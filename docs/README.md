@@ -9,4 +9,4 @@
 
 ## Quick Links
 
-- [Sharo Core Language Specification](../SHARO_CORE_LANGUAGE.md) - Parent specification
+- [Sharo Core Language Specification](./SHARO_CORE_LANGUAGE.md) - Parent specification

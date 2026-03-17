@@ -315,7 +315,7 @@ Each phase maintains backward compatibility with previous.
 
 ## References
 
-- Sharo Core Language Specification
+- [Sharo Core Language Specification](../SHARO_CORE_LANGUAGE.md)
 - Rust API Guidelines
 - W3C PROV Standard
 - Capability-Based Security (Miller et al.)

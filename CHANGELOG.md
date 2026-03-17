@@ -43,6 +43,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Lexer property tests: 18 proptest-based tests for identifiers, literals, spans, error recovery, and stress testing (TASK-010)
 - Surface AST types for parser: Program, Definition, Workflow, Expr, Pattern, and supporting types with full span tracking (TASK-011)
 - 49 surface AST tests: construction tests for all major types, span extraction tests, and variant coverage (TASK-011)
+- Parser core using winnow: ParseInput with Stream impl, ParseError with span tracking, basic combinators (TASK-012)
+- 25 parser core tests: ParseInput Stream operations, ParseError formatting, whitespace/alphanumeric/keyword combinators (TASK-012)
 
 ### Changed
 

@@ -9,6 +9,7 @@ description = "Parser for the Ash workflow language"
 [dependencies]
 ash-core = { path = "../ash-core" }
 thiserror.workspace = true
+winnow = { workspace = true }
 serde = { workspace = true, optional = true }
 
 [dev-dependencies]

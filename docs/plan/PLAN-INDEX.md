@@ -39,8 +39,8 @@ Every task is considered **complete** only when:
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-006](tasks/TASK-006-arbitrary-impls.md) | proptest Arbitrary implementations | - | 6 | 🔴 Not Started |
-| [TASK-007](tasks/TASK-007-test-harness.md) | Shared testing utilities | - | 4 | 🔴 Not Started |
+| [TASK-006](tasks/TASK-006-arbitrary-impls.md) | proptest Arbitrary implementations | - | 6 | ✅ Complete |
+| [TASK-007](tasks/TASK-007-test-harness.md) | Shared testing utilities | - | 4 | 🟡 In Progress |
 
 **Phase 1 Deliverable**: `ash-core` crate with complete IR
 
@@ -217,7 +217,7 @@ Update this section as tasks complete:
 
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
-| 1 | 7 | 5 | 🟡 In Progress |
+| 1 | 7 | 6 | 🟡 In Progress |
 | 2 | 10 | 0 | 🔴 Not started |
 | 3 | 8 | 0 | 🔴 Not started |
 | 4 | 12 | 0 | 🔴 Not started |
@@ -226,4 +226,4 @@ Update this section as tasks complete:
 | 7 | 3 | 0 | 🔴 Not started |
 | 8 | 3 | 0 | 🔴 Not started |
 
-**Overall Progress**: 5/55 tasks (9%)
+**Overall Progress**: 6/55 tasks (11%)

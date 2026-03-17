@@ -307,11 +307,12 @@ impl LineageTracker {
         operation: impl Into<String>,
         description: impl Into<String>,
     ) -> Option<&mut Lineage> {
-        #[allow(clippy::manual_inspect)]
-        self.lineages.get_mut(&id).map(|lineage| {
+        if let Some(lineage) = self.lineages.get_mut(&id) {
             lineage.transform(operation, description);
-            lineage
-        })
+            Some(lineage)
+        } else {
+            None
+        }
     }
 
     /// Check if a lineage exists.

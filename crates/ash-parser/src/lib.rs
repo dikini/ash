@@ -3,16 +3,26 @@
 //! This crate provides the lexer and parser for the Ash workflow language.
 
 pub mod combinators;
+pub mod desugar;
 pub mod error;
+pub mod error_recovery;
 pub mod input;
 pub mod lexer;
+pub mod lower;
+pub mod parse_expr;
+pub mod parse_workflow;
 pub mod surface;
 pub mod token;
 
 pub use combinators::*;
+pub use desugar::*;
 pub use error::*;
+pub use error_recovery::*;
 pub use input::*;
 pub use lexer::*;
+pub use lower::*;
+pub use parse_expr::*;
+pub use parse_workflow::*;
 pub use surface::*;
 pub use token::*;
 

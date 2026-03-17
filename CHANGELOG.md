@@ -50,6 +50,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - 49 surface AST tests: construction tests for all major types, span extraction tests, and variant coverage (TASK-011)
 - Parser core using winnow: ParseInput with Stream impl, ParseError with span tracking, basic combinators (TASK-012)
 - 25 parser core tests: ParseInput Stream operations, ParseError formatting, whitespace/alphanumeric/keyword combinators (TASK-012)
+- CLI implementation with 5 commands: check, run, trace, repl, dot (TASK-053 to TASK-057)
+- check command with --all, --strict, --format flags for type checking workflows
+- run command with --input, --output, --trace flags for workflow execution
+- trace command with provenance capture and JSON/NDJSON/CSV export formats
+- repl command with rustyline integration, :help, :type, :bindings commands
+- dot command for Graphviz DOT output generation
+- 23 CLI tests for argument parsing, command execution, and help output
 
 ### Changed
 

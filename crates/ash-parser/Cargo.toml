@@ -1,0 +1,20 @@
+[package]
+name = "ash-parser"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Parser for the Ash workflow language"
+
+[dependencies]
+ash-core = { path = "../ash-core" }
+thiserror.workspace = true
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[features]
+default = []
+serde = ["dep:serde"]

@@ -34,6 +34,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Proptest helpers tests: binding uniqueness, value roundtrip, name validation (TASK-006)
 - Test helpers module: WorkflowBuilder, test_capability, var, lit, var_expr utilities (TASK-007)
 - 13 test helper tests for builders and utilities (TASK-007)
+- Token definitions with 50+ variants: keywords, literals, operators, delimiters (TASK-008)
+- Span tracking for source locations with line/column/byte offset (TASK-008)
+- LexError types with thiserror for unexpected chars, unterminated strings, invalid numbers (TASK-008)
+- Lexer implementation with streaming tokenization, comments, error recovery (TASK-009)
+- 16 lexer tests for keywords, identifiers, literals, operators, spans, recovery (TASK-009)
 
 ### Changed
 

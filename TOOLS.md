@@ -21,6 +21,29 @@ These tools are installed via `cargo install` or included in the workspace.
 | `ash-lint` | `crates/ash-lint` | Custom lints for Ash workflows |
 | `ash-cli` | `crates/ash-cli` | Main CLI (check, run, trace, repl) |
 
+### Build Acceleration
+
+**sccache** - Compiler cache for faster builds
+```bash
+# Install sccache
+cargo install sccache
+
+# Configure Cargo to use sccache
+cat >> ~/.cargo/config.toml << 'EOF'
+[build]
+rustc-wrapper = "sccache"
+EOF
+
+# Optional: Set cache location
+export SCCACHE_DIR=~/.cache/sccache
+export SCCACHE_CACHE_SIZE=10G
+```
+
+**Benefits:**
+- Caches compiled crates across different project directories
+- Shared cache between `cargo build`, `cargo test`, `cargo check`
+- Significant speedup on CI and local development
+
 ### Documentation Tools
 
 ```bash
@@ -99,7 +122,10 @@ sudo pacman -S z3
 ### Quick Setup (No Sudo Required)
 ```bash
 # All Rust tools install without sudo
-cargo install cargo-insta cargo-nextest cargo-tarpaulin
+cargo install cargo-insta cargo-nextest cargo-tarpaulin sccache
+
+# Configure sccache (optional but recommended)
+echo '[build]\nrustc-wrapper = "sccache"' >> ~/.cargo/config.toml
 
 # Install git hooks
 ./scripts/install-hooks.sh
@@ -112,9 +138,17 @@ sudo apt-get update
 sudo apt-get install -y libz3-dev  # Only if using smt feature
 
 # These don't need sudo:
-cargo install cargo-fuzz cargo-tarpaulin cargo-insta cargo-nextest
+cargo install cargo-fuzz cargo-tarpaulin cargo-insta cargo-nextest sccache
 rustup install nightly
 rustup component add rust-src --toolchain nightly
+
+# Configure sccache (optional but recommended)
+mkdir -p ~/.cargo
+cat >> ~/.cargo/config.toml << 'EOF'
+[build]
+rustc-wrapper = "sccache"
+EOF
+
 ./scripts/install-hooks.sh
 ```
 
@@ -153,6 +187,23 @@ cargo tarpaulin --workspace --out Html
 # Open report
 open tarpaulin-report.html
 ```
+
+### Build Cache (sccache)
+```bash
+# View cache statistics
+sccache --show-stats
+
+# Zero stats
+sccache --zero-stats
+
+# Stop daemon
+sccache --stop-server
+```
+
+**Cache locations:**
+- Linux: `~/.cache/sccache`
+- macOS: `~/Library/Caches/sccache`
+- Windows: `%LOCALAPPDATA%\sccache`
 
 ### Linting
 ```bash
@@ -204,4 +255,23 @@ cargo tarpaulin --workspace --engine llvm
 echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
 
 # Option 3: Use Docker with --privileged
+```
+
+### sccache not working
+```bash
+# Check if sccache is properly configured
+cat ~/.cargo/config.toml
+# Should contain:
+# [build]
+# rustc-wrapper = "sccache"
+
+# Verify sccache is in PATH
+which sccache
+
+# Check sccache stats
+sccache --show-stats
+
+# Restart sccache daemon
+sccache --stop-server
+# Next cargo command will restart it automatically
 ```

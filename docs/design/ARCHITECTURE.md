@@ -101,11 +101,40 @@ Source Text → Lexer → Token Stream → Parser → Surface AST → Lower → 
 3. **Type Checking**: Verify type compatibility
 4. **Obligation Analysis**: Track deontic constraints
 5. **Proof Obligation Generation**: Emit conditions to verify
+6. **Constraint Solving**: Detect policy conflicts via SMT
 
 **Key Algorithms**:
 - Hindley-Milner style effect inference with join/meet
 - Dataflow analysis for obligation tracking
-- SAT encoding for policy conflicts
+- SMT solving via Z3 for policy conflict detection
+- Optimization for constraint satisfaction problems
+
+**SMT Integration**:
+```
+┌──────────────────────────────────────────────┐
+│           Policy Constraint Encoder          │
+│  (Convert policy constraints to SMT-LIB)     │
+└─────────────────────┬────────────────────────┘
+                      ▼
+┌──────────────────────────────────────────────┐
+│              Z3 Solver Context               │
+│  - Resource thresholds (budget, rate limits) │
+│  - Temporal constraints (time windows)       │
+│  - Cardinality constraints (retry limits)    │
+│  - Cross-variable constraints                │
+│  - Optimization objectives                   │
+└─────────────────────┬────────────────────────┘
+                      ▼
+┌──────────────────────────────────────────────┐
+│         Conflict Detection Results           │
+│  - SAT: Policies compatible                  │
+│  - UNSAT: Conflict with unsat core           │
+│  - UNKNOWN: Solver timeout                   │
+└──────────────────────────────────────────────┘
+```
+
+**Feature Flag**: `smt = ["z3"]` - enables full constraint solving
+**Fallback**: Without `smt` flag, uses structural analysis for simple conflicts
 
 ### 4. ash-interp
 
@@ -218,6 +247,14 @@ The effect lattice forms the foundation of safety:
 - Type safety: Well-typed programs don't get stuck
 - Effect safety: No operational action without decision
 - Audit completeness: Every action is traceable
+- Policy consistency: No contradictory obligations via SMT
+
+### SMT Testing
+- Property: Policy conflicts are detected before execution
+- Property: Unsat cores explain *why* policies conflict
+- Property: Optimization objectives find optimal valid configurations
+- Fuzzing: Random policy constraints should not crash solver
+- Regression: Real-world conflict patterns from deployment
 
 ## Performance Considerations
 

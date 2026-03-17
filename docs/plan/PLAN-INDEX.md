@@ -80,7 +80,7 @@ Every task is considered **complete** only when:
 | Task | Description | Spec | Est. Hours |
 |------|-------------|------|------------|
 | [TASK-018](tasks/TASK-018-type-representation.md) | Type enum and unification | SPEC-003 | 4 |
-| [TASK-019](tasks/TASK-019-constraints.md) | Constraint generation | SPEC-003 | 6 |
+| [TASK-019](tasks/TASK-019-type-constraints.md) | Type constraint generation | SPEC-003 | 6 |
 | [TASK-020](tasks/TASK-020-unification.md) | Unification algorithm | SPEC-003 | 6 |
 | [TASK-021](tasks/TASK-021-effect-inference.md) | Effect inference | SPEC-003 | 6 |
 
@@ -91,6 +91,7 @@ Every task is considered **complete** only when:
 | [TASK-022](tasks/TASK-022-name-resolution.md) | Name resolution pass | SPEC-003 | 6 |
 | [TASK-023](tasks/TASK-023-obligation-check.md) | Obligation tracking | SPEC-003 | 6 |
 | [TASK-024](tasks/TASK-024-proof-obligations.md) | Proof obligation generation | SPEC-003 | 6 |
+| [TASK-024b](tasks/TASK-024b-smt-integration.md) | Z3 SMT integration for conflict detection | SPEC-003 | 8 |
 
 ### Error Reporting
 
@@ -126,7 +127,7 @@ Every task is considered **complete** only when:
 | Task | Description | Spec | Est. Hours |
 |------|-------------|------|------------|
 | [TASK-035](tasks/TASK-035-capability-trait.md) | Capability provider trait | SPEC-004 | 4 |
-| [TASK-036](tasks/TASK-036-policy-engine.md) | Policy evaluation engine | SPEC-004 | 6 |
+| [TASK-036](tasks/TASK-036-policy-runtime.md) | Runtime policy evaluation | SPEC-004 | 6 |
 | [TASK-037](tasks/TASK-037-async-runtime.md) | Async runtime integration | SPEC-004 | 6 |
 
 **Phase 4 Deliverable**: `ash-interp` crate, working interpreter
@@ -172,8 +173,8 @@ Every task is considered **complete** only when:
 
 ## Total Effort Estimate
 
-- **Tasks**: 52
-- **Estimated Hours**: ~300 hours
+- **Tasks**: 53
+- **Estimated Hours**: ~308 hours
 - **Calendar Time**: 12 weeks (single developer)
 - **Team of 3**: ~4 weeks with parallel work
 
@@ -222,4 +223,4 @@ Update this section as tasks complete:
 | 7 | 3 | 0 | 🔴 Not started |
 | 8 | 3 | 0 | 🔴 Not started |
 
-**Overall Progress**: 0/52 tasks (0%)
+**Overall Progress**: 0/53 tasks (0%)

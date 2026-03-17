@@ -26,6 +26,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - List pattern variant for prefix matching with optional rest binding: `List(Vec<Pattern>, Option<Name>)` (TASK-003)
 - Pattern helper methods: `bindings()` to collect variable names, `is_refutable()` to check match exhaustiveness (TASK-003)
 - Comprehensive AST tests: workflow construction, pattern bindings, serde roundtrip (TASK-003)
+- Provenance tracking types: WorkflowId, Provenance, TraceEvent, Decision with fork lineage (TASK-004)
+- Provenance tests: lineage accumulation, uniqueness, serde roundtrip (TASK-004)
 
 ### Changed
 

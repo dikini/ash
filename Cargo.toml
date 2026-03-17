@@ -7,13 +7,16 @@ members = [
     "crates/ash-provenance",
     "crates/ash-cli",
 ]
+# ash-fuzz excluded - requires nightly toolchain for fuzzing
+exclude = ["crates/ash-fuzz"]
 resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+rust-version = "1.94.0"
 license = "MIT OR Apache-2.0"
-authors = ["Sharo Contributors"]
+authors = ["Ash Contributors"]
 repository = "https://github.com/dikini/ash"
 
 [workspace.dependencies]

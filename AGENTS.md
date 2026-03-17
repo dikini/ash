@@ -2,6 +2,41 @@
 
 This document defines how AI agents should collaborate on the Ash workflow language project.
 
+## Project Language Constraint
+
+- Primary implementation language: `rust`
+- Current project baseline: `edition 2024`, `rust-version  1.94.0`
+- New runtime or core logic should use Rust unless explicitly waived in a spec or plan.
+
+## Changelog and Commits
+
+- Use Common Changelog format: <https://common-changelog.org/>.
+- Task-completion work MUST update `CHANGELOG.md`.
+- Any staged change in code, tooling, hooks, docs policy, or project workflow MUST stage a matching `CHANGELOG.md` update.
+- Use Conventional Commits when possible for commit messages.
+
+## Policy Enforcement
+
+- Install hooks once per clone:
+  - `scripts/install-hooks.sh`
+- Local `pre-commit` enforces:
+  - staged docs evidence
+  - staged `CHANGELOG.md` updates for staged implementation/tooling/docs-policy changes
+  - `CHANGELOG.md` structure policy
+  - Rust formatting
+  - `cargo check`
+  - `cargo clippy`
+  - Rust tests
+  - property-test detection
+  - fuzz checks when a runnable harness exists
+- Local `pre-push` runs the full local gate.
+
+## Documentation Workflow
+
+- `docs/specs/` stores canonical behavior and invariant specs.
+- `docs/plans/` stores implementation and alignment plans.
+- `docs/reference/` stores frozen contract and behavior references needed to work locally.
+- `docs/notes/` stores per-subsystem future opportunities, cleanup notes, and non-blocking follow-up observations.
 ## Core Principles
 
 ### 1. Always Use Available Skills

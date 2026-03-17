@@ -1,0 +1,32 @@
+[package]
+name = "ash-fuzz"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94.0"
+authors = ["Ash Contributors"]
+description = "Fuzz testing for Ash workflow language"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ash-lang/ash"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+ash-core = { path = "../ash-core" }
+
+# Prevent this from interfering with the main workspace
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_effect_lattice"
+path = "fuzz_targets/fuzz_effect_lattice.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_value_roundtrip"
+path = "fuzz_targets/fuzz_value_roundtrip.rs"
+test = false
+doc = false

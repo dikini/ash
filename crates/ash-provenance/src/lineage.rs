@@ -307,6 +307,7 @@ impl LineageTracker {
         operation: impl Into<String>,
         description: impl Into<String>,
     ) -> Option<&mut Lineage> {
+        #[allow(clippy::manual_inspect)]
         self.lineages.get_mut(&id).map(|lineage| {
             lineage.transform(operation, description);
             lineage

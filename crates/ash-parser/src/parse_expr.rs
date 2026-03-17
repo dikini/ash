@@ -24,7 +24,7 @@ fn ternary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let condition = or_expr(input)?;
 
     // Check for ternary operator
-    if let Some(_) = opt(preceded(literal_str("?"), or_expr)).parse_next(input)? {
+    if opt(preceded(literal_str("?"), or_expr)).parse_next(input)?.is_some() {
         let _then_branch = or_expr(input)?;
         let _ = preceded(literal_str(":"), or_expr).parse_next(input)?;
         // Note: Simplified - ternary not fully implemented in surface AST
@@ -40,16 +40,7 @@ fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let mut left = and_expr(input)?;
 
     loop {
-        if let Some(_) = opt(literal_str("||")).parse_next(input)? {
-            let right = and_expr(input)?;
-            let span = span_from(&start_pos, &input.state);
-            left = Expr::Binary {
-                op: BinaryOp::Or,
-                left: Box::new(left),
-                right: Box::new(right),
-                span,
-            };
-        } else if let Some(_) = opt(literal_str("||")).parse_next(input)? {
+        if opt(literal_str("||")).parse_next(input)?.is_some() {
             let right = and_expr(input)?;
             let span = span_from(&start_pos, &input.state);
             left = Expr::Binary {
@@ -72,16 +63,7 @@ fn and_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let mut left = in_expr(input)?;
 
     loop {
-        if let Some(_) = opt(literal_str("&&")).parse_next(input)? {
-            let right = in_expr(input)?;
-            let span = span_from(&start_pos, &input.state);
-            left = Expr::Binary {
-                op: BinaryOp::And,
-                left: Box::new(left),
-                right: Box::new(right),
-                span,
-            };
-        } else if let Some(_) = opt(literal_str("&&")).parse_next(input)? {
+        if opt(literal_str("&&")).parse_next(input)?.is_some() {
             let right = in_expr(input)?;
             let span = span_from(&start_pos, &input.state);
             left = Expr::Binary {
@@ -103,7 +85,7 @@ fn in_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let left = comparison_expr(input)?;
 
-    if let Some(_) = opt(keyword("in")).parse_next(input)? {
+    if opt(keyword("in")).parse_next(input)?.is_some() {
         let right = comparison_expr(input)?;
         let span = span_from(&start_pos, &input.state);
         Ok(Expr::Binary {
@@ -213,7 +195,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
 
     // Try negation first
-    if let Some(_) = opt(literal_str("!")).parse_next(input)? {
+    if opt(literal_str("!")).parse_next(input)?.is_some() {
         let operand = unary_expr(input)?;
         let span = span_from(&start_pos, &input.state);
         return Ok(Expr::Unary {
@@ -224,12 +206,12 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     // Try arithmetic negation (but not if it's followed by a number, that's a literal)
-    if let Some(_) = opt(preceded(
+    if opt(preceded(
         literal_str("-"),
         one_of(|c: char| !c.is_ascii_digit()),
     ))
     .parse_next(input)?
-    {
+    .is_some() {
         // This was a minus followed by a non-digit, so it's unary negation
         // We need to backtrack and parse properly
         // For simplicity, just parse the operand
@@ -243,7 +225,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     // Try keyword "not"
-    if let Some(_) = opt(keyword("not")).parse_next(input)? {
+    if opt(keyword("not")).parse_next(input)?.is_some() {
         let operand = unary_expr(input)?;
         let span = span_from(&start_pos, &input.state);
         return Ok(Expr::Unary {
@@ -279,7 +261,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
     loop {
         // Field access: .field
-        if let Some(_) = opt(literal_str(".")).parse_next(input)?
+        if opt(literal_str(".")).parse_next(input)?.is_some()
             && let Ok(field) = identifier(input) {
                 let span = span_from(&start_pos, &input.state);
                 expr = Expr::FieldAccess {
@@ -291,7 +273,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             }
 
         // Index access: [index]
-        if let Some(_) = opt(literal_str("[")).parse_next(input)? {
+        if opt(literal_str("[")).parse_next(input)?.is_some() {
             let index = self::expr(input)?;
             let _ = literal_str("]").parse_next(input)?;
             let span = span_from(&start_pos, &input.state);
@@ -304,8 +286,8 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         }
 
         // Function call: (args)
-        if let Some(_) = opt(literal_str("(")).parse_next(input)? {
-            let args = if let Ok(_) = literal_str(")").parse_next(input) {
+        if opt(literal_str("(")).parse_next(input)?.is_some() {
+            let args = if literal_str(")").parse_next(input).is_ok() {
                 vec![]
             } else {
                 let args = parse_args(input)?;
@@ -336,7 +318,7 @@ fn parse_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
     let mut args = vec![first];
 
     loop {
-        if let Some(_) = opt(literal_str(",")).parse_next(input)? {
+        if opt(literal_str(",")).parse_next(input)?.is_some() {
             let arg = expr(input)?;
             args.push(arg);
         } else {
@@ -586,6 +568,7 @@ fn span_from(start: &Position, end: &Position) -> Span {
 }
 
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
 

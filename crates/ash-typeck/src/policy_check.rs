@@ -223,7 +223,6 @@ pub type TypeLookup<'a> = dyn Fn(&Name) -> Result<PolicyType, PolicyTypeError> +
 /// assert_eq!(result.unwrap(), PolicyType::Policy);
 /// ```
 #[inline]
-#[must_use]
 pub fn infer_policy_expr(
     expr: &PolicyExpr,
     lookup: &TypeLookup<'_>,
@@ -233,7 +232,6 @@ pub fn infer_policy_expr(
 }
 
 /// Infer the type of a policy expression with context.
-#[must_use]
 pub fn infer_policy_expr_with_context(
     expr: &PolicyExpr,
     ctx: &PolicyCheckContext,

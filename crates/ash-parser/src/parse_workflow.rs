@@ -130,7 +130,7 @@ fn observe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let capability = identifier(input)?;
 
     // Check for optional binding
-    let binding = if let Ok(_) = keyword("as").parse_next(input) {
+    let binding = if keyword("as").parse_next(input).is_ok() {
         Some(pattern(input)?)
     } else {
         None
@@ -155,7 +155,7 @@ fn orient_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let e = expr(input)?;
 
     // Check for optional binding
-    let binding = if let Ok(_) = keyword("as").parse_next(input) {
+    let binding = if keyword("as").parse_next(input).is_ok() {
         Some(pattern(input)?)
     } else {
         None
@@ -180,7 +180,7 @@ fn propose_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let action = action_ref(input)?;
 
     // Check for optional binding
-    let binding = if let Ok(_) = keyword("as").parse_next(input) {
+    let binding = if keyword("as").parse_next(input).is_ok() {
         Some(pattern(input)?)
     } else {
         None
@@ -205,7 +205,7 @@ fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let e = expr(input)?;
 
     // Optional policy name
-    let policy = if let Ok(_) = keyword("with").parse_next(input) {
+    let policy = if keyword("with").parse_next(input).is_ok() {
         Some(identifier(input)?.into())
     } else {
         None
@@ -214,7 +214,7 @@ fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let _ = keyword("then").parse_next(input)?;
     let then_branch = Box::new(parse_single_stmt_or_block(input)?);
 
-    let else_branch = if let Ok(_) = keyword("else").parse_next(input) {
+    let else_branch = if keyword("else").parse_next(input).is_ok() {
         Some(Box::new(parse_single_stmt_or_block(input)?))
     } else {
         None
@@ -323,7 +323,7 @@ fn act_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let action = action_ref(input)?;
 
     // Optional guard
-    let guard = if let Ok(_) = keyword("where").parse_next(input) {
+    let guard = if keyword("where").parse_next(input).is_ok() {
         Some(parse_guard(input)?)
     } else {
         None
@@ -368,7 +368,7 @@ fn if_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let _ = keyword("then").parse_next(input)?;
     let then_branch = Box::new(parse_single_stmt_or_block(input)?);
 
-    let else_branch = if let Ok(_) = keyword("else").parse_next(input) {
+    let else_branch = if keyword("else").parse_next(input).is_ok() {
         Some(Box::new(parse_single_stmt_or_block(input)?))
     } else {
         None
@@ -679,11 +679,11 @@ fn parse_expr_list(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
 /// Parse a guard expression
 fn parse_guard(input: &mut ParseInput) -> ModalResult<Guard> {
     // Simplified guard parsing
-    if let Ok(_) = keyword("always").parse_next(input) {
+    if keyword("always").parse_next(input).is_ok() {
         return Ok(Guard::Always);
     }
 
-    if let Ok(_) = keyword("never").parse_next(input) {
+    if keyword("never").parse_next(input).is_ok() {
         return Ok(Guard::Never);
     }
 

@@ -384,6 +384,7 @@ impl ObligationContextBuilder {
     }
 
     /// Add an obligation
+    #[allow(clippy::should_implement_trait)]
     pub fn add(mut self, obligation: ProofObligation) -> Self {
         self.obligations.push(obligation);
         self

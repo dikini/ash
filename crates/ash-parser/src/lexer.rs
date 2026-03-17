@@ -489,6 +489,7 @@ pub fn lex_with_recovery(input: &str) -> (Vec<Token>, Vec<LexError>) {
 }
 
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
 

@@ -106,18 +106,18 @@ fn policy_unary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     let start_pos = input.state;
 
     // Try negation: !expr
-    if let Ok(_) = policy_ws(literal_str("!")).parse_next(input) {
+    if policy_ws(literal_str("!")).parse_next(input).is_ok() {
         let operand = policy_unary(input)?;
         return Ok(PolicyExpr::Not(Box::new(operand)));
     }
 
     // Try forall quantifier
-    if let Ok(_) = policy_keyword("forall").parse_next(input) {
+    if policy_keyword("forall").parse_next(input).is_ok() {
         return parse_forall(input, &start_pos);
     }
 
     // Try exists quantifier
-    if let Ok(_) = policy_keyword("exists").parse_next(input) {
+    if policy_keyword("exists").parse_next(input).is_ok() {
         return parse_exists(input, &start_pos);
     }
 
@@ -182,8 +182,8 @@ fn policy_primary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     let name_str: Name = name.into();
 
     // Check for function call
-    if let Ok(_) = policy_ws(literal_str("(")).parse_next(input) {
-        let args = if let Ok(_) = literal_str(")").parse_next(input) {
+    if policy_ws(literal_str("(")).parse_next(input).is_ok() {
+        let args = if literal_str(")").parse_next(input).is_ok() {
             vec![]
         } else {
             let args = parse_policy_args(input)?;
@@ -216,13 +216,13 @@ fn parse_method_chain(
 ) -> ModalResult<PolicyExpr> {
     loop {
         // Check for method call
-        if let Ok(_) = policy_ws(literal_str(".")).parse_next(input)
+        if policy_ws(literal_str(".")).parse_next(input).is_ok()
             && let Ok(method_name) = identifier(input) {
                 let method: Name = method_name.to_string().into_boxed_str();
 
                 // Check for arguments
-                let args = if let Ok(_) = policy_ws(literal_str("(")).parse_next(input) {
-                    if let Ok(_) = literal_str(")").parse_next(input) {
+                let args = if policy_ws(literal_str("(")).parse_next(input).is_ok() {
+                    if literal_str(")").parse_next(input).is_ok() {
                         vec![]
                     } else {
                         let args = parse_policy_args(input)?;
@@ -253,7 +253,7 @@ fn parse_policy_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
     let mut args = vec![first];
 
     loop {
-        if let Ok(_) = policy_ws(literal_str(",")).parse_next(input) {
+        if policy_ws(literal_str(",")).parse_next(input).is_ok() {
             let arg = parse_expr_value(input)?;
             args.push(arg);
         } else {

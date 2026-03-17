@@ -54,6 +54,10 @@ bash scripts/check-property-tests.sh
 # Smoke test fuzz targets if ash-fuzz crate exists
 bash scripts/check-fuzz.sh --smoke
 
+# Doc tests
+echo "pre-commit-gate: running documentation tests"
+bash scripts/check-doc-tests.sh
+
 if [[ "$write_marker" == true ]]; then
   gate_write_marker "$marker_file"
   echo "pre-commit-gate: marker updated at $marker_file"

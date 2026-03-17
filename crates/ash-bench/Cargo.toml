@@ -1,0 +1,33 @@
+[package]
+name = "ash-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Benchmarks for Ash workflow language"
+publish = false
+
+[dependencies]
+ash-core = { path = "../ash-core" }
+ash-parser = { path = "../ash-parser" }
+ash-typeck = { path = "../ash-typeck" }
+ash-interp = { path = "../ash-interp" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "parser"
+path = "benches/parser.rs"
+harness = false
+
+[[bench]]
+name = "effect_lattice"
+path = "benches/effect_lattice.rs"
+harness = false
+
+[[bench]]
+name = "interpreter"
+path = "benches/interpreter.rs"
+harness = false

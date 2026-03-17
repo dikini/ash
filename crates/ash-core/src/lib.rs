@@ -8,6 +8,10 @@ pub mod effect;
 pub mod provenance;
 pub mod value;
 
+// Property testing helpers available when proptest feature enabled
+#[cfg(any(feature = "proptest-helpers", test))]
+pub mod proptest_helpers;
+
 pub use ast::*;
 pub use effect::*;
 pub use provenance::*;

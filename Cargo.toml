@@ -1,14 +1,19 @@
 [workspace]
 members = [
     "crates/ash-core",
+    "crates/ash-macros",
     "crates/ash-parser",
     "crates/ash-typeck",
     "crates/ash-interp",
     "crates/ash-provenance",
     "crates/ash-cli",
+    "crates/ash-lint",
 ]
 # ash-fuzz excluded - requires nightly toolchain for fuzzing
-exclude = ["crates/ash-fuzz"]
+# Excluded from main workspace:
+# - ash-fuzz: requires nightly toolchain for libfuzzer
+# - ash-bench: not part of main build, run separately via `cargo bench`
+exclude = ["crates/ash-fuzz", "crates/ash-bench"]
 resolver = "2"
 
 [workspace.package]
@@ -33,3 +38,7 @@ async-trait = "0.1"
 futures = "0.3"
 winnow = "0.5"
 pretty_assertions = "1.4"
+insta = "1.34"
+proptest = "1.4"
+walkdir = "2.4"
+colored = "2.1"

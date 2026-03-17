@@ -1,0 +1,20 @@
+[package]
+name = "ash-doc-tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Doc-test extractor for Ash specification documents"
+publish = false
+
+[[bin]]
+name = "ash-doc-tests"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { version = "4.4", features = ["derive"] }
+colored = { workspace = true }
+pulldown-cmark = "0.9"
+tempfile = "3.9"

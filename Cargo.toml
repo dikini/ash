@@ -8,6 +8,7 @@ members = [
     "crates/ash-provenance",
     "crates/ash-cli",
     "crates/ash-lint",
+    "crates/ash-doc-tests",
 ]
 # ash-fuzz excluded - requires nightly toolchain for fuzzing
 # Excluded from main workspace:

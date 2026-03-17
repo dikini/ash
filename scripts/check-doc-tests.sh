@@ -8,11 +8,18 @@ usage() {
   cat <<'USAGE'
 Usage:
   scripts/check-doc-tests.sh
+  scripts/check-doc-tests.sh --with-specs
 USAGE
 }
 
+with_specs=false
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --with-specs)
+      with_specs=true
+      shift
+      ;;
     -h | --help)
       usage
       exit 0
@@ -28,23 +35,11 @@ done
 echo "doc-tests: checking Rust documentation tests"
 cargo test --doc --workspace
 
-echo "doc-tests: checking SPEC document examples"
-# Extract and test code examples from SPEC documents
-# This ensures specs stay synchronized with implementation
-
-failed=0
-for spec in docs/spec/*.md; do
-  if [[ -f "$spec" ]]; then
-    echo "doc-tests: checking $spec"
-    # Look for ```rust or ```ignore code blocks
-    # TODO: Implement actual extraction and testing
-    # For now, just check that examples compile
-  fi
-done
-
-if [[ $failed -gt 0 ]]; then
-  echo "doc-tests: $failed failures" >&2
-  exit 1
+if [[ "$with_specs" == true ]]; then
+  echo "doc-tests: checking SPEC document code examples"
+  
+  # Build and run ash-doc-tests
+  cargo run --bin ash-doc-tests -- docs/spec/*.md
 fi
 
 echo "doc-tests: OK"

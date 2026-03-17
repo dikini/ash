@@ -7,6 +7,7 @@ pub mod ast;
 pub mod effect;
 pub mod provenance;
 pub mod value;
+pub mod visualize;
 
 // Property testing helpers available when proptest feature enabled
 #[cfg(any(feature = "proptest-helpers", test))]
@@ -16,3 +17,4 @@ pub use ast::*;
 pub use effect::*;
 pub use provenance::*;
 pub use value::*;
+pub use visualize::*;

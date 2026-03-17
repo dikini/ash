@@ -27,20 +27,20 @@ Every task is considered **complete** only when:
 
 ### Core Types and Data Structures
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-001](tasks/TASK-001-effect-lattice.md) | Effect lattice with property tests | SPEC-001 | 4 |
-| [TASK-002](tasks/TASK-002-value-system.md) | Value enum with serialization | SPEC-001 | 4 |
-| [TASK-003](tasks/TASK-003-workflow-ast.md) | Core Workflow AST types | SPEC-001 | 6 |
-| [TASK-004](tasks/TASK-004-provenance.md) | Provenance and trace types | SPEC-001 | 4 |
-| [TASK-005](tasks/TASK-005-patterns.md) | Pattern matching system | SPEC-001 | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-001](tasks/TASK-001-effect-lattice.md) | Effect lattice with property tests | SPEC-001 | 4 | ✅ Complete |
+| [TASK-002](tasks/TASK-002-value-system.md) | Value enum with serialization | SPEC-001 | 4 | ✅ Complete |
+| [TASK-003](tasks/TASK-003-workflow-ast.md) | Core Workflow AST types | SPEC-001 | 6 | 🔴 Not Started |
+| [TASK-004](tasks/TASK-004-provenance.md) | Provenance and trace types | SPEC-001 | 4 | 🔴 Not Started |
+| [TASK-005](tasks/TASK-005-patterns.md) | Pattern matching system | SPEC-001 | 6 | 🔴 Not Started |
 
 ### Testing Infrastructure
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-006](tasks/TASK-006-arbitrary-impls.md) | proptest Arbitrary implementations | - | 6 |
-| [TASK-007](tasks/TASK-007-test-harness.md) | Shared testing utilities | - | 4 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-006](tasks/TASK-006-arbitrary-impls.md) | proptest Arbitrary implementations | - | 6 | 🔴 Not Started |
+| [TASK-007](tasks/TASK-007-test-harness.md) | Shared testing utilities | - | 4 | 🔴 Not Started |
 
 **Phase 1 Deliverable**: `ash-core` crate with complete IR
 
@@ -217,13 +217,13 @@ Update this section as tasks complete:
 
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
-| 1 | 7 | 0 | 🔴 Not started |
+| 1 | 7 | 2 | 🟡 In Progress |
 | 2 | 10 | 0 | 🔴 Not started |
 | 3 | 8 | 0 | 🔴 Not started |
 | 4 | 12 | 0 | 🔴 Not started |
 | 5 | 4 | 0 | 🔴 Not started |
-| 6 | 5 | 0 | 🔴 Not started |
+| 6 | 8 | 0 | 🔴 Not started |
 | 7 | 3 | 0 | 🔴 Not started |
 | 8 | 3 | 0 | 🔴 Not started |
 
-**Overall Progress**: 0/61 tasks (0%)
+**Overall Progress**: 2/55 tasks (4%)

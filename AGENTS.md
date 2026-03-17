@@ -189,10 +189,29 @@ Expected: All tests pass, no clippy warnings, formatting clean."
 
 ## Task Workflow
 
+### Task File Requirement (CRITICAL)
+
+**Agents MUST NOT implement any task without a corresponding task file in `docs/plan/tasks/`.**
+
+Before starting any implementation:
+1. Check if `docs/plan/tasks/TASK-XXX-*.md` exists for the task
+2. If the task file is **MISSING**:
+   - **STOP** - Do not proceed with implementation
+   - Create the task file based on the PLAN-INDEX description and relevant SPEC documents
+   - Include: Description, Requirements, TDD Steps, Completion Checklist
+   - Ask the user to review if requirements are unclear
+3. Only proceed with implementation after the task file exists
+
+This ensures:
+- Clear, documented requirements before coding
+- Consistent task structure across the project
+- Traceability from PLAN-INDEX → Task File → Implementation → Tests
+
 ### For Each PLAN-INDEX Task
 
 ```
 1. MAIN AGENT reads task requirements
+   └─> Verifies task file exists in docs/plan/tasks/
    └─> Invokes /rust-skills if Rust code involved
 
 2. MAIN AGENT spawns TEST DEV sub-agent

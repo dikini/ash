@@ -174,10 +174,20 @@ Every task is considered **complete** only when:
 | [TASK-051](tasks/TASK-051-optimizations.md) | Performance optimizations | - | 8 |
 | [TASK-052](tasks/TASK-052-fuzzing.md) | Fuzzing setup | - | 6 |
 
+## Phase 9: Advanced Policy Features (Week 13+)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-061](tasks/TASK-061-policy-definitions.md) | Policy definition syntax | SPEC-006 | 12 | 🔴 Not Started |
+| [TASK-062](tasks/TASK-062-policy-combinators.md) | Policy combinators | SPEC-007 | 16 | 🔴 Not Started |
+| [TASK-063](tasks/TASK-063-dynamic-policies.md) | Dynamic policy registration | SPEC-008 | 40 | ⏸️ Deferred |
+
+**Phase 9 Deliverable**: User-defined policies with compile-time conflict detection
+
 ## Total Effort Estimate
 
-- **Tasks**: 61
-- **Estimated Hours**: ~356 hours
+- **Tasks**: 59 (56 complete, 3 planned)
+- **Estimated Hours**: ~424 hours (including Phase 9)
 - **Calendar Time**: 12 weeks (single developer)
 - **Team of 3**: ~4 weeks with parallel work
 
@@ -225,5 +235,6 @@ Update this section as tasks complete:
 | 6 | 8 | 8 | ✅ Complete |
 | 7 | 3 | 3 | ✅ Complete |
 | 8 | 3 | 3 | ✅ Complete |
+| 9 | 3 | 0 | 🟡 Planned |
 
-**Overall Progress**: 56/56 tasks (100%)
+**Overall Progress**: 56/59 tasks (95%)

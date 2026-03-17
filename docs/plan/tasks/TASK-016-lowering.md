@@ -1,6 +1,6 @@
 # TASK-016: Surface to Core Lowering
 
-## Status: 🔴 Not Started
+## Status: 🟢 Complete
 
 ## Description
 

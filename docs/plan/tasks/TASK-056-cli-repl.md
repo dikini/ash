@@ -1,5 +1,7 @@
 # TASK-056: ash repl Command
 
+## Status: 🟢 Complete
+
 ## Objective
 
 Implement the interactive REPL for Ash development.

@@ -1,6 +1,6 @@
 # TASK-027: Expression Evaluator
 
-## Status: 🔴 Not Started
+## Status: 🟢 Complete
 
 ## Description
 

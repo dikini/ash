@@ -1,5 +1,7 @@
 # TASK-053: ash check Command
 
+## Status: 🟢 Complete
+
 ## Objective
 
 Implement the `ash check` command for type checking and linting Ash workflow files.

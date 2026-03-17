@@ -1,5 +1,7 @@
 # TASK-055: ash trace Command
 
+## Status: 🟢 Complete
+
 ## Objective
 
 Implement the `ash trace` command for executing workflows with full provenance capture.

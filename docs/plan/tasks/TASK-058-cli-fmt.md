@@ -1,6 +1,6 @@
 # TASK-058: CLI Format Command
 
-## Status: 🔴 Not Started
+## Status: 🟢 Complete
 
 ## Description
 

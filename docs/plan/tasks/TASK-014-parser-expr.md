@@ -1,6 +1,6 @@
 # TASK-014: Expression Parser
 
-## Status: 🔴 Not Started
+## Status: 🟢 Complete
 
 ## Description
 

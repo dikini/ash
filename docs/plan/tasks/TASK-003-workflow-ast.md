@@ -1,6 +1,6 @@
 # TASK-003: Core Workflow AST Types
 
-## Status: 🔴 Not Started
+## Status: 🟢 Complete
 
 ## Description
 

@@ -1,5 +1,7 @@
 # TASK-054: ash run Command
 
+## Status: 🟢 Complete
+
 ## Objective
 
 Implement the `ash run` command for executing Ash workflows.

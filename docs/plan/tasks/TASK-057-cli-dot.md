@@ -1,5 +1,7 @@
 # TASK-057: ash dot Command
 
+## Status: 🟢 Complete
+
 ## Objective
 
 Implement the `ash dot` command for AST visualization.

@@ -1,5 +1,7 @@
 # TASK-024b: Z3 SMT Integration for Conflict Detection
 
+## Status: 🔴 Not Started
+
 ## Objective
 
 Integrate Z3 SMT solver for detecting policy conflicts at compile-time. This enables Ash to prove that policy constraints are satisfiable before execution, preventing runtime failures due to contradictory obligations.

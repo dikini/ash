@@ -237,4 +237,120 @@ Update this section as tasks complete:
 | 8 | 3 | 3 | ✅ Complete |
 | 9 | 3 | 3 | ✅ Complete |
 
-**Overall Progress**: 59/59 tasks (100%)
+## Phase 10: Module System (Weeks 14-16)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-064](tasks/TASK-064-module-ast.md) | Module AST types (ModuleDecl) | SPEC-009 | 4 | 🟢 Complete |
+| [TASK-065](tasks/TASK-065-visibility-ast.md) | Visibility AST types (pub, pub(crate)) | SPEC-009 | 4 | 🟢 Complete |
+| [TASK-066](tasks/TASK-066-parse-visibility.md) | Parse visibility modifiers | SPEC-009 | 4 | 🟢 Complete |
+| [TASK-067](tasks/TASK-067-parse-mod.md) | Parse module declarations | SPEC-009 | 6 | 🟢 Complete |
+| [TASK-068](tasks/TASK-068-module-graph.md) | Module graph data structure | SPEC-009 | 4 | 🟢 Complete |
+| [TASK-069](tasks/TASK-069-module-resolver.md) | Module resolution algorithm | SPEC-009 | 8 | 🟢 Complete |
+| [TASK-070](tasks/TASK-070-visibility-check.md) | Visibility checking in typeck | SPEC-009 | 6 | 🟢 Complete |
+| [TASK-084](tasks/TASK-084-use-ast.md) | Use statement AST types | SPEC-012 | 3 | 🟢 Complete |
+| [TASK-085](tasks/TASK-085-parse-use.md) | Parse use statements | SPEC-012 | 4 | 🟢 Complete |
+| [TASK-086](tasks/TASK-086-import-resolution.md) | Import resolution algorithm | SPEC-012 | 6 | 🟢 Complete |
+| [TASK-087](tasks/TASK-087-name-binding.md) | Name binding with imports | SPEC-012 | 5 | 🟢 Complete |
+
+**Phase 10 Deliverable**: Rust-style module system with `mod`, `pub`, `use`, and file-based resolution
+
+## Phase 11: Embedding API (Weeks 16-18)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-071](tasks/TASK-071-engine-crate.md) | Create ash-engine crate structure | SPEC-010 | 3 | 🔴 Not Started |
+| [TASK-072](tasks/TASK-072-engine-parse.md) | Implement Engine::parse | SPEC-010 | 2 | 🔴 Not Started |
+| [TASK-073](tasks/TASK-073-engine-check.md) | Implement Engine::check | SPEC-010 | 2 | 🔴 Not Started |
+| [TASK-074](tasks/TASK-074-engine-execute.md) | Implement Engine::execute | SPEC-010 | 3 | 🔴 Not Started |
+| [TASK-075](tasks/TASK-075-engine-capabilities.md) | Standard capability providers | SPEC-010 | 6 | 🔴 Not Started |
+| [TASK-076](tasks/TASK-076-cli-engine.md) | Update CLI to use ash-engine | SPEC-010 | 4 | 🔴 Not Started |
+
+**Phase 11 Deliverable**: Unified `Engine` type with builder API for embedding
+
+## Phase 12: REPL (Weeks 18-19)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-077](tasks/TASK-077-repl-crate.md) | Create ash-repl crate | SPEC-011 | 3 | 🔴 Not Started |
+| [TASK-078](tasks/TASK-078-repl-eval.md) | Expression evaluation in REPL | SPEC-011 | 4 | 🔴 Not Started |
+| [TASK-079](tasks/TASK-079-repl-multiline.md) | Multi-line input detection | SPEC-011 | 4 | 🔴 Not Started |
+| [TASK-080](tasks/TASK-080-repl-commands.md) | REPL commands (:help, :type, :quit) | SPEC-011 | 3 | 🔴 Not Started |
+| [TASK-081](tasks/TASK-081-repl-completion.md) | Tab completion | SPEC-011 | 4 | 🔴 Not Started |
+| [TASK-082](tasks/TASK-082-repl-history.md) | Persistent history | SPEC-011 | 2 | 🔴 Not Started |
+| [TASK-083](tasks/TASK-083-repl-errors.md) | Error display improvements | SPEC-011 | 3 | 🔴 Not Started |
+
+**Phase 12 Deliverable**: Interactive REPL with readline features
+
+## Progress Tracking
+
+| Phase | Tasks | Completed | Status |
+|-------|-------|-----------|--------|
+| 1 | 7 | 7 | ✅ Complete |
+| 2 | 10 | 10 | ✅ Complete |
+| 3 | 9 | 9 | ✅ Complete |
+| 4 | 12 | 12 | ✅ Complete |
+| 5 | 4 | 4 | ✅ Complete |
+| 6 | 8 | 8 | ✅ Complete |
+| 7 | 3 | 3 | ✅ Complete |
+| 8 | 3 | 3 | ✅ Complete |
+| 9 | 3 | 3 | ✅ Complete |
+| 10 | 11 | 11 | ✅ Complete |
+| 11 | 6 | 0 | 🔴 Not Started |
+| 12 | 7 | 0 | 🔴 Not Started |
+
+## Phase 13: Streams and Behaviours (Weeks 20-22)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-088](tasks/TASK-088-stream-ast.md) | Stream AST types and mailbox structure | SPEC-013 | 4 | 🔴 Not Started |
+| [TASK-089](tasks/TASK-089-stream-provider.md) | Stream provider trait and registry | SPEC-013 | 4 | 🔴 Not Started |
+| [TASK-090](tasks/TASK-090-parse-receive.md) | Parse receive construct | SPEC-013 | 6 | 🔴 Not Started |
+| [TASK-091](tasks/TASK-091-mailbox-impl.md) | Mailbox implementation with limits | SPEC-013 | 6 | 🔴 Not Started |
+| [TASK-092](tasks/TASK-092-stream-execution.md) | Stream execution with pattern matching | SPEC-013 | 8 | 🔴 Not Started |
+| [TASK-093](tasks/TASK-093-behaviour-provider.md) | Behaviour provider trait | SPEC-014 | 3 | 🔴 Not Started |
+| [TASK-094](tasks/TASK-094-parse-observe.md) | Parse observe with constraints | SPEC-014 | 3 | 🔴 Not Started |
+| [TASK-095](tasks/TASK-095-observe-execution.md) | Observe execution and sampling | SPEC-014 | 4 | 🔴 Not Started |
+
+**Phase 13 Deliverable**: Stream processing with receive and behaviour sampling with observe
+
+## Phase 14: Typed Providers (Week 23)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-096](tasks/TASK-096-typed-provider-wrapper.md) | Typed provider wrapper structs | SPEC-015 | 3 | 🔴 Not Started |
+| [TASK-097](tasks/TASK-097-schema-validation.md) | Schema validation logic | SPEC-015 | 4 | 🔴 Not Started |
+| [TASK-098](tasks/TASK-098-typed-registry.md) | Typed registry integration | SPEC-015 | 3 | 🔴 Not Started |
+| [TASK-099](tasks/TASK-099-runtime-validation.md) | Runtime validation in providers | SPEC-015 | 3 | 🔴 Not Started |
+| [TASK-100](tasks/TASK-100-type-error-reporting.md) | Type error reporting | SPEC-015 | 2 | 🔴 Not Started |
+
+**Phase 14 Deliverable**: Runtime type safety for Rust/Ash provider boundary
+
+## Phase 15: Capability Integration (Week 24)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-108](tasks/TASK-108-effect-tracking.md) | Effect tracking for all capabilities | SPEC-017 | 4 | 🔴 Not Started |
+| [TASK-109](tasks/TASK-109-obligation-checking.md) | Obligation checking with capabilities | SPEC-017 | 4 | 🔴 Not Started |
+| [TASK-110](tasks/TASK-110-policy-evaluation.md) | Policy evaluation for input/output | SPEC-017 | 6 | 🔴 Not Started |
+| [TASK-111](tasks/TASK-111-provenance-tracking.md) | Provenance tracking for all capabilities | SPEC-017 | 6 | 🔴 Not Started |
+| [TASK-112](tasks/TASK-112-capability-verification.md) | Capability declaration verification | SPEC-017 | 4 | 🔴 Not Started |
+| [TASK-113](tasks/TASK-113-read-write-types.md) | Read/write type checking | SPEC-017 | 4 | 🔴 Not Started |
+
+**Phase 15 Deliverable**: Full integration of capabilities with obligations, policies, provenance
+
+## Phase 16: Runtime Verification (Week 25)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-114](tasks/TASK-114-capability-verifier.md) | Capability availability verifier | SPEC-018 | 4 | 🔴 Not Started |
+| [TASK-115](tasks/TASK-115-obligation-checker.md) | Obligation satisfaction checker | SPEC-018 | 4 | 🔴 Not Started |
+| [TASK-116](tasks/TASK-116-effect-checker.md) | Effect compatibility checker | SPEC-018 | 3 | 🔴 Not Started |
+| [TASK-117](tasks/TASK-117-static-policy-validator.md) | Static policy validator | SPEC-018 | 4 | 🔴 Not Started |
+| [TASK-118](tasks/TASK-118-operation-verifier.md) | Per-operation runtime verifier | SPEC-018 | 5 | 🔴 Not Started |
+| [TASK-119](tasks/TASK-119-verification-aggregator.md) | Verification result aggregation | SPEC-018 | 3 | 🔴 Not Started |
+
+**Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
+
+**Overall Progress**: 59/109 tasks (54%)
+**New Tasks**: 50 tasks (178 estimated hours)

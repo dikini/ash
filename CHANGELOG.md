@@ -32,6 +32,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Pattern helper methods: bindings() for collecting variables, is_refutable() for exhaustiveness (TASK-005)
 - Property testing strategies: arb_effect, arb_value, arb_pattern, arb_name, arb_expr (TASK-006)
 - Proptest helpers tests: binding uniqueness, value roundtrip, name validation (TASK-006)
+- Test helpers module: WorkflowBuilder, test_capability, var, lit, var_expr utilities (TASK-007)
+- 13 test helper tests for builders and utilities (TASK-007)
 
 ### Changed
 

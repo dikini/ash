@@ -13,6 +13,10 @@ pub mod visualize;
 #[cfg(any(feature = "proptest-helpers", test))]
 pub mod proptest_helpers;
 
+// Testing helpers available in test mode
+#[cfg(test)]
+pub mod test_helpers;
+
 pub use ast::*;
 pub use effect::*;
 pub use provenance::*;

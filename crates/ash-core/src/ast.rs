@@ -42,10 +42,7 @@ pub enum Workflow {
         provenance: Provenance,
     },
     /// OBLIG role to workflow
-    Oblig {
-        role: Role,
-        workflow: Box<Workflow>,
-    },
+    Oblig { role: Role, workflow: Box<Workflow> },
     /// LET pattern = expr in continuation
     Let {
         pattern: Pattern,
@@ -64,9 +61,7 @@ pub enum Workflow {
         second: Box<Workflow>,
     },
     /// Parallel composition
-    Par {
-        workflows: Vec<Workflow>,
-    },
+    Par { workflows: Vec<Workflow> },
     /// FOREACH pattern in expr do workflow
     ForEach {
         pattern: Pattern,
@@ -139,11 +134,27 @@ pub struct Predicate {
 pub enum Expr {
     Literal(Value),
     Variable(Name),
-    FieldAccess { expr: Box<Expr>, field: Name },
-    IndexAccess { expr: Box<Expr>, index: Box<Expr> },
-    Unary { op: UnaryOp, expr: Box<Expr> },
-    Binary { op: BinaryOp, left: Box<Expr>, right: Box<Expr> },
-    Call { func: Name, arguments: Vec<Expr> },
+    FieldAccess {
+        expr: Box<Expr>,
+        field: Name,
+    },
+    IndexAccess {
+        expr: Box<Expr>,
+        index: Box<Expr>,
+    },
+    Unary {
+        op: UnaryOp,
+        expr: Box<Expr>,
+    },
+    Binary {
+        op: BinaryOp,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Call {
+        func: Name,
+        arguments: Vec<Expr>,
+    },
 }
 
 /// Unary operators

@@ -12,7 +12,7 @@
 //! println!("{}", workflow.to_dot());
 //! ```
 
-use crate::ast::{Workflow, Expr, Pattern};
+use crate::ast::{Expr, Pattern, Workflow};
 use crate::effect::Effect;
 use std::fmt::Write;
 
@@ -24,8 +24,8 @@ pub trait ToDot {
 
 impl ToDot for Workflow {
     fn to_dot(&self) -> String {
-        let mut gen = DotGenerator::new();
-        gen.generate(self)
+        let mut generator = DotGenerator::new();
+        generator.generate(self)
     }
 }
 
@@ -49,12 +49,20 @@ impl DotGenerator {
 
         writeln!(self.output, "digraph Workflow {{").unwrap();
         writeln!(self.output, "  rankdir=TB;").unwrap();
-        writeln!(self.output, "  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];").unwrap();
+        writeln!(
+            self.output,
+            "  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];"
+        )
+        .unwrap();
         writeln!(self.output, "  edge [fontname=\"Helvetica\"];").unwrap();
         writeln!(self.output).unwrap();
 
         let root_id = self.visit_workflow(workflow);
-        writeln!(self.output, "  root [label=\"Workflow\", shape=ellipse, fillcolor=\"lightblue\"];").unwrap();
+        writeln!(
+            self.output,
+            "  root [label=\"Workflow\", shape=ellipse, fillcolor=\"lightblue\"];"
+        )
+        .unwrap();
         writeln!(self.output, "  root -> node_{};", root_id).unwrap();
 
         writeln!(self.output, "}}").unwrap();
@@ -69,7 +77,11 @@ impl DotGenerator {
 
     fn visit_workflow(&mut self, workflow: &Workflow) -> usize {
         match workflow {
-            Workflow::Observe { capability, pattern, continuation } => {
+            Workflow::Observe {
+                capability,
+                pattern,
+                continuation,
+            } => {
                 let id = self.next_id();
                 let cont_id = self.visit_workflow(continuation);
                 writeln!(
@@ -78,8 +90,16 @@ impl DotGenerator {
                     id,
                     escape_dot(&capability.name),
                     effect_color(&Effect::Epistemic)
-                ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"{}\"];", id, cont_id, escape_dot(&pattern_to_string(pattern))).unwrap();
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"{}\"];",
+                    id,
+                    cont_id,
+                    escape_dot(&pattern_to_string(pattern))
+                )
+                .unwrap();
                 id
             }
             Workflow::Orient { expr, continuation } => {
@@ -91,12 +111,21 @@ impl DotGenerator {
                     "  node_{} [label=\"ORIENT\", fillcolor=\"{}\"];",
                     id,
                     effect_color(&Effect::Deliberative)
-                ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"expr\"];", id, expr_id).unwrap();
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"expr\"];",
+                    id, expr_id
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
                 id
             }
-            Workflow::Propose { action, continuation } => {
+            Workflow::Propose {
+                action,
+                continuation,
+            } => {
                 let id = self.next_id();
                 let cont_id = self.visit_workflow(continuation);
                 writeln!(
@@ -105,11 +134,16 @@ impl DotGenerator {
                     id,
                     escape_dot(&action.name),
                     effect_color(&Effect::Deliberative)
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
                 id
             }
-            Workflow::Decide { expr, policy, continuation } => {
+            Workflow::Decide {
+                expr,
+                policy,
+                continuation,
+            } => {
                 let id = self.next_id();
                 let expr_id = self.visit_expr(expr);
                 let cont_id = self.visit_workflow(continuation);
@@ -119,12 +153,21 @@ impl DotGenerator {
                     id,
                     escape_dot(policy),
                     effect_color(&Effect::Evaluative)
-                ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"guard\"];", id, expr_id).unwrap();
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"guard\"];",
+                    id, expr_id
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
                 id
             }
-            Workflow::Check { obligation, continuation } => {
+            Workflow::Check {
+                obligation,
+                continuation,
+            } => {
                 let id = self.next_id();
                 let cont_id = self.visit_workflow(continuation);
                 writeln!(
@@ -132,11 +175,16 @@ impl DotGenerator {
                     "  node_{} [label=\"CHECK\\n{:.20}...\", fillcolor=\"lightsalmon\"];",
                     id,
                     escape_dot(&format!("{:?}", obligation))
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
                 id
             }
-            Workflow::Act { action, guard, provenance: _ } => {
+            Workflow::Act {
+                action,
+                guard,
+                provenance: _,
+            } => {
                 let id = self.next_id();
                 writeln!(
                     self.output,
@@ -144,7 +192,8 @@ impl DotGenerator {
                     id,
                     escape_dot(&action.name),
                     effect_color(&Effect::Operational)
-                ).unwrap();
+                )
+                .unwrap();
                 // Optionally show guard
                 let _ = guard;
                 id
@@ -157,11 +206,16 @@ impl DotGenerator {
                     "  node_{} [label=\"OBLIG\\n{}\", shape=component, fillcolor=\"lightcoral\"];",
                     id,
                     escape_dot(&role.name)
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, wf_id).unwrap();
                 id
             }
-            Workflow::Let { pattern, expr, continuation } => {
+            Workflow::Let {
+                pattern,
+                expr,
+                continuation,
+            } => {
                 let id = self.next_id();
                 let expr_id = self.visit_expr(expr);
                 let cont_id = self.visit_workflow(continuation);
@@ -170,12 +224,27 @@ impl DotGenerator {
                     "  node_{} [label=\"LET {}\", shape=note, fillcolor=\"lightcyan\"];",
                     id,
                     escape_dot(&pattern_to_string(pattern))
-                ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"=\"];", id, expr_id).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"in\"];", id, cont_id).unwrap();
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"=\"];",
+                    id, expr_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"in\"];",
+                    id, cont_id
+                )
+                .unwrap();
                 id
             }
-            Workflow::If { condition, then_branch, else_branch } => {
+            Workflow::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
                 let id = self.next_id();
                 let cond_id = self.visit_expr(condition);
                 let then_id = self.visit_workflow(then_branch);
@@ -184,10 +253,26 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"IF\", shape=diamond, fillcolor=\"lightyellow\"];",
                     id
-                ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"cond\"];", id, cond_id).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"then\"];", id, then_id).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"else\"];", id, else_id).unwrap();
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"cond\"];",
+                    id, cond_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"then\"];",
+                    id, then_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"else\"];",
+                    id, else_id
+                )
+                .unwrap();
                 id
             }
             Workflow::Seq { first, second } => {
@@ -198,9 +283,20 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"SEQ\", shape=box, fillcolor=\"white\"];",
                     id
-                ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"1\"];", id, first_id).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"2\"];", id, second_id).unwrap();
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"1\"];",
+                    id, first_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"2\"];",
+                    id, second_id
+                )
+                .unwrap();
                 id
             }
             Workflow::Par { workflows } => {
@@ -213,11 +309,22 @@ impl DotGenerator {
                 ).unwrap();
                 for (i, w) in workflows.iter().enumerate() {
                     let branch_id = self.visit_workflow(w);
-                    writeln!(self.output, "  node_{} -> node_{} [label=\"{}\"];", id, branch_id, i + 1).unwrap();
+                    writeln!(
+                        self.output,
+                        "  node_{} -> node_{} [label=\"{}\"];",
+                        id,
+                        branch_id,
+                        i + 1
+                    )
+                    .unwrap();
                 }
                 id
             }
-            Workflow::ForEach { pattern, collection, body } => {
+            Workflow::ForEach {
+                pattern,
+                collection,
+                body,
+            } => {
                 let id = self.next_id();
                 let coll_id = self.visit_expr(collection);
                 let body_id = self.visit_workflow(body);
@@ -227,8 +334,18 @@ impl DotGenerator {
                     id,
                     escape_dot(&pattern_to_string(pattern))
                 ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"in\"];", id, coll_id).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"do\"];", id, body_id).unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"in\"];",
+                    id, coll_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"do\"];",
+                    id, body_id
+                )
+                .unwrap();
                 id
             }
             Workflow::Ret { expr } => {
@@ -238,11 +355,15 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"RET\", shape=oval, fillcolor=\"palegreen\"];",
                     id
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, expr_id).unwrap();
                 id
             }
-            Workflow::With { capability, workflow } => {
+            Workflow::With {
+                capability,
+                workflow,
+            } => {
                 let id = self.next_id();
                 let wf_id = self.visit_workflow(workflow);
                 writeln!(
@@ -250,7 +371,8 @@ impl DotGenerator {
                     "  node_{} [label=\"WITH {}\", shape=house, fillcolor=\"lightgray\"];",
                     id,
                     escape_dot(&capability.name)
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, wf_id).unwrap();
                 id
             }
@@ -262,9 +384,20 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"MAYBE\", shape=ellipse, fillcolor=\"lightpink\"];",
                     id
-                ).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"try\"];", id, primary_id).unwrap();
-                writeln!(self.output, "  node_{} -> node_{} [label=\"else\"];", id, fallback_id).unwrap();
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"try\"];",
+                    id, primary_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"else\"];",
+                    id, fallback_id
+                )
+                .unwrap();
                 id
             }
             Workflow::Must { workflow } => {
@@ -274,7 +407,8 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"MUST\", shape=doubleoctagon, fillcolor=\"lightcoral\"];",
                     id
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.output, "  node_{} -> node_{};", id, wf_id).unwrap();
                 id
             }
@@ -284,7 +418,8 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"DONE\", shape=oval, fillcolor=\"palegreen\"];",
                     id
-                ).unwrap();
+                )
+                .unwrap();
                 id
             }
         }
@@ -297,7 +432,8 @@ impl DotGenerator {
             self.output,
             "  node_{} [label=\"expr\", shape=ellipse, fillcolor=\"white\"];",
             id
-        ).unwrap();
+        )
+        .unwrap();
         id
     }
 }
@@ -325,7 +461,8 @@ fn pattern_to_string(pattern: &Pattern) -> String {
             format!("({})", inner.join(", "))
         }
         Pattern::Record(fields) => {
-            let inner: Vec<_> = fields.iter()
+            let inner: Vec<_> = fields
+                .iter()
                 .map(|(k, v)| format!("{}: {}", k, pattern_to_string(v)))
                 .collect();
             format!("{{ {} }}", inner.join(", "))
@@ -344,7 +481,7 @@ fn escape_dot(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{Capability, Pattern, Action};
+    use crate::ast::{Action, Capability, Pattern};
 
     #[test]
     fn test_done_to_dot() {
@@ -357,7 +494,10 @@ mod tests {
     #[test]
     fn test_act_to_dot() {
         let workflow = Workflow::Act {
-            action: Action { name: "notify".to_string(), arguments: vec![] },
+            action: Action {
+                name: "notify".to_string(),
+                arguments: vec![],
+            },
             guard: crate::ast::Guard::Always,
             provenance: crate::Provenance::new(),
         };
@@ -370,10 +510,10 @@ mod tests {
     #[test]
     fn test_observe_to_dot() {
         let workflow = Workflow::Observe {
-            capability: Capability { 
-                name: "sensor".to_string(), 
+            capability: Capability {
+                name: "sensor".to_string(),
                 effect: Effect::Epistemic,
-                constraints: vec![], 
+                constraints: vec![],
             },
             pattern: Pattern::Variable("data".to_string()),
             continuation: Box::new(Workflow::Done),

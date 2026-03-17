@@ -21,7 +21,7 @@ impl Default for WorkflowId {
 }
 
 /// Provenance information for tracking execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Provenance {
     /// Workflow instance ID
     pub workflow_id: WorkflowId,

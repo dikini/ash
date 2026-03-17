@@ -2,12 +2,6 @@
 members = [
     "crates/ash-core",
     "crates/ash-macros",
-    "crates/ash-parser",
-    "crates/ash-typeck",
-    "crates/ash-interp",
-    "crates/ash-provenance",
-    "crates/ash-cli",
-    "crates/ash-lint",
     "crates/ash-doc-tests",
 ]
 # ash-fuzz excluded - requires nightly toolchain for fuzzing

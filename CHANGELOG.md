@@ -9,6 +9,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Added
 - Initial project structure with workspace and 9 crates (ash-core, ash-macros, ash-parser, ash-typeck, ash-interp, ash-provenance, ash-cli, ash-lint, ash-doc-tests)
 - Effect lattice implementation with 4 levels: Epistemic, Deliberative, Evaluative, Operational (TASK-001)
+- Comprehensive property tests for Effect lattice: associativity, commutativity, idempotence, absorption, identity (18 property tests)
 - Core AST definitions for workflow language (SPEC-001)
 - AST visualization module generating Graphviz DOT output
 - Comprehensive development tooling: git hooks, sccache, insta, proptest

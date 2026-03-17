@@ -14,6 +14,9 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 ash-core = { path = "../ash-core" }
+ash-parser = { path = "../ash-parser" }
+ash-typeck = { path = "../ash-typeck" }
+serde_json = "1.0"
 
 # Prevent this from interfering with the main workspace
 [workspace]
@@ -28,5 +31,17 @@ doc = false
 [[bin]]
 name = "fuzz_value_roundtrip"
 path = "fuzz_targets/fuzz_value_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "parse"
+path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "typeck"
+path = "fuzz_targets/typeck.rs"
 test = false
 doc = false

@@ -57,6 +57,21 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - repl command with rustyline integration, :help, :type, :bindings commands
 - dot command for Graphviz DOT output generation
 - 23 CLI tests for argument parsing, command execution, and help output
+- Example workflows: 12 examples across 4 categories (basics, control-flow, policies, real-world) (TASK-047)
+- Examples README with overview, quick start, and learning path
+- Basics examples: hello-world, variables, expressions, observe pattern
+- Control flow examples: conditionals, foreach, parallel, sequential
+- Policy examples: role-based and time-based access control
+- Real-world examples: customer support and code review workflows
+- Comprehensive tutorial covering installation through real-world examples (TASK-048)
+- API documentation for all crates: ash-core, ash-parser, ash-typeck, ash-interp, ash-provenance, ash-cli (TASK-049)
+- Core benchmarks: effect operations, value operations, pattern matching (TASK-050)
+- Parser benchmarks: simple, complex, and nested workflow parsing
+- Interpreter benchmarks: workflow construction, expression evaluation, traversal
+- Serialization benchmarks: JSON roundtrip for workflows and values
+- Optimization documentation: performance characteristics and tuning guide (TASK-051)
+- Parser fuzzing target for validating input handling (TASK-052)
+- Type checker fuzzing target for crash detection
 
 ### Changed
 

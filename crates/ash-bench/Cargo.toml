@@ -1,10 +1,10 @@
 [package]
 name = "ash-bench"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-authors.workspace = true
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94.0"
+license = "MIT OR Apache-2.0"
+authors = ["Ash Contributors"]
 description = "Benchmarks for Ash workflow language"
 publish = false
 
@@ -30,4 +30,14 @@ harness = false
 [[bench]]
 name = "interpreter"
 path = "benches/interpreter.rs"
+harness = false
+
+[[bench]]
+name = "core"
+path = "benches/core.rs"
+harness = false
+
+[[bench]]
+name = "interp"
+path = "benches/interp.rs"
 harness = false

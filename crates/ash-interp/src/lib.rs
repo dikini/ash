@@ -1,0 +1,95 @@
+//! Ash Interpreter
+//!
+//! This crate provides the runtime interpreter for executing Ash workflows.
+//!
+//! # Example
+//!
+//! ```
+//! use ash_core::{Workflow, Expr, Value};
+//! use ash_interp::interpret;
+//!
+//! # tokio_test::block_on(async {
+//! let workflow = Workflow::Ret { expr: Expr::Literal(Value::Int(42)) };
+//! let result = interpret(&workflow).await.unwrap();
+//! assert_eq!(result, Value::Int(42));
+//! # });
+//! ```
+
+pub mod capability;
+pub mod context;
+pub mod error;
+pub mod eval;
+pub mod execute;
+pub mod guard;
+pub mod pattern;
+pub mod policy;
+
+pub use capability::{CapabilityContext, CapabilityProvider, CapabilityRegistry, MockProvider};
+pub use context::Context;
+pub use error::{EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult};
+pub use eval::eval_expr;
+pub use execute::{execute_simple, execute_workflow};
+pub use guard::eval_guard;
+pub use pattern::match_pattern;
+pub use policy::{Policy, PolicyEvaluator, PolicyResult, PolicyRule};
+
+use ash_core::{Value, Workflow};
+
+/// Convenience function to interpret a workflow with default contexts
+///
+/// This is the simplest way to execute a workflow when you don't need
+/// custom capability providers or policies.
+///
+/// # Example
+///
+/// ```
+/// use ash_core::{Workflow, Expr, Value};
+/// use ash_interp::interpret;
+///
+/// # tokio_test::block_on(async {
+/// let workflow = Workflow::Ret { expr: Expr::Literal(Value::String("hello".to_string())) };
+/// let result = interpret(&workflow).await.unwrap();
+/// assert_eq!(result, Value::String("hello".to_string()));
+/// # });
+/// ```
+pub async fn interpret(workflow: &Workflow) -> ExecResult<Value> {
+    execute_simple(workflow).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ash_core::{BinaryOp, Expr, Pattern};
+
+    #[tokio::test]
+    async fn test_interpret_simple() {
+        let workflow = Workflow::Ret {
+            expr: Expr::Literal(Value::Int(42)),
+        };
+        let result = interpret(&workflow).await.unwrap();
+        assert_eq!(result, Value::Int(42));
+    }
+
+    #[tokio::test]
+    async fn test_interpret_complex() {
+        // let x = 10 in let y = 20 in x + y
+        let workflow = Workflow::Let {
+            pattern: Pattern::Variable("x".to_string()),
+            expr: Expr::Literal(Value::Int(10)),
+            continuation: Box::new(Workflow::Let {
+                pattern: Pattern::Variable("y".to_string()),
+                expr: Expr::Literal(Value::Int(20)),
+                continuation: Box::new(Workflow::Ret {
+                    expr: Expr::Binary {
+                        op: BinaryOp::Add,
+                        left: Box::new(Expr::Variable("x".to_string())),
+                        right: Box::new(Expr::Variable("y".to_string())),
+                    },
+                }),
+            }),
+        };
+
+        let result = interpret(&workflow).await.unwrap();
+        assert_eq!(result, Value::Int(30));
+    }
+}

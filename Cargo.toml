@@ -3,6 +3,7 @@ members = [
     "crates/ash-core",
     "crates/ash-parser",
     "crates/ash-typeck",
+    "crates/ash-interp",
     "crates/ash-macros",
     "crates/ash-doc-tests",
 ]

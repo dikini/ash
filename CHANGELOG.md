@@ -41,6 +41,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - 16 lexer tests for keywords, identifiers, literals, operators, spans, recovery (TASK-009)
 - 23 lexer property tests: identifiers, literals, spans, error recovery, stress tests (TASK-010)
 - Lexer property tests: 18 proptest-based tests for identifiers, literals, spans, error recovery, and stress testing (TASK-010)
+- Surface AST types for parser: Program, Definition, Workflow, Expr, Pattern, and supporting types with full span tracking (TASK-011)
+- 49 surface AST tests: construction tests for all major types, span extraction tests, and variant coverage (TASK-011)
 
 ### Changed
 

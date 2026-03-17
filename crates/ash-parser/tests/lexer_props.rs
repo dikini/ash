@@ -3,21 +3,57 @@
 //! These tests use proptest to verify lexer invariants across
 //! a wide range of generated inputs.
 
-use ash_parser::{lex, lex_with_recovery, TokenKind};
+use ash_parser::{TokenKind, lex, lex_with_recovery};
 use proptest::prelude::*;
 
 // List of all keywords to test that they are not treated as identifiers
 const KEYWORDS: &[&str] = &[
-    "workflow", "capability", "policy", "role",
-    "observe", "orient", "propose", "decide", "act",
-    "oblige", "check", "let", "if", "then", "else", "for", "do", "par", "with",
-    "maybe", "must", "attempt", "retry", "timeout", "done",
-    "epistemic", "deliberative", "evaluative", "operational",
-    "authority", "obligations", "supervises",
-    "when", "returns", "where",
-    "permit", "deny", "require_approval", "escalate",
-    "in", "not", "and", "or",
-    "true", "false", "null",
+    "workflow",
+    "capability",
+    "policy",
+    "role",
+    "observe",
+    "orient",
+    "propose",
+    "decide",
+    "act",
+    "oblige",
+    "check",
+    "let",
+    "if",
+    "then",
+    "else",
+    "for",
+    "do",
+    "par",
+    "with",
+    "maybe",
+    "must",
+    "attempt",
+    "retry",
+    "timeout",
+    "done",
+    "epistemic",
+    "deliberative",
+    "evaluative",
+    "operational",
+    "authority",
+    "obligations",
+    "supervises",
+    "when",
+    "returns",
+    "where",
+    "permit",
+    "deny",
+    "require_approval",
+    "escalate",
+    "in",
+    "not",
+    "and",
+    "or",
+    "true",
+    "false",
+    "null",
 ];
 
 mod tests {
@@ -256,7 +292,7 @@ mod tests {
                 .filter(|t| matches!(t.kind.clone(), TokenKind::Ident(_)))
                 .collect();
 
-            prop_assert_eq!(idents.len(), 2, "Expected 2 identifiers, found {:?}", 
+            prop_assert_eq!(idents.len(), 2, "Expected 2 identifiers, found {:?}",
                 idents.iter().map(|t| &t.kind).collect::<Vec<_>>());
         }
 
@@ -275,7 +311,7 @@ mod tests {
                 .filter(|t| matches!(t.kind.clone(), TokenKind::Ident(_)))
                 .collect();
 
-            prop_assert_eq!(idents.len(), 2, "Expected 2 identifiers, found {:?}", 
+            prop_assert_eq!(idents.len(), 2, "Expected 2 identifiers, found {:?}",
                 idents.iter().map(|t| &t.kind).collect::<Vec<_>>());
         }
     }

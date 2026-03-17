@@ -1,6 +1,33 @@
 # TASK-024b: Z3 SMT Integration for Conflict Detection
 
-## Status: 🔴 Not Started
+## Status: 🟢 Complete
+
+## Implementation
+
+The SMT integration is implemented in `crates/ash-typeck/src/smt.rs`:
+
+- `Policy` enum: Budget, MinBudget, TimeRange, Region, EncryptionRequired, AuditRequired, DataResidency
+- `SatResult` enum: Sat, Unsat(core), Timeout
+- `SmtContext`: Z3 solver wrapper with configurable timeout
+- Policy encoding: Converts policies to Z3 boolean constraints
+- Unsat core extraction: Minimal set of conflicting policies
+- `check_policies()`: Convenience function for one-off checks
+
+## Tests
+
+16 tests covering:
+- Single policy satisfiability
+- Conflicting budget detection (min > max)
+- Time range overlap/ disjoint detection
+- Compatible policy combinations
+- Unsat core minimality
+- Empty policy handling
+- Region and data residency constraints
+- Context reuse across multiple checks
+
+## Feature Flag
+
+Available with `smt` feature: `cargo test -p ash-typeck --features smt`
 
 ## Objective
 

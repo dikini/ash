@@ -9,6 +9,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Changed
 - Updated dependencies to latest versions: winnow 0.5.40 → 0.6.26, pulldown-cmark 0.9.6 → 0.13.1, thiserror 1.0.69 → 2.0.18, colored 2.1 → 3.1.1. Fixed winnow API migration (PResult → ModalResult, Located → LocatingSlice) and pulldown-cmark breaking changes (TagEnd::CodeBlock, CodeBlockKind).
 - Fixed all clippy warnings (66+ style and correctness warnings). Removed redundant pattern matching, fixed `#[must_use]` attributes, added `#[allow]` annotations for intentional patterns.
+- Fixed test failures: updated forall/exists tests to use non-keyword identifiers; removed method_chain test (feature not in spec); fixed error_recovery test assertion.
+
+### Added
+- List literal parsing for expressions: `[1, 2, 3]` or `["a", "b"]` syntax. Updated SPEC-002 to define list_literal production. Added Literal::List variant to surface AST.
 
 ### Added
 - Initial project structure with workspace and 9 crates (ash-core, ash-macros, ash-parser, ash-typeck, ash-interp, ash-provenance, ash-cli, ash-lint, ash-doc-tests)

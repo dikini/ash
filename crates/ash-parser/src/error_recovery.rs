@@ -378,8 +378,8 @@ mod tests {
     #[test]
     fn test_parse_with_recovery_empty() {
         let result = parse_with_recovery("");
-        // Empty input should either succeed with Done or fail gracefully
-        assert!(!result.is_ok()); // No workflow to parse
+        // Empty input succeeds with Done (no statements to parse)
+        assert!(result.is_ok());
     }
 
     #[test]

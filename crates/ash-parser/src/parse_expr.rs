@@ -331,7 +331,7 @@ fn parse_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
 
 /// Parse a literal value.
 pub fn literal(input: &mut ParseInput) -> ModalResult<Literal> {
-    alt((parse_string, parse_float, parse_int, parse_bool, parse_null)).parse_next(input)
+    alt((parse_string, parse_float, parse_int, parse_bool, parse_null, parse_list)).parse_next(input)
 }
 
 /// Parse a string literal.
@@ -384,6 +384,37 @@ fn parse_bool(input: &mut ParseInput) -> ModalResult<Literal> {
 /// Parse a null literal.
 fn parse_null(input: &mut ParseInput) -> ModalResult<Literal> {
     keyword("null").map(|_| Literal::Null).parse_next(input)
+}
+
+/// Parse a list literal: [1, 2, 3] or ["a", "b"]
+fn parse_list(input: &mut ParseInput) -> ModalResult<Literal> {
+    let _ = literal_str("[").parse_next(input)?;
+    
+    // Empty list
+    if literal_str("]").parse_next(input).is_ok() {
+        return Ok(Literal::List(vec![]));
+    }
+    
+    // Parse first element
+    let first = literal(input)?;
+    let mut elements = vec![first];
+    
+    // Parse remaining elements
+    loop {
+        if opt(literal_str(",")).parse_next(input)?.is_some() {
+            // Check for trailing comma before ]
+            if literal_str("]").parse_next(input).is_ok() {
+                break;
+            }
+            let elem = literal(input)?;
+            elements.push(elem);
+        } else {
+            break;
+        }
+    }
+    
+    let _ = literal_str("]").parse_next(input)?;
+    Ok(Literal::List(elements))
 }
 
 /// Parse an identifier.

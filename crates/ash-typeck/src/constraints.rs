@@ -238,6 +238,7 @@ pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Ty
             ash_parser::surface::Literal::String(_) => Type::String,
             ash_parser::surface::Literal::Bool(_) => Type::Bool,
             ash_parser::surface::Literal::Null => Type::Null,
+            ash_parser::surface::Literal::List(_) => Type::List(Box::new(Type::Var(ctx.fresh_var()))),
         },
 
         Expr::Variable(name) => {

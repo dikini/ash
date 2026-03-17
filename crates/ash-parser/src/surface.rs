@@ -456,6 +456,8 @@ pub enum Literal {
     Bool(bool),
     /// Null literal
     Null,
+    /// List literal: [1, 2, 3]
+    List(Vec<Literal>),
 }
 
 /// Effect type levels.

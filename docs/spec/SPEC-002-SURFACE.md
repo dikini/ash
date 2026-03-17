@@ -177,7 +177,9 @@ primary         ::= literal
 
 arguments       ::= expression ("," expression)*
 
-literal         ::= STRING | NUMBER | BOOL | NULL
+literal         ::= STRING | NUMBER | BOOL | NULL | list_literal
+
+list_literal    ::= "[" (expression ("," expression)*)? "]"
 ```
 
 ### 3.7 Patterns

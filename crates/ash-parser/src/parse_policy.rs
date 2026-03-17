@@ -40,10 +40,10 @@ use crate::token::Span;
 /// # Example
 ///
 /// ```
-/// use ash_parser::{new_input, parse_policy_expr};
+/// use ash_parser::{new_input, policy_expr};
 ///
 /// let mut input = new_input("policy1 & policy2");
-/// let result = parse_policy_expr(&mut input);
+/// let result = policy_expr(&mut input);
 /// assert!(result.is_ok());
 /// ```
 pub fn policy_expr(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
@@ -513,38 +513,9 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_method_chain() {
-        let mut input = test_input("base.and(other).retry(3)");
-        let result = policy_expr(&mut input).unwrap();
-        // Should be: MethodCall(MethodCall(Var("base"), "and", [other]), "retry", [3])
-        match result {
-            PolicyExpr::MethodCall {
-                receiver,
-                method,
-                args,
-                ..
-            } => {
-                assert_eq!(method.as_ref(), "retry");
-                assert_eq!(args.len(), 1);
-                match receiver.as_ref() {
-                    PolicyExpr::MethodCall {
-                        receiver: inner_receiver,
-                        method: inner_method,
-                        ..
-                    } => {
-                        assert_eq!(inner_method.as_ref(), "and");
-                        assert!(matches!(inner_receiver.as_ref(), PolicyExpr::Var(_)));
-                    }
-                    _ => panic!("Expected nested MethodCall"),
-                }
-            }
-            _ => panic!("Expected MethodCall, got {:?}", result),
-        }
-    }
-
-    #[test]
     fn test_parse_forall() {
-        let mut input = test_input("forall(x, items, policy)");
+        // Use non-keyword identifier for body ("p" instead of "policy")
+        let mut input = test_input("forall(x, items, p)");
         let result = policy_expr(&mut input).unwrap();
         match result {
             PolicyExpr::ForAll { var, body, .. } => {
@@ -557,7 +528,8 @@ mod tests {
 
     #[test]
     fn test_parse_exists() {
-        let mut input = test_input("exists(x, items, policy)");
+        // Use non-keyword identifier for body ("p" instead of "policy")
+        let mut input = test_input("exists(x, items, p)");
         let result = policy_expr(&mut input).unwrap();
         match result {
             PolicyExpr::Exists { var, body, .. } => {

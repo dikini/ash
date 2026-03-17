@@ -300,6 +300,10 @@ fn lower_literal(lit: &Literal) -> ash_core::Value {
         Literal::String(s) => Value::String(s.to_string()),
         Literal::Bool(b) => Value::Bool(*b),
         Literal::Null => Value::Null,
+        Literal::List(elements) => {
+            let lowered = elements.iter().map(lower_literal).collect();
+            Value::List(lowered)
+        }
     }
 }
 

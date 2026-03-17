@@ -60,9 +60,7 @@ impl ProofObligation {
 
     /// Create a fulfill role obligation
     pub fn fulfill_role(role: impl Into<Box<str>>) -> Self {
-        Self::FulfillRole {
-            role: role.into(),
-        }
+        Self::FulfillRole { role: role.into() }
     }
 
     /// Create an audit action obligation
@@ -243,11 +241,7 @@ impl ObligationTracker {
     }
 
     /// Mark a named obligation as satisfied
-    pub fn satisfy_named(
-        &mut self,
-        name: &str,
-        witness: Option<ProofWitness>,
-    ) -> bool {
+    pub fn satisfy_named(&mut self, name: &str, witness: Option<ProofWitness>) -> bool {
         if let Some(&id) = self.named.get(name) {
             self.satisfy(id, witness)
         } else {
@@ -396,11 +390,7 @@ impl ObligationContextBuilder {
     }
 
     /// Add a check condition obligation
-    pub fn check_condition(
-        mut self,
-        condition: impl Into<Box<str>>,
-        at: EffectTime,
-    ) -> Self {
+    pub fn check_condition(mut self, condition: impl Into<Box<str>>, at: EffectTime) -> Self {
         self.obligations
             .push(ProofObligation::check_condition(condition, at));
         self
@@ -514,7 +504,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_add() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         assert_eq!(id, 0);
         assert_eq!(tracker.all().len(), 1);
@@ -533,7 +526,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_lookup() {
         let mut tracker = ObligationTracker::new();
-        tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         let found = tracker.lookup("x > 0").unwrap();
         assert_eq!(found.obligation.name(), "x > 0");
@@ -544,7 +540,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_satisfy() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         assert!(tracker.satisfy(id, Some(ProofWitness::Direct)));
         assert!(tracker.get(id).unwrap().is_satisfied());
@@ -553,7 +552,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_satisfy_named() {
         let mut tracker = ObligationTracker::new();
-        tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         assert!(tracker.satisfy_named("x > 0", Some(ProofWitness::Direct)));
         assert!(!tracker.satisfy_named("not_found", None));
@@ -562,7 +564,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_pending() {
         let mut tracker = ObligationTracker::new();
-        let id1 = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id1 = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
         let id2 = tracker.add(ProofObligation::maintain_invariant("valid"));
 
         tracker.satisfy(id1, None);
@@ -575,7 +580,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_satisfied() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         tracker.satisfy(id, None);
 
@@ -587,7 +595,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_failed() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         tracker.fail(id);
 
@@ -598,7 +609,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_all_satisfied() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         assert!(!tracker.all_satisfied());
 
@@ -609,7 +623,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_has_failures() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         assert!(!tracker.has_failures());
 
@@ -620,7 +637,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_count_by_status() {
         let mut tracker = ObligationTracker::new();
-        let id1 = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id1 = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
         let id2 = tracker.add(ProofObligation::maintain_invariant("valid"));
         let _id3 = tracker.add(ProofObligation::satisfy_policy("policy1"));
 
@@ -635,7 +655,10 @@ mod tests {
     #[test]
     fn test_obligation_tracker_clear() {
         let mut tracker = ObligationTracker::new();
-        tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         assert_eq!(tracker.all().len(), 1);
 
@@ -647,7 +670,10 @@ mod tests {
     #[test]
     fn test_check_obligations_success() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
         tracker.satisfy(id, None);
 
         assert_eq!(tracker.check_obligations(), ObligationCheckResult::Success);
@@ -656,7 +682,10 @@ mod tests {
     #[test]
     fn test_check_obligations_pending() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
 
         assert_eq!(
             tracker.check_obligations(),
@@ -667,7 +696,10 @@ mod tests {
     #[test]
     fn test_check_obligations_failed() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
         tracker.fail(id);
 
         assert_eq!(
@@ -735,7 +767,10 @@ mod tests {
     #[test]
     fn test_all_satisfied_with_waived() {
         let mut tracker = ObligationTracker::new();
-        let id = tracker.add(ProofObligation::check_condition("x > 0", EffectTime::Before));
+        let id = tracker.add(ProofObligation::check_condition(
+            "x > 0",
+            EffectTime::Before,
+        ));
         tracker.waive(id);
 
         assert!(tracker.all_satisfied());

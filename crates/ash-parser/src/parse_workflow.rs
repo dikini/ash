@@ -2,14 +2,17 @@
 //!
 //! This module provides parsers for Ash workflow statements and definitions.
 
-use winnow::prelude::*;
 use winnow::combinator::{alt, delimited};
-use winnow::stream::{AsBStr, Stream};
+use winnow::prelude::*;
+use winnow::stream::Stream;
 use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::expr;
-use crate::surface::{ActionRef, Expr, Guard, Name, ObligationRef, Pattern, Workflow, WorkflowDef};
+use crate::surface::{
+    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, Pattern, PolicyInstance, Workflow,
+    WorkflowDef,
+};
 use crate::token::Span;
 
 /// Parse a workflow definition: `workflow <name> { <body> }`
@@ -223,20 +226,76 @@ fn decide_stmt(input: &mut ParseInput) -> PResult<Workflow> {
     })
 }
 
-/// Parse a check statement: `check <obligation>`
+/// Parse a check statement: `check <obligation>` or `check <policy_instance>`
 fn check_stmt(input: &mut ParseInput) -> PResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("check").parse_next(input)?;
-    let obligation = obligation_ref(input)?;
+    let target = check_target(input)?;
 
     let span = span_from(&start_pos, &input.state);
 
     Ok(Workflow::Check {
-        obligation,
+        target,
         continuation: None,
         span,
     })
+}
+
+/// Parse a check target - either an obligation reference or a policy instance.
+fn check_target(input: &mut ParseInput) -> PResult<CheckTarget> {
+    // Try to parse as policy instance first (identifier { ... })
+    if let Ok(target) = policy_instance(input) {
+        return Ok(CheckTarget::Policy(target));
+    }
+
+    // Otherwise parse as obligation reference (role.condition)
+    obligation_ref(input).map(CheckTarget::Obligation)
+}
+
+/// Parse a policy instance: `PolicyName { field: expr, ... }`
+fn policy_instance(input: &mut ParseInput) -> PResult<PolicyInstance> {
+    let start_pos = input.state;
+
+    let name = identifier(input)?;
+    let fields = delimited(literal_str("{"), parse_policy_field_inits, literal_str("}"))
+        .parse_next(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(PolicyInstance {
+        name: name.into(),
+        fields,
+        span,
+    })
+}
+
+/// Parse field initializations for a policy instance.
+fn parse_policy_field_inits(input: &mut ParseInput) -> PResult<Vec<(Name, Expr)>> {
+    let mut fields = Vec::new();
+
+    loop {
+        skip_whitespace_and_comments(input);
+
+        if input.input.is_empty() || input.input.starts_with("}") {
+            break;
+        }
+
+        let field_name = identifier(input)?;
+        let _ = literal_str(":").parse_next(input)?;
+        let value = expr(input)?;
+        fields.push((field_name.into(), value));
+
+        skip_whitespace_and_comments(input);
+
+        // Optional comma
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+        }
+    }
+
+    Ok(fields)
 }
 
 /// Parse an act statement: `act <action> [where <guard>]`
@@ -255,7 +314,11 @@ fn act_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 
     let span = span_from(&start_pos, &input.state);
 
-    Ok(Workflow::Act { action, guard, span })
+    Ok(Workflow::Act {
+        action,
+        guard,
+        span,
+    })
 }
 
 /// Parse a let statement: `let <pattern> = <expr>`
@@ -328,7 +391,8 @@ fn par_stmt(input: &mut ParseInput) -> PResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("par").parse_next(input)?;
-    let branches = delimited(literal_str("{"), parse_par_branches, literal_str("}")).parse_next(input)?;
+    let branches =
+        delimited(literal_str("{"), parse_par_branches, literal_str("}")).parse_next(input)?;
 
     let span = span_from(&start_pos, &input.state);
 
@@ -354,7 +418,9 @@ fn parse_par_branches(input: &mut ParseInput) -> PResult<Vec<Workflow>> {
         // Optional comma or semicolon between branches
         if input.input.starts_with(",") || input.input.starts_with(";") {
             let _ = input.input.next_slice(1);
-            input.state.advance(input.input.chars().next().unwrap_or(' '));
+            input
+                .state
+                .advance(input.input.chars().next().unwrap_or(' '));
         }
     }
 
@@ -485,7 +551,8 @@ fn parse_variable_pattern(input: &mut ParseInput) -> PResult<Pattern> {
 
 /// Parse a tuple pattern: `(pat1, pat2, ...)`
 fn parse_tuple_pattern(input: &mut ParseInput) -> PResult<Pattern> {
-    let patterns = delimited(literal_str("("), parse_pattern_list, literal_str(")")).parse_next(input)?;
+    let patterns =
+        delimited(literal_str("("), parse_pattern_list, literal_str(")")).parse_next(input)?;
     Ok(Pattern::Tuple(patterns))
 }
 
@@ -623,8 +690,10 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
     let _first = one_of(|c: char| c.is_ascii_alphabetic() || c == '_').parse_next(input)?;
 
     // Remaining characters: alphanumeric, underscore, or hyphen
-    let _: &str = take_while(0.., |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-        .parse_next(input)?;
+    let _: &str = take_while(0.., |c: char| {
+        c.is_ascii_alphanumeric() || c == '_' || c == '-'
+    })
+    .parse_next(input)?;
 
     // Calculate the result from the checkpoint
     let consumed_len = input.state.offset - checkpoint.state.offset;
@@ -649,13 +718,7 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
-            if after.is_empty()
-                || !after
-                    .chars()
-                    .next()
-                    .unwrap()
-                    .is_ascii_alphanumeric()
-            {
+            if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
                 // Update position state
                 for c in word.chars() {
                     input.state.advance(c);
@@ -937,5 +1000,58 @@ mod tests {
         let result = action_ref(&mut input).unwrap();
         assert_eq!(result.name.as_ref(), "send_email");
         assert_eq!(result.args.len(), 2);
+    }
+
+    #[test]
+    fn test_check_stmt_with_obligation() {
+        let mut input = test_input("check admin.is_active");
+        let result = check_stmt(&mut input).unwrap();
+        assert!(matches!(result, Workflow::Check { .. }));
+        match result {
+            Workflow::Check { target, .. } => {
+                assert!(matches!(target, CheckTarget::Obligation(_)));
+            }
+            _ => panic!("Expected Check workflow"),
+        }
+    }
+
+    #[test]
+    fn test_check_stmt_with_policy_instance() {
+        let mut input = test_input("check RateLimit { requests: 100, window_secs: 60 }");
+        let result = check_stmt(&mut input).unwrap();
+        assert!(matches!(result, Workflow::Check { .. }));
+        match result {
+            Workflow::Check { target, .. } => {
+                assert!(matches!(target, CheckTarget::Policy(_)));
+            }
+            _ => panic!("Expected Check workflow with policy target"),
+        }
+    }
+
+    #[test]
+    fn test_policy_instance_parsing() {
+        let mut input = test_input("RateLimit { requests: 100, window_secs: 60 }");
+        let result = policy_instance(&mut input).unwrap();
+        assert_eq!(result.name.as_ref(), "RateLimit");
+        assert_eq!(result.fields.len(), 2);
+        assert_eq!(result.fields[0].0.as_ref(), "requests");
+        assert_eq!(result.fields[1].0.as_ref(), "window_secs");
+    }
+
+    #[test]
+    fn test_policy_instance_single_field() {
+        let mut input = test_input("MaxLatency { milliseconds: 500 }");
+        let result = policy_instance(&mut input).unwrap();
+        assert_eq!(result.name.as_ref(), "MaxLatency");
+        assert_eq!(result.fields.len(), 1);
+        assert_eq!(result.fields[0].0.as_ref(), "milliseconds");
+    }
+
+    #[test]
+    fn test_policy_instance_with_string_value() {
+        let mut input = test_input("DataResidency { allowed_regions: [\"us-east-1\"] }");
+        let result = policy_instance(&mut input).unwrap();
+        assert_eq!(result.name.as_ref(), "DataResidency");
+        assert_eq!(result.fields.len(), 1);
     }
 }

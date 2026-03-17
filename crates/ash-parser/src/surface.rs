@@ -51,10 +51,36 @@ pub struct CapabilityDef {
 pub struct PolicyDef {
     /// Name of the policy
     pub name: Name,
-    /// Condition expression
-    pub condition: Expr,
-    /// Decision made when condition is met
-    pub decision: Decision,
+    /// Type parameters for generic policies
+    pub type_params: Vec<Name>,
+    /// Fields of the policy
+    pub fields: Vec<PolicyField>,
+    /// Where clause for invariants
+    pub where_clause: Option<Expr>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A field in a policy definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PolicyField {
+    /// Name of the field
+    pub name: Name,
+    /// Type of the field
+    pub ty: Type,
+    /// Default value (optional)
+    pub default: Option<Expr>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A policy instance (usage of a policy).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PolicyInstance {
+    /// Name of the policy being instantiated
+    pub name: Name,
+    /// Field initializations
+    pub fields: Vec<(Name, Expr)>,
     /// Source span
     pub span: Span,
 }
@@ -134,10 +160,10 @@ pub enum Workflow {
         /// Source span
         span: Span,
     },
-    /// Check phase: verify an obligation
+    /// Check phase: verify an obligation or policy instance
     Check {
-        /// Obligation to check
-        obligation: ObligationRef,
+        /// The check target - either an obligation reference (legacy) or policy instance
+        target: CheckTarget,
         /// Optional continuation
         continuation: Option<Box<Workflow>>,
         /// Source span
@@ -287,6 +313,72 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
+    /// Policy expression
+    Policy(PolicyExpr),
+}
+
+/// Policy expression for combinators.
+///
+/// Policy expressions allow building complex policies from simple primitives
+/// using logical, arithmetic, and higher-order combinators (SPEC-007).
+#[derive(Debug, Clone, PartialEq)]
+pub enum PolicyExpr {
+    /// Variable reference to a policy
+    Var(Name),
+    /// Conjunction: all policies must hold
+    And(Vec<PolicyExpr>),
+    /// Disjunction: at least one policy must hold
+    Or(Vec<PolicyExpr>),
+    /// Negation: policy must not hold
+    Not(Box<PolicyExpr>),
+    /// Implication: if antecedent then consequent
+    Implies(Box<PolicyExpr>, Box<PolicyExpr>),
+    /// Sequential composition: policies apply in order
+    Sequential(Vec<PolicyExpr>),
+    /// Concurrent composition: policies apply simultaneously
+    Concurrent(Vec<PolicyExpr>),
+    /// Universal quantifier: all items satisfy the policy
+    ForAll {
+        /// Variable name for each item
+        var: Name,
+        /// Collection expression
+        items: Box<Expr>,
+        /// Policy body
+        body: Box<PolicyExpr>,
+        /// Source span
+        span: Span,
+    },
+    /// Existential quantifier: at least one item satisfies the policy
+    Exists {
+        /// Variable name for each item
+        var: Name,
+        /// Collection expression
+        items: Box<Expr>,
+        /// Policy body
+        body: Box<PolicyExpr>,
+        /// Source span
+        span: Span,
+    },
+    /// Method call on a policy: receiver.method(args)
+    MethodCall {
+        /// Receiver policy expression
+        receiver: Box<PolicyExpr>,
+        /// Method name
+        method: Name,
+        /// Method arguments
+        args: Vec<Expr>,
+        /// Source span
+        span: Span,
+    },
+    /// Function call returning a policy
+    Call {
+        /// Function name
+        func: Name,
+        /// Function arguments
+        args: Vec<Expr>,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Unary operators.
@@ -419,6 +511,15 @@ pub struct ObligationRef {
     pub condition: Expr,
 }
 
+/// Target of a check statement - either an obligation or a policy instance.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CheckTarget {
+    /// Legacy obligation reference
+    Obligation(ObligationRef),
+    /// Policy instance check
+    Policy(PolicyInstance),
+}
+
 /// Parameter with name and type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
@@ -512,7 +613,35 @@ impl Spanned for Expr {
             Expr::Unary { span, .. } => *span,
             Expr::Binary { span, .. } => *span,
             Expr::Call { span, .. } => *span,
+            Expr::Policy(policy_expr) => policy_expr.span(),
         }
+    }
+}
+
+impl Spanned for PolicyExpr {
+    fn span(&self) -> Span {
+        match self {
+            PolicyExpr::Var(_) => Span::default(),
+            PolicyExpr::And(exprs) => {
+                // Return span of first expression, or default if empty
+                exprs.first().map(Spanned::span).unwrap_or_default()
+            }
+            PolicyExpr::Or(exprs) => exprs.first().map(Spanned::span).unwrap_or_default(),
+            PolicyExpr::Not(expr) => expr.span(),
+            PolicyExpr::Implies(left, _) => left.span(),
+            PolicyExpr::Sequential(exprs) => exprs.first().map(Spanned::span).unwrap_or_default(),
+            PolicyExpr::Concurrent(exprs) => exprs.first().map(Spanned::span).unwrap_or_default(),
+            PolicyExpr::ForAll { span, .. } => *span,
+            PolicyExpr::Exists { span, .. } => *span,
+            PolicyExpr::MethodCall { span, .. } => *span,
+            PolicyExpr::Call { span, .. } => *span,
+        }
+    }
+}
+
+impl Spanned for PolicyInstance {
+    fn span(&self) -> Span {
+        self.span
     }
 }
 
@@ -554,9 +683,23 @@ mod tests {
         let _def = Definition::Capability(cap_def);
 
         let policy_def = PolicyDef {
-            name: "allow_admin".into(),
-            condition: Expr::Literal(Literal::Bool(true)),
-            decision: Decision::Permit,
+            name: "RateLimit".into(),
+            type_params: vec![],
+            fields: vec![
+                PolicyField {
+                    name: "requests".into(),
+                    ty: Type::Name("Int".into()),
+                    default: None,
+                    span: Span::new(0, 10, 1, 1),
+                },
+                PolicyField {
+                    name: "window_secs".into(),
+                    ty: Type::Name("Int".into()),
+                    default: None,
+                    span: Span::new(0, 10, 1, 1),
+                },
+            ],
+            where_clause: None,
             span: Span::new(0, 15, 1, 1),
         };
         let _def = Definition::Policy(policy_def);
@@ -600,19 +743,34 @@ mod tests {
     #[test]
     fn test_policy_def_construction() {
         let policy = PolicyDef {
-            name: "check_age".into(),
-            condition: Expr::Binary {
-                op: BinaryOp::Geq,
-                left: Box::new(Expr::Variable("age".into())),
-                right: Box::new(Expr::Literal(Literal::Int(18))),
+            name: "BoundedResource".into(),
+            type_params: vec![],
+            fields: vec![
+                PolicyField {
+                    name: "min".into(),
+                    ty: Type::Name("Int".into()),
+                    default: None,
+                    span: Span::new(0, 10, 1, 1),
+                },
+                PolicyField {
+                    name: "max".into(),
+                    ty: Type::Name("Int".into()),
+                    default: None,
+                    span: Span::new(0, 10, 1, 1),
+                },
+            ],
+            where_clause: Some(Expr::Binary {
+                op: BinaryOp::Leq,
+                left: Box::new(Expr::Variable("min".into())),
+                right: Box::new(Expr::Variable("max".into())),
                 span: Span::new(0, 10, 1, 1),
-            },
-            decision: Decision::Permit,
+            }),
             span: Span::new(0, 30, 1, 1),
         };
 
-        assert_eq!(policy.name, "check_age".into());
-        assert_eq!(policy.decision, Decision::Permit);
+        assert_eq!(policy.name, "BoundedResource".into());
+        assert_eq!(policy.fields.len(), 2);
+        assert!(policy.where_clause.is_some());
     }
 
     #[test]
@@ -735,10 +893,10 @@ mod tests {
     #[test]
     fn test_workflow_check() {
         let wf = Workflow::Check {
-            obligation: ObligationRef {
+            target: CheckTarget::Obligation(ObligationRef {
                 role: "admin".into(),
                 condition: Expr::Literal(Literal::Bool(true)),
-            },
+            }),
             continuation: Some(Box::new(Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
             })),
@@ -747,11 +905,16 @@ mod tests {
 
         match wf {
             Workflow::Check {
-                obligation,
+                target,
                 continuation,
                 ..
             } => {
-                assert_eq!(obligation.role, "admin".into());
+                match target {
+                    CheckTarget::Obligation(obl) => {
+                        assert_eq!(obl.role, "admin".into());
+                    }
+                    _ => panic!("Expected obligation target"),
+                }
                 assert!(continuation.is_some());
             }
             _ => panic!("Expected Check workflow"),
@@ -1060,6 +1223,175 @@ mod tests {
             }
             _ => panic!("Expected Call"),
         }
+    }
+
+    // =========================================================================
+    // PolicyExpr Tests
+    // =========================================================================
+
+    #[test]
+    fn test_policy_expr_var() {
+        let expr = PolicyExpr::Var("my_policy".into());
+        assert!(matches!(expr, PolicyExpr::Var(name) if name.as_ref() == "my_policy"));
+    }
+
+    #[test]
+    fn test_policy_expr_and() {
+        let expr = PolicyExpr::And(vec![
+            PolicyExpr::Var("p1".into()),
+            PolicyExpr::Var("p2".into()),
+        ]);
+        match expr {
+            PolicyExpr::And(exprs) => assert_eq!(exprs.len(), 2),
+            _ => panic!("Expected And"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_or() {
+        let expr = PolicyExpr::Or(vec![
+            PolicyExpr::Var("p1".into()),
+            PolicyExpr::Var("p2".into()),
+        ]);
+        match expr {
+            PolicyExpr::Or(exprs) => assert_eq!(exprs.len(), 2),
+            _ => panic!("Expected Or"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_not() {
+        let expr = PolicyExpr::Not(Box::new(PolicyExpr::Var("p".into())));
+        match expr {
+            PolicyExpr::Not(inner) => {
+                assert!(matches!(inner.as_ref(), PolicyExpr::Var(_)));
+            }
+            _ => panic!("Expected Not"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_implies() {
+        let expr = PolicyExpr::Implies(
+            Box::new(PolicyExpr::Var("a".into())),
+            Box::new(PolicyExpr::Var("b".into())),
+        );
+        match expr {
+            PolicyExpr::Implies(left, right) => {
+                assert!(matches!(left.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(right.as_ref(), PolicyExpr::Var(_)));
+            }
+            _ => panic!("Expected Implies"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_sequential() {
+        let expr = PolicyExpr::Sequential(vec![
+            PolicyExpr::Var("p1".into()),
+            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var("p3".into()),
+        ]);
+        match expr {
+            PolicyExpr::Sequential(exprs) => assert_eq!(exprs.len(), 3),
+            _ => panic!("Expected Sequential"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_concurrent() {
+        let expr = PolicyExpr::Concurrent(vec![
+            PolicyExpr::Var("p1".into()),
+            PolicyExpr::Var("p2".into()),
+        ]);
+        match expr {
+            PolicyExpr::Concurrent(exprs) => assert_eq!(exprs.len(), 2),
+            _ => panic!("Expected Concurrent"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_forall() {
+        let expr = PolicyExpr::ForAll {
+            var: "x".into(),
+            items: Box::new(Expr::Variable("items".into())),
+            body: Box::new(PolicyExpr::Var("policy".into())),
+            span: Span::new(0, 20, 1, 1),
+        };
+        match expr {
+            PolicyExpr::ForAll { var, body, .. } => {
+                assert_eq!(var.as_ref(), "x");
+                assert!(matches!(body.as_ref(), PolicyExpr::Var(_)));
+            }
+            _ => panic!("Expected ForAll"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_exists() {
+        let expr = PolicyExpr::Exists {
+            var: "x".into(),
+            items: Box::new(Expr::Variable("items".into())),
+            body: Box::new(PolicyExpr::Var("policy".into())),
+            span: Span::new(0, 20, 1, 1),
+        };
+        match expr {
+            PolicyExpr::Exists { var, body, .. } => {
+                assert_eq!(var.as_ref(), "x");
+                assert!(matches!(body.as_ref(), PolicyExpr::Var(_)));
+            }
+            _ => panic!("Expected Exists"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_method_call() {
+        let expr = PolicyExpr::MethodCall {
+            receiver: Box::new(PolicyExpr::Var("base".into())),
+            method: "and".into(),
+            args: vec![Expr::Variable("other".into())],
+            span: Span::new(0, 15, 1, 1),
+        };
+        match expr {
+            PolicyExpr::MethodCall {
+                receiver,
+                method,
+                args,
+                ..
+            } => {
+                assert!(matches!(receiver.as_ref(), PolicyExpr::Var(_)));
+                assert_eq!(method.as_ref(), "and");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected MethodCall"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_call() {
+        let expr = PolicyExpr::Call {
+            func: "rate_limit".into(),
+            args: vec![Expr::Literal(Literal::Int(100))],
+            span: Span::new(0, 15, 1, 1),
+        };
+        match expr {
+            PolicyExpr::Call { func, args, .. } => {
+                assert_eq!(func.as_ref(), "rate_limit");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected Call"),
+        }
+    }
+
+    #[test]
+    fn test_policy_expr_span() {
+        let span = Span::new(10, 20, 1, 5);
+        let expr = PolicyExpr::Call {
+            func: "test".into(),
+            args: vec![],
+            span,
+        };
+        assert_eq!(expr.span(), span);
     }
 
     // =========================================================================
@@ -1443,10 +1775,10 @@ mod tests {
         );
         assert_eq!(
             Workflow::Check {
-                obligation: ObligationRef {
+                target: CheckTarget::Obligation(ObligationRef {
                     role: "x".into(),
                     condition: Expr::Literal(Literal::Null)
-                },
+                }),
                 continuation: None,
                 span
             }

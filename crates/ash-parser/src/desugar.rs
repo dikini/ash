@@ -6,7 +6,7 @@
 //! - Optional binding expansion
 //! - Other syntactic sugar elimination
 
-use crate::surface::{Pattern, Workflow};
+use crate::surface::{CheckTarget, Pattern, Workflow};
 use crate::token::Span;
 
 /// Desugar a workflow definition, applying all transformation passes.
@@ -25,7 +25,11 @@ pub fn desugar_workflow(workflow: &Workflow) -> Workflow {
 /// This pass ensures all sequencing is represented as explicit `Seq` nodes.
 fn desugar_sequencing(workflow: &Workflow) -> Workflow {
     match workflow {
-        Workflow::Seq { first, second, span } => {
+        Workflow::Seq {
+            first,
+            second,
+            span,
+        } => {
             let new_first = desugar_sequencing(first);
             let new_second = desugar_sequencing(second);
             Workflow::Seq {
@@ -34,12 +38,17 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
+
         // For workflows with continuations, desugar the continuation
-        Workflow::Observe { capability, binding, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_sequencing(c))
-            });
+        Workflow::Observe {
+            capability,
+            binding,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_sequencing(c)));
             Workflow::Observe {
                 capability: capability.clone(),
                 binding: binding.clone(),
@@ -47,11 +56,16 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
-        Workflow::Orient { expr, binding, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_sequencing(c))
-            });
+
+        Workflow::Orient {
+            expr,
+            binding,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_sequencing(c)));
             Workflow::Orient {
                 expr: expr.clone(),
                 binding: binding.clone(),
@@ -59,11 +73,16 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
-        Workflow::Propose { action, binding, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_sequencing(c))
-            });
+
+        Workflow::Propose {
+            action,
+            binding,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_sequencing(c)));
             Workflow::Propose {
                 action: action.clone(),
                 binding: binding.clone(),
@@ -71,22 +90,31 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
-        Workflow::Check { obligation, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_sequencing(c))
-            });
+
+        Workflow::Check {
+            target,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_sequencing(c)));
             Workflow::Check {
-                obligation: obligation.clone(),
+                target: target.clone(),
                 continuation: new_continuation,
                 span: *span,
             }
         }
-        
-        Workflow::Let { pattern, expr, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_sequencing(c))
-            });
+
+        Workflow::Let {
+            pattern,
+            expr,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_sequencing(c)));
             Workflow::Let {
                 pattern: pattern.clone(),
                 expr: expr.clone(),
@@ -94,66 +122,80 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
+
         // For other constructs, recursively desugar nested workflows
-        Workflow::Decide { expr, policy, then_branch, else_branch, span } => {
-            Workflow::Decide {
-                expr: expr.clone(),
-                policy: policy.clone(),
-                then_branch: Box::new(desugar_sequencing(then_branch)),
-                else_branch: else_branch.as_ref().map(|e| Box::new(desugar_sequencing(e))),
-                span: *span,
-            }
-        }
-        
-        Workflow::If { condition, then_branch, else_branch, span } => {
-            Workflow::If {
-                condition: condition.clone(),
-                then_branch: Box::new(desugar_sequencing(then_branch)),
-                else_branch: else_branch.as_ref().map(|e| Box::new(desugar_sequencing(e))),
-                span: *span,
-            }
-        }
-        
-        Workflow::For { pattern, collection, body, span } => {
-            Workflow::For {
-                pattern: pattern.clone(),
-                collection: collection.clone(),
-                body: Box::new(desugar_sequencing(body)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Par { branches, span } => {
-            Workflow::Par {
-                branches: branches.iter().map(desugar_sequencing).collect(),
-                span: *span,
-            }
-        }
-        
-        Workflow::With { capability, body, span } => {
-            Workflow::With {
-                capability: capability.clone(),
-                body: Box::new(desugar_sequencing(body)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Maybe { primary, fallback, span } => {
-            Workflow::Maybe {
-                primary: Box::new(desugar_sequencing(primary)),
-                fallback: Box::new(desugar_sequencing(fallback)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Must { body, span } => {
-            Workflow::Must {
-                body: Box::new(desugar_sequencing(body)),
-                span: *span,
-            }
-        }
-        
+        Workflow::Decide {
+            expr,
+            policy,
+            then_branch,
+            else_branch,
+            span,
+        } => Workflow::Decide {
+            expr: expr.clone(),
+            policy: policy.clone(),
+            then_branch: Box::new(desugar_sequencing(then_branch)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|e| Box::new(desugar_sequencing(e))),
+            span: *span,
+        },
+
+        Workflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            span,
+        } => Workflow::If {
+            condition: condition.clone(),
+            then_branch: Box::new(desugar_sequencing(then_branch)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|e| Box::new(desugar_sequencing(e))),
+            span: *span,
+        },
+
+        Workflow::For {
+            pattern,
+            collection,
+            body,
+            span,
+        } => Workflow::For {
+            pattern: pattern.clone(),
+            collection: collection.clone(),
+            body: Box::new(desugar_sequencing(body)),
+            span: *span,
+        },
+
+        Workflow::Par { branches, span } => Workflow::Par {
+            branches: branches.iter().map(desugar_sequencing).collect(),
+            span: *span,
+        },
+
+        Workflow::With {
+            capability,
+            body,
+            span,
+        } => Workflow::With {
+            capability: capability.clone(),
+            body: Box::new(desugar_sequencing(body)),
+            span: *span,
+        },
+
+        Workflow::Maybe {
+            primary,
+            fallback,
+            span,
+        } => Workflow::Maybe {
+            primary: Box::new(desugar_sequencing(primary)),
+            fallback: Box::new(desugar_sequencing(fallback)),
+            span: *span,
+        },
+
+        Workflow::Must { body, span } => Workflow::Must {
+            body: Box::new(desugar_sequencing(body)),
+            span: *span,
+        },
+
         // Leaf nodes
         Workflow::Act { .. } | Workflow::Done { .. } => workflow.clone(),
     }
@@ -165,11 +207,16 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
 /// this pass inserts a wildcard pattern to make the binding explicit.
 fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
     match workflow {
-        Workflow::Observe { capability, binding, continuation, span } => {
+        Workflow::Observe {
+            capability,
+            binding,
+            continuation,
+            span,
+        } => {
             let new_binding = binding.clone().or(Some(Pattern::Wildcard));
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_optional_bindings(c))
-            });
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_optional_bindings(c)));
             Workflow::Observe {
                 capability: capability.clone(),
                 binding: new_binding,
@@ -177,11 +224,16 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
-        Workflow::Orient { expr, binding, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_optional_bindings(c))
-            });
+
+        Workflow::Orient {
+            expr,
+            binding,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_optional_bindings(c)));
             Workflow::Orient {
                 expr: expr.clone(),
                 binding: binding.clone(),
@@ -189,11 +241,16 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
-        Workflow::Propose { action, binding, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_optional_bindings(c))
-            });
+
+        Workflow::Propose {
+            action,
+            binding,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_optional_bindings(c)));
             Workflow::Propose {
                 action: action.clone(),
                 binding: binding.clone(),
@@ -201,31 +258,42 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
+
         // Recursively process other constructs
-        Workflow::Seq { first, second, span } => {
-            Workflow::Seq {
-                first: Box::new(desugar_optional_bindings(first)),
-                second: Box::new(desugar_optional_bindings(second)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Check { obligation, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_optional_bindings(c))
-            });
+        Workflow::Seq {
+            first,
+            second,
+            span,
+        } => Workflow::Seq {
+            first: Box::new(desugar_optional_bindings(first)),
+            second: Box::new(desugar_optional_bindings(second)),
+            span: *span,
+        },
+
+        Workflow::Check {
+            target,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_optional_bindings(c)));
             Workflow::Check {
-                obligation: obligation.clone(),
+                target: target.clone(),
                 continuation: new_continuation,
                 span: *span,
             }
         }
-        
-        Workflow::Let { pattern, expr, continuation, span } => {
-            let new_continuation = continuation.as_ref().map(|c| {
-                Box::new(desugar_optional_bindings(c))
-            });
+
+        Workflow::Let {
+            pattern,
+            expr,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_optional_bindings(c)));
             Workflow::Let {
                 pattern: pattern.clone(),
                 expr: expr.clone(),
@@ -233,65 +301,79 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
                 span: *span,
             }
         }
-        
-        Workflow::Decide { expr, policy, then_branch, else_branch, span } => {
-            Workflow::Decide {
-                expr: expr.clone(),
-                policy: policy.clone(),
-                then_branch: Box::new(desugar_optional_bindings(then_branch)),
-                else_branch: else_branch.as_ref().map(|e| Box::new(desugar_optional_bindings(e))),
-                span: *span,
-            }
-        }
-        
-        Workflow::If { condition, then_branch, else_branch, span } => {
-            Workflow::If {
-                condition: condition.clone(),
-                then_branch: Box::new(desugar_optional_bindings(then_branch)),
-                else_branch: else_branch.as_ref().map(|e| Box::new(desugar_optional_bindings(e))),
-                span: *span,
-            }
-        }
-        
-        Workflow::For { pattern, collection, body, span } => {
-            Workflow::For {
-                pattern: pattern.clone(),
-                collection: collection.clone(),
-                body: Box::new(desugar_optional_bindings(body)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Par { branches, span } => {
-            Workflow::Par {
-                branches: branches.iter().map(desugar_optional_bindings).collect(),
-                span: *span,
-            }
-        }
-        
-        Workflow::With { capability, body, span } => {
-            Workflow::With {
-                capability: capability.clone(),
-                body: Box::new(desugar_optional_bindings(body)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Maybe { primary, fallback, span } => {
-            Workflow::Maybe {
-                primary: Box::new(desugar_optional_bindings(primary)),
-                fallback: Box::new(desugar_optional_bindings(fallback)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Must { body, span } => {
-            Workflow::Must {
-                body: Box::new(desugar_optional_bindings(body)),
-                span: *span,
-            }
-        }
-        
+
+        Workflow::Decide {
+            expr,
+            policy,
+            then_branch,
+            else_branch,
+            span,
+        } => Workflow::Decide {
+            expr: expr.clone(),
+            policy: policy.clone(),
+            then_branch: Box::new(desugar_optional_bindings(then_branch)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|e| Box::new(desugar_optional_bindings(e))),
+            span: *span,
+        },
+
+        Workflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            span,
+        } => Workflow::If {
+            condition: condition.clone(),
+            then_branch: Box::new(desugar_optional_bindings(then_branch)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|e| Box::new(desugar_optional_bindings(e))),
+            span: *span,
+        },
+
+        Workflow::For {
+            pattern,
+            collection,
+            body,
+            span,
+        } => Workflow::For {
+            pattern: pattern.clone(),
+            collection: collection.clone(),
+            body: Box::new(desugar_optional_bindings(body)),
+            span: *span,
+        },
+
+        Workflow::Par { branches, span } => Workflow::Par {
+            branches: branches.iter().map(desugar_optional_bindings).collect(),
+            span: *span,
+        },
+
+        Workflow::With {
+            capability,
+            body,
+            span,
+        } => Workflow::With {
+            capability: capability.clone(),
+            body: Box::new(desugar_optional_bindings(body)),
+            span: *span,
+        },
+
+        Workflow::Maybe {
+            primary,
+            fallback,
+            span,
+        } => Workflow::Maybe {
+            primary: Box::new(desugar_optional_bindings(primary)),
+            fallback: Box::new(desugar_optional_bindings(fallback)),
+            span: *span,
+        },
+
+        Workflow::Must { body, span } => Workflow::Must {
+            body: Box::new(desugar_optional_bindings(body)),
+            span: *span,
+        },
+
         Workflow::Act { .. } | Workflow::Done { .. } => workflow.clone(),
     }
 }
@@ -303,130 +385,172 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
 fn desugar_nested_blocks(workflow: &Workflow) -> Workflow {
     match workflow {
         // Flatten nested Seq if either side is Done
-        Workflow::Seq { first, second, span } => {
+        Workflow::Seq {
+            first,
+            second,
+            span,
+        } => {
             let new_first = desugar_nested_blocks(first);
             let new_second = desugar_nested_blocks(second);
-            
+
             // If first is Done, just return second
             if matches!(new_first, Workflow::Done { .. }) {
                 return new_second;
             }
-            
+
             // If second is Done, just return first
             if matches!(new_second, Workflow::Done { .. }) {
                 return new_first;
             }
-            
+
             Workflow::Seq {
                 first: Box::new(new_first),
                 second: Box::new(new_second),
                 span: *span,
             }
         }
-        
+
         // Recursively process other constructs
-        Workflow::Observe { capability, binding, continuation, span } => {
-            Workflow::Observe {
-                capability: capability.clone(),
-                binding: binding.clone(),
-                continuation: continuation.as_ref().map(|c| Box::new(desugar_nested_blocks(c))),
-                span: *span,
-            }
-        }
-        
-        Workflow::Orient { expr, binding, continuation, span } => {
-            Workflow::Orient {
-                expr: expr.clone(),
-                binding: binding.clone(),
-                continuation: continuation.as_ref().map(|c| Box::new(desugar_nested_blocks(c))),
-                span: *span,
-            }
-        }
-        
-        Workflow::Propose { action, binding, continuation, span } => {
-            Workflow::Propose {
-                action: action.clone(),
-                binding: binding.clone(),
-                continuation: continuation.as_ref().map(|c| Box::new(desugar_nested_blocks(c))),
-                span: *span,
-            }
-        }
-        
-        Workflow::Check { obligation, continuation, span } => {
-            Workflow::Check {
-                obligation: obligation.clone(),
-                continuation: continuation.as_ref().map(|c| Box::new(desugar_nested_blocks(c))),
-                span: *span,
-            }
-        }
-        
-        Workflow::Let { pattern, expr, continuation, span } => {
-            Workflow::Let {
-                pattern: pattern.clone(),
-                expr: expr.clone(),
-                continuation: continuation.as_ref().map(|c| Box::new(desugar_nested_blocks(c))),
-                span: *span,
-            }
-        }
-        
-        Workflow::Decide { expr, policy, then_branch, else_branch, span } => {
-            Workflow::Decide {
-                expr: expr.clone(),
-                policy: policy.clone(),
-                then_branch: Box::new(desugar_nested_blocks(then_branch)),
-                else_branch: else_branch.as_ref().map(|e| Box::new(desugar_nested_blocks(e))),
-                span: *span,
-            }
-        }
-        
-        Workflow::If { condition, then_branch, else_branch, span } => {
-            Workflow::If {
-                condition: condition.clone(),
-                then_branch: Box::new(desugar_nested_blocks(then_branch)),
-                else_branch: else_branch.as_ref().map(|e| Box::new(desugar_nested_blocks(e))),
-                span: *span,
-            }
-        }
-        
-        Workflow::For { pattern, collection, body, span } => {
-            Workflow::For {
-                pattern: pattern.clone(),
-                collection: collection.clone(),
-                body: Box::new(desugar_nested_blocks(body)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Par { branches, span } => {
-            Workflow::Par {
-                branches: branches.iter().map(desugar_nested_blocks).collect(),
-                span: *span,
-            }
-        }
-        
-        Workflow::With { capability, body, span } => {
-            Workflow::With {
-                capability: capability.clone(),
-                body: Box::new(desugar_nested_blocks(body)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Maybe { primary, fallback, span } => {
-            Workflow::Maybe {
-                primary: Box::new(desugar_nested_blocks(primary)),
-                fallback: Box::new(desugar_nested_blocks(fallback)),
-                span: *span,
-            }
-        }
-        
-        Workflow::Must { body, span } => {
-            Workflow::Must {
-                body: Box::new(desugar_nested_blocks(body)),
-                span: *span,
-            }
-        }
-        
+        Workflow::Observe {
+            capability,
+            binding,
+            continuation,
+            span,
+        } => Workflow::Observe {
+            capability: capability.clone(),
+            binding: binding.clone(),
+            continuation: continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_nested_blocks(c))),
+            span: *span,
+        },
+
+        Workflow::Orient {
+            expr,
+            binding,
+            continuation,
+            span,
+        } => Workflow::Orient {
+            expr: expr.clone(),
+            binding: binding.clone(),
+            continuation: continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_nested_blocks(c))),
+            span: *span,
+        },
+
+        Workflow::Propose {
+            action,
+            binding,
+            continuation,
+            span,
+        } => Workflow::Propose {
+            action: action.clone(),
+            binding: binding.clone(),
+            continuation: continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_nested_blocks(c))),
+            span: *span,
+        },
+
+        Workflow::Check {
+            target,
+            continuation,
+            span,
+        } => Workflow::Check {
+            target: target.clone(),
+            continuation: continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_nested_blocks(c))),
+            span: *span,
+        },
+
+        Workflow::Let {
+            pattern,
+            expr,
+            continuation,
+            span,
+        } => Workflow::Let {
+            pattern: pattern.clone(),
+            expr: expr.clone(),
+            continuation: continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_nested_blocks(c))),
+            span: *span,
+        },
+
+        Workflow::Decide {
+            expr,
+            policy,
+            then_branch,
+            else_branch,
+            span,
+        } => Workflow::Decide {
+            expr: expr.clone(),
+            policy: policy.clone(),
+            then_branch: Box::new(desugar_nested_blocks(then_branch)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|e| Box::new(desugar_nested_blocks(e))),
+            span: *span,
+        },
+
+        Workflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            span,
+        } => Workflow::If {
+            condition: condition.clone(),
+            then_branch: Box::new(desugar_nested_blocks(then_branch)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|e| Box::new(desugar_nested_blocks(e))),
+            span: *span,
+        },
+
+        Workflow::For {
+            pattern,
+            collection,
+            body,
+            span,
+        } => Workflow::For {
+            pattern: pattern.clone(),
+            collection: collection.clone(),
+            body: Box::new(desugar_nested_blocks(body)),
+            span: *span,
+        },
+
+        Workflow::Par { branches, span } => Workflow::Par {
+            branches: branches.iter().map(desugar_nested_blocks).collect(),
+            span: *span,
+        },
+
+        Workflow::With {
+            capability,
+            body,
+            span,
+        } => Workflow::With {
+            capability: capability.clone(),
+            body: Box::new(desugar_nested_blocks(body)),
+            span: *span,
+        },
+
+        Workflow::Maybe {
+            primary,
+            fallback,
+            span,
+        } => Workflow::Maybe {
+            primary: Box::new(desugar_nested_blocks(primary)),
+            fallback: Box::new(desugar_nested_blocks(fallback)),
+            span: *span,
+        },
+
+        Workflow::Must { body, span } => Workflow::Must {
+            body: Box::new(desugar_nested_blocks(body)),
+            span: *span,
+        },
+
         Workflow::Act { .. } | Workflow::Done { .. } => workflow.clone(),
     }
 }
@@ -521,7 +645,10 @@ mod tests {
     fn test_desugar_nested_blocks_eliminate_done_right() {
         // x; done should become just x
         let inner = Workflow::Act {
-            action: ActionRef { name: "test".into(), args: vec![] },
+            action: ActionRef {
+                name: "test".into(),
+                args: vec![],
+            },
             guard: None,
             span: dummy_span(),
         };

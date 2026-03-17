@@ -3,7 +3,7 @@
 //! Provides constraint solving using unification and error reporting.
 
 use crate::constraints::Constraint;
-use crate::types::{unify, Substitution, Type, TypeVar, UnifyError};
+use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use ash_core::Effect;
 use std::fmt;
 
@@ -290,7 +290,10 @@ mod tests {
     #[test]
     fn test_solve_effect_constraint_valid() {
         let mut solver = Solver::new();
-        let constraints = vec![Constraint::EffectLeq(Effect::Epistemic, Effect::Operational)];
+        let constraints = vec![Constraint::EffectLeq(
+            Effect::Epistemic,
+            Effect::Operational,
+        )];
 
         let result = solver.solve(&constraints);
         assert!(result.is_ok());
@@ -299,7 +302,10 @@ mod tests {
     #[test]
     fn test_solve_effect_constraint_same() {
         let mut solver = Solver::new();
-        let constraints = vec![Constraint::EffectLeq(Effect::Operational, Effect::Operational)];
+        let constraints = vec![Constraint::EffectLeq(
+            Effect::Operational,
+            Effect::Operational,
+        )];
 
         let result = solver.solve(&constraints);
         assert!(result.is_ok());
@@ -398,7 +404,10 @@ mod tests {
     #[test]
     fn test_has_capability_constraint() {
         let mut solver = Solver::new();
-        let constraints = vec![Constraint::HasCapability("FileIO".into(), Effect::Operational)];
+        let constraints = vec![Constraint::HasCapability(
+            "FileIO".into(),
+            Effect::Operational,
+        )];
 
         let result = solver.solve(&constraints);
         assert!(result.is_ok());

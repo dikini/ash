@@ -10,6 +10,7 @@ pub mod input;
 pub mod lexer;
 pub mod lower;
 pub mod parse_expr;
+pub mod parse_policy;
 pub mod parse_workflow;
 pub mod surface;
 pub mod token;
@@ -22,6 +23,7 @@ pub use input::*;
 pub use lexer::*;
 pub use lower::*;
 pub use parse_expr::*;
+pub use parse_policy::*;
 pub use parse_workflow::*;
 pub use surface::*;
 pub use token::*;
@@ -47,8 +49,8 @@ mod lib_tests {
 
         // Test that winnow parsers work with ParseInput
         let mut input = new_input("hello world");
-        let result: PResult<&str> = take_while(1.., |c: char| c.is_ascii_alphabetic())
-            .parse_next(&mut input);
+        let result: PResult<&str> =
+            take_while(1.., |c: char| c.is_ascii_alphabetic()).parse_next(&mut input);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "hello");
     }
@@ -70,8 +72,7 @@ mod lib_tests {
         assert_eq!(span.end, 4);
 
         // Create an error
-        let error = ParseError::new(span, "test message")
-            .with_expected("something else");
+        let error = ParseError::new(span, "test message").with_expected("something else");
         assert_eq!(error.message, "test message");
         assert_eq!(error.expected.len(), 1);
     }

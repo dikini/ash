@@ -14,6 +14,7 @@ pub mod constraints;
 pub mod effect;
 pub mod names;
 pub mod obligations;
+pub mod policy_check;
 pub mod solver;
 pub mod types;
 
@@ -34,6 +35,7 @@ pub use constraints::*;
 pub use effect::*;
 pub use names::*;
 pub use obligations::*;
+pub use policy_check::*;
 pub use solver::*;
 pub use types::*;
 
@@ -61,9 +63,9 @@ pub fn type_check_workflow(
 ) -> Result<TypeCheckResult, TypeCheckError> {
     // Step 1: Name resolution
     let mut resolver = NameResolver::new();
-    resolver.resolve_workflow(workflow).map_err(|e| {
-        TypeCheckError::ResolutionError(format!("{:?}", e))
-    })?;
+    resolver
+        .resolve_workflow(workflow)
+        .map_err(|e| TypeCheckError::ResolutionError(format!("{:?}", e)))?;
 
     // Step 2: Constraint generation
     let mut ctx = crate::constraints::ConstraintContext::new();
@@ -71,7 +73,8 @@ pub fn type_check_workflow(
 
     // Step 3: Constraint solving
     let mut solver = Solver::new();
-    let substitution = solver.solve(ctx.constraints())
+    let substitution = solver
+        .solve(ctx.constraints())
         .map_err(|e| TypeCheckError::TypeError(format!("{:?}", e)))?;
 
     // Step 4: Effect inference
@@ -125,8 +128,7 @@ pub struct TypeCheckResult {
 impl TypeCheckResult {
     /// Check if type checking succeeded
     pub fn is_ok(&self) -> bool {
-        self.errors.is_empty()
-            && self.obligation_status.is_success()
+        self.errors.is_empty() && self.obligation_status.is_success()
     }
 
     /// Get the final type after applying substitution

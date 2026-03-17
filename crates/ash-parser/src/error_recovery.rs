@@ -8,7 +8,7 @@ use winnow::stream::Stream;
 use winnow::token::take_while;
 
 use crate::error::ParseError;
-use crate::input::{new_input, ParseInput};
+use crate::input::{ParseInput, new_input};
 use crate::surface::Workflow;
 use crate::token::Span;
 
@@ -94,9 +94,8 @@ where
 /// start new statements.
 fn skip_to_stmt_boundary(input: &mut ParseInput) {
     let stmt_start_keywords = [
-        "workflow", "observe", "orient", "propose", "decide", "act",
-        "let", "if", "for", "par", "with", "maybe", "must", "done",
-        "check",
+        "workflow", "observe", "orient", "propose", "decide", "act", "let", "if", "for", "par",
+        "with", "maybe", "must", "done", "check",
     ];
 
     loop {
@@ -116,8 +115,7 @@ fn skip_to_stmt_boundary(input: &mut ParseInput) {
         let is_keyword_boundary = stmt_start_keywords.iter().any(|kw| {
             input.input.starts_with(kw) && {
                 let after = &input.input[kw.len()..];
-                after.is_empty()
-                    || !after.chars().next().unwrap().is_ascii_alphanumeric()
+                after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric()
             }
         });
 
@@ -212,7 +210,10 @@ pub fn recovery_error(input: &ParseInput, message: impl Into<String>) -> ParseEr
 ///
 /// This is a higher-level recovery function that wraps any parser and
 /// returns both the result and any errors that occurred.
-pub fn try_recover<'a, F, O>(mut input: ParseInput<'a>, mut parser: F) -> (Option<O>, Vec<ParseError>)
+pub fn try_recover<'a, F, O>(
+    mut input: ParseInput<'a>,
+    mut parser: F,
+) -> (Option<O>, Vec<ParseError>)
 where
     F: FnMut(&mut ParseInput<'a>) -> PResult<O>,
 {
@@ -284,7 +285,9 @@ mod tests {
 
     #[test]
     fn test_recovered_ok() {
-        let r = Recovered::Ok(Workflow::Done { span: Span::default() });
+        let r = Recovered::Ok(Workflow::Done {
+            span: Span::default(),
+        });
         assert!(r.is_ok());
         assert!(!r.is_err());
     }
@@ -292,7 +295,9 @@ mod tests {
     #[test]
     fn test_recovered_partial() {
         let r = Recovered::Partial(
-            Workflow::Done { span: Span::default() },
+            Workflow::Done {
+                span: Span::default(),
+            },
             vec![ParseError::new(Span::default(), "test error")],
         );
         assert!(r.is_partial());
@@ -303,7 +308,8 @@ mod tests {
 
     #[test]
     fn test_recovered_err() {
-        let r: Recovered<Workflow> = Recovered::Err(vec![ParseError::new(Span::default(), "error")]);
+        let r: Recovered<Workflow> =
+            Recovered::Err(vec![ParseError::new(Span::default(), "error")]);
         assert!(r.is_err());
         assert!(!r.is_ok());
         assert!(r.errors().is_some());

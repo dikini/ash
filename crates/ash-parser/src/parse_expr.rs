@@ -2,10 +2,10 @@
 //!
 //! This module provides parsers for Ash expressions using precedence climbing.
 
-use winnow::prelude::*;
 use winnow::combinator::{alt, delimited, opt, preceded};
-use winnow::stream::{AsBStr, Stream};
-use winnow::token::{literal as lit, one_of, take_while};
+use winnow::prelude::*;
+use winnow::stream::Stream;
+use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
 use crate::surface::{BinaryOp, Expr, Literal, Name, UnaryOp};
@@ -154,7 +154,11 @@ fn additive_expr(input: &mut ParseInput) -> PResult<Expr> {
     let mut left = multiplicative_expr(input)?;
 
     loop {
-        let op = alt((literal_str("+").map(|_| BinaryOp::Add), literal_str("-").map(|_| BinaryOp::Sub))).parse_next(input);
+        let op = alt((
+            literal_str("+").map(|_| BinaryOp::Add),
+            literal_str("-").map(|_| BinaryOp::Sub),
+        ))
+        .parse_next(input);
 
         match op {
             Ok(op) => {
@@ -180,7 +184,11 @@ fn multiplicative_expr(input: &mut ParseInput) -> PResult<Expr> {
     let mut left = unary_expr(input)?;
 
     loop {
-        let op = alt((literal_str("*").map(|_| BinaryOp::Mul), literal_str("/").map(|_| BinaryOp::Div))).parse_next(input);
+        let op = alt((
+            literal_str("*").map(|_| BinaryOp::Mul),
+            literal_str("/").map(|_| BinaryOp::Div),
+        ))
+        .parse_next(input);
 
         match op {
             Ok(op) => {
@@ -216,7 +224,12 @@ fn unary_expr(input: &mut ParseInput) -> PResult<Expr> {
     }
 
     // Try arithmetic negation (but not if it's followed by a number, that's a literal)
-    if let Some(_) = opt(preceded(literal_str("-"), one_of(|c: char| !c.is_ascii_digit()))).parse_next(input)? {
+    if let Some(_) = opt(preceded(
+        literal_str("-"),
+        one_of(|c: char| !c.is_ascii_digit()),
+    ))
+    .parse_next(input)?
+    {
         // This was a minus followed by a non-digit, so it's unary negation
         // We need to backtrack and parse properly
         // For simplicity, just parse the operand
@@ -337,22 +350,15 @@ fn parse_args(input: &mut ParseInput) -> PResult<Vec<Expr>> {
 
 /// Parse a literal value.
 pub fn literal(input: &mut ParseInput) -> PResult<Literal> {
-    alt((
-        parse_string,
-        parse_float,
-        parse_int,
-        parse_bool,
-        parse_null,
-    ))
-    .parse_next(input)
+    alt((parse_string, parse_float, parse_int, parse_bool, parse_null)).parse_next(input)
 }
 
 /// Parse a string literal.
 fn parse_string(input: &mut ParseInput) -> PResult<Literal> {
     let _ = literal_str("\"").parse_next(input)?;
-    
+
     let content = take_while(0.., |c: char| c != '"').parse_next(input)?;
-    
+
     let _ = literal_str("\"").parse_next(input)?;
     Ok(Literal::String(content.into()))
 }
@@ -360,7 +366,7 @@ fn parse_string(input: &mut ParseInput) -> PResult<Literal> {
 /// Parse an integer literal.
 fn parse_int(input: &mut ParseInput) -> PResult<Literal> {
     let digits: &str = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
-    
+
     match digits.parse::<i64>() {
         Ok(n) => Ok(Literal::Int(n)),
         Err(_) => Err(winnow::error::ErrMode::Backtrack(
@@ -375,7 +381,7 @@ fn parse_float(input: &mut ParseInput) -> PResult<Literal> {
     let int_part: &str = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
     let _ = one_of('.').parse_next(input)?;
     let frac_part: &str = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
-    
+
     let full = format!("{}.{}", int_part, frac_part);
     match full.parse::<f64>() {
         Ok(f) => Ok(Literal::Float(f)),
@@ -400,20 +406,22 @@ fn parse_null(input: &mut ParseInput) -> PResult<Literal> {
 }
 
 /// Parse an identifier.
-fn identifier<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
+pub fn identifier<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
     let checkpoint = input.clone();
-    
+
     // First character: letter or underscore
     let _first = one_of(|c: char| c.is_ascii_alphabetic() || c == '_').parse_next(input)?;
-    
+
     // Remaining characters: alphanumeric, underscore, or hyphen
-    let _: &str = take_while(0.., |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-        .parse_next(input)?;
-    
+    let _: &str = take_while(0.., |c: char| {
+        c.is_ascii_alphanumeric() || c == '_' || c == '-'
+    })
+    .parse_next(input)?;
+
     // Calculate the result from the checkpoint
     let consumed_len = input.state.offset - checkpoint.state.offset;
     let result = &checkpoint.input[..consumed_len];
-    
+
     // Check that it's not a keyword
     if is_keyword(result) {
         // Restore input state
@@ -422,7 +430,7 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
             winnow::error::ContextError::new(),
         ));
     }
-    
+
     Ok(result)
 }
 
@@ -483,16 +491,10 @@ fn is_keyword(s: &str) -> bool {
 fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::error::ContextError> {
     move |input: &mut ParseInput<'a>| {
         let start = input.state;
-        
+
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
-            if after.is_empty()
-                || !after
-                    .chars()
-                    .next()
-                    .unwrap()
-                    .is_ascii_alphanumeric()
-            {
+            if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
                 // Update position state
                 for c in word.chars() {
                     input.state.advance(c);
@@ -547,13 +549,13 @@ fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
         let _: PResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
-        
+
         // Check for line comment
         if input.input.starts_with("--") {
             let _: PResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
             continue;
         }
-        
+
         // Check for block comment
         if input.input.starts_with("/*") {
             let _ = input.input.next_slice(2);
@@ -571,7 +573,7 @@ fn skip_whitespace_and_comments(input: &mut ParseInput) {
             }
             continue;
         }
-        
+
         break;
     }
 }
@@ -644,14 +646,26 @@ mod tests {
     fn test_parse_binary_addition() {
         let mut input = test_input("1 + 2");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Binary { op: BinaryOp::Add, .. }));
+        assert!(matches!(
+            result,
+            Expr::Binary {
+                op: BinaryOp::Add,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_parse_binary_multiplication() {
         let mut input = test_input("3 * 4");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Binary { op: BinaryOp::Mul, .. }));
+        assert!(matches!(
+            result,
+            Expr::Binary {
+                op: BinaryOp::Mul,
+                ..
+            }
+        ));
     }
 
     #[test]
@@ -659,12 +673,23 @@ mod tests {
         // Multiplication has higher precedence than addition
         let mut input = test_input("1 + 2 * 3");
         let result = expr(&mut input).unwrap();
-        
+
         // Should be: 1 + (2 * 3), not (1 + 2) * 3
         match result {
-            Expr::Binary { op: BinaryOp::Add, left, right, .. } => {
+            Expr::Binary {
+                op: BinaryOp::Add,
+                left,
+                right,
+                ..
+            } => {
                 assert!(matches!(left.as_ref(), Expr::Literal(Literal::Int(1))));
-                assert!(matches!(right.as_ref(), Expr::Binary { op: BinaryOp::Mul, .. }));
+                assert!(matches!(
+                    right.as_ref(),
+                    Expr::Binary {
+                        op: BinaryOp::Mul,
+                        ..
+                    }
+                ));
             }
             _ => panic!("Expected Add expression"),
         }
@@ -674,25 +699,49 @@ mod tests {
     fn test_parse_comparison() {
         let mut input = test_input("x > 5");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Binary { op: BinaryOp::Gt, .. }));
+        assert!(matches!(
+            result,
+            Expr::Binary {
+                op: BinaryOp::Gt,
+                ..
+            }
+        ));
 
         let mut input = test_input("a == b");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Binary { op: BinaryOp::Eq, .. }));
+        assert!(matches!(
+            result,
+            Expr::Binary {
+                op: BinaryOp::Eq,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_parse_logical_and() {
         let mut input = test_input("a && b");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Binary { op: BinaryOp::And, .. }));
+        assert!(matches!(
+            result,
+            Expr::Binary {
+                op: BinaryOp::And,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn test_parse_logical_or() {
         let mut input = test_input("a || b");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Binary { op: BinaryOp::Or, .. }));
+        assert!(matches!(
+            result,
+            Expr::Binary {
+                op: BinaryOp::Or,
+                ..
+            }
+        ));
     }
 
     #[test]
@@ -726,11 +775,21 @@ mod tests {
     fn test_parse_parenthesized() {
         let mut input = test_input("(1 + 2) * 3");
         let result = expr(&mut input).unwrap();
-        
+
         // Should be: (1 + 2) * 3
         match result {
-            Expr::Binary { op: BinaryOp::Mul, left, .. } => {
-                assert!(matches!(left.as_ref(), Expr::Binary { op: BinaryOp::Add, .. }));
+            Expr::Binary {
+                op: BinaryOp::Mul,
+                left,
+                ..
+            } => {
+                assert!(matches!(
+                    left.as_ref(),
+                    Expr::Binary {
+                        op: BinaryOp::Add,
+                        ..
+                    }
+                ));
             }
             _ => panic!("Expected Mul expression"),
         }
@@ -747,6 +806,12 @@ mod tests {
     fn test_parse_in_expression() {
         let mut input = test_input("x in list");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Binary { op: BinaryOp::In, .. }));
+        assert!(matches!(
+            result,
+            Expr::Binary {
+                op: BinaryOp::In,
+                ..
+            }
+        ));
     }
 }

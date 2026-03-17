@@ -72,6 +72,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Optimization documentation: performance characteristics and tuning guide (TASK-051)
 - Parser fuzzing target for validating input handling (TASK-052)
 - Type checker fuzzing target for crash detection
+- Policy combinators implementation with 12 AST variants: Var, And, Or, Not, Implies, Sequential, Concurrent, ForAll, Exists, MethodCall, Call (TASK-062)
+- Policy expression parser with support for infix operators (&, |, !, >>), method chaining (.and(), .or(), .retry()), and quantifiers (forall, exists) (TASK-062)
+- Policy type checker with 21 tests: type inference, validation, method signatures, context bindings (TASK-062)
+- Policy normalization passes: flatten nested and/or, eliminate double negation, constant folding preparation (TASK-062)
+- 12 surface AST tests for PolicyExpr variants: construction, span extraction, variant coverage (TASK-062)
 
 ### Changed
 

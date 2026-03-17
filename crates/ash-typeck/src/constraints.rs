@@ -251,7 +251,9 @@ pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Ty
             }
         }
 
-        Expr::Binary { op, left, right, .. } => {
+        Expr::Binary {
+            op, left, right, ..
+        } => {
             let left_ty = generate_expr_constraints(ctx, left);
             let right_ty = generate_expr_constraints(ctx, right);
 
@@ -576,9 +578,12 @@ mod tests {
         assert_eq!(ty, Type::Null);
 
         // Should have operational effect constraint
-        let has_effect_constraint = ctx.constraints().iter().any(|c| matches!(c,
-            Constraint::EffectLeq(Effect::Operational, Effect::Operational)
-        ));
+        let has_effect_constraint = ctx.constraints().iter().any(|c| {
+            matches!(
+                c,
+                Constraint::EffectLeq(Effect::Operational, Effect::Operational)
+            )
+        });
         assert!(has_effect_constraint);
     }
 

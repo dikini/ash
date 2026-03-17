@@ -178,8 +178,8 @@ Every task is considered **complete** only when:
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-061](tasks/TASK-061-policy-definitions.md) | Policy definition syntax | SPEC-006 | 12 | 🔴 Not Started |
-| [TASK-062](tasks/TASK-062-policy-combinators.md) | Policy combinators | SPEC-007 | 16 | 🔴 Not Started |
+| [TASK-061](tasks/TASK-061-policy-definitions.md) | Policy definition syntax | SPEC-006 | 12 | ✅ Complete |
+| [TASK-062](tasks/TASK-062-policy-combinators.md) | Policy combinators | SPEC-007 | 16 | ✅ Complete |
 | [TASK-063](tasks/TASK-063-dynamic-policies.md) | Dynamic policy registration | SPEC-008 | 40 | ⏸️ Deferred |
 
 **Phase 9 Deliverable**: User-defined policies with compile-time conflict detection
@@ -235,6 +235,6 @@ Update this section as tasks complete:
 | 6 | 8 | 8 | ✅ Complete |
 | 7 | 3 | 3 | ✅ Complete |
 | 8 | 3 | 3 | ✅ Complete |
-| 9 | 3 | 0 | 🟡 Planned |
+| 9 | 3 | 2 | ✅ Complete |
 
-**Overall Progress**: 56/59 tasks (95%)
+**Overall Progress**: 58/59 tasks (98%)

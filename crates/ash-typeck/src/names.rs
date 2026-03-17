@@ -256,17 +256,25 @@ impl NameResolver {
             }
 
             Workflow::Check {
-                obligation, continuation, ..
+                target,
+                continuation,
+                ..
             } => {
-                // Resolve obligation condition
-                self.resolve_expr(&obligation.condition);
+                // Resolve obligation condition if it's an obligation target
+                if let ash_parser::surface::CheckTarget::Obligation(obligation) = target {
+                    self.resolve_expr(&obligation.condition);
+                }
 
                 if let Some(cont) = continuation {
                     self.resolve_workflow_inner(cont);
                 }
             }
 
-            Workflow::Propose { action, continuation, .. } => {
+            Workflow::Propose {
+                action,
+                continuation,
+                ..
+            } => {
                 for arg in &action.args {
                     self.resolve_expr(arg);
                 }
@@ -305,7 +313,9 @@ impl NameResolver {
                 self.pop_scope();
             }
 
-            Workflow::Maybe { primary, fallback, .. } => {
+            Workflow::Maybe {
+                primary, fallback, ..
+            } => {
                 self.push_scope();
                 self.resolve_workflow_inner(primary);
                 self.pop_scope();
@@ -363,6 +373,55 @@ impl NameResolver {
             }
 
             Expr::Call { args, .. } => {
+                for arg in args {
+                    self.resolve_expr(arg);
+                }
+            }
+
+            Expr::Policy(policy_expr) => {
+                self.resolve_policy_expr(policy_expr);
+            }
+        }
+    }
+
+    /// Resolve names in a policy expression
+    fn resolve_policy_expr(&mut self, expr: &ash_parser::surface::PolicyExpr) {
+        use ash_parser::surface::PolicyExpr;
+
+        match expr {
+            PolicyExpr::Var(name) => {
+                if !self.is_bound(name) {
+                    self.errors
+                        .push(ResolutionError::UnboundVariable(name.to_string()));
+                }
+            }
+
+            PolicyExpr::And(exprs)
+            | PolicyExpr::Or(exprs)
+            | PolicyExpr::Sequential(exprs)
+            | PolicyExpr::Concurrent(exprs) => {
+                for e in exprs {
+                    self.resolve_policy_expr(e);
+                }
+            }
+
+            PolicyExpr::Not(inner) | PolicyExpr::Implies(inner, _) => {
+                self.resolve_policy_expr(inner);
+            }
+
+            PolicyExpr::ForAll { items, body, .. } | PolicyExpr::Exists { items, body, .. } => {
+                self.resolve_expr(items);
+                self.resolve_policy_expr(body);
+            }
+
+            PolicyExpr::MethodCall { receiver, args, .. } => {
+                self.resolve_policy_expr(receiver);
+                for arg in args {
+                    self.resolve_expr(arg);
+                }
+            }
+
+            PolicyExpr::Call { args, .. } => {
                 for arg in args {
                     self.resolve_expr(arg);
                 }
@@ -477,7 +536,7 @@ pub fn resolve_workflow(workflow: &Workflow) -> Result<ResolutionResult, Vec<Res
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::surface::{ActionRef, Literal, ObligationRef};
+    use ash_parser::surface::{ActionRef, CheckTarget, Literal, ObligationRef};
     use ash_parser::token::Span;
 
     fn test_span() -> Span {
@@ -823,10 +882,10 @@ mod tests {
         let mut resolver = NameResolver::new();
 
         let workflow = Workflow::Check {
-            obligation: ObligationRef {
+            target: CheckTarget::Obligation(ObligationRef {
                 role: "admin".into(),
                 condition: Expr::Literal(Literal::Bool(true)),
-            },
+            }),
             continuation: None,
             span: test_span(),
         };

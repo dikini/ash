@@ -243,10 +243,7 @@ mod tests {
 
     #[test]
     fn test_conflicting_budgets() {
-        let policies = vec![
-            Policy::Budget { max: 50 },
-            Policy::MinBudget { min: 100 },
-        ];
+        let policies = vec![Policy::Budget { max: 50 }, Policy::MinBudget { min: 100 }];
         let result = check_policies(&policies);
         assert!(
             matches!(result, SatResult::Unsat(_)),
@@ -326,10 +323,7 @@ mod tests {
 
     #[test]
     fn test_equal_budget_boundary() {
-        let policies = vec![
-            Policy::Budget { max: 100 },
-            Policy::MinBudget { min: 100 },
-        ];
+        let policies = vec![Policy::Budget { max: 100 }, Policy::MinBudget { min: 100 }];
         let result = check_policies(&policies);
         assert_eq!(result, SatResult::Sat);
     }

@@ -32,8 +32,8 @@
 
 use std::collections::HashMap;
 
-use z3::{Config, Context, SatResult as Z3SatResult, Solver};
 use z3::ast::{Ast, Bool, Int};
+use z3::{Config, Context, SatResult as Z3SatResult, Solver};
 
 /// A policy constraint that can be checked for conflicts.
 ///
@@ -88,8 +88,6 @@ pub enum Policy {
         jurisdictions: Vec<String>,
     },
 }
-
-
 
 /// Result of checking a set of policies for satisfiability.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -220,9 +218,7 @@ impl SmtContext {
         match policy {
             Policy::Budget { max } => self.encode_budget_constraint(*max),
             Policy::MinBudget { min } => self.encode_min_budget_constraint(*min),
-            Policy::TimeRange { start, end } => {
-                self.encode_time_range_constraint(*start, *end)
-            }
+            Policy::TimeRange { start, end } => self.encode_time_range_constraint(*start, *end),
             Policy::Region { regions } => self.encode_region_constraint(regions),
             Policy::EncryptionRequired => self.encode_encryption_constraint(),
             Policy::AuditRequired => self.encode_audit_constraint(),
@@ -403,10 +399,7 @@ mod tests {
     #[test]
     fn test_conflicting_budgets() {
         // min > max should be unsatisfiable
-        let policies = vec![
-            Policy::Budget { max: 50 },
-            Policy::MinBudget { min: 100 },
-        ];
+        let policies = vec![Policy::Budget { max: 50 }, Policy::MinBudget { min: 100 }];
         let result = check_policies(&policies);
         assert!(
             matches!(result, SatResult::Unsat(_)),
@@ -499,7 +492,10 @@ mod tests {
             // Core should not be larger than original policy set
             assert!(core.len() <= policies.len());
         } else {
-            panic!("Expected Unsat result for conflicting budgets, got {:?}", result);
+            panic!(
+                "Expected Unsat result for conflicting budgets, got {:?}",
+                result
+            );
         }
     }
 
@@ -558,16 +554,9 @@ mod tests {
     #[test]
     fn test_equal_budget_boundary() {
         // min == max should be satisfiable
-        let policies = vec![
-            Policy::Budget { max: 100 },
-            Policy::MinBudget { min: 100 },
-        ];
+        let policies = vec![Policy::Budget { max: 100 }, Policy::MinBudget { min: 100 }];
         let result = check_policies(&policies);
-        assert_eq!(
-            result,
-            SatResult::Sat,
-            "min == max should be satisfiable"
-        );
+        assert_eq!(result, SatResult::Sat, "min == max should be satisfiable");
     }
 
     #[test]
@@ -581,10 +570,8 @@ mod tests {
         let second_check = ctx.check_policies(&[Policy::MinBudget { min: 50 }]);
         assert_eq!(second_check, SatResult::Sat);
 
-        let conflict_check = ctx.check_policies(&[
-            Policy::Budget { max: 10 },
-            Policy::MinBudget { min: 20 },
-        ]);
+        let conflict_check =
+            ctx.check_policies(&[Policy::Budget { max: 10 }, Policy::MinBudget { min: 20 }]);
         assert!(matches!(conflict_check, SatResult::Unsat(_)));
     }
 }

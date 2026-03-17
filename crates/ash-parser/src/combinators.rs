@@ -3,12 +3,12 @@
 //! This module provides basic parser combinators built on top of winnow,
 //! specialized for parsing the Ash workflow language.
 
-use winnow::prelude::*;
-use winnow::token::take_while;
-use winnow::token::one_of;
 use winnow::error::ContextError;
 use winnow::error::ErrMode;
+use winnow::prelude::*;
 use winnow::stream::Stream;
+use winnow::token::one_of;
+use winnow::token::take_while;
 
 use crate::input::ParseInput;
 use crate::input::update_position;
@@ -107,30 +107,6 @@ pub fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, Contex
     }
 }
 
-/// Parses an identifier: starts with letter/underscore, followed by alphanumeric/underscore.
-///
-/// # Note
-///
-/// This is a placeholder implementation that currently always returns an error.
-/// Full implementation will be completed in a future task.
-///
-/// # Examples
-///
-/// ```
-/// use ash_parser::combinators::identifier;
-/// use ash_parser::input::new_input;
-/// use winnow::prelude::*;
-///
-/// let mut input = new_input("my_var123");
-/// let result = identifier.parse_next(&mut input);
-/// // Currently returns an error as it's not fully implemented
-/// assert!(result.is_err());
-/// ```
-pub fn identifier<'a>(_input: &mut ParseInput<'a>) -> PResult<&'a str> {
-    // Placeholder: identifier parsing will be fully implemented in a future task
-    Err(ErrMode::Backtrack(ContextError::new()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,12 +182,8 @@ mod tests {
     #[test]
     fn test_combinator_chaining() {
         // Test that we can chain combinators together
-        let mut parser = (
-            keyword("let"),
-            whitespace,
-            alphanumeric,
-        );
-        
+        let mut parser = (keyword("let"), whitespace, alphanumeric);
+
         let mut input = crate::input::new_input("let x = 5");
         let result = parser.parse_next(&mut input);
         assert!(result.is_ok());
@@ -223,13 +195,13 @@ mod tests {
     #[test]
     fn test_alt_combinator() {
         let mut parser = alt((keyword("if"), keyword("let"), keyword("fn")));
-        
+
         let mut input1 = crate::input::new_input("if x");
         assert_eq!(parser.parse_next(&mut input1).unwrap(), "if");
-        
+
         let mut input2 = crate::input::new_input("let y");
         assert_eq!(parser.parse_next(&mut input2).unwrap(), "let");
-        
+
         let mut input3 = crate::input::new_input("fn main");
         assert_eq!(parser.parse_next(&mut input3).unwrap(), "fn");
     }
@@ -251,14 +223,5 @@ mod tests {
         let result: Result<Option<&str>, _> = opt(keyword("if")).parse_next(&mut input);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), None);
-    }
-
-    #[test]
-    fn test_identifier_not_implemented() {
-        // The identifier function is currently a placeholder that always returns an error
-        // This test documents the current behavior
-        let mut input = crate::input::new_input("hello");
-        let result = identifier.parse_next(&mut input);
-        assert!(result.is_err());
     }
 }

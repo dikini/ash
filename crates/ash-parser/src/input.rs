@@ -4,9 +4,9 @@
 //! that tracks source offsets, line numbers, and column positions for accurate
 //! error reporting and span generation.
 
+use crate::token::Span;
 use winnow::stream::Located;
 use winnow::stream::Stateful;
-use crate::token::Span;
 
 /// Position state that tracks line and column information.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -155,7 +155,7 @@ mod tests {
         let mut end = Position::new();
         end.offset = 5;
         end.column = 6;
-        
+
         let span = span_from(&start, &end);
         assert_eq!(span.start, 0);
         assert_eq!(span.end, 5);
@@ -167,7 +167,7 @@ mod tests {
     fn test_update_position() {
         let mut pos = Position::new();
         update_position(&mut pos, "hello\nworld");
-        
+
         assert_eq!(pos.offset, 11);
         assert_eq!(pos.line, 2);
         assert_eq!(pos.column, 6);

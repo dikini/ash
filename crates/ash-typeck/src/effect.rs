@@ -90,7 +90,9 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
 
         Workflow::With { body, .. } => infer_effect(body),
 
-        Workflow::Maybe { primary, fallback, .. } => {
+        Workflow::Maybe {
+            primary, fallback, ..
+        } => {
             let primary_effect = infer_effect(primary);
             let fallback_effect = infer_effect(fallback);
             primary_effect.join(fallback_effect)
@@ -439,17 +441,19 @@ mod tests {
     #[test]
     fn test_check_effect_minimum() {
         assert!(check_effect_minimum(Effect::Operational, Effect::Epistemic));
-        assert!(check_effect_minimum(Effect::Operational, Effect::Operational));
-        assert!(!check_effect_minimum(Effect::Epistemic, Effect::Operational));
+        assert!(check_effect_minimum(
+            Effect::Operational,
+            Effect::Operational
+        ));
+        assert!(!check_effect_minimum(
+            Effect::Epistemic,
+            Effect::Operational
+        ));
     }
 
     #[test]
     fn test_join_effects() {
-        let effects = vec![
-            Effect::Epistemic,
-            Effect::Deliberative,
-            Effect::Epistemic,
-        ];
+        let effects = vec![Effect::Epistemic, Effect::Deliberative, Effect::Epistemic];
         assert_eq!(join_effects(&effects), Effect::Deliberative);
 
         let effects = vec![Effect::Epistemic, Effect::Operational];
@@ -613,10 +617,12 @@ mod tests {
     #[test]
     fn test_infer_effect_check() {
         let workflow = Workflow::Check {
-            obligation: ash_parser::surface::ObligationRef {
-                role: "admin".into(),
-                condition: Expr::Literal(Literal::Bool(true)),
-            },
+            target: ash_parser::surface::CheckTarget::Obligation(
+                ash_parser::surface::ObligationRef {
+                    role: "admin".into(),
+                    condition: Expr::Literal(Literal::Bool(true)),
+                },
+            ),
             continuation: None,
             span: test_span(),
         };

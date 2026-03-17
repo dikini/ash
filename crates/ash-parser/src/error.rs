@@ -3,8 +3,8 @@
 //! This module defines `ParseError`, the error type used throughout the parser
 //! for reporting syntax errors with location information and suggestions.
 
-use std::fmt;
 use crate::token::Span;
+use std::fmt;
 
 /// A parse error with location information.
 ///
@@ -86,7 +86,11 @@ impl ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "parse error: {}", self.message)?;
-        writeln!(f, "  --> line {}, column {}", self.span.line, self.span.column)?;
+        writeln!(
+            f,
+            "  --> line {}, column {}",
+            self.span.line, self.span.column
+        )?;
         if !self.expected.is_empty() {
             writeln!(f, "  = expected: {}", self.expected.join(", "))?;
         }
@@ -116,8 +120,7 @@ mod tests {
     #[test]
     fn test_parse_error_with_expected() {
         let span = Span::new(0, 1, 1, 1);
-        let error = ParseError::new(span, "unexpected token")
-            .with_expected("identifier");
+        let error = ParseError::new(span, "unexpected token").with_expected("identifier");
 
         assert_eq!(error.expected, vec!["identifier"]);
     }
@@ -183,8 +186,7 @@ mod tests {
     #[test]
     fn test_parse_error_clone() {
         let span = Span::new(0, 1, 1, 1);
-        let error = ParseError::new(span, "error")
-            .with_expected("something");
+        let error = ParseError::new(span, "error").with_expected("something");
         let cloned = error.clone();
 
         assert_eq!(error, cloned);

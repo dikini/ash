@@ -1,0 +1,14 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9f5206b1b37c624485af7881cae46e2af65f97349ed57a1ab98a0d69ae64a268 # shrinks to n = 0
+cc 436658e7ad737577a0f1678f9728e7495a6bd09655db4f2feba997a13d2fd611 # shrinks to ident = "a-A"
+cc 2e23ae661893e3097d03177248440e010d63cd69d88cfc19e96800f51ee3141c # shrinks to ident = "a"
+cc ddf9a29229bb6176444cf015ccf045abcb714304ef89d7b78c968102cc0d9833 # shrinks to prefix = "a", invalid = "(", suffix = "a"
+cc e6b9c25d1065913ce2fb09c6043e3678451a84737bc4cf5b5ce07a8ece93e25b # shrinks to whole = "0", frac = "0"
+cc ea4be507f0d9f0e3e11eb65d3b589ea22c1144687e2ead23e995cfea71b8d188 # shrinks to bytes = [0, 0, 0, 0, 0, 0, 34, 128, 34]
+cc 7183a0af40e8216a5467fc1ed300550a9823c10a1aaae04987be81c1e7cab405 # shrinks to content = "a", after = "in"
+cc ab1489a96b4bc2b6718869699527b8706aea05f75c0fac8e4d71a9d1ab189dff # shrinks to before = "a", comment = "", after = "if"

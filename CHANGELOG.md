@@ -39,6 +39,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - LexError types with thiserror for unexpected chars, unterminated strings, invalid numbers (TASK-008)
 - Lexer implementation with streaming tokenization, comments, error recovery (TASK-009)
 - 16 lexer tests for keywords, identifiers, literals, operators, spans, recovery (TASK-009)
+- 23 lexer property tests: identifiers, literals, spans, error recovery, stress tests (TASK-010)
+- Lexer property tests: 18 proptest-based tests for identifiers, literals, spans, error recovery, and stress testing (TASK-010)
 
 ### Changed
 

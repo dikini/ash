@@ -1,0 +1,21 @@
+[package]
+name = "ash-provenance"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Provenance tracking and audit trail for Ash workflows"
+
+[dependencies]
+ash-core = { path = "../ash-core" }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror.workspace = true
+uuid = { workspace = true }
+sha2 = "0.10"
+hex = "0.4"
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = "3.9"

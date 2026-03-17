@@ -4,6 +4,7 @@ members = [
     "crates/ash-parser",
     "crates/ash-typeck",
     "crates/ash-interp",
+    "crates/ash-provenance",
     "crates/ash-macros",
     "crates/ash-doc-tests",
 ]

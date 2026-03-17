@@ -12,11 +12,13 @@
 
 pub mod constraints;
 pub mod effect;
+pub mod name_binding;
 pub mod names;
 pub mod obligations;
 pub mod policy_check;
 pub mod solver;
 pub mod types;
+pub mod visibility;
 
 // SMT-based policy conflict detection using Z3
 // Provides compile-time verification of policy constraints
@@ -27,11 +29,13 @@ pub use smt as policy;
 
 pub use constraints::*;
 pub use effect::*;
+pub use name_binding::{NameBinder, NameError};
 pub use names::*;
 pub use obligations::*;
 pub use policy_check::*;
 pub use solver::*;
 pub use types::*;
+pub use visibility::{VisibilityChecker, VisibilityError};
 
 /// Type check a workflow
 ///

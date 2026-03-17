@@ -5,6 +5,7 @@
 
 pub mod ast;
 pub mod effect;
+pub mod module_graph;
 pub mod provenance;
 pub mod value;
 pub mod visualize;

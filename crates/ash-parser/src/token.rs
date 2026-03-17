@@ -182,7 +182,7 @@ pub enum TokenKind {
 }
 
 /// Represents a source code span with location information.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub struct Span {
     /// Byte offset from the start of the file
     pub start: usize,

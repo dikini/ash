@@ -100,6 +100,47 @@ pub struct RoleDef {
     pub span: Span,
 }
 
+/// Visibility modifiers for definitions (pub, pub(crate), etc.)
+#[derive(Debug, Clone, PartialEq, Eq, Default, Hash)]
+pub enum Visibility {
+    /// Default visibility (private to module)
+    #[default]
+    Inherited,
+    /// `pub` - visible everywhere
+    Public,
+    /// `pub(crate)` - visible within the crate/package
+    Crate,
+    /// `pub(super)` - visible to parent module
+    Super,
+    /// `pub(self)` - equivalent to private (explicit)
+    Self_,
+    /// `pub(in path)` - visible in specific module path
+    Restricted { path: Box<str> },
+}
+
+impl Visibility {
+    /// Check if this visibility is public (not inherited/private)
+    pub fn is_pub(&self) -> bool {
+        !matches!(self, Visibility::Inherited)
+    }
+
+    /// Check if an item with this visibility is accessible from the given module
+    ///
+    /// # Arguments
+    /// * `from` - the module path where the access is occurring
+    /// * `owner` - the module path where the item is defined
+    pub fn is_visible_in_module(&self, from: &str, owner: &str) -> bool {
+        match self {
+            Visibility::Inherited => from == owner,
+            Visibility::Public => true,
+            Visibility::Crate => !from.starts_with("external"),
+            Visibility::Super => from.starts_with(owner),
+            Visibility::Self_ => from == owner,
+            Visibility::Restricted { path } => from.starts_with(path.as_ref()),
+        }
+    }
+}
+
 /// A workflow definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowDef {
@@ -1873,5 +1914,54 @@ mod tests {
             span
         );
         assert_eq!(Workflow::Done { span }.span(), span);
+    }
+}
+
+#[cfg(test)]
+mod visibility_tests {
+    use super::*;
+
+    #[test]
+    fn test_visibility_private() {
+        let vis = Visibility::Inherited;
+        assert!(!vis.is_pub());
+    }
+
+    #[test]
+    fn test_visibility_public() {
+        let vis = Visibility::Public;
+        assert!(vis.is_pub());
+    }
+
+    #[test]
+    fn test_visibility_crate() {
+        let vis = Visibility::Crate;
+        assert!(vis.is_pub());
+        assert!(vis.is_visible_in_module("crate::foo", "crate::bar"));
+    }
+
+    #[test]
+    fn test_visibility_super() {
+        let vis = Visibility::Super;
+        assert!(vis.is_pub());
+        assert!(vis.is_visible_in_module("crate::foo::bar", "crate::foo"));
+    }
+
+    #[test]
+    fn test_visibility_self() {
+        let vis = Visibility::Self_;
+        assert!(vis.is_pub());
+        assert!(vis.is_visible_in_module("crate::foo", "crate::foo"));
+        assert!(!vis.is_visible_in_module("crate::foo", "crate::bar"));
+    }
+
+    #[test]
+    fn test_visibility_restricted() {
+        let vis = Visibility::Restricted {
+            path: "crate::internal".into(),
+        };
+        assert!(vis.is_pub());
+        assert!(vis.is_visible_in_module("crate::internal::sub", "crate::other"));
+        assert!(!vis.is_visible_in_module("crate::public", "crate::other"));
     }
 }

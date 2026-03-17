@@ -23,10 +23,10 @@
 //! }
 //! ```
 
+use crate::Name;
 use crate::ast::{Expr, Pattern};
 use crate::effect::Effect;
 use crate::value::Value;
-use crate::Name;
 
 /// Generate arbitrary Effect values
 pub fn arb_effect() -> impl proptest::strategy::Strategy<Value = Effect> {
@@ -93,7 +93,8 @@ pub fn arb_pattern() -> impl proptest::strategy::Strategy<Value = Pattern> {
                 (
                     prop::collection::vec(inner, 0..4),
                     proptest::option::of(arb_name())
-                ).prop_map(|(prefix, rest)| Pattern::List(prefix, rest)),
+                )
+                    .prop_map(|(prefix, rest)| Pattern::List(prefix, rest)),
             ]
         },
     )

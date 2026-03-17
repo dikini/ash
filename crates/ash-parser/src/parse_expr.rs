@@ -24,7 +24,10 @@ fn ternary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let condition = or_expr(input)?;
 
     // Check for ternary operator
-    if opt(preceded(literal_str("?"), or_expr)).parse_next(input)?.is_some() {
+    if opt(preceded(literal_str("?"), or_expr))
+        .parse_next(input)?
+        .is_some()
+    {
         let _then_branch = or_expr(input)?;
         let _ = preceded(literal_str(":"), or_expr).parse_next(input)?;
         // Note: Simplified - ternary not fully implemented in surface AST
@@ -211,7 +214,8 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         one_of(|c: char| !c.is_ascii_digit()),
     ))
     .parse_next(input)?
-    .is_some() {
+    .is_some()
+    {
         // This was a minus followed by a non-digit, so it's unary negation
         // We need to backtrack and parse properly
         // For simplicity, just parse the operand
@@ -262,15 +266,16 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     loop {
         // Field access: .field
         if opt(literal_str(".")).parse_next(input)?.is_some()
-            && let Ok(field) = identifier(input) {
-                let span = span_from(&start_pos, &input.state);
-                expr = Expr::FieldAccess {
-                    base: Box::new(expr),
-                    field: field.into(),
-                    span,
-                };
-                continue;
-            }
+            && let Ok(field) = identifier(input)
+        {
+            let span = span_from(&start_pos, &input.state);
+            expr = Expr::FieldAccess {
+                base: Box::new(expr),
+                field: field.into(),
+                span,
+            };
+            continue;
+        }
 
         // Index access: [index]
         if opt(literal_str("[")).parse_next(input)?.is_some() {
@@ -331,7 +336,15 @@ fn parse_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
 
 /// Parse a literal value.
 pub fn literal(input: &mut ParseInput) -> ModalResult<Literal> {
-    alt((parse_string, parse_float, parse_int, parse_bool, parse_null, parse_list)).parse_next(input)
+    alt((
+        parse_string,
+        parse_float,
+        parse_int,
+        parse_bool,
+        parse_null,
+        parse_list,
+    ))
+    .parse_next(input)
 }
 
 /// Parse a string literal.
@@ -389,16 +402,16 @@ fn parse_null(input: &mut ParseInput) -> ModalResult<Literal> {
 /// Parse a list literal: [1, 2, 3] or ["a", "b"]
 fn parse_list(input: &mut ParseInput) -> ModalResult<Literal> {
     let _ = literal_str("[").parse_next(input)?;
-    
+
     // Empty list
     if literal_str("]").parse_next(input).is_ok() {
         return Ok(Literal::List(vec![]));
     }
-    
+
     // Parse first element
     let first = literal(input)?;
     let mut elements = vec![first];
-    
+
     // Parse remaining elements
     loop {
         if opt(literal_str(",")).parse_next(input)?.is_some() {
@@ -412,7 +425,7 @@ fn parse_list(input: &mut ParseInput) -> ModalResult<Literal> {
             break;
         }
     }
-    
+
     let _ = literal_str("]").parse_next(input)?;
     Ok(Literal::List(elements))
 }
@@ -427,7 +440,9 @@ pub fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     .parse_next(input)?;
 
     // Check that first character is a letter or underscore (not a digit)
-    if result.is_empty() || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_') {
+    if result.is_empty()
+        || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_')
+    {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
@@ -558,7 +573,8 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
 fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: ModalResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        let _: ModalResult<&str> =
+            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
 
         // Check for line comment
         if input.input.starts_with("--") {

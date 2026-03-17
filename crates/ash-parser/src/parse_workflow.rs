@@ -265,7 +265,7 @@ fn policy_instance(input: &mut ParseInput) -> ModalResult<PolicyInstance> {
     let checkpoint = *input;
 
     let name = identifier(input)?;
-    
+
     // Check for opening brace, restore checkpoint if not found
     if literal_str("{").parse_next(input).is_err() {
         *input = checkpoint;
@@ -273,7 +273,7 @@ fn policy_instance(input: &mut ParseInput) -> ModalResult<PolicyInstance> {
             winnow::error::ContextError::new(),
         ));
     }
-    
+
     let fields = parse_policy_field_inits(input)?;
     let _ = literal_str("}").parse_next(input)?;
 
@@ -716,7 +716,9 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     .parse_next(input)?;
 
     // Check that first character is a letter or underscore (not a digit)
-    if result.is_empty() || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_') {
+    if result.is_empty()
+        || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_')
+    {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
@@ -793,7 +795,8 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
 fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: ModalResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        let _: ModalResult<&str> =
+            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
 
         // Check for line comment
         if input.input.starts_with("--") {

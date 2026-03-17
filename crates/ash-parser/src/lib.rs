@@ -6,27 +6,41 @@ pub mod combinators;
 pub mod desugar;
 pub mod error;
 pub mod error_recovery;
+pub mod import_resolver;
 pub mod input;
 pub mod lexer;
 pub mod lower;
+pub mod module;
 pub mod parse_expr;
+pub mod parse_module;
 pub mod parse_policy;
+pub mod parse_use;
+pub mod parse_visibility;
 pub mod parse_workflow;
+pub mod resolver;
 pub mod surface;
 pub mod token;
+pub mod use_tree;
 
 pub use combinators::*;
 pub use desugar::*;
 pub use error::*;
 pub use error_recovery::*;
+pub use import_resolver::{Binding, BindingKind, ImportError, ImportResolver};
 pub use input::*;
 pub use lexer::*;
 pub use lower::*;
+pub use module::*;
 pub use parse_expr::*;
+pub use parse_module::*;
 pub use parse_policy::*;
+pub use parse_use::*;
+pub use parse_visibility::*;
 pub use parse_workflow::*;
+pub use resolver::{Fs, ModuleResolver, ResolveError};
 pub use surface::*;
 pub use token::*;
+pub use use_tree::*;
 
 #[cfg(test)]
 mod lib_tests {

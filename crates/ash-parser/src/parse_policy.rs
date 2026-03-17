@@ -217,31 +217,32 @@ fn parse_method_chain(
     loop {
         // Check for method call
         if policy_ws(literal_str(".")).parse_next(input).is_ok()
-            && let Ok(method_name) = identifier(input) {
-                let method: Name = method_name.to_string().into_boxed_str();
+            && let Ok(method_name) = identifier(input)
+        {
+            let method: Name = method_name.to_string().into_boxed_str();
 
-                // Check for arguments
-                let args = if policy_ws(literal_str("(")).parse_next(input).is_ok() {
-                    if literal_str(")").parse_next(input).is_ok() {
-                        vec![]
-                    } else {
-                        let args = parse_policy_args(input)?;
-                        let _ = policy_ws(literal_str(")")).parse_next(input)?;
-                        args
-                    }
-                } else {
+            // Check for arguments
+            let args = if policy_ws(literal_str("(")).parse_next(input).is_ok() {
+                if literal_str(")").parse_next(input).is_ok() {
                     vec![]
-                };
+                } else {
+                    let args = parse_policy_args(input)?;
+                    let _ = policy_ws(literal_str(")")).parse_next(input)?;
+                    args
+                }
+            } else {
+                vec![]
+            };
 
-                let span = span_from(start_pos, &input.state);
-                receiver = PolicyExpr::MethodCall {
-                    receiver: Box::new(receiver),
-                    method,
-                    args,
-                    span,
-                };
-                continue;
-            }
+            let span = span_from(start_pos, &input.state);
+            receiver = PolicyExpr::MethodCall {
+                receiver: Box::new(receiver),
+                method,
+                args,
+                span,
+            };
+            continue;
+        }
         break;
     }
     Ok(receiver)
@@ -325,7 +326,8 @@ where
 fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: ModalResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        let _: ModalResult<&str> =
+            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
 
         // Check for line comment
         if input.input.starts_with("--") {
@@ -375,7 +377,9 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     .parse_next(input)?;
 
     // Check that first character is a letter or underscore (not a digit)
-    if result.is_empty() || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_') {
+    if result.is_empty()
+        || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_')
+    {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));

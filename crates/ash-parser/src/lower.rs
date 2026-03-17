@@ -4,9 +4,9 @@
 //! used by the ash-core crate.
 
 use ash_core::{
-    Action as CoreAction, Capability, Effect, Expr as CoreExpr,
-    Guard as CoreGuard, Obligation as CoreObligation, Pattern as CorePattern,
-    Predicate as CorePredicate, Provenance, Role as CoreRole, Workflow as CoreWorkflow,
+    Action as CoreAction, Capability, Effect, Expr as CoreExpr, Guard as CoreGuard,
+    Obligation as CoreObligation, Pattern as CorePattern, Predicate as CorePredicate, Provenance,
+    Role as CoreRole, Workflow as CoreWorkflow,
 };
 
 use crate::surface::{

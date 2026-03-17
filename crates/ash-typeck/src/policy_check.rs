@@ -430,7 +430,7 @@ pub fn validate_policy_expr(
 pub fn normalize(expr: PolicyExpr) -> PolicyExpr {
     let expr = flatten_nested_and(expr);
     let expr = flatten_nested_or(expr);
-    
+
     eliminate_double_negation(expr)
 }
 

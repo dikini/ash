@@ -22,6 +22,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Fuzz testing infrastructure with cargo-fuzz (ash-fuzz crate)
 - Benchmark suite with Criterion (ash-bench crate)
 - Procedural macros for Effectful and Provenance derive
+- Serde Serialize/Deserialize support for all AST types: Workflow, Pattern, Expr, Guard, etc. (TASK-003)
+- List pattern variant for prefix matching with optional rest binding: `List(Vec<Pattern>, Option<Name>)` (TASK-003)
+- Pattern helper methods: `bindings()` to collect variable names, `is_refutable()` to check match exhaustiveness (TASK-003)
+- Comprehensive AST tests: workflow construction, pattern bindings, serde roundtrip (TASK-003)
 
 ### Changed
 

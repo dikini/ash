@@ -469,6 +469,13 @@ fn pattern_to_string(pattern: &Pattern) -> String {
         }
         Pattern::Wildcard => "_".to_string(),
         Pattern::Literal(value) => format!("{:?}", value),
+        Pattern::List(patterns, rest) => {
+            let inner: Vec<_> = patterns.iter().map(pattern_to_string).collect();
+            match rest {
+                Some(name) => format!("[{}, ..{}]", inner.join(", "), name),
+                None => format!("[{}]", inner.join(", ")),
+            }
+        }
     }
 }
 

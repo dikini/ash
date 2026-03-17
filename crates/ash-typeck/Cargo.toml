@@ -1,0 +1,17 @@
+[package]
+name = "ash-typeck"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Type checker for the Ash workflow language"
+
+[dependencies]
+ash-core = { path = "../ash-core" }
+ash-parser = { path = "../ash-parser" }
+thiserror.workspace = true
+im = "15.1"  # Immutable data structures for substitutions
+
+[dev-dependencies]
+proptest = { workspace = true }
+pretty_assertions = { workspace = true }

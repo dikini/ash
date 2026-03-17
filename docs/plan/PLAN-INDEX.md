@@ -48,28 +48,28 @@ Every task is considered **complete** only when:
 
 ### Lexer
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-008](tasks/TASK-008-tokens.md) | Token definitions | SPEC-002 | 3 |
-| [TASK-009](tasks/TASK-009-lexer.md) | Lexer with error recovery | SPEC-002 | 6 |
-| [TASK-010](tasks/TASK-010-lexer-tests.md) | Lexer property tests | SPEC-002 | 4 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-008](tasks/TASK-008-tokens.md) | Token definitions | SPEC-002 | 3 | ✅ Complete |
+| [TASK-009](tasks/TASK-009-lexer.md) | Lexer with error recovery | SPEC-002 | 6 | ✅ Complete |
+| [TASK-010](tasks/TASK-010-lexer-tests.md) | Lexer property tests | SPEC-002 | 4 | ✅ Complete |
 
 ### Parser
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-011](tasks/TASK-011-surface-ast.md) | Surface AST types | SPEC-002 | 4 |
-| [TASK-012](tasks/TASK-012-parser-core.md) | Parser combinators (winnow) | SPEC-002 | 8 |
-| [TASK-013](tasks/TASK-013-parser-workflows.md) | Workflow parsing | SPEC-002 | 6 |
-| [TASK-014](tasks/TASK-014-parser-expr.md) | Expression parsing | SPEC-002 | 6 |
-| [TASK-015](tasks/TASK-015-error-recovery.md) | Parser error recovery | SPEC-002 | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-011](tasks/TASK-011-surface-ast.md) | Surface AST types | SPEC-002 | 4 | ✅ Complete |
+| [TASK-012](tasks/TASK-012-parser-core.md) | Parser combinators (winnow) | SPEC-002 | 8 | ✅ Complete |
+| [TASK-013](tasks/TASK-013-parser-workflows.md) | Workflow parsing | SPEC-002 | 6 | ✅ Complete |
+| [TASK-014](tasks/TASK-014-parser-expr.md) | Expression parsing | SPEC-002 | 6 | ✅ Complete |
+| [TASK-015](tasks/TASK-015-error-recovery.md) | Parser error recovery | SPEC-002 | 6 | ✅ Complete |
 
 ### Lowering
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-016](tasks/TASK-016-lowering.md) | Surface → Core lowering | SPEC-001/002 | 8 |
-| [TASK-017](tasks/TASK-017-desugar.md) | Desugaring transformations | SPEC-002 | 4 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-016](tasks/TASK-016-lowering.md) | Surface → Core lowering | SPEC-001/002 | 8 | ✅ Complete |
+| [TASK-017](tasks/TASK-017-desugar.md) | Desugaring transformations | SPEC-002 | 4 | ✅ Complete |
 
 **Phase 2 Deliverable**: `ash-parser` crate, complete parsing pipeline
 
@@ -77,27 +77,27 @@ Every task is considered **complete** only when:
 
 ### Type Inference
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-018](tasks/TASK-018-type-representation.md) | Type enum and unification | SPEC-003 | 4 |
-| [TASK-019](tasks/TASK-019-type-constraints.md) | Type constraint generation | SPEC-003 | 6 |
-| [TASK-020](tasks/TASK-020-unification.md) | Unification algorithm | SPEC-003 | 6 |
-| [TASK-021](tasks/TASK-021-effect-inference.md) | Effect inference | SPEC-003 | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-018](tasks/TASK-018-type-representation.md) | Type enum and unification | SPEC-003 | 4 | ✅ Complete |
+| [TASK-019](tasks/TASK-019-type-constraints.md) | Type constraint generation | SPEC-003 | 6 | ✅ Complete |
+| [TASK-020](tasks/TASK-020-unification.md) | Unification algorithm | SPEC-003 | 6 | ✅ Complete |
+| [TASK-021](tasks/TASK-021-effect-inference.md) | Effect inference | SPEC-003 | 6 | ✅ Complete |
 
 ### Validation
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-022](tasks/TASK-022-name-resolution.md) | Name resolution pass | SPEC-003 | 6 |
-| [TASK-023](tasks/TASK-023-obligation-check.md) | Obligation tracking | SPEC-003 | 6 |
-| [TASK-024](tasks/TASK-024-proof-obligations.md) | Proof obligation generation | SPEC-003 | 6 |
-| [TASK-024b](tasks/TASK-024b-smt-integration.md) | Z3 SMT integration for conflict detection | SPEC-003 | 8 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-022](tasks/TASK-022-name-resolution.md) | Name resolution pass | SPEC-003 | 6 | ✅ Complete |
+| [TASK-023](tasks/TASK-023-obligation-check.md) | Obligation tracking | SPEC-003 | 6 | ✅ Complete |
+| [TASK-024](tasks/TASK-024-proof-obligations.md) | Proof obligation generation | SPEC-003 | 6 | ✅ Complete |
+| [TASK-024b](tasks/TASK-024b-smt-integration.md) | Z3 SMT integration for conflict detection | SPEC-003 | 8 | 🔴 Not Started |
 
 ### Error Reporting
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-025](tasks/TASK-025-type-errors.md) | Rich type error messages | SPEC-003 | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-025](tasks/TASK-025-type-errors.md) | Rich type error messages | SPEC-003 | 6 | ✅ Complete |
 
 **Phase 3 Deliverable**: `ash-typeck` crate, complete type checking
 
@@ -105,74 +105,74 @@ Every task is considered **complete** only when:
 
 ### Core Runtime
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-026](tasks/TASK-026-context.md) | Runtime context and state | SPEC-004 | 4 |
-| [TASK-027](tasks/TASK-027-eval-expr.md) | Expression evaluator | SPEC-004 | 6 |
-| [TASK-028](tasks/TASK-028-pattern-match.md) | Pattern matching engine | SPEC-004 | 6 |
-| [TASK-029](tasks/TASK-029-guards.md) | Guard evaluation | SPEC-004 | 4 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-026](tasks/TASK-026-context.md) | Runtime context and state | SPEC-004 | 4 | ✅ Complete |
+| [TASK-027](tasks/TASK-027-eval-expr.md) | Expression evaluator | SPEC-004 | 6 | ✅ Complete |
+| [TASK-028](tasks/TASK-028-pattern-match.md) | Pattern matching engine | SPEC-004 | 6 | ✅ Complete |
+| [TASK-029](tasks/TASK-029-guards.md) | Guard evaluation | SPEC-004 | 4 | ✅ Complete |
 
 ### Workflow Execution
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------|
-| [TASK-030](tasks/TASK-030-interp-epistemic.md) | OBSERVE execution | SPEC-004 | 4 |
-| [TASK-031](tasks/TASK-031-interp-deliberative.md) | ORIENT/PROPOSE execution | SPEC-004 | 4 |
-| [TASK-032](tasks/TASK-032-interp-evaluative.md) | DECIDE/CHECK execution | SPEC-004 | 6 |
-| [TASK-033](tasks/TASK-033-interp-operational.md) | ACT/OBLIG execution | SPEC-004 | 6 |
-| [TASK-034](tasks/TASK-034-control-flow.md) | Control flow execution | SPEC-004 | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-030](tasks/TASK-030-interp-epistemic.md) | OBSERVE execution | SPEC-004 | 4 | ✅ Complete |
+| [TASK-031](tasks/TASK-031-interp-deliberative.md) | ORIENT/PROPOSE execution | SPEC-004 | 4 | ✅ Complete |
+| [TASK-032](tasks/TASK-032-interp-evaluative.md) | DECIDE/CHECK execution | SPEC-004 | 6 | ✅ Complete |
+| [TASK-033](tasks/TASK-033-interp-operational.md) | ACT/OBLIG execution | SPEC-004 | 6 | ✅ Complete |
+| [TASK-034](tasks/TASK-034-control-flow.md) | Control flow execution | SPEC-004 | 6 | ✅ Complete |
 
 ### Capability System
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-035](tasks/TASK-035-capability-trait.md) | Capability provider trait | SPEC-004 | 4 |
-| [TASK-036](tasks/TASK-036-policy-runtime.md) | Runtime policy evaluation | SPEC-004 | 6 |
-| [TASK-037](tasks/TASK-037-async-runtime.md) | Async runtime integration | SPEC-004 | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-035](tasks/TASK-035-capability-trait.md) | Capability provider trait | SPEC-004 | 4 | ✅ Complete |
+| [TASK-036](tasks/TASK-036-policy-runtime.md) | Runtime policy evaluation | SPEC-004 | 6 | ✅ Complete |
+| [TASK-037](tasks/TASK-037-async-runtime.md) | Async runtime integration | SPEC-004 | 6 | ✅ Complete |
 
 **Phase 4 Deliverable**: `ash-interp` crate, working interpreter
 
 ## Phase 5: Provenance (Week 9)
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-038](tasks/TASK-038-trace-recording.md) | Trace event recording | SPEC-001 | 4 |
-| [TASK-039](tasks/TASK-039-lineage-tracking.md) | Lineage tracking | SPEC-001 | 4 |
-| [TASK-040](tasks/TASK-040-audit-export.md) | Audit log export | SPEC-001 | 4 |
-| [TASK-041](tasks/TASK-041-integrity.md) | Trace integrity (Merkle) | SPEC-001 | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-038](tasks/TASK-038-trace-recording.md) | Trace event recording | SPEC-001 | 4 | ✅ Complete |
+| [TASK-039](tasks/TASK-039-lineage-tracking.md) | Lineage tracking | SPEC-001 | 4 | ✅ Complete |
+| [TASK-040](tasks/TASK-040-audit-export.md) | Audit log export | SPEC-001 | 4 | ✅ Complete |
+| [TASK-041](tasks/TASK-041-integrity.md) | Trace integrity (Merkle) | SPEC-001 | 6 | ✅ Complete |
 
 **Phase 5 Deliverable**: `ash-provenance` crate, complete audit system
 
 ## Phase 6: CLI and Integration (Week 10)
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-053](tasks/TASK-053-cli-check.md) | `ash check` command | SPEC-005 | 6 |
-| [TASK-054](tasks/TASK-054-cli-run.md) | `ash run` command | SPEC-005 | 8 |
-| [TASK-055](tasks/TASK-055-cli-trace.md) | `ash trace` command | SPEC-005 | 6 |
-| [TASK-056](tasks/TASK-056-cli-repl.md) | `ash repl` command | SPEC-005 | 8 |
-| [TASK-057](tasks/TASK-057-cli-dot.md) | `ash dot` command | SPEC-005 | 4 |
-| [TASK-058](tasks/TASK-058-cli-fmt.md) | `ash fmt` command | SPEC-005 | 4 |
-| [TASK-059](tasks/TASK-059-cli-lsp.md) | `ash lsp` command | SPEC-005 | 12 |
-| [TASK-060](tasks/TASK-060-integration-tests.md) | End-to-end integration tests | - | 8 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-053](tasks/TASK-053-cli-check.md) | `ash check` command | SPEC-005 | 6 | ✅ Complete |
+| [TASK-054](tasks/TASK-054-cli-run.md) | `ash run` command | SPEC-005 | 8 | ✅ Complete |
+| [TASK-055](tasks/TASK-055-cli-trace.md) | `ash trace` command | SPEC-005 | 6 | ✅ Complete |
+| [TASK-056](tasks/TASK-056-cli-repl.md) | `ash repl` command | SPEC-005 | 8 | ✅ Complete |
+| [TASK-057](tasks/TASK-057-cli-dot.md) | `ash dot` command | SPEC-005 | 4 | ✅ Complete |
+| [TASK-058](tasks/TASK-058-cli-fmt.md) | `ash fmt` command | SPEC-005 | 4 | ✅ Complete |
+| [TASK-059](tasks/TASK-059-cli-lsp.md) | `ash lsp` command | SPEC-005 | 12 | ✅ Complete |
+| [TASK-060](tasks/TASK-060-integration-tests.md) | End-to-end integration tests | - | 8 | ✅ Complete |
 
 **Phase 6 Deliverable**: `ash-cli` crate with check, run, trace, repl, dot commands
 
 ## Phase 7: Examples and Documentation (Week 11)
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-047](tasks/TASK-047-examples.md) | Example workflow library | - | 8 |
-| [TASK-048](tasks/TASK-048-tutorial.md) | User tutorial | - | 8 |
-| [TASK-049](tasks/TASK-049-api-docs.md) | API documentation | - | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-047](tasks/TASK-047-examples.md) | Example workflow library | - | 8 | ✅ Complete |
+| [TASK-048](tasks/TASK-048-tutorial.md) | User tutorial | - | 8 | ✅ Complete |
+| [TASK-049](tasks/TASK-049-api-docs.md) | API documentation | - | 6 | ✅ Complete |
 
 ## Phase 8: Optimization and Polish (Week 12)
 
-| Task | Description | Spec | Est. Hours |
-|------|-------------|------|------------|
-| [TASK-050](tasks/TASK-050-benchmarks.md) | Criterion benchmarks | - | 6 |
-| [TASK-051](tasks/TASK-051-optimizations.md) | Performance optimizations | - | 8 |
-| [TASK-052](tasks/TASK-052-fuzzing.md) | Fuzzing setup | - | 6 |
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-050](tasks/TASK-050-benchmarks.md) | Criterion benchmarks | - | 6 | ✅ Complete |
+| [TASK-051](tasks/TASK-051-optimizations.md) | Performance optimizations | - | 8 | ✅ Complete |
+| [TASK-052](tasks/TASK-052-fuzzing.md) | Fuzzing setup | - | 6 | ✅ Complete |
 
 ## Phase 9: Advanced Policy Features (Week 13+)
 

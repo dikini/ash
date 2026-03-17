@@ -226,8 +226,43 @@ Before marking a task complete, the main agent MUST verify:
 - [ ] `cargo clippy --all-targets` clean
 - [ ] `cargo fmt --check` clean
 - [ ] Documentation comments added
+- [ ] CHANGELOG.md updated with entry for this task
 - [ ] Code review completed, issues addressed
 - [ ] Task status updated in PLAN-INDEX.md
+
+### Changelog Guidelines
+
+Every task completion MUST include a CHANGELOG.md entry following [Common Changelog](https://common-changelog.org/) format.
+
+**Where to add:** Add entries to the `[Unreleased]` section at the top.
+
+**Format:**
+```markdown
+## [Unreleased]
+
+### Added
+- Effect lattice implementation with join/meet operations (TASK-001). The effect system tracks computational power from epistemic (read-only) through operational (side effects).
+
+### Changed
+- Refactored parser error handling for better diagnostics (TASK-015).
+
+### Fixed
+- Corrected partial ordering in Effect::partial_cmp (TASK-001).
+```
+
+**Categories:**
+- `Added` - New features, capabilities, modules
+- `Changed` - Changes to existing functionality
+- `Deprecated` - Soon-to-be removed features
+- `Removed` - Removed features
+- `Fixed` - Bug fixes
+- `Security` - Security-related changes
+
+**Entry content:**
+- One line per significant change
+- Include task reference in parentheses: `(TASK-001)`
+- Brief description of what changed
+- Optional: brief rationale (after period)
 
 ## Communication Protocol
 

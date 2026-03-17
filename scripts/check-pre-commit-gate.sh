@@ -38,6 +38,9 @@ done
 # Format check must pass before anything else
 bash scripts/check-rust-format.sh
 
+# Changelog check - ensure staged changes have corresponding changelog entry
+bash scripts/check-changelog-staged.sh
+
 # Fast checks
 echo "pre-commit-gate: running cargo check"
 cargo check --workspace

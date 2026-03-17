@@ -147,13 +147,16 @@ Every task is considered **complete** only when:
 
 | Task | Description | Spec | Est. Hours |
 |------|-------------|------|------------|
-| [TASK-042](tasks/TASK-042-cli-check.md) | `ash check` command | - | 4 |
-| [TASK-043](tasks/TASK-043-cli-run.md) | `ash run` command | - | 4 |
-| [TASK-044](tasks/TASK-044-cli-trace.md) | `ash trace` command | - | 4 |
-| [TASK-045](tasks/TASK-045-cli-repl.md) | `ash repl` command | - | 6 |
-| [TASK-046](tasks/TASK-046-integration-tests.md) | End-to-end integration tests | - | 8 |
+| [TASK-053](tasks/TASK-053-cli-check.md) | `ash check` command | SPEC-005 | 6 |
+| [TASK-054](tasks/TASK-054-cli-run.md) | `ash run` command | SPEC-005 | 8 |
+| [TASK-055](tasks/TASK-055-cli-trace.md) | `ash trace` command | SPEC-005 | 6 |
+| [TASK-056](tasks/TASK-056-cli-repl.md) | `ash repl` command | SPEC-005 | 8 |
+| [TASK-057](tasks/TASK-057-cli-dot.md) | `ash dot` command | SPEC-005 | 4 |
+| [TASK-058](tasks/TASK-058-cli-fmt.md) | `ash fmt` command | SPEC-005 | 4 |
+| [TASK-059](tasks/TASK-059-cli-lsp.md) | `ash lsp` command | SPEC-005 | 12 |
+| [TASK-060](tasks/TASK-060-integration-tests.md) | End-to-end integration tests | - | 8 |
 
-**Phase 6 Deliverable**: `ash-cli` crate, usable tool
+**Phase 6 Deliverable**: `ash-cli` crate with check, run, trace, repl, dot commands
 
 ## Phase 7: Examples and Documentation (Week 11)
 
@@ -173,8 +176,8 @@ Every task is considered **complete** only when:
 
 ## Total Effort Estimate
 
-- **Tasks**: 53
-- **Estimated Hours**: ~308 hours
+- **Tasks**: 61
+- **Estimated Hours**: ~356 hours
 - **Calendar Time**: 12 weeks (single developer)
 - **Team of 3**: ~4 weeks with parallel work
 
@@ -223,4 +226,4 @@ Update this section as tasks complete:
 | 7 | 3 | 0 | 🔴 Not started |
 | 8 | 3 | 0 | 🔴 Not started |
 
-**Overall Progress**: 0/53 tasks (0%)
+**Overall Progress**: 0/61 tasks (0%)

@@ -28,6 +28,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Comprehensive AST tests: workflow construction, pattern bindings, serde roundtrip (TASK-003)
 - Provenance tracking types: WorkflowId, Provenance, TraceEvent, Decision with fork lineage (TASK-004)
 - Provenance tests: lineage accumulation, uniqueness, serde roundtrip (TASK-004)
+- Pattern matching system with 6 variants: Variable, Tuple, Record, List, Wildcard, Literal (TASK-005)
+- Pattern helper methods: bindings() for collecting variables, is_refutable() for exhaustiveness (TASK-005)
 
 ### Changed
 

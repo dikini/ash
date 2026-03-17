@@ -33,7 +33,7 @@ Every task is considered **complete** only when:
 | [TASK-002](tasks/TASK-002-value-system.md) | Value enum with serialization | SPEC-001 | 4 | ✅ Complete |
 | [TASK-003](tasks/TASK-003-workflow-ast.md) | Core Workflow AST types | SPEC-001 | 6 | ✅ Complete |
 | [TASK-004](tasks/TASK-004-provenance.md) | Provenance and trace types | SPEC-001 | 4 | ✅ Complete |
-| [TASK-005](tasks/TASK-005-patterns.md) | Pattern matching system | SPEC-001 | 6 | 🔴 Not Started |
+| [TASK-005](tasks/TASK-005-patterns.md) | Pattern matching system | SPEC-001 | 6 | ✅ Complete |
 
 ### Testing Infrastructure
 
@@ -217,7 +217,7 @@ Update this section as tasks complete:
 
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
-| 1 | 7 | 4 | 🟡 In Progress |
+| 1 | 7 | 5 | 🟡 In Progress |
 | 2 | 10 | 0 | 🔴 Not started |
 | 3 | 8 | 0 | 🔴 Not started |
 | 4 | 12 | 0 | 🔴 Not started |
@@ -226,4 +226,4 @@ Update this section as tasks complete:
 | 7 | 3 | 0 | 🔴 Not started |
 | 8 | 3 | 0 | 🔴 Not started |
 
-**Overall Progress**: 4/55 tasks (7%)
+**Overall Progress**: 5/55 tasks (9%)

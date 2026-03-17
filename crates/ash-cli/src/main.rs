@@ -126,11 +126,11 @@ async fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     use assert_cmd::Command;
     use predicates::prelude::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
+    
+    
 
     #[test]
     fn test_cli_help() {

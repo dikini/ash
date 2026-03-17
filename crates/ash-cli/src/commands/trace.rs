@@ -5,7 +5,6 @@
 use anyhow::{Context, Result};
 use ash_provenance::export::ExportFormat;
 use clap::Args;
-use colored::Colorize;
 use std::path::Path;
 
 /// Arguments for the trace command

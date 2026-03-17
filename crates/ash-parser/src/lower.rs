@@ -4,7 +4,7 @@
 //! used by the ash-core crate.
 
 use ash_core::{
-    Action as CoreAction, Capability, Constraint as CoreConstraint, Effect, Expr as CoreExpr,
+    Action as CoreAction, Capability, Effect, Expr as CoreExpr,
     Guard as CoreGuard, Obligation as CoreObligation, Pattern as CorePattern,
     Predicate as CorePredicate, Provenance, Role as CoreRole, Workflow as CoreWorkflow,
 };
@@ -16,7 +16,6 @@ use crate::surface::{
 
 /// Lower a workflow definition to core IR.
 pub fn lower_workflow(def: &WorkflowDef) -> CoreWorkflow {
-    use crate::surface::Workflow as SurfaceWorkflow;
     // Create a provenance for the workflow
     let provenance = Provenance::new();
 
@@ -34,7 +33,7 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
         } => {
             let pattern = binding
                 .as_ref()
-                .map(|p| lower_pattern(p))
+                .map(lower_pattern)
                 .unwrap_or(CorePattern::Wildcard);
 
             let cont = continuation
@@ -55,7 +54,7 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
 
         SurfaceWorkflow::Orient {
             expr,
-            binding,
+            binding: _,
             continuation,
             ..
         } => {
@@ -72,7 +71,7 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
 
         SurfaceWorkflow::Propose {
             action,
-            binding,
+            binding: _,
             continuation,
             ..
         } => {
@@ -405,6 +404,7 @@ fn lower_predicate(pred: &Predicate) -> CorePredicate {
 }
 
 /// Lower an effect type to core Effect.
+#[allow(dead_code)]
 fn lower_effect_type(effect: EffectType) -> Effect {
     match effect {
         EffectType::Observe | EffectType::Read => Effect::Epistemic,

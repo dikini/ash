@@ -138,7 +138,6 @@ async fn execute_with_trace(
     _input: HashMap<String, Value>,
 ) -> Result<Value> {
     use ash_provenance::create_trace_recorder;
-    use ash_provenance::TraceStore;
     use ash_core::WorkflowId;
 
     let workflow_id = WorkflowId::new();

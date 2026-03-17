@@ -131,7 +131,7 @@ async fn handle_input(input: &str, ctx: &mut EvalContext) -> Result<()> {
 /// Handle REPL commands
 async fn handle_command(input: &str, ctx: &mut EvalContext) -> Result<()> {
     let parts: Vec<&str> = input.split_whitespace().collect();
-    let cmd = parts.first().map(|s| *s).unwrap_or(":");
+    let cmd = parts.first().copied().unwrap_or(":");
 
     match cmd {
         ":help" | ":h" => {
@@ -207,8 +207,8 @@ fn eval_expression(input: &str) -> Result<Value> {
     let core_expr = ash_parser::lower::lower_expr(&surface_expr);
 
     // Evaluate using a simple context - eval_expr is synchronous
-    let mut eval_ctx = ash_interp::Context::new();
-    ash_interp::eval_expr(&core_expr, &mut eval_ctx)
+    let eval_ctx = ash_interp::Context::new();
+    ash_interp::eval_expr(&core_expr, &eval_ctx)
         .map_err(|e| anyhow::anyhow!("Evaluation error: {:?}", e))
 }
 

@@ -49,7 +49,7 @@ mod lib_tests {
 
         // Test that winnow parsers work with ParseInput
         let mut input = new_input("hello world");
-        let result: PResult<&str> =
+        let result: ModalResult<&str> =
             take_while(1.., |c: char| c.is_ascii_alphabetic()).parse_next(&mut input);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "hello");

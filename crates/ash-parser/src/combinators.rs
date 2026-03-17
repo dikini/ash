@@ -26,7 +26,7 @@ use crate::input::update_position;
 /// let result = whitespace.parse_next(&mut input);
 /// assert!(result.is_ok());
 /// ```
-pub fn whitespace<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
+pub fn whitespace<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input)
 }
 
@@ -43,7 +43,7 @@ pub fn whitespace<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
 /// let c = alphanumeric.parse_next(&mut input).unwrap();
 /// assert_eq!(c, 'a');
 /// ```
-pub fn alphanumeric<'a>(input: &mut ParseInput<'a>) -> PResult<char> {
+pub fn alphanumeric<'a>(input: &mut ParseInput<'a>) -> ModalResult<char> {
     one_of(|c: char| c.is_ascii_alphanumeric()).parse_next(input)
 }
 
@@ -59,15 +59,16 @@ pub fn alphanumeric<'a>(input: &mut ParseInput<'a>) -> PResult<char> {
 /// use winnow::token::take_while;
 ///
 /// let mut input = new_input("  hello  ");
-/// fn parser<'a>(i: &mut ParseInput<'a>) -> PResult<&'a str> {
+/// fn parser<'a>(i: &mut ParseInput<'a>) -> ModalResult<&'a str> {
 ///     take_while(1.., |c: char| c.is_ascii_alphabetic()).parse_next(i)
 /// }
 /// let result = ws(parser).parse_next(&mut input);
 /// assert!(result.is_ok());
 /// ```
-pub fn ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> PResult<O>
+#[allow(dead_code)]
+pub fn ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<O>
 where
-    F: FnMut(&mut ParseInput<'a>) -> PResult<O>,
+    F: FnMut(&mut ParseInput<'a>) -> ModalResult<O>,
 {
     move |input: &mut ParseInput<'a>| {
         let _ = whitespace(input)?;

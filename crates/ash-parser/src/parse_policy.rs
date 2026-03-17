@@ -25,10 +25,10 @@
 //!                  | policy_primary "." method "(" args ")"
 //! ```
 
-use winnow::combinator::{delimited, preceded, separated};
+use winnow::combinator::delimited;
 use winnow::prelude::*;
 use winnow::stream::Stream;
-use winnow::token::{one_of, take_while};
+use winnow::token::take_while;
 
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::expr as parse_expr_value;
@@ -46,75 +46,63 @@ use crate::token::Span;
 /// let result = parse_policy_expr(&mut input);
 /// assert!(result.is_ok());
 /// ```
-pub fn policy_expr(input: &mut ParseInput) -> PResult<PolicyExpr> {
+pub fn policy_expr(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     policy_or(input)
 }
 
 /// Parse a policy OR expression: left | right
-fn policy_or(input: &mut ParseInput) -> PResult<PolicyExpr> {
+fn policy_or(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     let start_pos = input.state;
-    let first = policy_and(input)?;
+    let mut exprs = vec![policy_and(input)?];
 
-    let rest: Vec<PolicyExpr> = separated(
-        0..,
-        preceded(policy_ws(literal_str("|")), policy_and),
-        policy_ws(literal_str("|")),
-    )
-    .parse_next(input)?;
+    while policy_ws(literal_str("|")).parse_next(input).is_ok() {
+        exprs.push(policy_and(input)?);
+    }
 
-    if rest.is_empty() {
-        Ok(first)
+    if exprs.len() == 1 {
+        Ok(exprs.into_iter().next().unwrap())
     } else {
-        let mut all = vec![first];
-        all.extend(rest);
-        Ok(PolicyExpr::Or(all))
+        let _span = span_from(&start_pos, &input.state);
+        Ok(PolicyExpr::Or(exprs))
     }
 }
 
 /// Parse a policy AND expression: left & right
-fn policy_and(input: &mut ParseInput) -> PResult<PolicyExpr> {
+fn policy_and(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     let start_pos = input.state;
-    let first = policy_seq(input)?;
+    let mut exprs = vec![policy_seq(input)?];
 
-    let rest: Vec<PolicyExpr> = separated(
-        0..,
-        preceded(policy_ws(literal_str("&")), policy_seq),
-        policy_ws(literal_str("&")),
-    )
-    .parse_next(input)?;
+    while policy_ws(literal_str("&")).parse_next(input).is_ok() {
+        exprs.push(policy_seq(input)?);
+    }
 
-    if rest.is_empty() {
-        Ok(first)
+    if exprs.len() == 1 {
+        Ok(exprs.into_iter().next().unwrap())
     } else {
-        let mut all = vec![first];
-        all.extend(rest);
-        Ok(PolicyExpr::And(all))
+        let _span = span_from(&start_pos, &input.state);
+        Ok(PolicyExpr::And(exprs))
     }
 }
 
 /// Parse a policy sequential expression: left >> right
-fn policy_seq(input: &mut ParseInput) -> PResult<PolicyExpr> {
+fn policy_seq(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     let start_pos = input.state;
-    let first = policy_unary(input)?;
+    let mut exprs = vec![policy_unary(input)?];
 
-    let rest: Vec<PolicyExpr> = separated(
-        0..,
-        preceded(policy_ws(literal_str(">>")), policy_unary),
-        policy_ws(literal_str(">>")),
-    )
-    .parse_next(input)?;
+    while policy_ws(literal_str(">>")).parse_next(input).is_ok() {
+        exprs.push(policy_unary(input)?);
+    }
 
-    if rest.is_empty() {
-        Ok(first)
+    if exprs.len() == 1 {
+        Ok(exprs.into_iter().next().unwrap())
     } else {
-        let mut all = vec![first];
-        all.extend(rest);
-        Ok(PolicyExpr::Sequential(all))
+        let _span = span_from(&start_pos, &input.state);
+        Ok(PolicyExpr::Sequential(exprs))
     }
 }
 
 /// Parse a policy unary expression: !expr, forall, exists, or primary
-fn policy_unary(input: &mut ParseInput) -> PResult<PolicyExpr> {
+fn policy_unary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     let start_pos = input.state;
 
     // Try negation: !expr
@@ -137,9 +125,9 @@ fn policy_unary(input: &mut ParseInput) -> PResult<PolicyExpr> {
 }
 
 /// Parse a forall expression: forall(var, items, body)
-fn parse_forall(input: &mut ParseInput, start_pos: &Position) -> PResult<PolicyExpr> {
+fn parse_forall(input: &mut ParseInput, start_pos: &Position) -> ModalResult<PolicyExpr> {
     let _ = policy_ws(literal_str("(")).parse_next(input)?;
-    let var = identifier(input)?.into();
+    let var = policy_ws(identifier).parse_next(input)?.into();
     let _ = policy_ws(literal_str(",")).parse_next(input)?;
     let items = Box::new(parse_expr_value(input)?);
     let _ = policy_ws(literal_str(",")).parse_next(input)?;
@@ -156,9 +144,9 @@ fn parse_forall(input: &mut ParseInput, start_pos: &Position) -> PResult<PolicyE
 }
 
 /// Parse an exists expression: exists(var, items, body)
-fn parse_exists(input: &mut ParseInput, start_pos: &Position) -> PResult<PolicyExpr> {
+fn parse_exists(input: &mut ParseInput, start_pos: &Position) -> ModalResult<PolicyExpr> {
     let _ = policy_ws(literal_str("(")).parse_next(input)?;
-    let var = identifier(input)?.into();
+    let var = policy_ws(identifier).parse_next(input)?.into();
     let _ = policy_ws(literal_str(",")).parse_next(input)?;
     let items = Box::new(parse_expr_value(input)?);
     let _ = policy_ws(literal_str(",")).parse_next(input)?;
@@ -175,7 +163,7 @@ fn parse_exists(input: &mut ParseInput, start_pos: &Position) -> PResult<PolicyE
 }
 
 /// Parse a policy primary expression: identifier, call, or parenthesized
-fn policy_primary(input: &mut ParseInput) -> PResult<PolicyExpr> {
+fn policy_primary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     let start_pos = input.state;
 
     // Try parenthesized expression first
@@ -225,11 +213,11 @@ fn parse_method_chain(
     input: &mut ParseInput,
     mut receiver: PolicyExpr,
     start_pos: &Position,
-) -> PResult<PolicyExpr> {
+) -> ModalResult<PolicyExpr> {
     loop {
         // Check for method call
-        if let Ok(_) = policy_ws(literal_str(".")).parse_next(input) {
-            if let Ok(method_name) = identifier(input) {
+        if let Ok(_) = policy_ws(literal_str(".")).parse_next(input)
+            && let Ok(method_name) = identifier(input) {
                 let method: Name = method_name.to_string().into_boxed_str();
 
                 // Check for arguments
@@ -254,14 +242,13 @@ fn parse_method_chain(
                 };
                 continue;
             }
-        }
         break;
     }
     Ok(receiver)
 }
 
 /// Parse arguments for policy expressions
-fn parse_policy_args(input: &mut ParseInput) -> PResult<Vec<Expr>> {
+fn parse_policy_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
     let first = parse_expr_value(input)?;
     let mut args = vec![first];
 
@@ -278,7 +265,7 @@ fn parse_policy_args(input: &mut ParseInput) -> PResult<Vec<Expr>> {
 }
 
 /// Parse a string literal token.
-fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResult<&'a str> {
+fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<&'a str> {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
         if input.input.starts_with(s) {
@@ -298,10 +285,10 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResult<&'a
 }
 
 /// Parse a keyword (ensures word boundary).
-fn policy_keyword<'a>(word: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResult<&'a str> {
+fn policy_keyword<'a>(word: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<&'a str> {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
-        let start = input.state;
+        let _start = input.state;
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
@@ -322,9 +309,9 @@ fn policy_keyword<'a>(word: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResu
 }
 
 /// Whitespace wrapper for policy parsing.
-fn policy_ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> PResult<O>
+fn policy_ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<O>
 where
-    F: FnMut(&mut ParseInput<'a>) -> PResult<O>,
+    F: FnMut(&mut ParseInput<'a>) -> ModalResult<O>,
 {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
@@ -338,11 +325,11 @@ where
 fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: PResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        let _: ModalResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
 
         // Check for line comment
         if input.input.starts_with("--") {
-            let _: PResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
             continue;
         }
 
@@ -379,26 +366,23 @@ fn span_from(start: &Position, end: &Position) -> Span {
 }
 
 /// Parse an identifier.
-fn identifier<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
-    let checkpoint = input.clone();
-
-    // First character: letter or underscore
-    let _first = one_of(|c: char| c.is_ascii_alphabetic() || c == '_').parse_next(input)?;
-
-    // Remaining characters: alphanumeric, underscore, or hyphen
-    let _: &str = take_while(0.., |c: char| {
+fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    // Use take_while to match the entire identifier at once
+    // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
+    let result: &str = take_while(1.., |c: char| {
         c.is_ascii_alphanumeric() || c == '_' || c == '-'
     })
     .parse_next(input)?;
 
-    // Calculate the result from the checkpoint
-    let consumed_len = input.state.offset - checkpoint.state.offset;
-    let result = &checkpoint.input[..consumed_len];
+    // Check that first character is a letter or underscore (not a digit)
+    if result.is_empty() || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_') {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
 
     // Check that it's not a keyword
     if is_keyword(result) {
-        // Restore input state
-        *input = checkpoint;
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));

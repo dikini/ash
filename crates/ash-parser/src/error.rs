@@ -201,6 +201,6 @@ mod tests {
         let _: &dyn std::error::Error = &error;
 
         // Test description (via Display)
-        assert_eq!(format!("{}", error).contains("test error"), true);
+        assert!(format!("{}", error).contains("test error"));
     }
 }

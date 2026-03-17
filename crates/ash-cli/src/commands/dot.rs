@@ -5,7 +5,6 @@
 use anyhow::{Context, Result};
 use ash_core::visualize::ToDot;
 use clap::Args;
-use colored::Colorize;
 use std::io::Write;
 use std::path::Path;
 
@@ -84,7 +83,7 @@ fn remove_colors(dot: &str) -> String {
                     let before = parts[0];
                     let after_parts: Vec<&str> = parts[1].splitn(2, '"').collect();
                     if after_parts.len() >= 2 {
-                        let after = after_parts[1].splitn(2, '"').nth(1).unwrap_or("");
+                        let after = after_parts[1].split_once('"').map(|x| x.1).unwrap_or("");
                         format!("{}{}", before.trim_end_matches(','), after)
                     } else {
                         line.to_string()

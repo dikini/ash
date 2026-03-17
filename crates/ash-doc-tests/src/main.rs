@@ -10,9 +10,9 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
-use pulldown_cmark::{Event, Parser as MdParser, Tag, TagEnd};
+use pulldown_cmark::{Event, Parser as MdParser, Tag, TagEnd, CodeBlockKind};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(Parser)]
@@ -166,23 +166,22 @@ fn extract_blocks(file: &PathBuf) -> Result<Vec<CodeBlock>> {
     let mut in_code_block = false;
     let mut current_lang = String::new();
     let mut current_info: Vec<String> = Vec::new();
-    let mut line_number = 0;
-    let mut current_start_line = 0;
+    let current_start_line = 1;
     
-    for (event, range) in parser {
+    for event in parser {
         match event {
             Event::Start(Tag::CodeBlock(lang)) => {
                 in_code_block = true;
                 current_code.clear();
                 
                 // Parse language and info string
-                let lang_str = lang.to_string();
-                let parts: Vec<_> = lang_str.split_whitespace().collect();
-                current_lang = parts.first().map(|s| s.to_string()).unwrap_or_default();
-                current_info = parts.into_iter().skip(1).map(|s| s.to_string()).collect();
-                
-                // Calculate line number
-                current_start_line = content[..range.start].lines().count() + 1;
+                let lang_str = match lang {
+                    CodeBlockKind::Fenced(info) => info.to_string(),
+                    CodeBlockKind::Indented => String::new(),
+                };
+                let parts: Vec<&str> = lang_str.split_whitespace().collect();
+                current_lang = parts.first().map(|s: &&str| s.to_string()).unwrap_or_default();
+                current_info = parts.into_iter().skip(1).map(|s: &str| s.to_string()).collect();
             }
             Event::End(TagEnd::CodeBlock) => {
                 if in_code_block {
@@ -215,7 +214,7 @@ fn extract_blocks(file: &PathBuf) -> Result<Vec<CodeBlock>> {
     Ok(blocks)
 }
 
-fn test_block(block: &CodeBlock, temp_dir: &PathBuf) -> Result<TestResult> {
+fn test_block(block: &CodeBlock, temp_dir: &Path) -> Result<TestResult> {
     let test_file = temp_dir.join(format!("test_{}_{}.rs",
         sanitize_filename(&block.file.file_name().unwrap().to_string_lossy()),
         block.line

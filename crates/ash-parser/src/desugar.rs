@@ -6,8 +6,7 @@
 //! - Optional binding expansion
 //! - Other syntactic sugar elimination
 
-use crate::surface::{CheckTarget, Pattern, Workflow};
-use crate::token::Span;
+use crate::surface::{Pattern, Workflow};
 
 /// Desugar a workflow definition, applying all transformation passes.
 ///
@@ -15,8 +14,7 @@ use crate::token::Span;
 pub fn desugar_workflow(workflow: &Workflow) -> Workflow {
     let workflow = desugar_sequencing(workflow);
     let workflow = desugar_optional_bindings(&workflow);
-    let workflow = desugar_nested_blocks(&workflow);
-    workflow
+    desugar_nested_blocks(&workflow)
 }
 
 /// Desugar semicolon sequencing into explicit Seq nodes.

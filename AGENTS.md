@@ -31,6 +31,73 @@ This document defines how AI agents should collaborate on the Ash workflow langu
   - fuzz checks when a runnable harness exists
 - Local `pre-push` runs the full local gate.
 
+## Dependency Management
+
+**Keep dependencies current to avoid technical debt.**
+
+### Version Policy
+
+- Use **latest stable versions** of all dependencies
+- Avoid pinning to old versions unless absolutely necessary
+- Update dependencies when:
+  - Starting new work
+  - Fixing compatibility issues
+  - Addressing security advisories
+
+### Cargo.toml Guidelines
+
+```toml
+# GOOD: Specific recent version
+serde = "1.0"
+
+# GOOD: Using workspace dependencies for consistency
+[workspace.dependencies]
+tokio = { version = "1.42", features = ["full"] }
+
+# AVOID: Very old pinned versions
+old-crate = "=0.1.2"  # Only if critical
+```
+
+### Checking for Updates
+
+```bash
+# Check for outdated dependencies
+cargo install cargo-outdated
+cargo outdated
+
+# Update all dependencies
+cargo update
+
+# Check for security advisories
+cargo install cargo-audit
+cargo audit
+```
+
+### Breaking Changes
+
+When updating dependencies with breaking changes:
+1. Update version in `Cargo.toml`
+2. Fix compilation errors
+3. Run tests: `cargo test --all`
+4. Run clippy: `cargo clippy --all`
+5. Update `CHANGELOG.md` with dependency changes
+
+### Workspace Dependencies
+
+Use workspace-level dependencies for consistency across crates:
+
+```toml
+# In workspace Cargo.toml
+[workspace.dependencies]
+serde = "1.0"
+uuid = "1.12"
+
+# In crate Cargo.toml
+[dependencies]
+serde = { workspace = true }
+uuid = { workspace = true }
+```
+
 ## Documentation Workflow
 
 - `docs/specs/` stores canonical behavior and invariant specs.

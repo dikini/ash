@@ -229,7 +229,7 @@ impl fmt::Display for TypeCheckResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::surface::{Literal, Pattern};
+    use ash_parser::surface::Pattern;
 
     #[test]
     fn test_solver_creation() {

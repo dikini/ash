@@ -5,7 +5,7 @@
 use winnow::combinator::{alt, delimited};
 use winnow::prelude::*;
 use winnow::stream::Stream;
-use winnow::token::{one_of, take_while};
+use winnow::token::take_while;
 
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::expr;
@@ -16,10 +16,11 @@ use crate::surface::{
 use crate::token::Span;
 
 /// Parse a workflow definition: `workflow <name> { <body> }`
-pub fn workflow_def(input: &mut ParseInput) -> PResult<WorkflowDef> {
+pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     let start_pos = input.state;
 
     let _ = keyword("workflow").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let name = identifier(input)?;
     let body = delimited(literal_str("{"), workflow, literal_str("}")).parse_next(input)?;
 
@@ -33,7 +34,7 @@ pub fn workflow_def(input: &mut ParseInput) -> PResult<WorkflowDef> {
 }
 
 /// Parse a workflow body - sequence of statements separated by semicolons
-pub fn workflow(input: &mut ParseInput) -> PResult<Workflow> {
+pub fn workflow(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     // Parse statements
@@ -64,7 +65,7 @@ pub fn workflow(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a list of statements separated by semicolons
-fn parse_stmt_list(input: &mut ParseInput) -> PResult<Vec<Workflow>> {
+fn parse_stmt_list(input: &mut ParseInput) -> ModalResult<Vec<Workflow>> {
     let mut stmts = Vec::new();
 
     loop {
@@ -100,7 +101,7 @@ fn parse_stmt_list(input: &mut ParseInput) -> PResult<Vec<Workflow>> {
 }
 
 /// Parse a single workflow statement
-fn parse_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     alt((
         observe_stmt,
         orient_stmt,
@@ -121,10 +122,11 @@ fn parse_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse an observe statement: `observe <capability> [as <pattern>]`
-fn observe_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn observe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("observe").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let capability = identifier(input)?;
 
     // Check for optional binding
@@ -145,10 +147,11 @@ fn observe_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse an orient statement: `orient <expr> [as <pattern>]`
-fn orient_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn orient_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("orient").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let e = expr(input)?;
 
     // Check for optional binding
@@ -169,10 +172,11 @@ fn orient_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a propose statement: `propose <action> [as <pattern>]`
-fn propose_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn propose_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("propose").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let action = action_ref(input)?;
 
     // Check for optional binding
@@ -193,10 +197,11 @@ fn propose_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a decide statement: `decide <expr> [with <policy>] then <workflow> [else <workflow>]`
-fn decide_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("decide").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let e = expr(input)?;
 
     // Optional policy name
@@ -227,10 +232,11 @@ fn decide_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a check statement: `check <obligation>` or `check <policy_instance>`
-fn check_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn check_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("check").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let target = check_target(input)?;
 
     let span = span_from(&start_pos, &input.state);
@@ -243,7 +249,7 @@ fn check_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a check target - either an obligation reference or a policy instance.
-fn check_target(input: &mut ParseInput) -> PResult<CheckTarget> {
+fn check_target(input: &mut ParseInput) -> ModalResult<CheckTarget> {
     // Try to parse as policy instance first (identifier { ... })
     if let Ok(target) = policy_instance(input) {
         return Ok(CheckTarget::Policy(target));
@@ -254,12 +260,22 @@ fn check_target(input: &mut ParseInput) -> PResult<CheckTarget> {
 }
 
 /// Parse a policy instance: `PolicyName { field: expr, ... }`
-fn policy_instance(input: &mut ParseInput) -> PResult<PolicyInstance> {
+fn policy_instance(input: &mut ParseInput) -> ModalResult<PolicyInstance> {
     let start_pos = input.state;
+    let checkpoint = *input;
 
     let name = identifier(input)?;
-    let fields = delimited(literal_str("{"), parse_policy_field_inits, literal_str("}"))
-        .parse_next(input)?;
+    
+    // Check for opening brace, restore checkpoint if not found
+    if literal_str("{").parse_next(input).is_err() {
+        *input = checkpoint;
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    
+    let fields = parse_policy_field_inits(input)?;
+    let _ = literal_str("}").parse_next(input)?;
 
     let span = span_from(&start_pos, &input.state);
 
@@ -271,7 +287,7 @@ fn policy_instance(input: &mut ParseInput) -> PResult<PolicyInstance> {
 }
 
 /// Parse field initializations for a policy instance.
-fn parse_policy_field_inits(input: &mut ParseInput) -> PResult<Vec<(Name, Expr)>> {
+fn parse_policy_field_inits(input: &mut ParseInput) -> ModalResult<Vec<(Name, Expr)>> {
     let mut fields = Vec::new();
 
     loop {
@@ -299,10 +315,11 @@ fn parse_policy_field_inits(input: &mut ParseInput) -> PResult<Vec<(Name, Expr)>
 }
 
 /// Parse an act statement: `act <action> [where <guard>]`
-fn act_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn act_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("act").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let action = action_ref(input)?;
 
     // Optional guard
@@ -322,10 +339,11 @@ fn act_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a let statement: `let <pattern> = <expr>`
-fn let_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("let").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let pat = pattern(input)?;
     let _ = literal_str("=").parse_next(input)?;
     let e = expr(input)?;
@@ -341,10 +359,11 @@ fn let_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse an if statement: `if <expr> then <workflow> [else <workflow>]`
-fn if_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn if_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("if").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let condition = expr(input)?;
     let _ = keyword("then").parse_next(input)?;
     let then_branch = Box::new(parse_single_stmt_or_block(input)?);
@@ -366,10 +385,11 @@ fn if_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a for statement: `for <pattern> in <expr> do <workflow>`
-fn for_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn for_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("for").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let pat = pattern(input)?;
     let _ = keyword("in").parse_next(input)?;
     let collection = expr(input)?;
@@ -387,7 +407,7 @@ fn for_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a parallel block: `par { <workflows> }`
-fn par_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn par_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("par").parse_next(input)?;
@@ -400,7 +420,7 @@ fn par_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse parallel branches
-fn parse_par_branches(input: &mut ParseInput) -> PResult<Vec<Workflow>> {
+fn parse_par_branches(input: &mut ParseInput) -> ModalResult<Vec<Workflow>> {
     let mut branches = Vec::new();
 
     loop {
@@ -428,10 +448,11 @@ fn parse_par_branches(input: &mut ParseInput) -> PResult<Vec<Workflow>> {
 }
 
 /// Parse a with statement: `with <capability> do <workflow>`
-fn with_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn with_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("with").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let capability = identifier(input)?;
     let _ = keyword("do").parse_next(input)?;
     let body = Box::new(parse_single_stmt_or_block(input)?);
@@ -446,10 +467,11 @@ fn with_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a maybe statement: `maybe <workflow> else <workflow>`
-fn maybe_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn maybe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("maybe").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let primary = Box::new(parse_single_stmt_or_block(input)?);
     let _ = keyword("else").parse_next(input)?;
     let fallback = Box::new(parse_single_stmt_or_block(input)?);
@@ -464,10 +486,11 @@ fn maybe_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a must statement: `must <workflow>`
-fn must_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn must_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("must").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let body = Box::new(parse_single_stmt_or_block(input)?);
 
     let span = span_from(&start_pos, &input.state);
@@ -476,7 +499,7 @@ fn must_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a done statement: `done`
-fn done_stmt(input: &mut ParseInput) -> PResult<Workflow> {
+fn done_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("done").parse_next(input)?;
@@ -487,7 +510,7 @@ fn done_stmt(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse a single statement or a block
-fn parse_single_stmt_or_block(input: &mut ParseInput) -> PResult<Workflow> {
+fn parse_single_stmt_or_block(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
 
     if input.input.starts_with("{") {
@@ -498,7 +521,7 @@ fn parse_single_stmt_or_block(input: &mut ParseInput) -> PResult<Workflow> {
 }
 
 /// Parse an action reference: `name(args...)`
-pub fn action_ref(input: &mut ParseInput) -> PResult<ActionRef> {
+pub fn action_ref(input: &mut ParseInput) -> ModalResult<ActionRef> {
     let name = identifier(input)?;
 
     let args = if input.input.starts_with("(") {
@@ -514,7 +537,7 @@ pub fn action_ref(input: &mut ParseInput) -> PResult<ActionRef> {
 }
 
 /// Parse an obligation reference
-fn obligation_ref(input: &mut ParseInput) -> PResult<ObligationRef> {
+fn obligation_ref(input: &mut ParseInput) -> ModalResult<ObligationRef> {
     // Simplified: role.condition
     let role = identifier(input)?;
     let _ = literal_str(".").parse_next(input)?;
@@ -527,7 +550,8 @@ fn obligation_ref(input: &mut ParseInput) -> PResult<ObligationRef> {
 }
 
 /// Parse a pattern
-pub fn pattern(input: &mut ParseInput) -> PResult<Pattern> {
+pub fn pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
+    skip_whitespace_and_comments(input);
     alt((
         parse_wildcard_pattern,
         parse_tuple_pattern,
@@ -538,31 +562,31 @@ pub fn pattern(input: &mut ParseInput) -> PResult<Pattern> {
 }
 
 /// Parse a wildcard pattern: `_`
-fn parse_wildcard_pattern(input: &mut ParseInput) -> PResult<Pattern> {
+fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     let _ = literal_str("_").parse_next(input)?;
     Ok(Pattern::Wildcard)
 }
 
 /// Parse a variable pattern: just an identifier
-fn parse_variable_pattern(input: &mut ParseInput) -> PResult<Pattern> {
+fn parse_variable_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     let name = identifier(input)?;
     Ok(Pattern::Variable(name.into()))
 }
 
 /// Parse a tuple pattern: `(pat1, pat2, ...)`
-fn parse_tuple_pattern(input: &mut ParseInput) -> PResult<Pattern> {
+fn parse_tuple_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     let patterns =
         delimited(literal_str("("), parse_pattern_list, literal_str(")")).parse_next(input)?;
     Ok(Pattern::Tuple(patterns))
 }
 
 /// Parse a list pattern: `[pat1, pat2, ..rest]`
-fn parse_list_pattern(input: &mut ParseInput) -> PResult<Pattern> {
+fn parse_list_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     delimited(literal_str("["), parse_list_pattern_inner, literal_str("]")).parse_next(input)
 }
 
 /// Parse the inner content of a list pattern
-fn parse_list_pattern_inner(input: &mut ParseInput) -> PResult<Pattern> {
+fn parse_list_pattern_inner(input: &mut ParseInput) -> ModalResult<Pattern> {
     let mut elements = Vec::new();
     let mut rest = None;
 
@@ -599,7 +623,7 @@ fn parse_list_pattern_inner(input: &mut ParseInput) -> PResult<Pattern> {
 }
 
 /// Parse a comma-separated list of patterns
-fn parse_pattern_list(input: &mut ParseInput) -> PResult<Vec<Pattern>> {
+fn parse_pattern_list(input: &mut ParseInput) -> ModalResult<Vec<Pattern>> {
     let mut patterns = Vec::new();
 
     loop {
@@ -626,7 +650,7 @@ fn parse_pattern_list(input: &mut ParseInput) -> PResult<Vec<Pattern>> {
 }
 
 /// Parse a comma-separated list of expressions
-fn parse_expr_list(input: &mut ParseInput) -> PResult<Vec<Expr>> {
+fn parse_expr_list(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
     let mut exprs = Vec::new();
 
     loop {
@@ -653,7 +677,7 @@ fn parse_expr_list(input: &mut ParseInput) -> PResult<Vec<Expr>> {
 }
 
 /// Parse a guard expression
-fn parse_guard(input: &mut ParseInput) -> PResult<Guard> {
+fn parse_guard(input: &mut ParseInput) -> ModalResult<Guard> {
     // Simplified guard parsing
     if let Ok(_) = keyword("always").parse_next(input) {
         return Ok(Guard::Always);
@@ -678,31 +702,28 @@ fn parse_guard(input: &mut ParseInput) -> PResult<Guard> {
 }
 
 /// Parse a capability reference
-pub fn capability_ref(input: &mut ParseInput) -> PResult<Name> {
+pub fn capability_ref(input: &mut ParseInput) -> ModalResult<Name> {
     identifier(input).map(|s| s.into())
 }
 
 /// Parse an identifier.
-fn identifier<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
-    let checkpoint = input.clone();
-
-    // First character: letter or underscore
-    let _first = one_of(|c: char| c.is_ascii_alphabetic() || c == '_').parse_next(input)?;
-
-    // Remaining characters: alphanumeric, underscore, or hyphen
-    let _: &str = take_while(0.., |c: char| {
+fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    // Use take_while to match the entire identifier at once
+    // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
+    let result: &str = take_while(1.., |c: char| {
         c.is_ascii_alphanumeric() || c == '_' || c == '-'
     })
     .parse_next(input)?;
 
-    // Calculate the result from the checkpoint
-    let consumed_len = input.state.offset - checkpoint.state.offset;
-    let result = &checkpoint.input[..consumed_len];
+    // Check that first character is a letter or underscore (not a digit)
+    if result.is_empty() || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_') {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
 
     // Check that it's not a keyword
     if is_keyword(result) {
-        // Restore input state
-        *input = checkpoint;
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
@@ -735,9 +756,10 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
 }
 
 /// Whitespace wrapper.
-fn ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> PResult<O>
+#[allow(dead_code)]
+fn ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<O>
 where
-    F: FnMut(&mut ParseInput<'a>) -> PResult<O>,
+    F: FnMut(&mut ParseInput<'a>) -> ModalResult<O>,
 {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
@@ -748,7 +770,7 @@ where
 }
 
 /// Parse a string literal token.
-fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResult<&'a str> {
+fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<&'a str> {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
         if input.input.starts_with(s) {
@@ -771,11 +793,11 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResult<&'a
 fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: PResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        let _: ModalResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
 
         // Check for line comment
         if input.input.starts_with("--") {
-            let _: PResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
             continue;
         }
 

@@ -71,9 +71,9 @@ impl<T> Recovered<T> {
 /// (like the next semicolon or closing brace).
 pub fn recover_to_next_stmt<'a, F, O>(
     mut parser: F,
-) -> impl FnMut(&mut ParseInput<'a>) -> PResult<O> + 'a
+) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<O> + 'a
 where
-    F: FnMut(&mut ParseInput<'a>) -> PResult<O> + 'a,
+    F: FnMut(&mut ParseInput<'a>) -> ModalResult<O> + 'a,
 {
     move |input: &mut ParseInput<'a>| {
         // Try the parser first
@@ -125,7 +125,7 @@ fn skip_to_stmt_boundary(input: &mut ParseInput) {
 
         // Skip comment
         if input.input.starts_with("--") {
-            let _: PResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
             continue;
         }
 
@@ -215,13 +215,13 @@ pub fn try_recover<'a, F, O>(
     mut parser: F,
 ) -> (Option<O>, Vec<ParseError>)
 where
-    F: FnMut(&mut ParseInput<'a>) -> PResult<O>,
+    F: FnMut(&mut ParseInput<'a>) -> ModalResult<O>,
 {
     let mut errors = Vec::new();
 
     match parser(&mut input) {
         Ok(result) => (Some(result), errors),
-        Err(e) => {
+        Err(_e) => {
             errors.push(recovery_error(&input, "Parse failed"));
             skip_to_stmt_boundary(&mut input);
             (None, errors)
@@ -248,11 +248,11 @@ pub fn synchronize(input: &mut ParseInput) {
 fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: PResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        let _: ModalResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
 
         // Check for line comment
         if input.input.starts_with("--") {
-            let _: PResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
             continue;
         }
 

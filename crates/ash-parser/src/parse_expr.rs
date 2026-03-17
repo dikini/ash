@@ -14,18 +14,18 @@ use crate::token::Span;
 /// Parse an expression (entry point).
 ///
 /// This handles the full expression grammar with proper precedence.
-pub fn expr(input: &mut ParseInput) -> PResult<Expr> {
+pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
     ternary_expr(input)
 }
 
 /// Parse a ternary expression: condition ? then : else
-fn ternary_expr(input: &mut ParseInput) -> PResult<Expr> {
-    let start_pos = input.state;
+fn ternary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let _start_pos = input.state;
     let condition = or_expr(input)?;
 
     // Check for ternary operator
     if let Some(_) = opt(preceded(literal_str("?"), or_expr)).parse_next(input)? {
-        let then_branch = or_expr(input)?;
+        let _then_branch = or_expr(input)?;
         let _ = preceded(literal_str(":"), or_expr).parse_next(input)?;
         // Note: Simplified - ternary not fully implemented in surface AST
         Ok(condition)
@@ -35,7 +35,7 @@ fn ternary_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse logical OR expressions: left || right
-fn or_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let mut left = and_expr(input)?;
 
@@ -67,7 +67,7 @@ fn or_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse logical AND expressions: left && right
-fn and_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn and_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let mut left = in_expr(input)?;
 
@@ -99,7 +99,7 @@ fn and_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse IN expressions: left in right
-fn in_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn in_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let left = comparison_expr(input)?;
 
@@ -118,7 +118,7 @@ fn in_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse comparison expressions: ==, !=, <, >, <=, >=
-fn comparison_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let left = additive_expr(input)?;
 
@@ -149,7 +149,7 @@ fn comparison_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse additive expressions: +, -
-fn additive_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let mut left = multiplicative_expr(input)?;
 
@@ -179,7 +179,7 @@ fn additive_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse multiplicative expressions: *, /
-fn multiplicative_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let mut left = unary_expr(input)?;
 
@@ -209,7 +209,7 @@ fn multiplicative_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse unary expressions: !, -
-fn unary_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
 
     // Try negation first
@@ -257,7 +257,7 @@ fn unary_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse primary expressions: literals, variables, field access, index access, calls
-fn primary_expr(input: &mut ParseInput) -> PResult<Expr> {
+fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
 
     // Try parenthesized expression first
@@ -279,8 +279,8 @@ fn primary_expr(input: &mut ParseInput) -> PResult<Expr> {
 
     loop {
         // Field access: .field
-        if let Some(_) = opt(literal_str(".")).parse_next(input)? {
-            if let Ok(field) = identifier(input) {
+        if let Some(_) = opt(literal_str(".")).parse_next(input)?
+            && let Ok(field) = identifier(input) {
                 let span = span_from(&start_pos, &input.state);
                 expr = Expr::FieldAccess {
                     base: Box::new(expr),
@@ -289,7 +289,6 @@ fn primary_expr(input: &mut ParseInput) -> PResult<Expr> {
                 };
                 continue;
             }
-        }
 
         // Index access: [index]
         if let Some(_) = opt(literal_str("[")).parse_next(input)? {
@@ -332,7 +331,7 @@ fn primary_expr(input: &mut ParseInput) -> PResult<Expr> {
 }
 
 /// Parse function call arguments
-fn parse_args(input: &mut ParseInput) -> PResult<Vec<Expr>> {
+fn parse_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
     let first = expr(input)?;
     let mut args = vec![first];
 
@@ -349,12 +348,12 @@ fn parse_args(input: &mut ParseInput) -> PResult<Vec<Expr>> {
 }
 
 /// Parse a literal value.
-pub fn literal(input: &mut ParseInput) -> PResult<Literal> {
+pub fn literal(input: &mut ParseInput) -> ModalResult<Literal> {
     alt((parse_string, parse_float, parse_int, parse_bool, parse_null)).parse_next(input)
 }
 
 /// Parse a string literal.
-fn parse_string(input: &mut ParseInput) -> PResult<Literal> {
+fn parse_string(input: &mut ParseInput) -> ModalResult<Literal> {
     let _ = literal_str("\"").parse_next(input)?;
 
     let content = take_while(0.., |c: char| c != '"').parse_next(input)?;
@@ -364,7 +363,7 @@ fn parse_string(input: &mut ParseInput) -> PResult<Literal> {
 }
 
 /// Parse an integer literal.
-fn parse_int(input: &mut ParseInput) -> PResult<Literal> {
+fn parse_int(input: &mut ParseInput) -> ModalResult<Literal> {
     let digits: &str = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
 
     match digits.parse::<i64>() {
@@ -376,7 +375,7 @@ fn parse_int(input: &mut ParseInput) -> PResult<Literal> {
 }
 
 /// Parse a floating-point literal.
-fn parse_float(input: &mut ParseInput) -> PResult<Literal> {
+fn parse_float(input: &mut ParseInput) -> ModalResult<Literal> {
     // Simplified float parsing: digits.digits
     let int_part: &str = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
     let _ = one_of('.').parse_next(input)?;
@@ -392,7 +391,7 @@ fn parse_float(input: &mut ParseInput) -> PResult<Literal> {
 }
 
 /// Parse a boolean literal.
-fn parse_bool(input: &mut ParseInput) -> PResult<Literal> {
+fn parse_bool(input: &mut ParseInput) -> ModalResult<Literal> {
     alt((
         keyword("true").map(|_| Literal::Bool(true)),
         keyword("false").map(|_| Literal::Bool(false)),
@@ -401,31 +400,28 @@ fn parse_bool(input: &mut ParseInput) -> PResult<Literal> {
 }
 
 /// Parse a null literal.
-fn parse_null(input: &mut ParseInput) -> PResult<Literal> {
+fn parse_null(input: &mut ParseInput) -> ModalResult<Literal> {
     keyword("null").map(|_| Literal::Null).parse_next(input)
 }
 
 /// Parse an identifier.
-pub fn identifier<'a>(input: &mut ParseInput<'a>) -> PResult<&'a str> {
-    let checkpoint = input.clone();
-
-    // First character: letter or underscore
-    let _first = one_of(|c: char| c.is_ascii_alphabetic() || c == '_').parse_next(input)?;
-
-    // Remaining characters: alphanumeric, underscore, or hyphen
-    let _: &str = take_while(0.., |c: char| {
+pub fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    // Use take_while to match the entire identifier at once
+    // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
+    let result: &str = take_while(1.., |c: char| {
         c.is_ascii_alphanumeric() || c == '_' || c == '-'
     })
     .parse_next(input)?;
 
-    // Calculate the result from the checkpoint
-    let consumed_len = input.state.offset - checkpoint.state.offset;
-    let result = &checkpoint.input[..consumed_len];
+    // Check that first character is a letter or underscore (not a digit)
+    if result.is_empty() || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_') {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
 
     // Check that it's not a keyword
     if is_keyword(result) {
-        // Restore input state
-        *input = checkpoint;
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
@@ -490,7 +486,7 @@ fn is_keyword(s: &str) -> bool {
 /// Parse a keyword (ensures word boundary).
 fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::error::ContextError> {
     move |input: &mut ParseInput<'a>| {
-        let start = input.state;
+        let _start = input.state;
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
@@ -511,9 +507,10 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
 }
 
 /// Whitespace wrapper.
-fn ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> PResult<O>
+#[allow(dead_code)]
+fn ws<'a, F, O>(mut parser: F) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<O>
 where
-    F: FnMut(&mut ParseInput<'a>) -> PResult<O>,
+    F: FnMut(&mut ParseInput<'a>) -> ModalResult<O>,
 {
     move |input: &mut ParseInput<'a>| {
         // Skip whitespace and comments
@@ -525,7 +522,7 @@ where
 }
 
 /// Parse a string literal token.
-fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResult<&'a str> {
+fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<&'a str> {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
         if input.input.starts_with(s) {
@@ -548,11 +545,11 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> PResult<&'a
 fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: PResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        let _: ModalResult<&str> = take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
 
         // Check for line comment
         if input.input.starts_with("--") {
-            let _: PResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
             continue;
         }
 

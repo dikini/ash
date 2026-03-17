@@ -84,7 +84,7 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
             // Parallel composition: join of all branch effects
             branches
                 .iter()
-                .map(|b| infer_effect(b))
+                .map(infer_effect)
                 .fold(Effect::Epistemic, |acc, e| acc.join(e))
         }
 

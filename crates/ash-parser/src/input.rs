@@ -5,7 +5,7 @@
 //! error reporting and span generation.
 
 use crate::token::Span;
-use winnow::stream::Located;
+use winnow::stream::LocatingSlice;
 use winnow::stream::Stateful;
 
 /// Position state that tracks line and column information.
@@ -45,7 +45,7 @@ impl Position {
 ///
 /// `ParseInput` wraps a string slice with location tracking and maintains
 /// metadata about the current position in the source.
-pub type ParseInput<'a> = Stateful<Located<&'a str>, Position>;
+pub type ParseInput<'a> = Stateful<LocatingSlice<&'a str>, Position>;
 
 /// Creates a new `ParseInput` from a string slice.
 ///
@@ -60,7 +60,7 @@ pub type ParseInput<'a> = Stateful<Located<&'a str>, Position>;
 /// ```
 pub fn new_input(input: &str) -> ParseInput<'_> {
     Stateful {
-        input: Located::new(input),
+        input: LocatingSlice::new(input),
         state: Position::new(),
     }
 }

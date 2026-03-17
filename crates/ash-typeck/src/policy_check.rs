@@ -35,7 +35,7 @@
 
 use std::collections::HashMap;
 
-use ash_parser::surface::{Expr, Literal, Name, PolicyExpr};
+use ash_parser::surface::{Name, PolicyExpr};
 use thiserror::Error;
 
 /// The type of a policy expression.
@@ -432,8 +432,8 @@ pub fn validate_policy_expr(
 pub fn normalize(expr: PolicyExpr) -> PolicyExpr {
     let expr = flatten_nested_and(expr);
     let expr = flatten_nested_or(expr);
-    let expr = eliminate_double_negation(expr);
-    expr
+    
+    eliminate_double_negation(expr)
 }
 
 /// Flatten nested And expressions.
@@ -636,6 +636,7 @@ pub fn eliminate_double_negation(expr: PolicyExpr) -> PolicyExpr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ash_parser::surface::Expr;
 
     // Helper to create a simple lookup that treats all variables as policies
     fn policy_lookup(_name: &Name) -> Result<PolicyType, PolicyTypeError> {

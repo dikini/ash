@@ -47,32 +47,37 @@ rustup component add rust-src --toolchain nightly
 cargo install cargo-fuzz
 ```
 
-### Required for Coverage
+### Coverage (No Sudo Required)
 
 **cargo-tarpaulin** - Code coverage reporting
 ```bash
-# On Debian/Ubuntu - requires sudo for ptrace permissions
-sudo apt-get install libssl-dev pkg-config  # dependencies
-
 # Install tarpaulin
 cargo install cargo-tarpaulin
 
-# To run coverage (may need sudo on some systems)
+# Run coverage (no sudo needed for same-user processes)
 cargo tarpaulin --workspace
 
-# Or with specific features
+# With specific features
 cargo tarpaulin --workspace --features smt
+
+# With HTML output
+cargo tarpaulin --workspace --out Html
 ```
 
-**Note**: On Linux, tarpaulin uses `ptrace` which may require:
+**Note**: Tarpaulin uses ptrace on test processes it spawns. This works without sudo in normal environments. If you encounter permission issues (e.g., in restricted containers), use the LLVM engine:
+
 ```bash
-# Option 1: Run with sudo
-sudo $(which cargo) tarpaulin --workspace
+# Use LLVM engine instead of ptrace
+cargo tarpaulin --workspace --engine llvm
+```
 
-# Option 2: Add ptrace capability (one-time)
-sudo setcap cap_sys_ptrace+ep $(which cargo-tarpaulin)
+Or set ptrace_scope (if system allows):
+```bash
+# Check current setting
+cat /proc/sys/kernel/yama/ptrace_scope
 
-# Option 3: Use --privileged in Docker
+# Temporarily allow (resets on reboot)
+echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
 ```
 
 ### Optional: Z3 SMT Solver
@@ -91,32 +96,26 @@ sudo pacman -S z3
 
 ## Tool Installation Summary
 
-### Quick Setup (No Sudo)
+### Quick Setup (No Sudo Required)
 ```bash
-# All tools that can be installed without sudo
-cargo install cargo-insta cargo-nextest
+# All Rust tools install without sudo
+cargo install cargo-insta cargo-nextest cargo-tarpaulin
 
 # Install git hooks
 ./scripts/install-hooks.sh
 ```
 
-### Full Setup (With Sudo)
+### Full Setup (Minimal Sudo)
 ```bash
-# Run these commands with sudo access:
-
-# 1. System dependencies
+# These commands need sudo (system packages):
 sudo apt-get update
-sudo apt-get install -y libssl-dev pkg-config libz3-dev
+sudo apt-get install -y libz3-dev  # Only if using smt feature
 
-# 2. Install tools
-cargo install cargo-fuzz cargo-tarpaulin
-
-# 3. Setup git hooks
-./scripts/install-hooks.sh
-
-# 4. Install nightly for fuzzing
+# These don't need sudo:
+cargo install cargo-fuzz cargo-tarpaulin cargo-insta cargo-nextest
 rustup install nightly
 rustup component add rust-src --toolchain nightly
+./scripts/install-hooks.sh
 ```
 
 ## Tool Usage
@@ -198,8 +197,11 @@ cargo check --workspace
 
 ### Tarpaulin permission denied
 ```bash
-# Option 1: Use Docker
-# Option 2: Add capability
-sudo setcap cap_sys_ptrace+ep $(which cargo-tarpaulin)
-# Option 3: Skip coverage locally, rely on CI
+# Option 1: Use LLVM engine (no ptrace needed)
+cargo tarpaulin --workspace --engine llvm
+
+# Option 2: Temporarily relax ptrace_scope
+echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+
+# Option 3: Use Docker with --privileged
 ```

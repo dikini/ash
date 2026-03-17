@@ -18,18 +18,12 @@ pub mod policy_check;
 pub mod solver;
 pub mod types;
 
-// SMT-based policy conflict detection
-// Uses Z3 when 'smt' feature is enabled, fallback implementation otherwise
-#[cfg(feature = "smt")]
+// SMT-based policy conflict detection using Z3
+// Provides compile-time verification of policy constraints
 pub mod smt;
-#[cfg(not(feature = "smt"))]
-pub mod smt_fallback;
 
 // Re-export smt module under a unified name
-#[cfg(feature = "smt")]
 pub use smt as policy;
-#[cfg(not(feature = "smt"))]
-pub use smt_fallback as policy;
 
 pub use constraints::*;
 pub use effect::*;

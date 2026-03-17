@@ -25,9 +25,23 @@ The SMT integration is implemented in `crates/ash-typeck/src/smt.rs`:
 - Region and data residency constraints
 - Context reuse across multiple checks
 
-## Feature Flag
+## Mandatory Dependency
 
-Available with `smt` feature: `cargo test -p ash-typeck --features smt`
+Z3/SMT is now a **mandatory dependency** (not optional). All Ash builds include full policy conflict detection.
+
+### System Requirements
+
+Z3 C library must be installed:
+```bash
+# Ubuntu/Debian
+sudo apt-get install libz3-dev
+
+# macOS
+brew install z3
+
+# Windows
+vcpkg install z3
+```
 
 ## Objective
 

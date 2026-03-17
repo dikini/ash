@@ -6,16 +6,12 @@ license.workspace = true
 authors.workspace = true
 description = "Type checker for the Ash workflow language"
 
-[features]
-default = []
-smt = ["dep:z3"]
-
 [dependencies]
 ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }
 thiserror.workspace = true
 im = "15.1"  # Immutable data structures for substitutions
-z3 = { version = "0.12", optional = true }
+z3 = "0.12"
 
 [dev-dependencies]
 proptest = { workspace = true }

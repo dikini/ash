@@ -7,8 +7,6 @@ authors.workspace = true
 description = "Core IR and semantics definitions for Ash"
 
 [features]
-default = []
-smt = ["z3"]
 proptest-helpers = ["dep:proptest"]
 
 [dependencies]
@@ -16,7 +14,6 @@ serde.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 thiserror.workspace = true
-z3 = { version = "0.12", optional = true }
 proptest = { workspace = true, optional = true }
 
 [dev-dependencies]

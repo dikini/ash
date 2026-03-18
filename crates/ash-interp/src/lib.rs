@@ -34,6 +34,7 @@ pub mod typed_provider;
 
 pub use behaviour::{
     BehaviourContext, BehaviourProvider, BehaviourRegistry, MockBehaviourProvider,
+    MockSettableProvider, SettableBehaviourProvider, SettableRegistry, TypedSettableProvider,
 };
 pub use capability::{CapabilityContext, CapabilityProvider, CapabilityRegistry, MockProvider};
 pub use capability_policy::{
@@ -41,7 +42,10 @@ pub use capability_policy::{
     Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Role, Transformation,
 };
 pub use context::Context;
-pub use error::{EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult};
+pub use error::{
+    EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult, ValidationError,
+    ValidationResult,
+};
 pub use eval::eval_expr;
 pub use execute::{execute_simple, execute_workflow};
 pub use execute_observe::{execute_changed, execute_observe};

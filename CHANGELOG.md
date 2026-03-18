@@ -7,6 +7,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Settable Behaviour Provider Trait (TASK-101). Output capability support for writable channels:
+  - `SettableBehaviourProvider` trait extending `BehaviourProvider` with `set(&self, value: Value)` async method and optional `validate(&self, value: &Value)` for pre-checks
+  - `TypedSettableProvider` wrapper with `write_schema` validation before setting values
+  - `MockSettableProvider` for testing with configurable validators
+  - `SettableRegistry` for managing settable providers by capability/channel
+  - `BehaviourContext` extension with `register_settable()`, `get_settable()`, and `set()` methods
+  - `ValidationError` enum with variants for invalid values, out of range, and format errors
+  - `ExecError::ValidationFailed` variant for validation failure reporting
 - Phase 16: Runtime Verification (TASK-114 to TASK-119). Comprehensive runtime verification framework:
   - Capability availability verifier (TASK-114). New `CapabilityVerifier` checks all required capabilities are available with correct modes (observable, settable, sendable, receivable).
   - Obligation satisfaction checker (TASK-115). New `RuntimeObligationChecker` verifies role requirements and obligation presence at runtime.

@@ -72,6 +72,7 @@ pub enum ExecError {
         actual: String,
         path: Option<String>,
     },
+    ValidationFailed(String),
 }
 
 impl std::error::Error for ExecError {
@@ -123,6 +124,7 @@ impl std::fmt::Display for ExecError {
                     )
                 }
             }
+            Self::ValidationFailed(msg) => write!(f, "validation failed: {msg}"),
         }
     }
 }
@@ -167,6 +169,25 @@ pub enum PatternError {
     NotARecord(Value),
 }
 
+/// Validation errors for provider value validation
+#[derive(Debug, Error, Clone, PartialEq)]
+pub enum ValidationError {
+    #[error("invalid value: {0}")]
+    InvalidValue(String),
+
+    #[error("value out of range: {0}")]
+    OutOfRange(String),
+
+    #[error("value format error: {0}")]
+    FormatError(String),
+}
+
+impl From<ValidationError> for ExecError {
+    fn from(err: ValidationError) -> Self {
+        ExecError::ValidationFailed(err.to_string())
+    }
+}
+
 /// Result type for evaluation operations
 pub type EvalResult<T> = Result<T, EvalError>;
 
@@ -175,3 +196,6 @@ pub type ExecResult<T> = Result<T, ExecError>;
 
 /// Result type for pattern matching operations
 pub type PatternResult<T> = Result<T, PatternError>;
+
+/// Result type for validation operations
+pub type ValidationResult<T> = Result<T, ValidationError>;

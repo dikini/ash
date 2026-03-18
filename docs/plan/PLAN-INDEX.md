@@ -236,6 +236,14 @@ Update this section as tasks complete:
 | 7 | 3 | 3 | ✅ Complete |
 | 8 | 3 | 3 | ✅ Complete |
 | 9 | 3 | 3 | ✅ Complete |
+| 10 | 11 | 11 | ✅ Complete |
+| 11 | 6 | 6 | ✅ Complete |
+| 12 | 7 | 7 | ✅ Complete |
+| 13 | 8 | 8 | ✅ Complete |
+| 14 | 5 | 5 | ✅ Complete |
+| 14.5 | 7 | 0 | 🔴 Not Started |
+| 15 | 6 | 6 | ✅ Complete |
+| 16 | 6 | 6 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -299,6 +307,10 @@ Update this section as tasks complete:
 | 11 | 6 | 6 | ✅ Complete |
 | 12 | 7 | 7 | ✅ Complete |
 | 13 | 8 | 8 | ✅ Complete |
+| 14 | 5 | 5 | ✅ Complete |
+| 14.5 | 7 | 0 | 🔴 Not Started |
+| 15 | 6 | 6 | ✅ Complete |
+| 16 | 6 | 6 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -319,24 +331,40 @@ Update this section as tasks complete:
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-096](tasks/TASK-096-typed-provider-wrapper.md) | Typed provider wrapper structs | SPEC-015 | 3 | 🔴 Not Started |
-| [TASK-097](tasks/TASK-097-schema-validation.md) | Schema validation logic | SPEC-015 | 4 | 🔴 Not Started |
-| [TASK-098](tasks/TASK-098-typed-registry.md) | Typed registry integration | SPEC-015 | 3 | 🔴 Not Started |
-| [TASK-099](tasks/TASK-099-runtime-validation.md) | Runtime validation in providers | SPEC-015 | 3 | 🔴 Not Started |
-| [TASK-100](tasks/TASK-100-type-error-reporting.md) | Type error reporting | SPEC-015 | 2 | 🔴 Not Started |
+| [TASK-096](tasks/TASK-096-typed-provider-wrapper.md) | Typed provider wrapper structs | SPEC-015 | 3 | ✅ Complete |
+| [TASK-097](tasks/TASK-097-schema-validation.md) | Schema validation logic | SPEC-015 | 4 | ✅ Complete |
+| [TASK-098](tasks/TASK-098-typed-registry.md) | Typed registry integration | SPEC-015 | 3 | ✅ Complete |
+| [TASK-099](tasks/TASK-099-runtime-validation.md) | Runtime validation in providers | SPEC-015 | 3 | ✅ Complete |
+| [TASK-100](tasks/TASK-100-type-error-reporting.md) | Type error reporting | SPEC-015 | 2 | ✅ Complete |
 
 **Phase 14 Deliverable**: Runtime type safety for Rust/Ash provider boundary
+
+## Phase 14.5: Output Capabilities (Week 23.5)
+
+Output capabilities for writing/sending data (complement to input capabilities in Phase 13).
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-101](tasks/TASK-101-settable-provider.md) | Settable behaviour provider trait | SPEC-016 | 3 | 🔴 Not Started |
+| [TASK-102](tasks/TASK-102-sendable-provider.md) | Sendable stream provider trait | SPEC-016 | 3 | 🔴 Not Started |
+| [TASK-103](tasks/TASK-103-parse-set.md) | Parse set statement | SPEC-016 | 3 | 🔴 Not Started |
+| [TASK-104](tasks/TASK-104-parse-send.md) | Parse send statement | SPEC-016 | 3 | 🔴 Not Started |
+| [TASK-105](tasks/TASK-105-set-execution.md) | Set execution | SPEC-016 | 4 | 🔴 Not Started |
+| [TASK-106](tasks/TASK-106-send-execution.md) | Send execution | SPEC-016 | 4 | 🔴 Not Started |
+| [TASK-107](tasks/TASK-107-bidirectional-wrapper.md) | Bidirectional provider wrappers | SPEC-016 | 3 | 🔴 Not Started |
+
+**Phase 14.5 Deliverable**: Complete output capability support (set/send) for behaviours and streams
 
 ## Phase 15: Capability Integration (Week 24)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-108](tasks/TASK-108-effect-tracking.md) | Effect tracking for all capabilities | SPEC-017 | 4 | 🔴 Not Started |
-| [TASK-109](tasks/TASK-109-obligation-checking.md) | Obligation checking with capabilities | SPEC-017 | 4 | 🔴 Not Started |
-| [TASK-110](tasks/TASK-110-policy-evaluation.md) | Policy evaluation for input/output | SPEC-017 | 6 | 🔴 Not Started |
-| [TASK-111](tasks/TASK-111-provenance-tracking.md) | Provenance tracking for all capabilities | SPEC-017 | 6 | 🔴 Not Started |
-| [TASK-112](tasks/TASK-112-capability-verification.md) | Capability declaration verification | SPEC-017 | 4 | 🔴 Not Started |
-| [TASK-113](tasks/TASK-113-read-write-types.md) | Read/write type checking | SPEC-017 | 4 | 🔴 Not Started |
+| [TASK-108](tasks/TASK-108-effect-tracking.md) | Effect tracking for all capabilities | SPEC-017 | 4 | ✅ Complete |
+| [TASK-109](tasks/TASK-109-obligation-checking.md) | Obligation checking with capabilities | SPEC-017 | 4 | ✅ Complete |
+| [TASK-110](tasks/TASK-110-policy-evaluation.md) | Policy evaluation for input/output | SPEC-017 | 6 | ✅ Complete |
+| [TASK-111](tasks/TASK-111-provenance-tracking.md) | Provenance tracking for all capabilities | SPEC-017 | 6 | ✅ Complete |
+| [TASK-112](tasks/TASK-112-capability-verification.md) | Capability declaration verification | SPEC-017 | 4 | ✅ Complete |
+| [TASK-113](tasks/TASK-113-read-write-types.md) | Read/write type checking | SPEC-017 | 4 | ✅ Complete |
 
 **Phase 15 Deliverable**: Full integration of capabilities with obligations, policies, provenance
 
@@ -344,14 +372,14 @@ Update this section as tasks complete:
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-114](tasks/TASK-114-capability-verifier.md) | Capability availability verifier | SPEC-018 | 4 | 🔴 Not Started |
-| [TASK-115](tasks/TASK-115-obligation-checker.md) | Obligation satisfaction checker | SPEC-018 | 4 | 🔴 Not Started |
-| [TASK-116](tasks/TASK-116-effect-checker.md) | Effect compatibility checker | SPEC-018 | 3 | 🔴 Not Started |
-| [TASK-117](tasks/TASK-117-static-policy-validator.md) | Static policy validator | SPEC-018 | 4 | 🔴 Not Started |
-| [TASK-118](tasks/TASK-118-operation-verifier.md) | Per-operation runtime verifier | SPEC-018 | 5 | 🔴 Not Started |
-| [TASK-119](tasks/TASK-119-verification-aggregator.md) | Verification result aggregation | SPEC-018 | 3 | 🔴 Not Started |
+| [TASK-114](tasks/TASK-114-capability-verifier.md) | Capability availability verifier | SPEC-018 | 4 | ✅ Complete |
+| [TASK-115](tasks/TASK-115-obligation-checker.md) | Obligation satisfaction checker | SPEC-018 | 4 | ✅ Complete |
+| [TASK-116](tasks/TASK-116-effect-checker.md) | Effect compatibility checker | SPEC-018 | 3 | ✅ Complete |
+| [TASK-117](tasks/TASK-117-static-policy-validator.md) | Static policy validator | SPEC-018 | 4 | ✅ Complete |
+| [TASK-118](tasks/TASK-118-operation-verifier.md) | Per-operation runtime verifier | SPEC-018 | 5 | ✅ Complete |
+| [TASK-119](tasks/TASK-119-verification-aggregator.md) | Verification result aggregation | SPEC-018 | 3 | ✅ Complete |
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 65/109 tasks (60%)
-**Remaining Tasks**: 44 tasks (estimated 154 hours)
+**Overall Progress**: 109/116 tasks (94%)
+**Remaining Tasks**: 7 tasks (estimated 23 hours)

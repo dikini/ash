@@ -195,17 +195,28 @@ async fn execute_receive_control(
 ///
 /// # Returns
 /// Ok(()) when a message has been added to the mailbox
-async fn wait_for_message(mailbox: SharedMailbox, _stream_ctx: &StreamContext) -> ExecResult<()> {
+async fn wait_for_message(mailbox: SharedMailbox, stream_ctx: &StreamContext) -> ExecResult<()> {
     // Poll all registered streams until one has a message
     loop {
-        // TODO: Implement iteration over registered streams
-        // For now, we just sleep and retry
-        // In a full implementation, this would poll all registered providers
+        // Try to receive from any available stream
+        if let Some((cap, chan, result)) = stream_ctx.try_recv_any() {
+            let mut mb = mailbox.lock().await;
+            match result {
+                Ok(value) => {
+                    mb.push(MailboxEntry::new(&cap, &chan, value))?;
+                }
+                Err(e) => {
+                    // Log error but continue polling - don't crash on stream errors
+                    eprintln!("Stream error from {cap}:{chan}: {e}");
+                }
+            }
+            return Ok(());
+        }
 
         // Yield to avoid busy-waiting
         sleep(Duration::from_millis(1)).await;
 
-        // Check if any message has arrived (simplified - in real impl would poll providers)
+        // Also check if any message was already in mailbox
         let mb = mailbox.lock().await;
         if !mb.is_empty() {
             return Ok(());

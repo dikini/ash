@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+- Stream iteration over registered streams. Added `StreamRegistry::iter()` method to iterate over all registered providers, `StreamContext::iter_providers()` to iterate over typed providers, and `StreamContext::try_recv_any()` to receive from any available stream (non-blocking). Updated `wait_for_message()` in `execute_stream.rs` to poll all registered streams using `try_recv_any()` instead of busy-waiting.
+
 ### Fixed
 - Infinite recursion bug in `TypedSendableProvider::send()` and `BidirectionalStreamProvider::send()` methods. Both were calling themselves instead of delegating to `inner.send()`. Added proper write_schema validation and delegation to inner provider.
 

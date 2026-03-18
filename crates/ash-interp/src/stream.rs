@@ -94,6 +94,13 @@ impl StreamRegistry {
         self.providers
             .contains_key(&(cap.to_string(), channel.to_string()))
     }
+
+    /// Iterate over all registered providers
+    ///
+    /// Returns an iterator over ((capability_name, channel_name), provider) pairs.
+    pub fn iter(&self) -> impl Iterator<Item = (&(Name, Name), &TypedStreamProvider)> {
+        self.providers.iter()
+    }
 }
 
 /// Context for stream operations during execution
@@ -203,6 +210,61 @@ impl StreamContext {
     /// Returns `None` if no provider is registered for the given capability and channel.
     pub fn get_schema(&self, cap: &str, channel: &str) -> Option<&Type> {
         self.registry.get_schema(cap, channel)
+    }
+
+    /// Iterate over all registered stream providers
+    ///
+    /// Returns an iterator over references to all registered `TypedStreamProvider`s.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_interp::stream::{StreamContext, MockStreamProvider, TypedStreamProvider};
+    /// use ash_typeck::Type;
+    ///
+    /// let mut ctx = StreamContext::new();
+    /// ctx.register(TypedStreamProvider::new(
+    ///     MockStreamProvider::new("kafka", "orders"),
+    ///     Type::Int
+    /// ));
+    ///
+    /// for provider in ctx.iter_providers() {
+    ///     println!("Provider: {}:{}", provider.capability_name(), provider.channel_name());
+    /// }
+    /// ```
+    pub fn iter_providers(&self) -> impl Iterator<Item = &TypedStreamProvider> {
+        self.registry.iter().map(|(_, provider)| provider)
+    }
+
+    /// Try to receive from any available stream (non-blocking)
+    ///
+    /// Polls all registered providers and returns the first available message.
+    /// Returns `Some((capability_name, channel_name, result))` if a message is available,
+    /// or `None` if no provider has a message ready.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_interp::stream::{StreamContext, MockStreamProvider, TypedStreamProvider};
+    /// use ash_core::Value;
+    /// use ash_typeck::Type;
+    ///
+    /// let mut ctx = StreamContext::new();
+    /// let provider = MockStreamProvider::with_values("sensor", "temp", vec![Value::Int(42)]);
+    /// ctx.register(TypedStreamProvider::new(provider, Type::Int));
+    ///
+    /// // Receive from any available stream
+    /// if let Some((cap, chan, result)) = ctx.try_recv_any() {
+    ///     println!("Received from {}:{}: {:?}", cap, chan, result);
+    /// }
+    /// ```
+    pub fn try_recv_any(&self) -> Option<(String, String, ExecResult<Value>)> {
+        for ((cap, chan), provider) in self.registry.iter() {
+            if let Some(result) = provider.try_recv() {
+                return Some((cap.clone(), chan.clone(), result));
+            }
+        }
+        None
     }
 }
 
@@ -1591,5 +1653,134 @@ mod tests {
 
         // No more values
         assert!(provider.try_recv().is_none());
+    }
+
+    // ============================================================
+    // Stream Iteration Tests (Stream Iteration Task)
+    // ============================================================
+
+    #[test]
+    fn test_stream_registry_iter() {
+        let mut registry = StreamRegistry::new();
+        let provider1 = MockStreamProvider::new("kafka", "orders");
+        let provider2 = MockStreamProvider::new("sensor", "temp");
+
+        registry.register(TypedStreamProvider::new(provider1, Type::Int));
+        registry.register(TypedStreamProvider::new(provider2, Type::Float));
+
+        // Collect all providers from iterator
+        let providers: Vec<_> = registry.iter().collect();
+        assert_eq!(providers.len(), 2);
+
+        // Verify we can access both providers
+        let caps: std::collections::HashSet<_> =
+            providers.iter().map(|((cap, _), _)| cap.as_str()).collect();
+        assert!(caps.contains("kafka"));
+        assert!(caps.contains("sensor"));
+    }
+
+    #[test]
+    fn test_stream_context_iter_providers() {
+        let mut ctx = StreamContext::new();
+
+        // Register multiple providers
+        let provider1 = MockStreamProvider::new("kafka", "orders");
+        let provider2 = MockStreamProvider::new("sensor", "temp");
+        let provider3 = MockStreamProvider::new("api", "events");
+
+        ctx.register(TypedStreamProvider::new(provider1, Type::Int));
+        ctx.register(TypedStreamProvider::new(provider2, Type::Float));
+        ctx.register(TypedStreamProvider::new(provider3, Type::String));
+
+        // Iterate over all providers
+        let providers: Vec<_> = ctx.iter_providers().collect();
+        assert_eq!(providers.len(), 3);
+
+        // Collect capability names
+        let caps: std::collections::HashSet<_> =
+            providers.iter().map(|p| p.capability_name()).collect();
+        assert!(caps.contains("kafka"));
+        assert!(caps.contains("sensor"));
+        assert!(caps.contains("api"));
+    }
+
+    #[test]
+    fn test_stream_context_try_recv_any_single_provider() {
+        let mut ctx = StreamContext::new();
+        let provider = MockStreamProvider::with_values("sensor", "temp", vec![Value::Int(42)]);
+        ctx.register(TypedStreamProvider::new(provider, Type::Int));
+
+        // Should receive from the only provider
+        let result = ctx.try_recv_any();
+        assert!(result.is_some());
+
+        let (cap, chan, value_result) = result.unwrap();
+        assert_eq!(cap, "sensor");
+        assert_eq!(chan, "temp");
+        assert_eq!(value_result.unwrap(), Value::Int(42));
+
+        // No more messages
+        assert!(ctx.try_recv_any().is_none());
+    }
+
+    #[test]
+    fn test_stream_context_try_recv_any_multiple_providers() {
+        let mut ctx = StreamContext::new();
+
+        // Register multiple providers with values
+        let provider1 = MockStreamProvider::with_values("kafka", "orders", vec![Value::Int(1)]);
+        let provider2 = MockStreamProvider::with_values("sensor", "temp", vec![Value::Int(2)]);
+
+        ctx.register(TypedStreamProvider::new(provider1, Type::Int));
+        ctx.register(TypedStreamProvider::new(provider2, Type::Int));
+
+        // Should receive from one of the providers
+        let result1 = ctx.try_recv_any();
+        assert!(result1.is_some());
+        let (cap1, chan1, value1) = result1.unwrap();
+        assert_eq!(value1.unwrap(), Value::Int(1));
+
+        // Should receive from the other provider
+        let result2 = ctx.try_recv_any();
+        assert!(result2.is_some());
+        let (cap2, chan2, value2) = result2.unwrap();
+        assert_eq!(value2.unwrap(), Value::Int(2));
+
+        // Verify we got both different providers
+        assert_ne!(
+            (cap1.as_str(), chan1.as_str()),
+            (cap2.as_str(), chan2.as_str())
+        );
+
+        // No more messages
+        assert!(ctx.try_recv_any().is_none());
+    }
+
+    #[test]
+    fn test_stream_context_try_recv_any_empty() {
+        let ctx = StreamContext::new();
+
+        // No providers registered - should return None
+        assert!(ctx.try_recv_any().is_none());
+    }
+
+    #[test]
+    fn test_stream_context_try_recv_all_closed() {
+        let mut ctx = StreamContext::new();
+        let provider = MockStreamProvider::with_values("sensor", "temp", vec![Value::Int(42)]);
+        provider.close();
+        ctx.register(TypedStreamProvider::new(provider, Type::Int));
+
+        // Closed provider should return None
+        assert!(ctx.try_recv_any().is_none());
+    }
+
+    #[test]
+    fn test_stream_context_iter_providers_empty() {
+        let ctx = StreamContext::new();
+
+        // No providers registered - iterator should be empty
+        let count = ctx.iter_providers().count();
+        assert_eq!(count, 0);
     }
 }

@@ -17,6 +17,8 @@
 
 pub mod behaviour;
 pub mod capability;
+pub mod capability_policy;
+pub mod capability_provenance;
 pub mod context;
 pub mod error;
 pub mod eval;
@@ -33,6 +35,10 @@ pub use behaviour::{
     BehaviourContext, BehaviourProvider, BehaviourRegistry, MockBehaviourProvider,
 };
 pub use capability::{CapabilityContext, CapabilityProvider, CapabilityRegistry, MockProvider};
+pub use capability_policy::{
+    CapabilityContext as CapabilityPolicyContext, CapabilityOperation, CapabilityPolicyEvaluator,
+    Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Role, Transformation,
+};
 pub use context::Context;
 pub use error::{EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult};
 pub use eval::eval_expr;

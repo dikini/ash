@@ -7,6 +7,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Phase 15: Capability Integration (TASK-108 to TASK-113). Full integration of capabilities with obligations, policies, provenance, and type safety:
+  - Effect tracking for all capability operations (TASK-108). Added `Workflow::effect()` method that computes total effect by joining operation effects (Observe/Receive=Epistemic, Set/Send=Operational).
+  - Obligation checking with capabilities (TASK-109). New `ObligationChecker` verifies workflows have required input/output capabilities and sufficient effect levels.
+  - Policy evaluation for input/output (TASK-110). New `CapabilityPolicyEvaluator` with support for Permit, Deny, RequireApproval, and Transform decisions.
+  - Provenance tracking for all capabilities (TASK-111). New `CapabilityProvenanceTracker` records all capability operations with event types, values, and policy decisions.
+  - Capability declaration verification (TASK-112). New `CapabilityChecker` framework for verifying workflows use declared capabilities.
+  - Read/write type checking (TASK-113). New `CapabilitySchemaRegistry` validates input/output values against provider schemas with separate read/write types.
 - Phase 13: Streams and Behaviours (TASK-088 to TASK-095). Complete stream processing and behaviour sampling implementation:
   - Stream AST types: `StreamRef`, `Receive`, `ReceiveMode`, `Mailbox` with overflow strategies (TASK-088)
   - Stream provider trait with `StreamRegistry` and `StreamContext` for async stream operations (TASK-089)

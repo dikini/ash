@@ -10,10 +10,13 @@
 //! - **names**: Name resolution and scope tracking (TASK-022)
 //! - **obligations**: Obligation tracking and proof obligations (TASK-023, TASK-024)
 
+pub mod capability_check;
+pub mod capability_typecheck;
 pub mod constraints;
 pub mod effect;
 pub mod name_binding;
 pub mod names;
+pub mod obligation_checker;
 pub mod obligations;
 pub mod policy_check;
 pub mod solver;
@@ -27,10 +30,12 @@ pub mod smt;
 // Re-export smt module under a unified name
 pub use smt as policy;
 
+pub use capability_check::*;
 pub use constraints::*;
 pub use effect::*;
 pub use name_binding::{NameBinder, NameError};
 pub use names::*;
+pub use obligation_checker::*;
 pub use obligations::*;
 pub use policy_check::*;
 pub use solver::*;

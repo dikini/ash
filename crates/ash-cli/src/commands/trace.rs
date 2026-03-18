@@ -80,8 +80,8 @@ async fn execute_with_full_trace(
     workflow: &ash_core::Workflow,
     args: &TraceArgs,
 ) -> Result<TraceResult> {
-    use ash_provenance::create_trace_recorder;
     use ash_core::WorkflowId;
+    use ash_provenance::create_trace_recorder;
 
     let workflow_id = WorkflowId::new();
     let mut recorder = create_trace_recorder(workflow_id);

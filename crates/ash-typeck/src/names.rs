@@ -337,6 +337,11 @@ impl NameResolver {
             Workflow::Done { .. } => {
                 // Nothing to resolve
             }
+
+            Workflow::Ret { expr, .. } => {
+                // Resolve the return expression
+                self.resolve_expr(expr);
+            }
         }
     }
 

@@ -220,6 +220,10 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
         },
 
         SurfaceWorkflow::Done { .. } => CoreWorkflow::Done,
+
+        SurfaceWorkflow::Ret { expr, .. } => CoreWorkflow::Ret {
+            expr: lower_expr(expr),
+        },
     }
 }
 

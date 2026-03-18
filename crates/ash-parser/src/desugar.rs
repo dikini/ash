@@ -195,7 +195,7 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
         },
 
         // Leaf nodes
-        Workflow::Act { .. } | Workflow::Done { .. } => workflow.clone(),
+        Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }
 }
 
@@ -372,7 +372,7 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
             span: *span,
         },
 
-        Workflow::Act { .. } | Workflow::Done { .. } => workflow.clone(),
+        Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }
 }
 
@@ -549,7 +549,7 @@ fn desugar_nested_blocks(workflow: &Workflow) -> Workflow {
             span: *span,
         },
 
-        Workflow::Act { .. } | Workflow::Done { .. } => workflow.clone(),
+        Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }
 }
 

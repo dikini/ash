@@ -156,11 +156,15 @@ fn generate_svg(dot: &str) -> Result<String> {
         .map_err(|e| anyhow::anyhow!("Failed to spawn graphviz dot: {}", e))?;
 
     {
-        let stdin = child.stdin.as_mut().ok_or_else(|| anyhow::anyhow!("Failed to open stdin"))?;
+        let stdin = child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("Failed to open stdin"))?;
         stdin.write_all(dot.as_bytes())?;
     }
 
-    let output = child.wait_with_output()
+    let output = child
+        .wait_with_output()
         .map_err(|e| anyhow::anyhow!("Failed to read graphviz output: {}", e))?;
 
     if output.status.success() {

@@ -1,8 +1,10 @@
 //! Type checking command for Ash workflows.
 //!
 //! TASK-053: Implement `check` command for type checking workflows.
+//! TASK-076: Updated to use ash-engine.
 
 use anyhow::{Context, Result};
+use ash_engine::EngineError;
 use clap::Args;
 use colored::Colorize;
 use std::path::Path;
@@ -41,21 +43,24 @@ pub fn check(args: &CheckArgs) -> Result<()> {
 
 /// Check a single workflow file
 fn check_file(path: &Path, args: &CheckArgs) -> Result<()> {
-    let source = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read file: {}", path.display()))?;
+    // Create the engine
+    let engine = ash_engine::Engine::new()
+        .build()
+        .context("Failed to build engine")?;
 
-    // Parse the workflow
-    let mut input = ash_parser::new_input(&source);
-    let workflow_def = ash_parser::parse_workflow::workflow_def(&mut input)
-        .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
+    // Parse and type check the file
+    let workflow = engine
+        .parse_file(path)
+        .map_err(|e| anyhow::anyhow!("Parse error: {e}"))?;
 
-    // Run type checking
-    let result = ash_typeck::type_check_workflow(&workflow_def.body)?;
+    // Convert EngineError to anyhow::Error for consistent error handling
+    let check_result: Result<(), EngineError> = engine.check(&workflow);
+    let check_result: Result<()> = check_result.map_err(|e| anyhow::anyhow!("{e}"));
 
     // Output results
     match args.format.as_str() {
-        "json" => output_json(path, &result, args),
-        _ => output_human(path, &result, args),
+        "json" => output_json(path, &check_result, args),
+        _ => output_human(path, &check_result, args),
     }
 }
 
@@ -92,35 +97,30 @@ fn check_directory(path: &Path, args: &CheckArgs) -> Result<()> {
         Ok(())
     } else if errors_found > 0 {
         Err(anyhow::anyhow!(
-            "Type checking failed: {} error(s) in {} file(s)",
-            errors_found,
-            files_checked
+            "Type checking failed: {errors_found} error(s) in {files_checked} file(s)"
         ))
     } else {
-        println!(
-            "[OK] {} file(s) type-checked successfully",
-            files_checked
-        );
+        println!("[OK] {files_checked} file(s) type-checked successfully");
         Ok(())
     }
 }
 
 /// Output results in human-readable format
-fn output_human(path: &Path, result: &ash_typeck::TypeCheckResult, args: &CheckArgs) -> Result<()> {
+fn output_human(path: &Path, result: &Result<()>, args: &CheckArgs) -> Result<()> {
     let file_name = path.display().to_string().cyan();
 
     if result.is_ok() {
-        println!("[OK] {}: {}", file_name, "OK".green());
-        if args.strict && !result.errors.is_empty() {
-            for err in &result.errors {
-                println!("  {} {}", "Warning:".yellow(), err);
-            }
+        println!("[OK] {file_name}: {}", "OK".green());
+        if args.strict {
+            // In strict mode, we could output warnings here if the engine
+            // provided them. For now, just indicate strict mode is on.
+            println!("  {} Strict mode enabled", "Note:".yellow());
         }
         Ok(())
     } else {
-        println!("[FAIL] {}: {}", file_name, "FAILED".red());
-        for err in &result.errors {
-            println!("  {} {}", "Error:".red().bold(), err);
+        println!("[FAIL] {file_name}: {}", "FAILED".red());
+        if let Err(e) = result {
+            println!("  {} {e}", "Error:".red().bold());
         }
         Err(anyhow::anyhow!(
             "Type checking failed for {}",
@@ -130,17 +130,18 @@ fn output_human(path: &Path, result: &ash_typeck::TypeCheckResult, args: &CheckA
 }
 
 /// Output results in JSON format
-fn output_json(path: &Path, result: &ash_typeck::TypeCheckResult, args: &CheckArgs) -> Result<()> {
+fn output_json(path: &Path, result: &Result<()>, args: &CheckArgs) -> Result<()> {
+    let success = result.is_ok();
+    let error_message = result.as_ref().err().map(|e| format!("{e}"));
+
     let output = serde_json::json!({
         "file": path.display().to_string(),
-        "success": result.is_ok(),
-        "errors": result.errors.len(),
-        "effect": format!("{:?}", result.effect),
-        "obligation_status": format!("{:?}", result.obligation_status),
+        "success": success,
         "strict": args.strict,
+        "error": error_message,
     });
     println!("{}", serde_json::to_string_pretty(&output)?);
-    if result.is_ok() {
+    if success {
         Ok(())
     } else {
         Err(anyhow::anyhow!(

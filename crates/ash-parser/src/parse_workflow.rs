@@ -116,6 +116,7 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         with_stmt,
         maybe_stmt,
         must_stmt,
+        ret_stmt,
         done_stmt,
     ))
     .parse_next(input)
@@ -507,6 +508,19 @@ fn done_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let span = span_from(&start_pos, &input.state);
 
     Ok(Workflow::Done { span })
+}
+
+/// Parse a ret statement: `ret <expr>;`
+fn ret_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
+    let start_pos = input.state;
+
+    let _ = keyword("ret").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let e = expr(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(Workflow::Ret { expr: e, span })
 }
 
 /// Parse a single statement or a block

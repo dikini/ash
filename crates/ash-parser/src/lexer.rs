@@ -401,6 +401,7 @@ fn lookup_keyword(ident: &str) -> TokenKind {
         "retry" => TokenKind::Retry,
         "timeout" => TokenKind::Timeout,
         "done" => TokenKind::Done,
+        "ret" => TokenKind::Ret,
 
         // Effect levels
         "epistemic" => TokenKind::Epistemic,

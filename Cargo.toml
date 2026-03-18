@@ -5,6 +5,7 @@ members = [
     "crates/ash-typeck",
     "crates/ash-interp",
     "crates/ash-provenance",
+    "crates/ash-engine",
     "crates/ash-cli",
     "crates/ash-macros",
     "crates/ash-doc-tests",

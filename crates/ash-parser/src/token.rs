@@ -63,6 +63,8 @@ pub enum TokenKind {
     Timeout,
     /// `done` - Completion marker
     Done,
+    /// `ret` - Return expression
+    Ret,
 
     // Effect levels
     /// `epistemic` - Read-only effect level

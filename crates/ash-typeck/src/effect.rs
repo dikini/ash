@@ -107,6 +107,8 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
         }
 
         Workflow::Done { .. } => Effect::Epistemic,
+
+        Workflow::Ret { .. } => Effect::Deliberative,
     }
 }
 

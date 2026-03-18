@@ -298,6 +298,13 @@ pub enum Workflow {
         /// Source span
         span: Span,
     },
+    /// Ret: return an expression
+    Ret {
+        /// Expression to return
+        expr: Expr,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Expression types.
@@ -642,6 +649,7 @@ impl Spanned for Workflow {
             Workflow::Must { span, .. } => *span,
             Workflow::Seq { span, .. } => *span,
             Workflow::Done { span, .. } => *span,
+            Workflow::Ret { span, .. } => *span,
         }
     }
 }

@@ -6,8 +6,8 @@ use anyhow::Result;
 use ash_core::Value;
 use clap::Args;
 use colored::Colorize;
-use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
+use rustyline::error::ReadlineError;
 
 /// Arguments for the REPL command
 #[derive(Args, Debug, Clone)]
@@ -31,7 +31,11 @@ pub async fn repl(args: &ReplArgs) -> Result<()> {
     }
 
     println!("{}", "Ash Workflow Language REPL".cyan().bold());
-    println!("Type {} for help, {} to quit\n", ":help".yellow(), ":quit".yellow());
+    println!(
+        "Type {} for help, {} to quit\n",
+        ":help".yellow(),
+        ":quit".yellow()
+    );
 
     let mut rl = DefaultEditor::new()?;
 
@@ -180,7 +184,10 @@ fn print_help() {
     println!("{}", "Ash REPL Commands:".cyan().bold());
     println!();
     println!("  {}         Show this help message", ":help".yellow());
-    println!("  {}        Show the type of an expression", ":type <expr>".yellow());
+    println!(
+        "  {}        Show the type of an expression",
+        ":type <expr>".yellow()
+    );
     println!("  {}      List all variable bindings", ":bindings".yellow());
     println!("  {}        Clear all bindings", ":clear".yellow());
     println!("  {}         Exit the REPL", ":quit".yellow());
@@ -201,7 +208,8 @@ fn eval_expression(input: &str) -> Result<Value> {
     use winnow::prelude::*;
 
     let mut parse_input = ash_parser::new_input(input);
-    let surface_expr = expr.parse_next(&mut parse_input)
+    let surface_expr = expr
+        .parse_next(&mut parse_input)
         .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
 
     let core_expr = ash_parser::lower::lower_expr(&surface_expr);
@@ -219,7 +227,8 @@ async fn eval_workflow_stmt(input: &str) -> Result<Option<Value>> {
 
     // Parse a workflow definition
     let mut parse_input = ash_parser::new_input(input);
-    let surface_wf_def = workflow_def.parse_next(&mut parse_input)
+    let surface_wf_def = workflow_def
+        .parse_next(&mut parse_input)
         .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
 
     let core_wf = ash_parser::lower::lower_workflow(&surface_wf_def);
@@ -236,7 +245,8 @@ async fn infer_type(input: &str) -> Result<String> {
     use winnow::prelude::*;
 
     let mut parse_input = ash_parser::new_input(input);
-    let surface_expr = expr.parse_next(&mut parse_input)
+    let surface_expr = expr
+        .parse_next(&mut parse_input)
         .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
 
     // Create a dummy workflow with this expression

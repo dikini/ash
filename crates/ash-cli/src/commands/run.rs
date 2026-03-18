@@ -1,9 +1,13 @@
 //! Run command for executing Ash workflows.
 //!
 //! TASK-054: Implement `run` command for executing workflows.
+//! TASK-076: Updated to use ash-engine.
 
 use anyhow::{Context, Result};
 use ash_core::Value;
+use ash_provenance::{
+    TraceStore, create_trace_recorder, record_workflow_complete, record_workflow_start,
+};
 use clap::Args;
 use colored::Colorize;
 use std::collections::HashMap;
@@ -33,21 +37,29 @@ pub struct RunArgs {
 pub async fn run(args: &RunArgs) -> Result<()> {
     let path = Path::new(&args.path);
 
-    // Read the workflow source
-    let source = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read workflow file: {}", path.display()))?;
+    // Parse input parameters (currently unused but kept for future use)
+    let _input_values = parse_input(&args.input)?;
 
-    // Parse input parameters
-    let input_values = parse_input(&args.input)?;
+    // Create engine with capabilities
+    let engine = ash_engine::Engine::new()
+        .with_stdio_capabilities()
+        .with_fs_capabilities()
+        .build()
+        .context("Failed to build engine")?;
 
-    // Parse the workflow
-    let workflow = parse_workflow(&source)?;
-
-    // Execute the workflow
+    // Run the workflow file
     let result = if args.trace {
-        execute_with_trace(&workflow, input_values).await?
+        // For trace mode, we use the engine's run_file and add tracing
+        let workflow = engine
+            .parse_file(path)
+            .context("Failed to parse workflow")?;
+        engine.check(&workflow).context("Type checking failed")?;
+        execute_with_trace(&engine, &workflow).await?
     } else {
-        execute_workflow(&workflow, input_values).await?
+        engine
+            .run_file(path)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?
     };
 
     // Output results
@@ -109,50 +121,27 @@ fn json_to_ash_value(value: serde_json::Value) -> Result<Value> {
     }
 }
 
-/// Parse workflow source into core IR
-fn parse_workflow(source: &str) -> Result<ash_core::Workflow> {
-    use ash_parser::parse_workflow::workflow_def;
-    use winnow::prelude::*;
-
-    let mut input = ash_parser::new_input(source);
-    let workflow_def = workflow_def
-        .parse_next(&mut input)
-        .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
-
-    Ok(ash_parser::lower::lower_workflow(&workflow_def))
-}
-
-/// Execute a workflow with the given input
-async fn execute_workflow(
-    workflow: &ash_core::Workflow,
-    _input: HashMap<String, Value>,
-) -> Result<Value> {
-    ash_interp::interpret(workflow)
-        .await
-        .map_err(|e| anyhow::anyhow!("Execution error: {:?}", e))
-}
-
 /// Execute a workflow with tracing enabled
 async fn execute_with_trace(
-    workflow: &ash_core::Workflow,
-    _input: HashMap<String, Value>,
+    engine: &ash_engine::Engine,
+    workflow: &ash_engine::Workflow,
 ) -> Result<Value> {
-    use ash_provenance::create_trace_recorder;
     use ash_core::WorkflowId;
 
     let workflow_id = WorkflowId::new();
     let mut recorder = create_trace_recorder(workflow_id);
 
-    ash_provenance::record_workflow_start(&mut recorder, "main");
+    record_workflow_start(&mut recorder, "main");
 
-    let result = ash_interp::interpret(workflow)
+    let result = engine
+        .execute(workflow)
         .await
-        .map_err(|e| anyhow::anyhow!("Execution error: {:?}", e))?;
+        .map_err(|e| anyhow::anyhow!("Execution error: {e:?}"))?;
 
-    ash_provenance::record_workflow_complete(&mut recorder, true);
+    record_workflow_complete(&mut recorder, true);
 
     // Output trace summary - use the recorder directly
-    let events = recorder.events();
+    let events = recorder.store().events();
     println!("[INFO] Trace recorded: {} events", events.len());
 
     Ok(result)
@@ -160,17 +149,17 @@ async fn execute_with_trace(
 
 /// Output the result to stdout or file
 async fn output_result(result: &Value, output_path: &Option<String>) -> Result<()> {
-    let output = format!("{}", result);
+    let output = format!("{result}");
 
     match output_path {
         Some(path) => {
             tokio::fs::write(path, output)
                 .await
-                .with_context(|| format!("Failed to write output to {}", path))?;
-            println!("[OK] Output written to {}", path);
+                .with_context(|| format!("Failed to write output to {path}"))?;
+            println!("[OK] Output written to {path}");
         }
         None => {
-            println!("{} {}", "Result:".green().bold(), output);
+            println!("{} {output}", "Result:".green().bold());
         }
     }
 
@@ -192,15 +181,15 @@ mod tests {
         let json = r#"{"x": 42, "name": "test"}"#.to_string();
         let result = parse_input(&Some(json)).unwrap();
         assert_eq!(result.get("x"), Some(&Value::Int(42)));
-        assert_eq!(
-            result.get("name"),
-            Some(&Value::String("test".to_string()))
-        );
+        assert_eq!(result.get("name"), Some(&Value::String("test".to_string())));
     }
 
     #[test]
     fn test_json_to_ash_value_conversions() {
-        assert_eq!(json_to_ash_value(serde_json::Value::Null).unwrap(), Value::Null);
+        assert_eq!(
+            json_to_ash_value(serde_json::Value::Null).unwrap(),
+            Value::Null
+        );
         assert_eq!(
             json_to_ash_value(serde_json::Value::Bool(true)).unwrap(),
             Value::Bool(true)

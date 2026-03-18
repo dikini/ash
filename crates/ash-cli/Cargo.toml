@@ -11,11 +11,13 @@ name = "ash"
 path = "src/main.rs"
 
 [dependencies]
+ash-engine = { path = "../ash-engine" }
 ash-core = { path = "../ash-core" }
+ash-provenance = { path = "../ash-provenance" }
 ash-parser = { path = "../ash-parser" }
 ash-typeck = { path = "../ash-typeck" }
 ash-interp = { path = "../ash-interp" }
-ash-provenance = { path = "../ash-provenance" }
+winnow = { workspace = true }
 clap = { version = "4.4", features = ["derive", "cargo"] }
 anyhow = { workspace = true }
 serde = { workspace = true }
@@ -29,7 +31,6 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 regex = "1.10"
-winnow = { workspace = true }
 
 [dev-dependencies]
 assert_cmd = "2.0"

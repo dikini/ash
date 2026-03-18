@@ -15,7 +15,7 @@ use colored::Colorize;
 
 mod commands;
 
-use commands::{check, dot, repl, run, trace, CheckArgs, DotArgs, ReplArgs, RunArgs, TraceArgs};
+use commands::{CheckArgs, DotArgs, ReplArgs, RunArgs, TraceArgs, check, dot, repl, run, trace};
 
 /// Ash CLI - A workflow language for governed AI systems
 #[derive(Parser)]
@@ -126,11 +126,9 @@ async fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    
+
     use assert_cmd::Command;
     use predicates::prelude::*;
-    
-    
 
     #[test]
     fn test_cli_help() {

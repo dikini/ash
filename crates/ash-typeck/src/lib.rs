@@ -33,7 +33,7 @@ pub use name_binding::{NameBinder, NameError};
 pub use names::*;
 pub use obligations::*;
 pub use policy_check::*;
-pub use solver::*;
+pub use solver::{Solver, TypeError};
 pub use types::*;
 pub use visibility::{VisibilityChecker, VisibilityError};
 

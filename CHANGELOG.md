@@ -7,6 +7,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Phase 14: Typed Providers (TASK-096 to TASK-100). Runtime type safety for Rust/Ash provider boundary:
+  - `TypedBehaviourProvider` and `TypedStreamProvider` wrapper structs carrying type schemas (TASK-096)
+  - Schema validation logic with `Type::matches()` and `Type::validate()` methods (TASK-097)
+  - Typed registry integration - `BehaviourRegistry` and `StreamRegistry` now store typed providers with schema lookup via `get_schema()` (TASK-098)
+  - Runtime validation in providers - sample/recv operations validate values against schemas (TASK-099)
+  - Enhanced type error reporting with `ExecError::TypeMismatch` and path tracking (TASK-100)
+- Schema validation logic (TASK-097). New `Type::matches()` and `Type::validate()` methods in `ash-typeck` provide runtime validation of `Value` against `Type` schemas. Includes `SchemaError` enum with structured error information for mismatches, missing fields, and field type mismatches. Supports primitive types, lists, records, and nested structures.
 - Phase 13: Streams and Behaviours (TASK-088 to TASK-095). Complete stream processing and behaviour sampling implementation:
   - Stream AST types: `StreamRef`, `Receive`, `ReceiveMode`, `Mailbox` with overflow strategies (TASK-088)
   - Stream provider trait with `StreamRegistry` and `StreamContext` for async stream operations (TASK-089)

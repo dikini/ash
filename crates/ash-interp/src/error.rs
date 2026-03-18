@@ -45,34 +45,110 @@ pub enum EvalError {
 }
 
 /// Errors that can occur during workflow execution
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExecError {
-    #[error("evaluation error: {0}")]
-    Eval(#[from] EvalError),
-
-    #[error("pattern match failed: {pattern} does not match {value}")]
-    PatternMatchFailed { pattern: String, value: Value },
-
-    #[error("guard evaluation failed: {guard}")]
-    GuardFailed { guard: String },
-
-    #[error("capability not available: {0}")]
+    Eval(EvalError),
+    PatternMatchFailed {
+        pattern: String,
+        value: Value,
+    },
+    GuardFailed {
+        guard: String,
+    },
     CapabilityNotAvailable(Name),
-
-    #[error("action execution failed: {action} - {reason}")]
-    ActionFailed { action: Name, reason: String },
-
-    #[error("policy denied: {policy}")]
-    PolicyDenied { policy: Name },
-
-    #[error("workflow execution failed: {0}")]
+    ActionFailed {
+        action: Name,
+        reason: String,
+    },
+    PolicyDenied {
+        policy: Name,
+    },
     ExecutionFailed(String),
-
-    #[error("parallel execution failed: {0}")]
     ParallelFailed(String),
-
-    #[error("for each iteration failed: {0}")]
     ForEachFailed(String),
+    TypeMismatch {
+        provider: String,
+        expected: String,
+        actual: String,
+        path: Option<String>,
+    },
+}
+
+impl std::error::Error for ExecError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Eval(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl From<EvalError> for ExecError {
+    fn from(err: EvalError) -> Self {
+        Self::Eval(err)
+    }
+}
+
+impl std::fmt::Display for ExecError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Eval(e) => write!(f, "evaluation error: {e}"),
+            Self::PatternMatchFailed { pattern, value } => {
+                write!(f, "pattern match failed: {pattern} does not match {value}")
+            }
+            Self::GuardFailed { guard } => write!(f, "guard evaluation failed: {guard}"),
+            Self::CapabilityNotAvailable(name) => write!(f, "capability not available: {name}"),
+            Self::ActionFailed { action, reason } => {
+                write!(f, "action execution failed: {action} - {reason}")
+            }
+            Self::PolicyDenied { policy } => write!(f, "policy denied: {policy}"),
+            Self::ExecutionFailed(msg) => write!(f, "workflow execution failed: {msg}"),
+            Self::ParallelFailed(msg) => write!(f, "parallel execution failed: {msg}"),
+            Self::ForEachFailed(msg) => write!(f, "for each iteration failed: {msg}"),
+            Self::TypeMismatch {
+                provider,
+                expected,
+                actual,
+                path,
+            } => {
+                if let Some(p) = path {
+                    write!(
+                        f,
+                        "type mismatch in provider '{provider}' at {p}: expected {expected}, got {actual}"
+                    )
+                } else {
+                    write!(
+                        f,
+                        "type mismatch in provider '{provider}': expected {expected}, got {actual}"
+                    )
+                }
+            }
+        }
+    }
+}
+
+impl ExecError {
+    /// Create a type mismatch error for a provider
+    pub fn type_mismatch(
+        provider: impl Into<String>,
+        expected: impl Into<String>,
+        actual: impl Into<String>,
+    ) -> Self {
+        Self::TypeMismatch {
+            provider: provider.into(),
+            expected: expected.into(),
+            actual: actual.into(),
+            path: None,
+        }
+    }
+
+    /// Add a path to the type mismatch error
+    pub fn with_path(mut self, path: impl Into<String>) -> Self {
+        if let Self::TypeMismatch { path: p, .. } = &mut self {
+            *p = Some(path.into());
+        }
+        self
+    }
 }
 
 /// Errors that can occur during pattern matching

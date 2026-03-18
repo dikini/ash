@@ -8,8 +8,10 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use ash_core::{Constraint, Name, Value};
+use ash_typeck::Type;
 
 use crate::error::{ExecError, ExecResult};
+use crate::typed_provider::TypedBehaviourProvider;
 
 /// Behaviour provider trait for sampling observable values
 ///
@@ -57,7 +59,7 @@ pub trait BehaviourProvider: Send + Sync {
 /// for efficient lookup during execution.
 #[derive(Default)]
 pub struct BehaviourRegistry {
-    providers: HashMap<(Name, Name), Box<dyn BehaviourProvider>>,
+    providers: HashMap<(Name, Name), TypedBehaviourProvider>,
 }
 
 impl BehaviourRegistry {
@@ -73,7 +75,7 @@ impl BehaviourRegistry {
     ///
     /// The provider is indexed by its capability_name and channel_name.
     /// If a provider with the same names already exists, it is replaced.
-    pub fn register(&mut self, provider: Box<dyn BehaviourProvider>) {
+    pub fn register(&mut self, provider: TypedBehaviourProvider) {
         let key = (
             provider.capability_name().to_string(),
             provider.channel_name().to_string(),
@@ -83,10 +85,14 @@ impl BehaviourRegistry {
 
     /// Get a provider by capability and channel names
     #[must_use]
-    pub fn get(&self, cap: &str, channel: &str) -> Option<&dyn BehaviourProvider> {
-        self.providers
-            .get(&(cap.to_string(), channel.to_string()))
-            .map(|p| p.as_ref())
+    pub fn get(&self, cap: &str, channel: &str) -> Option<&TypedBehaviourProvider> {
+        self.providers.get(&(cap.to_string(), channel.to_string()))
+    }
+
+    /// Get the type schema for a provider
+    #[must_use]
+    pub fn get_schema(&self, cap: &str, channel: &str) -> Option<&Type> {
+        self.get(cap, channel).map(|p| p.schema())
     }
 
     /// Check if a provider exists for the given capability and channel
@@ -121,7 +127,7 @@ impl BehaviourContext {
     }
 
     /// Register a behaviour provider
-    pub fn register(&mut self, provider: Box<dyn BehaviourProvider>) {
+    pub fn register(&mut self, provider: TypedBehaviourProvider) {
         self.registry.register(provider);
     }
 
@@ -246,6 +252,7 @@ impl BehaviourProvider for MockBehaviourProvider {
 mod tests {
     use super::*;
     use ash_core::{Expr, Predicate};
+    use ash_typeck::Type;
 
     #[tokio::test]
     async fn test_mock_provider_sample() {
@@ -307,10 +314,43 @@ mod tests {
         let mut registry = BehaviourRegistry::new();
         let provider = MockBehaviourProvider::new("sensor", "temp");
 
-        registry.register(Box::new(provider));
+        registry.register(TypedBehaviourProvider::new(provider, Type::Int));
 
         assert!(registry.has("sensor", "temp"));
         assert!(!registry.has("sensor", "pressure"));
+    }
+
+    #[test]
+    fn test_registry_stores_typed_provider() {
+        let mut registry = BehaviourRegistry::new();
+        let provider = MockBehaviourProvider::new("sensor", "temp");
+        let typed = TypedBehaviourProvider::new(provider, Type::Int);
+
+        registry.register(typed);
+
+        assert!(registry.has("sensor", "temp"));
+        let retrieved = registry.get("sensor", "temp");
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().schema(), &Type::Int);
+    }
+
+    #[test]
+    fn test_registry_get_schema() {
+        let mut registry = BehaviourRegistry::new();
+        let provider = MockBehaviourProvider::new("sensor", "temp");
+        let typed = TypedBehaviourProvider::new(
+            provider,
+            Type::Record(vec![
+                (Box::from("value"), Type::Int),
+                (Box::from("unit"), Type::String),
+            ]),
+        );
+
+        registry.register(typed);
+
+        let schema = registry.get_schema("sensor", "temp");
+        assert!(schema.is_some());
+        assert!(matches!(schema.unwrap(), Type::Record(_)));
     }
 
     #[tokio::test]
@@ -318,7 +358,7 @@ mod tests {
         let mut ctx = BehaviourContext::new();
         let provider = MockBehaviourProvider::new("sensor", "temp").with_value(Value::Int(100));
 
-        ctx.register(Box::new(provider));
+        ctx.register(TypedBehaviourProvider::new(provider, Type::Int));
 
         let value = ctx.sample("sensor", "temp", &[]).await.unwrap();
         assert_eq!(value, Value::Int(100));
@@ -340,7 +380,7 @@ mod tests {
         let mut ctx = BehaviourContext::new();
         let provider = MockBehaviourProvider::new("sensor", "temp").with_value(Value::Int(50));
 
-        ctx.register(Box::new(provider));
+        ctx.register(TypedBehaviourProvider::new(provider, Type::Int));
 
         // First check should be true (never sampled)
         assert!(ctx.has_changed("sensor", "temp", &[]).await.unwrap());

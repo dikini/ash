@@ -4,7 +4,9 @@
 //! message queues) into Ash workflow execution.
 
 use crate::error::ExecResult;
+use crate::typed_provider::TypedStreamProvider;
 use ash_core::{Name, Value};
+use ash_typeck::Type;
 use async_trait::async_trait;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
@@ -45,7 +47,7 @@ pub trait StreamProvider: Send + Sync {
 /// pairs, allowing efficient lookup during workflow execution.
 #[derive(Default)]
 pub struct StreamRegistry {
-    providers: HashMap<(Name, Name), Box<dyn StreamProvider>>,
+    providers: HashMap<(Name, Name), TypedStreamProvider>,
 }
 
 impl StreamRegistry {
@@ -59,7 +61,7 @@ impl StreamRegistry {
     /// Register a stream provider
     ///
     /// The provider is indexed by its (capability_name, channel_name) pair.
-    pub fn register(&mut self, provider: Box<dyn StreamProvider>) {
+    pub fn register(&mut self, provider: TypedStreamProvider) {
         let key = (
             provider.capability_name().to_string(),
             provider.channel_name().to_string(),
@@ -70,10 +72,15 @@ impl StreamRegistry {
     /// Get a reference to a registered provider
     ///
     /// Returns `None` if no provider is registered for the given capability and channel.
-    pub fn get(&self, cap: &str, channel: &str) -> Option<&dyn StreamProvider> {
-        self.providers
-            .get(&(cap.to_string(), channel.to_string()))
-            .map(|p| p.as_ref())
+    pub fn get(&self, cap: &str, channel: &str) -> Option<&TypedStreamProvider> {
+        self.providers.get(&(cap.to_string(), channel.to_string()))
+    }
+
+    /// Get the type schema for a registered provider
+    ///
+    /// Returns `None` if no provider is registered for the given capability and channel.
+    pub fn get_schema(&self, cap: &str, channel: &str) -> Option<&Type> {
+        self.get(cap, channel).map(|p| p.schema())
     }
 
     /// Check if a provider is registered for the given capability and channel
@@ -105,7 +112,7 @@ impl StreamContext {
     }
 
     /// Register a stream provider
-    pub fn register(&mut self, provider: Box<dyn StreamProvider>) {
+    pub fn register(&mut self, provider: TypedStreamProvider) {
         self.registry.register(provider);
     }
 
@@ -135,7 +142,16 @@ impl StreamContext {
     ///
     /// Returns `None` if no provider is registered for the given capability and channel.
     pub fn get(&self, cap: &str, channel: &str) -> Option<&dyn StreamProvider> {
-        self.registry.get(cap, channel)
+        self.registry
+            .get(cap, channel)
+            .map(|p| p as &dyn StreamProvider)
+    }
+
+    /// Get the type schema for a registered provider
+    ///
+    /// Returns `None` if no provider is registered for the given capability and channel.
+    pub fn get_schema(&self, cap: &str, channel: &str) -> Option<&Type> {
+        self.registry.get_schema(cap, channel)
     }
 }
 
@@ -239,6 +255,7 @@ impl StreamProvider for MockStreamProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ash_typeck::Type;
 
     #[tokio::test]
     async fn test_mock_provider_recv() {
@@ -293,7 +310,7 @@ mod tests {
         let mut registry = StreamRegistry::new();
         let provider = MockStreamProvider::new("kafka", "orders");
 
-        registry.register(Box::new(provider));
+        registry.register(TypedStreamProvider::new(provider, Type::Int));
 
         assert!(registry.has("kafka", "orders"));
         assert!(!registry.has("kafka", "metrics"));
@@ -307,10 +324,43 @@ mod tests {
     }
 
     #[test]
+    fn test_registry_stores_typed_provider() {
+        let mut registry = StreamRegistry::new();
+        let provider = MockStreamProvider::new("kafka", "orders");
+        let typed = TypedStreamProvider::new(provider, Type::Int);
+
+        registry.register(typed);
+
+        assert!(registry.has("kafka", "orders"));
+        let retrieved = registry.get("kafka", "orders");
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().schema(), &Type::Int);
+    }
+
+    #[test]
+    fn test_registry_get_schema() {
+        let mut registry = StreamRegistry::new();
+        let provider = MockStreamProvider::new("kafka", "events");
+        let typed = TypedStreamProvider::new(
+            provider,
+            Type::Record(vec![
+                (Box::from("event_id"), Type::String),
+                (Box::from("timestamp"), Type::Time),
+            ]),
+        );
+
+        registry.register(typed);
+
+        let schema = registry.get_schema("kafka", "events");
+        assert!(schema.is_some());
+        assert!(matches!(schema.unwrap(), Type::Record(_)));
+    }
+
+    #[test]
     fn test_stream_context_try_recv() {
         let mut ctx = StreamContext::new();
         let provider = MockStreamProvider::with_values("sensor", "temp", vec![Value::Int(42)]);
-        ctx.register(Box::new(provider));
+        ctx.register(TypedStreamProvider::new(provider, Type::Int));
 
         // Can receive value through context
         let value = ctx.try_recv("sensor", "temp").unwrap().unwrap();
@@ -331,7 +381,7 @@ mod tests {
             "temp",
             vec![Value::Int(100), Value::Int(200)],
         );
-        ctx.register(Box::new(provider));
+        ctx.register(TypedStreamProvider::new(provider, Type::Int));
 
         // Can receive values through context
         let v1 = ctx.recv("sensor", "temp").await.unwrap().unwrap();

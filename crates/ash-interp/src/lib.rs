@@ -28,6 +28,7 @@ pub mod mailbox;
 pub mod pattern;
 pub mod policy;
 pub mod stream;
+pub mod typed_provider;
 
 pub use behaviour::{
     BehaviourContext, BehaviourProvider, BehaviourRegistry, MockBehaviourProvider,
@@ -43,6 +44,7 @@ pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyResult, PolicyRule};
 pub use stream::{MockStreamProvider, StreamContext, StreamProvider, StreamRegistry};
+pub use typed_provider::{TypedBehaviourProvider, TypedStreamProvider};
 
 use ash_core::{Value, Workflow};
 

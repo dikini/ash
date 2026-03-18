@@ -42,12 +42,15 @@ use crate::pattern::match_pattern;
 /// use ash_interp::behaviour::{BehaviourContext, MockBehaviourProvider};
 /// use ash_interp::context::Context;
 /// use ash_interp::execute_observe::execute_observe;
+/// use ash_interp::typed_provider::TypedBehaviourProvider;
+/// use ash_typeck::Type;
 ///
 /// # tokio_test::block_on(async {
 /// let mut behaviour_ctx = BehaviourContext::new();
-/// behaviour_ctx.register(Box::new(
+/// behaviour_ctx.register(TypedBehaviourProvider::new(
 ///     MockBehaviourProvider::new("sensor", "temp")
-///         .with_value(Value::Int(42))
+///         .with_value(Value::Int(42)),
+///     Type::Int,
 /// ));
 ///
 /// let observe = Observe {
@@ -115,12 +118,14 @@ pub async fn execute_observe(
 /// use ash_interp::behaviour::{BehaviourContext, MockBehaviourProvider};
 /// use ash_interp::context::Context;
 /// use ash_interp::execute_observe::execute_changed;
+/// use ash_interp::typed_provider::TypedBehaviourProvider;
+/// use ash_typeck::Type;
 ///
 /// # tokio_test::block_on(async {
 /// let mut behaviour_ctx = BehaviourContext::new();
 /// let provider = MockBehaviourProvider::new("sensor", "temp")
 ///     .with_value(Value::Int(42));
-/// behaviour_ctx.register(Box::new(provider.clone()));
+/// behaviour_ctx.register(TypedBehaviourProvider::new(provider.clone(), Type::Int));
 ///
 /// // First sample to establish baseline
 /// let _ = behaviour_ctx.sample("sensor", "temp", &[]).await;
@@ -163,12 +168,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::behaviour::MockBehaviourProvider;
+    use crate::typed_provider::TypedBehaviourProvider;
+    use ash_typeck::Type;
 
     #[tokio::test]
     async fn test_execute_observe_simple() {
         let mut behaviour_ctx = BehaviourContext::new();
-        behaviour_ctx.register(Box::new(
+        behaviour_ctx.register(TypedBehaviourProvider::new(
             MockBehaviourProvider::new("sensor", "temp").with_value(Value::Int(42)),
+            Type::Int,
         ));
 
         let observe = Observe {
@@ -193,8 +201,13 @@ mod tests {
         record.insert("price".into(), Value::Int(150));
         record.insert("symbol".into(), Value::String("AAPL".into()));
 
-        behaviour_ctx.register(Box::new(
+        let record_type = Type::Record(vec![
+            (Box::from("price"), Type::Int),
+            (Box::from("symbol"), Type::String),
+        ]);
+        behaviour_ctx.register(TypedBehaviourProvider::new(
             MockBehaviourProvider::new("market", "stock").with_value(Value::Record(record)),
+            record_type,
         ));
 
         let observe = Observe {
@@ -225,8 +238,13 @@ mod tests {
         record.insert("value".into(), Value::Int(25));
         record.insert("unit".into(), Value::String("celsius".into()));
 
-        behaviour_ctx.register(Box::new(
+        let record_type = Type::Record(vec![
+            (Box::from("value"), Type::Int),
+            (Box::from("unit"), Type::String),
+        ]);
+        behaviour_ctx.register(TypedBehaviourProvider::new(
             MockBehaviourProvider::new("sensor", "temp").with_value(Value::Record(record)),
+            record_type,
         ));
 
         let observe = Observe {
@@ -273,7 +291,7 @@ mod tests {
     async fn test_execute_changed_true() {
         let mut behaviour_ctx = BehaviourContext::new();
         let provider = MockBehaviourProvider::new("sensor", "temp").with_value(Value::Int(42));
-        behaviour_ctx.register(Box::new(provider.clone()));
+        behaviour_ctx.register(TypedBehaviourProvider::new(provider.clone(), Type::Int));
 
         // First sample to establish baseline
         let _ = behaviour_ctx.sample("sensor", "temp", &[]).await;
@@ -299,7 +317,7 @@ mod tests {
     async fn test_execute_changed_false() {
         let mut behaviour_ctx = BehaviourContext::new();
         let provider = MockBehaviourProvider::new("sensor", "temp").with_value(Value::Int(42));
-        behaviour_ctx.register(Box::new(provider.clone()));
+        behaviour_ctx.register(TypedBehaviourProvider::new(provider.clone(), Type::Int));
 
         // Sample to establish baseline
         let _ = behaviour_ctx.sample("sensor", "temp", &[]).await;

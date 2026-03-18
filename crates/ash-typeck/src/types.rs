@@ -3,8 +3,9 @@
 //! Defines the type representation, type variables, substitutions,
 //! and unification algorithm for the Ash type checker.
 
-use ash_core::Effect;
+use ash_core::{Effect, Value};
 use std::collections::HashMap;
+use thiserror::Error;
 
 /// Types in the Ash type system
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -122,6 +123,26 @@ impl Substitution {
     }
 }
 
+/// Schema validation error
+#[derive(Debug, Clone, Error, PartialEq)]
+pub enum SchemaError {
+    /// Type mismatch
+    #[error("type mismatch: expected {expected}, got {actual}")]
+    Mismatch { expected: String, actual: String },
+
+    /// Missing field in record
+    #[error("missing field '{field}' in record")]
+    MissingField { field: String },
+
+    /// Field type mismatch
+    #[error("field '{field}' type mismatch: expected {expected}, got {actual}")]
+    FieldMismatch {
+        field: String,
+        expected: String,
+        actual: String,
+    },
+}
+
 /// Unification error
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum UnifyError {
@@ -131,6 +152,82 @@ pub enum UnifyError {
     /// Infinite type detected (occurs check failed)
     #[error("Infinite type {0:?} in {1:?}")]
     InfiniteType(TypeVar, Type),
+}
+
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Int => write!(f, "Int"),
+            Type::String => write!(f, "String"),
+            Type::Bool => write!(f, "Bool"),
+            Type::Null => write!(f, "Null"),
+            Type::Time => write!(f, "Time"),
+            Type::Ref => write!(f, "Ref"),
+            Type::List(elem) => write!(f, "List<{}>", elem),
+            Type::Record(fields) => {
+                write!(f, "{{")?;
+                for (i, (name, ty)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}: {}", name, ty)?;
+                }
+                write!(f, "}}")
+            }
+            Type::Cap { name, effect } => write!(f, "Cap<{}: {:?}>", name, effect),
+            Type::Fun(args, ret, effect) => {
+                write!(f, "fn(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", arg)?;
+                }
+                write!(f, ") -> {} [{:?}]", ret, effect)
+            }
+            Type::Var(v) => write!(f, "Var<{}>", v.0),
+        }
+    }
+}
+
+impl Type {
+    /// Check if a value matches this type schema
+    pub fn matches(&self, value: &Value) -> bool {
+        match (self, value) {
+            (Type::Int, Value::Int(_)) => true,
+            (Type::String, Value::String(_)) => true,
+            (Type::Bool, Value::Bool(_)) => true,
+            (Type::Null, Value::Null) => true,
+            (Type::Time, Value::Time(_)) => true,
+            (Type::Ref, Value::Ref(_)) => true,
+            (Type::Cap { .. }, Value::Cap(_)) => true,
+
+            (Type::List(elem_type), Value::List(items)) => {
+                items.iter().all(|item| elem_type.matches(item))
+            }
+
+            (Type::Record(fields), Value::Record(record)) => fields.iter().all(|(name, ty)| {
+                record
+                    .get(name.as_ref())
+                    .map(|val| ty.matches(val))
+                    .unwrap_or(false)
+            }),
+
+            _ => false,
+        }
+    }
+
+    /// Detailed validation with error message
+    pub fn validate(&self, value: &Value) -> Result<(), SchemaError> {
+        if self.matches(value) {
+            Ok(())
+        } else {
+            Err(SchemaError::Mismatch {
+                expected: self.to_string(),
+                actual: value.to_string(),
+            })
+        }
+    }
 }
 
 /// Unify two types, returning a substitution that makes them equal
@@ -776,5 +873,117 @@ mod tests {
         let result = unify(&cap1, &cap2);
 
         assert!(result.is_err());
+    }
+
+    // ============================================================
+    // Schema Validation Tests (TASK-097)
+    // ============================================================
+
+    #[test]
+    fn test_int_matches() {
+        use ash_core::Value;
+
+        assert!(Type::Int.matches(&Value::Int(42)));
+        assert!(!Type::Int.matches(&Value::String("42".into())));
+    }
+
+    #[test]
+    fn test_string_matches() {
+        use ash_core::Value;
+
+        assert!(Type::String.matches(&Value::String("hello".into())));
+        assert!(!Type::String.matches(&Value::Int(42)));
+    }
+
+    #[test]
+    fn test_list_matches() {
+        use ash_core::Value;
+
+        let schema = Type::List(Box::new(Type::Int));
+        assert!(schema.matches(&Value::List(vec![Value::Int(1), Value::Int(2)])));
+        assert!(!schema.matches(&Value::List(vec![Value::String("a".into())])));
+    }
+
+    #[test]
+    fn test_record_matches() {
+        use ash_core::Value;
+        use std::collections::HashMap;
+
+        let schema = Type::Record(vec![
+            (Box::from("name"), Type::String),
+            (Box::from("age"), Type::Int),
+        ]);
+
+        let valid = Value::Record(HashMap::from([
+            ("name".to_string(), Value::String("Alice".into())),
+            ("age".to_string(), Value::Int(30)),
+        ]));
+        assert!(schema.matches(&valid));
+
+        let invalid = Value::Record(HashMap::from([
+            ("name".to_string(), Value::Int(30)), // Wrong type
+            ("age".to_string(), Value::Int(30)),
+        ]));
+        assert!(!schema.matches(&invalid));
+    }
+
+    #[test]
+    fn test_nested_record() {
+        use ash_core::Value;
+        use std::collections::HashMap;
+
+        let schema = Type::Record(vec![(
+            Box::from("point"),
+            Type::Record(vec![
+                (Box::from("x"), Type::Int),
+                (Box::from("y"), Type::Int),
+            ]),
+        )]);
+
+        let value = Value::Record(HashMap::from([(
+            "point".to_string(),
+            Value::Record(HashMap::from([
+                ("x".to_string(), Value::Int(1)),
+                ("y".to_string(), Value::Int(2)),
+            ])),
+        )]));
+        assert!(schema.matches(&value));
+    }
+
+    #[test]
+    fn test_validate_success() {
+        use ash_core::Value;
+
+        let result = Type::Int.validate(&Value::Int(42));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_failure() {
+        use ash_core::Value;
+
+        let result = Type::Int.validate(&Value::String("hello".into()));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, SchemaError::Mismatch { .. }));
+    }
+
+    #[test]
+    fn test_display_type() {
+        assert_eq!(Type::Int.to_string(), "Int");
+        assert_eq!(Type::String.to_string(), "String");
+        assert_eq!(Type::Bool.to_string(), "Bool");
+        assert_eq!(Type::Null.to_string(), "Null");
+        assert_eq!(Type::Time.to_string(), "Time");
+        assert_eq!(Type::Ref.to_string(), "Ref");
+        assert_eq!(Type::List(Box::new(Type::Int)).to_string(), "List<Int>");
+        assert_eq!(
+            Type::Record(vec![
+                (Box::from("x"), Type::Int),
+                (Box::from("y"), Type::String),
+            ])
+            .to_string(),
+            "{x: Int, y: String}"
+        );
     }
 }

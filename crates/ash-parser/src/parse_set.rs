@@ -6,7 +6,9 @@ use winnow::prelude::*;
 
 use crate::input::ParseInput;
 use crate::parse_expr::expr;
-use crate::parse_utils::{keyword, literal_str, parse_capability_ref, skip_whitespace_and_comments};
+use crate::parse_utils::{
+    keyword, literal_str, parse_capability_ref, skip_whitespace_and_comments,
+};
 use crate::surface::{Expr, Name};
 
 /// Parsed set expression.

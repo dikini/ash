@@ -305,6 +305,32 @@ pub enum Workflow {
         /// Source span
         span: Span,
     },
+    /// Set: Set a value on an output capability
+    Set {
+        /// Capability name (e.g., "hvac" in "hvac:target")
+        capability: Name,
+        /// Channel name (e.g., "target" in "hvac:target")
+        channel: Name,
+        /// Value expression to set
+        value: Expr,
+        /// Optional continuation
+        continuation: Option<Box<Workflow>>,
+        /// Source span
+        span: Span,
+    },
+    /// Send: Send a value to an output stream
+    Send {
+        /// Capability name (e.g., "kafka" in "kafka:orders")
+        capability: Name,
+        /// Channel name (e.g., "orders" in "kafka:orders")
+        channel: Name,
+        /// Value expression to send
+        value: Expr,
+        /// Optional continuation
+        continuation: Option<Box<Workflow>>,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Expression types.
@@ -650,6 +676,8 @@ impl Spanned for Workflow {
             Workflow::Seq { span, .. } => *span,
             Workflow::Done { span, .. } => *span,
             Workflow::Ret { span, .. } => *span,
+            Workflow::Set { span, .. } => *span,
+            Workflow::Send { span, .. } => *span,
         }
     }
 }
@@ -807,6 +835,24 @@ impl Workflow {
 
             // Return - no effect
             Workflow::Ret { .. } => Effect::Epistemic,
+
+            // Set - operational effect with continuation
+            Workflow::Set { continuation, .. } => {
+                if let Some(cont) = continuation {
+                    Effect::Operational.join(cont.effect())
+                } else {
+                    Effect::Operational
+                }
+            }
+
+            // Send - operational effect with continuation
+            Workflow::Send { continuation, .. } => {
+                if let Some(cont) = continuation {
+                    Effect::Operational.join(cont.effect())
+                } else {
+                    Effect::Operational
+                }
+            }
         }
     }
 }

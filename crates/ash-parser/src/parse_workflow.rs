@@ -9,6 +9,8 @@ use winnow::token::take_while;
 
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::expr;
+use crate::parse_send::parse_send;
+use crate::parse_set::parse_set;
 use crate::surface::{
     ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, Pattern, PolicyInstance, Workflow,
     WorkflowDef,
@@ -116,6 +118,8 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         with_stmt,
         maybe_stmt,
         must_stmt,
+        set_stmt,
+        send_stmt,
         ret_stmt,
         done_stmt,
     ))
@@ -523,6 +527,36 @@ fn ret_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     Ok(Workflow::Ret { expr: e, span })
 }
 
+/// Parse a set statement in a workflow: `set capability:channel = expr`
+fn set_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
+    let start_span = input.state;
+    let set_expr = parse_set(input)?;
+    let span = span_from(&start_span, &input.state);
+
+    Ok(Workflow::Set {
+        capability: set_expr.capability,
+        channel: set_expr.channel,
+        value: set_expr.value,
+        continuation: None,
+        span,
+    })
+}
+
+/// Parse a send statement in a workflow: `send capability:channel expr`
+fn send_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
+    let start_span = input.state;
+    let send_expr = parse_send(input)?;
+    let span = span_from(&start_span, &input.state);
+
+    Ok(Workflow::Send {
+        capability: send_expr.capability,
+        channel: send_expr.channel,
+        value: send_expr.value,
+        continuation: None,
+        span,
+    })
+}
+
 /// Parse a single statement or a block
 fn parse_single_stmt_or_block(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
@@ -865,6 +899,8 @@ fn is_keyword(s: &str) -> bool {
             | "with"
             | "maybe"
             | "must"
+            | "set"
+            | "send"
             | "attempt"
             | "retry"
             | "timeout"

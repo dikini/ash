@@ -7,13 +7,27 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Phase 16: Runtime Verification (TASK-114 to TASK-119). Comprehensive runtime verification framework:
+  - Capability availability verifier (TASK-114). New `CapabilityVerifier` checks all required capabilities are available with correct modes (observable, settable, sendable, receivable).
+  - Obligation satisfaction checker (TASK-115). New `RuntimeObligationChecker` verifies role requirements and obligation presence at runtime.
+  - Effect compatibility checker (TASK-116). New `EffectChecker` ensures workflow effect level is within runtime bounds.
+  - Static policy validator (TASK-117). New `StaticPolicyValidator` detects always-denied operations and approval requirements pre-execution.
+  - Per-operation runtime verifier (TASK-118). New `OperationVerifier` with async `verify()` for checking capability availability, mode support, policy evaluation, and rate limiting.
+  - Verification aggregator (TASK-119). New `VerificationAggregator` combines all verifiers into unified `VerificationResult` with `can_execute()` determination.
+- Phase 15: Capability Integration (TASK-108 to TASK-113). Full integration of capabilities with obligations, policies, provenance, and type safety:
+  - Effect tracking for all capability operations (TASK-108). Added `Workflow::effect()` method that computes total effect by joining operation effects (Observe/Receive=Epistemic, Set/Send=Operational).
+  - Obligation checking with capabilities (TASK-109). New `ObligationChecker` verifies workflows have required input/output capabilities and sufficient effect levels.
+  - Policy evaluation for input/output (TASK-110). New `CapabilityPolicyEvaluator` with support for Permit, Deny, RequireApproval, and Transform decisions.
+  - Provenance tracking for all capabilities (TASK-111). New `CapabilityProvenanceTracker` records all capability operations with event types, values, and policy decisions.
+  - Capability declaration verification (TASK-112). New `CapabilityChecker` framework for verifying workflows use declared capabilities.
+  - Read/write type checking (TASK-113). New `CapabilitySchemaRegistry` validates input/output values against provider schemas with separate read/write types.
 - Phase 14: Typed Providers (TASK-096 to TASK-100). Runtime type safety for Rust/Ash provider boundary:
   - `TypedBehaviourProvider` and `TypedStreamProvider` wrapper structs carrying type schemas (TASK-096)
   - Schema validation logic with `Type::matches()` and `Type::validate()` methods (TASK-097)
   - Typed registry integration - `BehaviourRegistry` and `StreamRegistry` now store typed providers with schema lookup via `get_schema()` (TASK-098)
   - Runtime validation in providers - sample/recv operations validate values against schemas (TASK-099)
   - Enhanced type error reporting with `ExecError::TypeMismatch` and path tracking (TASK-100)
-- Schema validation logic (TASK-097). New `Type::matches()` and `Type::validate()` methods in `ash-typeck` provide runtime validation of `Value` against `Type` schemas. Includes `SchemaError` enum with structured error information for mismatches, missing fields, and field type mismatches. Supports primitive types, lists, records, and nested structures.
+- Shared capability types module (ash-core). New `capability.rs` consolidates `Direction`, `RoleName`, `RequiredCapabilities`, and `WorkflowCapabilities` to eliminate duplication across crates.
 - Phase 13: Streams and Behaviours (TASK-088 to TASK-095). Complete stream processing and behaviour sampling implementation:
   - Stream AST types: `StreamRef`, `Receive`, `ReceiveMode`, `Mailbox` with overflow strategies (TASK-088)
   - Stream provider trait with `StreamRegistry` and `StreamContext` for async stream operations (TASK-089)

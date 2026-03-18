@@ -7,6 +7,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Phase 16: Runtime Verification (TASK-114 to TASK-119). Complete runtime verification of workflow-context compatibility:
+  - Capability availability verifier (TASK-114). New `CapabilityVerifier` checks that all required capabilities are available with correct modes (observable, settable, etc.) at runtime.
+  - Obligation satisfaction checker (TASK-115). New `RuntimeObligationChecker` verifies that runtime obligations and roles satisfy workflow requirements.
+  - Effect compatibility checker (TASK-116). New `EffectChecker` ensures workflow effects are within runtime bounds using the effect lattice.
+  - Static policy validator (TASK-117). New `StaticPolicyValidator` detects static policy conflicts and operations requiring approval.
+  - Per-operation runtime verifier (TASK-118). New `OperationVerifier` validates individual capability operations at runtime with rate limiting.
+  - Verification result aggregation (TASK-119). New `VerificationAggregator` combines all verification results into a coherent report with `can_execute()` determination.
+- Per-operation runtime verifier (TASK-118). New `OperationVerifier` in `ash-typeck` provides runtime verification of individual capability operations. Validates operations against capability schemas, evaluates static policies (permit/deny/requires approval), and enforces rate limits. Includes `CapabilityOperation`, `OperationResult`, `OperationError`, `RateLimiter`, and `Direction` types with 13 comprehensive async tests.
+- Effect compatibility checker (TASK-116). New `EffectChecker` in `ash-typeck` verifies that workflow effects are within runtime bounds. Prevents workflows requiring higher privileges (e.g., `Operational`) from executing in restricted runtime environments (e.g., `Epistemic` only). Checks use the effect lattice ordering: Epistemic < Deliberative < Evaluative < Operational.
 - Phase 13: Streams and Behaviours (TASK-088 to TASK-095). Complete stream processing and behaviour sampling implementation:
   - Stream AST types: `StreamRef`, `Receive`, `ReceiveMode`, `Mailbox` with overflow strategies (TASK-088)
   - Stream provider trait with `StreamRegistry` and `StreamContext` for async stream operations (TASK-089)

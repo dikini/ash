@@ -19,6 +19,7 @@ pub mod parse_receive;
 pub mod parse_send;
 pub mod parse_set;
 pub mod parse_use;
+pub mod parse_utils;
 pub mod parse_visibility;
 pub mod parse_workflow;
 pub mod resolver;
@@ -43,6 +44,7 @@ pub use parse_receive::*;
 pub use parse_send::*;
 pub use parse_set::*;
 pub use parse_use::*;
+// parse_utils is intentionally not exported - it's for internal use only
 pub use parse_visibility::*;
 pub use parse_workflow::*;
 pub use resolver::{Fs, ModuleResolver, ResolveError};

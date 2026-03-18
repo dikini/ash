@@ -135,6 +135,50 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             provenance: provenance.clone(),
         },
 
+        SurfaceWorkflow::Set {
+            capability,
+            channel,
+            value,
+            continuation,
+            ..
+        } => {
+            let cont = continuation
+                .as_ref()
+                .map(|c| lower_workflow_body(c, provenance))
+                .unwrap_or(CoreWorkflow::Done);
+
+            CoreWorkflow::Seq {
+                first: Box::new(CoreWorkflow::Set {
+                    capability: capability.to_string(),
+                    channel: channel.to_string(),
+                    value: lower_expr(value),
+                }),
+                second: Box::new(cont),
+            }
+        }
+
+        SurfaceWorkflow::Send {
+            capability,
+            channel,
+            value,
+            continuation,
+            ..
+        } => {
+            let cont = continuation
+                .as_ref()
+                .map(|c| lower_workflow_body(c, provenance))
+                .unwrap_or(CoreWorkflow::Done);
+
+            CoreWorkflow::Seq {
+                first: Box::new(CoreWorkflow::Send {
+                    capability: capability.to_string(),
+                    channel: channel.to_string(),
+                    value: lower_expr(value),
+                }),
+                second: Box::new(cont),
+            }
+        }
+
         SurfaceWorkflow::Let {
             pattern,
             expr,

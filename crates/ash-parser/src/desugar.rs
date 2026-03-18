@@ -194,6 +194,45 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
             span: *span,
         },
 
+        // Set and Send with continuations
+        Workflow::Set {
+            capability,
+            channel,
+            value,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_sequencing(c)));
+            Workflow::Set {
+                capability: capability.clone(),
+                channel: channel.clone(),
+                value: value.clone(),
+                continuation: new_continuation,
+                span: *span,
+            }
+        }
+
+        Workflow::Send {
+            capability,
+            channel,
+            value,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_sequencing(c)));
+            Workflow::Send {
+                capability: capability.clone(),
+                channel: channel.clone(),
+                value: value.clone(),
+                continuation: new_continuation,
+                span: *span,
+            }
+        }
+
         // Leaf nodes
         Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }
@@ -372,6 +411,45 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
             span: *span,
         },
 
+        // Set and Send with continuations
+        Workflow::Set {
+            capability,
+            channel,
+            value,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_optional_bindings(c)));
+            Workflow::Set {
+                capability: capability.clone(),
+                channel: channel.clone(),
+                value: value.clone(),
+                continuation: new_continuation,
+                span: *span,
+            }
+        }
+
+        Workflow::Send {
+            capability,
+            channel,
+            value,
+            continuation,
+            span,
+        } => {
+            let new_continuation = continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_optional_bindings(c)));
+            Workflow::Send {
+                capability: capability.clone(),
+                channel: channel.clone(),
+                value: value.clone(),
+                continuation: new_continuation,
+                span: *span,
+            }
+        }
+
         Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }
 }
@@ -546,6 +624,39 @@ fn desugar_nested_blocks(workflow: &Workflow) -> Workflow {
 
         Workflow::Must { body, span } => Workflow::Must {
             body: Box::new(desugar_nested_blocks(body)),
+            span: *span,
+        },
+
+        // Set and Send with continuations
+        Workflow::Set {
+            capability,
+            channel,
+            value,
+            continuation,
+            span,
+        } => Workflow::Set {
+            capability: capability.clone(),
+            channel: channel.clone(),
+            value: value.clone(),
+            continuation: continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_nested_blocks(c))),
+            span: *span,
+        },
+
+        Workflow::Send {
+            capability,
+            channel,
+            value,
+            continuation,
+            span,
+        } => Workflow::Send {
+            capability: capability.clone(),
+            channel: channel.clone(),
+            value: value.clone(),
+            continuation: continuation
+                .as_ref()
+                .map(|c| Box::new(desugar_nested_blocks(c))),
             span: *span,
         },
 

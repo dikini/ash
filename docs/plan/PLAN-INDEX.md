@@ -298,19 +298,20 @@ Update this section as tasks complete:
 | 10 | 11 | 11 | ✅ Complete |
 | 11 | 6 | 6 | ✅ Complete |
 | 12 | 7 | 7 | ✅ Complete |
+| 13 | 8 | 8 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-088](tasks/TASK-088-stream-ast.md) | Stream AST types and mailbox structure | SPEC-013 | 4 | 🔴 Not Started |
-| [TASK-089](tasks/TASK-089-stream-provider.md) | Stream provider trait and registry | SPEC-013 | 4 | 🔴 Not Started |
-| [TASK-090](tasks/TASK-090-parse-receive.md) | Parse receive construct | SPEC-013 | 6 | 🔴 Not Started |
-| [TASK-091](tasks/TASK-091-mailbox-impl.md) | Mailbox implementation with limits | SPEC-013 | 6 | 🔴 Not Started |
-| [TASK-092](tasks/TASK-092-stream-execution.md) | Stream execution with pattern matching | SPEC-013 | 8 | 🔴 Not Started |
-| [TASK-093](tasks/TASK-093-behaviour-provider.md) | Behaviour provider trait | SPEC-014 | 3 | 🔴 Not Started |
-| [TASK-094](tasks/TASK-094-parse-observe.md) | Parse observe with constraints | SPEC-014 | 3 | 🔴 Not Started |
-| [TASK-095](tasks/TASK-095-observe-execution.md) | Observe execution and sampling | SPEC-014 | 4 | 🔴 Not Started |
+| [TASK-088](tasks/TASK-088-stream-ast.md) | Stream AST types and mailbox structure | SPEC-013 | 4 | ✅ Complete |
+| [TASK-089](tasks/TASK-089-stream-provider.md) | Stream provider trait and registry | SPEC-013 | 4 | ✅ Complete |
+| [TASK-090](tasks/TASK-090-parse-receive.md) | Parse receive construct | SPEC-013 | 6 | ✅ Complete |
+| [TASK-091](tasks/TASK-091-mailbox-impl.md) | Mailbox implementation with limits | SPEC-013 | 6 | ✅ Complete |
+| [TASK-092](tasks/TASK-092-stream-execution.md) | Stream execution with pattern matching | SPEC-013 | 8 | ✅ Complete |
+| [TASK-093](tasks/TASK-093-behaviour-provider.md) | Behaviour provider trait | SPEC-014 | 3 | ✅ Complete |
+| [TASK-094](tasks/TASK-094-parse-observe.md) | Parse observe with constraints | SPEC-014 | 3 | ✅ Complete |
+| [TASK-095](tasks/TASK-095-observe-execution.md) | Observe execution and sampling | SPEC-014 | 4 | ✅ Complete |
 
 **Phase 13 Deliverable**: Stream processing with receive and behaviour sampling with observe
 

@@ -1,6 +1,6 @@
 # TASK-092: Stream Execution
 
-## Status: 🔴 Not Started
+## Status: 🟢 Done
 
 ## Description
 
@@ -409,15 +409,15 @@ git commit -m "feat: stream execution with pattern matching and guards"
 
 ## Completion Checklist
 
-- [ ] Non-blocking receive execution
-- [ ] Blocking receive with wait
-- [ ] Timeout handling
-- [ ] Pattern matching in mailbox
-- [ ] Guard clause evaluation
-- [ ] Control receive handling
-- [ ] Tests pass
-- [ ] `cargo fmt` passes
-- [ ] `cargo clippy` passes
+- [x] Non-blocking receive execution
+- [x] Blocking receive with wait
+- [x] Timeout handling
+- [x] Pattern matching in mailbox
+- [x] Guard clause evaluation
+- [x] Control receive handling
+- [x] Tests pass
+- [x] `cargo fmt` passes
+- [x] `cargo clippy` passes
 
 ## Estimated Effort
 

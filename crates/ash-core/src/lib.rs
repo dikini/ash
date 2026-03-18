@@ -7,6 +7,7 @@ pub mod ast;
 pub mod effect;
 pub mod module_graph;
 pub mod provenance;
+pub mod stream;
 pub mod value;
 pub mod visualize;
 
@@ -21,5 +22,6 @@ pub mod test_helpers;
 pub use ast::*;
 pub use effect::*;
 pub use provenance::*;
+pub use stream::*;
 pub use value::*;
 pub use visualize::*;

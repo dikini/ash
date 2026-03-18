@@ -240,6 +240,35 @@ pub struct Constraint {
     pub predicate: Predicate,
 }
 
+/// Observe expression for sampling behaviour providers
+///
+/// Represents an `observe capability:channel [where constraints] as pattern` construct.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Observe {
+    /// Capability name (e.g., "sensor" in "sensor:temp")
+    pub capability: Name,
+    /// Channel name (e.g., "temp" in "sensor:temp")
+    pub channel: Name,
+    /// Optional constraints for filtering
+    pub constraints: Vec<Constraint>,
+    /// Pattern to bind the result to
+    pub pattern: Pattern,
+}
+
+/// Changed expression for change detection
+///
+/// Represents a `changed capability:channel [where constraints]` construct
+/// for detecting changes in observed values.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Changed {
+    /// Capability name
+    pub capability: Name,
+    /// Channel name
+    pub channel: Name,
+    /// Optional constraints for filtering
+    pub constraints: Vec<Constraint>,
+}
+
 /// Deontic obligation
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Obligation {

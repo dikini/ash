@@ -15,23 +15,34 @@
 //! # });
 //! ```
 
+pub mod behaviour;
 pub mod capability;
 pub mod context;
 pub mod error;
 pub mod eval;
 pub mod execute;
+pub mod execute_observe;
+pub mod execute_stream;
 pub mod guard;
+pub mod mailbox;
 pub mod pattern;
 pub mod policy;
+pub mod stream;
 
+pub use behaviour::{
+    BehaviourContext, BehaviourProvider, BehaviourRegistry, MockBehaviourProvider,
+};
 pub use capability::{CapabilityContext, CapabilityProvider, CapabilityRegistry, MockProvider};
 pub use context::Context;
 pub use error::{EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult};
 pub use eval::eval_expr;
 pub use execute::{execute_simple, execute_workflow};
+pub use execute_observe::{execute_changed, execute_observe};
 pub use guard::eval_guard;
+pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyResult, PolicyRule};
+pub use stream::{MockStreamProvider, StreamContext, StreamProvider, StreamRegistry};
 
 use ash_core::{Value, Workflow};
 

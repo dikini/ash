@@ -7,6 +7,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Phase 13: Streams and Behaviours (TASK-088 to TASK-095). Complete stream processing and behaviour sampling implementation:
+  - Stream AST types: `StreamRef`, `Receive`, `ReceiveMode`, `Mailbox` with overflow strategies (TASK-088)
+  - Stream provider trait with `StreamRegistry` and `StreamContext` for async stream operations (TASK-089)
+  - Parse receive construct with guards, timeouts, and control streams (TASK-090)
+  - Mailbox implementation with size limits and overflow strategies (DropOldest, DropNewest, Error) (TASK-091)
+  - Stream execution with pattern matching, guard evaluation, blocking/non-blocking modes (TASK-092)
+  - Behaviour provider trait with `BehaviourRegistry` and `BehaviourContext` for sampling (TASK-093)
+  - Parse observe construct with constraints (TASK-094)
+  - Observe execution with sampling and pattern binding (TASK-095) New `execute_observe` module in `ash-interp` provides `execute_observe()` and `execute_changed()` functions. `execute_observe()` samples behaviour providers with constraints, matches patterns against sampled values, and binds variables. `execute_changed()` detects value changes since last sample. Includes 6 comprehensive async tests and proper error handling for missing providers and pattern match failures.
+- Stream execution with pattern matching and guards (TASK-092). New `execute_stream` module in `ash-interp` provides `execute_receive` function supporting non-blocking/blocking/timeout modes, pattern matching with destructuring, guard clause evaluation, and control stream handling. Includes 10 comprehensive async tests.
 - Interactive REPL (Phase 12, TASK-077 to TASK-083). New `ash-repl` crate with rustyline integration provides expression evaluation, multi-line input detection, commands (:help, :quit, :type, :ast, :clear), tab completion for keywords, persistent history, and syntax error highlighting with helpful suggestions.
 - Embedding API for ash-engine crate (Phase 11, TASK-071 to TASK-076). Unified Engine type with Parse→Check→Execute lifecycle, builder pattern (EngineBuilder), thread-safe workflow storage, and capability provider traits. CLI integration complete with 160 tests passing.
 

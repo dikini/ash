@@ -136,7 +136,10 @@ impl Pattern {
     fn collect_bindings(&self, result: &mut Vec<Name>) {
         match self {
             Pattern::Variable(name) => {
-                result.push(name.clone());
+                // Skip underscore bindings (wildcard pattern)
+                if name.as_str() != "_" {
+                    result.push(name.clone());
+                }
             }
             Pattern::Tuple(patterns) => {
                 for p in patterns {
@@ -153,7 +156,10 @@ impl Pattern {
                     p.collect_bindings(result);
                 }
                 if let Some(name) = rest {
-                    result.push(name.clone());
+                    // Skip underscore bindings (wildcard pattern)
+                    if name.as_str() != "_" {
+                        result.push(name.clone());
+                    }
                 }
             }
             Pattern::Wildcard | Pattern::Literal(_) => {

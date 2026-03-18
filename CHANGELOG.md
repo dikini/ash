@@ -6,6 +6,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Infinite recursion bug in `TypedSendableProvider::send()` and `BidirectionalStreamProvider::send()` methods. Both were calling themselves instead of delegating to `inner.send()`. Added proper write_schema validation and delegation to inner provider.
+
+### Changed
+- Refactored parser utilities to eliminate code duplication between `parse_set.rs` and `parse_send.rs`. Created new `parse_utils.rs` module with shared helper functions: `parse_capability_ref()`, `keyword()`, `literal_str()`, and `skip_whitespace_and_comments()`.
+
 ### Added
 - Set statement execution for output behaviours (TASK-105). New `execute_set` module in `ash-interp` with `execute_set(capability, channel, value, behaviour_ctx)` async function for setting values on writable channels. Integrates with `BehaviourContext` to lookup settable providers, validates values before setting, and returns `ExecError::CapabilityNotAvailable` or `ExecError::ValidationFailed` on errors. Added `Workflow::Set` variant to AST with `capability`, `channel`, and `value` fields. Extended `execute_workflow` with new `execute_workflow_with_behaviour` function that accepts `BehaviourContext` for set statement support.
 - Parse send statement for output streams (TASK-104). New `parse_send` module in `ash-parser` with `SendExpr` struct for parsing `send capability:channel expr` syntax. Similar to `parse_set` but without the `=` sign. Supports variables, string literals, and function calls for structured values.

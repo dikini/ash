@@ -272,13 +272,13 @@ Update this section as tasks complete:
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-077](tasks/TASK-077-repl-crate.md) | Create ash-repl crate | SPEC-011 | 3 | 🔴 Not Started |
-| [TASK-078](tasks/TASK-078-repl-eval.md) | Expression evaluation in REPL | SPEC-011 | 4 | 🔴 Not Started |
-| [TASK-079](tasks/TASK-079-repl-multiline.md) | Multi-line input detection | SPEC-011 | 4 | 🔴 Not Started |
-| [TASK-080](tasks/TASK-080-repl-commands.md) | REPL commands (:help, :type, :quit) | SPEC-011 | 3 | 🔴 Not Started |
-| [TASK-081](tasks/TASK-081-repl-completion.md) | Tab completion | SPEC-011 | 4 | 🔴 Not Started |
-| [TASK-082](tasks/TASK-082-repl-history.md) | Persistent history | SPEC-011 | 2 | 🔴 Not Started |
-| [TASK-083](tasks/TASK-083-repl-errors.md) | Error display improvements | SPEC-011 | 3 | 🔴 Not Started |
+| [TASK-077](tasks/TASK-077-repl-crate.md) | Create ash-repl crate | SPEC-011 | 3 | ✅ Complete |
+| [TASK-078](tasks/TASK-078-repl-eval.md) | Expression evaluation in REPL | SPEC-011 | 4 | ✅ Complete |
+| [TASK-079](tasks/TASK-079-repl-multiline.md) | Multi-line input detection | SPEC-011 | 4 | ✅ Complete |
+| [TASK-080](tasks/TASK-080-repl-commands.md) | REPL commands (:help, :type, :quit) | SPEC-011 | 3 | ✅ Complete |
+| [TASK-081](tasks/TASK-081-repl-completion.md) | Tab completion | SPEC-011 | 4 | ✅ Complete |
+| [TASK-082](tasks/TASK-082-repl-history.md) | Persistent history | SPEC-011 | 2 | ✅ Complete |
+| [TASK-083](tasks/TASK-083-repl-errors.md) | Error display improvements | SPEC-011 | 3 | ✅ Complete |
 
 **Phase 12 Deliverable**: Interactive REPL with readline features
 
@@ -297,7 +297,7 @@ Update this section as tasks complete:
 | 9 | 3 | 3 | ✅ Complete |
 | 10 | 11 | 11 | ✅ Complete |
 | 11 | 6 | 6 | ✅ Complete |
-| 12 | 7 | 0 | 🔴 Not Started |
+| 12 | 7 | 7 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 

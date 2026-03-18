@@ -342,6 +342,28 @@ impl NameResolver {
                 // Resolve the return expression
                 self.resolve_expr(expr);
             }
+
+            Workflow::Set {
+                value,
+                continuation,
+                ..
+            } => {
+                self.resolve_expr(value);
+                if let Some(cont) = continuation {
+                    self.resolve_workflow_inner(cont);
+                }
+            }
+
+            Workflow::Send {
+                value,
+                continuation,
+                ..
+            } => {
+                self.resolve_expr(value);
+                if let Some(cont) = continuation {
+                    self.resolve_workflow_inner(cont);
+                }
+            }
         }
     }
 

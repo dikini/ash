@@ -60,6 +60,23 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
 
         Workflow::Act { .. } => Effect::Operational,
 
+        // Set and Send are output operations with operational effect
+        Workflow::Set { continuation, .. } => {
+            let cont_effect = continuation
+                .as_ref()
+                .map(|c| infer_effect(c))
+                .unwrap_or(Effect::Operational);
+            Effect::Operational.join(cont_effect)
+        }
+
+        Workflow::Send { continuation, .. } => {
+            let cont_effect = continuation
+                .as_ref()
+                .map(|c| infer_effect(c))
+                .unwrap_or(Effect::Operational);
+            Effect::Operational.join(cont_effect)
+        }
+
         Workflow::Let { continuation, .. } => continuation
             .as_ref()
             .map(|c| infer_effect(c))

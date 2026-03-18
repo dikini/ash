@@ -38,6 +38,12 @@ pub enum CapabilityCheckError {
         /// The channel name (e.g., "temp", "target").
         channel: String,
     },
+    /// Action that was not declared.
+    #[error("undeclared action: action '{action}' not declared")]
+    ActionNotDeclared {
+        /// The action name that was not declared.
+        action: String,
+    },
 }
 
 /// Result type for capability checking.
@@ -57,7 +63,18 @@ pub type CapabilityCheckResult<T> = Result<T, CapabilityCheckError>;
 /// // Use checker to verify workflows...
 /// ```
 #[derive(Debug, Clone)]
-pub struct CapabilityChecker;
+pub struct CapabilityChecker {
+    /// Declared observed capabilities: (capability, channel)
+    observes: Vec<(String, String)>,
+    /// Declared set capabilities: (capability, channel)
+    sets: Vec<(String, String)>,
+    /// Declared received streams: (capability, channel)
+    receives: Vec<(String, String)>,
+    /// Declared sent streams: (capability, channel)
+    sends: Vec<(String, String)>,
+    /// Declared actions: capability name
+    actions: Vec<String>,
+}
 
 impl CapabilityChecker {
     /// Creates a new capability checker.
@@ -70,7 +87,112 @@ impl CapabilityChecker {
     /// let checker = CapabilityChecker::new();
     /// ```
     pub fn new() -> Self {
-        Self
+        Self {
+            observes: Vec::new(),
+            sets: Vec::new(),
+            receives: Vec::new(),
+            sends: Vec::new(),
+            actions: Vec::new(),
+        }
+    }
+
+    /// Declares an observe capability.
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - The capability name
+    /// * `channel` - The channel name
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    ///
+    /// let checker = CapabilityChecker::new()
+    ///     .observe("sensor", "temp");
+    /// ```
+    pub fn observe(mut self, cap: &str, channel: &str) -> Self {
+        self.observes.push((cap.to_string(), channel.to_string()));
+        self
+    }
+
+    /// Declares a set capability.
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - The capability name
+    /// * `channel` - The channel name
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    ///
+    /// let checker = CapabilityChecker::new()
+    ///     .set("hvac", "target");
+    /// ```
+    pub fn set(mut self, cap: &str, channel: &str) -> Self {
+        self.sets.push((cap.to_string(), channel.to_string()));
+        self
+    }
+
+    /// Declares a receive capability.
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - The capability name
+    /// * `channel` - The channel name
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    ///
+    /// let checker = CapabilityChecker::new()
+    ///     .receive("kafka", "orders");
+    /// ```
+    pub fn receive(mut self, cap: &str, channel: &str) -> Self {
+        self.receives.push((cap.to_string(), channel.to_string()));
+        self
+    }
+
+    /// Declares a send capability.
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - The capability name
+    /// * `channel` - The channel name
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    ///
+    /// let checker = CapabilityChecker::new()
+    ///     .send("kafka", "events");
+    /// ```
+    pub fn send(mut self, cap: &str, channel: &str) -> Self {
+        self.sends.push((cap.to_string(), channel.to_string()));
+        self
+    }
+
+    /// Declares an action.
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - The action name
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    ///
+    /// let checker = CapabilityChecker::new()
+    ///     .action("notify");
+    /// ```
+    pub fn action(mut self, cap: &str) -> Self {
+        self.actions.push(cap.to_string());
+        self
     }
 
     /// Verify that a workflow only uses declared capabilities.
@@ -103,13 +225,89 @@ impl CapabilityChecker {
         self.verify_workflow(workflow)
     }
 
+    /// Verify a workflow against provided declaration context.
+    ///
+    /// This method allows verification with declarations provided at check time,
+    /// rather than requiring them to be set via the builder methods.
+    ///
+    /// # Arguments
+    ///
+    /// * `workflow` - The workflow to verify
+    /// * `observes` - Declared observe capabilities as (capability, channel) pairs
+    /// * `sets` - Declared set capabilities as (capability, channel) pairs
+    /// * `receives` - Declared receive capabilities as (capability, channel) pairs
+    /// * `sends` - Declared send capabilities as (capability, channel) pairs
+    /// * `actions` - Declared action names
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if all capabilities are properly declared,
+    /// or a `CapabilityCheckError` if an undeclared capability is used.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    /// use ash_parser::surface::Workflow;
+    /// use ash_parser::token::Span;
+    ///
+    /// let checker = CapabilityChecker::new();
+    /// let workflow = Workflow::Done { span: Span::default() };
+    /// let result = checker.verify_with_context(
+    ///     &workflow,
+    ///     &[("sensor".to_string(), "temp".to_string())],
+    ///     &[],
+    ///     &[],
+    ///     &[],
+    ///     &[],
+    /// );
+    /// assert!(result.is_ok());
+    /// ```
+    pub fn verify_with_context(
+        &self,
+        workflow: &Workflow,
+        observes: &[(String, String)],
+        sets: &[(String, String)],
+        receives: &[(String, String)],
+        sends: &[(String, String)],
+        actions: &[String],
+    ) -> CapabilityCheckResult<()> {
+        // Create a temporary checker with the provided context
+        let temp_checker = Self {
+            observes: observes.to_vec(),
+            sets: sets.to_vec(),
+            receives: receives.to_vec(),
+            sends: sends.to_vec(),
+            actions: actions.to_vec(),
+        };
+        temp_checker.verify_workflow(workflow)
+    }
+
     fn verify_workflow(&self, workflow: &Workflow) -> CapabilityCheckResult<()> {
         match workflow {
             // Observation - checks if observe is declared for this capability
-            Workflow::Observe { continuation, .. } => {
-                // TODO: Check if observe is declared for this capability:channel
-                // For now, we just verify the syntax - actual declaration checking
-                // would require the workflow definition context
+            Workflow::Observe {
+                capability,
+                continuation,
+                ..
+            } => {
+                // Parse capability string to extract capability:channel
+                let cap_str = capability.as_ref();
+                let (cap_name, channel_name) = self.parse_capability_channel(cap_str);
+
+                // Check if (capability, channel) is in the observes list
+                if !self
+                    .observes
+                    .iter()
+                    .any(|(c, ch)| c == cap_name && ch == channel_name)
+                {
+                    return Err(CapabilityCheckError::NotDeclared {
+                        operation: "observe".to_string(),
+                        capability: cap_name.to_string(),
+                        channel: channel_name.to_string(),
+                    });
+                }
+
                 if let Some(cont) = continuation {
                     self.verify_workflow(cont)?;
                 }
@@ -154,8 +352,72 @@ impl CapabilityChecker {
             }
 
             // Act - executes an action with potential side effects
-            Workflow::Act { .. } => {
-                // TODO: Check if act is declared for this capability:channel
+            Workflow::Act { action, .. } => {
+                // Check if action name is in the actions list
+                let action_name = action.name.as_ref();
+                if !self.actions.iter().any(|a| a == action_name) {
+                    return Err(CapabilityCheckError::ActionNotDeclared {
+                        action: action_name.to_string(),
+                    });
+                }
+                Ok(())
+            }
+
+            // Set - sets a value on an output capability
+            Workflow::Set {
+                capability,
+                channel,
+                continuation,
+                ..
+            } => {
+                let cap_name = capability.as_ref();
+                let channel_name = channel.as_ref();
+
+                // Check if (capability, channel) is in the sets list
+                if !self
+                    .sets
+                    .iter()
+                    .any(|(c, ch)| c == cap_name && ch == channel_name)
+                {
+                    return Err(CapabilityCheckError::NotDeclared {
+                        operation: "set".to_string(),
+                        capability: cap_name.to_string(),
+                        channel: channel_name.to_string(),
+                    });
+                }
+
+                if let Some(cont) = continuation {
+                    self.verify_workflow(cont)?;
+                }
+                Ok(())
+            }
+
+            // Send - sends a value to an output stream
+            Workflow::Send {
+                capability,
+                channel,
+                continuation,
+                ..
+            } => {
+                let cap_name = capability.as_ref();
+                let channel_name = channel.as_ref();
+
+                // Check if (capability, channel) is in the sends list
+                if !self
+                    .sends
+                    .iter()
+                    .any(|(c, ch)| c == cap_name && ch == channel_name)
+                {
+                    return Err(CapabilityCheckError::NotDeclared {
+                        operation: "send".to_string(),
+                        capability: cap_name.to_string(),
+                        channel: channel_name.to_string(),
+                    });
+                }
+
+                if let Some(cont) = continuation {
+                    self.verify_workflow(cont)?;
+                }
                 Ok(())
             }
 
@@ -258,6 +520,20 @@ impl CapabilityChecker {
             }
         }
     }
+
+    /// Parse a capability string into (capability, channel) pair.
+    ///
+    /// Handles formats like:
+    /// - "sensor:temp" -> ("sensor", "temp")
+    /// - "sensor" -> ("sensor", "")
+    fn parse_capability_channel<'a>(&self, cap_str: &'a str) -> (&'a str, &'a str) {
+        if let Some(pos) = cap_str.find(':') {
+            let (cap, channel) = cap_str.split_at(pos);
+            (cap, &channel[1..]) // Skip the ':' character
+        } else {
+            (cap_str, "")
+        }
+    }
 }
 
 impl Default for CapabilityChecker {
@@ -269,7 +545,7 @@ impl Default for CapabilityChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::surface::{Literal, Pattern, Workflow};
+    use ash_parser::surface::{ActionRef, Literal, Pattern, Workflow};
     use ash_parser::token::Span;
 
     fn test_span() -> Span {
@@ -348,18 +624,191 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_observe() {
-        let checker = CapabilityChecker::new();
+    fn test_verify_observe_declared() {
+        let checker = CapabilityChecker::new().observe("sensor", "temp");
         let workflow = Workflow::Observe {
-            capability: "sensor".into(),
+            capability: "sensor:temp".into(),
             binding: Some(Pattern::Variable("data".into())),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
         };
 
         let result = checker.verify(&workflow);
-        // Currently passes since we don't have declaration context
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_observe_undeclared() {
+        let checker = CapabilityChecker::new();
+        let workflow = Workflow::Observe {
+            capability: "sensor:temp".into(),
+            binding: Some(Pattern::Variable("data".into())),
+            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_err());
+        match result {
+            Err(CapabilityCheckError::NotDeclared {
+                operation,
+                capability,
+                channel,
+            }) => {
+                assert_eq!(operation, "observe");
+                assert_eq!(capability, "sensor");
+                assert_eq!(channel, "temp");
+            }
+            _ => panic!("Expected NotDeclared error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_act_declared() {
+        let checker = CapabilityChecker::new().action("notify");
+        let workflow = Workflow::Act {
+            action: ActionRef {
+                name: "notify".into(),
+                args: vec![],
+            },
+            guard: None,
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_act_undeclared() {
+        let checker = CapabilityChecker::new();
+        let workflow = Workflow::Act {
+            action: ActionRef {
+                name: "notify".into(),
+                args: vec![],
+            },
+            guard: None,
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_err());
+        match result {
+            Err(CapabilityCheckError::ActionNotDeclared { action }) => {
+                assert_eq!(action, "notify");
+            }
+            _ => panic!("Expected ActionNotDeclared error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_set_declared() {
+        let checker = CapabilityChecker::new().set("hvac", "target");
+        let workflow = Workflow::Set {
+            capability: "hvac".into(),
+            channel: "target".into(),
+            value: Expr::Literal(Literal::Int(72)),
+            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_set_undeclared() {
+        let checker = CapabilityChecker::new();
+        let workflow = Workflow::Set {
+            capability: "hvac".into(),
+            channel: "target".into(),
+            value: Expr::Literal(Literal::Int(72)),
+            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_err());
+        match result {
+            Err(CapabilityCheckError::NotDeclared {
+                operation,
+                capability,
+                channel,
+            }) => {
+                assert_eq!(operation, "set");
+                assert_eq!(capability, "hvac");
+                assert_eq!(channel, "target");
+            }
+            _ => panic!("Expected NotDeclared error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_send_declared() {
+        let checker = CapabilityChecker::new().send("kafka", "events");
+        let workflow = Workflow::Send {
+            capability: "kafka".into(),
+            channel: "events".into(),
+            value: Expr::Literal(Literal::String("data".into())),
+            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_send_undeclared() {
+        let checker = CapabilityChecker::new();
+        let workflow = Workflow::Send {
+            capability: "kafka".into(),
+            channel: "events".into(),
+            value: Expr::Literal(Literal::String("data".into())),
+            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_err());
+        match result {
+            Err(CapabilityCheckError::NotDeclared {
+                operation,
+                capability,
+                channel,
+            }) => {
+                assert_eq!(operation, "send");
+                assert_eq!(capability, "kafka");
+                assert_eq!(channel, "events");
+            }
+            _ => panic!("Expected NotDeclared error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_with_context() {
+        let checker = CapabilityChecker::new();
+        let workflow = Workflow::Observe {
+            capability: "sensor:temp".into(),
+            binding: Some(Pattern::Variable("data".into())),
+            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
+            span: test_span(),
+        };
+
+        // Test with declared capability
+        let result = checker.verify_with_context(
+            &workflow,
+            &[("sensor".to_string(), "temp".to_string())],
+            &[],
+            &[],
+            &[],
+            &[],
+        );
+        assert!(result.is_ok());
+
+        // Test without declared capability
+        let result = checker.verify_with_context(&workflow, &[], &[], &[], &[], &[]);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -377,9 +826,52 @@ mod tests {
     }
 
     #[test]
+    fn test_action_error_display() {
+        let err = CapabilityCheckError::ActionNotDeclared {
+            action: "notify".into(),
+        };
+
+        let msg = err.to_string();
+        assert!(msg.contains("undeclared action"));
+        assert!(msg.contains("notify"));
+    }
+
+    #[test]
     fn test_checker_default() {
         let checker: CapabilityChecker = Default::default();
         let workflow = Workflow::Done { span: test_span() };
+        let result = checker.verify(&workflow);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_builder_chaining() {
+        let checker = CapabilityChecker::new()
+            .observe("sensor", "temp")
+            .observe("sensor", "humidity")
+            .set("hvac", "target")
+            .send("kafka", "events")
+            .action("notify")
+            .action("log");
+
+        // Verify all declarations were added
+        assert_eq!(checker.observes.len(), 2);
+        assert_eq!(checker.sets.len(), 1);
+        assert_eq!(checker.sends.len(), 1);
+        assert_eq!(checker.actions.len(), 2);
+    }
+
+    #[test]
+    fn test_observe_without_channel() {
+        // Test observe with capability that has no channel (no colon)
+        let checker = CapabilityChecker::new().observe("sensor", "");
+        let workflow = Workflow::Observe {
+            capability: "sensor".into(),
+            binding: None,
+            continuation: None,
+            span: test_span(),
+        };
+
         let result = checker.verify(&workflow);
         assert!(result.is_ok());
     }

@@ -73,6 +73,7 @@ pub enum ExecError {
         path: Option<String>,
     },
     ValidationFailed(String),
+    MailboxFull { limit: usize },
 }
 
 impl std::error::Error for ExecError {
@@ -87,6 +88,12 @@ impl std::error::Error for ExecError {
 impl From<EvalError> for ExecError {
     fn from(err: EvalError) -> Self {
         Self::Eval(err)
+    }
+}
+
+impl From<ash_core::MailboxOverflowError> for ExecError {
+    fn from(err: ash_core::MailboxOverflowError) -> Self {
+        Self::MailboxFull { limit: err.limit() }
     }
 }
 
@@ -125,6 +132,7 @@ impl std::fmt::Display for ExecError {
                 }
             }
             Self::ValidationFailed(msg) => write!(f, "validation failed: {msg}"),
+            Self::MailboxFull { limit } => write!(f, "mailbox full: limit of {limit} entries exceeded"),
         }
     }
 }

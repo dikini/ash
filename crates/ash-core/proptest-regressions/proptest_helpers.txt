@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc ace32562da056db3d2dd6bd2f6967b70771bf6d59f007206f718c6817feb33b4 # shrinks to pat = List([List([Variable("_")], None)], Some("_"))

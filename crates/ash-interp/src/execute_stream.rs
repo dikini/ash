@@ -203,7 +203,7 @@ async fn wait_for_message(mailbox: SharedMailbox, stream_ctx: &StreamContext) ->
             let mut mb = mailbox.lock().await;
             match result {
                 Ok(value) => {
-                    mb.push(MailboxEntry::new(&cap, &chan, value))?;
+                    mb.push(MailboxEntry::new(cap.clone(), chan.clone(), value))?;
                 }
                 Err(e) => {
                     // Log error but continue polling - don't crash on stream errors

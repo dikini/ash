@@ -219,7 +219,9 @@ impl StreamContext {
     /// # Example
     ///
     /// ```
-    /// use ash_interp::stream::{StreamContext, MockStreamProvider, TypedStreamProvider};
+    /// use ash_interp::stream::{StreamContext, MockStreamProvider};
+    /// use ash_interp::TypedStreamProvider;
+    /// use ash_interp::stream::StreamProvider;
     /// use ash_typeck::Type;
     ///
     /// let mut ctx = StreamContext::new();
@@ -245,7 +247,8 @@ impl StreamContext {
     /// # Example
     ///
     /// ```
-    /// use ash_interp::stream::{StreamContext, MockStreamProvider, TypedStreamProvider};
+    /// use ash_interp::stream::{StreamContext, MockStreamProvider, StreamProvider};
+    /// use ash_interp::TypedStreamProvider;
     /// use ash_core::Value;
     /// use ash_typeck::Type;
     ///
@@ -255,7 +258,7 @@ impl StreamContext {
     ///
     /// // Receive from any available stream
     /// if let Some((cap, chan, result)) = ctx.try_recv_any() {
-    ///     println!("Received from {}:{}: {:?}", cap, chan, result);
+    ///     println!("Received from {}:{}: {:?}", cap, chan, result.unwrap());
     /// }
     /// ```
     pub fn try_recv_any(&self) -> Option<(String, String, ExecResult<Value>)> {
@@ -1666,7 +1669,7 @@ mod tests {
         let provider2 = MockStreamProvider::new("sensor", "temp");
 
         registry.register(TypedStreamProvider::new(provider1, Type::Int));
-        registry.register(TypedStreamProvider::new(provider2, Type::Float));
+        registry.register(TypedStreamProvider::new(provider2, Type::String));
 
         // Collect all providers from iterator
         let providers: Vec<_> = registry.iter().collect();
@@ -1689,7 +1692,7 @@ mod tests {
         let provider3 = MockStreamProvider::new("api", "events");
 
         ctx.register(TypedStreamProvider::new(provider1, Type::Int));
-        ctx.register(TypedStreamProvider::new(provider2, Type::Float));
+        ctx.register(TypedStreamProvider::new(provider2, Type::Bool));
         ctx.register(TypedStreamProvider::new(provider3, Type::String));
 
         // Iterate over all providers
@@ -1734,23 +1737,24 @@ mod tests {
         ctx.register(TypedStreamProvider::new(provider1, Type::Int));
         ctx.register(TypedStreamProvider::new(provider2, Type::Int));
 
-        // Should receive from one of the providers
-        let result1 = ctx.try_recv_any();
-        assert!(result1.is_some());
-        let (cap1, chan1, value1) = result1.unwrap();
-        assert_eq!(value1.unwrap(), Value::Int(1));
+        // Collect results from both providers (order is non-deterministic)
+        let mut received_values = Vec::new();
+        let mut received_providers = std::collections::HashSet::new();
 
-        // Should receive from the other provider
-        let result2 = ctx.try_recv_any();
-        assert!(result2.is_some());
-        let (cap2, chan2, value2) = result2.unwrap();
-        assert_eq!(value2.unwrap(), Value::Int(2));
+        for _ in 0..2 {
+            let result = ctx.try_recv_any();
+            assert!(result.is_some());
+            let (cap, chan, value) = result.unwrap();
+            received_values.push(value.unwrap());
+            received_providers.insert((cap, chan));
+        }
+
+        // Verify we got both values
+        assert!(received_values.contains(&Value::Int(1)));
+        assert!(received_values.contains(&Value::Int(2)));
 
         // Verify we got both different providers
-        assert_ne!(
-            (cap1.as_str(), chan1.as_str()),
-            (cap2.as_str(), chan2.as_str())
-        );
+        assert_eq!(received_providers.len(), 2);
 
         // No more messages
         assert!(ctx.try_recv_any().is_none());

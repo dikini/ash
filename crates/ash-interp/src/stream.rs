@@ -401,7 +401,15 @@ impl StreamProvider for TypedSendableProvider {
 #[async_trait]
 impl SendableStreamProvider for TypedSendableProvider {
     async fn send(&self, value: Value) -> ExecResult<()> {
-        self.send(value).await
+        // Validate against write_schema before sending
+        if !self.write_schema.matches(&value) {
+            return Err(ExecError::type_mismatch(
+                format!("{}:{}", self.capability_name(), self.channel_name()),
+                self.write_schema.to_string(),
+                value.to_string(),
+            ));
+        }
+        self.inner.send(value).await
     }
 
     fn would_block(&self) -> bool {
@@ -857,7 +865,15 @@ impl StreamProvider for BidirectionalStreamProvider {
 #[async_trait]
 impl SendableStreamProvider for BidirectionalStreamProvider {
     async fn send(&self, value: Value) -> ExecResult<()> {
-        self.send(value).await
+        // Validate against write_schema before sending
+        if !self.write_schema.matches(&value) {
+            return Err(ExecError::type_mismatch(
+                format!("{}:{}", self.capability_name(), self.channel_name()),
+                self.write_schema.to_string(),
+                value.to_string(),
+            ));
+        }
+        self.inner.send(value).await
     }
 
     fn would_block(&self) -> bool {

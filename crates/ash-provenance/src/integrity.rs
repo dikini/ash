@@ -74,8 +74,6 @@ impl fmt::Display for Hash {
     }
 }
 
-
-
 impl From<[u8; 32]> for Hash {
     fn from(bytes: [u8; 32]) -> Self {
         Self::new(bytes)
@@ -308,7 +306,10 @@ impl MerkleProof {
 /// # Errors
 ///
 /// Returns an error if the tree is empty or the index is out of bounds.
-pub fn integrity_proof(tree: &MerkleTree, leaf_index: usize) -> Result<MerkleProof, IntegrityError> {
+pub fn integrity_proof(
+    tree: &MerkleTree,
+    leaf_index: usize,
+) -> Result<MerkleProof, IntegrityError> {
     tree.generate_proof(leaf_index)
 }
 
@@ -339,9 +340,8 @@ pub fn verify_integrity(leaf_hash: Hash, proof: &MerkleProof) -> bool {
 ///
 /// Returns an error if serialization fails.
 pub fn hash_value<T: Serialize>(value: &T) -> Result<Hash, IntegrityError> {
-    let json = serde_json::to_vec(value).map_err(|e| {
-        IntegrityError::Serialization(format!("failed to serialize value: {e}"))
-    })?;
+    let json = serde_json::to_vec(value)
+        .map_err(|e| IntegrityError::Serialization(format!("failed to serialize value: {e}")))?;
     Ok(Hash::from_bytes(&json))
 }
 
@@ -543,10 +543,7 @@ mod tests {
 
     #[test]
     fn test_merkle_tree_from_hashes() {
-        let hashes = vec![
-            Hash::from_string("a"),
-            Hash::from_string("b"),
-        ];
+        let hashes = vec![Hash::from_string("a"), Hash::from_string("b")];
         let tree = MerkleTree::from_hashes(hashes);
 
         assert_eq!(tree.len(), 2);

@@ -22,51 +22,42 @@ mod tests {
     fn test_parse_valid_workflow_with_let() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 let x = 42;
                 done
             }
-        "#,
+        ",
         );
-        assert!(
-            result.is_ok(),
-            "Workflow with let should parse: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "Workflow with let should parse: {result:?}");
     }
 
     #[test]
     fn test_parse_valid_workflow_with_if() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 if true then done
             }
-        "#,
+        ",
         );
-        assert!(
-            result.is_ok(),
-            "Workflow with if should parse: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "Workflow with if should parse: {result:?}");
     }
 
     #[test]
     fn test_parse_valid_workflow_with_if_else() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 if x > 0 then done else done
             }
-        "#,
+        ",
         );
         assert!(
             result.is_ok(),
-            "Workflow with if-else should parse: {:?}",
-            result
+            "Workflow with if-else should parse: {result:?}"
         );
     }
 
@@ -74,17 +65,16 @@ mod tests {
     fn test_parse_valid_workflow_with_observe() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 observe read_db as data;
                 done
             }
-        "#,
+        ",
         );
         assert!(
             result.is_ok(),
-            "Workflow with observe should parse: {:?}",
-            result
+            "Workflow with observe should parse: {result:?}"
         );
     }
 
@@ -99,44 +89,35 @@ mod tests {
             }
         "#,
         );
-        assert!(
-            result.is_ok(),
-            "Workflow with act should parse: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "Workflow with act should parse: {result:?}");
     }
 
     #[test]
     fn test_parse_valid_workflow_with_for() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 for item in items do done
             }
-        "#,
+        ",
         );
-        assert!(
-            result.is_ok(),
-            "Workflow with for should parse: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "Workflow with for should parse: {result:?}");
     }
 
     #[test]
     fn test_parse_valid_workflow_with_with() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 with db do done
             }
-        "#,
+        ",
         );
         assert!(
             result.is_ok(),
-            "Workflow with with should parse: {:?}",
-            result
+            "Workflow with with should parse: {result:?}"
         );
     }
 
@@ -144,16 +125,15 @@ mod tests {
     fn test_parse_valid_workflow_with_maybe() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 maybe done else done
             }
-        "#,
+        ",
         );
         assert!(
             result.is_ok(),
-            "Workflow with maybe should parse: {:?}",
-            result
+            "Workflow with maybe should parse: {result:?}"
         );
     }
 
@@ -161,16 +141,15 @@ mod tests {
     fn test_parse_valid_workflow_with_must() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 must done
             }
-        "#,
+        ",
         );
         assert!(
             result.is_ok(),
-            "Workflow with must should parse: {:?}",
-            result
+            "Workflow with must should parse: {result:?}"
         );
     }
 
@@ -178,20 +157,16 @@ mod tests {
     fn test_parse_valid_workflow_with_par() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(
-            r#"
+            r"
             workflow test {
                 par {
                     done
                     done
                 }
             }
-        "#,
+        ",
         );
-        assert!(
-            result.is_ok(),
-            "Workflow with par should parse: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "Workflow with par should parse: {result:?}");
     }
 
     #[test]
@@ -209,11 +184,7 @@ mod tests {
             }
         "#,
         );
-        assert!(
-            result.is_ok(),
-            "Complex workflow should parse: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "Complex workflow should parse: {result:?}");
     }
 
     #[test]
@@ -330,8 +301,7 @@ mod tests {
         let result = engine.parse_file(path);
         assert!(
             result.is_ok(),
-            "Parsing existing file should succeed: {:?}",
-            result
+            "Parsing existing file should succeed: {result:?}"
         );
     }
 
@@ -342,13 +312,13 @@ mod tests {
         let mut temp_file = tempfile::NamedTempFile::with_suffix(".ash").unwrap();
         writeln!(
             temp_file,
-            r#"
+            r"
             workflow test {{
                 let x = 42;
                 act print(x);
                 done
             }}
-        "#
+        "
         )
         .unwrap();
 
@@ -363,22 +333,21 @@ mod tests {
         let mut temp_file = tempfile::NamedTempFile::with_suffix(".ash").unwrap();
         writeln!(
             temp_file,
-            r#"
+            r"
             -- This is a comment
             workflow test {{
                 /* Multi-line
                    comment */
                 done
             }}
-        "#
+        "
         )
         .unwrap();
 
         let result = engine.parse_file(temp_file.path());
         assert!(
             result.is_ok(),
-            "Parsing file with comments should succeed: {:?}",
-            result
+            "Parsing file with comments should succeed: {result:?}"
         );
     }
 
@@ -465,7 +434,7 @@ mod tests {
 
         // Parse from file
         let mut temp_file = tempfile::NamedTempFile::with_suffix(".ash").unwrap();
-        writeln!(temp_file, "{}", source).unwrap();
+        writeln!(temp_file, "{source}").unwrap();
         let result_file = engine.parse_file(temp_file.path());
 
         // Both should succeed or both should fail

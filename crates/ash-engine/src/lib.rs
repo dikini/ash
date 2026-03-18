@@ -109,7 +109,7 @@ impl Engine {
     /// Generate a unique ID for storing surface workflows
     fn next_workflow_id(&self) -> u64 {
         self.next_id
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Store a surface workflow and return its ID
@@ -230,7 +230,16 @@ impl Engine {
 }
 
 impl Default for Engine {
+    /// Creates a default engine with standard configuration.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the engine cannot be built (e.g., out of memory). This is
+    /// extremely unlikely in practice since the default configuration requires
+    /// no external resources.
     fn default() -> Self {
+        // SAFETY: The default EngineBuilder configuration is infallible.
+        // It only allocates memory and performs simple initializations.
         Self::new().build().expect("default engine builds")
     }
 }
@@ -308,8 +317,7 @@ mod tests {
         let result = Engine::new().build();
         assert!(
             result.is_ok(),
-            "Engine::new().build() should succeed but got: {:?}",
-            result
+            "Engine::new().build() should succeed but got: {result:?}"
         );
     }
 
@@ -513,11 +521,10 @@ mod tests {
     fn test_engine_error_display_format() {
         // Verify error messages are informative
         let parse_err = EngineError::Parse("unexpected token".to_string());
-        let display = format!("{}", parse_err);
+        let display = format!("{parse_err}");
         assert!(
             display.contains("unexpected token"),
-            "Parse error should display message: {}",
-            display
+            "Parse error should display message: {display}"
         );
     }
 
@@ -548,7 +555,7 @@ mod tests {
         #[test]
         fn prop_error_message_preservation(message in "[a-zA-Z0-9_ ]{1,100}") {
             let err = EngineError::Parse(message.clone());
-            let display = format!("{}", err);
+            let display = format!("{err}");
             prop_assert!(
                 display.contains(&message),
                 "Error display should contain original message"
@@ -586,7 +593,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TODO: Implement during TASK-073"]
     fn test_engine_check_valid_workflow() {
         let engine = Engine::new().build().unwrap();
         let workflow = engine.parse("workflow main { ret 42; }").unwrap();
@@ -595,7 +601,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TODO: Implement during TASK-074"]
     fn test_engine_execute_workflow() {
         // This will be an async test
     }

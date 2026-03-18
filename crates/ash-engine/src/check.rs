@@ -18,8 +18,7 @@ mod tests {
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Empty workflow should pass type checking: {:?}",
-            result
+            "Empty workflow should pass type checking: {result:?}"
         );
     }
 
@@ -28,19 +27,18 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let x = 42;
                 done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with let should pass type checking: {:?}",
-            result
+            "Workflow with let should pass type checking: {result:?}"
         );
     }
 
@@ -49,18 +47,17 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 ret 42;
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with ret should pass type checking: {:?}",
-            result
+            "Workflow with ret should pass type checking: {result:?}"
         );
     }
 
@@ -69,18 +66,17 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 if true then done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with if should pass type checking: {:?}",
-            result
+            "Workflow with if should pass type checking: {result:?}"
         );
     }
 
@@ -89,19 +85,18 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let x = 1;
                 if x > 0 then done else done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with if-else should pass type checking: {:?}",
-            result
+            "Workflow with if-else should pass type checking: {result:?}"
         );
     }
 
@@ -110,19 +105,18 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 observe read_db as data;
                 done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with observe should pass type checking: {:?}",
-            result
+            "Workflow with observe should pass type checking: {result:?}"
         );
     }
 
@@ -142,8 +136,7 @@ mod tests {
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with act should pass type checking: {:?}",
-            result
+            "Workflow with act should pass type checking: {result:?}"
         );
     }
 
@@ -152,19 +145,18 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let items = [1, 2, 3];
                 for item in items do done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with for should pass type checking: {:?}",
-            result
+            "Workflow with for should pass type checking: {result:?}"
         );
     }
 
@@ -173,18 +165,17 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 with db do done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with with should pass type checking: {:?}",
-            result
+            "Workflow with with should pass type checking: {result:?}"
         );
     }
 
@@ -193,18 +184,17 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 maybe done else done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with maybe should pass type checking: {:?}",
-            result
+            "Workflow with maybe should pass type checking: {result:?}"
         );
     }
 
@@ -213,18 +203,17 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 must done
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with must should pass type checking: {:?}",
-            result
+            "Workflow with must should pass type checking: {result:?}"
         );
     }
 
@@ -233,21 +222,20 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 par {
                     done
                     done
                 }
             }
-        "#,
+        ",
             )
             .unwrap();
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with par should pass type checking: {:?}",
-            result
+            "Workflow with par should pass type checking: {result:?}"
         );
     }
 
@@ -271,8 +259,7 @@ mod tests {
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Complex workflow should pass type checking: {:?}",
-            result
+            "Complex workflow should pass type checking: {result:?}"
         );
     }
 
@@ -288,12 +275,12 @@ mod tests {
         // come from semantic analysis during check()
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let x = 42;
                 ret x;
             }
-        "#,
+        ",
             )
             .unwrap();
 
@@ -340,8 +327,7 @@ mod tests {
         let check_result = engine.check(&workflow);
         assert!(
             check_result.is_ok(),
-            "Parsed workflow should pass type checking: {:?}",
-            check_result
+            "Parsed workflow should pass type checking: {check_result:?}"
         );
     }
 
@@ -405,14 +391,13 @@ mod tests {
         ];
 
         for name in names {
-            let source = format!("workflow {} {{ done }}", name);
+            let source = format!("workflow {name} {{ done }}");
             let workflow = engine.parse(&source).unwrap();
             let result = engine.check(&workflow);
             // Will panic on first iteration due to todo!()
             assert!(
                 result.is_ok(),
-                "Workflow '{}' should pass type checking",
-                name
+                "Workflow '{name}' should pass type checking"
             );
         }
     }
@@ -422,22 +407,21 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let a = 1 + 2;
                 let b = a * 3;
                 let c = b - 1;
                 if c > 0 then done else done
             }
-        "#,
+        ",
             )
             .unwrap();
 
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with nested expressions should pass type checking: {:?}",
-            result
+            "Workflow with nested expressions should pass type checking: {result:?}"
         );
     }
 
@@ -459,8 +443,7 @@ mod tests {
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with strings should pass type checking: {:?}",
-            result
+            "Workflow with strings should pass type checking: {result:?}"
         );
     }
 
@@ -469,7 +452,7 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let a = true;
                 let b = false;
@@ -478,15 +461,14 @@ mod tests {
                 let e = !a;
                 done
             }
-        "#,
+        ",
             )
             .unwrap();
 
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with booleans should pass type checking: {:?}",
-            result
+            "Workflow with booleans should pass type checking: {result:?}"
         );
     }
 
@@ -495,7 +477,7 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let x = 5;
                 let y = 10;
@@ -507,15 +489,14 @@ mod tests {
                 let ge = x >= y;
                 done
             }
-        "#,
+        ",
             )
             .unwrap();
 
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with comparisons should pass type checking: {:?}",
-            result
+            "Workflow with comparisons should pass type checking: {result:?}"
         );
     }
 
@@ -524,20 +505,19 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let workflow = engine
             .parse(
-                r#"
+                r"
             workflow test {
                 let items = [1, 2, 3];
                 for item in items do done
             }
-        "#,
+        ",
             )
             .unwrap();
 
         let result = engine.check(&workflow);
         assert!(
             result.is_ok(),
-            "Workflow with lists should pass type checking: {:?}",
-            result
+            "Workflow with lists should pass type checking: {result:?}"
         );
     }
 
@@ -548,7 +528,7 @@ mod tests {
 
         // After implementation, verify that error messages are descriptive
         match engine.check(&workflow) {
-            Ok(_) => {
+            Ok(()) => {
                 // Success case - valid workflow
             }
             Err(EngineError::Type(msg)) => {
@@ -558,7 +538,7 @@ mod tests {
                 );
             }
             Err(other) => {
-                panic!("Expected Type error or success, got: {:?}", other);
+                panic!("Expected Type error or success, got: {other:?}");
             }
         }
     }
@@ -573,7 +553,7 @@ mod tests {
         let err = EngineError::Type("expected Int, got String".to_string());
         assert!(matches!(err, EngineError::Type(_)));
 
-        let display = format!("{}", err);
+        let display = format!("{err}");
         assert!(display.contains("type error"));
         assert!(display.contains("expected Int, got String"));
     }

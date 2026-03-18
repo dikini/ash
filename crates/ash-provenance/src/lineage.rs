@@ -275,11 +275,7 @@ impl LineageTracker {
     }
 
     /// Create and register a computed lineage.
-    pub fn compute(
-        &mut self,
-        operation: impl Into<String>,
-        parents: Vec<LineageId>,
-    ) -> LineageId {
+    pub fn compute(&mut self, operation: impl Into<String>, parents: Vec<LineageId>) -> LineageId {
         let lineage = Lineage::computed(operation, parents);
         self.register(lineage)
     }
@@ -386,11 +382,7 @@ impl LineageTracker {
     }
 
     /// Create a new computed value by combining multiple existing lineages.
-    pub fn combine(
-        &mut self,
-        operation: impl Into<String>,
-        inputs: Vec<LineageId>,
-    ) -> LineageId {
+    pub fn combine(&mut self, operation: impl Into<String>, inputs: Vec<LineageId>) -> LineageId {
         self.compute(operation, inputs)
     }
 
@@ -436,8 +428,8 @@ mod tests {
 
     #[test]
     fn test_transformation() {
-        let transform = Transformation::new("filter", "remove nulls")
-            .with_metadata("threshold", "0.5");
+        let transform =
+            Transformation::new("filter", "remove nulls").with_metadata("threshold", "0.5");
 
         assert_eq!(transform.operation, "filter");
         assert_eq!(transform.description, "remove nulls");

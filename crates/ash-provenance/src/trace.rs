@@ -402,10 +402,7 @@ pub struct TraceRecorder<S: TraceStore> {
 impl<S: TraceStore> TraceRecorder<S> {
     /// Create a new trace recorder for the given workflow.
     pub fn new(workflow_id: WorkflowId, store: S) -> Self {
-        Self {
-            workflow_id,
-            store,
-        }
+        Self { workflow_id, store }
     }
 
     /// Get the workflow ID.
@@ -428,7 +425,10 @@ impl<S: TraceStore> TraceRecorder<S> {
     }
 
     /// Record a workflow started event.
-    pub fn record_workflow_started(&mut self, name: impl Into<String>) -> Result<(), TraceStoreError> {
+    pub fn record_workflow_started(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<(), TraceStoreError> {
         self.record(TraceEvent::workflow_started(self.workflow_id, name))
     }
 
@@ -452,7 +452,11 @@ impl<S: TraceStore> TraceRecorder<S> {
         expression: impl Into<String>,
         result: impl Into<String>,
     ) -> Result<(), TraceStoreError> {
-        self.record(TraceEvent::orientation(self.workflow_id, expression, result))
+        self.record(TraceEvent::orientation(
+            self.workflow_id,
+            expression,
+            result,
+        ))
     }
 
     /// Record a proposal event.
@@ -471,7 +475,12 @@ impl<S: TraceStore> TraceRecorder<S> {
         decision: Decision,
         reason: Option<impl Into<String>>,
     ) -> Result<(), TraceStoreError> {
-        self.record(TraceEvent::decision(self.workflow_id, policy, decision, reason))
+        self.record(TraceEvent::decision(
+            self.workflow_id,
+            policy,
+            decision,
+            reason,
+        ))
     }
 
     /// Record an action event.
@@ -489,7 +498,11 @@ impl<S: TraceStore> TraceRecorder<S> {
         role: impl Into<String>,
         satisfied: bool,
     ) -> Result<(), TraceStoreError> {
-        self.record(TraceEvent::obligation_check(self.workflow_id, role, satisfied))
+        self.record(TraceEvent::obligation_check(
+            self.workflow_id,
+            role,
+            satisfied,
+        ))
     }
 
     /// Record an error event.
@@ -510,10 +523,7 @@ impl<S: TraceStore> TraceRecorder<S> {
 impl TraceRecorder<Arc<InMemoryTraceStore>> {
     /// Create a new trace recorder with a shared store.
     pub fn new_shared(workflow_id: WorkflowId, store: Arc<InMemoryTraceStore>) -> Self {
-        Self {
-            workflow_id,
-            store,
-        }
+        Self { workflow_id, store }
     }
 }
 
@@ -570,7 +580,12 @@ mod tests {
     #[test]
     fn test_trace_event_decision() {
         let workflow_id = WorkflowId::new();
-        let event = TraceEvent::decision(workflow_id, "budget", Decision::Permit, Some::<&str>("under_limit"));
+        let event = TraceEvent::decision(
+            workflow_id,
+            "budget",
+            Decision::Permit,
+            Some::<&str>("under_limit"),
+        );
 
         match &event {
             TraceEvent::Decision {

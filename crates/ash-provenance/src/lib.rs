@@ -12,7 +12,7 @@ pub mod lineage;
 pub mod trace;
 
 pub use export::{AuditExporter, CsvExporter, ExportFormat, JsonExporter, NdJsonExporter};
-pub use integrity::{verify_integrity, Hash, MerkleTree};
+pub use integrity::{Hash, MerkleTree, verify_integrity};
 pub use lineage::{DataSource, Lineage, LineageTracker, Transformation};
 pub use trace::{InMemoryTraceStore, TraceEvent, TraceRecorder};
 
@@ -82,10 +82,7 @@ pub fn create_lineage_tracker() -> LineageTracker {
 /// let mut recorder = create_trace_recorder(WorkflowId::new());
 /// record_workflow_start(&mut recorder, "my_workflow");
 /// ```
-pub fn record_workflow_start<S: trace::TraceStore>(
-    recorder: &mut TraceRecorder<S>,
-    name: &str,
-) {
+pub fn record_workflow_start<S: trace::TraceStore>(recorder: &mut TraceRecorder<S>, name: &str) {
     let _ = recorder.record_workflow_started(name);
 }
 

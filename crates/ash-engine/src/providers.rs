@@ -1,8 +1,8 @@
 //! Standard capability providers for the Ash engine
 //!
 //! This module provides built-in capability providers for common I/O operations:
-//! - `StdioProvider`: Standard input/output operations (print, println, read_line)
-//! - `FsProvider`: Filesystem operations (read_file, write_file, exists)
+//! - `StdioProvider`: Standard input/output operations (print, println, `read_line`)
+//! - `FsProvider`: Filesystem operations (`read_file`, `write_file`, `exists`)
 
 use ash_core::{Effect, Value};
 use async_trait::async_trait;
@@ -57,6 +57,7 @@ pub trait CapabilityProvider: Send + Sync {
 
 impl StdioProvider {
     /// Create a new stdio provider
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }
@@ -70,7 +71,7 @@ impl Default for StdioProvider {
 
 #[async_trait]
 impl CapabilityProvider for StdioProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "stdio"
     }
 
@@ -86,7 +87,7 @@ impl CapabilityProvider for StdioProvider {
                 Ok(Value::Null)
             }
             _ => Err(ProviderError {
-                message: format!("Unknown observe action: {}", action),
+                message: format!("Unknown observe action: {action}"),
             }),
         }
     }
@@ -99,7 +100,7 @@ impl CapabilityProvider for StdioProvider {
                 Ok(Value::Null)
             }
             _ => Err(ProviderError {
-                message: format!("Unknown execute action: {}", action),
+                message: format!("Unknown execute action: {action}"),
             }),
         }
     }
@@ -107,6 +108,7 @@ impl CapabilityProvider for StdioProvider {
 
 impl FsProvider {
     /// Create a new filesystem provider
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }
@@ -120,7 +122,7 @@ impl Default for FsProvider {
 
 #[async_trait]
 impl CapabilityProvider for FsProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "fs"
     }
 
@@ -136,7 +138,7 @@ impl CapabilityProvider for FsProvider {
                 Ok(Value::Null)
             }
             _ => Err(ProviderError {
-                message: format!("Unknown observe action: {}", action),
+                message: format!("Unknown observe action: {action}"),
             }),
         }
     }
@@ -149,7 +151,7 @@ impl CapabilityProvider for FsProvider {
                 Ok(Value::Null)
             }
             _ => Err(ProviderError {
-                message: format!("Unknown execute action: {}", action),
+                message: format!("Unknown execute action: {action}"),
             }),
         }
     }
@@ -170,8 +172,9 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::default_constructed_unit_structs)]
     fn test_stdio_provider_default() {
-        let provider: StdioProvider = Default::default();
+        let provider: StdioProvider = StdioProvider::default();
         let _ = provider;
     }
 
@@ -217,7 +220,9 @@ mod tests {
     #[tokio::test]
     async fn test_stdio_print_with_empty_string() {
         let provider = StdioProvider::new();
-        let result = provider.execute("print", &[Value::String("".into())]).await;
+        let result = provider
+            .execute("print", &[Value::String(String::new())])
+            .await;
         assert!(result.is_ok());
     }
 
@@ -269,8 +274,9 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::default_constructed_unit_structs)]
     fn test_fs_provider_default() {
-        let provider: FsProvider = Default::default();
+        let provider: FsProvider = FsProvider::default();
         let _ = provider;
     }
 
@@ -382,7 +388,7 @@ mod tests {
         let err = ProviderError {
             message: "test error".to_string(),
         };
-        assert_eq!(format!("{}", err), "test error");
+        assert_eq!(format!("{err}"), "test error");
     }
 
     #[test]
@@ -390,7 +396,7 @@ mod tests {
         let err = ProviderError {
             message: "test error".to_string(),
         };
-        let debug_str = format!("{:?}", err);
+        let debug_str = format!("{err:?}");
         assert!(debug_str.contains("test error"));
     }
 }

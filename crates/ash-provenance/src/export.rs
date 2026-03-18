@@ -291,7 +291,10 @@ impl AuditExporter for CsvExporter {
                         workflow_id.0.to_string(),
                         timestamp.to_rfc3339(),
                         "decision",
-                        format!("policy={};decision={decision_str}", escape_csv_value(policy)),
+                        format!(
+                            "policy={};decision={decision_str}",
+                            escape_csv_value(policy)
+                        ),
                     )
                 }
                 TraceEvent::Action {
@@ -340,7 +343,11 @@ impl AuditExporter for CsvExporter {
                         workflow_id.0.to_string(),
                         timestamp.to_rfc3339(),
                         "error",
-                        format!("error={};context={}", escape_csv_value(error), escape_csv_value(ctx_str)),
+                        format!(
+                            "error={};context={}",
+                            escape_csv_value(error),
+                            escape_csv_value(ctx_str)
+                        ),
                     )
                 }
             };

@@ -7,7 +7,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{DeriveInput, parse_macro_input};
 
 /// Derive macro for types that participate in effect tracking
 ///
@@ -33,22 +33,21 @@ use syn::{parse_macro_input, DeriveInput};
 #[proc_macro_derive(Effectful, attributes(effect))]
 pub fn derive_effectful(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    
+
     let name = &input.ident;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
-    
+
     // Look for #[effect(...)] attribute to determine effect level
-    let effect_level = input.attrs
+    let effect_level = input
+        .attrs
         .iter()
         .find(|attr| attr.path().is_ident("effect"))
-        .and_then(|attr| {
-            attr.parse_args::<syn::Ident>().ok()
-        })
+        .and_then(|attr| attr.parse_args::<syn::Ident>().ok())
         .map(|ident| ident.to_string())
         .unwrap_or_else(|| "Epistemic".to_string());
-    
+
     let effect_variant = syn::Ident::new(&effect_level, proc_macro2::Span::call_site());
-    
+
     let expanded = quote! {
         impl #impl_generics ::ash_core::effect::Effectful for #name #type_generics #where_clause {
             fn effect(&self) -> ::ash_core::effect::Effect {
@@ -56,7 +55,7 @@ pub fn derive_effectful(input: TokenStream) -> TokenStream {
             }
         }
     };
-    
+
     TokenStream::from(expanded)
 }
 
@@ -76,10 +75,10 @@ pub fn derive_effectful(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Provenance, attributes(provenance))]
 pub fn derive_provenance(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    
+
     let name = &input.ident;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
-    
+
     let expanded = quote! {
         impl #impl_generics ::ash_core::provenance::Prov for #name #type_generics #where_clause {
             fn provenance(&self) -> ::ash_core::provenance::Provenance {
@@ -87,7 +86,7 @@ pub fn derive_provenance(input: TokenStream) -> TokenStream {
             }
         }
     };
-    
+
     TokenStream::from(expanded)
 }
 
@@ -108,27 +107,27 @@ pub fn derive_provenance(input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn workflow(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as syn::ItemFn);
-    
+
     let vis = &input.vis;
     let sig = &input.sig;
     let block = &input.block;
     let attrs = &input.attrs;
-    
+
     let expanded = quote! {
         #(#attrs)*
         #vis #sig {
             // Enter workflow context
             let __workflow_ctx = ::ash_core::runtime::enter_workflow();
-            
+
             // Execute the workflow body
             let __result = (|| #block)();
-            
+
             // Exit workflow context and record provenance
             ::ash_core::runtime::exit_workflow(__workflow_ctx, &__result);
-            
+
             __result
         }
     };
-    
+
     TokenStream::from(expanded)
 }

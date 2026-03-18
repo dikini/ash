@@ -250,9 +250,9 @@ mod tests {
         let mut temp_file = tempfile::NamedTempFile::with_suffix(".ash").unwrap();
         write!(
             temp_file,
-            r#"workflow main {{
+            r"workflow main {{
     if 10 < 20 then ret 10 + 20 else ret 0
-}}"#
+}}"
         )
         .unwrap();
 
@@ -296,6 +296,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::cast_possible_wrap)]
     async fn test_concurrent_executions() {
         use futures::future::join_all;
 
@@ -317,12 +318,13 @@ mod tests {
         let results = join_all(handles).await;
 
         for (i, result) in results.iter().enumerate() {
-            assert!(result.is_ok(), "Concurrent execution {} should succeed", i);
+            assert!(result.is_ok(), "Concurrent execution {i} should succeed");
             assert_eq!(result.as_ref().unwrap(), &Value::Int((i as i64) * 10));
         }
     }
 
     #[tokio::test]
+    #[allow(clippy::cast_possible_wrap)]
     async fn test_concurrent_runs() {
         use futures::future::join_all;
 
@@ -343,7 +345,7 @@ mod tests {
         let results = join_all(handles).await;
 
         for (i, result) in results.iter().enumerate() {
-            assert!(result.is_ok(), "Concurrent run {} should succeed", i);
+            assert!(result.is_ok(), "Concurrent run {i} should succeed");
             assert_eq!(result.as_ref().unwrap(), &Value::Int((i as i64) * 10));
         }
     }
@@ -363,7 +365,7 @@ mod tests {
         match result {
             Err(ExecError::Eval(e)) => {
                 // Expected - undefined variable error
-                let msg = format!("{}", e);
+                let msg = format!("{e}");
                 assert!(msg.contains("undefined") || msg.contains("Undefined"));
             }
             Err(other) => {
@@ -429,9 +431,9 @@ mod tests {
         // Simplified nested conditional without let scoping issues
         let workflow = engine
             .parse(
-                r#"workflow main {
+                r"workflow main {
                 if true then if true then ret 100 else ret 50 else ret 0
-            }"#,
+            }",
             )
             .unwrap();
 

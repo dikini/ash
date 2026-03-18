@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn test_parse_error_display() {
         let err = EngineError::Parse("unexpected token".to_string());
-        let display = format!("{}", err);
+        let display = format!("{err}");
         assert!(display.contains("parse error"));
         assert!(display.contains("unexpected token"));
     }
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn test_type_error_display() {
         let err = EngineError::Type("type mismatch".to_string());
-        let display = format!("{}", err);
+        let display = format!("{err}");
         assert!(display.contains("type error"));
         assert!(display.contains("type mismatch"));
     }
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn test_execution_error_display() {
         let err = EngineError::Execution("runtime failed".to_string());
-        let display = format!("{}", err);
+        let display = format!("{err}");
         assert!(display.contains("execution error"));
         assert!(display.contains("runtime failed"));
     }
@@ -129,7 +129,7 @@ mod tests {
     fn test_io_error_display() {
         let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "access denied");
         let err = EngineError::Io(io_err);
-        let display = format!("{}", err);
+        let display = format!("{err}");
         assert!(display.contains("io error"));
         assert!(display.contains("access denied"));
     }
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn test_capability_not_found_display() {
         let err = EngineError::CapabilityNotFound("stdio:print".to_string());
-        let display = format!("{}", err);
+        let display = format!("{err}");
         assert!(display.contains("capability not found"));
         assert!(display.contains("stdio:print"));
     }
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_from_io_error() {
-        let io_err = std::io::Error::new(std::io::ErrorKind::Other, "test");
+        let io_err = std::io::Error::other("test");
         let err: EngineError = io_err.into();
         assert!(matches!(err, EngineError::Io(_)));
     }
@@ -206,7 +206,7 @@ mod tests {
         #[test]
         fn prop_error_display_contains_message(message in "[a-zA-Z0-9_ ]{1,100}") {
             let err = EngineError::Parse(message.clone());
-            let display = format!("{}", err);
+            let display = format!("{err}");
             prop_assert!(
                 display.contains(&message),
                 "Display '{}' should contain message '{}'",

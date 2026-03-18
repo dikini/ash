@@ -1,0 +1,27 @@
+[package]
+name = "ash-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Unified engine for embedding Ash workflows"
+rust-version.workspace = true
+
+[dependencies]
+ash-core = { path = "../ash-core" }
+ash-parser = { path = "../ash-parser" }
+ash-typeck = { path = "../ash-typeck" }
+ash-interp = { path = "../ash-interp" }
+thiserror.workspace = true
+tokio = { workspace = true }
+async-trait = { workspace = true }
+winnow = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tokio-test = "0.4"
+tempfile = "3.10"
+futures = "0.3"
+
+[lints]
+workspace = true

@@ -1129,4 +1129,44 @@ mod tests {
         assert_eq!(result.name.as_ref(), "DataResidency");
         assert_eq!(result.fields.len(), 1);
     }
+
+    #[test]
+    fn test_set_stmt() {
+        let mut input = test_input("set hvac:target = 72");
+        let result = parse_stmt(&mut input).unwrap();
+        assert!(matches!(result, Workflow::Set { .. }));
+        match result {
+            Workflow::Set {
+                capability,
+                channel,
+                continuation,
+                ..
+            } => {
+                assert_eq!(capability.as_ref(), "hvac");
+                assert_eq!(channel.as_ref(), "target");
+                assert!(continuation.is_none());
+            }
+            _ => panic!("Expected Set"),
+        }
+    }
+
+    #[test]
+    fn test_send_stmt() {
+        let mut input = test_input("send kafka:orders order");
+        let result = parse_stmt(&mut input).unwrap();
+        assert!(matches!(result, Workflow::Send { .. }));
+        match result {
+            Workflow::Send {
+                capability,
+                channel,
+                continuation,
+                ..
+            } => {
+                assert_eq!(capability.as_ref(), "kafka");
+                assert_eq!(channel.as_ref(), "orders");
+                assert!(continuation.is_none());
+            }
+            _ => panic!("Expected Send"),
+        }
+    }
 }

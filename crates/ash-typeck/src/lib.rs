@@ -9,6 +9,7 @@
 //! - **effect**: Effect inference and lattice operations (TASK-021)
 //! - **names**: Name resolution and scope tracking (TASK-022)
 //! - **obligations**: Obligation tracking and proof obligations (TASK-023, TASK-024)
+//! - **runtime_verification**: Runtime verification checks (TASK-116)
 
 pub mod capability_check;
 pub mod capability_typecheck;
@@ -19,6 +20,7 @@ pub mod names;
 pub mod obligation_checker;
 pub mod obligations;
 pub mod policy_check;
+pub mod runtime_verification;
 pub mod solver;
 pub mod types;
 pub mod visibility;
@@ -38,6 +40,12 @@ pub use names::*;
 pub use obligation_checker::*;
 pub use obligations::*;
 pub use policy_check::*;
+pub use runtime_verification::{
+    CapabilityOperation, CapabilitySchema, CapabilitySchemaRegistry, CapabilityVerifier,
+    EffectChecker, OperationError, OperationResult, OperationVerifier, RateLimiter,
+    RuntimeObligationChecker, RuntimeObligations, StaticPolicy, StaticPolicyValidator,
+    VerificationError, VerificationResult, VerificationWarning,
+};
 pub use solver::{Solver, TypeError};
 pub use types::*;
 pub use visibility::{VisibilityChecker, VisibilityError};

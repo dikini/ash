@@ -16,3 +16,4 @@ z3 = "0.12"
 [dev-dependencies]
 proptest = { workspace = true }
 pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros"] }

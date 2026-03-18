@@ -87,7 +87,7 @@ pub struct ReceiveExpr {
 /// Parse a receive expression
 ///
 /// Grammar:
-///   receive [control] [wait [DURATION]] { ARM [, ARM]* }
+///   receive `[control]` `[wait [DURATION]]` { ARM [, ARM]* }
 pub fn parse_receive(input: &mut ParseInput) -> ModalResult<ReceiveExpr> {
     let start_pos = input.state;
 

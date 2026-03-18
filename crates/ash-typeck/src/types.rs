@@ -200,7 +200,9 @@ impl Type {
             (Type::Null, Value::Null) => true,
             (Type::Time, Value::Time(_)) => true,
             (Type::Ref, Value::Ref(_)) => true,
-            (Type::Cap { .. }, Value::Cap(_)) => true,
+            (Type::Cap { name, .. }, Value::Cap(v)) => name.as_ref() == v.as_str(),
+            // Type variables match anything during inference
+            (Type::Var(_), _) => true,
 
             (Type::List(elem_type), Value::List(items)) => {
                 items.iter().all(|item| elem_type.matches(item))

@@ -1,6 +1,6 @@
 # TASK-076: Update CLI to Use ash-engine
 
-## Status: 🔴 Not Started
+## Status: 🟢 Complete
 
 ## Description
 

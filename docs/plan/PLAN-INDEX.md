@@ -259,12 +259,12 @@ Update this section as tasks complete:
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-071](tasks/TASK-071-engine-crate.md) | Create ash-engine crate structure | SPEC-010 | 3 | 🔴 Not Started |
-| [TASK-072](tasks/TASK-072-engine-parse.md) | Implement Engine::parse | SPEC-010 | 2 | 🔴 Not Started |
-| [TASK-073](tasks/TASK-073-engine-check.md) | Implement Engine::check | SPEC-010 | 2 | 🔴 Not Started |
-| [TASK-074](tasks/TASK-074-engine-execute.md) | Implement Engine::execute | SPEC-010 | 3 | 🔴 Not Started |
-| [TASK-075](tasks/TASK-075-engine-capabilities.md) | Standard capability providers | SPEC-010 | 6 | 🔴 Not Started |
-| [TASK-076](tasks/TASK-076-cli-engine.md) | Update CLI to use ash-engine | SPEC-010 | 4 | 🔴 Not Started |
+| [TASK-071](tasks/TASK-071-engine-crate.md) | Create ash-engine crate structure | SPEC-010 | 3 | 🟢 Complete |
+| [TASK-072](tasks/TASK-072-engine-parse.md) | Implement Engine::parse | SPEC-010 | 2 | 🟢 Complete |
+| [TASK-073](tasks/TASK-073-engine-check.md) | Implement Engine::check | SPEC-010 | 2 | 🟢 Complete |
+| [TASK-074](tasks/TASK-074-engine-execute.md) | Implement Engine::execute | SPEC-010 | 3 | 🟢 Complete |
+| [TASK-075](tasks/TASK-075-engine-capabilities.md) | Standard capability providers | SPEC-010 | 6 | 🟢 Complete |
+| [TASK-076](tasks/TASK-076-cli-engine.md) | Update CLI to use ash-engine | SPEC-010 | 4 | 🟢 Complete |
 
 **Phase 11 Deliverable**: Unified `Engine` type with builder API for embedding
 
@@ -296,7 +296,7 @@ Update this section as tasks complete:
 | 8 | 3 | 3 | ✅ Complete |
 | 9 | 3 | 3 | ✅ Complete |
 | 10 | 11 | 11 | ✅ Complete |
-| 11 | 6 | 0 | 🔴 Not Started |
+| 11 | 6 | 6 | ✅ Complete |
 | 12 | 7 | 0 | 🔴 Not Started |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
@@ -352,5 +352,5 @@ Update this section as tasks complete:
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 59/109 tasks (54%)
-**New Tasks**: 50 tasks (178 estimated hours)
+**Overall Progress**: 65/109 tasks (60%)
+**Remaining Tasks**: 44 tasks (estimated 154 hours)

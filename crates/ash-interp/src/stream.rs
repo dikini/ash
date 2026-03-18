@@ -2,8 +2,14 @@
 //!
 //! Provides the interface for integrating external event streams (like Kafka, sensors,
 //! message queues) into Ash workflow execution.
+//!
+//! # Sendable Stream Providers
+//!
+//! The [`SendableStreamProvider`] trait extends [`StreamProvider`] with the ability
+//! to send values to output streams. See [`MockSendableProvider`] and
+//! [`TypedSendableProvider`] for implementations.
 
-use crate::error::ExecResult;
+use crate::error::{ExecError, ExecResult};
 use crate::typed_provider::TypedStreamProvider;
 use ash_core::{Name, Value};
 use ash_typeck::Type;
@@ -93,9 +99,11 @@ impl StreamRegistry {
 /// Context for stream operations during execution
 ///
 /// The StreamContext wraps a StreamRegistry and provides convenient methods
-/// for receiving values from registered streams.
+/// for receiving values from registered streams. It also manages sendable
+/// providers for output operations.
 pub struct StreamContext {
     registry: StreamRegistry,
+    sendable_registry: SendableRegistry,
 }
 
 impl StreamContext {
@@ -103,17 +111,60 @@ impl StreamContext {
     pub fn new() -> Self {
         Self {
             registry: StreamRegistry::new(),
+            sendable_registry: SendableRegistry::new(),
         }
     }
 
     /// Create a stream context with an existing registry
     pub fn with_registry(registry: StreamRegistry) -> Self {
-        Self { registry }
+        Self {
+            registry,
+            sendable_registry: SendableRegistry::new(),
+        }
     }
 
     /// Register a stream provider
     pub fn register(&mut self, provider: TypedStreamProvider) {
         self.registry.register(provider);
+    }
+
+    /// Register a sendable stream provider
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The typed sendable provider to register
+    pub fn register_sendable(&mut self, provider: TypedSendableProvider) {
+        self.sendable_registry.register(provider);
+    }
+
+    /// Get a sendable provider by capability and channel names
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - Capability name
+    /// * `channel` - Channel name
+    #[must_use]
+    pub fn get_sendable(&self, cap: &str, channel: &str) -> Option<&TypedSendableProvider> {
+        self.sendable_registry.get(cap, channel)
+    }
+
+    /// Send a value to the specified sendable provider
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - Capability name
+    /// * `channel` - Channel name
+    /// * `value` - The value to send
+    ///
+    /// # Errors
+    ///
+    /// Returns `ExecError::CapabilityNotAvailable` if no provider is found
+    pub async fn send(&self, cap: &str, channel: &str, value: Value) -> ExecResult<()> {
+        let provider = self
+            .sendable_registry
+            .get(cap, channel)
+            .ok_or_else(|| ExecError::CapabilityNotAvailable(format!("{cap}:{channel}")))?;
+        provider.send(value).await
     }
 
     /// Try to receive a value from a stream without blocking
@@ -158,6 +209,361 @@ impl StreamContext {
 impl Default for StreamContext {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Sendable stream provider trait for output streams
+///
+/// This trait extends [`StreamProvider`] with the ability to send values
+/// to writable streams (message queues, output channels, etc.). Providers
+/// that support both reading and writing should implement this trait.
+///
+/// # Type Parameters
+///
+/// The trait requires `StreamProvider` as a supertrait since sendable
+/// providers must also be readable.
+///
+/// # Example
+///
+/// ```
+/// use ash_interp::stream::{StreamProvider, SendableStreamProvider, MockSendableProvider};
+/// use ash_core::Value;
+///
+/// # tokio_test::block_on(async {
+/// let provider = MockSendableProvider::new("queue", "output");
+/// provider.send(Value::Int(42)).await.unwrap();
+/// # });
+/// ```
+#[async_trait]
+pub trait SendableStreamProvider: StreamProvider + Send + Sync {
+    /// Send a value to this provider's output stream
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The value to send
+    ///
+    /// # Errors
+    ///
+    /// Returns `ExecError` if the send operation fails.
+    async fn send(&self, value: Value) -> ExecResult<()>;
+
+    /// Check if sending would block (backpressure detection)
+    ///
+    /// Default implementation returns `false` (never blocks).
+    /// Providers can override this to signal backpressure.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_interp::stream::{SendableStreamProvider, MockSendableProvider};
+    ///
+    /// let provider = MockSendableProvider::new("queue", "output");
+    /// assert!(!provider.would_block()); // Default is false
+    /// ```
+    fn would_block(&self) -> bool {
+        false // Default: never blocks
+    }
+
+    /// Flush any buffered sends
+    ///
+    /// Default implementation is a no-op.
+    /// Providers with internal buffering should override this
+    /// to ensure all buffered values are sent.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ExecError` if the flush operation fails.
+    async fn flush(&self) -> ExecResult<()> {
+        Ok(()) // Default: no-op
+    }
+}
+
+/// Typed wrapper for [`SendableStreamProvider`] with schema validation
+///
+/// This struct wraps a sendable stream provider and carries a [`Type`] schema
+/// that describes the expected type of values that can be sent. The schema is
+/// used for runtime validation before calling the inner provider's `send` method.
+///
+/// # Example
+///
+/// ```
+/// use ash_interp::stream::{SendableStreamProvider, MockSendableProvider, TypedSendableProvider};
+/// use ash_core::Value;
+/// use ash_typeck::Type;
+///
+/// # tokio_test::block_on(async {
+/// let inner = MockSendableProvider::new("queue", "output");
+/// let typed = TypedSendableProvider::new(inner, Type::Int);
+///
+/// // Valid value - accepted
+/// typed.send(Value::Int(50)).await.unwrap();
+///
+/// // Invalid value - rejected with type mismatch
+/// let result = typed.send(Value::String("invalid".to_string())).await;
+/// assert!(result.is_err());
+/// # });
+/// ```
+pub struct TypedSendableProvider {
+    inner: Box<dyn SendableStreamProvider>,
+    write_schema: Type,
+}
+
+impl TypedSendableProvider {
+    /// Create a new typed sendable provider
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The sendable stream provider to wrap
+    /// * `write_schema` - The expected type schema for values that can be sent
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The concrete provider type, must implement [`SendableStreamProvider`] + `'static`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_interp::stream::{MockSendableProvider, TypedSendableProvider};
+    /// use ash_typeck::Type;
+    ///
+    /// let inner = MockSendableProvider::new("queue", "output");
+    /// let typed = TypedSendableProvider::new(inner, Type::Int);
+    ///
+    /// assert_eq!(typed.write_schema(), &Type::Int);
+    /// ```
+    pub fn new<P>(provider: P, write_schema: Type) -> Self
+    where
+        P: SendableStreamProvider + 'static,
+    {
+        Self {
+            inner: Box::new(provider),
+            write_schema,
+        }
+    }
+
+    /// Get the write type schema for this provider
+    ///
+    /// Returns a reference to the [`Type`] schema that describes the
+    /// expected type of values that can be sent on this provider.
+    #[must_use]
+    pub fn write_schema(&self) -> &Type {
+        &self.write_schema
+    }
+
+    /// Send a value with schema validation
+    ///
+    /// Validates the value against the write schema before delegating
+    /// to the inner provider's `send` method.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ExecError::TypeMismatch` if the value doesn't match the schema.
+    pub async fn send(&self, value: Value) -> ExecResult<()> {
+        if !self.write_schema.matches(&value) {
+            return Err(ExecError::type_mismatch(
+                format!(
+                    "{}:{}",
+                    self.inner.capability_name(),
+                    self.inner.channel_name()
+                ),
+                self.write_schema.to_string(),
+                value.to_string(),
+            ));
+        }
+
+        self.inner.send(value).await
+    }
+}
+
+#[async_trait]
+impl StreamProvider for TypedSendableProvider {
+    fn capability_name(&self) -> &str {
+        self.inner.capability_name()
+    }
+
+    fn channel_name(&self) -> &str {
+        self.inner.channel_name()
+    }
+
+    fn try_recv(&self) -> Option<ExecResult<Value>> {
+        self.inner.try_recv()
+    }
+
+    async fn recv(&self) -> ExecResult<Value> {
+        self.inner.recv().await
+    }
+
+    fn is_closed(&self) -> bool {
+        self.inner.is_closed()
+    }
+}
+
+#[async_trait]
+impl SendableStreamProvider for TypedSendableProvider {
+    async fn send(&self, value: Value) -> ExecResult<()> {
+        self.send(value).await
+    }
+
+    fn would_block(&self) -> bool {
+        self.inner.would_block()
+    }
+
+    async fn flush(&self) -> ExecResult<()> {
+        self.inner.flush().await
+    }
+}
+
+/// Mock sendable stream provider for testing
+///
+/// Stores sent values in a queue that can be inspected for verification.
+/// Useful for testing output-capable stream workflows without external dependencies.
+///
+/// # Example
+///
+/// ```
+/// use ash_interp::stream::{SendableStreamProvider, MockSendableProvider};
+/// use ash_core::Value;
+///
+/// # tokio_test::block_on(async {
+/// let provider = MockSendableProvider::new("queue", "output");
+///
+/// // Send values
+/// provider.send(Value::Int(1)).await.unwrap();
+/// provider.send(Value::Int(2)).await.unwrap();
+///
+/// // Verify sent values
+/// let sent = provider.sent_values();
+/// assert_eq!(sent.len(), 2);
+/// assert_eq!(sent[0], Value::Int(1));
+/// assert_eq!(sent[1], Value::Int(2));
+/// # });
+/// ```
+#[derive(Clone)]
+pub struct MockSendableProvider {
+    capability: String,
+    channel: String,
+    sent: std::sync::Arc<Mutex<VecDeque<Value>>>,
+    would_block: std::sync::Arc<AtomicBool>,
+}
+
+impl MockSendableProvider {
+    /// Create a new mock sendable provider for the given capability and channel
+    #[must_use]
+    pub fn new(capability: &str, channel: &str) -> Self {
+        Self {
+            capability: capability.to_string(),
+            channel: channel.to_string(),
+            sent: std::sync::Arc::new(Mutex::new(VecDeque::new())),
+            would_block: std::sync::Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Get a copy of all sent values
+    #[must_use]
+    pub fn sent_values(&self) -> Vec<Value> {
+        let sent = self.sent.lock().unwrap();
+        sent.iter().cloned().collect()
+    }
+
+    /// Get the number of sent values
+    #[must_use]
+    pub fn sent_count(&self) -> usize {
+        let sent = self.sent.lock().unwrap();
+        sent.len()
+    }
+
+    /// Clear all sent values
+    pub fn clear_sent(&self) {
+        let mut sent = self.sent.lock().unwrap();
+        sent.clear();
+    }
+
+    /// Set whether the provider would block
+    pub fn set_would_block(&self, would_block: bool) {
+        self.would_block.store(would_block, Ordering::SeqCst);
+    }
+}
+
+#[async_trait]
+impl StreamProvider for MockSendableProvider {
+    fn capability_name(&self) -> &str {
+        &self.capability
+    }
+
+    fn channel_name(&self) -> &str {
+        &self.channel
+    }
+
+    fn try_recv(&self) -> Option<ExecResult<Value>> {
+        // Mock sendable provider doesn't support receiving
+        None
+    }
+
+    async fn recv(&self) -> ExecResult<Value> {
+        // Mock sendable provider doesn't support receiving
+        Err(ExecError::ExecutionFailed(
+            "mock sendable provider does not support recv".to_string(),
+        ))
+    }
+
+    fn is_closed(&self) -> bool {
+        false
+    }
+}
+
+#[async_trait]
+impl SendableStreamProvider for MockSendableProvider {
+    async fn send(&self, value: Value) -> ExecResult<()> {
+        let mut sent = self.sent.lock().unwrap();
+        sent.push_back(value);
+        Ok(())
+    }
+
+    fn would_block(&self) -> bool {
+        self.would_block.load(Ordering::SeqCst)
+    }
+}
+
+/// Registry of sendable stream providers indexed by capability and channel names
+///
+/// Similar to [`StreamRegistry`] but specifically for sendable providers.
+#[derive(Default)]
+pub struct SendableRegistry {
+    providers: HashMap<(Name, Name), TypedSendableProvider>,
+}
+
+impl SendableRegistry {
+    /// Create a new empty registry
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            providers: HashMap::new(),
+        }
+    }
+
+    /// Register a sendable provider
+    ///
+    /// The provider is indexed by its capability_name and channel_name.
+    /// If a provider with the same names already exists, it is replaced.
+    pub fn register(&mut self, provider: TypedSendableProvider) {
+        let key = (
+            provider.capability_name().to_string(),
+            provider.channel_name().to_string(),
+        );
+        self.providers.insert(key, provider);
+    }
+
+    /// Get a provider by capability and channel names
+    #[must_use]
+    pub fn get(&self, cap: &str, channel: &str) -> Option<&TypedSendableProvider> {
+        self.providers.get(&(cap.to_string(), channel.to_string()))
+    }
+
+    /// Check if a provider exists for the given capability and channel
+    #[must_use]
+    pub fn has(&self, cap: &str, channel: &str) -> bool {
+        self.providers
+            .contains_key(&(cap.to_string(), channel.to_string()))
     }
 }
 
@@ -392,5 +798,190 @@ mod tests {
 
         // Non-existent stream returns None
         assert!(ctx.recv("nonexistent", "channel").await.is_none());
+    }
+
+    // ============================================================
+    // Sendable Stream Provider Tests (TASK-102)
+    // ============================================================
+
+    #[tokio::test]
+    async fn test_send_accepts_value() {
+        let provider = MockSendableProvider::new("queue", "output");
+
+        // Send values
+        provider.send(Value::Int(42)).await.unwrap();
+        provider
+            .send(Value::String("hello".to_string()))
+            .await
+            .unwrap();
+
+        // Verify sent values
+        let sent = provider.sent_values();
+        assert_eq!(sent.len(), 2);
+        assert_eq!(sent[0], Value::Int(42));
+        assert_eq!(sent[1], Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn test_would_block_default() {
+        let provider = MockSendableProvider::new("queue", "output");
+
+        // Default should_block is false
+        assert!(!provider.would_block());
+    }
+
+    #[test]
+    fn test_would_block_can_be_set() {
+        let provider = MockSendableProvider::new("queue", "output");
+
+        // Initially false
+        assert!(!provider.would_block());
+
+        // Set to true
+        provider.set_would_block(true);
+        assert!(provider.would_block());
+
+        // Set back to false
+        provider.set_would_block(false);
+        assert!(!provider.would_block());
+    }
+
+    #[tokio::test]
+    async fn test_mock_sendable_sent_count() {
+        let provider = MockSendableProvider::new("queue", "output");
+
+        // Initially empty
+        assert_eq!(provider.sent_count(), 0);
+
+        // Send values
+        provider.send(Value::Int(1)).await.unwrap();
+        assert_eq!(provider.sent_count(), 1);
+
+        provider.send(Value::Int(2)).await.unwrap();
+        assert_eq!(provider.sent_count(), 2);
+
+        // Clear
+        provider.clear_sent();
+        assert_eq!(provider.sent_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_typed_sendable_validation() {
+        let inner = MockSendableProvider::new("queue", "output");
+        let typed = TypedSendableProvider::new(inner, Type::Int);
+
+        // Valid value - should succeed
+        typed.send(Value::Int(50)).await.unwrap();
+
+        // Invalid type - should fail with type mismatch
+        let result = typed.send(Value::String("not a number".to_string())).await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("type mismatch"));
+        assert!(err.contains("queue:output"));
+    }
+
+    #[tokio::test]
+    async fn test_typed_sendable_with_complex_type() {
+        use std::collections::HashMap;
+
+        let record_type = Type::Record(vec![
+            (Box::from("id"), Type::Int),
+            (Box::from("name"), Type::String),
+        ]);
+
+        let inner = MockSendableProvider::new("queue", "events");
+        let typed = TypedSendableProvider::new(inner, record_type);
+
+        // Valid record - should succeed
+        let mut valid_map = HashMap::new();
+        valid_map.insert("id".to_string(), Value::Int(1));
+        valid_map.insert("name".to_string(), Value::String("test".to_string()));
+        let valid_record = Value::Record(valid_map);
+        typed.send(valid_record).await.unwrap();
+
+        // Invalid record - wrong field type
+        let mut invalid_map = HashMap::new();
+        invalid_map.insert("id".to_string(), Value::String("not an int".to_string()));
+        invalid_map.insert("name".to_string(), Value::String("test".to_string()));
+        let invalid_record = Value::Record(invalid_map);
+        let result = typed.send(invalid_record).await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_sendable_registry() {
+        let mut registry = SendableRegistry::new();
+        let provider = MockSendableProvider::new("queue", "output");
+
+        registry.register(TypedSendableProvider::new(provider, Type::Int));
+
+        assert!(registry.has("queue", "output"));
+        assert!(!registry.has("queue", "other"));
+        assert!(!registry.has("other", "output"));
+    }
+
+    #[tokio::test]
+    async fn test_stream_context_sendable() {
+        let mut ctx = StreamContext::new();
+        let mock = MockSendableProvider::new("queue", "output");
+
+        ctx.register_sendable(TypedSendableProvider::new(mock.clone(), Type::Int));
+
+        // Send a value
+        ctx.send("queue", "output", Value::Int(42)).await.unwrap();
+
+        // Verify through the mock directly
+        assert_eq!(mock.sent_count(), 1);
+        assert_eq!(mock.sent_values()[0], Value::Int(42));
+    }
+
+    #[tokio::test]
+    async fn test_stream_context_sendable_not_found() {
+        let ctx = StreamContext::new();
+
+        let result = ctx.send("nonexistent", "channel", Value::Int(42)).await;
+        assert!(matches!(
+            result,
+            Err(ExecError::CapabilityNotAvailable(name)) if name == "nonexistent:channel"
+        ));
+    }
+
+    #[test]
+    fn test_typed_sendable_provider_schema() {
+        let inner = MockSendableProvider::new("queue", "output");
+        let typed = TypedSendableProvider::new(inner, Type::Int);
+
+        assert_eq!(typed.write_schema(), &Type::Int);
+        assert_eq!(typed.capability_name(), "queue");
+        assert_eq!(typed.channel_name(), "output");
+    }
+
+    #[tokio::test]
+    async fn test_typed_sendable_flush_delegates() {
+        let inner = MockSendableProvider::new("queue", "output");
+        let typed = TypedSendableProvider::new(inner, Type::Int);
+
+        // Flush should succeed (default no-op)
+        typed.flush().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_sendable_provider_stream_trait_methods() {
+        // MockSendableProvider implements StreamProvider with minimal support
+        let provider = MockSendableProvider::new("queue", "output");
+
+        // These methods are available through StreamProvider supertrait
+        assert_eq!(provider.capability_name(), "queue");
+        assert_eq!(provider.channel_name(), "output");
+        assert!(!provider.is_closed());
+
+        // try_recv returns None (not supported)
+        assert!(provider.try_recv().is_none());
+
+        // recv returns error (not supported)
+        let result = provider.recv().await;
+        assert!(result.is_err());
     }
 }

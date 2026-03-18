@@ -7,6 +7,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Sendable Stream Provider Trait (TASK-102). Output capability support for writable streams:
+  - `SendableStreamProvider` trait extending `StreamProvider` with `send(&self, value: Value)` async method
+  - `would_block(&self) -> bool` for backpressure detection (default: false)
+  - `flush(&self)` async for buffered sends (default: no-op)
+  - `TypedSendableProvider` wrapper with `write_schema` validation before sending values
+  - `MockSendableProvider` for testing with `sent_values()` and `sent_count()` inspection
+  - `SendableRegistry` for managing sendable providers by capability/channel
+  - `StreamContext` extension with `register_sendable()`, `get_sendable()`, and `send()` methods
 - Settable Behaviour Provider Trait (TASK-101). Output capability support for writable channels:
   - `SettableBehaviourProvider` trait extending `BehaviourProvider` with `set(&self, value: Value)` async method and optional `validate(&self, value: &Value)` for pre-checks
   - `TypedSettableProvider` wrapper with `write_schema` validation before setting values

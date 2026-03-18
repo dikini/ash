@@ -53,7 +53,10 @@ pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyResult, PolicyRule};
-pub use stream::{MockStreamProvider, StreamContext, StreamProvider, StreamRegistry};
+pub use stream::{
+    MockSendableProvider, MockStreamProvider, SendableRegistry, SendableStreamProvider,
+    StreamContext, StreamProvider, StreamRegistry, TypedSendableProvider,
+};
 pub use typed_provider::{TypedBehaviourProvider, TypedStreamProvider};
 
 use ash_core::{Value, Workflow};

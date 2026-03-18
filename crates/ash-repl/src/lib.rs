@@ -51,19 +51,19 @@ pub enum ReplError {
 
 impl From<ash_engine::EngineError> for ReplError {
     fn from(err: ash_engine::EngineError) -> Self {
-        ReplError::Engine(err.to_string())
+        Self::Engine(err.to_string())
     }
 }
 
 impl From<ash_interp::ExecError> for ReplError {
     fn from(err: ash_interp::ExecError) -> Self {
-        ReplError::Engine(err.to_string())
+        Self::Engine(err.to_string())
     }
 }
 
 impl From<ReadlineError> for ReplError {
     fn from(err: ReadlineError) -> Self {
-        ReplError::Readline(err.to_string())
+        Self::Readline(err.to_string())
     }
 }
 
@@ -85,6 +85,7 @@ impl ReplEditor {
 
         // Load history if path exists
         if let Some(path) = &history_path {
+            #[allow(clippy::collapsible_if)]
             if path.exists() {
                 editor.load_history(path).ok();
             }
@@ -119,6 +120,8 @@ impl ReplEditor {
 #[derive(Debug)]
 pub struct Repl {
     engine: Engine,
+    /// History path stored for test access and potential future use.
+    /// The actual history management is handled by `ReplEditor`.
     #[allow(dead_code)]
     history_path: Option<PathBuf>,
     editor: Option<ReplEditor>,
@@ -217,9 +220,8 @@ impl Repl {
 
             // Check for commands
             let trimmed = input.trim();
-            if trimmed.starts_with(':') {
-                let cmd = &trimmed[1..];
-                if self.handle_command(cmd).await? {
+            if let Some(cmd) = trimmed.strip_prefix(':') {
+                if self.handle_command(cmd) {
                     break;
                 }
                 continue;
@@ -234,7 +236,7 @@ impl Repl {
                 if !self.is_incomplete(&multi_line_input) {
                     let source = multi_line_input.clone();
                     let result = self.eval(&source).await;
-                    self.display_result(result, &source);
+                    Self::display_result(result, &source);
                     multi_line_input.clear();
                     is_multiline = false;
                 }
@@ -245,7 +247,7 @@ impl Repl {
                     is_multiline = true;
                 } else {
                     let result = self.eval(&input).await;
-                    self.display_result(result, &input);
+                    Self::display_result(result, &input);
                 }
             }
         }
@@ -305,24 +307,22 @@ impl Repl {
         }
 
         // Try parsing as-is
-        match self.engine.parse(input) {
-            Ok(_) => false,
-            Err(ash_engine::EngineError::Parse(msg)) => {
-                // Check for incomplete indicators in parse error
-                let incomplete_indicators = [
-                    "unexpected end of input",
-                    "incomplete",
-                    "unterminated",
-                    "unexpected eof",
-                    "expected",
-                ];
+        if let Err(ash_engine::EngineError::Parse(msg)) = self.engine.parse(input) {
+            // Check for incomplete indicators in parse error
+            let incomplete_indicators = [
+                "unexpected end of input",
+                "incomplete",
+                "unterminated",
+                "unexpected eof",
+                "expected",
+            ];
 
-                let msg_lower = msg.to_lowercase();
-                incomplete_indicators
-                    .iter()
-                    .any(|&ind| msg_lower.contains(ind))
-            }
-            Err(_) => false,
+            let msg_lower = msg.to_lowercase();
+            incomplete_indicators
+                .iter()
+                .any(|&ind| msg_lower.contains(ind))
+        } else {
+            false
         }
     }
 
@@ -335,20 +335,16 @@ impl Repl {
     /// # Returns
     ///
     /// `true` if the REPL should exit, `false` otherwise.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if command execution fails.
-    async fn handle_command(&mut self, cmd: &str) -> Result<bool, ReplError> {
+    fn handle_command(&self, cmd: &str) -> bool {
         let parts: Vec<&str> = cmd.split_whitespace().collect();
 
         match parts.first() {
-            Some(&"quit") | Some(&"q") => return Ok(true),
-            Some(&"help") | Some(&"h") => self.print_help(),
-            Some(&"type") | Some(&"t") => {
+            Some(&("quit" | "q")) => return true,
+            Some(&("help" | "h")) => Self::print_help(),
+            Some(&("type" | "t")) => {
                 if parts.len() > 1 {
                     let expr = parts[1..].join(" ");
-                    self.show_type(&expr).await?;
+                    self.show_type(&expr);
                 } else {
                     println!("Usage: :type <expression>");
                 }
@@ -356,7 +352,7 @@ impl Repl {
             Some(&"ast") => {
                 if parts.len() > 1 {
                     let expr = parts[1..].join(" ");
-                    self.show_ast(&expr)?;
+                    self.show_ast(&expr);
                 } else {
                     println!("Usage: :ast <expression>");
                 }
@@ -367,11 +363,11 @@ impl Repl {
             _ => println!("Unknown command: :{cmd}"),
         }
 
-        Ok(false)
+        false
     }
 
     /// Print the help message.
-    fn print_help(&self) {
+    fn print_help() {
         println!("Commands:");
         println!("  :help, :h     Show this help");
         println!("  :quit, :q     Exit the REPL");
@@ -387,11 +383,7 @@ impl Repl {
     /// # Arguments
     ///
     /// * `expr` - The expression to type check.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if parsing fails.
-    async fn show_type(&self, expr: &str) -> Result<(), ReplError> {
+    fn show_type(&self, expr: &str) {
         // Parse and type check without executing
         let wrapped = format!("workflow __typecheck__ {{ ret {expr}; }}");
 
@@ -403,8 +395,6 @@ impl Repl {
             }
             Err(e) => println!("Error: {e}"),
         }
-
-        Ok(())
     }
 
     /// Show the AST representation of an expression.
@@ -412,11 +402,7 @@ impl Repl {
     /// # Arguments
     ///
     /// * `input` - The input to parse and display.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if parsing fails.
-    fn show_ast(&self, input: &str) -> Result<(), ReplError> {
+    fn show_ast(&self, input: &str) {
         match self.engine.parse(input) {
             Ok(workflow) => {
                 println!("{workflow:#?}");
@@ -430,7 +416,6 @@ impl Repl {
                 }
             }
         }
-        Ok(())
     }
 
     /// Display the result of an evaluation.
@@ -439,7 +424,7 @@ impl Repl {
     ///
     /// * `result` - The result to display.
     /// * `source` - The source code that was evaluated (for error context).
-    fn display_result(&self, result: Result<Value, ReplError>, source: &str) {
+    fn display_result(result: Result<Value, ReplError>, source: &str) {
         match result {
             Ok(value) => {
                 if value != Value::Null {
@@ -520,11 +505,7 @@ mod tests {
         let repl = Repl::new(true).unwrap();
         // A complete workflow should not be incomplete
         assert!(!repl.is_incomplete(
-            r#"
-            workflow test {
-                ret 42;
-            }
-        "#
+            "\n            workflow test {\n                ret 42;\n            }\n        "
         ));
     }
 }

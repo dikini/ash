@@ -1,6 +1,7 @@
 //! Error formatting and display for the REPL.
 
 use colored::Colorize;
+use std::fmt::Write;
 
 /// Format an error with context and highlighting.
 ///
@@ -18,8 +19,8 @@ pub fn format_error(source: &str, error: &str, line_num: Option<usize>) -> Strin
     let mut output = String::new();
 
     // Error header
-    output.push_str(&format!("{}\n", "Error:".red().bold()));
-    output.push_str(&format!("  {error}\n"));
+    let _ = writeln!(output, "{}", "Error:".red().bold());
+    let _ = writeln!(output, "  {error}");
 
     if let Some(line) = line_num {
         output.push('\n');
@@ -34,24 +35,27 @@ pub fn format_error(source: &str, error: &str, line_num: Option<usize>) -> Strin
             let is_error_line = line_number == line;
 
             if is_error_line {
-                output.push_str(&format!(
-                    "{} | {}\n",
+                let _ = writeln!(
+                    output,
+                    "{} | {}",
                     line_number.to_string().red().bold(),
                     line_content
-                ));
+                );
                 // Add caret underline
                 let caret = "^".repeat(line_content.len().max(1));
-                output.push_str(&format!(
-                    "{} | {}\n",
+                let _ = writeln!(
+                    output,
+                    "{} | {}",
                     " ".repeat(line_number.to_string().len()),
                     caret.red().bold()
-                ));
+                );
             } else {
-                output.push_str(&format!(
-                    "{} | {}\n",
+                let _ = writeln!(
+                    output,
+                    "{} | {}",
                     line_number.to_string().dimmed(),
                     line_content
-                ));
+                );
             }
         }
     }
@@ -74,9 +78,9 @@ pub fn format_error(source: &str, error: &str, line_num: Option<usize>) -> Strin
 #[allow(dead_code)]
 pub fn format_type_error(expr: &str, expected: &str, found: &str) -> String {
     format!(
-        "{}\n  {}\n\nExpected: {}\nFound: {}\n",
+        "{}\n  Type mismatch in expression: {}\n\nExpected: {}\nFound: {}\n",
         "Type Error:".red().bold(),
-        format!("Type mismatch in expression: {}", expr),
+        expr,
         expected.green(),
         found.red()
     )
@@ -122,8 +126,8 @@ mod tests {
 
         assert!(formatted.contains("Error:"));
         assert!(formatted.contains("unexpected end of input"));
-        assert!(formatted.contains("1"));
-        assert!(formatted.contains("|"));
+        assert!(formatted.contains('1'));
+        assert!(formatted.contains('|'));
     }
 
     #[test]
@@ -131,7 +135,7 @@ mod tests {
         let formatted = format_error("", "something went wrong", None);
         assert!(formatted.contains("Error:"));
         assert!(formatted.contains("something went wrong"));
-        assert!(!formatted.contains("|"));
+        assert!(!formatted.contains('|'));
     }
 
     #[test]

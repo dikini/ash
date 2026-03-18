@@ -83,6 +83,18 @@ pub enum Workflow {
     },
     /// MUST workflow
     Must { workflow: Box<Workflow> },
+    /// SET capability:channel = value
+    Set {
+        capability: Name,
+        channel: Name,
+        value: Expr,
+    },
+    /// SEND capability:channel value
+    Send {
+        capability: Name,
+        channel: Name,
+        value: Expr,
+    },
     /// Terminal
     Done,
 }

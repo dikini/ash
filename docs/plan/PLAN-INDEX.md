@@ -241,7 +241,7 @@ Update this section as tasks complete:
 | 12 | 7 | 7 | ✅ Complete |
 | 13 | 8 | 8 | ✅ Complete |
 | 14 | 5 | 5 | ✅ Complete |
-| 14.5 | 7 | 0 | 🔴 Not Started |
+| 14.5 | 7 | 7 | ✅ Complete |
 | 15 | 6 | 6 | ✅ Complete |
 | 16 | 6 | 6 | ✅ Complete |
 

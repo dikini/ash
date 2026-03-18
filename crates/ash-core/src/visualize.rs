@@ -412,6 +412,40 @@ impl DotGenerator {
                 writeln!(self.output, "  node_{} -> node_{};", id, wf_id).unwrap();
                 id
             }
+            Workflow::Set {
+                capability,
+                channel,
+                value: _,
+            } => {
+                let id = self.next_id();
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"SET\\n{}:{}\", fillcolor=\"{}\"];",
+                    id,
+                    escape_dot(capability),
+                    escape_dot(channel),
+                    effect_color(&Effect::Operational)
+                )
+                .unwrap();
+                id
+            }
+            Workflow::Send {
+                capability,
+                channel,
+                value: _,
+            } => {
+                let id = self.next_id();
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"SEND\\n{}:{}\", fillcolor=\"{}\"];",
+                    id,
+                    escape_dot(capability),
+                    escape_dot(channel),
+                    effect_color(&Effect::Operational)
+                )
+                .unwrap();
+                id
+            }
             Workflow::Done => {
                 let id = self.next_id();
                 writeln!(

@@ -5,13 +5,17 @@
 use ash_core::{Value, Workflow};
 
 use crate::ExecResult;
+use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
 use crate::context::Context;
 use crate::error::{EvalError, ExecError};
 use crate::eval::eval_expr;
+use crate::exec_send::execute_send;
+use crate::execute_set::execute_set;
 use crate::guard::eval_guard;
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
+use crate::stream::StreamContext;
 
 use std::future::Future;
 use std::pin::Pin;
@@ -19,38 +23,59 @@ use std::pin::Pin;
 /// Boxed future type for recursive async execution
 type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-/// Execute a workflow, returning the final value
+/// Execute a workflow, returning the final value (legacy signature without BehaviourContext)
 ///
-/// This is the main entry point for workflow execution.
+/// This is kept for backward compatibility. For workflows that use Set statements,
+/// use [`execute_workflow_with_behaviour`] instead.
+pub fn execute_workflow<'a>(
+    workflow: &'a Workflow,
+    ctx: Context,
+    cap_ctx: &'a CapabilityContext,
+    policy_eval: &'a PolicyEvaluator,
+) -> BoxFuture<'a, ExecResult<Value>> {
+    Box::pin(async move {
+        // Create an empty behaviour context for backward compatibility
+        let behaviour_ctx = BehaviourContext::new();
+        execute_workflow_with_behaviour(workflow, ctx, cap_ctx, policy_eval, &behaviour_ctx).await
+    })
+}
+
+/// Execute a workflow with behaviour context, returning the final value
+///
+/// This is the main entry point for workflow execution when using settable providers.
 ///
 /// # Arguments
 /// * `workflow` - The workflow to execute
 /// * `ctx` - The runtime context with variable bindings
 /// * `cap_ctx` - The capability context for external operations
 /// * `policy_eval` - The policy evaluator for permission checks
+/// * `behaviour_ctx` - The behaviour context for settable providers
 ///
 /// # Examples
 /// ```
 /// use ash_core::{Workflow, Value};
+/// use ash_interp::behaviour::BehaviourContext;
 /// use ash_interp::context::Context;
 /// use ash_interp::capability::CapabilityContext;
 /// use ash_interp::policy::PolicyEvaluator;
-/// use ash_interp::execute::execute_workflow;
+/// use ash_interp::execute::execute_workflow_with_behaviour;
 ///
 /// # tokio_test::block_on(async {
 /// let ctx = Context::new();
 /// let cap_ctx = CapabilityContext::new();
 /// let policy_eval = PolicyEvaluator::new();
+/// let behaviour_ctx = BehaviourContext::new();
 /// let workflow = Workflow::Done;
-/// let result = execute_workflow(&workflow, ctx, &cap_ctx, &policy_eval).await.unwrap();
+/// let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx).await.unwrap();
 /// assert_eq!(result, Value::Null);
 /// # });
 /// ```
-pub fn execute_workflow<'a>(
+pub fn execute_workflow_with_behaviour<'a>(
     workflow: &'a Workflow,
     ctx: Context,
     cap_ctx: &'a CapabilityContext,
     policy_eval: &'a PolicyEvaluator,
+    behaviour_ctx: &'a BehaviourContext,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
         match workflow {
@@ -76,7 +101,14 @@ pub fn execute_workflow<'a>(
                 let mut new_ctx = ctx.extend();
                 new_ctx.set_many(bindings);
 
-                execute_workflow(continuation, new_ctx, cap_ctx, policy_eval).await
+                execute_workflow_with_behaviour(
+                    continuation,
+                    new_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
             }
 
             // Conditional execution
@@ -88,10 +120,24 @@ pub fn execute_workflow<'a>(
                 let cond_val = eval_expr(condition, &ctx).map_err(ExecError::Eval)?;
                 match cond_val {
                     Value::Bool(true) => {
-                        execute_workflow(then_branch, ctx, cap_ctx, policy_eval).await
+                        execute_workflow_with_behaviour(
+                            then_branch,
+                            ctx,
+                            cap_ctx,
+                            policy_eval,
+                            behaviour_ctx,
+                        )
+                        .await
                     }
                     Value::Bool(false) => {
-                        execute_workflow(else_branch, ctx, cap_ctx, policy_eval).await
+                        execute_workflow_with_behaviour(
+                            else_branch,
+                            ctx,
+                            cap_ctx,
+                            policy_eval,
+                            behaviour_ctx,
+                        )
+                        .await
                     }
                     _ => Err(ExecError::Eval(EvalError::TypeMismatch {
                         expected: "bool".to_string(),
@@ -102,8 +148,16 @@ pub fn execute_workflow<'a>(
 
             // Sequential composition
             Workflow::Seq { first, second } => {
-                let _ = execute_workflow(first, ctx.clone(), cap_ctx, policy_eval).await?;
-                execute_workflow(second, ctx, cap_ctx, policy_eval).await
+                let _ = execute_workflow_with_behaviour(
+                    first,
+                    ctx.clone(),
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await?;
+                execute_workflow_with_behaviour(second, ctx, cap_ctx, policy_eval, behaviour_ctx)
+                    .await
             }
 
             // Parallel composition
@@ -115,7 +169,15 @@ pub fn execute_workflow<'a>(
                 // Execute all workflows in parallel and collect results
                 let futures: Vec<_> = workflows
                     .iter()
-                    .map(|wf| execute_workflow(wf, ctx.clone(), cap_ctx, policy_eval))
+                    .map(|wf| {
+                        execute_workflow_with_behaviour(
+                            wf,
+                            ctx.clone(),
+                            cap_ctx,
+                            policy_eval,
+                            behaviour_ctx,
+                        )
+                    })
                     .collect();
 
                 let results = futures::future::join_all(futures).await;
@@ -142,13 +204,27 @@ pub fn execute_workflow<'a>(
                 let mut new_ctx = ctx.extend();
                 new_ctx.set_many(bindings);
 
-                execute_workflow(continuation, new_ctx, cap_ctx, policy_eval).await
+                execute_workflow_with_behaviour(
+                    continuation,
+                    new_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
             }
 
             // Orient - evaluate expression and continue
             Workflow::Orient { expr, continuation } => {
                 let _ = eval_expr(expr, &ctx).map_err(ExecError::Eval)?;
-                execute_workflow(continuation, ctx, cap_ctx, policy_eval).await
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
             }
 
             // Execute action with guard
@@ -183,7 +259,14 @@ pub fn execute_workflow<'a>(
                 continuation,
             } => {
                 // Proposal is advisory - just continue
-                execute_workflow(continuation, ctx, cap_ctx, policy_eval).await
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
             }
 
             // Decide under policy
@@ -202,7 +285,14 @@ pub fn execute_workflow<'a>(
 
                 match decision {
                     ash_core::Decision::Permit => {
-                        execute_workflow(continuation, ctx, cap_ctx, policy_eval).await
+                        execute_workflow_with_behaviour(
+                            continuation,
+                            ctx,
+                            cap_ctx,
+                            policy_eval,
+                            behaviour_ctx,
+                        )
+                        .await
                     }
                     ash_core::Decision::Deny => Err(ExecError::PolicyDenied {
                         policy: policy.clone(),
@@ -239,8 +329,14 @@ pub fn execute_workflow<'a>(
                             let mut iter_ctx = ctx.extend();
                             iter_ctx.set_many(bindings);
 
-                            last_result =
-                                execute_workflow(body, iter_ctx, cap_ctx, policy_eval).await?;
+                            last_result = execute_workflow_with_behaviour(
+                                body,
+                                iter_ctx,
+                                cap_ctx,
+                                policy_eval,
+                                behaviour_ctx,
+                            )
+                            .await?;
                         }
 
                         Ok(last_result)
@@ -259,20 +355,39 @@ pub fn execute_workflow<'a>(
             } => {
                 // For now, just execute the workflow
                 // In a full implementation, this would set up capability context
-                execute_workflow(workflow, ctx, cap_ctx, policy_eval).await
+                execute_workflow_with_behaviour(workflow, ctx, cap_ctx, policy_eval, behaviour_ctx)
+                    .await
             }
 
             // Maybe - try primary, fallback on failure
             Workflow::Maybe { primary, fallback } => {
-                match execute_workflow(primary, ctx.clone(), cap_ctx, policy_eval).await {
+                match execute_workflow_with_behaviour(
+                    primary,
+                    ctx.clone(),
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+                {
                     Ok(result) => Ok(result),
-                    Err(_) => execute_workflow(fallback, ctx, cap_ctx, policy_eval).await,
+                    Err(_) => {
+                        execute_workflow_with_behaviour(
+                            fallback,
+                            ctx,
+                            cap_ctx,
+                            policy_eval,
+                            behaviour_ctx,
+                        )
+                        .await
+                    }
                 }
             }
 
             // Must - fail if workflow fails
             Workflow::Must { workflow: inner } => {
-                execute_workflow(inner, ctx, cap_ctx, policy_eval).await
+                execute_workflow_with_behaviour(inner, ctx, cap_ctx, policy_eval, behaviour_ctx)
+                    .await
             }
 
             // Check obligation (simplified - just continue)
@@ -281,14 +396,106 @@ pub fn execute_workflow<'a>(
                 continuation,
             } => {
                 // In a full implementation, this would check obligations
-                execute_workflow(continuation, ctx, cap_ctx, policy_eval).await
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
             }
 
             // Obligate a role (simplified - just execute workflow)
             Workflow::Oblig {
                 role: _,
                 workflow: inner,
-            } => execute_workflow(inner, ctx, cap_ctx, policy_eval).await,
+            } => {
+                execute_workflow_with_behaviour(inner, ctx, cap_ctx, policy_eval, behaviour_ctx)
+                    .await
+            }
+
+            // Set a value on a writable channel
+            Workflow::Set {
+                capability,
+                channel,
+                value,
+            } => {
+                let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
+                execute_set(capability, channel, val, behaviour_ctx).await?;
+                Ok(Value::Null)
+            }
+
+            // Send is not supported without StreamContext
+            Workflow::Send { .. } => Err(ExecError::ExecutionFailed(
+                "Send requires StreamContext - use execute_workflow_with_stream".to_string(),
+            )),
+        }
+    })
+}
+
+/// Execute a workflow with stream context, returning the final value
+///
+/// This is the main entry point for workflow execution when using sendable stream providers.
+///
+/// # Arguments
+/// * `workflow` - The workflow to execute
+/// * `ctx` - The runtime context with variable bindings
+/// * `cap_ctx` - The capability context for external operations
+/// * `policy_eval` - The policy evaluator for permission checks
+/// * `behaviour_ctx` - The behaviour context for settable providers
+/// * `stream_ctx` - The stream context for sendable providers
+///
+/// # Examples
+/// ```
+/// use ash_core::{Workflow, Expr, Value};
+/// use ash_interp::behaviour::BehaviourContext;
+/// use ash_interp::stream::{StreamContext, MockSendableProvider, TypedSendableProvider};
+/// use ash_interp::context::Context;
+/// use ash_interp::capability::CapabilityContext;
+/// use ash_interp::policy::PolicyEvaluator;
+/// use ash_interp::execute::execute_workflow_with_stream;
+/// use ash_typeck::Type;
+///
+/// # tokio_test::block_on(async {
+/// let ctx = Context::new();
+/// let cap_ctx = CapabilityContext::new();
+/// let policy_eval = PolicyEvaluator::new();
+/// let behaviour_ctx = BehaviourContext::new();
+/// let mut stream_ctx = StreamContext::new();
+/// let provider = MockSendableProvider::new("queue", "output");
+/// stream_ctx.register_sendable(TypedSendableProvider::new(provider, Type::Int));
+/// let workflow = Workflow::Done;
+/// let result = execute_workflow_with_stream(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx, &stream_ctx).await.unwrap();
+/// assert_eq!(result, Value::Null);
+/// # });
+/// ```
+pub fn execute_workflow_with_stream<'a>(
+    workflow: &'a Workflow,
+    ctx: Context,
+    cap_ctx: &'a CapabilityContext,
+    policy_eval: &'a PolicyEvaluator,
+    behaviour_ctx: &'a BehaviourContext,
+    stream_ctx: &'a StreamContext,
+) -> BoxFuture<'a, ExecResult<Value>> {
+    Box::pin(async move {
+        match workflow {
+            // Handle Send with stream context
+            Workflow::Send {
+                capability,
+                channel,
+                value,
+            } => {
+                let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
+                execute_send(capability, channel, val, stream_ctx).await?;
+                Ok(Value::Null)
+            }
+
+            // Delegate all other variants to execute_workflow_with_behaviour
+            _ => {
+                execute_workflow_with_behaviour(workflow, ctx, cap_ctx, policy_eval, behaviour_ctx)
+                    .await
+            }
         }
     })
 }

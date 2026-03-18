@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Set statement execution for output behaviours (TASK-105). New `execute_set` module in `ash-interp` with `execute_set(capability, channel, value, behaviour_ctx)` async function for setting values on writable channels. Integrates with `BehaviourContext` to lookup settable providers, validates values before setting, and returns `ExecError::CapabilityNotAvailable` or `ExecError::ValidationFailed` on errors. Added `Workflow::Set` variant to AST with `capability`, `channel`, and `value` fields. Extended `execute_workflow` with new `execute_workflow_with_behaviour` function that accepts `BehaviourContext` for set statement support.
+- Parse send statement for output streams (TASK-104). New `parse_send` module in `ash-parser` with `SendExpr` struct for parsing `send capability:channel expr` syntax. Similar to `parse_set` but without the `=` sign. Supports variables, string literals, and function calls for structured values.
+- Parse set statement for output behaviours (TASK-103). New `parse_set` module in `ash-parser` with `SetExpr` struct for parsing `set capability:channel = expr` syntax. Supports simple values, function calls for structured values, and expressions.
 - Sendable Stream Provider Trait (TASK-102). Output capability support for writable streams:
   - `SendableStreamProvider` trait extending `StreamProvider` with `send(&self, value: Value)` async method
   - `would_block(&self) -> bool` for backpressure detection (default: false)
@@ -23,6 +26,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `BehaviourContext` extension with `register_settable()`, `get_settable()`, and `set()` methods
   - `ValidationError` enum with variants for invalid values, out of range, and format errors
   - `ExecError::ValidationFailed` variant for validation failure reporting
+- Bidirectional Provider Wrappers (TASK-107). Combine input/output capabilities for unified providers:
+  - `BidirectionalBehaviour` trait combining `sample()` and `set()` operations for internal implementations
+  - `BidirectionalBehaviourProvider` wrapper implementing both `BehaviourProvider` and `SettableBehaviourProvider` with separate `read_schema` and `write_schema` validation
+  - `MockBidirectionalProvider` for testing with read/write operation tracking via `read_count()` and `write_count()`
+  - `BidirectionalStream` trait combining `recv()`/`try_recv()` and `send()` operations for internal implementations
+  - `BidirectionalStreamProvider` wrapper implementing both `StreamProvider` and `SendableStreamProvider` with separate read/write schema validation
+  - `MockBidirectionalStream` for testing with `push()` for receive queue and `sent_values()`/`sent_count()` for sent values inspection
 - Phase 16: Runtime Verification (TASK-114 to TASK-119). Comprehensive runtime verification framework:
   - Capability availability verifier (TASK-114). New `CapabilityVerifier` checks all required capabilities are available with correct modes (observable, settable, sendable, receivable).
   - Obligation satisfaction checker (TASK-115). New `RuntimeObligationChecker` verifies role requirements and obligation presence at runtime.

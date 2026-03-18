@@ -658,6 +658,365 @@ impl StreamProvider for MockStreamProvider {
     }
 }
 
+/// Bidirectional stream trait for internal implementations
+///
+/// This trait combines both receiving and sending operations for
+/// bidirectional stream providers. It serves as the underlying implementation
+/// for [`BidirectionalStreamProvider`].
+#[async_trait]
+pub trait BidirectionalStream: Send + Sync {
+    /// Returns the capability name for this provider
+    fn capability_name(&self) -> &str;
+
+    /// Returns the channel name for this provider
+    fn channel_name(&self) -> &str;
+
+    /// Try to receive a value without blocking
+    fn try_recv(&self) -> Option<ExecResult<Value>>;
+
+    /// Block until a value is available
+    async fn recv(&self) -> ExecResult<Value>;
+
+    /// Check if the stream is closed
+    fn is_closed(&self) -> bool;
+
+    /// Send a value to this provider's output stream
+    async fn send(&self, value: Value) -> ExecResult<()>;
+
+    /// Check if sending would block
+    fn would_block(&self) -> bool {
+        false
+    }
+
+    /// Flush any buffered sends
+    async fn flush(&self) -> ExecResult<()> {
+        Ok(())
+    }
+}
+
+/// Bidirectional stream provider wrapper with separate read/write schemas
+///
+/// This struct wraps a [`BidirectionalStream`] implementation and provides
+/// both [`StreamProvider`] and [`SendableStreamProvider`] implementations
+/// with separate type schemas for receiving and sending operations.
+///
+/// # Example
+///
+/// ```
+/// use ash_interp::stream::{BidirectionalStreamProvider, MockBidirectionalStream};
+/// use ash_interp::stream::{StreamProvider, SendableStreamProvider};
+/// use ash_core::Value;
+/// use ash_typeck::Type;
+///
+/// # tokio_test::block_on(async {
+/// let inner = MockBidirectionalStream::new("queue", "events");
+/// inner.push(Value::Int(1));
+/// inner.push(Value::Int(2));
+/// let provider = BidirectionalStreamProvider::new(
+///     inner,
+///     Type::Int,  // read schema
+///     Type::Int   // write schema
+/// );
+///
+/// // Can receive and send
+/// let value = provider.recv().await.unwrap();
+/// assert_eq!(value, Value::Int(1));
+/// provider.send(Value::Int(100)).await.unwrap();
+/// # });
+/// ```
+pub struct BidirectionalStreamProvider {
+    inner: Box<dyn BidirectionalStream>,
+    read_schema: Type,
+    write_schema: Type,
+}
+
+impl BidirectionalStreamProvider {
+    /// Create a new bidirectional stream provider
+    ///
+    /// # Arguments
+    ///
+    /// * `inner` - The bidirectional stream implementation to wrap
+    /// * `read_schema` - The expected type schema for values received
+    /// * `write_schema` - The expected type schema for values sent
+    ///
+    /// # Type Parameters
+    ///
+    /// * `B` - The concrete stream type, must implement [`BidirectionalStream`] + `'static`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_interp::stream::{BidirectionalStreamProvider, MockBidirectionalStream};
+    /// use ash_typeck::Type;
+    ///
+    /// let inner = MockBidirectionalStream::new("queue", "messages");
+    /// let provider = BidirectionalStreamProvider::new(
+    ///     inner,
+    ///     Type::String,
+    ///     Type::String
+    /// );
+    ///
+    /// assert_eq!(provider.read_schema(), &Type::String);
+    /// assert_eq!(provider.write_schema(), &Type::String);
+    /// ```
+    pub fn new<B>(inner: B, read_schema: Type, write_schema: Type) -> Self
+    where
+        B: BidirectionalStream + 'static,
+    {
+        Self {
+            inner: Box::new(inner),
+            read_schema,
+            write_schema,
+        }
+    }
+
+    /// Get the read type schema for this provider
+    ///
+    /// Returns a reference to the [`Type`] schema that describes the
+    /// expected type of values received from this provider.
+    #[must_use]
+    pub fn read_schema(&self) -> &Type {
+        &self.read_schema
+    }
+
+    /// Get the write type schema for this provider
+    ///
+    /// Returns a reference to the [`Type`] schema that describes the
+    /// expected type of values sent to this provider.
+    #[must_use]
+    pub fn write_schema(&self) -> &Type {
+        &self.write_schema
+    }
+
+    /// Send a value with schema validation
+    ///
+    /// Validates the value against the write schema before delegating
+    /// to the inner provider's `send` method.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ExecError::TypeMismatch` if the value doesn't match the schema.
+    pub async fn send(&self, value: Value) -> ExecResult<()> {
+        if !self.write_schema.matches(&value) {
+            return Err(ExecError::type_mismatch(
+                format!("{}:{}", self.capability_name(), self.channel_name()),
+                self.write_schema.to_string(),
+                value.to_string(),
+            ));
+        }
+
+        self.inner.send(value).await
+    }
+}
+
+#[async_trait]
+impl StreamProvider for BidirectionalStreamProvider {
+    fn capability_name(&self) -> &str {
+        self.inner.capability_name()
+    }
+
+    fn channel_name(&self) -> &str {
+        self.inner.channel_name()
+    }
+
+    fn try_recv(&self) -> Option<ExecResult<Value>> {
+        self.inner.try_recv().map(|result| {
+            result.and_then(|value| {
+                if self.read_schema.matches(&value) {
+                    Ok(value)
+                } else {
+                    Err(ExecError::type_mismatch(
+                        format!("{}:{}", self.capability_name(), self.channel_name()),
+                        self.read_schema.to_string(),
+                        value.to_string(),
+                    ))
+                }
+            })
+        })
+    }
+
+    async fn recv(&self) -> ExecResult<Value> {
+        let value = self.inner.recv().await?;
+
+        if !self.read_schema.matches(&value) {
+            return Err(ExecError::type_mismatch(
+                format!("{}:{}", self.capability_name(), self.channel_name()),
+                self.read_schema.to_string(),
+                value.to_string(),
+            ));
+        }
+
+        Ok(value)
+    }
+
+    fn is_closed(&self) -> bool {
+        self.inner.is_closed()
+    }
+}
+
+#[async_trait]
+impl SendableStreamProvider for BidirectionalStreamProvider {
+    async fn send(&self, value: Value) -> ExecResult<()> {
+        self.send(value).await
+    }
+
+    fn would_block(&self) -> bool {
+        self.inner.would_block()
+    }
+
+    async fn flush(&self) -> ExecResult<()> {
+        self.inner.flush().await
+    }
+}
+
+/// Mock bidirectional stream provider for testing
+///
+/// Stores values in a queue for receiving and tracks sent values.
+/// Supports both read and write operations for bidirectional testing.
+///
+/// # Example
+///
+/// ```
+/// use ash_interp::stream::{BidirectionalStream, MockBidirectionalStream};
+/// use ash_core::Value;
+///
+/// # tokio_test::block_on(async {
+/// let provider = MockBidirectionalStream::new("queue", "messages");
+///
+/// // Push values for receiving
+/// provider.push(Value::Int(1));
+/// provider.push(Value::Int(2));
+///
+/// // Receive values
+/// let v1 = provider.recv().await.unwrap();
+/// assert_eq!(v1, Value::Int(1));
+///
+/// // Send values
+/// provider.send(Value::Int(100)).await.unwrap();
+///
+/// // Check sent values
+/// assert_eq!(provider.sent_count(), 1);
+/// # });
+/// ```
+#[derive(Clone)]
+pub struct MockBidirectionalStream {
+    capability: String,
+    channel: String,
+    values: std::sync::Arc<Mutex<VecDeque<Value>>>,
+    sent: std::sync::Arc<Mutex<VecDeque<Value>>>,
+    closed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    would_block: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl MockBidirectionalStream {
+    /// Create a new mock bidirectional stream provider
+    #[must_use]
+    pub fn new(capability: &str, channel: &str) -> Self {
+        Self {
+            capability: capability.to_string(),
+            channel: channel.to_string(),
+            values: std::sync::Arc::new(Mutex::new(VecDeque::new())),
+            sent: std::sync::Arc::new(Mutex::new(VecDeque::new())),
+            closed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            would_block: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        }
+    }
+
+    /// Create a mock provider with initial receive values
+    #[must_use]
+    pub fn with_values(capability: &str, channel: &str, values: Vec<Value>) -> Self {
+        Self {
+            capability: capability.to_string(),
+            channel: channel.to_string(),
+            values: std::sync::Arc::new(Mutex::new(values.into_iter().collect())),
+            sent: std::sync::Arc::new(Mutex::new(VecDeque::new())),
+            closed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            would_block: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        }
+    }
+
+    /// Add a value to the receive queue
+    pub fn push(&self, value: Value) {
+        let mut values = self.values.lock().unwrap();
+        values.push_back(value);
+    }
+
+    /// Close the stream
+    pub fn close(&self) {
+        self.closed.store(true, Ordering::SeqCst);
+    }
+
+    /// Get a copy of all sent values
+    #[must_use]
+    pub fn sent_values(&self) -> Vec<Value> {
+        let sent = self.sent.lock().unwrap();
+        sent.iter().cloned().collect()
+    }
+
+    /// Get the number of sent values
+    #[must_use]
+    pub fn sent_count(&self) -> usize {
+        let sent = self.sent.lock().unwrap();
+        sent.len()
+    }
+
+    /// Clear all sent values
+    pub fn clear_sent(&self) {
+        let mut sent = self.sent.lock().unwrap();
+        sent.clear();
+    }
+
+    /// Set whether the provider would block
+    pub fn set_would_block(&self, would_block: bool) {
+        self.would_block.store(would_block, Ordering::SeqCst);
+    }
+}
+
+#[async_trait]
+impl BidirectionalStream for MockBidirectionalStream {
+    fn capability_name(&self) -> &str {
+        &self.capability
+    }
+
+    fn channel_name(&self) -> &str {
+        &self.channel
+    }
+
+    fn try_recv(&self) -> Option<ExecResult<Value>> {
+        if self.is_closed() {
+            return None;
+        }
+
+        let mut values = self.values.lock().unwrap();
+        values.pop_front().map(Ok)
+    }
+
+    async fn recv(&self) -> ExecResult<Value> {
+        let mut values = self.values.lock().unwrap();
+        if let Some(value) = values.pop_front() {
+            Ok(value)
+        } else if self.is_closed() {
+            Err(ExecError::ExecutionFailed("stream is closed".to_string()))
+        } else {
+            Err(ExecError::ExecutionFailed("no value available".to_string()))
+        }
+    }
+
+    fn is_closed(&self) -> bool {
+        self.closed.load(Ordering::SeqCst)
+    }
+
+    async fn send(&self, value: Value) -> ExecResult<()> {
+        let mut sent = self.sent.lock().unwrap();
+        sent.push_back(value);
+        Ok(())
+    }
+
+    fn would_block(&self) -> bool {
+        self.would_block.load(Ordering::SeqCst)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -983,5 +1342,238 @@ mod tests {
         // recv returns error (not supported)
         let result = provider.recv().await;
         assert!(result.is_err());
+    }
+
+    // ============================================================
+    // Bidirectional Stream Provider Tests (TASK-107)
+    // ============================================================
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_recv_and_send() {
+        let inner = MockBidirectionalStream::with_values(
+            "queue",
+            "events",
+            vec![Value::Int(1), Value::Int(2)],
+        );
+        let provider = BidirectionalStreamProvider::new(inner.clone(), Type::Int, Type::Int);
+
+        // Receive values
+        let v1 = provider.recv().await.unwrap();
+        assert_eq!(v1, Value::Int(1));
+
+        let v2 = provider.recv().await.unwrap();
+        assert_eq!(v2, Value::Int(2));
+
+        // Send values
+        provider.send(Value::Int(100)).await.unwrap();
+        provider.send(Value::Int(200)).await.unwrap();
+
+        // Verify sent values through mock directly
+        assert_eq!(inner.sent_count(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_read_schema_validation() {
+        let inner = MockBidirectionalStream::with_values("queue", "events", vec![Value::Int(42)]);
+        let provider = BidirectionalStreamProvider::new(inner, Type::Int, Type::String);
+
+        // Read with valid type should succeed
+        let value = provider.recv().await.unwrap();
+        assert_eq!(value, Value::Int(42));
+
+        // Create provider with mismatched read schema
+        let inner2 = MockBidirectionalStream::with_values(
+            "queue",
+            "events",
+            vec![Value::String("test".to_string())],
+        );
+        let provider2 = BidirectionalStreamProvider::new(inner2, Type::Int, Type::String);
+
+        // Read should fail due to schema mismatch
+        let result = provider2.recv().await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("type mismatch"));
+        assert!(err.contains("queue:events"));
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_write_schema_validation() {
+        let inner = MockBidirectionalStream::new("queue", "output");
+        let provider = BidirectionalStreamProvider::new(inner, Type::String, Type::Int);
+
+        // Write with valid type should succeed
+        provider.send(Value::Int(50)).await.unwrap();
+
+        // Write with invalid type should fail
+        let result = provider.send(Value::String("invalid".to_string())).await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("type mismatch"));
+        assert!(err.contains("queue:output"));
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_try_recv_validation() {
+        let inner = MockBidirectionalStream::with_values("queue", "events", vec![Value::Int(42)]);
+        let provider = BidirectionalStreamProvider::new(inner, Type::Int, Type::String);
+
+        // Valid value
+        let result = provider.try_recv().unwrap();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Value::Int(42));
+
+        // No more values
+        assert!(provider.try_recv().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_try_recv_validation_fails() {
+        let inner = MockBidirectionalStream::with_values(
+            "queue",
+            "events",
+            vec![Value::String("not an int".to_string())],
+        );
+        let provider = BidirectionalStreamProvider::new(inner, Type::Int, Type::String);
+
+        // Invalid value should return error (not None)
+        let result = provider.try_recv().unwrap();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("type mismatch"));
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_separate_schemas() {
+        // Different read and write schemas
+        let inner = MockBidirectionalStream::with_values(
+            "queue",
+            "events",
+            vec![Value::String("received".to_string())],
+        );
+        let provider = BidirectionalStreamProvider::new(
+            inner,
+            Type::String, // read schema
+            Type::Int,    // write schema (different!)
+        );
+
+        // Verify schemas are different
+        assert_eq!(provider.read_schema(), &Type::String);
+        assert_eq!(provider.write_schema(), &Type::Int);
+
+        // Read validates against read_schema
+        let value = provider.recv().await.unwrap();
+        assert_eq!(value, Value::String("received".to_string()));
+
+        // Write validates against write_schema
+        provider.send(Value::Int(123)).await.unwrap();
+
+        // Write with wrong type for write_schema should fail
+        let result = provider.send(Value::String("wrong".to_string())).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("type mismatch"));
+    }
+
+    #[tokio::test]
+    async fn test_mock_bidirectional_stream_tracking() {
+        let provider = MockBidirectionalStream::with_values("queue", "events", vec![Value::Int(1)]);
+
+        // Initially has one receive value, no sent values
+        assert_eq!(provider.sent_count(), 0);
+
+        // Send values
+        provider.send(Value::Int(10)).await.unwrap();
+        provider.send(Value::Int(20)).await.unwrap();
+        assert_eq!(provider.sent_count(), 2);
+
+        // Verify sent values
+        let sent = provider.sent_values();
+        assert_eq!(sent.len(), 2);
+        assert_eq!(sent[0], Value::Int(10));
+        assert_eq!(sent[1], Value::Int(20));
+
+        // Clear sent
+        provider.clear_sent();
+        assert_eq!(provider.sent_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_provider_implements_both_traits() {
+        use crate::stream::StreamProvider;
+
+        let inner = MockBidirectionalStream::with_values("queue", "events", vec![Value::Int(1)]);
+        let provider = BidirectionalStreamProvider::new(inner, Type::Int, Type::Int);
+
+        // Should implement StreamProvider
+        assert_eq!(provider.capability_name(), "queue");
+        assert_eq!(provider.channel_name(), "events");
+
+        // Should be able to recv
+        let value = provider.recv().await.unwrap();
+        assert_eq!(value, Value::Int(1));
+
+        // Should implement SendableStreamProvider
+        provider.send(Value::Int(100)).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_stream_flush_delegates() {
+        let inner = MockBidirectionalStream::new("queue", "output");
+        let provider = BidirectionalStreamProvider::new(inner, Type::Int, Type::Int);
+
+        // Flush should succeed (default no-op)
+        provider.flush().await.unwrap();
+    }
+
+    #[test]
+    fn test_bidirectional_stream_is_closed() {
+        let inner = MockBidirectionalStream::with_values("queue", "events", vec![Value::Int(1)]);
+        let provider = BidirectionalStreamProvider::new(inner.clone(), Type::Int, Type::Int);
+
+        // Initially not closed
+        assert!(!provider.is_closed());
+
+        // Close the stream (through inner mock directly)
+        inner.close();
+
+        // Now closed
+        assert!(provider.is_closed());
+
+        // try_recv returns None when closed
+        assert!(provider.try_recv().is_none());
+    }
+
+    #[test]
+    fn test_bidirectional_stream_would_block() {
+        let inner = MockBidirectionalStream::new("queue", "output");
+        let provider = BidirectionalStreamProvider::new(inner.clone(), Type::Int, Type::Int);
+
+        // Initially not blocking
+        assert!(!provider.would_block());
+
+        // Set blocking through inner mock directly
+        inner.set_would_block(true);
+        assert!(provider.would_block());
+    }
+
+    #[tokio::test]
+    async fn test_mock_bidirectional_stream_push_and_recv() {
+        let provider = MockBidirectionalStream::new("queue", "messages");
+
+        // Push values
+        provider.push(Value::Int(1));
+        provider.push(Value::Int(2));
+        provider.push(Value::Int(3));
+
+        // Receive in order
+        assert_eq!(provider.recv().await.unwrap(), Value::Int(1));
+        assert_eq!(provider.recv().await.unwrap(), Value::Int(2));
+        assert_eq!(provider.try_recv().unwrap().unwrap(), Value::Int(3));
+
+        // No more values
+        assert!(provider.try_recv().is_none());
     }
 }

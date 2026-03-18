@@ -22,8 +22,10 @@ pub mod capability_provenance;
 pub mod context;
 pub mod error;
 pub mod eval;
+pub mod exec_send;
 pub mod execute;
 pub mod execute_observe;
+pub mod execute_set;
 pub mod execute_stream;
 pub mod guard;
 pub mod mailbox;
@@ -33,7 +35,8 @@ pub mod stream;
 pub mod typed_provider;
 
 pub use behaviour::{
-    BehaviourContext, BehaviourProvider, BehaviourRegistry, MockBehaviourProvider,
+    BehaviourContext, BehaviourProvider, BehaviourRegistry, BidirectionalBehaviour,
+    BidirectionalBehaviourProvider, MockBehaviourProvider, MockBidirectionalProvider,
     MockSettableProvider, SettableBehaviourProvider, SettableRegistry, TypedSettableProvider,
 };
 pub use capability::{CapabilityContext, CapabilityProvider, CapabilityRegistry, MockProvider};
@@ -47,13 +50,18 @@ pub use error::{
     ValidationResult,
 };
 pub use eval::eval_expr;
-pub use execute::{execute_simple, execute_workflow};
+pub use exec_send::execute_send;
+pub use execute::{
+    execute_simple, execute_workflow, execute_workflow_with_behaviour, execute_workflow_with_stream,
+};
 pub use execute_observe::{execute_changed, execute_observe};
+pub use execute_set::execute_set;
 pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyResult, PolicyRule};
 pub use stream::{
+    BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,
     MockSendableProvider, MockStreamProvider, SendableRegistry, SendableStreamProvider,
     StreamContext, StreamProvider, StreamRegistry, TypedSendableProvider,
 };

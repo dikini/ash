@@ -1,6 +1,6 @@
 # TASK-103: Parse Set Statement
 
-## Status: 🔴 Not Started
+## Status: ✅ Complete
 
 ## Description
 
@@ -99,13 +99,13 @@ git commit -m "feat: parse set statement"
 
 ## Completion Checklist
 
-- [ ] set statement parsed
-- [ ] Simple values work
-- [ ] Record values work
-- [ ] Expressions work
-- [ ] Tests pass
-- [ ] `cargo fmt` clean
-- [ ] `cargo clippy` clean
+- [x] set statement parsed
+- [x] Simple values work
+- [x] Record values work (via function call syntax)
+- [x] Expressions work
+- [x] Tests pass
+- [x] `cargo fmt` clean
+- [x] `cargo clippy` clean
 
 ## Estimated Effort
 

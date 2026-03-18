@@ -472,7 +472,7 @@ impl BehaviourProvider for TypedSettableProvider {
 #[async_trait]
 impl SettableBehaviourProvider for TypedSettableProvider {
     async fn set(&self, value: Value) -> ExecResult<()> {
-        self.set(value).await
+        self.inner.set(value).await
     }
 
     fn validate(&self, value: &Value) -> Result<(), ValidationError> {
@@ -502,11 +502,14 @@ impl SettableBehaviourProvider for TypedSettableProvider {
 /// assert_eq!(value, Value::Bool(true));
 /// # });
 /// ```
+/// Type alias for the validator function to reduce complexity
+pub type ValueValidator = Box<dyn Fn(&Value) -> Result<(), ValidationError> + Send + Sync>;
+
 pub struct MockSettableProvider {
     name: (String, String),
     value: std::sync::Arc<Mutex<Value>>,
     last_value: std::sync::Arc<Mutex<Option<Value>>>,
-    validator: Option<Box<dyn Fn(&Value) -> Result<(), ValidationError> + Send + Sync>>,
+    validator: Option<ValueValidator>,
 }
 
 impl Clone for MockSettableProvider {
@@ -638,6 +641,301 @@ impl SettableRegistry {
     pub fn has(&self, cap: &str, channel: &str) -> bool {
         self.providers
             .contains_key(&(cap.to_string(), channel.to_string()))
+    }
+}
+
+/// Bidirectional behaviour trait for internal implementations
+///
+/// This trait combines both reading (sample) and writing (set) operations
+/// for bidirectional providers. It serves as the underlying implementation
+/// for [`BidirectionalBehaviourProvider`].
+#[async_trait]
+pub trait BidirectionalBehaviour: Send + Sync {
+    /// Returns the capability name for this provider
+    fn capability_name(&self) -> &str;
+
+    /// Returns the channel name for this provider
+    fn channel_name(&self) -> &str;
+
+    /// Sample the current value with optional constraints
+    ///
+    /// # Arguments
+    ///
+    /// * `constraints` - Optional filtering constraints for the sample
+    ///
+    /// # Errors
+    ///
+    /// Returns `ExecError` if sampling fails
+    async fn sample(&self, constraints: &[Constraint]) -> ExecResult<Value>;
+
+    /// Set a value on this provider's output channel
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The value to set
+    ///
+    /// # Errors
+    ///
+    /// Returns `ExecError` if the set operation fails
+    async fn set(&self, value: Value) -> ExecResult<()>;
+
+    /// Check if value has changed since last sample
+    ///
+    /// Default implementation always returns `true`.
+    async fn has_changed(&self, _constraints: &[Constraint]) -> ExecResult<bool> {
+        Ok(true)
+    }
+}
+
+/// Bidirectional behaviour provider wrapper with separate read/write schemas
+///
+/// This struct wraps a [`BidirectionalBehaviour`] implementation and provides
+/// both [`BehaviourProvider`] and [`SettableBehaviourProvider`] implementations
+/// with separate type schemas for reading (sample) and writing (set) operations.
+///
+/// # Example
+///
+/// ```
+/// use ash_interp::behaviour::{BidirectionalBehaviourProvider, MockBidirectionalProvider};
+/// use ash_interp::behaviour::{BehaviourProvider, SettableBehaviourProvider};
+/// use ash_core::Value;
+/// use ash_typeck::Type;
+///
+/// # tokio_test::block_on(async {
+/// let inner = MockBidirectionalProvider::new("device", "setting");
+/// let provider = BidirectionalBehaviourProvider::new(
+///     inner,
+///     Type::Int,  // read schema
+///     Type::Int   // write schema
+/// );
+///
+/// // Can sample (read) and set (write)
+/// provider.set(Value::Int(42)).await.unwrap();
+/// let value = provider.sample(&[]).await.unwrap();
+/// assert_eq!(value, Value::Int(42));
+/// # });
+/// ```
+pub struct BidirectionalBehaviourProvider {
+    inner: Box<dyn BidirectionalBehaviour>,
+    read_schema: Type,
+    write_schema: Type,
+}
+
+impl BidirectionalBehaviourProvider {
+    /// Create a new bidirectional behaviour provider
+    ///
+    /// # Arguments
+    ///
+    /// * `inner` - The bidirectional behaviour implementation to wrap
+    /// * `read_schema` - The expected type schema for values returned by sample
+    /// * `write_schema` - The expected type schema for values accepted by set
+    ///
+    /// # Type Parameters
+    ///
+    /// * `B` - The concrete behaviour type, must implement [`BidirectionalBehaviour`] + `'static`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_interp::behaviour::{BidirectionalBehaviourProvider, MockBidirectionalProvider};
+    /// use ash_typeck::Type;
+    ///
+    /// let inner = MockBidirectionalProvider::new("device", "setting");
+    /// let provider = BidirectionalBehaviourProvider::new(
+    ///     inner,
+    ///     Type::Int,
+    ///     Type::Int
+    /// );
+    ///
+    /// assert_eq!(provider.read_schema(), &Type::Int);
+    /// assert_eq!(provider.write_schema(), &Type::Int);
+    /// ```
+    pub fn new<B>(inner: B, read_schema: Type, write_schema: Type) -> Self
+    where
+        B: BidirectionalBehaviour + 'static,
+    {
+        Self {
+            inner: Box::new(inner),
+            read_schema,
+            write_schema,
+        }
+    }
+
+    /// Get the read type schema for this provider
+    ///
+    /// Returns a reference to the [`Type`] schema that describes the
+    /// expected type of values returned by sample.
+    #[must_use]
+    pub fn read_schema(&self) -> &Type {
+        &self.read_schema
+    }
+
+    /// Get the write type schema for this provider
+    ///
+    /// Returns a reference to the [`Type`] schema that describes the
+    /// expected type of values accepted by set.
+    #[must_use]
+    pub fn write_schema(&self) -> &Type {
+        &self.write_schema
+    }
+}
+
+#[async_trait]
+impl BehaviourProvider for BidirectionalBehaviourProvider {
+    fn capability_name(&self) -> &str {
+        self.inner.capability_name()
+    }
+
+    fn channel_name(&self) -> &str {
+        self.inner.channel_name()
+    }
+
+    async fn sample(&self, constraints: &[Constraint]) -> ExecResult<Value> {
+        let value = self.inner.sample(constraints).await?;
+
+        // Validate against read_schema
+        if !self.read_schema.matches(&value) {
+            return Err(ExecError::type_mismatch(
+                format!("{}:{}", self.capability_name(), self.channel_name()),
+                self.read_schema.to_string(),
+                value.to_string(),
+            ));
+        }
+
+        Ok(value)
+    }
+
+    async fn has_changed(&self, constraints: &[Constraint]) -> ExecResult<bool> {
+        self.inner.has_changed(constraints).await
+    }
+}
+
+#[async_trait]
+impl SettableBehaviourProvider for BidirectionalBehaviourProvider {
+    async fn set(&self, value: Value) -> ExecResult<()> {
+        // Validate against write_schema
+        if !self.write_schema.matches(&value) {
+            return Err(ExecError::type_mismatch(
+                format!("{}:{}", self.capability_name(), self.channel_name()),
+                self.write_schema.to_string(),
+                value.to_string(),
+            ));
+        }
+
+        self.inner.set(value).await
+    }
+
+    fn validate(&self, _value: &Value) -> Result<(), ValidationError> {
+        // Validation is done in set() with type checking
+        Ok(())
+    }
+}
+
+/// Mock bidirectional provider for testing
+///
+/// Stores a value in a `Mutex` that can be both sampled and set.
+/// Tracks both read and write operations for verification.
+///
+/// # Example
+///
+/// ```
+/// use ash_interp::behaviour::{BidirectionalBehaviour, MockBidirectionalProvider};
+/// use ash_core::Value;
+///
+/// # tokio_test::block_on(async {
+/// let provider = MockBidirectionalProvider::new("device", "setting");
+///
+/// // Set a value
+/// provider.set(Value::Int(42)).await.unwrap();
+///
+/// // Sample the value back
+/// let value = provider.sample(&[]).await.unwrap();
+/// assert_eq!(value, Value::Int(42));
+///
+/// // Check tracking
+/// assert_eq!(provider.read_count(), 1);
+/// assert_eq!(provider.write_count(), 1);
+/// # });
+/// ```
+#[derive(Clone)]
+pub struct MockBidirectionalProvider {
+    name: (String, String),
+    value: std::sync::Arc<Mutex<Value>>,
+    last_value: std::sync::Arc<Mutex<Option<Value>>>,
+    read_count: std::sync::Arc<Mutex<usize>>,
+    write_count: std::sync::Arc<Mutex<usize>>,
+}
+
+impl MockBidirectionalProvider {
+    /// Create a new mock bidirectional provider with the given capability and channel names
+    #[must_use]
+    pub fn new(cap: &str, channel: &str) -> Self {
+        Self {
+            name: (cap.to_string(), channel.to_string()),
+            value: std::sync::Arc::new(Mutex::new(Value::Null)),
+            last_value: std::sync::Arc::new(Mutex::new(None)),
+            read_count: std::sync::Arc::new(Mutex::new(0)),
+            write_count: std::sync::Arc::new(Mutex::new(0)),
+        }
+    }
+
+    /// Set the initial value and return self (builder pattern)
+    #[must_use]
+    pub fn with_value(self, value: Value) -> Self {
+        *self.value.lock().unwrap() = value;
+        self
+    }
+
+    /// Get the number of read (sample) operations performed
+    #[must_use]
+    pub fn read_count(&self) -> usize {
+        *self.read_count.lock().unwrap()
+    }
+
+    /// Get the number of write (set) operations performed
+    #[must_use]
+    pub fn write_count(&self) -> usize {
+        *self.write_count.lock().unwrap()
+    }
+
+    /// Reset operation counters
+    pub fn reset_counts(&self) {
+        *self.read_count.lock().unwrap() = 0;
+        *self.write_count.lock().unwrap() = 0;
+    }
+}
+
+#[async_trait]
+impl BidirectionalBehaviour for MockBidirectionalProvider {
+    fn capability_name(&self) -> &str {
+        &self.name.0
+    }
+
+    fn channel_name(&self) -> &str {
+        &self.name.1
+    }
+
+    async fn sample(&self, _constraints: &[Constraint]) -> ExecResult<Value> {
+        *self.read_count.lock().unwrap() += 1;
+        let value = self.value.lock().unwrap().clone();
+        *self.last_value.lock().unwrap() = Some(value.clone());
+        Ok(value)
+    }
+
+    async fn set(&self, value: Value) -> ExecResult<()> {
+        *self.write_count.lock().unwrap() += 1;
+        *self.value.lock().unwrap() = value;
+        Ok(())
+    }
+
+    async fn has_changed(&self, _constraints: &[Constraint]) -> ExecResult<bool> {
+        let current = self.value.lock().unwrap().clone();
+        let last = self.last_value.lock().unwrap().clone();
+
+        match last {
+            None => Ok(true), // Never sampled before
+            Some(last_val) => Ok(current != last_val),
+        }
     }
 }
 
@@ -934,5 +1232,168 @@ mod tests {
         assert_eq!(typed.write_schema(), &Type::Int);
         assert_eq!(typed.capability_name(), "actuator");
         assert_eq!(typed.channel_name(), "brightness");
+    }
+
+    // ============================================================
+    // Bidirectional Provider Tests (TASK-107)
+    // ============================================================
+
+    #[tokio::test]
+    async fn test_bidirectional_observe_and_set() {
+        let inner = MockBidirectionalProvider::new("device", "setting").with_value(Value::Int(10));
+        let provider = BidirectionalBehaviourProvider::new(inner, Type::Int, Type::Int);
+
+        // Initially reads the set value
+        let value = provider.sample(&[]).await.unwrap();
+        assert_eq!(value, Value::Int(10));
+
+        // Set a new value
+        provider.set(Value::Int(42)).await.unwrap();
+
+        // Sample returns the new value
+        let value = provider.sample(&[]).await.unwrap();
+        assert_eq!(value, Value::Int(42));
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_read_schema_validation() {
+        let inner = MockBidirectionalProvider::new("sensor", "temp").with_value(Value::Int(25));
+        let provider = BidirectionalBehaviourProvider::new(inner, Type::Int, Type::String);
+
+        // Read should succeed with valid type
+        let value = provider.sample(&[]).await.unwrap();
+        assert_eq!(value, Value::Int(25));
+
+        // Create a new provider with mismatched read schema
+        let inner2 = MockBidirectionalProvider::new("sensor", "temp")
+            .with_value(Value::String("hot".to_string()));
+        let provider2 = BidirectionalBehaviourProvider::new(inner2, Type::Int, Type::String);
+
+        // Read should fail due to schema mismatch
+        let result = provider2.sample(&[]).await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("type mismatch"));
+        assert!(err.contains("sensor:temp"));
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_write_schema_validation() {
+        let inner = MockBidirectionalProvider::new("actuator", "brightness");
+        let provider = BidirectionalBehaviourProvider::new(inner, Type::Int, Type::Int);
+
+        // Write with valid type should succeed
+        provider.set(Value::Int(50)).await.unwrap();
+
+        // Write with invalid type should fail
+        let result = provider.set(Value::String("invalid".to_string())).await;
+        assert!(result.is_err());
+
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("type mismatch"));
+        assert!(err.contains("actuator:brightness"));
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_separate_read_write_schemas() {
+        // Different read and write schemas
+        let inner = MockBidirectionalProvider::new("converter", "value")
+            .with_value(Value::String("read".to_string()));
+        let provider = BidirectionalBehaviourProvider::new(
+            inner,
+            Type::String, // read schema
+            Type::Int,    // write schema (different!)
+        );
+
+        // Verify schemas are different
+        assert_eq!(provider.read_schema(), &Type::String);
+        assert_eq!(provider.write_schema(), &Type::Int);
+
+        // Read validates against read_schema
+        let value = provider.sample(&[]).await.unwrap();
+        assert_eq!(value, Value::String("read".to_string()));
+
+        // Write validates against write_schema
+        provider.set(Value::Int(123)).await.unwrap();
+
+        // Write with wrong type for write_schema should fail
+        let result = provider.set(Value::String("wrong".to_string())).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("type mismatch"));
+    }
+
+    #[tokio::test]
+    async fn test_mock_bidirectional_provider_tracking() {
+        let provider =
+            MockBidirectionalProvider::new("device", "counter").with_value(Value::Int(0));
+
+        // Initially no operations
+        assert_eq!(provider.read_count(), 0);
+        assert_eq!(provider.write_count(), 0);
+
+        // Perform some reads
+        let _ = provider.sample(&[]).await.unwrap();
+        let _ = provider.sample(&[]).await.unwrap();
+        assert_eq!(provider.read_count(), 2);
+        assert_eq!(provider.write_count(), 0);
+
+        // Perform some writes
+        provider.set(Value::Int(10)).await.unwrap();
+        provider.set(Value::Int(20)).await.unwrap();
+        provider.set(Value::Int(30)).await.unwrap();
+        assert_eq!(provider.read_count(), 2);
+        assert_eq!(provider.write_count(), 3);
+
+        // Reset counters
+        provider.reset_counts();
+        assert_eq!(provider.read_count(), 0);
+        assert_eq!(provider.write_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_provider_implements_both_traits() {
+        use crate::behaviour::{BehaviourProvider, SettableBehaviourProvider};
+
+        let inner = MockBidirectionalProvider::new("device", "state");
+        let provider = BidirectionalBehaviourProvider::new(inner, Type::Int, Type::Int);
+
+        // Should implement BehaviourProvider
+        assert_eq!(provider.capability_name(), "device");
+        assert_eq!(provider.channel_name(), "state");
+
+        // Should implement SettableBehaviourProvider
+        provider.set(Value::Int(100)).await.unwrap();
+
+        // Should be able to sample
+        let value = provider.sample(&[]).await.unwrap();
+        assert_eq!(value, Value::Int(100));
+    }
+
+    #[tokio::test]
+    async fn test_bidirectional_provider_has_changed() {
+        let inner = MockBidirectionalProvider::new("sensor", "reading").with_value(Value::Int(10));
+        let provider = BidirectionalBehaviourProvider::new(inner, Type::Int, Type::Int);
+
+        // First check should be true (never sampled)
+        assert!(provider.has_changed(&[]).await.unwrap());
+
+        // Sample to establish baseline
+        let _ = provider.sample(&[]).await;
+
+        // Same value - should report unchanged
+        assert!(!provider.has_changed(&[]).await.unwrap());
+
+        // Set new value via inner (simulating external change)
+        provider.set(Value::Int(20)).await.unwrap();
+
+        // Value changed - should report changed
+        assert!(provider.has_changed(&[]).await.unwrap());
+
+        // Sample to update baseline
+        let _ = provider.sample(&[]).await;
+
+        // Now unchanged again
+        assert!(!provider.has_changed(&[]).await.unwrap());
     }
 }

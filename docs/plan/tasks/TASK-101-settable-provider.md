@@ -1,6 +1,6 @@
 # TASK-101: Settable Behaviour Provider Trait
 
-## Status: 🔴 Not Started
+## Status: ✅ Complete
 
 ## Description
 

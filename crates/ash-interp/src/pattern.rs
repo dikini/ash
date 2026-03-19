@@ -85,7 +85,7 @@ fn match_pattern_recursive(
         Pattern::Record(field_patterns) => {
             // Record pattern matches record with matching fields
             match value {
-                Value::Record(Box::new(fields)) => {
+                Value::Record(fields) => {
                     for (field_name, field_pattern) in field_patterns {
                         match fields.get(field_name) {
                             Some(field_value) => {
@@ -312,7 +312,7 @@ mod tests {
         assert_eq!(bindings.get("head"), Some(&Value::Int(1)));
         assert_eq!(
             bindings.get("tail"),
-            Some(&Value::List(vec![Value::Int(2), Value::Int(3)]))
+            Some(&Value::List(Box::new(vec![Value::Int(2), Value::Int(3)])))
         );
     }
 
@@ -347,7 +347,7 @@ mod tests {
 
         let mut fields = HashMap::new();
         fields.insert("x".to_string(), Value::Int(42));
-        let value = Value::List(vec![Value::Record(Box::new(fields)), Value::Null]);
+        let value = Value::List(Box::new(vec![Value::Record(Box::new(fields)), Value::Null]));
 
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("inner"), Some(&Value::Int(42)));
@@ -393,7 +393,7 @@ mod tests {
         };
         let value = Value::Variant {
             name: "None".to_string(),
-            fields: vec![],
+            fields: Box::new(vec![]),
         };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
@@ -411,7 +411,7 @@ mod tests {
         };
         let value = Value::Variant {
             name: "Some".to_string(),
-            fields: vec![("value".to_string(), Value::Int(42))],
+            fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
         };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("x"), Some(&Value::Int(42)));
@@ -426,7 +426,7 @@ mod tests {
         };
         let value = Value::Variant {
             name: "None".to_string(),
-            fields: vec![],
+            fields: Box::new(vec![]),
         };
         assert!(match_pattern(&pattern, &value).is_err());
     }
@@ -440,7 +440,7 @@ mod tests {
         };
         let value = Value::Variant {
             name: "Some".to_string(),
-            fields: vec![("value".to_string(), Value::Int(42))],
+            fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
         };
         assert!(match_pattern(&pattern, &value).is_err());
     }
@@ -457,7 +457,7 @@ mod tests {
         };
         let value = Value::Variant {
             name: "Point".to_string(),
-            fields: vec![("x".to_string(), Value::Int(1))],
+            fields: Box::new(vec![("x".to_string(), Value::Int(1))]),
         };
         assert!(match_pattern(&pattern, &value).is_err());
     }
@@ -487,10 +487,10 @@ mod tests {
         };
         let value = Value::Variant {
             name: "Some".to_string(),
-            fields: vec![(
+            fields: Box::new(vec![(
                 "value".to_string(),
                 Value::List(Box::new(vec![Value::Int(1), Value::Int(2)])),
-            )],
+            )]),
         };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("x"), Some(&Value::Int(1)));
@@ -509,10 +509,10 @@ mod tests {
         };
         let value = Value::Variant {
             name: "Point".to_string(),
-            fields: vec![
+            fields: Box::new(vec![
                 ("x".to_string(), Value::Int(10)),
                 ("y".to_string(), Value::Int(20)),
-            ],
+            ]),
         };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("a"), Some(&Value::Int(10)));
@@ -531,7 +531,7 @@ mod tests {
         };
         let value = Value::Variant {
             name: "Some".to_string(),
-            fields: vec![("value".to_string(), Value::Int(42))],
+            fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
         };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
@@ -539,7 +539,7 @@ mod tests {
         // Wrong literal value should fail
         let value2 = Value::Variant {
             name: "Some".to_string(),
-            fields: vec![("value".to_string(), Value::Int(99))],
+            fields: Box::new(vec![("value".to_string(), Value::Int(99))]),
         };
         assert!(match_pattern(&pattern, &value2).is_err());
     }
@@ -553,7 +553,7 @@ mod tests {
         };
         let value = Value::Variant {
             name: "Some".to_string(),
-            fields: vec![("value".to_string(), Value::Int(42))],
+            fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
         };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());

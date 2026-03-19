@@ -1173,7 +1173,7 @@ mod tests {
         valid_map.insert("red".to_string(), Value::Int(255));
         valid_map.insert("green".to_string(), Value::Int(128));
         valid_map.insert("blue".to_string(), Value::Int(0));
-        let valid_record = Value::Record(valid_map);
+        let valid_record = Value::Record(Box::new(valid_map));
         typed.set(valid_record).await.unwrap();
 
         // Invalid record - wrong field type
@@ -1181,7 +1181,7 @@ mod tests {
         invalid_map.insert("red".to_string(), Value::String("high".to_string()));
         invalid_map.insert("green".to_string(), Value::Int(128));
         invalid_map.insert("blue".to_string(), Value::Int(0));
-        let invalid_record = Value::Record(invalid_map);
+        let invalid_record = Value::Record(Box::new(invalid_map));
         let result = typed.set(invalid_record).await;
         assert!(result.is_err());
     }

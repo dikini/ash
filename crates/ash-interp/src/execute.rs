@@ -809,7 +809,7 @@ mod tests {
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
-            ])),
+            ]))),
             body: Box::new(Workflow::Ret {
                 expr: Expr::Variable("x".to_string()),
             }),
@@ -964,7 +964,7 @@ mod tests {
                 Pattern::Variable("x".to_string()),
                 Pattern::Variable("y".to_string()),
             ]),
-            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(10), Value::Int(20)])),
+            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(10), Value::Int(20)]))),
             continuation: Box::new(Workflow::If {
                 condition: Expr::Binary {
                     op: BinaryOp::Lt,

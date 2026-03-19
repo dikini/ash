@@ -377,17 +377,17 @@ mod tests {
             (Box::from("unit"), Type::String),
         ]));
 
-        let valid = Value::Record(HashMap::from([
+        let valid = Value::Record(Box::new(HashMap::from([
             ("value".to_string(), Value::Int(25)),
             ("unit".to_string(), Value::String("celsius".into())),
-        ]));
+        ])));
 
         assert!(schema.validate_input(&valid).is_ok());
 
-        let invalid = Value::Record(HashMap::from([
+        let invalid = Value::Record(Box::new(HashMap::from([
             ("value".to_string(), Value::String("wrong".into())),
             ("unit".to_string(), Value::String("celsius".into())),
-        ]));
+        ])));
 
         assert!(schema.validate_input(&invalid).is_err());
     }
@@ -397,11 +397,11 @@ mod tests {
         let schema = CapabilitySchema::read_only(Type::List(Box::new(Type::Int)));
 
         // Valid list of ints
-        let valid = Value::List(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+        let valid = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
         assert!(schema.validate_input(&valid).is_ok());
 
         // Invalid - mixed types
-        let invalid = Value::List(vec![Value::Int(1), Value::String("two".into())]);
+        let invalid = Value::List(Box::new(vec![Value::Int(1), Value::String("two".into())]));
         assert!(schema.validate_input(&invalid).is_err());
     }
 
@@ -418,27 +418,27 @@ mod tests {
             (Box::from("name"), Type::String),
         ]));
 
-        let valid = Value::Record(HashMap::from([
+        let valid = Value::Record(Box::new(HashMap::from([
             (
                 "location".to_string(),
-                Value::Record(HashMap::from([
+                Value::Record(Box::new(HashMap::from([
                     ("lat".to_string(), Value::Int(40)),
                     ("lon".to_string(), Value::Int(-74)),
-                ])),
+                ]))),
             ),
             ("name".to_string(), Value::String("NYC".into())),
-        ]));
+        ])));
 
         assert!(schema.validate_input(&valid).is_ok());
 
         // Missing nested field
-        let invalid = Value::Record(HashMap::from([
+        let invalid = Value::Record(Box::new(HashMap::from([
             (
                 "location".to_string(),
-                Value::Record(HashMap::from([("lat".to_string(), Value::Int(40))])),
+                Value::Record(Box::new(HashMap::from([("lat".to_string(), Value::Int(40))]))),
             ),
             ("name".to_string(), Value::String("NYC".into())),
-        ]));
+        ])));
 
         assert!(schema.validate_input(&invalid).is_err());
     }

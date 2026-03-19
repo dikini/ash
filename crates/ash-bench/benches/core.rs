@@ -210,7 +210,7 @@ fn bench_pattern_matching(c: &mut Criterion) {
         Pattern::Variable("a".to_string()),
         Pattern::Variable("b".to_string()),
     ]);
-    let tuple_value = Value::List(vec![Value::Int(1), Value::Int(2)]);
+    let tuple_value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
     
     group.bench_function("bindings_tuple_2", |b| {
         b.iter(|| black_box(tuple_pattern.bindings()));

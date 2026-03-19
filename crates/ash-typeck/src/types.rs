@@ -941,8 +941,8 @@ mod tests {
         use ash_core::Value;
 
         let schema = Type::List(Box::new(Type::Int));
-        assert!(schema.matches(&Value::List(vec![Value::Int(1), Value::Int(2)])));
-        assert!(!schema.matches(&Value::List(vec![Value::String("a".into())])));
+        assert!(schema.matches(&Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))));
+        assert!(!schema.matches(&Value::List(Box::new(vec![Value::String("a".into())]))));
     }
 
     #[test]
@@ -955,16 +955,16 @@ mod tests {
             (Box::from("age"), Type::Int),
         ]);
 
-        let valid = Value::Record(HashMap::from([
+        let valid = Value::Record(Box::new(HashMap::from([
             ("name".to_string(), Value::String("Alice".into())),
             ("age".to_string(), Value::Int(30)),
-        ]));
+        ])));
         assert!(schema.matches(&valid));
 
-        let invalid = Value::Record(HashMap::from([
+        let invalid = Value::Record(Box::new(HashMap::from([
             ("name".to_string(), Value::Int(30)), // Wrong type
             ("age".to_string(), Value::Int(30)),
-        ]));
+        ])));
         assert!(!schema.matches(&invalid));
     }
 
@@ -981,13 +981,13 @@ mod tests {
             ]),
         )]);
 
-        let value = Value::Record(HashMap::from([(
+        let value = Value::Record(Box::new(HashMap::from([(
             "point".to_string(),
-            Value::Record(HashMap::from([
+            Value::Record(Box::new(HashMap::from([
                 ("x".to_string(), Value::Int(1)),
                 ("y".to_string(), Value::Int(2)),
-            ])),
-        )]));
+            ]))),
+        )])));
         assert!(schema.matches(&value));
     }
 

@@ -179,7 +179,7 @@ fn eval_split(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             let addr = Value::InstanceAddr(instance.addr);
             let control = instance.control.map(Value::ControlLink);
             // Return as a tuple: (addr, control)
-            Ok(Value::List(Box::new(vec![addr, control.unwrap_or(Value::Null)]))))
+            Ok(Value::List(Box::new(vec![addr, control.unwrap_or(Value::Null)])))
         }
         _ => Err(EvalError::TypeMismatch {
             expected: "Instance".to_string(),
@@ -643,7 +643,7 @@ mod tests {
                 Value::Int(10),
                 Value::Int(20),
                 Value::Int(30),
-            ]))),
+            ])))),
             index: Box::new(Expr::Literal(Value::Int(1))),
         };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(20));
@@ -653,7 +653,7 @@ mod tests {
     fn test_eval_index_out_of_bounds() {
         let ctx = Context::new();
         let expr = Expr::IndexAccess {
-            expr: Box::new(Expr::Literal(Value::List(Box::new(vec![Value::Int(10)]))),
+            expr: Box::new(Expr::Literal(Value::List(Box::new(vec![Value::Int(10)])))),
             index: Box::new(Expr::Literal(Value::Int(5))),
         };
         assert!(eval_expr(&expr, &ctx).is_err());
@@ -790,7 +790,7 @@ mod tests {
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
-            ]))),
+            ])))),
         };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(true));
     }
@@ -803,7 +803,7 @@ mod tests {
             arguments: vec![Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
-            ]))],
+            ])))],
         };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(2));
     }
@@ -831,7 +831,7 @@ mod tests {
             func: "concat".to_string(),
             arguments: vec![
                 Expr::Literal(Value::List(Box::new(vec![Value::Int(1)]))),
-                Expr::Literal(Value::List(Box::new(vec![Value::Int(2)])),
+                Expr::Literal(Value::List(Box::new(vec![Value::Int(2)]))),
             ],
         };
         assert_eq!(
@@ -925,7 +925,7 @@ mod tests {
             result,
             Value::Variant {
                 name: "Some".to_string(),
-                fields: vec![("value".to_string(), Value::Int(42))],
+                fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
             }
         );
     }
@@ -942,7 +942,7 @@ mod tests {
             result,
             Value::Variant {
                 name: "None".to_string(),
-                fields: vec![],
+                fields: Box::new(vec![]),
             }
         );
     }
@@ -989,7 +989,7 @@ mod tests {
             result,
             Value::Variant {
                 name: "Ok".to_string(),
-                fields: vec![("value".to_string(), Value::String("hello".to_string()))],
+                fields: Box::new(vec![("value".to_string(), Value::String("hello".to_string()))]),
             }
         );
     }
@@ -1009,7 +1009,7 @@ mod tests {
             result,
             Value::Variant {
                 name: "Err".to_string(),
-                fields: vec![("error".to_string(), Value::String("not found".to_string()))],
+                fields: Box::new(vec![("error".to_string(), Value::String("not found".to_string()))]),
             }
         );
     }
@@ -1031,13 +1031,13 @@ mod tests {
             result,
             Value::Variant {
                 name: "Some".to_string(),
-                fields: vec![(
+                fields: Box::new(vec![(
                     "value".to_string(),
                     Value::Variant {
                         name: "Ok".to_string(),
-                        fields: vec![("value".to_string(), Value::Int(42))],
+                        fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
                     }
-                )],
+                )]),
             }
         );
     }
@@ -1056,7 +1056,7 @@ mod tests {
             result,
             Value::Variant {
                 name: "Some".to_string(),
-                fields: vec![("value".to_string(), Value::Int(100))],
+                fields: Box::new(vec![("value".to_string(), Value::Int(100))]),
             }
         );
     }
@@ -1091,10 +1091,10 @@ mod tests {
             result,
             Value::Variant {
                 name: "Point".to_string(),
-                fields: vec![
+                fields: Box::new(vec![
                     ("x".to_string(), Value::Int(3)),
                     ("y".to_string(), Value::Int(12)),
-                ],
+                ]),
             }
         );
     }
@@ -1119,11 +1119,11 @@ mod tests {
             result,
             Value::Variant {
                 name: "Person".to_string(),
-                fields: vec![
+                fields: Box::new(vec![
                     ("name".to_string(), Value::String("Alice".to_string())),
                     ("age".to_string(), Value::Int(30)),
                     ("active".to_string(), Value::Bool(true)),
-                ],
+                ]),
             }
         );
     }
@@ -1136,7 +1136,7 @@ mod tests {
             v,
             Value::Variant {
                 name: "Some".to_string(),
-                fields: vec![("value".to_string(), Value::Int(42))],
+                fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
             }
         );
 
@@ -1146,7 +1146,7 @@ mod tests {
             v,
             Value::Variant {
                 name: "None".to_string(),
-                fields: vec![],
+                fields: Box::new(vec![]),
             }
         );
     }
@@ -1182,7 +1182,7 @@ mod tests {
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
-            ]))),
+            ])))),
             arms,
         };
 
@@ -1210,7 +1210,7 @@ mod tests {
             scrutinee: Box::new(Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
-            ]))),
+            ])))),
             arms,
         };
 

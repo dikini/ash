@@ -1338,14 +1338,14 @@ mod tests {
         let mut valid_map = HashMap::new();
         valid_map.insert("id".to_string(), Value::Int(1));
         valid_map.insert("name".to_string(), Value::String("test".to_string()));
-        let valid_record = Value::Record(valid_map);
+        let valid_record = Value::Record(Box::new(valid_map));
         typed.send(valid_record).await.unwrap();
 
         // Invalid record - wrong field type
         let mut invalid_map = HashMap::new();
         invalid_map.insert("id".to_string(), Value::String("not an int".to_string()));
         invalid_map.insert("name".to_string(), Value::String("test".to_string()));
-        let invalid_record = Value::Record(invalid_map);
+        let invalid_record = Value::Record(Box::new(invalid_map));
         let result = typed.send(invalid_record).await;
         assert!(result.is_err());
     }

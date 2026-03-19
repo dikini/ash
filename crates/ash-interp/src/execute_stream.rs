@@ -267,7 +267,7 @@ fn matches_pattern_entry(entry: &MailboxEntry, pattern: &Pattern) -> bool {
             _ => false,
         },
         Pattern::Record(field_patterns) => match &entry.value {
-            Value::Record(Box::new(fields)) => field_patterns.iter().all(|(field_name, field_pattern)| {
+            Value::Record(fields) => field_patterns.iter().all(|(field_name, field_pattern)| {
                 match fields.get(field_name) {
                     Some(field_value) => match field_pattern {
                         Pattern::Literal(lit) => lit == field_value,

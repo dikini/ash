@@ -411,5 +411,52 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 116/116 tasks (100%)
-**Remaining Tasks**: 0 tasks
+## Phase 17: Algebraic Data Types (In Progress)
+
+See line 187 for Phase 17 details.
+
+## Phase 18: Lean Reference Interpreter (Complete)
+
+See worktree `.worktrees/task-138-ast-types/` for completed implementation.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-137](tasks/TASK-137-lean-setup.md) | Lean 4 toolchain and project setup | SPEC-021 | 4 | ✅ Complete |
+| [TASK-138](tasks/TASK-138-lean-ast-types.md) | AST type definitions | SPEC-021 | 16 | ✅ Complete |
+| [TASK-139](tasks/TASK-139-lean-environment.md) | Environment and effect tracking | SPEC-021 | 8 | ✅ Complete |
+| [TASK-140](tasks/TASK-140-lean-expression-eval.md) | Expression evaluation | SPEC-021 | 16 | ✅ Complete |
+| [TASK-141](tasks/TASK-141-lean-pattern-match.md) | Pattern matching engine | SPEC-021 | 16 | ✅ Complete |
+| [TASK-142](tasks/TASK-142-lean-match-expr.md) | Match expression evaluation | SPEC-021 | 12 | ✅ Complete |
+| [TASK-143](tasks/TASK-143-lean-if-let.md) | If-let expression | SPEC-021 | 6 | ✅ Complete |
+| [TASK-144](tasks/TASK-144-lean-json-serialization.md) | JSON serialization bridge | SPEC-021 | 12 | ✅ Complete |
+| [TASK-145](tasks/TASK-145-lean-differential-testing.md) | Differential testing harness | SPEC-021 | 16 | ✅ Complete |
+| [TASK-146](tasks/TASK-146-lean-property-tests.md) | Property-based tests | SPEC-021 | 8 | ✅ Complete |
+| [TASK-147](tasks/TASK-147-lean-ci-integration.md) | CI integration | SPEC-021 | 8 | ✅ Complete |
+| [TASK-148](tasks/TASK-148-lean-documentation.md) | Documentation and examples | SPEC-021 | 8 | ✅ Complete |
+
+**Phase 18 Deliverable**: Working differential testing between Lean reference and Rust implementation
+
+## Phase 19: Formal Proofs (Weeks 31-36)
+
+Formal mathematical proofs of correctness properties for the Lean Reference Interpreter.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-149](tasks/TASK-149-pattern-determinism-proof.md) | Pattern match determinism proof | SPEC-021 | 12 | 🟡 Ready |
+| [TASK-150](tasks/TASK-150-pattern-totality-proof.md) | Pattern match totality proof | SPEC-021 | 16 | 🟡 Ready |
+| [TASK-151](tasks/TASK-151-constructor-purity-proof.md) | Constructor purity proof | SPEC-021 | 8 | 🟡 Ready |
+| [TASK-152](tasks/TASK-152-evaluation-determinism-proof.md) | Evaluation determinism proof | SPEC-021 | 12 | 🟡 Ready |
+| [TASK-153](tasks/TASK-153-progress-theorem.md) | Progress theorem | SPEC-021 | 24 | 🟡 Ready |
+| [TASK-154](tasks/TASK-154-preservation-theorem.md) | Preservation theorem | SPEC-021 | 32 | 🟡 Ready |
+| [TASK-155](tasks/TASK-155-type-safety-corollary.md) | Type safety corollary | SPEC-021 | 8 | 🟡 Ready |
+
+**Phase 19 Deliverable**: Mathematical proofs of pattern determinism, evaluation determinism, and type safety
+
+**Phase 19 Status**: 0 of 7 tasks complete (0%)
+- 🟡 Wave 1: Pattern Proofs (TASK-149, TASK-150)
+- 🟡 Wave 2: Purity (TASK-151)
+- 🟡 Wave 3: Evaluation (TASK-152)
+- 🟡 Wave 4: Type Safety (TASK-153, TASK-154, TASK-155)
+
+**Overall Progress**: 123/130 tasks (95%)
+**Remaining Tasks**: 7 tasks (Phase 19)

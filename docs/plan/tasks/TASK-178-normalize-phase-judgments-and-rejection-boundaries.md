@@ -50,8 +50,8 @@ Expected failure conditions:
 Observed before implementation:
 - `SPEC-001`, `SPEC-003`, and `SPEC-004` described phase behavior, but parser, lowering, type, and
   runtime rejection ownership was still partly implicit.
-- the reference docs mixed canonical contracts with implementation commentary in the type-to-runtime
-  handoff.
+- the canonical reference docs still carried implementation-drift notes in their convergence-note
+  sections.
 
 ### Step 3: Implement the minimal spec/reference fix (Green)
 
@@ -69,7 +69,8 @@ Verified after implementation:
   acceptance.
 - `SPEC-003` now separates type-layer rejection from parser, lowering, and runtime failures.
 - `SPEC-004` now distinguishes runtime boundary failures from parser, lowering, and type failures.
-- the three reference docs now keep canonical contract text separate from convergence notes.
+- the canonical references now end at the contract/boundary split; implementation-drift notes live
+  in the task/planning docs instead.
 
 ### Step 5: Commit
 

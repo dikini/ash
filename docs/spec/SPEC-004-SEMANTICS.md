@@ -187,12 +187,14 @@ Runtime and evaluation reject:
 - obligation violations at `check` sites
 - guard failures at `act` sites
 - missing or unavailable runtime capabilities and providers
-- non-receivable mailbox states, timeouts, or scheduler outcomes that the runtime exposes as
-  execution failures
+- mailbox or provider failures that prevent a receive arm or action from completing at runtime
 - provider-level input/output mismatches that arise from actual runtime values
 
 These are runtime boundary failures. They are not parser or lowering failures, and they are not
 type-checking failures once the type layer has validated the relevant shapes.
+
+Timeout expiry and receive fallthrough remain normal control flow under the canonical `RECEIVE`
+contract; they are not runtime rejections by themselves.
 
 ### 4.5 Operational Layer
 

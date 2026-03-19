@@ -136,14 +136,3 @@ The following are not parser failures:
   `if let` branch compatibility
 - runtime or verification behavior for mailbox selection, policy evaluation, REPL display, or
   variant execution
-
-## Convergence Notes
-
-Current parser code still exposes legacy shapes that downstream tasks must remove:
-
-- `surface::Workflow::Decide` currently allows `policy: Option<Name>`, but this contract requires
-  the parsed stabilized `decide` form to carry an explicit named policy.
-- `surface::CheckTarget` currently includes `Policy(PolicyInstance)`, but this contract treats
-  policy-target `check` forms as parser-invalid for the stabilized language.
-
-Those mismatches are implementation debt, not alternate contract choices.

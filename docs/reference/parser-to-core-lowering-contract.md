@@ -99,9 +99,6 @@ Required lowering-time rejections include:
   receive patterns
 - policy bindings whose final `surface::PolicyExpr` is not closed enough to compile to one named
   `CorePolicy`
-- workflow-level `decide` bindings that lower to terminal decisions outside `{Permit, Deny}`
-- ADT constructor or variant-pattern forms that cannot be related to the canonical source enum
-  metadata
 
 Lowering rejection is appropriate when syntax is valid but the parsed surface tree cannot be
 translated into a canonical core form without inventing semantics.
@@ -135,18 +132,11 @@ Lowering may normalize:
 The following are not lowering failures:
 
 - type compatibility of `decide` subjects, `receive` guards, constructor fields, or `match` arms
+- workflow-level `decide` outcome-domain restrictions; those are enforced by the type layer after a
+  named policy binding is resolved
+- ADT constructor-to-variant and pattern-to-enum relation failures; those are enforced by the type
+  layer against the resolved enum metadata
 - exhaustiveness checking for `match`
 - runtime evaluation of `CorePolicy`
 - runtime mailbox polling or policy enforcement behavior
 - user-visible CLI or REPL output
-
-## Convergence Notes
-
-Current code paths that must not be treated as contract:
-
-- lowering `decide` with a fabricated `"default"` policy name
-- lowering `CheckTarget::Policy(_)` into a dummy obligation
-- lowering `receive` to `Done`
-- lowering `PolicyExpr` to debug strings instead of normalized core policy graphs
-
-These are temporary implementation shortcuts that downstream convergence tasks must replace.

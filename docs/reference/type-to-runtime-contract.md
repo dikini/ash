@@ -136,21 +136,3 @@ The type-to-runtime boundary for ADTs is:
 
 The runtime therefore consumes resolved enum metadata and variant names/fields, not ad hoc
 record-tag encodings as a contract surface.
-
-## Convergence Notes
-
-The following implementation surfaces are convergence notes, not alternate contracts:
-
-- `ash_typeck::TypeCheckResult`
-- `ash_typeck::effect::infer_effect`
-- `ash_typeck::runtime_verification::{VerificationResult, RuntimeContext, PolicyDecisionType}`
-- ADT metadata and checks in `ash_typeck::{type_env, check_pattern, exhaustiveness}`
-
-Current implementation gaps that must not be mistaken for contract:
-
-- `TypeCheckResult` currently does not surface the full set of inferred expression types needed by
-  REPL `:type` behavior.
-- runtime-verification code still uses legacy `PolicyDecisionType::RequiresApproval` naming while
-  the stabilized spec vocabulary prefers normalized `PolicyDecision`.
-- implementation APIs may store ADT approximations internally, but runtime-visible behavior must
-  still conform to the canonical enum metadata story.

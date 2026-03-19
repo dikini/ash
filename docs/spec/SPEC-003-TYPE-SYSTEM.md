@@ -26,6 +26,8 @@ compatibility. It does not own parser acceptance or runtime execution outcomes.
   assigned a valid type, effect, or obligation shape.
 - Runtime rejection belongs to SPEC-004 and the runtime-observable contract family.
 - Verification-time availability checks belong to runtime verification, not pure typing.
+- Workflow effect ceilings are compared by runtime verification after the type layer establishes
+  the workflow effect classification.
 
 ## 2. Type Judgment
 
@@ -156,7 +158,6 @@ Type checking rejects:
 - unknown ADT constructors or variant patterns
 - constructor field mismatches against resolved enum metadata
 - non-exhaustive ADT `match` where exhaustiveness is required by the contract
-- workflow effect requirements above the declared or verified maximum permitted effect
 
 These are type-layer boundary failures. They must not be deferred to runtime execution or treated
 as parser or lowering ambiguities.

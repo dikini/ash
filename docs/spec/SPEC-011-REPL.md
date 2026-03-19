@@ -10,13 +10,19 @@ The Ash REPL provides an interactive environment for:
 - Learning the language
 - Debugging with `:type` and `:ast` inspection
 
+This document specifies the session behavior of the REPL started through `ash repl`.
+There is one normative REPL authority: the CLI entrypoint defined in `SPEC-005`.
+Any standalone `ash-repl` binary is non-normative compatibility surface, not a second contract.
+
 ## 2. Interface
 
 ### 2.1 Starting the REPL
 
 ```bash
-$ ash repl           -- Start interactive session
-$ ash-repl           -- Standalone binary
+$ ash repl                    -- Start interactive session
+$ ash repl --history /tmp/h   -- Override history location
+$ ash repl --no-history       -- Disable persistent history
+$ ash repl --config repl.toml -- Override REPL config
 ```
 
 ### 2.2 Prompt
@@ -80,17 +86,21 @@ Commands start with `:`:
 | `:ast` | | Show AST representation |
 | `:clear` | | Clear screen |
 
+No other REPL commands are normative in this specification. Interactive effect inspection,
+DOT generation, workflow loading, and trace toggling are outside the REPL contract unless
+they are added here and in `SPEC-005`.
+
 ### 4.1 Type Inspection
 
 ```
 ash> :type 42
-Number
+Int
 
 ash> :type "hello"
 String
 
 ash> :type [1, 2, 3]
-List<Number>
+List<Int>
 ```
 
 ### 4.2 AST Inspection
@@ -99,8 +109,8 @@ List<Number>
 ash> :ast 1 + 2
 Binary {
     op: Add,
-    left: Literal(Number(1.0)),
-    right: Literal(Number(2.0)),
+    left: Literal(Int(1)),
+    right: Literal(Int(2)),
 }
 ```
 
@@ -119,7 +129,9 @@ Standard readline editing:
 
 - Up/Down arrows navigate history
 - History persists between sessions
-- Default location: `~/.local/share/ash-repl/history`
+- Default location: `~/.local/share/ash/repl/history`
+- `ash repl --history <file>` overrides the path for one session
+- `ash repl --no-history` disables both loading and saving history for one session
 
 ### 5.3 Tab Completion
 
@@ -156,7 +168,7 @@ Error: Type mismatch
   |
 1 | if true then 1 else "hello"
   |     ^^^^     ^     ^^^^^^^
-  |     Number   |     String
+  |     Int      |     String
   |              expected same type in both branches
 ```
 
@@ -172,13 +184,16 @@ Error: File not found: nonexistent.txt
 ### 7.1 Command Line Options
 
 ```bash
-$ ash-repl --help
-ash-repl [OPTIONS]
+$ ash repl --help
+ash repl [OPTIONS]
 
 Options:
-  --history          Show history file location and exit
-  --no-history       Don't load or save history
+  --history <PATH>   Override history file location
+  --no-history       Disable history load/save
   --config <PATH>    Use custom config file
+  --init <PATH>      Run startup commands before the first prompt
+  --capability <name=uri>
+                     Provide default capability bindings for the session
   -h, --help         Print help
 ```
 
@@ -222,6 +237,16 @@ Multiline input is detected by parse errors:
 - `Incomplete` → continue reading
 - `Error` → report error immediately
 
+## 8.3 Observable Output Contract
+
+- `:help` must list the canonical commands in Section 4 and any documented aliases.
+- `:type` must print canonical Ash type names from `SPEC-003`, such as `Int`, `String`,
+  and `List<Int>`.
+- `:ast` must print a structural AST view suitable for human inspection. Exact whitespace
+  and debug-style formatting are implementation-defined.
+- Evaluation results may be printed for convenience, but value formatting is not further
+  constrained by this specification unless another CLI contract makes it normative.
+
 ## 9. Security Considerations
 
 ### 9.1 Capability Restrictions
@@ -229,8 +254,8 @@ Multiline input is detected by parse errors:
 REPL runs with full capabilities by default. Future versions may support restricted modes:
 
 ```bash
-$ ash-repl --sandbox  -- No file system access
-$ ash-repl --no-net   -- No network access
+$ ash repl --sandbox  -- No file system access
+$ ash repl --no-net   -- No network access
 ```
 
 ### 9.2 History Privacy

@@ -13,6 +13,11 @@ Output capabilities are the duals to input capabilities:
 
 This enables workflows to affect the external world, not just observe it.
 
+This specification governs workflow-level external outputs: `set` for behaviours and
+`send` for streams. It does not define CLI diagnostics, REPL display text, help rendering,
+or other developer-tool output. Those user-interface outputs are specified by `SPEC-005`
+and `SPEC-011`.
+
 ## 2. Set (Output Behaviours)
 
 ### 2.1 Concept

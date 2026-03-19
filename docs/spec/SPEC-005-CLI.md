@@ -176,26 +176,52 @@ Start an interactive REPL for Ash.
 ash repl [options]
 ```
 
+`ash repl` is the only normative user-facing entrypoint for interactive Ash sessions.
+`SPEC-011` defines the session semantics, command set, and display behavior for the REPL
+started by this CLI command. Any standalone `ash-repl` binary is an implementation detail
+or compatibility shim, not a second product contract.
+
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `--history <file>` | History file path |
+| `--history <file>` | Override the history file path |
+| `--no-history` | Disable history load/save for this session |
 | `--init <file>` | Startup script |
-| `--capability <name=uri>` | Default capability bindings |
+| `--config <file>` | Override the REPL config file path |
+| `--capability <name=uri>` | Default capability bindings passed into the REPL session |
 
 **REPL Commands:**
 
 | Command | Description |
 |---------|-------------|
-| `:help` | Show help |
-| `:quit` | Exit REPL |
-| `:type <expr>` | Show type of expression |
-| `:effect <expr>` | Show effect level |
-| `:parse <code>` | Show AST |
-| `:dot <code>` | Generate DOT visualization |
-| `:load <file>` | Load workflow file |
-| `:trace` | Toggle tracing |
+| `:help` / `:h` | Show help |
+| `:quit` / `:q` | Exit REPL |
+| `:type` / `:t` `<expr>` | Show the canonical Ash type of an expression |
+| `:ast <expr>` | Show the parsed AST representation of an expression |
+| `:clear` | Clear the interactive screen |
+
+The REPL command surface is intentionally limited to interactive inspection commands.
+Workflow visualization remains the responsibility of `ash dot`, and provenance/trace
+capture remains the responsibility of `ash trace`.
+
+**History and Config Behavior:**
+
+- History is persisted between sessions by default.
+- The default history location and optional config file shape are defined by `SPEC-011`.
+- `--history <file>` overrides the history path for one session.
+- `--no-history` disables both history loading and history saving for one session.
+- `--config <file>` overrides the REPL config file path for one session.
+- `--init <file>` runs startup commands after configuration is loaded and before the first prompt.
+
+**Observable Output Requirements:**
+
+- `:help` prints the supported REPL commands and any active aliases.
+- `:type` prints a canonical Ash type name using the type vocabulary from `SPEC-003`.
+- `:ast` prints a structural AST view intended for inspection, not a stability-guaranteed
+  serialization format.
+- Successful evaluation may print values, but formatting details remain implementation-defined
+  unless another CLI option or spec section makes them normative.
 
 **Example Session:**
 
@@ -204,21 +230,14 @@ $ ash repl
 Ash 0.1.0 REPL
 Type :help for help, :quit to exit
 
-ash> observe capability "sensor" as data
-Effect: Epistemic
-Type: Value
+ash> :type 42
+Int
 
-ash> :type data
-Value
-
-ash> :effect data
-Epistemic
-
-ash> :dot decide { data.temperature > 20 }
-digraph Workflow {
-  node_0 [label="DECIDE", shape=diamond, fillcolor="lightsalmon"];
-  node_1 [label="expr", shape=ellipse, fillcolor="white"];
-  node_0 -> node_1 [label="guard"];
+ash> :ast 1 + 2
+Binary {
+  op: Add,
+  left: Literal(Int(1)),
+  right: Literal(Int(2)),
 }
 
 ash> :quit

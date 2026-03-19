@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Canonicalized the REPL and CLI contract across SPEC-005, SPEC-011, and SPEC-016 (TASK-159). `ash repl` is now the sole normative REPL entrypoint, the REPL command set is limited to `:help`, `:quit`, `:type`, `:ast`, and `:clear`, and REPL display output is explicitly separated from workflow output capabilities.
 - Canonicalized the stream and runtime-verification contract across SPEC-004, SPEC-013, SPEC-014, SPEC-017, and SPEC-018 (TASK-158). `receive` modes, control-arm behavior, declaration requirements, runtime-context responsibilities, and verification outcomes now share one end-to-end contract.
 - Canonicalized the policy contract across SPEC-003, SPEC-004, SPEC-006, SPEC-007, SPEC-008, SPEC-017, and SPEC-018 (TASK-157). Policies now have one continuous story from named declaration and combinator expression through lowered core policy representation, type-checking constraints, and runtime `PolicyDecision` outcomes.
 

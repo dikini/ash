@@ -1,6 +1,6 @@
 # TASK-159: Canonicalize REPL and CLI Contracts
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -91,12 +91,12 @@ git commit -m "docs: canonicalize repl and cli contracts"
 
 ## Completion Checklist
 
-- [ ] canonical command set defined
-- [ ] CLI/REPL authority split defined
-- [ ] history/config behavior defined
-- [ ] type/output behavior defined
-- [ ] contradictory wording removed or superseded
-- [ ] `CHANGELOG.md` updated
+- [x] canonical command set defined
+- [x] CLI/REPL authority split defined
+- [x] history/config behavior defined
+- [x] type/output behavior defined
+- [x] contradictory wording removed or superseded
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

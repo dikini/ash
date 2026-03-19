@@ -84,7 +84,7 @@ workflow-level core form.
 | `surface::Expr::Constructor { name, fields, .. }` | core constructor expression preserving constructor name plus lowered named fields | Constructor resolution happens against the canonical enum metadata. |
 | `surface::Pattern::Variant { name, fields }` | core variant pattern preserving constructor name plus lowered field patterns | No synthetic `__variant` tags are introduced at the contract level. |
 | `surface::Expr::Match { scrutinee, arms, .. }` | core `Expr::Match` with lowered scrutinee, patterns, and bodies | Arm order is preserved. |
-| `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | either preserved as core `Expr::IfLet` or desugared into an equivalent core `Match` with wildcard fallback | Either choice is valid if semantics are preserved exactly. |
+| `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | core `Expr::Match` with the pattern lowered as the first arm and the `else_branch` lowered as the wildcard fallback arm | `if let` has no separate canonical runtime form. |
 
 ## Lowering-Time Rejections
 
@@ -117,7 +117,7 @@ Lowering may normalize:
 
 - policy combinator trees into one `PolicyGraph`
 - source type declarations into internal metadata derived from canonical `TypeDef`
-- `if let` into equivalent `match` when branch semantics are unchanged
+- `if let` into canonical `match` with a wildcard fallback arm
 
 ## Lowering vs Later-Phase Boundary
 

@@ -241,6 +241,9 @@ as parser or lowering ambiguities.
 Constructor typing, variant-pattern typing, and exhaustiveness analysis all operate over the
 same resolved enum definition derived from the source `TypeDef`.
 
+`if let` is typed as the same pattern-matching shape as the corresponding `match` with a wildcard
+fallback branch; it does not introduce a separate ADT typing rule.
+
 - A constructor expression such as `Some { value: 42 }` has the instantiated parent enum type.
 - A variant pattern such as `Some { value: x }` is typed against that same enum definition and
   binds fields using the declared field types.

@@ -125,6 +125,8 @@ The stdlib-visible ADT surface relies on these runtime guarantees:
 - `Option<T>` values are represented by `Some { value: ... }` and `None`
 - `Result<T, E>` values are represented by `Ok { value: ... }` and `Err { error: ... }`
 - `match` and `if let` consume those constructor-shaped runtime values consistently
+- `if let` is observable as a `match` with an explicit wildcard fallback branch; it does not add
+  a separate no-match failure mode
 - `unwrap`, `unwrap_or`, `map`, `and`, `or`, `ok_or`, `map_err`, `and_then`, `ok`, and `err`
   operate over that constructor-shaped runtime behavior
 - `split`/control-link examples relying on `Option<ControlLink>` observe `Some { value: link }`

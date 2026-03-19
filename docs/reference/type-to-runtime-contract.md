@@ -147,5 +147,8 @@ The type-to-runtime boundary for ADTs is:
 4. exhaustiveness reasoning is done over constructors of the resolved enum type, not synthetic
    tags.
 
+`if let` is typed and lowered as the same match construct with a wildcard fallback branch; it does
+not introduce a separate runtime path or separate recoverable-failure semantics.
+
 The runtime therefore consumes resolved enum metadata and variant names/fields, not ad hoc
 record-tag encodings as a contract surface.

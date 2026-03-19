@@ -167,6 +167,10 @@ match opt {
 }
 ```
 
+`if let` is not a separate semantic family. It always lowers to a canonical `match` with an
+explicit wildcard fallback arm, so typing, lowering, execution, and observable behavior all share
+the same match semantics.
+
 ## 6. Type Checking
 
 ### 6.1 Constructor Typing

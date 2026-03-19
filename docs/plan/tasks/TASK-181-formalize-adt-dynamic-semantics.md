@@ -1,6 +1,6 @@
 # TASK-181: Formalize ADT Dynamic Semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -23,6 +23,25 @@ implementations without local semantic choice.
 3. Define `if let` dynamic behavior precisely
 4. Keep ADT semantics aligned with the canonical source enum model
 5. Assume recoverable failure is represented with explicit `Result` values, not `catch`
+
+## TDD Evidence
+
+### Red
+
+Before this change, ADT semantics still left constructor evaluation, runtime variant shape,
+match/no-match behavior, and `if let` lowering open to prose interpretation across the core,
+lowering, and runtime-observable docs.
+
+### Green
+
+The canonical ADT story is now explicit:
+
+- constructor evaluation yields constructor-shaped runtime `Variant` values with named fields
+- variant runtime values do not carry synthetic tags or enclosing type names
+- `Match` selects the first arm whose pattern and guard succeed; no-match is an observable pattern
+  failure for `match`
+- `if let` always lowers to canonical `match` with an explicit wildcard fallback arm
+- `Result<T, E>` remains the canonical recoverable-failure mechanism
 
 ## Files
 
@@ -68,10 +87,10 @@ git commit -m "docs: formalize adt dynamic semantics"
 
 ## Completion Checklist
 
-- [ ] constructor/runtime value semantics documented
-- [ ] pattern and `if let` dynamic semantics documented
-- [ ] ADT runtime/source-model alignment documented
-- [ ] `CHANGELOG.md` updated
+- [x] constructor/runtime value semantics documented
+- [x] pattern and `if let` dynamic semantics documented
+- [x] ADT runtime/source-model alignment documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

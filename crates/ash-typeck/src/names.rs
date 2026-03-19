@@ -408,6 +408,30 @@ impl NameResolver {
             Expr::Policy(policy_expr) => {
                 self.resolve_policy_expr(policy_expr);
             }
+
+            Expr::IfLet {
+                expr,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.resolve_expr(expr);
+                self.resolve_expr(then_branch);
+                self.resolve_expr(else_branch);
+            }
+
+            Expr::Match { scrutinee, arms, .. } => {
+                self.resolve_expr(scrutinee);
+                for arm in arms {
+                    self.resolve_expr(&arm.body);
+                }
+            }
+
+            Expr::Constructor { fields, .. } => {
+                for (_, expr) in fields {
+                    self.resolve_expr(expr);
+                }
+            }
         }
     }
 
@@ -490,6 +514,14 @@ impl NameResolver {
 
             Pattern::Literal(_) => {
                 // Nothing to bind
+            }
+
+            Pattern::Variant { fields, .. } => {
+                if let Some(fields) = fields {
+                    for (_, pat) in fields {
+                        self.bind_pattern(pat);
+                    }
+                }
             }
         }
     }

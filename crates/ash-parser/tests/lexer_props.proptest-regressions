@@ -12,3 +12,4 @@ cc e6b9c25d1065913ce2fb09c6043e3678451a84737bc4cf5b5ce07a8ece93e25b # shrinks to
 cc ea4be507f0d9f0e3e11eb65d3b589ea22c1144687e2ead23e995cfea71b8d188 # shrinks to bytes = [0, 0, 0, 0, 0, 0, 34, 128, 34]
 cc 7183a0af40e8216a5467fc1ed300550a9823c10a1aaae04987be81c1e7cab405 # shrinks to content = "a", after = "in"
 cc ab1489a96b4bc2b6718869699527b8706aea05f75c0fac8e4d71a9d1ab189dff # shrinks to before = "a", comment = "", after = "if"
+cc 261c6a3aece4d90e76d8ea9ca7139f30e742e2f44ead57387aa1a7b12cf8e54e # shrinks to prefix = "do", invalid = "^", suffix = "a"

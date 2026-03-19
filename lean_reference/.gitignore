@@ -1,0 +1,19 @@
+# Lean build artifacts
+/build
+/.lake
+/lake-packages
+*.olean
+
+# Editor files
+.DS_Store
+*~
+*.swp
+*.swo
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Temporary files
+*.tmp
+*.log

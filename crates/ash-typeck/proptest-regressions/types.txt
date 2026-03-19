@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc aab5f351739ae1250fe2c9723307e8700c7c1ec68f909536538a721400752795 # shrinks to ctor = Constructor { name: "a", args: [Var(TypeVar(0))] }
+cc 87082765ae31262c8ded09b182078763c453d1d21ad43da51aef14c73eb51f05 # shrinks to struct_type = Struct { name: "A", type_params: [], fields: [] }
+cc 4634fb8987c4e9aad27b915c9f73de2342f4e06e1ed9763599491b06c644c637 # shrinks to sum_type = Sum { name: "A", type_params: [], variants: [Variant { name: "a", fields: [] }] }

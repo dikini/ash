@@ -320,6 +320,27 @@ pub fn lower_expr(expr: &Expr) -> CoreExpr {
         },
 
         Expr::Policy(policy_expr) => lower_policy_expr(policy_expr),
+
+        Expr::IfLet {
+            pattern,
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => CoreExpr::IfLet {
+            pattern: lower_pattern(pattern),
+            expr: Box::new(lower_expr(expr)),
+            then_branch: Box::new(lower_expr(then_branch)),
+            else_branch: Box::new(lower_expr(else_branch)),
+        },
+
+        Expr::Constructor { name, fields, .. } => CoreExpr::Constructor {
+            name: name.to_string(),
+            fields: fields
+                .iter()
+                .map(|(n, e)| (n.to_string(), lower_expr(e)))
+                .collect(),
+        },
     }
 }
 

@@ -398,6 +398,29 @@ pub enum Expr {
     },
     /// Policy expression
     Policy(PolicyExpr),
+    /// If-let expression: if let pattern = expr then expr else expr
+    IfLet {
+        /// Pattern to match against
+        pattern: Pattern,
+        /// Expression to match
+        expr: Box<Expr>,
+        /// Branch taken when pattern matches
+        then_branch: Box<Expr>,
+        /// Branch taken when pattern doesn't match
+        else_branch: Box<Expr>,
+        /// Source span
+        span: Span,
+    },
+
+    /// Constructor expression: Some { value: 42 }
+    Constructor {
+        /// Constructor name
+        name: Name,
+        /// Field expressions
+        fields: Vec<(Name, Expr)>,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// A single arm in a match expression.
@@ -533,6 +556,8 @@ pub enum Pattern {
         /// Optional rest binding
         rest: Option<Name>,
     },
+    /// Literal pattern
+    Literal(Literal),
     /// Variant pattern: Some { value: x } or None
     Variant {
         /// Variant name (e.g., "Some", "None")
@@ -540,8 +565,6 @@ pub enum Pattern {
         /// Optional fields with patterns
         fields: Option<Vec<(Name, Pattern)>>,
     },
-    /// Literal pattern
-    Literal(Literal),
 }
 
 /// Literal values.
@@ -721,6 +744,8 @@ impl Spanned for Expr {
             Expr::Call { span, .. } => *span,
             Expr::Match { span, .. } => *span,
             Expr::Policy(policy_expr) => policy_expr.span(),
+            Expr::IfLet { span, .. } => *span,
+            Expr::Constructor { span, .. } => *span,
         }
     }
 }

@@ -610,33 +610,39 @@ pub enum CapabilityError {
 }
 ```
 
-### 8.2 Error Recovery
+### 8.2 Recoverable Handling
+
+Recoverable capability failures are represented explicitly as `Result` values and handled with
+`match`.
 
 ```ash
 workflow resilient 
     observes sensor:temperature
     sets hvac:target 
 {
-    attempt {
-        observe sensor:temperature as t
-    } retry 3 on InputTimeout {
-        sleep(100ms)
-    } on error {
-        act log::error("sensor unavailable");
-        send alert:critical "Sensor failure";
-        use default:emergency_shutdown
-    };
-    
-    attempt {
-        set hvac:target = calculate_target(t)
-    } retry 3 on Disconnected {
-        sleep(500ms)
-    } on BufferFull {
-        act log::warn("HVAC buffer full, dropping command");
-        continue
-    } on error {
-        act log::error("HVAC control failed");
-        send alert:critical "HVAC failure"
+    let reading = sensor_temperature_result();
+    match reading {
+        Ok { value: t } => {
+            let update = set_hvac_target_result(calculate_target(t));
+            match update {
+                Ok { value: _ } => done,
+                Err { error: Disconnected } => {
+                    sleep(500ms)
+                },
+                Err { error: _ } => {
+                    act log::error("HVAC control failed");
+                    send alert:critical "HVAC failure"
+                }
+            }
+        },
+        Err { error: InputTimeout } => {
+            sleep(100ms)
+        },
+        Err { error: _ } => {
+            act log::error("sensor unavailable");
+            send alert:critical "Sensor failure";
+            use default:emergency_shutdown
+        }
     }
 }
 ```

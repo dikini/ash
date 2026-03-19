@@ -28,6 +28,9 @@ ADTs solve these while maintaining type safety through exhaustiveness checking.
 3. **Compile-time safety**: Exhaustiveness checking prevents runtime errors
 4. **Ergonomics**: Good error messages, helpful type inference
 
+Recoverable error handling in the canonical language uses `Result<T, E>` together with pattern
+matching.
+
 ## 4. Type Definitions
 
 ### 4.1 Canonical Source Definition Model
@@ -401,6 +404,9 @@ pub fn ok_or<T, E>(opt: Option<T>, err: E) -> Result<T, E>;
 pub type Result<T, E> =
     | Ok { value: T }
     | Err { error: E };
+
+`Result<T, E>` is the canonical recoverable error-handling mechanism. Workflows and helper
+functions use `Ok` / `Err` values with `match` to handle recoverable failures explicitly.
 
 -- Predicates
 pub fn is_ok<T, E>(res: Result<T, E>) -> Bool;

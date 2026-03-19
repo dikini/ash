@@ -250,7 +250,7 @@ Update this section as tasks complete:
 | 20 | 5 | 5 | ✅ Complete |
 | 21 | 3 | 0 | 📝 Planned |
 | 22 | 2 | 0 | 📝 Planned |
-| 23 | 3 | 1 | 🟡 In Progress |
+| 23 | 4 | 3 | 🟡 In Progress |
 | 24 | 2 | 0 | 📝 Planned |
 | 25 | 1 | 0 | 📝 Planned |
 | 26 | 4 | 0 | 📝 Planned |
@@ -495,14 +495,17 @@ boundaries before Rust-alignment work resumes.
 ## Phase 23: Interaction Semantics Hardening (Week 40)
 
 Tighten the highest-risk dynamic language semantics that still permit local implementation choice.
+The canonical language no longer includes `attempt`/`catch`; recoverable failures are handled with
+explicit `Result` values and pattern matching.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-179](tasks/TASK-179-formalize-receive-mailbox-and-scheduling-semantics.md) | Formalize `receive` mailbox and scheduling semantics | SPEC-002/004/013/017 | 8 | ✅ Complete |
 | [TASK-180](tasks/TASK-180-formalize-policy-evaluation-and-verification-semantics.md) | Formalize policy evaluation and verification semantics | SPEC-003/004/006/007/008/017/018 | 8 | ✅ Complete |
+| [TASK-185](tasks/TASK-185-remove-catch-and-require-explicit-result-handling.md) | Remove `catch` and require explicit `Result` handling | SPEC-002/004/014/016/017/020 | 6 | ✅ Complete |
 | [TASK-181](tasks/TASK-181-formalize-adt-dynamic-semantics.md) | Formalize ADT dynamic semantics | SPEC-003/004/020 | 8 | 📝 Planned |
 
-**Phase 23 Deliverable**: Proof-shaped and implementation-shaped semantics for `receive`, policy evaluation, and ADTs
+**Phase 23 Deliverable**: Proof-shaped and implementation-shaped semantics for `receive`, policy evaluation, explicit `Result`-based recovery, and ADTs
 
 ## Phase 24: Observable and Formalization Contracts (Week 41)
 

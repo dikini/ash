@@ -19,7 +19,7 @@ KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
               | "oblige" | "check" | "let" | "in" | "if" | "then" | "else"
               | "for" | "do" | "par" | "with" | "maybe" | "must"
               | "wait" | "control"
-              | "attempt" | "retry" | "timeout" | "done"
+              | "timeout" | "done"
               | "epistemic" | "deliberative" | "evaluative" | "operational"
               | "authority" | "obligations" | "supervises"
               | "when" | "returns" | "where"
@@ -193,6 +193,8 @@ must_stmt       ::= "must" workflow
   behaviours, not write authority; write authority is declared separately with `sets` or `sends`.
 - `if let` is surface sugar only. It is accepted for readability, but its canonical meaning is the
   same as a `match` with a wildcard fallback in the core language contract.
+- Recoverable failures use explicit `Result` values and pattern matching for recoverable control
+  flow.
 - The current surface syntax does not yet standardize explicit `receive` scheduling syntax. Until
   it does, neighboring specs should use the terminology from
   [LANGUAGE-TERMINOLOGY](../design/LANGUAGE-TERMINOLOGY.md): the runtime implements a scheduler,

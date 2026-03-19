@@ -267,22 +267,15 @@ contract; they are not runtime rejections by themselves.
   Γ, C, Ω, π ⊢ LET pat = expr in cont ⇓ v', ε, T, π'
 ```
 
-### 4.7 Error Handling
+### 4.7 Recoverable Result Handling
 
-```
-(ATTEMPT-SUCCESS)
-  Γ, C, Ω, π ⊢ w1 ⇓ v, ε, T, π'
-  ─────────────────────────────────────────────────────────────────
-  Γ, C, Ω, π ⊢ ATTEMPT w1 catch w2 ⇓ v, ε, T, π'
+Recoverable failures are represented explicitly as `Result` values in the canonical language.
+Workflows handle recoverable failures by pattern matching on `Ok` / `Err` values, and the meaning
+of that matching is given by the ADT `Match` semantics in SPEC-020 and the core `Match` rules in
+this document.
 
-(ATTEMPT-CATCH)
-  Γ, C, Ω, π ⊢ w1 ⇓ ⊥, ε, T, π, error:e
-  Γ, C, Ω, π ⊢ w2 ⇓ v, ε', T', π'
-  ─────────────────────────────────────────────────────────────────
-  Γ, C, Ω, π ⊢ ATTEMPT w1 catch w2 ⇓ v,
-               ε⊔ε',
-               T ++ [Catch(e, now())] ++ T',
-               π'
+Examples of recoverable handling are therefore written as explicit `Result` construction and
+`Match`.
 
 ### 4.8 Match and Constructor Semantics
 
@@ -298,7 +291,7 @@ pattern-match error; well-typed exhaustive matches are guaranteed by the ADT typ
 SPEC-020, but the operational rule here is the meaning of the core form itself.
 
 The `if let` note below is only about expression-level sugar for this `Match` form; it does not
-change workflow-form semantics.
+change workflow-form semantics or introduce a separate recoverable-failure mechanism.
 
 ### 4.9 Expression-Level Surface Convenience Notes
 

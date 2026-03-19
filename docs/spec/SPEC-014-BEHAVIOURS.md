@@ -287,18 +287,25 @@ impl BehaviourProvider for AgentEnvironmentProvider {
 }
 ```
 
-## 10. Error Handling
+## 10. Recoverable Handling
+
+Recoverable behaviour-provider failures are represented explicitly as `Result` values and handled
+with `match`.
 
 ### 10.1 Unavailable Behaviour
 
 ```
 workflow resilient {
-    attempt {
-        observe sensor:temperature as temp;
-        act process(temp)
-    } retry 3 timeout 5s on error {
-        act log::error("sensor unavailable");
-        act use::default_value(25)
+    let reading = sample_temperature_result();
+    match reading {
+        Ok { value: temp } => {
+            observe sensor:temperature as temp;
+            act process(temp)
+        },
+        Err { error: _ } => {
+            act log::error("sensor unavailable");
+            act use::default_value(25)
+        }
     }
 }
 ```
@@ -307,11 +314,15 @@ workflow resilient {
 
 ```
 workflow fresh_only {
-    attempt {
-        observe cache:data where max_age = "1s" as data;
-        act process(data)
-    } on error {
-        act fetch::fresh_data()
+    let reading = read_cache_result();
+    match reading {
+        Ok { value: data } => {
+            observe cache:data where max_age = "1s" as data;
+            act process(data)
+        },
+        Err { error: _ } => {
+            act fetch::fresh_data()
+        }
     }
 }
 ```

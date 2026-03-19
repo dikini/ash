@@ -259,17 +259,23 @@ pub enum SendError {
 }
 ```
 
-### 7.3 Workflow Error Handling
+### 7.3 Workflow Recoverable Handling
+
+Recoverable output failures are represented explicitly as `Result` values and handled with
+`match`.
 
 ```ash
 workflow resilient_sends {
-    attempt {
-        send kafka:orders order
-    } retry 3 on SendError::BufferFull {
-        sleep(100ms)  -- Back off
-    } on error {
-        act log::error("failed to send order");
-        send dlq:failed_orders { original: order, error: "send_failed" }
+    let result = send_order_result(order);
+    match result {
+        Ok { value: _ } => done,
+        Err { error: SendError::BufferFull } => {
+            sleep(100ms)  -- Back off
+        },
+        Err { error: _ } => {
+            act log::error("failed to send order");
+            send dlq:failed_orders { original: order, error: "send_failed" }
+        }
     }
 }
 ```

@@ -52,6 +52,8 @@ pub struct VariantDef {
 pub enum Visibility {
     /// Public visibility (accessible from anywhere)
     Public,
+    /// Crate visibility (accessible within the crate)
+    Crate,
     /// Private visibility (accessible only within the module)
     Private,
 }
@@ -126,7 +128,7 @@ pub fn parse_type_def(input: &mut ParseInput) -> ModalResult<TypeDef> {
     })
 }
 
-/// Parse visibility modifier (pub or private).
+/// Parse visibility modifier (pub, pub(crate), or private).
 ///
 /// Returns `Visibility::Private` if no visibility modifier is present.
 fn parse_visibility(input: &mut ParseInput) -> ModalResult<Visibility> {
@@ -134,6 +136,18 @@ fn parse_visibility(input: &mut ParseInput) -> ModalResult<Visibility> {
 
     // Try to match "pub" keyword
     if keyword(input, "pub").is_ok() {
+        skip_whitespace_and_comments(input);
+        // Check for pub(crate) syntax
+        if literal_str("(").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            if keyword(input, "crate").is_ok() {
+                skip_whitespace_and_comments(input);
+                let _ = literal_str(")").parse_next(input);
+                return Ok(Visibility::Crate);
+            }
+            // If not "crate", backtrack and treat as public
+            return Ok(Visibility::Public);
+        }
         Ok(Visibility::Public)
     } else {
         Ok(Visibility::Private)
@@ -146,7 +160,11 @@ fn parse_type_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)?;
 
     // Check that first character is uppercase
-    if name.is_empty() || !name.chars().next().unwrap().is_ascii_uppercase() {
+    if !name
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+    {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
@@ -195,7 +213,11 @@ fn parse_type_var<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)?;
 
     // Check that first character is uppercase
-    if name.is_empty() || !name.chars().next().unwrap().is_ascii_uppercase() {
+    if !name
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+    {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));

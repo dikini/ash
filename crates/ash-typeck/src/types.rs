@@ -32,6 +32,15 @@ pub enum Type {
     Fun(Vec<Type>, Box<Type>, Effect),
     /// Type variable
     Var(TypeVar),
+
+    /// Instance type (composite of addr + control link)
+    Instance { workflow_type: Box<str> },
+
+    /// Opaque instance address
+    InstanceAddr { workflow_type: Box<str> },
+
+    /// Control link (affine - must be used exactly once)
+    ControlLink { workflow_type: Box<str> },
 }
 
 /// Type variable identifier
@@ -186,6 +195,9 @@ impl std::fmt::Display for Type {
                 write!(f, ") -> {} [{:?}]", ret, effect)
             }
             Type::Var(v) => write!(f, "Var<{}>", v.0),
+            Type::Instance { workflow_type } => write!(f, "Instance<{}>", workflow_type),
+            Type::InstanceAddr { workflow_type } => write!(f, "InstanceAddr<{}>", workflow_type),
+            Type::ControlLink { workflow_type } => write!(f, "ControlLink<{}>", workflow_type),
         }
     }
 }
@@ -347,7 +359,10 @@ pub fn occurs_in(var: TypeVar, ty: &Type) -> bool {
         | Type::Bool
         | Type::Null
         | Type::Time
-        | Type::Ref => false,
+        | Type::Ref
+        | Type::Instance { .. }
+        | Type::InstanceAddr { .. }
+        | Type::ControlLink { .. } => false,
     }
 }
 
@@ -987,5 +1002,43 @@ mod tests {
             .to_string(),
             "{x: Int, y: String}"
         );
+    }
+
+    // ============================================================
+    // TASK-120: AST Extensions for ADTs - Type System Compilation Tests
+    // These tests verify that the new Type variants exist and can be
+    // constructed. They will fail to compile until implemented.
+    // ============================================================
+
+    #[test]
+    fn test_type_instance_exists() {
+        // Type::Instance should exist and take a workflow_type: Box<str>
+        let _instance = Type::Instance {
+            workflow_type: Box::from("MyClass"),
+        };
+
+        let _instance_no_args = Type::Instance {
+            workflow_type: Box::from("Singleton"),
+        };
+    }
+
+    #[test]
+    fn test_type_instance_addr_exists() {
+        // Type::InstanceAddr should exist and take a workflow_type: Box<str>
+        let _addr = Type::InstanceAddr {
+            workflow_type: Box::from("MyClass"),
+        };
+    }
+
+    #[test]
+    fn test_type_control_link_exists() {
+        // Type::ControlLink should exist and take a workflow_type: Box<str>
+        let _link = Type::ControlLink {
+            workflow_type: Box::from("MyClass"),
+        };
+
+        let _link_complex = Type::ControlLink {
+            workflow_type: Box::from("ControllerView"),
+        };
     }
 }

@@ -7,6 +7,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- AST Extensions for Algebraic Data Types (TASK-120). Foundation for Phase 17 ADT implementation:
+  - `Pattern::Variant` for enum variant pattern matching
+  - `Expr::Constructor` for ADT value construction
+  - `Expr::Match` for pattern matching expressions
+  - `Expr::IfLet` for if-let syntactic sugar
+  - `MatchArm` struct representing match arms
+  - `TypeDef`, `TypeBody`, `VariantDef` for type definitions
+  - `Visibility` enum for visibility modifiers (pub, crate, private)
+  - `TypeExpr` for surface syntax type expressions
+  - `Type::Instance`, `Type::InstanceAddr`, `Type::ControlLink` for spawn/control link support
 - Stream iteration over registered streams. Added `StreamRegistry::iter()` method to iterate over all registered providers, `StreamContext::iter_providers()` to iterate over typed providers, and `StreamContext::try_recv_any()` to receive from any available stream (non-blocking). Updated `wait_for_message()` in `execute_stream.rs` to poll all registered streams using `try_recv_any()` instead of busy-waiting.
 
 ### Fixed

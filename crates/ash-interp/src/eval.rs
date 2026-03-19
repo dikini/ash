@@ -112,6 +112,29 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 .collect::<Result<Vec<_>, _>>()?;
             eval_function_call(func, &args)
         }
+
+        Expr::Constructor { name, fields } => {
+            // TODO: Implement constructor evaluation in TASK-131
+            Err(EvalError::NotImplemented(format!(
+                "Constructor {} not yet implemented",
+                name
+            )))
+        }
+
+        Expr::Match { scrutinee, arms } => {
+            // TODO: Implement match evaluation in TASK-133
+            Err(EvalError::NotImplemented(format!(
+                "Match expression with {} arms not yet implemented",
+                arms.len()
+            )))
+        }
+
+        Expr::IfLet { pattern, expr, then_branch, else_branch } => {
+            // TODO: Implement if-let evaluation in TASK-133
+            Err(EvalError::NotImplemented(
+                "If-let expression not yet implemented".to_string()
+            ))
+        }
     }
 }
 

@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 /// A workflow name
 pub type Name = String;
 
+/// Type variable for generic types
+pub type TypeVar = String;
+
 /// Core workflow AST
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Workflow {
@@ -123,6 +126,12 @@ pub enum Pattern {
     List(Vec<Pattern>, Option<Name>), // [a, b, ..rest] - prefix patterns with optional rest
     Wildcard,
     Literal(Value),
+
+    /// Variant pattern: Some { value: x } or just Some (unit variant)
+    Variant {
+        name: Name,
+        fields: Option<Vec<(Name, Pattern)>>,
+    },
 }
 
 impl Pattern {
@@ -165,6 +174,13 @@ impl Pattern {
             Pattern::Wildcard | Pattern::Literal(_) => {
                 // No bindings
             }
+            Pattern::Variant { fields, .. } => {
+                if let Some(fields) = fields {
+                    for (_, p) in fields {
+                        p.collect_bindings(result);
+                    }
+                }
+            }
         }
     }
 
@@ -177,6 +193,7 @@ impl Pattern {
             Pattern::Tuple(_) | Pattern::Record(_) | Pattern::List(_, _) | Pattern::Literal(_) => {
                 true
             }
+            Pattern::Variant { .. } => true,
         }
     }
 }
@@ -225,6 +242,26 @@ pub enum Expr {
         func: Name,
         arguments: Vec<Expr>,
     },
+
+    /// Constructor expression: Some { value: 42 }
+    Constructor {
+        name: Name,
+        fields: Vec<(Name, Expr)>,
+    },
+
+    /// Match expression
+    Match {
+        scrutinee: Box<Expr>,
+        arms: Vec<MatchArm>,
+    },
+
+    /// If-let expression (sugar for match)
+    IfLet {
+        pattern: Pattern,
+        expr: Box<Expr>,
+        then_branch: Box<Expr>,
+        else_branch: Box<Expr>,
+    },
 }
 
 /// Unary operators
@@ -250,6 +287,13 @@ pub enum BinaryOp {
     Le,
     Ge,
     In,
+}
+
+/// Match arm: pattern => expression
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MatchArm {
+    pub pattern: Pattern,
+    pub body: Expr,
 }
 
 /// Constraint on capabilities
@@ -302,6 +346,72 @@ pub struct Role {
     pub authority: Vec<Capability>,
     pub obligations: Vec<Obligation>,
     pub supervises: Vec<Role>,
+}
+
+/// Type definition in source code
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeDef {
+    /// Name of the type being defined
+    pub name: Name,
+    /// Type parameters for generic types
+    pub params: Vec<TypeVar>,
+    /// Body of the type definition
+    pub body: TypeBody,
+    /// Visibility of the type
+    pub visibility: Visibility,
+}
+
+/// Body of a type definition
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TypeBody {
+    /// type Point = { x: Int, y: Int }
+    Struct(Vec<(Name, TypeExpr)>),
+    /// type Status = Pending | Processing { ... }
+    Enum(Vec<VariantDef>),
+    /// type Name = String
+    Alias(TypeExpr),
+}
+
+/// Variant definition for enums
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VariantDef {
+    /// Name of the variant
+    pub name: Name,
+    /// Fields of the variant (name, type pairs)
+    pub fields: Vec<(Name, TypeExpr)>,
+}
+
+/// Visibility modifier
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum Visibility {
+    /// Public visibility (accessible from anywhere)
+    Public,
+    /// Crate visibility (accessible within the crate)
+    Crate,
+    /// Private visibility (accessible only within the module)
+    Private,
+}
+
+/// Surface syntax type expression (to be resolved)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TypeExpr {
+    /// Named type (e.g., Int, String, MyType)
+    Named(Name),
+    /// Type constructor application (e.g., Option<Int>)
+    Constructor { name: Name, args: Vec<TypeExpr> },
+    /// Tuple type (e.g., (Int, String))
+    Tuple(Vec<TypeExpr>),
+    /// Record type (e.g., { x: Int, y: String })
+    Record(Vec<(Name, TypeExpr)>),
+}
+
+/// Top-level definition
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Definition {
+    /// Workflow definition
+    Workflow(Workflow),
+    /// Type definition
+    TypeDef(TypeDef),
 }
 
 #[cfg(test)]
@@ -584,5 +694,219 @@ mod tests {
         let json = serde_json::to_string(&observe).unwrap();
         let recovered: Workflow = serde_json::from_str(&json).unwrap();
         assert_eq!(observe, recovered);
+    }
+
+    // ============================================================
+    // TASK-120: AST Extensions for ADTs - Compilation Tests
+    // These tests verify that the new ADT-related types exist
+    // and can be constructed. They will fail to compile until
+    // the types are implemented.
+    // ============================================================
+
+    #[test]
+    fn test_pattern_variant_exists() {
+        // Pattern::Variant should exist with name and optional fields
+        let _variant_without_fields = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: None,
+        };
+
+        let _variant_with_fields = Pattern::Variant {
+            name: "Point".to_string(),
+            fields: Some(vec![
+                ("x".to_string(), Pattern::Variable("x".to_string())),
+                ("y".to_string(), Pattern::Variable("y".to_string())),
+            ]),
+        };
+    }
+
+    #[test]
+    fn test_expr_constructor_exists() {
+        // Expr::Constructor should exist with name and fields
+        let _constructor_without_fields = Expr::Constructor {
+            name: "None".to_string(),
+            fields: vec![],
+        };
+
+        let _constructor_with_fields = Expr::Constructor {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Expr::Literal(Value::Int(42)))],
+        };
+
+        let _constructor_multiple_fields = Expr::Constructor {
+            name: "Point".to_string(),
+            fields: vec![
+                ("x".to_string(), Expr::Literal(Value::Int(0))),
+                ("y".to_string(), Expr::Literal(Value::Int(0))),
+            ],
+        };
+    }
+
+    #[test]
+    fn test_match_arm_struct_exists() {
+        // MatchArm struct should exist with pattern and body
+        let _arm = MatchArm {
+            pattern: Pattern::Variable("x".to_string()),
+            body: Expr::Literal(Value::Int(42)),
+        };
+
+        let _arm_with_variant = MatchArm {
+            pattern: Pattern::Variant {
+                name: "Some".to_string(),
+                fields: Some(vec![(
+                    "value".to_string(),
+                    Pattern::Variable("v".to_string()),
+                )]),
+            },
+            body: Expr::Variable("v".to_string()),
+        };
+    }
+
+    #[test]
+    fn test_expr_match_exists() {
+        // Expr::Match should exist with scrutinee and arms
+        let _match_expr = Expr::Match {
+            scrutinee: Box::new(Expr::Variable("opt".to_string())),
+            arms: vec![
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "Some".to_string(),
+                        fields: Some(vec![(
+                            "value".to_string(),
+                            Pattern::Variable("v".to_string()),
+                        )]),
+                    },
+                    body: Expr::Variable("v".to_string()),
+                },
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "None".to_string(),
+                        fields: None,
+                    },
+                    body: Expr::Literal(Value::Int(0)),
+                },
+            ],
+        };
+    }
+
+    #[test]
+    fn test_expr_if_let_exists() {
+        // Expr::IfLet should exist with pattern, expr, then_branch, and else_branch
+        let _if_let = Expr::IfLet {
+            pattern: Pattern::Variant {
+                name: "Some".to_string(),
+                fields: Some(vec![(
+                    "value".to_string(),
+                    Pattern::Variable("v".to_string()),
+                )]),
+            },
+            expr: Box::new(Expr::Variable("opt".to_string())),
+            then_branch: Box::new(Expr::Variable("v".to_string())),
+            else_branch: Box::new(Expr::Literal(Value::Int(0))),
+        };
+
+        let _if_let_simple = Expr::IfLet {
+            pattern: Pattern::Tuple(vec![
+                Pattern::Variable("a".to_string()),
+                Pattern::Variable("b".to_string()),
+            ]),
+            expr: Box::new(Expr::Variable("pair".to_string())),
+            then_branch: Box::new(Expr::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(Expr::Variable("a".to_string())),
+                right: Box::new(Expr::Variable("b".to_string())),
+            }),
+            else_branch: Box::new(Expr::Literal(Value::Int(0))),
+        };
+    }
+
+    #[test]
+    fn test_pattern_variant_bindings() {
+        // Pattern::Variant should contribute bindings from its fields
+        let pattern = Pattern::Variant {
+            name: "Point".to_string(),
+            fields: Some(vec![
+                ("x".to_string(), Pattern::Variable("x_coord".to_string())),
+                ("y".to_string(), Pattern::Variable("y_coord".to_string())),
+            ]),
+        };
+        let mut bindings = pattern.bindings();
+        bindings.sort();
+        assert_eq!(bindings, vec!["x_coord", "y_coord"]);
+    }
+
+    #[test]
+    fn test_pattern_variant_is_refutable() {
+        // Pattern::Variant should be refutable
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: Some(vec![(
+                "value".to_string(),
+                Pattern::Variable("v".to_string()),
+            )]),
+        };
+        assert!(pattern.is_refutable());
+
+        // Even without fields, it's refutable
+        let pattern_no_fields = Pattern::Variant {
+            name: "None".to_string(),
+            fields: None,
+        };
+        assert!(pattern_no_fields.is_refutable());
+    }
+
+    #[test]
+    fn test_match_arm_with_nested_patterns() {
+        // MatchArm should work with complex nested patterns
+        let _arm = MatchArm {
+            pattern: Pattern::Variant {
+                name: "Ok".to_string(),
+                fields: Some(vec![(
+                    "value".to_string(),
+                    Pattern::Tuple(vec![
+                        Pattern::Variable("a".to_string()),
+                        Pattern::Variable("b".to_string()),
+                    ]),
+                )]),
+            },
+            body: Expr::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(Expr::Variable("a".to_string())),
+                right: Box::new(Expr::Variable("b".to_string())),
+            },
+        };
+    }
+
+    #[test]
+    fn test_expr_match_serde_roundtrip() {
+        // Expr::Match should be serializable and deserializable
+        let match_expr = Expr::Match {
+            scrutinee: Box::new(Expr::Variable("x".to_string())),
+            arms: vec![MatchArm {
+                pattern: Pattern::Variable("y".to_string()),
+                body: Expr::Variable("y".to_string()),
+            }],
+        };
+
+        let serialized = serde_json::to_string(&match_expr).expect("serialization should succeed");
+        let deserialized: Expr =
+            serde_json::from_str(&serialized).expect("deserialization should succeed");
+        assert_eq!(match_expr, deserialized);
+    }
+
+    #[test]
+    fn test_expr_if_let_serde_roundtrip() {
+        // Expr::IfLet should be serializable and deserializable
+        let if_let = Expr::IfLet {
+            pattern: Pattern::Variable("x".to_string()),
+            expr: Box::new(Expr::Literal(Value::Int(42))),
+            then_branch: Box::new(Expr::Variable("x".to_string())),
+            else_branch: Box::new(Expr::Literal(Value::Int(0))),
+        };
+
+        let serialized = serde_json::to_string(&if_let).expect("serialization should succeed");
+        let deserialized: Expr =
+            serde_json::from_str(&serialized).expect("deserialization should succeed");
+        assert_eq!(if_let, deserialized);
     }
 }

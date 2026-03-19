@@ -342,8 +342,6 @@ fn parse_field_list(input: &mut ParseInput) -> ModalResult<Vec<(String, TypeExpr
     if literal_str("}").parse_next(input).is_ok() {
         return Ok(vec![]);
     }
-    // Put the } back if we peeked it
-    // Actually, we need to not consume it. Let's handle differently
 
     let mut fields = vec![];
 

@@ -216,9 +216,9 @@ impl TypeEnv {
     /// Create a new empty type environment
     pub fn new() -> Self {
         Self {
-            ast_types: HashMap::new(),
-            type_info: HashMap::new(),
-            constructors: HashMap::new(),
+            ast_types: HashMap::with_capacity(10),
+            type_info: HashMap::with_capacity(10),
+            constructors: HashMap::with_capacity(10),
         }
     }
 

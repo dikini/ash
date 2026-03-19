@@ -166,24 +166,16 @@ fn match_pattern_recursive(
                         }
                         Some(field_patterns) => {
                             // Pattern expects variant with specific fields
-                            // Convert variant fields to a HashMap for lookup
-                            let variant_field_map: std::collections::HashMap<_, _> =
-                                variant_fields.iter().cloned().collect();
-
                             // Match each field pattern against the corresponding value field
                             for (field_name, field_pattern) in field_patterns {
-                                match variant_field_map.get(field_name) {
-                                    Some(field_value) => {
-                                        match_pattern_recursive(
-                                            field_pattern,
-                                            field_value,
-                                            bindings,
-                                        )?;
-                                    }
-                                    None => {
-                                        return Err(PatternError::FieldMissing(field_name.clone()));
-                                    }
-                                }
+                                let field_value = variant_fields
+                                    .iter()
+                                    .find(|(k, _)| k == field_name.as_str())
+                                    .map(|(_, v)| v)
+                                    .ok_or_else(|| {
+                                        PatternError::FieldMissing(field_name.clone())
+                                    })?;
+                                match_pattern_recursive(field_pattern, field_value, bindings)?;
                             }
                             Ok(())
                         }

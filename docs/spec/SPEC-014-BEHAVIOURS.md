@@ -8,6 +8,10 @@ Behaviours represent time-varying values in the external environment that workfl
 
 This concept is inspired by Functional Reactive Programming (FRP), but simplified for workflow contexts.
 
+Workflow declarations should make the split between behaviours and streams explicit. In
+practice that means `observes ...` declares behaviour inputs, while `receives ...` declares
+stream inputs.
+
 ## 2. Core Concepts
 
 ### 2.1 Behaviour vs Stream
@@ -208,6 +212,17 @@ workflow hybrid receives sensor:events {
             }
         }
     }
+}
+```
+
+An equivalent declaration with both input kinds made explicit is:
+
+```ash
+workflow hybrid
+    observes sensor:temperature
+    receives sensor:events
+{
+    ...
 }
 ```
 

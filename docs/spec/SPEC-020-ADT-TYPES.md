@@ -302,22 +302,32 @@ spawn worker with { init: args } as w;
 
 let (w_addr, w_ctrl) = split w;
 
--- w_addr: InstanceAddr<Worker> - opaque handle for communication
+-- w_addr: InstanceAddr<Worker> - communicable endpoint for messaging
 -- w_ctrl: Option<ControlLink<Worker>> - initially Some { value: link }
 ```
 
 ### 8.2 Control Link Transfer
 
 ```ash
--- Before transfer
+-- Instance addresses are ordinary communicable values
+send supervisor:worker_addrs w_addr;
+
+-- Control links transfer control authority
 if let Some { value: link } = w_ctrl then {
-    send_control supervisor with link;
-    -- After send_control, w_ctrl is logically None
+    send supervisor:control_links link;
+    -- After a successful send, w_ctrl is logically None
 }
 
--- Cannot use w_ctrl after transfer (tracked by type system)
--- w_addr remains usable
+-- On failed send, the sender retains the link
+-- w_addr remains usable independently of control-link transfer
 ```
+
+`InstanceAddr` and `ControlLink` are distinct:
+- `InstanceAddr` is a communicable endpoint value
+- `ControlLink` is transferable control authority
+
+Control-link transfer uses ordinary `send` semantics with one additional rule: ownership is
+consumed only after successful delivery. Failed sends do not consume the link.
 
 ### 8.3 Type Checking Transfer
 

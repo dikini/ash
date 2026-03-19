@@ -228,6 +228,7 @@ The runtime context is responsible for:
 
 - capability lookup and shape validation,
 - mailbox access for declared stream selectors and the implicit control mailbox,
+- scheduler execution for the active source scheduling modifier,
 - policy evaluation,
 - approval routing,
 - transformation application,

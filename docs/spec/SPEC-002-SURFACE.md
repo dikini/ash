@@ -107,7 +107,20 @@ obligation_ref      ::= IDENTIFIER "must" predicate
 ### 3.5 Workflow Definition
 
 ```
-workflow_def    ::= "workflow" IDENTIFIER "{" workflow "}"
+workflow_def    ::= "workflow" IDENTIFIER workflow_clause* "{" workflow "}"
+
+workflow_clause ::= observes_clause
+                  | receives_clause
+                  | sets_clause
+                  | sends_clause
+
+observes_clause ::= "observes" capability_ref ("," capability_ref)*
+receives_clause ::= "receives" stream_ref ("," stream_ref)*
+sets_clause     ::= "sets" capability_ref ("," capability_ref)*
+sends_clause    ::= "sends" capability_ref ("," capability_ref)*
+
+stream_ref      ::= IDENTIFIER (":" IDENTIFIER)?
+                  | IDENTIFIER "{" IDENTIFIER ("," IDENTIFIER)+ "}"
 
 workflow        ::= workflow_stmt (";" workflow_stmt)* ";"? "done"?
 
@@ -170,6 +183,12 @@ must_stmt       ::= "must" workflow
 - `check` is reserved for obligation references. Policy instances are not valid `check` targets.
 - `decide` is the policy gate, so `under <policy>` is required in the surface syntax.
 - `receive` is the authoritative surface form for stream/mailbox intake in the core workflow language; neighboring specs should defer to this grammar when referring to workflow-level `receive`.
+- Workflow clauses make input and output kinds explicit: `observes` declares behaviour inputs,
+  `receives` declares stream inputs, and `sets` / `sends` declare output capabilities.
+- The current surface syntax does not yet standardize explicit `receive` scheduling syntax. Until
+  it does, neighboring specs should use the terminology from
+  [LANGUAGE-TERMINOLOGY](../design/LANGUAGE-TERMINOLOGY.md): the runtime implements a scheduler,
+  and the current default behavior is the implicit `priority` source scheduling modifier.
 
 ### 3.6 Expressions
 

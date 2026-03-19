@@ -39,6 +39,7 @@ pub struct RuntimeContext {
     pub policy_registry: PolicyRegistry,  -- Named lowered policies available at runtime
     pub capabilities: CapabilityRegistry, -- What's available
     pub mailboxes: MailboxRegistry,       -- Declared stream mailboxes + implicit control mailbox
+    pub scheduler: SourceScheduler,       -- Implements source scheduling modifiers for receive
     pub approval_queue: ApprovalQueue,    -- For RequireApproval outcomes
     pub provenance: ProvenanceSink,       -- Records warnings/decisions/effects
     pub max_effect: Effect,               -- Highest effect this runtime will permit

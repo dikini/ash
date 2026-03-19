@@ -25,15 +25,30 @@ Each workflow has a **mailbox** that buffers incoming events:
 - Non-matching events remain in mailbox for future matching
 - Mailbox has configurable size limits and overflow strategies
 
+### 2.3 Source Scheduling Terminology
+
+This specification uses the term **source scheduling modifier** for the language-level rule
+that determines how `receive` chooses among eligible stream sources. The runtime implements
+that rule with a scheduler.
+
+The current default source scheduling modifier is **priority**:
+- arm order is significant
+- earlier arms and sources may starve later ones
+- fairer modifiers such as `round_robin`, `random`, or `fair` are possible future extensions,
+  but are not yet standardized surface syntax
+
 ## 3. Syntax
 
 ### 3.1 Workflow Declaration
 
 ```
 workflow_def ::= "workflow" IDENTIFIER 
+                 ("observes" capability_list)?
                  ("receives" stream_list)?
                  workflow_body
 
+capability_ref ::= IDENTIFIER (":" IDENTIFIER)?
+capability_list ::= capability_ref ("," capability_ref)*
 stream_list  ::= stream_decl ("," stream_decl)*
 stream_decl  ::= IDENTIFIER (":" IDENTIFIER)?
                | IDENTIFIER "{" IDENTIFIER ("," IDENTIFIER)+ "}"
@@ -46,6 +61,13 @@ workflow handler receives sensor:temperature, kafka:orders {
 }
 
 workflow multi receives kafka{orders, metrics, alerts} {
+    ...
+}
+
+workflow hybrid
+    observes sensor:temperature
+    receives sensor:events
+{
     ...
 }
 ```
@@ -183,7 +205,9 @@ receive {
 
 ### 6.1 Pattern Matching Order
 
-Patterns are checked in declaration order (biased selection):
+The current default source scheduling modifier is `priority`. Under `priority`, arms are
+checked in declaration order and later arms may never be reached if earlier arms continue to
+match available messages.
 
 ```
 receive {
@@ -196,27 +220,32 @@ receive {
 ### 6.2 Mailbox Processing
 
 ```
-execute_receive(patterns, mode, source):
-    1. For each pattern in order:
-       a. Search the selected mailbox source for matching entry
+execute_receive(patterns, mode, source_scheduling_modifier):
+    1. Ask the runtime scheduler for the next eligible source according to
+       source_scheduling_modifier.
+    2. For each arm in order:
+       a. Search that source's mailbox for the oldest matching entry
        b. If guard present, evaluate guard
        c. If match found:
           - Remove from mailbox
           - Execute corresponding workflow
           - Return
     
-    2. If wildcard pattern exists:
+    3. If wildcard pattern exists:
        - Execute wildcard workflow
        - Return
     
-    3. If mode is non-blocking:
+    4. If mode is non-blocking:
        - Return (continue to next statement)
     
-    4. If mode is blocking:
+    5. If mode is blocking:
        - Wait for new events (with optional timeout)
        - Add events to mailbox
        - Retry from step 1
 ```
+
+The runtime owns the concrete mailbox and transport organization. The language contract only
+requires the observable behavior above.
 
 ### 6.3 Timeout Behavior
 

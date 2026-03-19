@@ -134,11 +134,63 @@ fn match_pattern_recursive(
         }
 
         Pattern::Variant { name, fields } => {
-            // TODO: Implement variant pattern matching in TASK-132
-            Err(PatternError::MatchFailed {
-                expected: format!("variant {}", name),
-                actual: "variant patterns not yet implemented".to_string(),
-            })
+            // Variant pattern matching - check value is a variant with matching name
+            match value {
+                Value::Variant(variant_name, variant_fields) => {
+                    // Check variant name matches
+                    if variant_name != name {
+                        return Err(PatternError::MatchFailed {
+                            expected: format!("variant {}", name),
+                            actual: format!("variant {}", variant_name),
+                        });
+                    }
+
+                    // Handle field patterns
+                    match fields {
+                        None => {
+                            // Pattern expects unit variant (no fields)
+                            if !variant_fields.is_empty() {
+                                return Err(PatternError::MatchFailed {
+                                    expected: format!("unit variant {}", name),
+                                    actual: format!(
+                                        "variant {} with {} fields",
+                                        name,
+                                        variant_fields.len()
+                                    ),
+                                });
+                            }
+                            Ok(())
+                        }
+                        Some(field_patterns) => {
+                            // Pattern expects variant with specific fields
+                            // Convert variant fields to a HashMap for lookup
+                            let variant_field_map: std::collections::HashMap<_, _> =
+                                variant_fields.iter().cloned().collect();
+
+                            // Match each field pattern against the corresponding value field
+                            for (field_name, field_pattern) in field_patterns {
+                                match variant_field_map.get(field_name) {
+                                    Some(field_value) => {
+                                        match_pattern_recursive(
+                                            field_pattern,
+                                            field_value,
+                                            bindings,
+                                        )?;
+                                    }
+                                    None => {
+                                        return Err(PatternError::FieldMissing(field_name.clone()));
+                                    }
+                                }
+                            }
+                            Ok(())
+                        }
+                    }
+                }
+                _ => Err(PatternError::MatchFailed {
+                    expected: format!("variant {}", name),
+                    actual: format!("{:?}", value),
+                }),
+            }
         }
     }
 }
@@ -329,6 +381,176 @@ mod tests {
     fn test_match_empty_record() {
         let pattern = Pattern::Record(vec![]);
         let value = Value::Record(HashMap::new());
+        let bindings = match_pattern(&pattern, &value).unwrap();
+        assert!(bindings.is_empty());
+    }
+
+    // ============================================================
+    // TASK-132: Pattern Matching Engine - Variant Tests
+    // ============================================================
+
+    #[test]
+    fn test_match_variant_unit() {
+        // None matches Pattern::Variant { name: "None", fields: None }
+        let pattern = Pattern::Variant {
+            name: "None".to_string(),
+            fields: None,
+        };
+        let value = Value::Variant("None".to_string(), vec![]);
+        let bindings = match_pattern(&pattern, &value).unwrap();
+        assert!(bindings.is_empty());
+    }
+
+    #[test]
+    fn test_match_variant_with_fields() {
+        // Some { value: 42 } matches Pattern::Variant { name: "Some", fields: [("value", Variable("x"))] }
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: Some(vec![(
+                "value".to_string(),
+                Pattern::Variable("x".to_string()),
+            )]),
+        };
+        let value = Value::Variant(
+            "Some".to_string(),
+            vec![("value".to_string(), Value::Int(42))],
+        );
+        let bindings = match_pattern(&pattern, &value).unwrap();
+        assert_eq!(bindings.get("x"), Some(&Value::Int(42)));
+    }
+
+    #[test]
+    fn test_match_variant_wrong_name() {
+        // Pattern expects "Some", value is "None"
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: None,
+        };
+        let value = Value::Variant("None".to_string(), vec![]);
+        assert!(match_pattern(&pattern, &value).is_err());
+    }
+
+    #[test]
+    fn test_match_variant_unit_vs_fields() {
+        // Pattern expects unit variant, value has fields
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: None,
+        };
+        let value = Value::Variant(
+            "Some".to_string(),
+            vec![("value".to_string(), Value::Int(42))],
+        );
+        assert!(match_pattern(&pattern, &value).is_err());
+    }
+
+    #[test]
+    fn test_match_variant_missing_field() {
+        // Pattern expects field "value", value doesn't have it
+        let pattern = Pattern::Variant {
+            name: "Point".to_string(),
+            fields: Some(vec![(
+                "value".to_string(),
+                Pattern::Variable("x".to_string()),
+            )]),
+        };
+        let value = Value::Variant("Point".to_string(), vec![("x".to_string(), Value::Int(1))]);
+        assert!(match_pattern(&pattern, &value).is_err());
+    }
+
+    #[test]
+    fn test_match_variant_not_variant() {
+        // Pattern expects variant, value is Int
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: None,
+        };
+        assert!(match_pattern(&pattern, &Value::Int(42)).is_err());
+    }
+
+    #[test]
+    fn test_match_variant_nested() {
+        // Nested variant pattern: Some { value: (x, y) }
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: Some(vec![(
+                "value".to_string(),
+                Pattern::Tuple(vec![
+                    Pattern::Variable("x".to_string()),
+                    Pattern::Variable("y".to_string()),
+                ]),
+            )]),
+        };
+        let value = Value::Variant(
+            "Some".to_string(),
+            vec![(
+                "value".to_string(),
+                Value::List(vec![Value::Int(1), Value::Int(2)]),
+            )],
+        );
+        let bindings = match_pattern(&pattern, &value).unwrap();
+        assert_eq!(bindings.get("x"), Some(&Value::Int(1)));
+        assert_eq!(bindings.get("y"), Some(&Value::Int(2)));
+    }
+
+    #[test]
+    fn test_match_variant_multiple_fields() {
+        // Point { x: a, y: b }
+        let pattern = Pattern::Variant {
+            name: "Point".to_string(),
+            fields: Some(vec![
+                ("x".to_string(), Pattern::Variable("a".to_string())),
+                ("y".to_string(), Pattern::Variable("b".to_string())),
+            ]),
+        };
+        let value = Value::Variant(
+            "Point".to_string(),
+            vec![
+                ("x".to_string(), Value::Int(10)),
+                ("y".to_string(), Value::Int(20)),
+            ],
+        );
+        let bindings = match_pattern(&pattern, &value).unwrap();
+        assert_eq!(bindings.get("a"), Some(&Value::Int(10)));
+        assert_eq!(bindings.get("b"), Some(&Value::Int(20)));
+    }
+
+    #[test]
+    fn test_match_variant_with_literal() {
+        // Some { value: 42 } - literal pattern in variant field
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: Some(vec![(
+                "value".to_string(),
+                Pattern::Literal(Value::Int(42)),
+            )]),
+        };
+        let value = Value::Variant(
+            "Some".to_string(),
+            vec![("value".to_string(), Value::Int(42))],
+        );
+        let bindings = match_pattern(&pattern, &value).unwrap();
+        assert!(bindings.is_empty());
+
+        // Wrong literal value should fail
+        let value2 = Value::Variant(
+            "Some".to_string(),
+            vec![("value".to_string(), Value::Int(99))],
+        );
+        assert!(match_pattern(&pattern, &value2).is_err());
+    }
+
+    #[test]
+    fn test_match_variant_with_wildcard() {
+        // Some { value: _ } - wildcard in variant field
+        let pattern = Pattern::Variant {
+            name: "Some".to_string(),
+            fields: Some(vec![("value".to_string(), Pattern::Wildcard)]),
+        };
+        let value = Value::Variant(
+            "Some".to_string(),
+            vec![("value".to_string(), Value::Int(42))],
+        );
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }

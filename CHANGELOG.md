@@ -6,6 +6,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+- Pattern matching engine (TASK-132). Core pattern matching implementation in `crates/ash-interp/src/pattern.rs`:
+  - `Value::Variant` type added to `ash-core` for representing variant values
+  - `Pattern::Variant` pattern matching with field extraction
+  - Support for unit variants: `Pattern::Variant { name: "None", fields: None }`
+  - Support for variants with fields: `Pattern::Variant { name: "Some", fields: Some([("value", var)]) }`
+  - Nested variant pattern matching (variants containing tuples, records, etc.)
+  - Full test coverage for variant matching including negative cases
+
 ### Fixed
 - Type definition duplication between `ash-core` and `ash-typeck`. Unified `TypeDef` types by using AST types from `ash_core::ast` in `type_env.rs` with conversion functions.
 - Inefficient TypeEnv creation in pattern checking. Added static `EMPTY_ENV` with `OnceLock` to avoid repeated allocations.

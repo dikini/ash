@@ -24,6 +24,10 @@ pub enum Value {
     Record(HashMap<String, Value>),
     /// Capability reference
     Cap(String),
+    /// Variant value (name, fields)
+    /// e.g., `Some { value: 42 }` is `Variant("Some", [("value", Int(42))])`
+    /// and `None` is `Variant("None", [])`
+    Variant(String, Vec<(String, Value)>),
 }
 
 impl Value {
@@ -79,6 +83,20 @@ impl std::fmt::Display for Value {
                 write!(f, "}}")
             }
             Value::Cap(c) => write!(f, "cap({})", c),
+            Value::Variant(name, fields) => {
+                if fields.is_empty() {
+                    write!(f, "{}", name)
+                } else {
+                    write!(f, "{} {{", name)?;
+                    for (i, (field_name, field_value)) in fields.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}: {}", field_name, field_value)?;
+                    }
+                    write!(f, "}}")
+                }
+            }
         }
     }
 }

@@ -18,6 +18,19 @@ The core contract is execution-neutral:
 
 Surface syntax may elaborate into this IR, but the IR contract itself is the canonical truth.
 
+## 1.1 Phase-Owned Boundaries
+
+The IR contract sits on the lowering, typing, and runtime side of the language definition. It does
+not own parser acceptance, source-level recovery, or syntax-only rejection categories.
+
+- Parser rejection belongs to SPEC-002 and the parser boundary reference docs.
+- Lowering rejection belongs to canonicalization boundaries that map parsed surface forms into this
+  IR.
+- Type rejection belongs to SPEC-003 and the type-to-runtime boundary reference docs.
+- Runtime rejection belongs to SPEC-004 and the runtime-observable contract family.
+- Observable-behavior contracts may constrain what is reported, but they do not redefine the IR
+  contract itself.
+
 ## 2. Core Types
 
 ### 2.0 Canonical Core Language
@@ -32,9 +45,9 @@ These forms are the ones downstream phases must preserve:
 - core patterns: `Variable`, `Tuple`, `Record`, `List`, `Wildcard`, `Literal`, `Variant`
 
 Anything outside that workflow/expression/pattern runtime form set is either surface syntax or a
-lowering convenience for those forms. This scope statement does not apply to separate normative
-contracts such as type definitions, policy metadata, or other non-runtime language layers. In
-particular:
+lowering convenience for those forms. That statement only applies to the runtime form set here; it
+does not demote separate normative contracts such as type definitions, policy metadata, or other
+non-runtime language layers. In particular:
 
 - `if let` is an expression-level surface convenience that lowers to canonical matching behavior
 - parser-only scaffolding is not a core-language contract

@@ -47,16 +47,6 @@ The type layer must establish, directly or indirectly, the following runtime-rel
 | ADT constructor and variant-pattern resolution against canonical enum metadata | runtime pattern matching and constructor evaluation need one shared enum model |
 | `match` exhaustiveness success for required exhaustive sites | runtime must not rely on impossible fallback semantics for exhaustive ADT matches |
 
-The current Rust surface for these outputs spans:
-
-- `ash_typeck::TypeCheckResult`
-- `ash_typeck::effect::infer_effect`
-- `ash_typeck::runtime_verification::{VerificationResult, RuntimeContext, PolicyDecisionType}`
-- ADT metadata and checks in `ash_typeck::{type_env, check_pattern, exhaustiveness}`
-
-These existing APIs are implementation surfaces, not alternate contracts. Downstream convergence
-tasks may reshape them, but they must preserve the facts listed above.
-
 ## Required Runtime Consumers
 
 ### Runtime Verification
@@ -148,6 +138,13 @@ The runtime therefore consumes resolved enum metadata and variant names/fields, 
 record-tag encodings as a contract surface.
 
 ## Convergence Notes
+
+The following implementation surfaces are convergence notes, not alternate contracts:
+
+- `ash_typeck::TypeCheckResult`
+- `ash_typeck::effect::infer_effect`
+- `ash_typeck::runtime_verification::{VerificationResult, RuntimeContext, PolicyDecisionType}`
+- ADT metadata and checks in `ash_typeck::{type_env, check_pattern, exhaustiveness}`
 
 Current implementation gaps that must not be mistaken for contract:
 

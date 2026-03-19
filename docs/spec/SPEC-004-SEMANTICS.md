@@ -179,7 +179,22 @@ Canonical `RECEIVE` runtime behavior:
 
 `CHECK` evaluates obligations only; policies are not valid `CHECK` targets.
 
-### 4.4 Operational Layer
+### 4.4 Rejection Boundaries
+
+Runtime and evaluation reject:
+
+- policy denials at workflow `decide` sites
+- obligation violations at `check` sites
+- guard failures at `act` sites
+- missing or unavailable runtime capabilities and providers
+- non-receivable mailbox states, timeouts, or scheduler outcomes that the runtime exposes as
+  execution failures
+- provider-level input/output mismatches that arise from actual runtime values
+
+These are runtime boundary failures. They are not parser or lowering failures, and they are not
+type-checking failures once the type layer has validated the relevant shapes.
+
+### 4.5 Operational Layer
 
 ```
 (ACT)
@@ -204,7 +219,7 @@ Canonical `RECEIVE` runtime behavior:
                error: GuardViolation(action, guard)
 ```
 
-### 4.5 Control Flow
+### 4.6 Control Flow
 
 ```
 (SEQ)
@@ -242,7 +257,7 @@ Canonical `RECEIVE` runtime behavior:
   Γ, C, Ω, π ⊢ LET pat = expr in cont ⇓ v', ε, T, π'
 ```
 
-### 4.6 Error Handling
+### 4.7 Error Handling
 
 ```
 (ATTEMPT-SUCCESS)
@@ -259,7 +274,7 @@ Canonical `RECEIVE` runtime behavior:
                T ++ [Catch(e, now())] ++ T',
                π'
 
-### 4.7 Match and Constructor Semantics
+### 4.8 Match and Constructor Semantics
 
 `Constructor` is the expression-level core form for ADT value formation. It evaluates the payload
 fields, then yields the canonical runtime variant value `Variant(name, {field: value, ...})`. The
@@ -275,7 +290,7 @@ SPEC-020, but the operational rule here is the meaning of the core form itself.
 The `if let` note below is only about expression-level sugar for this `Match` form; it does not
 change workflow-form semantics.
 
-### 4.8 Expression-Level Surface Convenience Notes
+### 4.9 Expression-Level Surface Convenience Notes
 
 The following expression-level constructs may appear in the surface language or parser
 conveniences, but they are not additional semantic families:

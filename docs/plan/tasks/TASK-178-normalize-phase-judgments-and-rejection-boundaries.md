@@ -1,6 +1,6 @@
 # TASK-178: Normalize Phase Judgments and Rejection Boundaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -47,6 +47,12 @@ Check for:
 Expected failure conditions:
 - at least one rejection class still depends on interpretation across multiple docs.
 
+Observed before implementation:
+- `SPEC-001`, `SPEC-003`, and `SPEC-004` described phase behavior, but parser, lowering, type, and
+  runtime rejection ownership was still partly implicit.
+- the reference docs mixed canonical contracts with implementation commentary in the type-to-runtime
+  handoff.
+
 ### Step 3: Implement the minimal spec/reference fix (Green)
 
 Tighten only the phase judgments and rejection boundaries.
@@ -58,6 +64,13 @@ Expected pass conditions:
 - reference docs align to the same split,
 - specs state truth while tasks/plans carry migration commentary.
 
+Verified after implementation:
+- `SPEC-001` now states that the IR contract owns lowering/type/runtime boundaries, not parser
+  acceptance.
+- `SPEC-003` now separates type-layer rejection from parser, lowering, and runtime failures.
+- `SPEC-004` now distinguishes runtime boundary failures from parser, lowering, and type failures.
+- the three reference docs now keep canonical contract text separate from convergence notes.
+
 ### Step 5: Commit
 
 ```bash
@@ -67,10 +80,10 @@ git commit -m "docs: normalize phase judgments and rejection boundaries"
 
 ## Completion Checklist
 
-- [ ] phase judgments documented
-- [ ] rejection boundaries documented
-- [ ] reference docs aligned
-- [ ] `CHANGELOG.md` updated
+- [x] phase judgments documented
+- [x] rejection boundaries documented
+- [x] reference docs aligned
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

@@ -15,6 +15,18 @@ Canonical workflow effect vocabulary used throughout this spec:
 - **Evaluative** — policy and obligation evaluation
 - **Operational** — external side effects and irreversible outputs
 
+## 1.1 Phase-Owned Boundaries
+
+The type system owns judgments that prove or reject type, effect, obligation, and ADT
+compatibility. It does not own parser acceptance or runtime execution outcomes.
+
+- Parser rejection belongs to SPEC-002 and parser boundary references.
+- Lowering rejection belongs to SPEC-001 and lowering boundary references.
+- Type rejection belongs here when a workflow, expression, pattern, or declaration cannot be
+  assigned a valid type, effect, or obligation shape.
+- Runtime rejection belongs to SPEC-004 and the runtime-observable contract family.
+- Verification-time availability checks belong to runtime verification, not pure typing.
+
 ## 2. Type Judgment
 
 ```
@@ -133,6 +145,21 @@ from the source model rather than replacing it with a second specification-level
 Workflow-level `DECIDE` sites may only reference policies whose terminal decisions are `Permit` or `Deny`. Capability-verification sites may use the same `CorePolicy` model with richer terminal decisions such as `RequireApproval` or `Transform`.
 
 `CHECK` ranges only over obligations in `Ω`; policy evaluation belongs to `DECIDE`.
+
+### 4.8 Rejection Boundaries
+
+Type checking rejects:
+
+- unresolved named policy references for workflow `decide`
+- workflow `decide` sites whose resolved policy can lower to outcomes outside `{Permit, Deny}`
+- non-boolean `receive` guards
+- unknown ADT constructors or variant patterns
+- constructor field mismatches against resolved enum metadata
+- non-exhaustive ADT `match` where exhaustiveness is required by the contract
+- workflow effect requirements above the declared or verified maximum permitted effect
+
+These are type-layer boundary failures. They must not be deferred to runtime execution or treated
+as parser or lowering ambiguities.
 
 ### 4.4 Operational Layer
 

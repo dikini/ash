@@ -45,6 +45,9 @@ pub enum EvalError {
 
     #[error("not implemented: {0}")]
     NotImplemented(String),
+
+    #[error("non-exhaustive match: no arm matched value {value}")]
+    NonExhaustiveMatch { value: String },
 }
 
 /// Errors that can occur during workflow execution

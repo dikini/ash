@@ -16,6 +16,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Error message formatting. Changed to lowercase per Rust conventions.
 
 ### Added
+- Match and if-let expression evaluation (TASK-133). Pattern matching in the interpreter:
+  - `eval_match()` function for evaluating `Expr::Match` with multiple arms
+  - `eval_if_let()` function for evaluating `Expr::IfLet` expressions
+  - Pattern matching using existing `match_pattern()` engine
+  - Variable bindings scoped to match arm bodies via `Context::extend()`
+  - `NonExhaustiveMatch` error when no arm matches
+  - Support for all pattern types: literal, variable, wildcard, tuple, record, list
+  - First matching arm wins semantics
+  - If-let desugars to match with pattern/then/else branches
 - Generic type instantiation (TASK-129). Type parameter substitution for ADTs:
   - `instantiate(def, args)` function for substituting type parameters with concrete types
   - `Substitution::from_pairs()` method for creating substitutions from type variable pairs

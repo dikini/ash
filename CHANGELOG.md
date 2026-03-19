@@ -6,6 +6,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+- Phase-A convergence task files in [docs/plan/tasks/TASK-156-canonicalize-workflow-form-contracts.md](docs/plan/tasks/TASK-156-canonicalize-workflow-form-contracts.md), [docs/plan/tasks/TASK-157-canonicalize-policy-contracts.md](docs/plan/tasks/TASK-157-canonicalize-policy-contracts.md), [docs/plan/tasks/TASK-158-canonicalize-streams-runtime-verification-contracts.md](docs/plan/tasks/TASK-158-canonicalize-streams-runtime-verification-contracts.md), [docs/plan/tasks/TASK-159-canonicalize-repl-cli-contracts.md](docs/plan/tasks/TASK-159-canonicalize-repl-cli-contracts.md), and [docs/plan/tasks/TASK-160-canonicalize-adt-contracts.md](docs/plan/tasks/TASK-160-canonicalize-adt-contracts.md). Splits the first convergence phase into concrete documentation tasks with explicit requirements, TDD-style review steps, dependencies, and non-goals.
+- Spec-to-implementation convergence design in [docs/plan/2026-03-19-spec-to-implementation-convergence-design.md](docs/plan/2026-03-19-spec-to-implementation-convergence-design.md). Defines the spec-first recovery model, phase ordering, task-shaping rules, and completion criteria for bringing Rust code back into compliance.
+- Spec-to-implementation convergence plan in [docs/plan/2026-03-19-spec-to-implementation-convergence-plan.md](docs/plan/2026-03-19-spec-to-implementation-convergence-plan.md). Breaks convergence into fresh follow-up tasks ordered from canonical spec repair through final implementation audit.
+- Rust codebase review findings report in [docs/audit/2026-03-19-rust-codebase-review-findings.md](docs/audit/2026-03-19-rust-codebase-review-findings.md). Records checklist-driven implementation findings across baseline, policy, REPL/CLI, streams/runtime-verification, and ADT clusters without modifying Rust source.
+- Rust codebase review checklist in [docs/audit/2026-03-19-rust-codebase-review-checklist.md](docs/audit/2026-03-19-rust-codebase-review-checklist.md). Maps audit-identified risky task clusters to concrete Rust review targets and questions.
+- Non-Lean task consistency audit report in [docs/audit/2026-03-19-task-consistency-review-non-lean.md](docs/audit/2026-03-19-task-consistency-review-non-lean.md). Links task-plan drift to prior spec-audit findings to prepare for Rust code review.
+- Specification consistency audit report for SPEC-001 through SPEC-018 in [docs/audit/2026-03-19-spec-001-018-consistency-review.md](docs/audit/2026-03-19-spec-001-018-consistency-review.md). Captures cross-spec inconsistencies and aligned areas without modifying the specs.
+
 ### Fixed
 - Restored `ash-cli` compatibility with boxed `Value::List` and `Value::Record` constructors, and moved binary command tests into an integration harness so `cargo test -p ash-cli` passes again on the workflow-contracts branch.
 

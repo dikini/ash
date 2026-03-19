@@ -471,56 +471,7 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
 
 /// Check if a string is a keyword.
 fn is_keyword(s: &str) -> bool {
-    matches!(
-        s,
-        "workflow"
-            | "capability"
-            | "policy"
-            | "role"
-            | "observe"
-            | "orient"
-            | "propose"
-            | "decide"
-            | "act"
-            | "oblige"
-            | "check"
-            | "let"
-            | "if"
-            | "then"
-            | "else"
-            | "for"
-            | "do"
-            | "par"
-            | "with"
-            | "maybe"
-            | "must"
-            | "match"
-            | "attempt"
-            | "retry"
-            | "timeout"
-            | "done"
-            | "epistemic"
-            | "deliberative"
-            | "evaluative"
-            | "operational"
-            | "authority"
-            | "obligations"
-            | "supervises"
-            | "when"
-            | "returns"
-            | "where"
-            | "permit"
-            | "deny"
-            | "require_approval"
-            | "escalate"
-            | "in"
-            | "not"
-            | "and"
-            | "or"
-            | "true"
-            | "false"
-            | "null"
-    )
+    get_keywords().contains(s)
 }
 
 /// Parse a keyword (ensures word boundary).

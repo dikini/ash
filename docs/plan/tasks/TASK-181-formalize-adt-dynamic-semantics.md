@@ -36,6 +36,8 @@ lowering, and runtime-observable docs.
 
 The canonical ADT story is now explicit:
 
+- SPEC-004 now states constructor evaluation, match arm selection, no-match failure, and `if let`
+  sugar directly in the normative operational semantics
 - constructor evaluation yields constructor-shaped runtime `Variant` values with named fields
 - variant runtime values do not carry synthetic tags or enclosing type names
 - `Match` selects the first arm whose pattern and guard succeed; no-match is an observable pattern

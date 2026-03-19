@@ -6,6 +6,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+- Constructor evaluation for ADTs (TASK-131). Interpreter support for evaluating constructor expressions like `Some { value: 42 }`:
+  - `Value::Variant` type in `ash-core` with constructor name and field values
+  - `Expr::Constructor` evaluation in `ash-interp/src/eval.rs`
+  - Helper methods: `Value::variant()` and `Value::unit_variant()` for creating variants
+  - Support for nested constructors, expressions in fields, and variable references
+  - Full test coverage for Option, Result, and custom ADT constructors
+
 ### Fixed
 - Type definition duplication between `ash-core` and `ash-typeck`. Unified `TypeDef` types by using AST types from `ash_core::ast` in `type_env.rs` with conversion functions.
 - Inefficient TypeEnv creation in pattern checking. Added static `EMPTY_ENV` with `OnceLock` to avoid repeated allocations.

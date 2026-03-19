@@ -114,11 +114,18 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         }
 
         Expr::Constructor { name, fields } => {
-            // TODO: Implement constructor evaluation in TASK-131
-            Err(EvalError::NotImplemented(format!(
-                "Constructor {} not yet implemented",
-                name
-            )))
+            // Evaluate each field expression and collect into a vector of (name, value) pairs
+            let evaluated_fields: Vec<(String, Value)> = fields
+                .iter()
+                .map(|(field_name, expr)| {
+                    eval_expr(expr, ctx).map(|value| (field_name.clone(), value))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(Value::Variant {
+                name: name.clone(),
+                fields: evaluated_fields,
+            })
         }
 
         Expr::Match { scrutinee, arms } => {
@@ -803,5 +810,216 @@ mod tests {
             arguments: vec![Expr::Literal(Value::Int(42))],
         };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(false));
+    }
+
+    #[test]
+    fn test_eval_constructor_some_with_value() {
+        let ctx = Context::new();
+        let expr = Expr::Constructor {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Expr::Literal(Value::Int(42)))],
+        };
+        let result = eval_expr(&expr, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "Some".to_string(),
+                fields: vec![("value".to_string(), Value::Int(42))],
+            }
+        );
+    }
+
+    #[test]
+    fn test_eval_constructor_none_empty() {
+        let ctx = Context::new();
+        let expr = Expr::Constructor {
+            name: "None".to_string(),
+            fields: vec![],
+        };
+        let result = eval_expr(&expr, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "None".to_string(),
+                fields: vec![],
+            }
+        );
+    }
+
+    #[test]
+    fn test_eval_constructor_ok_with_string() {
+        let ctx = Context::new();
+        let expr = Expr::Constructor {
+            name: "Ok".to_string(),
+            fields: vec![(
+                "value".to_string(),
+                Expr::Literal(Value::String("hello".to_string())),
+            )],
+        };
+        let result = eval_expr(&expr, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "Ok".to_string(),
+                fields: vec![("value".to_string(), Value::String("hello".to_string()))],
+            }
+        );
+    }
+
+    #[test]
+    fn test_eval_constructor_err_with_value() {
+        let ctx = Context::new();
+        let expr = Expr::Constructor {
+            name: "Err".to_string(),
+            fields: vec![(
+                "error".to_string(),
+                Expr::Literal(Value::String("not found".to_string())),
+            )],
+        };
+        let result = eval_expr(&expr, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "Err".to_string(),
+                fields: vec![("error".to_string(), Value::String("not found".to_string()))],
+            }
+        );
+    }
+
+    #[test]
+    fn test_eval_constructor_nested() {
+        let ctx = Context::new();
+        // Some { value: Ok { value: 42 } }
+        let inner = Expr::Constructor {
+            name: "Ok".to_string(),
+            fields: vec![("value".to_string(), Expr::Literal(Value::Int(42)))],
+        };
+        let outer = Expr::Constructor {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), inner)],
+        };
+        let result = eval_expr(&outer, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "Some".to_string(),
+                fields: vec![(
+                    "value".to_string(),
+                    Value::Variant {
+                        name: "Ok".to_string(),
+                        fields: vec![("value".to_string(), Value::Int(42))],
+                    }
+                )],
+            }
+        );
+    }
+
+    #[test]
+    fn test_eval_constructor_with_variable() {
+        let mut ctx = Context::new();
+        ctx.set("x".to_string(), Value::Int(100));
+
+        let expr = Expr::Constructor {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Expr::Variable("x".to_string()))],
+        };
+        let result = eval_expr(&expr, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "Some".to_string(),
+                fields: vec![("value".to_string(), Value::Int(100))],
+            }
+        );
+    }
+
+    #[test]
+    fn test_eval_constructor_with_expression_in_field() {
+        let ctx = Context::new();
+        // Point { x: 1 + 2, y: 3 * 4 }
+        let expr = Expr::Constructor {
+            name: "Point".to_string(),
+            fields: vec![
+                (
+                    "x".to_string(),
+                    Expr::Binary {
+                        op: BinaryOp::Add,
+                        left: Box::new(Expr::Literal(Value::Int(1))),
+                        right: Box::new(Expr::Literal(Value::Int(2))),
+                    },
+                ),
+                (
+                    "y".to_string(),
+                    Expr::Binary {
+                        op: BinaryOp::Mul,
+                        left: Box::new(Expr::Literal(Value::Int(3))),
+                        right: Box::new(Expr::Literal(Value::Int(4))),
+                    },
+                ),
+            ],
+        };
+        let result = eval_expr(&expr, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "Point".to_string(),
+                fields: vec![
+                    ("x".to_string(), Value::Int(3)),
+                    ("y".to_string(), Value::Int(12)),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn test_eval_constructor_multiple_fields() {
+        let ctx = Context::new();
+        // Person { name: "Alice", age: 30, active: true }
+        let expr = Expr::Constructor {
+            name: "Person".to_string(),
+            fields: vec![
+                (
+                    "name".to_string(),
+                    Expr::Literal(Value::String("Alice".to_string())),
+                ),
+                ("age".to_string(), Expr::Literal(Value::Int(30))),
+                ("active".to_string(), Expr::Literal(Value::Bool(true))),
+            ],
+        };
+        let result = eval_expr(&expr, &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "Person".to_string(),
+                fields: vec![
+                    ("name".to_string(), Value::String("Alice".to_string())),
+                    ("age".to_string(), Value::Int(30)),
+                    ("active".to_string(), Value::Bool(true)),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn test_value_variant_helpers() {
+        // Test Value::variant helper
+        let v = Value::variant("Some", vec![("value", Value::Int(42))]);
+        assert_eq!(
+            v,
+            Value::Variant {
+                name: "Some".to_string(),
+                fields: vec![("value".to_string(), Value::Int(42))],
+            }
+        );
+
+        // Test Value::unit_variant helper
+        let v = Value::unit_variant("None");
+        assert_eq!(
+            v,
+            Value::Variant {
+                name: "None".to_string(),
+                fields: vec![],
+            }
+        );
     }
 }

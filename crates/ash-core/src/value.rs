@@ -24,6 +24,13 @@ pub enum Value {
     Record(HashMap<String, Value>),
     /// Capability reference
     Cap(String),
+    /// Variant/Constructor value (ADT)
+    Variant {
+        /// Constructor name (e.g., "Some", "None", "Ok")
+        name: String,
+        /// Field values as (name, value) pairs
+        fields: Vec<(String, Value)>,
+    },
 }
 
 impl Value {
@@ -45,6 +52,22 @@ impl Value {
         match self {
             Value::Bool(b) => Some(*b),
             _ => None,
+        }
+    }
+
+    /// Create a new variant value with the given name and fields
+    pub fn variant(name: impl Into<String>, fields: Vec<(impl Into<String>, Value)>) -> Self {
+        Value::Variant {
+            name: name.into(),
+            fields: fields.into_iter().map(|(k, v)| (k.into(), v)).collect(),
+        }
+    }
+
+    /// Create a new variant value with no fields (unit variant)
+    pub fn unit_variant(name: impl Into<String>) -> Self {
+        Value::Variant {
+            name: name.into(),
+            fields: vec![],
         }
     }
 }
@@ -79,6 +102,20 @@ impl std::fmt::Display for Value {
                 write!(f, "}}")
             }
             Value::Cap(c) => write!(f, "cap({})", c),
+            Value::Variant { name, fields } => {
+                write!(f, "{}", name)?;
+                if !fields.is_empty() {
+                    write!(f, " {{")?;
+                    for (i, (k, v)) in fields.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}: {}", k, v)?;
+                    }
+                    write!(f, "}}")?;
+                }
+                Ok(())
+            }
         }
     }
 }

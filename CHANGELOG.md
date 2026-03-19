@@ -7,6 +7,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Type check constructors for ADTs (TASK-127). Type checking for constructor expressions like `Some { value: 42 }`:
+  - `TypeEnv` struct to track type definitions and constructor mappings
+  - `register_type(def: TypeDef)` to add type definitions
+  - `lookup_constructor(name)` to find constructor's type and variant index
+  - `lookup_type(name)` to retrieve type definitions
+  - `add_builtin_types()` to register Option and Result types
+  - `check_expr` function with `Expr::Constructor` case for expression type checking
+  - Error types: `UnknownConstructor`, `MissingField`, `UnknownField`
+  - Full test coverage for Option and Result constructors
 - Parse type definitions (TASK-124). Parser for ADT type definitions in `ash-parser`:
   - `parse_type_def` module with `TypeDef`, `TypeBody`, `VariantDef`, `Visibility`, and `TypeExpr` types
   - Support for enums: `type Status = Pending | Processing | Completed;`

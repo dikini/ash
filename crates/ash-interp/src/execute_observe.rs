@@ -206,7 +206,7 @@ mod tests {
             (Box::from("symbol"), Type::String),
         ]);
         behaviour_ctx.register(TypedBehaviourProvider::new(
-            MockBehaviourProvider::new("market", "stock").with_value(Value::Record(record)),
+            MockBehaviourProvider::new("market", "stock").with_value(Value::Record(Box::new(record))),
             record_type,
         ));
 
@@ -243,7 +243,7 @@ mod tests {
             (Box::from("unit"), Type::String),
         ]);
         behaviour_ctx.register(TypedBehaviourProvider::new(
-            MockBehaviourProvider::new("sensor", "temp").with_value(Value::Record(record)),
+            MockBehaviourProvider::new("sensor", "temp").with_value(Value::Record(Box::new(record))),
             record_type,
         ));
 

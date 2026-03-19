@@ -513,7 +513,7 @@ mod tests {
                 Pattern::Variable("a".to_string()),
                 Pattern::Variable("b".to_string()),
             ]),
-            expr: Expr::Literal(Value::List(vec![Value::Int(1), Value::Int(2)])),
+            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
             continuation: Box::new(Workflow::Done),
         };
 
@@ -541,7 +541,7 @@ mod tests {
                 vec![Pattern::Variable("head".to_string())],
                 Some("tail".to_string()),
             ),
-            collection: Expr::Literal(Value::List(vec![])),
+            collection: Expr::Literal(Value::List(Box::new(vec![]))),
             body: Box::new(Workflow::Done),
         };
 

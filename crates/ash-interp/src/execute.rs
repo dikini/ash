@@ -185,7 +185,7 @@ pub fn execute_workflow_with_behaviour<'a>(
                 // Check for errors
                 let values: Vec<Value> = results.into_iter().collect::<Result<Vec<_>, _>>()?;
 
-                Ok(Value::List(values))
+                Ok(Value::List(Box::new(values)))
             }
 
             // Observe from capability
@@ -318,7 +318,7 @@ pub fn execute_workflow_with_behaviour<'a>(
                     Value::List(items) => {
                         let mut last_result = Value::Null;
 
-                        for item in items {
+                        for item in items.iter() {
                             let bindings = match_pattern(pattern, &item).map_err(|_| {
                                 ExecError::PatternMatchFailed {
                                     pattern: format!("{:?}", pattern),
@@ -692,7 +692,7 @@ mod tests {
                 Pattern::Variable("a".to_string()),
                 Pattern::Variable("b".to_string()),
             ]),
-            expr: Expr::Literal(Value::List(vec![Value::Int(1), Value::Int(2)])),
+            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
             continuation: Box::new(Workflow::Ret {
                 expr: Expr::Binary {
                     op: BinaryOp::Add,
@@ -805,7 +805,7 @@ mod tests {
         // Each iteration gets its own context extended from the parent
         let workflow = Workflow::ForEach {
             pattern: Pattern::Variable("x".to_string()),
-            collection: Expr::Literal(Value::List(vec![
+            collection: Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
@@ -964,7 +964,7 @@ mod tests {
                 Pattern::Variable("x".to_string()),
                 Pattern::Variable("y".to_string()),
             ]),
-            expr: Expr::Literal(Value::List(vec![Value::Int(10), Value::Int(20)])),
+            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(10), Value::Int(20)])),
             continuation: Box::new(Workflow::If {
                 condition: Expr::Binary {
                     op: BinaryOp::Lt,

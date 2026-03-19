@@ -376,7 +376,7 @@ mod tests {
         let pred = Predicate {
             name: "contains".to_string(),
             arguments: vec![
-                Expr::Literal(Value::List(vec![Value::Int(1), Value::Int(2)])),
+                Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
                 Expr::Literal(Value::Int(1)),
             ],
         };
@@ -385,7 +385,7 @@ mod tests {
         let pred = Predicate {
             name: "contains".to_string(),
             arguments: vec![
-                Expr::Literal(Value::List(vec![Value::Int(1), Value::Int(2)])),
+                Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
                 Expr::Literal(Value::Int(3)),
             ],
         };
@@ -429,13 +429,13 @@ mod tests {
 
         let pred = Predicate {
             name: "is_empty".to_string(),
-            arguments: vec![Expr::Literal(Value::List(vec![]))],
+            arguments: vec![Expr::Literal(Value::List(Box::new(vec![])))],
         };
         assert!(eval_predicate(&pred, &ctx).unwrap());
 
         let pred = Predicate {
             name: "is_empty".to_string(),
-            arguments: vec![Expr::Literal(Value::List(vec![Value::Int(1)]))],
+            arguments: vec![Expr::Literal(Value::List(Box::new(vec![Value::Int(1)])))],
         };
         assert!(!eval_predicate(&pred, &ctx).unwrap());
     }

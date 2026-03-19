@@ -85,7 +85,7 @@ fn match_pattern_recursive(
         Pattern::Record(field_patterns) => {
             // Record pattern matches record with matching fields
             match value {
-                Value::Record(fields) => {
+                Value::Record(Box::new(fields)) => {
                     for (field_name, field_pattern) in field_patterns {
                         match fields.get(field_name) {
                             Some(field_value) => {
@@ -121,7 +121,7 @@ fn match_pattern_recursive(
                     // Bind rest if specified
                     if let Some(rest_name) = rest_binding {
                         let rest_values: Vec<Value> = values[prefix_patterns.len()..].to_vec();
-                        bindings.insert(rest_name.clone(), Value::List(rest_values));
+                        bindings.insert(rest_name.clone(), Value::List(Box::new(rest_values)));
                     }
 
                     Ok(())
@@ -235,7 +235,7 @@ mod tests {
             Pattern::Variable("x".to_string()),
             Pattern::Variable("y".to_string()),
         ]);
-        let value = Value::List(vec![Value::Int(1), Value::Int(2)]);
+        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
         let bindings = match_pattern(&pattern, &value).unwrap();
 
         assert_eq!(bindings.get("x"), Some(&Value::Int(1)));
@@ -245,7 +245,7 @@ mod tests {
     #[test]
     fn test_match_tuple_wrong_length() {
         let pattern = Pattern::Tuple(vec![Pattern::Variable("x".to_string())]);
-        let value = Value::List(vec![Value::Int(1), Value::Int(2)]);
+        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
@@ -265,7 +265,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert("name".to_string(), Value::String("Alice".to_string()));
         fields.insert("age".to_string(), Value::Int(30));
-        let value = Value::Record(fields);
+        let value = Value::Record(Box::new(fields));
 
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("n"), Some(&Value::String("Alice".to_string())));
@@ -281,7 +281,7 @@ mod tests {
 
         let mut fields = HashMap::new();
         fields.insert("present".to_string(), Value::Int(1));
-        let value = Value::Record(fields);
+        let value = Value::Record(Box::new(fields));
 
         assert!(match_pattern(&pattern, &value).is_err());
     }
@@ -301,7 +301,7 @@ mod tests {
             ],
             None,
         );
-        let value = Value::List(vec![Value::Int(1), Value::Int(2)]);
+        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
         let bindings = match_pattern(&pattern, &value).unwrap();
 
         assert_eq!(bindings.get("a"), Some(&Value::Int(1)));
@@ -314,7 +314,7 @@ mod tests {
             vec![Pattern::Variable("head".to_string())],
             Some("tail".to_string()),
         );
-        let value = Value::List(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
         let bindings = match_pattern(&pattern, &value).unwrap();
 
         assert_eq!(bindings.get("head"), Some(&Value::Int(1)));
@@ -333,7 +333,7 @@ mod tests {
             ],
             None,
         );
-        let value = Value::List(vec![Value::Int(1)]);
+        let value = Value::List(Box::new(vec![Value::Int(1)]));
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
@@ -355,7 +355,7 @@ mod tests {
 
         let mut fields = HashMap::new();
         fields.insert("x".to_string(), Value::Int(42));
-        let value = Value::List(vec![Value::Record(fields), Value::Null]);
+        let value = Value::List(vec![Value::Record(Box::new(fields)), Value::Null]);
 
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("inner"), Some(&Value::Int(42)));
@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn test_match_empty_list() {
         let pattern = Pattern::List(vec![], None);
-        let value = Value::List(vec![]);
+        let value = Value::List(Box::new(vec![]));
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }
@@ -372,18 +372,18 @@ mod tests {
     #[test]
     fn test_match_empty_list_with_rest() {
         let pattern = Pattern::List(vec![], Some("rest".to_string()));
-        let value = Value::List(vec![Value::Int(1), Value::Int(2)]);
+        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(
             bindings.get("rest"),
-            Some(&Value::List(vec![Value::Int(1), Value::Int(2)]))
+            Some(&Value::List(Box::new(vec![Value::Int(1), Value::Int(2)])))
         );
     }
 
     #[test]
     fn test_match_empty_record() {
         let pattern = Pattern::Record(vec![]);
-        let value = Value::Record(HashMap::new());
+        let value = Value::Record(Box::new(HashMap::new()));
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }
@@ -497,7 +497,7 @@ mod tests {
             name: "Some".to_string(),
             fields: vec![(
                 "value".to_string(),
-                Value::List(vec![Value::Int(1), Value::Int(2)]),
+                Value::List(Box::new(vec![Value::Int(1), Value::Int(2)])),
             )],
         };
         let bindings = match_pattern(&pattern, &value).unwrap();

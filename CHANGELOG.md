@@ -7,6 +7,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Option and Result standard library (TASK-136). Core standard library modules:
+  - `std/src/option.ash` - Option<T> type with Some/None variants
+  - `std/src/result.ash` - Result<T, E> type with Ok/Err variants
+  - Helper functions: is_some, is_none, is_ok, is_err, unwrap, unwrap_or, unwrap_err
+  - Transformation functions: map, map_err, and_then, and, or, ok_or, ok, err
+  - `std/src/prelude.ash` - Auto-imported types and functions
+  - `std/src/lib.ash` - Main library exports
+  - `std/README.md` - Standard library documentation
+  - Integration tests verifying stdlib files parse correctly
 - Spawn returns Instance with Option<ControlLink> (TASK-134). Updated spawn expression to return a composite type that can be split into InstanceAddr and Option<ControlLink>:
   - Added `Instance`, `InstanceAddr`, and `ControlLink` types to `ash-core` value module
   - Added `Value::Instance`, `Value::InstanceAddr`, `Value::ControlLink` variants for runtime representation

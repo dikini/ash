@@ -1,6 +1,6 @@
 # TASK-160: Canonicalize ADT Contracts
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -93,12 +93,12 @@ git commit -m "docs: canonicalize adt contracts"
 
 ## Completion Checklist
 
-- [ ] canonical ADT structure defined
-- [ ] canonical runtime variant shape defined
-- [ ] canonical pattern/exhaustiveness contract defined
-- [ ] required stdlib helper surface defined
-- [ ] contradictory wording removed or superseded
-- [ ] `CHANGELOG.md` updated
+- [x] canonical ADT structure defined
+- [x] canonical runtime variant shape defined
+- [x] canonical pattern/exhaustiveness contract defined
+- [x] required stdlib helper surface defined
+- [x] contradictory wording removed or superseded
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

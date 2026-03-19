@@ -30,70 +30,25 @@ ADTs solve these while maintaining type safety through exhaustiveness checking.
 
 ## 4. Type Definitions
 
-### 4.1 Core Type Extensions
+### 4.1 Canonical Source Definition Model
 
 ```rust
-pub enum Type {
-    // Existing variants...
-    Int, String, Bool, Null, Time, Ref, List, Record, Cap, Fun, Var,
-    
-    /// Sum type: enum with variants
-    /// e.g., `Option<T> = Some { value: T } | None`
-    Sum {
-        name: Box<str>,
-        type_params: Vec<TypeVar>,
-        variants: Vec<Variant>,
-    },
-    
-    /// Struct type: product with named fields
-    /// e.g., `Point = { x: Int, y: Int }`
-    Struct {
-        name: Box<str>,
-        type_params: Vec<TypeVar>,
-        fields: Vec<(Box<str>, Type)>,
-    },
-    
-    /// Type constructor application
-    /// e.g., `Option<Int>` or `Result<T, Error>`
-    Constructor {
-        name: Box<str>,
-        args: Vec<Type>,
-    },
-}
-
-pub struct Variant {
-    pub name: Box<str>,
-    pub fields: Vec<(Box<str>, Type)>,
-}
-```
-
-### 4.2 Type Definition AST
-
-```rust
-pub enum Definition {
-    // Existing...
-    TypeDef(TypeDef),
-}
-
 pub struct TypeDef {
-    pub name: Box<str>,
+    pub name: Name,
     pub params: Vec<TypeVar>,
     pub body: TypeBody,
     pub visibility: Visibility,
 }
 
 pub enum TypeBody {
-    /// type Point = { x: Int, y: Int }
-    Struct(Vec<(Box<str>, Type)>),
-    
-    /// type Status = Pending | Processing { ... }
-    Enum(Vec<Variant>),
-    
-    /// type PointTuple = (Int, Int)
-    Tuple(Vec<Type>),
-    
-    /// type Name = String
-    Alias(Type),
+    Struct(Vec<(Name, TypeExpr)>),
+    Enum(Vec<VariantDef>),
+    Alias(TypeExpr),
+}
+
+pub struct VariantDef {
+    pub name: Name,
+    pub fields: Vec<(Name, TypeExpr)>,
 }
 
 pub enum Visibility {
@@ -101,7 +56,19 @@ pub enum Visibility {
     Crate,
     Private,
 }
+
+pub enum TypeExpr {
+    Named(Name),
+    Constructor { name: Name, args: Vec<TypeExpr> },
+    Tuple(Vec<TypeExpr>),
+    Record(Vec<(Name, TypeExpr)>),
+}
 ```
+
+This source `TypeDef` plus `TypeExpr` model is canonical for user-written ADT declarations.
+Implementations may elaborate it into internal type metadata for unification or exhaustiveness,
+but that elaborated form is derived from this source model rather than replacing it with a
+second specification-level structure.
 
 ## 5. Surface Syntax
 
@@ -131,7 +98,7 @@ type List<T> =
     | Nil;
 ```
 
-### 5.2 Struct Definition
+### 5.2 Struct and Alias Definition
 
 ```ash
 -- Named struct
@@ -140,7 +107,7 @@ type Point = { x: Int, y: Int };
 -- Generic struct
 type Pair<T, U> = { first: T, second: U };
 
--- Tuple struct (anonymous fields)
+-- Alias to a tuple type expression
 type PointTuple = (Int, Int);
 ```
 
@@ -203,13 +170,16 @@ match opt {
 
 ```
 (CONSTRUCTOR)
-  lookup_env(Γ, C) = (Variant { fields }, ParentType)
-  fields = [f1:τ1, ..., fn:τn]
-  ∀i. Γ ⊢ ei : σi
+  resolve_constructor(Σ, C) = (ParentTypeDef, VariantDef, subst)
+  VariantDef.fields = [f1:τ1, ..., fn:τn]
+  ∀i. Γ ⊢ ei : σi / εi
   unify(σi, apply_subst(τi, subst)) = ok
   ─────────────────────────────────────────────────────────────
-  Γ ⊢ C { f1: e1, ..., fn: en } : apply_subst(ParentType, subst)
+  Γ ⊢ C { f1: e1, ..., fn: en } : instantiate(ParentTypeDef, subst)
 ```
+
+Constructor typing is defined from the resolved enum definition associated with the
+constructor name. Unit variants are constructors with an empty field list.
 
 ### 6.2 Pattern Typing
 
@@ -219,21 +189,20 @@ match opt {
   Γ ⊢ x : τ ⊣ Γ, x:τ
 
 (PATTERN-VARIANT)
-  lookup(τ_scrutinee, C) = Variant { fields: [f1:τ1, ..., fn:τn] }
+  resolve_variant(τ_scrutinee, C) = VariantDef { fields: [f1:τ1, ..., fn:τn] }
   ∀i. Γ ⊢ pi : τi ⊣ Γi
   ─────────────────────────────────────────────────────────────
   Γ ⊢ C { f1: p1, ..., fn: pn } : τ_scrutinee ⊣ Γ1 ∪ ... ∪ Γn
-
-(PATTERN-RECORD)
-  τ_scrutinee = Struct { fields: [f1:τ1, ..., fn:τn] }
-  ∀i. Γ ⊢ pi : τi ⊣ Γi
-  ─────────────────────────────────────────────────────────────
-  Γ ⊢ { f1: p1, ..., fn: pn } : τ_scrutinee ⊣ Γ1 ∪ ... ∪ Γn
 ```
+
+Variant-pattern typing and constructor typing are two views of the same resolved enum
+metadata. Synthetic tagged-record encodings such as `__variant` are implementation details
+and are not part of the specification contract.
 
 ### 6.3 Exhaustiveness Checking
 
-Algorithm based on pattern matrix analysis:
+Exhaustiveness is defined over the constructors of the resolved scrutinee enum type, using
+pattern-matrix style coverage analysis:
 
 ```rust
 /// Check if patterns cover all cases for type
@@ -241,10 +210,7 @@ type Coverage =
     | Covered
     | Missing(Vec<Pattern>)  -- Witness patterns not covered
 
-fn check_exhaustive(
-    patterns: Vec<Pattern>,
-    scrutinee_type: Type,
-) -> Coverage {
+fn check_exhaustive(patterns: Vec<Pattern>, scrutinee_type: ResolvedEnumType) -> Coverage {
     // Build pattern matrix
     let matrix = PatternMatrix::new(patterns);
     
@@ -255,6 +221,9 @@ fn check_exhaustive(
     }
 }
 ```
+
+For enum scrutinees, exhaustiveness witnesses are missing constructors plus any required
+sub-pattern structure. `Wildcard` and variable patterns cover the remaining space.
 
 **Example error:**
 ```
@@ -296,47 +265,30 @@ fn instantiate(
 
 ## 7. Runtime Representation
 
-### 7.1 Value Extensions
+### 7.1 Canonical Variant Value Shape
 
 ```rust
 pub enum Value {
     // Existing...
     Int(i64), String(String), Bool(bool), /* ... */
-    
-    /// Tuple value
-    Tuple(Vec<Value>),
-    
-    /// Struct value
-    Struct {
-        typ: Box<str>,
-        fields: Vec<(Box<str>, Value)>,
-    },
-    
+
     /// Enum variant
     Variant {
-        typ: Box<str>,      // Type name (e.g., "Option")
-        variant: Box<str>,  // Variant name (e.g., "Some")
-        fields: Vec<(Box<str>, Value)>,
+        name: String,
+        fields: Vec<(String, Value)>,
     },
 }
 ```
 
-### 7.2 Memory Layout
+At runtime, a variant value stores:
 
-```rust
-// Option<T> layout (optimized):
-// - Some { value }: tag = 1, payload = T
-// - None: tag = 0, no payload
-// 
-// Null pointer optimization:
-// Option<Box<T>> is same size as Box<T>
-// (None = null pointer, Some = valid pointer)
+- the constructor name, such as `Some`, `None`, `Ok`, or `Err`
+- the named payload fields associated with that constructor
 
-// Result<T, E> layout:
-// - Ok { value }: tag = 0, payload = T
-// - Err { error }: tag = 1, payload = E
-// Size = max(sizeof(T), sizeof(E)) + tag
-```
+The enclosing type name is not stored inside the runtime value. It is recovered from
+constructor resolution, surrounding type information, or pattern context. Record-tag
+encodings and low-level memory layout optimizations are implementation details, not part
+of the observable spec contract.
 
 ## 8. Control Link Integration
 
@@ -421,20 +373,16 @@ pub fn is_none<T>(opt: Option<T>) -> Bool;
 -- Extraction
 pub fn unwrap<T>(opt: Option<T>) -> T;  -- Panics if None
 pub fn unwrap_or<T>(opt: Option<T>, default: T) -> T;
-pub fn unwrap_or_else<T>(opt: Option<T>, f: Fun() -> T) -> T;
 
 -- Transformation
 pub fn map<T, U>(opt: Option<T>, f: Fun(T) -> U) -> Option<U>;
-pub fn map_or<T, U>(opt: Option<T>, default: U, f: Fun(T) -> U) -> U;
-pub fn and_then<T, U>(opt: Option<T>, f: Fun(T) -> Option<U>) -> Option<U>;
-
--- Filtering
-pub fn filter<T>(opt: Option<T>, pred: Fun(T) -> Bool) -> Option<T>;
 
 -- Boolean operations
 pub fn and<T>(opt: Option<T>, other: Option<T>) -> Option<T>;
 pub fn or<T>(opt: Option<T>, other: Option<T>) -> Option<T>;
-pub fn xor<T>(opt: Option<T>, other: Option<T>) -> Option<T>;
+
+-- Conversion
+pub fn ok_or<T, E>(opt: Option<T>, err: E) -> Result<T, E>;
 ```
 
 ### 9.2 Result Module
@@ -458,9 +406,14 @@ pub fn map<T, E, U>(res: Result<T, E>, f: Fun(T) -> U) -> Result<U, E>;
 pub fn map_err<T, E, F>(res: Result<T, E>, f: Fun(E) -> F) -> Result<T, F>;
 pub fn and_then<T, E, U>(res: Result<T, E>, f: Fun(T) -> Result<U, E>) -> Result<U, E>;
 
--- Error handling
-pub fn or_else<T, E>(res: Result<T, E>, f: Fun(E) -> Result<T, E>) -> Result<T, E>;
+-- Conversion
+pub fn ok<T, E>(res: Result<T, E>) -> Option<T>;
+pub fn err<T, E>(res: Result<T, E>) -> Option<E>;
 ```
+
+The functions listed above are the required helper surface. Prelude re-exports and
+additional convenience helpers such as `unwrap_or_else`, `map_or`, `filter`, `xor`, or
+`or_else` are optional and not required by this specification.
 
 ## 10. Property Tests
 

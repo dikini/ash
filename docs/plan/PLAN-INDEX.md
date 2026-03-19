@@ -247,7 +247,7 @@ Update this section as tasks complete:
 | 17 | 12 | 12 | ✅ Complete |
 | 18 | 7 | 3 | 🟡 In Progress |
 | 19 | 7 | 7 | ✅ Complete |
-| 20 | 5 | 4 | 🟡 In Progress |
+| 20 | 5 | 5 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -453,6 +453,6 @@ Canonicalize spec contracts before downstream Rust alignment work.
 | [TASK-157](tasks/TASK-157-canonicalize-policy-contracts.md) | Canonicalize policy contracts | SPEC-003/004/006/007/008/017/018 | 6 | ✅ Complete |
 | [TASK-158](tasks/TASK-158-canonicalize-streams-runtime-verification-contracts.md) | Canonicalize streams/runtime verification contracts | SPEC-004/013/014/017/018 | 6 | ✅ Complete |
 | [TASK-159](tasks/TASK-159-canonicalize-repl-cli-contracts.md) | Canonicalize REPL/CLI contracts | SPEC-005/011/016 | 4 | ✅ Complete |
-| [TASK-160](tasks/TASK-160-canonicalize-adt-contracts.md) | Canonicalize ADT contracts | SPEC-020 | 6 | 📝 Planned |
+| [TASK-160](tasks/TASK-160-canonicalize-adt-contracts.md) | Canonicalize ADT contracts | SPEC-003/004/013/014/020 | 6 | ✅ Complete |
 
 **Phase 20 Deliverable**: Canonicalized spec contracts for policy, workflow, streams/runtime verification, CLI/REPL, and ADT behavior

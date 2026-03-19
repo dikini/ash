@@ -57,6 +57,16 @@ workflow monitor {
 }
 ```
 
+Observation patterns may use the same ADT variant patterns described in `SPEC-020`:
+
+```ash
+observe sensor:last_result as Ok { value: reading };
+observe sensor:last_result as Err { error: reason };
+```
+
+Variant matching for observed values is based on constructor name plus named fields. It does
+not rely on synthetic record tags.
+
 ### 3.3 Repeated Observation
 
 ```

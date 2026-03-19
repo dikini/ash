@@ -50,6 +50,22 @@ pub enum Type {
 pub struct TypeVar(pub u32);
 ```
 
+### 3.1 User-Defined ADT Definitions
+
+User-defined ADT declarations are specified in source form by `TypeDef`, `TypeBody`,
+`VariantDef`, and `TypeExpr` as defined in `SPEC-020`.
+
+That source model is canonical:
+
+- `TypeDef` introduces a named type with generic parameters and visibility.
+- `TypeBody::Enum` defines constructors and their named fields.
+- `TypeBody::Struct` and `TypeBody::Alias` define nominal wrappers over `TypeExpr`.
+- `TypeExpr` is the source-level type language used inside ADT declarations.
+
+Implementations may elaborate these declarations into internal type metadata for inference,
+constructor lookup, or exhaustiveness checking, but that elaborated representation is derived
+from the source model rather than replacing it with a second specification-level contract.
+
 ## 4. Type Rules
 
 ### 4.1 Epistemic Layer
@@ -180,6 +196,19 @@ Workflow-level `DECIDE` sites may only reference policies whose terminal decisio
   Γ, Σ, Ω ⊢ MUST w : τ / ε ⊣ Ω'
   [Must verification happens at runtime]
 ```
+
+### 4.7 ADT Typing Contract
+
+Constructor typing, variant-pattern typing, and exhaustiveness analysis all operate over the
+same resolved enum definition derived from the source `TypeDef`.
+
+- A constructor expression such as `Some { value: 42 }` has the instantiated parent enum type.
+- A variant pattern such as `Some { value: x }` is typed against that same enum definition and
+  binds fields using the declared field types.
+- Exhaustiveness analyzes constructor coverage for the resolved enum type, not record fields or
+  synthetic tag names.
+- Internal checker approximations such as `__variant`-tagged records are implementation details
+  and are not part of the language contract.
 
 ## 5. Effect Inference
 

@@ -152,6 +152,16 @@ queue:batch as [] => act log("empty")
 _ => act log("unhandled event")
 ```
 
+ADT variant patterns are also valid stream-message patterns:
+
+```ash
+queue:jobs as Ok { value: job } => act process(job)
+queue:jobs as Err { error: reason } => act log::error(reason)
+```
+
+These variant patterns follow the canonical ADT contract from `SPEC-020`: matching is based on
+constructor name plus named fields, not on synthetic tag fields.
+
 ## 5. Guard Clauses
 
 Patterns can have boolean guards:

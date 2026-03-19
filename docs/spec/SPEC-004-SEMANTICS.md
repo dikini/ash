@@ -12,6 +12,7 @@ Big-step operational semantics for the Ash workflow language. Tracks values, eff
 Value      ::= Int(i) | String(s) | Bool(b) | Null 
              | Time(t) | Ref(r) | List([v, ...]) | Record({k: v, ...})
              | Cap(c)
+             | Variant(name, {k: v, ...})
 
 Effect     ::= Epistemic | Deliberative | Evaluative | Operational
              -- Epistemic: input acquisition and read-only observation
@@ -32,6 +33,10 @@ Context    ::= Γ × C × Ω × π
 Result     ::= Ok(Value, Effect, Trace, Provenance)
              | Err(Error, Trace, Provenance)
 ```
+
+Variant values are the canonical runtime representation for enum constructors. They store the
+constructor name plus its named payload fields. The enclosing type name is not stored in the
+runtime value itself.
 
 ## 3. Big-Step Judgment
 
@@ -253,9 +258,14 @@ bind(PVar(x), v, Γ)        = Γ[x ↦ v]
 bind(PTuple(ps), [v1,...], Γ) = fold(bind, Γ, zip(ps, vs))
 bind(PRecord(fs), {k: v, ...}, Γ) = fold(bind_field, Γ, fs)
   where bind_field((k, p), Γ) = bind(p, lookup(k, record), Γ)
+bind(PVariant(C, fs), Variant(C, payload), Γ) = fold(bind_variant_field, Γ, fs)
+  where bind_variant_field((k, p), Γ) = bind(p, lookup(k, payload), Γ)
 bind(PWildcard, v, Γ)      = Γ
 bind(PLiteral(lit), v, Γ)  = if lit == v then Γ else error
 ```
+
+Variant-pattern execution matches constructor name first and then recursively binds named
+payload fields. Synthetic record tags such as `__variant` are not part of the runtime contract.
 
 ### 5.2 Effect Join
 

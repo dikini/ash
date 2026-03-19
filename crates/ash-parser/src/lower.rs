@@ -383,8 +383,8 @@ fn lower_literal(lit: &Literal) -> ash_core::Value {
         Literal::Bool(b) => Value::Bool(*b),
         Literal::Null => Value::Null,
         Literal::List(elements) => {
-            let lowered = elements.iter().map(lower_literal).collect();
-            Value::List(lowered)
+            let lowered: Vec<_> = elements.iter().map(lower_literal).collect();
+            Value::List(Box::new(lowered))
         }
     }
 }

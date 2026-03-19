@@ -267,7 +267,7 @@ fn matches_pattern_entry(entry: &MailboxEntry, pattern: &Pattern) -> bool {
             _ => false,
         },
         Pattern::Record(field_patterns) => match &entry.value {
-            Value::Record(fields) => field_patterns.iter().all(|(field_name, field_pattern)| {
+            Value::Record(Box::new(fields)) => field_patterns.iter().all(|(field_name, field_pattern)| {
                 match fields.get(field_name) {
                     Some(field_value) => match field_pattern {
                         Pattern::Literal(lit) => lit == field_value,
@@ -563,7 +563,7 @@ mod tests {
         // Create a record value
         let mut fields = HashMap::new();
         fields.insert("priority".to_string(), Value::String("urgent".to_string()));
-        let record_value = Value::Record(fields);
+        let record_value = Value::Record(Box::new(fields));
 
         let mailbox = create_test_mailbox(vec![MailboxEntry::new(
             "kafka",
@@ -623,7 +623,7 @@ mod tests {
         // Create a record value with value: 150
         let mut fields = HashMap::new();
         fields.insert("value".to_string(), Value::Int(150));
-        let record_value = Value::Record(fields);
+        let record_value = Value::Record(Box::new(fields));
 
         let mailbox = create_test_mailbox(vec![MailboxEntry::new("sensor", "temp", record_value)]);
         let stream_ctx = StreamContext::new();
@@ -716,7 +716,7 @@ mod tests {
         // Create a record value with value: 50
         let mut fields = HashMap::new();
         fields.insert("value".to_string(), Value::Int(50));
-        let record_value = Value::Record(fields);
+        let record_value = Value::Record(Box::new(fields));
 
         let mailbox = create_test_mailbox(vec![MailboxEntry::new("sensor", "temp", record_value)]);
         let stream_ctx = StreamContext::new();
@@ -797,7 +797,7 @@ mod tests {
         let mailbox = create_test_mailbox(vec![MailboxEntry::new(
             "test",
             "channel",
-            Value::List(vec![Value::Int(1), Value::Int(2)]),
+            Value::List(Box::new(vec![Value::Int(1), Value::Int(2)])),
         )]);
         let stream_ctx = StreamContext::new();
         let cap_ctx = CapabilityContext::new();

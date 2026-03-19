@@ -43,12 +43,14 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             let value = eval_expr(expr, ctx)?;
             match value {
                 Value::Record(mut fields) => {
-                    fields
-                        .remove(field)
-                        .ok_or_else(|| EvalError::FieldNotFound {
+                    let removed = fields.remove(field);
+                    if removed.is_none() {
+                        return Err(EvalError::FieldNotFound {
                             field: field.clone(),
                             value: Value::Record(fields),
-                        })
+                        });
+                    }
+                    Ok(removed.unwrap())
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "record".to_string(),
@@ -125,7 +127,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
 
             Ok(Value::Variant {
                 name: name.clone(),
-                fields: evaluated_fields,
+                fields: Box::new(evaluated_fields),
             })
         }
 
@@ -164,7 +166,7 @@ fn eval_spawn(workflow_type: &str) -> EvalResult<Value> {
 
     let control = Some(ControlLink { instance_id });
 
-    Ok(Value::Instance(Instance { addr, control }))
+    Ok(Value::Instance(Box::new(Instance { addr, control })))
 }
 
 /// Evaluate a split expression
@@ -177,7 +179,7 @@ fn eval_split(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             let addr = Value::InstanceAddr(instance.addr);
             let control = instance.control.map(Value::ControlLink);
             // Return as a tuple: (addr, control)
-            Ok(Value::List(vec![addr, control.unwrap_or(Value::Null)]))
+            Ok(Value::List(Box::new(vec![addr, control.unwrap_or(Value::Null)]))))
         }
         _ => Err(EvalError::TypeMismatch {
             expected: "Instance".to_string(),
@@ -407,9 +409,9 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
             }
             match (&args[0], &args[1]) {
                 (Value::List(list), elem) => {
-                    let mut new_list = list.clone();
+                    let mut new_list: Vec<_> = list.iter().cloned().collect();
                     new_list.push(elem.clone());
-                    Ok(Value::List(new_list))
+                    Ok(Value::List(Box::new(new_list)))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "list".to_string(),
@@ -427,9 +429,9 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
             }
             match (&args[0], &args[1]) {
                 (Value::List(l1), Value::List(l2)) => {
-                    let mut new_list = l1.clone();
-                    new_list.extend(l2.clone());
-                    Ok(Value::List(new_list))
+                    let mut new_list: Vec<_> = l1.iter().cloned().collect();
+                    new_list.extend(l2.iter().cloned());
+                    Ok(Value::List(Box::new(new_list)))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "list, list".to_string(),
@@ -450,7 +452,7 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
                 Value::Record(fields) => {
                     let keys: Vec<Value> =
                         fields.keys().map(|k| Value::String(k.clone())).collect();
-                    Ok(Value::List(keys))
+                    Ok(Value::List(Box::new(keys)))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "record".to_string(),
@@ -469,7 +471,7 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
             match &args[0] {
                 Value::Record(fields) => {
                     let values: Vec<Value> = fields.values().cloned().collect();
-                    Ok(Value::List(values))
+                    Ok(Value::List(Box::new(values)))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "record".to_string(),
@@ -560,7 +562,7 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
                 };
                 fields.insert(key, args[i + 1].clone());
             }
-            Ok(Value::Record(fields))
+            Ok(Value::Record(Box::new(fields)))
         }
 
         // Unknown function
@@ -599,7 +601,7 @@ mod tests {
         let mut ctx = Context::new();
         let mut record = HashMap::new();
         record.insert("name".to_string(), Value::String("Alice".to_string()));
-        ctx.set("person".to_string(), Value::Record(record));
+        ctx.set("person".to_string(), Value::Record(Box::new(record)));
 
         let expr = Expr::FieldAccess {
             expr: Box::new(Expr::Variable("person".to_string())),
@@ -617,7 +619,7 @@ mod tests {
         let mut record = HashMap::new();
         record.insert("x".to_string(), Value::Int(1));
         let expr = Expr::FieldAccess {
-            expr: Box::new(Expr::Literal(Value::Record(record))),
+            expr: Box::new(Expr::Literal(Value::Record(Box::new(record)))),
             field: "missing".to_string(),
         };
         assert!(eval_expr(&expr, &ctx).is_err());
@@ -637,7 +639,7 @@ mod tests {
     fn test_eval_index_list() {
         let ctx = Context::new();
         let expr = Expr::IndexAccess {
-            expr: Box::new(Expr::Literal(Value::List(vec![
+            expr: Box::new(Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(10),
                 Value::Int(20),
                 Value::Int(30),
@@ -651,7 +653,7 @@ mod tests {
     fn test_eval_index_out_of_bounds() {
         let ctx = Context::new();
         let expr = Expr::IndexAccess {
-            expr: Box::new(Expr::Literal(Value::List(vec![Value::Int(10)]))),
+            expr: Box::new(Expr::Literal(Value::List(Box::new(vec![Value::Int(10)]))),
             index: Box::new(Expr::Literal(Value::Int(5))),
         };
         assert!(eval_expr(&expr, &ctx).is_err());
@@ -784,7 +786,7 @@ mod tests {
         let expr = Expr::Binary {
             op: BinaryOp::In,
             left: Box::new(Expr::Literal(Value::Int(2))),
-            right: Box::new(Expr::Literal(Value::List(vec![
+            right: Box::new(Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
@@ -798,7 +800,7 @@ mod tests {
         let ctx = Context::new();
         let expr = Expr::Call {
             func: "len".to_string(),
-            arguments: vec![Expr::Literal(Value::List(vec![
+            arguments: vec![Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
             ]))],
@@ -812,13 +814,13 @@ mod tests {
         let expr = Expr::Call {
             func: "append".to_string(),
             arguments: vec![
-                Expr::Literal(Value::List(vec![Value::Int(1)])),
+                Expr::Literal(Value::List(Box::new(vec![Value::Int(1)]))),
                 Expr::Literal(Value::Int(2)),
             ],
         };
         assert_eq!(
             eval_expr(&expr, &ctx).unwrap(),
-            Value::List(vec![Value::Int(1), Value::Int(2)])
+            Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))
         );
     }
 
@@ -828,13 +830,13 @@ mod tests {
         let expr = Expr::Call {
             func: "concat".to_string(),
             arguments: vec![
-                Expr::Literal(Value::List(vec![Value::Int(1)])),
-                Expr::Literal(Value::List(vec![Value::Int(2)])),
+                Expr::Literal(Value::List(Box::new(vec![Value::Int(1)]))),
+                Expr::Literal(Value::List(Box::new(vec![Value::Int(2)])),
             ],
         };
         assert_eq!(
             eval_expr(&expr, &ctx).unwrap(),
-            Value::List(vec![Value::Int(1), Value::Int(2)])
+            Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))
         );
     }
 
@@ -1176,7 +1178,7 @@ mod tests {
         ];
 
         let expr = Expr::Match {
-            scrutinee: Box::new(Expr::Literal(Value::List(vec![
+            scrutinee: Box::new(Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
@@ -1205,7 +1207,7 @@ mod tests {
         }];
 
         let expr = Expr::Match {
-            scrutinee: Box::new(Expr::Literal(Value::List(vec![
+            scrutinee: Box::new(Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
             ]))),

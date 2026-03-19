@@ -38,10 +38,10 @@ pub enum Value {
     Time(chrono::DateTime<chrono::Utc>),
     /// Reference to external resource
     Ref(String),
-    /// List of values
-    List(Vec<Value>),
-    /// Record (map)
-    Record(HashMap<String, Value>),
+    /// List of values (boxed to reduce enum size)
+    List(Box<Vec<Value>>),
+    /// Record (map) (boxed to reduce enum size)
+    Record(Box<HashMap<String, Value>>),
     /// Capability reference
     Cap(String),
     /// Variant/Constructor value (ADT)
@@ -50,11 +50,11 @@ pub enum Value {
     Variant {
         /// Constructor name (e.g., "Some", "None", "Ok")
         name: String,
-        /// Field values as (name, value) pairs
-        fields: Vec<(String, Value)>,
+        /// Field values as (name, value) pairs (boxed to reduce enum size)
+        fields: Box<Vec<(String, Value)>>,
     },
-    /// Instance value - composite of addr and optional control link
-    Instance(Instance),
+    /// Instance value - composite of addr and optional control link (boxed to reduce enum size)
+    Instance(Box<Instance>),
     /// Instance address value (opaque reference to an instance)
     InstanceAddr(InstanceAddr),
     /// Control link value (affine - for controlling spawned instances)
@@ -87,7 +87,7 @@ impl Value {
     pub fn variant(name: impl Into<String>, fields: Vec<(impl Into<String>, Value)>) -> Self {
         Value::Variant {
             name: name.into(),
-            fields: fields.into_iter().map(|(k, v)| (k.into(), v)).collect(),
+            fields: Box::new(fields.into_iter().map(|(k, v)| (k.into(), v)).collect()),
         }
     }
 
@@ -95,7 +95,7 @@ impl Value {
     pub fn unit_variant(name: impl Into<String>) -> Self {
         Value::Variant {
             name: name.into(),
-            fields: vec![],
+            fields: Box::new(vec![]),
         }
     }
 }
@@ -205,9 +205,9 @@ mod tests {
             8,  // Items per collection
             |inner| {
                 prop_oneof![
-                    prop::collection::vec(inner.clone(), 0..8).prop_map(Value::List),
+                    prop::collection::vec(inner.clone(), 0..8).prop_map(|v| Value::List(Box::new(v))),
                     prop::collection::hash_map("[a-z]+".prop_map(String::from), inner, 0..8)
-                        .prop_map(Value::Record),
+                        .prop_map(|m| Value::Record(Box::new(m))),
                 ]
             },
         )

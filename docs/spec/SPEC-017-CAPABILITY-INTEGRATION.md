@@ -12,15 +12,20 @@ All capabilities (input: `observe`, `receive`; output: `set`, `send`) must integ
 
 | Capability | Operation | Effect | Rationale |
 |------------|-----------|--------|-----------|
-| Behaviour | `observe` | Epistemic | Read-only, no side effects |
-| Behaviour | `set` | Operational | Modifies external state |
-| Stream | `receive` | Epistemic | Read-only consumption |
-| Stream | `send` | Operational | Produces external event |
+| Behaviour | `observe` | Epistemic | Input acquisition and read-only observation |
+| Behaviour | `set` | Operational | External side effect that modifies external state |
+| Stream | `receive` | Epistemic | Mailbox input acquisition; consumes queued workflow input without producing external side effects |
+| Stream | `send` | Operational | External side effect that produces an outgoing event |
 
 ### 2.2 Effect Lattice
 
 ```
 Epistemic < Deliberative < Evaluative < Operational
+
+Epistemic = input acquisition and read-only observation
+Deliberative = analysis, planning, and proposal formation
+Evaluative = policy and obligation evaluation
+Operational = external side effects and irreversible outputs
 
 observe ──────┐
 receive ──────┼──► Epistemic
@@ -59,8 +64,10 @@ pub struct WorkflowType {
     pub total: Effect,   -- Join of input and output
 }
 
--- Pure workflow: Epistemic
--- Effectful workflow: Operational
+-- Input-only workflow: Epistemic
+-- Analysis-only workflow: Deliberative
+-- Policy/obligation gate: Evaluative
+-- Workflow with external outputs: Operational
 ```
 
 ## 3. Obligations Integration
@@ -395,7 +402,7 @@ workflow reader
     receives kafka:events           -- Stream input
 {
     observe sensor:temperature as t;  -- OK
-    receive kafka:events as e;        -- OK
+    receive { kafka:events as e => done }; -- OK
     observe sensor:pressure as p;     -- ERROR: not declared
 }
 
@@ -419,6 +426,8 @@ workflow mixed
     -- Can use all four
 }
 ```
+
+`receive` statements use the canonical arm-based surface form from SPEC-002. The declaration authorizes the `capability:channel` selectors named in those arms.
 
 ### 6.2 Capability Registry
 
@@ -500,7 +509,7 @@ impl CapabilitySchema {
         match &self.write {
             Some(schema) if schema.matches(value) => Ok(()),
             Some(schema) => Err(TypeError::OutputMismatch { ... }),
-            None => Err(TypeError::NotWritable),
+            None => Err(TypeError::NotSettable),
         }
     }
 }
@@ -511,7 +520,7 @@ impl CapabilitySchema {
 ```ash
 -- Schema: sensor:temperature reads Int, writes nothing
 workflow bad sets sensor:temperature {
-    set sensor:temperature = 72  -- ERROR: not writable
+    set sensor:temperature = 72  -- ERROR: not settable
 }
 
 -- Schema: hvac:target reads Int, writes Int
@@ -554,7 +563,7 @@ pub enum CapabilityError {
     -- Type errors
     TypeMismatch { expected: Type, actual: Type },
     NotReadable,
-    NotWritable,
+    NotSettable,
 }
 ```
 
@@ -596,7 +605,7 @@ workflow resilient
 | **Effect** | Epistemic | Operational |
 | **Obligations** | Can require observation | Can require output |
 | **Policies** | Can restrict/transform | Can restrict/approve |
-| **Provenance** | Record value received | Record value sent |
+| **Provenance** | Record observed data or message intake | Record value sent |
 | **Declaration** | `observes`, `receives` | `sets`, `sends` |
 | **Type Safety** | Read schema validated | Write schema validated |
 | **Errors** | Unavailable, Timeout | Failed, Rejected, BufferFull |

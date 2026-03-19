@@ -9,6 +9,12 @@ The type system tracks:
 2. **Effect types**: What computational power is used
 3. **Obligation types**: What deontic constraints apply
 
+Canonical workflow effect vocabulary used throughout this spec:
+- **Epistemic** — input acquisition and read-only observation
+- **Deliberative** — analysis, planning, and proposal formation
+- **Evaluative** — policy and obligation evaluation
+- **Operational** — external side effects and irreversible outputs
+
 ## 2. Type Judgment
 
 ```
@@ -55,9 +61,18 @@ pub struct TypeVar(pub u32);
   Γ ∪ Γ', Σ, Ω ⊢ cont : τ / ε ⊣ Ω'
   ─────────────────────────────────────────────────────────────
   Γ, Σ, Ω ⊢ OBSERVE cap as pat in cont : τ / epistemic⊔ε ⊣ Ω'
+
+(RECEIVE-T)
+  ∀i. bind(receive_pat_i, τ_msg_i) = Γ_i
+      guard_i = None ∨ Γ ∪ Γ_i ⊢ guard_i : bool / ε_guard_i
+      Γ ∪ Γ_i, Σ, Ω ⊢ body_i : τ / ε_i ⊣ Ω_i
+  Ω_out = ⋂ Ω_i
+  ε_arms = ⊔i (ε_guard_i ⊔ ε_i)
+  ─────────────────────────────────────────────────────────────
+  Γ, Σ, Ω ⊢ RECEIVE mode { arms_i } : τ / epistemic⊔ε_arms ⊣ Ω_out
 ```
 
-**Property**: OBSERVE never produces effect > epistemic
+**Property**: `OBSERVE` and `RECEIVE` never contribute a base effect above `epistemic`; any larger workflow effect comes from guards or branch bodies.
 
 ### 4.2 Deliberative Layer
 
@@ -96,6 +111,10 @@ pub struct TypeVar(pub u32);
   ─────────────────────────────────────────────────────────────
   Γ, Σ, Ω ⊢ CHECK obligation in cont : τ / ε_check⊔ε ⊣ Ω''
 ```
+
+`DECIDE` is well-formed only when the policy name is explicit.
+
+`CHECK` ranges only over obligations in `Ω`; policy evaluation belongs to `DECIDE`.
 
 ### 4.4 Operational Layer
 
@@ -169,6 +188,11 @@ fn infer_effect(workflow: &Workflow) -> Effect {
     match workflow {
         Observe { continuation, .. } => 
             Effect::Epistemic.join(infer_effect(continuation)),
+      Receive { arms, .. } =>
+        arms.iter().fold(Effect::Epistemic, |acc, arm| {
+            acc.join(infer_guard_effect(arm.guard.as_ref()))
+              .join(infer_effect(&arm.body))
+        }),
         Act { .. } => Effect::Operational,
         Seq { first, second } => 
             infer_effect(first).join(infer_effect(second)),

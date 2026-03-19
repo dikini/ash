@@ -13,16 +13,18 @@ Workflows declare what they need:
 ```ash
 workflow controller
     observes sensor:temperature     -- Required input
+    receives kafka:orders          -- Required stream input
     sets hvac:target               -- Required output
     oblig role:operator            -- Required obligation
 {
     observe sensor:temperature as t;
+    receive { kafka:orders as order => act process(order) };
     set hvac:target = calculate(t);
 }
 ```
 
 Compile-time requirements:
-- **Input capabilities**: `observes`, `receives`
+- **Input capabilities**: `observes`, `receives` (for stream selectors used in `receive` arms)
 - **Output capabilities**: `sets`, `sends`
 - **Effect level**: Computed from operations
 - **Obligations**: Required role/context
@@ -36,6 +38,7 @@ pub struct RuntimeContext {
     pub obligations: Vec<Obligation>,     -- What we're obliged to do
     pub policies: Vec<Policy>,            -- What we're allowed to do
     pub capabilities: CapabilityRegistry, -- What's available
+    pub max_effect: Effect,               -- Highest effect this runtime will permit
     pub role: Role,                       -- Who's running this
 }
 ```
@@ -47,10 +50,13 @@ pub struct RuntimeContext {
 | Workflow Requires | Runtime Provides | Result | Action |
 |-------------------|------------------|--------|--------|
 | `observes sensor:temp` | Registry has `sensor:temp` | ✅ OK | Proceed |
-| `observes sensor:temp` | Registry missing | ❌ ERROR | `CapabilityUnavailable` |
+| `observes sensor:temp` | Registry missing | ❌ ERROR | `MissingCapability` |
+| `receives kafka:orders` | Registry has `kafka:orders` + receivable | ✅ OK | Proceed |
+| `receives kafka:orders` | Registry has `kafka:orders` but cannot receive | ❌ ERROR | `NotReceivable` |
+| `receives kafka:orders` | Registry missing | ❌ ERROR | `MissingCapability` |
 | `sets hvac:target` | Registry has `hvac:target` + writable | ✅ OK | Proceed |
-| `sets hvac:target` | Registry has `hvac:target` read-only | ❌ ERROR | `NotWritable` |
-| `sets hvac:target` | Registry missing | ❌ ERROR | `CapabilityUnavailable` |
+| `sets hvac:target` | Registry has `hvac:target` read-only | ❌ ERROR | `NotSettable` |
+| `sets hvac:target` | Registry missing | ❌ ERROR | `MissingCapability` |
 | `sends kafka:orders` | Registry has `kafka:orders` + sendable | ✅ OK | Proceed |
 | `sends kafka:orders` | Registry has `kafka:orders` receive-only | ❌ ERROR | `NotSendable` |
 
@@ -61,7 +67,7 @@ pub struct RuntimeContext {
 | `oblig role:operator` | Context has `role:operator` | ✅ OK | Proceed |
 | `oblig role:operator` | Context has different role | ❌ ERROR | `RoleMismatch` |
 | `oblig maintain_temperature` | Obligation assigned | ✅ OK | Track fulfillment |
-| `oblig maintain_temperature` | Obligation not assigned | ⚠️ WARN | `UnfulfilledObligation` |
+| `oblig maintain_temperature` | Obligation not assigned | ⚠️ WARN | `MissingObligation` |
 | No obligation required | Any obligation present | ✅ OK | Ignore extra |
 
 ### 4.3 Policy Compliance Matrix
@@ -71,6 +77,8 @@ pub struct RuntimeContext {
 | `observe sensor:temp` | Policy: `Permit` | ✅ OK | Return value |
 | `observe sensor:temp` | Policy: `Deny` | ❌ ERROR | `PolicyDenied` |
 | `observe sensor:temp` | Policy: `Transform(mask)` | ✅ OK | Return masked value |
+| `receive { kafka:orders as order => ... }` | Policy: `Permit` | ✅ OK | Select message and run matched arm |
+| `receive { kafka:orders as order => ... }` | Policy: `Deny` | ❌ ERROR | `PolicyDenied` |
 | `set hvac:target` | Policy: `Permit` | ✅ OK | Execute set |
 | `set hvac:target` | Policy: `Deny` | ❌ ERROR | `PolicyDenied` |
 | `set hvac:target` | Policy: `RequireApproval(r)` | ⏸️ WAIT | Queue for approval |
@@ -81,9 +89,11 @@ pub struct RuntimeContext {
 
 | Workflow Effect | Runtime Max Effect | Result | Action |
 |-----------------|-------------------|--------|--------|
-| `Epistemic` (read-only) | Any | ✅ OK | Always allowed |
-| `Operational` (has output) | `Epistemic` only | ❌ ERROR | `EffectTooHigh` |
-| `Operational` (has output) | `Operational` | ✅ OK | Proceed |
+| `Epistemic` (input acquisition and read-only observation) | `Epistemic` or higher | ✅ OK | Proceed |
+| `Deliberative` (analysis, planning, proposal formation) | `Deliberative` or higher | ✅ OK | Proceed |
+| `Evaluative` (policy and obligation evaluation) | `Evaluative` or higher | ✅ OK | Proceed |
+| `Operational` (external side effects and irreversible outputs) | `Operational` | ✅ OK | Proceed |
+| Any workflow effect | Lower than required by the workflow | ❌ ERROR | `EffectTooHigh` |
 
 ## 5. Runtime Verification Algorithm
 
@@ -131,6 +141,20 @@ impl CapabilityVerifier {
                 Some(provider) => {
                     if !provider.is_observable() {
                         result.add_error(VerificationError::NotObservable { ... });
+                    }
+                }
+            }
+        }
+
+        for (cap, channel) in &workflow.required_receives {
+            match registry.get(cap, channel) {
+                None => result.add_error(VerificationError::MissingCapability {
+                    operation: "receive",
+                    capability: format!("{}:{}", cap, channel),
+                }),
+                Some(provider) => {
+                    if !provider.is_receivable() {
+                        result.add_error(VerificationError::NotReceivable { ... });
                     }
                 }
             }
@@ -213,6 +237,7 @@ pub enum VerificationError {
         capability: String,
     },
     NotObservable { capability: String },
+    NotReceivable { capability: String },
     NotSettable { capability: String },
     NotSendable { capability: String },
     RoleMismatch {
@@ -247,7 +272,7 @@ pub async fn verify_operation(
 ) -> OperationResult {
     -- 1. Check capability still available
     let provider = runtime.capabilities.get(&op.capability, &op.channel)
-        .ok_or(OperationError::CapabilityUnavailable)?;
+        .ok_or(OperationError::MissingCapability)?;
     
     -- 2. Evaluate dynamic policies
     let policy_ctx = PolicyContext::from_operation(op, runtime);

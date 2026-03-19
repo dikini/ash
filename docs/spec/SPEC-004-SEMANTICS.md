@@ -14,6 +14,10 @@ Value      ::= Int(i) | String(s) | Bool(b) | Null
              | Cap(c)
 
 Effect     ::= Epistemic | Deliberative | Evaluative | Operational
+             -- Epistemic: input acquisition and read-only observation
+             -- Deliberative: analysis, planning, and proposal formation
+             -- Evaluative: policy and obligation evaluation
+             -- Operational: external side effects and irreversible outputs
 
 Trace      ::= ε | TraceEvent :: Trace
 
@@ -62,6 +66,20 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
 - Effect is at most epistemic
 - Value bound to pattern
 - Observation recorded in trace
+
+```
+(RECEIVE)
+  poll_mailbox(mode, control, Γ) ↝ msg
+  select_receive_arm(arms, msg, Γ) = (Γ', body)
+  Γ ∪ Γ', C, Ω, π ⊢ body ⇓ v, ε, T, π'
+  ─────────────────────────────────────────────────────────────────
+  Γ, C, Ω, π ⊢ RECEIVE mode control { arms } ⇓ v,
+               epistemic⊔ε,
+               Receive(msg, now()) :: T,
+               π'
+```
+
+`RECEIVE` is the mailbox-input form. Its base effect is `epistemic` because it only selects from already-arrived workflow input; blocking and timeout behavior are determined by `mode` rather than by a higher effect classification.
 
 ### 4.2 Deliberative Layer
 
@@ -113,6 +131,8 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
                error: PolicyViolation(policy, v)
 ```
 
+`DECIDE` is the workflow-level policy gate and therefore always names an explicit policy. Capability-level checks may still be applied at concrete `observe`, `receive`, `set`, `send`, or `act` operations by the capability-verification runtime.
+
 ```
 (CHECK-SATISFIED)
   check_obligation(role, condition, Γ) = true
@@ -133,6 +153,8 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
                π,
                error: ObligationViolation(obligation)
 ```
+
+`CHECK` evaluates obligations only; policies are not valid `CHECK` targets.
 
 ### 4.4 Operational Layer
 

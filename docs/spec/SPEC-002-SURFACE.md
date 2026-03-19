@@ -15,9 +15,10 @@ The surface language is designed to be:
 
 ```
 KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
-              | "observe" | "orient" | "propose" | "decide" | "act"
+              | "observe" | "receive" | "orient" | "propose" | "decide" | "act"
               | "oblige" | "check" | "let" | "in" | "if" | "then" | "else"
               | "for" | "do" | "par" | "with" | "maybe" | "must"
+              | "wait" | "control"
               | "attempt" | "retry" | "timeout" | "done"
               | "epistemic" | "deliberative" | "evaluative" | "operational"
               | "authority" | "obligations" | "supervises"
@@ -111,7 +112,7 @@ workflow_def    ::= "workflow" IDENTIFIER "{" workflow "}"
 workflow        ::= workflow_stmt (";" workflow_stmt)* ";"? "done"?
 
 workflow_stmt   ::= observe_stmt | orient_stmt | propose_stmt
-                  | decide_stmt | check_stmt | act_stmt
+                  | decide_stmt | check_stmt | receive_stmt | act_stmt
                   | oblig_stmt | let_stmt | if_stmt
                   | for_stmt | par_stmt | with_stmt
                   | maybe_stmt | must_stmt
@@ -126,11 +127,23 @@ propose_stmt    ::= "propose" action_ref ("as" pattern)?
                     ("then" workflow)?
 
 decide_stmt     ::= "decide" "{" expression "}" 
-                    ("under" IDENTIFIER)?
+                    "under" IDENTIFIER
                     "then" workflow
-                    ("else" workflow)?
 
 check_stmt      ::= "check" obligation_ref ("then" workflow)?
+
+receive_stmt    ::= "receive" ("control")? receive_mode?
+                    "{" receive_arm ("," receive_arm)* "}"
+
+receive_mode    ::= "wait" (duration)?
+
+receive_arm     ::= receive_pattern ("if" expression)? "=>" workflow
+
+receive_pattern ::= IDENTIFIER ":" IDENTIFIER "as" pattern
+                  | STRING
+                  | "_"
+
+duration        ::= NUMBER ("ms" | "s" | "m" | "h")
 
 act_stmt        ::= "act" action_ref ("where" guard)?
 
@@ -152,6 +165,11 @@ maybe_stmt      ::= "maybe" workflow "else" workflow
 
 must_stmt       ::= "must" workflow
 ```
+
+**Canonical workflow-form contracts**:
+- `check` is reserved for obligation references. Policy instances are not valid `check` targets.
+- `decide` is the policy gate, so `under <policy>` is required in the surface syntax.
+- `receive` is the authoritative surface form for stream/mailbox intake in the core workflow language; neighboring specs should defer to this grammar when referring to workflow-level `receive`.
 
 ### 3.6 Expressions
 

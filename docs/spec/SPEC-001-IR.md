@@ -14,10 +14,10 @@ This document specifies the core Intermediate Representation (IR) for the Ash wo
 /// Effect levels form a complete lattice
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Effect {
-    Epistemic = 0,      // Read-only operations
-    Deliberative = 1,   // Analysis and planning
-    Evaluative = 2,     // Policy decisions
-    Operational = 3,    // Side-effecting actions
+    Epistemic = 0,      // Input acquisition and read-only observation
+    Deliberative = 1,   // Analysis, planning, and proposal formation
+    Evaluative = 2,     // Policy and obligation evaluation
+    Operational = 3,    // External side effects and irreversible outputs
 }
 ```
 
@@ -42,6 +42,11 @@ pub enum Workflow {
         capability: Capability,
         pattern: Pattern,
         continuation: Box<Workflow>,
+    },
+    Receive {
+        mode: ReceiveMode,
+        arms: Vec<ReceiveArm>,
+        control: bool,
     },
     
     // Deliberative layer
@@ -115,6 +120,34 @@ pub enum Workflow {
     },
     
     Done,
+}
+```
+
+**Canonical workflow-form contracts**:
+- `Check` is obligation-only in the IR. It discharges or rejects an `Obligation`; policies are evaluated by `Decide`, not `Check`.
+- `Decide` always carries an explicit named `policy`. There is no policy-free core `Decide` form.
+- `Receive` is the canonical IR form for mailbox input. It preserves the receive mode and the ordered arm list from the surface language.
+
+```rust
+pub enum ReceiveMode {
+    NonBlocking,
+    Blocking(Option<Duration>),
+}
+
+pub struct ReceiveArm {
+    pattern: ReceivePattern,
+    guard: Option<Expr>,
+    body: Workflow,
+}
+
+pub enum ReceivePattern {
+    Stream {
+        capability: Capability,
+        channel: Name,
+        pattern: Pattern,
+    },
+    Literal(Value),
+    Wildcard,
 }
 ```
 
@@ -199,6 +232,7 @@ pub struct TraceEvent {
 
 pub enum EventType {
     Observation,
+    Receive,
     Orientation,
     Decision,
     Proposal,

@@ -52,7 +52,6 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Canonicalized the spec contracts for `check`, `decide`, and `receive` across SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-017, and SPEC-018 (TASK-156). `check` is now obligation-only, `decide` always names an explicit policy, and `receive` is documented as an epistemic mailbox-input form with one authoritative surface grammar.
 
 ### Added
-- TASK-183 follow-up refinement for the formalization boundary. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now distinguishes the canonical semantic corpus from authoritative source/handoff contracts and historical artifacts, and [docs/spec/SPEC-021-LEAN-REFERENCE.md](docs/spec/SPEC-021-LEAN-REFERENCE.md) is explicitly marked as a legacy sketch rather than a competing current spec.
 - Formal proofs for semantic properties (Phase 19, TASK-149 through TASK-155):
   - `Ash/Proofs/Pattern.lean` - Pattern match determinism and totality proofs
   - `Ash/Proofs/Pure.lean` - Constructor purity proof (effect system)
@@ -142,7 +141,6 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Error message formatting. Changed to lowercase per Rust conventions.
 
 ### Added
-- TASK-183 follow-up refinement for the formalization boundary. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now distinguishes the canonical semantic corpus from authoritative source/handoff contracts and historical artifacts, and [docs/spec/SPEC-021-LEAN-REFERENCE.md](docs/spec/SPEC-021-LEAN-REFERENCE.md) is explicitly marked as a legacy sketch rather than a competing current spec.
 - Match and if-let expression evaluation (TASK-133). Pattern matching in the interpreter:
   - `eval_match()` function for evaluating `Expr::Match` with multiple arms
   - `eval_if_let()` function for evaluating `Expr::IfLet` expressions
@@ -208,7 +206,6 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Refactored parser utilities to eliminate code duplication between `parse_set.rs` and `parse_send.rs`. Created new `parse_utils.rs` module with shared helper functions: `parse_capability_ref()`, `keyword()`, `literal_str()`, and `skip_whitespace_and_comments()`.
 
 ### Added
-- TASK-183 follow-up refinement for the formalization boundary. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now distinguishes the canonical semantic corpus from authoritative source/handoff contracts and historical artifacts, and [docs/spec/SPEC-021-LEAN-REFERENCE.md](docs/spec/SPEC-021-LEAN-REFERENCE.md) is explicitly marked as a legacy sketch rather than a competing current spec.
 - Set statement execution for output behaviours (TASK-105). New `execute_set` module in `ash-interp` with `execute_set(capability, channel, value, behaviour_ctx)` async function for setting values on writable channels. Integrates with `BehaviourContext` to lookup settable providers, validates values before setting, and returns `ExecError::CapabilityNotAvailable` or `ExecError::ValidationFailed` on errors. Added `Workflow::Set` variant to AST with `capability`, `channel`, and `value` fields. Extended `execute_workflow` with new `execute_workflow_with_behaviour` function that accepts `BehaviourContext` for set statement support.
 - Parse send statement for output streams (TASK-104). New `parse_send` module in `ash-parser` with `SendExpr` struct for parsing `send capability:channel expr` syntax. Similar to `parse_set` but without the `=` sign. Supports variables, string literals, and function calls for structured values.
 - Parse set statement for output behaviours (TASK-103). New `parse_set` module in `ash-parser` with `SetExpr` struct for parsing `set capability:channel = expr` syntax. Supports simple values, function calls for structured values, and expressions.
@@ -276,11 +273,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - **Breaking**: Z3/SMT is now a mandatory dependency (removed `smt` feature flag). Policy conflict detection is always enabled for security-critical workflows. System must have Z3 C library installed.
 
 ### Added
-- TASK-183 follow-up refinement for the formalization boundary. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now distinguishes the canonical semantic corpus from authoritative source/handoff contracts and historical artifacts, and [docs/spec/SPEC-021-LEAN-REFERENCE.md](docs/spec/SPEC-021-LEAN-REFERENCE.md) is explicitly marked as a legacy sketch rather than a competing current spec.
 - List literal parsing for expressions: `[1, 2, 3]` or `["a", "b"]` syntax. Updated SPEC-002 to define list_literal production. Added Literal::List variant to surface AST.
 
 ### Added
-- TASK-183 follow-up refinement for the formalization boundary. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now distinguishes the canonical semantic corpus from authoritative source/handoff contracts and historical artifacts, and [docs/spec/SPEC-021-LEAN-REFERENCE.md](docs/spec/SPEC-021-LEAN-REFERENCE.md) is explicitly marked as a legacy sketch rather than a competing current spec.
 - Initial project structure with workspace and 9 crates (ash-core, ash-macros, ash-parser, ash-typeck, ash-interp, ash-provenance, ash-cli, ash-lint, ash-doc-tests)
 - Effect lattice implementation with 4 levels: Epistemic, Deliberative, Evaluative, Operational (TASK-001)
 - Comprehensive property tests for Effect lattice: associativity, commutativity, idempotence, absorption, identity (18 property tests)

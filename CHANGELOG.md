@@ -7,6 +7,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Generic type instantiation (TASK-129). Type parameter substitution for ADTs:
+  - `instantiate(def, args)` function for substituting type parameters with concrete types
+  - `Substitution::from_pairs()` method for creating substitutions from type variable pairs
+  - `InstantiateError::ArityMismatch` for wrong number of type arguments
+  - Support for instantiating enums, structs, and type aliases
+  - Recursive substitution in nested types (tuples, records, constructors)
+  - Full test coverage for single and multi-parameter type definitions
 - Type check patterns for match expressions (TASK-128). Pattern type checking in `crates/ash-typeck/src/check_pattern.rs`:
   - `check_pattern(env, pattern, expected)` function for checking patterns against expected types
   - `Bindings` type: `HashMap<String, Type>` for pattern variable bindings

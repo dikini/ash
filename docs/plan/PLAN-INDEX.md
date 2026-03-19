@@ -184,6 +184,36 @@ Every task is considered **complete** only when:
 
 **Phase 9 Deliverable**: User-defined policies with compile-time conflict detection
 
+## Phase 17: Algebraic Data Types (In Progress)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-120](tasks/TASK-120-ast-extensions.md) | AST Extensions for ADTs | SPEC-020 | 3 | ✅ Complete |
+| [TASK-124](tasks/TASK-124-parse-type-definitions.md) | Parse type definitions | SPEC-020 | 6 | ✅ Complete |
+| [TASK-125](tasks/TASK-125-parse-match-expressions.md) | Parse match and patterns | SPEC-020 | 5 | ✅ Complete |
+| [TASK-126](tasks/TASK-126-parse-if-let.md) | Parse if-let expressions | SPEC-020 | 3 | ✅ Complete |
+| [TASK-127](tasks/TASK-127-type-check-constructors.md) | Type check constructors | SPEC-020 | 6 | ✅ Complete |
+| [TASK-128](tasks/TASK-128-type-check-patterns.md) | Type check patterns | SPEC-020 | 8 | ✅ Complete |
+| [TASK-129](tasks/TASK-129-generic-instantiation.md) | Generic type instantiation | SPEC-020 | 6 | ✅ Complete |
+| [TASK-130](tasks/TASK-130-exhaustiveness-checking.md) | Exhaustiveness checking | SPEC-020 | 8 | 🟡 Ready |
+| [TASK-131](tasks/TASK-131-constructor-evaluation.md) | Constructor evaluation | SPEC-020 | 4 | 🟡 Ready |
+| [TASK-132](tasks/TASK-132-pattern-matching-engine.md) | Pattern matching engine | SPEC-020 | 6 | 🟡 Ready |
+| [TASK-133](tasks/TASK-133-match-evaluation.md) | Match expression evaluation | SPEC-020 | 5 | 🟡 Ready |
+| [TASK-134](tasks/TASK-134-spawn-option-control-link.md) | Spawn returns Option<ControlLink> | SPEC-020 | 6 | 🟡 Ready |
+| [TASK-135](tasks/TASK-135-control-link-transfer.md) | Control link transfer semantics | SPEC-020 | 5 | 🟡 Ready |
+| [TASK-136](tasks/TASK-136-option-result-library.md) | Option and Result modules | SPEC-020 | 6 | 🟡 Ready |
+
+**Phase 17 Deliverable**: Full ADT support with Option<T>, Result<T,E>, pattern matching, and exhaustiveness checking
+
+**Phase 17 Status**: 7 of 14 tasks complete (50%)
+- ✅ Wave 0: AST Foundation (TASK-120)
+- ✅ Wave 1: Parser (TASK-124, TASK-125, TASK-126)
+- ✅ Wave 2: Type Checker Core (TASK-127, TASK-128, TASK-129)
+- 🟡 Wave 3: Type Checker Advanced (TASK-130)
+- 🟡 Wave 4: Interpreter (TASK-131, TASK-132, TASK-133)
+- 🟡 Wave 5: Control Link (TASK-134, TASK-135)
+- 🟡 Wave 6: Standard Library (TASK-136)
+
 ## Total Effort Estimate
 
 - **Tasks**: 59 (56 complete, 3 planned)

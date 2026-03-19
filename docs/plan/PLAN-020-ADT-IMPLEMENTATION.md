@@ -20,6 +20,13 @@
 | TASK-121b | Variant struct, TypeVar, Substitution | ✅ Complete |
 | TASK-122 | Value::Variant, Value::Struct, Value::Tuple | ✅ Complete |
 | TASK-123 | ADT Unification (constructor unification, occurs_in) | ✅ Complete |
+| TASK-120 | AST Extensions for ADTs | ✅ Complete |
+| TASK-124 | Parse Type Definitions | ✅ Complete |
+| TASK-125 | Parse Match Expressions | ✅ Complete |
+| TASK-126 | Parse If-Let Expressions | ✅ Complete |
+| TASK-127 | Type Check Constructors | ✅ Complete |
+| TASK-128 | Type Check Patterns | ✅ Complete |
+| TASK-129 | Generic Type Instantiation | ✅ Complete |
 
 ### Discovery: TASK-123 Already Implemented
 
@@ -115,22 +122,22 @@ Phase 8: Standard Library
 
 ## Implementation Order (Corrected)
 
-### Wave 0: AST Foundation (CRITICAL - Must be first)
-**TASK-120**: AST Extensions for ADTs
+### Wave 0: AST Foundation (COMPLETE ✅)
+**TASK-120**: AST Extensions for ADTs ✅
 - Add `Pattern::Variant` to `crates/ash-core/src/ast.rs`
 - Add `Expr::Constructor`, `Expr::Match`, `Expr::IfLet` to `crates/ash-core/src/ast.rs`
 - Add `MatchArm`, `TypeDef`, `TypeBody`, `VariantDef`, `Visibility` to `crates/ash-core/src/ast.rs`
 - Add `Type::Instance`, `Type::InstanceAddr`, `Type::ControlLink` to `crates/ash-typeck/src/types.rs`
 
-### Wave 1: Parser (Sequential)
-1. **TASK-124**: Parse Type Definitions (after 120)
-2. **TASK-125**: Parse Match Expressions (after 124)
-3. **TASK-126**: Parse If-Let (after 125)
+### Wave 1: Parser (COMPLETE ✅)
+1. **TASK-124**: Parse Type Definitions ✅
+2. **TASK-125**: Parse Match Expressions ✅
+3. **TASK-126**: Parse If-Let ✅
 
-### Wave 2: Type Checker Core (Parallelizable)
-4. **TASK-129**: Generic Instantiation (after 120) 
-5. **TASK-127**: Type Check Constructors (after 120, 124)
-6. **TASK-128**: Type Check Patterns (after 120, 125, 127)
+### Wave 2: Type Checker Core (COMPLETE ✅)
+4. **TASK-129**: Generic Instantiation ✅
+5. **TASK-127**: Type Check Constructors ✅
+6. **TASK-128**: Type Check Patterns ✅
 
 ### Wave 3: Type Checker Advanced (Sequential)
 7. **TASK-130**: Exhaustiveness Checking (after 128, 129)
@@ -338,13 +345,13 @@ After completing the review, update `docs/plan/PLAN-INDEX.md`:
 | [TASK-121](tasks/TASK-121-adt-core-types.md) | ADT core type representations | SPEC-020 | 6 | ✅ Complete (types only) |
 | [TASK-122](tasks/TASK-122-adt-runtime-values.md) | Runtime values for ADTs | SPEC-020 | 5 | ✅ Complete |
 | [TASK-123](tasks/TASK-123-adt-unification.md) | Unification with constructors | SPEC-020 | 4 | ✅ Complete (already implemented) |
-| [TASK-120](tasks/TASK-120-ast-extensions.md) | AST Extensions for ADTs | SPEC-020 | 3 | 🟡 Ready (NEW) |
-| [TASK-124](tasks/TASK-124-parse-type-definitions.md) | Parse type definitions | SPEC-020 | 6 | 🟡 Ready |
-| [TASK-125](tasks/TASK-125-parse-match-expressions.md) | Parse match and patterns | SPEC-020 | 5 | 🟡 Ready |
-| [TASK-126](tasks/TASK-126-parse-if-let.md) | Parse if-let expressions | SPEC-020 | 3 | 🟡 Ready |
-| [TASK-127](tasks/TASK-127-type-check-constructors.md) | Type check constructors | SPEC-020 | 6 | 🟡 Ready |
-| [TASK-128](tasks/TASK-128-type-check-patterns.md) | Type check patterns | SPEC-020 | 8 | 🟡 Ready |
-| [TASK-129](tasks/TASK-129-generic-instantiation.md) | Generic type instantiation | SPEC-020 | 6 | 🟡 Ready |
+| [TASK-120](tasks/TASK-120-ast-extensions.md) | AST Extensions for ADTs | SPEC-020 | 3 | ✅ Complete |
+| [TASK-124](tasks/TASK-124-parse-type-definitions.md) | Parse type definitions | SPEC-020 | 6 | ✅ Complete |
+| [TASK-125](tasks/TASK-125-parse-match-expressions.md) | Parse match and patterns | SPEC-020 | 5 | ✅ Complete |
+| [TASK-126](tasks/TASK-126-parse-if-let.md) | Parse if-let expressions | SPEC-020 | 3 | ✅ Complete |
+| [TASK-127](tasks/TASK-127-type-check-constructors.md) | Type check constructors | SPEC-020 | 6 | ✅ Complete |
+| [TASK-128](tasks/TASK-128-type-check-patterns.md) | Type check patterns | SPEC-020 | 8 | ✅ Complete |
+| [TASK-129](tasks/TASK-129-generic-instantiation.md) | Generic type instantiation | SPEC-020 | 6 | ✅ Complete |
 | [TASK-130](tasks/TASK-130-exhaustiveness-checking.md) | Exhaustiveness checking | SPEC-020 | 8 | 🟡 Ready |
 | [TASK-131](tasks/TASK-131-constructor-evaluation.md) | Constructor evaluation | SPEC-020 | 4 | 🟡 Ready |
 | [TASK-132](tasks/TASK-132-pattern-matching-engine.md) | Pattern matching engine | SPEC-020 | 6 | 🟡 Ready |

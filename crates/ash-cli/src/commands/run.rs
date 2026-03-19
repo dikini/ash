@@ -109,14 +109,14 @@ fn json_to_ash_value(value: serde_json::Value) -> Result<Value> {
         serde_json::Value::String(s) => Ok(Value::String(s)),
         serde_json::Value::Array(arr) => {
             let values: Result<Vec<_>> = arr.into_iter().map(json_to_ash_value).collect();
-            Ok(Value::List(values?))
+            Ok(Value::List(Box::new(values?)))
         }
         serde_json::Value::Object(map) => {
             let mut result = std::collections::HashMap::new();
             for (k, v) in map {
                 result.insert(k, json_to_ash_value(v)?);
             }
-            Ok(Value::Record(result))
+            Ok(Value::Record(Box::new(result)))
         }
     }
 }
@@ -201,6 +201,24 @@ mod tests {
         assert_eq!(
             json_to_ash_value(serde_json::json!("hello")).unwrap(),
             Value::String("hello".to_string())
+        );
+        assert_eq!(
+            json_to_ash_value(serde_json::json!([1, true, "hello"])).unwrap(),
+            Value::List(Box::new(vec![
+                Value::Int(1),
+                Value::Bool(true),
+                Value::String("hello".to_string()),
+            ]))
+        );
+        assert_eq!(
+            json_to_ash_value(serde_json::json!({"nested": {"value": 42}})).unwrap(),
+            Value::Record(Box::new(HashMap::from([(
+                "nested".to_string(),
+                Value::Record(Box::new(HashMap::from([(
+                    "value".to_string(),
+                    Value::Int(42),
+                )]))),
+            )])))
         );
     }
 

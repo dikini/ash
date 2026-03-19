@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Restored `ash-cli` compatibility with boxed `Value::List` and `Value::Record` constructors, and moved binary command tests into an integration harness so `cargo test -p ash-cli` passes again on the workflow-contracts branch.
+
 ### Changed
 - Canonicalized the spec contracts for `check`, `decide`, and `receive` across SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-017, and SPEC-018 (TASK-156). `check` is now obligation-only, `decide` always names an explicit policy, and `receive` is documented as an epistemic mailbox-input form with one authoritative surface grammar.
 

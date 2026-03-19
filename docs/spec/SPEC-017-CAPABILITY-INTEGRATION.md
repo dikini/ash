@@ -192,13 +192,20 @@ policy data_residency:
     then mask(fields: ["personal_id", "address"])
 ```
 
-These declarations are canonical policy bindings. Before capability verification runs, each policy lowers into the shared `CorePolicy` representation from SPEC-006 and SPEC-007.
+These declarations are policy definitions and named policy bindings. Before capability
+verification runs, each named binding lowers into the shared `CorePolicy` representation from
+SPEC-006 and SPEC-007.
 The lowered representation is consumer-neutral, but the terminal decisions are not:
 
 - workflow `decide` sites admit only `Permit` / `Deny`,
-- capability-verification sites may admit `{Permit, Deny, RequireApproval, Transform}`,
+- capability-verification sites operate over the verification decision set
+  `{Permit, Deny, RequireApproval, Transform}`,
 - `Warn` is not a policy decision; it is verification metadata recorded separately in aggregate
   verification or provenance.
+
+Capability-verification consumers may still reject unsupported approval or transformation
+outcomes before execution if a particular capability/provider cannot honor that decision class.
+That rejection is a verification incompatibility, not a new policy decision kind.
 
 ### 4.2 Policy Evaluation Context
 

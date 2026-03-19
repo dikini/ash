@@ -43,8 +43,13 @@ The canonical policy story is now explicit:
 
 - policy definitions lower through closed named bindings into canonical `CorePolicy` identities,
 - workflow `decide` consumes only `Permit` / `Deny`,
-- capability verification may consume `{Permit, Deny, RequireApproval, Transform}`,
+- capability verification operates over the verification decision set
+  `{Permit, Deny, RequireApproval, Transform}`,
+- capability sites reference named policy bindings only; no inline policy expression is admitted
+  at the canonical boundary,
 - `Warn` is verification metadata, not a policy decision,
+- unsupported approval or transformation outcomes are rejected before execution as verification
+  incompatibilities,
 - parser, lowering, type, and runtime/verification failures are owned by distinct phases.
 
 ## Files

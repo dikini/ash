@@ -19,7 +19,6 @@ Policy definitions (SPEC-006) are static and named. Policy combinators provide:
 All combinators in this section produce `policy_expr` syntax. A `policy_expr` may appear:
 
 - on the right-hand side of a named `policy <name> = ...` binding,
-- in capability policy clauses (directly or as inline sugar that lowering names internally),
 - in deferred dynamic-policy compilation.
 
 They do not introduce a general-purpose runtime `Policy` value type.

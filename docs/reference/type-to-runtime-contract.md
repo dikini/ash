@@ -43,7 +43,7 @@ The type layer must establish, directly or indirectly, the following runtime-rel
 | obligation requirements and discharge shape | runtime verification must compare workflow obligations against runtime obligations |
 | named policy references resolved to canonical lowered-policy identities | workflow `decide` and capability verification must not consume anonymous or unresolved policy expressions |
 | decision-domain restrictions for workflow `decide` | workflow-level runtime `decide` only admits `Permit` / `Deny` outcomes |
-| decision-domain compatibility for capability verification | capability verification may additionally admit `RequireApproval` and `Transform` outcomes |
+| decision-domain compatibility for capability verification | capability verification operates over the verification decision set `{Permit, Deny, RequireApproval, Transform}`; unsupported approval or transformation outcomes are rejected before execution as verification incompatibilities |
 | `receive` guard well-typed as `Bool` | runtime must not execute untyped guard logic |
 | ADT constructor and variant-pattern resolution against canonical enum metadata | runtime pattern matching and constructor evaluation need one shared enum model |
 | `match` exhaustiveness success for required exhaustive sites | runtime must not rely on impossible fallback semantics for exhaustive ADT matches |
@@ -129,7 +129,10 @@ The type-to-runtime boundary for policies is:
 4. runtime consumes normalized policy decisions rather than source `PolicyExpr`.
 
 Workflow runtime may observe only `Permit` or `Deny` at workflow `decide` sites.
-Capability-verification runtime may additionally consume approval or transformation outcomes.
+Capability-verification runtime operates over the verification decision set
+`{Permit, Deny, RequireApproval, Transform}`. If a concrete capability/provider cannot honor a
+requested approval or transformation outcome, verification rejects that operation before
+execution as an incompatibility.
 Verification warnings are not policy outcomes and never appear as `PolicyDecision` values.
 
 ## ADT Contract

@@ -315,6 +315,11 @@ Aggregate verification reports `Proceed` when all required checks succeed. `Warn
 decision; it is verification metadata used by aggregate verification or provenance and does not
 alter the canonical policy decision taxonomy.
 
+Capability-verification consumers operate over this verification decision set. If a specific
+capability or provider cannot honor an approval or transformation outcome before execution, the
+operation is rejected as a verification incompatibility rather than introducing a new policy
+decision kind.
+
 ## 8. Decision Flowchart
 
 ```

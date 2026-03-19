@@ -91,10 +91,11 @@ Ash uses one policy story across the language:
 
 Policies are therefore not general first-class runtime values. They are named declarations and references that compile into a normalized policy representation.
 
-The normalized representation is consumer-neutral, but the admissible terminal decisions are not:
+The normalized representation is consumer-neutral, but the verification rule is not:
 
 - workflow `decide` consumes only `Permit` / `Deny`,
-- capability-verification consumers may admit `{Permit, Deny, RequireApproval, Transform}`,
+- capability-verification consumers operate over the verification decision set
+  `{Permit, Deny, RequireApproval, Transform}`,
 - `Warn` is not a policy decision and is handled as verification metadata outside the policy
   decision taxonomy.
 
@@ -154,7 +155,8 @@ capability process_payment : act(amount: Money)
   where policy payment_fraud_gate;
 ```
 
-Capability clauses may use a named policy binding directly. Inline policy expressions are allowed only as surface sugar if lowering first assigns them a stable internal name before verification.
+Capability clauses reference named policy bindings only. The canonical boundary does not admit
+anonymous inline policy expressions at capability sites.
 
 ## 5. Conflict Detection
 

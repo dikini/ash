@@ -79,6 +79,8 @@ The workflow runtime consumes the following already-typed assumptions:
 - `receive` guards are boolean
 - `receive` selection follows the scheduler-owned source ordering and guard-before-consumption
   behavior defined in SPEC-013 and SPEC-004
+- `receive wait DURATION` uses one timeout budget for the whole receive operation; retries do not
+  reset it
 - constructor expressions have fields compatible with the resolved constructor
 - variant patterns refer to real constructors on the resolved enum type
 - exhaustive `match` sites do not need synthetic runtime fallback behavior
@@ -111,7 +113,8 @@ The following remain runtime or verification-time concerns, not type-checking fa
 Type checking proves or constrains shapes; runtime enforces availability, environment, and actual
 execution outcomes.
 
-Receive timeout expiry and fallthrough remain runtime control flow, not boundary failures.
+Receive timeout expiry and fallthrough remain runtime control flow, not boundary failures; the
+remaining timeout budget is consumed by the whole receive operation, not reset per retry.
 
 ## Policy and Verification Contract
 

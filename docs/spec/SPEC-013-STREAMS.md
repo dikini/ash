@@ -92,6 +92,9 @@ receive_pattern ::= IDENTIFIER ":" IDENTIFIER "as" pattern
                   | literal           -- control receive patterns
 ```
 
+The `_` arm is a global fallback arm. It is not source-specific and is only considered after no
+eligible source mailbox yields a matching arm.
+
 **Mode 1: Non-blocking (default)**
 ```
 receive {
@@ -251,7 +254,7 @@ execute_receive(patterns, mode, source_scheduling_modifier):
     5. If no source yields a match:
        - execute `_` if present
        - otherwise, if mode is non-blocking, return to the next workflow step with no error
-       - otherwise wait for new events (with optional timeout) and retry
+       - otherwise wait for new events under the remaining timeout budget (if any) and retry
 ```
 
 The runtime owns the concrete mailbox and transport organization. The language contract only
@@ -261,6 +264,7 @@ requires the observable behavior above.
 
 With `receive wait DURATION`:
 - Wait up to DURATION for a matching event
+- The duration is one timeout budget for the whole receive operation; retries do not reset it
 - If timeout expires, execute `_` pattern (if present)
 - If no `_` pattern, continue to the next workflow step without binding a value
 - The timeout path is normal control flow, not a rejection

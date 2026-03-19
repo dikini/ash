@@ -85,9 +85,7 @@ The evaluation relation is execution-neutral:
 
 ```
 (RECEIVE)
-  select_receive_source(mode, control, source_scheduling_modifier, Γ) ↝ source
-  poll_mailbox(source, Γ) ↝ msg
-  select_receive_arm(arms, msg, Γ) = (Γ', body)
+  select_receive_match(mode, control, source_scheduling_modifier, arms, Γ) ↝ (msg, Γ', body)
   Γ ∪ Γ', C, Ω, π ⊢ body ⇓ v, ε, T, π'
   ─────────────────────────────────────────────────────────────────
   Γ, C, Ω, π ⊢ RECEIVE mode control { arms } ⇓ v,
@@ -98,11 +96,16 @@ The evaluation relation is execution-neutral:
 
 `RECEIVE` is the mailbox-input form. Its base effect is `epistemic` because it only selects from already-arrived workflow input; blocking and timeout behavior are determined by `mode` rather than by a higher effect classification.
 
+The selection relation searches according to SPEC-013: it probes declared stream mailboxes or the
+implicit control mailbox under the current source scheduling modifier, then selects the oldest
+queued entry whose arm matches and whose guard succeeds. It is not a single-message poll followed
+by separate arm testing.
+
 Canonical `RECEIVE` runtime behavior:
 
 - `receive { ... }` uses the runtime scheduler and the current source scheduling modifier to select a source mailbox, then checks arms in declaration order. Pattern matching happens before guard evaluation; a message is removed from the mailbox only after the selected arm's guard succeeds. If no source yields a match, `_` runs if present; otherwise control falls through to the next workflow step with no error.
 - `receive wait { ... }` uses the same source-selection and arm-order model, but blocks until a matching event is available, then runs the first matching arm.
-- `receive wait DURATION { ... }` blocks until a matching event arrives or the timeout expires. On timeout, `_` runs if present; otherwise control falls through with no error.
+- `receive wait DURATION { ... }` uses one timeout budget for the whole receive operation. It blocks until a matching event arrives or the budget expires. On timeout, `_` runs if present; otherwise control falls through with no error.
 - `receive control ... { ... }` polls only the implicit control mailbox and does not consume normal stream events.
 
 ### 4.2 Deliberative Layer

@@ -65,9 +65,9 @@ Expected pass conditions:
 
 Verified after implementation:
 - SPEC-013 now defines one source-selection model over declared stream mailboxes plus the implicit
-  control mailbox.
-- SPEC-013 now states the current default `priority` source scheduling modifier and the
-  guard-before-consumption timing.
+  control mailbox, and makes `_` a global fallback after all source searches fail.
+- SPEC-013 now states the current default `priority` source scheduling modifier, the
+  guard-before-consumption timing, and the single timeout budget for `receive wait DURATION`.
 - SPEC-004 and the runtime reference now treat timeout expiry and receive fallthrough as normal
   control flow, not rejection.
 - SPEC-017 and the lowering/type-runtime references now point to the runtime-owned scheduler

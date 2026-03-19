@@ -1,6 +1,6 @@
 # TASK-157: Canonicalize Policy Contracts
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -95,12 +95,12 @@ git commit -m "docs: canonicalize policy contracts"
 
 ## Completion Checklist
 
-- [ ] one canonical policy model documented
-- [ ] lowering expectations for policies defined
-- [ ] type-checking expectations for policies defined
-- [ ] runtime policy outcomes defined
-- [ ] contradictory policy wording removed or superseded
-- [ ] `CHANGELOG.md` updated
+- [x] one canonical policy model documented
+- [x] lowering expectations for policies defined
+- [x] type-checking expectations for policies defined
+- [x] runtime policy outcomes defined
+- [x] contradictory policy wording removed or superseded
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

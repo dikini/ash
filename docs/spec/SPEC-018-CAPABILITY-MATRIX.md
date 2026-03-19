@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-Workflows declare their capability requirements at compile time. At runtime, they're instantiated with specific obligations and policies. This spec defines the verification matrix and runtime checks to ensure compatibility.
+Workflows declare their capability requirements at compile time. At runtime, they're instantiated with specific obligations and named policies that have already been lowered to the canonical core policy representation. This spec defines the verification matrix and runtime checks to ensure compatibility.
 
 ## 2. Capability Requirements (Compile Time)
 
@@ -36,7 +36,7 @@ At instantiation, workflow receives:
 ```rust
 pub struct RuntimeContext {
     pub obligations: Vec<Obligation>,     -- What we're obliged to do
-    pub policies: Vec<Policy>,            -- What we're allowed to do
+    pub policy_registry: PolicyRegistry,  -- Named lowered policies available at runtime
     pub capabilities: CapabilityRegistry, -- What's available
     pub max_effect: Effect,               -- Highest effect this runtime will permit
     pub role: Role,                       -- Who's running this
@@ -118,8 +118,8 @@ impl CapabilityVerifier {
         -- 3. Check effect compatibility
         result.merge(self.verify_effect(workflow, runtime.max_effect)?);
         
-        -- 4. Pre-check policies (static analysis)
-        result.merge(self.verify_policies_static(workflow, &runtime.policies)?);
+        -- 4. Pre-check policy availability / compatibility
+        result.merge(self.verify_policies_static(workflow, &runtime.policy_registry)?);
         
         Ok(result)
     }
@@ -274,15 +274,15 @@ pub async fn verify_operation(
     let provider = runtime.capabilities.get(&op.capability, &op.channel)
         .ok_or(OperationError::MissingCapability)?;
     
-    -- 2. Evaluate dynamic policies
+    -- 2. Evaluate normalized policies
     let policy_ctx = PolicyContext::from_operation(op, runtime);
     match runtime.policy_evaluator.evaluate(&policy_ctx).await? {
-        Decision::Permit => {}
-        Decision::Deny => return Err(OperationError::PolicyDenied),
-        Decision::RequireApproval(role) => {
+        PolicyDecision::Permit => {}
+        PolicyDecision::Deny => return Err(OperationError::PolicyDenied),
+        PolicyDecision::RequireApproval(role) => {
             return Ok(OperationResult::RequiresApproval(role));
         }
-        Decision::Transform(t) => return Ok(OperationResult::Transformed(t)),
+        PolicyDecision::Transform(t) => return Ok(OperationResult::Transformed(t)),
     }
     
     -- 3. Check rate limits
@@ -293,6 +293,8 @@ pub async fn verify_operation(
     Ok(OperationResult::Proceed)
 }
 ```
+
+Runtime verification consumes only normalized `PolicyDecision` outcomes produced from named lowered policies. It does not operate on source-level policy expressions directly.
 
 ## 8. Decision Flowchart
 

@@ -98,7 +98,7 @@ pub struct TypeVar(pub u32);
 (DECIDE-T)
   Γ ⊢ expr : bool / ε_expr
   ε_expr ≤ evaluative
-  lookup(Σ, policy) = Policy bool
+  lookup(Σ, policy) = NamedPolicy { subject: bool, core: CorePolicy }
   Γ, Σ, Ω ⊢ cont : τ / ε ⊣ Ω'
   ─────────────────────────────────────────────────────────────
   Γ, Σ, Ω ⊢ DECIDE expr under policy in cont : τ / evaluative⊔ε ⊣ Ω'
@@ -112,7 +112,9 @@ pub struct TypeVar(pub u32);
   Γ, Σ, Ω ⊢ CHECK obligation in cont : τ / ε_check⊔ε ⊣ Ω''
 ```
 
-`DECIDE` is well-formed only when the policy name is explicit.
+`DECIDE` is well-formed only when the policy name is explicit and resolves to a named lowered policy binding.
+
+Workflow-level `DECIDE` sites may only reference policies whose terminal decisions are `Permit` or `Deny`. Capability-verification sites may use the same `CorePolicy` model with richer terminal decisions such as `RequireApproval` or `Transform`.
 
 `CHECK` ranges only over obligations in `Ω`; policy evaluation belongs to `DECIDE`.
 

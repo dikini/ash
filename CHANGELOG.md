@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Changed
+- Canonicalized the policy contract across SPEC-003, SPEC-004, SPEC-006, SPEC-007, SPEC-008, SPEC-017, and SPEC-018 (TASK-157). Policies now have one continuous story from named declaration and combinator expression through lowered core policy representation, type-checking constraints, and runtime `PolicyDecision` outcomes.
+
 ### Added
 - Phase-A convergence task files in [docs/plan/tasks/TASK-156-canonicalize-workflow-form-contracts.md](docs/plan/tasks/TASK-156-canonicalize-workflow-form-contracts.md), [docs/plan/tasks/TASK-157-canonicalize-policy-contracts.md](docs/plan/tasks/TASK-157-canonicalize-policy-contracts.md), [docs/plan/tasks/TASK-158-canonicalize-streams-runtime-verification-contracts.md](docs/plan/tasks/TASK-158-canonicalize-streams-runtime-verification-contracts.md), [docs/plan/tasks/TASK-159-canonicalize-repl-cli-contracts.md](docs/plan/tasks/TASK-159-canonicalize-repl-cli-contracts.md), and [docs/plan/tasks/TASK-160-canonicalize-adt-contracts.md](docs/plan/tasks/TASK-160-canonicalize-adt-contracts.md). Splits the first convergence phase into concrete documentation tasks with explicit requirements, TDD-style review steps, dependencies, and non-goals.
 - Spec-to-implementation convergence design in [docs/plan/2026-03-19-spec-to-implementation-convergence-design.md](docs/plan/2026-03-19-spec-to-implementation-convergence-design.md). Defines the spec-first recovery model, phase ordering, task-shaping rules, and completion criteria for bringing Rust code back into compliance.

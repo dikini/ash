@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-This specification defines runtime policy registration in Ash, allowing policies to be loaded from external sources (databases, configuration files, policy servers) and enforced dynamically during workflow execution.
+This specification defines the deferred runtime-loading story for policies in Ash. Dynamic policy sources do not introduce a separate policy model; they must compile into the same named core policy representation described in SPEC-006 and SPEC-007 before runtime verification consumes them.
 
 ## 2. Motivation
 
@@ -28,45 +28,29 @@ This feature is deferred because:
 ### 4.1 Policy Registry Capability
 
 ```ash
-capability policy_registry : observe(name: String) -> Policy
+capability policy_registry : observe(name: String) -> PolicyBundle
   effect: epistemic;
 ```
 
+`PolicyBundle` is an external source artifact, not a workflow-level first-class `Policy` value. The host/runtime compiles it into a named `CorePolicy` before any `DECIDE` or capability verification step can reference it.
+
 ### 4.2 Loading Policies at Runtime
 
-```ash
-workflow dynamic_api {
-  -- Load policy from registry
-  let rate_policy = observe policy_registry with name: "api_rate_limit";
-  
-  -- Apply dynamically loaded policy
-  check rate_policy with tier: user.tier;
-  
-  act process_request;
-}
+```text
+1. Runtime fetches `PolicyBundle` from `policy_registry`
+2. Runtime validates signature / version / schema compatibility
+3. Runtime compiles the bundle to `CorePolicy { name, graph, ... }`
+4. Runtime registers that compiled policy under an explicit policy name
+5. Workflows and capability checks continue to reference that explicit policy name
 ```
 
 ### 4.3 Policy Hot-Reloading
 
-```ash
--- Policies refresh periodically
-with policy_registry.refresh_interval(secs: 60) do {
-  workflow auto_reload_api {
-    check registry.get("current_rate_limit");
-    act handle_request;
-  }
-}
-```
+Policies may refresh periodically, but each refresh still produces a new compiled `CorePolicy` version under a stable policy name or versioned alias.
 
 ### 4.4 Versioned Policies
 
-```ash
--- Pin to specific policy version
-check policy_registry.get(name: "security_policy", version: "v2.1.0");
-
--- Or use latest
-check policy_registry.get(name: "security_policy", version: "latest");
-```
+Pinning a specific version affects which external policy bundle is loaded, not the language-level policy syntax. The workflow contract remains `DECIDE ... under policy_name`.
 
 ## 5. Implementation Approach
 
@@ -95,7 +79,7 @@ impl DynamicPolicyEngine {
         // 2. Fetch from registry
         let policy_def = self.registry_client.fetch(policy_name).await?;
         
-        // 3. Parse and compile to SMT
+        // 3. Parse and compile to the canonical core policy representation
         let compiled = self.compile_policy(&policy_def)?;
         
         // 4. Evaluate
@@ -143,8 +127,8 @@ impl PolicyValidationCache {
 ### 6.1 Policy Integrity
 
 ```ash
--- Verify policy signature
-check policy_registry.get_signed(
+-- Host/runtime verifies a signed policy bundle before registration
+policy_registry.get_signed(
   name: "critical_security_policy",
   public_key: org_security_key
 );
@@ -180,6 +164,12 @@ When this is implemented:
 3. **Policy simulation**: Test policies before deployment
 4. **ML-based optimization**: Learn optimal policy parameters
 5. **Distributed consensus**: Consistent policies across regions
+
+Dynamic policies therefore affect policy provisioning, not the core syntax/type/runtime contract:
+
+- syntax still references explicit policy names,
+- type checking still validates policy references and decision subsets,
+- runtime still consumes `PolicyDecision` values from normalized core policies.
 
 ## 9. Related Documents
 

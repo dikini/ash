@@ -192,6 +192,8 @@ policy data_residency:
     then mask(fields: ["personal_id", "address"])
 ```
 
+These declarations are canonical policy bindings. Before capability verification runs, each policy lowers into the shared `CorePolicy` representation from SPEC-006 and SPEC-007.
+
 ### 4.2 Policy Evaluation Context
 
 ```rust
@@ -226,25 +228,25 @@ pub enum CapabilityOperation {
 pub async fn check_policy(
     ctx: &CapabilityContext,
     policy_eval: &PolicyEvaluator,
-) -> PolicyResult {
+) -> Result<PolicyDecision, ExecError> {
     let decision = policy_eval.evaluate_capability(ctx)?;
     
     match decision {
-        Decision::Permit => Ok(()),
+        PolicyDecision::Permit => Ok(PolicyDecision::Permit),
         
-        Decision::Deny => Err(ExecError::PolicyDenied {
+        PolicyDecision::Deny => Err(ExecError::PolicyDenied {
             operation: format!("{:?}", ctx.operation),
             capability: ctx.capability.clone(),
         }),
         
-        Decision::RequireApproval { role } => Err(ExecError::RequiresApproval {
+        PolicyDecision::RequireApproval { role } => Err(ExecError::RequiresApproval {
             role,
             operation: format!("{:?}", ctx.operation),
         }),
         
-        Decision::Transform { transformation } => {
+        PolicyDecision::Transform { transformation } => {
             -- Apply transformation (e.g., masking)
-            Ok(transformation)
+            Ok(PolicyDecision::Transform { transformation })
         }
     }
 }
@@ -272,19 +274,19 @@ then mask(fields: ["ssn", "salary"])
 
 ```rust
 pub trait PolicyAwareProvider {
-    -- Policies specific to this provider
-    fn local_policies(&self) -> Vec<Policy>;
+    -- Named policies specific to this provider
+    fn local_policies(&self) -> Vec<PolicyName>;
     
     -- Check if operation would violate policies
-    fn check_policy(&self, ctx: &CapabilityContext) -> PolicyResult;
+    fn check_policy(&self, ctx: &CapabilityContext) -> Result<PolicyDecision, ExecError>;
 }
 
 impl PolicyAwareProvider for DatabaseProvider {
-    fn local_policies(&self) -> Vec<Policy> {
+    fn local_policies(&self) -> Vec<PolicyName> {
         vec![
-            Policy::RateLimit(100),  -- Max 100 queries/minute
-            Policy::MaxResultSize(10000),  -- Max 10k rows
-            Policy::RequireAuth,
+            PolicyName::new("database_rate_limit"),
+            PolicyName::new("database_max_result_size"),
+            PolicyName::new("database_require_auth"),
         ]
     }
 }

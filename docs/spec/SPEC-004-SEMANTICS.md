@@ -112,7 +112,7 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
 ```
 (DECIDE-PERMIT)
   eval(Γ, expr) ↝ v
-  lookup(policies, policy).eval(v, Γ) = Permit
+  lookup(policies, policy).eval(v, Γ) = PolicyDecision::Permit
   Γ, C, Ω, π ⊢ cont ⇓ v', ε, T, π'
   ─────────────────────────────────────────────────────────────────
   Γ, C, Ω, π ⊢ DECIDE expr under policy in cont ⇓ v',
@@ -122,7 +122,7 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
 
 (DECIDE-DENY)
   eval(Γ, expr) ↝ v
-  lookup(policies, policy).eval(v, Γ) = Deny
+  lookup(policies, policy).eval(v, Γ) = PolicyDecision::Deny
   ─────────────────────────────────────────────────────────────────
   Γ, C, Ω, π ⊢ DECIDE expr under policy in cont ⇓ ⊥,
                evaluative,
@@ -131,7 +131,7 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
                error: PolicyViolation(policy, v)
 ```
 
-`DECIDE` is the workflow-level policy gate and therefore always names an explicit policy. Capability-level checks may still be applied at concrete `observe`, `receive`, `set`, `send`, or `act` operations by the capability-verification runtime.
+`DECIDE` is the workflow-level policy gate and therefore always names an explicit lowered policy binding. It consumes the same normalized policy representation used by capability verification, but only admits `Permit` and `Deny` outcomes at the workflow layer. Capability-level checks may still be applied at concrete `observe`, `receive`, `set`, `send`, or `act` operations by the capability-verification runtime, which may also consume `RequireApproval` or `Transform` outcomes.
 
 ```
 (CHECK-SATISFIED)

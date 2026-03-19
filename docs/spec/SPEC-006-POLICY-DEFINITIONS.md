@@ -4,13 +4,13 @@
 
 ## 1. Overview
 
-This specification defines static policy definitions in Ash, allowing users to declare custom policy types with named parameters and constraints that are checked at compile-time using SMT solving.
+This specification defines the canonical policy declaration model in Ash. A `policy <Name> { ... }` form declares a policy schema, closed policy expressions instantiate those schemas, and named policy bindings are what downstream lowering, type checking, and runtime verification reference.
 
 ## 2. Motivation
 
 Currently, policies are hardcoded in the Rust implementation. Users need a way to:
 - Define domain-specific policies (e.g., "MaxQueueDepth", "MinReplicationFactor")
-- Share policy definitions across workflows
+- Share policy definitions and named policy bindings across workflows
 - Get compile-time verification of policy conflicts
 
 ## 3. Policy Definition Syntax
@@ -79,39 +79,64 @@ policy SizeLimit<Int> IntSizeLimit;
 policy SizeLimit<Bytes> ByteSizeLimit;
 ```
 
-## 4. Policy Usage in Workflows
+## 4. Canonical Policy Pipeline
 
-### 4.1 Check Statement
+Ash uses one policy story across the language:
+
+1. **Policy definition**: `policy RateLimit { ... }` declares a schema and any `where` invariants.
+2. **Policy expression**: a closed expression built from policy instances and combinators (SPEC-007).
+3. **Named policy binding**: a declaration that gives a closed policy expression a stable name.
+4. **Lowered/core policy**: the named binding lowers to a normalized policy graph / decision program.
+5. **Runtime decision**: evaluating the lowered policy yields a `PolicyDecision`.
+
+Policies are therefore not general first-class runtime values. They are named declarations and references that compile into a normalized policy representation.
+
+## 5. Policy Usage in Workflows
+
+### 5.1 Decide Statement
 
 ```ash
+policy production_rate = RateLimit { requests: 100, window_secs: 60 };
+policy latency_budget = MaxLatency { milliseconds: 500 };
+
 workflow api_call {
-  -- Check a policy instance
-  check RateLimit { requests: 100, window_secs: 60 };
-  check MaxLatency { milliseconds: 500 };
-  
-  act http_get with url: "https://api.example.com";
+  decide request_meta under production_rate then {
+    decide request_meta under latency_budget then {
+      act http_get with url: "https://api.example.com";
+    }
+  }
 }
 ```
 
-### 4.2 Named Policy Instances
+`DECIDE` is the workflow-level policy gate. It always references a named policy binding and never an anonymous inline policy expression.
+
+### 5.2 Named Policy Bindings
 
 ```ash
-let production_rate = RateLimit { requests: 1000, window_secs: 60 };
-let staging_rate = RateLimit { requests: 100, window_secs: 60 };
+policy production_rate = RateLimit { requests: 1000, window_secs: 60 };
+policy staging_rate = RateLimit { requests: 100, window_secs: 60 };
 
 workflow production_api {
-  check production_rate;
-  act process_request;
+  decide request_meta under production_rate then {
+    act process_request;
+  }
 }
 ```
 
-### 4.3 Policy in Capability Definitions
+Named bindings are the canonical boundary between syntax and lowering. A binding must be closed: all parameters are supplied and all combinators resolve to concrete policy definitions or previously bound policy names.
+
+### 5.3 Policy in Capability Definitions
 
 ```ash
+policy payment_rate_limit = RateLimit { requests: 100, window_secs: 60 };
+policy payment_fraud_gate = FraudCheck { max_risk_score: 0.1 };
+
 capability process_payment : act(amount: Money)
-  where RateLimit { requests: 100, window_secs: 60 }
-  where FraudCheck { max_risk_score: 0.1 };
+  where policy payment_rate_limit
+  where policy payment_fraud_gate;
 ```
+
+Capability clauses may use a named policy binding directly. Inline policy expressions are allowed only as surface sugar if lowering first assigns them a stable internal name before verification.
 
 ## 5. Conflict Detection
 
@@ -155,6 +180,8 @@ policy_def    ::= "policy" ["<" type_param ">"] identifier "{"
                     ["where" "{" constraint_expr "}"]
                   "}"
 
+policy_binding ::= "policy" identifier "=" policy_expr ";"
+
 field_def     ::= identifier ":" type ["=" expr] ","?
 
 type          ::= "Int" | "Bool" | "String" | "Float" 
@@ -164,12 +191,15 @@ type          ::= "Int" | "Bool" | "String" | "Float"
 
 constraint_expr ::= expr  -- Must evaluate to Bool
 
-check_stmt    ::= "check" policy_instance ";"
-
 policy_instance ::= identifier "{" field_init* "}"
+policy_expr   ::= policy_instance
+                | identifier            -- named policy binding
+                | ...                   -- combinator forms defined in SPEC-007
 
 field_init    ::= identifier ":" expr ","?
 ```
+
+`policy_expr` is intentionally shared with SPEC-007. This spec defines the base policy-instance form and named binding form; SPEC-007 defines how combinators extend the expression grammar.
 
 ## 7. Semantic Analysis
 
@@ -180,6 +210,14 @@ field_init    ::= identifier ":" expr ","?
 3. Where clause must reference only declared fields
 4. Where clause must be a boolean expression
 5. No circular dependencies between policies
+
+Named policy bindings add these well-formedness checks:
+
+1. The bound expression must be closed after defaults are applied.
+2. Every referenced policy definition or policy binding must resolve uniquely.
+3. Every `DECIDE ... under <policy_name>` must resolve to a named policy binding.
+4. Policies used by workflow `DECIDE` sites must lower to terminal decisions in `{Permit, Deny}`.
+5. Policies used by capability-verification sites may additionally lower to `RequireApproval` or `Transform`.
 
 ### 7.2 Type Checking
 
@@ -240,17 +278,34 @@ impl SmtEncodable for RateLimit {
 
 ### 8.2 To Core IR
 
-Policy checks become guard conditions:
+Policy bindings lower to one canonical core representation:
+
+```rust
+pub struct CorePolicy {
+    pub name: PolicyName,
+    pub params: Vec<PolicyParam>,
+    pub graph: PolicyGraph,
+}
+```
+
+`PolicyGraph` is a normalized decision graph produced from policy instances and combinators. Both static policy declarations and deferred dynamic-policy sources must compile into this same core representation before type checking or runtime use.
+
+Workflow policy checks then reference only the lowered policy name:
 
 ```ash
-check RateLimit { requests: 100, window_secs: 60 };
+policy production_rate = RateLimit { requests: 100, window_secs: 60 };
+
+decide request_meta under production_rate then {
+  act process_request;
+}
 ```
 
 Becomes:
 ```rust
-Workflow::Check {
-    obligation: Obligation::Policy(Box::new(RateLimit { ... })),
-    ...
+Workflow::Decide {
+    policy: PolicyName::new("production_rate"),
+    subject: Expr::Var("request_meta"),
+    cont: ...,
 }
 ```
 
@@ -276,21 +331,27 @@ policy DataResidency {
 }
 
 -- Use in workflow
+policy order_rate_limit = RateLimit { requests: 1000, window_secs: 60 };
+policy order_circuit_breaker = CircuitBreaker { failure_threshold: 3 };
+policy order_data_residency = DataResidency {
+  allowed_regions: ["us-east-1", "eu-west-1"],
+  encryption_required: true
+};
+
 workflow process_order {
-  check RateLimit { requests: 1000, window_secs: 60 };
-  check CircuitBreaker { failure_threshold: 3 };
-  check DataResidency { 
-    allowed_regions: ["us-east-1", "eu-west-1"],
-    encryption_required: true 
-  };
-  
-  observe inventory with product_id: order.product_id as inventory;
-  
-  if inventory.count > 0 then {
-    act charge_payment with amount: order.total;
-    act ship_order with order: order;
-  } else {
-    act notify_backorder with customer: order.customer;
+  decide request_meta under order_rate_limit then {
+    decide request_meta under order_circuit_breaker then {
+      decide request_meta under order_data_residency then {
+        observe inventory with product_id: order.product_id as inventory;
+
+        if inventory.count > 0 then {
+          act charge_payment with amount: order.total;
+          act ship_order with order: order;
+        } else {
+          act notify_backorder with customer: order.customer;
+        }
+      }
+    }
   }
 }
 ```

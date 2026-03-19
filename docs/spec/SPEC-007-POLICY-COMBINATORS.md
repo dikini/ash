@@ -4,17 +4,25 @@
 
 ## 1. Overview
 
-This specification defines functional combinators for composing policies in Ash, enabling users to build complex policies from simple primitives using familiar functional programming patterns.
+This specification defines the policy-expression combinators that extend SPEC-006. Combinators build policy expressions, but those expressions are canonical only once they are bound to a name and lowered into the shared core policy representation.
 
 ## 2. Motivation
 
 Policy definitions (SPEC-006) are static and named. Policy combinators provide:
-- **Ad-hoc composition**: Build policies inline without defining new types
+- **Structured composition**: Build richer policy expressions from policy instances and named policy bindings
 - **Reusability**: Combine existing policies in new ways
 - **Expressiveness**: Express complex constraints declaratively
-- **Composability**: Build higher-order policies from lower-order ones
+- **Composability**: Build reusable policy expressions before binding them to a canonical policy name
 
 ## 3. Core Combinators
+
+All combinators in this section produce `policy_expr` syntax. A `policy_expr` may appear:
+
+- on the right-hand side of a named `policy <name> = ...` binding,
+- in capability policy clauses (directly or as inline sugar that lowering names internally),
+- in deferred dynamic-policy compilation.
+
+They do not introduce a general-purpose runtime `Policy` value type.
 
 ### 3.1 Logical Combinators
 
@@ -34,17 +42,17 @@ implies(antecedent, consequent)
 
 **Examples:**
 ```ash
-let production = and(
+policy production = and(
   rate_limit(1000, 60),
   region(["us-east-1", "eu-west-1"])
 );
 
-let fallback = or(
+policy fallback = or(
   primary_region,
   secondary_region
 );
 
-let restricted = not(forbidden_region);
+policy restricted = not(forbidden_region);
 ```
 
 ### 3.2 Quantifier Combinators
@@ -200,57 +208,56 @@ degrade([
 For common combinators, provide operator syntax:
 
 ```ash
-let combined = policy1 & policy2;   -- and
-let either = policy1 | policy2;      -- or
-let inverted = !policy;              -- not
-let sequenced = policy1 >> policy2;  -- sequential
+policy combined = policy1 & policy2;   -- and
+policy either = policy1 | policy2;      -- or
+policy inverted = !policy;              -- not
+policy sequenced = policy1 >> policy2;  -- sequential
 ```
 
 ### 5.2 Method Chaining
 
 ```ash
-rate_limit(100, 60)
-  .and(region(["us", "eu"]))
-  .and(encryption_required())
-  .with_retry(max_attempts: 3)
-  .with_timeout(ms: 5000);
+policy hardened_rate_limit =
+  rate_limit(100, 60)
+    .and(region(["us", "eu"]))
+    .and(encryption_required())
+    .with_retry(max_attempts: 3)
+    .with_timeout(ms: 5000);
 ```
 
-## 6. Type System Integration
+## 6. Type System and Lowering Integration
 
-### 6.1 Policy Types
+### 6.1 Policy Expression Kind
 
 ```rust
-// Policy is a first-class type
-pub struct Policy {
-    // Internal representation
-}
-
-// Policy combinators are functions
-impl Policy {
-    pub fn and(self, other: Policy) -> Policy;
-    pub fn or(self, other: Policy) -> Policy;
-    pub fn not(self) -> Policy;
-    pub fn retry(self, config: RetryConfig) -> Policy;
+// Policy expressions are syntax / lowered IR, not general runtime values.
+pub enum PolicyExpr {
+    Ref(PolicyName),
+    Instance(PolicyInstance),
+    And(Vec<PolicyExpr>),
+    Or(Vec<PolicyExpr>),
+    Not(Box<PolicyExpr>),
+    ...
 }
 ```
+
+The type checker validates that every combinator operand is a policy expression and that each resulting expression can be lowered into a `CorePolicy` decision graph. Runtime evaluation consumes the lowered graph and yields `PolicyDecision`; it does not manipulate source-level `PolicyExpr` values directly.
 
 ### 6.2 Type Inference
 
 ```ash
--- Types inferred from usage
-let p1 = rate_limit(100, 60);  -- Policy
-let p2 = p1.and(region(["us"]));  -- Policy
+policy regional_limit =
+  and(rate_limit(100, 60), region(["us"]));
 
--- Higher-order policy
-let make_rate_limit = fn(tier: String) -> Policy {
+policy tiered_rate_limit =
   match tier {
     "premium" => rate_limit(10000, 60),
     "standard" => rate_limit(1000, 60),
     _ => rate_limit(100, 60)
-  }
-};
+  };
 ```
+
+Inference operates over `policy_expr` syntax while the binding remains open. A policy binding is well-formed only when the final expression is closed and can lower to one named `CorePolicy`.
 
 ## 7. Semantics
 
@@ -259,8 +266,8 @@ let make_rate_limit = fn(tier: String) -> Policy {
 **Lazy Evaluation**: Policies are only checked when needed
 
 ```ash
-let expensive_check = slow_audit();
-let cheap_check = quick_scan();
+policy expensive_check = slow_audit();
+policy cheap_check = quick_scan();
 
 -- Only evaluate expensive_check if cheap_check passes
 and(cheap_check, expensive_check);
@@ -303,7 +310,7 @@ Becomes:
 ### 8.1 Multi-Tier Rate Limiting
 
 ```ash
-let tiered_rate_limit = fn(tier: String) -> Policy {
+policy tiered_rate_limit =
   let base = rate_limit(
     match tier {
       "enterprise" => 100000,
@@ -320,19 +327,19 @@ let tiered_rate_limit = fn(tier: String) -> Policy {
     _ => always_ok()
   };
   
-  base.and(burst)
-};
+  base.and(burst);
 
 workflow api_endpoint {
-  check tiered_rate_limit(user.tier);
-  act process_request;
+  decide request_meta under tiered_rate_limit then {
+    act process_request;
+  }
 }
 ```
 
 ### 8.2 Complex Security Policy
 
 ```ash
-let security_policy = and(
+policy security_policy = and(
   -- Authentication
   or(
     mfa_enabled(),
@@ -356,7 +363,7 @@ let security_policy = and(
 ### 8.3 Resource Allocation
 
 ```ash
-let resource_policy = fn(services: List<Service>) -> Policy {
+policy resource_policy =
   let total_cpu = sum(services, fn(s) -> s.cpu_request);
   let total_memory = sum(services, fn(s) -> s.memory_request);
   
@@ -370,8 +377,7 @@ let resource_policy = fn(services: List<Service>) -> Policy {
         s1 != s2 and s1.node != s2.node
       )
     )
-  )
-};
+  );
 ```
 
 ## 9. Grammar Extension

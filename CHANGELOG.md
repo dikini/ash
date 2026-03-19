@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Tightened the workflow-declaration grammar in SPEC-002 so `observes` names `behaviour_ref` rather than a generic capability list. The grammar now preserves the existing semantic split between read-only behaviour inputs and separately declared write authority.
 - Clarified workflow input declarations, `receive` scheduling terminology, and workflow communication/link wording across SPEC-002, SPEC-013, SPEC-014, SPEC-017, SPEC-018, and SPEC-020. The docs now distinguish `observes` from `receives`, reserve `policy` for authorization semantics, use `source scheduling modifier` for `receive` source selection, and define control-link transfer as consume-on-success.
 - Canonicalized the ADT contract across SPEC-003, SPEC-004, SPEC-013, SPEC-014, and SPEC-020 (TASK-160). ADT declarations now use one `TypeDef`/`TypeExpr` source model, runtime variants store only constructor names plus fields, pattern and exhaustiveness rules share that same enum model, and the required Option/Result helper surface is explicitly narrowed.
 - Canonicalized the REPL and CLI contract across SPEC-005, SPEC-011, and SPEC-016 (TASK-159). `ash repl` is now the sole normative REPL entrypoint, the REPL command set is limited to `:help`, `:quit`, `:type`, `:ast`, and `:clear`, and REPL display output is explicitly separated from workflow output capabilities.

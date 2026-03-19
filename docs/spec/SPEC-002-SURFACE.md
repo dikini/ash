@@ -114,11 +114,14 @@ workflow_clause ::= observes_clause
                   | sets_clause
                   | sends_clause
 
-observes_clause ::= "observes" capability_ref ("," capability_ref)*
+observes_clause ::= "observes" behaviour_ref ("," behaviour_ref)*
 receives_clause ::= "receives" stream_ref ("," stream_ref)*
-sets_clause     ::= "sets" capability_ref ("," capability_ref)*
-sends_clause    ::= "sends" capability_ref ("," capability_ref)*
+sets_clause     ::= "sets" settable_ref ("," settable_ref)*
+sends_clause    ::= "sends" sendable_ref ("," sendable_ref)*
 
+behaviour_ref   ::= capability_ref
+settable_ref    ::= capability_ref
+sendable_ref    ::= capability_ref
 stream_ref      ::= IDENTIFIER (":" IDENTIFIER)?
                   | IDENTIFIER "{" IDENTIFIER ("," IDENTIFIER)+ "}"
 
@@ -185,6 +188,9 @@ must_stmt       ::= "must" workflow
 - `receive` is the authoritative surface form for stream/mailbox intake in the core workflow language; neighboring specs should defer to this grammar when referring to workflow-level `receive`.
 - Workflow clauses make input and output kinds explicit: `observes` declares behaviour inputs,
   `receives` declares stream inputs, and `sets` / `sends` declare output capabilities.
+- `behaviour_ref`, `settable_ref`, and `sendable_ref` are intentionally distinct names even when
+  they share the same token shape. The distinction is semantic: `observes` grants read access to
+  behaviours, not write authority; write authority is declared separately with `sets` or `sends`.
 - The current surface syntax does not yet standardize explicit `receive` scheduling syntax. Until
   it does, neighboring specs should use the terminology from
   [LANGUAGE-TERMINOLOGY](../design/LANGUAGE-TERMINOLOGY.md): the runtime implements a scheduler,

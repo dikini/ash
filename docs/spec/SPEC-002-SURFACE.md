@@ -272,6 +272,10 @@ observe cap as x
 observe cap  (continuation has no binding)
 ```
 
+This is surface sugar only. The canonical core contract still has an explicit binding position for
+the observation result; omitting the name in surface syntax does not create a new workflow form.
+Lowering supplies the wildcard-style binding internally.
+
 ### 4.3 Implicit Done
 
 ```
@@ -280,6 +284,10 @@ workflow foo { act send_email(...) }
 -- Equivalent to:
 workflow foo { act send_email(...); done }
 ```
+
+This is surface sugar only. The canonical core contract still ends in an explicit `Done` workflow
+form; omitting `done` in surface syntax does not add a separate completion construct or change the
+core workflow-form set.
 
 ## 5. Error Recovery
 

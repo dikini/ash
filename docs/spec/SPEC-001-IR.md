@@ -31,9 +31,12 @@ These forms are the ones downstream phases must preserve:
   `Call`, `Match`, `Constructor`
 - core patterns: `Variable`, `Tuple`, `Record`, `List`, `Wildcard`, `Literal`, `Variant`
 
-Anything outside that set is either surface syntax or a lowering convenience. In particular:
+Anything outside that workflow/expression/pattern runtime form set is either surface syntax or a
+lowering convenience for those forms. This scope statement does not apply to separate normative
+contracts such as type definitions, policy metadata, or other non-runtime language layers. In
+particular:
 
-- `if let` is a surface convenience that lowers to canonical matching behavior
+- `if let` is an expression-level surface convenience that lowers to canonical matching behavior
 - parser-only scaffolding is not a core-language contract
 - implementation-private representation choices are not part of the IR contract
 

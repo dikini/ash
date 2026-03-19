@@ -53,6 +53,12 @@ Expected failure conditions:
 Observed before implementation:
 - `SPEC-001`, `SPEC-002`, and `SPEC-004` still left the core-vs-sugar boundary implicit.
 - the IR was described as canonical, but it did not yet explicitly state execution neutrality.
+- `SPEC-001` listed `Match` and `Constructor` as core forms before `SPEC-004` gave them explicit
+  operational coverage.
+- `SPEC-002` tied `if let` to the core contract, but optional binding and implicit `done` still
+  read like general workflow rules instead of surface sugar.
+- `SPEC-001` used a broad "anything outside that set" line without scoping it to the runtime form
+  set, which risked reading as if it applied to type-level contracts too.
 
 ### Step 3: Implement the minimal spec fix (Green)
 
@@ -70,6 +76,11 @@ Verified after implementation:
 - `SPEC-002` now marks `if let` as surface sugar only.
 - `SPEC-004` now states that the operational semantics define canonical meaning, not interpreter or
   JIT strategy.
+- `SPEC-001` now scopes the core-vs-sugar boundary to the runtime form set only.
+- `SPEC-002` now ties optional binding and implicit `done` to surface sugar rather than new core
+  workflow forms.
+- `SPEC-004` now gives explicit expression-level semantics for `Constructor` and `Match`, and
+  its `if let` note is clearly expression-level rather than workflow-level.
 
 ### Step 5: Commit
 

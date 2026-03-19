@@ -259,10 +259,26 @@ Canonical `RECEIVE` runtime behavior:
                T ++ [Catch(e, now())] ++ T',
                π'
 
-### 4.7 Surface Convenience Notes
+### 4.7 Match and Constructor Semantics
 
-The following constructs may appear in the surface language or parser conveniences, but they are
-not additional semantic families:
+`Constructor` is the expression-level core form for ADT value formation. It evaluates the payload
+fields, then yields the canonical runtime variant value `Variant(name, {field: value, ...})`. The
+enclosing type name is not stored in the runtime value itself; type identity is resolved by the
+type system and the constructor name.
+
+`Match` is the expression-level core form for ADT case analysis. It evaluates the scrutinee, then
+selects the first arm whose pattern binds successfully and whose guard succeeds. The selected arm
+body evaluates with the resulting bindings in scope. If no arm matches, evaluation fails with a
+pattern-match error; well-typed exhaustive matches are guaranteed by the ADT typing rules in
+SPEC-020, but the operational rule here is the meaning of the core form itself.
+
+The `if let` note below is only about expression-level sugar for this `Match` form; it does not
+change workflow-form semantics.
+
+### 4.8 Expression-Level Surface Convenience Notes
+
+The following expression-level constructs may appear in the surface language or parser
+conveniences, but they are not additional semantic families:
 
 - `if let` is shorthand for canonical matching behavior with a fallback branch
 - surface-only spellings do not expand the set of semantic laws

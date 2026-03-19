@@ -12,7 +12,8 @@ use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::{expr, identifier};
-use crate::parse_workflow::{pattern, workflow};
+use crate::parse_pattern::pattern;
+use crate::parse_workflow::workflow;
 use crate::surface::{Expr, Name, Pattern, Workflow};
 use crate::token::Span;
 

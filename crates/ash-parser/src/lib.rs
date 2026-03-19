@@ -14,6 +14,7 @@ pub mod module;
 pub mod parse_expr;
 pub mod parse_module;
 pub mod parse_observe;
+pub mod parse_pattern;
 pub mod parse_policy;
 pub mod parse_receive;
 pub mod parse_send;

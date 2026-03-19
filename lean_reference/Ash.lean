@@ -46,3 +46,8 @@ export Ash.Eval.IfLet (evalIfLet)
 
 -- Serialization
 export Ash.Core.Serialize
+
+-- Proof modules
+export Ash.Proofs.Pattern (matchPattern_deterministic)
+export Ash.Proofs.Pure (constructor_purity)
+export Ash.Proofs.Determinism (eval_deterministic)

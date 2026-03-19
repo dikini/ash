@@ -119,11 +119,44 @@ lake build                    # Full rebuild
 - **std4**: Standard library extensions
 - **plausible**: Property-based testing framework
 
+## AST Subset Relationship
+
+**Important**: The Lean interpreter implements an **intentional subset** of the full Ash AST defined in Rust. This is a deliberate design choice for Phase 18 (Core ADT Operations).
+
+### Supported Expressions
+
+The Lean `Expr` type supports:
+- ✅ `literal` - Literal values
+- ✅ `variable` - Variable references
+- ✅ `constructor` - ADT constructor calls
+- ✅ `tuple` - Tuple construction
+- ✅ `match` - Pattern matching expressions
+- ✅ `if_let` - Conditional pattern binding
+
+### Not Supported (by Design)
+
+These Rust `Expr` variants are **intentionally excluded**:
+- ❌ `FieldAccess` - Use pattern matching instead
+- ❌ `IndexAccess` - Use pattern matching on lists
+- ❌ `Unary` - Explicit constructors preferred
+- ❌ `Binary` - Use match/if-let for control flow
+- ❌ `Call` - Inline constructor calls instead
+
+### Why a Subset?
+
+1. **Verification Focus**: Lean serves as an executable specification for formal proofs
+2. **Core ADT Operations**: Phase 18 focuses on constructor evaluation and pattern matching
+3. **Tractability**: Smaller language = easier correctness proofs
+4. **Differential Testing**: Sufficient for meaningful testing against Rust
+
+See [docs/AST-Subset.md](docs/AST-Subset.md) for the complete comparison table.
+
 ## Related Documents
 
 - [SPEC-004: Operational Semantics](../docs/spec/SPEC-004-SEMANTICS.md)
 - [SPEC-021: Lean Reference](../docs/spec/SPEC-021-LEAN-REFERENCE.md)
 - [TASK-137](../docs/plan/tasks/TASK-137-lean-setup.md) - This task
+- [AST Subset Documentation](docs/AST-Subset.md) - Detailed comparison
 
 ## License
 

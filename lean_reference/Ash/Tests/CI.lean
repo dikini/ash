@@ -3,7 +3,8 @@
 
 namespace Ash.Tests.CI
 
-/-- Placeholder for CI integration - defined in TASK-147 -/
-def placeholder : String := "CI integration placeholder"
+/-- Exit code for CI (0 = success, 1 = failure) -/
+def ciExitCode (numPassed numFailed : Nat) : UInt32 :=
+  if numFailed > 0 then 1 else 0
 
 end Ash.Tests.CI

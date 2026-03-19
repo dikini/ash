@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [docs/reference/parser-to-core-lowering-contract.md](docs/reference/parser-to-core-lowering-contract.md) as the canonical lowering handoff for stabilized workflow, policy, `receive`, and ADT forms (TASK-162). It defines the required surface-to-core mappings, lowering-time rejection cases, and preservation rules for downstream parser/core convergence work.
 - [docs/reference/surface-to-parser-contract.md](docs/reference/surface-to-parser-contract.md) as the canonical parser handoff for stabilized workflow, policy, and ADT forms (TASK-161). It fixes the accepted syntax, required surface AST outputs, legal parser rejections, and the parser-versus-later-phase boundary for downstream convergence work.
 - Convergence continuation task files [TASK-161](docs/plan/tasks/TASK-161-surface-to-parser-handoff-contract.md) through [TASK-176](docs/plan/tasks/TASK-176-final-convergence-audit.md). These extend the spec-to-implementation convergence program with explicit handoff-reference, parser/lowering, type/runtime, REPL/CLI, ADT, and final-audit tasks.
 - [docs/design/LANGUAGE-TERMINOLOGY.md](docs/design/LANGUAGE-TERMINOLOGY.md) as a shared language guide for project documents. It standardizes terms such as `source scheduling modifier`, `scheduler`, `InstanceAddr`, and `ControlLink`, and reserves `policy` for authorization semantics.

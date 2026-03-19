@@ -6,6 +6,10 @@
 
 Big-step operational semantics for the Ash workflow language. Tracks values, effects, traces, and provenance.
 
+These rules define the meaning of the canonical core IR from SPEC-001. Surface syntax may carry
+additional convenience forms, but those forms are only semantically relevant insofar as they lower
+to the canonical core contract.
+
 ## 2. Semantic Domains
 
 ```
@@ -48,6 +52,13 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
   - accumulated effect ε
   - trace T
   - updated provenance π'
+
+The evaluation relation is execution-neutral:
+
+- it is not a specification for a tree-walking interpreter,
+- it is not a specification for bytecode execution,
+- it is not a specification for a future JIT,
+- it is the contract that all such execution strategies must preserve.
 ```
 
 ## 4. Inference Rules
@@ -247,6 +258,15 @@ Canonical `RECEIVE` runtime behavior:
                ε⊔ε',
                T ++ [Catch(e, now())] ++ T',
                π'
+
+### 4.7 Surface Convenience Notes
+
+The following constructs may appear in the surface language or parser conveniences, but they are
+not additional semantic families:
+
+- `if let` is shorthand for canonical matching behavior with a fallback branch
+- surface-only spellings do not expand the set of semantic laws
+- implementation convenience nodes may exist internally, but they must not change the core meaning
 ```
 
 ## 5. Auxiliary Functions

@@ -191,6 +191,8 @@ must_stmt       ::= "must" workflow
 - `behaviour_ref`, `settable_ref`, and `sendable_ref` are intentionally distinct names even when
   they share the same token shape. The distinction is semantic: `observes` grants read access to
   behaviours, not write authority; write authority is declared separately with `sets` or `sends`.
+- `if let` is surface sugar only. It is accepted for readability, but its canonical meaning is the
+  same as a `match` with a wildcard fallback in the core language contract.
 - The current surface syntax does not yet standardize explicit `receive` scheduling syntax. Until
   it does, neighboring specs should use the terminology from
   [LANGUAGE-TERMINOLOGY](../design/LANGUAGE-TERMINOLOGY.md): the runtime implements a scheduler,

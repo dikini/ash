@@ -487,7 +487,7 @@ boundaries before Rust-alignment work resumes.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-177](tasks/TASK-177-freeze-canonical-core-language-and-ir.md) | Freeze canonical core language and execution-neutral IR | SPEC-001/002/004 | 8 | 📝 Planned |
+| [TASK-177](tasks/TASK-177-freeze-canonical-core-language-and-ir.md) | Freeze canonical core language and execution-neutral IR | SPEC-001/002/004 | 8 | ✅ Complete |
 | [TASK-178](tasks/TASK-178-normalize-phase-judgments-and-rejection-boundaries.md) | Normalize phase judgments and rejection boundaries | SPEC-001/003/004 | 8 | 📝 Planned |
 
 **Phase 22 Deliverable**: A canonical core contract with explicit phase-owned rejection boundaries

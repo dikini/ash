@@ -1,6 +1,6 @@
 # TASK-177: Freeze Canonical Core Language and Execution-Neutral IR
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -50,6 +50,10 @@ Expected failure conditions:
 - at least one form still lacks a clear core-vs-sugar classification,
 - the IR contract is not yet explicit about interpreter/JIT neutrality.
 
+Observed before implementation:
+- `SPEC-001`, `SPEC-002`, and `SPEC-004` still left the core-vs-sugar boundary implicit.
+- the IR was described as canonical, but it did not yet explicitly state execution neutrality.
+
 ### Step 3: Implement the minimal spec fix (Green)
 
 Tighten only the canonical core and IR contract.
@@ -61,6 +65,12 @@ Expected pass conditions:
 - IR invariants are execution-model-neutral,
 - the core spec no longer depends on implementation convenience wording.
 
+Verified after implementation:
+- `SPEC-001` now states the canonical core-language form set and execution-neutral IR invariants.
+- `SPEC-002` now marks `if let` as surface sugar only.
+- `SPEC-004` now states that the operational semantics define canonical meaning, not interpreter or
+  JIT strategy.
+
 ### Step 5: Commit
 
 ```bash
@@ -70,10 +80,10 @@ git commit -m "docs: tighten core language and ir contract"
 
 ## Completion Checklist
 
-- [ ] canonical core forms documented
-- [ ] sugar-only forms documented
-- [ ] execution-neutral IR invariants documented
-- [ ] `CHANGELOG.md` updated
+- [x] canonical core forms documented
+- [x] sugar-only forms documented
+- [x] execution-neutral IR invariants documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

@@ -4,9 +4,38 @@
 
 ## 1. Overview
 
-This document specifies the core Intermediate Representation (IR) for the Ash workflow language. The IR is the canonical representation used throughout the compiler and runtime.
+This document specifies the canonical core Intermediate Representation (IR) for the Ash workflow
+language. The IR is the authoritative contract used throughout lowering, type checking, execution,
+and future compilation backends.
+
+The core contract is execution-neutral:
+
+- it does not assume a tree-walking interpreter,
+- it does not assume a bytecode or stack-machine runtime,
+- it does not assume a JIT, but it allows one later,
+- it defines meaning by observable evaluation results, effects, traces, and provenance rather
+  than by a particular machine strategy.
+
+Surface syntax may elaborate into this IR, but the IR contract itself is the canonical truth.
 
 ## 2. Core Types
+
+### 2.0 Canonical Core Language
+
+The canonical core language is the contractually meaningful subset of Ash syntax and behavior.
+These forms are the ones downstream phases must preserve:
+
+- core workflows: `Observe`, `Receive`, `Orient`, `Propose`, `Decide`, `Check`, `Act`, `Oblig`,
+  `Let`, `If`, `Seq`, `Par`, `ForEach`, `Ret`, `With`, `Maybe`, `Must`, `Done`
+- core expressions: `Literal`, `Variable`, `FieldAccess`, `IndexAccess`, `Unary`, `Binary`,
+  `Call`, `Match`, `Constructor`
+- core patterns: `Variable`, `Tuple`, `Record`, `List`, `Wildcard`, `Literal`, `Variant`
+
+Anything outside that set is either surface syntax or a lowering convenience. In particular:
+
+- `if let` is a surface convenience that lowers to canonical matching behavior
+- parser-only scaffolding is not a core-language contract
+- implementation-private representation choices are not part of the IR contract
 
 ### 2.1 Effect Lattice
 
@@ -127,6 +156,15 @@ pub enum Workflow {
 - `Check` is obligation-only in the IR. It discharges or rejects an `Obligation`; policies are evaluated by `Decide`, not `Check`.
 - `Decide` always carries an explicit named `policy`. There is no policy-free core `Decide` form.
 - `Receive` is the canonical IR form for mailbox input. It preserves the receive mode and the ordered arm list from the surface language.
+
+**Execution-neutral IR invariants**:
+- The IR meaning is defined by the evaluation relation and observable results, not by evaluator
+  control strategy.
+- Lowering may normalize or preserve structure, but it must not require a specific backend
+  architecture.
+- Any future JIT must implement the same core meaning as interpretation, not a different contract.
+- Core nodes are stable contract boundaries even when current implementations use convenience
+  representations internally.
 
 ```rust
 pub enum ReceiveMode {

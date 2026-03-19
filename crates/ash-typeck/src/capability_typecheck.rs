@@ -435,7 +435,10 @@ mod tests {
         let invalid = Value::Record(Box::new(HashMap::from([
             (
                 "location".to_string(),
-                Value::Record(Box::new(HashMap::from([("lat".to_string(), Value::Int(40))]))),
+                Value::Record(Box::new(HashMap::from([(
+                    "lat".to_string(),
+                    Value::Int(40),
+                )]))),
             ),
             ("name".to_string(), Value::String("NYC".into())),
         ])));

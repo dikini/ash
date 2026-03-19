@@ -179,7 +179,10 @@ fn eval_split(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             let addr = Value::InstanceAddr(instance.addr);
             let control = instance.control.map(Value::ControlLink);
             // Return as a tuple: (addr, control)
-            Ok(Value::List(Box::new(vec![addr, control.unwrap_or(Value::Null)])))
+            Ok(Value::List(Box::new(vec![
+                addr,
+                control.unwrap_or(Value::Null),
+            ])))
         }
         _ => Err(EvalError::TypeMismatch {
             expected: "Instance".to_string(),
@@ -989,7 +992,10 @@ mod tests {
             result,
             Value::Variant {
                 name: "Ok".to_string(),
-                fields: Box::new(vec![("value".to_string(), Value::String("hello".to_string()))]),
+                fields: Box::new(vec![(
+                    "value".to_string(),
+                    Value::String("hello".to_string())
+                )]),
             }
         );
     }
@@ -1009,7 +1015,10 @@ mod tests {
             result,
             Value::Variant {
                 name: "Err".to_string(),
-                fields: Box::new(vec![("error".to_string(), Value::String("not found".to_string()))]),
+                fields: Box::new(vec![(
+                    "error".to_string(),
+                    Value::String("not found".to_string())
+                )]),
             }
         );
     }

@@ -17,7 +17,7 @@ This concept is inspired by Functional Reactive Programming (FRP), but simplifie
 | Time model | Continuous | Discrete |
 | Values | Always have a current value | Events occur at specific times |
 | Consumption | Sampling (non-destructive) | Consumption (destructive) |
-| Operations | `observe` (pull) | `receive` (pull/push hybrid) |
+| Operations | `observe` (pull) | `receive` (mailbox event intake; see SPEC-013) |
 | Example | Temperature sensor, stock price | Button click, order placed |
 
 ### 2.2 Observable Values
@@ -200,6 +200,12 @@ workflow hybrid receives sensor:events {
     }
 }
 ```
+
+`observe` and `receive` must remain contractually distinct:
+
+- `observe` samples a current value from a declared behaviour input and never consumes queued events.
+- `receive` consumes queued stream or control-mailbox entries according to SPEC-013 and SPEC-004.
+- A workflow may combine both, but declaration requirements and runtime verification are checked independently for behaviour and stream operations.
 
 ## 9. Provider Examples
 

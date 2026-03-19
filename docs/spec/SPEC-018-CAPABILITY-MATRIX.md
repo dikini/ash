@@ -38,10 +38,15 @@ pub struct RuntimeContext {
     pub obligations: Vec<Obligation>,     -- What we're obliged to do
     pub policy_registry: PolicyRegistry,  -- Named lowered policies available at runtime
     pub capabilities: CapabilityRegistry, -- What's available
+    pub mailboxes: MailboxRegistry,       -- Declared stream mailboxes + implicit control mailbox
+    pub approval_queue: ApprovalQueue,    -- For RequireApproval outcomes
+    pub provenance: ProvenanceSink,       -- Records warnings/decisions/effects
     pub max_effect: Effect,               -- Highest effect this runtime will permit
     pub role: Role,                       -- Who's running this
 }
 ```
+
+The runtime context owns verification-time responsibilities. It does not redefine workflow syntax; it supplies the resources needed to enforce the declared contract.
 
 ## 4. Verification Matrix
 
@@ -79,6 +84,7 @@ pub struct RuntimeContext {
 | `observe sensor:temp` | Policy: `Transform(mask)` | ✅ OK | Return masked value |
 | `receive { kafka:orders as order => ... }` | Policy: `Permit` | ✅ OK | Select message and run matched arm |
 | `receive { kafka:orders as order => ... }` | Policy: `Deny` | ❌ ERROR | `PolicyDenied` |
+| `receive control { "shutdown" => ... }` | Control mailbox message present | ✅ OK | Consume control message and run matched arm |
 | `set hvac:target` | Policy: `Permit` | ✅ OK | Execute set |
 | `set hvac:target` | Policy: `Deny` | ❌ ERROR | `PolicyDenied` |
 | `set hvac:target` | Policy: `RequireApproval(r)` | ⏸️ WAIT | Queue for approval |
@@ -219,6 +225,7 @@ pub struct VerificationResult {
     pub warnings: Vec<VerificationWarning>,
     pub can_execute: bool,
     pub requires_approval: Vec<ApprovalRequirement>,
+    pub transforms: Vec<PlannedTransformation>,
 }
 
 impl VerificationResult {
@@ -296,6 +303,14 @@ pub async fn verify_operation(
 
 Runtime verification consumes only normalized `PolicyDecision` outcomes produced from named lowered policies. It does not operate on source-level policy expressions directly.
 
+Outcome taxonomy is canonical across aggregate and per-operation verification:
+
+- `Proceed`: operation may execute normally.
+- `Deny`: hard error; operation stops.
+- `Warn`: non-fatal warning in aggregate verification or provenance.
+- `RequireApproval`: operation is suspended or queued pending approval.
+- `Transform`: operation continues with a transformed input or output value.
+
 ## 8. Decision Flowchart
 
 ```
@@ -368,7 +383,7 @@ workflow controller observes sensor:temp, sets hvac:target {
 -- Runtime Context
 RuntimeContext {
     obligations: [role:operator],
-    policies: [allow_temperature_control],
+    policy_registry: [allow_temperature_control],
     capabilities: [sensor:temp (read), hvac:target (read-write)],
     role: operator,
 }

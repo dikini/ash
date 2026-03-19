@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-Streams provide discrete event processing capabilities for Ash workflows. Unlike continuous behaviours (SPEC-014), streams are sequences of events that occur at specific points in time. The `receive` construct enables workflows to consume events from multiple sources with pattern matching.
+Streams provide discrete event processing capabilities for Ash workflows. Unlike continuous behaviours (SPEC-014), streams are sequences of events that occur at specific points in time. The `receive` construct enables workflows to consume events from multiple sources with pattern matching. The authoritative workflow-level `receive` grammar is defined in SPEC-002; this spec defines the stream-specific runtime contract for that grammar.
 
 ## 2. Concepts
 
@@ -55,13 +55,15 @@ workflow multi receives kafka{orders, metrics, alerts} {
 Three modes:
 
 ```
-receive_expr ::= "receive" receive_mode? "{" receive_arm+ "}"
+receive_expr ::= "receive" ("control")? receive_mode? "{" receive_arm+ "}"
 
 receive_mode ::= "wait" (DURATION)?
 
-receive_arm  ::= pattern ("if" expr)? "=>" workflow
+receive_arm  ::= receive_pattern ("if" expr)? "=>" workflow
                | "_" "=>" workflow
-               | IDENTIFIER "=>" workflow
+
+receive_pattern ::= IDENTIFIER ":" IDENTIFIER "as" pattern
+                  | literal           -- control receive patterns
 ```
 
 **Mode 1: Non-blocking (default)**
@@ -93,13 +95,13 @@ receive wait 30s {
 
 Every workflow has an implicit control stream:
 
-```
+```ash
 receive control {
     "shutdown" => break,
     "pause" => sleep(60s),
-    "resume" => (),
+    "resume" => done,
     "restart" => restart,
-    _ => ()
+    _ => done
 }
 ```
 
@@ -109,6 +111,14 @@ Common control messages:
 - `"resume"` - Resume processing
 - `"restart"` - Restart from beginning
 - `"status"` - Return current status
+
+Control-arm semantics are canonical:
+
+- `receive control` polls only the implicit control mailbox.
+- Control arms do not require `receives ...` declarations.
+- Control arms are matched in declaration order, just like normal receive arms.
+- A control message is consumed only when an arm matches and its guard succeeds.
+- Normal `receive` and `receive control` are separate operations; a single `receive` block never mixes control and normal stream selectors.
 
 ## 4. Pattern Matching
 
@@ -176,9 +186,9 @@ receive {
 ### 6.2 Mailbox Processing
 
 ```
-execute_receive(patterns, mode):
+execute_receive(patterns, mode, source):
     1. For each pattern in order:
-       a. Search mailbox for matching entry
+       a. Search the selected mailbox source for matching entry
        b. If guard present, evaluate guard
        c. If match found:
           - Remove from mailbox
@@ -203,7 +213,9 @@ execute_receive(patterns, mode):
 With `receive wait DURATION`:
 - Wait up to DURATION for a matching event
 - If timeout expires, execute `_` pattern (if present)
-- If no `_` pattern, continue with null value
+- If no `_` pattern, continue to the next workflow step without binding a value
+
+The timeout path is not an error by itself.
 
 ## 7. Mailbox Configuration
 
@@ -223,6 +235,8 @@ Overflow strategies:
 - `drop_newest` - Drop new incoming messages
 - `error` - Raise overflow error
 - `block_sender` - Backpressure on event sources
+
+These limits apply to declared stream mailboxes, not to the implicit control mailbox.
 
 ## 8. Stream Provider Interface
 

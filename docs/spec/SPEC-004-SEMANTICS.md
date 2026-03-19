@@ -81,6 +81,13 @@ Reads: In context (Γ, C, Ω, π), workflow w evaluates to:
 
 `RECEIVE` is the mailbox-input form. Its base effect is `epistemic` because it only selects from already-arrived workflow input; blocking and timeout behavior are determined by `mode` rather than by a higher effect classification.
 
+Canonical `RECEIVE` runtime behavior:
+
+- `receive { ... }` scans declared stream mailboxes once in arm order. If no arm matches, `_` runs if present; otherwise control falls through to the next workflow step with no error.
+- `receive wait { ... }` blocks until a matching event is available, then runs the first matching arm.
+- `receive wait DURATION { ... }` blocks until a matching event arrives or the timeout expires. On timeout, `_` runs if present; otherwise control falls through with no error.
+- `receive control ... { ... }` polls only the implicit control mailbox and does not consume normal stream events.
+
 ### 4.2 Deliberative Layer
 
 ```

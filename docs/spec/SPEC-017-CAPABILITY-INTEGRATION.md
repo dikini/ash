@@ -202,6 +202,8 @@ pub struct CapabilityContext {
     pub direction: Direction,  -- Input or Output
     pub capability: Name,
     pub channel: Name,
+    pub mode: Option<ReceiveMode>,
+    pub is_control_stream: bool,
     pub value: Option<Value>,  -- For output: value being set/sent
     pub constraints: Vec<Constraint>, -- For input: query constraints
     pub actor: Role,
@@ -221,6 +223,16 @@ pub enum CapabilityOperation {
     Send,
 }
 ```
+
+The runtime context is responsible for:
+
+- capability lookup and shape validation,
+- mailbox access for declared stream selectors and the implicit control mailbox,
+- policy evaluation,
+- approval routing,
+- transformation application,
+- provenance capture,
+- effect-ceiling enforcement.
 
 ### 4.3 Pre-Operation Policy Check
 
@@ -269,6 +281,14 @@ when observe database:users
 and role != admin
 then mask(fields: ["ssn", "salary"])
 ```
+
+Capability verification outcomes are canonical:
+
+- `Proceed` means the operation may continue unchanged.
+- `Deny` is a hard error and the operation does not execute.
+- `RequireApproval` pauses or queues the operation for approval handling.
+- `Transform` rewrites the observable or transferable value and then execution continues.
+- `Warn` is advisory only and is recorded in aggregate verification or provenance without blocking execution.
 
 ### 4.5 Provider-Level Policies
 
@@ -430,6 +450,14 @@ workflow mixed
 ```
 
 `receive` statements use the canonical arm-based surface form from SPEC-002. The declaration authorizes the `capability:channel` selectors named in those arms.
+
+Declaration requirements are canonical:
+
+- `observe cap:channel` requires `observes cap:channel`
+- `receive { cap:channel as ... => ... }` requires `receives cap:channel`
+- `receive control { ... }` requires no explicit declaration because the control mailbox is implicit
+- `set cap:channel = ...` requires `sets cap:channel`
+- `send cap:channel ...` requires `sends cap:channel`
 
 ### 6.2 Capability Registry
 

@@ -1,6 +1,6 @@
 # TASK-158: Canonicalize Streams and Runtime Verification Contracts
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -92,12 +92,12 @@ git commit -m "docs: canonicalize streams and runtime verification"
 
 ## Completion Checklist
 
-- [ ] `receive` modes canonicalized
-- [ ] control-arm semantics canonicalized
-- [ ] declaration requirements canonicalized
-- [ ] runtime context contract canonicalized
-- [ ] verification outcome taxonomy canonicalized
-- [ ] `CHANGELOG.md` updated
+- [x] `receive` modes canonicalized
+- [x] control-arm semantics canonicalized
+- [x] declaration requirements canonicalized
+- [x] runtime context contract canonicalized
+- [x] verification outcome taxonomy canonicalized
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Canonicalized the stream and runtime-verification contract across SPEC-004, SPEC-013, SPEC-014, SPEC-017, and SPEC-018 (TASK-158). `receive` modes, control-arm behavior, declaration requirements, runtime-context responsibilities, and verification outcomes now share one end-to-end contract.
 - Canonicalized the policy contract across SPEC-003, SPEC-004, SPEC-006, SPEC-007, SPEC-008, SPEC-017, and SPEC-018 (TASK-157). Policies now have one continuous story from named declaration and combinator expression through lowered core policy representation, type-checking constraints, and runtime `PolicyDecision` outcomes.
 
 ### Added

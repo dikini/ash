@@ -22,6 +22,7 @@ implementations without local semantic choice.
 2. Define one canonical dynamic pattern-matching story
 3. Define `if let` dynamic behavior precisely
 4. Keep ADT semantics aligned with the canonical source enum model
+5. Assume recoverable failure is represented with explicit `Result` values, not `catch`
 
 ## Files
 
@@ -79,5 +80,5 @@ git commit -m "docs: formalize adt dynamic semantics"
 
 ## Dependencies
 
-- Depends on: TASK-177, TASK-178
+- Depends on: TASK-177, TASK-178, TASK-185
 - Blocks: TASK-174, TASK-175, TASK-184

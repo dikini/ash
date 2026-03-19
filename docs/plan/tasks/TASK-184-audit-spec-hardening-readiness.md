@@ -19,6 +19,7 @@ mechanically and whether Lean formalization has a stable starting point.
 2. Audit whether the specs are structured enough for Lean formalization
 3. Audit whether the IR contract is execution-model-neutral
 4. Make this audit the explicit gate before Rust convergence resumes
+5. Confirm that no canonical `catch` construct remains in the hardened language definition
 
 ## Files
 
@@ -70,5 +71,5 @@ git commit -m "docs: audit spec hardening readiness"
 
 ## Dependencies
 
-- Depends on: TASK-177, TASK-178, TASK-179, TASK-180, TASK-181, TASK-182, TASK-183
+- Depends on: TASK-177, TASK-178, TASK-179, TASK-180, TASK-181, TASK-182, TASK-183, TASK-185
 - Blocks: TASK-164 through TASK-176

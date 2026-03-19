@@ -24,6 +24,7 @@ language definition is expected to support.
 2. Separate canonical specs from migration/reference/task artifacts
 3. List initial proof targets and bisimulation targets
 4. State the intended relationship between Rust and Lean implementations
+5. Treat recoverable failure as explicit `Result` dataflow, not exceptional `catch` semantics
 
 ## Files
 
@@ -75,5 +76,5 @@ git commit -m "docs: define formalization boundary and proof targets"
 
 ## Dependencies
 
-- Depends on: TASK-177, TASK-178, TASK-182
+- Depends on: TASK-177, TASK-178, TASK-182, TASK-185
 - Blocks: TASK-184

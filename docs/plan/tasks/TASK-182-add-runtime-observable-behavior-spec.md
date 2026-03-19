@@ -21,6 +21,7 @@ a single spec rather than being reconstructed from CLI, REPL, output, and ADT do
 2. Define verification-visible and runtime-visible outcomes
 3. Define REPL/CLI observable behavior boundaries
 4. Define value-display guarantees that matter contractually
+5. Keep recoverable failure visibility aligned with explicit `Result` handling rather than `catch`
 
 ## Files
 
@@ -75,5 +76,5 @@ git commit -m "docs: add runtime observable behavior spec"
 
 ## Dependencies
 
-- Depends on: TASK-177, TASK-178
+- Depends on: TASK-177, TASK-178, TASK-185
 - Blocks: TASK-173, TASK-176, TASK-183, TASK-184

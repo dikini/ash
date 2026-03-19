@@ -49,6 +49,15 @@ effect, and runtime-adjacent code paths. Those implementation details are intent
 documented in the canonical specs here; later Rust-alignment work must migrate them to explicit
 `Result` handling.
 
+The intended migration model is direct:
+
+- legacy `attempt` is treated as surface sugar around forcing a `Result`-producing function or
+  capability interaction
+- legacy `catch` branches become explicit `match` handling over `Ok { value: ... }` and
+  `Err { error: ... }`
+- retry or timeout behavior, where still desired, must be expressed through ordinary control flow
+  and explicit values rather than a dedicated exception-handling form
+
 ## Files
 
 - Modify: `CHANGELOG.md`
@@ -110,5 +119,5 @@ git commit -m "docs: remove catch from canonical language"
 
 ## Dependencies
 
-- Depends on: TASK-177, TASK-178, TASK-181, TASK-182, TASK-183, TASK-184
+- Depends on: TASK-177, TASK-178
 - Blocks: future Rust migration tasks that still reference `Attempt`/`catch`

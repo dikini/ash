@@ -54,6 +54,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Full test coverage for Option, Result, and custom ADT constructors
 
 ### Fixed
+- Dead code review: 5 `#[allow(dead_code)]` items audited, 2 duplicate `ws()` functions identified for removal
 - Code review issues from Phase 17 (P0, P1, P2 priority):
   - **Critical (P0)**: Fixed `unwrap()` abuse in parsers (`parse_pattern.rs`, `parse_expr.rs`) using `is_some_and()`
   - **Critical (P0)**: Removed unnecessary `Box::new` + immediate dereference pattern in `lower.rs`

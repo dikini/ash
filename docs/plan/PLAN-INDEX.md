@@ -498,7 +498,7 @@ Tighten the highest-risk dynamic language semantics that still permit local impl
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-179](tasks/TASK-179-formalize-receive-mailbox-and-scheduling-semantics.md) | Formalize `receive` mailbox and scheduling semantics | SPEC-002/004/013/017 | 8 | 📝 Planned |
+| [TASK-179](tasks/TASK-179-formalize-receive-mailbox-and-scheduling-semantics.md) | Formalize `receive` mailbox and scheduling semantics | SPEC-002/004/013/017 | 8 | ✅ Complete |
 | [TASK-180](tasks/TASK-180-formalize-policy-evaluation-and-verification-semantics.md) | Formalize policy evaluation and verification semantics | SPEC-003/004/006/007/008/017/018 | 8 | 📝 Planned |
 | [TASK-181](tasks/TASK-181-formalize-adt-dynamic-semantics.md) | Formalize ADT dynamic semantics | SPEC-003/004/020 | 8 | 📝 Planned |
 

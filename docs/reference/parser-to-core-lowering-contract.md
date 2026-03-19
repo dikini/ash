@@ -137,6 +137,8 @@ The following are not lowering failures:
 - ADT constructor-to-variant and pattern-to-enum relation failures; those are enforced by the type
   layer against the resolved enum metadata
 - exhaustiveness checking for `match`
+- source scheduling modifier behavior and mailbox probe order; those are runtime concerns defined
+  by the receive contract, not lowering targets
 - runtime evaluation of `CorePolicy`
 - runtime mailbox polling or policy enforcement behavior
 - user-visible CLI or REPL output

@@ -1,6 +1,6 @@
 # TASK-179: Formalize Receive Mailbox and Scheduling Semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,6 +49,11 @@ Check for ambiguity in:
 Expected failure conditions:
 - at least one of those behaviors still depends on local interpretation.
 
+Observed before implementation:
+- SPEC-013 still mixed a single-mailbox story with scheduler-driven source selection.
+- source selection, guard timing, consumption timing, and timeout/fallthrough behavior were only
+  partially explicit across SPEC-002, SPEC-004, SPEC-013, and SPEC-017.
+
 ### Step 3: Implement the minimal spec fix (Green)
 
 Tighten only `receive` semantics.
@@ -57,6 +62,16 @@ Tighten only `receive` semantics.
 
 Expected pass conditions:
 - `receive` no longer depends on implementation choice for its core contract.
+
+Verified after implementation:
+- SPEC-013 now defines one source-selection model over declared stream mailboxes plus the implicit
+  control mailbox.
+- SPEC-013 now states the current default `priority` source scheduling modifier and the
+  guard-before-consumption timing.
+- SPEC-004 and the runtime reference now treat timeout expiry and receive fallthrough as normal
+  control flow, not rejection.
+- SPEC-017 and the lowering/type-runtime references now point to the runtime-owned scheduler
+  contract rather than inventing their own receive semantics.
 
 ### Step 5: Commit
 
@@ -67,10 +82,10 @@ git commit -m "docs: formalize receive mailbox and scheduling semantics"
 
 ## Completion Checklist
 
-- [ ] mailbox selection semantics documented
-- [ ] source scheduling modifier semantics documented
-- [ ] timeout/fallthrough semantics documented
-- [ ] `CHANGELOG.md` updated
+- [x] mailbox selection semantics documented
+- [x] source scheduling modifier semantics documented
+- [x] timeout/fallthrough semantics documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

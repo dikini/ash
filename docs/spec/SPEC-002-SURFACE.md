@@ -196,7 +196,8 @@ must_stmt       ::= "must" workflow
 - The current surface syntax does not yet standardize explicit `receive` scheduling syntax. Until
   it does, neighboring specs should use the terminology from
   [LANGUAGE-TERMINOLOGY](../design/LANGUAGE-TERMINOLOGY.md): the runtime implements a scheduler,
-  and the current default behavior is the implicit `priority` source scheduling modifier.
+  and the current default behavior is the implicit `priority` source scheduling modifier defined
+  in SPEC-013. No new receive scheduling syntax is introduced here.
 
 ### 3.6 Expressions
 

@@ -451,6 +451,8 @@ workflow mixed
 ```
 
 `receive` statements use the canonical arm-based surface form from SPEC-002. The declaration authorizes the `capability:channel` selectors named in those arms.
+The runtime scheduler and source scheduling modifier defined in SPEC-013 determine which declared
+stream mailbox is probed next; this spec only states that the declared selector is authorized.
 
 Declaration requirements are canonical:
 

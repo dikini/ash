@@ -77,6 +77,8 @@ The workflow runtime consumes the following already-typed assumptions:
 
 - `decide` subjects are of the policy’s required subject type
 - `receive` guards are boolean
+- `receive` selection follows the scheduler-owned source ordering and guard-before-consumption
+  behavior defined in SPEC-013 and SPEC-004
 - constructor expressions have fields compatible with the resolved constructor
 - variant patterns refer to real constructors on the resolved enum type
 - exhaustive `match` sites do not need synthetic runtime fallback behavior
@@ -104,11 +106,12 @@ The following remain runtime or verification-time concerns, not type-checking fa
 - non-readable / non-writable / non-sendable / non-receivable providers
 - missing runtime obligations or role mismatches
 - runtime policy denials, approval requirements, or transformations
-- absent mailbox messages, timeout behavior, or scheduler outcomes
 - provider-level input/output type mismatches caused by actual runtime values
 
 Type checking proves or constrains shapes; runtime enforces availability, environment, and actual
 execution outcomes.
+
+Receive timeout expiry and fallthrough remain runtime control flow, not boundary failures.
 
 ## Policy and Verification Contract
 

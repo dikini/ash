@@ -85,7 +85,8 @@ The evaluation relation is execution-neutral:
 
 ```
 (RECEIVE)
-  poll_mailbox(mode, control, Γ) ↝ msg
+  select_receive_source(mode, control, source_scheduling_modifier, Γ) ↝ source
+  poll_mailbox(source, Γ) ↝ msg
   select_receive_arm(arms, msg, Γ) = (Γ', body)
   Γ ∪ Γ', C, Ω, π ⊢ body ⇓ v, ε, T, π'
   ─────────────────────────────────────────────────────────────────
@@ -99,8 +100,8 @@ The evaluation relation is execution-neutral:
 
 Canonical `RECEIVE` runtime behavior:
 
-- `receive { ... }` scans declared stream mailboxes once in arm order. If no arm matches, `_` runs if present; otherwise control falls through to the next workflow step with no error.
-- `receive wait { ... }` blocks until a matching event is available, then runs the first matching arm.
+- `receive { ... }` uses the runtime scheduler and the current source scheduling modifier to select a source mailbox, then checks arms in declaration order. Pattern matching happens before guard evaluation; a message is removed from the mailbox only after the selected arm's guard succeeds. If no source yields a match, `_` runs if present; otherwise control falls through to the next workflow step with no error.
+- `receive wait { ... }` uses the same source-selection and arm-order model, but blocks until a matching event is available, then runs the first matching arm.
 - `receive wait DURATION { ... }` blocks until a matching event arrives or the timeout expires. On timeout, `_` runs if present; otherwise control falls through with no error.
 - `receive control ... { ... }` polls only the implicit control mailbox and does not consume normal stream events.
 

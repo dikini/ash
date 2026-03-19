@@ -19,11 +19,13 @@ Streams provide discrete event processing capabilities for Ash workflows. Unlike
 
 ### 2.2 Mailbox Model
 
-Each workflow has a **mailbox** that buffers incoming events:
-- Events from all subscribed streams accumulate in the mailbox
-- Pattern matching selects which events to process
-- Non-matching events remain in mailbox for future matching
-- Mailbox has configurable size limits and overflow strategies
+Each workflow has one implicit control mailbox and zero or more declared stream mailboxes:
+- declared stream mailboxes buffer incoming events independently
+- control messages are routed to the implicit control mailbox
+- pattern matching selects which queued event to process next
+- non-matching events remain queued for future matching
+- mailbox limits and overflow strategies apply to declared stream mailboxes, not the implicit
+  control mailbox
 
 ### 2.3 Source Scheduling Terminology
 
@@ -32,8 +34,10 @@ that determines how `receive` chooses among eligible stream sources. The runtime
 that rule with a scheduler.
 
 The current default source scheduling modifier is **priority**:
-- arm order is significant
-- earlier arms and sources may starve later ones
+- declared stream mailboxes are probed in workflow declaration order
+- within the selected source, receive arms are checked in declaration order
+- a message is consumed only after its arm pattern matches and its guard succeeds
+- earlier sources and arms may starve later ones
 - fairer modifiers such as `round_robin`, `random`, or `fair` are possible future extensions,
   but are not yet standardized surface syntax
 
@@ -112,6 +116,11 @@ receive wait 30s {
     _ => act heartbeat()
 }
 ```
+
+Receive-arm evaluation is driven by the runtime scheduler and the current source scheduling
+modifier. For each selected source mailbox, arms are considered in declaration order; pattern
+matching happens before guard evaluation, and a message is removed from the mailbox only after the
+selected arm's guard succeeds.
 
 ### 3.3 Control Stream
 
@@ -205,9 +214,10 @@ receive {
 
 ### 6.1 Pattern Matching Order
 
-The current default source scheduling modifier is `priority`. Under `priority`, arms are
-checked in declaration order and later arms may never be reached if earlier arms continue to
-match available messages.
+The current default source scheduling modifier is `priority`. Under `priority`, declared stream
+mailboxes are probed in workflow declaration order and later sources may never be reached if
+earlier sources continue to yield matching messages. Within a selected source, arms are checked in
+declaration order.
 
 ```
 receive {
@@ -221,27 +231,27 @@ receive {
 
 ```
 execute_receive(patterns, mode, source_scheduling_modifier):
-    1. Ask the runtime scheduler for the next eligible source according to
+    1. Build the source set:
+       - normal receive => declared stream mailboxes
+       - receive control => implicit control mailbox only
+    2. Ask the runtime scheduler for the next eligible source according to
        source_scheduling_modifier.
-    2. For each arm in order:
-       a. Search that source's mailbox for the oldest matching entry
-       b. If guard present, evaluate guard
-       c. If match found:
-          - Remove from mailbox
-          - Execute corresponding workflow
+    3. For each arm in declaration order:
+       a. Search the selected source's mailbox for the oldest queued entry that matches the arm
+          pattern
+       b. If no entry matches, continue to the next arm
+       c. If a candidate entry matches, bind the pattern and evaluate the guard (if present)
+       d. If the guard succeeds:
+          - Remove the message from the mailbox
+          - Execute the corresponding workflow
           - Return
-    
-    3. If wildcard pattern exists:
-       - Execute wildcard workflow
-       - Return
-    
-    4. If mode is non-blocking:
-       - Return (continue to next statement)
-    
-    5. If mode is blocking:
-       - Wait for new events (with optional timeout)
-       - Add events to mailbox
-       - Retry from step 1
+       e. If the guard fails, leave the message queued and continue to the next arm
+    4. If no arm matches the selected source, ask the scheduler for the next eligible source and
+       repeat
+    5. If no source yields a match:
+       - execute `_` if present
+       - otherwise, if mode is non-blocking, return to the next workflow step with no error
+       - otherwise wait for new events (with optional timeout) and retry
 ```
 
 The runtime owns the concrete mailbox and transport organization. The language contract only
@@ -253,8 +263,7 @@ With `receive wait DURATION`:
 - Wait up to DURATION for a matching event
 - If timeout expires, execute `_` pattern (if present)
 - If no `_` pattern, continue to the next workflow step without binding a value
-
-The timeout path is not an error by itself.
+- The timeout path is normal control flow, not a rejection
 
 ## 7. Mailbox Configuration
 

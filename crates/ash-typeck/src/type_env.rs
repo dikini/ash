@@ -3,6 +3,7 @@
 //! Provides `TypeEnv` for managing type definitions and looking up constructors.
 
 use crate::types::{Type, TypeVar};
+use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef};
 use std::collections::HashMap;
 
 /// Type name (e.g., "Option", "Result")
@@ -14,18 +15,82 @@ pub type FieldName = String;
 /// Index of a variant within an enum type
 pub type VariantIndex = usize;
 
-/// Definition of a variant constructor
+/// Convert a type expression to an internal type
+///
+/// This is a simplified conversion that maps:
+/// - Primitive types (Int, String, Bool, Null) to their Type equivalents
+/// - Type parameters to their corresponding TypeVar
+/// - Other named types to type variables (for now)
+///
+/// Note: User-defined type constructors are not yet fully supported in the
+/// internal Type representation, so they are converted to type variables.
+pub fn type_expr_to_type(expr: &TypeExpr, param_mapping: &HashMap<String, TypeVar>) -> Type {
+    match expr {
+        TypeExpr::Named(name) => {
+            // Check if this is a type parameter
+            if let Some(&var) = param_mapping.get(name) {
+                Type::Var(var)
+            } else {
+                // It's a concrete type
+                match name.as_str() {
+                    "Int" => Type::Int,
+                    "String" => Type::String,
+                    "Bool" => Type::Bool,
+                    "Null" => Type::Null,
+                    // For now, unknown/user-defined types become type variables
+                    // This allows unification to work with them
+                    _ => Type::Var(TypeVar::fresh()),
+                }
+            }
+        }
+        TypeExpr::Constructor { name: _, args } => {
+            // Type constructors like Option<Int> or List<T>
+            // For now, we use the first type argument or a fresh variable
+            // A full implementation would add Type::Constructor variant
+            if let Some(first_arg) = args.first() {
+                type_expr_to_type(first_arg, param_mapping)
+            } else {
+                Type::Var(TypeVar::fresh())
+            }
+        }
+        TypeExpr::Tuple(types) => {
+            // Convert to a Record type for now
+            // In a full implementation, we'd have a proper Tuple type
+            Type::Record(
+                types
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| {
+                        (
+                            format!("_{}", i).into(),
+                            type_expr_to_type(t, param_mapping),
+                        )
+                    })
+                    .collect(),
+            )
+        }
+        TypeExpr::Record(fields) => Type::Record(
+            fields
+                .iter()
+                .map(|(name, ty)| (name.clone().into(), type_expr_to_type(ty, param_mapping)))
+                .collect(),
+        ),
+    }
+}
+
+/// Internal representation of a variant definition with converted types
 #[derive(Debug, Clone, PartialEq)]
-pub struct VariantDef {
+pub struct VariantInfo {
     /// Name of the variant (e.g., "Some", "None")
     pub name: String,
     /// Fields of the variant: (field_name, field_type)
+    /// Types are converted from TypeExpr to Type
     pub fields: Vec<(FieldName, Type)>,
 }
 
-/// Definition of a type (enum or struct)
+/// Internal representation of a type definition with converted types
 #[derive(Debug, Clone, PartialEq)]
-pub enum TypeDef {
+pub enum TypeInfo {
     /// Enum type with multiple variants
     Enum {
         /// Name of the type
@@ -33,7 +98,7 @@ pub enum TypeDef {
         /// Type parameters (for generic types)
         params: Vec<TypeVar>,
         /// Variants of the enum
-        variants: Vec<VariantDef>,
+        variants: Vec<VariantInfo>,
     },
     /// Struct type with fields
     Struct {
@@ -46,31 +111,92 @@ pub enum TypeDef {
     },
 }
 
-impl TypeDef {
+impl TypeInfo {
     /// Get the name of the type
     pub fn name(&self) -> &str {
         match self {
-            TypeDef::Enum { name, .. } => name,
-            TypeDef::Struct { name, .. } => name,
+            TypeInfo::Enum { name, .. } => name,
+            TypeInfo::Struct { name, .. } => name,
         }
     }
 
     /// Get the type parameters
     pub fn params(&self) -> &[TypeVar] {
         match self {
-            TypeDef::Enum { params, .. } => params,
-            TypeDef::Struct { params, .. } => params,
+            TypeInfo::Enum { params, .. } => params,
+            TypeInfo::Struct { params, .. } => params,
         }
     }
 
     /// Look up a variant by name (only for enums)
-    pub fn lookup_variant(&self, variant_name: &str) -> Option<(VariantIndex, &VariantDef)> {
+    pub fn lookup_variant(&self, variant_name: &str) -> Option<(VariantIndex, &VariantInfo)> {
         match self {
-            TypeDef::Enum { variants, .. } => variants
+            TypeInfo::Enum { variants, .. } => variants
                 .iter()
                 .enumerate()
                 .find(|(_, v)| v.name == variant_name),
-            TypeDef::Struct { .. } => None,
+            TypeInfo::Struct { .. } => None,
+        }
+    }
+}
+
+/// Convert an AST TypeDef to internal TypeInfo
+fn convert_type_def(type_def: &TypeDef) -> TypeInfo {
+    // Create mapping from param names to fresh type variables
+    let param_mapping: HashMap<String, TypeVar> = type_def
+        .params
+        .iter()
+        .map(|param| (param.clone(), TypeVar::fresh()))
+        .collect();
+
+    let params: Vec<TypeVar> = type_def
+        .params
+        .iter()
+        .map(|p| param_mapping.get(p).copied().unwrap_or_else(TypeVar::fresh))
+        .collect();
+
+    match &type_def.body {
+        TypeBody::Enum(variants) => {
+            let converted_variants: Vec<VariantInfo> = variants
+                .iter()
+                .map(|v| VariantInfo {
+                    name: v.name.clone(),
+                    fields: v
+                        .fields
+                        .iter()
+                        .map(|(fname, ftype)| {
+                            (fname.clone(), type_expr_to_type(ftype, &param_mapping))
+                        })
+                        .collect(),
+                })
+                .collect();
+
+            TypeInfo::Enum {
+                name: type_def.name.clone(),
+                params,
+                variants: converted_variants,
+            }
+        }
+        TypeBody::Struct(fields) => {
+            let converted_fields: Vec<(FieldName, Type)> = fields
+                .iter()
+                .map(|(fname, ftype)| (fname.clone(), type_expr_to_type(ftype, &param_mapping)))
+                .collect();
+
+            TypeInfo::Struct {
+                name: type_def.name.clone(),
+                params,
+                fields: converted_fields,
+            }
+        }
+        TypeBody::Alias(_) => {
+            // For aliases, we create a struct with no fields as a placeholder
+            // In a full implementation, aliases would be resolved differently
+            TypeInfo::Struct {
+                name: type_def.name.clone(),
+                params,
+                fields: vec![],
+            }
         }
     }
 }
@@ -78,8 +204,10 @@ impl TypeDef {
 /// Type environment for tracking type definitions and constructor mappings
 #[derive(Debug, Clone, Default)]
 pub struct TypeEnv {
-    /// Type definitions by name
-    types: HashMap<TypeName, TypeDef>,
+    /// Type definitions by name (stored as AST TypeDef)
+    ast_types: HashMap<TypeName, TypeDef>,
+    /// Internal type info (converted from AST)
+    type_info: HashMap<TypeName, TypeInfo>,
     /// Constructor mappings: constructor name -> (type name, variant index)
     constructors: HashMap<String, (TypeName, VariantIndex)>,
 }
@@ -88,7 +216,8 @@ impl TypeEnv {
     /// Create a new empty type environment
     pub fn new() -> Self {
         Self {
-            types: HashMap::new(),
+            ast_types: HashMap::new(),
+            type_info: HashMap::new(),
             constructors: HashMap::new(),
         }
     }
@@ -100,19 +229,23 @@ impl TypeEnv {
         env
     }
 
-    /// Register a type definition and its constructors
-    pub fn register_type(&mut self, def: TypeDef) {
-        let type_name = def.name().to_string();
+    /// Register a type definition and its constructors from AST TypeDef
+    pub fn register_type(&mut self, def: &TypeDef) {
+        let type_name = def.name.clone();
+
+        // Convert to internal TypeInfo for type checking
+        let type_info = convert_type_def(def);
 
         // Register constructors for enum variants
-        if let TypeDef::Enum { variants, .. } = &def {
+        if let TypeInfo::Enum { variants, .. } = &type_info {
             for (index, variant) in variants.iter().enumerate() {
                 self.constructors
                     .insert(variant.name.clone(), (type_name.clone(), index));
             }
         }
 
-        self.types.insert(type_name, def);
+        self.ast_types.insert(type_name.clone(), def.clone());
+        self.type_info.insert(type_name, type_info);
     }
 
     /// Look up a constructor by name
@@ -122,23 +255,28 @@ impl TypeEnv {
         self.constructors.get(name).cloned()
     }
 
-    /// Look up a type definition by name
+    /// Look up a type definition by name (AST version)
     pub fn lookup_type(&self, name: &str) -> Option<&TypeDef> {
-        self.types.get(name)
+        self.ast_types.get(name)
+    }
+
+    /// Look up internal type info by name
+    pub fn lookup_type_info(&self, name: &str) -> Option<&TypeInfo> {
+        self.type_info.get(name)
     }
 
     /// Get the variant definition for a constructor
     pub fn get_variant(
         &self,
         constructor_name: &str,
-    ) -> Option<(&TypeDef, VariantIndex, &VariantDef)> {
+    ) -> Option<(&TypeInfo, VariantIndex, &VariantInfo)> {
         let (type_name, variant_index) = self.lookup_constructor(constructor_name)?;
-        let type_def = self.types.get(&type_name)?;
+        let type_info = self.type_info.get(&type_name)?;
 
-        if let TypeDef::Enum { variants, .. } = type_def {
+        if let TypeInfo::Enum { variants, .. } = type_info {
             variants
                 .get(variant_index)
-                .map(|v| (type_def, variant_index, v))
+                .map(|v| (type_info, variant_index, v))
         } else {
             None
         }
@@ -153,53 +291,50 @@ impl TypeEnv {
     /// Add the Option<T> type
     fn add_option_type(&mut self) {
         // Option<T> = Some { value: T } | None
-        let t_var = TypeVar::fresh();
-
-        let option_type = TypeDef::Enum {
+        let option_type = TypeDef {
             name: "Option".to_string(),
-            params: vec![t_var],
-            variants: vec![
+            params: vec!["T".to_string()],
+            body: TypeBody::Enum(vec![
                 VariantDef {
                     name: "Some".to_string(),
-                    fields: vec![("value".to_string(), Type::Var(t_var))],
+                    fields: vec![("value".to_string(), TypeExpr::Named("T".to_string()))],
                 },
                 VariantDef {
                     name: "None".to_string(),
                     fields: vec![],
                 },
-            ],
+            ]),
+            visibility: ash_core::ast::Visibility::Public,
         };
 
-        self.register_type(option_type);
+        self.register_type(&option_type);
     }
 
     /// Add the Result<T, E> type
     fn add_result_type(&mut self) {
         // Result<T, E> = Ok { value: T } | Err { error: E }
-        let t_var = TypeVar::fresh();
-        let e_var = TypeVar::fresh();
-
-        let result_type = TypeDef::Enum {
+        let result_type = TypeDef {
             name: "Result".to_string(),
-            params: vec![t_var, e_var],
-            variants: vec![
+            params: vec!["T".to_string(), "E".to_string()],
+            body: TypeBody::Enum(vec![
                 VariantDef {
                     name: "Ok".to_string(),
-                    fields: vec![("value".to_string(), Type::Var(t_var))],
+                    fields: vec![("value".to_string(), TypeExpr::Named("T".to_string()))],
                 },
                 VariantDef {
                     name: "Err".to_string(),
-                    fields: vec![("error".to_string(), Type::Var(e_var))],
+                    fields: vec![("error".to_string(), TypeExpr::Named("E".to_string()))],
                 },
-            ],
+            ]),
+            visibility: ash_core::ast::Visibility::Public,
         };
 
-        self.register_type(result_type);
+        self.register_type(&result_type);
     }
 
     /// Check if a type is registered
     pub fn has_type(&self, name: &str) -> bool {
-        self.types.contains_key(name)
+        self.ast_types.contains_key(name)
     }
 
     /// Check if a constructor is registered
@@ -211,21 +346,22 @@ impl TypeEnv {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, Visibility};
 
     // ============================================================
-    // TypeDef Tests
+    // TypeInfo Tests
     // ============================================================
 
     #[test]
-    fn test_type_def_name() {
-        let enum_def = TypeDef::Enum {
+    fn test_type_info_name() {
+        let enum_def = TypeInfo::Enum {
             name: "Option".to_string(),
             params: vec![],
             variants: vec![],
         };
         assert_eq!(enum_def.name(), "Option");
 
-        let struct_def = TypeDef::Struct {
+        let struct_def = TypeInfo::Struct {
             name: "Point".to_string(),
             params: vec![],
             fields: vec![],
@@ -234,16 +370,16 @@ mod tests {
     }
 
     #[test]
-    fn test_type_def_lookup_variant() {
-        let enum_def = TypeDef::Enum {
+    fn test_type_info_lookup_variant() {
+        let enum_def = TypeInfo::Enum {
             name: "Option".to_string(),
             params: vec![],
             variants: vec![
-                VariantDef {
+                VariantInfo {
                     name: "Some".to_string(),
                     fields: vec![("value".to_string(), Type::Int)],
                 },
-                VariantDef {
+                VariantInfo {
                     name: "None".to_string(),
                     fields: vec![],
                 },
@@ -262,8 +398,8 @@ mod tests {
     }
 
     #[test]
-    fn test_struct_def_lookup_variant_returns_none() {
-        let struct_def = TypeDef::Struct {
+    fn test_struct_info_lookup_variant_returns_none() {
+        let struct_def = TypeInfo::Struct {
             name: "Point".to_string(),
             params: vec![],
             fields: vec![("x".to_string(), Type::Int)],
@@ -325,12 +461,12 @@ mod tests {
         let env = TypeEnv::with_builtin_types();
 
         let type_def = env.lookup_type("Option").unwrap();
-        assert_eq!(type_def.name(), "Option");
-        assert_eq!(type_def.params().len(), 1);
+        assert_eq!(type_def.name, "Option");
+        assert_eq!(type_def.params.len(), 1);
 
         let type_def = env.lookup_type("Result").unwrap();
-        assert_eq!(type_def.name(), "Result");
-        assert_eq!(type_def.params().len(), 2);
+        assert_eq!(type_def.name, "Result");
+        assert_eq!(type_def.params.len(), 2);
 
         assert!(env.lookup_type("Unknown").is_none());
     }
@@ -339,8 +475,8 @@ mod tests {
     fn test_get_variant() {
         let env = TypeEnv::with_builtin_types();
 
-        let (type_def, variant_idx, variant) = env.get_variant("Some").unwrap();
-        assert_eq!(type_def.name(), "Option");
+        let (type_info, variant_idx, variant) = env.get_variant("Some").unwrap();
+        assert_eq!(type_info.name(), "Option");
         assert_eq!(variant_idx, 0);
         assert_eq!(variant.name, "Some");
         assert_eq!(variant.fields.len(), 1);
@@ -357,22 +493,23 @@ mod tests {
     fn test_register_custom_type() {
         let mut env = TypeEnv::new();
 
-        let status_type = TypeDef::Enum {
+        let status_type = TypeDef {
             name: "Status".to_string(),
             params: vec![],
-            variants: vec![
+            body: TypeBody::Enum(vec![
                 VariantDef {
                     name: "Pending".to_string(),
                     fields: vec![],
                 },
                 VariantDef {
                     name: "Complete".to_string(),
-                    fields: vec![("result".to_string(), Type::Int)],
+                    fields: vec![("result".to_string(), TypeExpr::Named("Int".to_string()))],
                 },
-            ],
+            ]),
+            visibility: Visibility::Public,
         };
 
-        env.register_type(status_type);
+        env.register_type(&status_type);
 
         assert!(env.has_type("Status"));
         assert!(env.has_constructor("Pending"));
@@ -391,9 +528,15 @@ mod tests {
     fn test_option_type_structure() {
         let env = TypeEnv::with_builtin_types();
 
+        // Check AST type definition
         let type_def = env.lookup_type("Option").unwrap();
-        match type_def {
-            TypeDef::Enum {
+        assert_eq!(type_def.name, "Option");
+        assert_eq!(type_def.params.len(), 1);
+
+        // Check internal type info
+        let type_info = env.lookup_type_info("Option").unwrap();
+        match type_info {
+            TypeInfo::Enum {
                 name,
                 params,
                 variants,
@@ -421,9 +564,15 @@ mod tests {
     fn test_result_type_structure() {
         let env = TypeEnv::with_builtin_types();
 
-        let type_def = env.lookup_type("Result").unwrap();
-        match type_def {
-            TypeDef::Enum {
+        // Check AST type definition
+        let ast_type_def = env.lookup_type("Result").unwrap();
+        assert_eq!(ast_type_def.name, "Result");
+        assert_eq!(ast_type_def.params.len(), 2);
+
+        // Check internal type info
+        let type_info = env.lookup_type_info("Result").unwrap();
+        match type_info {
+            TypeInfo::Enum {
                 name,
                 params,
                 variants,

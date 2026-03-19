@@ -3,7 +3,7 @@
 //! Provides type checking for expressions, including constructor expressions.
 
 use crate::error::ConstructorError;
-use crate::type_env::{TypeEnv, VariantIndex};
+use crate::type_env::{TypeEnv, TypeInfo, VariantIndex};
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_parser::surface::Expr;
 use std::collections::HashSet;
@@ -185,9 +185,9 @@ fn check_constructor(
 ///
 /// For a variant of a generic type, this returns the type constructor
 /// with the appropriate type variables.
-fn build_constructor_type(type_def: &crate::type_env::TypeDef, _variant_idx: VariantIndex) -> Type {
-    match type_def {
-        crate::type_env::TypeDef::Enum {
+fn build_constructor_type(type_info: &TypeInfo, _variant_idx: VariantIndex) -> Type {
+    match type_info {
+        TypeInfo::Enum {
             name: _, params, ..
         } => {
             // Create the type constructor application
@@ -203,7 +203,7 @@ fn build_constructor_type(type_def: &crate::type_env::TypeDef, _variant_idx: Var
                 Type::Var(params[0])
             }
         }
-        crate::type_env::TypeDef::Struct { .. } => {
+        TypeInfo::Struct { .. } => {
             // Struct constructors return the struct type
             Type::Var(TypeVar::fresh())
         }

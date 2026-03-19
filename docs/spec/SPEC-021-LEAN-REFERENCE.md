@@ -1,10 +1,14 @@
-# SPEC-021: Lean Reference Interpreter
+# Lean Reference Interpreter (Legacy)
 
-## Status: Draft
+## Status: Legacy reference sketch
 
 ## 1. Overview
 
-This specification defines a reference interpreter for Ash implemented in Lean 4. The interpreter serves as:
+This historical document sketches a Lean 4 reference interpreter for Ash. It is preserved for
+implementation reference only and does not define canonical Ash semantics. The canonical semantic
+corpus and the authoritative source/handoff contracts live in the hardened spec set.
+
+The sketch originally served as:
 
 1. **Executable specification** - Direct implementation of SPEC-004 operational semantics
 2. **Test oracle** - Differential testing against Rust implementation

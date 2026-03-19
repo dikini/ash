@@ -6,15 +6,15 @@ TASK-183 boundary note.
 
 ## Purpose
 
-This note freezes the boundary between canonical language contracts and migration-only artifacts
-for future Lean work.
+This note freezes the boundary between canonical language contracts, authoritative source/handoff
+contracts, and historical artifacts for future Lean work.
 
 It exists so Lean formalization can treat the same semantic source of truth as Rust implementation
 work without re-inferring meaning from plan text, old reference sketches, or current code shape.
 
-## Normative Corpus
+## Canonical Semantic Corpus
 
-Future Lean work should treat these documents as authoritative for semantics:
+Lean should treat these documents as authoritative for language semantics:
 
 - [SPEC-001: Intermediate Representation](../spec/SPEC-001-IR.md)
 - [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md)
@@ -25,28 +25,42 @@ Future Lean work should treat these documents as authoritative for semantics:
 These documents define the canonical core, typing, dynamic semantics, ADT behavior, and
 observable runtime contract. They are the semantic truth for both Rust and Lean work.
 
-## Migration-Only Artifacts
+## Authoritative Source and Handoff Contracts
 
-The following artifacts are useful for implementation planning or historical context, but they are
-not the canonical semantic source:
+Lean should also treat these documents as authoritative for their own layer-specific contracts:
 
-- surface syntax and parser-oriented references such as [SPEC-002](../spec/SPEC-002-SURFACE.md)
-- CLI/REPL/output/tooling specs such as [SPEC-005](../spec/SPEC-005-CLI.md),
-  [SPEC-011](../spec/SPEC-011-REPL.md), and [SPEC-016](../spec/SPEC-016-OUTPUT.md)
+- [SPEC-002: Surface Language](../spec/SPEC-002-SURFACE.md)
+- [SPEC-005: CLI Specification](../spec/SPEC-005-CLI.md)
+- [SPEC-011: REPL](../spec/SPEC-011-REPL.md)
+- [SPEC-016: Output Capabilities](../spec/SPEC-016-OUTPUT.md)
+- [Surface-to-Parser Contract](surface-to-parser-contract.md)
+- [Parser-to-Core Lowering Contract](parser-to-core-lowering-contract.md)
+- [Type-to-Runtime Contract](type-to-runtime-contract.md)
+- [Runtime Observable Behavior Contract](runtime-observable-behavior-contract.md)
+
+These contracts are authoritative for source syntax, lowering handoff, CLI/REPL observability,
+and runtime handoff boundaries. They do not replace the canonical semantic corpus above, but Lean
+work should still use them as the contract for their respective layers.
+
+## Historical and Migration-Only Artifacts
+
+The following artifacts are useful for implementation planning or historical context, but are not
+the canonical semantic source:
+
 - planning artifacts under `docs/plan/`, including task files and hardening plans
-- the runtime handoff references used during convergence
-- [SPEC-021: Lean Reference Interpreter](../spec/SPEC-021-LEAN-REFERENCE.md), which is a
-  historical reference sketch and not a normative contract
+- the old reference interpreter sketch at [Lean Reference Interpreter](../spec/SPEC-021-LEAN-REFERENCE.md)
 
-When Lean work needs source syntax or migration context, it should consult these artifacts as
-guidance only. The semantics themselves come from the normative corpus above.
+When Lean work needs migration context, it should consult these artifacts as guidance only. The
+semantics themselves come from the canonical semantic corpus, while source and handoff contracts
+remain authoritative for their respective layers.
 
 ## Rust and Lean Relationship
 
 Rust is the production implementation target.
 
 Lean is the formalization target and proof vehicle for the same canonical contracts. It should model
-the normative corpus directly, not invent alternate semantics or depend on current Rust naming.
+the canonical semantic corpus directly, use authoritative source/handoff contracts for syntax and
+layer boundaries, and not invent alternate semantics or depend on current Rust naming.
 
 Where Rust and Lean differ, the canonical specs win. Divergence belongs in migration tasks and
 implementation work, not in the formalization boundary.
@@ -79,9 +93,8 @@ work is out of scope for this note.
 
 ## Contract Hygiene
 
-- Canonical specs define truth.
-- Reference docs define handoff boundaries.
+- Canonical specs define semantic truth.
+- Source/handoff contracts define layer-specific authority.
 - Plans and task files define implementation work and migration notes.
 - Recoverable failure is canonical only as explicit `Result` handling.
 - `catch` is not part of the canonical language contract.
-

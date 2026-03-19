@@ -43,13 +43,16 @@ The formalization boundary is now explicit:
   [SPEC-020](../../spec/SPEC-020-ADT-TYPES.md), and
   [SPEC-021](../../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md)
 - [docs/reference/formalization-boundary.md](../../reference/formalization-boundary.md) separates
-  that corpus from migration-only artifacts and task docs
+  the canonical semantic corpus, authoritative source/handoff contracts, and historical artifacts
+- [docs/spec/SPEC-021-LEAN-REFERENCE.md](../../spec/SPEC-021-LEAN-REFERENCE.md) is now explicitly
+  marked legacy instead of masquerading as a competing current spec
 - recoverable failure is explicitly `Result`-based; `catch` is not part of the canonical contract
 - proof and bisimulation targets are listed in the boundary note rather than being left implicit
 
 ## Files
 
 - Create: `docs/reference/formalization-boundary.md`
+- Modify: `docs/spec/SPEC-021-LEAN-REFERENCE.md`
 - Modify: `docs/plan/2026-03-19-spec-hardening-design.md`
 - Modify: `docs/plan/PLAN-INDEX.md`
 - Modify: `CHANGELOG.md`
@@ -80,7 +83,7 @@ Expected pass conditions:
 ### Step 5: Commit
 
 ```bash
-git add docs/reference/formalization-boundary.md docs/plan/2026-03-19-spec-hardening-design.md docs/plan/PLAN-INDEX.md docs/plan/tasks/TASK-183-define-formalization-boundary-and-proof-targets.md CHANGELOG.md
+git add docs/reference/formalization-boundary.md docs/spec/SPEC-021-LEAN-REFERENCE.md docs/plan/2026-03-19-spec-hardening-design.md docs/plan/PLAN-INDEX.md docs/plan/tasks/TASK-183-define-formalization-boundary-and-proof-targets.md CHANGELOG.md
 git commit -m "docs: define formalization boundary and proof targets"
 ```
 

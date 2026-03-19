@@ -136,7 +136,10 @@ fn match_pattern_recursive(
         Pattern::Variant { name, fields } => {
             // Variant pattern matching - check value is a variant with matching name
             match value {
-                Value::Variant(variant_name, variant_fields) => {
+                Value::Variant {
+                    name: variant_name,
+                    fields: variant_fields,
+                } => {
                     // Check variant name matches
                     if variant_name != name {
                         return Err(PatternError::MatchFailed {
@@ -396,7 +399,10 @@ mod tests {
             name: "None".to_string(),
             fields: None,
         };
-        let value = Value::Variant("None".to_string(), vec![]);
+        let value = Value::Variant {
+            name: "None".to_string(),
+            fields: vec![],
+        };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }
@@ -411,10 +417,10 @@ mod tests {
                 Pattern::Variable("x".to_string()),
             )]),
         };
-        let value = Value::Variant(
-            "Some".to_string(),
-            vec![("value".to_string(), Value::Int(42))],
-        );
+        let value = Value::Variant {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Value::Int(42))],
+        };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("x"), Some(&Value::Int(42)));
     }
@@ -426,7 +432,10 @@ mod tests {
             name: "Some".to_string(),
             fields: None,
         };
-        let value = Value::Variant("None".to_string(), vec![]);
+        let value = Value::Variant {
+            name: "None".to_string(),
+            fields: vec![],
+        };
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
@@ -437,10 +446,10 @@ mod tests {
             name: "Some".to_string(),
             fields: None,
         };
-        let value = Value::Variant(
-            "Some".to_string(),
-            vec![("value".to_string(), Value::Int(42))],
-        );
+        let value = Value::Variant {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Value::Int(42))],
+        };
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
@@ -454,7 +463,10 @@ mod tests {
                 Pattern::Variable("x".to_string()),
             )]),
         };
-        let value = Value::Variant("Point".to_string(), vec![("x".to_string(), Value::Int(1))]);
+        let value = Value::Variant {
+            name: "Point".to_string(),
+            fields: vec![("x".to_string(), Value::Int(1))],
+        };
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
@@ -481,13 +493,13 @@ mod tests {
                 ]),
             )]),
         };
-        let value = Value::Variant(
-            "Some".to_string(),
-            vec![(
+        let value = Value::Variant {
+            name: "Some".to_string(),
+            fields: vec![(
                 "value".to_string(),
                 Value::List(vec![Value::Int(1), Value::Int(2)]),
             )],
-        );
+        };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("x"), Some(&Value::Int(1)));
         assert_eq!(bindings.get("y"), Some(&Value::Int(2)));
@@ -503,13 +515,13 @@ mod tests {
                 ("y".to_string(), Pattern::Variable("b".to_string())),
             ]),
         };
-        let value = Value::Variant(
-            "Point".to_string(),
-            vec![
+        let value = Value::Variant {
+            name: "Point".to_string(),
+            fields: vec![
                 ("x".to_string(), Value::Int(10)),
                 ("y".to_string(), Value::Int(20)),
             ],
-        );
+        };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("a"), Some(&Value::Int(10)));
         assert_eq!(bindings.get("b"), Some(&Value::Int(20)));
@@ -525,18 +537,18 @@ mod tests {
                 Pattern::Literal(Value::Int(42)),
             )]),
         };
-        let value = Value::Variant(
-            "Some".to_string(),
-            vec![("value".to_string(), Value::Int(42))],
-        );
+        let value = Value::Variant {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Value::Int(42))],
+        };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
 
         // Wrong literal value should fail
-        let value2 = Value::Variant(
-            "Some".to_string(),
-            vec![("value".to_string(), Value::Int(99))],
-        );
+        let value2 = Value::Variant {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Value::Int(99))],
+        };
         assert!(match_pattern(&pattern, &value2).is_err());
     }
 
@@ -547,10 +559,10 @@ mod tests {
             name: "Some".to_string(),
             fields: Some(vec![("value".to_string(), Pattern::Wildcard)]),
         };
-        let value = Value::Variant(
-            "Some".to_string(),
-            vec![("value".to_string(), Value::Int(42))],
-        );
+        let value = Value::Variant {
+            name: "Some".to_string(),
+            fields: vec![("value".to_string(), Value::Int(42))],
+        };
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }

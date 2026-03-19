@@ -32,7 +32,7 @@ pub enum Value {
         name: String,
         /// Field values as (name, value) pairs
         fields: Vec<(String, Value)>,
-    }
+    },
 }
 
 impl Value {
@@ -104,7 +104,6 @@ impl std::fmt::Display for Value {
                 write!(f, "}}")
             }
             Value::Cap(c) => write!(f, "cap({})", c),
-<<<<<<< HEAD
             Value::Variant { name, fields } => {
                 write!(f, "{}", name)?;
                 if !fields.is_empty() {
@@ -118,21 +117,6 @@ impl std::fmt::Display for Value {
                     write!(f, "}}")?;
                 }
                 Ok(())
-=======
-            Value::Variant(name, fields) => {
-                if fields.is_empty() {
-                    write!(f, "{}", name)
-                } else {
-                    write!(f, "{} {{", name)?;
-                    for (i, (field_name, field_value)) in fields.iter().enumerate() {
-                        if i > 0 {
-                            write!(f, ", ")?;
-                        }
-                        write!(f, "{}: {}", field_name, field_value)?;
-                    }
-                    write!(f, "}}")
-                }
->>>>>>> task/TASK-132-pattern-engine
             }
         }
     }

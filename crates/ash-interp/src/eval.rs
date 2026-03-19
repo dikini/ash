@@ -2,7 +2,7 @@
 //!
 //! Evaluates expressions in a runtime context, producing values.
 
-use ash_core::{BinaryOp, Expr, UnaryOp, Value};
+use ash_core::{BinaryOp, Expr, UnaryOp, Value, ast::MatchArm, ast::Pattern};
 use std::collections::HashMap;
 
 use crate::EvalResult;
@@ -128,25 +128,14 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             })
         }
 
-        Expr::Match { scrutinee, arms } => {
-            // TODO: Implement match evaluation in TASK-133
-            Err(EvalError::NotImplemented(format!(
-                "Match expression with {} arms not yet implemented",
-                arms.len()
-            )))
-        }
+        Expr::Match { scrutinee, arms } => eval_match(scrutinee, arms, ctx),
 
         Expr::IfLet {
             pattern,
             expr,
             then_branch,
             else_branch,
-        } => {
-            // TODO: Implement if-let evaluation in TASK-133
-            Err(EvalError::NotImplemented(
-                "If-let expression not yet implemented".to_string(),
-            ))
-        }
+        } => eval_if_let(pattern, expr, then_branch, else_branch, ctx),
     }
 }
 
@@ -265,6 +254,65 @@ where
 {
     let ordering = compare_values(&left, &right)?;
     Ok(Value::Bool(check(ordering)))
+}
+
+/// Evaluate a match expression
+///
+/// Tries each arm in order, returning the result of the first matching arm.
+/// If no arm matches, returns a non-exhaustive match error.
+fn eval_match(scrutinee: &Expr, arms: &[MatchArm], ctx: &Context) -> EvalResult<Value> {
+    let value = eval_expr(scrutinee, ctx)?;
+
+    for arm in arms {
+        match crate::pattern::match_pattern(&arm.pattern, &value) {
+            Ok(bindings) => {
+                // Create a new context with the bindings
+                let mut new_ctx = ctx.extend();
+                for (name, val) in bindings {
+                    new_ctx.set(name, val);
+                }
+                return eval_expr(&arm.body, &new_ctx);
+            }
+            Err(_) => {
+                // Pattern didn't match, try next arm
+                continue;
+            }
+        }
+    }
+
+    // No arm matched
+    Err(EvalError::NonExhaustiveMatch {
+        value: format!("{:?}", value),
+    })
+}
+
+/// Evaluate an if-let expression
+///
+/// If the pattern matches the expression value, evaluates the then branch with bindings.
+/// Otherwise evaluates the else branch.
+fn eval_if_let(
+    pattern: &Pattern,
+    expr: &Expr,
+    then_branch: &Expr,
+    else_branch: &Expr,
+    ctx: &Context,
+) -> EvalResult<Value> {
+    let value = eval_expr(expr, ctx)?;
+
+    match crate::pattern::match_pattern(pattern, &value) {
+        Ok(bindings) => {
+            // Pattern matched - evaluate then branch with bindings
+            let mut new_ctx = ctx.extend();
+            for (name, val) in bindings {
+                new_ctx.set(name, val);
+            }
+            eval_expr(then_branch, &new_ctx)
+        }
+        Err(_) => {
+            // Pattern didn't match - evaluate else branch
+            eval_expr(else_branch, ctx)
+        }
+    }
 }
 
 /// Compare two values for ordering
@@ -812,6 +860,10 @@ mod tests {
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(false));
     }
 
+    // ============================================================
+    // TASK-131: Constructor Evaluation Tests
+    // ============================================================
+
     #[test]
     fn test_eval_constructor_some_with_value() {
         let ctx = Context::new();
@@ -843,6 +895,33 @@ mod tests {
                 name: "None".to_string(),
                 fields: vec![],
             }
+        );
+    }
+
+    #[test]
+    fn test_eval_match_wildcard_fallback() {
+        let ctx = Context::new();
+
+        // match 2 { 1 => "one", _ => "other" } → "other"
+        let arms = vec![
+            MatchArm {
+                pattern: Pattern::Literal(Value::Int(1)),
+                body: Expr::Literal(Value::String("one".to_string())),
+            },
+            MatchArm {
+                pattern: Pattern::Wildcard,
+                body: Expr::Literal(Value::String("other".to_string())),
+            },
+        ];
+
+        let expr = Expr::Match {
+            scrutinee: Box::new(Expr::Literal(Value::Int(2))),
+            arms,
+        };
+
+        assert_eq!(
+            eval_expr(&expr, &ctx).unwrap(),
+            Value::String("other".to_string())
         );
     }
 
@@ -1021,5 +1100,71 @@ mod tests {
                 fields: vec![],
             }
         );
+    }
+
+    #[test]
+    fn test_eval_match_list_destructure() {
+        let ctx = Context::new();
+
+        // match [1, 2, 3] { [a, b, ..] => a + b, _ => 0 } → 3
+        let arms = vec![
+            MatchArm {
+                pattern: Pattern::List(
+                    vec![
+                        Pattern::Variable("a".to_string()),
+                        Pattern::Variable("b".to_string()),
+                    ],
+                    Some("_".to_string()),
+                ),
+                body: Expr::Binary {
+                    op: BinaryOp::Add,
+                    left: Box::new(Expr::Variable("a".to_string())),
+                    right: Box::new(Expr::Variable("b".to_string())),
+                },
+            },
+            MatchArm {
+                pattern: Pattern::Wildcard,
+                body: Expr::Literal(Value::Int(0)),
+            },
+        ];
+
+        let expr = Expr::Match {
+            scrutinee: Box::new(Expr::Literal(Value::List(vec![
+                Value::Int(1),
+                Value::Int(2),
+                Value::Int(3),
+            ]))),
+            arms,
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(3));
+    }
+
+    #[test]
+    fn test_eval_match_tuple_destructure() {
+        let ctx = Context::new();
+
+        // match (1, 2) { (x, y) => x + y } → 3
+        let arms = vec![MatchArm {
+            pattern: Pattern::Tuple(vec![
+                Pattern::Variable("x".to_string()),
+                Pattern::Variable("y".to_string()),
+            ]),
+            body: Expr::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(Expr::Variable("x".to_string())),
+                right: Box::new(Expr::Variable("y".to_string())),
+            },
+        }];
+
+        let expr = Expr::Match {
+            scrutinee: Box::new(Expr::Literal(Value::List(vec![
+                Value::Int(1),
+                Value::Int(2),
+            ]))),
+            arms,
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(3));
     }
 }

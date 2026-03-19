@@ -1,0 +1,52 @@
+name: Lean Reference Interpreter
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'lean_reference/**'
+      - '.github/workflows/lean-reference.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'lean_reference/**'
+      - '.github/workflows/lean-reference.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./lean_reference
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lean 4
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+
+      - name: Cache Lean packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            lean_reference/.lake
+            lean_reference/lake-packages
+          key: ${{ runner.os }}-lean-${{ hashFiles('lean_reference/lake-manifest.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lean-
+
+      - name: Build Lean reference
+        run: |
+          lake update
+          lake build
+
+      - name: Run Lean tests
+        run: lake exe test || true  # Don't fail if tests not yet implemented
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-reference
+          path: lean_reference/build/

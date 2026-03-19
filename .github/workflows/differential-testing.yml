@@ -1,0 +1,112 @@
+name: Differential Testing
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'lean_reference/**'
+      - 'crates/**'
+      - '.github/workflows/differential-testing.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'lean_reference/**'
+      - 'crates/**'
+      - '.github/workflows/differential-testing.yml'
+  schedule:
+    # Run daily at 3 AM UTC
+    - cron: '0 3 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-lean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lean 4
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+
+      - name: Cache Lean packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            lean_reference/.lake
+            lean_reference/lake-packages
+          key: ${{ runner.os }}-lean-${{ hashFiles('lean_reference/lake-manifest.json') }}
+
+      - name: Build Lean reference
+        working-directory: ./lean_reference
+        run: |
+          lake update
+          lake build
+
+      - name: Upload Lean binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-binary
+          path: lean_reference/build/bin/ash_ref
+
+  build-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Rust implementation
+        run: cargo build --release
+
+      - name: Upload Rust binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-binary
+          path: target/release/ash
+
+  differential-tests:
+    needs: [build-lean, build-rust]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Lean binary
+        uses: actions/download-artifact@v4
+        with:
+          name: lean-binary
+          path: ./lean_binary
+
+      - name: Download Rust binary
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binary
+          path: ./rust_binary
+
+      - name: Make binaries executable
+        run: |
+          chmod +x ./lean_binary/ash_ref
+          chmod +x ./rust_binary/ash
+
+      - name: Run differential tests
+        run: |
+          ./scripts/differential_test.sh \
+            --lean ./lean_binary/ash_ref \
+            --rust ./rust_binary/ash \
+            --count 100
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: differential-test-failures
+          path: tests/differential/failures/

@@ -126,6 +126,16 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
         Workflow::Done { .. } => Effect::Epistemic,
 
         Workflow::Ret { .. } => Effect::Deliberative,
+
+        // Receive - Epistemic (read-only consumption) per SPEC-017
+        // Join with effects of all arm bodies
+        Workflow::Receive { arms, .. } => {
+            let arms_effect = arms
+                .iter()
+                .map(|arm| infer_effect(&arm.body))
+                .fold(Effect::Epistemic, |acc, e| acc.join(e));
+            Effect::Epistemic.join(arms_effect)
+        }
     }
 }
 

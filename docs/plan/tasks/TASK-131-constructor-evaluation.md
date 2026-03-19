@@ -1,6 +1,6 @@
 # TASK-131: Constructor Evaluation
 
-## Status: 🟡 Ready to Start
+## Status: 🟡 Ready
 
 ## Description
 

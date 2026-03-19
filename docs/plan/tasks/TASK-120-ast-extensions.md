@@ -1,6 +1,6 @@
 # TASK-120: AST Extensions for ADTs
 
-## Status: 🟡 Ready to Start
+## Status: ✅ Complete
 
 ## Description
 

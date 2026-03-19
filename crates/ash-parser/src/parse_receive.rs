@@ -14,32 +14,9 @@ use crate::input::{ParseInput, Position};
 use crate::parse_expr::{expr, identifier};
 use crate::parse_pattern::pattern;
 use crate::parse_workflow::workflow;
+use crate::surface::ReceiveMode;
 use crate::surface::{Expr, Name, Pattern, Workflow};
 use crate::token::Span;
-
-/// Receive mode: non-blocking, blocking forever, or blocking with timeout
-#[derive(Debug, Clone, PartialEq)]
-pub enum ReceiveMode {
-    /// Non-blocking receive - check for messages and continue immediately
-    NonBlocking,
-    /// Blocking receive - wait for messages, optionally with timeout
-    Blocking(Option<Duration>),
-}
-
-impl ReceiveMode {
-    /// Returns true if this is a blocking receive mode
-    pub fn is_blocking(&self) -> bool {
-        matches!(self, ReceiveMode::Blocking(_))
-    }
-
-    /// Returns the timeout duration if set
-    pub fn timeout(&self) -> Option<Duration> {
-        match self {
-            ReceiveMode::Blocking(timeout) => *timeout,
-            ReceiveMode::NonBlocking => None,
-        }
-    }
-}
 
 /// Stream pattern for matching messages in receive arms
 #[derive(Debug, Clone, PartialEq)]

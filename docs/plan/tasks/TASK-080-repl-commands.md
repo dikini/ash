@@ -1,6 +1,6 @@
 # TASK-080: REPL Commands
 
-## Status: 🔴 Not Started
+## Status: ✅ Complete
 
 ## Description
 

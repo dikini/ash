@@ -1,6 +1,6 @@
 # TASK-078: Expression Evaluation in REPL
 
-## Status: 🔴 Not Started
+## Status: ✅ Complete
 
 ## Description
 

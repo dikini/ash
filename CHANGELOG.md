@@ -18,6 +18,17 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `Ash/Types/WellTyped.lean` - Well-typed relation for expressions
   - Helper lemmas: `merge_envs_assoc`, `env_lookup_bind_eq`, `join_epistemic_left`, etc.
   - **Note**: Some theorems use `sorry` due to Lean 4 partial function limitations
+- Effect tracking for receive capability (TASK-108). Complete effect tracking for all capabilities:
+  - Added `Workflow::Receive` variant to surface AST for pattern matching on incoming messages
+  - Added `ReceiveMode` enum (NonBlocking, Blocking with optional timeout)
+  - Added `StreamPattern` enum (Wildcard, Literal, Binding) for receive arm patterns
+  - Added `ReceiveArm` struct (pattern, guard, body, span)
+  - Implemented effect computation: receive is `Epistemic` (read-only consumption) per SPEC-017
+  - Effect properly joins with all arm body effects: `arms.iter().map(|arm| arm.body.effect()).fold(Epistemic, join)`
+  - Added 7 property tests for receive effect tracking (empty, blocking, epistemic body, operational body, multiple arms, control receive)
+  - Updated desugar passes (sequencing, optional bindings, nested blocks) to handle Receive
+  - Updated lowering with placeholder for future core IR support
+  - Verified compliance with SPEC-017 Section 2.1: receive → Epistemic effect
 - Option and Result standard library (TASK-136). Core standard library modules:
   - `std/src/option.ash` - Option<T> type with Some/None variants
   - `std/src/result.ash` - Result<T, E> type with Ok/Err variants

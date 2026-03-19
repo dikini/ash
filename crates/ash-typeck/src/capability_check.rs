@@ -421,6 +421,16 @@ impl CapabilityChecker {
                 Ok(())
             }
 
+            // Receive - verify all arm bodies
+            // Note: receive doesn't need capability declaration check at this level
+            // because receive arms use pattern matching on messages, not direct capability access
+            Workflow::Receive { arms, .. } => {
+                for arm in arms {
+                    self.verify_workflow(&arm.body)?;
+                }
+                Ok(())
+            }
+
             // Let binding - verify expression and continuation
             Workflow::Let {
                 expr, continuation, ..

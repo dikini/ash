@@ -1,6 +1,6 @@
 # TASK-133: Match Expression Evaluation
 
-## Status: 🟡 Ready to Start
+## Status: 🟡 Ready
 
 ## Description
 

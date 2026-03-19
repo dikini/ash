@@ -1,6 +1,6 @@
 # TASK-088: Stream AST Types
 
-## Status: 🔴 Not Started
+## Status: ✅ Complete
 
 ## Description
 

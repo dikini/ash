@@ -364,6 +364,37 @@ impl NameResolver {
                     self.resolve_workflow_inner(cont);
                 }
             }
+
+            Workflow::Receive { arms, .. } => {
+                // Resolve bindings from receive arm patterns and their bodies
+                for arm in arms {
+                    // Bind pattern variables
+                    self.resolve_receive_pattern(&arm.pattern);
+                    // Resolve guard if present
+                    if let Some(guard) = &arm.guard {
+                        self.resolve_expr(guard);
+                    }
+                    // Resolve arm body
+                    self.resolve_workflow_inner(&arm.body);
+                }
+            }
+        }
+    }
+
+    /// Resolve bindings from a receive pattern
+    fn resolve_receive_pattern(&mut self, pattern: &ash_parser::surface::StreamPattern) {
+        use ash_parser::surface::StreamPattern;
+        match pattern {
+            StreamPattern::Wildcard => {
+                // No binding
+            }
+            StreamPattern::Literal(_) => {
+                // No binding
+            }
+            StreamPattern::Binding { pattern, .. } => {
+                // Bind the inner pattern
+                self.bind_pattern(pattern);
+            }
         }
     }
 

@@ -331,6 +331,72 @@ pub enum Workflow {
         /// Source span
         span: Span,
     },
+    /// Receive: Pattern match on incoming messages from streams
+    Receive {
+        /// Receive mode (blocking or non-blocking)
+        mode: ReceiveMode,
+        /// Receive arms for matching messages
+        arms: Vec<ReceiveArm>,
+        /// Whether this is a control receive
+        is_control: bool,
+        /// Source span
+        span: Span,
+    },
+}
+
+/// Receive mode: non-blocking, blocking forever, or blocking with timeout.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReceiveMode {
+    /// Non-blocking receive - check for messages and continue immediately
+    NonBlocking,
+    /// Blocking receive - wait for messages, optionally with timeout
+    Blocking(Option<std::time::Duration>),
+}
+
+impl ReceiveMode {
+    /// Returns true if this is a blocking receive mode
+    pub fn is_blocking(&self) -> bool {
+        matches!(self, ReceiveMode::Blocking(_))
+    }
+
+    /// Returns the timeout duration if set
+    pub fn timeout(&self) -> Option<std::time::Duration> {
+        match self {
+            ReceiveMode::Blocking(timeout) => *timeout,
+            ReceiveMode::NonBlocking => None,
+        }
+    }
+}
+
+/// Stream pattern for matching messages in receive arms.
+#[derive(Debug, Clone, PartialEq)]
+pub enum StreamPattern {
+    /// Wildcard pattern: _
+    Wildcard,
+    /// String literal pattern (for control messages)
+    Literal(String),
+    /// Binding pattern: capability:channel as pattern
+    Binding {
+        /// Capability name
+        capability: Name,
+        /// Channel name
+        channel: Name,
+        /// Pattern to bind the message
+        pattern: Pattern,
+    },
+}
+
+/// A receive arm: pattern + optional guard + body.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReceiveArm {
+    /// Pattern to match against incoming messages
+    pub pattern: StreamPattern,
+    /// Optional guard expression
+    pub guard: Option<Expr>,
+    /// Body workflow to execute when matched
+    pub body: Workflow,
+    /// Source span
+    pub span: Span,
 }
 
 /// Expression types.
@@ -728,6 +794,7 @@ impl Spanned for Workflow {
             Workflow::Ret { span, .. } => *span,
             Workflow::Set { span, .. } => *span,
             Workflow::Send { span, .. } => *span,
+            Workflow::Receive { span, .. } => *span,
         }
     }
 }
@@ -905,6 +972,15 @@ impl Workflow {
                 } else {
                     Effect::Operational
                 }
+            }
+
+            // Receive - epistemic (read-only) with join of all arm body effects
+            Workflow::Receive { arms, .. } => {
+                // Receive is Epistemic (reading from mailbox)
+                // Join with effects of all arm bodies
+                arms.iter()
+                    .map(|arm| arm.body.effect())
+                    .fold(Effect::Epistemic, |a, b| a.join(b))
             }
         }
     }
@@ -2693,5 +2769,131 @@ mod effect_tests {
         };
 
         assert_eq!(decide.effect(), Effect::Operational);
+    }
+
+    // =========================================================================
+    // Receive Effect Tests (TASK-108)
+    // =========================================================================
+
+    #[test]
+    fn test_receive_effect_is_epistemic() {
+        // Receive with no arms should be Epistemic (read-only observation)
+        let workflow = Workflow::Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![],
+            is_control: false,
+            span: dummy_span(),
+        };
+        assert_eq!(workflow.effect(), Effect::Epistemic);
+    }
+
+    #[test]
+    fn test_receive_effect_blocking() {
+        // Blocking receive should still be Epistemic
+        let workflow = Workflow::Receive {
+            mode: ReceiveMode::Blocking(Some(std::time::Duration::from_secs(10))),
+            arms: vec![],
+            is_control: false,
+            span: dummy_span(),
+        };
+        assert_eq!(workflow.effect(), Effect::Epistemic);
+    }
+
+    #[test]
+    fn test_receive_with_epistemic_body() {
+        // Receive with epistemic body should be Epistemic
+        let arm = ReceiveArm {
+            pattern: StreamPattern::Wildcard,
+            guard: None,
+            body: Workflow::Observe {
+                capability: "sensor".into(),
+                binding: None,
+                continuation: None,
+                span: dummy_span(),
+            },
+            span: dummy_span(),
+        };
+        let workflow = Workflow::Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![arm],
+            is_control: false,
+            span: dummy_span(),
+        };
+        assert_eq!(workflow.effect(), Effect::Epistemic);
+    }
+
+    #[test]
+    fn test_receive_with_operational_body() {
+        // Receive with operational body should be Operational
+        let arm = ReceiveArm {
+            pattern: StreamPattern::Wildcard,
+            guard: None,
+            body: Workflow::Act {
+                action: ActionRef {
+                    name: "process".into(),
+                    args: vec![],
+                },
+                guard: None,
+                span: dummy_span(),
+            },
+            span: dummy_span(),
+        };
+        let workflow = Workflow::Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![arm],
+            is_control: false,
+            span: dummy_span(),
+        };
+        // Epistemic join Operational = Operational
+        assert_eq!(workflow.effect(), Effect::Operational);
+    }
+
+    #[test]
+    fn test_receive_multiple_arms_effect_join() {
+        // Receive with multiple arms should join all arm body effects
+        let arm1 = ReceiveArm {
+            pattern: StreamPattern::Wildcard,
+            guard: None,
+            body: Workflow::Observe {
+                capability: "sensor1".into(),
+                binding: None,
+                continuation: None,
+                span: dummy_span(),
+            },
+            span: dummy_span(),
+        };
+        let arm2 = ReceiveArm {
+            pattern: StreamPattern::Literal("stop".into()),
+            guard: None,
+            body: Workflow::Act {
+                action: ActionRef {
+                    name: "shutdown".into(),
+                    args: vec![],
+                },
+                guard: None,
+                span: dummy_span(),
+            },
+            span: dummy_span(),
+        };
+        let workflow = Workflow::Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![arm1, arm2],
+            is_control: false,
+            span: dummy_span(),
+        };
+        // join(Epistemic, Epistemic, Operational) = Operational
+        assert_eq!(workflow.effect(), Effect::Operational);
+    }
+
+    #[test]
+    fn test_receive_control_is_epistemic() {
+        // Control receive should still be Epistemic (just a different mailbox)
+        let workflow = Workflow::Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![],
+            is_control: true,
+            span: dummy_span(),
+        };
+        assert_eq!(workflow.effect(), Effect::Epistemic);
     }
 }

@@ -1,6 +1,6 @@
 # TASK-130: Exhaustiveness Checking
 
-## Status: 🟡 Ready to Start
+## Status: 🟡 Ready
 
 ## Description
 

@@ -179,6 +179,16 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             }
         }
 
+        // NOTE: Receive lowering is not yet implemented in core IR.
+        // For now, we lower receive as a placeholder that returns Done.
+        // This preserves the effect tracking at the surface AST level.
+        #[allow(dead_code)]
+        SurfaceWorkflow::Receive { .. } => {
+            // TASK-108: Effect tracking is implemented at surface AST level.
+            // Full lowering requires core IR support for receive patterns.
+            CoreWorkflow::Done
+        }
+
         SurfaceWorkflow::Let {
             pattern,
             expr,

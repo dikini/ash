@@ -1,6 +1,6 @@
 # TASK-135: Control Link Transfer Semantics
 
-## Status: 🟡 Ready to Start
+## Status: 🟡 Ready
 
 ## Description
 

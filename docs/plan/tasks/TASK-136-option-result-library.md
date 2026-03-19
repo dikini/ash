@@ -1,6 +1,6 @@
 # TASK-136: Option and Result Standard Library
 
-## Status: 🟡 Ready to Start
+## Status: 🟡 Ready
 
 ## Description
 

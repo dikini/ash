@@ -233,6 +233,30 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
             }
         }
 
+        // Receive - desugar all arm bodies
+        Workflow::Receive {
+            mode,
+            arms,
+            is_control,
+            span,
+        } => {
+            let new_arms = arms
+                .iter()
+                .map(|arm| crate::surface::ReceiveArm {
+                    pattern: arm.pattern.clone(),
+                    guard: arm.guard.clone(),
+                    body: desugar_sequencing(&arm.body),
+                    span: arm.span,
+                })
+                .collect();
+            Workflow::Receive {
+                mode: mode.clone(),
+                arms: new_arms,
+                is_control: *is_control,
+                span: *span,
+            }
+        }
+
         // Leaf nodes
         Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }
@@ -450,6 +474,30 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
             }
         }
 
+        // Receive - desugar arm bodies
+        Workflow::Receive {
+            mode,
+            arms,
+            is_control,
+            span,
+        } => {
+            let new_arms = arms
+                .iter()
+                .map(|arm| crate::surface::ReceiveArm {
+                    pattern: arm.pattern.clone(),
+                    guard: arm.guard.clone(),
+                    body: desugar_optional_bindings(&arm.body),
+                    span: arm.span,
+                })
+                .collect();
+            Workflow::Receive {
+                mode: mode.clone(),
+                arms: new_arms,
+                is_control: *is_control,
+                span: *span,
+            }
+        }
+
         Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }
 }
@@ -659,6 +707,30 @@ fn desugar_nested_blocks(workflow: &Workflow) -> Workflow {
                 .map(|c| Box::new(desugar_nested_blocks(c))),
             span: *span,
         },
+
+        // Receive - desugar arm bodies
+        Workflow::Receive {
+            mode,
+            arms,
+            is_control,
+            span,
+        } => {
+            let new_arms = arms
+                .iter()
+                .map(|arm| crate::surface::ReceiveArm {
+                    pattern: arm.pattern.clone(),
+                    guard: arm.guard.clone(),
+                    body: desugar_nested_blocks(&arm.body),
+                    span: arm.span,
+                })
+                .collect();
+            Workflow::Receive {
+                mode: mode.clone(),
+                arms: new_arms,
+                is_control: *is_control,
+                span: *span,
+            }
+        }
 
         Workflow::Act { .. } | Workflow::Done { .. } | Workflow::Ret { .. } => workflow.clone(),
     }

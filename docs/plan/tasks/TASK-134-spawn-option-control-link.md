@@ -1,6 +1,6 @@
 # TASK-134: Spawn Returns Option<ControlLink>
 
-## Status: 🟡 Ready to Start
+## Status: 🟡 Ready
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-093: Behaviour Provider Trait
 
-## Status: 🔴 Not Started
+## Status: ✅ Complete
 
 ## Description
 

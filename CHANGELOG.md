@@ -7,6 +7,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Affine control link transfer semantics (TASK-135). Runtime tracking for control link consumption:
+  - `ControlLinkRegistry` for tracking link availability vs consumed state
+  - `ControlLinkError` for invalid link usage (AlreadyConsumed, NotFound, InvalidInstance)
+  - `acquire()` method for consuming links with exactly-once semantics
+  - `verify_unused()` for checking link availability without consuming
+  - `consume()` for explicit consumption, `is_consumed()` for state checking
+  - Support for kill, pause, resume, check_health supervision operations
+  - Instance, InstanceAddr, ControlLink types added to AST
+  - Spawn and Split expressions for workflow instantiation
+  - Workflow variants: Kill, Pause, Resume, CheckHealth for supervision
 - Match and if-let expression evaluation (TASK-133). Interpreter support for match expressions:
   - `Expr::Match` evaluation with pattern matching and arm selection
   - `Expr::IfLet` evaluation as sugar for match

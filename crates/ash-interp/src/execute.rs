@@ -430,6 +430,112 @@ pub fn execute_workflow_with_behaviour<'a>(
             Workflow::Send { .. } => Err(ExecError::ExecutionFailed(
                 "Send requires StreamContext - use execute_workflow_with_stream".to_string(),
             )),
+
+            // Spawn a workflow instance (not yet fully implemented)
+            Workflow::Spawn {
+                workflow_type: _,
+                init: _,
+                binding: _,
+                continuation,
+            } => {
+                // TODO: Implement actual spawning with instance creation
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Split instance into address and control link (not yet fully implemented)
+            Workflow::Split {
+                instance: _,
+                addr_binding: _,
+                control_binding: _,
+                continuation,
+            } => {
+                // TODO: Implement actual split with InstanceAddr and ControlLink creation
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Kill a workflow instance using control link
+            Workflow::Kill {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual kill with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Pause a workflow instance using control link
+            Workflow::Pause {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual pause with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Resume a workflow instance using control link
+            Workflow::Resume {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual resume with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Check health of a workflow instance using control link
+            Workflow::CheckHealth {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual health check with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
         }
     })
 }

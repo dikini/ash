@@ -136,6 +136,17 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             then_branch,
             else_branch,
         } => eval_if_let(pattern, expr, then_branch, else_branch, ctx),
+
+        Expr::Spawn {
+            workflow_type: _,
+            init: _,
+        } => Err(EvalError::NotImplemented(
+            "Spawn expression not yet implemented".to_string(),
+        )),
+
+        Expr::Split(_) => Err(EvalError::NotImplemented(
+            "Split expression not yet implemented".to_string(),
+        )),
     }
 }
 

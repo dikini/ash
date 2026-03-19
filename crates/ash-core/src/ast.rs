@@ -98,6 +98,47 @@ pub enum Workflow {
         channel: Name,
         value: Expr,
     },
+
+    /// Spawn a workflow and bind it
+    Spawn {
+        workflow_type: Name,
+        init: Vec<(Name, Expr)>,
+        binding: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Split instance into address and control link
+    Split {
+        instance: Name,
+        addr_binding: Name,
+        control_binding: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Kill a workflow instance
+    Kill {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Pause a workflow instance
+    Pause {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Resume a workflow instance
+    Resume {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Check health of a workflow instance
+    CheckHealth {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
     /// Terminal
     Done,
 }
@@ -262,6 +303,15 @@ pub enum Expr {
         then_branch: Box<Expr>,
         else_branch: Box<Expr>,
     },
+
+    /// Spawn a workflow instance
+    Spawn {
+        workflow_type: Name,
+        init: Vec<(Name, Expr)>,
+    },
+
+    /// Split instance into (addr, control)
+    Split(Box<Expr>),
 }
 
 /// Unary operators
@@ -403,6 +453,28 @@ pub enum TypeExpr {
     Tuple(Vec<TypeExpr>),
     /// Record type (e.g., { x: Int, y: String })
     Record(Vec<(Name, TypeExpr)>),
+}
+
+/// Workflow instance reference (result of spawn)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Instance {
+    /// Address for sending signals
+    pub addr: InstanceAddr,
+    /// Control link for supervision (initially Some)
+    pub control: Option<ControlLink>,
+}
+
+/// Opaque instance address
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InstanceAddr {
+    pub workflow_type: Name,
+    pub instance_id: crate::WorkflowId,
+}
+
+/// Control link for supervision
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ControlLink {
+    pub instance_id: crate::WorkflowId,
 }
 
 /// Top-level definition

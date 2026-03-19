@@ -25,12 +25,14 @@ pub enum Value {
     /// Capability reference
     Cap(String),
     /// Variant/Constructor value (ADT)
+    /// e.g., `Some { value: 42 }` is `Variant { name: "Some", fields: [("value", Int(42))] }`
+    /// and `None` is `Variant { name: "None", fields: [] }`
     Variant {
         /// Constructor name (e.g., "Some", "None", "Ok")
         name: String,
         /// Field values as (name, value) pairs
         fields: Vec<(String, Value)>,
-    },
+    }
 }
 
 impl Value {
@@ -102,6 +104,7 @@ impl std::fmt::Display for Value {
                 write!(f, "}}")
             }
             Value::Cap(c) => write!(f, "cap({})", c),
+<<<<<<< HEAD
             Value::Variant { name, fields } => {
                 write!(f, "{}", name)?;
                 if !fields.is_empty() {
@@ -115,6 +118,21 @@ impl std::fmt::Display for Value {
                     write!(f, "}}")?;
                 }
                 Ok(())
+=======
+            Value::Variant(name, fields) => {
+                if fields.is_empty() {
+                    write!(f, "{}", name)
+                } else {
+                    write!(f, "{} {{", name)?;
+                    for (i, (field_name, field_value)) in fields.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}: {}", field_name, field_value)?;
+                    }
+                    write!(f, "}}")
+                }
+>>>>>>> task/TASK-132-pattern-engine
             }
         }
     }

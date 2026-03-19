@@ -7,6 +7,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Match and if-let expression evaluation (TASK-133). Interpreter support for match expressions:
+  - `Expr::Match` evaluation with pattern matching and arm selection
+  - `Expr::IfLet` evaluation as sugar for match
+  - Integration with pattern matching engine for variable binding
+  - Proper error handling for non-exhaustive matches
+  - Full test coverage for all match forms
+- Pattern matching engine (TASK-132). Core pattern matching implementation in `crates/ash-interp/src/pattern.rs`:
+  - `Value::Variant` type added to `ash-core` for representing variant values
+  - `Pattern::Variant` pattern matching with field extraction
+  - Support for unit variants: `Pattern::Variant { name: "None", fields: None }`
+  - Support for variants with fields: `Pattern::Variant { name: "Some", fields: Some([("value", var)]) }`
+  - Nested variant pattern matching (variants containing tuples, records, etc.)
+  - Full test coverage for variant matching including negative cases
 - Constructor evaluation for ADTs (TASK-131). Interpreter support for evaluating constructor expressions like `Some { value: 42 }`:
   - `Value::Variant` type in `ash-core` with constructor name and field values
   - `Expr::Constructor` evaluation in `ash-interp/src/eval.rs`

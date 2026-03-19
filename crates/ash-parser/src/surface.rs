@@ -387,8 +387,28 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
+    /// Match expression: match scrutinee { arms... }
+    Match {
+        /// Expression to match on
+        scrutinee: Box<Expr>,
+        /// Match arms
+        arms: Vec<MatchArm>,
+        /// Source span
+        span: Span,
+    },
     /// Policy expression
     Policy(PolicyExpr),
+}
+
+/// A single arm in a match expression.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchArm {
+    /// Pattern to match against
+    pub pattern: Pattern,
+    /// Expression to evaluate if pattern matches
+    pub body: Box<Expr>,
+    /// Source span
+    pub span: Span,
 }
 
 /// Policy expression for combinators.
@@ -512,6 +532,13 @@ pub enum Pattern {
         elements: Vec<Pattern>,
         /// Optional rest binding
         rest: Option<Name>,
+    },
+    /// Variant pattern: Some { value: x } or None
+    Variant {
+        /// Variant name (e.g., "Some", "None")
+        name: Name,
+        /// Optional fields with patterns
+        fields: Option<Vec<(Name, Pattern)>>,
     },
     /// Literal pattern
     Literal(Literal),
@@ -692,6 +719,7 @@ impl Spanned for Expr {
             Expr::Unary { span, .. } => *span,
             Expr::Binary { span, .. } => *span,
             Expr::Call { span, .. } => *span,
+            Expr::Match { span, .. } => *span,
             Expr::Policy(policy_expr) => policy_expr.span(),
         }
     }

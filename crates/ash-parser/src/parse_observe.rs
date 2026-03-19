@@ -9,7 +9,7 @@ use winnow::token::take_while;
 
 use crate::input::ParseInput;
 use crate::parse_expr::{expr, identifier};
-use crate::parse_workflow::pattern;
+use crate::parse_pattern::pattern;
 use crate::surface::{Expr, Name, Pattern};
 
 /// Parsed observe expression.

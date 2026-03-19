@@ -9,10 +9,11 @@ use winnow::token::take_while;
 
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::expr;
+use crate::parse_pattern::pattern;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
-    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, Pattern, PolicyInstance, Workflow,
+    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, PolicyInstance, Workflow,
     WorkflowDef,
 };
 use crate::token::Span;
@@ -597,106 +598,6 @@ fn obligation_ref(input: &mut ParseInput) -> ModalResult<ObligationRef> {
     })
 }
 
-/// Parse a pattern
-pub fn pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    skip_whitespace_and_comments(input);
-    alt((
-        parse_wildcard_pattern,
-        parse_tuple_pattern,
-        parse_list_pattern,
-        parse_variable_pattern,
-    ))
-    .parse_next(input)
-}
-
-/// Parse a wildcard pattern: `_`
-fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    let _ = literal_str("_").parse_next(input)?;
-    Ok(Pattern::Wildcard)
-}
-
-/// Parse a variable pattern: just an identifier
-fn parse_variable_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    let name = identifier(input)?;
-    Ok(Pattern::Variable(name.into()))
-}
-
-/// Parse a tuple pattern: `(pat1, pat2, ...)`
-fn parse_tuple_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    let patterns =
-        delimited(literal_str("("), parse_pattern_list, literal_str(")")).parse_next(input)?;
-    Ok(Pattern::Tuple(patterns))
-}
-
-/// Parse a list pattern: `[pat1, pat2, ..rest]`
-fn parse_list_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    delimited(literal_str("["), parse_list_pattern_inner, literal_str("]")).parse_next(input)
-}
-
-/// Parse the inner content of a list pattern
-fn parse_list_pattern_inner(input: &mut ParseInput) -> ModalResult<Pattern> {
-    let mut elements = Vec::new();
-    let mut rest = None;
-
-    loop {
-        skip_whitespace_and_comments(input);
-
-        if input.input.is_empty() || input.input.starts_with("]") {
-            break;
-        }
-
-        // Check for rest pattern: ..name
-        if input.input.starts_with("..") {
-            let _ = input.input.next_slice(2);
-            input.state.advance('.');
-            input.state.advance('.');
-            rest = Some(identifier(input)?.into());
-            break;
-        }
-
-        let pat = pattern(input)?;
-        elements.push(pat);
-
-        skip_whitespace_and_comments(input);
-
-        if input.input.starts_with(",") {
-            let _ = input.input.next_slice(1);
-            input.state.advance(',');
-        } else {
-            break;
-        }
-    }
-
-    Ok(Pattern::List { elements, rest })
-}
-
-/// Parse a comma-separated list of patterns
-fn parse_pattern_list(input: &mut ParseInput) -> ModalResult<Vec<Pattern>> {
-    let mut patterns = Vec::new();
-
-    loop {
-        skip_whitespace_and_comments(input);
-
-        if input.input.is_empty() || input.input.starts_with(")") {
-            break;
-        }
-
-        let pat = pattern(input)?;
-        patterns.push(pat);
-
-        skip_whitespace_and_comments(input);
-
-        if input.input.starts_with(",") {
-            let _ = input.input.next_slice(1);
-            input.state.advance(',');
-        } else {
-            break;
-        }
-    }
-
-    Ok(patterns)
-}
-
 /// Parse a comma-separated list of expressions
 fn parse_expr_list(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
     let mut exprs = Vec::new();
@@ -942,6 +843,7 @@ fn span_from(start: &Position, end: &Position) -> Span {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::surface::Pattern;
 
     fn test_input(s: &str) -> ParseInput<'_> {
         crate::input::new_input(s)

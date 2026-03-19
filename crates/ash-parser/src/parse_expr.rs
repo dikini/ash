@@ -8,7 +8,8 @@ use winnow::stream::Stream;
 use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
-use crate::surface::{BinaryOp, Expr, Literal, Name, UnaryOp};
+use crate::parse_pattern::pattern;
+use crate::surface::{BinaryOp, Expr, Literal, MatchArm, Name, UnaryOp};
 use crate::token::Span;
 
 /// Parse an expression (entry point).
@@ -242,13 +243,18 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     primary_expr(input)
 }
 
-/// Parse primary expressions: literals, variables, field access, index access, calls
+/// Parse primary expressions: literals, variables, field access, index access, calls, match
 fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
 
     // Try parenthesized expression first
     if let Ok(e) = delimited(literal_str("("), expr, literal_str(")")).parse_next(input) {
         return Ok(e);
+    }
+
+    // Try match expression
+    if let Ok(match_expr) = parse_match_expr(input) {
+        return Ok(match_expr);
     }
 
     // Try literal
@@ -483,6 +489,7 @@ fn is_keyword(s: &str) -> bool {
             | "with"
             | "maybe"
             | "must"
+            | "match"
             | "attempt"
             | "retry"
             | "timeout"
@@ -509,6 +516,93 @@ fn is_keyword(s: &str) -> bool {
             | "false"
             | "null"
     )
+}
+
+/// Parse a match expression: `match scrutinee { arm1, arm2, ... }`
+///
+/// Syntax:
+/// ```text
+/// match <scrutinee> {
+///     <pattern> => <expression>,
+///     <pattern> => <expression>
+/// }
+/// ```
+fn parse_match_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state;
+
+    // Parse 'match' keyword
+    let _ = keyword("match").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse the scrutinee expression
+    let scrutinee = expr(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse opening brace
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse match arms
+    let mut arms = Vec::new();
+    loop {
+        skip_whitespace_and_comments(input);
+
+        // Check for closing brace
+        if input.input.starts_with("}") {
+            break;
+        }
+
+        // Parse an arm
+        let arm = parse_match_arm(input)?;
+        arms.push(arm);
+
+        skip_whitespace_and_comments(input);
+
+        // Optional comma between arms
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+        }
+    }
+
+    // Parse closing brace
+    let _ = literal_str("}").parse_next(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(Expr::Match {
+        scrutinee: Box::new(scrutinee),
+        arms,
+        span,
+    })
+}
+
+/// Parse a single match arm: `pattern => expr`
+fn parse_match_arm(input: &mut ParseInput) -> ModalResult<MatchArm> {
+    let start_pos = input.state;
+
+    // Parse the pattern
+    let pat = pattern(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse the rocket operator
+    let _ = literal_str("=>").parse_next(input).map_err(
+        |_: winnow::error::ErrMode<winnow::error::ContextError>| {
+            winnow::error::ErrMode::Backtrack(winnow::error::ContextError::new())
+        },
+    )?;
+    skip_whitespace_and_comments(input);
+
+    // Parse the body expression
+    let body = expr(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(MatchArm {
+        pattern: pat,
+        body: Box::new(body),
+        span,
+    })
 }
 
 /// Parse a keyword (ensures word boundary).
@@ -618,6 +712,7 @@ fn span_from(start: &Position, end: &Position) -> Span {
 #[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
+    use crate::surface::Pattern;
 
     fn test_input(s: &str) -> ParseInput<'_> {
         crate::input::new_input(s)
@@ -840,5 +935,106 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn test_parse_match_expr_simple() {
+        let mut input = test_input("match opt { Some { value: x } => x, None => 0 }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Match {
+                scrutinee, arms, ..
+            } => {
+                assert!(
+                    matches!(scrutinee.as_ref(), Expr::Variable(name) if name.as_ref() == "opt")
+                );
+                assert_eq!(arms.len(), 2);
+
+                // First arm: Some { value: x } => x
+                match &arms[0].pattern {
+                    Pattern::Variant { name, fields } => {
+                        assert_eq!(name.as_ref(), "Some");
+                        assert!(fields.is_some());
+                        let fields = fields.as_ref().unwrap();
+                        assert_eq!(fields.len(), 1);
+                        assert_eq!(fields[0].0.as_ref(), "value");
+                    }
+                    _ => panic!("Expected Variant pattern, got {:?}", arms[0].pattern),
+                }
+
+                // Second arm: None => 0
+                match &arms[1].pattern {
+                    Pattern::Variable(name) => {
+                        assert_eq!(name.as_ref(), "None");
+                    }
+                    _ => panic!("Expected Variable pattern for None"),
+                }
+            }
+            _ => panic!("Expected Match expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_expr_unit_variants() {
+        let mut input = test_input("match b { true => 1, false => 0 }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Match {
+                scrutinee, arms, ..
+            } => {
+                assert!(matches!(scrutinee.as_ref(), Expr::Variable(name) if name.as_ref() == "b"));
+                assert_eq!(arms.len(), 2);
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_expr_nested() {
+        let mut input = test_input("match opt { Some { value: (x, y) } => x + y, None => 0 }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Match { arms, .. } => {
+                assert_eq!(arms.len(), 2);
+                // Check nested tuple pattern in first arm
+                match &arms[0].pattern {
+                    Pattern::Variant { name, fields } => {
+                        assert_eq!(name.as_ref(), "Some");
+                        let fields = fields.as_ref().unwrap();
+                        assert!(matches!(&fields[0].1, Pattern::Tuple(_)));
+                    }
+                    _ => panic!("Expected Variant with nested Tuple pattern"),
+                }
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_expr_single_arm() {
+        let mut input = test_input("match x { y => y * 2 }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Match { arms, .. } => {
+                assert_eq!(arms.len(), 1);
+                assert!(
+                    matches!(&arms[0].pattern, Pattern::Variable(name) if name.as_ref() == "y")
+                );
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_expr_with_wildcard() {
+        let mut input = test_input("match x { _ => 42 }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Match { arms, .. } => {
+                assert_eq!(arms.len(), 1);
+                assert!(matches!(&arms[0].pattern, Pattern::Wildcard));
+            }
+            _ => panic!("Expected Match expression"),
+        }
     }
 }

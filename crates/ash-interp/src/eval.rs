@@ -129,10 +129,15 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             )))
         }
 
-        Expr::IfLet { pattern, expr, then_branch, else_branch } => {
+        Expr::IfLet {
+            pattern,
+            expr,
+            then_branch,
+            else_branch,
+        } => {
             // TODO: Implement if-let evaluation in TASK-133
             Err(EvalError::NotImplemented(
-                "If-let expression not yet implemented".to_string()
+                "If-let expression not yet implemented".to_string(),
             ))
         }
     }

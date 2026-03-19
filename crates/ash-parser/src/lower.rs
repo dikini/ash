@@ -5,8 +5,8 @@
 
 use ash_core::{
     Action as CoreAction, Capability, Effect, Expr as CoreExpr, Guard as CoreGuard,
-    Obligation as CoreObligation, Pattern as CorePattern, Predicate as CorePredicate, Provenance,
-    Role as CoreRole, Workflow as CoreWorkflow,
+    MatchArm as CoreMatchArm, Obligation as CoreObligation, Pattern as CorePattern,
+    Predicate as CorePredicate, Provenance, Role as CoreRole, Workflow as CoreWorkflow,
 };
 
 use crate::surface::{
@@ -306,6 +306,19 @@ pub fn lower_expr(expr: &Expr) -> CoreExpr {
             arguments: args.iter().map(lower_expr).collect(),
         },
 
+        Expr::Match {
+            scrutinee, arms, ..
+        } => CoreExpr::Match {
+            scrutinee: Box::new(lower_expr(scrutinee)),
+            arms: arms
+                .iter()
+                .map(|arm| CoreMatchArm {
+                    pattern: lower_pattern(&arm.pattern),
+                    body: *Box::new(lower_expr(&arm.body)),
+                })
+                .collect(),
+        },
+
         Expr::Policy(policy_expr) => lower_policy_expr(policy_expr),
     }
 }
@@ -405,6 +418,15 @@ pub fn lower_pattern(pattern: &Pattern) -> CorePattern {
             elements.iter().map(lower_pattern).collect(),
             rest.as_ref().map(|r| r.to_string()),
         ),
+
+        Pattern::Variant { name, fields } => CorePattern::Variant {
+            name: name.to_string(),
+            fields: fields.as_ref().map(|fs| {
+                fs.iter()
+                    .map(|(n, p)| (n.to_string(), lower_pattern(p)))
+                    .collect()
+            }),
+        },
 
         Pattern::Literal(lit) => CorePattern::Literal(lower_literal(lit)),
     }

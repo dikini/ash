@@ -54,6 +54,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Full test coverage for Option, Result, and custom ADT constructors
 
 ### Fixed
+- Code review issues from Phase 17 (P0, P1, P2 priority):
+  - **Critical (P0)**: Fixed `unwrap()` abuse in parsers (`parse_pattern.rs`, `parse_expr.rs`) using `is_some_and()`
+  - **Critical (P0)**: Removed unnecessary `Box::new` + immediate dereference pattern in `lower.rs`
+  - **High (P0)**: Added `#[must_use]` to all public constructors and pure functions in `exhaustiveness.rs`, `instantiate.rs`, `type_env.rs`
+  - **High (P1)**: Boxed large `Value` enum variants (`List`, `Record`, `Variant`, `Instance`) to reduce memory footprint
+  - **High (P1)**: Removed broken ternary expression parsing from `parse_expr.rs`
+  - **Medium (P2)**: Added `HashMap::with_capacity()` hints where collection size is known
+  - **Medium (P2)**: Optimized pattern matching to avoid temporary HashMap allocation
+  - **Low (P2)**: Removed dead code/comments from parser files
+  - **Low (P2)**: Fixed float literal lowering to truncate to Int instead of returning Null
 - Type definition duplication between `ash-core` and `ash-typeck`. Unified `TypeDef` types by using AST types from `ash_core::ast` in `type_env.rs` with conversion functions.
 - Inefficient TypeEnv creation in pattern checking. Added static `EMPTY_ENV` with `OnceLock` to avoid repeated allocations.
 - Keyword lookup performance. Replaced O(n) `matches!` pattern with O(1) `HashSet` lookup using `OnceLock` for lazy initialization.

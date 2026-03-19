@@ -1,6 +1,6 @@
 # TASK-066: Parse Visibility Modifiers
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

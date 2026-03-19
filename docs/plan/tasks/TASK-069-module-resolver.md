@@ -1,6 +1,6 @@
 # TASK-069: Module Resolution Algorithm
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

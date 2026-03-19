@@ -1,6 +1,6 @@
 # TASK-008: Token Definitions
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

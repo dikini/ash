@@ -1,6 +1,6 @@
 # TASK-035: Capability Provider Trait
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

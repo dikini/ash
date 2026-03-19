@@ -1,6 +1,6 @@
 # TASK-032: DECIDE/CHECK Execution (Evaluative)
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

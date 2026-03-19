@@ -1,6 +1,6 @@
 # TASK-065: Visibility AST Types
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

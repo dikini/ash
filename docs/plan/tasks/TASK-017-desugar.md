@@ -1,6 +1,6 @@
 # TASK-017: Desugaring Transformations
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

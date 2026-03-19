@@ -1,6 +1,6 @@
 # TASK-040: Audit Log Export
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

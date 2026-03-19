@@ -1,6 +1,6 @@
 # TASK-059: CLI LSP Command
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-039: Lineage Tracking
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

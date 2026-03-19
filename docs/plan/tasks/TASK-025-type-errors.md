@@ -1,6 +1,6 @@
 # TASK-025: Rich Type Error Messages
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

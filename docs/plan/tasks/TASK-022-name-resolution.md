@@ -1,6 +1,6 @@
 # TASK-022: Name Resolution Pass
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

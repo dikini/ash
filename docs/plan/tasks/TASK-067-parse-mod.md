@@ -1,6 +1,6 @@
 # TASK-067: Parse Module Declarations
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

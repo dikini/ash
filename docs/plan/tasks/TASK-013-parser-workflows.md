@@ -1,6 +1,6 @@
 # TASK-013: Workflow Parser
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

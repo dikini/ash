@@ -1,6 +1,6 @@
 # TASK-024: Proof Obligation Generation
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

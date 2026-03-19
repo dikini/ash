@@ -1,6 +1,6 @@
 # TASK-018: Type Representation and Unification
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

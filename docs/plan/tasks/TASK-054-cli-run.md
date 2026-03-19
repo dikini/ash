@@ -1,6 +1,6 @@
 # TASK-054: ash run Command
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Objective
 

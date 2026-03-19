@@ -1,6 +1,6 @@
 # TASK-020: Constraint Solving (Unification Algorithm)
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

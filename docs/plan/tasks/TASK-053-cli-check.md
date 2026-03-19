@@ -1,6 +1,6 @@
 # TASK-053: ash check Command
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Objective
 

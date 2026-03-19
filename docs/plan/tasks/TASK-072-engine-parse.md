@@ -1,6 +1,6 @@
 # TASK-072: Implement Engine::parse
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

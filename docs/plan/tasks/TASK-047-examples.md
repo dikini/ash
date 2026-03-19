@@ -1,6 +1,6 @@
 # TASK-047: Example Workflow Library
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

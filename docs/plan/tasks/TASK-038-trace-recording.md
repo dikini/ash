@@ -1,6 +1,6 @@
 # TASK-038: Trace Event Recording
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

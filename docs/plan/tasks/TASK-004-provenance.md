@@ -1,6 +1,6 @@
 # TASK-004: Provenance and Trace Types
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

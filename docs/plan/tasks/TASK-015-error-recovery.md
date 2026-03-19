@@ -1,6 +1,6 @@
 # TASK-015: Parser Error Recovery
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

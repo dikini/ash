@@ -1,6 +1,6 @@
 # TASK-033: ACT/OBLIG Execution (Operational)
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

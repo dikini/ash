@@ -1,6 +1,6 @@
 # TASK-050: Criterion Benchmarks
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

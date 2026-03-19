@@ -1,6 +1,6 @@
 # TASK-023: Obligation Tracking
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

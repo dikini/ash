@@ -1,6 +1,6 @@
 # TASK-010: Lexer Property Tests
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-011: Surface AST Types
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-055: ash trace Command
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Objective
 

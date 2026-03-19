@@ -1,6 +1,6 @@
 # TASK-001: Effect Lattice Implementation
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

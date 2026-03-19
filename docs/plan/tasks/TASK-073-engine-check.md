@@ -1,6 +1,6 @@
 # TASK-073: Implement Engine::check
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

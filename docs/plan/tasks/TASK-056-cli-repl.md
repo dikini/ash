@@ -1,6 +1,6 @@
 # TASK-056: ash repl Command
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Objective
 

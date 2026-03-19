@@ -1,6 +1,6 @@
 # TASK-070: Visibility Checking
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

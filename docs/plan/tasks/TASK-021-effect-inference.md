@@ -1,6 +1,6 @@
 # TASK-021: Effect Inference
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

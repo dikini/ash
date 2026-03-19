@@ -1,6 +1,6 @@
 # TASK-007: Shared Testing Utilities
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

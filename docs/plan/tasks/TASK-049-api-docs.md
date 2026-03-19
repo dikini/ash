@@ -1,6 +1,6 @@
 # TASK-049: API Documentation
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-057: ash dot Command
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Objective
 

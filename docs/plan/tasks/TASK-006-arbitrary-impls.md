@@ -1,6 +1,6 @@
 # TASK-006: Property Testing Arbitrary Implementations
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

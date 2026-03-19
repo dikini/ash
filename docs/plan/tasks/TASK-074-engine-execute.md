@@ -1,6 +1,6 @@
 # TASK-074: Implement Engine::execute
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-041: Trace Integrity (Merkle)
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

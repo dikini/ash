@@ -1,6 +1,6 @@
 # TASK-086: Import Resolution Algorithm
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-009: Lexer Implementation
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-068: Module Graph Data Structure
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

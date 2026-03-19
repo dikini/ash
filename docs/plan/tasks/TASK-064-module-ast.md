@@ -1,6 +1,6 @@
 # TASK-064: Module AST Types
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

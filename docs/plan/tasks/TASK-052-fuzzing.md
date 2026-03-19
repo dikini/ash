@@ -1,6 +1,6 @@
 # TASK-052: Fuzzing Setup
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

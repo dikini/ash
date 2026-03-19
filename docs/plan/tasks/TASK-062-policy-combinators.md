@@ -1,6 +1,6 @@
 # TASK-062: Policy Combinators Implementation
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

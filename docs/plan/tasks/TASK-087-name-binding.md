@@ -1,6 +1,6 @@
 # TASK-087: Name Binding with Imports
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-036: Runtime Policy Evaluation
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

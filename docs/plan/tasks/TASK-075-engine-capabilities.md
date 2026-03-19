@@ -1,6 +1,6 @@
 # TASK-075: Standard Capability Providers
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

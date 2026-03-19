@@ -1,6 +1,6 @@
 # TASK-028: Pattern Matching Engine
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

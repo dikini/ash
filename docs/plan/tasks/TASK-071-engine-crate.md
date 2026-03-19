@@ -1,6 +1,6 @@
 # TASK-071: Create ash-engine Crate
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

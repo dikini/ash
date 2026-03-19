@@ -1,6 +1,6 @@
 # TASK-048: User Tutorial
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

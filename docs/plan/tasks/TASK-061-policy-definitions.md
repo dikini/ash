@@ -1,6 +1,6 @@
 # TASK-061: Policy Definition Syntax Implementation
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

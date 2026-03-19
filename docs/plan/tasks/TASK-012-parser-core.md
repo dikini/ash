@@ -1,6 +1,6 @@
 # TASK-012: Parser Core (Winnow)
 
-## Status: 🟢 Complete
+## Status: ✅ Complete
 
 ## Description
 

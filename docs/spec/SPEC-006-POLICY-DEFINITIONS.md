@@ -91,6 +91,24 @@ Ash uses one policy story across the language:
 
 Policies are therefore not general first-class runtime values. They are named declarations and references that compile into a normalized policy representation.
 
+The normalized representation is consumer-neutral, but the admissible terminal decisions are not:
+
+- workflow `decide` consumes only `Permit` / `Deny`,
+- capability-verification consumers may admit `{Permit, Deny, RequireApproval, Transform}`,
+- `Warn` is not a policy decision and is handled as verification metadata outside the policy
+  decision taxonomy.
+
+### 4.1 Phase Ownership
+
+- Parser rejection owns malformed policy syntax, malformed combinator syntax, and malformed policy
+  binding syntax.
+- Lowering owns closure, binding normalization, policy-name assignment, and conversion of a closed
+  policy expression into a canonical `CorePolicy` identity.
+- Type checking owns resolution of named policy references and consumer-specific decision-domain
+  compatibility.
+- Runtime and verification own evaluation outcomes, approval routing, transformation application,
+  and provenance or warning recording.
+
 ## 5. Policy Usage in Workflows
 
 ### 5.1 Decide Statement
@@ -217,7 +235,9 @@ Named policy bindings add these well-formedness checks:
 2. Every referenced policy definition or policy binding must resolve uniquely.
 3. Every `DECIDE ... under <policy_name>` must resolve to a named policy binding.
 4. Policies used by workflow `DECIDE` sites must lower to terminal decisions in `{Permit, Deny}`.
-5. Policies used by capability-verification sites may additionally lower to `RequireApproval` or `Transform`.
+5. Policies used by capability-verification sites may additionally lower to the verification
+   outcome set `{Permit, Deny, RequireApproval, Transform}`.
+6. Warnings are not policy decisions and must not be modeled as terminal policy outcomes.
 
 ### 7.2 Type Checking
 

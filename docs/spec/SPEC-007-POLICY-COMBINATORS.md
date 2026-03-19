@@ -243,6 +243,14 @@ pub enum PolicyExpr {
 
 The type checker validates that every combinator operand is a policy expression and that each resulting expression can be lowered into a `CorePolicy` decision graph. Runtime evaluation consumes the lowered graph and yields `PolicyDecision`; it does not manipulate source-level `PolicyExpr` values directly.
 
+The consumer determines the admissible terminal decision set:
+
+- workflow `decide` sites observe only `Permit` / `Deny`,
+- capability-verification sites may observe the verification outcome set
+  `{Permit, Deny, RequireApproval, Transform}`,
+- `Warn` is not a `PolicyDecision`; it belongs to verification metadata, not the canonical policy
+  decision taxonomy.
+
 ### 6.2 Type Inference
 
 ```ash

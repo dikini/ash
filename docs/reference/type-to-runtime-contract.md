@@ -43,6 +43,7 @@ The type layer must establish, directly or indirectly, the following runtime-rel
 | obligation requirements and discharge shape | runtime verification must compare workflow obligations against runtime obligations |
 | named policy references resolved to canonical lowered-policy identities | workflow `decide` and capability verification must not consume anonymous or unresolved policy expressions |
 | decision-domain restrictions for workflow `decide` | workflow-level runtime `decide` only admits `Permit` / `Deny` outcomes |
+| decision-domain compatibility for capability verification | capability verification may additionally admit `RequireApproval` and `Transform` outcomes |
 | `receive` guard well-typed as `Bool` | runtime must not execute untyped guard logic |
 | ADT constructor and variant-pattern resolution against canonical enum metadata | runtime pattern matching and constructor evaluation need one shared enum model |
 | `match` exhaustiveness success for required exhaustive sites | runtime must not rely on impossible fallback semantics for exhaustive ADT matches |
@@ -115,6 +116,8 @@ execution outcomes.
 
 Receive timeout expiry and fallthrough remain runtime control flow, not boundary failures; the
 remaining timeout budget is consumed by the whole receive operation, not reset per retry.
+Warnings are not policy decisions. They are verification metadata and remain outside the runtime
+policy decision taxonomy.
 
 ## Policy and Verification Contract
 
@@ -127,6 +130,7 @@ The type-to-runtime boundary for policies is:
 
 Workflow runtime may observe only `Permit` or `Deny` at workflow `decide` sites.
 Capability-verification runtime may additionally consume approval or transformation outcomes.
+Verification warnings are not policy outcomes and never appear as `PolicyDecision` values.
 
 ## ADT Contract
 

@@ -193,6 +193,12 @@ policy data_residency:
 ```
 
 These declarations are canonical policy bindings. Before capability verification runs, each policy lowers into the shared `CorePolicy` representation from SPEC-006 and SPEC-007.
+The lowered representation is consumer-neutral, but the terminal decisions are not:
+
+- workflow `decide` sites admit only `Permit` / `Deny`,
+- capability-verification sites may admit `{Permit, Deny, RequireApproval, Transform}`,
+- `Warn` is not a policy decision; it is verification metadata recorded separately in aggregate
+  verification or provenance.
 
 ### 4.2 Policy Evaluation Context
 
@@ -283,13 +289,17 @@ and role != admin
 then mask(fields: ["ssn", "salary"])
 ```
 
-Capability verification outcomes are canonical:
+Capability-verification policy decisions are canonical:
 
 - `Proceed` means the operation may continue unchanged.
 - `Deny` is a hard error and the operation does not execute.
 - `RequireApproval` pauses or queues the operation for approval handling.
 - `Transform` rewrites the observable or transferable value and then execution continues.
-- `Warn` is advisory only and is recorded in aggregate verification or provenance without blocking execution.
+
+Verification warnings are separate from policy decisions:
+
+- `Warn` is advisory only and is recorded in aggregate verification or provenance without blocking
+  execution.
 
 ### 4.5 Provider-Level Policies
 

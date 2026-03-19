@@ -160,6 +160,10 @@ Canonical `RECEIVE` runtime behavior:
 
 `DECIDE` is the workflow-level policy gate and therefore always names an explicit lowered policy binding. It consumes the same normalized policy representation used by capability verification, but only admits `Permit` and `Deny` outcomes at the workflow layer. Capability-level checks may still be applied at concrete `observe`, `receive`, `set`, `send`, or `act` operations by the capability-verification runtime, which may also consume `RequireApproval` or `Transform` outcomes.
 
+The `DECIDE` judgment models workflow-level policy gates only. Capability-verification outcomes
+such as `RequireApproval` and `Transform` are owned by SPEC-017 and SPEC-018, and verification
+warnings are separate metadata rather than runtime `PolicyDecision` values.
+
 ```
 (CHECK-SATISFIED)
   check_obligation(role, condition, Γ) = true

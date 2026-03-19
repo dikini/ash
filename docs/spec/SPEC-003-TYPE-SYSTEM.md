@@ -29,6 +29,15 @@ compatibility. It does not own parser acceptance or runtime execution outcomes.
 - Workflow effect ceilings are compared by runtime verification after the type layer establishes
   the workflow effect classification.
 
+Policy typing is split by consumer:
+
+- workflow `decide` sites type-check only against policies whose terminal decisions are
+  `Permit` / `Deny`,
+- capability-verification sites may type-check against policies that can lower to
+  `{Permit, Deny, RequireApproval, Transform}`,
+- `Warn` is not a policy decision and is handled as verification metadata, not as a policy
+  typing outcome.
+
 ## 2. Type Judgment
 
 ```
@@ -154,6 +163,8 @@ Type checking rejects:
 
 - unresolved named policy references for workflow `decide`
 - workflow `decide` sites whose resolved policy can lower to outcomes outside `{Permit, Deny}`
+- capability-verification sites whose resolved policy cannot lower to the verification outcome
+  set required by the consumer: `{Permit, Deny, RequireApproval, Transform}`
 - non-boolean `receive` guards
 - unknown ADT constructors or variant patterns
 - constructor field mismatches against resolved enum metadata

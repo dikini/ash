@@ -304,13 +304,16 @@ pub async fn verify_operation(
 
 Runtime verification consumes only normalized `PolicyDecision` outcomes produced from named lowered policies. It does not operate on source-level policy expressions directly.
 
-Outcome taxonomy is canonical across aggregate and per-operation verification:
+Canonical policy decision taxonomy:
 
-- `Proceed`: operation may execute normally.
-- `Deny`: hard error; operation stops.
-- `Warn`: non-fatal warning in aggregate verification or provenance.
+- `Permit`: the policy allows execution to continue unchanged.
+- `Deny`: hard policy failure; operation stops.
 - `RequireApproval`: operation is suspended or queued pending approval.
 - `Transform`: operation continues with a transformed input or output value.
+
+Aggregate verification reports `Proceed` when all required checks succeed. `Warn` is not a policy
+decision; it is verification metadata used by aggregate verification or provenance and does not
+alter the canonical policy decision taxonomy.
 
 ## 8. Decision Flowchart
 

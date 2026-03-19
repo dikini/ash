@@ -1,6 +1,6 @@
 # TASK-180: Formalize Policy Evaluation and Verification Semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -25,6 +25,27 @@ capability verification outcomes, and policy rejection ownership.
 2. Separate workflow `decide` outcomes from capability-verification outcomes
 3. Define which policy failures are lowering/type/runtime failures
 4. Make the policy contract proof-shaped and implementation-shaped
+
+## TDD Evidence
+
+### Red
+
+Before this change, the policy docs still left these boundaries open to interpretation:
+
+- workflow `decide` and capability verification shared an ambiguous outcome taxonomy,
+- `Warn` appeared in the canonical policy taxonomy without a clear role in the policy story,
+- named binding, closure, lowering identity, and runtime verification boundaries were not split
+  explicitly enough for mechanical implementation.
+
+### Green
+
+The canonical policy story is now explicit:
+
+- policy definitions lower through closed named bindings into canonical `CorePolicy` identities,
+- workflow `decide` consumes only `Permit` / `Deny`,
+- capability verification may consume `{Permit, Deny, RequireApproval, Transform}`,
+- `Warn` is verification metadata, not a policy decision,
+- parser, lowering, type, and runtime/verification failures are owned by distinct phases.
 
 ## Files
 
@@ -70,10 +91,10 @@ git commit -m "docs: formalize policy evaluation and verification semantics"
 
 ## Completion Checklist
 
-- [ ] policy outcome domains documented
-- [ ] policy failure ownership documented
-- [ ] named policy semantics documented
-- [ ] `CHANGELOG.md` updated
+- [x] policy outcome domains documented
+- [x] policy failure ownership documented
+- [x] named policy semantics documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

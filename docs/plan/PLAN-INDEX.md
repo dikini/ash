@@ -250,7 +250,7 @@ Update this section as tasks complete:
 | 20 | 5 | 5 | ✅ Complete |
 | 21 | 3 | 0 | 📝 Planned |
 | 22 | 2 | 0 | 📝 Planned |
-| 23 | 3 | 0 | 📝 Planned |
+| 23 | 3 | 1 | 🟡 In Progress |
 | 24 | 2 | 0 | 📝 Planned |
 | 25 | 1 | 0 | 📝 Planned |
 | 26 | 4 | 0 | 📝 Planned |
@@ -499,7 +499,7 @@ Tighten the highest-risk dynamic language semantics that still permit local impl
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-179](tasks/TASK-179-formalize-receive-mailbox-and-scheduling-semantics.md) | Formalize `receive` mailbox and scheduling semantics | SPEC-002/004/013/017 | 8 | ✅ Complete |
-| [TASK-180](tasks/TASK-180-formalize-policy-evaluation-and-verification-semantics.md) | Formalize policy evaluation and verification semantics | SPEC-003/004/006/007/008/017/018 | 8 | 📝 Planned |
+| [TASK-180](tasks/TASK-180-formalize-policy-evaluation-and-verification-semantics.md) | Formalize policy evaluation and verification semantics | SPEC-003/004/006/007/008/017/018 | 8 | ✅ Complete |
 | [TASK-181](tasks/TASK-181-formalize-adt-dynamic-semantics.md) | Formalize ADT dynamic semantics | SPEC-003/004/020 | 8 | 📝 Planned |
 
 **Phase 23 Deliverable**: Proof-shaped and implementation-shaped semantics for `receive`, policy evaluation, and ADTs

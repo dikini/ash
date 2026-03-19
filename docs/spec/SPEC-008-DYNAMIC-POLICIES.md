@@ -170,6 +170,8 @@ Dynamic policies therefore affect policy provisioning, not the core syntax/type/
 - syntax still references explicit policy names,
 - type checking still validates policy references and decision subsets,
 - runtime still consumes `PolicyDecision` values from normalized core policies.
+- dynamic loading does not expand the canonical decision taxonomy; it only supplies new named
+  `CorePolicy` identities for the same workflow and capability-verification consumers.
 
 ## 9. Related Documents
 

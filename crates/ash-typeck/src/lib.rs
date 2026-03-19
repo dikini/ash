@@ -13,8 +13,10 @@
 
 pub mod capability_check;
 pub mod capability_typecheck;
+pub mod check_expr;
 pub mod constraints;
 pub mod effect;
+pub mod error;
 pub mod name_binding;
 pub mod names;
 pub mod obligation_checker;
@@ -22,6 +24,7 @@ pub mod obligations;
 pub mod policy_check;
 pub mod runtime_verification;
 pub mod solver;
+pub mod type_env;
 pub mod types;
 pub mod visibility;
 

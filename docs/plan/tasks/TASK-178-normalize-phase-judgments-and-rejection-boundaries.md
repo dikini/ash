@@ -1,0 +1,83 @@
+# TASK-178: Normalize Phase Judgments and Rejection Boundaries
+
+## Status: 📝 Planned
+
+## Description
+
+Define explicit phase-owned judgments and rejection boundaries for parsing, lowering, typing,
+runtime execution, and observable behavior so later implementation work does not rely on local
+interpretation of where failures belong.
+
+## Specification Reference
+
+- SPEC-001: IR
+- SPEC-003: Type System
+- SPEC-004: Operational Semantics
+
+## Requirements
+
+### Functional Requirements
+
+1. Define explicit phase-owned judgment boundaries
+2. Separate parser, lowering, typing, runtime, and observable-behavior rejection classes
+3. Keep normative specs free of implementation-drift commentary
+4. Align reference docs with the tightened boundaries
+
+## Files
+
+- Modify: `docs/spec/SPEC-001-IR.md`
+- Modify: `docs/spec/SPEC-003-TYPE-SYSTEM.md`
+- Modify: `docs/spec/SPEC-004-SEMANTICS.md`
+- Modify: `docs/reference/surface-to-parser-contract.md`
+- Modify: `docs/reference/parser-to-core-lowering-contract.md`
+- Modify: `docs/reference/type-to-runtime-contract.md`
+- Modify: `CHANGELOG.md`
+
+## TDD Steps
+
+### Step 1: Write the failing checklist (Red)
+
+Check for:
+- implicit phase ownership,
+- overlapping rejection classes,
+- phase boundaries explained only in prose.
+
+### Step 2: Verify RED
+
+Expected failure conditions:
+- at least one rejection class still depends on interpretation across multiple docs.
+
+### Step 3: Implement the minimal spec/reference fix (Green)
+
+Tighten only the phase judgments and rejection boundaries.
+
+### Step 4: Verify GREEN
+
+Expected pass conditions:
+- phase-owned rejection boundaries are explicit,
+- reference docs align to the same split,
+- specs state truth while tasks/plans carry migration commentary.
+
+### Step 5: Commit
+
+```bash
+git add docs/spec/SPEC-001-IR.md docs/spec/SPEC-003-TYPE-SYSTEM.md docs/spec/SPEC-004-SEMANTICS.md docs/reference/surface-to-parser-contract.md docs/reference/parser-to-core-lowering-contract.md docs/reference/type-to-runtime-contract.md CHANGELOG.md
+git commit -m "docs: normalize phase judgments and rejection boundaries"
+```
+
+## Completion Checklist
+
+- [ ] phase judgments documented
+- [ ] rejection boundaries documented
+- [ ] reference docs aligned
+- [ ] `CHANGELOG.md` updated
+
+## Non-goals
+
+- No implementation changes
+- No new runtime features
+
+## Dependencies
+
+- Depends on: TASK-177
+- Blocks: TASK-179, TASK-180, TASK-181, TASK-182, TASK-183, TASK-184

@@ -249,12 +249,16 @@ Update this section as tasks complete:
 | 19 | 7 | 7 | ✅ Complete |
 | 20 | 5 | 5 | ✅ Complete |
 | 21 | 3 | 0 | 📝 Planned |
-| 22 | 4 | 0 | 📝 Planned |
-| 23 | 2 | 0 | 📝 Planned |
+| 22 | 2 | 0 | 📝 Planned |
+| 23 | 3 | 0 | 📝 Planned |
 | 24 | 2 | 0 | 📝 Planned |
-| 25 | 2 | 0 | 📝 Planned |
-| 26 | 2 | 0 | 📝 Planned |
-| 27 | 1 | 0 | 📝 Planned |
+| 25 | 1 | 0 | 📝 Planned |
+| 26 | 4 | 0 | 📝 Planned |
+| 27 | 2 | 0 | 📝 Planned |
+| 28 | 2 | 0 | 📝 Planned |
+| 29 | 2 | 0 | 📝 Planned |
+| 30 | 2 | 0 | 📝 Planned |
+| 31 | 1 | 0 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -476,7 +480,55 @@ Document explicit reference contracts between surface syntax, lowering, type che
 
 **Phase 21 Deliverable**: Reference contracts that freeze parser/lowering/type/runtime handoffs for convergence work
 
-## Phase 22: Parser and Lowering Convergence (Week 39)
+## Phase 22: Core Semantics Hardening (Week 39)
+
+Tighten the canonical core language, execution-neutral IR contract, and per-phase judgment
+boundaries before Rust-alignment work resumes.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-177](tasks/TASK-177-freeze-canonical-core-language-and-ir.md) | Freeze canonical core language and execution-neutral IR | SPEC-001/002/004 | 8 | 📝 Planned |
+| [TASK-178](tasks/TASK-178-normalize-phase-judgments-and-rejection-boundaries.md) | Normalize phase judgments and rejection boundaries | SPEC-001/003/004 | 8 | 📝 Planned |
+
+**Phase 22 Deliverable**: A canonical core contract with explicit phase-owned rejection boundaries
+
+## Phase 23: Interaction Semantics Hardening (Week 40)
+
+Tighten the highest-risk dynamic language semantics that still permit local implementation choice.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-179](tasks/TASK-179-formalize-receive-mailbox-and-scheduling-semantics.md) | Formalize `receive` mailbox and scheduling semantics | SPEC-002/004/013/017 | 8 | 📝 Planned |
+| [TASK-180](tasks/TASK-180-formalize-policy-evaluation-and-verification-semantics.md) | Formalize policy evaluation and verification semantics | SPEC-003/004/006/007/008/017/018 | 8 | 📝 Planned |
+| [TASK-181](tasks/TASK-181-formalize-adt-dynamic-semantics.md) | Formalize ADT dynamic semantics | SPEC-003/004/020 | 8 | 📝 Planned |
+
+**Phase 23 Deliverable**: Proof-shaped and implementation-shaped semantics for `receive`, policy evaluation, and ADTs
+
+## Phase 24: Observable and Formalization Contracts (Week 41)
+
+Define the single observable-behavior authority and the formalization boundary for future Lean work.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-182](tasks/TASK-182-add-runtime-observable-behavior-spec.md) | Add runtime observable behavior spec | SPEC-005/011/016 | 6 | 📝 Planned |
+| [TASK-183](tasks/TASK-183-define-formalization-boundary-and-proof-targets.md) | Define formalization boundary and proof targets | SPEC-001/003/004/020/021 | 6 | 📝 Planned |
+
+**Phase 24 Deliverable**: One normative observable-behavior spec and one explicit Lean formalization boundary
+
+## Phase 25: Spec Hardening Audit (Week 42)
+
+Audit whether the hardened spec set is ready to drive Rust and Lean implementations mechanically.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-184](tasks/TASK-184-audit-spec-hardening-readiness.md) | Audit spec hardening readiness | All hardened contracts | 6 | 📝 Planned |
+
+**Phase 25 Deliverable**: Explicit readiness gate for mechanical Rust convergence and stable Lean modeling
+
+## Phase 26: Parser and Lowering Convergence (Week 43)
+
+These implementation phases are blocked until Phase 25 confirms that the specification is
+unambiguous enough to drive Rust work mechanically.
 
 Align parser dispatch, AST shape, and lowering behavior with the frozen contracts.
 
@@ -487,9 +539,9 @@ Align parser dispatch, AST shape, and lowering behavior with the frozen contract
 | [TASK-166](tasks/TASK-166-replace-placeholder-policy-lowering.md) | Replace placeholder policy lowering | SPEC-001/006/007 | 6 | 📝 Planned |
 | [TASK-167](tasks/TASK-167-lower-receive-into-canonical-core-form.md) | Lower `receive` into canonical core form | SPEC-001/013 | 6 | 📝 Planned |
 
-**Phase 22 Deliverable**: Parser and lowering layers aligned with the canonical workflow, policy, and `receive` contracts
+**Phase 26 Deliverable**: Parser and lowering layers aligned with the hardened canonical workflow, policy, and `receive` contracts
 
-## Phase 23: Type and Verification Convergence (Week 40)
+## Phase 27: Type and Verification Convergence (Week 44)
 
 Bring type checking and runtime verification context into line with the frozen contracts.
 
@@ -498,9 +550,9 @@ Bring type checking and runtime verification context into line with the frozen c
 | [TASK-168](tasks/TASK-168-align-type-checking-for-policies-and-receive.md) | Align type checking for policies and `receive` | SPEC-003/006/013/017 | 8 | 📝 Planned |
 | [TASK-169](tasks/TASK-169-unify-runtime-verification-context-and-obligation-enforcement.md) | Unify runtime verification context and obligation enforcement | SPEC-017/018 | 6 | 📝 Planned |
 
-**Phase 23 Deliverable**: Type and verification layers enforce the canonical policy and stream contracts
+**Phase 27 Deliverable**: Type and verification layers enforce the hardened canonical policy and stream contracts
 
-## Phase 24: Runtime Convergence (Week 41)
+## Phase 28: Runtime Convergence (Week 45)
 
 Complete runtime alignment for `receive` execution and policy outcomes.
 
@@ -509,9 +561,9 @@ Complete runtime alignment for `receive` execution and policy outcomes.
 | [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md) | Implement end-to-end `receive` execution | SPEC-004/013/017 | 8 | 📝 Planned |
 | [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) | Align runtime policy outcomes | SPEC-017/018 | 6 | 📝 Planned |
 
-**Phase 24 Deliverable**: Runtime behavior aligned with canonical `receive` and policy-outcome contracts
+**Phase 28 Deliverable**: Runtime behavior aligned with hardened canonical `receive` and policy-outcome contracts
 
-## Phase 25: REPL and CLI Convergence (Week 42)
+## Phase 29: REPL and CLI Convergence (Week 46)
 
 Align the implementation of REPL and CLI behavior with the frozen command and output contracts.
 
@@ -520,9 +572,9 @@ Align the implementation of REPL and CLI behavior with the frozen command and ou
 | [TASK-172](tasks/TASK-172-unify-repl-implementation.md) | Unify REPL implementation | SPEC-005/011/016 | 8 | 📝 Planned |
 | [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) | Implement REPL type reporting | SPEC-003/005/011 | 6 | 📝 Planned |
 
-**Phase 25 Deliverable**: One authoritative REPL implementation with canonical type reporting
+**Phase 29 Deliverable**: One authoritative REPL implementation with canonical type reporting
 
-## Phase 26: ADT Convergence (Week 43)
+## Phase 30: ADT Convergence (Week 47)
 
 Align ADT implementation layers and user-visible stdlib surface with the canonical ADT contract.
 
@@ -531,9 +583,9 @@ Align ADT implementation layers and user-visible stdlib surface with the canonic
 | [TASK-174](tasks/TASK-174-align-adt-type-value-and-pattern-contracts.md) | Align ADT type, value, and pattern contracts | SPEC-003/004/020 | 10 | 📝 Planned |
 | [TASK-175](tasks/TASK-175-align-adt-stdlib-and-example-surface.md) | Align ADT stdlib and example surface | SPEC-020 | 6 | 📝 Planned |
 
-**Phase 26 Deliverable**: Canonical ADT contracts implemented from parser/runtime through stdlib surface
+**Phase 30 Deliverable**: Canonical ADT contracts implemented from parser/runtime through stdlib surface
 
-## Phase 27: Final Convergence Audit (Week 44)
+## Phase 31: Final Convergence Audit (Week 48)
 
 Re-audit specs and implementation to close the convergence program.
 
@@ -541,4 +593,4 @@ Re-audit specs and implementation to close the convergence program.
 |------|-------------|------|------------|--------|
 | [TASK-176](tasks/TASK-176-final-convergence-audit.md) | Final convergence audit | All convergence contracts | 6 | 📝 Planned |
 
-**Phase 27 Deliverable**: Final audit report and repository-level convergence closeout
+**Phase 31 Deliverable**: Final audit report and repository-level convergence closeout

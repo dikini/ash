@@ -248,6 +248,13 @@ Update this section as tasks complete:
 | 18 | 7 | 3 | 🟡 In Progress |
 | 19 | 7 | 7 | ✅ Complete |
 | 20 | 5 | 5 | ✅ Complete |
+| 21 | 3 | 0 | 📝 Planned |
+| 22 | 4 | 0 | 📝 Planned |
+| 23 | 2 | 0 | 📝 Planned |
+| 24 | 2 | 0 | 📝 Planned |
+| 25 | 2 | 0 | 📝 Planned |
+| 26 | 2 | 0 | 📝 Planned |
+| 27 | 1 | 0 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -456,3 +463,82 @@ Canonicalize spec contracts before downstream Rust alignment work.
 | [TASK-160](tasks/TASK-160-canonicalize-adt-contracts.md) | Canonicalize ADT contracts | SPEC-003/004/013/014/020 | 6 | ✅ Complete |
 
 **Phase 20 Deliverable**: Canonicalized spec contracts for policy, workflow, streams/runtime verification, CLI/REPL, and ADT behavior
+
+## Phase 21: Convergence Handoff Docs (Week 38)
+
+Document explicit reference contracts between surface syntax, lowering, type checking, and runtime behavior before further implementation alignment.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-161](tasks/TASK-161-surface-to-parser-handoff-contract.md) | Surface-to-parser handoff contract | SPEC-002/013/020 | 4 | 📝 Planned |
+| [TASK-162](tasks/TASK-162-parser-to-core-lowering-handoff-contract.md) | Parser-to-core lowering handoff contract | SPEC-001/002/006/013/020 | 4 | 📝 Planned |
+| [TASK-163](tasks/TASK-163-type-runtime-handoff-contracts.md) | Type/runtime handoff contracts | SPEC-003/004/005/011/016 | 6 | 📝 Planned |
+
+**Phase 21 Deliverable**: Reference contracts that freeze parser/lowering/type/runtime handoffs for convergence work
+
+## Phase 22: Parser and Lowering Convergence (Week 39)
+
+Align parser dispatch, AST shape, and lowering behavior with the frozen contracts.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-164](tasks/TASK-164-route-receive-through-main-parser.md) | Route `receive` through main parser | SPEC-002/013 | 4 | 📝 Planned |
+| [TASK-165](tasks/TASK-165-align-check-decide-ast-contracts.md) | Align `check` and `decide` AST contracts | SPEC-001/002 | 6 | 📝 Planned |
+| [TASK-166](tasks/TASK-166-replace-placeholder-policy-lowering.md) | Replace placeholder policy lowering | SPEC-001/006/007 | 6 | 📝 Planned |
+| [TASK-167](tasks/TASK-167-lower-receive-into-canonical-core-form.md) | Lower `receive` into canonical core form | SPEC-001/013 | 6 | 📝 Planned |
+
+**Phase 22 Deliverable**: Parser and lowering layers aligned with the canonical workflow, policy, and `receive` contracts
+
+## Phase 23: Type and Verification Convergence (Week 40)
+
+Bring type checking and runtime verification context into line with the frozen contracts.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-168](tasks/TASK-168-align-type-checking-for-policies-and-receive.md) | Align type checking for policies and `receive` | SPEC-003/006/013/017 | 8 | 📝 Planned |
+| [TASK-169](tasks/TASK-169-unify-runtime-verification-context-and-obligation-enforcement.md) | Unify runtime verification context and obligation enforcement | SPEC-017/018 | 6 | 📝 Planned |
+
+**Phase 23 Deliverable**: Type and verification layers enforce the canonical policy and stream contracts
+
+## Phase 24: Runtime Convergence (Week 41)
+
+Complete runtime alignment for `receive` execution and policy outcomes.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md) | Implement end-to-end `receive` execution | SPEC-004/013/017 | 8 | 📝 Planned |
+| [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) | Align runtime policy outcomes | SPEC-017/018 | 6 | 📝 Planned |
+
+**Phase 24 Deliverable**: Runtime behavior aligned with canonical `receive` and policy-outcome contracts
+
+## Phase 25: REPL and CLI Convergence (Week 42)
+
+Align the implementation of REPL and CLI behavior with the frozen command and output contracts.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-172](tasks/TASK-172-unify-repl-implementation.md) | Unify REPL implementation | SPEC-005/011/016 | 8 | 📝 Planned |
+| [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) | Implement REPL type reporting | SPEC-003/005/011 | 6 | 📝 Planned |
+
+**Phase 25 Deliverable**: One authoritative REPL implementation with canonical type reporting
+
+## Phase 26: ADT Convergence (Week 43)
+
+Align ADT implementation layers and user-visible stdlib surface with the canonical ADT contract.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-174](tasks/TASK-174-align-adt-type-value-and-pattern-contracts.md) | Align ADT type, value, and pattern contracts | SPEC-003/004/020 | 10 | 📝 Planned |
+| [TASK-175](tasks/TASK-175-align-adt-stdlib-and-example-surface.md) | Align ADT stdlib and example surface | SPEC-020 | 6 | 📝 Planned |
+
+**Phase 26 Deliverable**: Canonical ADT contracts implemented from parser/runtime through stdlib surface
+
+## Phase 27: Final Convergence Audit (Week 44)
+
+Re-audit specs and implementation to close the convergence program.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-176](tasks/TASK-176-final-convergence-audit.md) | Final convergence audit | All convergence contracts | 6 | 📝 Planned |
+
+**Phase 27 Deliverable**: Final audit report and repository-level convergence closeout

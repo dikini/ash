@@ -132,6 +132,14 @@ fn match_pattern_recursive(
                 }),
             }
         }
+
+        Pattern::Variant { name, fields } => {
+            // TODO: Implement variant pattern matching in TASK-132
+            Err(PatternError::MatchFailed {
+                expected: format!("variant {}", name),
+                actual: "variant patterns not yet implemented".to_string(),
+            })
+        }
     }
 }
 

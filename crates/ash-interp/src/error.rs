@@ -42,6 +42,9 @@ pub enum EvalError {
 
     #[error("division by zero")]
     DivisionByZero,
+
+    #[error("not implemented: {0}")]
+    NotImplemented(String),
 }
 
 /// Errors that can occur during workflow execution
@@ -73,7 +76,9 @@ pub enum ExecError {
         path: Option<String>,
     },
     ValidationFailed(String),
-    MailboxFull { limit: usize },
+    MailboxFull {
+        limit: usize,
+    },
 }
 
 impl std::error::Error for ExecError {
@@ -132,7 +137,9 @@ impl std::fmt::Display for ExecError {
                 }
             }
             Self::ValidationFailed(msg) => write!(f, "validation failed: {msg}"),
-            Self::MailboxFull { limit } => write!(f, "mailbox full: limit of {limit} entries exceeded"),
+            Self::MailboxFull { limit } => {
+                write!(f, "mailbox full: limit of {limit} entries exceeded")
+            }
         }
     }
 }

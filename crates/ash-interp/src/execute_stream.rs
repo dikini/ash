@@ -297,6 +297,10 @@ fn matches_pattern_entry(entry: &MailboxEntry, pattern: &Pattern) -> bool {
             }
             _ => false,
         },
+        Pattern::Variant { .. } => {
+            // TODO: Implement variant pattern matching in TASK-132
+            false
+        }
     }
 }
 

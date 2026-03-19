@@ -510,6 +510,17 @@ fn pattern_to_string(pattern: &Pattern) -> String {
                 None => format!("[{}]", inner.join(", ")),
             }
         }
+        Pattern::Variant { name, fields } => {
+            if let Some(fields) = fields {
+                let inner: Vec<_> = fields
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, pattern_to_string(v)))
+                    .collect();
+                format!("{} {{ {} }}", name, inner.join(", "))
+            } else {
+                name.clone()
+            }
+        }
     }
 }
 

@@ -8,6 +8,9 @@ use crate::types::{Type, TypeVar};
 use ash_parser::surface::{Literal, Pattern};
 use std::collections::HashMap;
 
+/// Field name used to tag variant types in record representation
+const VARIANT_TAG: &str = "__variant";
+
 /// Bindings from pattern variables to their types
 pub type Bindings = HashMap<String, Type>;
 
@@ -198,7 +201,7 @@ fn check_variant_pattern(
             // Check if this looks like a variant representation
             // (first field is the variant name)
             if let Some((name_field, _)) = fields.first()
-                && name_field.as_ref() == "__variant"
+                && name_field.as_ref() == VARIANT_TAG
             {
                 // This is a variant type representation
                 // Check field patterns against the record fields
@@ -209,7 +212,7 @@ fn check_variant_pattern(
                             .find(|(n, _)| n.as_ref() == field_name.as_ref())
                             .map(|(_, t)| t)
                             .ok_or(TypeError::InvalidPattern {
-                                message: format!("Unknown field: {field_name}"),
+                                message: format!("unknown field: {field_name}"),
                             })?;
                         check_pattern_inner(&TypeEnv::new(), field_pattern, field_type, bindings)?;
                     }
@@ -218,7 +221,7 @@ fn check_variant_pattern(
             }
             Err(TypeError::PatternMismatch {
                 expected: expected.clone(),
-                actual: Type::Record(vec![(Box::from("__variant"), Type::String)]),
+                actual: Type::Record(vec![(Box::from(VARIANT_TAG), Type::String)]),
             })
         }
         Type::Var(_) => {
@@ -302,7 +305,7 @@ fn check_record_pattern(
                     .find(|(n, _)| n.as_ref() == field_name.as_ref())
                     .map(|(_, t)| t)
                     .ok_or_else(|| TypeError::InvalidPattern {
-                        message: format!("Unknown field: {field_name}"),
+                        message: format!("unknown field: {field_name}"),
                     })?;
                 check_pattern_inner(&TypeEnv::new(), field_pattern, field_type, bindings)?;
             }
@@ -475,7 +478,7 @@ mod tests {
 
         // Option<Int> represented as record with variant info
         let option_type = Type::Record(vec![
-            (Box::from("__variant"), Type::String),
+            (Box::from(VARIANT_TAG), Type::String),
             (Box::from("value"), Type::Int),
         ]);
 
@@ -493,7 +496,7 @@ mod tests {
         };
 
         // Option<T> with None variant represented
-        let option_type = Type::Record(vec![(Box::from("__variant"), Type::String)]);
+        let option_type = Type::Record(vec![(Box::from(VARIANT_TAG), Type::String)]);
 
         let bindings = check_pattern(&env, &pattern, &option_type).unwrap();
         assert!(bindings.is_empty());
@@ -700,7 +703,7 @@ mod tests {
             fields: None,
         };
 
-        let option_type = Type::Record(vec![(Box::from("__variant"), Type::String)]);
+        let option_type = Type::Record(vec![(Box::from(VARIANT_TAG), Type::String)]);
 
         let bindings = check_pattern(&env, &pattern, &option_type).unwrap();
         assert!(bindings.is_empty());
@@ -722,7 +725,7 @@ mod tests {
         };
 
         let option_type = Type::Record(vec![
-            (Box::from("__variant"), Type::String),
+            (Box::from(VARIANT_TAG), Type::String),
             (
                 Box::from("value"),
                 Type::Record(vec![

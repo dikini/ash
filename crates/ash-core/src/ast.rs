@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 /// A workflow name
 pub type Name = String;
 
+// Re-export instance types from value module for use in AST
+pub use crate::value::{ControlLink, Instance, InstanceAddr};
+
 /// Type variable for generic types
 pub type TypeVar = String;
 
@@ -100,6 +103,21 @@ pub enum Workflow {
     },
     /// Terminal
     Done,
+
+    /// Spawn workflow: spawn MyClass with { init: args } as pattern in continuation
+    Spawn {
+        workflow_type: Name,
+        init: Expr,
+        pattern: Pattern,
+        continuation: Box<Workflow>,
+    },
+
+    /// Split instance: split instance_expr as pattern in continuation
+    Split {
+        expr: Expr,
+        pattern: Pattern,
+        continuation: Box<Workflow>,
+    },
 }
 
 /// A capability reference
@@ -262,6 +280,17 @@ pub enum Expr {
         then_branch: Box<Expr>,
         else_branch: Box<Expr>,
     },
+
+    /// Spawn expression: spawn workflow_type with { init: args }
+    /// Returns an Instance value containing addr and control link
+    Spawn {
+        workflow_type: Name,
+        init: Box<Expr>,
+    },
+
+    /// Split expression: split instance_expr
+    /// Returns a tuple (InstanceAddr, Option<ControlLink>)
+    Split(Box<Expr>),
 }
 
 /// Unary operators

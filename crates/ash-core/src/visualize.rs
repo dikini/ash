@@ -456,6 +456,68 @@ impl DotGenerator {
                 .unwrap();
                 id
             }
+            Workflow::Spawn {
+                workflow_type,
+                init,
+                pattern,
+                continuation,
+            } => {
+                let id = self.next_id();
+                let init_id = self.visit_expr(init);
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"SPAWN\\n{}\", shape=component, fillcolor=\"lightblue\"];",
+                    id,
+                    escape_dot(workflow_type)
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"init\"];",
+                    id, init_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"{}\"];",
+                    id,
+                    cont_id,
+                    escape_dot(&pattern_to_string(pattern))
+                )
+                .unwrap();
+                id
+            }
+            Workflow::Split {
+                expr,
+                pattern,
+                continuation,
+            } => {
+                let id = self.next_id();
+                let expr_id = self.visit_expr(expr);
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"SPLIT\", shape=invhouse, fillcolor=\"lightcyan\"];",
+                    id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"instance\"];",
+                    id, expr_id
+                )
+                .unwrap();
+                writeln!(
+                    self.output,
+                    "  node_{} -> node_{} [label=\"{}\"];",
+                    id,
+                    cont_id,
+                    escape_dot(&pattern_to_string(pattern))
+                )
+                .unwrap();
+                id
+            }
         }
     }
 

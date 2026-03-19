@@ -7,6 +7,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Spawn returns Instance with Option<ControlLink> (TASK-134). Updated spawn expression to return a composite type that can be split into InstanceAddr and Option<ControlLink>:
+  - Added `Instance`, `InstanceAddr`, and `ControlLink` types to `ash-core` value module
+  - Added `Value::Instance`, `Value::InstanceAddr`, `Value::ControlLink` variants for runtime representation
+  - Added `Expr::Spawn { workflow_type, init }` expression for spawning workflows
+  - Added `Expr::Split` expression to decompose Instance into (InstanceAddr, ControlLink)
+  - Added `Workflow::Spawn` and `Workflow::Split` workflow variants
+  - Implemented evaluation logic in `ash-interp` for spawn (creates Instance with unique ID) and split (returns tuple)
+  - Added visualization support for new workflow variants
+  - Full test coverage for spawn/split evaluation and instance value display
 - Match and if-let expression evaluation (TASK-133). Interpreter support for match expressions:
   - `Expr::Match` evaluation with pattern matching and arm selection
   - `Expr::IfLet` evaluation as sugar for match

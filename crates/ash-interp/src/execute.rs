@@ -2,7 +2,7 @@
 //!
 //! Executes workflows in a runtime context, handling all workflow variants.
 
-use ash_core::{Value, Workflow};
+use ash_core::{Expr, Value, Workflow};
 
 use crate::ExecResult;
 use crate::behaviour::BehaviourContext;
@@ -430,6 +430,75 @@ pub fn execute_workflow_with_behaviour<'a>(
             Workflow::Send { .. } => Err(ExecError::ExecutionFailed(
                 "Send requires StreamContext - use execute_workflow_with_stream".to_string(),
             )),
+
+            // Spawn a workflow instance
+            Workflow::Spawn {
+                workflow_type: _,
+                init,
+                pattern,
+                continuation,
+            } => {
+                // Evaluate the spawn expression
+                let instance_value = eval_expr(
+                    &Expr::Spawn {
+                        workflow_type: "spawned".to_string(),
+                        init: Box::new(init.clone()),
+                    },
+                    &ctx,
+                )
+                .map_err(ExecError::Eval)?;
+
+                // Match pattern and bind
+                let bindings = match_pattern(pattern, &instance_value).map_err(|_| {
+                    ExecError::PatternMatchFailed {
+                        pattern: format!("{:?}", pattern),
+                        value: instance_value.clone(),
+                    }
+                })?;
+
+                let mut new_ctx = ctx.extend();
+                new_ctx.set_many(bindings);
+
+                execute_workflow_with_behaviour(
+                    continuation,
+                    new_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Split an instance into (addr, control)
+            Workflow::Split {
+                expr,
+                pattern,
+                continuation,
+            } => {
+                // Evaluate the split expression
+                let split_value = eval_expr(&Expr::Split(Box::new(expr.clone())), &ctx)
+                    .map_err(ExecError::Eval)?;
+
+                // Match pattern and bind
+                let bindings = match_pattern(pattern, &split_value).map_err(|_| {
+                    ExecError::PatternMatchFailed {
+                        pattern: format!("{:?}", pattern),
+                        value: split_value.clone(),
+                    }
+                })?;
+
+                let mut new_ctx = ctx.extend();
+                new_ctx.set_many(bindings);
+
+                execute_workflow_with_behaviour(
+                    continuation,
+                    new_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
         }
     })
 }

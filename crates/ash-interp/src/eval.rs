@@ -3,7 +3,9 @@
 //! Evaluates expressions in a runtime context, producing values.
 
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, ast::MatchArm, ast::Pattern};
+use ash_core::{ControlLink, Instance, InstanceAddr};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::EvalResult;
 use crate::context::Context;
@@ -136,6 +138,56 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             then_branch,
             else_branch,
         } => eval_if_let(pattern, expr, then_branch, else_branch, ctx),
+
+        Expr::Spawn {
+            workflow_type,
+            init: _,
+        } => eval_spawn(workflow_type),
+
+        Expr::Split(expr) => eval_split(expr, ctx),
+    }
+}
+
+/// Counter for generating unique instance IDs
+static INSTANCE_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+/// Generate a fresh instance ID
+fn fresh_instance_id() -> String {
+    let id = INSTANCE_COUNTER.fetch_add(1, Ordering::SeqCst);
+    format!("instance-{}", id)
+}
+
+/// Evaluate a spawn expression
+/// Creates a new Instance value with a fresh address and control link
+fn eval_spawn(workflow_type: &str) -> EvalResult<Value> {
+    let instance_id = fresh_instance_id();
+
+    let addr = InstanceAddr {
+        workflow_type: workflow_type.to_string(),
+        instance_id: instance_id.clone(),
+    };
+
+    let control = Some(ControlLink { instance_id });
+
+    Ok(Value::Instance(Instance { addr, control }))
+}
+
+/// Evaluate a split expression
+/// Splits an Instance into a tuple (InstanceAddr, Option<ControlLink>)
+fn eval_split(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
+    let value = eval_expr(expr, ctx)?;
+
+    match value {
+        Value::Instance(instance) => {
+            let addr = Value::InstanceAddr(instance.addr);
+            let control = instance.control.map(Value::ControlLink);
+            // Return as a tuple: (addr, control)
+            Ok(Value::List(vec![addr, control.unwrap_or(Value::Null)]))
+        }
+        _ => Err(EvalError::TypeMismatch {
+            expected: "Instance".to_string(),
+            actual: format!("{:?}", value),
+        }),
     }
 }
 
@@ -1166,5 +1218,152 @@ mod tests {
         };
 
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(3));
+    }
+
+    // ============================================================
+    // TASK-134: Spawn and Split Tests
+    // ============================================================
+
+    #[test]
+    fn test_eval_spawn_returns_instance() {
+        let ctx = Context::new();
+
+        // spawn Worker with { init: 42 }
+        let expr = Expr::Spawn {
+            workflow_type: "Worker".to_string(),
+            init: Box::new(Expr::Literal(Value::Int(42))),
+        };
+
+        let result = eval_expr(&expr, &ctx).unwrap();
+
+        // Should return an Instance value
+        match result {
+            Value::Instance(instance) => {
+                assert_eq!(instance.addr.workflow_type, "Worker");
+                assert!(!instance.addr.instance_id.is_empty());
+                assert!(instance.control.is_some());
+                assert_eq!(
+                    instance.control.unwrap().instance_id,
+                    instance.addr.instance_id
+                );
+            }
+            _ => panic!("Expected Instance, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_eval_spawn_creates_unique_ids() {
+        let ctx = Context::new();
+
+        // spawn two instances
+        let expr1 = Expr::Spawn {
+            workflow_type: "Worker".to_string(),
+            init: Box::new(Expr::Literal(Value::Int(1))),
+        };
+        let expr2 = Expr::Spawn {
+            workflow_type: "Worker".to_string(),
+            init: Box::new(Expr::Literal(Value::Int(2))),
+        };
+
+        let result1 = eval_expr(&expr1, &ctx).unwrap();
+        let result2 = eval_expr(&expr2, &ctx).unwrap();
+
+        let id1 = match &result1 {
+            Value::Instance(inst) => inst.addr.instance_id.clone(),
+            _ => panic!("Expected Instance"),
+        };
+        let id2 = match &result2 {
+            Value::Instance(inst) => inst.addr.instance_id.clone(),
+            _ => panic!("Expected Instance"),
+        };
+
+        // IDs should be unique
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_eval_split_returns_tuple() {
+        let ctx = Context::new();
+
+        // First spawn an instance
+        let spawn_expr = Expr::Spawn {
+            workflow_type: "Worker".to_string(),
+            init: Box::new(Expr::Literal(Value::Int(42))),
+        };
+
+        // Then split it
+        let split_expr = Expr::Split(Box::new(spawn_expr));
+
+        let result = eval_expr(&split_expr, &ctx).unwrap();
+
+        // Should return a tuple (InstanceAddr, ControlLink)
+        match result {
+            Value::List(tuple) => {
+                assert_eq!(tuple.len(), 2);
+                // First element should be InstanceAddr
+                assert!(matches!(tuple[0], Value::InstanceAddr(_)));
+                // Second element should be ControlLink
+                assert!(matches!(tuple[1], Value::ControlLink(_)));
+            }
+            _ => panic!("Expected tuple (List), got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_eval_split_type_mismatch() {
+        let ctx = Context::new();
+
+        // Try to split a non-instance value
+        let split_expr = Expr::Split(Box::new(Expr::Literal(Value::Int(42))));
+
+        let result = eval_expr(&split_expr, &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_instance_addr_display() {
+        let addr = InstanceAddr {
+            workflow_type: "Worker".to_string(),
+            instance_id: "inst-123".to_string(),
+        };
+        assert_eq!(format!("{}", addr), "InstanceAddr<Worker:inst-123>");
+    }
+
+    #[test]
+    fn test_control_link_display() {
+        let link = ControlLink {
+            instance_id: "inst-123".to_string(),
+        };
+        assert_eq!(format!("{}", link), "ControlLink<inst-123>");
+    }
+
+    #[test]
+    fn test_instance_display() {
+        let instance = Instance {
+            addr: InstanceAddr {
+                workflow_type: "Worker".to_string(),
+                instance_id: "inst-123".to_string(),
+            },
+            control: Some(ControlLink {
+                instance_id: "inst-123".to_string(),
+            }),
+        };
+        let display = format!("{}", instance);
+        assert!(display.contains("Instance {"));
+        assert!(display.contains("addr: InstanceAddr<Worker:inst-123>"));
+        assert!(display.contains("control: Some(ControlLink<inst-123>)"));
+    }
+
+    #[test]
+    fn test_instance_display_no_control() {
+        let instance = Instance {
+            addr: InstanceAddr {
+                workflow_type: "Worker".to_string(),
+                instance_id: "inst-123".to_string(),
+            },
+            control: None,
+        };
+        let display = format!("{}", instance);
+        assert!(display.contains("control: None"));
     }
 }

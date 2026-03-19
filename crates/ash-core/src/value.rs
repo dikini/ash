@@ -3,6 +3,26 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Instance address - opaque reference to a workflow instance
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InstanceAddr {
+    pub workflow_type: String,
+    pub instance_id: String,
+}
+
+/// Control link for controlling a spawned instance (affine - must be used exactly once)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ControlLink {
+    pub instance_id: String,
+}
+
+/// Instance composite type - returned by spawn, can be split into addr and control
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Instance {
+    pub addr: InstanceAddr,
+    pub control: Option<ControlLink>,
+}
+
 /// Runtime values in Ash
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Value {
@@ -33,6 +53,12 @@ pub enum Value {
         /// Field values as (name, value) pairs
         fields: Vec<(String, Value)>,
     },
+    /// Instance value - composite of addr and optional control link
+    Instance(Instance),
+    /// Instance address value (opaque reference to an instance)
+    InstanceAddr(InstanceAddr),
+    /// Control link value (affine - for controlling spawned instances)
+    ControlLink(ControlLink),
 }
 
 impl Value {
@@ -71,6 +97,34 @@ impl Value {
             name: name.into(),
             fields: vec![],
         }
+    }
+}
+
+impl std::fmt::Display for InstanceAddr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "InstanceAddr<{}:{}>",
+            self.workflow_type, self.instance_id
+        )
+    }
+}
+
+impl std::fmt::Display for ControlLink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ControlLink<{}>", self.instance_id)
+    }
+}
+
+impl std::fmt::Display for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Instance {{")?;
+        write!(f, " addr: {}", self.addr)?;
+        match &self.control {
+            Some(ctrl) => write!(f, ", control: Some({})", ctrl)?,
+            None => write!(f, ", control: None")?,
+        }
+        write!(f, " }}")
     }
 }
 
@@ -118,6 +172,9 @@ impl std::fmt::Display for Value {
                 }
                 Ok(())
             }
+            Value::Instance(instance) => write!(f, "{}", instance),
+            Value::InstanceAddr(addr) => write!(f, "{}", addr),
+            Value::ControlLink(link) => write!(f, "{}", link),
         }
     }
 }

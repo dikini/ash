@@ -1,6 +1,6 @@
 # TASK-182: Add Runtime Observable Behavior Spec
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -12,6 +12,7 @@ a single spec rather than being reconstructed from CLI, REPL, output, and ADT do
 - SPEC-005: CLI
 - SPEC-011: REPL
 - SPEC-016: Output
+- SPEC-021: Runtime Observable Behavior
 
 ## Requirements
 
@@ -22,6 +23,26 @@ a single spec rather than being reconstructed from CLI, REPL, output, and ADT do
 3. Define REPL/CLI observable behavior boundaries
 4. Define value-display guarantees that matter contractually
 5. Keep recoverable failure visibility aligned with explicit `Result` handling rather than `catch`
+
+## TDD Evidence
+
+### Red
+
+Before this change, runtime observable behavior was split across `SPEC-005`, `SPEC-011`,
+`SPEC-016`, and the runtime handoff reference, with no single normative owner for CLI/REPL output,
+value display, or error visibility.
+
+### Green
+
+The canonical observable-behavior story is now explicit:
+
+- `SPEC-021` is the single normative owner for runtime observable behavior
+- `SPEC-005`, `SPEC-011`, and `SPEC-016` now defer observable output and value-display contract
+  details to `SPEC-021`
+- the runtime handoff reference points at `SPEC-021` as the canonical contract owner while keeping
+  migration notes in task/reference space
+- recoverable failures are represented explicitly as `Result<T, E>` values and handled with
+  `match` / `if let`, not `catch`
 
 ## Files
 
@@ -64,10 +85,10 @@ git commit -m "docs: add runtime observable behavior spec"
 
 ## Completion Checklist
 
-- [ ] observable-behavior spec created
-- [ ] CLI/REPL/output specs aligned
-- [ ] observable behavior ownership documented
-- [ ] `CHANGELOG.md` updated
+- [x] observable-behavior spec created
+- [x] CLI/REPL/output specs aligned
+- [x] observable behavior ownership documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

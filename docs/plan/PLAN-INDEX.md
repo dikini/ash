@@ -513,7 +513,7 @@ Define the single observable-behavior authority and the formalization boundary f
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-182](tasks/TASK-182-add-runtime-observable-behavior-spec.md) | Add runtime observable behavior spec | SPEC-005/011/016 | 6 | 📝 Planned |
+| [TASK-182](tasks/TASK-182-add-runtime-observable-behavior-spec.md) | Add runtime observable behavior spec | SPEC-005/011/016/021 | 6 | ✅ Complete |
 | [TASK-183](tasks/TASK-183-define-formalization-boundary-and-proof-targets.md) | Define formalization boundary and proof targets | SPEC-001/003/004/020/021 | 6 | 📝 Planned |
 
 **Phase 24 Deliverable**: One normative observable-behavior spec and one explicit Lean formalization boundary

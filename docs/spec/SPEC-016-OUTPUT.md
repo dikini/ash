@@ -15,8 +15,8 @@ This enables workflows to affect the external world, not just observe it.
 
 This specification governs workflow-level external outputs: `set` for behaviours and
 `send` for streams. It does not define CLI diagnostics, REPL display text, help rendering,
-or other developer-tool output. Those user-interface outputs are specified by `SPEC-005`
-and `SPEC-011`.
+or other developer-tool output. Those user-interface outputs are specified by
+[SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
 
 ## 2. Set (Output Behaviours)
 

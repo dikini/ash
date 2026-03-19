@@ -4,6 +4,10 @@
 
 This document specifies the command-line interface for the Ash workflow language. The CLI is the primary user-facing tool for developing, checking, and executing Ash workflows.
 
+The observable consequences of CLI and REPL commands, diagnostics, and runtime-visible output are
+owned by [SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
+This document stays focused on command structure and flags.
+
 ## Design Principles
 
 1. **Familiarity**: Follow conventions from `cargo`, `rustfmt`, `clippy`
@@ -216,12 +220,8 @@ capture remains the responsibility of `ash trace`.
 
 **Observable Output Requirements:**
 
-- `:help` prints the supported REPL commands and any active aliases.
-- `:type` prints a canonical Ash type name using the type vocabulary from `SPEC-003`.
-- `:ast` prints a structural AST view intended for inspection, not a stability-guaranteed
-  serialization format.
-- Successful evaluation may print values, but formatting details remain implementation-defined
-  unless another CLI option or spec section makes them normative.
+See [SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) for the
+canonical REPL output, diagnostic visibility, and value-display contract.
 
 **Example Session:**
 

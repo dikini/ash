@@ -13,6 +13,8 @@ The Ash REPL provides an interactive environment for:
 This document specifies the session behavior of the REPL started through `ash repl`.
 There is one normative REPL authority: the CLI entrypoint defined in `SPEC-005`.
 Any standalone `ash-repl` binary is non-normative compatibility surface, not a second contract.
+The observable REPL command output, display shape, and error visibility are owned by
+[SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
 
 ## 2. Interface
 
@@ -239,13 +241,8 @@ Multiline input is detected by parse errors:
 
 ## 8.3 Observable Output Contract
 
-- `:help` must list the canonical commands in Section 4 and any documented aliases.
-- `:type` must print canonical Ash type names from `SPEC-003`, such as `Int`, `String`,
-  and `List<Int>`.
-- `:ast` must print a structural AST view suitable for human inspection. Exact whitespace
-  and debug-style formatting are implementation-defined.
-- Evaluation results may be printed for convenience, but value formatting is not further
-  constrained by this specification unless another CLI contract makes it normative.
+The canonical REPL observable behavior contract lives in
+[SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
 
 ## 9. Security Considerations
 

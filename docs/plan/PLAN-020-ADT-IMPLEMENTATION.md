@@ -139,13 +139,13 @@ Phase 8: Standard Library
 5. **TASK-127**: Type Check Constructors ✅
 6. **TASK-128**: Type Check Patterns ✅
 
-### Wave 3: Type Checker Advanced (Sequential)
-7. **TASK-130**: Exhaustiveness Checking (after 128, 129)
+### Wave 3: Type Checker Advanced (COMPLETE ✅)
+7. **TASK-130**: Exhaustiveness Checking ✅
 
-### Wave 4: Interpreter (Sequential)
-8. **TASK-131**: Constructor Evaluation (after 127)
-9. **TASK-132**: Pattern Matching Engine (after 128, 131)
-10. **TASK-133**: Match Evaluation (after 126, 132)
+### Wave 4: Interpreter (COMPLETE ✅)
+8. **TASK-131**: Constructor Evaluation ✅
+9. **TASK-132**: Pattern Matching Engine ✅
+10. **TASK-133**: Match Evaluation ✅
 
 ### Wave 5: Control Link (Sequential)
 11. **TASK-134**: Spawn Option ControlLink (after 120, 127)
@@ -352,10 +352,10 @@ After completing the review, update `docs/plan/PLAN-INDEX.md`:
 | [TASK-127](tasks/TASK-127-type-check-constructors.md) | Type check constructors | SPEC-020 | 6 | ✅ Complete |
 | [TASK-128](tasks/TASK-128-type-check-patterns.md) | Type check patterns | SPEC-020 | 8 | ✅ Complete |
 | [TASK-129](tasks/TASK-129-generic-instantiation.md) | Generic type instantiation | SPEC-020 | 6 | ✅ Complete |
-| [TASK-130](tasks/TASK-130-exhaustiveness-checking.md) | Exhaustiveness checking | SPEC-020 | 8 | 🟡 Ready |
-| [TASK-131](tasks/TASK-131-constructor-evaluation.md) | Constructor evaluation | SPEC-020 | 4 | 🟡 Ready |
-| [TASK-132](tasks/TASK-132-pattern-matching-engine.md) | Pattern matching engine | SPEC-020 | 6 | 🟡 Ready |
-| [TASK-133](tasks/TASK-133-match-evaluation.md) | Match expression evaluation | SPEC-020 | 5 | 🟡 Ready |
+| [TASK-130](tasks/TASK-130-exhaustiveness-checking.md) | Exhaustiveness checking | SPEC-020 | 8 | ✅ Complete |
+| [TASK-131](tasks/TASK-131-constructor-evaluation.md) | Constructor evaluation | SPEC-020 | 4 | ✅ Complete |
+| [TASK-132](tasks/TASK-132-pattern-matching-engine.md) | Pattern matching engine | SPEC-020 | 6 | ✅ Complete |
+| [TASK-133](tasks/TASK-133-match-evaluation.md) | Match expression evaluation | SPEC-020 | 5 | ✅ Complete |
 | [TASK-134](tasks/TASK-134-spawn-option-control-link.md) | Spawn returns Option<ControlLink> | SPEC-020 | 6 | 🟡 Ready |
 | [TASK-135](tasks/TASK-135-control-link-transfer.md) | Control link transfer semantics | SPEC-020 | 5 | 🟡 Ready |
 | [TASK-136](tasks/TASK-136-option-result-library.md) | Option and Result modules | SPEC-020 | 6 | 🟡 Ready |

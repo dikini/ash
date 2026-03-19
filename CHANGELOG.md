@@ -6,6 +6,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Type definition duplication between `ash-core` and `ash-typeck`. Unified `TypeDef` types by using AST types from `ash_core::ast` in `type_env.rs` with conversion functions.
+- Inefficient TypeEnv creation in pattern checking. Added static `EMPTY_ENV` with `OnceLock` to avoid repeated allocations.
+- Keyword lookup performance. Replaced O(n) `matches!` pattern with O(1) `HashSet` lookup using `OnceLock` for lazy initialization.
+- Magic string for variant tag. Extracted `"__variant"` to `const VARIANT_TAG` constant.
+- Visibility enum completeness. Added `Crate` variant to `Visibility` enum.
+- Unsafe `unwrap()` usage in parser. Replaced with `is_some_and()` pattern.
+- Error message formatting. Changed to lowercase per Rust conventions.
+
 ### Added
 - Generic type instantiation (TASK-129). Type parameter substitution for ADTs:
   - `instantiate(def, args)` function for substituting type parameters with concrete types

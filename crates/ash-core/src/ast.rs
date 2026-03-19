@@ -101,8 +101,6 @@ pub enum Workflow {
         channel: Name,
         value: Expr,
     },
-    /// Terminal
-    Done,
 
     /// Spawn workflow: spawn MyClass with { init: args } as pattern in continuation
     Spawn {
@@ -118,6 +116,33 @@ pub enum Workflow {
         pattern: Pattern,
         continuation: Box<Workflow>,
     },
+
+    /// Kill a workflow instance
+    Kill {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Pause a workflow instance
+    Pause {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Resume a workflow instance
+    Resume {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Check health of a workflow instance
+    CheckHealth {
+        target: Name,
+        continuation: Box<Workflow>,
+    },
+
+    /// Terminal
+    Done,
 }
 
 /// A capability reference

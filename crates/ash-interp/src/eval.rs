@@ -2,10 +2,9 @@
 //!
 //! Evaluates expressions in a runtime context, producing values.
 
-use ash_core::{BinaryOp, Expr, UnaryOp, Value, ast::MatchArm, ast::Pattern};
+use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::EvalResult;
 use crate::context::Context;
@@ -148,13 +147,9 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
     }
 }
 
-/// Counter for generating unique instance IDs
-static INSTANCE_COUNTER: AtomicU64 = AtomicU64::new(1);
-
 /// Generate a fresh instance ID
-fn fresh_instance_id() -> String {
-    let id = INSTANCE_COUNTER.fetch_add(1, Ordering::SeqCst);
-    format!("instance-{}", id)
+fn fresh_instance_id() -> WorkflowId {
+    WorkflowId::new()
 }
 
 /// Evaluate a spawn expression
@@ -1240,7 +1235,6 @@ mod tests {
         match result {
             Value::Instance(instance) => {
                 assert_eq!(instance.addr.workflow_type, "Worker");
-                assert!(!instance.addr.instance_id.is_empty());
                 assert!(instance.control.is_some());
                 assert_eq!(
                     instance.control.unwrap().instance_id,
@@ -1322,36 +1316,40 @@ mod tests {
 
     #[test]
     fn test_instance_addr_display() {
+        let id = WorkflowId::new();
         let addr = InstanceAddr {
             workflow_type: "Worker".to_string(),
-            instance_id: "inst-123".to_string(),
+            instance_id: id,
         };
-        assert_eq!(format!("{}", addr), "InstanceAddr<Worker:inst-123>");
+        let display = format!("{}", addr);
+        assert!(display.starts_with("InstanceAddr<Worker:"));
+        assert!(display.ends_with(">"));
     }
 
     #[test]
     fn test_control_link_display() {
         let link = ControlLink {
-            instance_id: "inst-123".to_string(),
+            instance_id: WorkflowId::new(),
         };
-        assert_eq!(format!("{}", link), "ControlLink<inst-123>");
+        let display = format!("{}", link);
+        assert!(display.starts_with("ControlLink<"));
+        assert!(display.ends_with(">"));
     }
 
     #[test]
     fn test_instance_display() {
+        let id = WorkflowId::new();
         let instance = Instance {
             addr: InstanceAddr {
                 workflow_type: "Worker".to_string(),
-                instance_id: "inst-123".to_string(),
+                instance_id: id,
             },
-            control: Some(ControlLink {
-                instance_id: "inst-123".to_string(),
-            }),
+            control: Some(ControlLink { instance_id: id }),
         };
         let display = format!("{}", instance);
         assert!(display.contains("Instance {"));
-        assert!(display.contains("addr: InstanceAddr<Worker:inst-123>"));
-        assert!(display.contains("control: Some(ControlLink<inst-123>)"));
+        assert!(display.contains("addr:"));
+        assert!(display.contains("control: Some(ControlLink"));
     }
 
     #[test]
@@ -1359,7 +1357,7 @@ mod tests {
         let instance = Instance {
             addr: InstanceAddr {
                 workflow_type: "Worker".to_string(),
-                instance_id: "inst-123".to_string(),
+                instance_id: WorkflowId::new(),
             },
             control: None,
         };

@@ -7,13 +7,13 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InstanceAddr {
     pub workflow_type: String,
-    pub instance_id: String,
+    pub instance_id: crate::WorkflowId,
 }
 
 /// Control link for controlling a spawned instance (affine - must be used exactly once)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ControlLink {
-    pub instance_id: String,
+    pub instance_id: crate::WorkflowId,
 }
 
 /// Instance composite type - returned by spawn, can be split into addr and control
@@ -104,7 +104,7 @@ impl std::fmt::Display for InstanceAddr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "InstanceAddr<{}:{}>",
+            "InstanceAddr<{}:{:?}>",
             self.workflow_type, self.instance_id
         )
     }
@@ -112,7 +112,7 @@ impl std::fmt::Display for InstanceAddr {
 
 impl std::fmt::Display for ControlLink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ControlLink<{}>", self.instance_id)
+        write!(f, "ControlLink<{:?}>", self.instance_id)
     }
 }
 

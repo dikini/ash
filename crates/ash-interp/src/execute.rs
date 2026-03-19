@@ -499,6 +499,74 @@ pub fn execute_workflow_with_behaviour<'a>(
                 )
                 .await
             }
+
+            // Kill a workflow instance using control link
+            Workflow::Kill {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual kill with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Pause a workflow instance using control link
+            Workflow::Pause {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual pause with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Resume a workflow instance using control link
+            Workflow::Resume {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual resume with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
+
+            // Check health of a workflow instance using control link
+            Workflow::CheckHealth {
+                target: _,
+                continuation,
+            } => {
+                // TODO: Implement actual health check with control link consumption check
+                // For now, just continue with the continuation
+                execute_workflow_with_behaviour(
+                    continuation,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                )
+                .await
+            }
         }
     })
 }

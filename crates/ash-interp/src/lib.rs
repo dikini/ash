@@ -20,6 +20,7 @@ pub mod capability;
 pub mod capability_policy;
 pub mod capability_provenance;
 pub mod context;
+pub mod control_link;
 pub mod error;
 pub mod eval;
 pub mod exec_send;
@@ -45,6 +46,7 @@ pub use capability_policy::{
     Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Role, Transformation,
 };
 pub use context::Context;
+pub use control_link::{ControlLinkError, ControlLinkRegistry, LinkState};
 pub use error::{
     EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult, ValidationError,
     ValidationResult,

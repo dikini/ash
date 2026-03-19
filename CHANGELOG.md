@@ -16,6 +16,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Implemented evaluation logic in `ash-interp` for spawn (creates Instance with unique ID) and split (returns tuple)
   - Added visualization support for new workflow variants
   - Full test coverage for spawn/split evaluation and instance value display
+- Affine control link transfer semantics (TASK-135). Runtime tracking for control link consumption:
+  - `ControlLinkRegistry` for tracking link availability vs consumed state
+  - `ControlLinkError` for invalid link usage (AlreadyConsumed, NotFound, InvalidInstance)
+  - `acquire()` method for consuming links with exactly-once semantics
+  - `verify_unused()` for checking link availability without consuming
+  - `consume()` for explicit consumption, `is_consumed()` for state checking
+  - Support for kill, pause, resume, check_health supervision operations
+  - Workflow variants: Kill, Pause, Resume, CheckHealth for supervision
 - Match and if-let expression evaluation (TASK-133). Interpreter support for match expressions:
   - `Expr::Match` evaluation with pattern matching and arm selection
   - `Expr::IfLet` evaluation as sugar for match

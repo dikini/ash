@@ -446,6 +446,74 @@ impl DotGenerator {
                 .unwrap();
                 id
             }
+            Workflow::Kill {
+                target,
+                continuation,
+            } => {
+                let id = self.next_id();
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"KILL\\n{}, fillcolor=\"{}\"];",
+                    id,
+                    escape_dot(target),
+                    effect_color(&Effect::Operational)
+                )
+                .unwrap();
+                writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
+                id
+            }
+            Workflow::Pause {
+                target,
+                continuation,
+            } => {
+                let id = self.next_id();
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"PAUSE\\n{}, fillcolor=\"{}\"];",
+                    id,
+                    escape_dot(target),
+                    effect_color(&Effect::Operational)
+                )
+                .unwrap();
+                writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
+                id
+            }
+            Workflow::Resume {
+                target,
+                continuation,
+            } => {
+                let id = self.next_id();
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"RESUME\\n{}, fillcolor=\"{}\"];",
+                    id,
+                    escape_dot(target),
+                    effect_color(&Effect::Operational)
+                )
+                .unwrap();
+                writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
+                id
+            }
+            Workflow::CheckHealth {
+                target,
+                continuation,
+            } => {
+                let id = self.next_id();
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"CHECK_HEALTH\\n{}, fillcolor=\"{}\"];",
+                    id,
+                    escape_dot(target),
+                    effect_color(&Effect::Epistemic)
+                )
+                .unwrap();
+                writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
+                id
+            }
             Workflow::Done => {
                 let id = self.next_id();
                 writeln!(

@@ -3,6 +3,9 @@
 //! This module provides parsers for Ash patterns used in let bindings,
 //! for loops, and match expressions.
 
+use std::collections::HashSet;
+use std::sync::OnceLock;
+
 use winnow::combinator::alt;
 use winnow::prelude::*;
 use winnow::stream::Stream;
@@ -11,6 +14,64 @@ use winnow::token::take_while;
 use crate::input::ParseInput;
 use crate::surface::{Literal, Name, Pattern};
 use crate::token::Span;
+
+/// Static set of Ash keywords for O(1) lookup.
+static KEYWORDS: OnceLock<HashSet<&'static str>> = OnceLock::new();
+
+/// Get the set of Ash keywords.
+fn get_keywords() -> &'static HashSet<&'static str> {
+    KEYWORDS.get_or_init(|| {
+        let mut set = HashSet::new();
+        set.insert("workflow");
+        set.insert("capability");
+        set.insert("policy");
+        set.insert("role");
+        set.insert("observe");
+        set.insert("orient");
+        set.insert("propose");
+        set.insert("decide");
+        set.insert("act");
+        set.insert("oblige");
+        set.insert("check");
+        set.insert("let");
+        set.insert("if");
+        set.insert("then");
+        set.insert("else");
+        set.insert("for");
+        set.insert("do");
+        set.insert("par");
+        set.insert("with");
+        set.insert("maybe");
+        set.insert("must");
+        set.insert("match");
+        set.insert("attempt");
+        set.insert("retry");
+        set.insert("timeout");
+        set.insert("done");
+        set.insert("epistemic");
+        set.insert("deliberative");
+        set.insert("evaluative");
+        set.insert("operational");
+        set.insert("authority");
+        set.insert("obligations");
+        set.insert("supervises");
+        set.insert("when");
+        set.insert("returns");
+        set.insert("where");
+        set.insert("permit");
+        set.insert("deny");
+        set.insert("require_approval");
+        set.insert("escalate");
+        set.insert("in");
+        set.insert("not");
+        set.insert("and");
+        set.insert("or");
+        set.insert("true");
+        set.insert("false");
+        set.insert("null");
+        set
+    })
+}
 
 /// Parse a pattern (entry point).
 ///

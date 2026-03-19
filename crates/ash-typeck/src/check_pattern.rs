@@ -7,9 +7,19 @@ use crate::solver::TypeError;
 use crate::types::{Type, TypeVar};
 use ash_parser::surface::{Literal, Pattern};
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 /// Bindings from pattern variables to their types
 pub type Bindings = HashMap<String, Type>;
+
+/// Static empty type environment for use in recursive pattern checking.
+/// This avoids creating new empty environments on each recursive call.
+static EMPTY_ENV: OnceLock<TypeEnv> = OnceLock::new();
+
+/// Get a reference to the static empty type environment.
+fn empty_env() -> &'static TypeEnv {
+    EMPTY_ENV.get_or_init(TypeEnv::new)
+}
 
 /// Type environment for pattern checking
 #[derive(Debug, Clone, Default)]
@@ -211,7 +221,7 @@ fn check_variant_pattern(
                             .ok_or(TypeError::InvalidPattern {
                                 message: format!("Unknown field: {field_name}"),
                             })?;
-                        check_pattern_inner(&TypeEnv::new(), field_pattern, field_type, bindings)?;
+                        check_pattern_inner(empty_env(), field_pattern, field_type, bindings)?;
                     }
                 }
                 return Ok(());
@@ -228,7 +238,7 @@ fn check_variant_pattern(
                 for (field_name, field_pattern) in field_pats {
                     let _ = field_name;
                     let fresh_type = Type::Var(TypeVar::fresh());
-                    check_pattern_inner(&TypeEnv::new(), field_pattern, &fresh_type, bindings)?;
+                    check_pattern_inner(empty_env(), field_pattern, &fresh_type, bindings)?;
                 }
             }
             Ok(())
@@ -263,7 +273,7 @@ fn check_tuple_pattern(
                         expected: fields.len(),
                         actual: patterns.len(),
                     })?;
-                check_pattern_inner(&TypeEnv::new(), pattern, field_type, bindings)?;
+                check_pattern_inner(empty_env(), pattern, field_type, bindings)?;
             }
             Ok(())
         }
@@ -271,7 +281,7 @@ fn check_tuple_pattern(
             // Type variable - create fresh types for each element
             for pattern in patterns {
                 let fresh_type = Type::Var(TypeVar::fresh());
-                check_pattern_inner(&TypeEnv::new(), pattern, &fresh_type, bindings)?;
+                check_pattern_inner(empty_env(), pattern, &fresh_type, bindings)?;
             }
             Ok(())
         }
@@ -304,7 +314,7 @@ fn check_record_pattern(
                     .ok_or_else(|| TypeError::InvalidPattern {
                         message: format!("Unknown field: {field_name}"),
                     })?;
-                check_pattern_inner(&TypeEnv::new(), field_pattern, field_type, bindings)?;
+                check_pattern_inner(empty_env(), field_pattern, field_type, bindings)?;
             }
             Ok(())
         }
@@ -313,7 +323,7 @@ fn check_record_pattern(
             for (field_name, field_pattern) in field_patterns {
                 let _ = field_name;
                 let fresh_type = Type::Var(TypeVar::fresh());
-                check_pattern_inner(&TypeEnv::new(), field_pattern, &fresh_type, bindings)?;
+                check_pattern_inner(empty_env(), field_pattern, &fresh_type, bindings)?;
             }
             Ok(())
         }
@@ -339,7 +349,7 @@ fn check_list_pattern(
     match expected {
         Type::List(elem_type) => {
             for element in elements {
-                check_pattern_inner(&TypeEnv::new(), element, elem_type, bindings)?;
+                check_pattern_inner(empty_env(), element, elem_type, bindings)?;
             }
             if let Some(rest_name) = rest {
                 // Rest binding gets the list type
@@ -351,7 +361,7 @@ fn check_list_pattern(
             // Type variable - create fresh type for elements
             let elem_type = Type::Var(TypeVar::fresh());
             for element in elements {
-                check_pattern_inner(&TypeEnv::new(), element, &elem_type, bindings)?;
+                check_pattern_inner(empty_env(), element, &elem_type, bindings)?;
             }
             if let Some(rest_name) = rest {
                 let list_type = Type::List(Box::new(elem_type));

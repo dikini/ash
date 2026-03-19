@@ -389,6 +389,19 @@ pub enum Expr {
     },
     /// Policy expression
     Policy(PolicyExpr),
+    /// If-let expression: if let pattern = expr then expr else expr
+    IfLet {
+        /// Pattern to match against
+        pattern: Pattern,
+        /// Expression to match
+        expr: Box<Expr>,
+        /// Branch taken when pattern matches
+        then_branch: Box<Expr>,
+        /// Branch taken when pattern doesn't match
+        else_branch: Box<Expr>,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Policy expression for combinators.
@@ -515,6 +528,13 @@ pub enum Pattern {
     },
     /// Literal pattern
     Literal(Literal),
+    /// Variant pattern: Some { value: x } or just None
+    Variant {
+        /// Name of the variant
+        name: Name,
+        /// Optional fields (None for unit variants)
+        fields: Option<Vec<(Name, Pattern)>>,
+    },
 }
 
 /// Literal values.
@@ -693,6 +713,7 @@ impl Spanned for Expr {
             Expr::Binary { span, .. } => *span,
             Expr::Call { span, .. } => *span,
             Expr::Policy(policy_expr) => policy_expr.span(),
+            Expr::IfLet { span, .. } => *span,
         }
     }
 }

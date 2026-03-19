@@ -8,6 +8,7 @@ use winnow::stream::Stream;
 use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
+use crate::parse_workflow::pattern;
 use crate::surface::{BinaryOp, Expr, Literal, Name, UnaryOp};
 use crate::token::Span;
 
@@ -15,6 +16,10 @@ use crate::token::Span;
 ///
 /// This handles the full expression grammar with proper precedence.
 pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    // Try if-let first (before other expressions to avoid conflicts with 'if')
+    if let Ok(if_let) = parse_if_let_expr(input) {
+        return Ok(if_let);
+    }
     ternary_expr(input)
 }
 
@@ -34,6 +39,105 @@ fn ternary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         Ok(condition)
     } else {
         Ok(condition)
+    }
+}
+
+/// Parse an if-let expression: `if let pattern = expr then expr else expr`
+///
+/// Example: `if let Some { value: x } = opt then { x } else { 0 }`
+pub fn parse_if_let_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state;
+
+    // Match "if let"
+    let _ = keyword("if").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("let").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse the pattern
+    let pat = pattern(input)?;
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse the expression to match against
+    let match_expr = ternary_expr(input)?;
+
+    skip_whitespace_and_comments(input);
+    let _ = keyword("then").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse then branch (block or expression)
+    let then_branch = Box::new(parse_block_or_expr(input)?);
+
+    skip_whitespace_and_comments(input);
+    let _ = keyword("else").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse else branch (block or expression)
+    let else_branch = Box::new(parse_block_or_expr(input)?);
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(Expr::IfLet {
+        pattern: pat,
+        expr: Box::new(match_expr),
+        then_branch,
+        else_branch,
+        span,
+    })
+}
+
+/// Parse either a block `{ ... }` or a single expression.
+///
+/// This is used for then/else branches in if-let expressions.
+/// A block can contain multiple statements/expressions separated by semicolons.
+fn parse_block_or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    skip_whitespace_and_comments(input);
+
+    if input.input.starts_with("{") {
+        // Parse a block with multiple statements
+        let _ = literal_str("{").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+
+        // Check for empty block
+        if input.input.starts_with("}") {
+            let _ = literal_str("}").parse_next(input)?;
+            return Ok(Expr::Literal(Literal::Null));
+        }
+
+        // Parse first expression
+        let first = expr(input)?;
+
+        // Check for more expressions (semicolon-separated)
+        let mut exprs = vec![first];
+        loop {
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with(";") {
+                let _ = input.input.next_slice(1);
+                input.state.advance(';');
+                skip_whitespace_and_comments(input);
+
+                // If next is }, this was a trailing semicolon
+                if input.input.starts_with("}") {
+                    break;
+                }
+
+                let next = expr(input)?;
+                exprs.push(next);
+            } else {
+                break;
+            }
+        }
+
+        let _ = literal_str("}").parse_next(input)?;
+
+        // Return the last expression (or the only one)
+        Ok(exprs.pop().unwrap_or(Expr::Literal(Literal::Null)))
+    } else {
+        // Single expression
+        expr(input)
     }
 }
 
@@ -840,5 +944,181 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    // ============================================================
+    // If-Let Expression Tests (TASK-126)
+    // ============================================================
+
+    #[test]
+    fn test_parse_if_let_simple() {
+        // Simple if-let with variant pattern
+        let mut input = test_input("if let Some { value: x } = opt then { x } else { 0 }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::IfLet {
+                pattern,
+                expr,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                // Pattern should be a Variant pattern
+                assert!(
+                    matches!(pattern, crate::surface::Pattern::Variant { name, .. } if name.as_ref() == "Some")
+                );
+                // Expression should be variable 'opt'
+                assert!(matches!(expr.as_ref(), Expr::Variable(name) if name.as_ref() == "opt"));
+                // Then branch should be variable 'x'
+                assert!(
+                    matches!(then_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "x")
+                );
+                // Else branch should be literal 0
+                assert!(matches!(
+                    else_branch.as_ref(),
+                    Expr::Literal(Literal::Int(0))
+                ));
+            }
+            _ => panic!("Expected IfLet expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_if_let_unit_variant() {
+        // Unit variant pattern (just the name without fields)
+        let mut input = test_input("if let None = opt then { \"none\" } else { \"some\" }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::IfLet {
+                pattern,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                // Pattern should be a variable (None is parsed as variable pattern for now)
+                assert!(
+                    matches!(pattern, crate::surface::Pattern::Variable(name) if name.as_ref() == "None")
+                );
+                // Then branch should be string "none"
+                assert!(
+                    matches!(then_branch.as_ref(), Expr::Literal(Literal::String(s)) if s.as_ref() == "none")
+                );
+                // Else branch should be string "some"
+                assert!(
+                    matches!(else_branch.as_ref(), Expr::Literal(Literal::String(s)) if s.as_ref() == "some")
+                );
+            }
+            _ => panic!("Expected IfLet expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_if_let_variable_pattern() {
+        // Simple variable pattern
+        let mut input = test_input("if let x = value then { x } else { 0 }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::IfLet {
+                pattern,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert!(
+                    matches!(pattern, crate::surface::Pattern::Variable(name) if name.as_ref() == "x")
+                );
+                assert!(
+                    matches!(then_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "x")
+                );
+                assert!(matches!(
+                    else_branch.as_ref(),
+                    Expr::Literal(Literal::Int(0))
+                ));
+            }
+            _ => panic!("Expected IfLet expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_if_let_wildcard_pattern() {
+        // Wildcard pattern
+        let mut input = test_input("if let _ = value then { 1 } else { 0 }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::IfLet { pattern, .. } => {
+                assert!(matches!(pattern, crate::surface::Pattern::Wildcard));
+            }
+            _ => panic!("Expected IfLet expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_if_let_tuple_pattern() {
+        // Tuple pattern
+        let mut input = test_input("if let (a, b) = pair then { a } else { b }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::IfLet {
+                pattern,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert!(matches!(pattern, crate::surface::Pattern::Tuple(pats) if pats.len() == 2));
+                assert!(
+                    matches!(then_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "a")
+                );
+                assert!(
+                    matches!(else_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "b")
+                );
+            }
+            _ => panic!("Expected IfLet expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_if_let_complex_expression() {
+        // If-let with complex expression in match position
+        let mut input = test_input("if let x = foo() + bar then { x } else { 0 }");
+        let result = expr(&mut input).unwrap();
+
+        assert!(matches!(result, Expr::IfLet { .. }));
+    }
+
+    #[test]
+    fn test_parse_if_let_nested_expressions() {
+        // Nested expressions in branches
+        let mut input = test_input("if let Some { value: x } = opt then { x + 1 } else { x - 1 }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::IfLet {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                // Both branches should be binary expressions
+                assert!(matches!(
+                    then_branch.as_ref(),
+                    Expr::Binary {
+                        op: BinaryOp::Add,
+                        ..
+                    }
+                ));
+                assert!(matches!(
+                    else_branch.as_ref(),
+                    Expr::Binary {
+                        op: BinaryOp::Sub,
+                        ..
+                    }
+                ));
+            }
+            _ => panic!("Expected IfLet expression, got {:?}", result),
+        }
     }
 }

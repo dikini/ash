@@ -518,6 +518,17 @@ impl CapabilityChecker {
                 // Policy expressions don't involve capability operations
                 Ok(())
             }
+
+            Expr::IfLet {
+                expr,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.verify_expr(expr)?;
+                self.verify_expr(then_branch)?;
+                self.verify_expr(else_branch)
+            }
         }
     }
 

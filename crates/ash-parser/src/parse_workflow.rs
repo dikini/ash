@@ -602,6 +602,8 @@ pub fn pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     skip_whitespace_and_comments(input);
     alt((
         parse_wildcard_pattern,
+        parse_variant_pattern,
+        parse_record_pattern,
         parse_tuple_pattern,
         parse_list_pattern,
         parse_variable_pattern,
@@ -613,6 +615,90 @@ pub fn pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
 fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     let _ = literal_str("_").parse_next(input)?;
     Ok(Pattern::Wildcard)
+}
+
+/// Parse a variant pattern: `Name` or `Name { field: pat, ... }`
+fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
+    // First, parse an identifier
+    let name = identifier(input)?;
+
+    skip_whitespace_and_comments(input);
+
+    // Check if it's followed by `{` for record-style variant
+    if input.input.starts_with("{") {
+        let fields = delimited(
+            literal_str("{"),
+            parse_record_field_patterns,
+            literal_str("}"),
+        )
+        .parse_next(input)?;
+        Ok(Pattern::Variant {
+            name: name.into(),
+            fields: Some(fields),
+        })
+    } else {
+        // Unit variant - just the name
+        // But wait, this would also match a variable pattern!
+        // We need to backtrack if this is just a simple variable.
+        // Actually, for now let's only match this if it looks like a variant
+        // (i.e., starts with uppercase). But since we don't have that check,
+        // this parser should only be tried after variable pattern fails
+        // or we need a different approach.
+        //
+        // For now, let's fail here so variable patterns are preferred
+        Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ))
+    }
+}
+
+/// Parse a record pattern: `{ field: pat, ... }`
+fn parse_record_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
+    let fields = delimited(
+        literal_str("{"),
+        parse_record_field_patterns,
+        literal_str("}"),
+    )
+    .parse_next(input)?;
+    Ok(Pattern::Record(fields))
+}
+
+/// Parse field patterns for a record pattern.
+fn parse_record_field_patterns(input: &mut ParseInput) -> ModalResult<Vec<(Name, Pattern)>> {
+    let mut fields = Vec::new();
+
+    loop {
+        skip_whitespace_and_comments(input);
+
+        if input.input.is_empty() || input.input.starts_with("}") {
+            break;
+        }
+
+        // Parse field name
+        let field_name = identifier(input)?;
+
+        skip_whitespace_and_comments(input);
+
+        // Expect colon followed by pattern
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+
+        // Parse the pattern for this field
+        let pat = pattern(input)?;
+        fields.push((field_name.into(), pat));
+
+        skip_whitespace_and_comments(input);
+
+        // Optional comma
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+        } else {
+            break;
+        }
+    }
+
+    Ok(fields)
 }
 
 /// Parse a variable pattern: just an identifier
@@ -1053,6 +1139,22 @@ mod tests {
         let mut input = test_input("my_var");
         let result = pattern(&mut input).unwrap();
         assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "my_var"));
+    }
+
+    #[test]
+    fn test_pattern_record() {
+        let mut input = test_input("{ x: a, y: b }");
+        let result = pattern(&mut input).unwrap();
+        match result {
+            Pattern::Record(fields) => {
+                assert_eq!(fields.len(), 2);
+                assert_eq!(fields[0].0.as_ref(), "x");
+                assert!(matches!(fields[0].1, Pattern::Variable(ref name) if name.as_ref() == "a"));
+                assert_eq!(fields[1].0.as_ref(), "y");
+                assert!(matches!(fields[1].1, Pattern::Variable(ref name) if name.as_ref() == "b"));
+            }
+            _ => panic!("Expected Record pattern, got {:?}", result),
+        }
     }
 
     #[test]

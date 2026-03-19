@@ -307,6 +307,19 @@ pub fn lower_expr(expr: &Expr) -> CoreExpr {
         },
 
         Expr::Policy(policy_expr) => lower_policy_expr(policy_expr),
+
+        Expr::IfLet {
+            pattern,
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => CoreExpr::IfLet {
+            pattern: lower_pattern(pattern),
+            expr: Box::new(lower_expr(expr)),
+            then_branch: Box::new(lower_expr(then_branch)),
+            else_branch: Box::new(lower_expr(else_branch)),
+        },
     }
 }
 
@@ -407,6 +420,18 @@ pub fn lower_pattern(pattern: &Pattern) -> CorePattern {
         ),
 
         Pattern::Literal(lit) => CorePattern::Literal(lower_literal(lit)),
+
+        Pattern::Variant { name, fields } => {
+            let lowered_fields = fields.as_ref().map(|fs| {
+                fs.iter()
+                    .map(|(n, p)| (n.to_string(), lower_pattern(p)))
+                    .collect()
+            });
+            CorePattern::Variant {
+                name: name.to_string(),
+                fields: lowered_fields,
+            }
+        }
     }
 }
 

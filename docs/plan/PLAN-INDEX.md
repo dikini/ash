@@ -524,7 +524,7 @@ Audit whether the hardened spec set is ready to drive Rust and Lean implementati
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-184](tasks/TASK-184-audit-spec-hardening-readiness.md) | Audit spec hardening readiness | All hardened contracts | 6 | 📝 Planned |
+| [TASK-184](tasks/TASK-184-audit-spec-hardening-readiness.md) | Audit spec hardening readiness | All hardened contracts | 6 | ✅ Complete |
 
 **Phase 25 Deliverable**: Explicit readiness gate for mechanical Rust convergence and stable Lean modeling
 

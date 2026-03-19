@@ -1,6 +1,6 @@
 # TASK-184: Audit Spec Hardening Readiness
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -20,6 +20,24 @@ mechanically and whether Lean formalization has a stable starting point.
 3. Audit whether the IR contract is execution-model-neutral
 4. Make this audit the explicit gate before Rust convergence resumes
 5. Confirm that no canonical `catch` construct remains in the hardened language definition
+
+## TDD Evidence
+
+### Red
+
+Before this task, the repository had a hardened spec set but no explicit readiness gate tying the
+canonical corpus back to Rust convergence and Lean formalization. The plan index still showed TASK-184
+as planned, so the gate itself was not yet materially closed.
+
+### Green
+
+The readiness gate is now explicit:
+
+- [docs/audit/2026-03-19-spec-hardening-readiness-review.md](../../audit/2026-03-19-spec-hardening-readiness-review.md)
+  records the audit and gate conclusion
+- the audit says Rust convergence may resume under TASK-164 through TASK-176
+- the audit says Lean formalization has a stable starting corpus
+- no canonical `catch` construct remains in the hardened language definition
 
 ## Files
 
@@ -59,10 +77,10 @@ git commit -m "docs: audit spec hardening readiness"
 
 ## Completion Checklist
 
-- [ ] readiness audit created
-- [ ] Rust-convergence gate documented
-- [ ] Lean-readiness assessment documented
-- [ ] `CHANGELOG.md` updated
+- [x] readiness audit created
+- [x] Rust-convergence gate documented
+- [x] Lean-readiness assessment documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

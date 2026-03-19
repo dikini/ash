@@ -147,12 +147,12 @@ Phase 8: Standard Library
 9. **TASK-132**: Pattern Matching Engine ✅
 10. **TASK-133**: Match Evaluation ✅
 
-### Wave 5: Control Link (Sequential)
-11. **TASK-134**: Spawn Option ControlLink (after 120, 127)
-12. **TASK-135**: Control Link Transfer (after 134)
+### Wave 5: Control Link (COMPLETE ✅)
+11. **TASK-134**: Spawn Option ControlLink ✅
+12. **TASK-135**: Control Link Transfer ✅
 
-### Wave 6: Standard Library (Sequential)
-13. **TASK-136**: Option/Result Library (after 127, 128, 134)
+### Wave 6: Standard Library (COMPLETE ✅)
+13. **TASK-136**: Option/Result Library ✅
 
 ---
 
@@ -356,9 +356,9 @@ After completing the review, update `docs/plan/PLAN-INDEX.md`:
 | [TASK-131](tasks/TASK-131-constructor-evaluation.md) | Constructor evaluation | SPEC-020 | 4 | ✅ Complete |
 | [TASK-132](tasks/TASK-132-pattern-matching-engine.md) | Pattern matching engine | SPEC-020 | 6 | ✅ Complete |
 | [TASK-133](tasks/TASK-133-match-evaluation.md) | Match expression evaluation | SPEC-020 | 5 | ✅ Complete |
-| [TASK-134](tasks/TASK-134-spawn-option-control-link.md) | Spawn returns Option<ControlLink> | SPEC-020 | 6 | 🟡 Ready |
-| [TASK-135](tasks/TASK-135-control-link-transfer.md) | Control link transfer semantics | SPEC-020 | 5 | 🟡 Ready |
-| [TASK-136](tasks/TASK-136-option-result-library.md) | Option and Result modules | SPEC-020 | 6 | 🟡 Ready |
+| [TASK-134](tasks/TASK-134-spawn-option-control-link.md) | Spawn returns Option<ControlLink> | SPEC-020 | 6 | ✅ Complete |
+| [TASK-135](tasks/TASK-135-control-link-transfer.md) | Control link transfer semantics | SPEC-020 | 5 | ✅ Complete |
+| [TASK-136](tasks/TASK-136-option-result-library.md) | Option and Result modules | SPEC-020 | 6 | ✅ Complete |
 
 **Phase 17 Deliverable**: Full ADT support with Option<T>, Result<T,E>, pattern matching, and exhaustiveness checking
 **Note**: TASK-120 added as prerequisite; TASK-123 was already implemented

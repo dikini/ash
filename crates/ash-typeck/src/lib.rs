@@ -38,6 +38,7 @@ pub mod smt;
 pub use smt as policy;
 
 pub use capability_check::*;
+pub use check_pattern::{Bindings, TypeDef, TypeEnv, VariantDef, check_pattern};
 pub use constraints::*;
 pub use effect::*;
 pub use instantiate::{InstantiateError, InstantiateSubst, instantiate};

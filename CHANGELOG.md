@@ -7,6 +7,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Parse type definitions (TASK-124). Parser for ADT type definitions in `ash-parser`:
+  - `parse_type_def` module with `TypeDef`, `TypeBody`, `VariantDef`, `Visibility`, and `TypeExpr` types
+  - Support for enums: `type Status = Pending | Processing | Completed;`
+  - Support for struct types: `type Point = { x: Int, y: Int };`
+  - Support for type aliases: `type Name = String;`
+  - Support for generics: `type Option<T> = Some { value: T } | None;`
+  - Support for visibility: `pub type Result<T, E> = Ok { value: T } | Err { error: E };`
+  - Full test coverage for all type definition forms
 - AST Extensions for Algebraic Data Types (TASK-120). Foundation for Phase 17 ADT implementation:
   - `Pattern::Variant` for enum variant pattern matching
   - `Expr::Constructor` for ADT value construction

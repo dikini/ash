@@ -18,6 +18,7 @@ pub mod parse_policy;
 pub mod parse_receive;
 pub mod parse_send;
 pub mod parse_set;
+pub mod parse_type_def;
 pub mod parse_use;
 pub mod parse_utils;
 pub mod parse_visibility;

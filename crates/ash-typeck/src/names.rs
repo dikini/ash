@@ -420,7 +420,9 @@ impl NameResolver {
                 self.resolve_expr(else_branch);
             }
 
-            Expr::Match { scrutinee, arms, .. } => {
+            Expr::Match {
+                scrutinee, arms, ..
+            } => {
                 self.resolve_expr(scrutinee);
                 for arm in arms {
                     self.resolve_expr(&arm.body);

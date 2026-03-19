@@ -70,6 +70,30 @@ impl Substitution {
         }
     }
 
+    /// Create a substitution from an iterator of (TypeVar, Type) pairs
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::types::{Substitution, Type, TypeVar};
+    ///
+    /// let pairs = vec![
+    ///     (TypeVar(0), &Type::Int),
+    ///     (TypeVar(1), &Type::String),
+    /// ];
+    /// let subst = Substitution::from_pairs(pairs.into_iter());
+    ///
+    /// assert_eq!(subst.apply(&Type::Var(TypeVar(0))), Type::Int);
+    /// assert_eq!(subst.apply(&Type::Var(TypeVar(1))), Type::String);
+    /// ```
+    pub fn from_pairs<'a>(pairs: impl Iterator<Item = (TypeVar, &'a Type)>) -> Self {
+        let mut mappings = HashMap::new();
+        for (var, ty) in pairs {
+            mappings.insert(var, ty.clone());
+        }
+        Self { mappings }
+    }
+
     /// Insert a mapping from a type variable to a type
     pub fn insert(&mut self, var: TypeVar, ty: Type) {
         self.mappings.insert(var, ty);

@@ -530,7 +530,9 @@ impl CapabilityChecker {
                 self.verify_expr(else_branch)
             }
 
-            Expr::Match { scrutinee, arms, .. } => {
+            Expr::Match {
+                scrutinee, arms, ..
+            } => {
                 self.verify_expr(scrutinee)?;
                 for arm in arms {
                     self.verify_expr(&arm.body)?;

@@ -41,6 +41,7 @@ The canonical observable-behavior story is now explicit:
   details to `SPEC-021`
 - the runtime handoff reference points at `SPEC-021` as the canonical contract owner while keeping
   migration notes in task/reference space
+- verification warnings are observable diagnostics, not silent success
 - recoverable failures are represented explicitly as `Result<T, E>` values and handled with
   `match` / `if let`, not `catch`
 

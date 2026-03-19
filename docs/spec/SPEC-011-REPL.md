@@ -152,34 +152,10 @@ ash> workflow
 
 ## 6. Error Display
 
-### 6.1 Syntax Errors
-
-```
-ash> 1 + 
-Error: Unexpected end of input
-  |
-1 | 1 + 
-  |     ^ expected expression
-```
-
-### 6.2 Type Errors
-
-```
-ash> :type if true then 1 else "hello"
-Error: Type mismatch
-  |
-1 | if true then 1 else "hello"
-  |     ^^^^     ^     ^^^^^^^
-  |     Int      |     String
-  |              expected same type in both branches
-```
-
-### 6.3 Runtime Errors
-
-```
-ash> file:read("nonexistent.txt")
-Error: File not found: nonexistent.txt
-```
+Observable REPL error rendering, including parse, type, verification, policy, and runtime
+failures, is owned by [SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
+This section only records that the REPL must surface those failures through the canonical observable
+categories instead of inventing a separate REPL-specific error model.
 
 ## 7. Configuration
 

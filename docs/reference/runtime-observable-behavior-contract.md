@@ -2,7 +2,7 @@
 
 ## Status
 
-Canonical reference for TASK-182.
+TASK-182 handoff reference.
 
 ## Purpose
 
@@ -33,8 +33,8 @@ Out of scope:
 
 ## Handoff Summary
 
-SPEC-021 now owns the canonical observable contract. This reference preserves the migration
-boundary and records the implementation drift that TASK-182 was meant to eliminate.
+SPEC-021 owns the canonical observable contract. This reference preserves the migration boundary
+and records the implementation drift that TASK-182 was meant to eliminate.
 
 Current implementation notes:
 

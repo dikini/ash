@@ -26,6 +26,7 @@ The runtime and verification stack must make these outcomes observable:
 |---|---|
 | capability verification success | execution may proceed |
 | capability verification error | tooling receives a concrete verification error |
+| capability verification warning | tooling receives an observable warning distinct from success and error |
 | workflow policy `Permit` | gated continuation may execute |
 | workflow policy `Deny` | execution stops with observable denial |
 | capability-level approval requirement | approval is observed as a distinct state, not as permit |
@@ -47,6 +48,8 @@ The CLI surface must preserve the same failure classes and observability rules:
 
 - `ash check` surfaces parse, type, verification, and policy failures as diagnostics rather than
   collapsing them into one undifferentiated error class.
+- `ash check` surfaces verification warnings as observable diagnostics rather than hiding them or
+  collapsing them into success.
 - `ash run` and `ash trace` surface runtime execution failures observably instead of silently
   swallowing them.
 - `ash repl` surfaces interactive parse, type, and runtime failures using the same canonical

@@ -1,6 +1,6 @@
 # TASK-183: Define Formalization Boundary and Proof Targets
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -26,10 +26,32 @@ language definition is expected to support.
 4. State the intended relationship between Rust and Lean implementations
 5. Treat recoverable failure as explicit `Result` dataflow, not exceptional `catch` semantics
 
+## TDD Evidence
+
+### Red
+
+Before this task, the repository had no single formalization-boundary note. Lean-oriented guidance
+was split between the hardening plan, the runtime/observable references, and an older Lean
+reference interpreter document, so the canonical proof corpus was not mechanically obvious.
+
+### Green
+
+The formalization boundary is now explicit:
+
+- the canonical Lean/Rust proof corpus is [SPEC-001](../../spec/SPEC-001-IR.md),
+  [SPEC-003](../../spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004](../../spec/SPEC-004-SEMANTICS.md),
+  [SPEC-020](../../spec/SPEC-020-ADT-TYPES.md), and
+  [SPEC-021](../../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md)
+- [docs/reference/formalization-boundary.md](../../reference/formalization-boundary.md) separates
+  that corpus from migration-only artifacts and task docs
+- recoverable failure is explicitly `Result`-based; `catch` is not part of the canonical contract
+- proof and bisimulation targets are listed in the boundary note rather than being left implicit
+
 ## Files
 
 - Create: `docs/reference/formalization-boundary.md`
 - Modify: `docs/plan/2026-03-19-spec-hardening-design.md`
+- Modify: `docs/plan/PLAN-INDEX.md`
 - Modify: `CHANGELOG.md`
 
 ## TDD Steps
@@ -58,16 +80,16 @@ Expected pass conditions:
 ### Step 5: Commit
 
 ```bash
-git add docs/reference/formalization-boundary.md docs/plan/2026-03-19-spec-hardening-design.md CHANGELOG.md
+git add docs/reference/formalization-boundary.md docs/plan/2026-03-19-spec-hardening-design.md docs/plan/PLAN-INDEX.md docs/plan/tasks/TASK-183-define-formalization-boundary-and-proof-targets.md CHANGELOG.md
 git commit -m "docs: define formalization boundary and proof targets"
 ```
 
 ## Completion Checklist
 
-- [ ] formalization boundary documented
-- [ ] proof targets documented
-- [ ] Rust-vs-Lean contract relationship documented
-- [ ] `CHANGELOG.md` updated
+- [x] formalization boundary documented
+- [x] proof targets documented
+- [x] Rust-vs-Lean contract relationship documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

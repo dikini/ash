@@ -64,6 +64,10 @@ Each tightened area should identify its primary theory influences where appropri
 
 This does not force Ash to copy any one system wholesale, but it prevents purely ad hoc semantics.
 
+Lean formalization should treat the hardened canonical specs as the authoritative source of truth,
+with the formalization-boundary note distinguishing those specs from migration-only artifacts such
+as older reference interpreters, task files, and implementation drift notes.
+
 ## Why this design
 
 Without another spec-tightening pass:
@@ -135,6 +139,9 @@ Add:
 - one normative observable-behavior spec,
 - one formalization-boundary note describing what Lean treats as authoritative and what proof
   targets later work should satisfy.
+
+The older Lean reference interpreter sketch remains a historical artifact, not a second canonical
+specification.
 
 ### Phase D: Readiness Audit
 

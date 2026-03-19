@@ -33,7 +33,7 @@ impl InstantiateSubst {
     /// Create a substitution from an iterator of (param_name, type_expr) pairs
     #[must_use]
     pub fn from_pairs(pairs: impl Iterator<Item = (String, TypeExpr)>) -> Self {
-        let mut mappings = std::collections::HashMap::new();
+        let mut mappings = std::collections::HashMap::with_capacity(pairs.size_hint().0);
         for (name, expr) in pairs {
             mappings.insert(name, expr);
         }

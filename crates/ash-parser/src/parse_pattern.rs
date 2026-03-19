@@ -486,11 +486,9 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
             if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
-                // Update position state
                 for c in word.chars() {
                     input.state.advance(c);
                 }
-                // Advance the inner stream
                 let _ = input.input.next_slice(word.len());
                 return Ok(word);
             }

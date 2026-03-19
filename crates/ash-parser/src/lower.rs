@@ -378,7 +378,11 @@ fn lower_literal(lit: &Literal) -> ash_core::Value {
 
     match lit {
         Literal::Int(n) => Value::Int(*n),
-        Literal::Float(_f) => Value::Null, // Float not supported in core
+        Literal::Float(f) => {
+            // TODO: Add Value::Float support
+            // For now, truncate to Int as a placeholder
+            Value::Int(*f as i64)
+        }
         Literal::String(s) => Value::String(s.to_string()),
         Literal::Bool(b) => Value::Bool(*b),
         Literal::Null => Value::Null,

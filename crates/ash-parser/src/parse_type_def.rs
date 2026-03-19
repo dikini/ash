@@ -160,11 +160,7 @@ fn parse_type_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)?;
 
     // Check that first character is uppercase
-    if !name
-        .chars()
-        .next()
-        .is_some_and(|c| c.is_ascii_uppercase())
-    {
+    if !name.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
@@ -213,11 +209,7 @@ fn parse_type_var<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)?;
 
     // Check that first character is uppercase
-    if !name
-        .chars()
-        .next()
-        .is_some_and(|c| c.is_ascii_uppercase())
-    {
+    if !name.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));

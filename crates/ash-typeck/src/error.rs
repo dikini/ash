@@ -62,6 +62,19 @@ pub enum TypeEnvError {
     InvalidDefinition(String),
 }
 
+/// Error type for exhaustiveness checking
+#[derive(Debug, Clone, PartialEq, Error)]
+pub enum ExhaustivenessError {
+    /// Non-exhaustive pattern match
+    #[error("non-exhaustive pattern match for type '{scrutinee_type}'")]
+    NonExhaustiveMatch {
+        /// Type being matched
+        scrutinee_type: String,
+        /// Missing patterns
+        missing_patterns: Vec<String>,
+    },
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

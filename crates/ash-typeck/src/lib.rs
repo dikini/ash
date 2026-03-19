@@ -18,6 +18,7 @@ pub mod check_pattern;
 pub mod constraints;
 pub mod effect;
 pub mod error;
+pub mod exhaustiveness;
 pub mod instantiate;
 pub mod name_binding;
 pub mod names;

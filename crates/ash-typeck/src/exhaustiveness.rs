@@ -33,6 +33,7 @@ pub enum PatternCell {
 
 impl PatternMatrix {
     /// Create a new pattern matrix from a list of patterns
+    #[must_use]
     pub fn new(patterns: &[Pattern]) -> Self {
         let rows = patterns.iter().map(|p| vec![pattern_to_cell(p)]).collect();
         Self { rows }

@@ -23,6 +23,7 @@ pub struct InstantiateSubst {
 
 impl InstantiateSubst {
     /// Create a new empty substitution
+    #[must_use]
     pub fn new() -> Self {
         Self {
             mappings: std::collections::HashMap::new(),
@@ -30,6 +31,7 @@ impl InstantiateSubst {
     }
 
     /// Create a substitution from an iterator of (param_name, type_expr) pairs
+    #[must_use]
     pub fn from_pairs(pairs: impl Iterator<Item = (String, TypeExpr)>) -> Self {
         let mut mappings = std::collections::HashMap::new();
         for (name, expr) in pairs {
@@ -44,6 +46,7 @@ impl InstantiateSubst {
     }
 
     /// Apply this substitution to a type expression
+    #[must_use]
     pub fn apply_expr(&self, expr: &TypeExpr) -> TypeExpr {
         match expr {
             TypeExpr::Named(name) => {
@@ -70,6 +73,7 @@ impl InstantiateSubst {
     }
 
     /// Apply this substitution to a variant definition
+    #[must_use]
     pub fn apply_variant(&self, variant: &VariantDef) -> VariantDef {
         VariantDef {
             name: variant.name.clone(),
@@ -82,6 +86,7 @@ impl InstantiateSubst {
     }
 
     /// Apply this substitution to a type body
+    #[must_use]
     pub fn apply_body(&self, body: &TypeBody) -> TypeBody {
         match body {
             TypeBody::Enum(variants) => {

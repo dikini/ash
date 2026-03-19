@@ -452,7 +452,11 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
 
     // Check that first character is a letter or underscore (not a digit)
     if result.is_empty()
-        || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_')
+        || !result
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic())
+            && !result.starts_with('_')
     {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),

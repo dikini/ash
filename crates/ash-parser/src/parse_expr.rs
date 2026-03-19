@@ -545,7 +545,11 @@ pub fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
 
     // Check that first character is a letter or underscore (not a digit)
     if result.is_empty()
-        || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_')
+        || !result
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic())
+            && !result.starts_with('_')
     {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
@@ -622,7 +626,12 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
-            if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
+            if after.is_empty()
+                || !after
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_alphanumeric())
+            {
                 // Update position state
                 for c in word.chars() {
                     input.state.advance(c);

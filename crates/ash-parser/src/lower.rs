@@ -314,7 +314,7 @@ pub fn lower_expr(expr: &Expr) -> CoreExpr {
                 .iter()
                 .map(|arm| CoreMatchArm {
                     pattern: lower_pattern(&arm.pattern),
-                    body: *Box::new(lower_expr(&arm.body)),
+                    body: lower_expr(&arm.body),
                 })
                 .collect(),
         },

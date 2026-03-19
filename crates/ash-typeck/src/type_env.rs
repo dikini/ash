@@ -214,6 +214,7 @@ pub struct TypeEnv {
 
 impl TypeEnv {
     /// Create a new empty type environment
+    #[must_use]
     pub fn new() -> Self {
         Self {
             ast_types: HashMap::new(),
@@ -223,6 +224,7 @@ impl TypeEnv {
     }
 
     /// Create a new type environment with builtin types registered
+    #[must_use]
     pub fn with_builtin_types() -> Self {
         let mut env = Self::new();
         env.add_builtin_types();

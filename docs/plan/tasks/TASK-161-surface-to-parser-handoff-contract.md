@@ -1,6 +1,6 @@
 # TASK-161: Surface-to-Parser Handoff Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,6 +61,12 @@ Expected failure conditions:
 - at least one stabilized form still requires inference across multiple docs,
 - parser rejection boundaries are not fully centralized.
 
+Observed before implementation:
+- `docs/reference/` did not exist, so there was no parser-handoff reference file.
+- accepted `check`, `decide`, `receive`, policy, and ADT parser expectations had to be inferred
+  across `SPEC-002`, `SPEC-013`, `SPEC-020`, and current parser AST code.
+- parser-vs-lowering boundaries were implicit rather than written in one authority file.
+
 ### Step 3: Implement the minimal reference (Green)
 
 Document only the handoff needed between surface syntax and parser AST.
@@ -72,6 +78,12 @@ Expected pass conditions:
 - parser outputs are named concretely,
 - parser failure boundaries are explicit.
 
+Verified after implementation:
+- `docs/reference/surface-to-parser-contract.md` is now the single parser-handoff reference.
+- required parser outputs are named concretely using `ash_parser::surface` and
+  `ash_parser::parse_type_def` node names.
+- parser rejection cases and parser-vs-later boundaries are explicitly listed.
+
 ### Step 5: Commit
 
 ```bash
@@ -81,11 +93,11 @@ git commit -m "docs: add surface to parser contract"
 
 ## Completion Checklist
 
-- [ ] accepted surface forms documented
-- [ ] parser AST outputs documented
-- [ ] legal parser failures documented
-- [ ] parser/later-phase boundary documented
-- [ ] `CHANGELOG.md` updated
+- [x] accepted surface forms documented
+- [x] parser AST outputs documented
+- [x] legal parser failures documented
+- [x] parser/later-phase boundary documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

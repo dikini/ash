@@ -474,9 +474,9 @@ Document explicit reference contracts between surface syntax, lowering, type che
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-161](tasks/TASK-161-surface-to-parser-handoff-contract.md) | Surface-to-parser handoff contract | SPEC-002/013/020 | 4 | 📝 Planned |
-| [TASK-162](tasks/TASK-162-parser-to-core-lowering-handoff-contract.md) | Parser-to-core lowering handoff contract | SPEC-001/002/006/013/020 | 4 | 📝 Planned |
-| [TASK-163](tasks/TASK-163-type-runtime-handoff-contracts.md) | Type/runtime handoff contracts | SPEC-003/004/005/011/016 | 6 | 📝 Planned |
+| [TASK-161](tasks/TASK-161-surface-to-parser-handoff-contract.md) | Surface-to-parser handoff contract | SPEC-002/013/020 | 4 | ✅ Complete |
+| [TASK-162](tasks/TASK-162-parser-to-core-lowering-handoff-contract.md) | Parser-to-core lowering handoff contract | SPEC-001/002/006/013/020 | 4 | ✅ Complete |
+| [TASK-163](tasks/TASK-163-type-runtime-handoff-contracts.md) | Type/runtime handoff contracts | SPEC-003/004/005/011/016 | 6 | ✅ Complete |
 
 **Phase 21 Deliverable**: Reference contracts that freeze parser/lowering/type/runtime handoffs for convergence work
 

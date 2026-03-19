@@ -1,6 +1,6 @@
 # TASK-163: Type-to-Runtime Handoff Contracts
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,6 +64,15 @@ Expected failure conditions:
 - runtime-visible guarantees are still spread across multiple specs,
 - at least one boundary between type/runtime/observable behavior remains implicit.
 
+Observed before implementation:
+- neither `docs/reference/type-to-runtime-contract.md` nor
+  `docs/reference/runtime-observable-behavior-contract.md` existed.
+- required type/runtime and runtime/observable guarantees had to be reconstructed from
+  `SPEC-003`, `SPEC-004`, `SPEC-005`, `SPEC-011`, `SPEC-016`, and current Rust surfaces in
+  `ash-typeck`, `ash-interp`, `ash-cli`, and `ash-repl`.
+- the boundary between type outputs, verification-time rejections, and user-visible runtime
+  behavior remained implicit.
+
 ### Step 3: Implement the minimal references (Green)
 
 Document only the required type/runtime and runtime/observable handoffs.
@@ -75,6 +84,13 @@ Expected pass conditions:
 - required outputs and rejected states are documented,
 - runtime verification, REPL output, and stdlib-visible behavior are covered.
 
+Verified after implementation:
+- both required reference documents now exist under `docs/reference/`.
+- the type-to-runtime handoff explicitly lists required type facts, runtime consumers, and
+  pre-runtime rejected states.
+- the runtime-observable handoff explicitly covers verification outcomes, normative REPL behavior,
+  and stdlib-visible ADT/runtime guarantees.
+
 ### Step 5: Commit
 
 ```bash
@@ -84,11 +100,11 @@ git commit -m "docs: add type and runtime handoff contracts"
 
 ## Completion Checklist
 
-- [ ] type-to-runtime contract documented
-- [ ] runtime-observable behavior contract documented
-- [ ] rejected states documented
-- [ ] runtime verification and REPL/stdlib behavior covered
-- [ ] `CHANGELOG.md` updated
+- [x] type-to-runtime contract documented
+- [x] runtime-observable behavior contract documented
+- [x] rejected states documented
+- [x] runtime verification and REPL/stdlib behavior covered
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

@@ -7,6 +7,17 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Formal proofs for semantic properties (Phase 19, TASK-149 through TASK-155):
+  - `Ash/Proofs/Pattern.lean` - Pattern match determinism and totality proofs
+  - `Ash/Proofs/Pure.lean` - Constructor purity proof (effect system)
+  - `Ash/Proofs/Determinism.lean` - Expression evaluation determinism proof
+  - `Ash/Proofs/Progress.lean` - Progress theorem (well-typed programs don't get stuck)
+  - `Ash/Proofs/Preservation.lean` - Preservation theorem (types preserved during evaluation)
+  - `Ash/Proofs/TypeSafety.lean` - Type safety corollary combining progress and preservation
+  - `Ash/Types/Basic.lean` - Core type system definitions (`Ty` inductive)
+  - `Ash/Types/WellTyped.lean` - Well-typed relation for expressions
+  - Helper lemmas: `merge_envs_assoc`, `env_lookup_bind_eq`, `join_epistemic_left`, etc.
+  - **Note**: Some theorems use `sorry` due to Lean 4 partial function limitations
 - Option and Result standard library (TASK-136). Core standard library modules:
   - `std/src/option.ash` - Option<T> type with Some/None variants
   - `std/src/result.ash` - Result<T, E> type with Ok/Err variants

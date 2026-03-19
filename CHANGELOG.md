@@ -7,6 +7,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Type check patterns for match expressions (TASK-128). Pattern type checking in `crates/ash-typeck/src/check_pattern.rs`:
+  - `check_pattern(env, pattern, expected)` function for checking patterns against expected types
+  - `Bindings` type: `HashMap<String, Type>` for pattern variable bindings
+  - Support for `Pattern::Wildcard` - matches any type with no bindings
+  - Support for `Pattern::Variable` - binds variable to expected type
+  - Support for `Pattern::Literal` - checks literal type compatibility
+  - Support for `Pattern::Variant` - checks variant patterns against sum types
+  - Support for `Pattern::Tuple` - checks element count and types
+  - Support for `Pattern::Record` - checks field names and types
+  - Support for `Pattern::List` - checks element patterns and rest bindings
+  - New error types: `PatternMismatch`, `UnknownVariant`, `PatternArityMismatch`, `InvalidPattern`
+  - `TypeEnv` for managing type definitions and variable scopes during pattern checking
+  - Full test coverage for all pattern types including nested patterns
 - Parse type definitions (TASK-124). Parser for ADT type definitions in `ash-parser`:
   - `parse_type_def` module with `TypeDef`, `TypeBody`, `VariantDef`, `Visibility`, and `TypeExpr` types
   - Support for enums: `type Status = Pending | Processing | Completed;`

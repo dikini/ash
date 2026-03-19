@@ -28,6 +28,18 @@ pub enum TypeError {
     /// Unsatisfied obligation
     #[error("Unsatisfied obligation: {0}")]
     UnsatisfiedObligation(String),
+    /// Pattern type mismatch
+    #[error("Pattern mismatch: expected {expected:?}, got {actual:?}")]
+    PatternMismatch { expected: Type, actual: Type },
+    /// Unknown variant in pattern
+    #[error("Unknown variant: {0}")]
+    UnknownVariant(String),
+    /// Pattern arity mismatch
+    #[error("Pattern arity mismatch: expected {expected} elements, got {actual}")]
+    PatternArityMismatch { expected: usize, actual: usize },
+    /// Invalid pattern
+    #[error("Invalid pattern: {message}")]
+    InvalidPattern { message: String },
 }
 
 impl From<UnifyError> for TypeError {

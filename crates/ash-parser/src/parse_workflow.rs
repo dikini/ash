@@ -13,8 +13,7 @@ use crate::parse_pattern::pattern;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
-    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, PolicyInstance, Workflow,
-    WorkflowDef,
+    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, PolicyInstance, Workflow, WorkflowDef,
 };
 use crate::token::Span;
 

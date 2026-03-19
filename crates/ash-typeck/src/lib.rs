@@ -13,6 +13,7 @@
 
 pub mod capability_check;
 pub mod capability_typecheck;
+pub mod check_pattern;
 pub mod constraints;
 pub mod effect;
 pub mod name_binding;
@@ -33,6 +34,7 @@ pub mod smt;
 pub use smt as policy;
 
 pub use capability_check::*;
+pub use check_pattern::{Bindings, TypeDef, TypeEnv, VariantDef, check_pattern};
 pub use constraints::*;
 pub use effect::*;
 pub use name_binding::{NameBinder, NameError};

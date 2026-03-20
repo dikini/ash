@@ -258,7 +258,7 @@ Update this section as tasks complete:
 | 28 | 2 | 0 | 📝 Planned |
 | 29 | 2 | 0 | 📝 Planned |
 | 30 | 2 | 0 | 📝 Planned |
-| 31 | 1 | 0 | 📝 Planned |
+| 31 | 1 | 1 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -744,9 +744,14 @@ Re-audit specs and implementation to close the convergence program.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-176](tasks/TASK-176-final-convergence-audit.md) | Final convergence audit | All convergence contracts | 6 | 📝 Planned |
+| [TASK-176](tasks/TASK-176-final-convergence-audit.md) | Final convergence audit | All convergence contracts | 6 | ✅ Complete |
 
-**Phase 31 Deliverable**: Final audit report and repository-level convergence closeout
+**Phase 31 Deliverable**: Final audit report and explicit convergence status for the completed Rust/spec implementation path
+
+Closeout note: the main Rust/spec convergence path is complete. The final audit leaves
+[TASK-212](tasks/TASK-212-design-control-link-retention-policy.md) as an explicit non-blocking
+design follow-up and records a small set of still-open spec-only documentation findings directly in
+the audit report instead of treating them as hidden convergence drift.
 
 Execution note: final convergence closeout now depends on the downstream runtime-boundary and
 tooling observable convergence work as well as the original convergence phases.

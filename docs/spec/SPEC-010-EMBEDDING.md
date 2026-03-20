@@ -93,6 +93,11 @@ pub trait CapabilityProvider: Send + Sync {
 }
 ```
 
+The `effect()` method is a coarse provider-level declaration. It classifies the
+embedding boundary for provider registration and diagnostics, but it does not
+introduce a new per-call effect lattice or widen runtime semantics beyond the
+canonical effect model defined elsewhere in the spec set.
+
 ### 4.2 Registration
 
 Providers are registered at engine build time:

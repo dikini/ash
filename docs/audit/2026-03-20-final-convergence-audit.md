@@ -18,6 +18,18 @@ Acceptance basis:
 
 Review date: 2026-03-20
 
+## Addendum: Phase 34 Follow-up
+
+Phase 34 (`TASK-213` through `TASK-215`) resolved the residual spec-only findings that this audit
+originally left open:
+
+- the module/import scope conflict between `SPEC-009` and `SPEC-012`
+- the stale typed-provider forward reference and incorrect policy example
+- the remaining low-severity example-type hygiene in the affected specs
+
+This audit remains the historical record of the closeout state at the end of `TASK-176`, but the
+residual spec-only documentation debt described here is now closed.
+
 ## Summary
 
 The Rust/spec convergence implementation program is closed, but the older 2026-03-19 spec-only
@@ -87,13 +99,7 @@ work cited in the closure matrix above.
 
 ### Explicitly Still Open
 
-- module/import scope conflict between `SPEC-009` and `SPEC-012`
-- stale forward reference in `SPEC-015` that still points future schema-first work at `SPEC-016`
-- incorrect policy-conflict example in `SPEC-007`
-
-These remain documentation debt from the original spec audit. They are explicit in this report and
-therefore no longer implicit convergence drift, but they do prevent claiming that the entire
-2026-03-19 spec consistency audit is fully resolved.
+None after Phase 34.
 
 ### Explicitly Non-Blocking / Out of Current Closeout Scope
 
@@ -146,10 +152,9 @@ Result: pass.
 
 ## Explicit Remaining Follow-up
 
-The audit leaves two explicit residual buckets:
+The audit leaves one explicit residual bucket:
 
 - [TASK-212](../plan/tasks/TASK-212-design-control-link-retention-policy.md)
-- the residual spec-only findings listed above under **Explicitly Still Open**
 
 `TASK-212` remains non-blocking because:
 
@@ -157,9 +162,8 @@ The audit leaves two explicit residual buckets:
 - the follow-up is explicit rather than implicit
 - it does not reopen the original parser/type/runtime/CLI/ADT drift classes
 
-The residual spec-only findings remain open because they were not closed by the implementation
-convergence chain. They should be treated as documentation follow-up, not as hidden implementation
-misalignment.
+The residual spec-only findings that were open at the end of `TASK-176` were later closed by
+Phase 34 and are preserved here only as historical audit context.
 
 ## Conclusion
 
@@ -180,10 +184,8 @@ What is now closed:
 
 - the implementation convergence program that began with the original drift reports
 
-What is not yet fully closed:
+What remains open in this neighborhood:
 
-- the entire 2026-03-19 spec-only consistency audit
+- [TASK-212](../plan/tasks/TASK-212-design-control-link-retention-policy.md)
 
-That remaining documentation debt is now explicit rather than hidden. The repository no longer has
-implicit high-risk implementation drift in the audited convergence clusters, but it still has a
-small set of identified spec-only follow-ups.
+The repository no longer has residual spec-only findings from the final convergence audit.

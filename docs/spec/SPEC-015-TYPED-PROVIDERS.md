@@ -20,8 +20,8 @@ impl BehaviourProvider for BadProvider {
 
 But workflow expects:
 ```ash
-observe sensor:temp as { value: Number, unit: String }
---                         ^^^^^^^^^^^^^^^^^^^^^^^^
+observe sensor:temp as { value: Int, unit: String }
+--                         ^^^^^^^^^^^^^^^^^^^^^
 --                         Expects Record with 2 fields
 ```
 
@@ -211,7 +211,7 @@ This spec implements **Option 1** (runtime validation).
 // Option 2 generates this from Ash schema:
 generated! {
     schema Temperature {
-        value: Number,
+        value: Int,
         unit: String,
     }
 }
@@ -324,4 +324,5 @@ $ ash generate --schema sensor.ash --output src/providers/
 # - src/providers/sensor_provider.rs (trait)
 ```
 
-This is **SPEC-016** (future work).
+The schema-first code-generation path remains future work and does not change the runtime
+validation contract defined in this spec.

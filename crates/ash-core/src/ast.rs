@@ -21,6 +21,12 @@ pub enum Workflow {
         pattern: Pattern,
         continuation: Box<Workflow>,
     },
+    /// RECEIVE from workflow mailboxes using ordered arm matching
+    Receive {
+        mode: ReceiveMode,
+        arms: Vec<ReceiveArm>,
+        control: bool,
+    },
     /// ORIENT expression then continue
     Orient {
         expr: Expr,
@@ -158,6 +164,33 @@ pub struct Capability {
 pub struct Action {
     pub name: Name,
     pub arguments: Vec<Expr>,
+}
+
+/// Receive mode for mailbox intake.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum ReceiveMode {
+    NonBlocking,
+    Blocking(Option<std::time::Duration>),
+}
+
+/// Canonical core receive arm.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReceiveArm {
+    pub pattern: ReceivePattern,
+    pub guard: Option<Expr>,
+    pub body: Workflow,
+}
+
+/// Canonical core receive-pattern forms.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ReceivePattern {
+    Stream {
+        capability: Name,
+        channel: Name,
+        pattern: Pattern,
+    },
+    Literal(Value),
+    Wildcard,
 }
 
 /// Pattern for destructuring
@@ -485,6 +518,16 @@ mod tests {
             continuation: Box::new(Workflow::Done),
         };
 
+        let _receive = Workflow::Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![ReceiveArm {
+                pattern: ReceivePattern::Wildcard,
+                guard: None,
+                body: Workflow::Done,
+            }],
+            control: false,
+        };
+
         // Test Orient
         let _orient = Workflow::Orient {
             expr: Expr::Literal(Value::Int(42)),
@@ -573,6 +616,73 @@ mod tests {
 
         // Test Done
         let _done = Workflow::Done;
+    }
+
+    #[test]
+    fn test_receive_workflow_construction() {
+        let receive = Workflow::Receive {
+            mode: ReceiveMode::Blocking(Some(std::time::Duration::from_secs(30))),
+            arms: vec![
+                ReceiveArm {
+                    pattern: ReceivePattern::Stream {
+                        capability: "sensor".to_string(),
+                        channel: "temp".to_string(),
+                        pattern: Pattern::Variable("reading".to_string()),
+                    },
+                    guard: Some(Expr::Variable("ready".to_string())),
+                    body: Workflow::Done,
+                },
+                ReceiveArm {
+                    pattern: ReceivePattern::Wildcard,
+                    guard: None,
+                    body: Workflow::Done,
+                },
+            ],
+            control: false,
+        };
+
+        match receive {
+            Workflow::Receive {
+                mode,
+                arms,
+                control,
+            } => {
+                assert_eq!(
+                    mode,
+                    ReceiveMode::Blocking(Some(std::time::Duration::from_secs(30)))
+                );
+                assert!(!control);
+                assert_eq!(arms.len(), 2);
+                assert!(matches!(
+                    arms[0].pattern,
+                    ReceivePattern::Stream {
+                        ref capability,
+                        ref channel,
+                        pattern: Pattern::Variable(ref name),
+                    } if capability == "sensor" && channel == "temp" && name == "reading"
+                ));
+            }
+            other => panic!("expected receive workflow, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_receive_workflow_serde_roundtrip() {
+        let workflow = Workflow::Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![ReceiveArm {
+                pattern: ReceivePattern::Literal(Value::String("shutdown".to_string())),
+                guard: None,
+                body: Workflow::Done,
+            }],
+            control: true,
+        };
+
+        let json = serde_json::to_string(&workflow).expect("receive workflow should serialize");
+        let roundtrip: Workflow =
+            serde_json::from_str(&json).expect("receive workflow should deserialize");
+
+        assert_eq!(workflow, roundtrip);
     }
 
     #[test]

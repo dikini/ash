@@ -10,10 +10,11 @@ use winnow::token::take_while;
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::expr;
 use crate::parse_pattern::pattern;
+use crate::parse_receive::parse_receive;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
-    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, PolicyInstance, Workflow, WorkflowDef,
+    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, Workflow, WorkflowDef,
 };
 use crate::token::Span;
 
@@ -48,8 +49,8 @@ pub fn workflow(input: &mut ParseInput) -> ModalResult<Workflow> {
         });
     }
 
-    if stmts.len() == 1 {
-        return Ok(stmts.into_iter().next().unwrap());
+    if let [stmt] = stmts.as_slice() {
+        return Ok(stmt.clone());
     }
 
     // Combine statements into sequential composition
@@ -78,25 +79,18 @@ fn parse_stmt_list(input: &mut ParseInput) -> ModalResult<Vec<Workflow>> {
             break;
         }
 
-        // Try to parse a statement
-        match parse_stmt(input) {
-            Ok(stmt) => {
-                stmts.push(stmt);
+        let stmt = parse_stmt(input)?;
+        stmts.push(stmt);
 
-                // Check for semicolon
-                skip_whitespace_and_comments(input);
-                if input.input.starts_with(";") {
-                    let _ = input.input.next_slice(1);
-                    input.state.advance(';');
-                } else if !input.input.is_empty() && !input.input.starts_with("}") {
-                    // Statement without semicolon - that's okay if followed by }
-                    continue;
-                }
-            }
-            Err(_) => break,
-        }
-
+        // Check for semicolon
         skip_whitespace_and_comments(input);
+        if input.input.starts_with(";") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(';');
+        } else if !input.input.is_empty() && !input.input.starts_with("}") {
+            // Statement without semicolon - that's okay if followed by }
+            continue;
+        }
     }
 
     Ok(stmts)
@@ -108,6 +102,7 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         observe_stmt,
         orient_stmt,
         propose_stmt,
+        receive_stmt,
         decide_stmt,
         check_stmt,
         act_stmt,
@@ -201,29 +196,28 @@ fn propose_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     })
 }
 
-/// Parse a decide statement: `decide <expr> [with <policy>] then <workflow> [else <workflow>]`
+/// Parse a receive statement using the dedicated receive parser.
+fn receive_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
+    parse_receive(input)
+}
+
+/// Parse a decide statement: `decide { <expr> } under <policy> then <workflow>`
 fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("decide").parse_next(input)?;
     skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
     let e = expr(input)?;
-
-    // Optional policy name
-    let policy = if keyword("with").parse_next(input).is_ok() {
-        Some(identifier(input)?.into())
-    } else {
-        None
-    };
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("}").parse_next(input)?;
+    let _ = keyword("under").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let policy = Some(identifier(input)?.into());
 
     let _ = keyword("then").parse_next(input)?;
     let then_branch = Box::new(parse_single_stmt_or_block(input)?);
-
-    let else_branch = if keyword("else").parse_next(input).is_ok() {
-        Some(Box::new(parse_single_stmt_or_block(input)?))
-    } else {
-        None
-    };
 
     let span = span_from(&start_pos, &input.state);
 
@@ -231,18 +225,18 @@ fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         expr: e,
         policy,
         then_branch,
-        else_branch,
+        else_branch: None,
         span,
     })
 }
 
-/// Parse a check statement: `check <obligation>` or `check <policy_instance>`
+/// Parse a check statement: `check <obligation>`
 fn check_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     let _ = keyword("check").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let target = check_target(input)?;
+    let target = obligation_ref(input).map(CheckTarget::Obligation)?;
 
     let span = span_from(&start_pos, &input.state);
 
@@ -251,72 +245,6 @@ fn check_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         continuation: None,
         span,
     })
-}
-
-/// Parse a check target - either an obligation reference or a policy instance.
-fn check_target(input: &mut ParseInput) -> ModalResult<CheckTarget> {
-    // Try to parse as policy instance first (identifier { ... })
-    if let Ok(target) = policy_instance(input) {
-        return Ok(CheckTarget::Policy(target));
-    }
-
-    // Otherwise parse as obligation reference (role.condition)
-    obligation_ref(input).map(CheckTarget::Obligation)
-}
-
-/// Parse a policy instance: `PolicyName { field: expr, ... }`
-fn policy_instance(input: &mut ParseInput) -> ModalResult<PolicyInstance> {
-    let start_pos = input.state;
-    let checkpoint = *input;
-
-    let name = identifier(input)?;
-
-    // Check for opening brace, restore checkpoint if not found
-    if literal_str("{").parse_next(input).is_err() {
-        *input = checkpoint;
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    let fields = parse_policy_field_inits(input)?;
-    let _ = literal_str("}").parse_next(input)?;
-
-    let span = span_from(&start_pos, &input.state);
-
-    Ok(PolicyInstance {
-        name: name.into(),
-        fields,
-        span,
-    })
-}
-
-/// Parse field initializations for a policy instance.
-fn parse_policy_field_inits(input: &mut ParseInput) -> ModalResult<Vec<(Name, Expr)>> {
-    let mut fields = Vec::new();
-
-    loop {
-        skip_whitespace_and_comments(input);
-
-        if input.input.is_empty() || input.input.starts_with("}") {
-            break;
-        }
-
-        let field_name = identifier(input)?;
-        let _ = literal_str(":").parse_next(input)?;
-        let value = expr(input)?;
-        fields.push((field_name.into(), value));
-
-        skip_whitespace_and_comments(input);
-
-        // Optional comma
-        if input.input.starts_with(",") {
-            let _ = input.input.next_slice(1);
-            input.state.advance(',');
-        }
-    }
-
-    Ok(fields)
 }
 
 /// Parse an act statement: `act <action> [where <guard>]`
@@ -558,7 +486,7 @@ fn send_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 }
 
 /// Parse a single statement or a block
-fn parse_single_stmt_or_block(input: &mut ParseInput) -> ModalResult<Workflow> {
+pub(crate) fn parse_single_stmt_or_block(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
 
     if input.input.starts_with("{") {
@@ -664,9 +592,13 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     .parse_next(input)?;
 
     // Check that first character is a letter or underscore (not a digit)
-    if result.is_empty()
-        || !result.chars().next().unwrap().is_ascii_alphabetic() && !result.starts_with('_')
-    {
+    let starts_with_identifier_head = result
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_alphabetic())
+        || result.starts_with('_');
+
+    if result.is_empty() || !starts_with_identifier_head {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
@@ -689,7 +621,11 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
-            if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
+            if after
+                .chars()
+                .next()
+                .is_none_or(|next| !next.is_ascii_alphanumeric())
+            {
                 // Update position state
                 for c in word.chars() {
                     input.state.advance(c);
@@ -992,43 +928,34 @@ mod tests {
     }
 
     #[test]
-    fn test_check_stmt_with_policy_instance() {
+    fn test_check_stmt_rejects_policy_instance() {
         let mut input = test_input("check RateLimit { requests: 100, window_secs: 60 }");
-        let result = check_stmt(&mut input).unwrap();
-        assert!(matches!(result, Workflow::Check { .. }));
+        let result = check_stmt(&mut input);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decide_stmt_requires_under_clause() {
+        let mut input = test_input("decide { ok } under gate then done");
+        let result = decide_stmt(&mut input).unwrap();
         match result {
-            Workflow::Check { target, .. } => {
-                assert!(matches!(target, CheckTarget::Policy(_)));
+            Workflow::Decide {
+                policy,
+                else_branch,
+                ..
+            } => {
+                assert!(matches!(policy, Some(ref name) if name.as_ref() == "gate"));
+                assert!(else_branch.is_none());
             }
-            _ => panic!("Expected Check workflow with policy target"),
+            _ => panic!("Expected Decide workflow"),
         }
     }
 
     #[test]
-    fn test_policy_instance_parsing() {
-        let mut input = test_input("RateLimit { requests: 100, window_secs: 60 }");
-        let result = policy_instance(&mut input).unwrap();
-        assert_eq!(result.name.as_ref(), "RateLimit");
-        assert_eq!(result.fields.len(), 2);
-        assert_eq!(result.fields[0].0.as_ref(), "requests");
-        assert_eq!(result.fields[1].0.as_ref(), "window_secs");
-    }
-
-    #[test]
-    fn test_policy_instance_single_field() {
-        let mut input = test_input("MaxLatency { milliseconds: 500 }");
-        let result = policy_instance(&mut input).unwrap();
-        assert_eq!(result.name.as_ref(), "MaxLatency");
-        assert_eq!(result.fields.len(), 1);
-        assert_eq!(result.fields[0].0.as_ref(), "milliseconds");
-    }
-
-    #[test]
-    fn test_policy_instance_with_string_value() {
-        let mut input = test_input("DataResidency { allowed_regions: [\"us-east-1\"] }");
-        let result = policy_instance(&mut input).unwrap();
-        assert_eq!(result.name.as_ref(), "DataResidency");
-        assert_eq!(result.fields.len(), 1);
+    fn test_decide_stmt_rejects_missing_policy() {
+        let mut input = test_input("decide { ok } then done");
+        let result = decide_stmt(&mut input);
+        assert!(result.is_err());
     }
 
     #[test]

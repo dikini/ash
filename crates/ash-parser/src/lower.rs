@@ -6,12 +6,13 @@
 use ash_core::{
     Action as CoreAction, Capability, Effect, Expr as CoreExpr, Guard as CoreGuard,
     MatchArm as CoreMatchArm, Obligation as CoreObligation, Pattern as CorePattern,
-    Predicate as CorePredicate, Provenance, Role as CoreRole, Workflow as CoreWorkflow,
+    Predicate as CorePredicate, Provenance, ReceiveArm as CoreReceiveArm,
+    ReceivePattern as CoreReceivePattern, Role as CoreRole, Workflow as CoreWorkflow,
 };
 
 use crate::surface::{
     ActionRef, BinaryOp, CheckTarget, EffectType, Expr, Guard, Literal, ObligationRef, Pattern,
-    PolicyExpr, Predicate, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
+    PolicyExpr, Predicate, StreamPattern, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
 };
 
 /// Lower a workflow definition to core IR.
@@ -93,23 +94,18 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             else_branch,
             ..
         } => {
-            let else_wf = else_branch
-                .as_ref()
-                .map(|e| lower_workflow_body(e, provenance))
-                .unwrap_or(CoreWorkflow::Done);
-            let then_wf = lower_workflow_body(then_branch, provenance);
+            assert!(
+                else_branch.is_none(),
+                "legacy decide else-branches are not part of the canonical lowering contract"
+            );
 
             CoreWorkflow::Decide {
                 expr: lower_expr(expr),
                 policy: policy
                     .as_ref()
-                    .map(|p| p.to_string())
-                    .unwrap_or_else(|| "default".to_string()),
-                continuation: Box::new(CoreWorkflow::If {
-                    condition: lower_expr(expr),
-                    then_branch: Box::new(then_wf),
-                    else_branch: Box::new(else_wf),
-                }),
+                    .expect("canonical decide lowering requires an explicit named policy")
+                    .to_string(),
+                continuation: Box::new(lower_workflow_body(then_branch, provenance)),
             }
         }
 
@@ -179,15 +175,19 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             }
         }
 
-        // NOTE: Receive lowering is not yet implemented in core IR.
-        // For now, we lower receive as a placeholder that returns Done.
-        // This preserves the effect tracking at the surface AST level.
-        #[allow(dead_code)]
-        SurfaceWorkflow::Receive { .. } => {
-            // TASK-108: Effect tracking is implemented at surface AST level.
-            // Full lowering requires core IR support for receive patterns.
-            CoreWorkflow::Done
-        }
+        SurfaceWorkflow::Receive {
+            mode,
+            arms,
+            is_control,
+            ..
+        } => CoreWorkflow::Receive {
+            mode: lower_receive_mode(mode),
+            arms: arms
+                .iter()
+                .map(|arm| lower_receive_arm(arm, provenance))
+                .collect(),
+            control: *is_control,
+        },
 
         SurfaceWorkflow::Let {
             pattern,
@@ -361,24 +361,44 @@ fn lower_policy_expr(expr: &PolicyExpr) -> CoreExpr {
     CoreExpr::Literal(ash_core::Value::String(format!("{:?}", expr)))
 }
 
+fn lower_receive_mode(mode: &crate::surface::ReceiveMode) -> ash_core::ReceiveMode {
+    match mode {
+        crate::surface::ReceiveMode::NonBlocking => ash_core::ReceiveMode::NonBlocking,
+        crate::surface::ReceiveMode::Blocking(timeout) => ash_core::ReceiveMode::Blocking(*timeout),
+    }
+}
+
+fn lower_receive_arm(arm: &crate::surface::ReceiveArm, provenance: &Provenance) -> CoreReceiveArm {
+    CoreReceiveArm {
+        pattern: lower_receive_pattern(&arm.pattern),
+        guard: arm.guard.as_ref().map(lower_expr),
+        body: lower_workflow_body(&arm.body, provenance),
+    }
+}
+
+fn lower_receive_pattern(pattern: &StreamPattern) -> CoreReceivePattern {
+    match pattern {
+        StreamPattern::Binding {
+            capability,
+            channel,
+            pattern,
+        } => CoreReceivePattern::Stream {
+            capability: capability.to_string(),
+            channel: channel.to_string(),
+            pattern: lower_pattern(pattern),
+        },
+        StreamPattern::Literal(value) => {
+            CoreReceivePattern::Literal(ash_core::Value::String(value.to_string()))
+        }
+        StreamPattern::Wildcard => CoreReceivePattern::Wildcard,
+    }
+}
+
 /// Lower a check target to core IR.
 fn lower_check_target(target: &CheckTarget) -> CoreObligation {
-    // For now, only support obligation targets
-    // Policy instances would need additional core IR support
     match target {
         CheckTarget::Obligation(obl) => lower_obligation(obl),
-        CheckTarget::Policy(_) => {
-            // Policy instances not yet supported in core - return a dummy obligation
-            CoreObligation::Obliged {
-                role: CoreRole {
-                    name: "_policy".to_string(),
-                    authority: vec![],
-                    obligations: vec![],
-                    supervises: vec![],
-                },
-                condition: CoreExpr::Literal(ash_core::Value::Bool(true)),
-            }
-        }
+        CheckTarget::Policy(_) => panic!("policy instances are not valid canonical check targets"),
     }
 }
 

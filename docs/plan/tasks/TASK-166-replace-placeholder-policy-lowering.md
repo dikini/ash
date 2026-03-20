@@ -1,6 +1,6 @@
 # TASK-166: Replace Placeholder Policy Lowering
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -75,11 +75,11 @@ git commit -m "fix: replace placeholder policy lowering"
 
 ## Completion Checklist
 
-- [ ] failing policy-lowering tests added
-- [ ] failure verified
-- [ ] canonical core policy lowering implemented
-- [ ] focused verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing policy-lowering tests added
+- [x] failure verified
+- [x] canonical core policy lowering implemented
+- [x] focused verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

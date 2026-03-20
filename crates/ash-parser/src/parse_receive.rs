@@ -13,60 +13,15 @@ use winnow::token::{one_of, take_while};
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::{expr, identifier};
 use crate::parse_pattern::pattern;
-use crate::parse_workflow::workflow;
-use crate::surface::ReceiveMode;
-use crate::surface::{Expr, Name, Pattern, Workflow};
+use crate::parse_workflow::parse_single_stmt_or_block;
+use crate::surface::{ReceiveArm, ReceiveMode, StreamPattern, Workflow};
 use crate::token::Span;
-
-/// Stream pattern for matching messages in receive arms
-#[derive(Debug, Clone, PartialEq)]
-pub enum StreamPatternExpr {
-    /// Wildcard pattern: _
-    Wildcard,
-    /// String literal pattern (for control messages)
-    Literal(String),
-    /// Binding pattern: capability:channel as pattern
-    Binding {
-        /// Capability name
-        capability: Name,
-        /// Channel name
-        channel: Name,
-        /// Pattern to bind the message
-        pattern: Pattern,
-    },
-}
-
-/// A receive arm: pattern + optional guard + body
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReceiveArmExpr {
-    /// Pattern to match against incoming messages
-    pub pattern: StreamPatternExpr,
-    /// Optional guard expression
-    pub guard: Option<Expr>,
-    /// Body workflow to execute when matched
-    pub body: Workflow,
-    /// Source span
-    pub span: Span,
-}
-
-/// Parsed receive expression
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReceiveExpr {
-    /// Receive mode (blocking or non-blocking)
-    pub mode: ReceiveMode,
-    /// Receive arms for matching messages
-    pub arms: Vec<ReceiveArmExpr>,
-    /// Whether this is a control receive
-    pub is_control: bool,
-    /// Source span
-    pub span: Span,
-}
 
 /// Parse a receive expression
 ///
 /// Grammar:
 ///   receive `[control]` `[wait [DURATION]]` { ARM [, ARM]* }
-pub fn parse_receive(input: &mut ParseInput) -> ModalResult<ReceiveExpr> {
+pub fn parse_receive(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
     // Parse "receive" keyword
@@ -98,7 +53,7 @@ pub fn parse_receive(input: &mut ParseInput) -> ModalResult<ReceiveExpr> {
 
     let span = span_from(&start_pos, &input.state);
 
-    Ok(ReceiveExpr {
+    Ok(Workflow::Receive {
         mode,
         arms,
         is_control,
@@ -107,7 +62,7 @@ pub fn parse_receive(input: &mut ParseInput) -> ModalResult<ReceiveExpr> {
 }
 
 /// Parse a comma-separated list of receive arms
-fn parse_receive_arms(input: &mut ParseInput) -> ModalResult<Vec<ReceiveArmExpr>> {
+fn parse_receive_arms(input: &mut ParseInput) -> ModalResult<Vec<ReceiveArm>> {
     let mut arms = Vec::new();
 
     loop {
@@ -141,7 +96,7 @@ fn parse_receive_arms(input: &mut ParseInput) -> ModalResult<Vec<ReceiveArmExpr>
 ///
 /// Grammar:
 ///   PATTERN [if EXPR] => WORKFLOW
-fn parse_receive_arm(input: &mut ParseInput) -> ModalResult<ReceiveArmExpr> {
+fn parse_receive_arm(input: &mut ParseInput) -> ModalResult<ReceiveArm> {
     let start_pos = input.state;
 
     // Parse stream pattern
@@ -163,11 +118,11 @@ fn parse_receive_arm(input: &mut ParseInput) -> ModalResult<ReceiveArmExpr> {
     skip_whitespace(input);
 
     // Body workflow
-    let body = workflow(input)?;
+    let body = parse_single_stmt_or_block(input)?;
 
     let span = span_from(&start_pos, &input.state);
 
-    Ok(ReceiveArmExpr {
+    Ok(ReceiveArm {
         pattern,
         guard,
         body,
@@ -179,7 +134,7 @@ fn parse_receive_arm(input: &mut ParseInput) -> ModalResult<ReceiveArmExpr> {
 ///
 /// Grammar:
 ///   _ | STRING | IDENTIFIER : IDENTIFIER as PATTERN
-fn parse_stream_pattern(input: &mut ParseInput) -> ModalResult<StreamPatternExpr> {
+fn parse_stream_pattern(input: &mut ParseInput) -> ModalResult<StreamPattern> {
     skip_whitespace(input);
 
     alt((
@@ -191,21 +146,21 @@ fn parse_stream_pattern(input: &mut ParseInput) -> ModalResult<StreamPatternExpr
 }
 
 /// Parse a wildcard pattern: _
-fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<StreamPatternExpr> {
+fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<StreamPattern> {
     literal_str("_").parse_next(input)?;
-    Ok(StreamPatternExpr::Wildcard)
+    Ok(StreamPattern::Wildcard)
 }
 
 /// Parse a string literal pattern for control messages
-fn parse_string_literal_pattern(input: &mut ParseInput) -> ModalResult<StreamPatternExpr> {
+fn parse_string_literal_pattern(input: &mut ParseInput) -> ModalResult<StreamPattern> {
     let _ = literal_str("\"").parse_next(input)?;
     let content: &str = take_while(0.., |c: char| c != '"').parse_next(input)?;
     let _ = literal_str("\"").parse_next(input)?;
-    Ok(StreamPatternExpr::Literal(content.to_string()))
+    Ok(StreamPattern::Literal(content.to_string()))
 }
 
 /// Parse a binding pattern: capability:channel as pattern
-fn parse_binding_pattern(input: &mut ParseInput) -> ModalResult<StreamPatternExpr> {
+fn parse_binding_pattern(input: &mut ParseInput) -> ModalResult<StreamPattern> {
     let capability = identifier(input)?.into();
     literal_str(":").parse_next(input)?;
     let channel = identifier(input)?.into();
@@ -216,7 +171,7 @@ fn parse_binding_pattern(input: &mut ParseInput) -> ModalResult<StreamPatternExp
 
     let pattern = pattern(input)?;
 
-    Ok(StreamPatternExpr::Binding {
+    Ok(StreamPattern::Binding {
         capability,
         channel,
         pattern,
@@ -253,7 +208,11 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
-            if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
+            if after
+                .chars()
+                .next()
+                .is_none_or(|next| !next.is_ascii_alphanumeric())
+            {
                 // Update position state
                 for c in word.chars() {
                     input.state.advance(c);
@@ -344,10 +303,19 @@ mod tests {
         let input = "receive { sensor:temp as t => done }";
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        let receive = result.unwrap();
-        assert!(matches!(receive.mode, ReceiveMode::NonBlocking));
-        assert_eq!(receive.arms.len(), 1);
-        assert!(!receive.is_control);
+        match result.expect("receive should parse") {
+            Workflow::Receive {
+                mode,
+                arms,
+                is_control,
+                ..
+            } => {
+                assert!(matches!(mode, ReceiveMode::NonBlocking));
+                assert_eq!(arms.len(), 1);
+                assert!(!is_control);
+            }
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -355,8 +323,12 @@ mod tests {
         let input = "receive wait { sensor:temp as t => done }";
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        let receive = result.unwrap();
-        assert!(matches!(receive.mode, ReceiveMode::Blocking(None)));
+        match result.expect("receive should parse") {
+            Workflow::Receive { mode, .. } => {
+                assert!(matches!(mode, ReceiveMode::Blocking(None)));
+            }
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -364,9 +336,13 @@ mod tests {
         let input = "receive wait 30s { _ => act heartbeat() }";
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        let receive = result.unwrap();
-        assert!(matches!(receive.mode, ReceiveMode::Blocking(Some(_))));
-        assert_eq!(receive.mode.timeout(), Some(Duration::from_secs(30)));
+        match result.expect("receive should parse") {
+            Workflow::Receive { mode, .. } => {
+                assert!(matches!(mode, ReceiveMode::Blocking(Some(_))));
+                assert_eq!(mode.timeout(), Some(Duration::from_secs(30)));
+            }
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -374,8 +350,12 @@ mod tests {
         let input = "receive wait 5m { _ => done }";
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        let receive = result.unwrap();
-        assert_eq!(receive.mode.timeout(), Some(Duration::from_secs(5 * 60)));
+        match result.expect("receive should parse") {
+            Workflow::Receive { mode, .. } => {
+                assert_eq!(mode.timeout(), Some(Duration::from_secs(5 * 60)));
+            }
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -383,8 +363,12 @@ mod tests {
         let input = "receive wait 1h { _ => done }";
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        let receive = result.unwrap();
-        assert_eq!(receive.mode.timeout(), Some(Duration::from_secs(60 * 60)));
+        match result.expect("receive should parse") {
+            Workflow::Receive { mode, .. } => {
+                assert_eq!(mode.timeout(), Some(Duration::from_secs(60 * 60)));
+            }
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -394,8 +378,10 @@ mod tests {
         }"#;
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        let receive = result.unwrap();
-        assert!(receive.arms[0].guard.is_some());
+        match result.expect("receive should parse") {
+            Workflow::Receive { arms, .. } => assert!(arms[0].guard.is_some()),
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -407,7 +393,10 @@ mod tests {
         }"#;
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        assert!(result.unwrap().is_control);
+        match result.expect("receive should parse") {
+            Workflow::Receive { is_control, .. } => assert!(is_control),
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -419,7 +408,10 @@ mod tests {
         }"#;
         let result = parse_receive(&mut new_input(input));
         assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-        assert_eq!(result.unwrap().arms.len(), 3);
+        match result.expect("receive should parse") {
+            Workflow::Receive { arms, .. } => assert_eq!(arms.len(), 3),
+            other => panic!("Expected receive workflow, got {other:?}"),
+        }
     }
 
     #[test]
@@ -444,14 +436,19 @@ mod tests {
     fn test_parse_stream_pattern_wildcard() {
         let mut input = new_input("_");
         let result = parse_stream_pattern(&mut input);
-        assert!(matches!(result.unwrap(), StreamPatternExpr::Wildcard));
+        assert!(matches!(
+            result.expect("pattern should parse"),
+            StreamPattern::Wildcard
+        ));
     }
 
     #[test]
     fn test_parse_stream_pattern_literal() {
         let mut input = new_input("\"shutdown\"");
         let result = parse_stream_pattern(&mut input);
-        assert!(matches!(result.unwrap(), StreamPatternExpr::Literal(s) if s == "shutdown"));
+        assert!(
+            matches!(result.expect("pattern should parse"), StreamPattern::Literal(s) if s == "shutdown")
+        );
     }
 
     #[test]
@@ -459,8 +456,8 @@ mod tests {
         let mut input = new_input("sensor:temp as t");
         let result = parse_stream_pattern(&mut input);
         assert!(matches!(
-            result.unwrap(),
-            StreamPatternExpr::Binding {
+            result.expect("pattern should parse"),
+            StreamPattern::Binding {
                 capability,
                 channel,
                 ..

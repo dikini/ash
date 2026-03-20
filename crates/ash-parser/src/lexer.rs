@@ -480,8 +480,6 @@ pub fn lex_with_recovery(input: &str) -> (Vec<Token>, Vec<LexError>) {
             }
             Err(err) => {
                 errors.push(err);
-                // Try to recover by advancing past the problematic character
-                lexer.advance();
             }
         }
     }

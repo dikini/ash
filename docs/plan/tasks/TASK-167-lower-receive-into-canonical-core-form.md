@@ -1,6 +1,6 @@
 # TASK-167: Lower Receive Into Canonical Core Form
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -74,11 +74,11 @@ git commit -m "fix: lower receive into canonical core form"
 
 ## Completion Checklist
 
-- [ ] failing receive-lowering tests added
-- [ ] failure verified
-- [ ] canonical core receive lowering implemented
-- [ ] focused verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing receive-lowering tests added
+- [x] failure verified
+- [x] canonical core receive lowering implemented
+- [x] focused verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

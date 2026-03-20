@@ -22,6 +22,9 @@ pub mod test_helpers;
 pub use ast::*;
 pub use effect::*;
 pub use provenance::*;
-pub use stream::*;
+pub use stream::{
+    Mailbox, MailboxEntry, MailboxOverflowError, OverflowStrategy, Receive as StreamReceive,
+    ReceiveArm as StreamReceiveArm, ReceiveMode as StreamReceiveMode, StreamRef,
+};
 pub use value::*;
 pub use visualize::*;

@@ -1,6 +1,6 @@
 # TASK-165: Align Check and Decide AST Contracts
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -76,11 +76,11 @@ git commit -m "fix: align check and decide ast contracts"
 
 ## Completion Checklist
 
-- [ ] failing AST contract tests added
-- [ ] failure verified
-- [ ] canonical AST shapes implemented
-- [ ] focused verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing AST contract tests added
+- [x] failure verified
+- [x] canonical AST shapes implemented
+- [x] focused verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

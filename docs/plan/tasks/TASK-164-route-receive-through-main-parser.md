@@ -1,6 +1,6 @@
 # TASK-164: Route Receive Through Main Parser
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -82,12 +82,12 @@ git commit -m "fix: route receive through main parser"
 
 ## Completion Checklist
 
-- [ ] failing parser tests added
-- [ ] failure verified
-- [ ] main parser dispatch fixed
-- [ ] focused parser tests passing
-- [ ] broader parser verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing parser tests added
+- [x] failure verified
+- [x] main parser dispatch fixed
+- [x] focused parser tests passing
+- [x] broader parser verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

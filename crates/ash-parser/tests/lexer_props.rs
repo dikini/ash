@@ -231,18 +231,18 @@ mod tests {
         ) {
             let input = format!("{}{}{}", prefix, invalid, suffix);
             let (tokens, errors) = lex_with_recovery(&input);
+            let prefix_tokens = lex(&prefix).unwrap();
+            let suffix_tokens = lex(&suffix).unwrap();
 
             prop_assert!(!errors.is_empty(), "Expected at least one error");
             prop_assert!(
-                tokens.len() >= 2,
-                "Expected at least 2 tokens, got {}",
+                tokens.len() >= 3,
+                "Expected at least 3 tokens, got {}",
                 tokens.len()
             );
 
-            prop_assert!(
-                matches!(tokens[0].kind.clone(), TokenKind::Ident(_)),
-                "First token should be an identifier"
-            );
+            prop_assert_eq!(tokens[0].kind.clone(), prefix_tokens[0].kind.clone());
+            prop_assert_eq!(tokens[1].kind.clone(), suffix_tokens[0].kind.clone());
         }
 
         /// Property: Unterminated strings should produce an error.

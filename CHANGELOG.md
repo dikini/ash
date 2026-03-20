@@ -71,6 +71,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Expanded [docs/plan/PLAN-INDEX.md](docs/plan/PLAN-INDEX.md) with logical post-Phase-20 convergence phases. The remaining convergence work is now split into docs-only handoff phases, implementation-alignment phases, and a final audit phase rather than living only inside the convergence plan document.
 
 ### Fixed
+- Parser/lowering convergence for TASK-164 through TASK-167. `receive` now routes through the main workflow parser, canonical `decide { ... } under <policy>` and obligation-only `check` forms are enforced, surface `receive` lowers into the canonical core `Workflow::Receive`, and lexer recovery no longer skips valid tokens after an unexpected character.
 - Restored `ash-cli` compatibility with boxed `Value::List` and `Value::Record` constructors, and moved binary command tests into an integration harness so `cargo test -p ash-cli` passes again on the workflow-contracts branch.
 
 ### Changed

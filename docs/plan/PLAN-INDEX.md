@@ -663,10 +663,10 @@ Align parser dispatch, AST shape, and lowering behavior with the frozen contract
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-164](tasks/TASK-164-route-receive-through-main-parser.md) | Route `receive` through main parser | SPEC-002/013 | 4 | 📝 Planned |
-| [TASK-165](tasks/TASK-165-align-check-decide-ast-contracts.md) | Align `check` and `decide` AST contracts | SPEC-001/002 | 6 | 📝 Planned |
-| [TASK-166](tasks/TASK-166-replace-placeholder-policy-lowering.md) | Replace placeholder policy lowering | SPEC-001/006/007 | 6 | 📝 Planned |
-| [TASK-167](tasks/TASK-167-lower-receive-into-canonical-core-form.md) | Lower `receive` into canonical core form | SPEC-001/013 | 6 | 📝 Planned |
+| [TASK-164](tasks/TASK-164-route-receive-through-main-parser.md) | Route `receive` through main parser | SPEC-002/013 | 4 | ✅ Complete |
+| [TASK-165](tasks/TASK-165-align-check-decide-ast-contracts.md) | Align `check` and `decide` AST contracts | SPEC-001/002 | 6 | ✅ Complete |
+| [TASK-166](tasks/TASK-166-replace-placeholder-policy-lowering.md) | Replace placeholder policy lowering | SPEC-001/006/007 | 6 | ✅ Complete |
+| [TASK-167](tasks/TASK-167-lower-receive-into-canonical-core-form.md) | Lower `receive` into canonical core form | SPEC-001/013 | 6 | ✅ Complete |
 
 **Phase 26 Deliverable**: Parser and lowering layers aligned with the hardened canonical workflow, policy, and `receive` contracts
 

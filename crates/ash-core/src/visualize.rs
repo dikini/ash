@@ -102,6 +102,36 @@ impl DotGenerator {
                 .unwrap();
                 id
             }
+            Workflow::Receive {
+                mode,
+                arms,
+                control,
+            } => {
+                let id = self.next_id();
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"RECEIVE\\n{}{}\", fillcolor=\"{}\"];",
+                    id,
+                    if *control { "control\\n" } else { "" },
+                    escape_dot(&format!("{mode:?}")),
+                    effect_color(&Effect::Epistemic)
+                )
+                .unwrap();
+
+                for arm in arms {
+                    let body_id = self.visit_workflow(&arm.body);
+                    writeln!(
+                        self.output,
+                        "  node_{} -> node_{} [label=\"{}\"];",
+                        id,
+                        body_id,
+                        escape_dot(&format!("{:?}", arm.pattern))
+                    )
+                    .unwrap();
+                }
+
+                id
+            }
             Workflow::Orient { expr, continuation } => {
                 let id = self.next_id();
                 let cont_id = self.visit_workflow(continuation);

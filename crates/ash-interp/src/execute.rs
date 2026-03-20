@@ -431,6 +431,12 @@ pub fn execute_workflow_with_behaviour<'a>(
                 "Send requires StreamContext - use execute_workflow_with_stream".to_string(),
             )),
 
+            // Receive is not yet executed through the canonical core form here.
+            Workflow::Receive { .. } => Err(ExecError::ExecutionFailed(
+                "Receive requires the stream execution path; canonical core receive execution is not wired here yet"
+                    .to_string(),
+            )),
+
             // Spawn a workflow instance
             Workflow::Spawn {
                 workflow_type: _,

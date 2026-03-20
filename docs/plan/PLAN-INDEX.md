@@ -615,6 +615,33 @@ through [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) remain uncha
 [TASK-172](tasks/TASK-172-unify-repl-implementation.md) and
 [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) only need in-place reference updates.
 
+## Runtime Boundary Implementation Phase (Week 49)
+
+Implement the runtime-first hardening work identified by the runtime-boundary steering brief before
+expanding user-facing tooling follow-up.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md) | Implement runtime action and control-link execution | SPEC-004/017/018 | 10 | 📝 Planned |
+| [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md) | Align runtime admission, rejection, and commitment visibility | SPEC-004/017/018/021 | 8 | 📝 Planned |
+| [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) | Harden runtime trace and provenance boundaries | SPEC-001/004/021 | 8 | 📝 Planned |
+
+**Phase Deliverable**: Completed runtime execution branches, explicit runtime boundary behavior, and hardened trace/provenance capture aligned with accepted runtime progression
+
+## Tooling Observable Convergence Extension (Week 50)
+
+Finish the minimum-risk user-facing convergence work identified by the tooling/surface steering
+brief by building on the existing REPL tasks and one new CLI output-alignment task.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-208](tasks/TASK-208-align-cli-run-and-trace-observable-output.md) | Align CLI run and trace observable output | SPEC-005/011/021 | 8 | 📝 Planned |
+
+**Extension Deliverable**: Shared REPL authority and canonical `:type` reporting via [TASK-172](tasks/TASK-172-unify-repl-implementation.md) / [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md), plus CLI `run` / `trace` output aligned with the observable contract via TASK-208
+
+The presentation-only stage-guidance overlay remains intentionally deferred until the observable
+contract is implemented cleanly.
+
 ## Phase 26: Parser and Lowering Convergence (Week 44)
 
 These implementation phases are blocked until the monitoring authority gate confirms that the specification is

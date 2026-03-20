@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Residual spec hygiene closeout for TASK-215. `SPEC-015` now uses canonical `Int` examples in the remaining typed-provider snippets, and the final convergence audit now records that the Phase 34 spec-only findings are closed while keeping `TASK-212` as the remaining non-blocking follow-up.
 - Residual policy and typed-provider spec drift cleanup for TASK-214. `SPEC-007` now uses a genuinely contradictory SMT example, `SPEC-015` no longer forwards schema-first code generation to the unrelated `SPEC-016` output spec, and `SPEC-010` / `SPEC-016` now explicitly keep provider effect granularity at the embedding boundary without widening runtime scope.
 - TASK-213 now reconciles the module/import spec scope. `SPEC-009` now defers `use` and `pub use` to `SPEC-012` instead of treating them as future module features, and the touched examples now use canonical type names.
 - Residual spec-audit follow-up plan and task set for the remaining docs-only findings after TASK-176. `docs/plan/2026-03-20-residual-spec-audit-follow-up-plan.md` now defines the bounded post-convergence docs phase, and `TASK-213` through `TASK-215` now cover the remaining module/import scope conflict, typed-provider/policy example drift, and low-severity spec hygiene cleanup.

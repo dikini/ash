@@ -788,12 +788,13 @@ Close the explicit spec-only documentation debt that remained after the final co
 |------|-------------|------|------------|--------|
 | [TASK-213](tasks/TASK-213-reconcile-module-and-import-spec-scope.md) | Reconcile module and import spec scope | SPEC-009/012 | 3 | ✅ Complete |
 | [TASK-214](tasks/TASK-214-fix-residual-policy-and-typed-provider-spec-drift.md) | Fix residual policy and typed-provider spec drift | SPEC-007/010/015/016 | 4 | ✅ Complete |
-| [TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) | Normalize residual spec hygiene | Affected specs | 3 | 📝 Planned |
+| [TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) | Normalize residual spec hygiene | Affected specs | 3 | ✅ Complete |
 
-**Phase 34 Deliverable**: Residual spec-only findings from the final convergence audit are either
-closed or explicitly reclassified.
+**Phase 34 Deliverable**: Residual spec-only findings from the final convergence audit are closed
+or explicitly reclassified without reopening the completed implementation convergence path.
 
-Execution note: [TASK-213](tasks/TASK-213-reconcile-module-and-import-spec-scope.md) remains
-independent, [TASK-214](tasks/TASK-214-fix-residual-policy-and-typed-provider-spec-drift.md) is
-complete, and [TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) should follow so the
-final hygiene pass reflects the corrected canonical text.
+Execution note: [TASK-213](tasks/TASK-213-reconcile-module-and-import-spec-scope.md),
+[TASK-214](tasks/TASK-214-fix-residual-policy-and-typed-provider-spec-drift.md), and
+[TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) are complete. The final audit’s
+residual spec-only findings are now closed, while [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md)
+remains the only planned non-blocking follow-up in this area.

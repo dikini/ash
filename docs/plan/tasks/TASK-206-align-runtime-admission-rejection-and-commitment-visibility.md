@@ -1,6 +1,6 @@
 # TASK-206: Align Runtime Admission, Rejection, and Commitment Visibility
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -30,15 +30,18 @@ commitment, and runtime-owned failure surfaces are explicit and consistent.
 3. Add focused tests covering visible runtime boundary outcomes and rejection classes
 4. Keep the work runtime-first and separate from CLI/REPL presentation concerns
 5. Replace the transitional process-global control-link registry from TASK-205 with explicit
-   runtime-owned lifecycle state, including a documented cleanup versus tombstone policy for
-   terminated instances
+   runtime-owned lifecycle state, and make the current retention policy explicit for terminated
+   instances
 
 ## Files
 
 - Modify: `crates/ash-engine/src/lib.rs`
+- Modify: `crates/ash-interp/src/lib.rs`
+- Add: `crates/ash-interp/src/runtime_state.rs`
 - Modify: `crates/ash-interp/src/execute_observe.rs`
 - Modify: `crates/ash-interp/src/execute_set.rs`
 - Modify: `crates/ash-interp/src/exec_send.rs`
+- Modify: `crates/ash-interp/src/execute.rs`
 - Modify: `crates/ash-interp/src/execute_stream.rs`
 - Test: `crates/ash-engine/tests/runtime_boundary_visibility.rs`
 - Test: `crates/ash-interp/tests/runtime_boundary_visibility.rs`
@@ -60,8 +63,8 @@ Add focused tests for:
 Run:
 
 ```bash
-cargo test -p ash-engine runtime_boundary_visibility -- --nocapture
-cargo test -p ash-interp runtime_boundary_visibility -- --nocapture
+cargo test -p ash-engine --test runtime_boundary_visibility -- --nocapture
+cargo test -p ash-interp --test runtime_boundary_visibility -- --nocapture
 ```
 
 Expected: fail for current mismatches or missing explicit boundary behavior.
@@ -90,17 +93,24 @@ Expected: pass.
 ### Step 6: Commit
 
 ```bash
-git add crates/ash-engine/src/lib.rs crates/ash-interp/src/execute_observe.rs crates/ash-interp/src/execute_set.rs crates/ash-interp/src/exec_send.rs crates/ash-interp/src/execute_stream.rs crates/ash-engine/tests/runtime_boundary_visibility.rs crates/ash-interp/tests/runtime_boundary_visibility.rs CHANGELOG.md
+git add crates/ash-engine/src/lib.rs crates/ash-engine/tests/runtime_boundary_visibility.rs crates/ash-interp/src/lib.rs crates/ash-interp/src/runtime_state.rs crates/ash-interp/src/execute.rs crates/ash-interp/src/execute_stream.rs crates/ash-interp/tests/runtime_boundary_visibility.rs CHANGELOG.md
 git commit -m "fix: align runtime boundary visibility"
 ```
 
 ## Completion Checklist
 
-- [ ] failing runtime-boundary visibility tests added
-- [ ] failure verified
-- [ ] admission/rejection/commitment boundaries aligned
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing runtime-boundary visibility tests added
+- [x] failure verified
+- [x] admission/rejection/commitment boundaries aligned
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
+
+## Resolution Note
+
+`TASK-206` adopts explicit tombstone retention for terminated control targets as the current
+runtime behavior. Killed instances remain observable as terminated across later executions that
+share the same `RuntimeState`. The long-term bounded-retention and cleanup design is deferred to
+[TASK-212](TASK-212-design-control-link-retention-policy.md).
 
 ## Non-goals
 
@@ -111,9 +121,10 @@ git commit -m "fix: align runtime boundary visibility"
 ## Task Note
 
 `TASK-205` intentionally uses a shared process-global `ControlLinkRegistry` as a transitional fix
-so transferred control links remain valid across top-level executions. `TASK-206` must replace that
-fallback with explicit runtime-owned state and define whether terminated instances remain observable
-as tombstones or are eagerly removed after terminal control.
+so transferred control links remain valid across top-level executions. `TASK-206` replaces that
+fallback with explicit runtime-owned state and freezes tombstone retention as the current runtime
+behavior. Long-term cleanup policy is tracked separately by
+[TASK-212](TASK-212-design-control-link-retention-policy.md).
 
 ## Dependencies
 

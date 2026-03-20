@@ -33,6 +33,7 @@ pub mod guard;
 pub mod mailbox;
 pub mod pattern;
 pub mod policy;
+pub mod runtime_state;
 pub mod stream;
 pub mod typed_provider;
 
@@ -55,7 +56,9 @@ pub use error::{
 pub use eval::eval_expr;
 pub use exec_send::execute_send;
 pub use execute::{
-    execute_simple, execute_workflow, execute_workflow_with_behaviour, execute_workflow_with_stream,
+    execute_simple, execute_simple_in_state, execute_workflow, execute_workflow_with_behaviour,
+    execute_workflow_with_behaviour_in_state, execute_workflow_with_stream,
+    execute_workflow_with_stream_in_state,
 };
 pub use execute_observe::{execute_changed, execute_observe};
 pub use execute_set::execute_set;
@@ -63,6 +66,7 @@ pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyResult, PolicyRule};
+pub use runtime_state::RuntimeState;
 pub use stream::{
     BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,
     MockSendableProvider, MockStreamProvider, SendableRegistry, SendableStreamProvider,
@@ -91,6 +95,14 @@ use ash_core::{Value, Workflow};
 /// ```
 pub async fn interpret(workflow: &Workflow) -> ExecResult<Value> {
     execute_simple(workflow).await
+}
+
+/// Execute a workflow using explicit runtime-owned state.
+pub async fn interpret_in_state(
+    workflow: &Workflow,
+    runtime_state: &RuntimeState,
+) -> ExecResult<Value> {
+    execute_simple_in_state(workflow, runtime_state).await
 }
 
 #[cfg(test)]

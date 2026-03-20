@@ -1,11 +1,14 @@
 use ash_core::{
     Action, ControlLink, Effect, Expr, Guard, Pattern, Provenance, Value, Workflow, WorkflowId,
 };
+use ash_interp::RuntimeState;
 use ash_interp::behaviour::BehaviourContext;
 use ash_interp::capability::{CapabilityContext, MockProvider};
 use ash_interp::context::Context;
 use ash_interp::error::ExecError;
-use ash_interp::execute::execute_workflow_with_behaviour;
+use ash_interp::execute::{
+    execute_workflow_with_behaviour, execute_workflow_with_behaviour_in_state,
+};
 use ash_interp::policy::PolicyEvaluator;
 
 fn execution_contexts() -> (
@@ -117,13 +120,15 @@ async fn spawned_control_link_supports_pause_health_and_resume() {
 #[tokio::test]
 async fn transferred_control_link_remains_valid_across_executions() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
+    let runtime_state = RuntimeState::new();
 
-    let control = execute_workflow_with_behaviour(
+    let control = execute_workflow_with_behaviour_in_state(
         &spawn_and_return_control(),
         ctx,
         &cap_ctx,
         &policy_eval,
         &behaviour_ctx,
+        &runtime_state,
     )
     .await
     .expect("spawn should return a control link");
@@ -148,12 +153,13 @@ async fn transferred_control_link_remains_valid_across_executions() {
         }),
     };
 
-    let result = execute_workflow_with_behaviour(
+    let result = execute_workflow_with_behaviour_in_state(
         &workflow,
         next_ctx,
         &cap_ctx,
         &policy_eval,
         &behaviour_ctx,
+        &runtime_state,
     )
     .await
     .expect("transferred control link should remain usable in a later execution");

@@ -19,11 +19,12 @@ use crate::guard::eval_guard;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
+use crate::runtime_state::RuntimeState;
 use crate::stream::StreamContext;
 
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 /// Boxed future type for recursive async execution
@@ -43,7 +44,16 @@ pub fn execute_workflow<'a>(
     Box::pin(async move {
         // Create an empty behaviour context for backward compatibility
         let behaviour_ctx = BehaviourContext::new();
-        execute_workflow_with_behaviour(workflow, ctx, cap_ctx, policy_eval, &behaviour_ctx).await
+        let runtime_state = RuntimeState::new();
+        execute_workflow_with_behaviour_in_state(
+            workflow,
+            ctx,
+            cap_ctx,
+            policy_eval,
+            &behaviour_ctx,
+            &runtime_state,
+        )
+        .await
     })
 }
 
@@ -84,8 +94,38 @@ pub fn execute_workflow_with_behaviour<'a>(
     policy_eval: &'a PolicyEvaluator,
     behaviour_ctx: &'a BehaviourContext,
 ) -> BoxFuture<'a, ExecResult<Value>> {
+    Box::pin(async move {
+        let runtime_state = RuntimeState::new();
+        execute_workflow_with_behaviour_in_state(
+            workflow,
+            ctx,
+            cap_ctx,
+            policy_eval,
+            behaviour_ctx,
+            &runtime_state,
+        )
+        .await
+    })
+}
+
+fn shared_mailbox() -> SharedMailbox {
+    Arc::new(Mutex::new(Mailbox::new()))
+}
+
+pub(crate) fn shared_control_registry(runtime_state: &RuntimeState) -> SharedControlRegistry {
+    runtime_state.control_registry()
+}
+
+pub fn execute_workflow_with_behaviour_in_state<'a>(
+    workflow: &'a Workflow,
+    ctx: Context,
+    cap_ctx: &'a CapabilityContext,
+    policy_eval: &'a PolicyEvaluator,
+    behaviour_ctx: &'a BehaviourContext,
+    runtime_state: &'a RuntimeState,
+) -> BoxFuture<'a, ExecResult<Value>> {
     let mailbox = shared_mailbox();
-    let control_registry = shared_control_registry();
+    let control_registry = shared_control_registry(runtime_state);
     execute_workflow_inner(
         workflow,
         ctx,
@@ -96,16 +136,6 @@ pub fn execute_workflow_with_behaviour<'a>(
         mailbox,
         control_registry,
     )
-}
-
-fn shared_mailbox() -> SharedMailbox {
-    Arc::new(Mutex::new(Mailbox::new()))
-}
-
-pub(crate) fn shared_control_registry() -> SharedControlRegistry {
-    static CONTROL_REGISTRY: LazyLock<SharedControlRegistry> =
-        LazyLock::new(|| Arc::new(Mutex::new(ControlLinkRegistry::new())));
-    CONTROL_REGISTRY.clone()
 }
 
 fn resolve_control_link(target: &str, ctx: &Context) -> ExecResult<ash_core::ControlLink> {
@@ -849,8 +879,38 @@ pub fn execute_workflow_with_stream<'a>(
     behaviour_ctx: &'a BehaviourContext,
     stream_ctx: &'a StreamContext,
 ) -> BoxFuture<'a, ExecResult<Value>> {
+    Box::pin(async move {
+        let runtime_state = RuntimeState::new();
+        execute_workflow_with_stream_in_state(
+            workflow,
+            ctx,
+            cap_ctx,
+            policy_eval,
+            behaviour_ctx,
+            stream_ctx,
+            &runtime_state,
+        )
+        .await
+    })
+}
+
+/// Execute a workflow with default contexts (convenience function)
+pub async fn execute_simple(workflow: &Workflow) -> ExecResult<Value> {
+    let runtime_state = RuntimeState::new();
+    execute_simple_in_state(workflow, &runtime_state).await
+}
+
+pub fn execute_workflow_with_stream_in_state<'a>(
+    workflow: &'a Workflow,
+    ctx: Context,
+    cap_ctx: &'a CapabilityContext,
+    policy_eval: &'a PolicyEvaluator,
+    behaviour_ctx: &'a BehaviourContext,
+    stream_ctx: &'a StreamContext,
+    runtime_state: &'a RuntimeState,
+) -> BoxFuture<'a, ExecResult<Value>> {
     let mailbox = shared_mailbox();
-    let control_registry = shared_control_registry();
+    let control_registry = shared_control_registry(runtime_state);
     execute_workflow_inner(
         workflow,
         ctx,
@@ -863,12 +923,24 @@ pub fn execute_workflow_with_stream<'a>(
     )
 }
 
-/// Execute a workflow with default contexts (convenience function)
-pub async fn execute_simple(workflow: &Workflow) -> ExecResult<Value> {
+/// Execute a workflow with default contexts using explicit runtime-owned state.
+pub async fn execute_simple_in_state(
+    workflow: &Workflow,
+    runtime_state: &RuntimeState,
+) -> ExecResult<Value> {
     let ctx = Context::new();
     let cap_ctx = CapabilityContext::new();
     let policy_eval = PolicyEvaluator::new();
-    execute_workflow(workflow, ctx, &cap_ctx, &policy_eval).await
+    let behaviour_ctx = BehaviourContext::new();
+    execute_workflow_with_behaviour_in_state(
+        workflow,
+        ctx,
+        &cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        runtime_state,
+    )
+    .await
 }
 
 #[cfg(test)]

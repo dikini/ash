@@ -569,6 +569,19 @@ planning any implementation convergence against the new interaction-facing mater
 
 **Phase Deliverable**: One interaction contract, one minimal runtime-framing update, one terminology pass, one surface-guidance boundary note, and one implementation-readiness handoff with runtime-only protections preserved
 
+## Runtime-Reasoner Implementation Planning Phase (Week 46)
+
+Review the existing convergence queue against the new runtime-reasoner docs corpus and produce a
+revised convergence map before opening any new code-facing tasks.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-196](tasks/TASK-196-audit-planned-convergence-tasks-against-runtime-reasoner-specs.md) | Audit planned convergence tasks against runtime-reasoner specs | Handoff / existing task corpus | 6 | 📝 Planned |
+| [TASK-197](tasks/TASK-197-define-runtime-reasoner-implementation-planning-surface.md) | Define runtime-reasoner implementation-planning surface | Interaction / handoff docs | 5 | 📝 Planned |
+| [TASK-198](tasks/TASK-198-synthesize-revised-runtime-reasoner-convergence-map.md) | Synthesize revised runtime-reasoner convergence map | Planning outputs | 5 | 📝 Planned |
+
+**Phase Deliverable**: One impact audit of the current convergence queue, one implementation-planning surface note, and one revised convergence map for later code-facing task creation
+
 ## Phase 26: Parser and Lowering Convergence (Week 44)
 
 These implementation phases are blocked until the monitoring authority gate confirms that the specification is

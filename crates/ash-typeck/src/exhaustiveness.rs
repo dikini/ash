@@ -3,8 +3,7 @@
 //! Provides exhaustiveness analysis to ensure all pattern match cases are covered.
 //! Uses a pattern matrix approach for analyzing coverage.
 
-use crate::check_pattern::TypeDef;
-use ash_core::ast::Pattern;
+use ash_core::ast::{Pattern, TypeBody, TypeDef};
 
 /// Coverage result for exhaustiveness checking
 #[derive(Debug, Clone, PartialEq)]
@@ -92,6 +91,11 @@ pub fn check_exhaustive(patterns: &[Pattern], type_def: &TypeDef) -> Coverage {
 
 /// Find uncovered patterns for a type
 fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Pattern>> {
+    let variants = match &type_def.body {
+        TypeBody::Enum(variants) => variants,
+        _ => return None,
+    };
+
     // Get all covered variant names from the matrix
     let covered: Vec<String> = matrix
         .rows
@@ -114,11 +118,21 @@ fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Patt
 
     // Find missing variants
     let mut missing = Vec::new();
-    for variant in &type_def.variants {
+    for variant in variants {
         if !covered.contains(&variant.name) {
             missing.push(Pattern::Variant {
                 name: variant.name.clone(),
-                fields: None,
+                fields: if variant.fields.is_empty() {
+                    None
+                } else {
+                    Some(
+                        variant
+                            .fields
+                            .iter()
+                            .map(|(field_name, _)| (field_name.clone(), Pattern::Wildcard))
+                            .collect(),
+                    )
+                },
             });
         }
     }
@@ -133,23 +147,24 @@ fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Patt
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::check_pattern::VariantDef;
-    use crate::types::Type;
+    use ash_core::ast::{TypeExpr, VariantDef, Visibility};
 
     /// Create a test Option type with Some and None variants
     fn make_option_type() -> TypeDef {
         TypeDef {
             name: "Option".to_string(),
-            variants: vec![
+            params: vec![],
+            body: TypeBody::Enum(vec![
                 VariantDef {
                     name: "Some".to_string(),
-                    fields: vec![("value".to_string(), Type::Var(crate::types::TypeVar(0)))],
+                    fields: vec![("value".to_string(), TypeExpr::Named("Int".to_string()))],
                 },
                 VariantDef {
                     name: "None".to_string(),
                     fields: vec![],
                 },
-            ],
+            ]),
+            visibility: Visibility::Public,
         }
     }
 

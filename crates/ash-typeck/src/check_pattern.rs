@@ -4,13 +4,14 @@
 //! variable binding extraction and type compatibility checking.
 
 use crate::solver::TypeError;
+use crate::type_env::type_expr_to_type;
 use crate::types::{Type, TypeVar};
+use ash_core::ast::TypeBody;
 use ash_parser::surface::{Literal, Pattern};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-/// Field name used to tag variant types in record representation
-const VARIANT_TAG: &str = "__variant";
+pub use ash_core::ast::{TypeDef, VariantDef};
 
 /// Bindings from pattern variables to their types
 pub type Bindings = HashMap<String, Type>;
@@ -31,24 +32,6 @@ pub struct TypeEnv {
     vars: HashMap<String, Type>,
     /// Type definitions (for variant checking)
     type_defs: HashMap<String, TypeDef>,
-}
-
-/// Type definition for sum types (enums with variants)
-#[derive(Debug, Clone)]
-pub struct TypeDef {
-    /// Name of the type
-    pub name: String,
-    /// Variants of the sum type
-    pub variants: Vec<VariantDef>,
-}
-
-/// Variant definition
-#[derive(Debug, Clone)]
-pub struct VariantDef {
-    /// Name of the variant
-    pub name: String,
-    /// Fields of the variant (name, type pairs)
-    pub fields: Vec<(String, Type)>,
 }
 
 impl TypeEnv {
@@ -78,6 +61,53 @@ impl TypeEnv {
     /// Look up a type definition
     pub fn lookup_type_def(&self, name: &str) -> Option<&TypeDef> {
         self.type_defs.get(name)
+    }
+
+    fn lookup_variant(
+        &self,
+        variant_name: &str,
+        field_patterns: Option<&[(Box<str>, Pattern)]>,
+    ) -> Result<Option<&VariantDef>, TypeError> {
+        let named_matches: Vec<&VariantDef> = self
+            .type_defs
+            .values()
+            .filter_map(|type_def| match &type_def.body {
+                TypeBody::Enum(variants) => Some(variants.iter()),
+                _ => None,
+            })
+            .flatten()
+            .filter(|variant| variant.name == variant_name)
+            .collect();
+
+        match named_matches.as_slice() {
+            [] => Ok(None),
+            [variant] => Ok(Some(*variant)),
+            _ => {
+                let requested_fields: Option<Vec<&str>> = field_patterns.map(|patterns| {
+                    patterns
+                        .iter()
+                        .map(|(field_name, _)| field_name.as_ref())
+                        .collect()
+                });
+                let mut disambiguated = named_matches.into_iter().filter(|variant| {
+                    requested_fields.as_ref().is_some_and(|requested_fields| {
+                        requested_fields.iter().all(|requested| {
+                            variant.fields.iter().any(|(name, _)| name == requested)
+                        })
+                    })
+                });
+
+                let first = disambiguated.next();
+                let second = disambiguated.next();
+
+                match (first, second) {
+                    (Some(variant), None) => Ok(Some(variant)),
+                    _ => Err(TypeError::InvalidPattern {
+                        message: format!("ambiguous variant: {variant_name}"),
+                    }),
+                }
+            }
+        }
     }
 }
 
@@ -120,7 +150,7 @@ pub fn check_pattern(
 
 /// Inner recursive pattern checking function
 fn check_pattern_inner(
-    _env: &TypeEnv,
+    env: &TypeEnv,
     pattern: &Pattern,
     expected: &Type,
     bindings: &mut Bindings,
@@ -150,7 +180,7 @@ fn check_pattern_inner(
 
         // Variant pattern: check variant exists and field patterns match
         Pattern::Variant { name, fields } => {
-            check_variant_pattern(name, fields.as_deref(), expected, bindings)
+            check_variant_pattern(env, name, fields.as_deref(), expected, bindings)
         }
 
         // Tuple pattern: check element count and types
@@ -198,55 +228,67 @@ fn types_compatible(expected: &Type, actual: &Type) -> bool {
 
 /// Check a variant pattern against a type
 fn check_variant_pattern(
+    env: &TypeEnv,
     variant_name: &str,
     field_patterns: Option<&[(Box<str>, Pattern)]>,
     expected: &Type,
     bindings: &mut Bindings,
 ) -> Result<(), TypeError> {
-    // For now, we handle variant patterns by checking against Record types
-    // In a full implementation, this would look up the type definition
-    // and verify the variant exists with correct field types
+    if !matches!(expected, Type::Var(_)) {
+        return Err(TypeError::PatternMismatch {
+            expected: expected.clone(),
+            actual: Type::Var(TypeVar::fresh()),
+        });
+    }
+
+    if let Some(variant_def) = env.lookup_variant(variant_name, field_patterns)? {
+        return check_variant_fields(
+            env,
+            variant_name,
+            field_patterns,
+            &variant_def.fields,
+            bindings,
+        );
+    }
+
     match expected {
-        Type::Record(fields) => {
-            // Check if this looks like a variant representation
-            // (first field is the variant name)
-            if let Some((name_field, _)) = fields.first()
-                && name_field.as_ref() == VARIANT_TAG
-            {
-                // This is a variant type representation
-                // Check field patterns against the record fields
-                if let Some(field_pats) = field_patterns {
-                    for (field_name, field_pattern) in field_pats {
-                        let field_type = fields
-                            .iter()
-                            .find(|(n, _)| n.as_ref() == field_name.as_ref())
-                            .map(|(_, t)| t)
-                            .ok_or(TypeError::InvalidPattern {
-                                message: format!("unknown field: {field_name}"),
-                            })?;
-                        check_pattern_inner(empty_env(), field_pattern, field_type, bindings)?;
-                    }
-                }
-                return Ok(());
+        Type::Var(_) => Err(TypeError::UnknownVariant(variant_name.to_string())),
+        _ => Err(TypeError::UnknownVariant(variant_name.to_string())),
+    }
+}
+
+fn check_variant_fields(
+    env: &TypeEnv,
+    variant_name: &str,
+    field_patterns: Option<&[(Box<str>, Pattern)]>,
+    variant_fields: &[(String, ash_core::ast::TypeExpr)],
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    match field_patterns {
+        None => {
+            if variant_fields.is_empty() {
+                Ok(())
+            } else {
+                Err(TypeError::InvalidPattern {
+                    message: format!("variant {variant_name} requires fields"),
+                })
             }
-            Err(TypeError::PatternMismatch {
-                expected: expected.clone(),
-                actual: Type::Record(vec![(Box::from(VARIANT_TAG), Type::String)]),
-            })
         }
-        Type::Var(_) => {
-            // Type variable - accept any variant pattern
-            // Bind any field patterns
-            if let Some(field_pats) = field_patterns {
-                for (field_name, field_pattern) in field_pats {
-                    let _ = field_name;
-                    let fresh_type = Type::Var(TypeVar::fresh());
-                    check_pattern_inner(empty_env(), field_pattern, &fresh_type, bindings)?;
-                }
+        Some(field_pats) => {
+            let param_mapping = HashMap::new();
+            for (field_name, field_pattern) in field_pats {
+                let field_type = variant_fields
+                    .iter()
+                    .find(|(name, _)| name == field_name.as_ref())
+                    .map(|(_, ty)| type_expr_to_type(ty, &param_mapping))
+                    .ok_or_else(|| TypeError::InvalidPattern {
+                        message: format!("unknown field: {field_name}"),
+                    })?;
+                check_pattern_inner(env, field_pattern, &field_type, bindings)?;
             }
+
             Ok(())
         }
-        _ => Err(TypeError::UnknownVariant(variant_name.to_string())),
     }
 }
 
@@ -382,6 +424,30 @@ fn check_list_pattern(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ash_core::ast::{TypeBody, TypeExpr, Visibility};
+
+    fn option_env() -> TypeEnv {
+        let mut env = TypeEnv::new();
+        env.add_type_def(
+            "Option".to_string(),
+            TypeDef {
+                name: "Option".to_string(),
+                params: vec![],
+                body: TypeBody::Enum(vec![
+                    VariantDef {
+                        name: "Some".to_string(),
+                        fields: vec![("value".to_string(), TypeExpr::Named("Int".to_string()))],
+                    },
+                    VariantDef {
+                        name: "None".to_string(),
+                        fields: vec![],
+                    },
+                ]),
+                visibility: Visibility::Public,
+            },
+        );
+        env
+    }
 
     // ============================================================
     // Wildcard Pattern Tests
@@ -479,51 +545,51 @@ mod tests {
 
     #[test]
     fn test_variant_pattern_with_fields() {
-        let env = TypeEnv::new();
-        // Some { value: x } pattern against Option<Int> representation
+        let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
         };
 
-        // Option<Int> represented as record with variant info
-        let option_type = Type::Record(vec![
-            (Box::from(VARIANT_TAG), Type::String),
-            (Box::from("value"), Type::Int),
-        ]);
-
-        let bindings = check_pattern(&env, &pattern, &option_type).unwrap();
+        let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
         assert_eq!(bindings.get("x"), Some(&Type::Int));
     }
 
     #[test]
+    fn test_variant_pattern_rejects_non_adt_expected_type() {
+        let env = option_env();
+        let pattern = Pattern::Variant {
+            name: "Some".into(),
+            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+        };
+
+        let result = check_pattern(&env, &pattern, &Type::Int);
+        assert!(matches!(result, Err(TypeError::PatternMismatch { .. })));
+    }
+
+    #[test]
     fn test_variant_pattern_none() {
-        let env = TypeEnv::new();
-        // None pattern
+        let env = option_env();
         let pattern = Pattern::Variant {
             name: "None".into(),
             fields: None,
         };
 
-        // Option<T> with None variant represented
-        let option_type = Type::Record(vec![(Box::from(VARIANT_TAG), Type::String)]);
-
-        let bindings = check_pattern(&env, &pattern, &option_type).unwrap();
+        let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
         assert!(bindings.is_empty());
     }
 
     #[test]
     fn test_variant_pattern_type_var() {
-        let env = TypeEnv::new();
+        let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
         };
 
-        // Against a type variable - should accept and bind field
         let type_var = Type::Var(TypeVar::fresh());
         let bindings = check_pattern(&env, &pattern, &type_var).unwrap();
-        assert!(bindings.contains_key("x"));
+        assert_eq!(bindings.get("x"), Some(&Type::Int));
     }
 
     // ============================================================
@@ -688,41 +754,55 @@ mod tests {
 
     #[test]
     fn test_some_value_against_option_int() {
-        // Test: `Some { value: x }` against Option<Int> binds x: Int
-        let env = TypeEnv::new();
+        let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
         };
 
-        let option_type = Type::Record(vec![
-            (Box::from("__variant"), Type::String),
-            (Box::from("value"), Type::Int),
-        ]);
-
-        let bindings = check_pattern(&env, &pattern, &option_type).unwrap();
+        let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
         assert_eq!(bindings.get("x"), Some(&Type::Int));
     }
 
     #[test]
     fn test_none_against_option_no_bindings() {
-        // Test: `None` against Option<T> (no bindings)
-        let env = TypeEnv::new();
+        let env = option_env();
         let pattern = Pattern::Variant {
             name: "None".into(),
             fields: None,
         };
 
-        let option_type = Type::Record(vec![(Box::from(VARIANT_TAG), Type::String)]);
-
-        let bindings = check_pattern(&env, &pattern, &option_type).unwrap();
+        let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
         assert!(bindings.is_empty());
     }
 
     #[test]
     fn test_nested_pattern() {
-        // Test: Some { value: (a, b) } - nested tuple in variant
-        let env = TypeEnv::new();
+        let mut env = TypeEnv::new();
+        env.add_type_def(
+            "OptionTuple".to_string(),
+            TypeDef {
+                name: "OptionTuple".to_string(),
+                params: vec![],
+                body: TypeBody::Enum(vec![
+                    VariantDef {
+                        name: "Some".to_string(),
+                        fields: vec![(
+                            "value".to_string(),
+                            TypeExpr::Record(vec![
+                                ("0".to_string(), TypeExpr::Named("Int".to_string())),
+                                ("1".to_string(), TypeExpr::Named("String".to_string())),
+                            ]),
+                        )],
+                    },
+                    VariantDef {
+                        name: "None".to_string(),
+                        fields: vec![],
+                    },
+                ]),
+                visibility: Visibility::Public,
+            },
+        );
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![(
@@ -734,19 +814,39 @@ mod tests {
             )]),
         };
 
-        let option_type = Type::Record(vec![
-            (Box::from(VARIANT_TAG), Type::String),
-            (
-                Box::from("value"),
-                Type::Record(vec![
-                    (Box::from("0"), Type::Int),
-                    (Box::from("1"), Type::String),
-                ]),
-            ),
-        ]);
-
-        let bindings = check_pattern(&env, &pattern, &option_type).unwrap();
+        let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
         assert_eq!(bindings.get("a"), Some(&Type::Int));
         assert_eq!(bindings.get("b"), Some(&Type::String));
+    }
+
+    #[test]
+    fn test_variant_pattern_uses_field_shape_to_disambiguate_constructors() {
+        let mut env = option_env();
+        env.add_type_def(
+            "Maybe".to_string(),
+            TypeDef {
+                name: "Maybe".to_string(),
+                params: vec![],
+                body: TypeBody::Enum(vec![
+                    VariantDef {
+                        name: "Some".to_string(),
+                        fields: vec![("other".to_string(), TypeExpr::Named("Bool".to_string()))],
+                    },
+                    VariantDef {
+                        name: "Never".to_string(),
+                        fields: vec![],
+                    },
+                ]),
+                visibility: Visibility::Public,
+            },
+        );
+
+        let pattern = Pattern::Variant {
+            name: "Some".into(),
+            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+        };
+
+        let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
+        assert_eq!(bindings.get("x"), Some(&Type::Int));
     }
 }

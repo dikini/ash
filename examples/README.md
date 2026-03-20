@@ -50,6 +50,18 @@ dot -Tpng workflow.dot -o workflow.png
 - **customer-support.ash**: Support ticket workflow
 - **code-review.ash**: Pull request review workflow
 
+## Canonical ADT Helper Surface
+
+The examples and the automatically imported prelude use the canonical Option/Result helper surface:
+
+### Option helper surface
+
+- `is_some`, `is_none`, `unwrap`, `unwrap_or`, `map`, `and`, `or`, `ok_or`
+
+### Result helper surface
+
+- `is_ok`, `is_err`, `unwrap_res`, `unwrap_err`, `unwrap_or_res`, `map_res`, `map_err`, `and_then`, `ok`, `err_opt`
+
 ## Learning Path
 
 1. Start with `01-basics/` to understand the core concepts

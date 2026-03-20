@@ -1,6 +1,6 @@
 # TASK-175: Align ADT Stdlib and Example Surface
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -46,8 +46,7 @@ Add tests proving the standard library and examples expose the canonical Option/
 Run:
 
 ```bash
-cargo test -p ash-parser stdlib_surface -- --nocapture
-cargo test --test '*'
+cargo test -p ash-parser --test stdlib_surface -- --nocapture
 ```
 
 Expected: at least one failure for missing helper surface.
@@ -61,7 +60,7 @@ Add only the canonical helper surface and example updates required by the spec.
 Run:
 
 ```bash
-cargo test -p ash-parser stdlib_surface -- --nocapture
+cargo test -p ash-parser --test stdlib_surface -- --nocapture
 ```
 
 Expected: pass.
@@ -85,12 +84,12 @@ git commit -m "feat: align adt stdlib surface"
 
 ## Completion Checklist
 
-- [ ] failing stdlib-surface tests added
-- [ ] failure verified
-- [ ] canonical stdlib helper surface aligned
-- [ ] examples aligned
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing stdlib-surface tests added
+- [x] failure verified
+- [x] canonical stdlib helper surface aligned
+- [x] examples aligned
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

@@ -733,8 +733,8 @@ Align ADT implementation layers and user-visible stdlib surface with the canonic
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-174](tasks/TASK-174-align-adt-type-value-and-pattern-contracts.md) | Align ADT type, value, and pattern contracts | SPEC-003/004/020 | 10 | 📝 Planned |
-| [TASK-175](tasks/TASK-175-align-adt-stdlib-and-example-surface.md) | Align ADT stdlib and example surface | SPEC-020 | 6 | 📝 Planned |
+| [TASK-174](tasks/TASK-174-align-adt-type-value-and-pattern-contracts.md) | Align ADT type, value, and pattern contracts | SPEC-003/004/020 | 10 | ✅ Complete |
+| [TASK-175](tasks/TASK-175-align-adt-stdlib-and-example-surface.md) | Align ADT stdlib and example surface | SPEC-020 | 6 | ✅ Complete |
 
 **Phase 30 Deliverable**: Canonical ADT contracts implemented from parser/runtime through stdlib surface
 

@@ -38,8 +38,9 @@ pub mod smt;
 // Re-export smt module under a unified name
 pub use smt as policy;
 
+pub use ash_core::ast::{TypeDef, VariantDef};
 pub use capability_check::*;
-pub use check_pattern::{Bindings, TypeDef, TypeEnv, VariantDef, check_pattern};
+pub use check_pattern::{Bindings, TypeEnv, check_pattern};
 pub use constraints::*;
 pub use effect::*;
 pub use instantiate::{InstantiateError, InstantiateSubst, instantiate};

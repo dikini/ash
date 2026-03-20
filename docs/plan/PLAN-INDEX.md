@@ -634,6 +634,9 @@ Execution note: this phase is downstream from Phase 28. Treat
 [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) as runtime hardening
 work that begins only after [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md)
 and [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) are complete.
+Execution note: [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) is a
+documentation gate for this phase and must complete before
+[TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md).
 
 ## Tooling Observable Convergence Extension (Week 50)
 
@@ -746,3 +749,15 @@ Clear repository-level warnings that still break the enforced local and CI quali
 | [TASK-210](tasks/TASK-210-clear-workspace-clippy-warnings.md) | Clear workspace clippy warnings | SPEC-021 | 1 | ✅ Complete |
 
 **Phase 32 Deliverable**: Clean workspace clippy gate for the currently merged codebase
+
+## Phase 33: Control Authority Contract Revision
+
+Freeze the reusable-control semantics for `ControlLink` before the next runtime hardening batch
+implements supervision behavior.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) | Revise control-link authority contract | SPEC-002/004/020/021 | 4 | 📝 Planned |
+
+**Phase 33 Deliverable**: Canonical docs updated so runtime supervision uses reusable control
+authority rather than affine one-shot control.

@@ -111,6 +111,7 @@ impl StreamRegistry {
 pub struct StreamContext {
     registry: StreamRegistry,
     sendable_registry: SendableRegistry,
+    control_messages: Mutex<VecDeque<Value>>,
 }
 
 impl StreamContext {
@@ -119,6 +120,7 @@ impl StreamContext {
         Self {
             registry: StreamRegistry::new(),
             sendable_registry: SendableRegistry::new(),
+            control_messages: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -127,6 +129,7 @@ impl StreamContext {
         Self {
             registry,
             sendable_registry: SendableRegistry::new(),
+            control_messages: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -268,6 +271,18 @@ impl StreamContext {
             }
         }
         None
+    }
+
+    /// Push a control message into the implicit control mailbox.
+    pub fn push_control(&self, value: Value) {
+        let mut control_messages = self.control_messages.lock().unwrap();
+        control_messages.push_back(value);
+    }
+
+    /// Try to receive a control message without blocking.
+    pub fn try_recv_control(&self) -> Option<Value> {
+        let mut control_messages = self.control_messages.lock().unwrap();
+        control_messages.pop_front()
     }
 }
 

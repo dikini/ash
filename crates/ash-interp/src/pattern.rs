@@ -356,7 +356,7 @@ mod tests {
     #[test]
     fn test_match_empty_list() {
         let pattern = Pattern::List(vec![], None);
-        let value = Value::List(Box::new(vec![]));
+        let value = Value::List(Box::default());
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn test_match_empty_record() {
         let pattern = Pattern::Record(vec![]);
-        let value = Value::Record(Box::new(HashMap::new()));
+        let value = Value::Record(Box::default());
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }

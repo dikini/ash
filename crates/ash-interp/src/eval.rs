@@ -161,7 +161,7 @@ fn eval_spawn(workflow_type: &str) -> EvalResult<Value> {
 
     let addr = InstanceAddr {
         workflow_type: workflow_type.to_string(),
-        instance_id: instance_id.clone(),
+        instance_id,
     };
 
     let control = Some(ControlLink { instance_id });
@@ -412,7 +412,7 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
             }
             match (&args[0], &args[1]) {
                 (Value::List(list), elem) => {
-                    let mut new_list: Vec<_> = list.iter().cloned().collect();
+                    let mut new_list = list.to_vec();
                     new_list.push(elem.clone());
                     Ok(Value::List(Box::new(new_list)))
                 }
@@ -432,7 +432,7 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
             }
             match (&args[0], &args[1]) {
                 (Value::List(l1), Value::List(l2)) => {
-                    let mut new_list: Vec<_> = l1.iter().cloned().collect();
+                    let mut new_list = l1.to_vec();
                     new_list.extend(l2.iter().cloned());
                     Ok(Value::List(Box::new(new_list)))
                 }
@@ -1274,11 +1274,11 @@ mod tests {
         let result2 = eval_expr(&expr2, &ctx).unwrap();
 
         let id1 = match &result1 {
-            Value::Instance(inst) => inst.addr.instance_id.clone(),
+            Value::Instance(inst) => inst.addr.instance_id,
             _ => panic!("Expected Instance"),
         };
         let id2 = match &result2 {
-            Value::Instance(inst) => inst.addr.instance_id.clone(),
+            Value::Instance(inst) => inst.addr.instance_id,
             _ => panic!("Expected Instance"),
         };
 

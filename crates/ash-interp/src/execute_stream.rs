@@ -7,18 +7,154 @@ use std::time::Duration;
 
 use tokio::time::{sleep, timeout};
 
+use ash_core::ast::{ReceiveArm as CoreReceiveArm, ReceiveMode as CoreReceiveMode, ReceivePattern};
 use ash_core::stream::{MailboxEntry, Receive, ReceiveArm, ReceiveMode};
 use ash_core::{Expr, Pattern, Value};
 
+use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
 use crate::context::Context;
 use crate::error::{EvalError, ExecError, ExecResult};
 use crate::eval::eval_expr;
-use crate::execute::execute_workflow;
+use crate::execute::execute_workflow_inner;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
 use crate::stream::StreamContext;
+
+const CONTROL_CAPABILITY: &str = "__control__";
+const CONTROL_CHANNEL: &str = "__mailbox__";
+
+pub struct CoreReceiveRuntime<'a> {
+    pub mailbox: SharedMailbox,
+    pub stream_ctx: &'a StreamContext,
+    pub cap_ctx: &'a CapabilityContext,
+    pub policy_eval: &'a PolicyEvaluator,
+    pub behaviour_ctx: &'a BehaviourContext,
+}
+
+/// Execute a canonical core receive using the shared stream-aware execution path.
+pub async fn execute_core_receive(
+    mode: &CoreReceiveMode,
+    arms: &[CoreReceiveArm],
+    control: bool,
+    ctx: Context,
+    runtime: CoreReceiveRuntime<'_>,
+) -> ExecResult<Value> {
+    if !control {
+        verify_stream_bindings_available(arms, runtime.stream_ctx)?;
+    }
+    let stream_sources = collect_core_stream_sources(arms);
+
+    loop {
+        {
+            let mut mb = runtime.mailbox.lock().await;
+            for arm in arms {
+                if let Some(entry) = find_matching_core_entry(&mb, &arm.pattern, control) {
+                    if let Some(ref guard_expr) = arm.guard {
+                        let guard_ctx = build_core_guard_context(&ctx, entry, &arm.pattern)?;
+                        if !eval_guard_expr(guard_expr, &guard_ctx)? {
+                            continue;
+                        }
+                    }
+
+                    let entry_value = entry.value.clone();
+                    let entry_source = entry.source().to_string();
+                    let entry_channel = entry.channel().to_string();
+
+                    mb.remove_matching(|e| {
+                        e.source() == entry_source
+                            && e.channel() == entry_channel
+                            && e.value == entry_value
+                    });
+
+                    let arm_ctx = build_core_arm_context(ctx, &entry_value, &arm.pattern)?;
+                    return execute_workflow_inner(
+                        &arm.body,
+                        arm_ctx,
+                        runtime.cap_ctx,
+                        runtime.policy_eval,
+                        runtime.behaviour_ctx,
+                        Some(runtime.stream_ctx),
+                        runtime.mailbox.clone(),
+                    )
+                    .await;
+                }
+            }
+        }
+
+        if pump_available_core_message(
+            runtime.mailbox.clone(),
+            runtime.stream_ctx,
+            control,
+            &stream_sources,
+        )
+        .await?
+        {
+            continue;
+        }
+
+        match mode {
+            CoreReceiveMode::NonBlocking => {
+                if let Some(wildcard_arm) = arms.iter().find(|arm| is_core_wildcard(&arm.pattern)) {
+                    return execute_workflow_inner(
+                        &wildcard_arm.body,
+                        ctx,
+                        runtime.cap_ctx,
+                        runtime.policy_eval,
+                        runtime.behaviour_ctx,
+                        Some(runtime.stream_ctx),
+                        runtime.mailbox.clone(),
+                    )
+                    .await;
+                }
+                return Ok(Value::Null);
+            }
+            CoreReceiveMode::Blocking(None) => {
+                wait_for_core_message(
+                    runtime.mailbox.clone(),
+                    runtime.stream_ctx,
+                    control,
+                    &stream_sources,
+                )
+                .await?;
+            }
+            CoreReceiveMode::Blocking(Some(duration)) => {
+                match timeout(
+                    *duration,
+                    wait_for_core_message(
+                        runtime.mailbox.clone(),
+                        runtime.stream_ctx,
+                        control,
+                        &stream_sources,
+                    ),
+                )
+                .await
+                {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => return Err(error),
+                    Err(_) => {
+                        if let Some(wildcard_arm) =
+                            arms.iter().find(|arm| is_core_wildcard(&arm.pattern))
+                        {
+                            return execute_workflow_inner(
+                                &wildcard_arm.body,
+                                ctx,
+                                runtime.cap_ctx,
+                                runtime.policy_eval,
+                                runtime.behaviour_ctx,
+                                Some(runtime.stream_ctx),
+                                runtime.mailbox.clone(),
+                            )
+                            .await;
+                        }
+                        return Ok(Value::Null);
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// Execute a receive construct with pattern matching and guard evaluation
 ///
@@ -51,6 +187,7 @@ pub async fn execute_receive(
             control_arms,
             ctx.clone(),
             mailbox.clone(),
+            stream_ctx,
             cap_ctx,
             policy_eval,
         )
@@ -91,7 +228,17 @@ pub async fn execute_receive(
 
                     // Build arm context with bindings
                     let arm_ctx = build_arm_context(ctx, &entry_value, &arm.pattern)?;
-                    return execute_workflow(&arm.body, arm_ctx, cap_ctx, policy_eval).await;
+                    let behaviour_ctx = BehaviourContext::new();
+                    return execute_workflow_inner(
+                        &arm.body,
+                        arm_ctx,
+                        cap_ctx,
+                        policy_eval,
+                        &behaviour_ctx,
+                        Some(stream_ctx),
+                        mailbox.clone(),
+                    )
+                    .await;
                 }
             }
 
@@ -100,7 +247,17 @@ pub async fn execute_receive(
             if receive.mode.is_non_blocking()
                 && let Some(wildcard_arm) = receive.arms.iter().find(|a| is_wildcard(&a.pattern))
             {
-                return execute_workflow(&wildcard_arm.body, ctx, cap_ctx, policy_eval).await;
+                let behaviour_ctx = BehaviourContext::new();
+                return execute_workflow_inner(
+                    &wildcard_arm.body,
+                    ctx,
+                    cap_ctx,
+                    policy_eval,
+                    &behaviour_ctx,
+                    Some(stream_ctx),
+                    mailbox.clone(),
+                )
+                .await;
             }
         }
 
@@ -127,8 +284,17 @@ pub async fn execute_receive(
                         if let Some(wildcard) =
                             receive.arms.iter().find(|a| is_wildcard(&a.pattern))
                         {
-                            return execute_workflow(&wildcard.body, ctx, cap_ctx, policy_eval)
-                                .await;
+                            let behaviour_ctx = BehaviourContext::new();
+                            return execute_workflow_inner(
+                                &wildcard.body,
+                                ctx,
+                                cap_ctx,
+                                policy_eval,
+                                &behaviour_ctx,
+                                Some(stream_ctx),
+                                mailbox.clone(),
+                            )
+                            .await;
                         }
                         return Ok(Value::Null);
                     }
@@ -153,6 +319,7 @@ async fn execute_receive_control(
     control_arms: &[ReceiveArm],
     ctx: Context,
     mailbox: SharedMailbox,
+    stream_ctx: &StreamContext,
     cap_ctx: &CapabilityContext,
     policy_eval: &PolicyEvaluator,
 ) -> ExecResult<Value> {
@@ -176,7 +343,17 @@ async fn execute_receive_control(
             drop(mb);
 
             let arm_ctx = build_arm_context(ctx, &entry_value, &arm_pattern)?;
-            return execute_workflow(&arm_body, arm_ctx, cap_ctx, policy_eval).await;
+            let behaviour_ctx = BehaviourContext::new();
+            return execute_workflow_inner(
+                &arm_body,
+                arm_ctx,
+                cap_ctx,
+                policy_eval,
+                &behaviour_ctx,
+                Some(stream_ctx),
+                mailbox.clone(),
+            )
+            .await;
         }
     }
 
@@ -326,6 +503,212 @@ fn eval_guard_expr(guard: &Expr, ctx: &Context) -> Result<bool, EvalError> {
             actual: format!("{:?}", value),
         }),
     }
+}
+
+fn verify_stream_bindings_available(
+    arms: &[CoreReceiveArm],
+    stream_ctx: &StreamContext,
+) -> ExecResult<()> {
+    for arm in arms {
+        if let ReceivePattern::Stream {
+            capability,
+            channel,
+            ..
+        } = &arm.pattern
+            && stream_ctx.get(capability, channel).is_none()
+        {
+            return Err(ExecError::CapabilityNotAvailable(format!(
+                "{capability}:{channel}"
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn find_matching_core_entry<'a>(
+    mailbox: &'a Mailbox,
+    pattern: &ReceivePattern,
+    control: bool,
+) -> Option<&'a MailboxEntry> {
+    mailbox.find_matching(|entry| matches_core_pattern_entry(entry, pattern, control))
+}
+
+fn matches_core_pattern_entry(
+    entry: &MailboxEntry,
+    pattern: &ReceivePattern,
+    control: bool,
+) -> bool {
+    if control {
+        if entry.source() != CONTROL_CAPABILITY || entry.channel() != CONTROL_CHANNEL {
+            return false;
+        }
+
+        return match pattern {
+            ReceivePattern::Literal(value) => &entry.value == value,
+            ReceivePattern::Wildcard => true,
+            ReceivePattern::Stream { .. } => false,
+        };
+    }
+
+    match pattern {
+        ReceivePattern::Stream {
+            capability,
+            channel,
+            pattern,
+        } => {
+            entry.source() == capability
+                && entry.channel() == channel
+                && match_pattern(pattern, &entry.value).is_ok()
+        }
+        ReceivePattern::Literal(value) => &entry.value == value,
+        ReceivePattern::Wildcard => true,
+    }
+}
+
+fn is_core_wildcard(pattern: &ReceivePattern) -> bool {
+    matches!(pattern, ReceivePattern::Wildcard)
+}
+
+fn build_core_guard_context(
+    base_ctx: &Context,
+    entry: &MailboxEntry,
+    pattern: &ReceivePattern,
+) -> ExecResult<Context> {
+    let mut ctx = base_ctx.clone();
+    if let Some(bindings) = try_bind_receive_pattern(pattern, &entry.value)? {
+        ctx.set_many(bindings);
+    }
+    Ok(ctx)
+}
+
+fn build_core_arm_context(
+    base_ctx: Context,
+    value: &Value,
+    pattern: &ReceivePattern,
+) -> ExecResult<Context> {
+    let mut ctx = base_ctx.extend();
+    if let Some(bindings) = try_bind_receive_pattern(pattern, value)? {
+        ctx.set_many(bindings);
+    }
+    Ok(ctx)
+}
+
+fn try_bind_receive_pattern(
+    pattern: &ReceivePattern,
+    value: &Value,
+) -> ExecResult<Option<std::collections::HashMap<String, Value>>> {
+    match pattern {
+        ReceivePattern::Stream { pattern, .. } => {
+            let bindings =
+                match_pattern(pattern, value).map_err(|_| ExecError::PatternMatchFailed {
+                    pattern: format!("{:?}", pattern),
+                    value: value.clone(),
+                })?;
+            Ok(Some(bindings))
+        }
+        ReceivePattern::Literal(_) | ReceivePattern::Wildcard => Ok(None),
+    }
+}
+
+async fn wait_for_core_message(
+    mailbox: SharedMailbox,
+    stream_ctx: &StreamContext,
+    control: bool,
+    stream_sources: &[(String, String)],
+) -> ExecResult<()> {
+    loop {
+        if pump_available_core_message(mailbox.clone(), stream_ctx, control, stream_sources).await?
+        {
+            return Ok(());
+        }
+
+        sleep(Duration::from_millis(1)).await;
+
+        let mb = mailbox.lock().await;
+        if mailbox_has_relevant_core_entry(&mb, control, stream_sources) {
+            return Ok(());
+        }
+    }
+}
+
+async fn pump_available_core_message(
+    mailbox: SharedMailbox,
+    stream_ctx: &StreamContext,
+    control: bool,
+    stream_sources: &[(String, String)],
+) -> ExecResult<bool> {
+    if control {
+        if let Some(value) = stream_ctx.try_recv_control() {
+            let mut mb = mailbox.lock().await;
+            mb.push(MailboxEntry::new(
+                CONTROL_CAPABILITY,
+                CONTROL_CHANNEL,
+                value,
+            ))?;
+            return Ok(true);
+        }
+        return Ok(false);
+    }
+
+    for (capability, channel) in stream_sources {
+        if let Some(result) = stream_ctx.try_recv(capability, channel) {
+            let mut mb = mailbox.lock().await;
+            match result {
+                Ok(value) => {
+                    mb.push(MailboxEntry::new(
+                        capability.clone(),
+                        channel.clone(),
+                        value,
+                    ))?;
+                }
+                Err(error) => {
+                    eprintln!("Stream error from receive source {capability}:{channel}: {error}");
+                }
+            }
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn collect_core_stream_sources(arms: &[CoreReceiveArm]) -> Vec<(String, String)> {
+    let mut sources = Vec::new();
+
+    for arm in arms {
+        if let ReceivePattern::Stream {
+            capability,
+            channel,
+            ..
+        } = &arm.pattern
+            && !sources
+                .iter()
+                .any(|(existing_capability, existing_channel)| {
+                    existing_capability == capability && existing_channel == channel
+                })
+        {
+            sources.push((capability.clone(), channel.clone()));
+        }
+    }
+
+    sources
+}
+
+fn mailbox_has_relevant_core_entry(
+    mailbox: &Mailbox,
+    control: bool,
+    stream_sources: &[(String, String)],
+) -> bool {
+    mailbox.iter().any(|entry| {
+        if control {
+            return entry.source() == CONTROL_CAPABILITY && entry.channel() == CONTROL_CHANNEL;
+        }
+
+        stream_sources.iter().any(|(capability, channel)| {
+            entry.source() == capability.as_str() && entry.channel() == channel.as_str()
+        })
+    })
 }
 
 /// Build a context for guard evaluation with pattern bindings

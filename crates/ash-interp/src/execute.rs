@@ -9,6 +9,7 @@ use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
 use crate::capability_policy::{CapabilityPolicyEvaluator, Role};
 use crate::context::Context;
+use crate::control_link::ControlLinkRegistry;
 use crate::error::{EvalError, ExecError};
 use crate::eval::eval_expr;
 use crate::exec_send::execute_send;
@@ -22,11 +23,12 @@ use crate::stream::StreamContext;
 
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tokio::sync::Mutex;
 
 /// Boxed future type for recursive async execution
 type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+type SharedControlRegistry = Arc<Mutex<ControlLinkRegistry>>;
 
 /// Execute a workflow, returning the final value (legacy signature without BehaviourContext)
 ///
@@ -83,6 +85,7 @@ pub fn execute_workflow_with_behaviour<'a>(
     behaviour_ctx: &'a BehaviourContext,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     let mailbox = shared_mailbox();
+    let control_registry = shared_control_registry();
     execute_workflow_inner(
         workflow,
         ctx,
@@ -91,6 +94,7 @@ pub fn execute_workflow_with_behaviour<'a>(
         behaviour_ctx,
         None,
         mailbox,
+        control_registry,
     )
 }
 
@@ -98,6 +102,25 @@ fn shared_mailbox() -> SharedMailbox {
     Arc::new(Mutex::new(Mailbox::new()))
 }
 
+pub(crate) fn shared_control_registry() -> SharedControlRegistry {
+    static CONTROL_REGISTRY: LazyLock<SharedControlRegistry> =
+        LazyLock::new(|| Arc::new(Mutex::new(ControlLinkRegistry::new())));
+    CONTROL_REGISTRY.clone()
+}
+
+fn resolve_control_link(target: &str, ctx: &Context) -> ExecResult<ash_core::ControlLink> {
+    match ctx.get(target) {
+        Some(Value::ControlLink(link)) => Ok(link.clone()),
+        Some(value) => Err(ExecError::ExecutionFailed(format!(
+            "control target '{target}' is not a ControlLink: {value}"
+        ))),
+        None => Err(ExecError::ExecutionFailed(format!(
+            "control target '{target}' is undefined"
+        ))),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn execute_workflow_inner<'a>(
     workflow: &'a Workflow,
     ctx: Context,
@@ -106,6 +129,7 @@ pub(crate) fn execute_workflow_inner<'a>(
     behaviour_ctx: &'a BehaviourContext,
     stream_ctx: Option<&'a StreamContext>,
     mailbox: SharedMailbox,
+    control_registry: SharedControlRegistry,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
         match workflow {
@@ -139,6 +163,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -160,6 +185,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             behaviour_ctx,
                             stream_ctx,
                             mailbox,
+                            control_registry,
                         )
                         .await
                     }
@@ -172,6 +198,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             behaviour_ctx,
                             stream_ctx,
                             mailbox,
+                            control_registry,
                         )
                         .await
                     }
@@ -192,6 +219,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox.clone(),
+                    control_registry.clone(),
                 )
                 .await?;
                 execute_workflow_inner(
@@ -202,6 +230,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -224,6 +253,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             behaviour_ctx,
                             stream_ctx,
                             mailbox.clone(),
+                            control_registry.clone(),
                         )
                     })
                     .collect();
@@ -260,6 +290,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -275,6 +306,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -296,13 +328,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     });
                 }
 
-                // Execute action using a mock capability for now
-                // In a real implementation, actions would be associated with specific capabilities
-                Err(ExecError::ActionFailed {
-                    action: action.name.clone(),
-                    reason: "Action execution not implemented - use capability-based actions"
-                        .to_string(),
-                })
+                cap_ctx.execute(action, &action.name).await
             }
 
             // Propose action (advisory - just continue)
@@ -319,6 +345,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -347,6 +374,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             behaviour_ctx,
                             stream_ctx,
                             mailbox,
+                            control_registry,
                         )
                         .await
                     }
@@ -393,6 +421,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                                 behaviour_ctx,
                                 stream_ctx,
                                 mailbox.clone(),
+                                control_registry.clone(),
                             )
                             .await?;
                         }
@@ -421,6 +450,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -435,6 +465,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox.clone(),
+                    control_registry.clone(),
                 )
                 .await
                 {
@@ -448,6 +479,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             behaviour_ctx,
                             stream_ctx,
                             mailbox,
+                            control_registry,
                         )
                         .await
                     }
@@ -464,6 +496,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -482,6 +515,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -499,6 +533,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -568,6 +603,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     ctx,
                     CoreReceiveRuntime {
                         mailbox,
+                        control_registry,
                         stream_ctx,
                         cap_ctx,
                         policy_eval,
@@ -594,6 +630,12 @@ pub(crate) fn execute_workflow_inner<'a>(
                 )
                 .map_err(ExecError::Eval)?;
 
+                if let Value::Instance(instance) = &instance_value
+                    && let Some(control) = instance.control.as_ref()
+                {
+                    control_registry.lock().await.register(control.instance_id);
+                }
+
                 // Match pattern and bind
                 let bindings = match_pattern(pattern, &instance_value).map_err(|_| {
                     ExecError::PatternMatchFailed {
@@ -613,6 +655,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -638,23 +681,30 @@ pub(crate) fn execute_workflow_inner<'a>(
                 let mut new_ctx = ctx.extend();
                 new_ctx.set_many(bindings);
 
-                execute_workflow_with_behaviour(
+                execute_workflow_inner(
                     continuation,
                     new_ctx,
                     cap_ctx,
                     policy_eval,
                     behaviour_ctx,
+                    stream_ctx,
+                    mailbox,
+                    control_registry,
                 )
                 .await
             }
 
             // Kill a workflow instance using control link
             Workflow::Kill {
-                target: _,
+                target,
                 continuation,
             } => {
-                // TODO: Implement actual kill with control link consumption check
-                // For now, just continue with the continuation
+                let link = resolve_control_link(target, &ctx)?;
+                control_registry.lock().await.kill(&link).map_err(|error| {
+                    ExecError::ExecutionFailed(format!(
+                        "kill on control target '{target}' failed: {error}"
+                    ))
+                })?;
                 execute_workflow_inner(
                     continuation,
                     ctx,
@@ -663,17 +713,26 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
 
             // Pause a workflow instance using control link
             Workflow::Pause {
-                target: _,
+                target,
                 continuation,
             } => {
-                // TODO: Implement actual pause with control link consumption check
-                // For now, just continue with the continuation
+                let link = resolve_control_link(target, &ctx)?;
+                control_registry
+                    .lock()
+                    .await
+                    .pause(&link)
+                    .map_err(|error| {
+                        ExecError::ExecutionFailed(format!(
+                            "pause on control target '{target}' failed: {error}"
+                        ))
+                    })?;
                 execute_workflow_inner(
                     continuation,
                     ctx,
@@ -682,17 +741,26 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
 
             // Resume a workflow instance using control link
             Workflow::Resume {
-                target: _,
+                target,
                 continuation,
             } => {
-                // TODO: Implement actual resume with control link consumption check
-                // For now, just continue with the continuation
+                let link = resolve_control_link(target, &ctx)?;
+                control_registry
+                    .lock()
+                    .await
+                    .resume(&link)
+                    .map_err(|error| {
+                        ExecError::ExecutionFailed(format!(
+                            "resume on control target '{target}' failed: {error}"
+                        ))
+                    })?;
                 execute_workflow_inner(
                     continuation,
                     ctx,
@@ -701,17 +769,26 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
 
             // Check health of a workflow instance using control link
             Workflow::CheckHealth {
-                target: _,
+                target,
                 continuation,
             } => {
-                // TODO: Implement actual health check with control link consumption check
-                // For now, just continue with the continuation
+                let link = resolve_control_link(target, &ctx)?;
+                control_registry
+                    .lock()
+                    .await
+                    .check_health(&link)
+                    .map_err(|error| {
+                        ExecError::ExecutionFailed(format!(
+                            "check_health on control target '{target}' failed: {error}"
+                        ))
+                    })?;
                 execute_workflow_inner(
                     continuation,
                     ctx,
@@ -720,6 +797,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     behaviour_ctx,
                     stream_ctx,
                     mailbox,
+                    control_registry,
                 )
                 .await
             }
@@ -772,6 +850,7 @@ pub fn execute_workflow_with_stream<'a>(
     stream_ctx: &'a StreamContext,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     let mailbox = shared_mailbox();
+    let control_registry = shared_control_registry();
     execute_workflow_inner(
         workflow,
         ctx,
@@ -780,6 +859,7 @@ pub fn execute_workflow_with_stream<'a>(
         behaviour_ctx,
         Some(stream_ctx),
         mailbox,
+        control_registry,
     )
 }
 

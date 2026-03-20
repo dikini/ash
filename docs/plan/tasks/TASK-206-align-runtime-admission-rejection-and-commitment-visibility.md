@@ -29,6 +29,9 @@ commitment, and runtime-owned failure surfaces are explicit and consistent.
 2. Align observe/set/send/receive boundary behavior with the canonical runtime outcome model
 3. Add focused tests covering visible runtime boundary outcomes and rejection classes
 4. Keep the work runtime-first and separate from CLI/REPL presentation concerns
+5. Replace the transitional process-global control-link registry from TASK-205 with explicit
+   runtime-owned lifecycle state, including a documented cleanup versus tombstone policy for
+   terminated instances
 
 ## Files
 
@@ -48,7 +51,9 @@ commitment, and runtime-owned failure surfaces are explicit and consistent.
 Add focused tests for:
 - explicit runtime rejection at boundary failures,
 - consistent observable outcomes across observe/set/send/receive,
-- preserved runtime-owned commitment behavior at engine/interpreter entry points.
+- preserved runtime-owned commitment behavior at engine/interpreter entry points,
+- cross-execution control-link behavior backed by runtime-owned state rather than per-call or
+  process-global fallback storage.
 
 ### Step 2: Verify RED
 
@@ -102,6 +107,13 @@ git commit -m "fix: align runtime boundary visibility"
 - No CLI or REPL output redesign
 - No provenance presentation wording
 - No new interaction-layer transport or projection behavior
+
+## Task Note
+
+`TASK-205` intentionally uses a shared process-global `ControlLinkRegistry` as a transitional fix
+so transferred control links remain valid across top-level executions. `TASK-206` must replace that
+fallback with explicit runtime-owned state and define whether terminated instances remain observable
+as tombstones or are eagerly removed after terminal control.
 
 ## Dependencies
 

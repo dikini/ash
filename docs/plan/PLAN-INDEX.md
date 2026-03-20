@@ -622,7 +622,7 @@ expanding user-facing tooling follow-up.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md) | Implement runtime action and control-link execution | SPEC-004/017/018 | 10 | 📝 Planned |
+| [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md) | Implement runtime action and control-link execution | SPEC-004/017/018 | 10 | ✅ Complete |
 | [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md) | Align runtime admission, rejection, and commitment visibility | SPEC-004/017/018/021 | 8 | 📝 Planned |
 | [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) | Harden runtime trace and provenance boundaries | SPEC-001/004/021 | 8 | 📝 Planned |
 
@@ -637,6 +637,11 @@ and [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) are complete.
 Execution note: [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) is a
 documentation gate for this phase and must complete before
 [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md).
+Execution note: [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md)
+uses a transitional shared control-link registry so transferred links remain valid across
+executions; [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md)
+must replace that fallback with explicit runtime-owned lifecycle state and a cleanup/tombstone
+policy for terminated instances.
 
 ## Tooling Observable Convergence Extension (Week 50)
 

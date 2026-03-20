@@ -32,7 +32,7 @@ A module declaration with a body defines the module inline:
 
 ```
 mod foo {
-    capability read: observe() returns string;
+    capability read: observe() returns String;
     
     workflow helper {
         action read_file {
@@ -73,10 +73,10 @@ visibility ::= "pub"
 
 ```
 -- Private capability (default)
-capability internal_log: observe(msg: string);
+capability internal_log: observe(msg: String);
 
 -- Public capability
-pub capability http_get: observe(url: string) returns json;
+pub capability http_get: observe(url: String) returns String;
 
 -- Crate-public policy
 pub(crate) policy budget_limit:
@@ -136,7 +136,7 @@ workflow main {
 1. Current module (`self`)
 2. Parent modules (for `super`)
 3. Root module (for `crate`)
-4. Imported names (future: `use` statements)
+4. Imported names (see SPEC-012)
 
 ## 6. Module Graph
 
@@ -215,7 +215,8 @@ Common errors:
 ### 9.3 Future Extensions
 
 Not in current scope:
-- `use` statements for importing
-- `pub use` for re-exports
 - External crate dependencies
 - Binary module compilation
+
+Import statements (`use`) and re-exports (`pub use`) are specified in [SPEC-012](SPEC-012-IMPORTS.md)
+and are not modeled here.

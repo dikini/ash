@@ -259,6 +259,7 @@ Update this section as tasks complete:
 | 29 | 2 | 0 | 📝 Planned |
 | 30 | 2 | 0 | 📝 Planned |
 | 31 | 1 | 1 | ✅ Complete |
+| 34 | 3 | 1 | 🟡 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -778,3 +779,21 @@ implements supervision behavior.
 
 **Phase 33 Deliverable**: Canonical docs updated so runtime supervision uses reusable control
 authority rather than affine one-shot control.
+
+## Phase 34: Residual Spec-Audit Follow-up
+
+Close the explicit spec-only documentation debt that remained after the final convergence audit.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-213](tasks/TASK-213-reconcile-module-and-import-spec-scope.md) | Reconcile module and import spec scope | SPEC-009/012 | 3 | ✅ Complete |
+| [TASK-214](tasks/TASK-214-fix-residual-policy-and-typed-provider-spec-drift.md) | Fix residual policy and typed-provider spec drift | SPEC-007/010/015/016 | 4 | 📝 Planned |
+| [TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) | Normalize residual spec hygiene | Affected specs | 3 | 📝 Planned |
+
+**Phase 34 Deliverable**: Residual spec-only findings from the final convergence audit are either
+closed or explicitly reclassified.
+
+Execution note: [TASK-213](tasks/TASK-213-reconcile-module-and-import-spec-scope.md) and
+[TASK-214](tasks/TASK-214-fix-residual-policy-and-typed-provider-spec-drift.md) can run in
+parallel. [TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) should follow them so the
+final hygiene pass reflects the corrected canonical text.

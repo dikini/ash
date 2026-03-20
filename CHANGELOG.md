@@ -7,6 +7,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- TASK-213 now reconciles the module/import spec scope. `SPEC-009` now defers `use` and `pub use` to `SPEC-012` instead of treating them as future module features, and the touched examples now use canonical type names.
+- Residual spec-audit follow-up plan and task set for the remaining docs-only findings after TASK-176. `docs/plan/2026-03-20-residual-spec-audit-follow-up-plan.md` now defines the bounded post-convergence docs phase, and `TASK-213` through `TASK-215` now cover the remaining module/import scope conflict, typed-provider/policy example drift, and low-severity spec hygiene cleanup.
 - Final convergence closeout audit for TASK-176. `docs/audit/2026-03-20-final-convergence-audit.md` now records the closure matrix for the original implementation drift classes, confirms repository-wide verification, and makes both `TASK-212` and the remaining spec-only documentation debt explicit rather than leaving any convergence gap implicit.
 - Canonical ADT stdlib and example surface for TASK-175. `std/src/prelude.ash` now exposes the full canonical Option/Result helper surface, `examples/README.md` documents the same surface for readers, and parser-level stdlib-surface tests lock the contract in.
 - Canonical REPL authority and tooling-observable convergence for TASK-172, TASK-173, and TASK-208. `ash-repl` now exports the canonical REPL command surface and session configuration used by both REPL entrypoints, REPL `:type` reporting now flows through the canonical parse/type-check pipeline with focused expression inference support, and `ash run` / `ash trace` now emit contract-aligned observable output with focused CLI regression coverage.

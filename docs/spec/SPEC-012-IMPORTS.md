@@ -198,7 +198,7 @@ use crate::internal::secret;
 
 ```
 -- utils.ash
-pub capability log: observe(msg: string);
+pub capability log: observe(msg: String);
 pub workflow helpers {
     action format {
         effect: epistemic;

@@ -125,7 +125,7 @@ Runtime values expose distinct observable roles for:
 
 - `InstanceAddr` as a communicable endpoint value
 - `ControlLink` as transferable control authority
-- `MonitorLink` as transferable observation authority
+- `MonitorLink` as shareable observation authority
 - `Instance` as a composite containing an address plus `Option<ControlLink>` plus
   `Option<MonitorLink>`
 
@@ -141,6 +141,8 @@ Workflow instances may expose a monitor view via `exposes { ... }`.
 - it may include obligations, behaviours, and values
 - it may include monitor metadata such as `monitor_count`
 - only holders of `MonitorLink` may observe the exposed monitor view, subject to policy
+- `MonitorLink` is shareable by default: sharing or delegating it does not consume the source
+  authority, unlike control-link transfer
 - monitoring does not imply control or message-send authority
 
 ## 5. Stdlib-Visible Guarantees

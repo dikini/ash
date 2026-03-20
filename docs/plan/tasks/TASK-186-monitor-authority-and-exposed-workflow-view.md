@@ -48,6 +48,16 @@ The monitor-authority contract is now explicit:
   existing policy machinery rather than introducing a monitor-specific policy sublanguage
 - the monitor view remains read-only and distinct from control or message-send authority
 
+### Follow-up Clarification
+
+- `SPEC-002` now uses `workflow_obligation_ref` for live workflow obligation state symbols inside
+  `exposes { obligations: [...] }`, so the exposed contract is no longer conflated with role-level
+  deontic obligation syntax
+- `MonitorLink` sharing is non-consuming by default and is distinct from control-link transfer;
+  the exposed monitor view remains readable without making monitor authority linear or affine
+- `PLAN-INDEX.md` keeps TASK-186 traceable as a monitoring gate without renumbering the later
+  convergence phases
+
 ## Files
 
 - Modify: `docs/spec/SPEC-002-SURFACE.md`

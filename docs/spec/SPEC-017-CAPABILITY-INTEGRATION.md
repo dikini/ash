@@ -213,7 +213,9 @@ Monitoring authority is a distinct read-only capability. Workflows may expose a 
 `monitor_count`. Ordinary policy conditions may inspect those exposed values to govern monitor
 grant, delegation, or observation decisions. No monitor-specific policy sublanguage is introduced,
 and monitor grant/delegation is treated as an explicit atomic capability operation rather than a
-two-step read-then-write protocol.
+two-step read-then-write protocol. `MonitorLink` sharing is non-consuming by default and is
+distinct from control transfer, so policy can constrain the visible monitor count without making
+monitor authority linear or affine.
 
 ### 4.2 Policy Evaluation Context
 

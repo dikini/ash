@@ -340,15 +340,17 @@ Control-link transfer does not imply monitor authority or monitor visibility.
 
 ### 8.3 Monitor Link Integration
 
-`MonitorLink` is a first-class observation authority distinct from `InstanceAddr` and
-`ControlLink`.
+`MonitorLink` is a first-class shareable observation authority distinct from `InstanceAddr`
+and `ControlLink`.
 
 - `MonitorLink` grants read-only access to the workflow's exposed monitor view
 - the exposed monitor view is defined by the workflow's `exposes { ... }` clause in SPEC-002
 - exposing a monitor view does not imply control or messaging authority
 - a workflow may have more than one active monitor grant when policy and the runtime allow it
-- monitor grant or delegation is explicit and atomic; the language contract does not require a
-  particular internal storage layout
+- sharing or delegating a `MonitorLink` is explicit and atomic, but unlike `ControlLink`
+  transfer it does not consume the source authority by default
+- monitor sharing and control transfer are distinct operations; the language contract does not
+  require a particular internal storage layout
 
 ### 8.4 Type Checking Transfer
 

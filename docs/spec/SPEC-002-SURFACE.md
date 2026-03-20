@@ -103,6 +103,8 @@ supervises_clause   ::= "supervises:" "[" IDENTIFIER* "]"
 obligation_ref      ::= IDENTIFIER "must" predicate
                       | IDENTIFIER "may" action_ref
                       | IDENTIFIER "must-not" action_ref
+
+workflow_obligation_ref ::= IDENTIFIER
 ```
 
 ### 3.5 Workflow Definition
@@ -126,7 +128,7 @@ exposure_item   ::= obligations_exposure
                   | behaviours_exposure
                   | values_exposure
 
-obligations_exposure ::= "obligations:" "[" obligation_ref* "]"
+obligations_exposure ::= "obligations:" "[" workflow_obligation_ref* "]"
 behaviours_exposure   ::= "behaviours:" "[" behaviour_ref* "]"
 values_exposure       ::= "values:" "[" IDENTIFIER* "]"
 
@@ -157,7 +159,7 @@ decide_stmt     ::= "decide" "{" expression "}"
                     "under" IDENTIFIER
                     "then" workflow
 
-check_stmt      ::= "check" obligation_ref ("then" workflow)?
+check_stmt      ::= "check" workflow_obligation_ref ("then" workflow)?
 
 receive_stmt    ::= "receive" ("control")? receive_mode?
                     "{" receive_arm ("," receive_arm)* "}"
@@ -201,6 +203,9 @@ must_stmt       ::= "must" workflow
   `receives` declares stream inputs, and `sets` / `sends` declare output capabilities.
 - `exposes` declares the externally monitorable workflow view. It does not imply control or
   messaging authority; it exposes only the named obligations, behaviours, and values.
+- `workflow_obligation_ref` names a live workflow obligation state symbol exposed by the
+  workflow. It is distinct from the role-level deontic `obligation_ref` syntax used inside
+  `role_def`.
 - `behaviour_ref`, `settable_ref`, and `sendable_ref` are intentionally distinct names even when
   they share the same token shape. The distinction is semantic: `observes` grants read access to
   behaviours, not write authority; write authority is declared separately with `sets` or `sends`.

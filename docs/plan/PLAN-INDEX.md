@@ -528,7 +528,7 @@ Audit whether the hardened spec set is ready to drive Rust and Lean implementati
 
 **Phase 25 Deliverable**: Explicit readiness gate for mechanical Rust convergence and stable Lean modeling
 
-## Phase 26: Monitoring Authority and Exposed Views (Week 43)
+## Monitoring Authority Gate (Week 43)
 
 Define the monitor authority surface, exposed workflow views, and monitorability boundaries before
 parser and runtime convergence resumes.
@@ -537,11 +537,11 @@ parser and runtime convergence resumes.
 |------|-------------|------|------------|--------|
 | [TASK-186](tasks/TASK-186-monitor-authority-and-exposed-workflow-view.md) | Define monitor authority and exposed workflow views | SPEC-002/017/020/021 | 6 | ✅ Complete |
 
-**Phase 26 Deliverable**: Explicit monitor authority and exposed workflow views for later Rust convergence
+**Gate Deliverable**: Explicit monitor authority and exposed workflow views for later Rust convergence
 
-## Phase 27: Parser and Lowering Convergence (Week 44)
+## Phase 26: Parser and Lowering Convergence (Week 44)
 
-These implementation phases are blocked until Phase 26 confirms that the specification is
+These implementation phases are blocked until the monitoring authority gate confirms that the specification is
 unambiguous enough to drive Rust work mechanically.
 
 Align parser dispatch, AST shape, and lowering behavior with the frozen contracts.
@@ -553,9 +553,9 @@ Align parser dispatch, AST shape, and lowering behavior with the frozen contract
 | [TASK-166](tasks/TASK-166-replace-placeholder-policy-lowering.md) | Replace placeholder policy lowering | SPEC-001/006/007 | 6 | 📝 Planned |
 | [TASK-167](tasks/TASK-167-lower-receive-into-canonical-core-form.md) | Lower `receive` into canonical core form | SPEC-001/013 | 6 | 📝 Planned |
 
-**Phase 27 Deliverable**: Parser and lowering layers aligned with the hardened canonical workflow, policy, and `receive` contracts
+**Phase 26 Deliverable**: Parser and lowering layers aligned with the hardened canonical workflow, policy, and `receive` contracts
 
-## Phase 28: Type and Verification Convergence (Week 45)
+## Phase 27: Type and Verification Convergence (Week 45)
 
 Bring type checking and runtime verification context into line with the frozen contracts.
 
@@ -564,9 +564,9 @@ Bring type checking and runtime verification context into line with the frozen c
 | [TASK-168](tasks/TASK-168-align-type-checking-for-policies-and-receive.md) | Align type checking for policies and `receive` | SPEC-003/006/013/017 | 8 | 📝 Planned |
 | [TASK-169](tasks/TASK-169-unify-runtime-verification-context-and-obligation-enforcement.md) | Unify runtime verification context and obligation enforcement | SPEC-017/018 | 6 | 📝 Planned |
 
-**Phase 28 Deliverable**: Type and verification layers enforce the hardened canonical policy and stream contracts
+**Phase 27 Deliverable**: Type and verification layers enforce the hardened canonical policy and stream contracts
 
-## Phase 29: Runtime Convergence (Week 46)
+## Phase 28: Runtime Convergence (Week 46)
 
 Complete runtime alignment for `receive` execution and policy outcomes.
 
@@ -575,9 +575,9 @@ Complete runtime alignment for `receive` execution and policy outcomes.
 | [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md) | Implement end-to-end `receive` execution | SPEC-004/013/017 | 8 | 📝 Planned |
 | [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) | Align runtime policy outcomes | SPEC-017/018 | 6 | 📝 Planned |
 
-**Phase 29 Deliverable**: Runtime behavior aligned with hardened canonical `receive` and policy-outcome contracts
+**Phase 28 Deliverable**: Runtime behavior aligned with hardened canonical `receive` and policy-outcome contracts
 
-## Phase 30: REPL and CLI Convergence (Week 47)
+## Phase 29: REPL and CLI Convergence (Week 47)
 
 Align the implementation of REPL and CLI behavior with the frozen command and output contracts.
 
@@ -586,9 +586,9 @@ Align the implementation of REPL and CLI behavior with the frozen command and ou
 | [TASK-172](tasks/TASK-172-unify-repl-implementation.md) | Unify REPL implementation | SPEC-005/011/016 | 8 | 📝 Planned |
 | [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) | Implement REPL type reporting | SPEC-003/005/011 | 6 | 📝 Planned |
 
-**Phase 30 Deliverable**: One authoritative REPL implementation with canonical type reporting
+**Phase 29 Deliverable**: One authoritative REPL implementation with canonical type reporting
 
-## Phase 31: ADT Convergence (Week 48)
+## Phase 30: ADT Convergence (Week 48)
 
 Align ADT implementation layers and user-visible stdlib surface with the canonical ADT contract.
 
@@ -597,9 +597,9 @@ Align ADT implementation layers and user-visible stdlib surface with the canonic
 | [TASK-174](tasks/TASK-174-align-adt-type-value-and-pattern-contracts.md) | Align ADT type, value, and pattern contracts | SPEC-003/004/020 | 10 | 📝 Planned |
 | [TASK-175](tasks/TASK-175-align-adt-stdlib-and-example-surface.md) | Align ADT stdlib and example surface | SPEC-020 | 6 | 📝 Planned |
 
-**Phase 31 Deliverable**: Canonical ADT contracts implemented from parser/runtime through stdlib surface
+**Phase 30 Deliverable**: Canonical ADT contracts implemented from parser/runtime through stdlib surface
 
-## Phase 32: Final Convergence Audit (Week 49)
+## Phase 31: Final Convergence Audit (Week 49)
 
 Re-audit specs and implementation to close the convergence program.
 
@@ -607,4 +607,4 @@ Re-audit specs and implementation to close the convergence program.
 |------|-------------|------|------------|--------|
 | [TASK-176](tasks/TASK-176-final-convergence-audit.md) | Final convergence audit | All convergence contracts | 6 | 📝 Planned |
 
-**Phase 32 Deliverable**: Final audit report and repository-level convergence closeout
+**Phase 31 Deliverable**: Final audit report and repository-level convergence closeout

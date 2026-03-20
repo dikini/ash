@@ -736,3 +736,13 @@ Re-audit specs and implementation to close the convergence program.
 
 Execution note: final convergence closeout now depends on the downstream runtime-boundary and
 tooling observable convergence work as well as the original convergence phases.
+
+## Phase 32: CI Hygiene
+
+Clear repository-level warnings that still break the enforced local and CI quality gates.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-210](tasks/TASK-210-clear-workspace-clippy-warnings.md) | Clear workspace clippy warnings | SPEC-021 | 1 | ✅ Complete |
+
+**Phase 32 Deliverable**: Clean workspace clippy gate for the currently merged codebase

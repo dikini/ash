@@ -584,7 +584,7 @@ mod tests {
                 vec![Pattern::Variable("head".to_string())],
                 Some("tail".to_string()),
             ),
-            collection: Expr::Literal(Value::List(Box::new(vec![]))),
+            collection: Expr::Literal(Value::List(Box::default())),
             body: Box::new(Workflow::Done),
         };
 

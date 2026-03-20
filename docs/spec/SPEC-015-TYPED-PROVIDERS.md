@@ -324,4 +324,5 @@ $ ash generate --schema sensor.ash --output src/providers/
 # - src/providers/sensor_provider.rs (trait)
 ```
 
-This is **SPEC-016** (future work).
+The schema-first code-generation path remains future work and does not change the runtime
+validation contract defined in this spec.

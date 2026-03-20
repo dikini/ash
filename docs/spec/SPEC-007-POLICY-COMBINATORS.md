@@ -301,15 +301,15 @@ Combinators flatten to SMT constraints:
 ```ash
 and(
   rate_limit(100, 60),
-  rate_limit(50, 60)
+  not(rate_limit(100, 60))
 )
 ```
 
 Becomes:
 ```smt
 (assert (<= actual_rate 1.67))  -- 100/60
-(assert (<= actual_rate 0.83))  -- 50/60
--- Conflict: actual_rate cannot be <= 0.83 and satisfy both
+(assert (> actual_rate 1.67))
+-- Conflict: actual_rate cannot satisfy both constraints
 ```
 
 ## 8. Examples

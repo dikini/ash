@@ -18,6 +18,10 @@ This specification governs workflow-level external outputs: `set` for behaviours
 or other developer-tool output. Those user-interface outputs are specified by
 [SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
 
+Provider-side effect granularity remains an embedding concern. This spec stays at the
+workflow-output boundary and does not introduce a separate provider effect model beyond the
+canonical effect classification used elsewhere in the spec set.
+
 ## 2. Set (Output Behaviours)
 
 ### 2.1 Concept

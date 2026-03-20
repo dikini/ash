@@ -18,6 +18,8 @@ This task removes REPL duplication debt without adding new REPL features.
 ## Reference Contract
 
 - `docs/reference/runtime-observable-behavior-contract.md`
+- `docs/reference/surface-guidance-boundary.md`
+- `docs/reference/runtime-to-reasoner-interaction-contract.md`
 
 ## Requirements
 
@@ -26,6 +28,8 @@ This task removes REPL duplication debt without adding new REPL features.
 1. Make both REPL entrypoints delegate to one canonical implementation
 2. Expose the same command surface and handling behavior from both entrypoints
 3. Add tests proving the shared authority and canonical command handling
+4. Preserve the runtime-only meaning of REPL observable behavior without treating monitorability,
+   `exposes`, or command output as reasoner projection
 
 ## Files
 
@@ -82,6 +86,7 @@ git commit -m "refactor: unify repl implementation"
 
 - No new REPL features beyond the canonical spec
 - No output-format redesign
+- No reinterpretation of runtime-observable REPL behavior as runtime-to-reasoner projection
 
 ## Dependencies
 

@@ -18,6 +18,8 @@ the user-visible output matches the frozen REPL contract.
 ## Reference Contract
 
 - `docs/reference/runtime-observable-behavior-contract.md`
+- `docs/reference/surface-guidance-boundary.md`
+- `docs/reference/runtime-to-reasoner-interaction-contract.md`
 
 ## Requirements
 
@@ -26,6 +28,8 @@ the user-visible output matches the frozen REPL contract.
 1. Make `:type` report canonical inferred types rather than placeholders
 2. Route reporting through the canonical parse/type-check pipeline
 3. Add tests proving the canonical REPL type output
+4. Preserve `:type` as runtime-observable behavior; any future advisory-versus-authoritative stage
+   wording remains explanatory only and must not change runtime semantic authority
 
 ## Files
 
@@ -80,6 +84,7 @@ git commit -m "fix: implement repl type reporting"
 
 - No output-format redesign outside the canonical spec
 - No new REPL features
+- No reinterpretation of REPL type output as projected reasoner context
 
 ## Dependencies
 

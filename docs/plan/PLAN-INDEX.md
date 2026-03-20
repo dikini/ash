@@ -582,6 +582,39 @@ revised convergence map before opening any new code-facing tasks.
 
 **Phase Deliverable**: One impact audit of the current convergence queue, one implementation-planning surface note, and one revised convergence map for later code-facing task creation
 
+## Runtime Boundary Implementation Planning Phase (Week 47)
+
+Plan the authoritative runtime-boundary follow-up work separately from tooling and surface work,
+then stop at a steering brief before opening any runtime code-facing tasks.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-199](tasks/TASK-199-audit-runtime-execution-boundaries-for-interaction-planning.md) | Audit runtime execution boundaries for interaction planning | SPEC-004 / interaction contract | 6 | 📝 Planned |
+| [TASK-200](tasks/TASK-200-audit-runtime-trace-and-provenance-surfaces.md) | Audit runtime trace and provenance surfaces | SPEC-004 / planning surface | 5 | 📝 Planned |
+| [TASK-201](tasks/TASK-201-synthesize-runtime-boundary-steering-brief.md) | Synthesize runtime boundary steering brief | Runtime-boundary audit outputs | 5 | 📝 Planned |
+
+**Phase Deliverable**: Two runtime-boundary audits and one steering brief that identifies later runtime code-facing task clusters without opening them
+
+## Tooling and Surface Implementation Planning Phase (Week 48)
+
+Plan the CLI, REPL, trace-presentation, and explanatory surface follow-up work separately from the
+authoritative runtime-boundary work, then stop at a steering brief before opening any tooling or
+surface code-facing tasks.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-202](tasks/TASK-202-audit-cli-and-repl-surfaces-for-interaction-planning.md) | Audit CLI and REPL surfaces for interaction planning | SPEC-005/011 / runtime-observable contract | 6 | 📝 Planned |
+| [TASK-203](tasks/TASK-203-audit-trace-export-and-presentation-surfaces.md) | Audit trace export and presentation surfaces | SPEC-005/016 / runtime-observable contract | 5 | 📝 Planned |
+| [TASK-204](tasks/TASK-204-synthesize-tooling-and-surface-steering-brief.md) | Synthesize tooling and surface steering brief | Tooling/surface audit outputs | 5 | 📝 Planned |
+
+**Phase Deliverable**: Two tooling/surface audits and one steering brief that identifies later user-facing task clusters without opening them
+
+These two planning phases are additive review gates for later task creation. They do not change the
+existing impact-review result that [TASK-164](tasks/TASK-164-route-receive-through-main-parser.md)
+through [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) remain unchanged and
+[TASK-172](tasks/TASK-172-unify-repl-implementation.md) and
+[TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) only need in-place reference updates.
+
 ## Phase 26: Parser and Lowering Convergence (Week 44)
 
 These implementation phases are blocked until the monitoring authority gate confirms that the specification is

@@ -32,23 +32,24 @@ residual spec-only documentation debt described here is now closed.
 
 ## Summary
 
-The Rust/spec convergence implementation program is closed, but the older 2026-03-19 spec-only
-audit is not fully zeroed out.
+The Rust/spec convergence implementation program is closed, and the residual spec-only findings
+from the older 2026-03-19 consistency audit were later closed by Phase 34.
 
 Closed:
 
 - the original implementation drift classes around workflow forms, parser/lowering contracts,
   runtime verification, `receive`, runtime policy outcomes, REPL/CLI observable behavior, ADT
   contracts, and runtime trace/provenance boundaries
+- the residual spec-only findings that remained open at the end of `TASK-176`
 
 Still explicitly open:
 
-- a small set of residual spec-only issues from the 2026-03-19 consistency audit
 - [TASK-212](../plan/tasks/TASK-212-design-control-link-retention-policy.md), which tracks the
   long-term retention/cleanup policy for terminated `ControlLink` supervision state
 
-This audit therefore closes the implementation convergence path while explicitly recording the
-remaining documentation debt instead of overstating full spec-corpus closure.
+This audit therefore closes the implementation convergence path and, with the Phase 34 addendum,
+also records the later closure of the residual spec-only documentation debt without erasing the
+historical end-of-`TASK-176` snapshot.
 
 ## Final Acceptance Checklist
 

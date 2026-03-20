@@ -1,5 +1,7 @@
 # Residual Spec-Audit Follow-up Plan
 
+**Status:** Complete. Preserved as the original execution plan for Phase 34.
+
 **Goal:** Close the explicit spec-only documentation debt that remained after the final
 implementation convergence audit.
 
@@ -13,6 +15,8 @@ resolving the residual findings recorded in
 - low-severity spec hygiene work is scoped separately from the higher-priority spec inconsistencies
 - `PLAN-INDEX.md` shows a bounded post-convergence docs-only phase rather than leaving residual
   audit items implicit
+- all three Phase 34 tasks are completed without reopening the closed implementation convergence
+  path
 
 ## Task Set
 
@@ -28,7 +32,7 @@ resolving the residual findings recorded in
 
 ## Execution Notes
 
-- `TASK-213` and `TASK-214` can run in parallel.
-- `TASK-215` should follow them so the hygiene pass reflects the corrected canonical text.
-- After those tasks, the final convergence audit can be amended or superseded only if needed; do
-  not reopen the closed implementation convergence path unless a new contradiction is discovered.
+- `TASK-213` and `TASK-214` were executed in parallel.
+- `TASK-215` then completed the final hygiene pass against the corrected canonical text.
+- The final convergence audit was amended to record that the residual spec-only findings are now
+  closed, while preserving the original `TASK-176` audit as historical context.

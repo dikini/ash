@@ -8,6 +8,10 @@ use std::time::Duration;
 use ash_core::Value;
 
 use crate::ExecResult;
+use crate::capability_policy::{
+    CapabilityOperation, CapabilityPolicyEvaluator, Direction, PolicyDecision, Role,
+};
+use crate::capability_policy_runtime::{apply_transformation, build_policy_context, check_policy};
 use crate::error::ExecError;
 use crate::stream::{SendableStreamProvider, StreamContext};
 
@@ -43,7 +47,9 @@ use crate::stream::{SendableStreamProvider, StreamContext};
 /// let provider = MockSendableProvider::new("queue", "output");
 /// ctx.register_sendable(TypedSendableProvider::new(provider, Type::Int));
 ///
-/// execute_send("queue", "output", Value::Int(42), &ctx).await.unwrap();
+/// let policy_eval = ash_interp::CapabilityPolicyEvaluator::new();
+/// let actor = ash_interp::Role::new("system");
+/// execute_send("queue", "output", Value::Int(42), &ctx, &policy_eval, &actor).await.unwrap();
 /// # });
 /// ```
 pub async fn execute_send(
@@ -51,7 +57,27 @@ pub async fn execute_send(
     channel: &str,
     value: Value,
     stream_ctx: &StreamContext,
+    policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
 ) -> ExecResult<()> {
+    let policy_ctx = build_policy_context(
+        CapabilityOperation::Send,
+        Direction::Output,
+        capability,
+        channel,
+        Some(value.clone()),
+        &[],
+        actor,
+    );
+    let decision = check_policy(policy_eval, &policy_ctx)?;
+    let value = match decision {
+        PolicyDecision::Permit => value,
+        PolicyDecision::Transform { transformation } => {
+            apply_transformation(value, &transformation)
+        }
+        PolicyDecision::Deny | PolicyDecision::RequireApproval { .. } => unreachable!(),
+    };
+
     // Get sendable provider
     let provider = stream_ctx
         .get_sendable(capability, channel)
@@ -87,9 +113,18 @@ mod tests {
         ctx.register_sendable(TypedSendableProvider::new(provider.clone(), Type::Int));
 
         // Execute send
-        execute_send("queue", "output", Value::Int(42), &ctx)
-            .await
-            .unwrap();
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_send(
+            "queue",
+            "output",
+            Value::Int(42),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
 
         // Verify value was sent
         assert_eq!(provider.sent_count(), 1);
@@ -100,7 +135,17 @@ mod tests {
     async fn test_send_missing_provider() {
         let ctx = StreamContext::new(); // Empty - no providers registered
 
-        let result = execute_send("nonexistent", "channel", Value::Int(42), &ctx).await;
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        let result = execute_send(
+            "nonexistent",
+            "channel",
+            Value::Int(42),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await;
 
         assert!(result.is_err());
         assert!(matches!(
@@ -120,7 +165,17 @@ mod tests {
         ctx.register_sendable(TypedSendableProvider::new(provider, Type::Int));
 
         // Execute send - should fail after timeout
-        let result = execute_send("queue", "output", Value::Int(42), &ctx).await;
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        let result = execute_send(
+            "queue",
+            "output",
+            Value::Int(42),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await;
 
         assert!(result.is_err());
         assert!(matches!(
@@ -145,9 +200,18 @@ mod tests {
         ));
 
         // Send int value
-        execute_send("queue", "numbers", Value::Int(100), &ctx)
-            .await
-            .unwrap();
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_send(
+            "queue",
+            "numbers",
+            Value::Int(100),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
         assert_eq!(int_provider.sent_count(), 1);
         assert_eq!(int_provider.sent_values()[0], Value::Int(100));
 
@@ -157,6 +221,8 @@ mod tests {
             "messages",
             Value::String("hello".to_string()),
             &ctx,
+            &policy_eval,
+            &actor,
         )
         .await
         .unwrap();
@@ -174,9 +240,18 @@ mod tests {
         ctx.register_sendable(TypedSendableProvider::new(provider, Type::Int));
 
         // Valid value should succeed
-        execute_send("queue", "output", Value::Int(42), &ctx)
-            .await
-            .unwrap();
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_send(
+            "queue",
+            "output",
+            Value::Int(42),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
 
         // Invalid type should fail
         let result = execute_send(
@@ -184,6 +259,8 @@ mod tests {
             "output",
             Value::String("not an int".to_string()),
             &ctx,
+            &policy_eval,
+            &actor,
         )
         .await;
         assert!(result.is_err());
@@ -198,13 +275,15 @@ mod tests {
         ctx.register_sendable(TypedSendableProvider::new(provider.clone(), Type::Int));
 
         // Send multiple values
-        execute_send("queue", "output", Value::Int(1), &ctx)
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_send("queue", "output", Value::Int(1), &ctx, &policy_eval, &actor)
             .await
             .unwrap();
-        execute_send("queue", "output", Value::Int(2), &ctx)
+        execute_send("queue", "output", Value::Int(2), &ctx, &policy_eval, &actor)
             .await
             .unwrap();
-        execute_send("queue", "output", Value::Int(3), &ctx)
+        execute_send("queue", "output", Value::Int(3), &ctx, &policy_eval, &actor)
             .await
             .unwrap();
 
@@ -236,9 +315,18 @@ mod tests {
         };
 
         // Execute send - should wait and then succeed
-        execute_send("queue", "output", Value::Int(42), &ctx)
-            .await
-            .unwrap();
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_send(
+            "queue",
+            "output",
+            Value::Int(42),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
 
         // Wait for the unblock task to complete
         unblock_handle.await.unwrap();

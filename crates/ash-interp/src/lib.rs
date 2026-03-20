@@ -18,6 +18,7 @@
 pub mod behaviour;
 pub mod capability;
 pub mod capability_policy;
+pub mod capability_policy_runtime;
 pub mod capability_provenance;
 pub mod context;
 pub mod control_link;

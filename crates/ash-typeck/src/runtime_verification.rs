@@ -249,6 +249,13 @@ pub enum VerificationWarning {
         /// Description of the operation requiring approval
         operation: String,
     },
+    /// Operation will proceed with a transformed value.
+    PolicyTransform {
+        /// Description of the transformed operation.
+        operation: String,
+        /// Human-readable transformation summary.
+        transformation: String,
+    },
 }
 
 /// Verification result
@@ -888,6 +895,8 @@ pub enum PolicyDecisionType {
     Deny,
     /// Require approval from a specific role
     RequiresApproval { role: Role },
+    /// Transform the runtime value before proceeding.
+    Transform { transformation: String },
 }
 
 /// Policy for static validation
@@ -927,7 +936,7 @@ impl StaticPolicy {
 /// Static policy validator
 ///
 /// Validates workflows against static policies before execution.
-/// Policies can permit, deny, or require approval for specific capabilities.
+/// Policies can permit, deny, require approval, or transform specific capabilities.
 #[derive(Debug, Clone)]
 pub struct StaticPolicyValidator;
 
@@ -992,6 +1001,12 @@ impl StaticPolicyValidator {
                         result.add_warning(VerificationWarning::RequiresApproval {
                             role: role.clone(),
                             operation: format!("{} {}:{}", operation, cap_str, chan_str),
+                        });
+                    }
+                    PolicyDecisionType::Transform { transformation } => {
+                        result.add_warning(VerificationWarning::PolicyTransform {
+                            operation: format!("{} {}:{}", operation, cap_str, chan_str),
+                            transformation: transformation.clone(),
                         });
                     }
                     PolicyDecisionType::Permit => {}
@@ -1202,6 +1217,11 @@ impl OperationVerifier {
                     }
                     PolicyDecisionType::RequiresApproval { role } => {
                         return Ok(OperationResult::RequiresApproval { role: role.clone() });
+                    }
+                    PolicyDecisionType::Transform { transformation } => {
+                        return Ok(OperationResult::Transformed {
+                            transformation: transformation.clone(),
+                        });
                     }
                     PolicyDecisionType::Permit => {}
                 }

@@ -7,6 +7,10 @@ use ash_core::{Changed, Observe, Value};
 
 use crate::ExecResult;
 use crate::behaviour::BehaviourContext;
+use crate::capability_policy::{
+    CapabilityOperation, CapabilityPolicyEvaluator, Direction, PolicyDecision, Role,
+};
+use crate::capability_policy_runtime::{apply_transformation, build_policy_context, check_policy};
 use crate::context::Context;
 use crate::error::ExecError;
 use crate::pattern::match_pattern;
@@ -61,7 +65,9 @@ use crate::pattern::match_pattern;
 /// };
 ///
 /// let ctx = Context::new();
-/// let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx).await.unwrap();
+/// let policy_eval = ash_interp::CapabilityPolicyEvaluator::new();
+/// let actor = ash_interp::Role::new("system");
+/// let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx, &policy_eval, &actor).await.unwrap();
 /// assert_eq!(new_ctx.get("t"), Some(&Value::Int(42)));
 /// # });
 /// ```
@@ -69,11 +75,31 @@ pub async fn execute_observe(
     observe: &Observe,
     ctx: Context,
     behaviour_ctx: &BehaviourContext,
+    policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
 ) -> ExecResult<Context> {
+    let policy_ctx = build_policy_context(
+        CapabilityOperation::Observe,
+        Direction::Input,
+        &observe.capability,
+        &observe.channel,
+        None,
+        &observe.constraints,
+        actor,
+    );
+    let decision = check_policy(policy_eval, &policy_ctx)?;
+
     // Sample the behaviour
     let value = behaviour_ctx
         .sample(&observe.capability, &observe.channel, &observe.constraints)
         .await?;
+    let value = match decision {
+        PolicyDecision::Permit => value,
+        PolicyDecision::Transform { transformation } => {
+            apply_transformation(value, &transformation)
+        }
+        PolicyDecision::Deny | PolicyDecision::RequireApproval { .. } => unreachable!(),
+    };
 
     // Match pattern and bind variables
     let bindings =
@@ -187,7 +213,9 @@ mod tests {
         };
 
         let ctx = Context::new();
-        let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx)
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx, &policy_eval, &actor)
             .await
             .unwrap();
 
@@ -224,7 +252,9 @@ mod tests {
         };
 
         let ctx = Context::new();
-        let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx)
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx, &policy_eval, &actor)
             .await
             .unwrap();
 
@@ -260,7 +290,9 @@ mod tests {
         };
 
         let ctx = Context::new();
-        let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx)
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        let new_ctx = execute_observe(&observe, ctx, &behaviour_ctx, &policy_eval, &actor)
             .await
             .unwrap();
 
@@ -280,7 +312,9 @@ mod tests {
         };
 
         let ctx = Context::new();
-        let result = execute_observe(&observe, ctx, &behaviour_ctx).await;
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        let result = execute_observe(&observe, ctx, &behaviour_ctx, &policy_eval, &actor).await;
 
         assert!(result.is_err());
         assert!(matches!(

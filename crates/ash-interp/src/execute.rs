@@ -7,6 +7,7 @@ use ash_core::{Expr, Value, Workflow};
 use crate::ExecResult;
 use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
+use crate::capability_policy::{CapabilityPolicyEvaluator, Role};
 use crate::context::Context;
 use crate::error::{EvalError, ExecError};
 use crate::eval::eval_expr;
@@ -509,7 +510,17 @@ pub(crate) fn execute_workflow_inner<'a>(
                 value,
             } => {
                 let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
-                execute_set(capability, channel, val, behaviour_ctx).await?;
+                let capability_policy_eval = CapabilityPolicyEvaluator::new();
+                let actor = Role::new("system");
+                execute_set(
+                    capability,
+                    channel,
+                    val,
+                    behaviour_ctx,
+                    &capability_policy_eval,
+                    &actor,
+                )
+                .await?;
                 Ok(Value::Null)
             }
 
@@ -525,7 +536,17 @@ pub(crate) fn execute_workflow_inner<'a>(
                     )
                 })?;
                 let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
-                execute_send(capability, channel, val, stream_ctx).await?;
+                let capability_policy_eval = CapabilityPolicyEvaluator::new();
+                let actor = Role::new("system");
+                execute_send(
+                    capability,
+                    channel,
+                    val,
+                    stream_ctx,
+                    &capability_policy_eval,
+                    &actor,
+                )
+                .await?;
                 Ok(Value::Null)
             }
 

@@ -7,6 +7,10 @@ use ash_core::Value;
 
 use crate::ExecResult;
 use crate::behaviour::{BehaviourContext, SettableBehaviourProvider};
+use crate::capability_policy::{
+    CapabilityOperation, CapabilityPolicyEvaluator, Direction, PolicyDecision, Role,
+};
+use crate::capability_policy_runtime::{apply_transformation, build_policy_context, check_policy};
 use crate::error::ExecError;
 
 /// Execute a set statement
@@ -42,7 +46,9 @@ use crate::error::ExecError;
 /// let provider = MockSettableProvider::new("actuator", "led");
 /// ctx.register_settable(TypedSettableProvider::new(provider, Type::Bool));
 ///
-/// execute_set("actuator", "led", Value::Bool(true), &ctx).await.unwrap();
+/// let policy_eval = ash_interp::CapabilityPolicyEvaluator::new();
+/// let actor = ash_interp::Role::new("system");
+/// execute_set("actuator", "led", Value::Bool(true), &ctx, &policy_eval, &actor).await.unwrap();
 /// # });
 /// ```
 pub async fn execute_set(
@@ -50,7 +56,27 @@ pub async fn execute_set(
     channel: &str,
     value: Value,
     behaviour_ctx: &BehaviourContext,
+    policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
 ) -> ExecResult<()> {
+    let policy_ctx = build_policy_context(
+        CapabilityOperation::Set,
+        Direction::Output,
+        capability,
+        channel,
+        Some(value.clone()),
+        &[],
+        actor,
+    );
+    let decision = check_policy(policy_eval, &policy_ctx)?;
+    let value = match decision {
+        PolicyDecision::Permit => value,
+        PolicyDecision::Transform { transformation } => {
+            apply_transformation(value, &transformation)
+        }
+        PolicyDecision::Deny | PolicyDecision::RequireApproval { .. } => unreachable!(),
+    };
+
     // Get settable provider
     let provider = behaviour_ctx
         .get_settable(capability, channel)
@@ -82,7 +108,9 @@ mod tests {
         ctx.register_settable(TypedSettableProvider::new(provider, Type::Int));
 
         // Execute set
-        execute_set("hvac", "target", Value::Int(72), &ctx)
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_set("hvac", "target", Value::Int(72), &ctx, &policy_eval, &actor)
             .await
             .unwrap();
 
@@ -99,23 +127,46 @@ mod tests {
         ctx.register_settable(TypedSettableProvider::new(provider, Type::Int));
 
         // Set initial value
-        execute_set("actuator", "brightness", Value::Int(50), &ctx)
-            .await
-            .unwrap();
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_set(
+            "actuator",
+            "brightness",
+            Value::Int(50),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
         let provider = ctx.get_settable("actuator", "brightness").unwrap();
         assert_eq!(provider.sample(&[]).await.unwrap(), Value::Int(50));
 
         // Change to new value
-        execute_set("actuator", "brightness", Value::Int(75), &ctx)
-            .await
-            .unwrap();
+        execute_set(
+            "actuator",
+            "brightness",
+            Value::Int(75),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
         let provider = ctx.get_settable("actuator", "brightness").unwrap();
         assert_eq!(provider.sample(&[]).await.unwrap(), Value::Int(75));
 
         // Change to another value
-        execute_set("actuator", "brightness", Value::Int(100), &ctx)
-            .await
-            .unwrap();
+        execute_set(
+            "actuator",
+            "brightness",
+            Value::Int(100),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
         let provider = ctx.get_settable("actuator", "brightness").unwrap();
         assert_eq!(provider.sample(&[]).await.unwrap(), Value::Int(100));
     }
@@ -124,7 +175,17 @@ mod tests {
     async fn test_set_missing_provider() {
         let ctx = BehaviourContext::new(); // Empty - no providers registered
 
-        let result = execute_set("nonexistent", "channel", Value::Int(42), &ctx).await;
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        let result = execute_set(
+            "nonexistent",
+            "channel",
+            Value::Int(42),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await;
 
         assert!(result.is_err());
         assert!(matches!(
@@ -149,16 +210,33 @@ mod tests {
         ctx.register_settable(TypedSettableProvider::new(provider, Type::Int));
 
         // Valid value should succeed
-        execute_set("actuator", "brightness", Value::Int(50), &ctx)
-            .await
-            .unwrap();
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_set(
+            "actuator",
+            "brightness",
+            Value::Int(50),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
 
         // Verify value was set
         let provider = ctx.get_settable("actuator", "brightness").unwrap();
         assert_eq!(provider.sample(&[]).await.unwrap(), Value::Int(50));
 
         // Invalid value should fail
-        let result = execute_set("actuator", "brightness", Value::Int(150), &ctx).await;
+        let result = execute_set(
+            "actuator",
+            "brightness",
+            Value::Int(150),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await;
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -183,9 +261,18 @@ mod tests {
         ctx.register_settable(TypedSettableProvider::new(string_provider, Type::String));
 
         // Set bool value
-        execute_set("device", "enabled", Value::Bool(true), &ctx)
-            .await
-            .unwrap();
+        let policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+        execute_set(
+            "device",
+            "enabled",
+            Value::Bool(true),
+            &ctx,
+            &policy_eval,
+            &actor,
+        )
+        .await
+        .unwrap();
         let bool_provider = ctx.get_settable("device", "enabled").unwrap();
         assert_eq!(bool_provider.sample(&[]).await.unwrap(), Value::Bool(true));
 
@@ -195,6 +282,8 @@ mod tests {
             "name",
             Value::String("sensor-01".to_string()),
             &ctx,
+            &policy_eval,
+            &actor,
         )
         .await
         .unwrap();

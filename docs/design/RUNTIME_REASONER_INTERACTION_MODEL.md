@@ -9,6 +9,9 @@ This note captures the intended design story behind Ash as a workflow language f
 cognition. Its purpose is to preserve the core conceptual model precisely enough that the runtime,
 IR, semantics, and later interaction-facing specifications can be derived or revised against it.
 
+For the future extension path around interaction-specific obligations, see
+[Interaction Obligations Extension Path](INTERACTION_OBLIGATIONS_EXTENSION_PATH.md).
+
 This document is intentionally pre-spec. It does not define full normative syntax or operational
 rules. Instead, it defines the system intent and the two focused views that Ash must support:
 

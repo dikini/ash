@@ -688,7 +688,7 @@ Complete runtime alignment for `receive` execution and policy outcomes.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md) | Implement end-to-end `receive` execution | SPEC-004/013/017 | 8 | 📝 Planned |
+| [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md) | Implement end-to-end `receive` execution | SPEC-004/013/017 | 8 | ✅ Complete |
 | [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) | Align runtime policy outcomes | SPEC-017/018 | 6 | 📝 Planned |
 
 **Phase 28 Deliverable**: Runtime behavior aligned with hardened canonical `receive` and policy-outcome contracts

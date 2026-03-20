@@ -1,6 +1,6 @@
 # TASK-170: Implement End-to-End Receive Execution
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -34,7 +34,7 @@ verification layers.
 ## Files
 
 - Modify: `crates/ash-interp/src/execute_stream.rs`
-- Modify: `crates/ash-interp/src/eval.rs`
+- Modify: `crates/ash-interp/src/execute.rs`
 - Modify: `crates/ash-interp/src/stream.rs`
 - Test: `crates/ash-interp/tests/receive_execution.rs`
 - Modify: `CHANGELOG.md`
@@ -50,7 +50,7 @@ Add integration tests proving canonical `receive` behavior from parsed form thro
 Run:
 
 ```bash
-cargo test -p ash-interp receive_execution -- --nocapture
+cargo test -p ash-interp --test receive_execution -- --nocapture
 ```
 
 Expected: fail because `receive` is not fully implemented end-to-end.
@@ -64,7 +64,7 @@ Implement canonical runtime behavior for `receive` using the frozen core and ver
 Run:
 
 ```bash
-cargo test -p ash-interp receive_execution -- --nocapture
+cargo test -p ash-interp --test receive_execution -- --nocapture
 ```
 
 Expected: pass.
@@ -88,11 +88,11 @@ git commit -m "feat: implement end-to-end receive execution"
 
 ## Completion Checklist
 
-- [ ] failing receive-execution tests added
-- [ ] failure verified
-- [ ] canonical end-to-end `receive` execution implemented
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing receive-execution tests added
+- [x] failure verified
+- [x] canonical end-to-end `receive` execution implemented
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

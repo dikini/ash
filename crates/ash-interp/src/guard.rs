@@ -429,7 +429,7 @@ mod tests {
 
         let pred = Predicate {
             name: "is_empty".to_string(),
-            arguments: vec![Expr::Literal(Value::List(Box::new(vec![])))],
+            arguments: vec![Expr::Literal(Value::List(Box::default()))],
         };
         assert!(eval_predicate(&pred, &ctx).unwrap());
 

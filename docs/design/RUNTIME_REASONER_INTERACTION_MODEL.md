@@ -109,6 +109,10 @@ Projection is not assumed to be lossless. It may:
 Projection exists to control both safety and reasoning quality. The runtime does not hand over raw
 state unchanged. It prepares a view suitable for reasoning while preserving governance constraints.
 
+Runtime visibility is a separate concern. Monitor views, `exposes { ... }`, workflow observability,
+and other inspectable runtime surfaces remain runtime-only contracts and are not the same as
+reasoner projection.
+
 ### Derivation
 
 Derivation produces advisory results from projected context.

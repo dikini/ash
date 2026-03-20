@@ -8,6 +8,13 @@ confuse across specs, plans, and implementation notes.
 - **policy**: Authorization and governance logic such as `Permit`, `Deny`,
   `RequireApproval`, or `Transform`. Do not use `policy` for scheduling, routing, or
   mailbox-selection behavior unless the paragraph explicitly redefines the term.
+- **projection**: The runtime-governed selection, redaction, framing, or summarization of runtime
+  state for a reasoner-visible context. Do not use `projection` for runtime observability or
+  monitor views.
+- **monitorability**: Runtime visibility and inspectability of workflow state, monitor views, or
+  exposed workflow data. Do not use `monitorability` for runtime-to-reasoner context transfer.
+- **exposed workflow view**: A read-only runtime surface declared by `exposes { ... }` and
+  observed through monitor authority. Do not use this term to mean injected reasoner context.
 - **source scheduling modifier**: The language-level modifier that determines how
   `receive` chooses among eligible stream sources.
 - **scheduler**: The runtime mechanism that implements a source scheduling modifier.
@@ -18,6 +25,8 @@ confuse across specs, plans, and implementation notes.
 - **stream**: A discrete event input consumed with `receive`.
 - **control mailbox**: The implicit workflow-owned mailbox used by `receive control`.
 - **stream mailbox**: The queued input state for declared `receives` sources.
+- **observe**: In workflow syntax, the input-acquisition verb for behaviour observation. Do not use
+  it as a generic synonym for monitor-view access when describing runtime visibility.
 
 Workflow declarations should be explicit about input kinds:
 
@@ -53,4 +62,6 @@ workflow worker
 
 When a paragraph is about workflow authorization, obligations, or capability permissions, use
 `policy`. When it is about `receive` source selection or mailbox fairness, use
-`source scheduling modifier` and `scheduler`.
+`source scheduling modifier` and `scheduler`. When it is about runtime visibility, use
+`monitorability` or `exposed workflow view`; when it is about runtime-to-reasoner context transfer,
+use `projection`.

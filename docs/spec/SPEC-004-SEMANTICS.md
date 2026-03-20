@@ -10,6 +10,18 @@ These rules define the meaning of the canonical core IR from SPEC-001. Surface s
 additional convenience forms, but those forms are only semantically relevant insofar as they lower
 to the canonical core contract.
 
+## 1.1 Runtime Authority and Advisory Interaction
+
+This document defines canonical runtime meaning. The runtime owns authoritative state,
+validation, rejection, commitment, trace, and provenance.
+
+If an external reasoner participates in a workflow, its outputs remain advisory until the runtime
+accepts them. That interaction is governed by separate interaction contracts and does not change
+the canonical operational rules below.
+
+This spec remains execution-neutral. It does not define reasoner projection mechanics, transport,
+or any monitor/exposure behavior.
+
 ## 2. Semantic Domains
 
 ```

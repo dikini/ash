@@ -1,6 +1,6 @@
 # TASK-192: Add Runtime-Authority Framing to SPEC-004
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -46,6 +46,13 @@ Check for:
 Expected failure conditions:
 - the repository still lacks a runtime-semantics framing section that cleanly references the interaction contract without absorbing it.
 
+Observed before implementation:
+- `SPEC-004` defined the operational rules and execution-neutral big-step semantics, but it did not
+  yet explicitly state that authoritative runtime transition remains separate from advisory
+  interaction until accepted.
+- the new interaction contract existed, but the runtime semantics file did not yet point at that
+  boundary in a short framing section.
+
 ### Step 3: Implement the minimal framing delta (Green)
 
 Add only the framing text needed to clarify authority and acceptance boundaries.
@@ -57,6 +64,14 @@ Expected pass conditions:
 - advisory interaction is acknowledged but not operationalized in the core rules,
 - no runtime-only feature is overloaded.
 
+Verified after implementation:
+- [docs/spec/SPEC-004-SEMANTICS.md](/home/dikini/Projects/ash/docs/spec/SPEC-004-SEMANTICS.md)
+  now includes a minimal `1.1 Runtime Authority and Advisory Interaction` subsection.
+- the new framing states that the runtime owns authoritative state, validation, rejection,
+  commitment, trace, and provenance.
+- the new framing also states that external reasoner outputs remain advisory until runtime
+  acceptance and that the spec stays execution-neutral.
+
 ### Step 5: Commit
 
 ```bash
@@ -66,10 +81,10 @@ git commit -m "docs: add runtime authority framing to spec-004"
 
 ## Completion Checklist
 
-- [ ] framing section added
-- [ ] runtime authority explicit
-- [ ] advisory boundary explicit
-- [ ] `CHANGELOG.md` updated
+- [x] framing section added
+- [x] runtime authority explicit
+- [x] advisory boundary explicit
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 
@@ -81,4 +96,3 @@ git commit -m "docs: add runtime authority framing to spec-004"
 
 - Depends on: TASK-191
 - Blocks: TASK-195
-

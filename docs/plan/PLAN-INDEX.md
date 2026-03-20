@@ -561,11 +561,11 @@ planning any implementation convergence against the new interaction-facing mater
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-191](tasks/TASK-191-define-runtime-to-reasoner-interaction-contract.md) | Define runtime-to-reasoner interaction contract | Design note / SPEC-004 | 6 | 📝 Planned |
-| [TASK-192](tasks/TASK-192-add-runtime-authority-framing-to-spec-004.md) | Add runtime-authority framing to `SPEC-004` | SPEC-004 | 4 | 📝 Planned |
-| [TASK-193](tasks/TASK-193-tighten-projection-and-monitorability-terminology.md) | Tighten projection and monitorability terminology | Design / reference | 4 | 📝 Planned |
-| [TASK-194](tasks/TASK-194-define-human-facing-surface-guidance-boundary.md) | Define human-facing surface guidance boundary | SPEC-002 / reference | 5 | 📝 Planned |
-| [TASK-195](tasks/TASK-195-synthesize-runtime-reasoner-spec-handoff.md) | Synthesize runtime-reasoner spec handoff | Follow-up docs corpus | 4 | 📝 Planned |
+| [TASK-191](tasks/TASK-191-define-runtime-to-reasoner-interaction-contract.md) | Define runtime-to-reasoner interaction contract | Design note / SPEC-004 | 6 | ✅ Complete |
+| [TASK-192](tasks/TASK-192-add-runtime-authority-framing-to-spec-004.md) | Add runtime-authority framing to `SPEC-004` | SPEC-004 | 4 | ✅ Complete |
+| [TASK-193](tasks/TASK-193-tighten-projection-and-monitorability-terminology.md) | Tighten projection and monitorability terminology | Design / reference | 4 | ✅ Complete |
+| [TASK-194](tasks/TASK-194-define-human-facing-surface-guidance-boundary.md) | Define human-facing surface guidance boundary | SPEC-002 / reference | 5 | ✅ Complete |
+| [TASK-195](tasks/TASK-195-synthesize-runtime-reasoner-spec-handoff.md) | Synthesize runtime-reasoner spec handoff | Follow-up docs corpus | 4 | ✅ Complete |
 
 **Phase Deliverable**: One interaction contract, one minimal runtime-framing update, one terminology pass, one surface-guidance boundary note, and one implementation-readiness handoff with runtime-only protections preserved
 

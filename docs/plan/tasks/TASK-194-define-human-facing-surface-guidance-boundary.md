@@ -1,6 +1,6 @@
 # TASK-194: Define Human-Facing Surface Guidance Boundary
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -48,6 +48,12 @@ Check for:
 Expected failure conditions:
 - the repository still lacks one note that decides the surface-guidance boundary before `SPEC-002` is edited.
 
+Observed before implementation:
+- the repository had the interaction contract and the terminology pass, but no single note stated
+  whether human-facing advisory/gated/committed guidance should be explanatory or normative.
+- without that decision, later `SPEC-002` edits risked drifting into syntax design or overloading
+  runtime-only features such as `exposes` and monitor visibility.
+
 ### Step 3: Implement the minimal boundary note (Green)
 
 Add only the boundary decision and guidance ownership note needed for later surface-spec work.
@@ -59,6 +65,13 @@ Expected pass conditions:
 - the decision on explanatory versus normative text is explicit,
 - runtime-only constructs remain protected.
 
+Verified after implementation:
+- [surface-guidance-boundary.md](../../reference/surface-guidance-boundary.md) now states that the
+  required human-facing stage guidance is explanatory only at this stage.
+- the note defines what guidance may later appear in `SPEC-002` and what remains out of scope,
+  including new syntax, grammar changes, and any reinterpretation of monitor or exposure features.
+- runtime-only constructs remain explicitly protected from being reused as stage markers.
+
 ### Step 5: Commit
 
 ```bash
@@ -68,10 +81,10 @@ git commit -m "docs: define human-facing surface guidance boundary"
 
 ## Completion Checklist
 
-- [ ] guidance boundary documented
-- [ ] explanatory versus normative decision documented
-- [ ] runtime-only constructs protected
-- [ ] `CHANGELOG.md` updated
+- [x] guidance boundary documented
+- [x] explanatory versus normative decision documented
+- [x] runtime-only constructs protected
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 
@@ -83,4 +96,3 @@ git commit -m "docs: define human-facing surface guidance boundary"
 
 - Depends on: TASK-191, TASK-193
 - Blocks: TASK-195
-

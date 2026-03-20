@@ -1,6 +1,6 @@
 # TASK-195: Synthesize Runtime-Reasoner Spec Handoff
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,6 +49,13 @@ Check for:
 Expected failure conditions:
 - the repository still lacks one handoff note that closes the docs-only follow-up phase cleanly.
 
+Observed before implementation:
+- the repository had the interaction contract, the `SPEC-004` framing update, the terminology
+  pass, and the surface-guidance boundary note, but no single handoff document closing the
+  docs-only phase.
+- it was still unclear which docs implementation planning should treat as authoritative and which
+  runtime-only areas remained explicitly protected.
+
 ### Step 3: Implement the handoff note (Green)
 
 Create only the handoff note and the minimal index/changelog updates needed to close the phase.
@@ -61,6 +68,15 @@ Expected pass conditions:
 - the later implementation-planning surface is explicit,
 - the phase closes without creating implementation tasks prematurely.
 
+Verified after implementation:
+- [2026-03-20-runtime-reasoner-spec-handoff.md](../2026-03-20-runtime-reasoner-spec-handoff.md)
+  now lists the authoritative docs produced by the follow-up phase.
+- the handoff restates the protected runtime-only areas and records what remains explicitly out of
+  scope.
+- the handoff defines the later implementation-planning surface without creating implementation
+  tasks in this phase.
+- the docs-only follow-up phase now closes cleanly.
+
 ### Step 5: Commit
 
 ```bash
@@ -70,11 +86,11 @@ git commit -m "docs: synthesize runtime-reasoner spec handoff"
 
 ## Completion Checklist
 
-- [ ] handoff documented
-- [ ] authoritative docs listed
-- [ ] protected runtime-only areas restated
-- [ ] later implementation-planning surface defined
-- [ ] `CHANGELOG.md` updated
+- [x] handoff documented
+- [x] authoritative docs listed
+- [x] protected runtime-only areas restated
+- [x] later implementation-planning surface defined
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 
@@ -86,4 +102,3 @@ git commit -m "docs: synthesize runtime-reasoner spec handoff"
 
 - Depends on: TASK-191, TASK-192, TASK-193, TASK-194
 - Blocks: later implementation-planning work to be introduced after this handoff
-

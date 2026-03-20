@@ -1,6 +1,6 @@
 # TASK-191: Define Runtime-to-Reasoner Interaction Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,6 +49,14 @@ Check for:
 Expected failure conditions:
 - the repository still lacks one authoritative interaction-facing document that later specs can cite.
 
+Observed before implementation:
+- the repository had the design note and the separation rules, but no standalone interaction-facing
+  contract that later specs or references could cite directly.
+- projection, advisory outputs, and acceptance boundaries still lived across design discussion and
+  planning outputs rather than in one handoff note.
+- the non-overlap between projection and monitor/exposure mechanisms was preserved by intent, but
+  not yet frozen in one interaction-layer document.
+
 ### Step 3: Implement the minimal contract note (Green)
 
 Add only the interaction contract and the minimal planning/changelog updates needed to track it.
@@ -60,6 +68,15 @@ Expected pass conditions:
 - monitor views and `exposes` are explicitly excluded from projection semantics,
 - later framing and terminology tasks can cite one stable note.
 
+Verified after implementation:
+- [runtime-to-reasoner-interaction-contract.md](../../reference/runtime-to-reasoner-interaction-contract.md)
+  now defines injected context, hidden reasoner history, advisory outputs, acceptance boundaries,
+  and runtime-owned commitment.
+- the new contract explicitly states that monitor views, `exposes`, workflow observability, and
+  `MonitorLink` are runtime-only visibility constructs rather than projection machinery.
+- later follow-up tasks can now cite one stable interaction contract instead of re-deriving the
+  boundary from the design note.
+
 ### Step 5: Commit
 
 ```bash
@@ -69,10 +86,10 @@ git commit -m "docs: define runtime-to-reasoner interaction contract"
 
 ## Completion Checklist
 
-- [ ] interaction contract documented
-- [ ] projection/acceptance boundaries documented
-- [ ] monitor/exposes non-overlap documented
-- [ ] `CHANGELOG.md` updated
+- [x] interaction contract documented
+- [x] projection/acceptance boundaries documented
+- [x] monitor/exposes non-overlap documented
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 
@@ -84,4 +101,3 @@ git commit -m "docs: define runtime-to-reasoner interaction contract"
 
 - Depends on: TASK-190
 - Blocks: TASK-192, TASK-193, TASK-194, TASK-195
-

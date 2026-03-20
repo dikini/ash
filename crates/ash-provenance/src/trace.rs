@@ -527,6 +527,61 @@ impl TraceRecorder<Arc<InMemoryTraceStore>> {
     }
 }
 
+/// Wrapper-safe workflow trace session that guarantees canonical entry/exit framing.
+///
+/// A session records exactly one workflow-started event on entry. Terminal success records
+/// `WorkflowCompleted { success: true }` as the final event. Terminal failure records
+/// `Error` followed by `WorkflowCompleted { success: false }`.
+#[derive(Debug)]
+pub struct WorkflowTraceSession<S: TraceStore> {
+    recorder: TraceRecorder<S>,
+}
+
+impl<S: TraceStore> WorkflowTraceSession<S> {
+    /// Start a new workflow trace session by recording the workflow entry event.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the start event cannot be stored.
+    pub fn start(
+        mut recorder: TraceRecorder<S>,
+        name: impl Into<String>,
+    ) -> Result<Self, TraceStoreError> {
+        recorder.record_workflow_started(name)?;
+        Ok(Self { recorder })
+    }
+
+    /// Get a mutable recorder reference for accepted runtime progression events.
+    pub fn recorder_mut(&mut self) -> &mut TraceRecorder<S> {
+        &mut self.recorder
+    }
+
+    /// Finish the session successfully, recording terminal completion last.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the completion event cannot be stored.
+    pub fn finish_success(mut self) -> Result<TraceRecorder<S>, TraceStoreError> {
+        self.recorder.record_workflow_completed(true)?;
+        Ok(self.recorder)
+    }
+
+    /// Finish the session with an error, recording the error before failed completion.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if either the error or completion event cannot be stored.
+    pub fn finish_error(
+        mut self,
+        error: impl Into<String>,
+        context: Option<impl Into<String>>,
+    ) -> Result<TraceRecorder<S>, TraceStoreError> {
+        self.recorder.record_error(error, context)?;
+        self.recorder.record_workflow_completed(false)?;
+        Ok(self.recorder)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

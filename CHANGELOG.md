@@ -42,6 +42,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Follow-up tightening for TASK-180. [SPEC-006](docs/spec/SPEC-006-POLICY-DEFINITIONS.md), [SPEC-017](docs/spec/SPEC-017-CAPABILITY-INTEGRATION.md), [SPEC-018](docs/spec/SPEC-018-CAPABILITY-MATRIX.md), and [docs/reference/type-to-runtime-contract.md](docs/reference/type-to-runtime-contract.md) now require named policy bindings at capability sites and define the capability-verification outcome set as a verification-time interface with explicit pre-execution incompatibility rejection for unsupported approval or transformation outcomes.
 
 ### Fixed
+- Runtime trace and provenance boundaries now use one canonical wrapper framing path (TASK-207).
+  `ash-provenance` now exposes a `WorkflowTraceSession` that records `started` on entry and
+  terminal `completed` on exit, failed runs now record `error` before `completed(false)`, and the
+  current CLI trace wrappers plus `#[workflow]` macro now route through that same runtime-only
+  session API. `ash-macros` also now has integration coverage for the downstream expansion path.
 - `TASK-206` now makes the current terminated-control retention behavior explicit and tests it directly. `ash-interp` stateful runtime-boundary tests now lock in that killed control links remain observable as terminated tombstones across later executions sharing the same `RuntimeState`.
 - Cleared the remaining workspace clippy warnings so the repository-level CI gate is clean again (TASK-210). `ash-core` test construction now uses `Box::default()` instead of boxing an empty vector directly, and `ash-repl` test ANSI stripping now iterates with `for ... in chars.by_ref()` so `cargo clippy --all-targets --all-features` and `cargo test --all` both pass on the merged codebase.
 

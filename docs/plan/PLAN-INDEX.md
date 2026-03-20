@@ -624,7 +624,7 @@ expanding user-facing tooling follow-up.
 |------|-------------|------|------------|--------|
 | [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md) | Implement runtime action and control-link execution | SPEC-004/017/018 | 10 | ✅ Complete |
 | [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md) | Align runtime admission, rejection, and commitment visibility | SPEC-004/017/018/021 | 8 | ✅ Complete |
-| [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) | Harden runtime trace and provenance boundaries | SPEC-001/004/021 | 8 | 📝 Planned |
+| [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) | Harden runtime trace and provenance boundaries | SPEC-001/004/021 | 8 | ✅ Complete |
 
 **Phase Deliverable**: Completed runtime execution branches, explicit runtime boundary behavior, and hardened trace/provenance capture aligned with accepted runtime progression
 
@@ -643,6 +643,11 @@ executions; [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-comm
 must replace that fallback with explicit runtime-owned lifecycle state. The current implementation
 retains terminated instances as tombstones; long-term retention and cleanup design is deferred to
 [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md).
+
+Execution note: [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md)
+lands as a runtime-only provenance session API plus wrapper-caller convergence. It hardens
+workflow entry/exit framing without reclassifying CLI or macro surfaces as anything other than
+runtime observability.
 
 ## Tooling Observable Convergence Extension (Week 50)
 

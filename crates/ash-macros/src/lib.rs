@@ -112,18 +112,29 @@ pub fn workflow(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let sig = &input.sig;
     let block = &input.block;
     let attrs = &input.attrs;
+    let fn_name = sig.ident.to_string();
 
     let expanded = quote! {
         #(#attrs)*
         #vis #sig {
-            // Enter workflow context
-            let __workflow_ctx = ::ash_core::runtime::enter_workflow();
+            let __workflow_id = ::ash_core::WorkflowId::new();
+            let __trace_recorder = ::ash_provenance::create_trace_recorder(__workflow_id);
+            let __trace_session = ::ash_provenance::WorkflowTraceSession::start(
+                __trace_recorder,
+                #fn_name,
+            ).expect("workflow trace session starts");
 
             // Execute the workflow body
             let __result = (|| #block)();
 
-            // Exit workflow context and record provenance
-            ::ash_core::runtime::exit_workflow(__workflow_ctx, &__result);
+            let __trace_recorder = match &__result {
+                Ok(_) => __trace_session.finish_success(),
+                Err(error) => __trace_session.finish_error(
+                    format!("{:?}", error),
+                    Some(#fn_name),
+                ),
+            }.expect("workflow trace session completes");
+            let _ = __trace_recorder;
 
             __result
         }

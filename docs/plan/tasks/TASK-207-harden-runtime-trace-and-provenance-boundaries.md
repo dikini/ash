@@ -1,6 +1,6 @@
 # TASK-207: Harden Runtime Trace and Provenance Boundaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -33,6 +33,8 @@ across execution boundaries and workflow wrapper framing.
 - Modify: `crates/ash-provenance/src/lib.rs`
 - Modify: `crates/ash-provenance/src/trace.rs`
 - Modify: `crates/ash-macros/src/lib.rs`
+- Modify: `crates/ash-cli/src/commands/run.rs`
+- Modify: `crates/ash-cli/src/commands/trace.rs`
 - Test: `crates/ash-provenance/tests/runtime_trace_boundaries.rs`
 - Modify: `CHANGELOG.md`
 
@@ -88,11 +90,22 @@ git commit -m "fix: harden runtime trace and provenance boundaries"
 
 ## Completion Checklist
 
-- [ ] failing runtime trace/provenance tests added
-- [ ] failure verified
-- [ ] trace/provenance boundary capture hardened
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing runtime trace/provenance tests added
+- [x] failure verified
+- [x] trace/provenance boundary capture hardened
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
+
+## Resolution Note
+
+`TASK-207` hardens runtime trace/provenance boundaries by introducing a wrapper-safe
+`WorkflowTraceSession` in `ash-provenance` and routing current workflow-wrapper callers through
+that API. Successful runs now record `WorkflowStarted ... WorkflowCompleted(true)` with completion
+terminally last; failed runs now record `WorkflowStarted ... Error ... WorkflowCompleted(false)`.
+The current `ash-cli` tracing wrappers and `#[workflow]` macro now align to that same runtime-only
+boundary contract. `ash-macros` now also has integration coverage proving the `#[workflow]`
+expansion compiles and executes in a downstream test-crate context with the required
+`ash_core`/`ash_provenance` dependencies present.
 
 ## Non-goals
 

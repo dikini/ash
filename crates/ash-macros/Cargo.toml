@@ -17,3 +17,4 @@ syn = { version = "2.0", features = ["full", "extra-traits"] }
 
 [dev-dependencies]
 ash-core = { path = "../ash-core" }
+ash-provenance = { path = "../ash-provenance" }

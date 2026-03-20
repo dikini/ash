@@ -16,6 +16,7 @@ All capabilities (input: `observe`, `receive`; output: `set`, `send`) must integ
 | Behaviour | `set` | Operational | External side effect that modifies external state |
 | Stream | `receive` | Epistemic | Mailbox input acquisition; consumes queued workflow input without producing external side effects |
 | Stream | `send` | Operational | External side effect that produces an outgoing event |
+| Monitor view | `observe` via `MonitorLink` | Epistemic | Read-only observation of an exposed workflow view |
 
 ### 2.2 Effect Lattice
 
@@ -206,6 +207,13 @@ The lowered representation is consumer-neutral, but the terminal decisions are n
 Capability-verification consumers may still reject unsupported approval or transformation
 outcomes before execution if a particular capability/provider cannot honor that decision class.
 That rejection is a verification incompatibility, not a new policy decision kind.
+
+Monitoring authority is a distinct read-only capability. Workflows may expose a monitor view via
+`exposes { ... }`; that view can include obligations, behaviours, and values such as
+`monitor_count`. Ordinary policy conditions may inspect those exposed values to govern monitor
+grant, delegation, or observation decisions. No monitor-specific policy sublanguage is introduced,
+and monitor grant/delegation is treated as an explicit atomic capability operation rather than a
+two-step read-then-write protocol.
 
 ### 4.2 Policy Evaluation Context
 

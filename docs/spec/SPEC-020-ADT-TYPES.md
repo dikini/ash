@@ -6,7 +6,7 @@
 
 This specification defines the design for Algebraic Data Types (ADTs) in Ash, including sum types (enums), product types (structs/tuples), and generics. ADTs enable:
 
-- **Option<T>** for nullable values and control link tracking
+- **Option<T>** for nullable values and control/monitor link tracking
 - **Result<T, E>** for error handling  
 - **User-defined enums** for state machines and domain modeling
 - **Pattern matching** with exhaustiveness checking
@@ -305,12 +305,13 @@ of the observable spec contract.
 spawn worker with { init: args } as w;
 
 -- w: Instance<Worker> (composite)
--- Contains: InstanceAddr<Worker> + Option<ControlLink<Worker>>
+-- Contains: InstanceAddr<Worker> + Option<ControlLink<Worker>> + Option<MonitorLink<Worker>>
 
-let (w_addr, w_ctrl) = split w;
+let (w_addr, w_ctrl, w_mon) = split w;
 
 -- w_addr: InstanceAddr<Worker> - communicable endpoint for messaging
 -- w_ctrl: Option<ControlLink<Worker>> - initially Some { value: link }
+-- w_mon: Option<MonitorLink<Worker>> - exposed monitor-view authority when granted
 ```
 
 ### 8.2 Control Link Transfer
@@ -335,8 +336,21 @@ if let Some { value: link } = w_ctrl then {
 
 Control-link transfer uses ordinary `send` semantics with one additional rule: ownership is
 consumed only after successful delivery. Failed sends do not consume the link.
+Control-link transfer does not imply monitor authority or monitor visibility.
 
-### 8.3 Type Checking Transfer
+### 8.3 Monitor Link Integration
+
+`MonitorLink` is a first-class observation authority distinct from `InstanceAddr` and
+`ControlLink`.
+
+- `MonitorLink` grants read-only access to the workflow's exposed monitor view
+- the exposed monitor view is defined by the workflow's `exposes { ... }` clause in SPEC-002
+- exposing a monitor view does not imply control or messaging authority
+- a workflow may have more than one active monitor grant when policy and the runtime allow it
+- monitor grant or delegation is explicit and atomic; the language contract does not require a
+  particular internal storage layout
+
+### 8.4 Type Checking Transfer
 
 The type checker must track when an Option is consumed:
 
@@ -520,7 +534,7 @@ proptest! {
 - Match expression evaluation
 
 ### Phase 5: Integration (TASK-134 to TASK-135)
-- Spawn returns Option<ControlLink>
+- Spawn returns Option<ControlLink> and Option<MonitorLink>
 - Control link transfer semantics
 
 ### Phase 6: Standard Library (TASK-136)

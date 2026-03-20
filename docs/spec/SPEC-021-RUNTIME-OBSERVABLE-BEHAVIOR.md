@@ -10,7 +10,7 @@ It defines:
 
 1. verification-visible and runtime-visible outcomes,
 2. CLI and REPL observable behavior boundaries,
-3. stable user-visible value display for ADTs and instance/control values, and
+3. stable user-visible value display for ADTs and instance/control/monitor values, and
 4. observable failure boundaries for parse, type, verification, policy, and runtime errors.
 
 This spec is about what users and tooling may observe, not about the internal storage or execution
@@ -125,10 +125,23 @@ Runtime values expose distinct observable roles for:
 
 - `InstanceAddr` as a communicable endpoint value
 - `ControlLink` as transferable control authority
-- `Instance` as a composite containing an address plus `Option<ControlLink>`
+- `MonitorLink` as transferable observation authority
+- `Instance` as a composite containing an address plus `Option<ControlLink>` plus
+  `Option<MonitorLink>`
 
 Observable formatting may vary in punctuation, but the distinction between address and control
-authority must remain visible.
+authority must remain visible. Monitoring authority must remain visible as a separate observable
+role, not as control or messaging.
+
+### 4.3 Monitor Views
+
+Workflow instances may expose a monitor view via `exposes { ... }`.
+
+- the monitor view is read-only
+- it may include obligations, behaviours, and values
+- it may include monitor metadata such as `monitor_count`
+- only holders of `MonitorLink` may observe the exposed monitor view, subject to policy
+- monitoring does not imply control or message-send authority
 
 ## 5. Stdlib-Visible Guarantees
 
@@ -143,5 +156,7 @@ The stdlib-visible ADT surface relies on these runtime guarantees:
   operate over that constructor-shaped runtime behavior
 - `split` / control-link examples relying on `Option<ControlLink>` observe `Some { value: link }`
   vs `None` semantics rather than an unrelated sentinel encoding
+- monitor-view observation uses the declared exposed monitor view and does not grant control or
+  messaging authority
 
 These guarantees are about visible behavior, not about requiring one internal storage type.

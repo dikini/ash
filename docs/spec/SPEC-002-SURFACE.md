@@ -19,6 +19,7 @@ KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
               | "oblige" | "check" | "let" | "in" | "if" | "then" | "else"
               | "for" | "do" | "par" | "with" | "maybe" | "must"
               | "wait" | "control"
+              | "exposes"
               | "timeout" | "done"
               | "epistemic" | "deliberative" | "evaluative" | "operational"
               | "authority" | "obligations" | "supervises"
@@ -113,11 +114,21 @@ workflow_clause ::= observes_clause
                   | receives_clause
                   | sets_clause
                   | sends_clause
+                  | exposes_clause
 
 observes_clause ::= "observes" behaviour_ref ("," behaviour_ref)*
 receives_clause ::= "receives" stream_ref ("," stream_ref)*
 sets_clause     ::= "sets" settable_ref ("," settable_ref)*
 sends_clause    ::= "sends" sendable_ref ("," sendable_ref)*
+exposes_clause   ::= "exposes" "{" exposure_item ("," exposure_item)* "}"
+
+exposure_item   ::= obligations_exposure
+                  | behaviours_exposure
+                  | values_exposure
+
+obligations_exposure ::= "obligations:" "[" obligation_ref* "]"
+behaviours_exposure   ::= "behaviours:" "[" behaviour_ref* "]"
+values_exposure       ::= "values:" "[" IDENTIFIER* "]"
 
 behaviour_ref   ::= capability_ref
 settable_ref    ::= capability_ref
@@ -188,9 +199,13 @@ must_stmt       ::= "must" workflow
 - `receive` is the authoritative surface form for stream/mailbox intake in the core workflow language; neighboring specs should defer to this grammar when referring to workflow-level `receive`.
 - Workflow clauses make input and output kinds explicit: `observes` declares behaviour inputs,
   `receives` declares stream inputs, and `sets` / `sends` declare output capabilities.
+- `exposes` declares the externally monitorable workflow view. It does not imply control or
+  messaging authority; it exposes only the named obligations, behaviours, and values.
 - `behaviour_ref`, `settable_ref`, and `sendable_ref` are intentionally distinct names even when
   they share the same token shape. The distinction is semantic: `observes` grants read access to
   behaviours, not write authority; write authority is declared separately with `sets` or `sends`.
+- `exposure_item` is intentionally read-only. Monitor metadata such as `monitor_count` belongs in
+  the exposed `values` set when it is meant to be visible.
 - `if let` is surface sugar only. It is accepted for readability, but its canonical meaning is the
   same as a `match` with a wildcard fallback in the core language contract.
 - Recoverable failures use explicit `Result` values and pattern matching for recoverable control

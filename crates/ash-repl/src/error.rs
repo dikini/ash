@@ -118,11 +118,31 @@ pub fn suggest_fix(error: &str) -> Option<String> {
 mod tests {
     use super::*;
 
+    fn strip_ansi(text: &str) -> String {
+        let mut result = String::with_capacity(text.len());
+        let mut chars = text.chars().peekable();
+
+        while let Some(ch) = chars.next() {
+            if ch == '\u{1b}' && chars.peek() == Some(&'[') {
+                chars.next();
+                while let Some(next) = chars.next() {
+                    if ('@'..='~').contains(&next) {
+                        break;
+                    }
+                }
+                continue;
+            }
+            result.push(ch);
+        }
+
+        result
+    }
+
     #[test]
     fn test_format_error_with_line() {
         let source = "1 +\n2 + 3";
         let error = "unexpected end of input";
-        let formatted = format_error(source, error, Some(1));
+        let formatted = strip_ansi(&format_error(source, error, Some(1)));
 
         assert!(formatted.contains("Error:"));
         assert!(formatted.contains("unexpected end of input"));
@@ -132,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_format_error_without_line() {
-        let formatted = format_error("", "something went wrong", None);
+        let formatted = strip_ansi(&format_error("", "something went wrong", None));
         assert!(formatted.contains("Error:"));
         assert!(formatted.contains("something went wrong"));
         assert!(!formatted.contains('|'));
@@ -142,7 +162,7 @@ mod tests {
     fn test_format_error_with_context() {
         let source = "line 1\nline 2\nline 3\nline 4";
         let error = "test error";
-        let formatted = format_error(source, error, Some(2));
+        let formatted = strip_ansi(&format_error(source, error, Some(2)));
 
         // Should show context lines around line 2
         assert!(formatted.contains("1 |"));
@@ -152,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_format_type_error() {
-        let formatted = format_type_error("x + 1", "Int", "String");
+        let formatted = strip_ansi(&format_type_error("x + 1", "Int", "String"));
         assert!(formatted.contains("Type Error:"));
         assert!(formatted.contains("Expected:"));
         assert!(formatted.contains("Found:"));

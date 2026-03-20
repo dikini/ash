@@ -6,6 +6,11 @@
 
 Implement control link transfer semantics for affine/linear tracking of control links.
 
+> Historical note: the original task framed transfer through affine consumption. The canonical
+> control-authority contract was later revised by TASK-211 so transferred `ControlLink` authority
+> remains reusable for non-terminal supervision operations and is invalidated by terminal runtime
+> state rather than unconditional first use.
+
 ## Specification Reference
 
 - SPEC-020: ADT Types - Section 8.2, 8.3

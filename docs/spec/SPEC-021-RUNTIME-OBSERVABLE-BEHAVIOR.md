@@ -124,7 +124,7 @@ Tooling and stdlib behavior must not depend on synthetic tag fields such as `__v
 Runtime values expose distinct observable roles for:
 
 - `InstanceAddr` as a communicable endpoint value
-- `ControlLink` as transferable control authority
+- `ControlLink` as transferable reusable control authority
 - `MonitorLink` as shareable observation authority
 - `Instance` as a composite containing an address plus `Option<ControlLink>` plus
   `Option<MonitorLink>`
@@ -132,6 +132,14 @@ Runtime values expose distinct observable roles for:
 Observable formatting may vary in punctuation, but the distinction between address and control
 authority must remain visible. Monitoring authority must remain visible as a separate observable
 role, not as control or messaging.
+
+Observable control behavior follows the runtime control contract:
+
+- `ControlLink` may be reused for non-terminal supervision operations such as health checks,
+  pause, and resume while the target instance remains valid
+- terminal control such as `kill` invalidates future control operations for that instance
+- later failed control attempts must surface as explicit runtime failures rather than as silent
+  no-ops or hidden first-use consumption
 
 ### 4.3 Monitor Views
 

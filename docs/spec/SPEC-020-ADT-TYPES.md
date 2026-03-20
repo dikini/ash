@@ -332,11 +332,24 @@ if let Some { value: link } = w_ctrl then {
 
 `InstanceAddr` and `ControlLink` are distinct:
 - `InstanceAddr` is a communicable endpoint value
-- `ControlLink` is transferable control authority
+- `ControlLink` is transferable reusable control authority
 
 Control-link transfer uses ordinary `send` semantics with one additional rule: ownership is
 consumed only after successful delivery. Failed sends do not consume the link.
 Control-link transfer does not imply monitor authority or monitor visibility.
+
+Once transferred, a `ControlLink` authorizes ongoing supervision of the target instance rather than
+only one control operation. The runtime determines validity from instance lifecycle and control
+state:
+
+- `check_health` is non-terminal and does not invalidate the link
+- `pause` is non-terminal and does not invalidate the link
+- `resume` is non-terminal and does not invalidate the link
+- `kill` is terminal and invalidates future control operations for that instance
+
+So the transfer of authority is linear, but successful use of the authority is not one-shot by
+default. Runtime rejection for later control operations is based on invalid instance state, missing
+authority, or prior terminal shutdown, not on unconditional first-use consumption.
 
 ### 8.3 Monitor Link Integration
 

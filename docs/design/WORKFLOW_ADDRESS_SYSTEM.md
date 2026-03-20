@@ -11,6 +11,10 @@ This gives us:
 - **Control**: Supervisor knows exactly who has references to supervised workflows
 - **Composability**: Can build complex routing topologies safely
 
+This affine-address story does not imply one-shot control operations. `ControlLink` is a separate
+reusable supervision authority whose validity is governed by instance lifecycle, not by automatic
+consumption on first use.
+
 ---
 
 ## 1. Address Type (Opaque)
@@ -132,6 +136,17 @@ pub enum ControlMsg {
 2. **Priority**: Control always processed before business messages
 3. **Simplicity**: Mailbox can be full, but supervisor can still shutdown worker
 4. **Trust**: Control link is established by runtime, not user code
+
+### Control Authority Semantics
+
+`ControlLink` is reusable while the supervised instance remains valid.
+
+- `check_health` is non-terminal and reusable
+- `pause` is non-terminal and reusable
+- `resume` is non-terminal and reusable
+- `kill` is terminal and invalidates future control operations
+
+So authority transfer is explicit, but successful control use is not globally one-shot.
 
 ---
 

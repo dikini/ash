@@ -304,7 +304,7 @@ pub enum Type {
         workflow_type: Box<str>,
     },
     
-    /// Control link (affine - must be used exactly once)
+    /// Control link for supervision authority
     ControlLink {
         workflow_type: Box<str>,
     },

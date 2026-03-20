@@ -42,6 +42,8 @@ Current implementation notes:
 - CLI `:type` handling and REPL display text are still split across implementation paths.
 - runtime value formatting and error visibility must converge to the constructor-shaped display
   and explicit `Result`-based recovery model in SPEC-021.
+- observable control authority must converge to the reusable-supervision model in SPEC-021 rather
+  than an affine one-shot control token.
 
 ## Observable Error Boundaries
 

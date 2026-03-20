@@ -10,7 +10,10 @@ pub struct InstanceAddr {
     pub instance_id: crate::WorkflowId,
 }
 
-/// Control link for controlling a spawned instance (affine - must be used exactly once)
+/// Control link for controlling a spawned instance.
+///
+/// A control link represents reusable supervision authority while the target instance remains
+/// valid. Terminal control operations may invalidate future use for that instance.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ControlLink {
     pub instance_id: crate::WorkflowId,
@@ -57,7 +60,7 @@ pub enum Value {
     Instance(Box<Instance>),
     /// Instance address value (opaque reference to an instance)
     InstanceAddr(InstanceAddr),
-    /// Control link value (affine - for controlling spawned instances)
+    /// Control link value for controlling spawned instances
     ControlLink(ControlLink),
 }
 

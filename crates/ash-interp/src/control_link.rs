@@ -1,8 +1,8 @@
-//! Control link registry for affine semantics
+//! Control link registry for runtime control authority.
 //!
-//! This module implements affine/linear tracking of control links.
-//! Control links must be used exactly once for supervision operations
-//! (kill, pause, resume, check_health).
+//! The current implementation still uses a consumption-style registry, but the canonical
+//! documentation now treats `ControlLink` as reusable supervision authority with terminal
+//! invalidation semantics. This module will be aligned to that contract by later runtime tasks.
 
 use ash_core::{ControlLink, WorkflowId};
 use std::collections::HashMap;

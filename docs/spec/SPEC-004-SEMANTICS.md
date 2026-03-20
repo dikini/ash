@@ -209,12 +209,18 @@ Runtime and evaluation reject:
 - missing or unavailable runtime capabilities and providers
 - mailbox or provider failures that prevent a receive arm or action from completing at runtime
 - provider-level input/output mismatches that arise from actual runtime values
+- invalid control operations caused by missing authority, unknown instance state, or terminally
+  shut down instances
 
 These are runtime boundary failures. They are not parser or lowering failures, and they are not
 type-checking failures once the type layer has validated the relevant shapes.
 
 Timeout expiry and receive fallthrough remain normal control flow under the canonical `RECEIVE`
 contract; they are not runtime rejections by themselves.
+
+Control authority is reusable unless an operation is terminal. In particular, health checks,
+pause, and resume do not by themselves consume or invalidate a valid `ControlLink`; terminal
+control such as kill invalidates future control operations for the target instance.
 
 ### 4.5 Operational Layer
 

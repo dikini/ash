@@ -6,6 +6,10 @@
 
 Update spawn expression to return a composite type that can be split into InstanceAddr and Option<ControlLink>.
 
+> Historical note: this task established the structural `Option<ControlLink>` result shape.
+> The later control-authority contract was revised by TASK-211; `ControlLink` is now documented as
+> reusable supervision authority rather than a one-shot affine control token.
+
 ## Specification Reference
 
 - SPEC-020: ADT Types - Section 8.1, 8.2
@@ -112,7 +116,7 @@ pub enum Type {
         workflow_type: Box<str>,
     },
     
-    /// Control link (affine - must be used exactly once)
+    /// Control link for supervision authority
     ControlLink {
         workflow_type: Box<str>,
     },

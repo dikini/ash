@@ -1,6 +1,6 @@
 # TASK-211: Revise Control-Link Authority Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -82,10 +82,21 @@ the correct order.
 
 ## Completion Checklist
 
-- [ ] control-link semantics audited across design/spec/reference docs
-- [ ] reusable supervision contract documented
-- [ ] runtime/task dependency notes updated
-- [ ] `CHANGELOG.md` updated
+- [x] control-link semantics audited across design/spec/reference docs
+- [x] reusable supervision contract documented
+- [x] runtime/task dependency notes updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+- Revised the canonical docs so `ControlLink` is reusable supervision authority rather than a
+  one-shot affine control token.
+- Updated `SPEC-020`, `SPEC-021`, and `SPEC-004` to distinguish non-terminal reusable control from
+  terminal invalidation.
+- Updated design notes and code documentation to remove the unconditional first-use-consumption
+  story.
+- Added historical notes to older completed planning/task artifacts that originally described the
+  affine model.
 
 ## Non-goals
 

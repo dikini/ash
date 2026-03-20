@@ -757,7 +757,7 @@ implements supervision behavior.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) | Revise control-link authority contract | SPEC-002/004/020/021 | 4 | 📝 Planned |
+| [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) | Revise control-link authority contract | SPEC-002/004/020/021 | 4 | ✅ Complete |
 
 **Phase 33 Deliverable**: Canonical docs updated so runtime supervision uses reusable control
 authority rather than affine one-shot control.

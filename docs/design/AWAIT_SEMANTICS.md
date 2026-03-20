@@ -130,18 +130,11 @@ impl ControlLink<W> {
 }
 ```
 
-**Recommendation**: ControlLink should also be consumed/invalidated after await:
+**Current direction**: `await` does not consume `ControlLink`.
 
-```ash
-spawn worker with {} as w;
-let (addr, ctl) = split w;
-
-let result = await addr;  -- Consumes addr
--- ctl is now also marked "inactive" 
--- (instance completed, no more control needed)
-```
-
-Or alternatively: keep both, but ControlLink methods return "already exited" errors.
+Instead, the link remains reusable supervision authority while the runtime can still answer control
+queries for the target instance. After completion, non-terminal queries such as status/health may
+return an "already exited" style result, while terminal control requests are rejected explicitly.
 
 ---
 
@@ -352,7 +345,7 @@ Keep `await` specific to workflow instances for clarity.
 | Expression | Waits For | Returns | Consumes |
 |------------|-----------|---------|----------|
 | `await addr` | Instance completion | `AwaitResult<T>` | `InstanceAddr` |
-| `await_exit ctl` | Instance exit | `ExitReason` | `ControlLink` |
+| `await_exit ctl` | Instance exit | `ExitReason` | implementation-defined by later control contract |
 | `await addr timeout: t` | Completion or timeout | `AwaitResult<T>` | `InstanceAddr` |
 
 ### Type Signatures
@@ -362,7 +355,7 @@ Keep `await` specific to workflow instances for clarity.
 fn await(self, timeout: Option<Duration>) -> AwaitResult<T>;
 
 // ControlLink<W>
-fn await_exit(self) -> ExitReason;
+fn await_exit(&self) -> ExitReason;
 ```
 
 ### AwaitResult<T>
@@ -385,7 +378,7 @@ impl<T> AwaitResult<T> {
 
 ## 11. Open Questions
 
-1. **Should `await` consume ControlLink too?** Or leave it for status checks?
+1. **How much post-exit status remains observable through `ControlLink`?**
 
 2. **What about `await` on SpawnResult before split?**
    ```ash

@@ -67,7 +67,11 @@ impl TypeEnv {
         let mut matches = self
             .type_defs
             .values()
-            .flat_map(|type_def| type_def.variants.iter())
+            .filter_map(|type_def| match &type_def.body {
+                TypeBody::Enum(variants) => Some(variants.iter()),
+                _ => None,
+            })
+            .flatten()
             .filter(|variant| variant.name == variant_name);
 
         let first = matches.next();
@@ -206,6 +210,13 @@ fn check_variant_pattern(
     expected: &Type,
     bindings: &mut Bindings,
 ) -> Result<(), TypeError> {
+    if !matches!(expected, Type::Var(_)) {
+        return Err(TypeError::PatternMismatch {
+            expected: expected.clone(),
+            actual: Type::Var(TypeVar::fresh()),
+        });
+    }
+
     if let Some(variant_def) = env.lookup_variant(variant_name)? {
         return check_variant_fields(
             env,
@@ -226,7 +237,7 @@ fn check_variant_fields(
     env: &TypeEnv,
     variant_name: &str,
     field_patterns: Option<&[(Box<str>, Pattern)]>,
-    variant_fields: &[(String, Type)],
+    variant_fields: &[(String, ash_core::ast::TypeExpr)],
     bindings: &mut Bindings,
 ) -> Result<(), TypeError> {
     match field_patterns {
@@ -240,15 +251,16 @@ fn check_variant_fields(
             }
         }
         Some(field_pats) => {
+            let param_mapping = HashMap::new();
             for (field_name, field_pattern) in field_pats {
                 let field_type = variant_fields
                     .iter()
                     .find(|(name, _)| name == field_name.as_ref())
-                    .map(|(_, ty)| ty)
+                    .map(|(_, ty)| type_expr_to_type(ty, &param_mapping))
                     .ok_or_else(|| TypeError::InvalidPattern {
                         message: format!("unknown field: {field_name}"),
                     })?;
-                check_pattern_inner(env, field_pattern, field_type, bindings)?;
+                check_pattern_inner(env, field_pattern, &field_type, bindings)?;
             }
 
             Ok(())

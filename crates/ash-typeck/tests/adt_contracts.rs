@@ -1,22 +1,24 @@
-use ash_core::ast::Pattern as CorePattern;
+use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef, TypeExpr, VariantDef, Visibility};
 use ash_parser::surface::{Literal, Pattern as ParserPattern};
-use ash_typeck::check_pattern::{TypeDef, TypeEnv, VariantDef, check_pattern};
+use ash_typeck::check_pattern::{TypeEnv, check_pattern};
 use ash_typeck::exhaustiveness::{Coverage, check_exhaustive};
 use ash_typeck::types::{Type, TypeVar};
 
 fn option_type_def() -> TypeDef {
     TypeDef {
         name: "Option".to_string(),
-        variants: vec![
+        params: vec![],
+        body: TypeBody::Enum(vec![
             VariantDef {
                 name: "Some".to_string(),
-                fields: vec![("value".to_string(), Type::Int)],
+                fields: vec![("value".to_string(), TypeExpr::Named("Int".to_string()))],
             },
             VariantDef {
                 name: "None".to_string(),
                 fields: vec![],
             },
-        ],
+        ]),
+        visibility: Visibility::Public,
     }
 }
 

@@ -30,6 +30,18 @@ originally left open:
 This audit remains the historical record of the closeout state at the end of `TASK-176`, but the
 residual spec-only documentation debt described here is now closed.
 
+## Addendum: TASK-212 Follow-up
+
+`TASK-212` later froze the control-link retention policy that this audit still listed as a
+non-blocking follow-up.
+
+That follow-up closed by:
+
+- freezing retained terminal tombstones as runtime-state-owned lifecycle state
+- freezing whole-`RuntimeState` teardown as the current cleanup boundary
+- documenting that silent background cleanup must not collapse terminal control failure into
+  `NotFound` while the same runtime state remains alive
+
 ## Summary
 
 The Rust/spec convergence implementation program is closed, and the residual spec-only findings
@@ -44,8 +56,7 @@ Closed:
 
 Still explicitly open:
 
-- [TASK-212](../plan/tasks/TASK-212-design-control-link-retention-policy.md), which tracks the
-  long-term retention/cleanup policy for terminated `ControlLink` supervision state
+- none
 
 This audit therefore closes the implementation convergence path and, with the Phase 34 addendum,
 also records the later closure of the residual spec-only documentation debt without erasing the
@@ -153,18 +164,11 @@ Result: pass.
 
 ## Explicit Remaining Follow-up
 
-The audit leaves one explicit residual bucket:
-
-- [TASK-212](../plan/tasks/TASK-212-design-control-link-retention-policy.md)
-
-`TASK-212` remains non-blocking because:
-
-- the current runtime behavior is intentional and documented
-- the follow-up is explicit rather than implicit
-- it does not reopen the original parser/type/runtime/CLI/ADT drift classes
+No explicit residual buckets remain from this audit after Phase 34 and TASK-212.
 
 The residual spec-only findings that were open at the end of `TASK-176` were later closed by
-Phase 34 and are preserved here only as historical audit context.
+Phase 34, and the later control-link retention follow-up was closed by `TASK-212`. The earlier
+open items are preserved here only as historical audit context.
 
 ## Conclusion
 
@@ -187,6 +191,6 @@ What is now closed:
 
 What remains open in this neighborhood:
 
-- [TASK-212](../plan/tasks/TASK-212-design-control-link-retention-policy.md)
+- none from this audit lineage
 
 The repository no longer has residual spec-only findings from the final convergence audit.

@@ -222,6 +222,11 @@ Control authority is reusable unless an operation is terminal. In particular, he
 pause, and resume do not by themselves consume or invalidate a valid `ControlLink`; terminal
 control such as kill invalidates future control operations for the target instance.
 
+While the owning runtime state remains alive, terminally controlled instances remain retained as
+runtime-owned tombstones rather than being silently forgotten. Later control attempts therefore
+continue to fail as terminal-control runtime failures, not as unknown-link failures caused by
+background cleanup in the same runtime state.
+
 ### 4.5 Operational Layer
 
 ```

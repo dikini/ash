@@ -1,6 +1,6 @@
 # TASK-212: Design Control-Link Retention Policy
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -36,3 +36,27 @@ Design the long-term runtime policy for retaining, exposing, and eventually clea
 
 - No change to the current `TASK-206` runtime behavior
 - No new runtime/reasoner interaction semantics
+
+## Completion Checklist
+
+- [x] canonical retention policy frozen in spec/reference text
+- [x] ownership and cleanup boundary documented
+- [x] runtime visibility and diagnostics interaction documented
+- [x] stale design references aligned
+- [x] `CHANGELOG.md` updated
+
+## Outcome
+
+`TASK-212` freezes the current long-term safe baseline:
+
+- live `ControlLink` authority remains reusable while the target is valid
+- `kill` creates a retained tombstone inside the owning `RuntimeState`
+- later control attempts in that same runtime state continue to fail as explicit terminal-control
+  failures rather than silently degrading into `NotFound`
+- cleanup is currently owned by whole-`RuntimeState` teardown rather than background per-link
+  scavenging
+
+No new implementation task was opened in this pass because the frozen policy keeps the current
+runtime behavior and bounds cleanup by runtime-state lifetime. If long-lived embedders later need
+in-process tombstone compaction, that should be introduced as an explicit runtime-maintenance
+feature rather than hidden cleanup.

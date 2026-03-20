@@ -146,6 +146,10 @@ pub enum ControlMsg {
 - `resume` is non-terminal and reusable
 - `kill` is terminal and invalidates future control operations
 
+After `kill`, the current runtime contract retains a terminal tombstone for the lifetime of the
+owning `RuntimeState` so later control attempts fail explicitly as terminal control rather than as
+unknown-link lookup. See [Control-Link Retention Policy](../reference/control-link-retention-policy.md).
+
 So authority transfer is explicit, but successful control use is not globally one-shot.
 
 ---

@@ -138,8 +138,12 @@ Observable control behavior follows the runtime control contract:
 - `ControlLink` may be reused for non-terminal supervision operations such as health checks,
   pause, and resume while the target instance remains valid
 - terminal control such as `kill` invalidates future control operations for that instance
+- after terminal control, the current runtime contract retains the target as a tombstone for the
+  lifetime of the owning `RuntimeState`
 - later failed control attempts must surface as explicit runtime failures rather than as silent
   no-ops or hidden first-use consumption
+- while that runtime state remains alive, retained tombstones must keep surfacing terminal-control
+  failure rather than silently collapsing into `NotFound`
 
 ### 4.3 Monitor Views
 

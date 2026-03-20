@@ -44,6 +44,8 @@ Current implementation notes:
   and explicit `Result`-based recovery model in SPEC-021.
 - observable control authority must converge to the reusable-supervision model in SPEC-021 rather
   than an affine one-shot control token.
+- retained terminal control targets remain observably terminal for the lifetime of the owning
+  runtime state; see [Control-Link Retention Policy](control-link-retention-policy.md).
 
 ## Observable Error Boundaries
 

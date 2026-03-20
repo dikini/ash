@@ -5,9 +5,7 @@
 
 use anyhow::{Context, Result};
 use ash_core::Value;
-use ash_provenance::{
-    TraceStore, create_trace_recorder, record_workflow_complete, record_workflow_start,
-};
+use ash_provenance::{TraceStore, WorkflowTraceSession, create_trace_recorder};
 use clap::Args;
 use colored::Colorize;
 use std::collections::HashMap;
@@ -129,22 +127,23 @@ async fn execute_with_trace(
     use ash_core::WorkflowId;
 
     let workflow_id = WorkflowId::new();
-    let mut recorder = create_trace_recorder(workflow_id);
+    let recorder = create_trace_recorder(workflow_id);
+    let session = WorkflowTraceSession::start(recorder, "main")?;
 
-    record_workflow_start(&mut recorder, "main");
-
-    let result = engine
-        .execute(workflow)
-        .await
-        .map_err(|e| anyhow::anyhow!("Execution error: {e:?}"))?;
-
-    record_workflow_complete(&mut recorder, true);
-
-    // Output trace summary - use the recorder directly
-    let events = recorder.store().events();
-    println!("[INFO] Trace recorded: {} events", events.len());
-
-    Ok(result)
+    match engine.execute(workflow).await {
+        Ok(value) => {
+            let recorder = session.finish_success()?;
+            let events = recorder.store().events();
+            println!("[INFO] Trace recorded: {} events", events.len());
+            Ok(value)
+        }
+        Err(error) => {
+            let recorder = session.finish_error(format!("{error:?}"), Some("engine.execute"))?;
+            let events = recorder.store().events();
+            println!("[INFO] Trace recorded: {} events", events.len());
+            Err(anyhow::anyhow!("Execution error: {error:?}"))
+        }
+    }
 }
 
 /// Output the result to stdout or file

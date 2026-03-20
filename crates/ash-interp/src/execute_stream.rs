@@ -14,12 +14,14 @@ use ash_core::{Expr, Pattern, Value};
 use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
 use crate::context::Context;
+use crate::control_link::ControlLinkRegistry;
 use crate::error::{EvalError, ExecError, ExecResult};
 use crate::eval::eval_expr;
 use crate::execute::execute_workflow_inner;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
+use crate::runtime_state::RuntimeState;
 use crate::stream::StreamContext;
 
 const CONTROL_CAPABILITY: &str = "__control__";
@@ -27,6 +29,7 @@ const CONTROL_CHANNEL: &str = "__mailbox__";
 
 pub struct CoreReceiveRuntime<'a> {
     pub mailbox: SharedMailbox,
+    pub control_registry: std::sync::Arc<tokio::sync::Mutex<ControlLinkRegistry>>,
     pub stream_ctx: &'a StreamContext,
     pub cap_ctx: &'a CapabilityContext,
     pub policy_eval: &'a PolicyEvaluator,
@@ -77,6 +80,7 @@ pub async fn execute_core_receive(
                         runtime.behaviour_ctx,
                         Some(runtime.stream_ctx),
                         runtime.mailbox.clone(),
+                        runtime.control_registry.clone(),
                     )
                     .await;
                 }
@@ -105,6 +109,7 @@ pub async fn execute_core_receive(
                         runtime.behaviour_ctx,
                         Some(runtime.stream_ctx),
                         runtime.mailbox.clone(),
+                        runtime.control_registry.clone(),
                     )
                     .await;
                 }
@@ -145,6 +150,7 @@ pub async fn execute_core_receive(
                                 runtime.behaviour_ctx,
                                 Some(runtime.stream_ctx),
                                 runtime.mailbox.clone(),
+                                runtime.control_registry.clone(),
                             )
                             .await;
                         }
@@ -181,12 +187,36 @@ pub async fn execute_receive(
     cap_ctx: &CapabilityContext,
     policy_eval: &PolicyEvaluator,
 ) -> ExecResult<Value> {
+    let runtime_state = RuntimeState::new();
+    execute_receive_in_state(
+        receive,
+        ctx,
+        mailbox,
+        stream_ctx,
+        cap_ctx,
+        policy_eval,
+        &runtime_state,
+    )
+    .await
+}
+
+pub async fn execute_receive_in_state(
+    receive: &Receive,
+    ctx: Context,
+    mailbox: SharedMailbox,
+    stream_ctx: &StreamContext,
+    cap_ctx: &CapabilityContext,
+    policy_eval: &PolicyEvaluator,
+    runtime_state: &RuntimeState,
+) -> ExecResult<Value> {
+    let control_registry = runtime_state.control_registry();
     // Check control arms first if present (non-blocking check)
     if let Some(ref control_arms) = receive.control_arms {
         let control_result = execute_receive_control(
             control_arms,
             ctx.clone(),
             mailbox.clone(),
+            control_registry.clone(),
             stream_ctx,
             cap_ctx,
             policy_eval,
@@ -237,6 +267,7 @@ pub async fn execute_receive(
                         &behaviour_ctx,
                         Some(stream_ctx),
                         mailbox.clone(),
+                        control_registry.clone(),
                     )
                     .await;
                 }
@@ -256,6 +287,7 @@ pub async fn execute_receive(
                     &behaviour_ctx,
                     Some(stream_ctx),
                     mailbox.clone(),
+                    control_registry.clone(),
                 )
                 .await;
             }
@@ -293,6 +325,7 @@ pub async fn execute_receive(
                                 &behaviour_ctx,
                                 Some(stream_ctx),
                                 mailbox.clone(),
+                                control_registry.clone(),
                             )
                             .await;
                         }
@@ -319,6 +352,7 @@ async fn execute_receive_control(
     control_arms: &[ReceiveArm],
     ctx: Context,
     mailbox: SharedMailbox,
+    control_registry: std::sync::Arc<tokio::sync::Mutex<ControlLinkRegistry>>,
     stream_ctx: &StreamContext,
     cap_ctx: &CapabilityContext,
     policy_eval: &PolicyEvaluator,
@@ -352,6 +386,7 @@ async fn execute_receive_control(
                 &behaviour_ctx,
                 Some(stream_ctx),
                 mailbox.clone(),
+                control_registry.clone(),
             )
             .await;
         }

@@ -22,7 +22,7 @@ pub mod providers;
 pub use error::EngineError;
 
 use ash_core::Value;
-use ash_interp::{ExecResult, interpret};
+use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
 
 /// The central engine for all Ash operations
 ///
@@ -53,6 +53,8 @@ pub struct Engine {
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::Workflow>>,
     /// Counter for generating unique IDs
     next_id: std::sync::atomic::AtomicU64,
+    /// Runtime-owned state that persists across related executions.
+    runtime_state: RuntimeState,
 }
 
 /// A workflow handle that carries its internal ID for type checking
@@ -198,7 +200,7 @@ impl Engine {
     ///
     /// Returns execution errors from the interpreter.
     pub async fn execute(&self, workflow: &Workflow) -> ExecResult<Value> {
-        interpret(&workflow.core).await
+        interpret_in_state(&workflow.core, &self.runtime_state).await
     }
 
     /// Parse, check, and execute in one call
@@ -280,6 +282,7 @@ impl EngineBuilder {
         Ok(Engine {
             surface_workflows: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
+            runtime_state: RuntimeState::new(),
         })
     }
 

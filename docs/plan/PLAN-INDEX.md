@@ -622,9 +622,9 @@ expanding user-facing tooling follow-up.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md) | Implement runtime action and control-link execution | SPEC-004/017/018 | 10 | 📝 Planned |
-| [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md) | Align runtime admission, rejection, and commitment visibility | SPEC-004/017/018/021 | 8 | 📝 Planned |
-| [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) | Harden runtime trace and provenance boundaries | SPEC-001/004/021 | 8 | 📝 Planned |
+| [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md) | Implement runtime action and control-link execution | SPEC-004/017/018 | 10 | ✅ Complete |
+| [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md) | Align runtime admission, rejection, and commitment visibility | SPEC-004/017/018/021 | 8 | ✅ Complete |
+| [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) | Harden runtime trace and provenance boundaries | SPEC-001/004/021 | 8 | ✅ Complete |
 
 **Phase Deliverable**: Completed runtime execution branches, explicit runtime boundary behavior, and hardened trace/provenance capture aligned with accepted runtime progression
 
@@ -637,6 +637,17 @@ and [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) are complete.
 Execution note: [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) is a
 documentation gate for this phase and must complete before
 [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md).
+Execution note: [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md)
+uses a transitional shared control-link registry so transferred links remain valid across
+executions; [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md)
+must replace that fallback with explicit runtime-owned lifecycle state. The current implementation
+retains terminated instances as tombstones; long-term retention and cleanup design is deferred to
+[TASK-212](tasks/TASK-212-design-control-link-retention-policy.md).
+
+Execution note: [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md)
+lands as a runtime-only provenance session API plus wrapper-caller convergence. It hardens
+workflow entry/exit framing without reclassifying CLI or macro surfaces as anything other than
+runtime observability.
 
 ## Tooling Observable Convergence Extension (Week 50)
 
@@ -758,6 +769,7 @@ implements supervision behavior.
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) | Revise control-link authority contract | SPEC-002/004/020/021 | 4 | ✅ Complete |
+| [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md) | Design control-link retention policy | SPEC-004/021 | 3 | 📝 Planned |
 
 **Phase 33 Deliverable**: Canonical docs updated so runtime supervision uses reusable control
 authority rather than affine one-shot control.

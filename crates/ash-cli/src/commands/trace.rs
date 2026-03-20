@@ -81,27 +81,18 @@ async fn execute_with_full_trace(
     args: &TraceArgs,
 ) -> Result<TraceResult> {
     use ash_core::WorkflowId;
-    use ash_provenance::create_trace_recorder;
+    use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 
     let workflow_id = WorkflowId::new();
-    let mut recorder = create_trace_recorder(workflow_id);
-
-    // Record workflow start
-    ash_provenance::record_workflow_start(&mut recorder, "main");
+    let recorder = create_trace_recorder(workflow_id);
+    let session = WorkflowTraceSession::start(recorder, "main")?;
 
     // Execute the workflow
     let result = ash_interp::interpret(workflow).await;
-
-    // Record completion
-    match &result {
-        Ok(_) => ash_provenance::record_workflow_complete(&mut recorder, true),
-        Err(_) => ash_provenance::record_workflow_complete(&mut recorder, false),
-    }
-
-    // Capture any errors
-    if let Err(ref e) = result {
-        ash_provenance::record_error(&mut recorder, &format!("{:?}", e));
-    }
+    let recorder = match &result {
+        Ok(_) => session.finish_success()?,
+        Err(error) => session.finish_error(format!("{error:?}"), Some("ash_interp::interpret"))?,
+    };
 
     let final_value = result.map_err(|e| anyhow::anyhow!("Execution error: {:?}", e))?;
 

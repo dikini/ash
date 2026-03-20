@@ -14,7 +14,7 @@ pub mod trace;
 pub use export::{AuditExporter, CsvExporter, ExportFormat, JsonExporter, NdJsonExporter};
 pub use integrity::{Hash, MerkleTree, verify_integrity};
 pub use lineage::{DataSource, Lineage, LineageTracker, Transformation};
-pub use trace::{InMemoryTraceStore, TraceEvent, TraceRecorder};
+pub use trace::{InMemoryTraceStore, TraceEvent, TraceRecorder, WorkflowTraceSession};
 
 use ash_core::WorkflowId;
 use std::sync::Arc;

@@ -1,6 +1,6 @@
 # TASK-205: Implement Runtime Action and Control-Link Execution
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -32,6 +32,8 @@ specifically the canonical `Act` path and control-link operations.
 ## Files
 
 - Modify: `crates/ash-interp/src/execute.rs`
+- Modify: `crates/ash-interp/src/control_link.rs`
+- Modify: `crates/ash-interp/src/execute_stream.rs`
 - Test: `crates/ash-interp/tests/runtime_action_control.rs`
 - Modify: `CHANGELOG.md`
 
@@ -50,7 +52,7 @@ Add focused tests for:
 Run:
 
 ```bash
-cargo test -p ash-interp runtime_action_control -- --nocapture
+cargo test -p ash-interp --test runtime_action_control -- --nocapture
 ```
 
 Expected: fail because the targeted runtime branches are incomplete today.
@@ -64,7 +66,7 @@ Implement the targeted runtime branches to satisfy the hardened runtime contract
 Run:
 
 ```bash
-cargo test -p ash-interp runtime_action_control -- --nocapture
+cargo test -p ash-interp --test runtime_action_control -- --nocapture
 ```
 
 Expected: pass.
@@ -82,17 +84,17 @@ Expected: pass.
 ### Step 6: Commit
 
 ```bash
-git add crates/ash-interp/src/execute.rs crates/ash-interp/tests/runtime_action_control.rs CHANGELOG.md
+git add crates/ash-interp/src/execute.rs crates/ash-interp/src/control_link.rs crates/ash-interp/src/execute_stream.rs crates/ash-interp/tests/runtime_action_control.rs CHANGELOG.md
 git commit -m "feat: complete runtime action and control-link execution"
 ```
 
 ## Completion Checklist
 
-- [ ] failing runtime action/control tests added
-- [ ] failure verified
-- [ ] runtime `Act` and control-link branches implemented
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing runtime action/control tests added
+- [x] failure verified
+- [x] runtime `Act` and control-link branches implemented
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

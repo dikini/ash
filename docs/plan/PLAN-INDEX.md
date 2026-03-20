@@ -678,8 +678,9 @@ Bring type checking and runtime verification context into line with the frozen c
 |------|-------------|------|------------|--------|
 | [TASK-168](tasks/TASK-168-align-type-checking-for-policies-and-receive.md) | Align type checking for policies and `receive` | SPEC-003/006/013/017 | 8 | 📝 Planned |
 | [TASK-169](tasks/TASK-169-unify-runtime-verification-context-and-obligation-enforcement.md) | Unify runtime verification context and obligation enforcement | SPEC-017/018 | 6 | 📝 Planned |
+| [TASK-209](tasks/TASK-209-separate-runtime-verification-input-classes.md) | Separate runtime verification input classes | SPEC-017/018 | 4 | 📝 Planned |
 
-**Phase 27 Deliverable**: Type and verification layers enforce the hardened canonical policy and stream contracts
+**Phase 27 Deliverable**: Type and verification layers enforce the hardened canonical policy and stream contracts without conflating capability declarations and obligation-backed runtime requirements
 
 ## Phase 28: Runtime Convergence (Week 46)
 
@@ -694,6 +695,7 @@ Complete runtime alignment for `receive` execution and policy outcomes.
 
 Execution note: Phase 28 remains the upstream runtime convergence work. The later runtime-boundary
 implementation phase extends this runtime path and should not begin before Phase 28 is complete.
+Execution note: [TASK-209](tasks/TASK-209-separate-runtime-verification-input-classes.md) is a gating follow-up from Phase 27 and must complete before [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md) and [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md).
 
 ## Phase 29: REPL and CLI Convergence (Week 47)
 

@@ -17,6 +17,7 @@ same way across observe/set/send boundaries.
 ## Reference Contract
 
 - `docs/reference/type-to-runtime-contract.md`
+- `docs/reference/runtime-verification-input-contract.md`
 - `docs/reference/runtime-observable-behavior-contract.md`
 
 ## Requirements
@@ -25,7 +26,8 @@ same way across observe/set/send boundaries.
 
 1. Align runtime deny, warning, transform, and approval behavior with the canonical contract
 2. Apply the same policy-outcome story across verification and interpreter boundaries
-3. Add tests covering the canonical runtime outcomes
+3. Preserve the separated capability-availability versus obligation-requirement verification inputs
+4. Add tests covering the canonical runtime outcomes
 
 ## Files
 
@@ -86,5 +88,5 @@ git commit -m "fix: align runtime policy outcomes"
 
 ## Dependencies
 
-- Depends on: TASK-166, TASK-168, TASK-169, TASK-170
+- Depends on: TASK-166, TASK-168, TASK-169, TASK-170, TASK-209
 - Blocks: TASK-176, TASK-205

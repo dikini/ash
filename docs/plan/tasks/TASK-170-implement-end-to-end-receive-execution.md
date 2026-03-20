@@ -18,6 +18,7 @@ verification layers.
 ## Reference Contract
 
 - `docs/reference/type-to-runtime-contract.md`
+- `docs/reference/runtime-verification-input-contract.md`
 - `docs/reference/runtime-observable-behavior-contract.md`
 
 ## Requirements
@@ -27,7 +28,8 @@ verification layers.
 1. Execute canonical non-blocking, blocking, and timed `receive` forms end-to-end
 2. Respect control-mailbox semantics
 3. Integrate runtime verification and declaration rules
-4. Add integration tests proving canonical behavior from parsed form through execution
+4. Respect the separated capability-availability versus obligation-requirement verification inputs
+5. Add integration tests proving canonical behavior from parsed form through execution
 
 ## Files
 
@@ -99,5 +101,5 @@ git commit -m "feat: implement end-to-end receive execution"
 
 ## Dependencies
 
-- Depends on: TASK-168, TASK-169
+- Depends on: TASK-168, TASK-169, TASK-209
 - Blocks: TASK-171, TASK-205

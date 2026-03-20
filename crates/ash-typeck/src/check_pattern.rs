@@ -63,8 +63,12 @@ impl TypeEnv {
         self.type_defs.get(name)
     }
 
-    fn lookup_variant(&self, variant_name: &str) -> Result<Option<&VariantDef>, TypeError> {
-        let mut matches = self
+    fn lookup_variant(
+        &self,
+        variant_name: &str,
+        field_patterns: Option<&[(Box<str>, Pattern)]>,
+    ) -> Result<Option<&VariantDef>, TypeError> {
+        let named_matches: Vec<&VariantDef> = self
             .type_defs
             .values()
             .filter_map(|type_def| match &type_def.body {
@@ -72,17 +76,37 @@ impl TypeEnv {
                 _ => None,
             })
             .flatten()
-            .filter(|variant| variant.name == variant_name);
+            .filter(|variant| variant.name == variant_name)
+            .collect();
 
-        let first = matches.next();
-        let second = matches.next();
+        match named_matches.as_slice() {
+            [] => Ok(None),
+            [variant] => Ok(Some(*variant)),
+            _ => {
+                let requested_fields: Option<Vec<&str>> = field_patterns.map(|patterns| {
+                    patterns
+                        .iter()
+                        .map(|(field_name, _)| field_name.as_ref())
+                        .collect()
+                });
+                let mut disambiguated = named_matches.into_iter().filter(|variant| {
+                    requested_fields.as_ref().is_some_and(|requested_fields| {
+                        requested_fields.iter().all(|requested| {
+                            variant.fields.iter().any(|(name, _)| name == requested)
+                        })
+                    })
+                });
 
-        match (first, second) {
-            (Some(variant), None) => Ok(Some(variant)),
-            (Some(_), Some(_)) => Err(TypeError::InvalidPattern {
-                message: format!("ambiguous variant: {variant_name}"),
-            }),
-            (None, _) => Ok(None),
+                let first = disambiguated.next();
+                let second = disambiguated.next();
+
+                match (first, second) {
+                    (Some(variant), None) => Ok(Some(variant)),
+                    _ => Err(TypeError::InvalidPattern {
+                        message: format!("ambiguous variant: {variant_name}"),
+                    }),
+                }
+            }
         }
     }
 }
@@ -217,7 +241,7 @@ fn check_variant_pattern(
         });
     }
 
-    if let Some(variant_def) = env.lookup_variant(variant_name)? {
+    if let Some(variant_def) = env.lookup_variant(variant_name, field_patterns)? {
         return check_variant_fields(
             env,
             variant_name,
@@ -532,6 +556,18 @@ mod tests {
     }
 
     #[test]
+    fn test_variant_pattern_rejects_non_adt_expected_type() {
+        let env = option_env();
+        let pattern = Pattern::Variant {
+            name: "Some".into(),
+            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+        };
+
+        let result = check_pattern(&env, &pattern, &Type::Int);
+        assert!(matches!(result, Err(TypeError::PatternMismatch { .. })));
+    }
+
+    #[test]
     fn test_variant_pattern_none() {
         let env = option_env();
         let pattern = Pattern::Variant {
@@ -781,5 +817,36 @@ mod tests {
         let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
         assert_eq!(bindings.get("a"), Some(&Type::Int));
         assert_eq!(bindings.get("b"), Some(&Type::String));
+    }
+
+    #[test]
+    fn test_variant_pattern_uses_field_shape_to_disambiguate_constructors() {
+        let mut env = option_env();
+        env.add_type_def(
+            "Maybe".to_string(),
+            TypeDef {
+                name: "Maybe".to_string(),
+                params: vec![],
+                body: TypeBody::Enum(vec![
+                    VariantDef {
+                        name: "Some".to_string(),
+                        fields: vec![("other".to_string(), TypeExpr::Named("Bool".to_string()))],
+                    },
+                    VariantDef {
+                        name: "Never".to_string(),
+                        fields: vec![],
+                    },
+                ]),
+                visibility: Visibility::Public,
+            },
+        );
+
+        let pattern = Pattern::Variant {
+            name: "Some".into(),
+            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+        };
+
+        let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
+        assert_eq!(bindings.get("x"), Some(&Type::Int));
     }
 }

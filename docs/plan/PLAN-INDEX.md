@@ -628,6 +628,13 @@ expanding user-facing tooling follow-up.
 
 **Phase Deliverable**: Completed runtime execution branches, explicit runtime boundary behavior, and hardened trace/provenance capture aligned with accepted runtime progression
 
+Execution note: this phase is downstream from Phase 28. Treat
+[TASK-205](tasks/TASK-205-implement-runtime-action-and-control-link-execution.md),
+[TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md), and
+[TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md) as runtime hardening
+work that begins only after [TASK-170](tasks/TASK-170-implement-end-to-end-receive-execution.md)
+and [TASK-171](tasks/TASK-171-align-runtime-policy-outcomes.md) are complete.
+
 ## Tooling Observable Convergence Extension (Week 50)
 
 Finish the minimum-risk user-facing convergence work identified by the tooling/surface steering
@@ -638,6 +645,11 @@ brief by building on the existing REPL tasks and one new CLI output-alignment ta
 | [TASK-208](tasks/TASK-208-align-cli-run-and-trace-observable-output.md) | Align CLI run and trace observable output | SPEC-005/011/021 | 8 | 📝 Planned |
 
 **Extension Deliverable**: Shared REPL authority and canonical `:type` reporting via [TASK-172](tasks/TASK-172-unify-repl-implementation.md) / [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md), plus CLI `run` / `trace` output aligned with the observable contract via TASK-208
+
+Execution note: this extension is downstream from Phase 29. Execute
+[TASK-172](tasks/TASK-172-unify-repl-implementation.md), then
+[TASK-173](tasks/TASK-173-implement-repl-type-reporting.md), then
+[TASK-208](tasks/TASK-208-align-cli-run-and-trace-observable-output.md).
 
 The presentation-only stage-guidance overlay remains intentionally deferred until the observable
 contract is implemented cleanly.
@@ -680,6 +692,9 @@ Complete runtime alignment for `receive` execution and policy outcomes.
 
 **Phase 28 Deliverable**: Runtime behavior aligned with hardened canonical `receive` and policy-outcome contracts
 
+Execution note: Phase 28 remains the upstream runtime convergence work. The later runtime-boundary
+implementation phase extends this runtime path and should not begin before Phase 28 is complete.
+
 ## Phase 29: REPL and CLI Convergence (Week 47)
 
 Align the implementation of REPL and CLI behavior with the frozen command and output contracts.
@@ -690,6 +705,11 @@ Align the implementation of REPL and CLI behavior with the frozen command and ou
 | [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) | Implement REPL type reporting | SPEC-003/005/011 | 6 | 📝 Planned |
 
 **Phase 29 Deliverable**: One authoritative REPL implementation with canonical type reporting
+
+Execution note: Phase 29 is also the front half of the later tooling observable convergence
+extension. Complete [TASK-172](tasks/TASK-172-unify-repl-implementation.md) and
+[TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) before
+[TASK-208](tasks/TASK-208-align-cli-run-and-trace-observable-output.md).
 
 ## Phase 30: ADT Convergence (Week 48)
 
@@ -711,3 +731,6 @@ Re-audit specs and implementation to close the convergence program.
 | [TASK-176](tasks/TASK-176-final-convergence-audit.md) | Final convergence audit | All convergence contracts | 6 | 📝 Planned |
 
 **Phase 31 Deliverable**: Final audit report and repository-level convergence closeout
+
+Execution note: final convergence closeout now depends on the downstream runtime-boundary and
+tooling observable convergence work as well as the original convergence phases.

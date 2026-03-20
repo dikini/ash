@@ -92,3 +92,6 @@ git commit -m "refactor: unify repl implementation"
 
 - Depends on: TASK-159, TASK-163
 - Blocks: TASK-173
+
+This task is also the first implementation step in the tooling observable convergence extension
+defined by `docs/plan/2026-03-20-tooling-observable-convergence-plan.md`.

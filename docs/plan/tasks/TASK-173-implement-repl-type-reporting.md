@@ -89,4 +89,7 @@ git commit -m "fix: implement repl type reporting"
 ## Dependencies
 
 - Depends on: TASK-163, TASK-172
-- Blocks: TASK-176
+- Blocks: TASK-176, TASK-208
+
+This task is the second implementation step in the tooling observable convergence extension defined
+by `docs/plan/2026-03-20-tooling-observable-convergence-plan.md`.

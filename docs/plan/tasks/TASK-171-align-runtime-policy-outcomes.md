@@ -1,6 +1,6 @@
 # TASK-171: Align Runtime Policy Outcomes
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -75,11 +75,11 @@ git commit -m "fix: align runtime policy outcomes"
 
 ## Completion Checklist
 
-- [ ] failing runtime policy-outcome tests added
-- [ ] failure verified
-- [ ] runtime policy outcomes aligned
-- [ ] focused verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing runtime policy-outcome tests added
+- [x] failure verified
+- [x] runtime policy outcomes aligned
+- [x] focused verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

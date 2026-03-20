@@ -3,6 +3,8 @@
 use ash_core::{Name, Value};
 use thiserror::Error;
 
+use crate::capability_policy::Role;
+
 /// Errors that can occur during expression evaluation
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum EvalError {
@@ -69,6 +71,11 @@ pub enum ExecError {
     PolicyDenied {
         policy: Name,
     },
+    RequiresApproval {
+        role: Role,
+        operation: String,
+        capability: Name,
+    },
     ExecutionFailed(String),
     ParallelFailed(String),
     ForEachFailed(String),
@@ -118,6 +125,17 @@ impl std::fmt::Display for ExecError {
                 write!(f, "action execution failed: {action} - {reason}")
             }
             Self::PolicyDenied { policy } => write!(f, "policy denied: {policy}"),
+            Self::RequiresApproval {
+                role,
+                operation,
+                capability,
+            } => write!(
+                f,
+                "approval required: role '{}' must approve {} on {}",
+                role.as_ref(),
+                operation,
+                capability
+            ),
             Self::ExecutionFailed(msg) => write!(f, "workflow execution failed: {msg}"),
             Self::ParallelFailed(msg) => write!(f, "parallel execution failed: {msg}"),
             Self::ForEachFailed(msg) => write!(f, "for each iteration failed: {msg}"),

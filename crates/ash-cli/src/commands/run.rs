@@ -5,9 +5,10 @@
 
 use anyhow::{Context, Result};
 use ash_core::Value;
-use ash_provenance::{TraceStore, WorkflowTraceSession, create_trace_recorder};
+use ash_engine::EngineError;
+use ash_interp::ExecError;
+use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 use clap::Args;
-use colored::Colorize;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -47,17 +48,11 @@ pub async fn run(args: &RunArgs) -> Result<()> {
 
     // Run the workflow file
     let result = if args.trace {
-        // For trace mode, we use the engine's run_file and add tracing
-        let workflow = engine
-            .parse_file(path)
-            .context("Failed to parse workflow")?;
-        engine.check(&workflow).context("Type checking failed")?;
+        let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
+        engine.check(&workflow).map_err(classify_engine_error)?;
         execute_with_trace(&engine, &workflow).await?
     } else {
-        engine
-            .run_file(path)
-            .await
-            .map_err(|e| anyhow::anyhow!("{e}"))?
+        engine.run_file(path).await.map_err(classify_exec_error)?
     };
 
     // Output results
@@ -132,16 +127,12 @@ async fn execute_with_trace(
 
     match engine.execute(workflow).await {
         Ok(value) => {
-            let recorder = session.finish_success()?;
-            let events = recorder.store().events();
-            println!("[INFO] Trace recorded: {} events", events.len());
+            let _recorder = session.finish_success()?;
             Ok(value)
         }
         Err(error) => {
-            let recorder = session.finish_error(format!("{error:?}"), Some("engine.execute"))?;
-            let events = recorder.store().events();
-            println!("[INFO] Trace recorded: {} events", events.len());
-            Err(anyhow::anyhow!("Execution error: {error:?}"))
+            let _recorder = session.finish_error(format!("{error:?}"), Some("engine.execute"))?;
+            Err(classify_exec_error(error))
         }
     }
 }
@@ -155,14 +146,51 @@ async fn output_result(result: &Value, output_path: &Option<String>) -> Result<(
             tokio::fs::write(path, output)
                 .await
                 .with_context(|| format!("Failed to write output to {path}"))?;
-            println!("[OK] Output written to {path}");
         }
         None => {
-            println!("{} {output}", "Result:".green().bold());
+            println!("{output}");
         }
     }
 
     Ok(())
+}
+
+fn classify_exec_error(error: ExecError) -> anyhow::Error {
+    match error {
+        ExecError::ExecutionFailed(message) if message.starts_with("parse error:") => {
+            anyhow::anyhow!("{message}")
+        }
+        ExecError::ExecutionFailed(message) if message.starts_with("type error:") => {
+            anyhow::anyhow!("{message}")
+        }
+        ExecError::CapabilityNotAvailable(name) => {
+            anyhow::anyhow!("verification error: capability not available: {name}")
+        }
+        ExecError::PolicyDenied { policy } => anyhow::anyhow!("policy denial: {policy}"),
+        ExecError::RequiresApproval {
+            role,
+            operation,
+            capability,
+        } => anyhow::anyhow!(
+            "approval required: role '{}' must approve {} on {}",
+            role.as_ref(),
+            operation,
+            capability
+        ),
+        other => anyhow::anyhow!("runtime error: {other}"),
+    }
+}
+
+fn classify_engine_error(error: EngineError) -> anyhow::Error {
+    match error {
+        EngineError::Parse(message) => anyhow::anyhow!("parse error: {message}"),
+        EngineError::Type(message) => anyhow::anyhow!("type error: {message}"),
+        EngineError::Execution(message) => anyhow::anyhow!("runtime error: {message}"),
+        EngineError::CapabilityNotFound(name) => {
+            anyhow::anyhow!("verification error: capability not found: {name}")
+        }
+        EngineError::Io(error) => anyhow::anyhow!("io error: {error}"),
+    }
 }
 
 #[cfg(test)]

@@ -3,8 +3,11 @@
 //! TASK-055: Implement `trace` command with provenance capture.
 
 use anyhow::{Context, Result};
+use ash_engine::EngineError;
+use ash_interp::ExecError;
 use ash_provenance::export::ExportFormat;
 use clap::Args;
+use serde::Serialize;
 use std::path::Path;
 
 /// Arguments for the trace command
@@ -38,16 +41,16 @@ pub struct TraceArgs {
 /// Run a workflow with full provenance tracing
 pub async fn trace(args: &TraceArgs) -> Result<()> {
     let path = Path::new(&args.path);
-
-    // Read the workflow source
-    let source = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read workflow file: {}", path.display()))?;
-
-    // Parse and lower the workflow
-    let workflow = parse_workflow(&source)?;
+    let engine = ash_engine::Engine::new()
+        .with_stdio_capabilities()
+        .with_fs_capabilities()
+        .build()
+        .context("Failed to build engine")?;
+    let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
+    engine.check(&workflow).map_err(classify_engine_error)?;
 
     // Execute with tracing
-    let trace_result = execute_with_full_trace(&workflow, args).await?;
+    let trace_result = execute_with_full_trace(&engine, &workflow, path, args).await?;
 
     // Output trace data
     output_trace(&trace_result, args).await?;
@@ -55,30 +58,22 @@ pub async fn trace(args: &TraceArgs) -> Result<()> {
     Ok(())
 }
 
-/// Parse workflow source into core IR
-fn parse_workflow(source: &str) -> Result<ash_core::Workflow> {
-    use ash_parser::parse_workflow::workflow_def;
-    use winnow::prelude::*;
-
-    let mut input = ash_parser::new_input(source);
-    let workflow_def = workflow_def
-        .parse_next(&mut input)
-        .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
-
-    Ok(ash_parser::lower::lower_workflow(&workflow_def))
-}
-
 /// Trace result containing execution data
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct TraceResult {
+    pub trace_id: String,
+    pub workflow: String,
+    pub started_at: String,
     pub events: Vec<ash_provenance::TraceEvent>,
-    pub final_value: ash_core::Value,
+    pub final_value: String,
 }
 
 /// Execute a workflow with full provenance tracing
 async fn execute_with_full_trace(
-    workflow: &ash_core::Workflow,
-    args: &TraceArgs,
+    engine: &ash_engine::Engine,
+    workflow: &ash_engine::Workflow,
+    path: &Path,
+    _args: &TraceArgs,
 ) -> Result<TraceResult> {
     use ash_core::WorkflowId;
     use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
@@ -88,36 +83,27 @@ async fn execute_with_full_trace(
     let session = WorkflowTraceSession::start(recorder, "main")?;
 
     // Execute the workflow
-    let result = ash_interp::interpret(workflow).await;
+    let result = engine.execute(workflow).await;
     let recorder = match &result {
         Ok(_) => session.finish_success()?,
         Err(error) => session.finish_error(format!("{error:?}"), Some("ash_interp::interpret"))?,
     };
 
-    let final_value = result.map_err(|e| anyhow::anyhow!("Execution error: {:?}", e))?;
+    let final_value = result.map_err(classify_exec_error)?;
 
     // Get events from recorder
     let events = recorder.events().to_vec();
-
-    println!(
-        "[INFO] Traced {} events for workflow {:?}",
-        events.len(),
-        workflow_id
-    );
-
-    // Verify integrity if requested
-    if args.verify {
-        println!("[OK] Trace integrity verified");
-    }
-
-    // Lineage tracking is simplified - just acknowledge the flag
-    if args.lineage {
-        println!("[INFO] Lineage tracking enabled");
-    }
+    let started_at = events
+        .first()
+        .map(|event| event.timestamp().to_rfc3339())
+        .unwrap_or_default();
 
     Ok(TraceResult {
+        trace_id: workflow_id.0.to_string(),
+        workflow: path.display().to_string(),
+        started_at,
         events,
-        final_value,
+        final_value: final_value.to_string(),
     })
 }
 
@@ -145,7 +131,6 @@ async fn output_trace(result: &TraceResult, args: &TraceArgs) -> Result<()> {
             tokio::fs::write(path, output)
                 .await
                 .with_context(|| format!("Failed to write trace to {}", path))?;
-            println!("[OK] Trace written to {}", path);
         }
         None => {
             println!("{}", output);
@@ -157,11 +142,7 @@ async fn output_trace(result: &TraceResult, args: &TraceArgs) -> Result<()> {
 
 /// Export trace as JSON
 fn export_json(result: &TraceResult) -> Result<String> {
-    let trace_data = serde_json::json!({
-        "events": result.events,
-        "final_value": result.final_value,
-    });
-    Ok(serde_json::to_string_pretty(&trace_data)?)
+    Ok(serde_json::to_string_pretty(result)?)
 }
 
 /// Export trace as NDJSON (newline-delimited JSON)
@@ -200,6 +181,44 @@ fn export_csv(result: &TraceResult) -> Result<String> {
     Ok(csv)
 }
 
+fn classify_engine_error(error: EngineError) -> anyhow::Error {
+    match error {
+        EngineError::Parse(message) => anyhow::anyhow!("parse error: {message}"),
+        EngineError::Type(message) => anyhow::anyhow!("type error: {message}"),
+        EngineError::Execution(message) => anyhow::anyhow!("runtime error: {message}"),
+        EngineError::CapabilityNotFound(message) => {
+            anyhow::anyhow!("verification error: capability not found: {message}")
+        }
+        EngineError::Io(error) => anyhow::anyhow!("io error: {error}"),
+    }
+}
+
+fn classify_exec_error(error: ExecError) -> anyhow::Error {
+    match error {
+        ExecError::ExecutionFailed(message) if message.starts_with("parse error:") => {
+            anyhow::anyhow!("{message}")
+        }
+        ExecError::ExecutionFailed(message) if message.starts_with("type error:") => {
+            anyhow::anyhow!("{message}")
+        }
+        ExecError::CapabilityNotAvailable(name) => {
+            anyhow::anyhow!("verification error: capability not available: {name}")
+        }
+        ExecError::PolicyDenied { policy } => anyhow::anyhow!("policy denial: {policy}"),
+        ExecError::RequiresApproval {
+            role,
+            operation,
+            capability,
+        } => anyhow::anyhow!(
+            "approval required: role '{}' must approve {} on {}",
+            role.as_ref(),
+            operation,
+            capability
+        ),
+        other => anyhow::anyhow!("runtime error: {other}"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,19 +245,20 @@ mod tests {
         use ash_core::Value;
 
         let result = TraceResult {
+            trace_id: "trace-id".to_string(),
+            workflow: "main".to_string(),
+            started_at: "2026-03-20T00:00:00Z".to_string(),
             events: vec![],
-            final_value: Value::Int(42),
+            final_value: Value::Int(42).to_string(),
         };
 
-        // Test JSON export
         let json = export_json(&result).unwrap();
         assert!(json.contains("final_value"));
+        assert!(json.contains("trace_id"));
 
-        // Test NDJSON export
         let ndjson = export_ndjson(&result).unwrap();
         assert!(ndjson.is_empty() || ndjson.contains("{"));
 
-        // Test CSV export
         let csv = export_csv(&result).unwrap();
         assert!(csv.contains("timestamp"));
     }

@@ -1,6 +1,6 @@
 # TASK-173: Implement REPL Type Reporting
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -74,11 +74,11 @@ git commit -m "fix: implement repl type reporting"
 
 ## Completion Checklist
 
-- [ ] failing REPL type-reporting tests added
-- [ ] failure verified
-- [ ] canonical type reporting implemented
-- [ ] focused verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing REPL type-reporting tests added
+- [x] failure verified
+- [x] canonical type reporting implemented
+- [x] focused verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

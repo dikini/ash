@@ -15,14 +15,14 @@ ash-parser = { path = "../ash-parser" }
 ash-interp = { path = "../ash-interp" }
 tokio = { workspace = true }
 thiserror = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 rustyline = { version = "15.0", features = ["derive"] }
 directories = "6.0"
 colored = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
+assert_cmd = "2.0"
+predicates = "3.0"
 
 [lints]
 workspace = true

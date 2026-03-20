@@ -35,6 +35,27 @@ use std::io::Write;
 use std::path::PathBuf;
 use thiserror::Error;
 
+/// Canonical normal REPL prompt.
+pub const NORMAL_PROMPT: &str = "ash> ";
+
+/// Canonical continuation REPL prompt.
+pub const CONTINUATION_PROMPT: &str = "... ";
+
+/// Canonical startup banner for interactive REPL sessions.
+pub const STARTUP_BANNER: &str = "Ash REPL - Type :help for help, :quit to exit";
+
+const HELP_TEXT: &str = "\
+Commands:
+  :help, :h     Show this help
+  :quit, :q     Exit the REPL
+  :type, :t     Show type of expression
+  :ast          Show AST representation
+  :clear        Clear screen
+
+Multi-line input is supported automatically.";
+
+const CANONICAL_COMMANDS: [&str; 5] = [":help", ":quit", ":type", ":ast", ":clear"];
+
 /// Errors that can occur in the REPL.
 #[derive(Debug, Error)]
 pub enum ReplError {
@@ -65,6 +86,76 @@ impl From<ReadlineError> for ReplError {
     fn from(err: ReadlineError) -> Self {
         Self::Readline(err.to_string())
     }
+}
+
+/// Session-level REPL configuration.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ReplConfig {
+    history_path: Option<PathBuf>,
+}
+
+impl ReplConfig {
+    /// Disable persistent history for the session.
+    #[must_use]
+    pub const fn no_history() -> Self {
+        Self { history_path: None }
+    }
+
+    /// Use the default persistent history location.
+    #[must_use]
+    pub fn with_default_history() -> Self {
+        Self {
+            history_path: Repl::get_history_path(),
+        }
+    }
+
+    /// Override the history path for the session.
+    #[must_use]
+    pub fn with_history_path(path: impl Into<PathBuf>) -> Self {
+        Self {
+            history_path: Some(path.into()),
+        }
+    }
+
+    /// Return the configured history path.
+    #[must_use]
+    pub const fn history_path(&self) -> Option<&PathBuf> {
+        self.history_path.as_ref()
+    }
+}
+
+/// Return the canonical help text for the interactive command surface.
+#[must_use]
+pub const fn help_text() -> &'static str {
+    HELP_TEXT
+}
+
+/// Return the canonical command names from the REPL spec.
+#[must_use]
+pub const fn canonical_command_names() -> &'static [&'static str] {
+    &CANONICAL_COMMANDS
+}
+
+/// Infer the canonical Ash type name for an expression.
+///
+/// # Errors
+///
+/// Returns an error when the expression cannot be parsed or does not yield a
+/// reportable canonical type.
+pub fn infer_type_display(expr: &str) -> Result<String, ReplError> {
+    Engine::default()
+        .infer_expression_type(expr)
+        .map_err(Into::into)
+}
+
+/// Run a REPL session with explicit session configuration.
+///
+/// # Errors
+///
+/// Returns an error when session initialization or interactive execution fails.
+pub async fn run_with_config(config: ReplConfig) -> Result<(), ReplError> {
+    let mut repl = Repl::from_config(config)?;
+    repl.run().await
 }
 
 /// Helper struct for managing the readline editor.
@@ -138,19 +229,27 @@ impl Repl {
     ///
     /// Returns error if history file cannot be accessed.
     pub fn new(no_history: bool) -> Result<Self, ReplError> {
+        let config = if no_history {
+            ReplConfig::no_history()
+        } else {
+            ReplConfig::with_default_history()
+        };
+
+        Self::from_config(config)
+    }
+
+    /// Create a new REPL from explicit session configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if history file cannot be accessed.
+    pub fn from_config(config: ReplConfig) -> Result<Self, ReplError> {
         let engine = Engine::default();
-
-        let history_path = if no_history {
-            None
-        } else {
-            Self::get_history_path()
-        };
-
-        let editor = if no_history {
-            None
-        } else {
-            Some(ReplEditor::new(history_path.clone())?)
-        };
+        let history_path = config.history_path;
+        let editor = history_path
+            .as_ref()
+            .map(|_| ReplEditor::new(history_path.clone()))
+            .transpose()?;
 
         Ok(Self {
             engine,
@@ -171,14 +270,18 @@ impl Repl {
     ///
     /// Returns error if readline fails.
     pub async fn run(&mut self) -> Result<(), ReplError> {
-        println!("Ash REPL - Type :help for help, :quit to exit");
+        println!("{STARTUP_BANNER}");
         println!();
 
         let mut multi_line_input = String::new();
         let mut is_multiline = false;
 
         loop {
-            let prompt = if is_multiline { "... " } else { "ash> " };
+            let prompt = if is_multiline {
+                CONTINUATION_PROMPT
+            } else {
+                NORMAL_PROMPT
+            };
 
             let input = if let Some(editor) = &mut self.editor {
                 match editor.readline(prompt) {
@@ -344,7 +447,7 @@ impl Repl {
             Some(&("type" | "t")) => {
                 if parts.len() > 1 {
                     let expr = parts[1..].join(" ");
-                    self.show_type(&expr);
+                    Self::show_type(&expr);
                 } else {
                     println!("Usage: :type <expression>");
                 }
@@ -368,14 +471,7 @@ impl Repl {
 
     /// Print the help message.
     fn print_help() {
-        println!("Commands:");
-        println!("  :help, :h     Show this help");
-        println!("  :quit, :q     Exit the REPL");
-        println!("  :type, :t     Show type of expression");
-        println!("  :ast          Show AST representation");
-        println!("  :clear        Clear screen");
-        println!();
-        println!("Multi-line input is supported automatically.");
+        println!("{}", help_text());
     }
 
     /// Show the type of an expression.
@@ -383,16 +479,9 @@ impl Repl {
     /// # Arguments
     ///
     /// * `expr` - The expression to type check.
-    fn show_type(&self, expr: &str) {
-        // Parse and type check without executing
-        let wrapped = format!("workflow __typecheck__ {{ ret {expr}; }}");
-
-        match self.engine.parse(&wrapped) {
-            Ok(workflow) => {
-                // TODO: Get type from type checker
-                println!("Type: (inferred from context)");
-                let _ = workflow;
-            }
+    fn show_type(expr: &str) {
+        match infer_type_display(expr) {
+            Ok(ty) => println!("{ty}"),
             Err(e) => println!("Error: {e}"),
         }
     }

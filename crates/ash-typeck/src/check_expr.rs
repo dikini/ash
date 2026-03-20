@@ -5,7 +5,7 @@
 use crate::error::ConstructorError;
 use crate::type_env::{TypeEnv, TypeInfo, VariantIndex};
 use crate::types::{Substitution, Type, TypeVar, unify};
-use ash_parser::surface::Expr;
+use ash_parser::surface::{BinaryOp, Expr, Literal, UnaryOp};
 use std::collections::HashSet;
 
 /// Result of type checking an expression
@@ -55,7 +55,20 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             // Variables get a fresh type variable (they should be looked up in context)
             CheckResult::success(Type::Var(TypeVar::fresh()))
         }
+        Expr::Unary { op, operand, .. } => check_unary(env, *op, operand),
+        Expr::Binary {
+            op, left, right, ..
+        } => check_binary(env, *op, left, right),
         Expr::Constructor { name, fields, .. } => check_constructor(env, name.as_ref(), fields),
+        Expr::IfLet {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            let then_result = check_expr(env, then_branch);
+            let else_result = check_expr(env, else_branch);
+            merge_branch_results(then_result, else_result)
+        }
         _ => {
             // For other expression types, return a fresh type variable
             // These should be implemented as needed
@@ -65,22 +78,123 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
 }
 
 /// Check a literal expression
-fn check_literal(lit: &ash_parser::surface::Literal) -> CheckResult {
+fn check_literal(lit: &Literal) -> CheckResult {
     let ty = match lit {
-        ash_parser::surface::Literal::Int(_) => Type::Int,
-        ash_parser::surface::Literal::String(_) => Type::String,
-        ash_parser::surface::Literal::Bool(_) => Type::Bool,
-        ash_parser::surface::Literal::Null => Type::Null,
-        ash_parser::surface::Literal::Float(_) => {
+        Literal::Int(_) => Type::Int,
+        Literal::String(_) => Type::String,
+        Literal::Bool(_) => Type::Bool,
+        Literal::Null => Type::Null,
+        Literal::Float(_) => {
             // Floats not yet supported in core types, use fresh variable
             Type::Var(TypeVar::fresh())
         }
-        ash_parser::surface::Literal::List(_) => {
-            // Lists would need element type inference
-            Type::Var(TypeVar::fresh())
-        }
+        Literal::List(items) => infer_list_literal_type(items),
     };
     CheckResult::success(ty)
+}
+
+fn infer_list_literal_type(items: &[Literal]) -> Type {
+    let mut iter = items.iter();
+    let Some(first) = iter.next() else {
+        return Type::List(Box::new(Type::Var(TypeVar::fresh())));
+    };
+
+    let first_ty = check_literal(first).ty;
+    if iter.all(|item| check_literal(item).ty == first_ty) {
+        Type::List(Box::new(first_ty))
+    } else {
+        Type::List(Box::new(Type::Var(TypeVar::fresh())))
+    }
+}
+
+fn check_unary(env: &TypeEnv, op: UnaryOp, operand: &Expr) -> CheckResult {
+    let operand_result = check_expr(env, operand);
+    if !operand_result.is_ok() {
+        return operand_result;
+    }
+
+    let ty = match op {
+        UnaryOp::Not if operand_result.ty == Type::Bool => Type::Bool,
+        UnaryOp::Neg if operand_result.ty == Type::Int => Type::Int,
+        _ => Type::Var(TypeVar::fresh()),
+    };
+
+    CheckResult {
+        ty,
+        substitution: operand_result.substitution,
+        errors: operand_result.errors,
+    }
+}
+
+fn check_binary(env: &TypeEnv, op: BinaryOp, left: &Expr, right: &Expr) -> CheckResult {
+    let left_result = check_expr(env, left);
+    let right_result = check_expr(env, right);
+
+    if !left_result.is_ok() || !right_result.is_ok() {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution: left_result.substitution.compose(&right_result.substitution),
+            errors: left_result
+                .errors
+                .into_iter()
+                .chain(right_result.errors)
+                .collect(),
+        };
+    }
+
+    let ty = match op {
+        BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div
+            if left_result.ty == Type::Int && right_result.ty == Type::Int =>
+        {
+            Type::Int
+        }
+        BinaryOp::And | BinaryOp::Or
+            if left_result.ty == Type::Bool && right_result.ty == Type::Bool =>
+        {
+            Type::Bool
+        }
+        BinaryOp::Eq
+        | BinaryOp::Neq
+        | BinaryOp::Lt
+        | BinaryOp::Gt
+        | BinaryOp::Leq
+        | BinaryOp::Geq
+            if left_result.ty == right_result.ty =>
+        {
+            Type::Bool
+        }
+        BinaryOp::In => Type::Bool,
+        _ => Type::Var(TypeVar::fresh()),
+    };
+
+    CheckResult {
+        ty,
+        substitution: left_result.substitution.compose(&right_result.substitution),
+        errors: Vec::new(),
+    }
+}
+
+fn merge_branch_results(left: CheckResult, right: CheckResult) -> CheckResult {
+    let substitution = left.substitution.compose(&right.substitution);
+    let errors: Vec<ConstructorError> = left.errors.into_iter().chain(right.errors).collect();
+
+    if !errors.is_empty() {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        };
+    }
+
+    let ty = unify(&left.ty, &right.ty)
+        .map(|subst| subst.apply(&left.ty))
+        .unwrap_or(Type::Var(TypeVar::fresh()));
+
+    CheckResult {
+        ty,
+        substitution,
+        errors: Vec::new(),
+    }
 }
 
 /// Check a constructor expression

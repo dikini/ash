@@ -656,7 +656,7 @@ brief by building on the existing REPL tasks and one new CLI output-alignment ta
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-208](tasks/TASK-208-align-cli-run-and-trace-observable-output.md) | Align CLI run and trace observable output | SPEC-005/011/021 | 8 | 📝 Planned |
+| [TASK-208](tasks/TASK-208-align-cli-run-and-trace-observable-output.md) | Align CLI run and trace observable output | SPEC-005/011/021 | 8 | ✅ Complete |
 
 **Extension Deliverable**: Shared REPL authority and canonical `:type` reporting via [TASK-172](tasks/TASK-172-unify-repl-implementation.md) / [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md), plus CLI `run` / `trace` output aligned with the observable contract via TASK-208
 
@@ -717,8 +717,8 @@ Align the implementation of REPL and CLI behavior with the frozen command and ou
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-172](tasks/TASK-172-unify-repl-implementation.md) | Unify REPL implementation | SPEC-005/011/016 | 8 | 📝 Planned |
-| [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) | Implement REPL type reporting | SPEC-003/005/011 | 6 | 📝 Planned |
+| [TASK-172](tasks/TASK-172-unify-repl-implementation.md) | Unify REPL implementation | SPEC-005/011/016 | 8 | ✅ Complete |
+| [TASK-173](tasks/TASK-173-implement-repl-type-reporting.md) | Implement REPL type reporting | SPEC-003/005/011 | 6 | ✅ Complete |
 
 **Phase 29 Deliverable**: One authoritative REPL implementation with canonical type reporting
 

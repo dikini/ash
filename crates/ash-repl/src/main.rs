@@ -1,13 +1,10 @@
 //! Standalone REPL binary for Ash workflow language.
 
-use ash_repl::Repl;
+use ash_repl::ReplConfig;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt::init();
-
-    let mut repl = Repl::new(false)?;
-    repl.run().await?;
+    ash_repl::run_with_config(ReplConfig::with_default_history()).await?;
 
     Ok(())
 }

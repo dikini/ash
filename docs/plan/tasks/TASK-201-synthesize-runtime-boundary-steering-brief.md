@@ -1,6 +1,6 @@
 # TASK-201: Synthesize Runtime Boundary Steering Brief
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -67,10 +67,20 @@ git commit -m "docs: synthesize runtime boundary steering brief"
 
 ## Completion Checklist
 
-- [ ] TASK-199 and TASK-200 findings merged
-- [ ] later runtime-boundary task clusters stated
-- [ ] review checkpoint and steering questions documented
-- [ ] runtime-only authority protected
+- [x] TASK-199 and TASK-200 findings merged
+- [x] later runtime-boundary task clusters stated
+- [x] review checkpoint and steering questions documented
+- [x] runtime-only authority protected
+
+## Evidence
+
+- [docs/plan/2026-03-20-runtime-boundary-steering-brief.md](/home/dikini/Projects/ash/docs/plan/2026-03-20-runtime-boundary-steering-brief.md)
+  now merges the runtime execution-boundary and trace/provenance audits into one phase-end
+  steering artifact.
+- The brief preserves runtime-only ownership of execution, acceptance, rejection, commitment,
+  observability, and provenance while separating later tooling/presentation concerns.
+- The resulting cluster map stays runtime-first: runtime completeness, runtime acceptance and
+  commitment visibility, and trace/provenance hardening.
 
 ## Non-goals
 

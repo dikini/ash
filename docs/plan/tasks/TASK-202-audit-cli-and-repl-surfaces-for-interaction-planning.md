@@ -1,6 +1,6 @@
 # TASK-202: Audit CLI and REPL Surfaces for Interaction Planning
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -69,10 +69,20 @@ git commit -m "docs: audit cli and repl surfaces for planning"
 
 ## Completion Checklist
 
-- [ ] CLI and REPL surfaces audited
-- [ ] runtime-observable versus explanatory-only boundary restated
-- [ ] likely wording/presentation follow-ups identified
-- [ ] audit output written for TASK-204
+- [x] CLI and REPL surfaces audited
+- [x] runtime-observable versus explanatory-only boundary restated
+- [x] likely wording/presentation follow-ups identified
+- [x] audit output written for TASK-204
+
+## Evidence
+
+- [docs/audit/2026-03-20-cli-and-repl-interaction-planning-review.md](/home/dikini/Projects/ash/docs/audit/2026-03-20-cli-and-repl-interaction-planning-review.md)
+  now classifies `ash run`, `ash trace`, REPL command handling, and REPL inspection commands as
+  runtime-observable, with only presentation-level wording pressure remaining.
+- The audit keeps explanatory stage guidance separate from runtime semantics and does not reclassify
+  CLI/REPL surfaces as reasoner projection.
+- The remaining follow-up is to align observable wording, especially REPL `:type`, with the frozen
+  runtime observable behavior contract.
 
 ## Non-goals
 

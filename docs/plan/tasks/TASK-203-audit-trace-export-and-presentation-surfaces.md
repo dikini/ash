@@ -1,6 +1,6 @@
 # TASK-203: Audit Trace Export and Presentation Surfaces
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,10 +71,20 @@ git commit -m "docs: audit trace presentation surfaces"
 
 ## Completion Checklist
 
-- [ ] trace/export presentation surfaces audited
-- [ ] provenance authority protections restated
-- [ ] likely wording/presentation follow-ups identified
-- [ ] audit output written for TASK-204
+- [x] trace/export presentation surfaces audited
+- [x] provenance authority protections restated
+- [x] likely wording/presentation follow-ups identified
+- [x] audit output written for TASK-204
+
+## Evidence
+
+- [docs/audit/2026-03-20-trace-export-and-presentation-planning-review.md](/home/dikini/Projects/ash/docs/audit/2026-03-20-trace-export-and-presentation-planning-review.md)
+  now classifies the CLI trace command, provenance recorder, and export helpers as runtime-only
+  and identifies stage-aware wording as tooling-level follow-up rather than semantic change.
+- The audit keeps trace export and presentation separate from reasoner projection, preserving
+  runtime-owned observability and provenance.
+- The only remaining pressure is presentation-level wording for accepted versus rejected
+  progression, which belongs to the later tooling/surface steering brief.
 
 ## Non-goals
 

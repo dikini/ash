@@ -1,6 +1,6 @@
 # TASK-204: Synthesize Tooling and Surface Steering Brief
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -68,10 +68,20 @@ git commit -m "docs: synthesize tooling and surface steering brief"
 
 ## Completion Checklist
 
-- [ ] TASK-202 and TASK-203 findings merged
-- [ ] later tooling/surface task clusters stated
-- [ ] review checkpoint and steering questions documented
-- [ ] runtime authority protections restated
+- [x] TASK-202 and TASK-203 findings merged
+- [x] later tooling/surface task clusters stated
+- [x] review checkpoint and steering questions documented
+- [x] runtime authority protections restated
+
+## Evidence
+
+- [docs/plan/2026-03-20-tooling-surface-steering-brief.md](/home/dikini/Projects/ash/docs/plan/2026-03-20-tooling-surface-steering-brief.md)
+  now merges the CLI/REPL and trace-presentation audits into one phase-end steering artifact.
+- The brief preserves the distinction between runtime-observable behavior and explanatory stage
+  guidance while defining later clusters for REPL convergence, CLI run/trace output convergence,
+  and optional presentation overlays.
+- The resulting cluster map keeps runtime authority primary and treats wording/stage labels as
+  presentation-only follow-up.
 
 ## Non-goals
 

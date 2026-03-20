@@ -591,7 +591,7 @@ then stop at a steering brief before opening any runtime code-facing tasks.
 |------|-------------|------|------------|--------|
 | [TASK-199](tasks/TASK-199-audit-runtime-execution-boundaries-for-interaction-planning.md) | Audit runtime execution boundaries for interaction planning | SPEC-004 / interaction contract | 6 | ✅ Complete |
 | [TASK-200](tasks/TASK-200-audit-runtime-trace-and-provenance-surfaces.md) | Audit runtime trace and provenance surfaces | SPEC-004 / planning surface | 5 | ✅ Complete |
-| [TASK-201](tasks/TASK-201-synthesize-runtime-boundary-steering-brief.md) | Synthesize runtime boundary steering brief | Runtime-boundary audit outputs | 5 | 📝 Planned |
+| [TASK-201](tasks/TASK-201-synthesize-runtime-boundary-steering-brief.md) | Synthesize runtime boundary steering brief | Runtime-boundary audit outputs | 5 | ✅ Complete |
 
 **Phase Deliverable**: Two runtime-boundary audits and one steering brief that identifies later runtime code-facing task clusters without opening them
 
@@ -603,9 +603,9 @@ surface code-facing tasks.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-202](tasks/TASK-202-audit-cli-and-repl-surfaces-for-interaction-planning.md) | Audit CLI and REPL surfaces for interaction planning | SPEC-005/011 / runtime-observable contract | 6 | 📝 Planned |
-| [TASK-203](tasks/TASK-203-audit-trace-export-and-presentation-surfaces.md) | Audit trace export and presentation surfaces | SPEC-005/016 / runtime-observable contract | 5 | 📝 Planned |
-| [TASK-204](tasks/TASK-204-synthesize-tooling-and-surface-steering-brief.md) | Synthesize tooling and surface steering brief | Tooling/surface audit outputs | 5 | 📝 Planned |
+| [TASK-202](tasks/TASK-202-audit-cli-and-repl-surfaces-for-interaction-planning.md) | Audit CLI and REPL surfaces for interaction planning | SPEC-005/011 / runtime-observable contract | 6 | ✅ Complete |
+| [TASK-203](tasks/TASK-203-audit-trace-export-and-presentation-surfaces.md) | Audit trace export and presentation surfaces | SPEC-005/016 / runtime-observable contract | 5 | ✅ Complete |
+| [TASK-204](tasks/TASK-204-synthesize-tooling-and-surface-steering-brief.md) | Synthesize tooling and surface steering brief | Tooling/surface audit outputs | 5 | ✅ Complete |
 
 **Phase Deliverable**: Two tooling/surface audits and one steering brief that identifies later user-facing task clusters without opening them
 

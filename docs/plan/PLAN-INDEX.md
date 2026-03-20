@@ -539,6 +539,36 @@ parser and runtime convergence resumes.
 
 **Gate Deliverable**: Explicit monitor authority and exposed workflow views for later Rust convergence
 
+## Runtime-Reasoner Design Review Gate (Week 44)
+
+Freeze the runtime-only versus runtime-to-reasoner separation rules, audit the current canonical
+docs against those rules, and synthesize the resulting spec-delta program before further language
+and runtime contract revision resumes.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-187](tasks/TASK-187-freeze-runtime-reasoner-separation-rules.md) | Freeze runtime versus reasoner separation rules | Design note / SPEC-001 / SPEC-004 | 4 | ✅ Complete |
+| [TASK-188](tasks/TASK-188-audit-runtime-and-verification-specs-for-reasoner-boundaries.md) | Audit runtime and verification specs for reasoner boundaries | SPEC-001/004/017/018 | 6 | ✅ Complete |
+| [TASK-189](tasks/TASK-189-audit-surface-and-observability-docs-for-reasoner-boundaries.md) | Audit surface and observability docs for reasoner boundaries | SPEC-002/021 | 6 | ✅ Complete |
+| [TASK-190](tasks/TASK-190-synthesize-runtime-reasoner-spec-delta-program.md) | Synthesize runtime-reasoner spec delta program | Design note / SPEC-001/002/004/017/018/021 | 6 | ✅ Complete |
+
+**Gate Deliverable**: Frozen separation rules, completed audits, and one ordered spec-delta program that preserves runtime-only concerns while defining the review path for interaction-layer contracts
+
+## Runtime-Reasoner Spec Follow-Up Phase (Week 45)
+
+Complete the docs-only follow-up work required by the runtime-reasoner delta program before
+planning any implementation convergence against the new interaction-facing material.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-191](tasks/TASK-191-define-runtime-to-reasoner-interaction-contract.md) | Define runtime-to-reasoner interaction contract | Design note / SPEC-004 | 6 | 📝 Planned |
+| [TASK-192](tasks/TASK-192-add-runtime-authority-framing-to-spec-004.md) | Add runtime-authority framing to `SPEC-004` | SPEC-004 | 4 | 📝 Planned |
+| [TASK-193](tasks/TASK-193-tighten-projection-and-monitorability-terminology.md) | Tighten projection and monitorability terminology | Design / reference | 4 | 📝 Planned |
+| [TASK-194](tasks/TASK-194-define-human-facing-surface-guidance-boundary.md) | Define human-facing surface guidance boundary | SPEC-002 / reference | 5 | 📝 Planned |
+| [TASK-195](tasks/TASK-195-synthesize-runtime-reasoner-spec-handoff.md) | Synthesize runtime-reasoner spec handoff | Follow-up docs corpus | 4 | 📝 Planned |
+
+**Phase Deliverable**: One interaction contract, one minimal runtime-framing update, one terminology pass, one surface-guidance boundary note, and one implementation-readiness handoff with runtime-only protections preserved
+
 ## Phase 26: Parser and Lowering Convergence (Week 44)
 
 These implementation phases are blocked until the monitoring authority gate confirms that the specification is

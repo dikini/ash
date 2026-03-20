@@ -503,7 +503,7 @@ pub struct Obligation {
     /// Description of what the obligation requires
     pub description: String,
     /// Required capabilities to satisfy this obligation
-    pub required_capabilities: RequiredCapabilities,
+    pub required_capabilities: ObligationRequirements,
 }
 
 impl Obligation {
@@ -512,40 +512,160 @@ impl Obligation {
         Self {
             name: name.into(),
             description: description.into(),
-            required_capabilities: RequiredCapabilities::default(),
+            required_capabilities: ObligationRequirements::default(),
         }
     }
 
-    /// Add a required capability
-    pub fn with_capability(mut self, capability: impl Into<String>) -> Self {
-        self.required_capabilities.add(capability);
+    /// Add a required observe capability.
+    pub fn with_observe_capability(
+        mut self,
+        capability: impl Into<Name>,
+        channel: impl Into<Name>,
+    ) -> Self {
+        self.required_capabilities = self
+            .required_capabilities
+            .require_observe(capability, channel);
+        self
+    }
+
+    /// Add a required receive capability.
+    pub fn with_receive_capability(
+        mut self,
+        capability: impl Into<Name>,
+        channel: impl Into<Name>,
+    ) -> Self {
+        self.required_capabilities = self
+            .required_capabilities
+            .require_receive(capability, channel);
+        self
+    }
+
+    /// Add a required set capability.
+    pub fn with_set_capability(
+        mut self,
+        capability: impl Into<Name>,
+        channel: impl Into<Name>,
+    ) -> Self {
+        self.required_capabilities = self.required_capabilities.require_set(capability, channel);
+        self
+    }
+
+    /// Add a required send capability.
+    pub fn with_send_capability(
+        mut self,
+        capability: impl Into<Name>,
+        channel: impl Into<Name>,
+    ) -> Self {
+        self.required_capabilities = self.required_capabilities.require_send(capability, channel);
         self
     }
 }
 
-/// Required capabilities for an obligation
+/// Explicit obligation-backed runtime requirements consumed by aggregate verification.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct RequiredCapabilities {
-    /// List of required capability strings
-    pub capabilities: Vec<String>,
+pub struct ObligationRequirements {
+    /// Required observe capabilities.
+    pub observes: Vec<(Name, Name)>,
+    /// Required receive capabilities.
+    pub receives: Vec<(Name, Name)>,
+    /// Required set capabilities.
+    pub sets: Vec<(Name, Name)>,
+    /// Required send capabilities.
+    pub sends: Vec<(Name, Name)>,
+    /// Required runtime roles.
+    pub roles: Vec<Role>,
+    /// Required obligation names.
+    pub obligations: Vec<Name>,
 }
 
-impl RequiredCapabilities {
-    /// Create empty required capabilities
+impl ObligationRequirements {
+    /// Create empty obligation-backed requirements.
     pub fn new() -> Self {
-        Self {
-            capabilities: Vec::new(),
-        }
+        Self::default()
     }
 
-    /// Add a required capability
-    pub fn add(&mut self, capability: impl Into<String>) {
-        self.capabilities.push(capability.into());
+    /// Add and return a required observe capability.
+    pub fn require_observe(
+        mut self,
+        capability: impl Into<Name>,
+        channel: impl Into<Name>,
+    ) -> Self {
+        self.observes.push((capability.into(), channel.into()));
+        self
     }
 
-    /// Check if no capabilities are required
+    /// Add and return a required receive capability.
+    pub fn require_receive(
+        mut self,
+        capability: impl Into<Name>,
+        channel: impl Into<Name>,
+    ) -> Self {
+        self.receives.push((capability.into(), channel.into()));
+        self
+    }
+
+    /// Add and return a required set capability.
+    pub fn require_set(mut self, capability: impl Into<Name>, channel: impl Into<Name>) -> Self {
+        self.sets.push((capability.into(), channel.into()));
+        self
+    }
+
+    /// Add and return a required send capability.
+    pub fn require_send(mut self, capability: impl Into<Name>, channel: impl Into<Name>) -> Self {
+        self.sends.push((capability.into(), channel.into()));
+        self
+    }
+
+    /// Add and return a required runtime role.
+    pub fn require_role(mut self, role: Role) -> Self {
+        self.roles.push(role);
+        self
+    }
+
+    /// Add and return a required obligation name.
+    pub fn require_obligation(mut self, obligation: impl Into<Name>) -> Self {
+        self.obligations.push(obligation.into());
+        self
+    }
+
+    /// Check if no requirements are present.
     pub fn is_empty(&self) -> bool {
-        self.capabilities.is_empty()
+        self.observes.is_empty()
+            && self.receives.is_empty()
+            && self.sets.is_empty()
+            && self.sends.is_empty()
+            && self.roles.is_empty()
+            && self.obligations.is_empty()
+    }
+
+    /// Build runtime obligation requirements from structured declaration requirements.
+    pub fn from_declared_requirements(
+        requirements: &crate::obligation_checker::RequiredCapabilities,
+    ) -> Self {
+        Self {
+            observes: requirements
+                .observes
+                .iter()
+                .map(|(cap, channel)| (cap.to_string(), channel.to_string()))
+                .collect(),
+            receives: requirements
+                .receives
+                .iter()
+                .map(|(cap, channel)| (cap.to_string(), channel.to_string()))
+                .collect(),
+            sets: requirements
+                .sets
+                .iter()
+                .map(|(cap, channel)| (cap.to_string(), channel.to_string()))
+                .collect(),
+            sends: requirements
+                .sends
+                .iter()
+                .map(|(cap, channel)| (cap.to_string(), channel.to_string()))
+                .collect(),
+            roles: Vec::new(),
+            obligations: Vec::new(),
+        }
     }
 }
 
@@ -609,25 +729,83 @@ impl RuntimeObligationChecker {
     /// Check that runtime obligations satisfy workflow requirements
     pub fn check(
         &self,
-        required: &RequiredCapabilities,
-        runtime: &RuntimeObligations,
+        required: &ObligationRequirements,
+        runtime: &RuntimeContext,
     ) -> VerificationResult {
         let mut result = VerificationResult::new();
 
-        // Check that required capabilities are available in runtime
-        for capability in &required.capabilities {
-            // Check if this capability is satisfied by any obligation
-            let has_capability = runtime.obligations.iter().any(|obligation| {
+        for (capability, channel) in &required.observes {
+            if !runtime.obligations.obligations.iter().any(|obligation| {
                 obligation
                     .required_capabilities
-                    .capabilities
-                    .contains(capability)
-            });
-
-            if !has_capability {
+                    .observes
+                    .contains(&(capability.clone(), channel.clone()))
+            }) {
                 result.add_error(VerificationError::MissingRequiredCapability {
-                    required: capability.clone(),
+                    required: format!("{capability}:{channel}"),
                 });
+            }
+        }
+
+        for (capability, channel) in &required.receives {
+            if !runtime.obligations.obligations.iter().any(|obligation| {
+                obligation
+                    .required_capabilities
+                    .receives
+                    .contains(&(capability.clone(), channel.clone()))
+            }) {
+                result.add_error(VerificationError::MissingRequiredCapability {
+                    required: format!("{capability}:{channel}"),
+                });
+            }
+        }
+
+        for (capability, channel) in &required.sets {
+            if !runtime.obligations.obligations.iter().any(|obligation| {
+                obligation
+                    .required_capabilities
+                    .sets
+                    .contains(&(capability.clone(), channel.clone()))
+            }) {
+                result.add_error(VerificationError::MissingRequiredCapability {
+                    required: format!("{capability}:{channel}"),
+                });
+            }
+        }
+
+        for (capability, channel) in &required.sends {
+            if !runtime.obligations.obligations.iter().any(|obligation| {
+                obligation
+                    .required_capabilities
+                    .sends
+                    .contains(&(capability.clone(), channel.clone()))
+            }) {
+                result.add_error(VerificationError::MissingRequiredCapability {
+                    required: format!("{capability}:{channel}"),
+                });
+            }
+        }
+
+        for role in &required.roles {
+            let has_role = runtime.role.as_ref().is_some_and(|active| active == role)
+                || runtime.obligations.has_role(role);
+
+            if !has_role {
+                result.add_error(VerificationError::RoleMismatch {
+                    required: role.clone(),
+                    available: runtime
+                        .role
+                        .iter()
+                        .cloned()
+                        .chain(runtime.obligations.roles.iter().cloned())
+                        .collect(),
+                });
+            }
+        }
+
+        for obligation in &required.obligations {
+            if !runtime.obligations.has_obligation(obligation) {
+                result.add_error(VerificationError::MissingObligation(obligation.clone()));
             }
         }
 
@@ -1059,9 +1237,20 @@ pub struct RuntimeContext {
     pub capabilities: CapabilitySchemaRegistry,
     /// Runtime obligations
     pub obligations: RuntimeObligations,
+    /// Runtime mailbox registry used by receive verification.
+    pub mailboxes: MailboxRegistry,
+    /// Source scheduler used by runtime receive execution.
+    pub scheduler: SourceScheduler,
+    /// Approval queue for approval-gated policy outcomes.
+    pub approval_queue: ApprovalQueue,
+    /// Provenance sink for verification-time audit metadata.
+    pub provenance: ProvenanceSink,
+    /// Active runtime role, when known.
+    pub role: Option<Role>,
     /// Maximum allowed effect
     pub max_effect: Effect,
-    /// Static policies to validate against
+    /// Static policies to validate against. This is the type-layer stand-in for the
+    /// canonical runtime policy registry.
     pub policies: Vec<StaticPolicy>,
 }
 
@@ -1071,6 +1260,11 @@ impl RuntimeContext {
         Self {
             capabilities: CapabilitySchemaRegistry::new(),
             obligations: RuntimeObligations::new(),
+            mailboxes: MailboxRegistry::new(),
+            scheduler: SourceScheduler::new(),
+            approval_queue: ApprovalQueue::new(),
+            provenance: ProvenanceSink::new(),
+            role: None,
             max_effect,
             policies: vec![],
         }
@@ -1094,10 +1288,81 @@ impl RuntimeContext {
         self
     }
 
+    /// Set the runtime role (builder-style)
+    pub fn with_role(mut self, role: Role) -> Self {
+        self.role = Some(role);
+        self
+    }
+
     /// Add a single policy (builder-style)
     pub fn add_policy(mut self, policy: StaticPolicy) -> Self {
         self.policies.push(policy);
         self
+    }
+}
+
+/// Verification-time mailbox registry placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct MailboxRegistry {
+    entries: Vec<String>,
+}
+
+impl MailboxRegistry {
+    /// Create an empty mailbox registry.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check whether the registry is empty.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+/// Verification-time source scheduler placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SourceScheduler;
+
+impl SourceScheduler {
+    /// Create a new source scheduler placeholder.
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// Verification-time approval queue placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ApprovalQueue {
+    pending: Vec<String>,
+}
+
+impl ApprovalQueue {
+    /// Create an empty approval queue.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check whether the queue is empty.
+    pub fn is_empty(&self) -> bool {
+        self.pending.is_empty()
+    }
+}
+
+/// Verification-time provenance sink placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ProvenanceSink {
+    events: Vec<String>,
+}
+
+impl ProvenanceSink {
+    /// Create an empty provenance sink.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check whether the sink is empty.
+    pub fn is_empty(&self) -> bool {
+        self.events.is_empty()
     }
 }
 
@@ -1116,6 +1381,31 @@ pub struct VerificationAggregator {
     policy_validator: StaticPolicyValidator,
 }
 
+/// Inputs to aggregate runtime verification.
+///
+/// Workflow capability declarations and obligation-backed runtime requirements are distinct
+/// inputs and must be provided separately.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AggregateVerificationInputs {
+    /// Workflow-declared capability use.
+    pub workflow_capabilities: WorkflowCapabilities,
+    /// Explicit obligation-backed runtime requirements.
+    pub obligation_requirements: ObligationRequirements,
+}
+
+impl AggregateVerificationInputs {
+    /// Create aggregate verification inputs from separate workflow and obligation requirements.
+    pub fn new(
+        workflow_capabilities: WorkflowCapabilities,
+        obligation_requirements: ObligationRequirements,
+    ) -> Self {
+        Self {
+            workflow_capabilities,
+            obligation_requirements,
+        }
+    }
+}
+
 impl VerificationAggregator {
     /// Create a new verification aggregator
     pub fn new() -> Self {
@@ -1131,7 +1421,7 @@ impl VerificationAggregator {
     ///
     /// # Arguments
     /// * `workflow` - The workflow to verify
-    /// * `required` - The capabilities required by the workflow
+    /// * `inputs` - The separated workflow and obligation requirements
     /// * `runtime` - The runtime context to verify against
     ///
     /// # Returns
@@ -1139,7 +1429,7 @@ impl VerificationAggregator {
     pub fn aggregate(
         &self,
         workflow: &Workflow,
-        required: &WorkflowCapabilities,
+        inputs: &AggregateVerificationInputs,
         runtime: &RuntimeContext,
     ) -> VerificationResult {
         let mut result = VerificationResult::new();
@@ -1147,13 +1437,13 @@ impl VerificationAggregator {
         // 1. Verify capabilities are available
         let cap_result = self
             .capability_verifier
-            .verify(required, &runtime.capabilities);
+            .verify(&inputs.workflow_capabilities, &runtime.capabilities);
         result.merge(cap_result);
 
         // 2. Check obligations are satisfied
         let obl_result = self
             .obligation_checker
-            .check(&RequiredCapabilities::new(), &runtime.obligations);
+            .check(&inputs.obligation_requirements, runtime);
         result.merge(obl_result);
 
         // 3. Check effect bounds
@@ -1161,7 +1451,9 @@ impl VerificationAggregator {
         result.merge(effect_result);
 
         // 4. Validate against static policies
-        let policy_result = self.policy_validator.validate(required, &runtime.policies);
+        let policy_result = self
+            .policy_validator
+            .validate(&inputs.workflow_capabilities, &runtime.policies);
         result.merge(policy_result);
 
         result
@@ -1174,10 +1466,10 @@ impl VerificationAggregator {
     pub fn can_execute(
         &self,
         workflow: &Workflow,
-        required: &WorkflowCapabilities,
+        inputs: &AggregateVerificationInputs,
         runtime: &RuntimeContext,
     ) -> bool {
-        self.aggregate(workflow, required, runtime).can_execute()
+        self.aggregate(workflow, inputs, runtime).can_execute()
     }
 }
 
@@ -1215,22 +1507,33 @@ mod tests {
 
             let workflow = valid_workflow();
 
-            let required = WorkflowCapabilities {
+            let workflow_capabilities = WorkflowCapabilities {
                 observes: vec![(Name::from("sensor"), Name::from("temp"))],
                 ..Default::default()
             };
+            let inputs = AggregateVerificationInputs::new(
+                workflow_capabilities,
+                ObligationRequirements::new().require_observe("sensor", "temp"),
+            );
 
-            let runtime = RuntimeContext::new(Effect::Operational).with_capabilities({
-                let mut r = CapabilitySchemaRegistry::new();
-                r.register(
-                    Name::from("sensor"),
-                    Name::from("temp"),
-                    CapabilitySchema::read_only(Type::Int),
+            let runtime = RuntimeContext::new(Effect::Operational)
+                .with_capabilities({
+                    let mut r = CapabilitySchemaRegistry::new();
+                    r.register(
+                        Name::from("sensor"),
+                        Name::from("temp"),
+                        CapabilitySchema::read_only(Type::Int),
+                    );
+                    r
+                })
+                .with_obligations(
+                    RuntimeObligations::new().with_obligation(
+                        Obligation::new("monitor", "read temp")
+                            .with_observe_capability("sensor", "temp"),
+                    ),
                 );
-                r
-            });
 
-            let result = aggregator.aggregate(&workflow, &required, &runtime);
+            let result = aggregator.aggregate(&workflow, &inputs, &runtime);
             assert!(result.can_execute());
             assert!(result.errors.is_empty());
         }
@@ -1241,14 +1544,18 @@ mod tests {
 
             let workflow = valid_workflow();
 
-            let required = WorkflowCapabilities {
+            let workflow_capabilities = WorkflowCapabilities {
                 observes: vec![(Name::from("missing"), Name::from("cap"))],
                 ..Default::default()
             };
+            let inputs = AggregateVerificationInputs::new(
+                workflow_capabilities,
+                ObligationRequirements::new().require_observe("missing", "cap"),
+            );
 
             let runtime = RuntimeContext::new(Effect::Operational);
 
-            let result = aggregator.aggregate(&workflow, &required, &runtime);
+            let result = aggregator.aggregate(&workflow, &inputs, &runtime);
             assert!(!result.can_execute());
             assert!(!result.errors.is_empty());
         }
@@ -1267,10 +1574,13 @@ mod tests {
                 span: ash_parser::token::Span::default(),
             };
 
-            let required = WorkflowCapabilities::new();
+            let inputs = AggregateVerificationInputs::new(
+                WorkflowCapabilities::new(),
+                ObligationRequirements::new(),
+            );
             let runtime = RuntimeContext::new(Effect::Epistemic);
 
-            let result = aggregator.aggregate(&workflow, &required, &runtime);
+            let result = aggregator.aggregate(&workflow, &inputs, &runtime);
             assert!(!result.can_execute());
             assert!(
                 result
@@ -1286,10 +1596,14 @@ mod tests {
 
             let workflow = valid_workflow();
 
-            let required = WorkflowCapabilities {
+            let workflow_capabilities = WorkflowCapabilities {
                 sets: vec![(Name::from("hvac"), Name::from("target"))],
                 ..Default::default()
             };
+            let inputs = AggregateVerificationInputs::new(
+                workflow_capabilities,
+                ObligationRequirements::new().require_set("hvac", "target"),
+            );
 
             let runtime = RuntimeContext::new(Effect::Operational)
                 .with_capabilities({
@@ -1301,13 +1615,16 @@ mod tests {
                     );
                     r
                 })
+                .with_obligations(RuntimeObligations::new().with_obligation(
+                    Obligation::new("control", "set hvac").with_set_capability("hvac", "target"),
+                ))
                 .with_policies(vec![StaticPolicy::new("approval_required").decision(
                     PolicyDecisionType::RequiresApproval {
                         role: Role::new("admin"),
                     },
                 )]);
 
-            let result = aggregator.aggregate(&workflow, &required, &runtime);
+            let result = aggregator.aggregate(&workflow, &inputs, &runtime);
             assert!(result.can_execute()); // Warnings don't block
             assert!(!result.warnings.is_empty());
         }
@@ -1317,10 +1634,13 @@ mod tests {
             let aggregator = VerificationAggregator::new();
 
             let workflow = valid_workflow();
-            let required = WorkflowCapabilities::new();
+            let inputs = AggregateVerificationInputs::new(
+                WorkflowCapabilities::new(),
+                ObligationRequirements::new(),
+            );
             let runtime = RuntimeContext::new(Effect::Operational);
 
-            assert!(aggregator.can_execute(&workflow, &required, &runtime));
+            assert!(aggregator.can_execute(&workflow, &inputs, &runtime));
         }
 
         #[test]
@@ -1337,18 +1657,25 @@ mod tests {
                 span: ash_parser::token::Span::default(),
             };
 
-            let required = WorkflowCapabilities {
+            let workflow_capabilities = WorkflowCapabilities {
                 observes: vec![(Name::from("missing"), Name::from("cap"))],
                 sets: vec![(Name::from("also"), Name::from("missing"))],
                 ..Default::default()
             };
+            let inputs = AggregateVerificationInputs::new(
+                workflow_capabilities,
+                ObligationRequirements::new()
+                    .require_observe("missing", "cap")
+                    .require_set("also", "missing"),
+            );
 
             let runtime = RuntimeContext::new(Effect::Epistemic);
 
-            let result = aggregator.aggregate(&workflow, &required, &runtime);
+            let result = aggregator.aggregate(&workflow, &inputs, &runtime);
             assert!(!result.can_execute());
-            // Should have: 2 missing capabilities + 1 effect too high
-            assert_eq!(result.errors.len(), 3);
+            // Should have: 2 missing runtime capabilities, 2 missing required runtime obligations,
+            // and 1 effect-ceiling failure.
+            assert_eq!(result.errors.len(), 5);
         }
 
         #[test]
@@ -1367,10 +1694,13 @@ mod tests {
         fn test_aggregator_default() {
             let aggregator: VerificationAggregator = Default::default();
             let workflow = valid_workflow();
-            let required = WorkflowCapabilities::new();
+            let inputs = AggregateVerificationInputs::new(
+                WorkflowCapabilities::new(),
+                ObligationRequirements::new(),
+            );
             let runtime = RuntimeContext::new(Effect::Operational);
 
-            let result = aggregator.aggregate(&workflow, &required, &runtime);
+            let result = aggregator.aggregate(&workflow, &inputs, &runtime);
             assert!(result.can_execute());
         }
     }

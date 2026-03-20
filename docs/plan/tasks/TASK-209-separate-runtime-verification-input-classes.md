@@ -1,6 +1,6 @@
 # TASK-209: Separate Runtime Verification Input Classes
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -34,7 +34,7 @@ distinguish capability availability from obligation satisfaction.
 ## Files
 
 - Modify: `crates/ash-typeck/src/runtime_verification.rs`
-- Modify: `crates/ash-typeck/src/obligation_checker.rs`
+- Modify: `crates/ash-typeck/src/lib.rs`
 - Test: `crates/ash-typeck/tests/runtime_verification_input_contracts.rs`
 - Modify: `CHANGELOG.md`
 
@@ -54,7 +54,7 @@ Add tests proving:
 Run:
 
 ```bash
-cargo test -p ash-typeck runtime_verification_input_contracts -- --nocapture
+cargo test -p ash-typeck --test runtime_verification_input_contracts -- --nocapture
 ```
 
 Expected: fail because aggregate verification still derives obligation requirements implicitly
@@ -70,7 +70,7 @@ to use it.
 Run:
 
 ```bash
-cargo test -p ash-typeck runtime_verification_input_contracts -- --nocapture
+cargo test -p ash-typeck --test runtime_verification_input_contracts -- --nocapture
 ```
 
 Expected: pass.
@@ -94,12 +94,12 @@ git commit -m "fix: separate runtime verification input classes"
 
 ## Completion Checklist
 
-- [ ] failing runtime-verification input-contract tests added
-- [ ] failure verified
-- [ ] aggregate verification input classes separated
-- [ ] implicit capability-to-obligation substitution removed
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing runtime-verification input-contract tests added
+- [x] failure verified
+- [x] aggregate verification input classes separated
+- [x] implicit capability-to-obligation substitution removed
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

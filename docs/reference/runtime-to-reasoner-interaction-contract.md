@@ -28,6 +28,7 @@ This interaction contract depends on, but does not replace:
 - [SPEC-017: Capability Integration](../spec/SPEC-017-CAPABILITY-INTEGRATION.md)
 - [SPEC-018: Capability Runtime Verification Matrix](../spec/SPEC-018-CAPABILITY-MATRIX.md)
 - [Runtime-Reasoner Separation Rules](runtime-reasoner-separation-rules.md)
+- [Interaction Obligations Extension Path](../design/INTERACTION_OBLIGATIONS_EXTENSION_PATH.md)
 
 The canonical runtime contracts still own:
 
@@ -254,6 +255,7 @@ This note should be cited by later work that:
 - tightens projection versus monitorability terminology
 - defines human-facing surface guidance for advisory, gated, and committed stages
 - plans later implementation convergence against the interaction contract
+- extends runtime/type verification with future interaction-obligation checks
 
 If a later change appears to move a runtime-only feature into the interaction layer, the first
 question remains:

@@ -4,10 +4,14 @@
 //! variable binding extraction and type compatibility checking.
 
 use crate::solver::TypeError;
+use crate::type_env::type_expr_to_type;
 use crate::types::{Type, TypeVar};
+use ash_core::ast::TypeBody;
 use ash_parser::surface::{Literal, Pattern};
 use std::collections::HashMap;
 use std::sync::OnceLock;
+
+pub use ash_core::ast::{TypeDef, VariantDef};
 
 /// Bindings from pattern variables to their types
 pub type Bindings = HashMap<String, Type>;
@@ -28,24 +32,6 @@ pub struct TypeEnv {
     vars: HashMap<String, Type>,
     /// Type definitions (for variant checking)
     type_defs: HashMap<String, TypeDef>,
-}
-
-/// Type definition for sum types (enums with variants)
-#[derive(Debug, Clone)]
-pub struct TypeDef {
-    /// Name of the type
-    pub name: String,
-    /// Variants of the sum type
-    pub variants: Vec<VariantDef>,
-}
-
-/// Variant definition
-#[derive(Debug, Clone)]
-pub struct VariantDef {
-    /// Name of the variant
-    pub name: String,
-    /// Fields of the variant (name, type pairs)
-    pub fields: Vec<(String, Type)>,
 }
 
 impl TypeEnv {

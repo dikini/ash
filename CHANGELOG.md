@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Final convergence closeout audit for TASK-176. `docs/audit/2026-03-20-final-convergence-audit.md` now records the closure matrix for the original implementation drift classes, confirms repository-wide verification, and makes both `TASK-212` and the remaining spec-only documentation debt explicit rather than leaving any convergence gap implicit.
 - Canonical ADT stdlib and example surface for TASK-175. `std/src/prelude.ash` now exposes the full canonical Option/Result helper surface, `examples/README.md` documents the same surface for readers, and parser-level stdlib-surface tests lock the contract in.
 - Canonical REPL authority and tooling-observable convergence for TASK-172, TASK-173, and TASK-208. `ash-repl` now exports the canonical REPL command surface and session configuration used by both REPL entrypoints, REPL `:type` reporting now flows through the canonical parse/type-check pipeline with focused expression inference support, and `ash run` / `ash trace` now emit contract-aligned observable output with focused CLI regression coverage.
 - Follow-up task for long-term `ControlLink` retention design. [TASK-212](docs/plan/tasks/TASK-212-design-control-link-retention-policy.md) now tracks the bounded-retention/cleanup design for terminated supervision state after `TASK-206` freezes tombstone retention as the current runtime behavior.

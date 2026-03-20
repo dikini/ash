@@ -1,6 +1,6 @@
 # TASK-176: Final Convergence Audit
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,11 +71,36 @@ git commit -m "docs: publish final convergence audit"
 
 ## Completion Checklist
 
-- [ ] final acceptance checklist written
-- [ ] final convergence audit report published
-- [ ] full verification run
-- [ ] remaining drift classes explicitly recorded if any remain
-- [ ] `CHANGELOG.md` updated
+- [x] final acceptance checklist written
+- [x] final convergence audit report published
+- [x] full verification run
+- [x] remaining drift classes explicitly recorded if any remain
+- [x] `CHANGELOG.md` updated
+
+## Outcome
+
+Published:
+
+- `docs/audit/2026-03-20-final-convergence-audit.md`
+
+Verification run on 2026-03-20:
+
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets --all-features`
+- `cargo test --workspace`
+
+Result: pass.
+
+Explicit remaining non-blocking follow-up:
+
+- `TASK-212` keeps the long-term `ControlLink` retention/cleanup design separate from convergence
+  closeout.
+
+Explicit remaining spec-only debt:
+
+- `docs/audit/2026-03-20-final-convergence-audit.md` records a small set of still-open
+  documentation findings from the earlier 2026-03-19 spec consistency audit. Those findings are
+  now explicit and no longer hidden drift, but they are not claimed closed by `TASK-176`.
 
 ## Non-goals
 

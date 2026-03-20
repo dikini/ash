@@ -118,14 +118,17 @@ send_control ctl with checkin;  -- May return "already exited"
 
 ### ControlLink After Instance Completes
 
-Once an instance completes, the `ControlLink` becomes mostly useless:
+Once an instance completes, the `ControlLink` no longer authorizes new live control of the target,
+but it remains diagnostically meaningful while the owning runtime state retains the terminal
+tombstone:
 
 ```rust
 impl ControlLink<W> {
-    /// After instance exits, returns exit reason immediately
-    fn check_status(&self) -> ExitStatus;
-    
-    /// No-op if already exited
+    /// While the runtime retains the terminal tombstone, post-exit queries
+    /// surface an explicit terminal-state failure rather than a silent no-op.
+    fn check_status(&self) -> Result<LinkState, LinkError>;
+
+    /// Terminal control remains rejected explicitly; it is not a silent no-op.
     fn request_shutdown(&self, deadline: Duration) -> Result<(), LinkError>;
 }
 ```
@@ -133,8 +136,12 @@ impl ControlLink<W> {
 **Current direction**: `await` does not consume `ControlLink`.
 
 Instead, the link remains reusable supervision authority while the runtime can still answer control
-queries for the target instance. After completion, non-terminal queries such as status/health may
-return an "already exited" style result, while terminal control requests are rejected explicitly.
+queries for the target instance. Under the current runtime contract, terminal shutdown retains a
+tombstone for the lifetime of the owning runtime state, so later control/health queries continue to
+surface explicit terminal-state failure rather than silently degrading into an unknown-link result.
+
+See [Control-Link Retention Policy](../reference/control-link-retention-policy.md) for the
+canonical retention rule.
 
 ---
 
@@ -378,7 +385,7 @@ impl<T> AwaitResult<T> {
 
 ## 11. Open Questions
 
-1. **How much post-exit status remains observable through `ControlLink`?**
+1. **How should future `await`-related design interact with retained terminal tombstones?**
 
 2. **What about `await` on SpawnResult before split?**
    ```ash

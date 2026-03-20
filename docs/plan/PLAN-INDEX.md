@@ -642,8 +642,8 @@ Execution note: [TASK-205](tasks/TASK-205-implement-runtime-action-and-control-l
 uses a transitional shared control-link registry so transferred links remain valid across
 executions; [TASK-206](tasks/TASK-206-align-runtime-admission-rejection-and-commitment-visibility.md)
 must replace that fallback with explicit runtime-owned lifecycle state. The current implementation
-retains terminated instances as tombstones; long-term retention and cleanup design is deferred to
-[TASK-212](tasks/TASK-212-design-control-link-retention-policy.md).
+retains terminated instances as tombstones; the long-term retention and cleanup design was later
+frozen by [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md).
 
 Execution note: [TASK-207](tasks/TASK-207-harden-runtime-trace-and-provenance-boundaries.md)
 lands as a runtime-only provenance session API plus wrapper-caller convergence. It hardens
@@ -749,10 +749,10 @@ Re-audit specs and implementation to close the convergence program.
 
 **Phase 31 Deliverable**: Final audit report and explicit convergence status for the completed Rust/spec implementation path
 
-Closeout note: the main Rust/spec convergence path is complete. The final audit leaves
-[TASK-212](tasks/TASK-212-design-control-link-retention-policy.md) as an explicit non-blocking
-design follow-up and records a small set of still-open spec-only documentation findings directly in
-the audit report instead of treating them as hidden convergence drift.
+Closeout note: the main Rust/spec convergence path is complete. The final audit originally left
+[TASK-212](tasks/TASK-212-design-control-link-retention-policy.md) and a small set of residual
+spec-only findings as explicit follow-ups; those later closed through TASK-212 and Phase 34 rather
+than being left as hidden convergence drift.
 
 Execution note: final convergence closeout now depends on the downstream runtime-boundary and
 tooling observable convergence work as well as the original convergence phases.
@@ -775,10 +775,11 @@ implements supervision behavior.
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-211](tasks/TASK-211-revise-control-link-authority-contract.md) | Revise control-link authority contract | SPEC-002/004/020/021 | 4 | ✅ Complete |
-| [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md) | Design control-link retention policy | SPEC-004/021 | 3 | 📝 Planned |
+| [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md) | Design control-link retention policy | SPEC-004/021 | 3 | ✅ Complete |
 
 **Phase 33 Deliverable**: Canonical docs updated so runtime supervision uses reusable control
-authority rather than affine one-shot control.
+authority rather than affine one-shot control, and terminal control retention is frozen as
+runtime-state-owned tombstone visibility rather than hidden background cleanup.
 
 ## Phase 34: Residual Spec-Audit Follow-up
 
@@ -796,5 +797,5 @@ or explicitly reclassified without reopening the completed implementation conver
 Execution note: [TASK-213](tasks/TASK-213-reconcile-module-and-import-spec-scope.md),
 [TASK-214](tasks/TASK-214-fix-residual-policy-and-typed-provider-spec-drift.md), and
 [TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) are complete. The final audit’s
-residual spec-only findings are now closed, while [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md)
-remains the only planned non-blocking follow-up in this area.
+residual spec-only findings are now closed, and [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md)
+later closed the remaining control-link retention follow-up in this area.

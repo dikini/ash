@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Control-link retention policy handoff for TASK-212. `docs/reference/control-link-retention-policy.md` now freezes retained tombstones as runtime-state-owned terminal visibility, `SPEC-004` / `SPEC-021` now encode the same observable semantics, and the related design notes now point to the canonical retention contract.
 - Residual spec-audit follow-up closeout now uses fully consistent historical framing. The final convergence audit summary now matches the Phase 34 addendum, and the Phase 34 plan is explicitly marked complete rather than reading like a still-live execution plan.
 - Residual spec hygiene closeout for TASK-215. `SPEC-015` now uses canonical `Int` examples in the remaining typed-provider snippets, and the final convergence audit now records that the Phase 34 spec-only findings are closed while keeping `TASK-212` as the remaining non-blocking follow-up.
 - Residual policy and typed-provider spec drift cleanup for TASK-214. `SPEC-007` now uses a genuinely contradictory SMT example, `SPEC-015` no longer forwards schema-first code generation to the unrelated `SPEC-016` output spec, and `SPEC-010` / `SPEC-016` now explicitly keep provider effect granularity at the embedding boundary without widening runtime scope.

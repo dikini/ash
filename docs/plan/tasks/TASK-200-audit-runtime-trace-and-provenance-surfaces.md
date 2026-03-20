@@ -1,6 +1,6 @@
 # TASK-200: Audit Runtime Trace and Provenance Surfaces
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,16 +64,23 @@ Expected pass conditions:
 ### Step 5: Commit
 
 ```bash
-git add docs/audit/2026-03-20-runtime-trace-and-provenance-planning-review.md docs/plan/PLAN-INDEX.md CHANGELOG.md docs/plan/tasks/TASK-200-audit-runtime-trace-and-provenance-surfaces.md docs/plan/2026-03-20-runtime-boundary-implementation-planning-plan.md
+git add docs/audit/2026-03-20-runtime-trace-and-provenance-planning-review.md docs/plan/PLAN-INDEX.md CHANGELOG.md docs/plan/tasks/TASK-200-audit-runtime-trace-and-provenance-surfaces.md
 git commit -m "docs: audit runtime trace and provenance surfaces"
 ```
 
 ## Completion Checklist
 
-- [ ] trace/provenance surfaces audited
-- [ ] wrapper boundaries reviewed
-- [ ] runtime-owned observability protections restated
-- [ ] audit output written for TASK-201
+- [x] trace/provenance surfaces audited
+- [x] wrapper boundaries reviewed
+- [x] runtime-owned observability protections restated
+- [x] audit output written for TASK-201
+
+## Evidence
+
+- The runtime trace recorder, trace event, export helpers, and workflow wrapper hooks remain
+  meaningful without any reasoner present, so they stay in the runtime-only bucket.
+- The new audit explicitly separates runtime observability from later presentation-level planning
+  and keeps projection semantics out of trace/provenance ownership.
 
 ## Non-goals
 

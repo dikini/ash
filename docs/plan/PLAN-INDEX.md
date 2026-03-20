@@ -590,7 +590,7 @@ then stop at a steering brief before opening any runtime code-facing tasks.
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-199](tasks/TASK-199-audit-runtime-execution-boundaries-for-interaction-planning.md) | Audit runtime execution boundaries for interaction planning | SPEC-004 / interaction contract | 6 | 📝 Planned |
-| [TASK-200](tasks/TASK-200-audit-runtime-trace-and-provenance-surfaces.md) | Audit runtime trace and provenance surfaces | SPEC-004 / planning surface | 5 | 📝 Planned |
+| [TASK-200](tasks/TASK-200-audit-runtime-trace-and-provenance-surfaces.md) | Audit runtime trace and provenance surfaces | SPEC-004 / planning surface | 5 | ✅ Complete |
 | [TASK-201](tasks/TASK-201-synthesize-runtime-boundary-steering-brief.md) | Synthesize runtime boundary steering brief | Runtime-boundary audit outputs | 5 | 📝 Planned |
 
 **Phase Deliverable**: Two runtime-boundary audits and one steering brief that identifies later runtime code-facing task clusters without opening them

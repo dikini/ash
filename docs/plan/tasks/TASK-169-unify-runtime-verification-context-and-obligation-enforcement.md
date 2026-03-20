@@ -1,6 +1,6 @@
 # TASK-169: Unify Runtime Verification Context and Obligation Enforcement
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -83,12 +83,12 @@ git commit -m "fix: unify runtime verification context"
 
 ## Completion Checklist
 
-- [ ] failing runtime-verification tests added
-- [ ] failure verified
-- [ ] context contract aligned
-- [ ] aggregate obligation enforcement restored
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing runtime-verification tests added
+- [x] failure verified
+- [x] context contract aligned
+- [x] aggregate obligation enforcement restored
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

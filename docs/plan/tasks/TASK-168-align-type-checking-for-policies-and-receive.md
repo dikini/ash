@@ -1,6 +1,6 @@
 # TASK-168: Align Type Checking for Policies and Receive
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -87,12 +87,12 @@ git commit -m "fix: align type checking for policies and receive"
 
 ## Completion Checklist
 
-- [ ] failing type-check tests added
-- [ ] failure verified
-- [ ] policy type checking aligned
-- [ ] `receive` type/declaration checking aligned
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing type-check tests added
+- [x] failure verified
+- [x] policy type checking aligned
+- [x] `receive` type/declaration checking aligned
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

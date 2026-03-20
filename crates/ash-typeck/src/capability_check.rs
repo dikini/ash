@@ -44,6 +44,12 @@ pub enum CapabilityCheckError {
         /// The action name that was not declared.
         action: String,
     },
+    /// Workflow decide is missing the required explicit policy binding.
+    #[error("invalid decide workflow: missing explicit policy reference")]
+    MissingPolicyReference,
+    /// Workflow check target is not part of the canonical contract.
+    #[error("invalid check workflow: only obligation targets are permitted")]
+    InvalidCheckTarget,
 }
 
 /// Result type for capability checking.
@@ -332,10 +338,14 @@ impl CapabilityChecker {
 
             // Decision - check both branches
             Workflow::Decide {
+                policy,
                 then_branch,
                 else_branch,
                 ..
             } => {
+                if policy.is_none() {
+                    return Err(CapabilityCheckError::MissingPolicyReference);
+                }
                 self.verify_workflow(then_branch)?;
                 if let Some(else_b) = else_branch {
                     self.verify_workflow(else_b)?;
@@ -344,7 +354,14 @@ impl CapabilityChecker {
             }
 
             // Check - verify obligation or policy
-            Workflow::Check { continuation, .. } => {
+            Workflow::Check {
+                target,
+                continuation,
+                ..
+            } => {
+                if matches!(target, ash_parser::surface::CheckTarget::Policy(_)) {
+                    return Err(CapabilityCheckError::InvalidCheckTarget);
+                }
                 if let Some(cont) = continuation {
                     self.verify_workflow(cont)?;
                 }
@@ -424,8 +441,27 @@ impl CapabilityChecker {
             // Receive - verify all arm bodies
             // Note: receive doesn't need capability declaration check at this level
             // because receive arms use pattern matching on messages, not direct capability access
-            Workflow::Receive { arms, .. } => {
+            Workflow::Receive {
+                arms, is_control, ..
+            } => {
                 for arm in arms {
+                    if !is_control
+                        && let ash_parser::surface::StreamPattern::Binding {
+                            capability,
+                            channel,
+                            ..
+                        } = &arm.pattern
+                        && !self
+                            .receives
+                            .iter()
+                            .any(|(c, ch)| c == capability.as_ref() && ch == channel.as_ref())
+                    {
+                        return Err(CapabilityCheckError::NotDeclared {
+                            operation: "receive".to_string(),
+                            capability: capability.to_string(),
+                            channel: channel.to_string(),
+                        });
+                    }
                     self.verify_workflow(&arm.body)?;
                 }
                 Ok(())

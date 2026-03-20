@@ -1059,9 +1059,20 @@ pub struct RuntimeContext {
     pub capabilities: CapabilitySchemaRegistry,
     /// Runtime obligations
     pub obligations: RuntimeObligations,
+    /// Runtime mailbox registry used by receive verification.
+    pub mailboxes: MailboxRegistry,
+    /// Source scheduler used by runtime receive execution.
+    pub scheduler: SourceScheduler,
+    /// Approval queue for approval-gated policy outcomes.
+    pub approval_queue: ApprovalQueue,
+    /// Provenance sink for verification-time audit metadata.
+    pub provenance: ProvenanceSink,
+    /// Active runtime role, when known.
+    pub role: Option<Role>,
     /// Maximum allowed effect
     pub max_effect: Effect,
-    /// Static policies to validate against
+    /// Static policies to validate against. This is the type-layer stand-in for the
+    /// canonical runtime policy registry.
     pub policies: Vec<StaticPolicy>,
 }
 
@@ -1071,6 +1082,11 @@ impl RuntimeContext {
         Self {
             capabilities: CapabilitySchemaRegistry::new(),
             obligations: RuntimeObligations::new(),
+            mailboxes: MailboxRegistry::new(),
+            scheduler: SourceScheduler::new(),
+            approval_queue: ApprovalQueue::new(),
+            provenance: ProvenanceSink::new(),
+            role: None,
             max_effect,
             policies: vec![],
         }
@@ -1094,10 +1110,81 @@ impl RuntimeContext {
         self
     }
 
+    /// Set the runtime role (builder-style)
+    pub fn with_role(mut self, role: Role) -> Self {
+        self.role = Some(role);
+        self
+    }
+
     /// Add a single policy (builder-style)
     pub fn add_policy(mut self, policy: StaticPolicy) -> Self {
         self.policies.push(policy);
         self
+    }
+}
+
+/// Verification-time mailbox registry placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct MailboxRegistry {
+    entries: Vec<String>,
+}
+
+impl MailboxRegistry {
+    /// Create an empty mailbox registry.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check whether the registry is empty.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+/// Verification-time source scheduler placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SourceScheduler;
+
+impl SourceScheduler {
+    /// Create a new source scheduler placeholder.
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// Verification-time approval queue placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ApprovalQueue {
+    pending: Vec<String>,
+}
+
+impl ApprovalQueue {
+    /// Create an empty approval queue.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check whether the queue is empty.
+    pub fn is_empty(&self) -> bool {
+        self.pending.is_empty()
+    }
+}
+
+/// Verification-time provenance sink placeholder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ProvenanceSink {
+    events: Vec<String>,
+}
+
+impl ProvenanceSink {
+    /// Create an empty provenance sink.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check whether the sink is empty.
+    pub fn is_empty(&self) -> bool {
+        self.events.is_empty()
     }
 }
 
@@ -1151,9 +1238,10 @@ impl VerificationAggregator {
         result.merge(cap_result);
 
         // 2. Check obligations are satisfied
+        let obligation_requirements = required_capabilities_from_workflow(required);
         let obl_result = self
             .obligation_checker
-            .check(&RequiredCapabilities::new(), &runtime.obligations);
+            .check(&obligation_requirements, &runtime.obligations);
         result.merge(obl_result);
 
         // 3. Check effect bounds
@@ -1185,6 +1273,25 @@ impl Default for VerificationAggregator {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn required_capabilities_from_workflow(required: &WorkflowCapabilities) -> RequiredCapabilities {
+    let mut aggregated = RequiredCapabilities::new();
+
+    for (capability, channel) in &required.observes {
+        aggregated.add(format!("{capability}:{channel}"));
+    }
+    for (capability, channel) in &required.receives {
+        aggregated.add(format!("{capability}:{channel}"));
+    }
+    for (capability, channel) in &required.sets {
+        aggregated.add(format!("{capability}:{channel}"));
+    }
+    for (capability, channel) in &required.sends {
+        aggregated.add(format!("{capability}:{channel}"));
+    }
+
+    aggregated
 }
 
 // =============================================================================
@@ -1220,15 +1327,19 @@ mod tests {
                 ..Default::default()
             };
 
-            let runtime = RuntimeContext::new(Effect::Operational).with_capabilities({
-                let mut r = CapabilitySchemaRegistry::new();
-                r.register(
-                    Name::from("sensor"),
-                    Name::from("temp"),
-                    CapabilitySchema::read_only(Type::Int),
-                );
-                r
-            });
+            let runtime = RuntimeContext::new(Effect::Operational)
+                .with_capabilities({
+                    let mut r = CapabilitySchemaRegistry::new();
+                    r.register(
+                        Name::from("sensor"),
+                        Name::from("temp"),
+                        CapabilitySchema::read_only(Type::Int),
+                    );
+                    r
+                })
+                .with_obligations(RuntimeObligations::new().with_obligation(
+                    Obligation::new("monitor", "read temp").with_capability("sensor:temp"),
+                ));
 
             let result = aggregator.aggregate(&workflow, &required, &runtime);
             assert!(result.can_execute());
@@ -1301,6 +1412,9 @@ mod tests {
                     );
                     r
                 })
+                .with_obligations(RuntimeObligations::new().with_obligation(
+                    Obligation::new("control", "set hvac").with_capability("hvac:target"),
+                ))
                 .with_policies(vec![StaticPolicy::new("approval_required").decision(
                     PolicyDecisionType::RequiresApproval {
                         role: Role::new("admin"),
@@ -1347,8 +1461,9 @@ mod tests {
 
             let result = aggregator.aggregate(&workflow, &required, &runtime);
             assert!(!result.can_execute());
-            // Should have: 2 missing capabilities + 1 effect too high
-            assert_eq!(result.errors.len(), 3);
+            // Should have: 2 missing runtime capabilities, 2 missing required runtime obligations,
+            // and 1 effect-ceiling failure.
+            assert_eq!(result.errors.len(), 5);
         }
 
         #[test]

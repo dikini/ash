@@ -1,6 +1,6 @@
 # TASK-174: Align ADT Type, Value, and Pattern Contracts
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -87,11 +87,11 @@ git commit -m "fix: align adt type value and pattern contracts"
 
 ## Completion Checklist
 
-- [ ] failing ADT contract tests added
-- [ ] failure verified
-- [ ] ADT type/value/pattern layers aligned
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing ADT contract tests added
+- [x] failure verified
+- [x] ADT type/value/pattern layers aligned
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

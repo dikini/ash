@@ -49,10 +49,10 @@ pub use obligation_checker::*;
 pub use obligations::*;
 pub use policy_check::*;
 pub use runtime_verification::{
-    CapabilityOperation, CapabilitySchema, CapabilitySchemaRegistry, CapabilityVerifier,
-    EffectChecker, OperationError, OperationResult, OperationVerifier, RateLimiter,
-    RuntimeObligationChecker, RuntimeObligations, StaticPolicy, StaticPolicyValidator,
-    VerificationError, VerificationResult, VerificationWarning,
+    AggregateVerificationInputs, CapabilityOperation, CapabilitySchema, CapabilitySchemaRegistry,
+    CapabilityVerifier, EffectChecker, ObligationRequirements, OperationError, OperationResult,
+    OperationVerifier, RateLimiter, RuntimeObligationChecker, RuntimeObligations, StaticPolicy,
+    StaticPolicyValidator, VerificationError, VerificationResult, VerificationWarning,
 };
 pub use solver::{Solver, TypeError};
 pub use types::*;

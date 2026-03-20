@@ -2,8 +2,9 @@ use ash_core::Effect;
 use ash_parser::surface::Workflow;
 use ash_parser::token::Span;
 use ash_typeck::runtime_verification::{
-    CapabilitySchema, CapabilitySchemaRegistry, Role, RuntimeContext, RuntimeObligations,
-    StaticPolicy, VerificationAggregator, VerificationError, WorkflowCapabilities,
+    AggregateVerificationInputs, CapabilitySchema, CapabilitySchemaRegistry,
+    ObligationRequirements, Role, RuntimeContext, RuntimeObligations, StaticPolicy,
+    VerificationAggregator, VerificationError, WorkflowCapabilities,
 };
 
 fn valid_workflow() -> Workflow {
@@ -15,7 +16,10 @@ fn valid_workflow() -> Workflow {
 #[test]
 fn aggregate_reports_missing_required_capabilities_from_runtime_obligations() {
     let workflow = valid_workflow();
-    let required = WorkflowCapabilities::new().observe("sensor", "temp");
+    let inputs = AggregateVerificationInputs::new(
+        WorkflowCapabilities::new().observe("sensor", "temp"),
+        ObligationRequirements::new().require_observe("sensor", "temp"),
+    );
 
     let mut capabilities = CapabilitySchemaRegistry::new();
     capabilities.register(
@@ -26,7 +30,7 @@ fn aggregate_reports_missing_required_capabilities_from_runtime_obligations() {
 
     let runtime = RuntimeContext::new(Effect::Operational).with_capabilities(capabilities);
 
-    let result = VerificationAggregator::new().aggregate(&workflow, &required, &runtime);
+    let result = VerificationAggregator::new().aggregate(&workflow, &inputs, &runtime);
 
     assert!(
         result.errors.iter().any(|error| matches!(
@@ -41,7 +45,10 @@ fn aggregate_reports_missing_required_capabilities_from_runtime_obligations() {
 #[test]
 fn aggregate_accepts_required_capabilities_provided_by_runtime_obligations() {
     let workflow = valid_workflow();
-    let required = WorkflowCapabilities::new().observe("sensor", "temp");
+    let inputs = AggregateVerificationInputs::new(
+        WorkflowCapabilities::new().observe("sensor", "temp"),
+        ObligationRequirements::new().require_observe("sensor", "temp"),
+    );
 
     let mut capabilities = CapabilitySchemaRegistry::new();
     capabilities.register(
@@ -55,11 +62,11 @@ fn aggregate_accepts_required_capabilities_provided_by_runtime_obligations() {
         .with_obligations(
             RuntimeObligations::new().with_obligation(
                 ash_typeck::runtime_verification::Obligation::new("monitor", "read temp")
-                    .with_capability("sensor:temp"),
+                    .with_observe_capability("sensor", "temp"),
             ),
         );
 
-    let result = VerificationAggregator::new().aggregate(&workflow, &required, &runtime);
+    let result = VerificationAggregator::new().aggregate(&workflow, &inputs, &runtime);
 
     assert!(
         result.errors.is_empty(),

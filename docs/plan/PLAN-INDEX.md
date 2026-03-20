@@ -253,8 +253,8 @@ Update this section as tasks complete:
 | 23 | 4 | 4 | ✅ Complete |
 | 24 | 2 | 0 | 📝 Planned |
 | 25 | 1 | 0 | 📝 Planned |
-| 26 | 4 | 0 | 📝 Planned |
-| 27 | 2 | 0 | 📝 Planned |
+| 26 | 4 | 4 | ✅ Complete |
+| 27 | 3 | 3 | ✅ Complete |
 | 28 | 2 | 0 | 📝 Planned |
 | 29 | 2 | 0 | 📝 Planned |
 | 30 | 2 | 0 | 📝 Planned |
@@ -676,10 +676,9 @@ Bring type checking and runtime verification context into line with the frozen c
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-<<<<<<< HEAD
 | [TASK-168](tasks/TASK-168-align-type-checking-for-policies-and-receive.md) | Align type checking for policies and `receive` | SPEC-003/006/013/017 | 8 | ✅ Complete |
 | [TASK-169](tasks/TASK-169-unify-runtime-verification-context-and-obligation-enforcement.md) | Unify runtime verification context and obligation enforcement | SPEC-017/018 | 6 | ✅ Complete |
-| [TASK-209](tasks/TASK-209-separate-runtime-verification-input-classes.md) | Separate runtime verification input classes | SPEC-017/018 | 4 | 📝 Planned |
+| [TASK-209](tasks/TASK-209-separate-runtime-verification-input-classes.md) | Separate runtime verification input classes | SPEC-017/018 | 4 | ✅ Complete |
 
 **Phase 27 Deliverable**: Type and verification layers enforce the hardened canonical policy and stream contracts without conflating capability declarations and obligation-backed runtime requirements
 

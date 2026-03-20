@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 ash-engine = { path = "../ash-engine" }
 ash-core = { path = "../ash-core" }
+ash-repl = { path = "../ash-repl" }
 ash-provenance = { path = "../ash-provenance" }
 ash-parser = { path = "../ash-parser" }
 ash-typeck = { path = "../ash-typeck" }
@@ -26,7 +27,6 @@ tokio = { workspace = true }
 chrono = { workspace = true }
 colored = "2.1"
 walkdir = { workspace = true }
-rustyline = "14.0"
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

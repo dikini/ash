@@ -167,6 +167,31 @@ impl Engine {
         self.parse(&source)
     }
 
+    /// Infer the canonical Ash type name for an expression.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Parse` if the expression does not parse and
+    /// `EngineError::Type` if the inferred type is not concrete enough to report.
+    pub fn infer_expression_type(&self, source: &str) -> Result<String, EngineError> {
+        use ash_parser::parse_expr::expr;
+        use ash_typeck::type_env::TypeEnv;
+        use winnow::prelude::*;
+
+        let mut input = ash_parser::new_input(source);
+        let expr = expr
+            .parse_next(&mut input)
+            .map_err(|e| EngineError::Parse(format!("{e}")))?;
+
+        let ty = ash_typeck::check_expr::infer_type(&TypeEnv::with_builtin_types(), &expr);
+        match ty {
+            ash_typeck::Type::Var(_) => Err(EngineError::Type(
+                "could not infer a canonical type for expression".to_string(),
+            )),
+            other => Ok(other.to_string()),
+        }
+    }
+
     /// Type check a workflow
     ///
     /// # Errors
@@ -601,6 +626,20 @@ mod tests {
         let workflow = engine.parse("workflow main { ret 42; }").unwrap();
         let result = engine.check(&workflow);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_engine_infer_expression_type_reports_canonical_names() {
+        let engine = Engine::new().build().unwrap();
+
+        assert_eq!(engine.infer_expression_type("42").unwrap(), "Int");
+        assert_eq!(engine.infer_expression_type("\"hello\"").unwrap(), "String");
+        assert_eq!(
+            engine.infer_expression_type("[1, 2, 3]").unwrap(),
+            "List<Int>"
+        );
+        assert_eq!(engine.infer_expression_type("1 + 2").unwrap(), "Int");
+        assert_eq!(engine.infer_expression_type("!true").unwrap(), "Bool");
     }
 
     #[test]

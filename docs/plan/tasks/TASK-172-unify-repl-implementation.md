@@ -1,6 +1,6 @@
 # TASK-172: Unify REPL Implementation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -76,11 +76,11 @@ git commit -m "refactor: unify repl implementation"
 
 ## Completion Checklist
 
-- [ ] failing REPL authority tests added
-- [ ] failure verified
-- [ ] shared REPL authority implemented
-- [ ] focused verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing REPL authority tests added
+- [x] failure verified
+- [x] shared REPL authority implemented
+- [x] focused verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

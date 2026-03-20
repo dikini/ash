@@ -1,6 +1,6 @@
 # TASK-208: Align CLI Run and Trace Observable Output
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -85,11 +85,11 @@ git commit -m "fix: align cli observable output"
 
 ## Completion Checklist
 
-- [ ] failing CLI observable-output tests added
-- [ ] failure verified
-- [ ] `run` and `trace` output aligned
-- [ ] focused and broader verification passing
-- [ ] `CHANGELOG.md` updated
+- [x] failing CLI observable-output tests added
+- [x] failure verified
+- [x] `run` and `trace` output aligned
+- [x] focused and broader verification passing
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 

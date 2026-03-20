@@ -576,9 +576,9 @@ revised convergence map before opening any new code-facing tasks.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-196](tasks/TASK-196-audit-planned-convergence-tasks-against-runtime-reasoner-specs.md) | Audit planned convergence tasks against runtime-reasoner specs | Handoff / existing task corpus | 6 | 📝 Planned |
-| [TASK-197](tasks/TASK-197-define-runtime-reasoner-implementation-planning-surface.md) | Define runtime-reasoner implementation-planning surface | Interaction / handoff docs | 5 | 📝 Planned |
-| [TASK-198](tasks/TASK-198-synthesize-revised-runtime-reasoner-convergence-map.md) | Synthesize revised runtime-reasoner convergence map | Planning outputs | 5 | 📝 Planned |
+| [TASK-196](tasks/TASK-196-audit-planned-convergence-tasks-against-runtime-reasoner-specs.md) | Audit planned convergence tasks against runtime-reasoner specs | Handoff / existing task corpus | 6 | ✅ Complete |
+| [TASK-197](tasks/TASK-197-define-runtime-reasoner-implementation-planning-surface.md) | Define runtime-reasoner implementation-planning surface | Interaction / handoff docs | 5 | ✅ Complete |
+| [TASK-198](tasks/TASK-198-synthesize-revised-runtime-reasoner-convergence-map.md) | Synthesize revised runtime-reasoner convergence map | Planning outputs | 5 | ✅ Complete |
 
 **Phase Deliverable**: One impact audit of the current convergence queue, one implementation-planning surface note, and one revised convergence map for later code-facing task creation
 

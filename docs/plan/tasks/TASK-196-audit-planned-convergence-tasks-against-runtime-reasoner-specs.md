@@ -1,6 +1,6 @@
 # TASK-196: Audit Planned Convergence Tasks Against Runtime-Reasoner Specs
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -47,6 +47,13 @@ Check for:
 Expected failure conditions:
 - the repository still lacks one audit explaining how the existing planned convergence tasks relate to the new interaction-facing contracts.
 
+Observed before implementation:
+- the planned convergence queue still pointed at the pre-runtime-reasoner contract set, so there was
+  no single impact audit explaining whether the queue was unchanged or needed reference/scope
+  updates.
+- the new docs corpus existed, but the implementation-planning phase had not yet classified the
+  existing tasks against it.
+
 ### Step 3: Implement the audit report (Green)
 
 Write only the impact audit and the minimal planning/changelog updates needed to track it.
@@ -58,6 +65,13 @@ Expected pass conditions:
 - existing valid tasks are preserved where appropriate,
 - the audit provides enough detail for later convergence-map synthesis.
 
+Verified after implementation:
+- [planned-convergence-tasks-runtime-reasoner-impact-review.md](../../audit/2026-03-20-planned-convergence-tasks-runtime-reasoner-impact-review.md)
+  now classifies TASK-164 through TASK-173 against the runtime-reasoner docs corpus.
+- the audit preserves the existing planned tasks and marks only the REPL tasks as
+  reference-update-only.
+- no task is blocked by the runtime-reasoner docs corpus.
+
 ### Step 5: Commit
 
 ```bash
@@ -67,10 +81,10 @@ git commit -m "docs: audit planned convergence tasks against runtime-reasoner sp
 
 ## Completion Checklist
 
-- [ ] reviewed tasks classified
-- [ ] task-by-task findings documented
-- [ ] valid existing tasks preserved where appropriate
-- [ ] `CHANGELOG.md` updated
+- [x] reviewed tasks classified
+- [x] task-by-task findings documented
+- [x] valid existing tasks preserved where appropriate
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 
@@ -82,4 +96,3 @@ git commit -m "docs: audit planned convergence tasks against runtime-reasoner sp
 
 - Depends on: TASK-195
 - Blocks: TASK-197, TASK-198
-

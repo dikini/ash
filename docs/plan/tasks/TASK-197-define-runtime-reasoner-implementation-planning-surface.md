@@ -1,6 +1,6 @@
 # TASK-197: Define Runtime-Reasoner Implementation-Planning Surface
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -65,9 +65,16 @@ git commit -m "docs: define runtime-reasoner implementation planning surface"
 
 ## Completion Checklist
 
-- [ ] implementation-planning surface documented
-- [ ] likely work areas classified
-- [ ] out-of-scope areas restated
+- [x] implementation-planning surface documented
+- [x] likely work areas classified
+- [x] out-of-scope areas restated
+
+## Evidence
+
+- Red: before this task, there was no single reference note that mapped the runtime-reasoner docs
+  corpus to later implementation-planning surfaces.
+- Green: the new reference note now names likely runtime entry-point classes, classifies likely
+  runtime/tooling/docs/surface-docs-only work areas, and keeps syntax redesign out of scope.
 
 ## Non-goals
 
@@ -79,4 +86,3 @@ git commit -m "docs: define runtime-reasoner implementation planning surface"
 
 - Depends on: TASK-196
 - Blocks: TASK-198
-

@@ -1,6 +1,6 @@
 # TASK-198: Synthesize Revised Runtime-Reasoner Convergence Map
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -58,6 +58,15 @@ Expected pass conditions:
 - later code-facing task-cluster openings are explicit,
 - the planning phase closes without creating implementation tasks prematurely.
 
+## Evidence
+
+- Red: the impact audit established that TASK-164 through TASK-171 remain unchanged and that only
+  TASK-172 and TASK-173 need reference-only updates, while the planning surface note identified
+  runtime, tooling, and provenance/trace entry-point classes for later grouping.
+- Green: the new revised convergence map records those outcomes in one place, keeps the existing
+  convergence queue intact, and defers code-facing clusters until a later implementation-planning
+  pass.
+
 ### Step 5: Commit
 
 ```bash
@@ -67,10 +76,10 @@ git commit -m "docs: synthesize revised runtime-reasoner convergence map"
 
 ## Completion Checklist
 
-- [ ] revised convergence map documented
-- [ ] existing-task impact synthesized
-- [ ] later task-cluster openings identified
-- [ ] `CHANGELOG.md` updated
+- [x] revised convergence map documented
+- [x] existing-task impact synthesized
+- [x] later task-cluster openings identified
+- [x] `CHANGELOG.md` updated
 
 ## Non-goals
 
@@ -82,4 +91,3 @@ git commit -m "docs: synthesize revised runtime-reasoner convergence map"
 
 - Depends on: TASK-196, TASK-197
 - Blocks: later code-facing task creation after this planning phase
-

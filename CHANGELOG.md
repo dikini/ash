@@ -7,6 +7,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- `Expr::Match` exhaustiveness checking in `ash-typeck` (`check_expr`) for enum scrutinees resolved via constructor or variant patterns, reporting `ConstructorError::NonExhaustiveMatch` when arms omit variants (TASK-130).
+- Completed ADT interpreter convergence for constructor evaluation, pattern matching, and match/if-let behavior (TASK-131, TASK-132, TASK-133). `ash-interp` now evaluates receive/mailbox patterns through the shared `match_pattern` engine (including variants), and explicit Option-style match/if-let runtime tests lock expected binding/branch semantics.
 - Control-link retention policy handoff for TASK-212. `docs/reference/control-link-retention-policy.md` now freezes retained tombstones as runtime-state-owned terminal visibility, `SPEC-004` / `SPEC-021` now encode the same observable semantics, and the related design notes now point to the canonical retention contract.
 - Residual spec-audit follow-up closeout now uses fully consistent historical framing. The final convergence audit summary now matches the Phase 34 addendum, and the Phase 34 plan is explicitly marked complete rather than reading like a still-live execution plan.
 - Residual spec hygiene closeout for TASK-215. `SPEC-015` now uses canonical `Int` examples in the remaining typed-provider snippets, and the final convergence audit now records that the Phase 34 spec-only findings are closed while keeping `TASK-212` as the remaining non-blocking follow-up.
@@ -56,6 +58,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   terminal `completed` on exit, failed runs now record `error` before `completed(false)`, and the
   current CLI trace wrappers plus `#[workflow]` macro now route through that same runtime-only
   session API. `ash-macros` also now has integration coverage for the downstream expansion path.
+- Aligned ADT match exhaustiveness checking with runtime variant field-shape semantics: unit-variant patterns now cover only zero-field variants (TASK-130).
+- Updated parser pattern syntax so bare uppercase constructor identifiers like `None` are parsed as unit variant patterns instead of variable bindings (TASK-130).
 - `TASK-206` now makes the current terminated-control retention behavior explicit and tests it directly. `ash-interp` stateful runtime-boundary tests now lock in that killed control links remain observable as terminated tombstones across later executions sharing the same `RuntimeState`.
 - Cleared the remaining workspace clippy warnings so the repository-level CI gate is clean again (TASK-210). `ash-core` test construction now uses `Box::default()` instead of boxing an empty vector directly, and `ash-repl` test ANSI stripping now iterates with `for ... in chars.by_ref()` so `cargo clippy --all-targets --all-features` and `cargo test --all` both pass on the merged codebase.
 

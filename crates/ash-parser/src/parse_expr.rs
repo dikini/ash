@@ -1006,10 +1006,12 @@ mod tests {
                 else_branch,
                 ..
             } => {
-                // Pattern should be a variable (None is parsed as variable pattern for now)
-                assert!(
-                    matches!(pattern, crate::surface::Pattern::Variable(name) if name.as_ref() == "None")
-                );
+                // Unit variants like `None` parse as variant patterns without braces.
+                assert!(matches!(
+                    pattern,
+                    crate::surface::Pattern::Variant { name, fields }
+                        if name.as_ref() == "None" && fields.is_none()
+                ));
                 // Then branch should be string "none"
                 assert!(
                     matches!(then_branch.as_ref(), Expr::Literal(Literal::String(s)) if s.as_ref() == "none")

@@ -427,10 +427,10 @@ Algebraic Data Types support in the Rust implementation.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-130](tasks/TASK-130-exhaustiveness-checking.md) | Exhaustiveness checking for patterns | SPEC-020 | 16 | 🟡 In Progress |
-| [TASK-131](tasks/TASK-131-constructor-evaluation.md) | Constructor evaluation | SPEC-020 | 8 | 🟡 In Progress |
-| [TASK-132](tasks/TASK-132-pattern-matching-engine.md) | Pattern matching engine | SPEC-020 | 12 | 🟡 In Progress |
-| [TASK-133](tasks/TASK-133-match-evaluation.md) | Match expression evaluation | SPEC-020 | 12 | 🟡 In Progress |
+| [TASK-130](tasks/TASK-130-exhaustiveness-checking.md) | Exhaustiveness checking for patterns | SPEC-020 | 16 | ✅ Complete |
+| [TASK-131](tasks/TASK-131-constructor-evaluation.md) | Constructor evaluation | SPEC-020 | 8 | ✅ Complete |
+| [TASK-132](tasks/TASK-132-pattern-matching-engine.md) | Pattern matching engine | SPEC-020 | 12 | ✅ Complete |
+| [TASK-133](tasks/TASK-133-match-evaluation.md) | Match expression evaluation | SPEC-020 | 12 | ✅ Complete |
 | [TASK-134](tasks/TASK-134-spawn-option-control-link.md) | Spawn with Option<ControlLink> | SPEC-020 | 8 | ✅ Complete |
 | [TASK-135](tasks/TASK-135-control-link-transfer.md) | Control link affine transfer | SPEC-020 | 8 | ✅ Complete |
 | [TASK-136](tasks/TASK-136-option-result-library.md) | Option/Result standard library | SPEC-020 | 8 | ✅ Complete |

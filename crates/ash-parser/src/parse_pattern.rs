@@ -121,32 +121,43 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     // Check if followed by `{` (fields) or not (unit variant)
     skip_whitespace_and_comments(input);
 
-    if !input.input.starts_with('{') {
-        // This is just a variable pattern, not a variant pattern
-        // Backtrack and let variable pattern handle it
-        *input = checkpoint;
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
+    if input.input.starts_with('{') {
+        // Parse the fields block
+        let fields = match parse_variant_fields(input) {
+            Ok(f) => Some(f),
+            Err(_) => {
+                *input = checkpoint;
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+        };
+
+        let _span = span_from(&start_pos, &input.state);
+        return Ok(Pattern::Variant {
+            name: name.into(),
+            fields,
+        });
     }
 
-    // Parse the fields block
-    let fields = match parse_variant_fields(input) {
-        Ok(f) => Some(f),
-        Err(_) => {
-            *input = checkpoint;
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-    };
+    // No `{` after the identifier: parse as a unit variant only when the
+    // identifier is UpperCamelCase (uppercase-leading). Otherwise, it is a
+    // variable pattern (e.g. `x`).
+    let is_uppercase_leading = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
 
-    let _span = span_from(&start_pos, &input.state);
-
-    Ok(Pattern::Variant {
-        name: name.into(),
-        fields,
-    })
+    if is_uppercase_leading {
+        let _span = span_from(&start_pos, &input.state);
+        Ok(Pattern::Variant {
+            name: name.into(),
+            fields: None,
+        })
+    } else {
+        // Backtrack and let variable pattern handle it.
+        *input = checkpoint;
+        Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ))
+    }
 }
 
 /// Parse variant fields: `{ field: pat, ... }`
@@ -645,11 +656,11 @@ mod tests {
         let mut input = test_input("None");
         let result = pattern(&mut input).unwrap();
         match result {
-            Pattern::Variable(name) => {
-                // Unit variants like "None" without fields are parsed as variables
+            Pattern::Variant { name, fields } => {
                 assert_eq!(name.as_ref(), "None");
+                assert!(fields.is_none());
             }
-            _ => panic!("Expected Variable pattern for unit variant"),
+            _ => panic!("Expected Variant pattern for unit variant"),
         }
     }
 

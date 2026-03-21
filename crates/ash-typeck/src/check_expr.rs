@@ -3,9 +3,12 @@
 //! Provides type checking for expressions, including constructor expressions.
 
 use crate::error::ConstructorError;
+use crate::exhaustiveness::{Coverage, check_exhaustive};
 use crate::type_env::{TypeEnv, TypeInfo, VariantIndex};
 use crate::types::{Substitution, Type, TypeVar, unify};
-use ash_parser::surface::{BinaryOp, Expr, Literal, UnaryOp};
+use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
+use ash_parser::lower_pattern;
+use ash_parser::surface::{BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp};
 use std::collections::HashSet;
 
 /// Result of type checking an expression
@@ -69,6 +72,9 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             let else_result = check_expr(env, else_branch);
             merge_branch_results(then_result, else_result)
         }
+        Expr::Match {
+            scrutinee, arms, ..
+        } => check_match(env, scrutinee, arms),
         _ => {
             // For other expression types, return a fresh type variable
             // These should be implemented as needed
@@ -194,6 +200,81 @@ fn merge_branch_results(left: CheckResult, right: CheckResult) -> CheckResult {
         ty,
         substitution,
         errors: Vec::new(),
+    }
+}
+
+fn resolve_enum_type_def_for_match<'a>(
+    env: &'a TypeEnv,
+    scrutinee: &Expr,
+    arms: &[MatchArm],
+) -> Option<&'a TypeDef> {
+    if let Expr::Constructor { name, .. } = scrutinee
+        && let Some((type_name, _)) = env.lookup_constructor(name.as_ref())
+        && let Some(def) = env.lookup_type(type_name.as_str())
+        && matches!(&def.body, TypeBody::Enum(_))
+    {
+        return Some(def);
+    }
+    for arm in arms {
+        if let SurfacePattern::Variant { name, .. } = &arm.pattern
+            && let Some((type_name, _)) = env.lookup_constructor(name.as_ref())
+            && let Some(def) = env.lookup_type(type_name.as_str())
+            && matches!(&def.body, TypeBody::Enum(_))
+        {
+            return Some(def);
+        }
+    }
+    None
+}
+
+fn format_missing_witnesses(witnesses: &[CorePattern]) -> String {
+    witnesses
+        .iter()
+        .map(|p| match p {
+            CorePattern::Variant { name, .. } => name.clone(),
+            _ => format!("{p:?}"),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResult {
+    let scrutinee_result = check_expr(env, scrutinee);
+    let mut errors: Vec<ConstructorError> = scrutinee_result.errors.clone();
+
+    if let Some(type_def) = resolve_enum_type_def_for_match(env, scrutinee, arms) {
+        let patterns: Vec<CorePattern> =
+            arms.iter().map(|arm| lower_pattern(&arm.pattern)).collect();
+        if let Coverage::Missing(witnesses) = check_exhaustive(&patterns, type_def) {
+            errors.push(ConstructorError::NonExhaustiveMatch {
+                scrutinee_type: type_def.name.clone(),
+                missing: format_missing_witnesses(&witnesses),
+            });
+        }
+    }
+
+    let mut arm_merged: Option<CheckResult> = None;
+    for arm in arms {
+        let body_result = check_expr(env, &arm.body);
+        arm_merged = Some(match arm_merged {
+            None => body_result,
+            Some(prev) => merge_branch_results(prev, body_result),
+        });
+    }
+
+    let arm_merged =
+        arm_merged.unwrap_or_else(|| CheckResult::success(Type::Var(TypeVar::fresh())));
+
+    let substitution = scrutinee_result
+        .substitution
+        .compose(&arm_merged.substitution);
+
+    errors.extend(arm_merged.errors);
+
+    CheckResult {
+        ty: arm_merged.ty,
+        substitution,
+        errors,
     }
 }
 
@@ -538,6 +619,98 @@ mod tests {
         assert!(
             result.is_ok(),
             "Expected success, got errors: {:?}",
+            result.errors
+        );
+    }
+
+    // ============================================================
+    // Match Exhaustiveness Tests (TASK-130 RED)
+    // ============================================================
+
+    #[test]
+    fn test_match_non_exhaustive_option_reports_error() {
+        let env = TypeEnv::with_builtin_types();
+
+        // match None { Some { value: x } => x }
+        let expr = Expr::Match {
+            scrutinee: Box::new(Expr::Constructor {
+                name: "None".into(),
+                fields: vec![],
+                span: Span::default(),
+            }),
+            arms: vec![ash_parser::surface::MatchArm {
+                pattern: ash_parser::surface::Pattern::Variant {
+                    name: "Some".into(),
+                    fields: Some(vec![(
+                        "value".into(),
+                        ash_parser::surface::Pattern::Variable("x".into()),
+                    )]),
+                },
+                body: Box::new(Expr::Variable("x".into())),
+                span: Span::default(),
+            }],
+            span: Span::default(),
+        };
+
+        let result = check_expr(&env, &expr);
+
+        assert!(
+            !result.is_ok(),
+            "Expected non-exhaustive match to report an error"
+        );
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.to_string().contains("non-exhaustive")),
+            "Expected a non-exhaustive match error, got: {:?}",
+            result.errors
+        );
+    }
+
+    #[test]
+    fn test_match_exhaustive_option_is_accepted() {
+        let env = TypeEnv::with_builtin_types();
+
+        // match None {
+        //   Some { value: x } => x,
+        //   None => 0
+        // }
+        let expr = Expr::Match {
+            scrutinee: Box::new(Expr::Constructor {
+                name: "None".into(),
+                fields: vec![],
+                span: Span::default(),
+            }),
+            arms: vec![
+                ash_parser::surface::MatchArm {
+                    pattern: ash_parser::surface::Pattern::Variant {
+                        name: "Some".into(),
+                        fields: Some(vec![(
+                            "value".into(),
+                            ash_parser::surface::Pattern::Variable("x".into()),
+                        )]),
+                    },
+                    body: Box::new(Expr::Variable("x".into())),
+                    span: Span::default(),
+                },
+                ash_parser::surface::MatchArm {
+                    pattern: ash_parser::surface::Pattern::Variant {
+                        name: "None".into(),
+                        fields: None,
+                    },
+                    body: Box::new(Expr::Literal(Literal::Int(0))),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+
+        let result = check_expr(&env, &expr);
+
+        assert!(
+            result.is_ok(),
+            "Expected exhaustive match to type check, got errors: {:?}",
             result.errors
         );
     }

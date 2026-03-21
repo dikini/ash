@@ -44,6 +44,15 @@ pub enum ConstructorError {
         /// Actual type
         actual: String,
     },
+
+    /// Match expression does not cover all variants of the scrutinee enum
+    #[error("non-exhaustive match on type '{scrutinee_type}': missing {missing}")]
+    NonExhaustiveMatch {
+        /// Enum (or ADT) type being matched
+        scrutinee_type: String,
+        /// Human-readable list of missing cases
+        missing: String,
+    },
 }
 
 /// Error type for type environment operations

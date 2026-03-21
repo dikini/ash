@@ -1226,6 +1226,111 @@ mod tests {
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(3));
     }
 
+    #[test]
+    fn test_eval_match_option_some_branch_binds_value() {
+        let mut ctx = Context::new();
+        ctx.set(
+            "opt".to_string(),
+            Value::Variant {
+                name: "Some".to_string(),
+                fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
+            },
+        );
+
+        let expr = Expr::Match {
+            scrutinee: Box::new(Expr::Variable("opt".to_string())),
+            arms: vec![
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "Some".to_string(),
+                        fields: Some(vec![(
+                            "value".to_string(),
+                            Pattern::Variable("x".to_string()),
+                        )]),
+                    },
+                    body: Expr::Binary {
+                        op: BinaryOp::Mul,
+                        left: Box::new(Expr::Variable("x".to_string())),
+                        right: Box::new(Expr::Literal(Value::Int(2))),
+                    },
+                },
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "None".to_string(),
+                        fields: None,
+                    },
+                    body: Expr::Literal(Value::Int(0)),
+                },
+            ],
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(84));
+    }
+
+    #[test]
+    fn test_eval_match_option_none_branch_selected() {
+        let mut ctx = Context::new();
+        ctx.set(
+            "opt".to_string(),
+            Value::Variant {
+                name: "None".to_string(),
+                fields: Box::new(vec![]),
+            },
+        );
+
+        let expr = Expr::Match {
+            scrutinee: Box::new(Expr::Variable("opt".to_string())),
+            arms: vec![
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "Some".to_string(),
+                        fields: Some(vec![(
+                            "value".to_string(),
+                            Pattern::Variable("x".to_string()),
+                        )]),
+                    },
+                    body: Expr::Variable("x".to_string()),
+                },
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "None".to_string(),
+                        fields: None,
+                    },
+                    body: Expr::Literal(Value::Int(0)),
+                },
+            ],
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(0));
+    }
+
+    #[test]
+    fn test_eval_if_let_option_some_then_branch_binds_value() {
+        let mut ctx = Context::new();
+        ctx.set(
+            "opt".to_string(),
+            Value::Variant {
+                name: "Some".to_string(),
+                fields: Box::new(vec![("value".to_string(), Value::Int(99))]),
+            },
+        );
+
+        let expr = Expr::IfLet {
+            pattern: Pattern::Variant {
+                name: "Some".to_string(),
+                fields: Some(vec![(
+                    "value".to_string(),
+                    Pattern::Variable("x".to_string()),
+                )]),
+            },
+            expr: Box::new(Expr::Variable("opt".to_string())),
+            then_branch: Box::new(Expr::Variable("x".to_string())),
+            else_branch: Box::new(Expr::Literal(Value::Int(0))),
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(99));
+    }
+
     // ============================================================
     // TASK-134: Spawn and Split Tests
     // ============================================================

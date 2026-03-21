@@ -457,63 +457,7 @@ fn find_matching_entry<'a>(mailbox: &'a Mailbox, pattern: &Pattern) -> Option<&'
 /// # Returns
 /// true if the entry matches the pattern
 fn matches_pattern_entry(entry: &MailboxEntry, pattern: &Pattern) -> bool {
-    match pattern {
-        Pattern::Wildcard => true,
-        Pattern::Literal(val) => entry.value == *val,
-        Pattern::Variable(_) => true, // Variable matches any value
-        Pattern::Tuple(patterns) => match &entry.value {
-            Value::List(values) => {
-                if values.len() != patterns.len() {
-                    return false;
-                }
-                patterns.iter().zip(values.iter()).all(|(p, v)| {
-                    // For tuple elements, check if they match
-                    match p {
-                        Pattern::Literal(lit) => lit == v,
-                        Pattern::Variable(_) => true,
-                        Pattern::Wildcard => true,
-                        _ => false,
-                    }
-                })
-            }
-            _ => false,
-        },
-        Pattern::Record(field_patterns) => match &entry.value {
-            Value::Record(fields) => field_patterns.iter().all(|(field_name, field_pattern)| {
-                match fields.get(field_name) {
-                    Some(field_value) => match field_pattern {
-                        Pattern::Literal(lit) => lit == field_value,
-                        Pattern::Variable(_) => true,
-                        Pattern::Wildcard => true,
-                        _ => false,
-                    },
-                    None => false,
-                }
-            }),
-            _ => false,
-        },
-        Pattern::List(prefix_patterns, _rest) => match &entry.value {
-            Value::List(values) => {
-                if values.len() < prefix_patterns.len() {
-                    return false;
-                }
-                prefix_patterns
-                    .iter()
-                    .zip(values.iter())
-                    .all(|(p, v)| match p {
-                        Pattern::Literal(lit) => lit == v,
-                        Pattern::Variable(_) => true,
-                        Pattern::Wildcard => true,
-                        _ => false,
-                    })
-            }
-            _ => false,
-        },
-        Pattern::Variant { .. } => {
-            // TODO: Implement variant pattern matching in TASK-132
-            false
-        }
-    }
+    match_pattern(pattern, &entry.value).is_ok()
 }
 
 /// Check if a pattern is a wildcard
@@ -1245,5 +1189,44 @@ mod tests {
         // Should match tuple and sum values: 1 + 2 = 3
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Value::Int(3));
+    }
+
+    #[tokio::test]
+    async fn test_receive_variant_pattern_matching_some_binds_and_executes_arm() {
+        let ctx = Context::new();
+        let mailbox = create_test_mailbox(vec![MailboxEntry::new(
+            "test",
+            "channel",
+            Value::Variant {
+                name: "Some".to_string(),
+                fields: Box::new(vec![("value".to_string(), Value::Int(42))]),
+            },
+        )]);
+        let stream_ctx = StreamContext::new();
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+
+        let receive = Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![create_arm(
+                Pattern::Variant {
+                    name: "Some".to_string(),
+                    fields: Some(vec![(
+                        "value".to_string(),
+                        Pattern::Variable("x".to_string()),
+                    )]),
+                },
+                Workflow::Ret {
+                    expr: Expr::Variable("x".to_string()),
+                },
+            )],
+            control_arms: None,
+        };
+
+        let result =
+            execute_receive(&receive, ctx, mailbox, &stream_ctx, &cap_ctx, &policy_eval).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Value::Int(42));
     }
 }

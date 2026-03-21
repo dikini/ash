@@ -27,7 +27,12 @@ pub enum PatternCell {
     /// Wildcard pattern that matches anything
     Wildcard,
     /// Constructor pattern with name and field patterns
-    Constructor(String, Vec<PatternCell>),
+    ///
+    /// `fields == None` represents a unit-variant pattern written without
+    /// destructuring braces (e.g. `None` for `Option::None`).
+    /// `fields == Some(_)` represents a constructor pattern with braces
+    /// (e.g. `Some { value: x }`).
+    Constructor(String, Option<Vec<PatternCell>>),
 }
 
 impl PatternMatrix {
@@ -56,25 +61,24 @@ pub fn pattern_to_cell(pattern: &Pattern) -> PatternCell {
         Pattern::Variant { name, fields } => {
             let field_cells = fields
                 .as_ref()
-                .map(|f| f.iter().map(|(_, p)| pattern_to_cell(p)).collect())
-                .unwrap_or_default();
+                .map(|f| f.iter().map(|(_, p)| pattern_to_cell(p)).collect());
             PatternCell::Constructor(name.clone(), field_cells)
         }
         Pattern::Tuple(patterns) => PatternCell::Constructor(
             "tuple".to_string(),
-            patterns.iter().map(pattern_to_cell).collect(),
+            Some(patterns.iter().map(pattern_to_cell).collect()),
         ),
-        Pattern::Literal(_) => PatternCell::Constructor("literal".to_string(), vec![]),
+        Pattern::Literal(_) => PatternCell::Constructor("literal".to_string(), None),
         Pattern::Record(fields) => PatternCell::Constructor(
             "record".to_string(),
-            fields.iter().map(|(_, p)| pattern_to_cell(p)).collect(),
+            Some(fields.iter().map(|(_, p)| pattern_to_cell(p)).collect()),
         ),
         Pattern::List(patterns, rest) => {
             let mut cells: Vec<PatternCell> = patterns.iter().map(pattern_to_cell).collect();
             if rest.is_some() {
                 cells.push(PatternCell::Wildcard);
             }
-            PatternCell::Constructor("list".to_string(), cells)
+            PatternCell::Constructor("list".to_string(), Some(cells))
         }
     }
 }
@@ -96,16 +100,6 @@ fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Patt
         _ => return None,
     };
 
-    // Get all covered variant names from the matrix
-    let covered: Vec<String> = matrix
-        .rows
-        .iter()
-        .filter_map(|row| match row.first() {
-            Some(PatternCell::Constructor(name, _)) => Some(name.clone()),
-            _ => None,
-        })
-        .collect();
-
     // Check if there's a wildcard pattern (covers everything)
     let has_wildcard = matrix
         .rows
@@ -119,7 +113,19 @@ fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Patt
     // Find missing variants
     let mut missing = Vec::new();
     for variant in variants {
-        if !covered.contains(&variant.name) {
+        let is_covered = matrix.rows.iter().any(|row| match row.first() {
+            Some(PatternCell::Constructor(name, pattern_fields)) if name == &variant.name => {
+                match pattern_fields {
+                    // Unit-variant patterns only cover variants that have zero fields.
+                    None => variant.fields.is_empty(),
+                    // Braced constructor patterns cover (conservatively) the variant.
+                    Some(_) => true,
+                }
+            }
+            _ => false,
+        });
+
+        if !is_covered {
             missing.push(Pattern::Variant {
                 name: variant.name.clone(),
                 fields: if variant.fields.is_empty() {
@@ -174,7 +180,7 @@ mod tests {
         let patterns = vec![
             Pattern::Variant {
                 name: "Some".to_string(),
-                fields: None,
+                fields: Some(vec![("value".to_string(), Pattern::Wildcard)]),
             },
             Pattern::Variant {
                 name: "None".to_string(),
@@ -183,6 +189,42 @@ mod tests {
         ];
 
         assert_eq!(check_exhaustive(&patterns, &option_type), Coverage::Covered);
+    }
+
+    #[test]
+    fn test_non_exhaustive_some_requires_field_patterns() {
+        let option_type = make_option_type();
+        let patterns = vec![
+            // `Option::Some` has a payload field (`value`), so a pattern that
+            // omits the `{ ... }` field destructuring should not count as
+            // covering `Some`.
+            Pattern::Variant {
+                name: "Some".to_string(),
+                fields: None,
+            },
+            Pattern::Variant {
+                name: "None".to_string(),
+                fields: None,
+            },
+        ];
+
+        match check_exhaustive(&patterns, &option_type) {
+            Coverage::Missing(missing) => {
+                assert!(
+                    missing.iter().any(|p| {
+                        matches!(
+                            p,
+                            Pattern::Variant {
+                                name,
+                                fields: Some(_)
+                            } if name == "Some"
+                        )
+                    }),
+                    "Expected missing coverage for `Some` with fields"
+                );
+            }
+            other => panic!("Expected Missing coverage, got {other:?}"),
+        }
     }
 
     #[test]
@@ -195,14 +237,18 @@ mod tests {
 
         match check_exhaustive(&patterns, &option_type) {
             Coverage::Missing(missing) => {
-                assert_eq!(missing.len(), 1);
-                // Should be missing None
-                match &missing[0] {
-                    Pattern::Variant { name, .. } => {
-                        assert_eq!(name, "None");
-                    }
-                    _ => panic!("Expected Variant pattern for None"),
-                }
+                assert_eq!(missing.len(), 2);
+                let names: Vec<&str> = missing
+                    .iter()
+                    .filter_map(|p| match p {
+                        Pattern::Variant { name, .. } => Some(name.as_str()),
+                        _ => None,
+                    })
+                    .collect();
+                assert!(
+                    names.contains(&"Some") && names.contains(&"None"),
+                    "Expected missing coverage for both `Some` and `None`"
+                );
             }
             _ => panic!("Expected Missing coverage"),
         }
@@ -274,7 +320,7 @@ mod tests {
         match pattern_to_cell(&pattern) {
             PatternCell::Constructor(name, fields) => {
                 assert_eq!(name, "Some");
-                assert!(fields.is_empty());
+                assert!(fields.is_none());
             }
             _ => panic!("Expected Constructor cell"),
         }

@@ -20,11 +20,13 @@ pub mod effect;
 pub mod error;
 pub mod exhaustiveness;
 pub mod instantiate;
+pub mod kind;
 pub mod name_binding;
 pub mod names;
 pub mod obligation_checker;
 pub mod obligations;
 pub mod policy_check;
+pub mod qualified_name;
 pub mod runtime_verification;
 pub mod solver;
 pub mod type_env;
@@ -44,11 +46,13 @@ pub use check_pattern::{Bindings, TypeEnv, check_pattern};
 pub use constraints::*;
 pub use effect::*;
 pub use instantiate::{InstantiateError, InstantiateSubst, instantiate};
+pub use kind::Kind;
 pub use name_binding::{NameBinder, NameError};
 pub use names::*;
 pub use obligation_checker::*;
 pub use obligations::*;
 pub use policy_check::*;
+pub use qualified_name::QualifiedName;
 pub use runtime_verification::{
     AggregateVerificationInputs, CapabilityOperation, CapabilitySchema, CapabilitySchemaRegistry,
     CapabilityVerifier, EffectChecker, ObligationRequirements, OperationError, OperationResult,

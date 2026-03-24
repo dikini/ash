@@ -16,6 +16,12 @@ pub enum TypeError {
     /// Infinite type detected (occurs check failed)
     #[error("Infinite type: type variable {var:?} occurs in {typ:?}")]
     InfiniteType { var: TypeVar, typ: Type },
+    /// Constructor name mismatch
+    #[error("Constructor name mismatch: expected {expected}, found {found}")]
+    ConstructorNameMismatch { expected: String, found: String },
+    /// Constructor arity mismatch
+    #[error("Constructor arity mismatch for {name}: expected {expected_arity}, found {found_arity}")]
+    ConstructorArityMismatch { name: String, expected_arity: usize, found_arity: usize },
     /// Unbound variable
     #[error("Unbound variable: {0}")]
     UnboundVariable(String),
@@ -50,6 +56,12 @@ impl From<UnifyError> for TypeError {
                 found: t2,
             },
             UnifyError::InfiniteType(var, typ) => TypeError::InfiniteType { var, typ },
+            UnifyError::ConstructorNameMismatch { expected, found } => {
+                TypeError::ConstructorNameMismatch { expected, found }
+            }
+            UnifyError::ConstructorArityMismatch { name, expected_arity, found_arity } => {
+                TypeError::ConstructorArityMismatch { name, expected_arity, found_arity }
+            }
         }
     }
 }

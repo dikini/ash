@@ -201,6 +201,12 @@ pub enum UnifyError {
     /// Infinite type detected (occurs check failed)
     #[error("Infinite type {0:?} in {1:?}")]
     InfiniteType(TypeVar, Type),
+    /// Constructor name mismatch
+    #[error("Constructor name mismatch: expected {expected}, found {found}")]
+    ConstructorNameMismatch { expected: String, found: String },
+    /// Constructor arity mismatch
+    #[error("Constructor arity mismatch for {name}: expected {expected_arity}, found {found_arity}")]
+    ConstructorArityMismatch { name: String, expected_arity: usize, found_arity: usize },
 }
 
 impl std::fmt::Display for Type {
@@ -300,26 +306,58 @@ impl Type {
 
 /// Unify two types, returning a substitution that makes them equal
 pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
-    // Apply any existing substitutions to normalize before unifying
+    use Type::*;
+
+    // Handle identical types first
+    if t1 == t2 {
+        return Ok(Substitution::new());
+    }
+
     match (t1, t2) {
         // Same primitives unify with empty substitution
-        (Type::Int, Type::Int)
-        | (Type::String, Type::String)
-        | (Type::Bool, Type::Bool)
-        | (Type::Null, Type::Null)
-        | (Type::Time, Type::Time)
-        | (Type::Ref, Type::Ref) => Ok(Substitution::new()),
+        (Int, Int)
+        | (String, String)
+        | (Bool, Bool)
+        | (Null, Null)
+        | (Time, Time)
+        | (Ref, Ref) => Ok(Substitution::new()),
 
-        // Type variable unification
-        (Type::Var(v), ty) | (ty, Type::Var(v)) => {
-            // Occurs check: prevent infinite types
-            if occurs_in(*v, ty) {
-                return Err(UnifyError::InfiniteType(*v, ty.clone()));
+        // Variable binding cases
+        (Var(v), ty) => bind_var(*v, ty),
+        (ty, Var(v)) => bind_var(*v, ty),
+
+        // Constructor vs Constructor
+        (
+            Constructor { name: n1, args: a1, .. },
+            Constructor { name: n2, args: a2, .. }
+        ) => {
+            if n1 != n2 {
+                return Err(UnifyError::ConstructorNameMismatch {
+                    expected: n1.display(),
+                    found: n2.display(),
+                });
             }
-            // Create a substitution mapping the variable to the type
-            let mut sub = Substitution::new();
-            sub.insert(*v, ty.clone());
-            Ok(sub)
+
+            if a1.len() != a2.len() {
+                return Err(UnifyError::ConstructorArityMismatch {
+                    name: n1.display(),
+                    expected_arity: a1.len(),
+                    found_arity: a2.len(),
+                });
+            }
+
+            // Unify arguments pairwise, applying accumulated substitution
+            let mut acc_sub = Substitution::new();
+            for (arg1, arg2) in a1.iter().zip(a2.iter()) {
+                let sub = unify(&acc_sub.apply(arg1), &acc_sub.apply(arg2))?;
+                acc_sub = acc_sub.compose(&sub);
+            }
+            Ok(acc_sub)
+        }
+
+        // Constructor cannot unify with primitives
+        (Constructor { .. }, _) | (_, Constructor { .. }) => {
+            Err(UnifyError::Mismatch(t1.clone(), t2.clone()))
         }
 
         // List unification: elements must unify
@@ -398,6 +436,23 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
         // Different constructors cannot unify
         _ => Err(UnifyError::Mismatch(t1.clone(), t2.clone())),
     }
+}
+
+/// Bind a type variable to a type, checking for infinite types
+fn bind_var(var: TypeVar, ty: &Type) -> Result<Substitution, UnifyError> {
+    if let Type::Var(v) = ty {
+        if *v == var {
+            return Ok(Substitution::new()); // T = T
+        }
+    }
+
+    if occurs_in(var, ty) {
+        return Err(UnifyError::InfiniteType(var, ty.clone()));
+    }
+
+    let mut sub = Substitution::new();
+    sub.insert(var, ty.clone());
+    Ok(sub)
 }
 
 /// Check if a type variable occurs in a type (occurs check)
@@ -1095,5 +1150,126 @@ mod tests {
         let _link_complex = Type::ControlLink {
             workflow_type: Box::from("ControllerView"),
         };
+    }
+
+    // ============================================================
+    // TASK-003: Constructor Unification Tests
+    // ============================================================
+
+    #[test]
+    fn constructor_self_unifies() {
+        use crate::kind::Kind;
+        use crate::qualified_name::QualifiedName;
+
+        let opt_int = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Int],
+            kind: Kind::Type,
+        };
+        let sub = unify(&opt_int, &opt_int).unwrap();
+        assert_eq!(sub, Substitution::new());
+    }
+
+    #[test]
+    fn constructor_different_names_fail() {
+        use crate::kind::Kind;
+        use crate::qualified_name::QualifiedName;
+
+        let opt_int = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Int],
+            kind: Kind::Type,
+        };
+        let list_int = Type::Constructor {
+            name: QualifiedName::root("List"),
+            args: vec![Type::Int],
+            kind: Kind::Type,
+        };
+        assert!(unify(&opt_int, &list_int).is_err());
+    }
+
+    #[test]
+    fn constructor_different_args_fail() {
+        use crate::kind::Kind;
+        use crate::qualified_name::QualifiedName;
+
+        let opt_int = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Int],
+            kind: Kind::Type,
+        };
+        let opt_str = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::String],
+            kind: Kind::Type,
+        };
+        assert!(unify(&opt_int, &opt_str).is_err());
+    }
+
+    #[test]
+    fn constructor_with_var_unifies() {
+        use crate::kind::Kind;
+        use crate::qualified_name::QualifiedName;
+
+        let v = TypeVar(0);
+        let opt_var = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Var(v)],
+            kind: Kind::Type,
+        };
+        let opt_int = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Int],
+            kind: Kind::Type,
+        };
+        let sub = unify(&opt_var, &opt_int).unwrap();
+        assert_eq!(sub.apply(&Type::Var(v)), Type::Int);
+    }
+
+    #[test]
+    fn nested_constructors_unify() {
+        use crate::kind::Kind;
+        use crate::qualified_name::QualifiedName;
+
+        let v = TypeVar(0);
+        let opt_list_var = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Constructor {
+                name: QualifiedName::root("List"),
+                args: vec![Type::Var(v)],
+                kind: Kind::Type,
+            }],
+            kind: Kind::Type,
+        };
+        let opt_list_int = Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Constructor {
+                name: QualifiedName::root("List"),
+                args: vec![Type::Int],
+                kind: Kind::Type,
+            }],
+            kind: Kind::Type,
+        };
+        let sub = unify(&opt_list_var, &opt_list_int).unwrap();
+        assert_eq!(sub.apply(&Type::Var(v)), Type::Int);
+    }
+
+    #[test]
+    fn occurs_check_finds_cycles() {
+        use crate::kind::Kind;
+        use crate::qualified_name::QualifiedName;
+
+        let v = TypeVar(0);
+        let t = Type::Var(v);
+        let list_t = Type::Constructor {
+            name: QualifiedName::root("List"),
+            args: vec![t.clone()],
+            kind: Kind::Type,
+        };
+
+        assert!(matches!(
+            unify(&t, &list_t),
+            Err(UnifyError::InfiniteType(TypeVar(0), _))
+        ));
     }
 }

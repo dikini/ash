@@ -27,6 +27,7 @@ pub mod obligation_checker;
 pub mod obligations;
 pub mod policy_check;
 pub mod qualified_name;
+pub mod requirements;
 pub mod runtime_verification;
 pub mod solver;
 pub mod type_env;
@@ -53,6 +54,10 @@ pub use obligation_checker::*;
 pub use obligations::*;
 pub use policy_check::*;
 pub use qualified_name::QualifiedName;
+pub use requirements::{
+    CheckResult, ContractCheckResult, RequirementContext, RequirementError, check_contract,
+    check_requirement,
+};
 pub use runtime_verification::{
     AggregateVerificationInputs, CapabilityOperation, CapabilitySchema, CapabilitySchemaRegistry,
     CapabilityVerifier, EffectChecker, ObligationRequirements, OperationError, OperationResult,

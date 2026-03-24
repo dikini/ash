@@ -1,10 +1,9 @@
 //! Kinds classify types and type constructors.
 //!
-//! ```ignore
-//! *           - proper type (Int, String, List<Int>)
-//! * -> *      - type constructor (List, Option)
-//! * -> * -> * - binary type constructor (Result, Pair)
-//! ```
+//! Kind notation:
+//! - `*`           - proper type (Int, String, List<Int>)
+//! - `* -> *`      - type constructor (List, Option)
+//! - `* -> * -> *` - binary type constructor (Result, Pair)
 
 use std::fmt;
 

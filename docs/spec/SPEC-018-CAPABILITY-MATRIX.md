@@ -29,6 +29,9 @@ Compile-time requirements:
 - **Effect level**: Computed from operations
 - **Obligations**: Required role/context
 
+Required roles and approval roles are flat named role references. The verification contract does
+not assume role hierarchy, role supervision, or inherited authority between roles.
+
 ## 3. Runtime Context
 
 At instantiation, workflow receives:

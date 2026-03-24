@@ -426,13 +426,22 @@ pub enum Obligation {
     Prohibited { role: Role, action: Action },
 }
 
-/// Role definition
+/// A named role-level obligation reference preserved in core role metadata.
+///
+/// This carrier records only the referenced obligation name. It intentionally does not reuse
+/// workflow-level [`Obligation`] semantics when the source role metadata only provides a named
+/// reference.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RoleObligationRef {
+    pub name: Name,
+}
+
+/// Core role metadata used by lowered workflows and verification contexts.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Role {
     pub name: Name,
     pub authority: Vec<Capability>,
-    pub obligations: Vec<Obligation>,
-    pub supervises: Vec<Role>,
+    pub obligations: Vec<RoleObligationRef>,
 }
 
 /// Type definition in source code
@@ -951,6 +960,53 @@ mod tests {
                 },
             ],
         };
+    }
+
+    #[test]
+    fn test_role_struct_exists_without_supervision_list() {
+        let role = Role {
+            name: "reviewer".to_string(),
+            authority: vec![],
+            obligations: vec![],
+        };
+
+        assert_eq!(role.name, "reviewer");
+        assert!(role.authority.is_empty());
+        assert!(role.obligations.is_empty());
+    }
+
+    #[test]
+    fn test_role_metadata_preserves_named_obligation_refs_losslessly() {
+        let role = Role {
+            name: "reviewer".to_string(),
+            authority: vec![],
+            obligations: vec![RoleObligationRef {
+                name: "check_tests".to_string(),
+            }],
+        };
+
+        assert_eq!(role.name, "reviewer");
+        assert!(matches!(
+            &role.obligations[..],
+            [RoleObligationRef { name }] if name == "check_tests"
+        ));
+    }
+
+    #[test]
+    fn test_role_metadata_serde_roundtrip_preserves_named_obligation_refs() {
+        let role = Role {
+            name: "reviewer".to_string(),
+            authority: vec![],
+            obligations: vec![RoleObligationRef {
+                name: "check_tests".to_string(),
+            }],
+        };
+
+        let encoded = serde_json::to_string(&role).expect("role metadata should serialize");
+        let decoded: Role =
+            serde_json::from_str(&encoded).expect("role metadata should deserialize");
+
+        assert_eq!(decoded, role);
     }
 
     #[test]

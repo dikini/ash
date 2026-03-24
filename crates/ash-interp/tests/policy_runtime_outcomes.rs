@@ -111,6 +111,47 @@ async fn set_policy_requires_approval_surfaces_a_distinct_runtime_state() {
 }
 
 #[tokio::test]
+async fn approval_role_remains_an_explicit_flat_name() {
+    let mut behaviour_ctx = BehaviourContext::new();
+    let provider = MockSettableProvider::new("repo", "merge");
+    behaviour_ctx.register_settable(ash_interp::behaviour::TypedSettableProvider::new(
+        provider,
+        Type::Bool,
+    ));
+
+    let mut policy_eval = CapabilityPolicyEvaluator::new();
+    policy_eval.add_output_policy(CapabilityPolicy {
+        capability_pattern: "repo:merge".into(),
+        condition: Box::new(|_| true),
+        decision: Box::new(|_| PolicyDecision::RequireApproval {
+            role: Role::new("senior_reviewer"),
+        }),
+    });
+
+    let actor = Role::new("reviewer_delegate");
+    let error = execute_set(
+        "repo",
+        "merge",
+        Value::Bool(true),
+        &behaviour_ctx,
+        &policy_eval,
+        &actor,
+    )
+    .await
+    .expect_err("approval should remain distinct from the acting role");
+
+    assert_ne!(actor.as_ref(), "senior_reviewer");
+    assert_eq!(
+        error,
+        ExecError::RequiresApproval {
+            role: "senior_reviewer".into(),
+            operation: "set".into(),
+            capability: "repo:merge".into(),
+        }
+    );
+}
+
+#[tokio::test]
 async fn send_policy_transform_rewrites_the_value_before_send() {
     let mut stream_ctx = StreamContext::new();
     let provider = MockSendableProvider::new("alert", "critical");

@@ -7,6 +7,7 @@ This appendix details all 28 example workflows, their complexity levels, require
 ## Level 1: Basic Workflows (Getting Started)
 
 ### 01_hello_world.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 5-10 |
@@ -16,6 +17,7 @@ This appendix details all 28 example workflows, their complexity levels, require
 Simplest possible workflow that outputs "Hello, World!" to the console.
 
 ### 02_variables.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 10-15 |
@@ -25,6 +27,7 @@ Simplest possible workflow that outputs "Hello, World!" to the console.
 Demonstrates variable declaration, assignment, and basic types.
 
 ### 03_control_flow.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 15-25 |
@@ -34,6 +37,7 @@ Demonstrates variable declaration, assignment, and basic types.
 Shows conditional execution and iteration patterns.
 
 ### 04_patterns.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 15-25 |
@@ -47,6 +51,7 @@ Pattern matching basics with tuples, records, and lists.
 ## Level 2: OODA Pattern (Core Concepts)
 
 ### 05_temperature_monitor.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 20-40 |
@@ -56,6 +61,7 @@ Pattern matching basics with tuples, records, and lists.
 Simple observation from a sensor with a decision based on the value.
 
 ### 06_data_processor.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 25-50 |
@@ -65,6 +71,7 @@ Simple observation from a sensor with a decision based on the value.
 Transforms data through the orient phase.
 
 ### 07_policy_guard.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 30-60 |
@@ -74,6 +81,7 @@ Transforms data through the orient phase.
 Basic policy enforcement with permit/deny decisions.
 
 ### 08_action_sequence.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 30-50 |
@@ -87,6 +95,7 @@ Chains multiple actions together.
 ## Level 3: Capabilities (External Integration)
 
 ### 09_file_processor.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 30-60 |
@@ -96,6 +105,7 @@ Chains multiple actions together.
 Reads from a file, processes content, writes result.
 
 ### 10_event_counter.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 30-60 |
@@ -105,6 +115,7 @@ Reads from a file, processes content, writes result.
 Processes events from a queue and maintains state.
 
 ### 11_sensor_dashboard.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 40-80 |
@@ -114,6 +125,7 @@ Processes events from a queue and maintains state.
 Reads from multiple sensors and aggregates data.
 
 ### 12_message_router.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 40-80 |
@@ -127,6 +139,7 @@ Receives messages and routes them to different destinations.
 ## Level 4: Governance (Policies & Roles)
 
 ### 13_expense_approval.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 50-90 |
@@ -136,15 +149,17 @@ Receives messages and routes them to different destinations.
 Expense request with role-based approval and email notification.
 
 ### 14_access_control.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 40-80 |
 | **Provider** | None (demonstrates role system) |
-| **Concepts** | role hierarchies, authority checks |
+| **Concepts** | role authorities, named approval roles |
 
-Demonstrates hierarchical roles and access control.
+Demonstrates flat role declarations and access control.
 
 ### 15_audit_logger.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 50-100 |
@@ -154,6 +169,7 @@ Demonstrates hierarchical roles and access control.
 Records all actions to an audit log.
 
 ### 16_multi_policy.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 60-120 |
@@ -166,7 +182,12 @@ Combines multiple policies using logical operators.
 
 ## Level 5: Real-World Systems (Production Examples)
 
+These larger examples are useful reference scenarios. Where a file diverges from the current
+canonical surface contract, treat it as reference-oriented documentation rather than a conformance
+sample; the canonical syntax lives in `docs/spec/`.
+
 ### 17_ecommerce_order.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 80-150 |
@@ -176,6 +197,7 @@ Combines multiple policies using logical operators.
 Complete order processing: inventory check, payment, fulfillment.
 
 ### 18_customer_support.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 80-150 |
@@ -185,6 +207,7 @@ Complete order processing: inventory check, payment, fulfillment.
 Ticket routing based on priority with escalation paths.
 
 ### 19_iot_monitoring.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 80-150 |
@@ -194,6 +217,7 @@ Ticket routing based on priority with escalation paths.
 Sensor data monitoring with SMS alerts for anomalies.
 
 ### 20_data_pipeline.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 80-150 |
@@ -203,15 +227,17 @@ Sensor data monitoring with SMS alerts for anomalies.
 Extract-transform-load pipeline with format conversion.
 
 ### 40_tdd_workflow.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 300-500 |
 | **Providers** | task_manager, test_runner, code_repo, review_system |
 | **Concepts** | Multi-role orchestration, TDD lifecycle, obligation tracking, iterative development |
 
-Complete Test-Driven Development workflow with developer, tester, and reviewer roles. Demonstrates red/green/refactor cycles, policy enforcement, and code review process.
+Reference TDD workflow template with developer, tester, and reviewer roles. Demonstrates red/green/refactor cycles, policy enforcement, and code review process without claiming canonical surface-syntax completeness.
 
 **Files**:
+
 - `40_tdd_workflow.ash` - Generic TDD workflow template
 - `40a_tdd_concrete_example.ash` - Concrete Stack implementation example
 
@@ -220,6 +246,7 @@ Complete Test-Driven Development workflow with developer, tester, and reviewer r
 ## Level 6: Advanced Patterns (Complex Scenarios)
 
 ### 21_multi_agent.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 100-180 |
@@ -229,6 +256,7 @@ Complete Test-Driven Development workflow with developer, tester, and reviewer r
 Multiple agents working in parallel with result aggregation.
 
 ### 22_state_machine.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 100-180 |
@@ -238,6 +266,7 @@ Multiple agents working in parallel with result aggregation.
 Workflow as a state machine with persisted state.
 
 ### 23_circuit_breaker.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 100-180 |
@@ -247,6 +276,7 @@ Workflow as a state machine with persisted state.
 Fault tolerance using the circuit breaker pattern.
 
 ### 24_saga_pattern.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 120-200 |
@@ -260,6 +290,7 @@ Long-running transaction with rollback on failure.
 ## Level 7: Complete Applications (Full Systems)
 
 ### 25_api_gateway.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 150-300 |
@@ -269,6 +300,7 @@ Long-running transaction with rollback on failure.
 API gateway with rate limiting and backend routing.
 
 ### 26_ml_inference.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 150-300 |
@@ -278,6 +310,7 @@ API gateway with rate limiting and backend routing.
 Model serving with A/B testing and feature flags.
 
 ### 27_fraud_detection.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 150-300 |
@@ -287,6 +320,7 @@ Model serving with A/B testing and feature flags.
 Real-time fraud detection with risk scoring.
 
 ### 28_compliance_checker.ash
+
 | Attribute | Value |
 |-----------|-------|
 | **Lines** | 150-300 |

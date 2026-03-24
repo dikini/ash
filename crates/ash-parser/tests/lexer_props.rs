@@ -39,7 +39,6 @@ const KEYWORDS: &[&str] = &[
     "operational",
     "authority",
     "obligations",
-    "supervises",
     "when",
     "returns",
     "where",

@@ -1,16 +1,16 @@
 -- Code Review Workflow with Role Separation
 -- Demonstrates: roles, obligations, parallel execution
+-- Reference-oriented example; canonical role contracts use only authority and obligations,
+-- and approval roles remain flat named references in `docs/spec/`.
 
 role drafter {
   authority: [read_code, create_pr, respond_to_comments],
-  obligations: [ensure_tests_pass],
-  supervises: []
+  obligations: [ensure_tests_pass]
 }
 
 role reviewer {
   authority: [read_code, comment, request_changes, approve],
-  obligations: [check_tests, check_security, review_logic],
-  supervises: drafter
+  obligations: [check_tests, check_security, review_logic]
 }
 
 capability fetch_pr : observe(pr_id: ID) returns PR

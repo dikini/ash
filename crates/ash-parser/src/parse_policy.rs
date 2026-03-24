@@ -430,7 +430,6 @@ fn is_keyword(s: &str) -> bool {
             | "operational"
             | "authority"
             | "obligations"
-            | "supervises"
             | "when"
             | "returns"
             | "where"
@@ -569,6 +568,13 @@ mod tests {
             }
             _ => panic!("Expected Call, got {:?}", result),
         }
+    }
+
+    #[test]
+    fn test_parse_policy_variable_named_supervises() {
+        let mut input = test_input("supervises");
+        let result = policy_expr(&mut input).unwrap();
+        assert!(matches!(result, PolicyExpr::Var(name) if name.as_ref() == "supervises"));
     }
 
     #[test]

@@ -81,8 +81,6 @@ pub enum TokenKind {
     Authority,
     /// `obligations` - Obligations declaration
     Obligations,
-    /// `supervises` - Supervision relation
-    Supervises,
 
     // Type keywords
     /// `when` - When clause
@@ -276,7 +274,6 @@ mod tests {
         let _operational = TokenKind::Operational;
         let _authority = TokenKind::Authority;
         let _obligations = TokenKind::Obligations;
-        let _supervises = TokenKind::Supervises;
         let _when = TokenKind::When;
         let _returns = TokenKind::Returns;
         let _where = TokenKind::Where;

@@ -3,6 +3,9 @@
 //! This module converts the surface syntax AST into the core IR representation
 //! used by the ash-core crate.
 
+#[cfg(test)]
+use std::fmt;
+
 use ash_core::{
     Action as CoreAction, Capability, Effect, Expr as CoreExpr, Guard as CoreGuard,
     MatchArm as CoreMatchArm, Obligation as CoreObligation, Pattern as CorePattern,
@@ -10,10 +13,38 @@ use ash_core::{
     ReceivePattern as CoreReceivePattern, Role as CoreRole, Workflow as CoreWorkflow,
 };
 
+#[cfg(test)]
+use ash_core::RoleObligationRef as CoreRoleObligationRef;
+
 use crate::surface::{
-    ActionRef, BinaryOp, CheckTarget, EffectType, Expr, Guard, Literal, ObligationRef, Pattern,
-    PolicyExpr, Predicate, StreamPattern, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
+    ActionRef, BinaryOp, CheckTarget, Expr, Guard, Literal, ObligationRef, Pattern, PolicyExpr,
+    Predicate, StreamPattern, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
 };
+
+#[cfg(test)]
+use crate::surface::{CapabilityDef, Definition, EffectType, RoleDef};
+
+/// Error returned when parsed role metadata cannot be lowered honestly.
+#[cfg(test)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RoleLoweringError {
+    pub(crate) role: String,
+    pub(crate) authority: String,
+}
+
+#[cfg(test)]
+impl fmt::Display for RoleLoweringError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "cannot lower role '{}' because authority '{}' has no matching capability definition",
+            self.role, self.authority
+        )
+    }
+}
+
+#[cfg(test)]
+impl std::error::Error for RoleLoweringError {}
 
 /// Lower a workflow definition to core IR.
 pub fn lower_workflow(def: &WorkflowDef) -> CoreWorkflow {
@@ -21,6 +52,80 @@ pub fn lower_workflow(def: &WorkflowDef) -> CoreWorkflow {
     let provenance = Provenance::new();
 
     lower_workflow_body(&def.body, &provenance)
+}
+
+#[cfg(test)]
+fn lower_role_def_with_definitions(
+    def: &RoleDef,
+    definitions: &[Definition],
+) -> Result<CoreRole, RoleLoweringError> {
+    Ok(CoreRole {
+        name: def.name.to_string(),
+        authority: def
+            .authority
+            .iter()
+            .map(|name| lower_role_authority(def.name.as_ref(), name, definitions))
+            .collect::<Result<Vec<_>, _>>()?,
+        obligations: def
+            .obligations
+            .iter()
+            .map(|name| lower_role_obligation_name(name))
+            .collect(),
+    })
+}
+
+/// Lower all parsed inline-module role definitions into core role metadata.
+#[cfg(test)]
+pub(crate) fn lower_module_role_definitions(
+    module: &crate::module::ModuleDecl,
+) -> Result<Vec<CoreRole>, RoleLoweringError> {
+    let Some(definitions) = module.definitions() else {
+        return Ok(vec![]);
+    };
+
+    definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            Definition::Role(role) => Some(lower_role_def_with_definitions(role, definitions)),
+            _ => None,
+        })
+        .collect()
+}
+
+#[cfg(test)]
+fn lower_role_authority(
+    role_name: &str,
+    authority_name: &str,
+    definitions: &[Definition],
+) -> Result<Capability, RoleLoweringError> {
+    definitions
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Capability(capability) if capability.name.as_ref() == authority_name => {
+                Some(lower_capability_def(capability))
+            }
+            _ => None,
+        })
+        .ok_or_else(|| RoleLoweringError {
+            role: role_name.to_string(),
+            authority: authority_name.to_string(),
+        })
+}
+
+#[cfg(test)]
+fn lower_capability_def(def: &CapabilityDef) -> Capability {
+    Capability {
+        name: def.name.to_string(),
+        effect: lower_effect_type(def.effect),
+        constraints: def.constraints.iter().map(lower_constraint).collect(),
+    }
+}
+
+#[cfg(test)]
+fn lower_constraint(constraint: &crate::surface::Constraint) -> ash_core::Constraint {
+    ash_core::Constraint {
+        predicate: lower_predicate(&constraint.predicate),
+    }
 }
 
 /// Lower a workflow body to core IR.
@@ -502,9 +607,15 @@ fn lower_obligation(obligation: &ObligationRef) -> CoreObligation {
             name: obligation.role.to_string(),
             authority: vec![],
             obligations: vec![],
-            supervises: vec![],
         },
         condition: lower_expr(&obligation.condition),
+    }
+}
+
+#[cfg(test)]
+fn lower_role_obligation_name(name: &str) -> CoreRoleObligationRef {
+    CoreRoleObligationRef {
+        name: name.to_string(),
     }
 }
 
@@ -533,7 +644,7 @@ fn lower_predicate(pred: &Predicate) -> CorePredicate {
 }
 
 /// Lower an effect type to core Effect.
-#[allow(dead_code)]
+#[cfg(test)]
 fn lower_effect_type(effect: EffectType) -> Effect {
     match effect {
         EffectType::Observe | EffectType::Read => Effect::Epistemic,
@@ -547,7 +658,7 @@ fn lower_effect_type(effect: EffectType) -> Effect {
 mod tests {
     use super::*;
     use crate::surface::{
-        BinaryOp, EffectType, Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern,
+        BinaryOp, EffectType, Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern, RoleDef,
         Workflow as SurfaceWorkflow,
     };
     use crate::token::Span;
@@ -643,6 +754,162 @@ mod tests {
         let surface = SurfaceLiteral::String("hello".into());
         let core = lower_literal(&surface);
         assert!(matches!(core, ash_core::Value::String(s) if s == "hello"));
+    }
+
+    #[test]
+    fn test_lower_obligation_uses_simplified_role_shape() {
+        let surface = ObligationRef {
+            role: "manager".into(),
+            condition: SurfaceExpr::Variable("approved".into()),
+        };
+
+        let core = lower_obligation(&surface);
+
+        assert!(matches!(
+            core,
+            CoreObligation::Obliged {
+                role: CoreRole {
+                    name,
+                    authority,
+                    obligations,
+                },
+                condition: CoreExpr::Variable(condition),
+            } if name == "manager"
+                && authority.is_empty()
+                && obligations.is_empty()
+                && condition == "approved"
+        ));
+    }
+
+    #[test]
+    fn test_lower_role_def_preserves_named_authority_refs_and_obligation_refs() {
+        let surface = RoleDef {
+            name: "reviewer".into(),
+            authority: vec!["approve".into(), "review".into()],
+            obligations: vec!["check_tests".into()],
+            span: dummy_span(),
+        };
+
+        let definitions = vec![
+            crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                name: "approve".into(),
+                effect: crate::surface::EffectType::Decide,
+                params: vec![],
+                return_type: None,
+                constraints: vec![],
+                span: dummy_span(),
+            }),
+            crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                name: "review".into(),
+                effect: crate::surface::EffectType::Analyze,
+                params: vec![],
+                return_type: None,
+                constraints: vec![],
+                span: dummy_span(),
+            }),
+        ];
+
+        let core = lower_role_def_with_definitions(&surface, &definitions)
+            .expect("matching capability definitions should lower authority metadata");
+
+        assert_eq!(core.name, "reviewer");
+        assert_eq!(core.authority.len(), 2);
+        assert!(matches!(
+            &core.authority[0],
+            Capability { name, .. } if name == "approve"
+        ));
+        assert!(matches!(
+            &core.authority[1],
+            Capability { name, .. } if name == "review"
+        ));
+        assert!(matches!(
+            &core.obligations[..],
+            [ash_core::RoleObligationRef { name }] if name == "check_tests"
+        ));
+    }
+
+    #[test]
+    fn test_lower_module_role_definitions_only_lowers_roles() {
+        let module = crate::module::ModuleDecl::inline(
+            "governance".into(),
+            crate::surface::Visibility::Inherited,
+            vec![
+                crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                    name: "approve".into(),
+                    effect: crate::surface::EffectType::Read,
+                    params: vec![],
+                    return_type: None,
+                    constraints: vec![],
+                    span: dummy_span(),
+                }),
+                crate::surface::Definition::Role(RoleDef {
+                    name: "reviewer".into(),
+                    authority: vec!["approve".into()],
+                    obligations: vec!["check_tests".into()],
+                    span: dummy_span(),
+                }),
+            ],
+            dummy_span(),
+        );
+
+        let roles = lower_module_role_definitions(&module)
+            .expect("matching capability definitions should lower authority metadata");
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles[0].name, "reviewer");
+        assert!(matches!(
+            &roles[0].obligations[..],
+            [ash_core::RoleObligationRef { name }] if name == "check_tests"
+        ));
+    }
+
+    #[test]
+    fn test_lower_module_role_definitions_preserves_authority_metadata_from_module_capabilities() {
+        let module = crate::module::ModuleDecl::inline(
+            "governance".into(),
+            crate::surface::Visibility::Inherited,
+            vec![
+                crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                    name: "approve".into(),
+                    effect: crate::surface::EffectType::Decide,
+                    params: vec![],
+                    return_type: None,
+                    constraints: vec![crate::surface::Constraint {
+                        predicate: crate::surface::Predicate {
+                            name: "requires_mfa".into(),
+                            args: vec![],
+                        },
+                    }],
+                    span: dummy_span(),
+                }),
+                crate::surface::Definition::Role(RoleDef {
+                    name: "reviewer".into(),
+                    authority: vec!["approve".into()],
+                    obligations: vec!["check_tests".into()],
+                    span: dummy_span(),
+                }),
+            ],
+            dummy_span(),
+        );
+
+        let roles = lower_module_role_definitions(&module)
+            .expect("matching capability definitions should lower authority metadata");
+
+        assert_eq!(roles.len(), 1);
+        assert!(matches!(
+            &roles[0].authority[..],
+            [Capability {
+                name,
+                effect: Effect::Evaluative,
+                constraints,
+            }] if name == "approve"
+                && matches!(
+                    &constraints[..],
+                    [ash_core::Constraint {
+                        predicate: ash_core::Predicate { name: predicate_name, arguments }
+                    }] if predicate_name == "requires_mfa" && arguments.is_empty()
+                )
+        ));
     }
 
     #[test]

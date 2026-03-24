@@ -28,6 +28,7 @@ Ash is a workflow language designed for governed AI systems. It provides:
 ### Why Ash?
 
 Traditional workflow languages often lack:
+
 - Built-in governance mechanisms
 - Fine-grained capability control
 - Audit trails by default
@@ -377,17 +378,18 @@ workflow monitor_temperature {
 
 ## Policies and Roles
 
+The examples in this section are high-level governance sketches. Treat them as reference-oriented
+examples; the canonical current surface syntax and role contract live in `docs/spec/`.
+
 ### Defining Roles
 
 ```ash
 role admin {
-    authority: [read, write, delete, manage_users],
-    supervises: [manager]
+    authority: [read, write, delete, manage_users]
 }
 
 role manager {
-    authority: [read, write, approve],
-    supervises: [user]
+    authority: [read, write, approve]
 }
 
 role user {
@@ -421,7 +423,7 @@ policy can_delete {
 
 policy needs_approval {
     condition: record.sensitivity == "high",
-    decision: require_approval(manager)
+    decision: require_approval(role: manager)
 }
 
 policy auto_approve {
@@ -458,6 +460,9 @@ workflow process_request {
 
 Let's build a complete customer support workflow:
 
+This end-to-end scenario is also reference-oriented rather than a canonical surface-syntax
+conformance sample.
+
 ```ash
 // Capabilities
 capability fetch_ticket {
@@ -474,7 +479,7 @@ capability send_email {
 // Roles
 role supervisor {
     authority: [view_all, assign, resolve],
-    supervises: [agent]
+    obligations: []
 }
 
 role agent {
@@ -536,6 +541,11 @@ workflow support_ticket {
 
 Look at the complete examples in the `examples/` directory:
 
+For the current canonical syntax contract, prefer `docs/spec/` plus the smaller introductory
+examples earlier in this tutorial. The larger policy and scenario sketches here and in
+`examples/` are intentionally reference-oriented design examples rather than surface-syntax
+conformance samples.
+
 ```bash
 ls examples/
 ```
@@ -553,7 +563,7 @@ See [API.md](API.md) for detailed API reference.
 
 ### Join the Community
 
-- GitHub: https://github.com/dikini/ash
+- GitHub: <https://github.com/dikini/ash>
 - Issues: Report bugs and request features
 - Discussions: Ask questions and share ideas
 

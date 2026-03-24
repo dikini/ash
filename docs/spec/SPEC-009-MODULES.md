@@ -23,6 +23,7 @@ mod bar;      -- Looks for bar.ash or bar/mod.ash
 ```
 
 Resolution follows Rust's rules:
+
 1. `name.ash` (module file)
 2. `name/mod.ash` (module directory with mod.ash)
 
@@ -143,6 +144,7 @@ workflow main {
 ### 6.1 Graph Structure
 
 The module system builds a directed graph:
+
 - Nodes: Modules (file-based or inline)
 - Edges: Parent-child relationships from `mod` declarations
 
@@ -163,6 +165,7 @@ mod foo;  -- creates cycle
 ### 7.1 Access Rules
 
 An item is accessible from module M if:
+
 1. The item is in M (same module)
 2. The item is `pub` (anywhere)
 3. The item is `pub(crate)` and M is in the same crate
@@ -172,6 +175,7 @@ An item is accessible from module M if:
 ### 7.2 Type Checking Phase
 
 Visibility checking occurs during type checking (ash-typeck):
+
 - After name resolution
 - Before type inference
 - Reports visibility violations as errors
@@ -201,20 +205,28 @@ visibility_rest ::= "crate" | "super" | "self" | "in" module_path
 ### 9.1 Module Resolution
 
 Module resolution happens in two phases:
+
 1. **Discovery**: Parse root, find `mod` declarations, recursively discover files
 2. **Loading**: Parse discovered files, build module graph
 
 ### 9.2 Error Handling
 
 Common errors:
+
 - Module not found (file doesn't exist)
 - Visibility violation (accessing private item)
 - Circular dependency
 - Duplicate module name
 
+Current parser implementations may support only a subset of canonical inline `module_item` forms at
+specific entry points. When an inline-module parser does not yet implement a canonical item such as
+`workflow_def` or `datatype_def`, it must reject that item explicitly rather than silently skipping
+it and continuing as though the module parsed successfully.
+
 ### 9.3 Future Extensions
 
 Not in current scope:
+
 - External crate dependencies
 - Binary module compilation
 

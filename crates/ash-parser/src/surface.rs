@@ -92,10 +92,8 @@ pub struct RoleDef {
     pub name: Name,
     /// Authorities granted to this role
     pub authority: Vec<Name>,
-    /// Obligations of this role
-    pub obligations: Vec<ObligationRef>,
-    /// Roles supervised by this role
-    pub supervises: Vec<Name>,
+    /// Named obligations exposed by this role
+    pub obligations: Vec<Name>,
     /// Source span
     pub span: Span,
 }
@@ -1049,7 +1047,6 @@ mod tests {
             name: "admin".into(),
             authority: vec!["read".into(), "write".into()],
             obligations: vec![],
-            supervises: vec![],
             span: Span::new(0, 10, 1, 1),
         };
         let _def = Definition::Role(role_def);
@@ -1119,18 +1116,14 @@ mod tests {
         let role = RoleDef {
             name: "manager".into(),
             authority: vec!["approve".into(), "review".into()],
-            obligations: vec![ObligationRef {
-                role: "manager".into(),
-                condition: Expr::Literal(Literal::Bool(true)),
-            }],
-            supervises: vec!["employee".into()],
+            obligations: vec!["audit_log".into()],
             span: Span::new(0, 100, 1, 1),
         };
 
         assert_eq!(role.name, "manager".into());
         assert_eq!(role.authority.len(), 2);
         assert_eq!(role.obligations.len(), 1);
-        assert_eq!(role.supervises.len(), 1);
+        assert_eq!(role.obligations[0].as_ref(), "audit_log");
     }
 
     #[test]

@@ -2,6 +2,8 @@
 //
 // A real-world workflow for processing customer support tickets
 // using the OODA pattern with policy-based routing.
+// This is a reference-oriented scenario example; use `docs/spec/` for the canonical
+// surface-syntax contract.
 
 // Capabilities
 capability fetch_ticket {
@@ -43,7 +45,7 @@ capability resolve_ticket {
 // Roles
 role supervisor {
     authority: [view_all, assign, escalate, resolve, refund],
-    supervises: [agent]
+    obligations: []
 }
 
 role agent {
@@ -64,7 +66,7 @@ policy urgent_priority {
 
 policy vip_customer {
     condition: customer.tier == "enterprise" || customer.tier == "premium",
-    decision: require_approval(supervisor)
+    decision: require_approval(role: supervisor)
 }
 
 policy auto_resolve {

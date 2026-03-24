@@ -1,22 +1,20 @@
 -- Multi-Agent Research Workflow
 -- Demonstrates: parallel deliberation, synthesis, collaboration
+-- Reference-oriented example; use `docs/spec/` for the canonical current surface contract.
 
 role analyst {
   authority: [search_literature, extract_findings],
-  obligations: [cite_sources],
-  supervises: []
+  obligations: [cite_sources]
 }
 
 role critic {
   authority: [review_findings, identify_gaps],
-  obligations: [verify_claims],
-  supervises: []
+  obligations: [verify_claims]
 }
 
 role synthesizer {
   authority: [synthesize_themes, draft_report],
-  obligations: [ensure_coherence],
-  supervises: [analyst, critic]
+  obligations: [ensure_coherence]
 }
 
 capability search_literature : observe(query: String) returns Papers
@@ -47,7 +45,7 @@ workflow collaborative_research {
   orient synthesize(perspectives) as synthesis;
   propose draft_report(synthesis) as report;
   
-  oblige role: reviewer to verify_claims(report);
+  oblige role: critic to verify_claims(report);
   
   decide { report.confidence > threshold } then {
     act publish_report(report) where peer_reviewed;

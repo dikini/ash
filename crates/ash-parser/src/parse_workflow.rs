@@ -747,7 +747,6 @@ fn is_keyword(s: &str) -> bool {
             | "operational"
             | "authority"
             | "obligations"
-            | "supervises"
             | "when"
             | "returns"
             | "where"
@@ -890,6 +889,13 @@ mod tests {
         let mut input = test_input("my_var");
         let result = pattern(&mut input).unwrap();
         assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "my_var"));
+    }
+
+    #[test]
+    fn test_pattern_variable_named_supervises() {
+        let mut input = test_input("supervises");
+        let result = pattern(&mut input).unwrap();
+        assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "supervises"));
     }
 
     #[test]

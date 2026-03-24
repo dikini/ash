@@ -1,6 +1,8 @@
 // Code Review Workflow
 //
 // A workflow for processing pull request reviews with policy enforcement.
+// This is a reference-oriented scenario example; canonical role and policy contracts live in
+// `docs/spec/` and keep approval roles as flat named references.
 
 // Capabilities
 capability fetch_pr {
@@ -42,7 +44,7 @@ capability post_comment {
 // Roles
 role maintainer {
     authority: [merge, approve, request_changes, bypass_checks],
-    supervises: [reviewer, author]
+    obligations: []
 }
 
 role reviewer {
@@ -63,12 +65,12 @@ role ci_system {
 // Policies
 policy require_review {
     condition: pr.lines_changed > 10 || pr.affected_files > 1 || pr.is_security_related,
-    decision: require_approval(reviewer)
+    decision: require_approval(role: reviewer)
 }
 
 policy require_maintainer_for_large_changes {
     condition: pr.lines_changed > 500 || pr.affected_core,
-    decision: require_approval(maintainer)
+    decision: require_approval(role: maintainer)
 }
 
 policy auto_merge_patch {
@@ -83,7 +85,7 @@ policy block_on_security_issues {
 
 policy require_tests {
     condition: pr.has_code_changes && !pr.has_test_changes && !pr.test_exemption,
-    decision: require_approval(maintainer)
+    decision: require_approval(role: maintainer)
 }
 
 // Main workflow

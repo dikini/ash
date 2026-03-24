@@ -90,8 +90,8 @@ This is the comprehensive documentation for the Ash workflow language - a langua
   - Policy evaluation context
 
 - [12. Understanding Roles & Obligations](12-roles.md)
-  - Role declarations (authority, obligations, supervises)
-  - Role hierarchies
+  - Role declarations (authority, obligations)
+  - Flat named approval roles
   - The `check` statement for obligations
 
 - [13. The Effect System](13-effect-system.md)

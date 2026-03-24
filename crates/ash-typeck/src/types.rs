@@ -141,6 +141,11 @@ impl Substitution {
                 Box::new(self.apply(ret)),
                 *effect,
             ),
+            Type::Constructor { name, args, kind } => Type::Constructor {
+                name: name.clone(),
+                args: args.iter().map(|a| self.apply(a)).collect(),
+                kind: kind.clone(),
+            },
             // Primitives have no variables to substitute
             _ => ty.clone(),
         }

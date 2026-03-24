@@ -40,6 +40,12 @@ pub enum TypeError {
     /// Unsatisfied obligation
     #[error("Unsatisfied obligation: {0}")]
     UnsatisfiedObligation(String),
+    /// Obligation error from workflow contracts
+    #[error("Obligation error: {0}")]
+    Obligation(#[from] ash_core::workflow_contract::ObligationError),
+    /// Undischarged obligations at workflow end
+    #[error("Undischarged obligations: {obligations:?}")]
+    UndischargedObligations { obligations: Vec<String> },
     /// Pattern type mismatch
     #[error("Pattern mismatch: expected {expected:?}, got {actual:?}")]
     PatternMismatch { expected: Type, actual: Type },

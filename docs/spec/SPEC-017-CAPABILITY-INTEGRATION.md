@@ -1,14 +1,127 @@
 # SPEC-017: Capability Integration with System Features
 
-## Status: Draft
+## Status: Active (Section 2 Capability Definitions added)
 
 ## 1. Overview
 
 All capabilities (input: `observe`, `receive`; output: `set`, `send`) must integrate with Ash's system features: obligations, policies, effects, provenance, and capability safety.
 
-## 2. Effects System
+## 2. Capability Definitions
 
-### 2.1 Effect Classification
+Capabilities can be defined in `.ash` source files using the `capability` keyword. This allows user-defined capabilities without requiring pre-registration in Rust.
+
+### 2.1 Syntax
+
+```bnf
+capability_def  ::= "capability" IDENTIFIER ":" effect_type
+                    "(" param_list? ")"
+                    ("returns" type)?
+                    constraint_list?
+                    visibility?
+
+effect_type     ::= "observe" | "read" | "analyze" | "decide" 
+                  | "act" | "write" | "external"
+                  | "epistemic" | "deliberative" | "evaluative" | "operational"
+
+param_list      ::= param ("," param)*
+param           ::= IDENTIFIER ":" type
+
+constraint_list ::= "where" constraint ("," constraint)*
+constraint      ::= expression
+
+visibility      ::= "pub" | "private"  -- default: private
+```
+
+### 2.2 Examples
+
+Minimal capability (no parameters, no constraints):
+```ash
+capability get_timestamp : observe ()
+```
+
+Capability with parameters:
+```ash
+capability read_file : read (path : String)
+```
+
+Capability with return type:
+```ash
+capability fetch_user : observe (id : Int) returns User
+```
+
+Capability with constraints:
+```ash
+capability transfer_funds : act (amount : Int, to : Account)
+    where amount > 0 and balance >= amount
+```
+
+Public capability (exported from module):
+```ash
+pub capability system_restart : act ()
+    where role == admin
+```
+
+### 2.3 Semantic Requirements
+
+**Effect Type Mapping:**
+
+| Surface Syntax | Core Effect |
+|----------------|-------------|
+| `observe`, `read`, `epistemic` | `Effect::Epistemic` |
+| `analyze`, `deliberative` | `Effect::Deliberative` |
+| `decide`, `evaluative` | `Effect::Evaluative` |
+| `act`, `write`, `external`, `operational` | `Effect::Operational` |
+
+**Constraint Evaluation:**
+- Constraints are evaluated at capability invocation time
+- All constraints must evaluate to `true` for invocation to proceed
+- Constraint failure results in `ValidationError`
+- Constraints may reference capability parameters
+
+**Visibility:**
+- `pub` capabilities are exported and can be imported by other modules
+- `private` (default) capabilities are module-local
+- Visibility is checked during module linking
+
+### 2.4 Core AST Representation
+
+```rust
+pub struct CapabilityDef {
+    pub name: Name,
+    pub effect: Effect,
+    pub params: Vec<Param>,
+    pub returns: Option<TypeExpr>,
+    pub constraints: Vec<Constraint>,
+    pub visibility: Visibility,
+    pub span: Span,
+}
+
+pub struct Param {
+    pub name: Name,
+    pub ty: TypeExpr,
+}
+```
+
+### 2.5 Integration Points
+
+**Module System:**
+- Capability definitions are module items
+- Public capabilities are exported in module interface
+- Imported capabilities are resolved during lowering
+
+**Type Checker:**
+- Capability parameters are type-checked at definition
+- Capability return type is validated at invocation
+- Constraints are type-checked as boolean expressions
+
+**Runtime:**
+- Capability definitions populate `CapabilityRegistry`
+- Runtime looks up capabilities by name
+- Constraints are evaluated before capability execution
+
+## 3. Effects System
+
+### 3.1 Effect Classification
 
 | Capability | Operation | Effect | Rationale |
 |------------|-----------|--------|-----------|
@@ -18,7 +131,7 @@ All capabilities (input: `observe`, `receive`; output: `set`, `send`) must integ
 | Stream | `send` | Operational | External side effect that produces an outgoing event |
 | Monitor view | `observe` via `MonitorLink` | Epistemic | Read-only observation of an exposed workflow view |
 
-### 2.2 Effect Lattice
+### 3.2 Effect Lattice
 
 ```
 Epistemic < Deliberative < Evaluative < Operational
@@ -36,7 +149,7 @@ send ─────────┼──► Operational
 act ──────────┘
 ```
 
-### 2.3 Workflow Effect Inference
+### 3.3 Workflow Effect Inference
 
 ```ash
 workflow reader observes sensor:temp {
@@ -56,7 +169,7 @@ workflow mixed
 }
 ```
 
-### 2.4 Effect Tracking in Types
+### 3.4 Effect Tracking in Types
 
 ```rust
 pub struct WorkflowType {
@@ -71,9 +184,9 @@ pub struct WorkflowType {
 -- Workflow with external outputs: Operational
 ```
 
-## 3. Obligations Integration
+## 4. Obligations Integration
 
-### 3.1 Obligations Can Require Capabilities
+### 4.1 Obligations Can Require Capabilities
 
 ```ash
 -- Obligation that requires observation
@@ -107,7 +220,7 @@ workflow maintain_temperature
 These examples rely only on the canonical role contract: roles contribute authority and
 obligations, but no role hierarchy or supervision semantics are assumed here.
 
-### 3.2 Obligation Checking
+### 4.2 Obligation Checking
 
 ```rust
 pub struct ObligationChecker;
@@ -141,7 +254,7 @@ impl ObligationChecker {
 }
 ```
 
-### 3.3 Obligation Violations
+### 4.3 Obligation Violations
 
 ```rust
 pub enum ObligationViolation {
@@ -163,9 +276,9 @@ pub enum ObligationViolation {
 }
 ```
 
-## 4. Policies Integration
+## 5. Policies Integration
 
-### 4.1 Policy-Controlled Capabilities
+### 5.1 Policy-Controlled Capabilities
 
 Policies can restrict both input and output:
 
@@ -223,7 +336,7 @@ two-step read-then-write protocol. `MonitorLink` sharing is non-consuming by def
 distinct from control transfer, so policy can constrain the visible monitor count without making
 monitor authority linear or affine.
 
-### 4.2 Policy Evaluation Context
+### 5.2 Policy Evaluation Context
 
 ```rust
 pub struct CapabilityContext {
@@ -264,7 +377,7 @@ The runtime context is responsible for:
 - provenance capture,
 - effect-ceiling enforcement.
 
-### 4.3 Pre-Operation Policy Check
+### 5.3 Pre-Operation Policy Check
 
 ```rust
 pub async fn check_policy(
@@ -294,7 +407,7 @@ pub async fn check_policy(
 }
 ```
 
-### 4.4 Input Transformations
+### 5.4 Input Transformations
 
 Policies can transform input data:
 
@@ -324,7 +437,7 @@ Verification warnings are separate from policy decisions:
 - `Warn` is advisory only and is recorded in aggregate verification or provenance without blocking
   execution.
 
-### 4.5 Provider-Level Policies
+### 5.5 Provider-Level Policies
 
 ```rust
 pub trait PolicyAwareProvider {
@@ -346,9 +459,9 @@ impl PolicyAwareProvider for DatabaseProvider {
 }
 ```
 
-## 5. Provenance Integration
+## 6. Provenance Integration
 
-### 5.1 Provenance Events for All Capabilities
+### 6.1 Provenance Events for All Capabilities
 
 ```rust
 pub struct ProvenanceEvent {
@@ -373,7 +486,7 @@ pub enum CapabilityEventType {
 }
 ```
 
-### 5.2 Input Provenance
+### 6.2 Input Provenance
 
 ```
 [2024-01-15T10:30:00Z] workflow:analyzer
@@ -390,7 +503,7 @@ pub enum CapabilityEventType {
   Effect: Epistemic
 ```
 
-### 5.3 Output Provenance
+### 6.3 Output Provenance
 
 ```
 [2024-01-15T10:31:00Z] workflow:controller
@@ -409,7 +522,7 @@ pub enum CapabilityEventType {
   Effect: Operational
 ```
 
-### 5.4 Provenance-Aware Execution
+### 6.4 Provenance-Aware Execution
 
 ```rust
 pub async fn execute_capability(
@@ -445,9 +558,9 @@ pub async fn execute_capability(
 }
 ```
 
-## 6. Capability Safety
+## 7. Capability Safety
 
-### 6.1 Declaration Requirements
+### 7.1 Declaration Requirements
 
 All capabilities must be declared:
 
@@ -495,7 +608,7 @@ Declaration requirements are canonical:
 - `set cap:channel = ...` requires `sets cap:channel`
 - `send cap:channel ...` requires `sends cap:channel`
 
-### 6.2 Capability Registry
+### 7.2 Capability Registry
 
 ```rust
 pub struct WorkflowCapabilities {
@@ -524,7 +637,7 @@ impl WorkflowCapabilities {
 }
 ```
 
-### 6.3 Compile-Time Verification
+### 7.3 Compile-Time Verification
 
 ```rust
 pub fn verify_capabilities(workflow: &Workflow) -> Result<(), CapabilityError> {
@@ -552,9 +665,9 @@ pub fn verify_capabilities(workflow: &Workflow) -> Result<(), CapabilityError> {
 }
 ```
 
-## 7. Type Safety Integration
+## 8. Type Safety Integration
 
-### 7.1 Read/Write Type Schemas
+### 8.1 Read/Write Type Schemas
 
 ```rust
 pub struct CapabilitySchema {
@@ -581,7 +694,7 @@ impl CapabilitySchema {
 }
 ```
 
-### 7.2 Type Checking Example
+### 8.2 Type Checking Example
 
 ```ash
 -- Schema: sensor:temperature reads Int, writes nothing
@@ -602,9 +715,9 @@ workflow bad_type observes sensor:temp, sets config:mode {
 }
 ```
 
-## 8. Error Handling
+## 9. Error Handling
 
-### 8.1 Unified Capability Errors
+### 9.1 Unified Capability Errors
 
 ```rust
 pub enum CapabilityError {
@@ -633,7 +746,7 @@ pub enum CapabilityError {
 }
 ```
 
-### 8.2 Recoverable Handling
+### 9.2 Recoverable Handling
 
 Recoverable capability failures are represented explicitly as `Result` values and handled with
 `match`.
@@ -670,7 +783,7 @@ workflow resilient
 }
 ```
 
-## 9. Summary Table
+## 10. Summary Table
 
 | Feature | Input (observe/receive) | Output (set/send) |
 |---------|------------------------|-------------------|
@@ -682,7 +795,7 @@ workflow resilient
 | **Type Safety** | Read schema validated | Write schema validated |
 | **Errors** | Unavailable, Timeout | Failed, Rejected, BufferFull |
 
-## 10. Implementation Tasks
+## 11. Implementation Tasks
 
 - TASK-108: Effect tracking for all capabilities
 - TASK-109: Obligation checking with capabilities
@@ -690,3 +803,5 @@ workflow resilient
 - TASK-111: Provenance tracking for all capabilities
 - TASK-112: Capability declaration verification
 - TASK-113: Read/write type checking
+- TASK-233: Capability definition parsing specification (completed)
+- TASK-234: Capability definition parser implementation (pending)

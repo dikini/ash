@@ -1,6 +1,6 @@
 # TASK-239: Implement Proxy Workflow Runtime
 
-## Status: Blocked on TASK-238
+## Status: 📋 Ready (Blocked on SPEC-023 finalization)
 
 ## Description
 

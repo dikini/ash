@@ -1,6 +1,24 @@
 # TASK-237: DECISION - Obligation Syntax (Local vs Role-Bound)
 
-## Status: Ready for Discussion
+## Status: ✅ Complete - DECIDED
+
+## Decision
+
+**Option C: Support both local and role-bound obligations**
+
+- Local obligations (SPEC-022): `oblige name;` / `check name;`
+- Role-bound obligations: `check role_name.obligation_name;`
+
+**Rationale:**
+- Backward compatible with existing SPEC-022 code
+- Enables progressive enhancement from simple to complex governance
+- Proxy workflows can use local obligations initially, migrate to role-bound later
+
+**Implementation:**
+- Phase 1 (now): Local obligations (already implemented in SPEC-022)
+- Phase 2 (after proxy workflows): Add role-bound obligation syntax
+
+**Decision Record:** See `docs/decisions/DECISION-237-OBLIGATION-SYNTAX.md`
 
 ## Description
 

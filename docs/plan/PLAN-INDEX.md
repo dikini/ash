@@ -856,3 +856,53 @@ Implement workflow contracts with Hoare-style pre/post-conditions, linear obliga
 **Phase 37 Deliverable**: Complete. Workflow contracts with requires/ensures clauses, linear
 obligation tracking (oblige/check), requirement checking with capabilities/roles, and audit trail
 integration. SPEC-022 canonicalized in docs/spec/.
+
+---
+
+## Future Phases: Governance and Collaboration
+
+See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency graph and planning.
+
+### Phase 38: Capability Definition Specification
+
+**Goal:** Revise SPEC-017 to add capability definition parsing requirements.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-233](tasks/TASK-233-SPEC-017-CAPABILITY-PARSING.md) | SPEC-017 revision: capability parsing | SPEC-017 | 8 | 📋 Ready |
+
+### Phase 39: Capability Definition Implementation
+
+**Goal:** Implement parser support for capability definitions in `.ash` files.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-234](tasks/TASK-234-CAPABILITY-PARSER-IMPL.md) | Implement capability definition parser | SPEC-017 | 20 | ⏳ Blocked on TASK-233 |
+
+### Phase 40: Role Runtime Semantics
+
+**Goal:** Specify and implement role authority and obligation enforcement.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-235](tasks/TASK-235-SPEC-019-ROLE-SEMANTICS.md) | SPEC-019: role runtime semantics | SPEC-019 | 12 | 📋 Ready |
+| [TASK-236](tasks/TASK-236-ROLE-RUNTIME-IMPL.md) | Implement role runtime enforcement | SPEC-019 | 30 | ⏳ Blocked on TASK-235 |
+
+### Decision Point: Obligation Syntax
+
+**Goal:** Decide on obligation syntax direction.
+
+| Task | Description | Type | Status |
+|------|-------------|------|--------|
+| [DECISION-237](tasks/TASK-237-OBLIGATION-SYNTAX-DECISION.md) | Obligation syntax: local vs role-bound | Decision | 📋 Ready |
+
+### Phase 41-42: Proxy Workflows
+
+**Goal:** Enable human-AI collaboration via proxy workflows.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-238](tasks/TASK-238-SPEC-023-PROXY-WORKFLOWS.md) | SPEC-023: proxy workflows | SPEC-023 | 16 | 📋 Ready |
+| [TASK-239](tasks/TASK-239-PROXY-WORKFLOW-IMPL.md) | Implement proxy workflow runtime | SPEC-023 | 50 | ⏳ Blocked on TASK-238 |
+
+**Note:** No release is currently planned for these phases. Work can proceed according to dependency constraints and priorities.

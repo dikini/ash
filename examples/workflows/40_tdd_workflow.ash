@@ -1,5 +1,6 @@
 -- TDD Workflow Example
 -- Demonstrates: complex multi-role workflow, obligation tracking, iterative development cycles
+-- Reference-oriented workflow template; canonical role and approval contracts live in `docs/spec/`.
 -- 
 -- This workflow orchestrates the complete Test-Driven Development lifecycle
 -- involving three roles: developer, tester, and reviewer.
@@ -62,8 +63,7 @@ role developer {
         must_write_tests_first,
         must_not_commit_without_tests,
         must_refactor_before_submit
-    ],
-    supervises: []
+    ]
 }
 
 role tester {
@@ -75,8 +75,7 @@ role tester {
         must_define_property_tests,
         must_ensure_red_phase_first,
         must_verify_coverage
-    ],
-    supervises: [developer]
+    ]
 }
 
 role reviewer {
@@ -88,8 +87,7 @@ role reviewer {
         must_not_review_own_code,
         must_check_test_quality,
         must_verify_no_duplication
-    ],
-    supervises: [developer, tester]
+    ]
 }
 
 -- ============================================================================

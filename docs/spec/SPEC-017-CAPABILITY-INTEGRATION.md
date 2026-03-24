@@ -104,6 +104,9 @@ workflow maintain_temperature
 }
 ```
 
+These examples rely only on the canonical role contract: roles contribute authority and
+obligations, but no role hierarchy or supervision semantics are assumed here.
+
 ### 3.2 Obligation Checking
 
 ```rust
@@ -207,6 +210,9 @@ The lowered representation is consumer-neutral, but the terminal decisions are n
 Capability-verification consumers may still reject unsupported approval or transformation
 outcomes before execution if a particular capability/provider cannot honor that decision class.
 That rejection is a verification incompatibility, not a new policy decision kind.
+
+`RequireApproval { role }` names the approval role directly. It does not derive approval authority
+from role supervision or inherited hierarchy semantics.
 
 Monitoring authority is a distinct read-only capability. Workflows may expose a monitor view via
 `exposes { ... }`; that view can include obligations, behaviours, and values such as
@@ -448,7 +454,7 @@ All capabilities must be declared:
 ```ash
 -- Input declarations
 workflow reader 
-    observes sensor:temperature      -- Behaviour input
+    observes sensor:temperature     -- Behaviour input
     receives kafka:events           -- Stream input
 {
     observe sensor:temperature as t;  -- OK
@@ -458,8 +464,8 @@ workflow reader
 
 -- Output declarations
 workflow writer 
-    sets hvac:target                -- Behaviour output
-    sends notification:alerts       -- Stream output
+    sets hvac:target                 -- Behaviour output
+    sends notification:alerts        -- Stream output
 {
     set hvac:target = 72;            -- OK
     send notification:alerts "...";  -- OK

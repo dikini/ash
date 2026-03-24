@@ -54,7 +54,6 @@ fn get_keywords() -> &'static HashSet<&'static str> {
         set.insert("operational");
         set.insert("authority");
         set.insert("obligations");
-        set.insert("supervises");
         set.insert("when");
         set.insert("returns");
         set.insert("where");
@@ -649,6 +648,13 @@ mod tests {
             }
             _ => panic!("Expected Record pattern"),
         }
+    }
+
+    #[test]
+    fn test_parse_variable_pattern_named_supervises() {
+        let mut input = test_input("supervises");
+        let result = pattern(&mut input).unwrap();
+        assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "supervises"));
     }
 
     #[test]

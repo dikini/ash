@@ -67,11 +67,13 @@ pub enum Effect {
 ```
 
 **Lattice Operations**:
+
 - `join(Effect, Effect) -> Effect`: Least upper bound
 - `meet(Effect, Effect) -> Effect`: Greatest lower bound
 - `leq(Effect, Effect) -> bool`: Partial order check
 
 **Axioms** (property-tested):
+
 1. Associativity: `join(a, join(b, c)) == join(join(a, b), c)`
 2. Commutativity: `join(a, b) == join(b, a)`
 3. Idempotence: `join(a, a) == a`
@@ -169,11 +171,13 @@ pub enum Workflow {
 ```
 
 **Canonical workflow-form contracts**:
+
 - `Check` is obligation-only in the IR. It discharges or rejects an `Obligation`; policies are evaluated by `Decide`, not `Check`.
 - `Decide` always carries an explicit named `policy`. There is no policy-free core `Decide` form.
 - `Receive` is the canonical IR form for mailbox input. It preserves the receive mode and the ordered arm list from the surface language.
 
 **Execution-neutral IR invariants**:
+
 - The IR meaning is defined by the evaluation relation and observable results, not by evaluator
   control strategy.
 - Lowering may normalize or preserve structure, but it must not require a specific backend
@@ -205,6 +209,31 @@ pub enum ReceivePattern {
 }
 ```
 
+### 2.2a Role Metadata
+
+When core workflows or runtime-verification contexts need an explicit role carrier, the canonical
+role shape is:
+
+```rust
+pub struct RoleObligationRef {
+    pub name: Name,
+}
+
+pub struct Role {
+    pub name: Name,
+    pub authority: Vec<Capability>,
+    pub obligations: Vec<RoleObligationRef>,
+}
+```
+
+Role metadata carries granted capabilities and role-level obligation references only.
+`RoleObligationRef` preserves the named role-obligation reference losslessly and does not imply a
+workflow `Obligation` node, an unconditional `check` target, or any other fabricated deontic
+semantics.
+The canonical core contract does not include role supervision or role hierarchy.
+Approval-oriented policy outcomes may still name a target role directly, but that is an explicit
+policy reference rather than inherited authority.
+
 ### 2.3 Values
 
 ```rust
@@ -222,6 +251,7 @@ pub enum Value {
 ```
 
 **Invariants**:
+
 - `List` and `Record` are immutable after creation
 - `String` is valid UTF-8
 - `Ref` is a valid URI
@@ -240,6 +270,7 @@ pub enum Pattern {
 ```
 
 **Matching Rules**:
+
 - `Variable` binds any value
 - `Tuple` matches same-length list
 - `Record` matches superset of fields
@@ -261,6 +292,7 @@ pub enum Guard {
 ```
 
 **Semantics**:
+
 - `Always` ≡ true
 - `Never` ≡ false
 - `And` short-circuits
@@ -299,6 +331,7 @@ pub enum EventType {
 ## 4. Serialization
 
 All IR types implement:
+
 - `Serialize` / `Deserialize` (bincode for internal, JSON for debugging)
 - `Debug` with compact representation
 - `Display` for human-readable output
@@ -325,6 +358,7 @@ prop_workflow_effect_monotonic()?
 ## 6. Versioning
 
 The IR is versioned via:
+
 ```rust
 pub const IR_VERSION: u32 = 1;
 ```

@@ -1,30 +1,28 @@
 // Role-Based Access Control
 //
 // This workflow demonstrates role-based policies and permissions.
+// It keeps the canonical flat role contract (authority + obligations) but remains a
+// reference-oriented example rather than a surface-syntax conformance sample.
 
 // Define roles with authorities and obligations
 role admin {
     authority: [read, write, delete, approve],
-    obligations: [audit_log],
-    supervises: [manager, user]
+    obligations: [audit_log]
 }
 
 role manager {
     authority: [read, write, approve],
-    obligations: [review_reports],
-    supervises: [user]
+    obligations: [review_reports]
 }
 
 role user {
     authority: [read, write],
-    obligations: [],
-    supervises: []
+    obligations: []
 }
 
 role guest {
     authority: [read],
-    obligations: [],
-    supervises: []
+    obligations: []
 }
 
 // Define capabilities with required roles

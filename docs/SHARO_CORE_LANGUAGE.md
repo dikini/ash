@@ -10,6 +10,10 @@
 
 This document presents Sharo Core (SHC), a workflow language designed for governed AI systems that bridges human oversight and automated execution. The language integrates operational semantics, deontic logic, modal logic, and dynamic logic to provide a formal foundation for AI governance while maintaining readability for both humans and LLMs.
 
+> Note: this document is a historical design report and reference artifact. The canonical current
+> surface and IR contracts live in `docs/spec/`; examples and grammars in this report should be
+> read as historical/reference material when they differ from the canonical specs.
+
 ---
 
 ## 1. Motivation and Design Goals
@@ -171,8 +175,7 @@ data TraceEvent
 data Role = Role {
   roleName :: Name,
   roleAuthority :: [Capability],
-  roleObligations :: [Obligation],
-  roleSupervises :: [Role]
+  roleObligations :: [Obligation]
 }
 ```
 
@@ -198,6 +201,7 @@ The effect system forms a lattice that tracks the "power" of operations:
 ## 3. Surface Language (LLM-Friendly Syntax)
 
 The surface syntax is designed to be:
+
 - **Readable** by non-programmers (policy officers, auditors)
 - **Writable** by LLMs (clear keywords, structured but natural)
 - **Translatable** to the IR for execution
@@ -210,7 +214,7 @@ Program ::= Definition* "workflow" Identifier "{" Workflow "}"
 Definition ::=
     | "capability" Identifier ":" Effect "(" Params ")" Constraints
     | "policy" Identifier ":" "when" Expression "then" Decision
-    | "role" Identifier "{" Authority "," Obligations ("," Supervision)? "}"
+  | "role" Identifier "{" Authority ("," Obligations)? "}"
     | "memory" Identifier "stores" Type ("with" "retention" Duration)?
     | "datatype" Identifier "=" Constructor ("|" Constructor)*
 
@@ -282,7 +286,6 @@ Arguments ::= Expression ("," Expression)*
 
 Authority ::= "authority:" "[" CapabilityRef* "]"
 Obligations ::= "obligations:" "[" ObligationRef* "]"
-Supervision ::= "supervises:" "[" RoleRef* "]"
 
 ObligationRef ::= RoleRef "must" Condition | RoleRef "may" ActionRef | RoleRef "must-not" ActionRef
 
@@ -551,11 +554,10 @@ F(role, α)  -- Role is forbidden from α (must not)
 (CONSISTENCY)
   not (Γ ⊢ P(r, α) and Γ ⊢ F(r, α))
 
-(ROLE-HIERARCHY)
-  supervises(r1, r2)
-  Γ ⊢ O(r2, φ)
+(ROLE-APPROVAL-REFERENCE)
+  approval_role(r)
   ─────────────────────────────
-  Γ ⊢ can_verify(r1, O(r2, φ))
+  Γ ⊢ can_route_approval(r)
 ```
 
 ### 6.3 Deontic Violations
@@ -929,14 +931,12 @@ workflow support_ticket_resolution {
 -- Role definitions
 role drafter {
   authority: [read_code, create_pr, respond_to_comments],
-  obligations: [ensure_tests_pass],
-  supervises: []
+  obligations: [ensure_tests_pass]
 }
 
 role reviewer {
   authority: [read_code, comment, request_changes, approve],
-  obligations: [check_tests, check_security, review_logic],
-  supervises: drafter
+  obligations: [check_tests, check_security, review_logic]
 }
 
 -- Capabilities

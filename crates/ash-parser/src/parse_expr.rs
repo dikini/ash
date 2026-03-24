@@ -601,7 +601,6 @@ fn is_keyword(s: &str) -> bool {
             | "operational"
             | "authority"
             | "obligations"
-            | "supervises"
             | "when"
             | "returns"
             | "where"
@@ -909,6 +908,13 @@ mod tests {
             }
             _ => panic!("Expected Call expression"),
         }
+    }
+
+    #[test]
+    fn test_parse_variable_named_supervises() {
+        let mut input = test_input("supervises");
+        let result = expr(&mut input).unwrap();
+        assert!(matches!(result, Expr::Variable(name) if name.as_ref() == "supervises"));
     }
 
     #[test]

@@ -259,7 +259,9 @@ Update this section as tasks complete:
 | 29 | 2 | 0 | 📝 Planned |
 | 30 | 2 | 0 | 📝 Planned |
 | 31 | 1 | 1 | ✅ Complete |
-| 34 | 3 | 1 | 🟡 In Progress |
+| 34 | 3 | 3 | ✅ Complete |
+| 35 | 5 | 5 | ✅ Complete |
+| 36 | 4 | 4 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -397,8 +399,8 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 123/130 tasks (95%)
-**Remaining Tasks**: 7 tasks (Phase 17 Rust work)
+**Overall Progress**: 209/210 tasks complete (1 deferred)
+**Remaining Tasks**: 1 deferred task (`TASK-063` dynamic policy registration)
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
 
@@ -799,3 +801,40 @@ Execution note: [TASK-213](tasks/TASK-213-reconcile-module-and-import-spec-scope
 [TASK-215](tasks/TASK-215-normalize-residual-spec-hygiene.md) are complete. The final audit’s
 residual spec-only findings are now closed, and [TASK-212](tasks/TASK-212-design-control-link-retention-policy.md)
 later closed the remaining control-link retention follow-up in this area.
+
+## Phase 35: Role Contract Simplification and Convergence
+
+Align the canonical role contracts with the simplified authority-plus-obligations model, then
+reopen the minimum implementation work needed to remove legacy role-supervision residue and
+support source role definitions end to end.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-216](tasks/TASK-216-canonicalize-role-contracts.md) | Canonicalize role contracts | SPEC-001/002/017/018 | 4 | ✅ Complete |
+| [TASK-217](tasks/TASK-217-remove-legacy-role-supervision-shape.md) | Remove legacy role supervision shape | SPEC-001/002 | 6 | ✅ Complete |
+| [TASK-218](tasks/TASK-218-implement-source-role-definition-parsing-and-lowering.md) | Implement source role definition parsing and lowering | SPEC-001/002 | 8 | ✅ Complete |
+| [TASK-219](tasks/TASK-219-align-runtime-role-approval-contract.md) | Align runtime role approval contract | SPEC-017/018 | 6 | ✅ Complete |
+| [TASK-220](tasks/TASK-220-audit-role-convergence-and-align-examples.md) | Audit role convergence and align examples | Affected specs/examples | 4 | ✅ Complete |
+
+**Phase 35 Deliverable**: Canonical role contracts no longer encode supervision, and the remaining
+implementation work is split into focused parser/core, parser/lowering, runtime-approval, and
+example/audit tasks.
+
+## Phase 36: Role Convergence Blocker Remediation
+
+Resolve the remaining blocker-class gaps from the Phase 35 review: remove placeholder role
+obligation lowering, make role-definition lowering participate in an honest end-to-end parser/core
+path, and reconcile touched docs/examples with the canonical surface contract.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-221](tasks/TASK-221-align-core-role-obligation-carrier.md) | Align core role obligation carrier | SPEC-001/002 | 6 | ✅ Complete |
+| [TASK-222](tasks/TASK-222-integrate-role-definition-lowering-path.md) | Integrate role definition lowering path | SPEC-001/002/009 | 8 | ✅ Complete |
+| [TASK-223](tasks/TASK-223-canonicalize-touched-role-docs-and-examples.md) | Canonicalize touched role docs and examples | SPEC-002/017/018 | 6 | ✅ Complete |
+| [TASK-224](tasks/TASK-224-role-convergence-closeout-audit.md) | Role convergence closeout audit | Affected specs/examples | 4 | ✅ Complete |
+| [TASK-225](tasks/TASK-225-inline-module-role-honesty-fix.md) | Inline module role honesty fix | SPEC-002/009 | 3 | ✅ Complete |
+
+**Phase 36 Deliverable**: Complete. Role-definition support no longer relies on placeholder
+obligation semantics, touched docs/examples stop overstating convergence, the inline-module parser
+rejects unsupported canonical items honestly even after recovery, and the branch now carries a
+focused closeout audit for the remaining intentional historical/process-supervision references.

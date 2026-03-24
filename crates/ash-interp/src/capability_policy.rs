@@ -107,7 +107,10 @@ pub enum Transformation {
     Replace { value: Value },
 }
 
-/// Role for authorization
+/// Flat named role used for policy evaluation and approval routing.
+///
+/// This runtime role carrier is intentionally just a named identity. It does not encode
+/// supervision, hierarchy, or inherited authority semantics.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Role(pub String);
 

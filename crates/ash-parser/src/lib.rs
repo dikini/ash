@@ -102,4 +102,146 @@ mod lib_tests {
         assert_eq!(error.message, "test message");
         assert_eq!(error.expected.len(), 1);
     }
+
+    #[test]
+    fn test_module_decl_lowers_inline_module_roles_after_parse() {
+        use ash_core::RoleObligationRef;
+        use winnow::prelude::*;
+
+        let mut input = new_input(
+            "mod governance { capability approve: decide(); capability review: analyze(); role reviewer { authority: [approve, review], obligations: [check_tests] } }",
+        );
+
+        let decl = parse_module_decl.parse_next(&mut input).unwrap();
+        let roles = decl
+            .lower_role_definitions()
+            .expect("matching capability definitions should lower role authority metadata");
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles[0].name, "reviewer");
+        assert_eq!(roles[0].authority.len(), 2);
+        assert!(matches!(
+            &roles[0].obligations[..],
+            [RoleObligationRef { name }] if name == "check_tests"
+        ));
+    }
+
+    #[test]
+    fn test_parse_module_decl_rejects_malformed_inline_module_role_definition() {
+        use winnow::prelude::*;
+
+        let mut input = new_input(
+            "mod governance { role reviewer { authority: [approve], obligations: [check_tests, } }",
+        );
+
+        let result = parse_module_decl.parse_next(&mut input);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_module_decl_preserves_same_module_capability_metadata_for_role_authority() {
+        use ash_core::{Capability, Constraint, Effect, RoleObligationRef};
+        use winnow::prelude::*;
+
+        let mut input = new_input(
+            "mod governance { capability approve: decide() where requires_mfa(); role reviewer { authority: [approve], obligations: [check_tests] } }",
+        );
+
+        let decl = parse_module_decl.parse_next(&mut input).unwrap();
+        let roles = decl
+            .lower_role_definitions()
+            .expect("matching capability definitions should lower role authority metadata");
+
+        assert_eq!(roles.len(), 1);
+        assert!(matches!(
+            &roles[0].authority[..],
+            [Capability {
+                name,
+                effect: Effect::Evaluative,
+                constraints,
+            }] if name == "approve"
+                && matches!(
+                    &constraints[..],
+                    [Constraint {
+                        predicate: ash_core::Predicate { name: predicate_name, arguments }
+                    }] if predicate_name == "requires_mfa" && arguments.is_empty()
+                )
+        ));
+        assert!(matches!(
+            &roles[0].obligations[..],
+            [RoleObligationRef { name }] if name == "check_tests"
+        ));
+    }
+
+    #[test]
+    fn test_module_decl_preserves_same_module_capability_constraint_arguments_for_role_authority() {
+        use ash_core::{Capability, Constraint, Effect, Expr, RoleObligationRef, Value};
+        use winnow::prelude::*;
+
+        let mut input = new_input(
+            "mod governance { capability approve: decide() where requires_region(\"EU\"); role reviewer { authority: [approve], obligations: [check_tests] } }",
+        );
+
+        let decl = parse_module_decl.parse_next(&mut input).unwrap();
+        let roles = decl
+            .lower_role_definitions()
+            .expect("matching capability definitions should lower role authority metadata");
+
+        assert_eq!(roles.len(), 1);
+        assert!(matches!(
+            &roles[0].authority[..],
+            [Capability {
+                name,
+                effect: Effect::Evaluative,
+                constraints,
+            }] if name == "approve"
+                && matches!(
+                    &constraints[..],
+                    [Constraint {
+                        predicate: ash_core::Predicate { name: predicate_name, arguments }
+                    }] if predicate_name == "requires_region"
+                        && matches!(&arguments[..], [Expr::Literal(Value::String(region))] if region == "EU")
+                )
+        ));
+        assert!(matches!(
+            &roles[0].obligations[..],
+            [RoleObligationRef { name }] if name == "check_tests"
+        ));
+    }
+
+    #[test]
+    fn test_module_decl_preserves_constraint_arguments_in_role_authority_metadata() {
+        use ash_core::{Capability, Constraint, Effect};
+        use winnow::prelude::*;
+
+        let mut input = new_input(
+            "mod governance { capability approve: decide() returns Bool where requires_region(\"EU\"); role reviewer { authority: [approve], obligations: [check_tests] } }",
+        );
+
+        let decl = parse_module_decl.parse_next(&mut input).unwrap();
+        let roles = decl
+            .lower_role_definitions()
+            .expect("matching capability definitions should lower authority metadata");
+
+        assert_eq!(roles.len(), 1);
+        assert!(matches!(
+            &roles[0].authority[..],
+            [Capability {
+                name,
+                effect: Effect::Evaluative,
+                constraints,
+            }] if name == "approve"
+                && matches!(
+                    &constraints[..],
+                    [Constraint {
+                        predicate: ash_core::Predicate { name: predicate_name, arguments }
+                    }] if predicate_name == "requires_region"
+                        && matches!(
+                            &arguments[..],
+                            [ash_core::Expr::Literal(ash_core::Value::String(region))] if region == "EU"
+                        )
+                )
+        ));
+    }
 }

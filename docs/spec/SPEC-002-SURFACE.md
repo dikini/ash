@@ -5,6 +5,7 @@
 ## 1. Overview
 
 The surface language is designed to be:
+
 - **Readable** by non-programmers (policy officers, auditors)
 - **Writable** by LLMs (clear structure, predictable patterns)
 - **Translatable** to IR for execution
@@ -22,7 +23,7 @@ KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
               | "exposes"
               | "timeout" | "done"
               | "epistemic" | "deliberative" | "evaluative" | "operational"
-              | "authority" | "obligations" | "supervises"
+              | "authority" | "obligations"
               | "when" | "returns" | "where"
 
 IDENTIFIER  ::= [a-zA-Z_][a-zA-Z0-9_-]*
@@ -92,20 +93,28 @@ decision    ::= "permit" | "deny"
 ```
 role_def    ::= "role" IDENTIFIER "{"
                 authority_clause
-                obligations_clause?
-                supervises_clause?
-                "}"
+                (role_clause_separator obligations_clause)?
+                role_clause_separator? "}"
 
-authority_clause    ::= "authority:" "[" capability_ref* "]"
-obligations_clause  ::= "obligations:" "[" obligation_ref* "]"
-supervises_clause   ::= "supervises:" "[" IDENTIFIER* "]"
+authority_clause    ::= "authority:" "[" role_authority_ref_list? "]"
+obligations_clause  ::= "obligations:" "[" workflow_obligation_ref_list? "]"
 
-obligation_ref      ::= IDENTIFIER "must" predicate
-                      | IDENTIFIER "may" action_ref
-                      | IDENTIFIER "must-not" action_ref
+role_authority_ref_list ::= role_authority_ref ("," role_authority_ref)*
+role_authority_ref ::= IDENTIFIER
+workflow_obligation_ref_list ::= workflow_obligation_ref ("," workflow_obligation_ref)*
+role_clause_separator ::= ","
 
 workflow_obligation_ref ::= IDENTIFIER
 ```
+
+Canonical role-form contracts:
+
+- `role_def` declares role authority and role obligations only.
+- `role_def` obligations are named role-obligation references. They lower to the core
+  `RoleObligationRef` carrier and must not be reinterpreted as workflow `Obligation` semantics
+  when the source form only provides a name.
+- Role hierarchy or supervision is not part of the canonical role contract.
+- Policy decisions may still name an approval role directly with `require_approval(role: IDENTIFIER)`.
 
 ### 3.5 Workflow Definition
 
@@ -135,6 +144,9 @@ values_exposure       ::= "values:" "[" IDENTIFIER* "]"
 behaviour_ref   ::= capability_ref
 settable_ref    ::= capability_ref
 sendable_ref    ::= capability_ref
+capability_ref  ::= IDENTIFIER (":" IDENTIFIER)?
+action_ref      ::= IDENTIFIER ("(" arguments? ")")?
+check_ref       ::= workflow_obligation_ref
 stream_ref      ::= IDENTIFIER (":" IDENTIFIER)?
                   | IDENTIFIER "{" IDENTIFIER ("," IDENTIFIER)+ "}"
 
@@ -196,6 +208,7 @@ must_stmt       ::= "must" workflow
 ```
 
 **Canonical workflow-form contracts**:
+
 - `check` is reserved for obligation references. Policy instances are not valid `check` targets.
 - `decide` is the policy gate, so `under <policy>` is required in the surface syntax.
 - `receive` is the authoritative surface form for stream/mailbox intake in the core workflow language; neighboring specs should defer to this grammar when referring to workflow-level `receive`.
@@ -204,8 +217,9 @@ must_stmt       ::= "must" workflow
 - `exposes` declares the externally monitorable workflow view. It does not imply control or
   messaging authority; it exposes only the named obligations, behaviours, and values.
 - `workflow_obligation_ref` names a live workflow obligation state symbol exposed by the
-  workflow. It is distinct from the role-level deontic `obligation_ref` syntax used inside
-  `role_def`.
+  workflow. The same identifier-shaped reference is also used for the current `role_def`
+  obligations list, which records named role obligations for the core `RoleObligationRef`
+  carrier rather than deontic `must` / `may` / `must-not` clauses.
 - `behaviour_ref`, `settable_ref`, and `sendable_ref` are intentionally distinct names even when
   they share the same token shape. The distinction is semantic: `observes` grants read access to
   behaviours, not write authority; write authority is declared separately with `sets` or `sends`.
@@ -315,6 +329,7 @@ core workflow-form set.
 ## 5. Error Recovery
 
 The parser should recover from common errors:
+
 - Missing semicolons (insert and continue)
 - Unclosed braces (report and skip to next top-level)
 - Unknown keywords (suggest closest match)
@@ -354,6 +369,7 @@ workflow cleanup {
 ## 7. Pretty Printing
 
 The surface language has canonical formatting:
+
 - Indentation: 2 spaces
 - Line length: 80 characters
 - One statement per line

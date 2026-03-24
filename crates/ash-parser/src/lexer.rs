@@ -412,7 +412,6 @@ fn lookup_keyword(ident: &str) -> TokenKind {
         // Capability keywords
         "authority" => TokenKind::Authority,
         "obligations" => TokenKind::Obligations,
-        "supervises" => TokenKind::Supervises,
 
         // Type keywords
         "when" => TokenKind::When,
@@ -503,10 +502,11 @@ mod tests {
 
     #[test]
     fn test_identifier_tokenization() {
-        let tokens = lex("myVariable my_function _private").unwrap();
+        let tokens = lex("myVariable my_function _private supervises").unwrap();
         assert_eq!(tokens[0].kind, TokenKind::Ident("myVariable".into()));
         assert_eq!(tokens[1].kind, TokenKind::Ident("my_function".into()));
         assert_eq!(tokens[2].kind, TokenKind::Ident("_private".into()));
+        assert_eq!(tokens[3].kind, TokenKind::Ident("supervises".into()));
     }
 
     #[test]
@@ -597,7 +597,7 @@ mod tests {
             oblige check let if then else for do par with
             maybe must attempt retry timeout done
             epistemic deliberative evaluative operational
-            authority obligations supervises
+            authority obligations
             when returns where
             permit deny require_approval escalate
             in not and or

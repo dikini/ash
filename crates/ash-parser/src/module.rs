@@ -101,18 +101,39 @@ impl ModuleDecl {
 
     /// Get the definitions if this is an inline module.
     ///
-    /// Returns `Some(&Vec<Definition>)` for inline modules, `None` for file-based modules.
-    pub fn definitions(&self) -> Option<&Vec<Definition>> {
+    /// Returns `Some(&[Definition])` for inline modules, `None` for file-based modules.
+    pub fn definitions(&self) -> Option<&[Definition]> {
         match &self.source {
-            ModuleSource::Inline(defs) => Some(defs),
+            ModuleSource::Inline(defs) => Some(defs.as_slice()),
             ModuleSource::File => None,
         }
+    }
+
+    /// Iterate over parsed inline-module role definitions.
+    #[cfg(test)]
+    pub(crate) fn role_definitions(&self) -> impl Iterator<Item = &crate::surface::RoleDef> {
+        self.definitions()
+            .into_iter()
+            .flatten()
+            .filter_map(|definition| match definition {
+                Definition::Role(role) => Some(role),
+                _ => None,
+            })
+    }
+
+    /// Lower parsed inline-module role definitions into core role metadata.
+    #[cfg(test)]
+    pub(crate) fn lower_role_definitions(
+        &self,
+    ) -> Result<Vec<ash_core::Role>, crate::lower::RoleLoweringError> {
+        crate::lower::lower_module_role_definitions(self)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ash_core::RoleObligationRef;
 
     // =========================================================================
     // Construction Tests
@@ -202,6 +223,125 @@ mod tests {
         assert!(!decl.is_file_based());
         assert!(decl.is_inline());
         assert_eq!(decl.definitions().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_inline_module_role_definitions_exposes_only_roles() {
+        let role_def = Definition::Role(crate::surface::RoleDef {
+            name: "reviewer".into(),
+            authority: vec!["approve".into()],
+            obligations: vec!["check_tests".into()],
+            span: Span::new(10, 40, 1, 1),
+        });
+
+        let capability_def = Definition::Capability(crate::surface::CapabilityDef {
+            name: "read_file".into(),
+            effect: crate::surface::EffectType::Read,
+            params: vec![],
+            return_type: None,
+            constraints: vec![],
+            span: Span::new(45, 75, 1, 1),
+        });
+
+        let decl = ModuleDecl::inline(
+            "governance".into(),
+            Visibility::Inherited,
+            vec![capability_def, role_def],
+            Span::new(0, 90, 1, 1),
+        );
+
+        let roles = decl.role_definitions().collect::<Vec<_>>();
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles[0].name.as_ref(), "reviewer");
+        assert_eq!(roles[0].authority, vec!["approve".into()]);
+        assert_eq!(roles[0].obligations, vec!["check_tests".into()]);
+    }
+
+    #[test]
+    fn test_inline_module_lower_role_definitions_uses_core_role_carrier() {
+        let decl = ModuleDecl::inline(
+            "governance".into(),
+            Visibility::Inherited,
+            vec![
+                Definition::Capability(crate::surface::CapabilityDef {
+                    name: "approve".into(),
+                    effect: crate::surface::EffectType::Decide,
+                    params: vec![],
+                    return_type: None,
+                    constraints: vec![],
+                    span: Span::new(10, 30, 1, 1),
+                }),
+                Definition::Capability(crate::surface::CapabilityDef {
+                    name: "review".into(),
+                    effect: crate::surface::EffectType::Analyze,
+                    params: vec![],
+                    return_type: None,
+                    constraints: vec![],
+                    span: Span::new(31, 50, 1, 1),
+                }),
+                Definition::Role(crate::surface::RoleDef {
+                    name: "reviewer".into(),
+                    authority: vec!["approve".into(), "review".into()],
+                    obligations: vec!["check_tests".into(), "audit_log".into()],
+                    span: Span::new(51, 100, 1, 1),
+                }),
+            ],
+            Span::new(0, 80, 1, 1),
+        );
+
+        let roles = decl
+            .lower_role_definitions()
+            .expect("matching capability definitions should lower authority metadata");
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles[0].name, "reviewer");
+        assert_eq!(roles[0].authority.len(), 2);
+        assert!(matches!(
+            &roles[0].obligations[..],
+            [
+                RoleObligationRef { name: first },
+                RoleObligationRef { name: second }
+            ] if first == "check_tests" && second == "audit_log"
+        ));
+    }
+
+    #[test]
+    fn test_file_module_role_helpers_are_empty() {
+        let decl = ModuleDecl::file(
+            "governance".into(),
+            Visibility::Inherited,
+            Span::new(0, 15, 1, 1),
+        );
+
+        assert_eq!(decl.role_definitions().count(), 0);
+        assert!(
+            decl.lower_role_definitions()
+                .expect("file modules should have no lowered roles")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_inline_module_lower_role_definitions_rejects_unknown_authority_name() {
+        let decl = ModuleDecl::inline(
+            "governance".into(),
+            Visibility::Inherited,
+            vec![Definition::Role(crate::surface::RoleDef {
+                name: "reviewer".into(),
+                authority: vec!["approve".into()],
+                obligations: vec!["check_tests".into()],
+                span: Span::new(10, 70, 1, 1),
+            })],
+            Span::new(0, 80, 1, 1),
+        );
+
+        let error = decl
+            .lower_role_definitions()
+            .expect_err("unknown authority names should be rejected");
+
+        assert_eq!(error.role, "reviewer");
+        assert_eq!(error.authority, "approve");
     }
 
     // =========================================================================

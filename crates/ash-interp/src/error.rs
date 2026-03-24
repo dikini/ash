@@ -71,6 +71,7 @@ pub enum ExecError {
     PolicyDenied {
         policy: Name,
     },
+    /// The operation is paused until the explicitly named approval role acts.
     RequiresApproval {
         role: Role,
         operation: String,

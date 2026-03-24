@@ -7,6 +7,24 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+
+- Role-convergence design and planning scaffold for TASK-216 through TASK-220. `docs/plans/2026-03-23-role-contract-simplification-design.md` now records the simplified role model, `docs/plans/2026-03-23-role-convergence-implementation-plan.md` turns that design into an implementation sequence, and `docs/plan/PLAN-INDEX.md` plus TASK-216 through TASK-220 now track the follow-up parser/core/runtime/example work needed to remove legacy role-supervision residue.
+- Follow-up blocker-remediation planning for the remaining role-convergence gaps after TASK-220. `docs/plans/2026-03-23-role-convergence-blocker-remediation-design.md` now records the narrowed design for replacing placeholder role-obligation lowering and reconciling touched docs/examples with the canonical surface, while `docs/plans/2026-03-23-role-convergence-blocker-remediation-plan.md`, `docs/plan/PLAN-INDEX.md`, and TASK-221 through TASK-224 break that work into focused self-contained implementation tasks.
+
+### Changed
+
+- Inline-module parser honesty follow-up now rejects unsupported canonical inline items such as `workflow`, `policy`, `datatype`, and visibility-qualified entries explicitly even after recovery from earlier unknown items instead of skipping them silently, while the module role-lowering helper surface is narrowed to the maintained test-only crate-internal path (TASK-225).
+- Review-driven role-convergence wording cleanup now removes stale placeholder-lowering wording from TASK-218 and makes the closeout audit explicit that module role lowering remains a maintained test-only helper surface rather than a general parser-facing lowering API (TASK-218, TASK-225).
+- Phase 36 role-convergence closeout now includes a fresh audit note and reconciled task bookkeeping. `docs/audit/2026-03-23-role-convergence-closeout-audit.md` records the post-TASK-221 through TASK-225 evidence, distinguishes intentional historical/process-supervision references from live role syntax, and marks the blocker-remediation phase complete (TASK-224, TASK-225).
+- Touched role docs and examples now use honest canonical/reference framing: tutorial and appendix guidance now point readers back to `docs/spec/` for the canonical syntax contract, scenario examples are explicitly marked as reference-oriented where they are not conformance samples, and the multi-agent research example no longer refers to an undefined `reviewer` role (TASK-223).
+- Parsed inline-module `role` definitions now lower through regression-covered test-only crate-internal parser/module helpers, so named role obligations flow into the core `RoleObligationRef` carrier through the maintained module helper path, same-module capability definitions preserve authority metadata during role lowering, and unsupported canonical inline definitions are rejected explicitly instead of being skipped silently (TASK-222).
+- Core role metadata now preserves named role-obligation references with a dedicated `RoleObligationRef` carrier instead of reusing workflow `Obligation` semantics for identifier-only role obligations (TASK-221).
+- Examples and residual user-facing docs now consistently reflect the simplified flat role contract, removing canonical `supervises` usage from touched role examples, updating approval examples to use explicit named-role syntax, and adding a focused role-convergence audit note for the remaining intentional historical/process-supervision references (TASK-220).
+- Runtime approval-role handling now explicitly documents and tests the flat named-role contract already used by `ash-interp`, ensuring `RequireApproval` outcomes preserve the named approval role directly without implying supervision or inherited hierarchy semantics (TASK-219).
+- Inline module parsing now recognizes source `role` definitions in inline modules, preserving named role authorities and named role obligations in the surface AST and lowering them into the simplified core role carrier shape through the maintained test-only crate-internal module helper path (TASK-218).
+- Removed the legacy `supervises` role field from parser and core role structures, dropped placeholder lowering that manufactured empty supervision data, and returned `supervises` to ordinary identifier handling in parser contexts (TASK-217).
+- Canonical role contracts no longer treat supervision as part of the role model (TASK-216). `SPEC-002` now defines `role_def` with authority and obligations only, `SPEC-001` now defines the matching core role shape without `supervises`, and `SPEC-017` / `SPEC-018` now clarify that approval-role references remain flat named-role policy/verification constructs rather than hierarchy-derived supervision.
+
 - `Expr::Match` exhaustiveness checking in `ash-typeck` (`check_expr`) for enum scrutinees resolved via constructor or variant patterns, reporting `ConstructorError::NonExhaustiveMatch` when arms omit variants (TASK-130).
 - Completed ADT interpreter convergence for constructor evaluation, pattern matching, and match/if-let behavior (TASK-131, TASK-132, TASK-133). `ash-interp` now evaluates receive/mailbox patterns through the shared `match_pattern` engine (including variants), and explicit Option-style match/if-let runtime tests lock expected binding/branch semantics.
 - Control-link retention policy handoff for TASK-212. `docs/reference/control-link-retention-policy.md` now freezes retained tombstones as runtime-state-owned terminal visibility, `SPEC-004` / `SPEC-021` now encode the same observable semantics, and the related design notes now point to the canonical retention contract.
@@ -53,6 +71,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Follow-up tightening for TASK-180. [SPEC-006](docs/spec/SPEC-006-POLICY-DEFINITIONS.md), [SPEC-017](docs/spec/SPEC-017-CAPABILITY-INTEGRATION.md), [SPEC-018](docs/spec/SPEC-018-CAPABILITY-MATRIX.md), and [docs/reference/type-to-runtime-contract.md](docs/reference/type-to-runtime-contract.md) now require named policy bindings at capability sites and define the capability-verification outcome set as a verification-time interface with explicit pre-execution incompatibility rejection for unsupported approval or transformation outcomes.
 
 ### Fixed
+
 - Runtime trace and provenance boundaries now use one canonical wrapper framing path (TASK-207).
   `ash-provenance` now exposes a `WorkflowTraceSession` that records `started` on entry and
   terminal `completed` on exit, failed runs now record `error` before `completed(false)`, and the
@@ -63,10 +82,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - `TASK-206` now makes the current terminated-control retention behavior explicit and tests it directly. `ash-interp` stateful runtime-boundary tests now lock in that killed control links remain observable as terminated tombstones across later executions sharing the same `RuntimeState`.
 - Cleared the remaining workspace clippy warnings so the repository-level CI gate is clean again (TASK-210). `ash-core` test construction now uses `Box::default()` instead of boxing an empty vector directly, and `ash-repl` test ANSI stripping now iterates with `for ... in chars.by_ref()` so `cargo clippy --all-targets --all-features` and `cargo test --all` both pass on the merged codebase.
 
-### Added
+### Added (continued 1)
+
 - Added a control-authority contract revision gate before the runtime hardening batch (TASK-211). [docs/plan/tasks/TASK-211-revise-control-link-authority-contract.md](docs/plan/tasks/TASK-211-revise-control-link-authority-contract.md) now freezes the required documentation work to revise `ControlLink` from affine one-shot control to reusable supervision authority, and [TASK-205](docs/plan/tasks/TASK-205-implement-runtime-action-and-control-link-execution.md) is now explicitly blocked on that contract update.
 
-### Changed
+### Changed (continued 1)
+
 - Revised the canonical control-link contract from affine one-shot control to reusable supervision authority (TASK-211). [SPEC-020](docs/spec/SPEC-020-ADT-TYPES.md), [SPEC-021](docs/spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md), and the related design/reference notes now define `ControlLink` as reusable for non-terminal supervision operations, with terminal invalidation driven by runtime instance state rather than unconditional first-use consumption.
 - Removal of `attempt`/`catch` from the canonical language for TASK-185. [SPEC-002](docs/spec/SPEC-002-SURFACE.md), [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md), [SPEC-014](docs/spec/SPEC-014-BEHAVIOURS.md), [SPEC-016](docs/spec/SPEC-016-OUTPUT.md), [SPEC-017](docs/spec/SPEC-017-CAPABILITY-INTEGRATION.md), and [SPEC-020](docs/spec/SPEC-020-ADT-TYPES.md) now require explicit `Result` values and pattern matching for recoverable failures.
 - Policy evaluation and verification semantics tightening for TASK-180. [SPEC-003](docs/spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md), [SPEC-006](docs/spec/SPEC-006-POLICY-DEFINITIONS.md), [SPEC-007](docs/spec/SPEC-007-POLICY-COMBINATORS.md), [SPEC-008](docs/spec/SPEC-008-DYNAMIC-POLICIES.md), [SPEC-017](docs/spec/SPEC-017-CAPABILITY-INTEGRATION.md), [SPEC-018](docs/spec/SPEC-018-CAPABILITY-MATRIX.md), and [docs/reference/type-to-runtime-contract.md](docs/reference/type-to-runtime-contract.md) now define one policy story from named binding through lowered `CorePolicy` to runtime `PolicyDecision`, with workflow `decide` limited to `Permit` / `Deny` and capability verification using the richer verification outcome set.
@@ -88,7 +109,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Non-Lean task consistency audit report in [docs/audit/2026-03-19-task-consistency-review-non-lean.md](docs/audit/2026-03-19-task-consistency-review-non-lean.md). Links task-plan drift to prior spec-audit findings to prepare for Rust code review.
 - Specification consistency audit report for SPEC-001 through SPEC-018 in [docs/audit/2026-03-19-spec-001-018-consistency-review.md](docs/audit/2026-03-19-spec-001-018-consistency-review.md). Captures cross-spec inconsistencies and aligned areas without modifying the specs.
 
-### Changed
+### Changed (continued 2)
+
 - Clarified TASK-186 monitor-contract wording so exposed workflow obligations use `workflow_obligation_ref`, `MonitorLink` is shareable by default and distinct from control transfer, and [docs/plan/PLAN-INDEX.md](docs/plan/PLAN-INDEX.md) now records TASK-186 as a monitoring gate instead of renumbering the downstream convergence phases.
 - Tightened TASK-177 core-contract wording so SPEC-001 scopes the runtime form set precisely, SPEC-002 treats optional binding and implicit `done` as surface sugar, and SPEC-004 gives explicit expression-level semantics for `Constructor` and `Match`. The core-language contract now separates canonical truth from surface convenience without widening runtime meaning to unrelated type-level contracts.
 - `SPEC-001`, `SPEC-002`, and `SPEC-004` now separate canonical core truth from surface sugar and implementation convenience. The canonical IR contract is explicitly backend-neutral, so future interpreter and JIT implementations must preserve the same meaning rather than discover it locally.
@@ -101,7 +123,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Canonicalized the policy contract across SPEC-003, SPEC-004, SPEC-006, SPEC-007, SPEC-008, SPEC-017, and SPEC-018 (TASK-157). Policies now have one continuous story from named declaration and combinator expression through lowered core policy representation, type-checking constraints, and runtime `PolicyDecision` outcomes.
 - Expanded [docs/plan/PLAN-INDEX.md](docs/plan/PLAN-INDEX.md) with logical post-Phase-20 convergence phases. The remaining convergence work is now split into docs-only handoff phases, implementation-alignment phases, and a final audit phase rather than living only inside the convergence plan document.
 
-### Fixed
+### Fixed (continued 1)
+
 - ADT constructor typing, exhaustiveness, and runtime pattern tests now follow one constructor-shaped contract (TASK-174). `ash-typeck` now resolves variant patterns from canonical enum metadata in `TypeDef.body` instead of synthetic `__variant` record tags, exhaustiveness witnesses preserve required constructor field shape, and the focused ADT contract tests lock in constructor-shaped behavior end to end.
 - Runtime boundary visibility now flows through explicit runtime-owned state rather than a temporary process-global fallback (TASK-206). `ash-interp` now exposes a `RuntimeState` carrier and stateful execution entrypoints, `ash-engine` now owns persistent runtime state across related executions, and focused engine/interpreter tests cover cross-execution control authority plus explicit rejection classes for missing capabilities and missing stream context.
 - Runtime `Act` execution and control-link lifecycle handling now follow the hardened runtime contract (TASK-205). `ash-interp` now dispatches canonical `Act` workflows through registered operational capability providers, registers spawned control links for supervision, enforces reusable `pause` / `resume` / `check_health` behavior while an instance is live, invalidates future control operations after `kill`, and adds focused interpreter coverage for both the happy path and rejection path.
@@ -114,9 +137,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Restored `ash-cli` compatibility with boxed `Value::List` and `Value::Record` constructors, and moved binary command tests into an integration harness so `cargo test -p ash-cli` passes again on the workflow-contracts branch.
 
 ### Changed
+
 - Canonicalized the spec contracts for `check`, `decide`, and `receive` across SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-017, and SPEC-018 (TASK-156). `check` is now obligation-only, `decide` always names an explicit policy, and `receive` is documented as an epistemic mailbox-input form with one authoritative surface grammar.
 
 ### Added
+
 - Formal proofs for semantic properties (Phase 19, TASK-149 through TASK-155):
   - `Ash/Proofs/Pattern.lean` - Pattern match determinism and totality proofs
   - `Ash/Proofs/Pure.lean` - Constructor purity proof (effect system)
@@ -186,6 +211,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Full test coverage for Option, Result, and custom ADT constructors
 
 ### Fixed
+
 - Dead code review: 5 `#[allow(dead_code)]` items audited, 2 duplicate `ws()` functions identified for removal
 - Code review issues from Phase 17 (P0, P1, P2 priority):
   - **Critical (P0)**: Fixed `unwrap()` abuse in parsers (`parse_pattern.rs`, `parse_expr.rs`) using `is_some_and()`
@@ -205,7 +231,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Unsafe `unwrap()` usage in parser. Replaced with `is_some_and()` pattern.
 - Error message formatting. Changed to lowercase per Rust conventions.
 
-### Added
+### Added (continued 2)
+
 - Match and if-let expression evaluation (TASK-133). Pattern matching in the interpreter:
   - `eval_match()` function for evaluating `Expr::Match` with multiple arms
   - `eval_if_let()` function for evaluating `Expr::IfLet` expressions
@@ -265,12 +292,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Stream iteration over registered streams. Added `StreamRegistry::iter()` method to iterate over all registered providers, `StreamContext::iter_providers()` to iterate over typed providers, and `StreamContext::try_recv_any()` to receive from any available stream (non-blocking). Updated `wait_for_message()` in `execute_stream.rs` to poll all registered streams using `try_recv_any()` instead of busy-waiting.
 
 ### Fixed
+
 - Infinite recursion bug in `TypedSendableProvider::send()` and `BidirectionalStreamProvider::send()` methods. Both were calling themselves instead of delegating to `inner.send()`. Added proper write_schema validation and delegation to inner provider.
 
-### Changed
+### Changed (continued 3)
+
 - Refactored parser utilities to eliminate code duplication between `parse_set.rs` and `parse_send.rs`. Created new `parse_utils.rs` module with shared helper functions: `parse_capability_ref()`, `keyword()`, `literal_str()`, and `skip_whitespace_and_comments()`.
 
-### Added
+### Added (continued 3)
+
 - Set statement execution for output behaviours (TASK-105). New `execute_set` module in `ash-interp` with `execute_set(capability, channel, value, behaviour_ctx)` async function for setting values on writable channels. Integrates with `BehaviourContext` to lookup settable providers, validates values before setting, and returns `ExecError::CapabilityNotAvailable` or `ExecError::ValidationFailed` on errors. Added `Workflow::Set` variant to AST with `capability`, `channel`, and `value` fields. Extended `execute_workflow` with new `execute_workflow_with_behaviour` function that accepts `BehaviourContext` for set statement support.
 - Parse send statement for output streams (TASK-104). New `parse_send` module in `ash-parser` with `SendExpr` struct for parsing `send capability:channel expr` syntax. Similar to `parse_set` but without the `=` sign. Supports variables, string literals, and function calls for structured values.
 - Parse set statement for output behaviours (TASK-103). New `parse_set` module in `ash-parser` with `SetExpr` struct for parsing `set capability:channel = expr` syntax. Supports simple values, function calls for structured values, and expressions.
@@ -331,16 +361,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Interactive REPL (Phase 12, TASK-077 to TASK-083). New `ash-repl` crate with rustyline integration provides expression evaluation, multi-line input detection, commands (:help, :quit, :type, :ast, :clear), tab completion for keywords, persistent history, and syntax error highlighting with helpful suggestions.
 - Embedding API for ash-engine crate (Phase 11, TASK-071 to TASK-076). Unified Engine type with Parse→Check→Execute lifecycle, builder pattern (EngineBuilder), thread-safe workflow storage, and capability provider traits. CLI integration complete with 160 tests passing.
 
-### Changed
+### Changed (continued 4)
+
 - Updated dependencies to latest versions: winnow 0.5.40 → 0.6.26, pulldown-cmark 0.9.6 → 0.13.1, thiserror 1.0.69 → 2.0.18, colored 2.1 → 3.1.1. Fixed winnow API migration (PResult → ModalResult, Located → LocatingSlice) and pulldown-cmark breaking changes (TagEnd::CodeBlock, CodeBlockKind).
 - Fixed all clippy warnings (66+ style and correctness warnings). Removed redundant pattern matching, fixed `#[must_use]` attributes, added `#[allow]` annotations for intentional patterns.
 - Fixed test failures: updated forall/exists tests to use non-keyword identifiers; removed method_chain test (feature not in spec); fixed error_recovery test assertion.
 - **Breaking**: Z3/SMT is now a mandatory dependency (removed `smt` feature flag). Policy conflict detection is always enabled for security-critical workflows. System must have Z3 C library installed.
 
-### Added
+### Added (continued 4)
+
 - List literal parsing for expressions: `[1, 2, 3]` or `["a", "b"]` syntax. Updated SPEC-002 to define list_literal production. Added Literal::List variant to surface AST.
 
-### Added
+### Added (continued 5)
+
 - Initial project structure with workspace and 9 crates (ash-core, ash-macros, ash-parser, ash-typeck, ash-interp, ash-provenance, ash-cli, ash-lint, ash-doc-tests)
 - Effect lattice implementation with 4 levels: Epistemic, Deliberative, Evaluative, Operational (TASK-001)
 - Comprehensive property tests for Effect lattice: associativity, commutativity, idempotence, absorption, identity (18 property tests)
@@ -420,7 +453,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Standard capability providers (TASK-075). Implemented `StdioProvider` (print, println, read_line) and `FsProvider` (read_file, write_file, exists) with `CapabilityProvider` trait. Builder methods `with_stdio_capabilities()` and `with_fs_capabilities()` on EngineBuilder. 28 tests covering provider behavior and trait implementations.
 - CLI integration with ash-engine (TASK-076). Updated ash-cli to use Engine API instead of direct crate dependencies. `ash run` command now uses Engine::run_file with stdio/fs capabilities. `ash check` command uses Engine::parse + Engine::check. All 23 CLI tests pass with new implementation.
 
-### Changed
+### Changed (reserved)
 
 ### Deprecated
 

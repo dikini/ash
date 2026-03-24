@@ -89,3 +89,45 @@ impl CapabilityOperationExt for CapabilityOperation {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::capability_policy::{Policy, Role};
+
+    #[test]
+    fn require_approval_preserves_the_explicit_named_role() {
+        let mut eval = CapabilityPolicyEvaluator::new();
+        eval.add_output_policy(Policy {
+            capability_pattern: "repo:merge".into(),
+            condition: Box::new(|_| true),
+            decision: Box::new(|_| PolicyDecision::RequireApproval {
+                role: Role::new("senior_reviewer"),
+            }),
+        });
+
+        let actor = Role::new("reviewer_delegate");
+        let ctx = build_policy_context(
+            CapabilityOperation::Set,
+            Direction::Output,
+            "repo",
+            "merge",
+            Some(Value::Bool(true)),
+            &[],
+            &actor,
+        );
+
+        let error = check_policy(&eval, &ctx).expect_err("approval should be surfaced");
+
+        assert_eq!(ctx.actor, actor);
+        assert_ne!(ctx.actor.as_ref(), "senior_reviewer");
+        assert_eq!(
+            error,
+            ExecError::RequiresApproval {
+                role: Role::new("senior_reviewer"),
+                operation: "set".into(),
+                capability: "repo:merge".into(),
+            }
+        );
+    }
+}

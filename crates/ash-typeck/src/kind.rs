@@ -32,6 +32,10 @@ use std::fmt;
 /// let binary = Kind::n_ary(2);
 /// assert_eq!(binary.to_string(), "* -> * -> *");
 /// ```
+/// A kind classifies types and type constructors.
+///
+/// Marked as non-exhaustive to allow future extensions without breaking changes.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Kind {
     /// The kind of types: *

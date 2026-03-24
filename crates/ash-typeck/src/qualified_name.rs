@@ -45,9 +45,11 @@ impl QualifiedName {
     /// assert_eq!(name.to_string(), "Int");
     /// ```
     pub fn root(name: impl Into<String>) -> Self {
+        let name = name.into();
+        assert!(!name.is_empty(), "name cannot be empty");
         Self {
             module: vec![],
-            name: name.into(),
+            name,
         }
     }
 
@@ -66,10 +68,13 @@ impl QualifiedName {
     /// assert_eq!(name.to_string(), "Std.Maybe.Option");
     /// ```
     pub fn qualified(module: Vec<String>, name: impl Into<String>) -> Self {
-        Self {
-            module,
-            name: name.into(),
-        }
+        let name = name.into();
+        assert!(!name.is_empty(), "name cannot be empty");
+        assert!(
+            module.iter().all(|m| !m.is_empty()),
+            "module path components cannot be empty"
+        );
+        Self { module, name }
     }
 
     /// Check if this is a root-level name
@@ -126,13 +131,22 @@ impl QualifiedName {
     /// assert_eq!(root.name, "Int");
     /// ```
     pub fn parse(s: &str) -> Self {
+        assert!(!s.is_empty(), "qualified name string cannot be empty");
         let parts: Vec<_> = s.split('.').collect();
+        // Check for empty components (e.g., ".Foo" or "Foo." or "Foo..Bar")
+        assert!(
+            parts.iter().all(|p| !p.is_empty()),
+            "qualified name components cannot be empty: {:?}",
+            s
+        );
         if parts.len() == 1 {
             Self::root(parts[0])
         } else {
             Self::qualified(
                 parts[..parts.len() - 1].iter().map(|s| s.to_string()).collect(),
-                *parts.last().unwrap(),
+                *parts
+                    .last()
+                    .expect("parts is non-empty because s is non-empty"),
             )
         }
     }

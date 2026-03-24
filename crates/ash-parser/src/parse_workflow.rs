@@ -31,7 +31,9 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
 
     Ok(WorkflowDef {
         name: name.into(),
+        params: vec![],
         body,
+        contract: None,
         span,
     })
 }

@@ -139,13 +139,57 @@ impl Visibility {
     }
 }
 
+/// A workflow parameter with name and type.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Parameter {
+    /// Parameter name
+    pub name: Name,
+    /// Parameter type
+    pub ty: Type,
+    /// Source span
+    pub span: Span,
+}
+
+/// An ensures clause (postcondition).
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnsuresClause {
+    /// The predicate expression
+    pub expr: Expr,
+    /// Source span
+    pub span: Span,
+}
+
+/// A requirement (precondition).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Requirement {
+    /// Required capability with minimum effect level
+    HasCapability { cap: Name, min_effect: EffectType },
+    /// Required role membership
+    HasRole(Name),
+    /// Arithmetic constraint on parameter
+    Arithmetic { expr: Expr },
+}
+
+/// Workflow contract with preconditions and postconditions.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Contract {
+    /// Preconditions that must hold at call site
+    pub requires: Vec<Requirement>,
+    /// Postconditions guaranteed after workflow completes
+    pub ensures: Vec<EnsuresClause>,
+}
+
 /// A workflow definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowDef {
     /// Name of the workflow
     pub name: Name,
+    /// Workflow parameters (name: type)
+    pub params: Vec<Parameter>,
     /// The workflow body
     pub body: Workflow,
+    /// Optional contract (requires/ensures)
+    pub contract: Option<Contract>,
     /// Source span
     pub span: Span,
 }

@@ -831,6 +831,24 @@ pub(crate) fn execute_workflow_inner<'a>(
                 )
                 .await
             }
+
+            // OBLIGE - Introduce a linear obligation (contract tracking)
+            Workflow::Oblige { name, .. } => {
+                // TODO: Implement obligation tracking in execution context
+                // For now, return null as obligations are tracked at type-check time
+                Err(ExecError::ExecutionFailed(format!(
+                    "OBLIGE '{name}' not yet implemented in interpreter"
+                )))
+            }
+
+            // CHECK - Check/discharge a linear obligation (contract tracking)
+            Workflow::CheckObligation { name, .. } => {
+                // TODO: Implement obligation checking in execution context
+                // For now, return true as obligations are tracked at type-check time
+                Err(ExecError::ExecutionFailed(format!(
+                    "CHECK '{name}' not yet implemented in interpreter"
+                )))
+            }
         }
     })
 }

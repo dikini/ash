@@ -157,6 +157,26 @@ Workflow instances may expose a monitor view via `exposes { ... }`.
   authority, unlike control-link transfer
 - monitoring does not imply control or message-send authority
 
+### 4.4 Pattern Match Failure
+
+When a `match` expression has no matching arm at runtime:
+
+**Well-typed programs**: Exhaustiveness checking (SPEC-003, SPEC-020) guarantees this cannot happen
+for statically-typed matches. The type checker rejects non-exhaustive pattern matches before runtime.
+
+**Dynamic scenarios**: If a non-exhaustive match somehow executes (e.g., through dynamic code loading,
+external data with unexpected shapes, or unsafe operations), the runtime signals a **pattern-match
+failure** as an observable error.
+
+**Observable error must include**:
+- The scrutinee value that failed to match
+- The match location (source position)
+- The available match arms (for diagnosis)
+
+**Note**: `if let` surface syntax lowers to a `match` with an explicit wildcard fallback arm (see
+SPEC-001 Section 2.6). Therefore, `if let` has no separate failure mode—it always has a matching
+branch.
+
 ## 5. Stdlib-Visible Guarantees
 
 The stdlib-visible ADT surface relies on these runtime guarantees:
@@ -174,3 +194,11 @@ The stdlib-visible ADT surface relies on these runtime guarantees:
   messaging authority
 
 These guarantees are about visible behavior, not about requiring one internal storage type.
+
+## 6. Related Documents
+
+- [SPEC-001](../SPEC-001-IR.md): IR - Core intermediate representation including `Value::Variant`
+- [SPEC-002](../SPEC-002-SURFACE.md): Surface Language - Surface syntax for ADTs and match
+- [SPEC-003](../SPEC-003-TYPE-SYSTEM.md): Type System - Type checking and exhaustiveness
+- [SPEC-004](../SPEC-004-SEMANTICS.md): Operational Semantics - Pattern matching semantics
+- [SPEC-020](../SPEC-020-ADT-TYPES.md): ADT Types - Algebraic data type specifications

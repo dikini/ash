@@ -6,6 +6,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed Type Expression Conversion (TypeEnv). Replaced stubbed `TypeExpr::Constructor` handling that lost constructor information. `type_expr_to_type` now properly converts constructor names and all arguments, type alias expansion now resolves to underlying types, and name resolution is available via the new `resolve_type` helper.
+
 ### Added
 
 - Role-convergence design and planning scaffold for TASK-216 through TASK-220. `docs/plans/2026-03-23-role-contract-simplification-design.md` now records the simplified role model, `docs/plans/2026-03-23-role-convergence-implementation-plan.md` turns that design into an implementation sequence, and `docs/plan/PLAN-INDEX.md` plus TASK-216 through TASK-220 now track the follow-up parser/core/runtime/example work needed to remove legacy role-supervision residue.

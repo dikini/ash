@@ -3,6 +3,9 @@
 //! Provides `TypeEnv` for managing type definitions and looking up constructors.
 
 use crate::types::{Type, TypeVar};
+use crate::error::TypeEnvError;
+use crate::solver::TypeError;
+use crate::{Kind, QualifiedName};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef};
 use std::collections::HashMap;
 
@@ -17,64 +20,82 @@ pub type VariantIndex = usize;
 
 /// Convert a type expression to an internal type
 ///
-/// This is a simplified conversion that maps:
-/// - Primitive types (Int, String, Bool, Null) to their Type equivalents
+/// This conversion maps:
+/// - Primitive types (Int, String, Bool, Null, Time, Ref) to their Type equivalents
 /// - Type parameters to their corresponding TypeVar
-/// - Other named types to type variables (for now)
-///
-/// Note: User-defined type constructors are not yet fully supported in the
-/// internal Type representation, so they are converted to type variables.
-pub fn type_expr_to_type(expr: &TypeExpr, param_mapping: &HashMap<String, TypeVar>) -> Type {
+/// - User-defined type constructors to Type::Constructor with resolved names
+/// - Lists, tuples, and records to their corresponding Type variants
+pub fn type_expr_to_type(
+    expr: &TypeExpr,
+    param_mapping: &HashMap<String, TypeVar>,
+    type_env: &TypeEnv,
+) -> Result<Type, TypeError> {
     match expr {
         TypeExpr::Named(name) => {
-            // Check if this is a type parameter
+            // Check if it's a type parameter
             if let Some(&var) = param_mapping.get(name) {
-                Type::Var(var)
-            } else {
-                // It's a concrete type
-                match name.as_str() {
-                    "Int" => Type::Int,
-                    "String" => Type::String,
-                    "Bool" => Type::Bool,
-                    "Null" => Type::Null,
-                    // For now, unknown/user-defined types become type variables
-                    // This allows unification to work with them
-                    _ => Type::Var(TypeVar::fresh()),
+                return Ok(Type::Var(var));
+            }
+
+            // Check for primitive types
+            match name.as_str() {
+                "Int" => Ok(Type::Int),
+                "String" => Ok(Type::String),
+                "Bool" => Ok(Type::Bool),
+                "Null" => Ok(Type::Null),
+                "Time" => Ok(Type::Time),
+                "Ref" => Ok(Type::Ref),
+                _ => {
+                    // User-defined type with no args - look it up
+                    let (qualified, _) = type_env.resolve_type(name)?;
+                    Ok(Type::Constructor {
+                        name: qualified,
+                        args: vec![],
+                        kind: Kind::Type,
+                    })
                 }
             }
         }
-        TypeExpr::Constructor { name: _, args } => {
-            // Type constructors like Option<Int> or List<T>
-            // For now, we use the first type argument or a fresh variable
-            // A full implementation would add Type::Constructor variant
-            if let Some(first_arg) = args.first() {
-                type_expr_to_type(first_arg, param_mapping)
-            } else {
-                Type::Var(TypeVar::fresh())
-            }
-        }
-        TypeExpr::Tuple(types) => {
-            // Convert to a Record type for now
-            // In a full implementation, we'd have a proper Tuple type
-            Type::Record(
-                types
-                    .iter()
-                    .enumerate()
-                    .map(|(i, t)| {
-                        (
-                            format!("_{}", i).into(),
-                            type_expr_to_type(t, param_mapping),
-                        )
-                    })
-                    .collect(),
-            )
-        }
-        TypeExpr::Record(fields) => Type::Record(
-            fields
+
+        TypeExpr::Constructor { name, args } => {
+            let (qualified, _) = type_env.resolve_type(name)?;
+
+            // Convert all arguments
+            let arg_types: Result<Vec<_>, _> = args
                 .iter()
-                .map(|(name, ty)| (name.clone().into(), type_expr_to_type(ty, param_mapping)))
-                .collect(),
-        ),
+                .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
+                .collect();
+
+            Ok(Type::Constructor {
+                name: qualified,
+                args: arg_types?,
+                kind: Kind::Type,
+            })
+        }
+
+        TypeExpr::Tuple(elems) => {
+            // Convert tuple to record with numeric field names
+            let field_types: Result<Vec<_>, _> = elems
+                .iter()
+                .enumerate()
+                .map(|(i, t)| {
+                    type_expr_to_type(t, param_mapping, type_env)
+                        .map(|ty| (Box::from(format!("_{}", i).as_str()), ty))
+                })
+                .collect();
+            Ok(Type::Record(field_types?))
+        }
+
+        TypeExpr::Record(fields) => {
+            let field_types: Result<Vec<_>, _> = fields
+                .iter()
+                .map(|(n, t)| {
+                    type_expr_to_type(t, param_mapping, type_env)
+                        .map(|ty| (Box::from(n.as_str()), ty))
+                })
+                .collect();
+            Ok(Type::Record(field_types?))
+        }
     }
 }
 
@@ -141,7 +162,7 @@ impl TypeInfo {
 }
 
 /// Convert an AST TypeDef to internal TypeInfo
-fn convert_type_def(type_def: &TypeDef) -> TypeInfo {
+fn convert_type_def(type_def: &TypeDef, type_env: &TypeEnv) -> Result<TypeInfo, TypeError> {
     // Create mapping from param names to fresh type variables
     let param_mapping: HashMap<String, TypeVar> = type_def
         .params
@@ -157,46 +178,54 @@ fn convert_type_def(type_def: &TypeDef) -> TypeInfo {
 
     match &type_def.body {
         TypeBody::Enum(variants) => {
-            let converted_variants: Vec<VariantInfo> = variants
+            let converted_variants: Result<Vec<_>, _> = variants
                 .iter()
-                .map(|v| VariantInfo {
-                    name: v.name.clone(),
-                    fields: v
+                .map(|v| {
+                    let fields: Result<Vec<_>, _> = v
                         .fields
                         .iter()
                         .map(|(fname, ftype)| {
-                            (fname.clone(), type_expr_to_type(ftype, &param_mapping))
+                            type_expr_to_type(ftype, &param_mapping, type_env)
+                                .map(|ty| (fname.clone(), ty))
                         })
-                        .collect(),
+                        .collect();
+                    fields.map(|f| VariantInfo {
+                        name: v.name.clone(),
+                        fields: f,
+                    })
                 })
                 .collect();
 
-            TypeInfo::Enum {
+            Ok(TypeInfo::Enum {
                 name: type_def.name.clone(),
                 params,
-                variants: converted_variants,
-            }
+                variants: converted_variants?,
+            })
         }
         TypeBody::Struct(fields) => {
-            let converted_fields: Vec<(FieldName, Type)> = fields
+            let converted_fields: Result<Vec<_>, _> = fields
                 .iter()
-                .map(|(fname, ftype)| (fname.clone(), type_expr_to_type(ftype, &param_mapping)))
+                .map(|(fname, ftype)| {
+                    type_expr_to_type(ftype, &param_mapping, type_env)
+                        .map(|ty| (fname.clone(), ty))
+                })
                 .collect();
 
-            TypeInfo::Struct {
+            Ok(TypeInfo::Struct {
                 name: type_def.name.clone(),
                 params,
-                fields: converted_fields,
-            }
+                fields: converted_fields?,
+            })
         }
-        TypeBody::Alias(_) => {
-            // For aliases, we create a struct with no fields as a placeholder
-            // In a full implementation, aliases would be resolved differently
-            TypeInfo::Struct {
+        TypeBody::Alias(target_expr) => {
+            // Expand alias to underlying type immediately
+            let target_type = type_expr_to_type(target_expr, &param_mapping, type_env)?;
+            // Store as a struct with the target type as a special field
+            Ok(TypeInfo::Struct {
                 name: type_def.name.clone(),
                 params,
-                fields: vec![],
-            }
+                fields: vec![("__alias_target".to_string(), target_type)],
+            })
         }
     }
 }
@@ -232,11 +261,12 @@ impl TypeEnv {
     }
 
     /// Register a type definition and its constructors from AST TypeDef
-    pub fn register_type(&mut self, def: &TypeDef) {
+    pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         let type_name = def.name.clone();
 
         // Convert to internal TypeInfo for type checking
-        let type_info = convert_type_def(def);
+        let type_info = convert_type_def(def, self)
+            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
 
         // Register constructors for enum variants
         if let TypeInfo::Enum { variants, .. } = &type_info {
@@ -248,6 +278,7 @@ impl TypeEnv {
 
         self.ast_types.insert(type_name.clone(), def.clone());
         self.type_info.insert(type_name, type_info);
+        Ok(())
     }
 
     /// Look up a constructor by name
@@ -309,7 +340,8 @@ impl TypeEnv {
             visibility: ash_core::ast::Visibility::Public,
         };
 
-        self.register_type(&option_type);
+        self.register_type(&option_type)
+            .expect("Failed to register Option type");
     }
 
     /// Add the Result<T, E> type
@@ -331,7 +363,8 @@ impl TypeEnv {
             visibility: ash_core::ast::Visibility::Public,
         };
 
-        self.register_type(&result_type);
+        self.register_type(&result_type)
+            .expect("Failed to register Result type");
     }
 
     /// Check if a type is registered
@@ -342,6 +375,29 @@ impl TypeEnv {
     /// Check if a constructor is registered
     pub fn has_constructor(&self, name: &str) -> bool {
         self.constructors.contains_key(name)
+    }
+
+    /// Resolve a type name to its qualified form and info
+    pub fn resolve_type(&self, name: &str) -> Result<(QualifiedName, Option<&TypeInfo>), TypeError> {
+        // Try as primitive first
+        match name {
+            "Int" | "String" | "Bool" | "Null" | "Time" | "Ref" => {
+                return Ok((QualifiedName::root(name), None));
+            }
+            _ => {}
+        }
+
+        // Try local types
+        if let Some(info) = self.type_info.get(name) {
+            return Ok((QualifiedName::root(name), Some(info)));
+        }
+
+        // Try AST types for types not yet converted
+        if self.ast_types.contains_key(name) {
+            return Ok((QualifiedName::root(name), None));
+        }
+
+        Err(TypeError::UnboundVariable(name.to_string()))
     }
 }
 
@@ -511,7 +567,7 @@ mod tests {
             visibility: Visibility::Public,
         };
 
-        env.register_type(&status_type);
+        env.register_type(&status_type).unwrap();
 
         assert!(env.has_type("Status"));
         assert!(env.has_constructor("Pending"));
@@ -594,6 +650,31 @@ mod tests {
                 assert_eq!(variants[1].fields[0].0, "error");
             }
             _ => panic!("Result should be an enum"),
+        }
+    }
+
+    #[test]
+    fn type_expr_constructor_converts_properly() {
+        use crate::kind::Kind;
+
+        let env = TypeEnv::with_builtin_types();
+
+        // Option<Int> should become Constructor { name: "Option", args: [Int] }
+        let type_expr = TypeExpr::Constructor {
+            name: "Option".to_string(),
+            args: vec![TypeExpr::Named("Int".to_string())],
+        };
+
+        let ty = type_expr_to_type(&type_expr, &HashMap::new(), &env).unwrap();
+
+        match ty {
+            Type::Constructor { name, args, kind } => {
+                assert_eq!(name.display(), "Option");
+                assert_eq!(args.len(), 1);
+                assert_eq!(args[0], Type::Int);
+                assert_eq!(kind, Kind::Type);
+            }
+            _ => panic!("Expected Type::Constructor, got {:?}", ty),
         }
     }
 }

@@ -4,26 +4,15 @@
 //! variable binding extraction and type compatibility checking.
 
 use crate::solver::TypeError;
-use crate::type_env::type_expr_to_type;
 use crate::types::{Type, TypeVar};
 use ash_core::ast::TypeBody;
 use ash_parser::surface::{Literal, Pattern};
 use std::collections::HashMap;
-use std::sync::OnceLock;
 
 pub use ash_core::ast::{TypeDef, VariantDef};
 
 /// Bindings from pattern variables to their types
 pub type Bindings = HashMap<String, Type>;
-
-/// Static empty type environment for use in recursive pattern checking.
-/// This avoids creating new empty environments on each recursive call.
-static EMPTY_ENV: OnceLock<TypeEnv> = OnceLock::new();
-
-/// Get a reference to the static empty type environment.
-fn empty_env() -> &'static TypeEnv {
-    EMPTY_ENV.get_or_init(TypeEnv::new)
-}
 
 /// Type environment for pattern checking
 #[derive(Debug, Clone, Default)]
@@ -184,13 +173,14 @@ fn check_pattern_inner(
         }
 
         // Tuple pattern: check element count and types
-        Pattern::Tuple(patterns) => check_tuple_pattern(patterns, expected, bindings),
+        Pattern::Tuple(patterns) => check_tuple_pattern(env, patterns, expected, bindings),
 
         // Record pattern: check field names and types
-        Pattern::Record(field_patterns) => check_record_pattern(field_patterns, expected, bindings),
+        Pattern::Record(field_patterns) => check_record_pattern(env, field_patterns, expected, bindings),
 
         // List pattern: check element patterns
         Pattern::List { elements, rest } => check_list_pattern(
+            env,
             elements,
             rest.as_ref().map(|v| v.as_ref()),
             expected,
@@ -257,6 +247,46 @@ fn check_variant_pattern(
     }
 }
 
+/// Simple local conversion of TypeExpr to Type for pattern checking.
+/// This handles primitive types and basic type expressions.
+fn simple_type_expr_to_type(expr: &ash_core::ast::TypeExpr) -> Type {
+    match expr {
+        ash_core::ast::TypeExpr::Named(name) => match name.as_str() {
+            "Int" => Type::Int,
+            "String" => Type::String,
+            "Bool" => Type::Bool,
+            "Null" => Type::Null,
+            "Time" => Type::Time,
+            "Ref" => Type::Ref,
+            _ => Type::Var(TypeVar::fresh()),
+        },
+        ash_core::ast::TypeExpr::Constructor { name, args } => {
+            // For constructors like Option<Int>, convert arguments and build constructor
+            let arg_types: Vec<Type> = args.iter().map(simple_type_expr_to_type).collect();
+            Type::Constructor {
+                name: crate::QualifiedName::root(name),
+                args: arg_types,
+                kind: crate::Kind::Type,
+            }
+        }
+        ash_core::ast::TypeExpr::Tuple(elems) => {
+            let field_types: Vec<(Box<str>, Type)> = elems
+                .iter()
+                .enumerate()
+                .map(|(i, t)| (Box::from(format!("_{}", i).as_str()), simple_type_expr_to_type(t)))
+                .collect();
+            Type::Record(field_types)
+        }
+        ash_core::ast::TypeExpr::Record(fields) => {
+            let field_types: Vec<(Box<str>, Type)> = fields
+                .iter()
+                .map(|(n, t)| (Box::from(n.as_str()), simple_type_expr_to_type(t)))
+                .collect();
+            Type::Record(field_types)
+        }
+    }
+}
+
 fn check_variant_fields(
     env: &TypeEnv,
     variant_name: &str,
@@ -275,12 +305,11 @@ fn check_variant_fields(
             }
         }
         Some(field_pats) => {
-            let param_mapping = HashMap::new();
             for (field_name, field_pattern) in field_pats {
                 let field_type = variant_fields
                     .iter()
                     .find(|(name, _)| name == field_name.as_ref())
-                    .map(|(_, ty)| type_expr_to_type(ty, &param_mapping))
+                    .map(|(_, ty)| simple_type_expr_to_type(ty))
                     .ok_or_else(|| TypeError::InvalidPattern {
                         message: format!("unknown field: {field_name}"),
                     })?;
@@ -294,6 +323,7 @@ fn check_variant_fields(
 
 /// Check a tuple pattern against a type
 fn check_tuple_pattern(
+    env: &TypeEnv,
     patterns: &[Pattern],
     expected: &Type,
     bindings: &mut Bindings,
@@ -318,7 +348,7 @@ fn check_tuple_pattern(
                         expected: fields.len(),
                         actual: patterns.len(),
                     })?;
-                check_pattern_inner(empty_env(), pattern, field_type, bindings)?;
+                check_pattern_inner(env, pattern, field_type, bindings)?;
             }
             Ok(())
         }
@@ -326,7 +356,7 @@ fn check_tuple_pattern(
             // Type variable - create fresh types for each element
             for pattern in patterns {
                 let fresh_type = Type::Var(TypeVar::fresh());
-                check_pattern_inner(empty_env(), pattern, &fresh_type, bindings)?;
+                check_pattern_inner(env, pattern, &fresh_type, bindings)?;
             }
             Ok(())
         }
@@ -345,6 +375,7 @@ fn check_tuple_pattern(
 
 /// Check a record pattern against a type
 fn check_record_pattern(
+    env: &TypeEnv,
     field_patterns: &[(Box<str>, Pattern)],
     expected: &Type,
     bindings: &mut Bindings,
@@ -359,7 +390,7 @@ fn check_record_pattern(
                     .ok_or_else(|| TypeError::InvalidPattern {
                         message: format!("unknown field: {field_name}"),
                     })?;
-                check_pattern_inner(empty_env(), field_pattern, field_type, bindings)?;
+                check_pattern_inner(env, field_pattern, field_type, bindings)?;
             }
             Ok(())
         }
@@ -368,7 +399,7 @@ fn check_record_pattern(
             for (field_name, field_pattern) in field_patterns {
                 let _ = field_name;
                 let fresh_type = Type::Var(TypeVar::fresh());
-                check_pattern_inner(empty_env(), field_pattern, &fresh_type, bindings)?;
+                check_pattern_inner(env, field_pattern, &fresh_type, bindings)?;
             }
             Ok(())
         }
@@ -386,6 +417,7 @@ fn check_record_pattern(
 
 /// Check a list pattern against a type
 fn check_list_pattern(
+    env: &TypeEnv,
     elements: &[Pattern],
     rest: Option<&str>,
     expected: &Type,
@@ -394,7 +426,7 @@ fn check_list_pattern(
     match expected {
         Type::List(elem_type) => {
             for element in elements {
-                check_pattern_inner(empty_env(), element, elem_type, bindings)?;
+                check_pattern_inner(env, element, elem_type, bindings)?;
             }
             if let Some(rest_name) = rest {
                 // Rest binding gets the list type
@@ -406,7 +438,7 @@ fn check_list_pattern(
             // Type variable - create fresh type for elements
             let elem_type = Type::Var(TypeVar::fresh());
             for element in elements {
-                check_pattern_inner(empty_env(), element, &elem_type, bindings)?;
+                check_pattern_inner(env, element, &elem_type, bindings)?;
             }
             if let Some(rest_name) = rest {
                 let list_type = Type::List(Box::new(elem_type));

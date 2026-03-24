@@ -33,6 +33,7 @@ pub mod guard;
 pub mod mailbox;
 pub mod pattern;
 pub mod policy;
+pub mod role_context;
 pub mod runtime_state;
 pub mod stream;
 pub mod typed_provider;
@@ -45,7 +46,8 @@ pub use behaviour::{
 pub use capability::{CapabilityContext, CapabilityProvider, CapabilityRegistry, MockProvider};
 pub use capability_policy::{
     CapabilityContext as CapabilityPolicyContext, CapabilityOperation, CapabilityPolicyEvaluator,
-    Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Role, Transformation,
+    Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Reason, Role,
+    Transformation,
 };
 pub use context::Context;
 pub use control_link::{ControlLinkError, ControlLinkRegistry, LinkState};
@@ -65,7 +67,8 @@ pub use execute_set::execute_set;
 pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
-pub use policy::{Policy, PolicyEvaluator, PolicyResult, PolicyRule};
+pub use policy::{Policy, PolicyEvaluator, PolicyRule};
+pub use role_context::RoleContext;
 pub use runtime_state::RuntimeState;
 pub use stream::{
     BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,

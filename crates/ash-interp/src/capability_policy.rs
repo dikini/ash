@@ -35,7 +35,7 @@
 //! assert_eq!(decision, PolicyDecision::Permit);
 //! ```
 
-use ash_core::{Constraint, Name, Value};
+use ash_core::{Capability, Constraint, Name, Value};
 use chrono::{DateTime, Utc};
 
 /// Direction of capability operation
@@ -191,6 +191,103 @@ impl CapabilityPolicyEvaluator {
         }
         Ok(PolicyDecision::Permit)
     }
+
+    /// Evaluate policy with role authority checking
+    ///
+    /// First checks if the role context (if provided) has authority for the capability.
+    /// If not, returns `PolicyResult::Denied(Reason::NotInRoleAuthority)`.
+    /// Otherwise, proceeds with normal policy evaluation.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_core::{Role as CoreRole, Capability, Effect, RoleObligationRef};
+    /// use ash_interp::capability_policy::{
+    ///     CapabilityPolicyEvaluator, CapabilityContext, CapabilityOperation,
+    ///     Direction, PolicyResult, Reason, Role
+    /// };
+    /// use ash_interp::role_context::RoleContext;
+    /// use chrono::Utc;
+    ///
+    /// // Create a role with sensor authority
+    /// let role = CoreRole {
+    ///     name: "operator".to_string(),
+    ///     authority: vec![Capability {
+    ///         name: "sensor".to_string(),
+    ///         effect: Effect::Epistemic,
+    ///         constraints: vec![],
+    ///     }],
+    ///     obligations: vec![],
+    /// };
+    /// let role_ctx = RoleContext::new(role);
+    ///
+    /// let evaluator = CapabilityPolicyEvaluator::new();
+    ///
+    /// // Create context for accessing sensor capability
+    /// let cap_ctx = CapabilityContext {
+    ///     operation: CapabilityOperation::Observe,
+    ///     direction: Direction::Input,
+    ///     capability: "sensor".into(),
+    ///     channel: "temp".into(),
+    ///     value: None,
+    ///     constraints: vec![],
+    ///     actor: Role::new("operator"),
+    ///     timestamp: Utc::now(),
+    /// };
+    ///
+    /// // Should permit since role has authority
+    /// let result = evaluator.evaluate_with_authority(&cap_ctx, Some(&role_ctx));
+    /// assert!(result.is_permitted());
+    ///
+    /// // Create context for accessing unauthorized capability
+    /// let cap_ctx_unauthorized = CapabilityContext {
+    ///     operation: CapabilityOperation::Set,
+    ///     direction: Direction::Output,
+    ///     capability: "actuator".into(),
+    ///     channel: "control".into(),
+    ///     value: None,
+    ///     constraints: vec![],
+    ///     actor: Role::new("operator"),
+    ///     timestamp: Utc::now(),
+    /// };
+    ///
+    /// // Should deny since role doesn't have authority
+    /// let result = evaluator.evaluate_with_authority(&cap_ctx_unauthorized, Some(&role_ctx));
+    /// assert!(result.is_denied());
+    /// assert_eq!(result.denial_reason(), Some(&Reason::NotInRoleAuthority));
+    /// ```
+    pub fn evaluate_with_authority(
+        &self,
+        ctx: &CapabilityContext,
+        role_context: Option<&crate::role_context::RoleContext>,
+    ) -> PolicyResult {
+        // Check role authority first (if role_context provided)
+        if let Some(role_ctx) = role_context {
+            // Build a capability from the context for authority checking
+            let capability = Capability {
+                name: ctx.capability.clone(),
+                effect: match ctx.operation {
+                    CapabilityOperation::Observe | CapabilityOperation::Receive => {
+                        ash_core::Effect::Epistemic
+                    }
+                    CapabilityOperation::Set | CapabilityOperation::Send => {
+                        ash_core::Effect::Operational
+                    }
+                },
+                constraints: ctx.constraints.clone(),
+            };
+
+            if !role_ctx.can_access(&capability) {
+                return PolicyResult::Denied(Reason::NotInRoleAuthority);
+            }
+        }
+
+        // Proceed with normal policy evaluation
+        match self.evaluate(ctx) {
+            Ok(decision) => decision.into(),
+            Err(e) => PolicyResult::Denied(Reason::EvaluationFailed(e.to_string())),
+        }
+    }
 }
 
 impl Default for CapabilityPolicyEvaluator {
@@ -227,6 +324,75 @@ impl Policy {
     /// Get the decision for this policy
     pub fn decision(&self, ctx: &CapabilityContext) -> Result<PolicyDecision, PolicyError> {
         Ok((self.decision)(ctx))
+    }
+}
+
+/// Reason for policy denial
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Reason {
+    /// Role does not have authority for this capability
+    NotInRoleAuthority,
+    /// Policy condition resulted in denial
+    PolicyDenied,
+    /// Evaluation error
+    EvaluationFailed(String),
+}
+
+impl std::fmt::Display for Reason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Reason::NotInRoleAuthority => write!(f, "role does not have authority for capability"),
+            Reason::PolicyDenied => write!(f, "policy denied the operation"),
+            Reason::EvaluationFailed(msg) => write!(f, "evaluation failed: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for Reason {}
+
+/// Result of policy evaluation with authority checking
+#[derive(Debug, Clone, PartialEq)]
+pub enum PolicyResult {
+    /// Operation is permitted
+    Permit,
+    /// Operation is denied with reason
+    Denied(Reason),
+    /// Operation requires approval from a specific role
+    RequireApproval { role: Role },
+    /// Value should be transformed before proceeding
+    Transform { transformation: Transformation },
+}
+
+impl PolicyResult {
+    /// Check if this result permits the operation
+    pub fn is_permitted(&self) -> bool {
+        matches!(self, PolicyResult::Permit)
+    }
+
+    /// Check if this result denies the operation
+    pub fn is_denied(&self) -> bool {
+        matches!(self, PolicyResult::Denied(_))
+    }
+
+    /// Get the denial reason if denied
+    pub fn denial_reason(&self) -> Option<&Reason> {
+        match self {
+            PolicyResult::Denied(reason) => Some(reason),
+            _ => None,
+        }
+    }
+}
+
+impl From<PolicyDecision> for PolicyResult {
+    fn from(decision: PolicyDecision) -> Self {
+        match decision {
+            PolicyDecision::Permit => PolicyResult::Permit,
+            PolicyDecision::Deny => PolicyResult::Denied(Reason::PolicyDenied),
+            PolicyDecision::RequireApproval { role } => PolicyResult::RequireApproval { role },
+            PolicyDecision::Transform { transformation } => {
+                PolicyResult::Transform { transformation }
+            }
+        }
     }
 }
 

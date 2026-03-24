@@ -17,6 +17,8 @@ pub struct Context {
     parent: Option<Box<Context>>,
     /// Active obligations that must be discharged (interior mutability for &self discharge)
     obligations: RefCell<HashSet<Name>>,
+    /// Optional role context for authority and obligation tracking
+    role_context: Option<crate::role_context::RoleContext>,
 }
 
 impl Context {
@@ -26,6 +28,7 @@ impl Context {
             bindings: HashMap::new(),
             parent: None,
             obligations: RefCell::new(HashSet::new()),
+            role_context: None,
         }
     }
 
@@ -75,6 +78,7 @@ impl Context {
             bindings: HashMap::new(),
             parent: Some(Box::new(self.clone())),
             obligations: RefCell::new(HashSet::new()),
+            role_context: self.role_context.clone(),
         }
     }
 
@@ -84,7 +88,40 @@ impl Context {
             bindings,
             parent: None,
             obligations: RefCell::new(HashSet::new()),
+            role_context: None,
         }
+    }
+
+    /// Set the role context for this context
+    pub fn with_role_context(mut self, role_context: crate::role_context::RoleContext) -> Self {
+        self.role_context = Some(role_context);
+        self
+    }
+
+    /// Get a reference to the role context if set
+    pub fn role_context(&self) -> Option<&crate::role_context::RoleContext> {
+        self.role_context.as_ref()
+    }
+
+    /// Check if all role obligations have been discharged
+    ///
+    /// Returns true if there is no role context or if all obligations are discharged.
+    /// Returns false if there are pending obligations.
+    pub fn role_obligations_complete(&self) -> bool {
+        self.role_context
+            .as_ref()
+            .map(|rc| rc.all_discharged())
+            .unwrap_or(true)
+    }
+
+    /// Get pending role obligations
+    ///
+    /// Returns empty vector if there is no role context.
+    pub fn pending_role_obligations(&self) -> Vec<Name> {
+        self.role_context
+            .as_ref()
+            .map(|rc| rc.pending_obligations())
+            .unwrap_or_default()
     }
 
     /// Get all bindings in this context (excluding parent)

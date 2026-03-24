@@ -176,7 +176,9 @@ fn check_pattern_inner(
         Pattern::Tuple(patterns) => check_tuple_pattern(env, patterns, expected, bindings),
 
         // Record pattern: check field names and types
-        Pattern::Record(field_patterns) => check_record_pattern(env, field_patterns, expected, bindings),
+        Pattern::Record(field_patterns) => {
+            check_record_pattern(env, field_patterns, expected, bindings)
+        }
 
         // List pattern: check element patterns
         Pattern::List { elements, rest } => check_list_pattern(
@@ -273,7 +275,12 @@ fn simple_type_expr_to_type(expr: &ash_core::ast::TypeExpr) -> Type {
             let field_types: Vec<(Box<str>, Type)> = elems
                 .iter()
                 .enumerate()
-                .map(|(i, t)| (Box::from(format!("_{}", i).as_str()), simple_type_expr_to_type(t)))
+                .map(|(i, t)| {
+                    (
+                        Box::from(format!("_{}", i).as_str()),
+                        simple_type_expr_to_type(t),
+                    )
+                })
                 .collect();
             Type::Record(field_types)
         }

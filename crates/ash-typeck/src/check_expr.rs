@@ -393,13 +393,11 @@ fn build_constructor_type(type_info: &TypeInfo, _variant_idx: VariantIndex) -> T
                 kind: Kind::Type,
             }
         }
-        TypeInfo::Struct { name, params, .. } => {
-            Type::Constructor {
-                name: QualifiedName::root(name.clone()),
-                args: params.iter().map(|p| Type::Var(*p)).collect(),
-                kind: Kind::Type,
-            }
-        }
+        TypeInfo::Struct { name, params, .. } => Type::Constructor {
+            name: QualifiedName::root(name.clone()),
+            args: params.iter().map(|p| Type::Var(*p)).collect(),
+            kind: Kind::Type,
+        },
     }
 }
 

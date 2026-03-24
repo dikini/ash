@@ -3,8 +3,8 @@
 //! Defines the type representation, type variables, substitutions,
 //! and unification algorithm for the Ash type checker.
 
-use ash_core::{Effect, Value};
 use crate::{Kind, QualifiedName};
+use ash_core::{Effect, Value};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -205,8 +205,14 @@ pub enum UnifyError {
     #[error("Constructor name mismatch: expected {expected}, found {found}")]
     ConstructorNameMismatch { expected: String, found: String },
     /// Constructor arity mismatch
-    #[error("Constructor arity mismatch for {name}: expected {expected_arity}, found {found_arity}")]
-    ConstructorArityMismatch { name: String, expected_arity: usize, found_arity: usize },
+    #[error(
+        "Constructor arity mismatch for {name}: expected {expected_arity}, found {found_arity}"
+    )]
+    ConstructorArityMismatch {
+        name: String,
+        expected_arity: usize,
+        found_arity: usize,
+    },
 }
 
 impl std::fmt::Display for Type {
@@ -315,12 +321,9 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
 
     match (t1, t2) {
         // Same primitives unify with empty substitution
-        (Int, Int)
-        | (String, String)
-        | (Bool, Bool)
-        | (Null, Null)
-        | (Time, Time)
-        | (Ref, Ref) => Ok(Substitution::new()),
+        (Int, Int) | (String, String) | (Bool, Bool) | (Null, Null) | (Time, Time) | (Ref, Ref) => {
+            Ok(Substitution::new())
+        }
 
         // Variable binding cases
         (Var(v), ty) => bind_var(*v, ty),
@@ -328,8 +331,12 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
 
         // Constructor vs Constructor
         (
-            Constructor { name: n1, args: a1, .. },
-            Constructor { name: n2, args: a2, .. }
+            Constructor {
+                name: n1, args: a1, ..
+            },
+            Constructor {
+                name: n2, args: a2, ..
+            },
         ) => {
             if n1 != n2 {
                 return Err(UnifyError::ConstructorNameMismatch {

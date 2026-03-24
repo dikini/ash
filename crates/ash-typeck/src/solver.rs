@@ -20,8 +20,14 @@ pub enum TypeError {
     #[error("Constructor name mismatch: expected {expected}, found {found}")]
     ConstructorNameMismatch { expected: String, found: String },
     /// Constructor arity mismatch
-    #[error("Constructor arity mismatch for {name}: expected {expected_arity}, found {found_arity}")]
-    ConstructorArityMismatch { name: String, expected_arity: usize, found_arity: usize },
+    #[error(
+        "Constructor arity mismatch for {name}: expected {expected_arity}, found {found_arity}"
+    )]
+    ConstructorArityMismatch {
+        name: String,
+        expected_arity: usize,
+        found_arity: usize,
+    },
     /// Unbound variable
     #[error("Unbound variable: {0}")]
     UnboundVariable(String),
@@ -46,6 +52,9 @@ pub enum TypeError {
     /// Invalid pattern
     #[error("Invalid pattern: {message}")]
     InvalidPattern { message: String },
+    /// Not a constructor
+    #[error("Not a constructor: {0}")]
+    NotAConstructor(String),
 }
 
 impl From<UnifyError> for TypeError {
@@ -59,9 +68,15 @@ impl From<UnifyError> for TypeError {
             UnifyError::ConstructorNameMismatch { expected, found } => {
                 TypeError::ConstructorNameMismatch { expected, found }
             }
-            UnifyError::ConstructorArityMismatch { name, expected_arity, found_arity } => {
-                TypeError::ConstructorArityMismatch { name, expected_arity, found_arity }
-            }
+            UnifyError::ConstructorArityMismatch {
+                name,
+                expected_arity,
+                found_arity,
+            } => TypeError::ConstructorArityMismatch {
+                name,
+                expected_arity,
+                found_arity,
+            },
         }
     }
 }

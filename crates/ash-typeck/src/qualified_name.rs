@@ -143,7 +143,10 @@ impl QualifiedName {
             Self::root(parts[0])
         } else {
             Self::qualified(
-                parts[..parts.len() - 1].iter().map(|s| s.to_string()).collect(),
+                parts[..parts.len() - 1]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
                 *parts
                     .last()
                     .expect("parts is non-empty because s is non-empty"),
@@ -171,8 +174,7 @@ mod tests {
 
     #[test]
     fn qualified_name_qualified() {
-        let name =
-            QualifiedName::qualified(vec!["Std".to_string(), "Maybe".to_string()], "Option");
+        let name = QualifiedName::qualified(vec!["Std".to_string(), "Maybe".to_string()], "Option");
         assert!(!name.is_root());
         assert_eq!(name.display(), "Std.Maybe.Option");
     }

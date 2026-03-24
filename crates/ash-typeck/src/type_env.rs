@@ -2,9 +2,9 @@
 //!
 //! Provides `TypeEnv` for managing type definitions and looking up constructors.
 
-use crate::types::{Type, TypeVar};
 use crate::error::TypeEnvError;
 use crate::solver::TypeError;
+use crate::types::{Substitution, Type, TypeVar};
 use crate::{Kind, QualifiedName};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef};
 use std::collections::HashMap;
@@ -206,8 +206,7 @@ fn convert_type_def(type_def: &TypeDef, type_env: &TypeEnv) -> Result<TypeInfo, 
             let converted_fields: Result<Vec<_>, _> = fields
                 .iter()
                 .map(|(fname, ftype)| {
-                    type_expr_to_type(ftype, &param_mapping, type_env)
-                        .map(|ty| (fname.clone(), ty))
+                    type_expr_to_type(ftype, &param_mapping, type_env).map(|ty| (fname.clone(), ty))
                 })
                 .collect();
 
@@ -378,7 +377,10 @@ impl TypeEnv {
     }
 
     /// Resolve a type name to its qualified form and info
-    pub fn resolve_type(&self, name: &str) -> Result<(QualifiedName, Option<&TypeInfo>), TypeError> {
+    pub fn resolve_type(
+        &self,
+        name: &str,
+    ) -> Result<(QualifiedName, Option<&TypeInfo>), TypeError> {
         // Try as primitive first
         match name {
             "Int" | "String" | "Bool" | "Null" | "Time" | "Ref" => {
@@ -399,6 +401,90 @@ impl TypeEnv {
 
         Err(TypeError::UnboundVariable(name.to_string()))
     }
+
+    /// Unfold a constructor to its definition with type arguments substituted
+    pub fn unfold_constructor(
+        &self,
+        name: &QualifiedName,
+        args: &[Type],
+    ) -> Result<UnfoldedBody, TypeError> {
+        let (_, type_info) = self.resolve_type(&name.name)?;
+
+        let type_info = type_info.ok_or_else(|| TypeError::NotAConstructor(name.display()))?;
+
+        match type_info {
+            TypeInfo::Enum {
+                params, variants, ..
+            } => {
+                if params.len() != args.len() {
+                    return Err(TypeError::ConstructorArityMismatch {
+                        name: name.display(),
+                        expected_arity: params.len(),
+                        found_arity: args.len(),
+                    });
+                }
+
+                // Create substitution from param vars to args
+                let subst = params.iter().copied().zip(args.iter().cloned()).fold(
+                    Substitution::new(),
+                    |mut acc, (var, ty)| {
+                        acc.insert(var, ty);
+                        acc
+                    },
+                );
+
+                // Apply substitution to variants
+                let unfolded_variants: Vec<_> = variants
+                    .iter()
+                    .map(|v| VariantInfo {
+                        name: v.name.clone(),
+                        fields: v
+                            .fields
+                            .iter()
+                            .map(|(n, t)| (n.clone(), subst.apply(t)))
+                            .collect(),
+                    })
+                    .collect();
+
+                Ok(UnfoldedBody::Enum(unfolded_variants))
+            }
+            TypeInfo::Struct { params, fields, .. } => {
+                if params.len() != args.len() {
+                    return Err(TypeError::ConstructorArityMismatch {
+                        name: name.display(),
+                        expected_arity: params.len(),
+                        found_arity: args.len(),
+                    });
+                }
+
+                // Create substitution from param vars to args
+                let subst = params.iter().copied().zip(args.iter().cloned()).fold(
+                    Substitution::new(),
+                    |mut acc, (var, ty)| {
+                        acc.insert(var, ty);
+                        acc
+                    },
+                );
+
+                // Apply substitution to fields
+                let unfolded_fields: Vec<_> = fields
+                    .iter()
+                    .map(|(n, t)| (n.clone(), subst.apply(t)))
+                    .collect();
+
+                Ok(UnfoldedBody::Struct(unfolded_fields))
+            }
+        }
+    }
+}
+
+/// Unfolded type body with substituted type arguments
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnfoldedBody {
+    /// Enum with variants
+    Enum(Vec<VariantInfo>),
+    /// Struct with fields
+    Struct(Vec<(FieldName, Type)>),
 }
 
 #[cfg(test)]
@@ -676,5 +762,85 @@ mod tests {
             }
             _ => panic!("Expected Type::Constructor, got {:?}", ty),
         }
+    }
+
+    #[test]
+    fn unfold_option_int() {
+        let env = TypeEnv::with_builtin_types();
+
+        // Unfold Option<Int>
+        let unfolded = env
+            .unfold_constructor(&QualifiedName::root("Option"), &[Type::Int])
+            .unwrap();
+
+        // Should get: Some { value: Int } | None
+        match unfolded {
+            UnfoldedBody::Enum(variants) => {
+                assert_eq!(variants.len(), 2);
+
+                // Check Some variant
+                let some = &variants[0];
+                assert_eq!(some.name, "Some");
+                assert_eq!(some.fields.len(), 1);
+                assert_eq!(some.fields[0].0, "value");
+                assert_eq!(some.fields[0].1, Type::Int);
+
+                // Check None variant
+                let none = &variants[1];
+                assert_eq!(none.name, "None");
+                assert!(none.fields.is_empty());
+            }
+            _ => panic!("Expected enum body, got {:?}", unfolded),
+        }
+    }
+
+    #[test]
+    fn unfold_result_int_string() {
+        let env = TypeEnv::with_builtin_types();
+
+        // Unfold Result<Int, String>
+        let unfolded = env
+            .unfold_constructor(&QualifiedName::root("Result"), &[Type::Int, Type::String])
+            .unwrap();
+
+        // Should get: Ok { value: Int } | Err { error: String }
+        match unfolded {
+            UnfoldedBody::Enum(variants) => {
+                assert_eq!(variants.len(), 2);
+
+                // Check Ok variant
+                let ok = &variants[0];
+                assert_eq!(ok.name, "Ok");
+                assert_eq!(ok.fields.len(), 1);
+                assert_eq!(ok.fields[0].0, "value");
+                assert_eq!(ok.fields[0].1, Type::Int);
+
+                // Check Err variant
+                let err = &variants[1];
+                assert_eq!(err.name, "Err");
+                assert_eq!(err.fields.len(), 1);
+                assert_eq!(err.fields[0].0, "error");
+                assert_eq!(err.fields[0].1, Type::String);
+            }
+            _ => panic!("Expected enum body, got {:?}", unfolded),
+        }
+    }
+
+    #[test]
+    fn unfold_constructor_wrong_arity() {
+        let env = TypeEnv::with_builtin_types();
+
+        // Option expects 1 type argument, but we provide 2
+        let result =
+            env.unfold_constructor(&QualifiedName::root("Option"), &[Type::Int, Type::String]);
+
+        assert!(matches!(
+            result,
+            Err(TypeError::ConstructorArityMismatch {
+                name,
+                expected_arity: 1,
+                found_arity: 2,
+            }) if name == "Option"
+        ));
     }
 }

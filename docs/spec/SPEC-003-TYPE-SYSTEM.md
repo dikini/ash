@@ -68,10 +68,19 @@ pub enum Type {
     Cap(Box<str>, Effect),  // Capability with effect
     Fun(Vec<Type>, Box<Type>, Effect),  // Function type
     Var(TypeVar),           // Type variable (for inference)
+    Constructor {
+        name: QualifiedName,
+        args: Vec<Type>,
+        kind: Kind,
+    },
 }
 
 pub struct TypeVar(pub u32);
 ```
+
+The `Type::Constructor` variant represents user-defined ADT instances and generic type
+applications. It carries a qualified name (potentially with module path), type arguments
+for generic instantiation, and a kind annotation for higher-kinded type checking.
 
 ### 3.1 User-Defined ADT Definitions
 
@@ -88,6 +97,66 @@ That source model is canonical:
 Implementations may elaborate these declarations into internal type metadata for inference,
 constructor lookup, or exhaustiveness checking, but that elaborated representation is derived
 from the source model rather than replacing it with a second specification-level contract.
+
+### 3.2 Kind System
+
+```rust
+/// Kind annotations for type constructors
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Kind {
+    /// Base kind: concrete types (e.g., Int, String)
+    Type,
+    /// Function kind: constructor from argument kinds to result kind
+    Arrow(Vec<Kind>, Box<Kind>),
+}
+```
+
+Kinds classify types and type constructors:
+- `Kind::Type` is the kind of all concrete value types
+- `Kind::Arrow(args, ret)` is the kind of type constructors taking type arguments
+  of kinds `args` and producing a type of kind `ret`
+
+Examples:
+- `Int` has kind `Type`
+- `Option` (taking one type parameter) has kind `Arrow([Type], Type)`
+- `Result` (taking two type parameters) has kind `Arrow([Type, Type], Type)`
+
+### 3.3 Qualified Names
+
+```rust
+/// A fully qualified type name with optional module path
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct QualifiedName {
+    /// Module path components (e.g., ["std", "option"])
+    pub path: Vec<Box<str>>,
+    /// The base name (e.g., "Option")
+    pub name: Box<str>,
+}
+
+impl QualifiedName {
+    /// Create a simple unqualified name
+    pub fn simple(name: impl Into<Box<str>>) -> Self {
+        Self {
+            path: Vec::new(),
+            name: name.into(),
+        }
+    }
+
+    /// Create a qualified name with module path
+    pub fn qualified(
+        path: impl IntoIterator<Item = impl Into<Box<str>>>,
+        name: impl Into<Box<str>>,
+    ) -> Self {
+        Self {
+            path: path.into_iter().map(Into::into).collect(),
+            name: name.into(),
+        }
+    }
+}
+```
+
+Qualified names enable type definitions from different modules to coexist without
+naming collisions. The empty path denotes a name from the current scope.
 
 ## 4. Type Rules
 
@@ -339,14 +408,89 @@ enum Constraint {
 ```rust
 fn unify(c1: Type, c2: Type) -> Result<Substitution, TypeError> {
     match (c1, c2) {
-        (Type::Int, Type::Int) => Ok(empty_subst()),
+        // Base type unification
+        (Type::Int, Type::Int) => Ok(Substitution::empty()),
+        (Type::String, Type::String) => Ok(Substitution::empty()),
+        (Type::Bool, Type::Bool) => Ok(Substitution::empty()),
+        (Type::Null, Type::Null) => Ok(Substitution::empty()),
+        
+        // Variable binding (occurs check)
         (Type::Var(v), t) => bind(v, t),
         (t, Type::Var(v)) => bind(v, t),
+        
+        // Structural type unification
         (Type::List(a), Type::List(b)) => unify(*a, *b),
-        (Type::Fun(args1, ret1, _), Type::Fun(args2, ret2, _)) => {
-            // Unify argument and return types
+        (Type::Ref(a), Type::Ref(b)) if a == b => Ok(Substitution::empty()),
+        
+        // Record unification (structural, contravariant in fields)
+        (Type::Record(fs1), Type::Record(fs2)) => {
+            unify_records(fs1, fs2)
         }
+        
+        // Function type unification (contravariant in args, covariant in ret)
+        (Type::Fun(args1, ret1, _), Type::Fun(args2, ret2, _)) => {
+            if args1.len() != args2.len() {
+                return Err(TypeError::ArityMismatch(args1.len(), args2.len()));
+            }
+            let mut subst = Substitution::empty();
+            // Unify arguments contravariantly
+            for (a1, a2) in args1.iter().zip(args2.iter()) {
+                let s = unify(a2.clone(), a1.clone())?;
+                subst = subst.compose(s);
+            }
+            // Unify return type covariantly
+            let s = unify(*ret1, *ret2)?;
+            subst = subst.compose(s);
+            Ok(subst)
+        }
+        
+        // Constructor unification: Constructor vs Constructor
+        (
+            Type::Constructor { name: n1, args: a1, .. },
+            Type::Constructor { name: n2, args: a2, .. }
+        ) => {
+            if n1 != n2 {
+                return Err(TypeError::ConstructorMismatch(n1, n2));
+            }
+            if a1.len() != a2.len() {
+                return Err(TypeError::ArityMismatch(a1.len(), a2.len()));
+            }
+            let mut subst = Substitution::empty();
+            for (arg1, arg2) in a1.iter().zip(a2.iter()) {
+                let s = unify(arg1.clone(), arg2.clone())?;
+                subst = subst.compose(s);
+            }
+            Ok(subst)
+        }
+        
+        // Constructor unification: Constructor vs Variable
+        (Type::Constructor { .. }, Type::Var(v)) => bind(v, c1),
+        (Type::Var(v), Type::Constructor { .. }) => bind(v, c2),
+        
+        // Mismatch
         _ => Err(TypeError::Mismatch(c1, c2)),
+    }
+}
+
+/// Bind a type variable to a type, performing occurs check
+fn bind(var: TypeVar, ty: Type) -> Result<Substitution, TypeError> {
+    if occurs_in(var, &ty) {
+        return Err(TypeError::InfiniteType(var, ty));
+    }
+    Ok(Substitution::singleton(var, ty))
+}
+
+/// Check if a type variable occurs in a type (occurs check)
+fn occurs_in(var: TypeVar, ty: &Type) -> bool {
+    match ty {
+        Type::Var(v) => v == &var,
+        Type::List(inner) => occurs_in(var, inner),
+        Type::Record(fields) => fields.iter().any(|(_, t)| occurs_in(var, t)),
+        Type::Fun(args, ret, _) => {
+            args.iter().any(|t| occurs_in(var, t)) || occurs_in(var, ret)
+        }
+        Type::Constructor { args, .. } => args.iter().any(|t| occurs_in(var, t)),
+        _ => false,
     }
 }
 ```
@@ -411,6 +555,152 @@ error[E001]: Effect mismatch
 16 |     act delete_file(path);
 17 |   }
    |
+```
+
+### 9.1 Type Variable Naming
+
+Type variables are assigned human-readable names for error messages:
+
+```rust
+/// Assigns and tracks names for type variables in error messages
+pub struct TypeVarNames {
+    next_id: u32,
+    names: HashMap<TypeVar, Box<str>>,
+}
+
+impl TypeVarNames {
+    pub fn new() -> Self {
+        Self {
+            next_id: 0,
+            names: HashMap::new(),
+        }
+    }
+
+    /// Get or assign a name for a type variable
+    pub fn name_for(&mut self, var: TypeVar) -> &str {
+        self.names.entry(var).or_insert_with(|| {
+            let name = format!("{}{}",
+                (b'a' + (self.next_id % 26) as u8) as char,
+                if self.next_id >= 26 { format!("{}", self.next_id / 26) } else { String::new() }
+            );
+            self.next_id += 1;
+            name.into()
+        })
+    }
+}
+```
+
+Naming scheme:
+- First 26 variables: `a`, `b`, `c`, ..., `z`
+- Variables 26-51: `a1`, `b1`, ..., `z1`
+- Variables 52-77: `a2`, `b2`, ..., `z2`
+- And so on...
+
+This produces readable error messages like:
+```
+error[E003]: Type mismatch
+  --> example.ash:10:5
+   |
+10 |   let x: Option<Int> = Some { value: "hello" };
+   |       ^               ------------------------
+   |       |               |
+   |       |               found `Option<String>`
+   |       expected `Option<Int>`
+   |
+   = note: Type `a` (String) does not match type `a` (Int)
+```
+
+### 9.2 Type Difference Reporting
+
+When two types don't match, the error reporter identifies and highlights structural differences:
+
+```rust
+/// Represents the structural difference between two types
+#[derive(Debug, Clone)]
+pub enum TypeDiff {
+    /// Types are completely different
+    Mismatch { expected: Type, found: Type },
+    /// Constructor name differs
+    ConstructorName { expected: QualifiedName, found: QualifiedName },
+    /// Type argument differs at position
+    TypeArgument { position: usize, diff: Box<TypeDiff> },
+    /// Record field differs
+    Field { name: Box<str>, expected: Type, found: Type },
+    /// Function argument differs (contravariant)
+    FunctionArg { position: usize, diff: Box<TypeDiff> },
+    /// Function return differs
+    FunctionReturn { diff: Box<TypeDiff> },
+}
+
+impl TypeDiff {
+    /// Compute the structural difference between two types
+    pub fn compute(expected: &Type, found: &Type) -> Self {
+        match (expected, found) {
+            (
+                Type::Constructor { name: n1, args: a1, .. },
+                Type::Constructor { name: n2, args: a2, .. }
+            ) if n1 == n2 && a1.len() == a2.len() => {
+                // Find first differing argument
+                for (i, (arg1, arg2)) in a1.iter().zip(a2.iter()).enumerate() {
+                    if arg1 != arg2 {
+                        return TypeDiff::TypeArgument {
+                            position: i,
+                            diff: Box::new(TypeDiff::compute(arg1, arg2)),
+                        };
+                    }
+                }
+                TypeDiff::Mismatch {
+                    expected: expected.clone(),
+                    found: found.clone(),
+                }
+            }
+            (Type::Fun(args1, ret1, _), Type::Fun(args2, ret2, _)) => {
+                // Check return type first (more important)
+                if ret1 != ret2 {
+                    return TypeDiff::FunctionReturn {
+                        diff: Box::new(TypeDiff::compute(ret1, ret2)),
+                    };
+                }
+                // Check arguments
+                for (i, (a1, a2)) in args1.iter().zip(args2.iter()).enumerate() {
+                    if a1 != a2 {
+                        return TypeDiff::FunctionArg {
+                            position: i,
+                            diff: Box::new(TypeDiff::compute(a2, a1)), // Contravariant
+                        };
+                    }
+                }
+                TypeDiff::Mismatch {
+                    expected: expected.clone(),
+                    found: found.clone(),
+                }
+            }
+            _ => TypeDiff::Mismatch {
+                expected: expected.clone(),
+                found: found.clone(),
+            },
+        }
+    }
+}
+```
+
+Example error with structural difference highlighting:
+```
+error[E004]: Type mismatch
+  --> example.ash:15:20
+   |
+15 |   fn process(x: Result<Option<Int>, String>) -> Int { ... }
+   |                    ^^^^^^^^^^^^^^^^^^^^^^
+   |                    |
+   |                    expected: Result<Option<Int>, String>
+16 |   process(Ok { value: Some { value: "hello" } })
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |          |
+   |          found: Result<Option<String>, String>
+   |
+   = note: In type argument 0 of Result:
+   = note:   In type argument 0 of Option:
+   = note:     Expected Int, found String
 ```
 
 ## 10. Related Documents

@@ -6,8 +6,26 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Full parametric polymorphism (generics) for Ash type system. Type constructors like `Option<Int>` and `Option<String>` are now distinct, distinguishable types. (TASK-127, TASK-128, TASK-129, TASK-130)
+- `Type::Constructor` variant with `QualifiedName`, type arguments, and `Kind` annotation for future higher-kinded type support.
+- `Kind` system for classifying type constructors (`*`, `* -> *`, etc.).
+- `QualifiedName` for module-qualified type names.
+- Iso-recursive type unfolding for generic field access and pattern matching.
+- Pattern typing and exhaustiveness checking for generic constructors.
+- Property-based tests for unification soundness, reflexivity, and symmetry.
+
+### Changed
+
+- `type_expr_to_type` now properly converts `TypeExpr::Constructor` to `Type::Constructor` instead of losing constructor information.
+- `build_constructor_type` now returns the constructor type (e.g., `Option<T>`) instead of just the type parameter.
+- Type alias expansion now properly unfolds to underlying types.
+
 ### Fixed
 
+- `Option<Int>` and `Option<String>` no longer incorrectly unify.
+- Error messages now show readable type names (`Option<Int>`) instead of internal variable IDs (`Var<42>`).
 - Fixed Type Expression Conversion (TypeEnv). Replaced stubbed `TypeExpr::Constructor` handling that lost constructor information. `type_expr_to_type` now properly converts constructor names and all arguments, type alias expansion now resolves to underlying types, and name resolution is available via the new `resolve_type` helper.
 
 ### Added

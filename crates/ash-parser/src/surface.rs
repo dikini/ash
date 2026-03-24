@@ -723,6 +723,14 @@ pub enum EffectType {
     Write,
     /// External effects
     External,
+    /// Knowledge/observation effect (lattice variant)
+    Epistemic,
+    /// Deliberation/analysis effect (lattice variant)
+    Deliberative,
+    /// Decision/evaluation effect (lattice variant)
+    Evaluative,
+    /// Action/operation effect (lattice variant)
+    Operational,
 }
 
 /// Policy decisions.

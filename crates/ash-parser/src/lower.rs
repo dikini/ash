@@ -660,10 +660,12 @@ fn lower_predicate(pred: &Predicate) -> CorePredicate {
 #[cfg(test)]
 fn lower_effect_type(effect: EffectType) -> Effect {
     match effect {
-        EffectType::Observe | EffectType::Read => Effect::Epistemic,
-        EffectType::Analyze => Effect::Deliberative,
-        EffectType::Decide => Effect::Evaluative,
-        EffectType::Act | EffectType::Write | EffectType::External => Effect::Operational,
+        EffectType::Observe | EffectType::Read | EffectType::Epistemic => Effect::Epistemic,
+        EffectType::Analyze | EffectType::Deliberative => Effect::Deliberative,
+        EffectType::Decide | EffectType::Evaluative => Effect::Evaluative,
+        EffectType::Act | EffectType::Write | EffectType::External | EffectType::Operational => {
+            Effect::Operational
+        }
     }
 }
 

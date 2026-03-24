@@ -361,7 +361,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     // Try check obligation expression: check obligation_name
-    if let Ok(_) = keyword("check").parse_next(input) {
+    if keyword("check").parse_next(input).is_ok() {
         skip_whitespace_and_comments(input);
         let obligation = identifier(input)?;
         let span = span_from(&start_pos, &input.state);

@@ -355,33 +355,33 @@ proptest! {
     /// Property: remaining() returns exactly the undischarged obligations
     #[test]
     fn prop_remaining_returns_exactly_undischarged(
-        names in prop::collection::vec("[a-z_][a-z0-9_]{1,20}", 0..15)
+        names in prop::collection::hash_set("[a-z_][a-z0-9_]{1,20}", 0..15)
     ) {
         let mut set = ObligationSet::new();
 
-        // Insert all
+        // Insert all unique names
         for name in &names {
             let _ = set.insert(name);
         }
 
-        // Remove only even-indexed items
-        for (i, name) in names.iter().enumerate() {
-            if i % 2 == 0 {
-                let _ = set.remove(name);
-            }
-        }
-
-        // Check that remaining only contains odd-indexed items
-        let remaining: Vec<_> = set.remaining().iter().map(|s| s.to_string()).collect();
-        let expected: Vec<_> = names.iter().enumerate()
-            .filter(|(i, _)| i % 2 == 1)
-            .map(|(_, n)| n.clone())
+        // Remove half of them (using a deterministic approach based on name)
+        let to_remove: Vec<_> = names.iter()
+            .filter(|name| name.len() % 2 == 0)
             .collect();
 
-        for name in &expected {
-            prop_assert!(remaining.contains(name));
+        for name in &to_remove {
+            let _ = set.remove(name);
         }
-        prop_assert_eq!(remaining.len(), expected.len());
+
+        // Check that remaining contains only what we didn't remove
+        let remaining: std::collections::HashSet<_> = set.remaining()
+            .iter().map(|s| s.to_string()).collect();
+        let expected_remaining: std::collections::HashSet<_> = names.iter()
+            .filter(|name| name.len() % 2 == 1)
+            .map(|n| n.clone())
+            .collect();
+
+        prop_assert_eq!(remaining, expected_remaining);
     }
 }
 

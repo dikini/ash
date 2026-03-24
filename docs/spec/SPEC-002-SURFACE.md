@@ -56,6 +56,8 @@ program     ::= definition* workflow_def
 
 definition  ::= capability_def | policy_def | role_def 
               | memory_def | datatype_def
+
+-- Note: datatype_def is expanded in Section 3.6 Type Definitions
 ```
 
 ### 3.2 Capability Definition
@@ -235,7 +237,40 @@ must_stmt       ::= "must" workflow
   and the current default behavior is the implicit `priority` source scheduling modifier defined
   in SPEC-013. No new receive scheduling syntax is introduced here.
 
-### 3.6 Expressions
+### 3.6 Type Definitions
+
+```
+datatype_def    ::= "type" IDENTIFIER type_params? "=" type_body
+type_params     ::= "<" IDENTIFIER ("," IDENTIFIER)* ">"
+type_body       ::= enum_body | struct_body | alias_body
+
+enum_body       ::= variant ("|" variant)*
+variant         ::= IDENTIFIER ("{" field_list "}")?
+field_list      ::= field ("," field)*
+field           ::= IDENTIFIER ":" type
+
+struct_body     ::= "{" field_list "}"
+alias_body      ::= type
+```
+
+**Type Definitions** declare algebraic data types (ADTs) with optional type parameters:
+
+- **Enum types** have multiple variant constructors (e.g., `Option<T>` with `Some` and `None`)
+- **Struct types** have a single constructor with named fields (e.g., `Point { x: Int, y: Int }`)
+- **Type aliases** create synonyms for existing types (e.g., `IntList = List<Int>`)
+
+**Examples:**
+```ash
+type Option<T> = Some { value: T } | None;
+type Result<T, E> = Ok { value: T } | Err { error: E };
+type List<T> = Cons { head: T, tail: List<T> } | Nil;
+type Point = { x: Int, y: Int };
+type IntList = List<Int>;
+```
+
+See [SPEC-020](../SPEC-020-ADT-TYPES.md) for detailed ADT semantics and typing rules.
+
+### 3.7 Expressions
 
 ```
 expression      ::= or_expr
@@ -255,16 +290,24 @@ primary         ::= literal
                   | primary "." IDENTIFIER   -- Field access
                   | primary "[" expression "]"  -- Index access
                   | primary "(" arguments ")"   -- Function call
+                  | constructor_expr
                   | "(" expression ")"
+
+constructor_expr ::= IDENTIFIER "{" field_assignments "}"
+field_assignments ::= field_assignment ("," field_assignment)*
+field_assignment  ::= IDENTIFIER ":" expression
 
 arguments       ::= expression ("," expression)*
 
 literal         ::= STRING | NUMBER | BOOL | NULL | list_literal
 
 list_literal    ::= "[" (expression ("," expression)*)? "]"
+
+match_expr      ::= "match" expression "{" match_arm ("," match_arm)* ","? "}"
+match_arm       ::= pattern ("if" expression)? "=>" expression
 ```
 
-### 3.7 Patterns
+### 3.8 Patterns
 
 ```
 pattern         ::= IDENTIFIER
@@ -272,12 +315,29 @@ pattern         ::= IDENTIFIER
                   | "(" pattern ("," pattern)* ")"
                   | "{" field_pattern ("," field_pattern)* "}"
                   | "[" pattern ("," pattern)* (".." IDENTIFIER)? "]"
+                  | variant_pattern
                   | literal
 
 field_pattern   ::= IDENTIFIER (":" pattern)?
+
+variant_pattern ::= IDENTIFIER ("{" variant_field_patterns "}")?
+variant_field_patterns ::= variant_field_pattern ("," variant_field_pattern)*
+variant_field_pattern  ::= IDENTIFIER (":" pattern)?
 ```
 
-### 3.8 Guards
+**Variant Patterns** match ADT constructor values. The pattern consists of a constructor name optionally followed by field patterns in braces.
+
+**Examples:**
+```ash
+Some { value: x }           -- Matches Some with any value, binds to x
+None                        -- Matches None (unit variant)
+Ok { value: Some { value: x } }  -- Nested pattern matching
+Err { error: e }            -- Matches Err, binds error field to e
+```
+
+See [SPEC-001](../SPEC-001-IR.md) for IR representation and [SPEC-004](../SPEC-004-SEMANTICS.md) for pattern matching semantics.
+
+### 3.9 Guards
 
 ```
 guard           ::= "always" | "never" | predicate
@@ -366,6 +426,48 @@ workflow cleanup {
 }
 ```
 
+### 6.3 Algebraic Data Types
+
+```ash
+type Option<T> = Some { value: T } | None;
+type Result<T, E> = Ok { value: T } | Err { error: E };
+
+workflow process_data {
+  observe fetch_data as raw_data;
+  
+  let parsed = parse_json(raw_data);
+  
+  match parsed {
+    Ok { value: data } => {
+      let result = transform(data);
+      act save_result(result);
+    },
+    Err { error: e } => {
+      act log_error(e);
+    }
+  };
+}
+
+workflow find_user(id: Int) {
+  observe fetch_user with id: id as user_opt;
+  
+  match user_opt {
+    Some { value: user } => act display_user(user),
+    None => act show_not_found()
+  };
+}
+```
+
+**Key features demonstrated:**
+- Generic type definitions with `type Option<T>`
+- Enum variants with fields: `Some { value: T }`
+- Constructor expressions: `Ok { value: data }`, `Some { value: user }`
+- Pattern matching with `match` and variant patterns
+- Nested patterns: `Ok { value: data }` binds the inner value
+- Guarded patterns: `Err { error: e }` binds the error field
+
+See [SPEC-020](../SPEC-020-ADT-TYPES.md) for detailed ADT semantics.
+
 ## 7. Pretty Printing
 
 The surface language has canonical formatting:
@@ -377,5 +479,7 @@ The surface language has canonical formatting:
 
 ## 8. Related Documents
 
-- SPEC-001: IR
-- SPEC-003: Type System
+- [SPEC-001](../SPEC-001-IR.md): IR - Core intermediate representation
+- [SPEC-003](../SPEC-003-TYPE-SYSTEM.md): Type System - Type checking and inference
+- [SPEC-004](../SPEC-004-SEMANTICS.md): Operational Semantics - Runtime behavior
+- [SPEC-020](../SPEC-020-ADT-TYPES.md): ADT Types - Algebraic data type specifications

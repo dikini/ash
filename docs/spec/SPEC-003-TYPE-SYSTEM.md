@@ -102,24 +102,26 @@ from the source model rather than replacing it with a second specification-level
 
 ```rust
 /// Kind annotations for type constructors
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Kind {
-    /// Base kind: concrete types (e.g., Int, String)
+    /// The kind of types: *
     Type,
-    /// Function kind: constructor from argument kinds to result kind
-    Arrow(Vec<Kind>, Box<Kind>),
+    /// Function kind: K1 -> K2 (curried)
+    Arrow(Box<Kind>, Box<Kind>),
 }
 ```
 
 Kinds classify types and type constructors:
-- `Kind::Type` is the kind of all concrete value types
-- `Kind::Arrow(args, ret)` is the kind of type constructors taking type arguments
-  of kinds `args` and producing a type of kind `ret`
+- `Kind::Type` (written `*`) is the kind of all concrete value types
+- `Kind::Arrow(k1, k2)` (written `k1 -> k2`) is the kind of type constructors
+  taking one type argument of kind `k1` and producing a type of kind `k2`
+- Kinds are curried: binary constructors like `Result` have kind `* -> * -> *`
 
 Examples:
-- `Int` has kind `Type`
-- `Option` (taking one type parameter) has kind `Arrow([Type], Type)`
-- `Result` (taking two type parameters) has kind `Arrow([Type, Type], Type)`
+- `Int`, `String` have kind `Type` (or `*`)
+- `Option` has kind `Type -> Type` (or `* -> *`)
+- `Result` has kind `Type -> Type -> Type` (or `* -> * -> *`)
+- `* -> *` is parsed as `Arrow(Box::new(Type), Box::new(Type))`
 
 ### 3.3 Qualified Names
 

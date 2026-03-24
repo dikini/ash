@@ -248,20 +248,27 @@ Update this section as tasks complete:
 | 18 | 7 | 3 | 🟡 In Progress |
 | 19 | 7 | 7 | ✅ Complete |
 | 20 | 5 | 5 | ✅ Complete |
-| 21 | 3 | 0 | 📝 Planned |
-| 22 | 2 | 0 | 📝 Planned |
+| 21 | 3 | 3 | ✅ Complete |
+| 22 | 2 | 2 | ✅ Complete |
 | 23 | 4 | 4 | ✅ Complete |
-| 24 | 2 | 0 | 📝 Planned |
-| 25 | 1 | 0 | 📝 Planned |
+| 24 | 2 | 2 | ✅ Complete |
+| 25 | 1 | 1 | ✅ Complete |
 | 26 | 4 | 4 | ✅ Complete |
 | 27 | 3 | 3 | ✅ Complete |
-| 28 | 2 | 0 | 📝 Planned |
-| 29 | 2 | 0 | 📝 Planned |
-| 30 | 2 | 0 | 📝 Planned |
+| 28 | 2 | 2 | ✅ Complete |
+| 29 | 2 | 2 | ✅ Complete |
+| 30 | 2 | 2 | ✅ Complete |
 | 31 | 1 | 1 | ✅ Complete |
+| 32 | 1 | 1 | ✅ Complete |
+| 33 | 2 | 2 | ✅ Complete |
 | 34 | 3 | 3 | ✅ Complete |
 | 35 | 5 | 5 | ✅ Complete |
-| 36 | 4 | 4 | ✅ Complete |
+| 36 | 5 | 5 | ✅ Complete |
+| 37 | 7 | 7 | ✅ Complete |
+| 38 | 1 | 1 | ✅ Complete |
+| 39 | 1 | 1 | ✅ Complete |
+| 40 | 2 | 1 | 🟡 In Progress |
+| 41-42 | 2 | 1 | 🟡 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -329,6 +336,31 @@ Update this section as tasks complete:
 | 14.5 | 7 | 7 | ✅ Complete |
 | 15 | 6 | 6 | ✅ Complete |
 | 16 | 6 | 6 | ✅ Complete |
+| 17 | 12 | 12 | ✅ Complete |
+| 18 | 7 | 7 | ✅ Complete |
+| 19 | 7 | 7 | ✅ Complete |
+| 20 | 5 | 5 | ✅ Complete |
+| 21 | 3 | 3 | ✅ Complete |
+| 22 | 2 | 2 | ✅ Complete |
+| 23 | 4 | 4 | ✅ Complete |
+| 24 | 2 | 2 | ✅ Complete |
+| 25 | 1 | 1 | ✅ Complete |
+| 26 | 4 | 4 | ✅ Complete |
+| 27 | 3 | 3 | ✅ Complete |
+| 28 | 2 | 2 | ✅ Complete |
+| 29 | 2 | 2 | ✅ Complete |
+| 30 | 2 | 2 | ✅ Complete |
+| 31 | 1 | 1 | ✅ Complete |
+| 32 | 1 | 1 | ✅ Complete |
+| 33 | 2 | 2 | ✅ Complete |
+| 34 | 3 | 3 | ✅ Complete |
+| 35 | 5 | 5 | ✅ Complete |
+| 36 | 5 | 5 | ✅ Complete |
+| 37 | 7 | 7 | ✅ Complete |
+| 38 | 1 | 1 | ✅ Complete |
+| 39 | 1 | 1 | ✅ Complete |
+| 40 | 2 | 1 | 🟡 In Progress |
+| 41-42 | 2 | 1 | 🟡 In Progress |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -399,8 +431,10 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 209/210 tasks complete (1 deferred)
-**Remaining Tasks**: 1 deferred task (`TASK-063` dynamic policy registration)
+**Overall Progress**: 245/247 tasks complete (1 deferred, 2 ready)
+**Remaining Tasks**:
+- 1 deferred: `TASK-063` (dynamic policy registration)
+- 2 ready: `TASK-236` (role runtime), `TASK-239` (proxy impl)
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
 
@@ -869,7 +903,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-233](tasks/TASK-233-SPEC-017-CAPABILITY-PARSING.md) | SPEC-017 revision: capability parsing | SPEC-017 | 8 | 📋 Ready |
+| [TASK-233](tasks/TASK-233-SPEC-017-CAPABILITY-PARSING.md) | SPEC-017 revision: capability parsing | SPEC-017 | 8 | ✅ Complete |
 
 ### Phase 39: Capability Definition Implementation
 
@@ -877,7 +911,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-234](tasks/TASK-234-CAPABILITY-PARSER-IMPL.md) | Implement capability definition parser | SPEC-017 | 20 | ⏳ Blocked on TASK-233 |
+| [TASK-234](tasks/TASK-234-CAPABILITY-PARSER-IMPL.md) | Implement capability definition parser | SPEC-017 | 20 | ✅ Complete |
 
 ### Phase 40: Role Runtime Semantics
 
@@ -885,8 +919,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-235](tasks/TASK-235-SPEC-019-ROLE-SEMANTICS.md) | SPEC-019: role runtime semantics | SPEC-019 | 12 | 📋 Ready |
-| [TASK-236](tasks/TASK-236-ROLE-RUNTIME-IMPL.md) | Implement role runtime enforcement | SPEC-019 | 30 | ⏳ Blocked on TASK-235 |
+| [TASK-235](tasks/TASK-235-SPEC-019-ROLE-SEMANTICS.md) | SPEC-019: role runtime semantics | SPEC-019 | 12 | ✅ Complete |
+| [TASK-236](tasks/TASK-236-ROLE-RUNTIME-IMPL.md) | Implement role runtime enforcement | SPEC-019 | 30 | 📋 Ready |
 
 ### Decision Point: Obligation Syntax
 
@@ -894,7 +928,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Type | Status |
 |------|-------------|------|--------|
-| [DECISION-237](tasks/TASK-237-OBLIGATION-SYNTAX-DECISION.md) | Obligation syntax: local vs role-bound | Decision | 📋 Ready |
+| [DECISION-237](tasks/TASK-237-OBLIGATION-SYNTAX-DECISION.md) | Obligation syntax: local vs role-bound | Decision | ✅ Complete |
 
 ### Phase 41-42: Proxy Workflows
 
@@ -902,7 +936,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-238](tasks/TASK-238-SPEC-023-PROXY-WORKFLOWS.md) | SPEC-023: proxy workflows | SPEC-023 | 16 | 📋 Ready |
-| [TASK-239](tasks/TASK-239-PROXY-WORKFLOW-IMPL.md) | Implement proxy workflow runtime | SPEC-023 | 50 | ⏳ Blocked on TASK-238 |
+| [TASK-238](tasks/TASK-238-SPEC-023-PROXY-WORKFLOWS.md) | SPEC-023: proxy workflows | SPEC-023 | 16 | ✅ Complete |
+| [TASK-239](tasks/TASK-239-PROXY-WORKFLOW-IMPL.md) | Implement proxy workflow runtime | SPEC-023 | 50 | 📋 Ready |
 
 **Note:** No release is currently planned for these phases. Work can proceed according to dependency constraints and priorities.

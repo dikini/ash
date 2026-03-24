@@ -1,6 +1,6 @@
 # TASK-234: Implement Capability Definition Parser
 
-## Status: Blocked on TASK-233
+## Status: ✅ Complete
 
 ## Description
 

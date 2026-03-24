@@ -454,8 +454,12 @@ pub fn lower_expr(expr: &Expr) -> CoreExpr {
             else_branch: Box::new(lower_expr(else_branch)),
         },
 
-        Expr::CheckObligation { obligation, .. } => CoreExpr::CheckObligation {
+        Expr::CheckObligation { obligation, span } => CoreExpr::CheckObligation {
             obligation: obligation.to_string(),
+            span: ash_core::Span {
+                start: span.start,
+                end: span.end,
+            },
         },
 
         Expr::Constructor { name, fields, .. } => CoreExpr::Constructor {

@@ -1061,9 +1061,11 @@ mod tests {
             definitions: vec![],
             workflow: WorkflowDef {
                 name: "main".into(),
+                params: vec![],
                 body: Workflow::Done {
                     span: Span::new(0, 4, 1, 1),
                 },
+                contract: None,
                 span: Span::new(0, 10, 1, 1),
             },
         };
@@ -1193,9 +1195,11 @@ mod tests {
     fn test_workflow_def_construction() {
         let workflow_def = WorkflowDef {
             name: "process_order".into(),
+            params: vec![],
             body: Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
             },
+            contract: None,
             span: Span::new(0, 20, 1, 1),
         };
 

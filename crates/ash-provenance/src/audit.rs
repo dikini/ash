@@ -89,8 +89,7 @@ impl FileAuditBackend {
         for event in &self.buffer {
             let line = serde_json::to_string(event)
                 .map_err(|e| AuditError::Serialization(e.to_string()))?;
-            writeln!(self.file, "{}", line)
-                .map_err(|e| AuditError::Io(e.to_string()))?;
+            writeln!(self.file, "{}", line).map_err(|e| AuditError::Io(e.to_string()))?;
         }
 
         self.file
@@ -198,7 +197,9 @@ mod tests {
         let path = dir.path().join("audit.jsonl");
 
         {
-            let mut backend = FileAuditBackend::new(&path).unwrap().with_flush_threshold(1); // Flush immediately
+            let mut backend = FileAuditBackend::new(&path)
+                .unwrap()
+                .with_flush_threshold(1); // Flush immediately
 
             let event = AuditEvent {
                 obligation: "respond_by_deadline".into(),
@@ -231,7 +232,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let path = dir.path().join("audit.jsonl");
 
-        let mut backend = FileAuditBackend::new(&path).unwrap().with_flush_threshold(3);
+        let mut backend = FileAuditBackend::new(&path)
+            .unwrap()
+            .with_flush_threshold(3);
 
         // Write 2 events (below threshold)
         for i in 0..2 {
@@ -272,7 +275,9 @@ mod tests {
         let path = dir.path().join("audit.jsonl");
 
         {
-            let mut backend = FileAuditBackend::new(&path).unwrap().with_flush_threshold(10); // High threshold
+            let mut backend = FileAuditBackend::new(&path)
+                .unwrap()
+                .with_flush_threshold(10); // High threshold
 
             // Write 2 events (below threshold, should not flush)
             for i in 0..2 {
@@ -303,7 +308,9 @@ mod tests {
         let path = dir.path().join("audit.jsonl");
 
         {
-            let backend = FileAuditBackend::new(&path).unwrap().with_flush_threshold(1);
+            let backend = FileAuditBackend::new(&path)
+                .unwrap()
+                .with_flush_threshold(1);
             let mut log = AuditLog::new(Box::new(backend));
 
             let event = AuditEvent {
@@ -327,7 +334,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let path = dir.path().join("audit.jsonl");
 
-        let backend = FileAuditBackend::new(&path).unwrap().with_flush_threshold(10);
+        let backend = FileAuditBackend::new(&path)
+            .unwrap()
+            .with_flush_threshold(10);
         let mut log = AuditLog::new(Box::new(backend));
 
         log.record(AuditEvent {

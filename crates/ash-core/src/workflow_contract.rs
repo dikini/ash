@@ -389,6 +389,47 @@ mod tests {
     }
 
     #[test]
+    fn obligation_set_double_insert_fails() {
+        let mut set = ObligationSet::new();
+        set.insert("audit").unwrap();
+
+        // Double insert should fail
+        let result = set.insert("audit");
+        assert!(
+            matches!(result, Err(ObligationError::Duplicate(_))),
+            "Double insert should return Duplicate error"
+        );
+    }
+
+    #[test]
+    fn obligation_set_double_remove_fails() {
+        let mut set = ObligationSet::new();
+        set.insert("audit").unwrap();
+
+        // First remove should succeed
+        set.remove("audit").unwrap();
+
+        // Second remove should fail (already consumed)
+        let result = set.remove("audit");
+        assert!(
+            matches!(result, Err(ObligationError::Unknown(_))),
+            "Double remove should return Unknown error"
+        );
+    }
+
+    #[test]
+    fn obligation_set_remove_unknown_fails() {
+        let mut set = ObligationSet::new();
+
+        // Remove non-existent obligation should fail
+        let result = set.remove("never_created");
+        assert!(
+            matches!(result, Err(ObligationError::Unknown(_))),
+            "Removing unknown obligation should return Unknown error"
+        );
+    }
+
+    #[test]
     fn obligation_set_union_contains_all_elements() {
         let mut set_a = ObligationSet::new();
         set_a.insert("a").unwrap();

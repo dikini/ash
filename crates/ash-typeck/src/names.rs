@@ -343,6 +343,10 @@ impl NameResolver {
                 self.resolve_expr(expr);
             }
 
+            Workflow::Oblige { .. } => {
+                // Nothing to resolve for obligation creation
+            }
+
             Workflow::Set {
                 value,
                 continuation,
@@ -464,6 +468,10 @@ impl NameResolver {
                 for (_, expr) in fields {
                     self.resolve_expr(expr);
                 }
+            }
+
+            Expr::CheckObligation { .. } => {
+                // Nothing to resolve for obligation check expressions
             }
         }
     }

@@ -97,9 +97,13 @@ fn test_undischarged_obligation_error() {
 #[test]
 fn test_is_empty_reports_undischarged() {
     let mut set = ObligationSet::new();
-    set.insert("undischarged_obligation").expect("insert should succeed");
+    set.insert("undischarged_obligation")
+        .expect("insert should succeed");
 
-    assert!(!set.is_empty(), "Set should report non-empty with undischarged obligations");
+    assert!(
+        !set.is_empty(),
+        "Set should report non-empty with undischarged obligations"
+    );
     let remaining = set.remaining();
     assert_eq!(remaining.len(), 1);
     assert_eq!(remaining[0], "undischarged_obligation");
@@ -112,7 +116,8 @@ fn test_is_empty_reports_undischarged() {
 #[test]
 fn test_double_insert_error() {
     let mut set = ObligationSet::new();
-    set.insert("singleton").expect("first insert should succeed");
+    set.insert("singleton")
+        .expect("first insert should succeed");
 
     let result = set.insert("singleton");
     assert!(
@@ -162,7 +167,10 @@ fn test_branch_partial_discharge_intersection_keeps_obligation() {
     // Here we simulate the case where else branch doesn't discharge
 
     let merged = then_branch.intersection(&else_branch);
-    assert!(merged.is_empty(), "Both branches empty, intersection is empty");
+    assert!(
+        merged.is_empty(),
+        "Both branches empty, intersection is empty"
+    );
 }
 
 #[test]
@@ -178,7 +186,10 @@ fn test_branch_both_discharge_results_in_empty_intersection() {
     else_branch.remove("o1").expect("remove in else");
 
     let merged = then_branch.intersection(&else_branch);
-    assert!(merged.is_empty(), "Both branches discharged, intersection should be empty");
+    assert!(
+        merged.is_empty(),
+        "Both branches discharged, intersection should be empty"
+    );
 }
 
 #[test]
@@ -206,11 +217,13 @@ fn test_audit_trail_obligation_tracking() {
     let mut set = ObligationSet::new();
 
     // Record obligation creation
-    set.insert("audit_log_entry").expect("insert should succeed");
+    set.insert("audit_log_entry")
+        .expect("insert should succeed");
     audit_log.push("OBLIGE: audit_log_entry".to_string());
 
     // Record obligation check
-    set.remove("audit_log_entry").expect("remove should succeed");
+    set.remove("audit_log_entry")
+        .expect("remove should succeed");
     audit_log.push("CHECK: audit_log_entry (discharged)".to_string());
 
     assert_eq!(audit_log.len(), 2);
@@ -331,7 +344,10 @@ fn test_arithmetic_requirement_range() {
     match &req {
         Requirement::Arithmetic { var, constraint } => {
             assert_eq!(var, "age");
-            assert!(matches!(constraint, ArithConstraint::Range { min: 0, max: 120 }));
+            assert!(matches!(
+                constraint,
+                ArithConstraint::Range { min: 0, max: 120 }
+            ));
         }
         _ => panic!("Expected Arithmetic variant"),
     }
@@ -373,7 +389,9 @@ fn test_workflow_def_with_contract() {
         params: vec![],
         body: Workflow::Done,
         export: true,
-        contract: Some(Contract::new().with_requirement(Requirement::HasRole("treasurer".to_string()))),
+        contract: Some(
+            Contract::new().with_requirement(Requirement::HasRole("treasurer".to_string())),
+        ),
         span: Span::default(),
     };
 

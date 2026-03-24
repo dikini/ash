@@ -3,16 +3,20 @@
 //! Provides nested scope management for the interpreter.
 
 use ash_core::{Name, Value};
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 
-/// Runtime execution context with variable bindings
+/// Runtime execution context with variable bindings and obligation tracking
 ///
 /// Contexts form a hierarchy - lookups traverse from child to parent.
 /// Bindings are immutable once set (functional style).
+/// Obligations use interior mutability for linear discharge semantics.
 #[derive(Debug, Clone, Default)]
 pub struct Context {
     bindings: HashMap<Name, Value>,
     parent: Option<Box<Context>>,
+    /// Active obligations that must be discharged (interior mutability for &self discharge)
+    obligations: RefCell<HashSet<Name>>,
 }
 
 impl Context {
@@ -21,7 +25,24 @@ impl Context {
         Self {
             bindings: HashMap::new(),
             parent: None,
+            obligations: RefCell::new(HashSet::new()),
         }
+    }
+
+    /// Add an obligation to the context
+    pub fn add_obligation(&self, obligation: Name) {
+        self.obligations.borrow_mut().insert(obligation);
+    }
+
+    /// Check if an obligation exists and discharge it (remove it)
+    /// Returns true if the obligation was found and discharged
+    pub fn discharge_obligation(&self, obligation: &str) -> bool {
+        self.obligations.borrow_mut().remove(obligation)
+    }
+
+    /// Check if an obligation exists (without discharging)
+    pub fn has_obligation(&self, obligation: &str) -> bool {
+        self.obligations.borrow().contains(obligation)
     }
 
     /// Look up a variable by name
@@ -53,6 +74,7 @@ impl Context {
         Self {
             bindings: HashMap::new(),
             parent: Some(Box::new(self.clone())),
+            obligations: RefCell::new(HashSet::new()),
         }
     }
 
@@ -61,6 +83,7 @@ impl Context {
         Self {
             bindings,
             parent: None,
+            obligations: RefCell::new(HashSet::new()),
         }
     }
 

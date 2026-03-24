@@ -930,9 +930,6 @@ mod linear_tests {
         let ctx = LinearObligationContext::with_bindings(bindings);
         let branched = ctx.branch();
 
-        assert_eq!(
-            branched.var_types.get("x"),
-            Some(&Type::Int)
-        );
+        assert_eq!(branched.var_types.get("x"), Some(&Type::Int));
     }
 }

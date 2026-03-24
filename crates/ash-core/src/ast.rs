@@ -388,10 +388,29 @@ pub enum Expr {
     /// Returns a tuple (InstanceAddr, Option<ControlLink>)
     Split(Box<Expr>),
 
-    /// Check obligation expression: check obligation_name
-    /// Returns true if obligation was discharged, false otherwise
+    /// Check obligation expression: `check obligation_name`
+    ///
+    /// Linearly consumes an obligation that was previously created with `oblige`.
+    /// Returns a boolean indicating whether the obligation was found and discharged.
+    ///
+    /// # Linear Semantics
+    /// - First `check` returns `true` and removes the obligation
+    /// - Subsequent `check` calls return `false` (obligation already consumed)
+    /// - If obligation was never created, returns `false`
+    ///
+    /// # Example
+    /// ```
+    /// // workflow example {
+    /// //     oblige audit_trail;      // Creates obligation
+    /// //     let ok = check audit_trail;  // Returns true, discharges
+    /// //     let ok2 = check audit_trail; // Returns false, already discharged
+    /// // }
+    /// ```
     CheckObligation {
+        /// Name of the obligation to check/discharge
         obligation: Name,
+        /// Source span for error reporting
+        span: Span,
     },
 }
 

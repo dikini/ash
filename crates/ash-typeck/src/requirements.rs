@@ -333,7 +333,26 @@ pub fn check_contract(contract: &Contract, ctx: &RequirementContext) -> Contract
 ///
 /// This module provides SMT-based verification for arithmetic constraints
 /// when values are not known at compile time (symbolic checking).
-#[cfg(feature = "smt")]
+///
+/// # Usage
+/// ```ignore
+/// use ash_typeck::requirements::smt_checker::SmtChecker;
+/// use ash_typeck::requirements::{RequirementContext, Requirement};
+/// use ash_core::workflow_contract::ArithConstraint;
+///
+/// let checker = SmtChecker::new();
+/// let mut ctx = RequirementContext::new();
+///
+/// // Check if constraint is satisfiable with known facts
+/// ctx.facts.insert("x".into(), 10);
+/// let req = Requirement::Arithmetic {
+///     var: "x".into(),
+///     constraint: ArithConstraint::Gt(5),
+/// };
+/// ```
+///
+/// # Note
+/// Requires Z3 solver to be installed on the system.
 pub mod smt_checker {
     use super::*;
     use z3::ast::{Ast, Int};
@@ -374,7 +393,7 @@ pub mod smt_checker {
         }
 
         fn encode_constraint<'a>(
-            &self,
+            &'a self,
             var: &Int<'a>,
             constraint: &ArithConstraint,
         ) -> z3::ast::Bool<'a> {
@@ -516,7 +535,11 @@ mod tests {
         assert!(result.is_failed());
 
         match result {
-            CheckResult::Failed(RequirementError::MissingCapability { cap, required, found }) => {
+            CheckResult::Failed(RequirementError::MissingCapability {
+                cap,
+                required,
+                found,
+            }) => {
                 assert_eq!(cap, "file_io");
                 assert_eq!(required, Effect::Operational);
                 assert_eq!(found, Some(Effect::Epistemic));
@@ -538,7 +561,11 @@ mod tests {
         assert!(result.is_failed());
 
         match result {
-            CheckResult::Failed(RequirementError::MissingCapability { cap, required, found }) => {
+            CheckResult::Failed(RequirementError::MissingCapability {
+                cap,
+                required,
+                found,
+            }) => {
                 assert_eq!(cap, "file_io");
                 assert_eq!(required, Effect::Epistemic);
                 assert_eq!(found, None);
@@ -826,7 +853,10 @@ mod tests {
             .with_requirement(Requirement::HasRole("db_admin".into()))
             .with_requirement(Requirement::Arithmetic {
                 var: "timeout_ms".into(),
-                constraint: ArithConstraint::Range { min: 100, max: 5000 },
+                constraint: ArithConstraint::Range {
+                    min: 100,
+                    max: 5000,
+                },
             })
             .with_requirement(Requirement::Arithmetic {
                 var: "max_retries".into(),
@@ -866,7 +896,9 @@ mod tests {
         assert!(msg.contains("file_io"));
         assert!(msg.contains("Operational"));
 
-        let err = RequirementError::MissingRole { role: "admin".into() };
+        let err = RequirementError::MissingRole {
+            role: "admin".into(),
+        };
         let msg = format!("{err}");
         assert!(msg.contains("admin"));
 

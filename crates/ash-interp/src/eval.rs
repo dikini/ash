@@ -146,6 +146,13 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         } => eval_spawn(workflow_type),
 
         Expr::Split(expr) => eval_split(expr, ctx),
+
+        Expr::CheckObligation { obligation, .. } => {
+            // Check if obligation exists and discharge it (linear consumption)
+            // Returns true if obligation was found and discharged, false otherwise
+            let discharged = ctx.discharge_obligation(obligation);
+            Ok(Value::Bool(discharged))
+        }
     }
 }
 
@@ -579,7 +586,7 @@ mod tests {
 
     #[test]
     fn test_eval_literal() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Literal(Value::Int(42));
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(42));
     }
@@ -594,7 +601,7 @@ mod tests {
 
     #[test]
     fn test_eval_variable_not_found() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Variable("x".to_string());
         assert!(eval_expr(&expr, &ctx).is_err());
     }
@@ -618,7 +625,7 @@ mod tests {
 
     #[test]
     fn test_eval_field_access_not_found() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let mut record = HashMap::new();
         record.insert("x".to_string(), Value::Int(1));
         let expr = Expr::FieldAccess {
@@ -630,7 +637,7 @@ mod tests {
 
     #[test]
     fn test_eval_field_access_not_record() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::FieldAccess {
             expr: Box::new(Expr::Literal(Value::Int(42))),
             field: "x".to_string(),
@@ -640,7 +647,7 @@ mod tests {
 
     #[test]
     fn test_eval_index_list() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::IndexAccess {
             expr: Box::new(Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(10),
@@ -654,7 +661,7 @@ mod tests {
 
     #[test]
     fn test_eval_index_out_of_bounds() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::IndexAccess {
             expr: Box::new(Expr::Literal(Value::List(Box::new(vec![Value::Int(10)])))),
             index: Box::new(Expr::Literal(Value::Int(5))),
@@ -664,7 +671,7 @@ mod tests {
 
     #[test]
     fn test_eval_unary_not() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Unary {
             op: UnaryOp::Not,
             expr: Box::new(Expr::Literal(Value::Bool(true))),
@@ -674,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_eval_unary_neg() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Unary {
             op: UnaryOp::Neg,
             expr: Box::new(Expr::Literal(Value::Int(42))),
@@ -684,7 +691,7 @@ mod tests {
 
     #[test]
     fn test_eval_binary_arithmetic() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // Addition
         let expr = Expr::Binary {
@@ -721,7 +728,7 @@ mod tests {
 
     #[test]
     fn test_eval_binary_div_by_zero() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Binary {
             op: BinaryOp::Div,
             left: Box::new(Expr::Literal(Value::Int(10))),
@@ -735,7 +742,7 @@ mod tests {
 
     #[test]
     fn test_eval_binary_logical() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // AND
         let expr = Expr::Binary {
@@ -756,7 +763,7 @@ mod tests {
 
     #[test]
     fn test_eval_binary_comparison() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // Less than
         let expr = Expr::Binary {
@@ -785,7 +792,7 @@ mod tests {
 
     #[test]
     fn test_eval_binary_in_list() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Binary {
             op: BinaryOp::In,
             left: Box::new(Expr::Literal(Value::Int(2))),
@@ -800,7 +807,7 @@ mod tests {
 
     #[test]
     fn test_eval_call_len() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Call {
             func: "len".to_string(),
             arguments: vec![Expr::Literal(Value::List(Box::new(vec![
@@ -813,7 +820,7 @@ mod tests {
 
     #[test]
     fn test_eval_call_append() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Call {
             func: "append".to_string(),
             arguments: vec![
@@ -829,7 +836,7 @@ mod tests {
 
     #[test]
     fn test_eval_call_concat() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Call {
             func: "concat".to_string(),
             arguments: vec![
@@ -845,7 +852,7 @@ mod tests {
 
     #[test]
     fn test_eval_call_unknown() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Call {
             func: "unknown".to_string(),
             arguments: vec![],
@@ -855,7 +862,7 @@ mod tests {
 
     #[test]
     fn test_eval_call_wrong_arity() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Call {
             func: "len".to_string(),
             arguments: vec![],
@@ -883,7 +890,7 @@ mod tests {
 
     #[test]
     fn test_eval_string_concat() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Binary {
             op: BinaryOp::Add,
             left: Box::new(Expr::Literal(Value::String("hello ".to_string()))),
@@ -897,7 +904,7 @@ mod tests {
 
     #[test]
     fn test_eval_type_checks() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         let expr = Expr::Call {
             func: "is_int".to_string(),
@@ -918,7 +925,7 @@ mod tests {
 
     #[test]
     fn test_eval_constructor_some_with_value() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Constructor {
             name: "Some".to_string(),
             fields: vec![("value".to_string(), Expr::Literal(Value::Int(42)))],
@@ -935,7 +942,7 @@ mod tests {
 
     #[test]
     fn test_eval_constructor_none_empty() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Constructor {
             name: "None".to_string(),
             fields: vec![],
@@ -952,7 +959,7 @@ mod tests {
 
     #[test]
     fn test_eval_match_wildcard_fallback() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // match 2 { 1 => "one", _ => "other" } → "other"
         let arms = vec![
@@ -979,7 +986,7 @@ mod tests {
 
     #[test]
     fn test_eval_constructor_ok_with_string() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Constructor {
             name: "Ok".to_string(),
             fields: vec![(
@@ -1002,7 +1009,7 @@ mod tests {
 
     #[test]
     fn test_eval_constructor_err_with_value() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         let expr = Expr::Constructor {
             name: "Err".to_string(),
             fields: vec![(
@@ -1025,7 +1032,7 @@ mod tests {
 
     #[test]
     fn test_eval_constructor_nested() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         // Some { value: Ok { value: 42 } }
         let inner = Expr::Constructor {
             name: "Ok".to_string(),
@@ -1072,7 +1079,7 @@ mod tests {
 
     #[test]
     fn test_eval_constructor_with_expression_in_field() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         // Point { x: 1 + 2, y: 3 * 4 }
         let expr = Expr::Constructor {
             name: "Point".to_string(),
@@ -1110,7 +1117,7 @@ mod tests {
 
     #[test]
     fn test_eval_constructor_multiple_fields() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
         // Person { name: "Alice", age: 30, active: true }
         let expr = Expr::Constructor {
             name: "Person".to_string(),
@@ -1162,7 +1169,7 @@ mod tests {
 
     #[test]
     fn test_eval_match_list_destructure() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // match [1, 2, 3] { [a, b, ..] => a + b, _ => 0 } → 3
         let arms = vec![
@@ -1200,7 +1207,7 @@ mod tests {
 
     #[test]
     fn test_eval_match_tuple_destructure() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // match (1, 2) { (x, y) => x + y } → 3
         let arms = vec![MatchArm {
@@ -1337,7 +1344,7 @@ mod tests {
 
     #[test]
     fn test_eval_spawn_returns_instance() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // spawn Worker with { init: 42 }
         let expr = Expr::Spawn {
@@ -1363,7 +1370,7 @@ mod tests {
 
     #[test]
     fn test_eval_spawn_creates_unique_ids() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // spawn two instances
         let expr1 = Expr::Spawn {
@@ -1393,7 +1400,7 @@ mod tests {
 
     #[test]
     fn test_eval_split_returns_tuple() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // First spawn an instance
         let spawn_expr = Expr::Spawn {
@@ -1421,7 +1428,7 @@ mod tests {
 
     #[test]
     fn test_eval_split_type_mismatch() {
-        let ctx = Context::new();
+        let mut ctx = Context::new();
 
         // Try to split a non-instance value
         let split_expr = Expr::Split(Box::new(Expr::Literal(Value::Int(42))));

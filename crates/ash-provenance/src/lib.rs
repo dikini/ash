@@ -14,7 +14,7 @@ pub mod trace;
 
 pub use audit::{AuditBackend, AuditError, AuditEvent, AuditLog, CheckResult, FileAuditBackend};
 pub use export::{AuditExporter, CsvExporter, ExportFormat, JsonExporter, NdJsonExporter};
-pub use integrity::{verify_integrity, Hash, MerkleTree};
+pub use integrity::{Hash, MerkleTree, verify_integrity};
 pub use lineage::{DataSource, Lineage, LineageTracker, Transformation};
 pub use trace::{InMemoryTraceStore, TraceEvent, TraceRecorder, WorkflowTraceSession};
 

@@ -14,7 +14,8 @@ use crate::parse_receive::parse_receive;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
-    ActionRef, CheckTarget, Contract, EnsuresClause, Expr, Guard, Name, ObligationRef, Parameter, Requirement, Type, Workflow, WorkflowDef,
+    ActionRef, CheckTarget, Contract, EnsuresClause, Expr, Guard, Name, ObligationRef, Parameter,
+    Requirement, Type, Workflow, WorkflowDef,
 };
 use crate::token::Span;
 
@@ -25,7 +26,7 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     let _ = keyword("workflow").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
-    
+
     // Parse optional parameters: (x: Int, y: String)
     skip_whitespace_and_comments(input);
     let params = if input.input.starts_with("(") {
@@ -33,11 +34,11 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     } else {
         vec![]
     };
-    
+
     // Parse optional contract clauses (requires/ensures)
     skip_whitespace_and_comments(input);
     let contract = parse_opt_contract(input)?;
-    
+
     skip_whitespace_and_comments(input);
     let body = delimited(literal_str("{"), workflow, literal_str("}")).parse_next(input)?;
 
@@ -56,39 +57,44 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
 fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
     let _ = literal_str("(").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    
+
     let mut params = Vec::new();
-    
+
     // Check for empty params
     if input.input.starts_with(")") {
         let _ = literal_str(")").parse_next(input)?;
         return Ok(params);
     }
-    
+
     loop {
         skip_whitespace_and_comments(input);
         let param_start = input.state;
-        
-        // Parse parameter name
+
+        // Parse parameter name and validate it's not a keyword
         let name = identifier(input)?;
+        if is_keyword(name) {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
         skip_whitespace_and_comments(input);
-        
+
         // Parse colon
         let _ = literal_str(":").parse_next(input)?;
         skip_whitespace_and_comments(input);
-        
+
         // Parse type
         let ty = parse_type(input)?;
-        
+
         let param_span = span_from(&param_start, &input.state);
         params.push(Parameter {
             name: name.into(),
             ty,
             span: param_span,
         });
-        
+
         skip_whitespace_and_comments(input);
-        
+
         // Check for comma or end of params
         if input.input.starts_with(",") {
             let _ = input.input.next_slice(1);
@@ -99,11 +105,11 @@ fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
             break;
         } else {
             return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new()
+                winnow::error::ContextError::new(),
             ));
         }
     }
-    
+
     Ok(params)
 }
 
@@ -117,10 +123,10 @@ fn parse_type(input: &mut ParseInput) -> ModalResult<Type> {
 fn parse_opt_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
     let mut requires = Vec::new();
     let mut ensures = Vec::new();
-    
+
     loop {
         skip_whitespace_and_comments(input);
-        
+
         if input.input.starts_with("requires") {
             let req = parse_requires_clause(input)?;
             requires.push(req);
@@ -131,7 +137,7 @@ fn parse_opt_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
             break;
         }
     }
-    
+
     if requires.is_empty() && ensures.is_empty() {
         Ok(None)
     } else {
@@ -145,25 +151,25 @@ fn parse_requires_clause(input: &mut ParseInput) -> ModalResult<Requirement> {
     skip_whitespace_and_comments(input);
     let _ = literal_str(":").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    
+
     // Parse the requirement expression
     let expr = expr(input)?;
-    
+
     Ok(Requirement::Arithmetic { expr })
 }
 
 /// Parse an ensures clause: `ensures: <expr>`
 fn parse_ensures_clause(input: &mut ParseInput) -> ModalResult<EnsuresClause> {
     let start_pos = input.state;
-    
+
     let _ = keyword("ensures").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let _ = literal_str(":").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    
+
     let expr = expr(input)?;
     let span = span_from(&start_pos, &input.state);
-    
+
     Ok(EnsuresClause { expr, span })
 }
 

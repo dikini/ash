@@ -534,6 +534,9 @@ impl CapabilityChecker {
 
             // Return - pure workflow, no capabilities
             Workflow::Ret { .. } => Ok(()),
+
+            // Oblige - evaluative effect, no capabilities
+            Workflow::Oblige { .. } => Ok(()),
         }
     }
 
@@ -588,6 +591,11 @@ impl CapabilityChecker {
 
             Expr::Constructor { .. } => {
                 // Constructor expressions don't involve capabilities
+                Ok(())
+            }
+
+            Expr::CheckObligation { .. } => {
+                // Check obligation expressions don't involve capabilities
                 Ok(())
             }
         }

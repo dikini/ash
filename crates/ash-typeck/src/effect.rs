@@ -58,6 +58,8 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
             Effect::Evaluative.join(cont_effect)
         }
 
+        Workflow::Oblige { .. } => Effect::Evaluative,
+
         Workflow::Act { .. } => Effect::Operational,
 
         // Set and Send are output operations with operational effect

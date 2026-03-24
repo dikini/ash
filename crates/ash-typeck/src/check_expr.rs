@@ -381,26 +381,24 @@ fn check_constructor(
 /// For a variant of a generic type, this returns the type constructor
 /// with the appropriate type variables.
 fn build_constructor_type(type_info: &TypeInfo, _variant_idx: VariantIndex) -> Type {
+    use crate::kind::Kind;
+    use crate::qualified_name::QualifiedName;
+
     match type_info {
-        TypeInfo::Enum {
-            name: _, params, ..
-        } => {
-            // Create the type constructor application
-            // e.g., Option<T> for Some constructor
-            if params.is_empty() {
-                // For non-generic types, we'd need a different representation
-                // For now, use a fresh variable (this is a simplification)
-                Type::Var(TypeVar::fresh())
-            } else {
-                // Return the first type parameter for Option-like types
-                // This is a simplified approach - a full implementation would
-                // return the proper type constructor application
-                Type::Var(params[0])
+        TypeInfo::Enum { name, params, .. } => {
+            // Build Option<T>, not just T
+            Type::Constructor {
+                name: QualifiedName::root(name.clone()),
+                args: params.iter().map(|p| Type::Var(*p)).collect(),
+                kind: Kind::Type,
             }
         }
-        TypeInfo::Struct { .. } => {
-            // Struct constructors return the struct type
-            Type::Var(TypeVar::fresh())
+        TypeInfo::Struct { name, params, .. } => {
+            Type::Constructor {
+                name: QualifiedName::root(name.clone()),
+                args: params.iter().map(|p| Type::Var(*p)).collect(),
+                kind: Kind::Type,
+            }
         }
     }
 }
@@ -486,8 +484,13 @@ mod tests {
             "Expected success, got errors: {:?}",
             result.errors
         );
-        // After unification with Int literal, the type variable is resolved to Int
-        assert_eq!(result.ty, Type::Int);
+        // Constructor returns Option<T>, not just T
+        match &result.ty {
+            Type::Constructor { name, .. } => {
+                assert_eq!(name.to_string(), "Option");
+            }
+            _ => panic!("Expected constructor type, got {:?}", result.ty),
+        }
     }
 
     #[test]
@@ -738,8 +741,35 @@ mod tests {
         };
 
         let ty = infer_type(&env, &expr);
-        // After unification with Int literal, the type variable is resolved to Int
-        assert_eq!(ty, Type::Int);
+        // Constructor returns Option<T>, not just T
+        match &ty {
+            Type::Constructor { name, .. } => {
+                assert_eq!(name.to_string(), "Option");
+            }
+            _ => panic!("Expected constructor type, got {:?}", ty),
+        }
+    }
+
+    #[test]
+    fn constructor_returns_constructor_type() {
+        let env = TypeEnv::with_builtin_types();
+
+        // Some { value: 42 } should have type Option<Int>, not Int
+        let expr = Expr::Constructor {
+            name: "Some".into(),
+            fields: vec![("value".into(), Expr::Literal(Literal::Int(42)))],
+            span: Span::default(),
+        };
+
+        let result = check_expr(&env, &expr);
+
+        // Should be Option<Int>
+        match result.ty {
+            Type::Constructor { name, .. } => {
+                assert_eq!(name.to_string(), "Option");
+            }
+            _ => panic!("Expected constructor type, got {:?}", result.ty),
+        }
     }
 
     // ============================================================

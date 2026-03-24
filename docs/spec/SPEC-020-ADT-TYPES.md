@@ -73,6 +73,56 @@ Implementations may elaborate it into internal type metadata for unification or 
 but that elaborated form is derived from this source model rather than replacing it with a
 second specification-level structure.
 
+#### Internal Type Representation
+
+The type system elaborates source `TypeDef` declarations into internal `Type::Constructor`
+representations for unification and type checking:
+
+```rust
+// From SPEC-003: Type::Constructor for instantiated ADTs
+pub enum Type {
+    // ... other variants
+    Constructor {
+        name: QualifiedName,     // Fully qualified type name
+        args: Vec<Type>,         // Instantiated type arguments
+        kind: Kind,              // Kind annotation
+    },
+}
+
+/// Elaboration from source TypeDef to internal Type representation
+pub fn elaborate_type_def(type_def: &TypeDef, args: Vec<Type>) -> Type {
+    let qualified_name = QualifiedName {
+        path: vec![], // Module path resolved during name resolution
+        name: type_def.name.clone().into(),
+    };
+    
+    // Compute kind from parameter count
+    let kind = if type_def.params.is_empty() {
+        Kind::Type
+    } else {
+        Kind::Arrow(
+            vec![Kind::Type; type_def.params.len()],
+            Box::new(Kind::Type)
+        )
+    };
+    
+    Type::Constructor {
+        name: qualified_name,
+        args,
+        kind,
+    }
+}
+```
+
+The elaboration process:
+1. **Name resolution**: Resolves simple names to fully qualified names with module paths
+2. **Kind computation**: Infers the kind from the number of type parameters
+3. **Argument instantiation**: Substitutes concrete types for generic parameters
+4. **Metadata attachment**: Preserves source location and constructor information for error reporting
+
+The internal `Type::Constructor` representation is used throughout type checking, while the
+source `TypeDef` remains the canonical declaration model.
+
 ## 5. Surface Syntax
 
 ### 5.1 Enum Definition
@@ -248,27 +298,230 @@ error[E042]: Non-exhaustive pattern match
    |
 ```
 
-### 6.4 Generic Type Instantiation
+### 6.4 Substitution Application and Composition
 
 ```rust
-/// Instantiate generic type with concrete arguments
-fn instantiate(
-    type_def: TypeDef,
-    args: Vec<Type>,
-) -> Type {
-    assert_eq!(type_def.params.len(), args.len());
-    
-    let subst = Substitution::from_pairs(
-        type_def.params.iter().zip(args.iter())
-    );
-    
-    subst.apply_to_type_def(&type_def)
+/// Substitution mapping type variables to types
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Substitution {
+    mappings: HashMap<TypeVar, Type>,
+}
+
+impl Substitution {
+    /// Create an empty substitution
+    pub fn empty() -> Self {
+        Self {
+            mappings: HashMap::new(),
+        }
+    }
+
+    /// Create a substitution with a single mapping
+    pub fn singleton(var: TypeVar, ty: Type) -> Self {
+        let mut mappings = HashMap::new();
+        mappings.insert(var, ty);
+        Self { mappings }
+    }
+
+    /// Apply the substitution to a type
+    pub fn apply(&self, ty: &Type) -> Type {
+        match ty {
+            Type::Var(v) => self.mappings.get(v).cloned().unwrap_or_else(|| ty.clone()),
+            Type::List(inner) => Type::List(Box::new(self.apply(inner))),
+            Type::Record(fields) => {
+                let new_fields: Vec<_> = fields
+                    .iter()
+                    .map(|(name, t)| (name.clone(), self.apply(t)))
+                    .collect();
+                Type::Record(new_fields)
+            }
+            Type::Fun(args, ret, eff) => {
+                let new_args: Vec<_> = args.iter().map(|a| self.apply(a)).collect();
+                let new_ret = Box::new(self.apply(ret));
+                Type::Fun(new_args, new_ret, *eff)
+            }
+            Type::Constructor { name, args, kind } => {
+                let new_args: Vec<_> = args.iter().map(|a| self.apply(a)).collect();
+                Type::Constructor {
+                    name: name.clone(),
+                    args: new_args,
+                    kind: kind.clone(),
+                }
+            }
+            _ => ty.clone(),
+        }
+    }
+
+    /// Compose two substitutions: self ∘ other
+    /// Result applies other first, then self
+    pub fn compose(self, other: Self) -> Self {
+        let mut result = Self::empty();
+        
+        // First, apply self to all mappings in other
+        for (var, ty) in other.mappings {
+            result.mappings.insert(var, self.apply(&ty));
+        }
+        
+        // Then add remaining mappings from self (that don't conflict)
+        for (var, ty) in self.mappings {
+            result.mappings.entry(var).or_insert(ty);
+        }
+        
+        result
+    }
+
+    /// Instantiate a generic type definition with concrete arguments
+    pub fn instantiate(
+        &self,
+        type_def: &TypeDef,
+        args: &[Type],
+    ) -> Type {
+        assert_eq!(type_def.params.len(), args.len(),
+            "Type parameter count mismatch");
+        
+        // Create substitution from params to args
+        let subst: HashMap<_, _> = type_def.params
+            .iter()
+            .zip(args.iter())
+            .map(|(p, a)| (*p, a.clone()))
+            .collect();
+        
+        // Apply substitution throughout the type body
+        self.apply_to_type_body(&type_def.body, &subst)
+    }
+
+    fn apply_to_type_body(&self, body: &TypeBody, subst: &HashMap<TypeVar, Type>) -> Type {
+        // Implementation depends on TypeBody structure
+        // Substitutes type variables throughout the body
+        todo!()
+    }
 }
 
 // Example:
+// let subst = Substitution::singleton(TypeVar(0), Type::Int);
+// subst.apply(&Type::List(Box::new(Type::Var(TypeVar(0)))))
+//   => Type::List(Box::new(Type::Int))
+//
 // instantiate(Option<T>, [Int]) => Option<Int>
 //   where T is substituted with Int throughout
 ```
+
+### 6.5 Recursive Type Unfolding
+
+Recursive types like `List<T>` use an iso-recursive representation. Type equality is
+decided by comparing the recursive structure rather than infinite unfolding:
+
+```rust
+/// Unfolds a recursive type constructor one level
+/// 
+/// For recursive types like `List<T> = Cons { head: T, tail: List<T> } | Nil`,
+/// unfolding replaces the recursive occurrence with a reference to the type definition.
+pub fn unfold_constructor(
+    type_def: &TypeDef,
+    args: &[Type],
+) -> Option<UnfoldedBody> {
+    match &type_def.body {
+        TypeBody::Enum(variants) => {
+            // Substitute type parameters in each variant
+            let subst: HashMap<_, _> = type_def.params
+                .iter()
+                .zip(args.iter())
+                .map(|(p, a)| (*p, a.clone()))
+                .collect();
+            
+            let unfolded_variants: Vec<_> = variants
+                .iter()
+                .map(|v| UnfoldedVariant {
+                    name: v.name.clone(),
+                    fields: v.fields
+                        .iter()
+                        .map(|(name, ty_expr)| {
+                            (name.clone(), substitute_in_expr(ty_expr, &subst))
+                        })
+                        .collect(),
+                })
+                .collect();
+            
+            Some(UnfoldedBody::Enum(unfolded_variants))
+        }
+        TypeBody::Struct(fields) => {
+            // Similar substitution for struct fields
+            let subst: HashMap<_, _> = type_def.params
+                .iter()
+                .zip(args.iter())
+                .map(|(p, a)| (*p, a.clone()))
+                .collect();
+            
+            let unfolded_fields: Vec<_> = fields
+                .iter()
+                .map(|(name, ty_expr)| {
+                    (name.clone(), substitute_in_expr(ty_expr, &subst))
+                })
+                .collect();
+            
+            Some(UnfoldedBody::Struct(unfolded_fields))
+        }
+        TypeBody::Alias(expr) => {
+            // Aliases unfold to their underlying type
+            let subst: HashMap<_, _> = type_def.params
+                .iter()
+                .zip(args.iter())
+                .map(|(p, a)| (*p, a.clone()))
+                .collect();
+            
+            Some(UnfoldedBody::Alias(substitute_in_expr(expr, &subst)))
+        }
+    }
+}
+
+/// Result of unfolding a type constructor
+#[derive(Debug, Clone)]
+pub enum UnfoldedBody {
+    Enum(Vec<UnfoldedVariant>),
+    Struct(Vec<(Name, TypeExpr)>),
+    Alias(TypeExpr),
+}
+
+#[derive(Debug, Clone)]
+pub struct UnfoldedVariant {
+    pub name: Name,
+    pub fields: Vec<(Name, TypeExpr)>,
+}
+
+/// Substitute type variables in a TypeExpr
+fn substitute_in_expr(expr: &TypeExpr, subst: &HashMap<TypeVar, Type>) -> TypeExpr {
+    match expr {
+        TypeExpr::Named(name) => TypeExpr::Named(name.clone()),
+        TypeExpr::Constructor { name, args } => {
+            let new_args: Vec<_> = args.iter()
+                .map(|a| substitute_in_expr(a, subst))
+                .collect();
+            TypeExpr::Constructor {
+                name: name.clone(),
+                args: new_args,
+            }
+        }
+        TypeExpr::Tuple(elems) => {
+            TypeExpr::Tuple(elems.iter().map(|e| substitute_in_expr(e, subst)).collect())
+        }
+        TypeExpr::Record(fields) => {
+            TypeExpr::Record(fields.iter()
+                .map(|(n, e)| (n.clone(), substitute_in_expr(e, subst)))
+                .collect())
+        }
+    }
+}
+```
+
+Iso-recursive representation:
+- **Type definitions** are stored in a global type context
+- **Type constructors** reference their definition by qualified name
+- **Unfolding** happens on demand during type checking (constructor resolution, exhaustiveness)
+- **Equality** is structural: two types are equal if their definitions are equal under the same arguments
+
+This approach:
+- Avoids infinite type representations
+- Supports efficient type comparison
+- Allows recursive types to be used in generic contexts
 
 ## 7. Runtime Representation
 
@@ -525,35 +778,61 @@ proptest! {
 }
 ```
 
-## 11. Implementation Phases
+## 11. Implementation Status
 
-### Phase 1: Core Types (TASK-121 to TASK-123)
-- Add Type::Sum, Type::Struct, Type::Constructor
-- Add Value::Variant, Value::Struct, Value::Tuple
-- Update unification for new types
+| Task | Description | Status |
+|------|-------------|--------|
+| TASK-121 | Add `Type::Constructor` variant | ✅ Complete |
+| TASK-122 | Add `Value::Variant` for runtime representation | ✅ Complete |
+| TASK-123 | Update unification for constructor types | ✅ Complete |
+| TASK-124 | Parse enum type definitions | ✅ Complete |
+| TASK-125 | Parse variant constructor expressions | ✅ Complete |
+| TASK-126 | Parse match expressions and patterns | ✅ Complete |
+| TASK-127 | Type check constructor expressions | ✅ Complete |
+| TASK-128 | Type check variant patterns | ✅ Complete |
+| TASK-129 | Exhaustiveness checking | ✅ Complete |
+| TASK-130 | Generic type instantiation | ✅ Complete |
+| TASK-131 | Evaluate constructor expressions | ⬜ Pending |
+| TASK-132 | Pattern matching engine | ⬜ Pending |
+| TASK-133 | Match expression evaluation | ⬜ Pending |
+| TASK-134 | Spawn returns `Option<ControlLink>` | ⬜ Pending |
+| TASK-135 | Control link transfer semantics | ⬜ Pending |
+| TASK-136 | Option and Result standard library | ⬜ Pending |
 
-### Phase 2: Parser (TASK-124 to TASK-126)
-- Parse type definitions
-- Parse variant constructors
-- Parse match expressions and patterns
+### Completed Work Summary
 
-### Phase 3: Type Checker (TASK-127 to TASK-130)
-- Type check constructors
-- Type check patterns
-- Exhaustiveness checking
-- Generic type instantiation
+**Phase 1: Core Types (TASK-121 to TASK-123)** ✅
+- `Type::Constructor` with `QualifiedName`, `args: Vec<Type>`, and `Kind`
+- `Value::Variant` for runtime enum constructor values
+- Updated unification to handle constructor vs constructor and constructor vs variable cases
+- `Substitution::apply()` and `Substitution::compose()` for type-level substitution
 
-### Phase 4: Interpreter (TASK-131 to TASK-133)
-- Evaluate constructors
-- Pattern matching engine
-- Match expression evaluation
+**Phase 2: Parser (TASK-124 to TASK-126)** ✅
+- Surface syntax parsing for `type ... = ...` definitions
+- Constructor expression parsing: `Some { value: 42 }`
+- Pattern parsing: `Some { value: x }` and wildcard `_`
+- `match` expression syntax with multiple arms
 
-### Phase 5: Integration (TASK-134 to TASK-135)
-- Spawn returns Option<ControlLink> and Option<MonitorLink>
-- Control link transfer semantics
+**Phase 3: Type Checker (TASK-127 to TASK-130)** ✅
+- Constructor typing: resolves constructor names to parent enum types
+- Variant pattern typing: checks field bindings against constructor metadata
+- Exhaustiveness checking using pattern matrix analysis
+- Generic instantiation via `Substitution::instantiate()`
+- Iso-recursive type unfolding via `unfold_constructor()`
 
-### Phase 6: Standard Library (TASK-136)
-- Option and Result modules
+### Remaining Work
+
+**Phase 4: Interpreter (TASK-131 to TASK-133)**
+- Evaluate constructor expressions to `Value::Variant`
+- Implement pattern matching engine with binding extraction
+- Evaluate `match` expressions against scrutinee values
+
+**Phase 5: Integration (TASK-134 to TASK-135)**
+- `spawn` returns composite with `Option<ControlLink>` and `Option<MonitorLink>`
+- Control link transfer with ownership semantics
+
+**Phase 6: Standard Library (TASK-136)**
+- `Option<T>` and `Result<T, E>` modules with helper functions
 
 ## 12. Related Documents
 

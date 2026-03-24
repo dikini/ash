@@ -8,6 +8,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Workflow Contracts with Linear Obligation Tracking (Phase 37, SPEC-022)**
+  - Hoare-style workflow contracts with `requires` and `ensures` clauses
+  - Linear obligation tracking: `oblige obligation_name` creates, `check obligation_name` discharges
+  - Requirement checking with capabilities (`HasCapability`), roles (`HasRole`), and arithmetic constraints
+  - SMT-based arithmetic constraint checking using Z3 for symbolic verification
+  - Audit trail integration with JSON Lines format for obligation checks
+  - Branch/parallel obligation discharge semantics via set intersection
+  - 600+ new tests covering obligations, requirements, and contract parsing
+  - Canonical SPEC-022 documentation in `docs/spec/` (TASK-226 through TASK-232)
+
 - Full parametric polymorphism (generics) for Ash type system. Type constructors like `Option<Int>` and `Option<String>` are now distinct, distinguishable types. (TASK-127, TASK-128, TASK-129, TASK-130)
 - `Type::Constructor` variant with `QualifiedName`, type arguments, and `Kind` annotation for future higher-kinded type support.
 - `Kind` system for classifying type constructors (`*`, `* -> *`, etc.).

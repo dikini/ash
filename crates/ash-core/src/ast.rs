@@ -147,8 +147,46 @@ pub enum Workflow {
         continuation: Box<Workflow>,
     },
 
+    /// OBLIGE obligation_name - introduce linear obligation
+    Oblige {
+        name: String,
+        span: crate::workflow_contract::Span,
+    },
+
+    /// CHECK obligation_name - check obligation, returns Bool
+    CheckObligation {
+        name: String,
+        span: crate::workflow_contract::Span,
+    },
+
     /// Terminal
     Done,
+}
+
+/// Source span for AST nodes
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+/// Parameter for workflow definitions
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Parameter {
+    pub name: Name,
+    pub ty: TypeExpr,
+    pub span: Span,
+}
+
+/// Workflow definition with contract support
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowDef {
+    pub name: Name,
+    pub params: Vec<Parameter>,
+    pub body: Workflow,
+    pub export: bool,
+    pub contract: Option<crate::workflow_contract::Contract>,
+    pub span: Span,
 }
 
 /// A capability reference

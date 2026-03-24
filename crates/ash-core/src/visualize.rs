@@ -616,6 +616,28 @@ impl DotGenerator {
                 .unwrap();
                 id
             }
+            Workflow::Oblige { name, .. } => {
+                let id = self.next_id();
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"OBLIGE\\n{}\", shape=note, fillcolor=\"lightyellow\"];",
+                    id,
+                    escape_dot(name)
+                )
+                .unwrap();
+                id
+            }
+            Workflow::CheckObligation { name, .. } => {
+                let id = self.next_id();
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"CHECK\\n{}\", shape=note, fillcolor=\"lightcoral\"];",
+                    id,
+                    escape_dot(name)
+                )
+                .unwrap();
+                id
+            }
         }
     }
 

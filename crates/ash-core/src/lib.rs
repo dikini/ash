@@ -10,6 +10,7 @@ pub mod provenance;
 pub mod stream;
 pub mod value;
 pub mod visualize;
+pub mod workflow_contract;
 
 // Property testing helpers available when proptest feature enabled
 #[cfg(any(feature = "proptest-helpers", test))]

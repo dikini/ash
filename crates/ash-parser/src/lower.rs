@@ -230,6 +230,11 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             }
         }
 
+        SurfaceWorkflow::Oblige { obligation, .. } => CoreWorkflow::Oblige {
+            name: obligation.to_string(),
+            span: Default::default(),
+        },
+
         SurfaceWorkflow::Act { action, guard, .. } => CoreWorkflow::Act {
             action: lower_action(action),
             guard: guard.as_ref().map(lower_guard).unwrap_or(CoreGuard::Always),
@@ -447,6 +452,10 @@ pub fn lower_expr(expr: &Expr) -> CoreExpr {
             expr: Box::new(lower_expr(expr)),
             then_branch: Box::new(lower_expr(then_branch)),
             else_branch: Box::new(lower_expr(else_branch)),
+        },
+
+        Expr::CheckObligation { obligation, .. } => CoreExpr::CheckObligation {
+            obligation: obligation.to_string(),
         },
 
         Expr::Constructor { name, fields, .. } => CoreExpr::Constructor {

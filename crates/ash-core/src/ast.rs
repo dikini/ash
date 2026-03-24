@@ -387,6 +387,12 @@ pub enum Expr {
     /// Split expression: split instance_expr
     /// Returns a tuple (InstanceAddr, Option<ControlLink>)
     Split(Box<Expr>),
+
+    /// Check obligation expression: check obligation_name
+    /// Returns true if obligation was discharged, false otherwise
+    CheckObligation {
+        obligation: Name,
+    },
 }
 
 /// Unary operators

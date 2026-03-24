@@ -360,6 +360,17 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         return Ok(Expr::Literal(lit));
     }
 
+    // Try check obligation expression: check obligation_name
+    if let Ok(_) = keyword("check").parse_next(input) {
+        skip_whitespace_and_comments(input);
+        let obligation = identifier(input)?;
+        let span = span_from(&start_pos, &input.state);
+        return Ok(Expr::CheckObligation {
+            obligation: obligation.into(),
+            span,
+        });
+    }
+
     // Try identifier/variable (and potential field access/call)
     let name = identifier(input)?;
     let name_str: Name = name.into();

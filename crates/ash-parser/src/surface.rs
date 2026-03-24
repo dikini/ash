@@ -252,6 +252,13 @@ pub enum Workflow {
         /// Source span
         span: Span,
     },
+    /// Create an obligation that must be discharged before workflow completes
+    Oblige {
+        /// Name of the obligation to create
+        obligation: Name,
+        /// Source span
+        span: Span,
+    },
     /// Act phase: execute an action
     Act {
         /// Action to execute
@@ -516,6 +523,13 @@ pub enum Expr {
         then_branch: Box<Expr>,
         /// Branch taken when pattern doesn't match
         else_branch: Box<Expr>,
+        /// Source span
+        span: Span,
+    },
+    /// Check obligation expression: check obligation_name
+    CheckObligation {
+        /// Name of the obligation to check
+        obligation: Name,
         /// Source span
         span: Span,
     },
@@ -823,6 +837,7 @@ impl Spanned for Workflow {
             Workflow::Propose { span, .. } => *span,
             Workflow::Decide { span, .. } => *span,
             Workflow::Check { span, .. } => *span,
+            Workflow::Oblige { span, .. } => *span,
             Workflow::Act { span, .. } => *span,
             Workflow::Let { span, .. } => *span,
             Workflow::If { span, .. } => *span,
@@ -854,6 +869,7 @@ impl Spanned for Expr {
             Expr::Match { span, .. } => *span,
             Expr::Policy(policy_expr) => policy_expr.span(),
             Expr::IfLet { span, .. } => *span,
+            Expr::CheckObligation { span, .. } => *span,
             Expr::Constructor { span, .. } => *span,
         }
     }
@@ -943,6 +959,9 @@ impl Workflow {
                     Effect::Evaluative
                 }
             }
+
+            // Creating obligations is evaluative (affects type checking)
+            Workflow::Oblige { .. } => Effect::Evaluative,
 
             // Executing actions has side effects
             Workflow::Act { .. } => Effect::Operational,

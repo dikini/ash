@@ -14,28 +14,157 @@ use crate::parse_receive::parse_receive;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
-    ActionRef, CheckTarget, Expr, Guard, Name, ObligationRef, Workflow, WorkflowDef,
+    ActionRef, CheckTarget, Contract, EnsuresClause, Expr, Guard, Name, ObligationRef, Parameter, Requirement, Type, Workflow, WorkflowDef,
 };
 use crate::token::Span;
 
-/// Parse a workflow definition: `workflow <name> { <body> }`
+/// Parse a workflow definition: `workflow <name>[(<params>)] [<contract>] { <body> }`
 pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     let start_pos = input.state;
 
     let _ = keyword("workflow").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
+    
+    // Parse optional parameters: (x: Int, y: String)
+    skip_whitespace_and_comments(input);
+    let params = if input.input.starts_with("(") {
+        parse_params(input)?
+    } else {
+        vec![]
+    };
+    
+    // Parse optional contract clauses (requires/ensures)
+    skip_whitespace_and_comments(input);
+    let contract = parse_opt_contract(input)?;
+    
+    skip_whitespace_and_comments(input);
     let body = delimited(literal_str("{"), workflow, literal_str("}")).parse_next(input)?;
 
     let span = span_from(&start_pos, &input.state);
 
     Ok(WorkflowDef {
         name: name.into(),
-        params: vec![],
+        params,
         body,
-        contract: None,
+        contract,
         span,
     })
+}
+
+/// Parse workflow parameters: `(x: Int, y: String)`
+fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    
+    let mut params = Vec::new();
+    
+    // Check for empty params
+    if input.input.starts_with(")") {
+        let _ = literal_str(")").parse_next(input)?;
+        return Ok(params);
+    }
+    
+    loop {
+        skip_whitespace_and_comments(input);
+        let param_start = input.state;
+        
+        // Parse parameter name
+        let name = identifier(input)?;
+        skip_whitespace_and_comments(input);
+        
+        // Parse colon
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        
+        // Parse type
+        let ty = parse_type(input)?;
+        
+        let param_span = span_from(&param_start, &input.state);
+        params.push(Parameter {
+            name: name.into(),
+            ty,
+            span: param_span,
+        });
+        
+        skip_whitespace_and_comments(input);
+        
+        // Check for comma or end of params
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            continue;
+        } else if input.input.starts_with(")") {
+            let _ = literal_str(")").parse_next(input)?;
+            break;
+        } else {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new()
+            ));
+        }
+    }
+    
+    Ok(params)
+}
+
+/// Parse an optional type (simple version - just identifiers for now)
+fn parse_type(input: &mut ParseInput) -> ModalResult<Type> {
+    let type_name = identifier(input)?;
+    Ok(Type::Name(type_name.into()))
+}
+
+/// Parse optional contract clauses
+fn parse_opt_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
+    let mut requires = Vec::new();
+    let mut ensures = Vec::new();
+    
+    loop {
+        skip_whitespace_and_comments(input);
+        
+        if input.input.starts_with("requires") {
+            let req = parse_requires_clause(input)?;
+            requires.push(req);
+        } else if input.input.starts_with("ensures") {
+            let ens = parse_ensures_clause(input)?;
+            ensures.push(ens);
+        } else {
+            break;
+        }
+    }
+    
+    if requires.is_empty() && ensures.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(Contract { requires, ensures }))
+    }
+}
+
+/// Parse a requires clause: `requires: <expr>`
+fn parse_requires_clause(input: &mut ParseInput) -> ModalResult<Requirement> {
+    let _ = keyword("requires").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    
+    // Parse the requirement expression
+    let expr = expr(input)?;
+    
+    Ok(Requirement::Arithmetic { expr })
+}
+
+/// Parse an ensures clause: `ensures: <expr>`
+fn parse_ensures_clause(input: &mut ParseInput) -> ModalResult<EnsuresClause> {
+    let start_pos = input.state;
+    
+    let _ = keyword("ensures").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    
+    let expr = expr(input)?;
+    let span = span_from(&start_pos, &input.state);
+    
+    Ok(EnsuresClause { expr, span })
 }
 
 /// Parse a workflow body - sequence of statements separated by semicolons
@@ -106,6 +235,7 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         propose_stmt,
         receive_stmt,
         decide_stmt,
+        oblige_stmt,
         check_stmt,
         act_stmt,
         let_stmt,
@@ -228,6 +358,22 @@ fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         policy,
         then_branch,
         else_branch: None,
+        span,
+    })
+}
+
+/// Parse an oblige statement: `oblige <obligation>`
+fn oblige_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
+    let start_pos = input.state;
+
+    let _ = keyword("oblige").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let obligation = identifier(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(Workflow::Oblige {
+        obligation: obligation.into(),
         span,
     })
 }

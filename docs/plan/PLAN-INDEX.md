@@ -838,3 +838,21 @@ path, and reconcile touched docs/examples with the canonical surface contract.
 obligation semantics, touched docs/examples stop overstating convergence, the inline-module parser
 rejects unsupported canonical items honestly even after recovery, and the branch now carries a
 focused closeout audit for the remaining intentional historical/process-supervision references.
+
+## Phase 37: Workflow Typing with Constraints
+
+Implement workflow contracts with Hoare-style pre/post-conditions, linear obligation tracking, and requirement checking.
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-226](tasks/TASK-226-workflow-contracts-ast.md) | Workflow contracts AST extensions | SPEC-022 | 8 | ✅ Complete |
+| [TASK-227](tasks/TASK-227-type-check-obligations.md) | Type check obligations as linear resources | SPEC-022 | 10 | ✅ Complete |
+| [TASK-228](tasks/TASK-228-requirement-checking.md) | Requirement checking at call sites | SPEC-022 | 8 | ✅ Complete |
+| [TASK-229](tasks/TASK-229-audit-trail-integration.md) | Audit trail for obligation checks | SPEC-022 | 6 | ✅ Complete |
+| [TASK-230](tasks/TASK-230-parser-updates.md) | Parser updates for contract syntax | SPEC-022 | 8 | ✅ Complete |
+| [TASK-231](tasks/TASK-231-integration-tests.md) | End-to-end integration tests | SPEC-022 | 6 | ✅ Complete |
+| [TASK-232](tasks/TASK-232-canonicalize-spec-022.md) | Canonicalize SPEC-022 workflow typing | SPEC-022 | 4 | ✅ Complete |
+
+**Phase 37 Deliverable**: Complete. Workflow contracts with requires/ensures clauses, linear
+obligation tracking (oblige/check), requirement checking with capabilities/roles, and audit trail
+integration. SPEC-022 canonicalized in docs/spec/.

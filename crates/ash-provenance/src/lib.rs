@@ -6,13 +6,15 @@
 //! - Export to multiple audit formats (JSON, CSV, PROV)
 //! - Integrity verification using Merkle trees
 
+pub mod audit;
 pub mod export;
 pub mod integrity;
 pub mod lineage;
 pub mod trace;
 
+pub use audit::{AuditBackend, AuditError, AuditEvent, AuditLog, CheckResult, FileAuditBackend};
 pub use export::{AuditExporter, CsvExporter, ExportFormat, JsonExporter, NdJsonExporter};
-pub use integrity::{Hash, MerkleTree, verify_integrity};
+pub use integrity::{verify_integrity, Hash, MerkleTree};
 pub use lineage::{DataSource, Lineage, LineageTracker, Transformation};
 pub use trace::{InMemoryTraceStore, TraceEvent, TraceRecorder, WorkflowTraceSession};
 

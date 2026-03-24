@@ -44,6 +44,10 @@ These forms are the ones downstream phases must preserve:
   `Call`, `Match`, `Constructor`
 - core patterns: `Variable`, `Tuple`, `Record`, `List`, `Wildcard`, `Literal`, `Variant`
 
+The `Variant` pattern is explicitly listed as a core pattern for matching ADT constructors
+such as `Some { value: x }` or `None`. It is essential for pattern matching over algebraic
+data types and integrates with the exhaustiveness checking specified in SPEC-020.
+
 Anything outside that workflow/expression/pattern runtime form set is either surface syntax or a
 lowering convenience for those forms. That statement only applies to the runtime form set here; it
 does not demote separate normative contracts such as type definitions, policy metadata, or other
@@ -247,6 +251,10 @@ pub enum Value {
     List(Box<[Value]>),
     Record(HashMap<Box<str>, Value>),
     Cap(Box<str>),
+    Variant {
+        name: Box<str>,
+        fields: Vec<(Box<str>, Value)>,
+    },
 }
 ```
 
@@ -255,6 +263,35 @@ pub enum Value {
 - `List` and `Record` are immutable after creation
 - `String` is valid UTF-8
 - `Ref` is a valid URI
+- `Variant` stores the constructor name and its field values; the enclosing type is
+  determined by context or constructor resolution
+
+**Value::Variant** represents ADT constructor values at runtime:
+
+- `name` is the constructor name (e.g., `"Some"`, `"None"`, `"Ok"`, `"Err"`)
+- `fields` contains the named field bindings for record-style variants
+- Unit variants (no fields) have an empty `fields` vector
+
+Examples:
+```rust
+// Some { value: 42 }
+Value::Variant {
+    name: "Some".into(),
+    fields: vec![("value".into(), Value::Int(42))],
+}
+
+// None
+Value::Variant {
+    name: "None".into(),
+    fields: vec![],
+}
+
+// Ok { value: "hello" }
+Value::Variant {
+    name: "Ok".into(),
+    fields: vec![("value".into(), Value::String("hello".into()))],
+}
+```
 
 ### 2.4 Patterns
 
@@ -266,6 +303,10 @@ pub enum Pattern {
     List(Box<[Pattern]>, Option<Name>), // [a, b, ..rest]
     Wildcard,
     Literal(Value),
+    Variant {
+        name: Name,
+        fields: Box<[(Name, Pattern)]>,
+    },
 }
 ```
 
@@ -277,6 +318,47 @@ pub enum Pattern {
 - `List` matches exact prefix, binds rest if specified
 - `Wildcard` matches any, no binding
 - `Literal` matches equal value
+- `Variant` matches ADT constructor values (see below)
+
+**Pattern::Variant Matching Rules**:
+
+A `Variant` pattern matches a `Value::Variant` when:
+1. The constructor `name` matches exactly
+2. Each field pattern matches the corresponding field value
+3. All fields in the pattern must exist in the value (field subset matching)
+
+```rust
+// Example: Matching Some { value: x }
+let pattern = Pattern::Variant {
+    name: "Some".into(),
+    fields: Box::new([("value".into(), Pattern::Variable("x".into()))]),
+};
+
+let value = Value::Variant {
+    name: "Some".into(),
+    fields: vec![("value".into(), Value::Int(42))],
+};
+
+// Match succeeds, binding x = Value::Int(42)
+```
+
+**Exhaustiveness**: The type checker ensures that variant patterns cover all constructors
+of the scrutinee type. A non-exhaustive match is a type error (see SPEC-020 Section 6.3).
+
+**Nested Patterns**: Variant patterns can nest arbitrarily:
+```rust
+// Ok { value: Some { value: x } }
+Pattern::Variant {
+    name: "Ok".into(),
+    fields: Box::new([(
+        "value".into(),
+        Pattern::Variant {
+            name: "Some".into(),
+            fields: Box::new([("value".into(), Pattern::Variable("x".into()))]),
+        }
+    )]),
+}
+```
 
 ### 2.5 Guards
 

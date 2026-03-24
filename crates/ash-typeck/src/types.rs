@@ -4,6 +4,7 @@
 //! and unification algorithm for the Ash type checker.
 
 use ash_core::{Effect, Value};
+use crate::{Kind, QualifiedName};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -41,6 +42,16 @@ pub enum Type {
 
     /// Control link (affine - must be used exactly once)
     ControlLink { workflow_type: Box<str> },
+
+    /// Type constructor application: Option<Int>, List<T>, Result<T, E>
+    Constructor {
+        /// Fully qualified constructor name
+        name: QualifiedName,
+        /// Type arguments (all must have kind *)
+        args: Vec<Type>,
+        /// Kind of the fully applied constructor (always * for now)
+        kind: Kind,
+    },
 }
 
 /// Type variable identifier
@@ -222,6 +233,20 @@ impl std::fmt::Display for Type {
             Type::Instance { workflow_type } => write!(f, "Instance<{}>", workflow_type),
             Type::InstanceAddr { workflow_type } => write!(f, "InstanceAddr<{}>", workflow_type),
             Type::ControlLink { workflow_type } => write!(f, "ControlLink<{}>", workflow_type),
+            Type::Constructor { name, args, .. } => {
+                if args.is_empty() {
+                    write!(f, "{}", name)
+                } else {
+                    write!(f, "{}<", name)?;
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", arg)?;
+                    }
+                    write!(f, ">")
+                }
+            }
         }
     }
 }
@@ -374,6 +399,7 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
 pub fn occurs_in(var: TypeVar, ty: &Type) -> bool {
     match ty {
         Type::Var(v) => *v == var,
+        Type::Constructor { args, .. } => args.iter().any(|a| occurs_in(var, a)),
         Type::List(elem) => occurs_in(var, elem),
         Type::Record(fields) => fields.iter().any(|(_, ty)| occurs_in(var, ty)),
         Type::Fun(args, ret, _) => args.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),

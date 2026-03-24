@@ -37,6 +37,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - `Option<Int>` and `Option<String>` no longer incorrectly unify.
 - Error messages now show readable type names (`Option<Int>`) instead of internal variable IDs (`Var<42>`).
 - Fixed Type Expression Conversion (TypeEnv). Replaced stubbed `TypeExpr::Constructor` handling that lost constructor information. `type_expr_to_type` now properly converts constructor names and all arguments, type alias expansion now resolves to underlying types, and name resolution is available via the new `resolve_type` helper.
+- Cleaned up documentation in `kind.rs` to avoid unnecessary `ignore` attributes on code blocks.
 
 ### Added
 

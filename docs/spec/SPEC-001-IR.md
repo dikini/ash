@@ -293,6 +293,8 @@ Value::Variant {
 }
 ```
 
+**Note on Generic Types**: While `Type::Constructor` tracks generic type information at compile time (SPEC-003), at runtime `Value::Variant` stores only the constructor name and fields. The enclosing type is determined by context or constructor resolution during execution. This is consistent with the iso-recursive type representation described in SPEC-020 Section 6.5.
+
 ### 2.4 Patterns
 
 ```rust
@@ -381,6 +383,99 @@ pub enum Guard {
 - `Or` short-circuits
 - `Not` negates
 
+### 2.6 Expressions
+
+```rust
+pub enum Expr {
+    Literal(Value),
+    Variable(Name),
+    FieldAccess(Box<Expr>, Name),
+    IndexAccess(Box<Expr>, Box<Expr>),
+    Unary(UnaryOp, Box<Expr>),
+    Binary(BinaryOp, Box<Expr>, Box<Expr>),
+    Call(Box<Expr>, Vec<Expr>),
+    Match(Box<Expr>, Vec<MatchArm>),
+    Constructor(ConstructorExpr),
+}
+
+/// Constructor expression for ADT value creation
+pub struct ConstructorExpr {
+    /// Constructor name (e.g., "Some", "None", "Ok")
+    pub name: Name,
+    /// Field assignments: field name -> expression
+    pub fields: Vec<(Name, Expr)>,
+}
+
+/// Match arm for pattern matching
+pub struct MatchArm {
+    /// Pattern to match against
+    pub pattern: Pattern,
+    /// Optional guard expression
+    pub guard: Option<Expr>,
+    /// Expression to evaluate if pattern matches
+    pub body: Expr,
+}
+```
+
+**Constructor Expression** (`Expr::Constructor`):
+
+Creates an ADT variant value by evaluating field expressions and packaging them
+into a `Value::Variant`. The constructor name determines which variant is created.
+
+```rust
+// Example: Some { value: 42 }
+Expr::Constructor(ConstructorExpr {
+    name: "Some".into(),
+    fields: vec![(
+        "value".into(),
+        Expr::Literal(Value::Int(42))
+    )],
+})
+```
+
+**Match Expression** (`Expr::Match`):
+
+Evaluates the scrutinee expression, then selects the first arm whose pattern
+matches and whose guard (if present) evaluates to true. Pattern matching happens
+in arm order; guards are evaluated only after successful pattern match.
+
+```rust
+// Example: match opt { Some { value: x } => x, None => 0 }
+Expr::Match(
+    Box::new(Expr::Variable("opt".into())),
+    vec![
+        MatchArm {
+            pattern: Pattern::Variant {
+                name: "Some".into(),
+                fields: Box::new([(
+                    "value".into(),
+                    Pattern::Variable("x".into())
+                )]),
+            },
+            guard: None,
+            body: Expr::Variable("x".into()),
+        },
+        MatchArm {
+            pattern: Pattern::Variant {
+                name: "None".into(),
+                fields: Box::new([]),
+            },
+            guard: None,
+            body: Expr::Literal(Value::Int(0)),
+        },
+    ],
+)
+```
+
+**Exhaustiveness**: Well-typed match expressions are guaranteed exhaustive by
+the type checker (see SPEC-020 Section 6.3). A non-exhaustive match at runtime
+indicates a type system or implementation error.
+
+**Lowering from Surface Syntax**:
+- Constructor expressions in SPEC-002 lower directly to `Expr::Constructor`
+- Match expressions in SPEC-02 lower directly to `Expr::Match`
+- `if let` surface syntax lowers to `Expr::Match` with a wildcard fallback arm
+
 ## 3. Provenance
 
 ```rust
@@ -449,6 +544,7 @@ Breaking changes increment version. Runtime checks version compatibility.
 
 ## 7. Related Documents
 
-- SPEC-002: Surface Language
-- SPEC-003: Type System
-- SPEC-004: Operational Semantics
+- [SPEC-002](../SPEC-002-SURFACE.md): Surface Language - Surface syntax for type definitions, constructors, and match
+- [SPEC-003](../SPEC-003-TYPE-SYSTEM.md): Type System - Type checking including `Type::Constructor` and generic types
+- [SPEC-004](../SPEC-004-SEMANTICS.md): Operational Semantics - Runtime behavior including pattern matching
+- [SPEC-020](../SPEC-020-ADT-TYPES.md): ADT Types - Algebraic data type specifications and exhaustiveness checking

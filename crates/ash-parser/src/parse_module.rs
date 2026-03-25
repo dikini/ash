@@ -135,6 +135,10 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
 fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     let start_pos = input.state;
 
+    // Parse optional visibility modifier before "capability" keyword
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+
     let _ = keyword("capability").parse_next(input)?;
     skip_whitespace(input);
     let name = identifier(input)?;
@@ -158,6 +162,7 @@ fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition
     };
 
     Ok(Definition::Capability(CapabilityDef {
+        visibility,
         name: name.into(),
         effect,
         params,
@@ -225,6 +230,14 @@ fn parse_effect_type(input: &mut ParseInput) -> ModalResult<EffectType> {
         Ok(EffectType::Write)
     } else if keyword("external").parse_next(input).is_ok() {
         Ok(EffectType::External)
+    } else if keyword("epistemic").parse_next(input).is_ok() {
+        Ok(EffectType::Epistemic)
+    } else if keyword("deliberative").parse_next(input).is_ok() {
+        Ok(EffectType::Deliberative)
+    } else if keyword("evaluative").parse_next(input).is_ok() {
+        Ok(EffectType::Evaluative)
+    } else if keyword("operational").parse_next(input).is_ok() {
+        Ok(EffectType::Operational)
     } else {
         Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),

@@ -191,6 +191,7 @@ mod tests {
     fn test_inline_module_with_definitions() {
         // Test inline module with actual definitions
         let capability_def = Definition::Capability(crate::surface::CapabilityDef {
+            visibility: crate::surface::Visibility::Inherited,
             name: "read_file".into(),
             effect: crate::surface::EffectType::Read,
             params: vec![],
@@ -235,6 +236,7 @@ mod tests {
         });
 
         let capability_def = Definition::Capability(crate::surface::CapabilityDef {
+            visibility: crate::surface::Visibility::Inherited,
             name: "read_file".into(),
             effect: crate::surface::EffectType::Read,
             params: vec![],
@@ -265,6 +267,7 @@ mod tests {
             Visibility::Inherited,
             vec![
                 Definition::Capability(crate::surface::CapabilityDef {
+                    visibility: crate::surface::Visibility::Inherited,
                     name: "approve".into(),
                     effect: crate::surface::EffectType::Decide,
                     params: vec![],
@@ -273,6 +276,7 @@ mod tests {
                     span: Span::new(10, 30, 1, 1),
                 }),
                 Definition::Capability(crate::surface::CapabilityDef {
+                    visibility: crate::surface::Visibility::Inherited,
                     name: "review".into(),
                     effect: crate::surface::EffectType::Analyze,
                     params: vec![],

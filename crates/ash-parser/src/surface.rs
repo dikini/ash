@@ -32,6 +32,8 @@ pub enum Definition {
 /// A capability definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapabilityDef {
+    /// Visibility modifier (pub, pub(crate), etc.)
+    pub visibility: Visibility,
     /// Name of the capability
     pub name: Name,
     /// Effect type of the capability
@@ -723,6 +725,14 @@ pub enum EffectType {
     Write,
     /// External effects
     External,
+    /// Knowledge/observation effect (lattice variant)
+    Epistemic,
+    /// Deliberation/analysis effect (lattice variant)
+    Deliberative,
+    /// Decision/evaluation effect (lattice variant)
+    Evaluative,
+    /// Action/operation effect (lattice variant)
+    Operational,
 }
 
 /// Policy decisions.
@@ -1077,6 +1087,7 @@ mod tests {
     #[test]
     fn test_definition_variants() {
         let cap_def = CapabilityDef {
+            visibility: Visibility::Inherited,
             name: "read_file".into(),
             effect: EffectType::Read,
             params: vec![],
@@ -1120,6 +1131,7 @@ mod tests {
     #[test]
     fn test_capability_def_construction() {
         let cap = CapabilityDef {
+            visibility: Visibility::Inherited,
             name: "write_file".into(),
             effect: EffectType::Write,
             params: vec![

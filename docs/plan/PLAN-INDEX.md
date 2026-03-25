@@ -431,10 +431,10 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 245/247 tasks complete (1 deferred, 2 ready)
+**Overall Progress**: 246/247 tasks complete (1 deferred, 1 ready)
 **Remaining Tasks**:
 - 1 deferred: `TASK-063` (dynamic policy registration)
-- 2 ready: `TASK-236` (role runtime), `TASK-239` (proxy impl)
+- 1 ready: `TASK-239` (proxy impl)
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
 
@@ -920,7 +920,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-235](tasks/TASK-235-SPEC-019-ROLE-SEMANTICS.md) | SPEC-019: role runtime semantics | SPEC-019 | 12 | ✅ Complete |
-| [TASK-236](tasks/TASK-236-ROLE-RUNTIME-IMPL.md) | Implement role runtime enforcement | SPEC-019 | 30 | 📋 Ready |
+| [TASK-236](tasks/TASK-236-ROLE-RUNTIME-IMPL.md) | Implement role runtime enforcement | SPEC-019 | 30 | ✅ Complete |
 
 ### Decision Point: Obligation Syntax
 

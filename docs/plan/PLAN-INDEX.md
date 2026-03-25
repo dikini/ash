@@ -877,7 +877,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-234](tasks/TASK-234-CAPABILITY-PARSER-IMPL.md) | Implement capability definition parser | SPEC-017 | 20 | ⏳ Blocked on TASK-233 |
+| [TASK-234](tasks/TASK-234-CAPABILITY-PARSER-IMPL.md) | Implement capability definition parser | SPEC-017 | 20 | ✅ Complete |
 
 ### Phase 40: Role Runtime Semantics
 

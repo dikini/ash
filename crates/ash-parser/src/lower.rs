@@ -17,12 +17,10 @@ use ash_core::{
 use ash_core::RoleObligationRef as CoreRoleObligationRef;
 
 use crate::surface::{
-    ActionRef, BinaryOp, CheckTarget, Expr, Guard, Literal, ObligationRef, Pattern, PolicyExpr,
-    Predicate, StreamPattern, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
+    ActionRef, BinaryOp, CapabilityDef, CheckTarget, Definition, EffectType, Expr, Guard, Literal,
+    ObligationRef, Pattern, PolicyExpr, Predicate, RoleDef, StreamPattern, UnaryOp,
+    Workflow as SurfaceWorkflow, WorkflowDef,
 };
-
-#[cfg(test)]
-use crate::surface::{CapabilityDef, Definition, EffectType, RoleDef};
 
 /// Error returned when parsed role metadata cannot be lowered honestly.
 #[cfg(test)]
@@ -112,7 +110,6 @@ fn lower_role_authority(
         })
 }
 
-#[cfg(test)]
 fn lower_capability_def(def: &CapabilityDef) -> Capability {
     Capability {
         name: def.name.to_string(),
@@ -121,7 +118,6 @@ fn lower_capability_def(def: &CapabilityDef) -> Capability {
     }
 }
 
-#[cfg(test)]
 fn lower_constraint(constraint: &crate::surface::Constraint) -> ash_core::Constraint {
     ash_core::Constraint {
         predicate: lower_predicate(&constraint.predicate),
@@ -657,7 +653,6 @@ fn lower_predicate(pred: &Predicate) -> CorePredicate {
 }
 
 /// Lower an effect type to core Effect.
-#[cfg(test)]
 fn lower_effect_type(effect: EffectType) -> Effect {
     match effect {
         EffectType::Observe | EffectType::Read | EffectType::Epistemic => Effect::Epistemic,
@@ -807,6 +802,7 @@ mod tests {
 
         let definitions = vec![
             crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                visibility: crate::surface::Visibility::Inherited,
                 name: "approve".into(),
                 effect: crate::surface::EffectType::Decide,
                 params: vec![],
@@ -815,6 +811,7 @@ mod tests {
                 span: dummy_span(),
             }),
             crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                visibility: crate::surface::Visibility::Inherited,
                 name: "review".into(),
                 effect: crate::surface::EffectType::Analyze,
                 params: vec![],
@@ -850,6 +847,7 @@ mod tests {
             crate::surface::Visibility::Inherited,
             vec![
                 crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                    visibility: crate::surface::Visibility::Inherited,
                     name: "approve".into(),
                     effect: crate::surface::EffectType::Read,
                     params: vec![],
@@ -885,6 +883,7 @@ mod tests {
             crate::surface::Visibility::Inherited,
             vec![
                 crate::surface::Definition::Capability(crate::surface::CapabilityDef {
+                    visibility: crate::surface::Visibility::Inherited,
                     name: "approve".into(),
                     effect: crate::surface::EffectType::Decide,
                     params: vec![],

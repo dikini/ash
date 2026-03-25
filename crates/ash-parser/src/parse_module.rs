@@ -135,6 +135,10 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
 fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     let start_pos = input.state;
 
+    // Parse optional visibility modifier before "capability" keyword
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+
     let _ = keyword("capability").parse_next(input)?;
     skip_whitespace(input);
     let name = identifier(input)?;
@@ -158,6 +162,7 @@ fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition
     };
 
     Ok(Definition::Capability(CapabilityDef {
+        visibility,
         name: name.into(),
         effect,
         params,

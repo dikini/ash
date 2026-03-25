@@ -116,15 +116,7 @@ const BASIC_EFFECT_TYPES: &[(EffectType, &str)] = &[
     (EffectType::External, "external"),
 ];
 
-/// All effect lattice variants.
-const LATTICE_EFFECT_TYPES: &[(EffectType, &str)] = &[
-    // Note: These would map to the same variants in an extended EffectType enum
-    // For now, we test that the parser recognizes these keywords
-    (EffectType::Observe, "epistemic"), // Maps to Observe for now
-    (EffectType::Analyze, "deliberative"), // Maps to Analyze for now
-    (EffectType::Decide, "evaluative"), // Maps to Decide for now
-    (EffectType::Act, "operational"),   // Maps to Act for now
-];
+
 
 // =============================================================================
 // Property Tests

@@ -159,6 +159,38 @@ pub enum Workflow {
         span: crate::workflow_contract::Span,
     },
 
+    /// YIELD to role with request, suspend workflow awaiting response
+    ///
+    /// Sends a request to a proxy handling the specified role and suspends
+    /// the workflow until a response is received with matching correlation ID.
+    Yield {
+        /// Target role to yield to
+        role: Name,
+        /// Request value to send to the proxy
+        request: Box<Expr>,
+        /// Expected response type for type checking
+        expected_response_type: crate::workflow_contract::TypeExpr,
+        /// Continuation workflow executed after resume
+        continuation: Box<Workflow>,
+        /// Source span for error reporting
+        span: Span,
+    },
+
+    /// RESUME from yield with response value
+    ///
+    /// Sends a response back to a workflow that yielded to this proxy.
+    /// Used within proxy workflows to respond to yield requests.
+    ProxyResume {
+        /// Response value to send back
+        value: Box<Expr>,
+        /// Type of the response value
+        value_type: crate::workflow_contract::TypeExpr,
+        /// Correlation ID linking to the original yield
+        correlation_id: CorrelationId,
+        /// Source span for error reporting
+        span: Span,
+    },
+
     /// Terminal
     Done,
 }
@@ -168,6 +200,30 @@ pub enum Workflow {
 pub struct Span {
     pub start: usize,
     pub end: usize,
+}
+
+/// Correlation ID for linking yield/resume pairs
+///
+/// Used to match responses from proxies to the original yield requests.
+/// Each yield generates a unique correlation ID that must be included
+/// in the corresponding resume.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CorrelationId(pub u64);
+
+impl CorrelationId {
+    /// Create a new correlation ID from a numeric value
+    #[must_use]
+    pub fn new(id: u64) -> Self {
+        Self(id)
+    }
+
+    /// Generate a new unique correlation ID
+    #[must_use]
+    pub fn generate() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(1);
+        Self(COUNTER.fetch_add(1, Ordering::SeqCst))
+    }
 }
 
 /// Parameter for workflow definitions
@@ -505,6 +561,63 @@ pub struct Role {
     pub name: Name,
     pub authority: Vec<Capability>,
     pub obligations: Vec<RoleObligationRef>,
+}
+
+/// Input capability for proxy workflows
+///
+/// Represents either an `observes` or `receives` capability declaration
+/// in a proxy definition, specifying what inputs the proxy can handle.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum InputCapability {
+    /// Observes capability (read-only sampling)
+    Observes {
+        /// The capability being observed
+        capability: Capability,
+        /// Optional channel within the capability
+        channel: Option<Name>,
+    },
+    /// Receives capability (mailbox messages)
+    Receives {
+        /// The capability receiving messages
+        capability: Capability,
+        /// Optional channel for message routing
+        channel: Option<Name>,
+    },
+}
+
+/// Proxy workflow definition
+///
+/// A proxy workflow represents an external persona (human, AI agent, etc.)
+/// and handles role-based message routing for yield/resume patterns.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProxyDef {
+    /// Name of the proxy workflow
+    pub name: Name,
+    /// The role this proxy handles messages for
+    pub handled_role: Role,
+    /// Input capabilities (observes/receives declarations)
+    pub inputs: Vec<InputCapability>,
+    /// Body of the proxy workflow
+    pub body: Workflow,
+    /// Source span for error reporting
+    pub span: Span,
+}
+
+/// Top-level module item
+///
+/// A module can contain workflows, proxies, capabilities, policies, and roles.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ModuleItem {
+    /// Workflow definition
+    Workflow(WorkflowDef),
+    /// Proxy workflow definition
+    Proxy(ProxyDef),
+    /// Capability definition
+    Capability(Capability),
+    /// Type definition
+    Type(TypeDef),
+    /// Role definition
+    Role(Role),
 }
 
 /// Type definition in source code

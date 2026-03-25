@@ -431,10 +431,9 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 247/248 tasks complete (1 deferred, 1 ready)
+**Overall Progress**: 248/248 tasks complete (1 deferred)
 **Remaining Tasks**:
 - 1 deferred: `TASK-063` (dynamic policy registration)
-- 1 ready: `TASK-239` (proxy workflow implementation, waiting on SPEC-023 finalization)
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
 
@@ -937,6 +936,6 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-238](tasks/TASK-238-SPEC-023-PROXY-WORKFLOWS.md) | SPEC-023: proxy workflows | SPEC-023 | 16 | ✅ Complete |
-| [TASK-239](tasks/TASK-239-PROXY-WORKFLOW-IMPL.md) | Implement proxy workflow runtime | SPEC-023 | 50 | 📋 Ready |
+| [TASK-239](tasks/TASK-239-PROXY-WORKFLOW-IMPL.md) | Implement proxy workflow runtime | SPEC-023 | 50 | ✅ Complete |
 
 **Note:** No release is currently planned for these phases. Work can proceed according to dependency constraints and priorities.

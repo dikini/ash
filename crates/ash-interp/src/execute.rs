@@ -19,17 +19,22 @@ use crate::guard::eval_guard;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
+use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_state::RuntimeState;
 use crate::stream::StreamContext;
+use crate::yield_state::{CorrelationId, SuspendedYields, YieldState};
 
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::Mutex;
 
 /// Boxed future type for recursive async execution
 type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 type SharedControlRegistry = Arc<Mutex<ControlLinkRegistry>>;
+type SharedProxyRegistry = Arc<Mutex<ProxyRegistry>>;
+type SharedSuspendedYields = Arc<Mutex<SuspendedYields>>;
 
 /// Execute a workflow, returning the final value (legacy signature without BehaviourContext)
 ///
@@ -116,6 +121,14 @@ pub(crate) fn shared_control_registry(runtime_state: &RuntimeState) -> SharedCon
     runtime_state.control_registry()
 }
 
+pub(crate) fn shared_proxy_registry(runtime_state: &RuntimeState) -> SharedProxyRegistry {
+    runtime_state.proxy_registry()
+}
+
+pub(crate) fn shared_suspended_yields(runtime_state: &RuntimeState) -> SharedSuspendedYields {
+    runtime_state.suspended_yields()
+}
+
 pub fn execute_workflow_with_behaviour_in_state<'a>(
     workflow: &'a Workflow,
     ctx: Context,
@@ -126,6 +139,8 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
 ) -> BoxFuture<'a, ExecResult<Value>> {
     let mailbox = shared_mailbox();
     let control_registry = shared_control_registry(runtime_state);
+    let proxy_registry = shared_proxy_registry(runtime_state);
+    let suspended_yields = shared_suspended_yields(runtime_state);
     execute_workflow_inner(
         workflow,
         ctx,
@@ -135,6 +150,8 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
         None,
         mailbox,
         control_registry,
+        Some(proxy_registry),
+        Some(suspended_yields),
     )
 }
 
@@ -160,6 +177,8 @@ pub(crate) fn execute_workflow_inner<'a>(
     stream_ctx: Option<&'a StreamContext>,
     mailbox: SharedMailbox,
     control_registry: SharedControlRegistry,
+    proxy_registry: Option<SharedProxyRegistry>,
+    suspended_yields: Option<SharedSuspendedYields>,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
         match workflow {
@@ -194,7 +213,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -216,7 +235,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        )
+                        None, None)
                         .await
                     }
                     Value::Bool(false) => {
@@ -229,7 +248,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        )
+                        None, None)
                         .await
                     }
                     _ => Err(ExecError::Eval(EvalError::TypeMismatch {
@@ -250,7 +269,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox.clone(),
                     control_registry.clone(),
-                )
+                None, None)
                 .await?;
                 execute_workflow_inner(
                     second,
@@ -261,7 +280,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -284,7 +303,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox.clone(),
                             control_registry.clone(),
-                        )
+                        None, None)
                     })
                     .collect();
 
@@ -321,7 +340,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -337,7 +356,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -376,7 +395,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -405,7 +424,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        )
+                        None, None)
                         .await
                     }
                     ash_core::Decision::Deny => Err(ExecError::PolicyDenied {
@@ -452,7 +471,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                                 stream_ctx,
                                 mailbox.clone(),
                                 control_registry.clone(),
-                            )
+                            None, None)
                             .await?;
                         }
 
@@ -481,7 +500,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -496,7 +515,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox.clone(),
                     control_registry.clone(),
-                )
+                None, None)
                 .await
                 {
                     Ok(result) => Ok(result),
@@ -510,7 +529,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        )
+                        None, None)
                         .await
                     }
                 }
@@ -527,7 +546,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -546,7 +565,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -564,7 +583,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -634,6 +653,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     CoreReceiveRuntime {
                         mailbox,
                         control_registry,
+                        proxy_registry: None,
+                        suspended_yields: None,
                         stream_ctx,
                         cap_ctx,
                         policy_eval,
@@ -686,7 +707,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -720,7 +741,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -744,7 +765,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -772,7 +793,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -800,7 +821,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -828,7 +849,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                )
+                None, None)
                 .await
             }
 
@@ -849,8 +870,117 @@ pub(crate) fn execute_workflow_inner<'a>(
                     "CHECK '{name}' not yet implemented in interpreter"
                 )))
             }
+
+            // YIELD - Yield control to proxy (awaiting resume)
+            Workflow::Yield {
+                role,
+                request,
+                expected_response_type,
+                continuation,
+                span: _,
+            } => {
+                // Check if proxy registry is available
+                let proxy_reg = match proxy_registry {
+                    Some(reg) => reg,
+                    None => {
+                        return Err(ExecError::ExecutionFailed(
+                            "YIELD requires proxy registry - use execute_workflow_with_behaviour_in_state".to_string()
+                        ));
+                    }
+                };
+
+                // Look up the proxy for this role
+                let proxy_addr = {
+                    let registry = proxy_reg.lock().await;
+                    match registry.lookup(role) {
+                        Some(addr) => addr.clone(),
+                        None => {
+                            return Err(ExecError::ExecutionFailed(
+                                format!("No proxy registered for role '{}'", role)
+                            ));
+                        }
+                    }
+                };
+
+                // Check if suspended yields registry is available
+                let suspended = match suspended_yields {
+                    Some(s) => s,
+                    None => {
+                        return Err(ExecError::ExecutionFailed(
+                            "YIELD requires suspended yields registry".to_string()
+                        ));
+                    }
+                };
+
+                // Evaluate the request expression
+                let request_value = eval_expr(request, &ctx).map_err(ExecError::Eval)?;
+
+                // Generate correlation ID and create yield state
+                let correlation_id = CorrelationId::new();
+                let yield_state = YieldState {
+                    correlation_id,
+                    expected_response_type: convert_type_expr(expected_response_type),
+                    continuation: (**continuation).clone(),
+                    origin_workflow: "workflow-instance".to_string(),
+                    target_role: role.clone(),
+                    request_sent_at: Instant::now(),
+                };
+
+                // Suspend the workflow
+                {
+                    let mut suspended = suspended.lock().await;
+                    suspended.suspend(yield_state);
+                }
+
+                // For now, we return an error indicating the workflow is suspended
+                // In a full implementation, this would send a message to the proxy
+                // and the workflow would be resumed when the proxy responds
+                Err(ExecError::ExecutionFailed(
+                    format!("YIELD suspended: request sent to proxy at {} for role '{}' with correlation_id={}", 
+                        proxy_addr, role, correlation_id.0)
+                ))
+            }
+
+            // PROXY_RESUME - Resume after proxy yields
+            Workflow::ProxyResume { .. } => {
+                Err(ExecError::ExecutionFailed(
+                    "PROXY_RESUME not yet implemented in interpreter".to_string()
+                ))
+            }
         }
     })
+}
+/// Convert a workflow_contract TypeExpr to a typeck Type
+fn convert_type_expr(type_expr: &ash_core::workflow_contract::TypeExpr) -> ash_typeck::types::Type {
+    use ash_core::workflow_contract::TypeExpr;
+    
+    match type_expr {
+        TypeExpr::Named(name) => {
+            match name.as_str() {
+                "Int" => ash_typeck::types::Type::Int,
+                "Bool" => ash_typeck::types::Type::Bool,
+                "String" => ash_typeck::types::Type::String,
+                _ => ash_typeck::types::Type::Var(ash_typeck::types::TypeVar(0)), // Fallback
+            }
+        }
+        TypeExpr::Constructor { name, args } => {
+            // For now, treat constructors as lists or special types
+            if name == "List" && args.len() == 1 {
+                ash_typeck::types::Type::List(Box::new(convert_type_expr(&args[0])))
+            } else {
+                ash_typeck::types::Type::Var(ash_typeck::types::TypeVar(0))
+            }
+        }
+        TypeExpr::Tuple(types) => {
+            // Build a record type from tuple elements
+            let converted: Vec<(Box<str>, ash_typeck::types::Type)> = types
+                .iter()
+                .enumerate()
+                .map(|(i, t)| (format!("_{}", i).into_boxed_str(), convert_type_expr(t)))
+                .collect();
+            ash_typeck::types::Type::Record(converted)
+        }
+    }
 }
 
 /// Execute a workflow with stream context, returning the final value
@@ -938,7 +1068,7 @@ pub fn execute_workflow_with_stream_in_state<'a>(
         Some(stream_ctx),
         mailbox,
         control_registry,
-    )
+    None, None)
 }
 
 /// Execute a workflow with default contexts using explicit runtime-owned state.

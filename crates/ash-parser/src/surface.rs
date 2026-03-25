@@ -27,6 +27,8 @@ pub enum Definition {
     Policy(PolicyDef),
     /// Role definition
     Role(RoleDef),
+    /// Proxy definition
+    Proxy(ProxyDef),
 }
 
 /// A capability definition.
@@ -96,6 +98,34 @@ pub struct RoleDef {
     pub authority: Vec<Name>,
     /// Named obligations exposed by this role
     pub obligations: Vec<Name>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A capability reference for proxy declarations.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityRef {
+    /// The capability name
+    pub name: Name,
+    /// Optional channel (e.g., `requests:approval_request`)
+    pub channel: Option<Name>,
+}
+
+/// A proxy definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProxyDef {
+    /// Visibility modifier
+    pub visibility: Visibility,
+    /// Name of the proxy
+    pub name: Name,
+    /// Role this proxy handles
+    pub role: Name,
+    /// Capabilities this proxy observes (reads from)
+    pub observes: Vec<CapabilityRef>,
+    /// Capabilities this proxy receives (handles)
+    pub receives: Vec<CapabilityRef>,
+    /// The proxy workflow body
+    pub body: Workflow,
     /// Source span
     pub span: Span,
 }
@@ -393,6 +423,41 @@ pub enum Workflow {
         /// Source span
         span: Span,
     },
+    /// Yield: Delegate to a role with resumption
+    Yield {
+        /// Role to delegate to
+        role: Name,
+        /// Expression to send to the role
+        expr: Expr,
+        /// Resume variable binding
+        resume_var: Name,
+        /// Resume variable type
+        resume_type: Type,
+        /// Match arms for handling responses
+        arms: Vec<YieldArm>,
+        /// Source span
+        span: Span,
+    },
+    /// Resume: Resume from a yield with a value
+    Resume {
+        /// Expression to resume with
+        expr: Expr,
+        /// Type of the expression
+        ty: Type,
+        /// Source span
+        span: Span,
+    },
+}
+
+/// A single arm in a yield expression for handling responses.
+#[derive(Debug, Clone, PartialEq)]
+pub struct YieldArm {
+    /// Pattern to match against the response
+    pub pattern: Pattern,
+    /// Body workflow to execute when pattern matches
+    pub body: Workflow,
+    /// Source span
+    pub span: Span,
 }
 
 /// Receive mode: non-blocking, blocking forever, or blocking with timeout.
@@ -862,6 +927,8 @@ impl Spanned for Workflow {
             Workflow::Set { span, .. } => *span,
             Workflow::Send { span, .. } => *span,
             Workflow::Receive { span, .. } => *span,
+            Workflow::Yield { span, .. } => *span,
+            Workflow::Resume { span, .. } => *span,
         }
     }
 }
@@ -1053,6 +1120,18 @@ impl Workflow {
                     .map(|arm| arm.body.effect())
                     .fold(Effect::Epistemic, |a, b| a.join(b))
             }
+
+            // Yield - deliberative (delegating to a role) with join of all arm body effects
+            Workflow::Yield { arms, .. } => {
+                // Yield is Deliberative (interacting with roles)
+                // Join with effects of all arm bodies
+                arms.iter()
+                    .map(|arm| arm.body.effect())
+                    .fold(Effect::Deliberative, |a, b| a.join(b))
+            }
+
+            // Resume - epistemic (returning a value)
+            Workflow::Resume { .. } => Effect::Epistemic,
         }
     }
 }

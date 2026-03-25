@@ -382,6 +382,27 @@ impl NameResolver {
                     self.resolve_workflow_inner(&arm.body);
                 }
             }
+
+            Workflow::Yield {
+                expr,
+                arms,
+                ..
+            } => {
+                // Resolve the request expression
+                self.resolve_expr(expr);
+                // Resolve all arm bodies
+                for arm in arms {
+                    self.resolve_workflow_inner(&arm.body);
+                }
+            }
+
+            Workflow::Resume {
+                expr,
+                ..
+            } => {
+                // Resolve the response value expression
+                self.resolve_expr(expr);
+            }
         }
     }
 

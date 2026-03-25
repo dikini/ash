@@ -261,7 +261,9 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
         Workflow::Act { .. }
         | Workflow::Done { .. }
         | Workflow::Ret { .. }
-        | Workflow::Oblige { .. } => workflow.clone(),
+        | Workflow::Oblige { .. }
+        | Workflow::Yield { .. }
+        | Workflow::Resume { .. } => workflow.clone(),
     }
 }
 
@@ -504,7 +506,9 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
         Workflow::Act { .. }
         | Workflow::Done { .. }
         | Workflow::Ret { .. }
-        | Workflow::Oblige { .. } => workflow.clone(),
+        | Workflow::Oblige { .. }
+        | Workflow::Yield { .. }
+        | Workflow::Resume { .. } => workflow.clone(),
     }
 }
 
@@ -741,7 +745,9 @@ fn desugar_nested_blocks(workflow: &Workflow) -> Workflow {
         Workflow::Act { .. }
         | Workflow::Done { .. }
         | Workflow::Ret { .. }
-        | Workflow::Oblige { .. } => workflow.clone(),
+        | Workflow::Oblige { .. }
+        | Workflow::Yield { .. }
+        | Workflow::Resume { .. } => workflow.clone(),
     }
 }
 

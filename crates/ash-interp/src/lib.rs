@@ -33,10 +33,12 @@ pub mod guard;
 pub mod mailbox;
 pub mod pattern;
 pub mod policy;
+pub mod proxy_registry;
 pub mod role_context;
 pub mod runtime_state;
 pub mod stream;
 pub mod typed_provider;
+pub mod yield_state;
 
 pub use behaviour::{
     BehaviourContext, BehaviourProvider, BehaviourRegistry, BidirectionalBehaviour,
@@ -68,6 +70,7 @@ pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyRule};
+pub use proxy_registry::{InstanceAddr, ProxyRegistry, RoleName};
 pub use role_context::RoleContext;
 pub use runtime_state::RuntimeState;
 pub use stream::{
@@ -76,6 +79,7 @@ pub use stream::{
     StreamContext, StreamProvider, StreamRegistry, TypedSendableProvider,
 };
 pub use typed_provider::{TypedBehaviourProvider, TypedStreamProvider};
+pub use yield_state::{CorrelationId, SuspendedYields, YieldState};
 
 use ash_core::{Value, Workflow};
 

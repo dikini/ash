@@ -638,6 +638,36 @@ impl DotGenerator {
                 .unwrap();
                 id
             }
+            Workflow::Yield {
+                role,
+                continuation,
+                ..
+            } => {
+                let id = self.next_id();
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"YIELD\\nrole:{}\", shape=hexagon, fillcolor=\"lightyellow\"];",
+                    id,
+                    escape_dot(role)
+                )
+                .unwrap();
+                writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
+                id
+            }
+            Workflow::ProxyResume {
+                correlation_id, ..
+            } => {
+                let id = self.next_id();
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"RESUME\\ncid:{}\", shape=hexagon, fillcolor=\"lightgreen\"];",
+                    id,
+                    correlation_id.0
+                )
+                .unwrap();
+                id
+            }
         }
     }
 

@@ -537,6 +537,17 @@ impl CapabilityChecker {
 
             // Oblige - evaluative effect, no capabilities
             Workflow::Oblige { .. } => Ok(()),
+
+            // Yield - message passing with proxy, verify all arms
+            Workflow::Yield { arms, .. } => {
+                for arm in arms {
+                    self.verify_workflow(&arm.body)?;
+                }
+                Ok(())
+            }
+
+            // Resume - responding to a yield, no continuation to verify
+            Workflow::Resume { .. } => Ok(()),
         }
     }
 

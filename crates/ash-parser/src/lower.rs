@@ -384,6 +384,18 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
         SurfaceWorkflow::Ret { expr, .. } => CoreWorkflow::Ret {
             expr: lower_expr(expr),
         },
+
+        // Proxy workflow constructs - for now, lower to a placeholder
+        // These will be expanded in future work for full proxy support
+        SurfaceWorkflow::Yield { .. } => {
+            // Yield is not yet supported in core IR
+            // For now, return Done as a placeholder
+            CoreWorkflow::Done
+        }
+
+        SurfaceWorkflow::Resume { expr, .. } => CoreWorkflow::Ret {
+            expr: lower_expr(expr),
+        },
     }
 }
 

@@ -21,8 +21,10 @@ use crate::execute::execute_workflow_inner;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
+use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_state::RuntimeState;
 use crate::stream::StreamContext;
+use crate::yield_state::SuspendedYields;
 
 const CONTROL_CAPABILITY: &str = "__control__";
 const CONTROL_CHANNEL: &str = "__mailbox__";
@@ -30,6 +32,8 @@ const CONTROL_CHANNEL: &str = "__mailbox__";
 pub struct CoreReceiveRuntime<'a> {
     pub mailbox: SharedMailbox,
     pub control_registry: std::sync::Arc<tokio::sync::Mutex<ControlLinkRegistry>>,
+    pub proxy_registry: Option<std::sync::Arc<tokio::sync::Mutex<ProxyRegistry>>>,
+    pub suspended_yields: Option<std::sync::Arc<tokio::sync::Mutex<SuspendedYields>>>,
     pub stream_ctx: &'a StreamContext,
     pub cap_ctx: &'a CapabilityContext,
     pub policy_eval: &'a PolicyEvaluator,
@@ -81,7 +85,7 @@ pub async fn execute_core_receive(
                         Some(runtime.stream_ctx),
                         runtime.mailbox.clone(),
                         runtime.control_registry.clone(),
-                    )
+                    None, None)
                     .await;
                 }
             }
@@ -110,7 +114,7 @@ pub async fn execute_core_receive(
                         Some(runtime.stream_ctx),
                         runtime.mailbox.clone(),
                         runtime.control_registry.clone(),
-                    )
+                    None, None)
                     .await;
                 }
                 return Ok(Value::Null);
@@ -151,7 +155,7 @@ pub async fn execute_core_receive(
                                 Some(runtime.stream_ctx),
                                 runtime.mailbox.clone(),
                                 runtime.control_registry.clone(),
-                            )
+                            None, None)
                             .await;
                         }
                         return Ok(Value::Null);
@@ -268,7 +272,7 @@ pub async fn execute_receive_in_state(
                         Some(stream_ctx),
                         mailbox.clone(),
                         control_registry.clone(),
-                    )
+                    None, None)
                     .await;
                 }
             }
@@ -288,7 +292,7 @@ pub async fn execute_receive_in_state(
                     Some(stream_ctx),
                     mailbox.clone(),
                     control_registry.clone(),
-                )
+                None, None)
                 .await;
             }
         }
@@ -326,7 +330,7 @@ pub async fn execute_receive_in_state(
                                 Some(stream_ctx),
                                 mailbox.clone(),
                                 control_registry.clone(),
-                            )
+                            None, None)
                             .await;
                         }
                         return Ok(Value::Null);
@@ -387,7 +391,7 @@ async fn execute_receive_control(
                 Some(stream_ctx),
                 mailbox.clone(),
                 control_registry.clone(),
-            )
+            None, None)
             .await;
         }
     }

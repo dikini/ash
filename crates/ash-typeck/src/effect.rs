@@ -138,6 +138,19 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
                 .fold(Effect::Epistemic, |acc, e| acc.join(e));
             Effect::Epistemic.join(arms_effect)
         }
+
+        // Yield - Evaluative (message passing with proxy)
+        // Join effects of all yield arms
+        Workflow::Yield { arms, .. } => {
+            let arms_effect = arms
+                .iter()
+                .map(|arm| infer_effect(&arm.body))
+                .fold(Effect::Evaluative, |acc, e| acc.join(e));
+            Effect::Evaluative.join(arms_effect)
+        }
+
+        // Resume - Deliberative (returning a value)
+        Workflow::Resume { .. } => Effect::Deliberative,
     }
 }
 

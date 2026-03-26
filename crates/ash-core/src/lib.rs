@@ -3,6 +3,7 @@
 //! This crate defines the core abstract syntax, effects, and types
 //! for the Ash workflow language.
 
+pub mod adt;
 pub mod ast;
 pub mod capabilities;
 pub mod effect;

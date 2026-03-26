@@ -6,6 +6,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Reduced Syntax Specification (Phase 45)**
+  - SPEC-024: Complete capability-role-workflow syntax specification with EBNF grammar (TASK-257)
+  - DESIGN-014: Syntax reduction decision record documenting kept vs deferred features (TASK-257)
+  - SPEC-017: Added Section 5 documenting constraint refinement syntax `@ { ... }` (TASK-258)
+  - Deferred features: capability composition operators (`+`, `|`), use-site refinement, implicit role leak
+  - Kept syntax: `plays role(R)`, `capabilities: [...]`, `capability @ { constraints }`
+
 ### Fixed
 
 - **Stale Documentation Update (TASK-255)**

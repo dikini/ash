@@ -68,7 +68,8 @@ fn parse_workflow(source: &str, _name: Option<&str>) -> Result<ash_core::Workflo
         .parse_next(&mut input)
         .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
 
-    Ok(ash_parser::lower::lower_workflow(&workflow_def))
+    ash_parser::lower::lower_workflow(&workflow_def)
+        .map_err(|e| anyhow::anyhow!("Lowering error: {}", e))
 }
 
 /// Remove color attributes from DOT output

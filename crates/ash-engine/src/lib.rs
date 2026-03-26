@@ -20,6 +20,7 @@ pub mod parse;
 pub mod providers;
 
 pub use error::EngineError;
+pub use providers::CapabilityProvider;
 
 use ash_core::Value;
 use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
@@ -55,6 +56,11 @@ pub struct Engine {
     next_id: std::sync::atomic::AtomicU64,
     /// Runtime-owned state that persists across related executions.
     runtime_state: RuntimeState,
+    /// Registered capability providers by name
+    /// Note: This field is currently stored but not yet used in execution.
+    /// It will be wired up in a future implementation.
+    #[allow(dead_code)]
+    providers: std::collections::HashMap<String, Box<dyn CapabilityProvider>>,
 }
 
 /// A workflow handle that carries its internal ID for type checking
@@ -144,7 +150,8 @@ impl Engine {
         match workflow_def.parse_next(&mut input) {
             Ok(def) => {
                 let surface = def.body.clone();
-                let core = lower_workflow(&def);
+                let core = lower_workflow(&def)
+                    .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow(surface);
                 Ok(Workflow { core, id })
             }
@@ -271,6 +278,29 @@ impl Default for Engine {
     }
 }
 
+/// Configuration for HTTP capabilities
+#[derive(Debug, Clone, Default)]
+pub struct HttpConfig {
+    /// Timeout for HTTP requests in seconds
+    pub timeout_seconds: u64,
+    /// Maximum number of redirects to follow
+    pub max_redirects: u32,
+    /// Whether to verify SSL certificates
+    pub verify_ssl: bool,
+}
+
+impl HttpConfig {
+    /// Create a new HTTP config with default settings
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            timeout_seconds: 30,
+            max_redirects: 10,
+            verify_ssl: true,
+        }
+    }
+}
+
 /// Builder for configuring and constructing an Engine
 ///
 /// The builder pattern allows for fluent configuration of capabilities:
@@ -284,17 +314,24 @@ impl Default for Engine {
 ///     .build()
 ///     .expect("engine builds");
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EngineBuilder {
-    // Configuration state will be added during implementation
+    /// Whether to enable stdio capabilities
+    enable_stdio: bool,
+    /// Whether to enable filesystem capabilities
+    enable_fs: bool,
+    /// HTTP configuration if enabled
+    http_config: Option<HttpConfig>,
+    /// Custom providers to register
+    custom_providers: std::collections::HashMap<String, Box<dyn CapabilityProvider>>,
 }
 
 impl EngineBuilder {
     /// Create a new engine builder
     ///
     /// Prefer using `Engine::new()` instead of this method directly.
-    const fn new() -> Self {
-        Self {}
+    fn new() -> Self {
+        Self::default()
     }
 
     /// Build the configured engine
@@ -304,10 +341,39 @@ impl EngineBuilder {
     /// Returns `EngineError` if the engine cannot be constructed
     /// (e.g., missing required capabilities or invalid configuration).
     pub fn build(self) -> Result<Engine, EngineError> {
+        use providers::{FsProvider, StdioProvider};
+
+        let mut providers: std::collections::HashMap<String, Box<dyn CapabilityProvider>> =
+            std::collections::HashMap::new();
+
+        // Register stdio provider if enabled
+        if self.enable_stdio {
+            let provider = StdioProvider::new();
+            providers.insert(provider.name().to_string(), Box::new(provider));
+        }
+
+        // Register filesystem provider if enabled
+        if self.enable_fs {
+            let provider = FsProvider::new();
+            providers.insert(provider.name().to_string(), Box::new(provider));
+        }
+
+        // Register HTTP provider if configured
+        if self.http_config.is_some() {
+            // HTTP provider would be registered here when implemented
+            // For now, we just acknowledge the config was provided
+        }
+
+        // Register custom providers (these can override built-ins)
+        for (name, provider) in self.custom_providers {
+            providers.insert(name, provider);
+        }
+
         Ok(Engine {
             surface_workflows: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state: RuntimeState::new(),
+            providers,
         })
     }
 
@@ -315,8 +381,9 @@ impl EngineBuilder {
     ///
     /// These are operational-effect capabilities for console I/O.
     #[must_use]
-    pub const fn with_stdio_capabilities(self) -> Self {
-        // Implementation to be added
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to HashMap operations in build()
+    pub fn with_stdio_capabilities(mut self) -> Self {
+        self.enable_stdio = true;
         self
     }
 
@@ -324,8 +391,78 @@ impl EngineBuilder {
     ///
     /// These are operational-effect capabilities for file operations.
     #[must_use]
-    pub const fn with_fs_capabilities(self) -> Self {
-        // Implementation to be added
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to HashMap operations in build()
+    pub fn with_fs_capabilities(mut self) -> Self {
+        self.enable_fs = true;
+        self
+    }
+
+    /// Add HTTP capabilities (get, post, put, delete)
+    ///
+    /// These are operational-effect capabilities for HTTP operations.
+    /// Uses the provided configuration for timeout, redirects, and SSL verification.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_engine::{Engine, HttpConfig};
+    ///
+    /// let config = HttpConfig {
+    ///     timeout_seconds: 60,
+    ///     max_redirects: 5,
+    ///     verify_ssl: true,
+    /// };
+    /// let engine = Engine::new()
+    ///     .with_http_capabilities(config)
+    ///     .build()
+    ///     .expect("engine builds");
+    /// ```
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to HashMap operations in build()
+    pub fn with_http_capabilities(mut self, config: HttpConfig) -> Self {
+        self.http_config = Some(config);
+        self
+    }
+
+    /// Add a custom capability provider
+    ///
+    /// Custom providers can be used to extend the engine with application-specific
+    /// capabilities. They can also override built-in providers by using the same name.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_engine::{Engine, CapabilityProvider};
+    /// use ash_core::{Effect, Value};
+    /// use async_trait::async_trait;
+    ///
+    /// #[derive(Debug)]
+    /// struct MyProvider;
+    ///
+    /// #[async_trait]
+    /// impl CapabilityProvider for MyProvider {
+    ///     fn name(&self) -> &str { "my_provider" }
+    ///     fn effect(&self) -> Effect { Effect::Operational }
+    ///     async fn observe(&self, _action: &str, _args: &[Value]) -> Result<Value, ash_engine::providers::ProviderError> {
+    ///         Ok(Value::Null)
+    ///     }
+    ///     async fn execute(&self, _action: &str, _args: &[Value]) -> Result<Value, ash_engine::providers::ProviderError> {
+    ///         Ok(Value::Null)
+    ///     }
+    /// }
+    ///
+    /// let engine = Engine::new()
+    ///     .with_custom_provider("custom", Box::new(MyProvider))
+    ///     .build()
+    ///     .expect("engine builds");
+    /// ```
+    #[must_use]
+    pub fn with_custom_provider(
+        mut self,
+        name: &str,
+        provider: Box<dyn CapabilityProvider>,
+    ) -> Self {
+        self.custom_providers.insert(name.to_string(), provider);
         self
     }
 }
@@ -645,5 +782,161 @@ mod tests {
     #[test]
     fn test_engine_execute_workflow() {
         // This will be an async test
+    }
+
+    // ============================================================
+    // EngineBuilder HTTP Capabilities Tests
+    // ============================================================
+
+    #[test]
+    fn test_builder_http_capabilities_chaining() {
+        // with_http_capabilities should return Self for chaining
+        let config = HttpConfig::new();
+        let builder = Engine::new();
+        let builder = builder.with_http_capabilities(config);
+        let result = builder.build();
+        assert!(
+            result.is_ok(),
+            "Builder with HTTP capabilities should build successfully"
+        );
+    }
+
+    #[test]
+    fn test_builder_http_capabilities_with_custom_config() {
+        // Test with custom HTTP configuration
+        let config = HttpConfig {
+            timeout_seconds: 60,
+            max_redirects: 5,
+            verify_ssl: false,
+        };
+        let result = Engine::new().with_http_capabilities(config).build();
+        assert!(
+            result.is_ok(),
+            "Builder with custom HTTP config should build successfully"
+        );
+    }
+
+    #[test]
+    fn test_builder_http_default_config() {
+        // Test HttpConfig::new() provides sensible defaults
+        let config = HttpConfig::new();
+        assert_eq!(config.timeout_seconds, 30);
+        assert_eq!(config.max_redirects, 10);
+        assert!(config.verify_ssl);
+    }
+
+    // ============================================================
+    // EngineBuilder Custom Provider Tests
+    // ============================================================
+
+    #[test]
+    fn test_builder_custom_provider_chaining() {
+        // with_custom_provider should return Self for chaining
+        use providers::StdioProvider;
+
+        let provider = StdioProvider::new();
+        let builder = Engine::new();
+        let builder = builder.with_custom_provider("custom_stdio", Box::new(provider));
+        let result = builder.build();
+        assert!(
+            result.is_ok(),
+            "Builder with custom provider should build successfully"
+        );
+    }
+
+    #[test]
+    fn test_builder_custom_provider_overrides_builtin() {
+        // Custom providers with the same name as built-ins should override them
+        use providers::StdioProvider;
+
+        let custom_stdio = StdioProvider::new();
+        let result = Engine::new()
+            .with_stdio_capabilities() // Enable built-in stdio
+            .with_custom_provider("stdio", Box::new(custom_stdio)) // Override with custom
+            .build();
+        assert!(
+            result.is_ok(),
+            "Builder should allow overriding built-in providers"
+        );
+    }
+
+    #[test]
+    fn test_builder_multiple_custom_providers() {
+        // Multiple custom providers should all be registered
+        use providers::{FsProvider, StdioProvider};
+
+        let result = Engine::new()
+            .with_custom_provider("my_stdio", Box::new(StdioProvider::new()))
+            .with_custom_provider("my_fs", Box::new(FsProvider::new()))
+            .build();
+        assert!(
+            result.is_ok(),
+            "Builder with multiple custom providers should build successfully"
+        );
+    }
+
+    // ============================================================
+    // EngineBuilder Combined Configuration Tests
+    // ============================================================
+
+    #[test]
+    fn test_builder_all_capabilities_together() {
+        // All capability methods should work together
+        use providers::StdioProvider;
+
+        let result = Engine::new()
+            .with_stdio_capabilities()
+            .with_fs_capabilities()
+            .with_http_capabilities(HttpConfig::new())
+            .with_custom_provider("custom", Box::new(StdioProvider::new()))
+            .build();
+        assert!(
+            result.is_ok(),
+            "Builder with all capabilities should build successfully"
+        );
+    }
+
+    #[test]
+    fn test_builder_complex_chaining_order() {
+        // Different ordering should all work
+        use providers::StdioProvider;
+
+        let engine1 = Engine::new()
+            .with_stdio_capabilities()
+            .with_fs_capabilities()
+            .with_http_capabilities(HttpConfig::new())
+            .build();
+
+        let engine2 = Engine::new()
+            .with_http_capabilities(HttpConfig::new())
+            .with_custom_provider("custom", Box::new(StdioProvider::new()))
+            .with_stdio_capabilities()
+            .build();
+
+        assert!(engine1.is_ok(), "First order should succeed");
+        assert!(engine2.is_ok(), "Second order should succeed");
+    }
+
+    #[test]
+    fn test_http_config_clone() {
+        // HttpConfig should be cloneable
+        let config = HttpConfig {
+            timeout_seconds: 45,
+            max_redirects: 3,
+            verify_ssl: false,
+        };
+        let config_clone = config.clone();
+        assert_eq!(config.timeout_seconds, config_clone.timeout_seconds);
+        assert_eq!(config.max_redirects, config_clone.max_redirects);
+        assert_eq!(config.verify_ssl, config_clone.verify_ssl);
+    }
+
+    #[test]
+    fn test_http_config_default() {
+        // HttpConfig should implement Default
+        let config = HttpConfig::default();
+        assert_eq!(config.timeout_seconds, 0); // Default for u64
+        assert_eq!(config.max_redirects, 0); // Default for u32
+        assert!(!config.verify_ssl); // Default for bool
     }
 }

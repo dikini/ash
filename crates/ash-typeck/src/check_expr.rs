@@ -243,8 +243,10 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
     let mut errors: Vec<ConstructorError> = scrutinee_result.errors.clone();
 
     if let Some(type_def) = resolve_enum_type_def_for_match(env, scrutinee, arms) {
-        let patterns: Vec<CorePattern> =
-            arms.iter().map(|arm| lower_pattern(&arm.pattern)).collect();
+        let patterns: Vec<CorePattern> = arms
+            .iter()
+            .filter_map(|arm| lower_pattern(&arm.pattern).ok())
+            .collect();
         if let Coverage::Missing(witnesses) = check_exhaustive(&patterns, type_def) {
             errors.push(ConstructorError::NonExhaustiveMatch {
                 scrutinee_type: type_def.name.clone(),

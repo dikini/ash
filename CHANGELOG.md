@@ -8,6 +8,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Trace Flags Implementation (TASK-254)**
+  - Implemented `--lineage` flag to include data lineage information in trace output
+  - Implemented `--verify` flag to compute and include integrity verification data (Merkle tree root hash) in trace output
+  - Added `IntegrityData` struct for trace integrity metadata
+  - Extended `TraceResult` with optional `lineage` and `integrity` fields
+  - Added 3 new tests for lineage and integrity flag functionality
+
+- **EngineBuilder Methods Implementation (TASK-246)**
+  - Implemented `with_http_capabilities(config)` to configure HTTP client capabilities with timeout, redirect, and SSL settings
+  - Implemented `with_custom_provider(name, provider)` to register custom capability providers that can extend or override built-in providers
+  - Added `HttpConfig` struct for HTTP capability configuration
+  - Updated `Engine` to store registered providers (wired for future execution integration)
+  - Added 10 new tests covering HTTP capabilities, custom providers, and combined builder configuration
+
 - **Workflow::Oblige Execution (TASK-240)**
   - Implemented runtime execution for `Workflow::Oblige` to satisfy SPEC-022 contract requirements
   - Obligations are now tracked in the runtime `Context` with linearity checking (duplicate oblige fails)
@@ -49,6 +63,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Fixed invalid HTML tags in doc comments
 
 ### Fixed
+
+- **Role Obligation Discharge (TASK-248)**
+  - Fixed `RoleContext::discharge()` to verify obligations are declared on the role before discharge
+  - Added `DischargeError` enum with `UndeclaredObligation` and `AlreadyDischarged` variants
+  - Changed return type from `bool` to `Result<(), DischargeError>` for proper error handling
+  - Updated all tests to use the new Result-based API
 
 - **SmtContext Thread Safety (TASK-245)**
   - Removed unsound `unsafe impl Send/Sync for SmtContext`

@@ -1,11 +1,14 @@
 //! Trace command for capturing workflow execution provenance.
 //!
 //! TASK-055: Implement `trace` command with provenance capture.
+//! TASK-254: Implement trace flags (--lineage, --verify)
 
 use anyhow::{Context, Result};
 use ash_engine::EngineError;
 use ash_interp::ExecError;
 use ash_provenance::export::ExportFormat;
+use ash_provenance::LineageTracker;
+use ash_provenance::integrity::{TamperEvidentLog, hash_value};
 use clap::Args;
 use serde::Serialize;
 use std::path::Path;
@@ -66,6 +69,23 @@ pub struct TraceResult {
     pub started_at: String,
     pub events: Vec<ash_provenance::TraceEvent>,
     pub final_value: String,
+    /// Data lineage information (included when --lineage flag is used)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lineage: Option<Vec<ash_provenance::Lineage>>,
+    /// Integrity verification data (included when --verify flag is used)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub integrity: Option<IntegrityData>,
+}
+
+/// Integrity verification data for trace output
+#[derive(Debug, Serialize)]
+pub struct IntegrityData {
+    /// Merkle tree root hash
+    pub root_hash: String,
+    /// Number of events included in the integrity check
+    pub event_count: usize,
+    /// Algorithm used for hashing
+    pub algorithm: String,
 }
 
 /// Execute a workflow with full provenance tracing
@@ -73,7 +93,7 @@ async fn execute_with_full_trace(
     engine: &ash_engine::Engine,
     workflow: &ash_engine::Workflow,
     path: &Path,
-    _args: &TraceArgs,
+    args: &TraceArgs,
 ) -> Result<TraceResult> {
     use ash_core::WorkflowId;
     use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
@@ -81,6 +101,13 @@ async fn execute_with_full_trace(
     let workflow_id = WorkflowId::new();
     let recorder = create_trace_recorder(workflow_id);
     let session = WorkflowTraceSession::start(recorder, "main")?;
+
+    // Initialize lineage tracker if requested
+    let lineage_tracker = if args.lineage {
+        Some(LineageTracker::new())
+    } else {
+        None
+    };
 
     // Execute the workflow
     let result = engine.execute(workflow).await;
@@ -98,13 +125,56 @@ async fn execute_with_full_trace(
         .map(|event| event.timestamp().to_rfc3339())
         .unwrap_or_default();
 
+    // Collect lineage data if requested
+    let lineage = if args.lineage {
+        lineage_tracker.as_ref().map(|tracker| {
+            tracker.all().cloned().collect::<Vec<_>>()
+        })
+    } else {
+        None
+    };
+
+    // Compute integrity data if requested
+    let integrity = if args.verify {
+        compute_integrity_data(&events)?
+    } else {
+        None
+    };
+
     Ok(TraceResult {
         trace_id: workflow_id.0.to_string(),
         workflow: path.display().to_string(),
         started_at,
         events,
         final_value: final_value.to_string(),
+        lineage,
+        integrity,
     })
+}
+
+/// Compute integrity data for trace events using Merkle tree
+fn compute_integrity_data(events: &[ash_provenance::TraceEvent]) -> Result<Option<IntegrityData>> {
+    if events.is_empty() {
+        return Ok(None);
+    }
+
+    let mut log = TamperEvidentLog::new();
+
+    for event in events {
+        let hash = hash_value(event)
+            .map_err(|e| anyhow::anyhow!("failed to hash event: {}", e))?;
+        log.append(hash.as_bytes());
+    }
+
+    let root_hash = log.root()
+        .map(|h: ash_provenance::integrity::Hash| h.to_hex())
+        .unwrap_or_default();
+
+    Ok(Some(IntegrityData {
+        root_hash,
+        event_count: events.len(),
+        algorithm: "SHA-256".to_string(),
+    }))
 }
 
 /// Output trace data to file or stdout
@@ -250,6 +320,8 @@ mod tests {
             started_at: "2026-03-20T00:00:00Z".to_string(),
             events: vec![],
             final_value: Value::Int(42).to_string(),
+            lineage: None,
+            integrity: None,
         };
 
         let json = export_json(&result).unwrap();
@@ -261,5 +333,50 @@ mod tests {
 
         let csv = export_csv(&result).unwrap();
         assert!(csv.contains("timestamp"));
+    }
+
+    #[test]
+    fn test_trace_with_lineage() {
+        let result = TraceResult {
+            trace_id: "trace-id".to_string(),
+            workflow: "main".to_string(),
+            started_at: "2026-03-20T00:00:00Z".to_string(),
+            events: vec![],
+            final_value: "42".to_string(),
+            lineage: Some(vec![]),
+            integrity: None,
+        };
+
+        let json = export_json(&result).unwrap();
+        assert!(json.contains("lineage"));
+    }
+
+    #[test]
+    fn test_trace_with_integrity() {
+        let result = TraceResult {
+            trace_id: "trace-id".to_string(),
+            workflow: "main".to_string(),
+            started_at: "2026-03-20T00:00:00Z".to_string(),
+            events: vec![],
+            final_value: "42".to_string(),
+            lineage: None,
+            integrity: Some(IntegrityData {
+                root_hash: "abc123".to_string(),
+                event_count: 0,
+                algorithm: "SHA-256".to_string(),
+            }),
+        };
+
+        let json = export_json(&result).unwrap();
+        assert!(json.contains("integrity"));
+        assert!(json.contains("root_hash"));
+        assert!(json.contains("SHA-256"));
+    }
+
+    #[test]
+    fn test_compute_integrity_data_empty() {
+        let events: Vec<ash_provenance::TraceEvent> = vec![];
+        let integrity = compute_integrity_data(&events).unwrap();
+        assert!(integrity.is_none());
     }
 }

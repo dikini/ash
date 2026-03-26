@@ -43,6 +43,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Code Quality
 
 - Formatted all code with `cargo fmt` (TASK-250)
+- Fixed all rustdoc warnings for clean documentation generation (TASK-251)
+  - Fixed broken intra-doc links
+  - Fixed invalid code blocks
+  - Fixed invalid HTML tags in doc comments
 
 ### Fixed
 

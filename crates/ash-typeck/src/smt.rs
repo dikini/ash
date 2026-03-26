@@ -31,6 +31,8 @@
 //! ```
 
 use std::collections::HashMap;
+use std::marker::PhantomData;
+use std::rc::Rc;
 
 use z3::ast::{Ast, Bool, Int};
 use z3::{Config, Context, SatResult as Z3SatResult, Solver};
@@ -109,16 +111,21 @@ pub enum SatResult {
 ///
 /// This struct wraps the Z3 solver and manages the encoding of policies
 /// into SMT constraints.
+///
+/// # Thread Safety
+///
+/// `SmtContext` is **not** `Send` or `Sync`. It must be created and used
+/// on a single thread only. This is because the underlying Z3 context is
+/// not thread-safe. If you need to check policies from multiple threads,
+/// create a separate `SmtContext` per thread.
 pub struct SmtContext {
     /// Z3 context - owns all allocated AST nodes.
     /// Boxed to ensure stable address.
     context: Box<Context>,
+    /// Phantom data to ensure SmtContext is !Send and !Sync.
+    /// Rc is used here because it is neither Send nor Sync.
+    _not_send_sync: PhantomData<Rc<()>>,
 }
-
-// Safety: Z3 context is not Send/Sync by default,
-// but we're using it in a single-threaded manner.
-unsafe impl Send for SmtContext {}
-unsafe impl Sync for SmtContext {}
 
 impl SmtContext {
     /// Creates a new SMT context with default configuration.
@@ -156,7 +163,10 @@ impl SmtContext {
 
         let context = Box::new(Context::new(&config));
 
-        Self { context }
+        Self {
+            context,
+            _not_send_sync: PhantomData,
+        }
     }
 
     /// Checks a set of policies for satisfiability.

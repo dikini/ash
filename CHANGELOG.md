@@ -50,6 +50,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- **SmtContext Thread Safety (TASK-245)**
+  - Removed unsound `unsafe impl Send/Sync for SmtContext`
+  - Added `PhantomData<Rc<()>>` to enforce `!Send` and `!Sync` at compile time
+  - Documented that `SmtContext` must be created and used on a single thread only
+  - For multi-threaded use, create a separate `SmtContext` per thread
+
 - `Option<Int>` and `Option<String>` no longer incorrectly unify.
 - Error messages now show readable type names (`Option<Int>`) instead of internal variable IDs (`Var<42>`).
 - Fixed Type Expression Conversion (TypeEnv). Replaced stubbed `TypeExpr::Constructor` handling that lost constructor information. `type_expr_to_type` now properly converts constructor names and all arguments, type alias expansion now resolves to underlying types, and name resolution is available via the new `resolve_type` helper.

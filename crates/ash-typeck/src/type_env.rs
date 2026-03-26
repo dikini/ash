@@ -240,6 +240,10 @@ pub struct TypeEnv {
     type_info: HashMap<TypeName, TypeInfo>,
     /// Constructor mappings: constructor name -> (type name, variant index)
     constructors: HashMap<String, (TypeName, VariantIndex)>,
+    /// Variable bindings: variable name -> type
+    variables: HashMap<String, crate::types::Type>,
+    /// Parent environment for nested scopes (None for root)
+    parent: Option<Box<TypeEnv>>,
 }
 
 impl TypeEnv {
@@ -250,6 +254,8 @@ impl TypeEnv {
             ast_types: HashMap::with_capacity(10),
             type_info: HashMap::with_capacity(10),
             constructors: HashMap::with_capacity(10),
+            variables: HashMap::with_capacity(10),
+            parent: None,
         }
     }
 
@@ -376,6 +382,39 @@ impl TypeEnv {
     /// Check if a constructor is registered
     pub fn has_constructor(&self, name: &str) -> bool {
         self.constructors.contains_key(name)
+    }
+
+    /// Bind a variable to a type in this environment
+    pub fn bind_variable(&mut self, name: &str, ty: crate::types::Type) {
+        self.variables.insert(name.to_string(), ty);
+    }
+
+    /// Look up a variable's type in this environment
+    ///
+    /// Searches current scope first, then parent scopes
+    pub fn lookup_variable(&self, name: &str) -> Option<crate::types::Type> {
+        if let Some(ty) = self.variables.get(name) {
+            return Some(ty.clone());
+        }
+        if let Some(ref parent) = self.parent {
+            return parent.lookup_variable(name);
+        }
+        None
+    }
+
+    /// Create a new child environment with this as parent
+    ///
+    /// Used for block scoping - variables bound in the child
+    /// are not visible in the parent
+    #[must_use]
+    pub fn extend(&self) -> Self {
+        Self {
+            ast_types: self.ast_types.clone(),
+            type_info: self.type_info.clone(),
+            constructors: self.constructors.clone(),
+            variables: HashMap::with_capacity(10),
+            parent: Some(Box::new(self.clone())),
+        }
     }
 
     /// Resolve a type name to its qualified form and info

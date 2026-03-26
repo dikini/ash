@@ -56,12 +56,12 @@ pub struct Engine {
     /// Counter for generating unique IDs
     next_id: std::sync::atomic::AtomicU64,
     /// Runtime-owned state that persists across related executions.
+    /// Providers configured via `EngineBuilder` are passed to `RuntimeState` during build.
     runtime_state: RuntimeState,
     /// Registered capability providers by name
-    /// Note: This field is currently stored but not yet used in execution.
-    /// It will be wired up in a future implementation.
+    /// These are kept for reference and potential future introspection.
     #[allow(dead_code)]
-    providers: std::collections::HashMap<String, Box<dyn CapabilityProvider>>,
+    providers: std::collections::HashMap<String, std::sync::Arc<dyn CapabilityProvider>>,
 }
 
 /// A workflow handle that carries its internal ID for type checking
@@ -236,6 +236,32 @@ impl Engine {
         interpret_in_state(&workflow.core, &self.runtime_state).await
     }
 
+    /// Execute a workflow asynchronously with input bindings
+    ///
+    /// The input bindings are injected into the workflow's execution context
+    /// as initial variable bindings. This is useful for passing CLI arguments
+    /// or other external inputs to the workflow.
+    ///
+    /// # Arguments
+    /// * `workflow` - The workflow to execute
+    /// * `input_bindings` - Initial variable bindings (e.g., from CLI --input)
+    ///
+    /// # Errors
+    ///
+    /// Returns execution errors from the interpreter.
+    pub async fn execute_with_input(
+        &self,
+        workflow: &Workflow,
+        input_bindings: std::collections::HashMap<String, Value>,
+    ) -> ExecResult<Value> {
+        ash_interp::execute_with_bindings_in_state(
+            &workflow.core,
+            &self.runtime_state,
+            input_bindings,
+        )
+        .await
+    }
+
     /// Parse, check, and execute in one call
     ///
     /// Convenience method that chains parse → check → execute.
@@ -261,6 +287,29 @@ impl Engine {
         let workflow = self.parse_file(path)?;
         self.check(&workflow)?;
         self.execute(&workflow).await
+    }
+
+    /// Parse, check, and execute a workflow from a file with input bindings
+    ///
+    /// Convenience method that reads a file and then runs parse → check → execute
+    /// with the provided input bindings injected into the execution context.
+    ///
+    /// # Arguments
+    /// * `path` - Path to the workflow file
+    /// * `input_bindings` - Initial variable bindings (e.g., from CLI --input)
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Io` if the file cannot be read.
+    /// Returns other errors from parse, check, or execute stages.
+    pub async fn run_file_with_input(
+        &self,
+        path: impl AsRef<std::path::Path>,
+        input_bindings: std::collections::HashMap<String, Value>,
+    ) -> ExecResult<Value> {
+        let workflow = self.parse_file(path)?;
+        self.check(&workflow)?;
+        self.execute_with_input(&workflow, input_bindings).await
     }
 }
 
@@ -324,7 +373,7 @@ pub struct EngineBuilder {
     /// HTTP configuration if enabled
     http_config: Option<HttpConfig>,
     /// Custom providers to register
-    custom_providers: std::collections::HashMap<String, Box<dyn CapabilityProvider>>,
+    custom_providers: std::collections::HashMap<String, std::sync::Arc<dyn CapabilityProvider>>,
 }
 
 impl EngineBuilder {
@@ -342,21 +391,22 @@ impl EngineBuilder {
     /// Returns `EngineError` if the engine cannot be constructed
     /// (e.g., missing required capabilities or invalid configuration).
     pub fn build(self) -> Result<Engine, EngineError> {
-        use providers::{FsProvider, StdioProvider};
+        use providers::{FsProvider, InterpProviderAdapter, StdioProvider};
+        use std::sync::Arc;
 
-        let mut providers: std::collections::HashMap<String, Box<dyn CapabilityProvider>> =
+        let mut providers: std::collections::HashMap<String, Arc<dyn CapabilityProvider>> =
             std::collections::HashMap::new();
 
         // Register stdio provider if enabled
         if self.enable_stdio {
             let provider = StdioProvider::new();
-            providers.insert(provider.name().to_string(), Box::new(provider));
+            providers.insert(provider.name().to_string(), Arc::new(provider));
         }
 
         // Register filesystem provider if enabled
         if self.enable_fs {
             let provider = FsProvider::new();
-            providers.insert(provider.name().to_string(), Box::new(provider));
+            providers.insert(provider.name().to_string(), Arc::new(provider));
         }
 
         // Register HTTP provider if configured
@@ -370,10 +420,26 @@ impl EngineBuilder {
             providers.insert(name, provider);
         }
 
+        // Convert engine providers to interpreter-compatible providers
+        // and build the RuntimeState with them
+        let mut interp_providers: std::collections::HashMap<
+            String,
+            Arc<dyn ash_interp::capability::CapabilityProvider>,
+        > = std::collections::HashMap::new();
+
+        for (name, provider) in &providers {
+            // Create an adapter that wraps the engine provider
+            // The adapter implements ash_interp::capability::CapabilityProvider
+            let adapter = InterpProviderAdapter::new(provider.clone());
+            interp_providers.insert(name.clone(), Arc::new(adapter));
+        }
+
+        let runtime_state = RuntimeState::new().with_providers(interp_providers);
+
         Ok(Engine {
             surface_workflows: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
-            runtime_state: RuntimeState::new(),
+            runtime_state,
             providers,
         })
     }
@@ -436,6 +502,7 @@ impl EngineBuilder {
     /// use ash_engine::{Engine, CapabilityProvider};
     /// use ash_core::{Effect, Value};
     /// use async_trait::async_trait;
+    /// use std::sync::Arc;
     ///
     /// #[derive(Debug)]
     /// struct MyProvider;
@@ -453,7 +520,7 @@ impl EngineBuilder {
     /// }
     ///
     /// let engine = Engine::new()
-    ///     .with_custom_provider("custom", Box::new(MyProvider))
+    ///     .with_custom_provider("custom", Arc::new(MyProvider))
     ///     .build()
     ///     .expect("engine builds");
     /// ```
@@ -461,7 +528,7 @@ impl EngineBuilder {
     pub fn with_custom_provider(
         mut self,
         name: &str,
-        provider: Box<dyn CapabilityProvider>,
+        provider: std::sync::Arc<dyn CapabilityProvider>,
     ) -> Self {
         self.custom_providers.insert(name.to_string(), provider);
         self
@@ -834,10 +901,11 @@ mod tests {
     fn test_builder_custom_provider_chaining() {
         // with_custom_provider should return Self for chaining
         use providers::StdioProvider;
+        use std::sync::Arc;
 
         let provider = StdioProvider::new();
         let builder = Engine::new();
-        let builder = builder.with_custom_provider("custom_stdio", Box::new(provider));
+        let builder = builder.with_custom_provider("custom_stdio", Arc::new(provider));
         let result = builder.build();
         assert!(
             result.is_ok(),
@@ -853,7 +921,7 @@ mod tests {
         let custom_stdio = StdioProvider::new();
         let result = Engine::new()
             .with_stdio_capabilities() // Enable built-in stdio
-            .with_custom_provider("stdio", Box::new(custom_stdio)) // Override with custom
+            .with_custom_provider("stdio", std::sync::Arc::new(custom_stdio)) // Override with custom
             .build();
         assert!(
             result.is_ok(),
@@ -867,8 +935,8 @@ mod tests {
         use providers::{FsProvider, StdioProvider};
 
         let result = Engine::new()
-            .with_custom_provider("my_stdio", Box::new(StdioProvider::new()))
-            .with_custom_provider("my_fs", Box::new(FsProvider::new()))
+            .with_custom_provider("my_stdio", std::sync::Arc::new(StdioProvider::new()))
+            .with_custom_provider("my_fs", std::sync::Arc::new(FsProvider::new()))
             .build();
         assert!(
             result.is_ok(),
@@ -889,8 +957,9 @@ mod tests {
             .with_stdio_capabilities()
             .with_fs_capabilities()
             .with_http_capabilities(HttpConfig::new())
-            .with_custom_provider("custom", Box::new(StdioProvider::new()))
+            .with_custom_provider("custom", std::sync::Arc::new(StdioProvider::new()))
             .build();
+
         assert!(
             result.is_ok(),
             "Builder with all capabilities should build successfully"
@@ -910,7 +979,7 @@ mod tests {
 
         let engine2 = Engine::new()
             .with_http_capabilities(HttpConfig::new())
-            .with_custom_provider("custom", Box::new(StdioProvider::new()))
+            .with_custom_provider("custom", std::sync::Arc::new(StdioProvider::new()))
             .with_stdio_capabilities()
             .build();
 

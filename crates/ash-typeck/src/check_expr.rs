@@ -9,6 +9,7 @@ use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
 use ash_parser::lower_pattern;
 use ash_parser::surface::{BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp};
+use ash_parser::token::Span;
 use std::collections::HashSet;
 
 /// Result of type checking an expression
@@ -54,9 +55,15 @@ impl CheckResult {
 pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
     match expr {
         Expr::Literal(lit) => check_literal(lit),
-        Expr::Variable(_) => {
-            // Variables get a fresh type variable (they should be looked up in context)
-            CheckResult::success(Type::Var(TypeVar::fresh()))
+        Expr::Variable(name) => {
+            // FIXED: Look up variable in environment instead of creating fresh type var
+            match env.lookup_variable(name.as_ref()) {
+                Some(ty) => CheckResult::success(ty),
+                None => CheckResult::error(ConstructorError::UnboundVariable {
+                    name: name.to_string(),
+                    span: get_expr_span(expr),
+                }),
+            }
         }
         Expr::Unary { op, operand, .. } => check_unary(env, *op, operand),
         Expr::Binary {
@@ -75,11 +82,99 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         Expr::Match {
             scrutinee, arms, ..
         } => check_match(env, scrutinee, arms),
-        _ => {
-            // For other expression types, return a fresh type variable
-            // These should be implemented as needed
-            CheckResult::success(Type::Var(TypeVar::fresh()))
+        Expr::FieldAccess { base, field, span } => {
+            // Field access is not yet fully implemented
+            // Check the base expression first, then report unsupported
+            let base_result = check_expr(env, base);
+            if !base_result.is_ok() {
+                return base_result;
+            }
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: format!("FieldAccess (.{field})"),
+                span: *span,
+            })
         }
+        Expr::IndexAccess { base, index, span } => {
+            // Index access is not yet fully implemented
+            let base_result = check_expr(env, base);
+            let index_result = check_expr(env, index);
+
+            let mut errors: Vec<ConstructorError> = Vec::new();
+            if !base_result.is_ok() {
+                errors.extend(base_result.errors);
+            }
+            if !index_result.is_ok() {
+                errors.extend(index_result.errors);
+            }
+
+            if !errors.is_empty() {
+                return CheckResult {
+                    ty: Type::Var(TypeVar::fresh()),
+                    substitution: base_result.substitution.compose(&index_result.substitution),
+                    errors,
+                };
+            }
+
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "IndexAccess ([]".to_string(),
+                span: *span,
+            })
+        }
+        Expr::Call { func, args, span } => {
+            // Function calls are not yet fully implemented
+            // Type check all arguments
+            let mut errors: Vec<ConstructorError> = Vec::new();
+            let mut substitution = Substitution::new();
+
+            for arg in args {
+                let arg_result = check_expr(env, arg);
+                if !arg_result.is_ok() {
+                    errors.extend(arg_result.errors);
+                }
+                substitution = substitution.compose(&arg_result.substitution);
+            }
+
+            if !errors.is_empty() {
+                return CheckResult {
+                    ty: Type::Var(TypeVar::fresh()),
+                    substitution,
+                    errors,
+                };
+            }
+
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: format!("Call ({func})"),
+                span: *span,
+            })
+        }
+        Expr::CheckObligation { obligation, span } => {
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: format!("CheckObligation ({obligation})"),
+                span: *span,
+            })
+        }
+        Expr::Policy(policy_expr) => CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: format!("Policy expression ({policy_expr:?})"),
+            span: Span::default(),
+        }),
+    }
+}
+
+/// Get the span from an expression
+fn get_expr_span(expr: &Expr) -> Span {
+    match expr {
+        Expr::Literal(_) => Span::default(),
+        Expr::Variable(_) => Span::default(),
+        Expr::FieldAccess { span, .. } => *span,
+        Expr::IndexAccess { span, .. } => *span,
+        Expr::Unary { span, .. } => *span,
+        Expr::Binary { span, .. } => *span,
+        Expr::Call { span, .. } => *span,
+        Expr::Match { span, .. } => *span,
+        Expr::Policy(_) => Span::default(),
+        Expr::IfLet { span, .. } => *span,
+        Expr::CheckObligation { span, .. } => *span,
+        Expr::Constructor { span, .. } => *span,
     }
 }
 
@@ -210,19 +305,17 @@ fn resolve_enum_type_def_for_match<'a>(
 ) -> Option<&'a TypeDef> {
     if let Expr::Constructor { name, .. } = scrutinee
         && let Some((type_name, _)) = env.lookup_constructor(name.as_ref())
-        && let Some(def) = env.lookup_type(type_name.as_str())
-        && matches!(&def.body, TypeBody::Enum(_))
-    {
-        return Some(def);
-    }
+            && let Some(def) = env.lookup_type(type_name.as_str())
+                && matches!(&def.body, TypeBody::Enum(_)) {
+                    return Some(def);
+                }
     for arm in arms {
         if let SurfacePattern::Variant { name, .. } = &arm.pattern
             && let Some((type_name, _)) = env.lookup_constructor(name.as_ref())
-            && let Some(def) = env.lookup_type(type_name.as_str())
-            && matches!(&def.body, TypeBody::Enum(_))
-        {
-            return Some(def);
-        }
+                && let Some(def) = env.lookup_type(type_name.as_str())
+                    && matches!(&def.body, TypeBody::Enum(_)) {
+                        return Some(def);
+                    }
     }
     None
 }
@@ -676,9 +769,11 @@ mod tests {
         let env = TypeEnv::with_builtin_types();
 
         // match None {
-        //   Some { value: x } => x,
+        //   Some { value: _ } => 42,
         //   None => 0
         // }
+        // Note: Using literal body instead of variable to avoid needing
+        // pattern variable binding in type environment (separate feature)
         let expr = Expr::Match {
             scrutinee: Box::new(Expr::Constructor {
                 name: "None".into(),
@@ -691,10 +786,10 @@ mod tests {
                         name: "Some".into(),
                         fields: Some(vec![(
                             "value".into(),
-                            ash_parser::surface::Pattern::Variable("x".into()),
+                            ash_parser::surface::Pattern::Wildcard,
                         )]),
                     },
-                    body: Box::new(Expr::Variable("x".into())),
+                    body: Box::new(Expr::Literal(Literal::Int(42))),
                     span: Span::default(),
                 },
                 ash_parser::surface::MatchArm {

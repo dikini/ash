@@ -418,6 +418,62 @@ impl CapabilityProvider for FsProvider {
     }
 }
 
+/// Adapter that wraps an `ash_engine` `CapabilityProvider` to work with `ash_interp`
+///
+/// This allows providers defined using the `ash_engine::providers::CapabilityProvider`
+/// trait to be used with the interpreter which expects `ash_interp::capability::CapabilityProvider`.
+#[derive(Clone, Debug)]
+pub struct InterpProviderAdapter {
+    inner: Arc<dyn CapabilityProvider>,
+}
+
+impl InterpProviderAdapter {
+    /// Create a new adapter wrapping the given provider
+    pub fn new(provider: Arc<dyn CapabilityProvider>) -> Self {
+        Self { inner: provider }
+    }
+}
+
+#[async_trait]
+impl ash_interp::capability::CapabilityProvider for InterpProviderAdapter {
+    fn capability_name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn effect(&self) -> Effect {
+        self.inner.effect()
+    }
+
+    async fn observe(
+        &self,
+        _constraints: &[ash_core::Constraint],
+    ) -> ash_interp::ExecResult<Value> {
+        // For now, we delegate to the wrapped provider with empty args
+        // The ash_interp trait passes constraints, but the ash_engine trait
+        // uses action/args. We use "observe" as the action.
+        self.inner
+            .observe("observe", &[])
+            .await
+            .map_err(|e| ash_interp::ExecError::ExecutionFailed(e.to_string()))
+    }
+
+    async fn execute(&self, action: &ash_core::Action) -> ash_interp::ExecResult<Value> {
+        // Convert Action arguments from Expr to Value by evaluating them
+        // For now, we pass empty args - in a full implementation we'd need
+        // an evaluation context to evaluate the expressions
+        let args: Vec<Value> = action
+            .arguments
+            .iter()
+            .map(|_expr| Value::Null) // Simplified - would need proper eval
+            .collect();
+
+        self.inner
+            .execute(&action.name, &args)
+            .await
+            .map_err(|e| ash_interp::ExecError::ExecutionFailed(e.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

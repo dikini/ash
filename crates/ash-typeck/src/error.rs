@@ -53,6 +53,33 @@ pub enum ConstructorError {
         /// Human-readable list of missing cases
         missing: String,
     },
+
+    /// Unbound variable - variable not found in environment
+    #[error("unbound variable: {name}")]
+    UnboundVariable {
+        /// Name of the variable
+        name: String,
+        /// Source span
+        span: ash_parser::token::Span,
+    },
+
+    /// Type is not iterable (used in for loops)
+    #[error("type {ty} is not iterable")]
+    NotIterable {
+        /// The type that cannot be iterated
+        ty: crate::types::Type,
+        /// Source span
+        span: ash_parser::token::Span,
+    },
+
+    /// Unsupported expression type
+    #[error("unsupported expression: {kind}")]
+    UnsupportedExpression {
+        /// Kind of expression that is unsupported
+        kind: String,
+        /// Source span
+        span: ash_parser::token::Span,
+    },
 }
 
 /// Error type for type environment operations

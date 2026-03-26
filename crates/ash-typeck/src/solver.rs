@@ -2,8 +2,6 @@
 //!
 //! Provides constraint solving using unification and error reporting.
 
-#![allow(clippy::result_large_err)]
-
 use crate::constraints::Constraint;
 use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use ash_core::Effect;
@@ -11,14 +9,17 @@ use ash_parser::token::Span;
 use std::fmt;
 
 /// Type error with detailed information (TASK-025)
+///
+/// Type values are boxed to keep the error type small on the stack.
+/// See: https://docs.rs/serde_json/latest/src/serde_json/error.rs.html
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum TypeError {
     /// Types cannot be unified
     #[error("Type mismatch: expected {expected:?}, found {found:?}")]
-    Mismatch { expected: Type, found: Type },
+    Mismatch { expected: Box<Type>, found: Box<Type> },
     /// Infinite type detected (occurs check failed)
     #[error("Infinite type: type variable {var:?} occurs in {typ:?}")]
-    InfiniteType { var: TypeVar, typ: Type },
+    InfiniteType { var: TypeVar, typ: Box<Type> },
     /// Constructor name mismatch
     #[error("Constructor name mismatch: expected {expected}, found {found}")]
     ConstructorNameMismatch { expected: String, found: String },
@@ -49,9 +50,18 @@ pub enum TypeError {
     /// Undischarged obligations at workflow end
     #[error("Undischarged obligations: {obligations:?}")]
     UndischargedObligations { obligations: Vec<String> },
+    /// Unknown obligation checked without being obliged first
+    #[error("Unknown obligation: '{name}' was not obliged")]
+    UnknownObligation { name: String, span: Span },
+    /// Obligation already satisfied (linear obligation tracking)
+    #[error("Obligation already satisfied: '{name}'")]
+    ObligationAlreadySatisfied { name: String, span: Span },
+    /// Unsatisfied obligations at workflow end
+    #[error("Unsatisfied obligations: {obligations:?}")]
+    UnsatisfiedObligations { obligations: Vec<String> },
     /// Pattern type mismatch
     #[error("Pattern mismatch: expected {expected:?}, got {actual:?}")]
-    PatternMismatch { expected: Type, actual: Type },
+    PatternMismatch { expected: Box<Type>, actual: Box<Type> },
     /// Unknown variant in pattern
     #[error("Unknown variant: {0}")]
     UnknownVariant(String),
@@ -87,10 +97,13 @@ impl From<UnifyError> for TypeError {
     fn from(err: UnifyError) -> Self {
         match err {
             UnifyError::Mismatch(t1, t2) => TypeError::Mismatch {
-                expected: t1,
-                found: t2,
+                expected: Box::new(t1),
+                found: Box::new(t2),
             },
-            UnifyError::InfiniteType(var, typ) => TypeError::InfiniteType { var, typ },
+            UnifyError::InfiniteType(var, typ) => TypeError::InfiniteType {
+                var,
+                typ: Box::new(typ),
+            },
             UnifyError::ConstructorNameMismatch { expected, found } => {
                 TypeError::ConstructorNameMismatch { expected, found }
             }
@@ -388,8 +401,8 @@ mod tests {
     #[test]
     fn test_type_error_display() {
         let err = TypeError::Mismatch {
-            expected: Type::Int,
-            found: Type::Bool,
+            expected: Box::new(Type::Int),
+            found: Box::new(Type::Bool),
         };
         let display = format!("{err}");
         assert!(display.contains("Type mismatch"));

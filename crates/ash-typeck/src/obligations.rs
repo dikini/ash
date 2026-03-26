@@ -782,7 +782,9 @@ mod tests {
 // Linear Obligation Tracking for Workflow Contracts (TASK-227)
 // ============================================================================
 
+use crate::solver::TypeError;
 use ash_core::workflow_contract::ObligationSet;
+use ash_parser::surface::{CheckTarget, Workflow};
 
 /// Variable bindings type
 pub type VarBindings = HashMap<String, Type>;
@@ -794,6 +796,361 @@ pub struct LinearObligationContext {
     pub var_types: VarBindings,
     /// Linear obligation set (must be discharged before workflow completes)
     pub obligations: ObligationSet,
+}
+
+// ============================================================================
+// Obligation Collector for Workflow AST (TASK-275)
+// ============================================================================
+
+/// Collector that walks the workflow AST to collect and verify obligations
+///
+/// This implements linear obligation tracking where:
+/// - `oblige obligation_name` introduces a new obligation
+/// - `check obligation_name` consumes/discharge the obligation
+/// - Obligations must be discharged exactly once
+/// - All obligations must be discharged before workflow completion
+#[derive(Debug, Clone, Default)]
+pub struct ObligationCollector;
+
+impl ObligationCollector {
+    /// Create a new obligation collector
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Collect and verify obligations from a workflow
+    ///
+    /// Walks the workflow AST, tracking obligations and verifying that:
+    /// 1. All obligations are properly discharged
+    /// 2. No obligation is discharged twice
+    /// 3. No unknown obligation is discharged
+    ///
+    /// # Arguments
+    /// * `workflow` - The workflow AST to analyze
+    /// * `ctx` - The obligation context to update
+    ///
+    /// # Returns
+    /// * `Ok(())` if all obligations are satisfied
+    /// * `Err(TypeError)` if there are unsatisfied or invalid obligations
+    pub fn collect(
+        &mut self,
+        workflow: &Workflow,
+        ctx: &mut LinearObligationContext,
+    ) -> Result<(), TypeError> {
+        self.collect_from_workflow(workflow, ctx)
+    }
+
+    fn collect_from_workflow(
+        &mut self,
+        workflow: &Workflow,
+        ctx: &mut LinearObligationContext,
+    ) -> Result<(), TypeError> {
+        match workflow {
+            // OBLIGE: Introduce a new obligation
+            Workflow::Oblige {
+                obligation,
+                span: _,
+            } => {
+                ctx.obligations
+                    .insert(obligation.to_string())
+                    .map_err(TypeError::from)?;
+            }
+
+            // CHECK: Verify an obligation exists and discharge it
+            Workflow::Check {
+                target,
+                continuation,
+                span,
+            } => {
+                if let CheckTarget::Obligation(obl_ref) = target {
+                    // Try to discharge the obligation
+                    // Use the role field as the obligation identifier
+                    let obl_name = obl_ref.role.to_string();
+                    ctx.obligations.remove(&obl_name).map_err(|e| match e {
+                        ash_core::workflow_contract::ObligationError::Unknown(_) => {
+                            TypeError::UnknownObligation {
+                                name: obl_name,
+                                span: *span,
+                            }
+                        }
+                        _ => TypeError::from(e),
+                    })?;
+                }
+
+                // Continue with the rest of the workflow
+                if let Some(cont) = continuation {
+                    self.collect_from_workflow(cont, ctx)?;
+                }
+            }
+
+            // IF: Both branches must discharge obligations for them to be considered satisfied
+            Workflow::If {
+                condition: _,
+                then_branch,
+                else_branch,
+                span: _,
+            } => {
+                let mut then_ctx = ctx.branch();
+                self.collect_from_workflow(then_branch, &mut then_ctx)?;
+
+                if let Some(else_branch) = else_branch {
+                    let mut else_ctx = ctx.branch();
+                    self.collect_from_workflow(else_branch, &mut else_ctx)?;
+                    ctx.merge(else_ctx);
+                }
+
+                // Merge the then context back
+                ctx.merge(then_ctx);
+            }
+
+            // PAR: Union of obligations from all branches
+            Workflow::Par { branches, span: _ } => {
+                let mut branch_contexts = Vec::new();
+                for branch in branches {
+                    let mut branch_ctx = ctx.branch();
+                    self.collect_from_workflow(branch, &mut branch_ctx)?;
+                    branch_contexts.push(branch_ctx);
+                }
+
+                // For parallel composition, obligations must be discharged in all branches
+                // We use intersection semantics
+                for branch_ctx in branch_contexts {
+                    ctx.merge(branch_ctx);
+                }
+            }
+
+            // MAYBE: Try primary, fallback on failure
+            // Obligations must be discharged in both branches
+            Workflow::Maybe {
+                primary,
+                fallback,
+                span: _,
+            } => {
+                let mut primary_ctx = ctx.branch();
+                self.collect_from_workflow(primary, &mut primary_ctx)?;
+
+                let mut fallback_ctx = ctx.branch();
+                self.collect_from_workflow(fallback, &mut fallback_ctx)?;
+
+                ctx.merge(primary_ctx);
+                ctx.merge(fallback_ctx);
+            }
+
+            // MUST: Ensure workflow succeeds
+            // Same as regular body
+            Workflow::Must { body, span: _ } => {
+                self.collect_from_workflow(body, ctx)?;
+            }
+
+            // WITH: Scoped capability
+            Workflow::With {
+                capability: _,
+                body,
+                span: _,
+            } => {
+                self.collect_from_workflow(body, ctx)?;
+            }
+
+            // FOR: Loop body
+            Workflow::For {
+                pattern: _,
+                collection: _,
+                body,
+                span: _,
+            } => {
+                self.collect_from_workflow(body, ctx)?;
+            }
+
+            // LET: Binding with continuation
+            Workflow::Let {
+                pattern: _,
+                expr: _,
+                continuation,
+                span: _,
+            } => {
+                if let Some(cont) = continuation {
+                    self.collect_from_workflow(cont, ctx)?;
+                }
+            }
+
+            // OBSERVE: Capability observation with continuation
+            Workflow::Observe {
+                capability: _,
+                binding: _,
+                continuation,
+                span: _,
+            } => {
+                if let Some(cont) = continuation {
+                    self.collect_from_workflow(cont, ctx)?;
+                }
+            }
+
+            // ORIENT: Expression evaluation with continuation
+            Workflow::Orient {
+                expr: _,
+                binding: _,
+                continuation,
+                span: _,
+            } => {
+                if let Some(cont) = continuation {
+                    self.collect_from_workflow(cont, ctx)?;
+                }
+            }
+
+            // PROPOSE: Action proposal with continuation
+            Workflow::Propose {
+                action: _,
+                binding: _,
+                continuation,
+                span: _,
+            } => {
+                if let Some(cont) = continuation {
+                    self.collect_from_workflow(cont, ctx)?;
+                }
+            }
+
+            // DECIDE: Conditional with branches
+            Workflow::Decide {
+                expr: _,
+                policy: _,
+                then_branch,
+                else_branch,
+                span: _,
+            } => {
+                let mut then_ctx = ctx.branch();
+                self.collect_from_workflow(then_branch, &mut then_ctx)?;
+
+                if let Some(else_branch) = else_branch {
+                    let mut else_ctx = ctx.branch();
+                    self.collect_from_workflow(else_branch, &mut else_ctx)?;
+                    ctx.merge(else_ctx);
+                }
+
+                ctx.merge(then_ctx);
+            }
+
+            // ACT: Action (terminal - no continuation field)
+            Workflow::Act {
+                action: _,
+                guard: _,
+                span: _,
+            } => {
+                // Terminal action - no obligations to track
+            }
+
+            // SET: Set value with optional continuation
+            Workflow::Set {
+                capability: _,
+                channel: _,
+                value: _,
+                continuation,
+                span: _,
+            } => {
+                if let Some(cont) = continuation {
+                    self.collect_from_workflow(cont, ctx)?;
+                }
+            }
+
+            // SEND: Send value with optional continuation
+            Workflow::Send {
+                capability: _,
+                channel: _,
+                value: _,
+                continuation,
+                span: _,
+            } => {
+                if let Some(cont) = continuation {
+                    self.collect_from_workflow(cont, ctx)?;
+                }
+            }
+
+            // SEQ: Sequential composition
+            Workflow::Seq {
+                first,
+                second,
+                span: _,
+            } => {
+                self.collect_from_workflow(first, ctx)?;
+                self.collect_from_workflow(second, ctx)?;
+            }
+
+            // RECEIVE: Pattern matching on messages
+            Workflow::Receive {
+                mode: _,
+                arms,
+                is_control: _,
+                span: _,
+            } => {
+                let mut arm_contexts = Vec::new();
+                for arm in arms {
+                    let mut arm_ctx = ctx.branch();
+                    self.collect_from_workflow(&arm.body, &mut arm_ctx)?;
+                    arm_contexts.push(arm_ctx);
+                }
+
+                // Merge all arm contexts using intersection
+                for arm_ctx in arm_contexts {
+                    ctx.merge(arm_ctx);
+                }
+            }
+
+            // YIELD: Role delegation with resumption
+            Workflow::Yield {
+                role: _,
+                expr: _,
+                resume_var: _,
+                resume_type: _,
+                arms,
+                span: _,
+            } => {
+                let mut arm_contexts = Vec::new();
+                for arm in arms {
+                    let mut arm_ctx = ctx.branch();
+                    self.collect_from_workflow(&arm.body, &mut arm_ctx)?;
+                    arm_contexts.push(arm_ctx);
+                }
+
+                // Merge all arm contexts using intersection
+                for arm_ctx in arm_contexts {
+                    ctx.merge(arm_ctx);
+                }
+            }
+
+            // RET: Return expression
+            Workflow::Ret { expr: _, span: _ } => {}
+
+            // RESUME: Resume from yield with a value
+            Workflow::Resume {
+                expr: _,
+                ty: _,
+                span: _,
+            } => {}
+
+            // DONE: Terminal workflow
+            Workflow::Done { span: _ } => {}
+        }
+
+        Ok(())
+    }
+
+    /// Finalize obligation checking and report any unsatisfied obligations
+    ///
+    /// # Arguments
+    /// * `ctx` - The obligation context to finalize
+    ///
+    /// # Returns
+    /// * `Ok(())` if all obligations are satisfied
+    /// * `Err(TypeError::UnsatisfiedObligations)` if there are pending obligations
+    pub fn finalize(&self, ctx: &LinearObligationContext) -> Result<(), TypeError> {
+        if ctx.is_clean() {
+            Ok(())
+        } else {
+            let remaining: Vec<String> = ctx.obligations.remaining().into_iter().cloned().collect();
+            Err(TypeError::UnsatisfiedObligations {
+                obligations: remaining,
+            })
+        }
+    }
 }
 
 impl LinearObligationContext {

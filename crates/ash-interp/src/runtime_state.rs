@@ -98,12 +98,12 @@ impl RuntimeState {
     ///
     /// ```
     /// use ash_interp::RuntimeState;
-    /// use ash_interp::capability::MockProvider;
+    /// use ash_interp::capability::{CapabilityProvider, MockProvider};
     /// use ash_core::Effect;
     /// use std::collections::HashMap;
     /// use std::sync::Arc;
     ///
-    /// let mut providers = HashMap::new();
+    /// let mut providers: HashMap<String, Arc<dyn CapabilityProvider>> = HashMap::new();
     /// providers.insert("test".to_string(), Arc::new(MockProvider::new("test", Effect::Epistemic)));
     ///
     /// let state = RuntimeState::new().with_providers(providers);

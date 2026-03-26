@@ -8,6 +8,43 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Phase 46: Unified Capability-Role Implementation (Partial)**
+  - **Parser Extensions (46.1):**
+    - TASK-259: Parse `plays role(R)` clause in workflow headers
+    - TASK-260: Parse `capabilities: [...]` with `@ { constraints }` syntax
+    - TASK-261: Lower capabilities to implicit `{workflow}_default` role
+    - New AST types: RoleRef, CapabilityDecl, ConstraintBlock, ConstraintField, ConstraintValue
+    - 67+ tests for parser extensions
+  - **Type System Integration (46.2):**
+    - TASK-262: RoleChecker validates role inclusion and composes capabilities
+    - TASK-263: ConstraintChecker validates capability constraints against schema
+    - TASK-264: EffectiveCapabilitySet merges capabilities from multiple sources
+    - Type errors: UnknownRole, UnknownCapability, InvalidConstraintField, ConstraintTypeMismatch
+    - 75+ tests for type system integration
+  - **Runtime Integration (46.3):**
+    - TASK-265: RoleRegistry resolves workflow roles to runtime capability grants
+    - TASK-266: ConstraintEnforcer validates capability constraints at invocation time
+    - TASK-267: YieldRouter routes `yield role(R)` to registered role handlers
+    - Runtime types: RuntimeCapabilitySet, CapabilityGrant, PendingYield, ResumeResult
+    - Error types: RoleError, CapabilityError, ConstraintViolation, YieldError
+    - 70+ tests for runtime integration
+  - **Agent Harness (46.4):**
+    - TASK-268: Agent harness capability types for LLM agent integration
+    - Types: AgentHarnessCapability, AgentHarnessConfig, AgentHarnessOperation
+    - Security model: Permission-based with default deny on accept_response
+    - Configuration: ProjectionPolicy, AcceptanceMode, max_retries, timeout_ms
+    - 6 comprehensive tests for capability functionality
+    - TASK-269: AgentHarness workflow pattern for LLM agent integration in ash-engine
+    - Types: AgentHarness, HarnessError, HarnessResult
+    - Operations: project_context, delegate_to_agent, validate_response, accept_response
+    - 12 comprehensive tests for harness functionality
+    - TASK-270: MCP (Model Context Protocol) capability provider for LLM communication
+    - Types: McpProvider, McpConfig, McpCapabilities
+    - Protocol: JSON-RPC 2.0 over HTTP with reqwest client
+    - Operations: call (raw JSON-RPC), call_tool (MCP tools), get_prompt (MCP prompts)
+    - Integration: Real MCP delegation in AgentHarness::delegate_to_agent
+    - Testing: wiremock-based HTTP mocking for 4 integration tests
+
 - **Reduced Syntax Specification (Phase 45)**
   - SPEC-024: Complete capability-role-workflow syntax specification with EBNF grammar (TASK-257)
   - DESIGN-014: Syntax reduction decision record documenting kept vs deferred features (TASK-257)
@@ -16,6 +53,21 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Kept syntax: `plays role(R)`, `capabilities: [...]`, `capability @ { constraints }`
 
 ### Fixed
+
+- **Code Quality Fixes (Phase 46 Follow-up)**
+  - Fixed failing property test `prop_capability_with_multiple_params` by excluding reserved keywords from parameter name generation
+  - Added missing reserved keywords to `is_keyword()`: `let`, `if`, `else`, `match`, `done`, `ret`, `yield`, `plays`, `capabilities`
+  - Replaced `.unwrap()` with safe alternatives in `parse_workflow.rs` and `parse_pattern.rs` using `is_some_and()`/`is_none_or()`
+  - **TASK-273: Fixed `arb_pattern()` binding name uniqueness**
+    - Added `prop_filter` to ensure generated patterns have unique binding names
+    - Prevents duplicate bindings when rest pattern (`G_`) matches a variable name (`G_`) in the same record
+    - Test `test_arb_pattern_bindings_unique` now passes consistently
+  - Added `#[must_use]` to Result-returning functions per rust-skills guidelines:
+    - `RoleRegistry::resolve_workflow_roles()`
+    - `RuntimeCapabilitySet::check_use()`
+    - `ConstraintEnforcer::check()`
+    - `YieldRouter::route_yield()`
+    - `YieldRouter::resume_with_response()`
 
 - **Stale Documentation Update (TASK-255)**
   - Fixed `README.md` example reference from non-existent `examples/multi_agent.ash` to `examples/multi_agent_research.ash`

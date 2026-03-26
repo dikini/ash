@@ -69,7 +69,7 @@ pub fn arb_name() -> impl proptest::strategy::Strategy<Value = Name> {
     "[a-zA-Z_][a-zA-Z0-9_]*".prop_map(String::from)
 }
 
-/// Generate arbitrary Pattern values
+/// Generate arbitrary Pattern values with unique binding names
 pub fn arb_pattern() -> impl proptest::strategy::Strategy<Value = Pattern> {
     use proptest::prelude::*;
 
@@ -98,6 +98,12 @@ pub fn arb_pattern() -> impl proptest::strategy::Strategy<Value = Pattern> {
             ]
         },
     )
+    // Filter out patterns with duplicate bindings to ensure name uniqueness
+    .prop_filter("unique binding names", |pat| {
+        let bindings = pat.bindings();
+        let unique: std::collections::HashSet<_> = bindings.iter().collect();
+        bindings.len() == unique.len()
+    })
 }
 
 /// Generate simple expressions (for use in workflows)

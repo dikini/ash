@@ -4,6 +4,7 @@
 //! for the Ash workflow language.
 
 pub mod ast;
+pub mod capabilities;
 pub mod effect;
 pub mod module_graph;
 pub mod provenance;

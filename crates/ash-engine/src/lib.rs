@@ -16,6 +16,7 @@
 pub mod check;
 pub mod error;
 pub mod execute;
+pub mod harness;
 pub mod parse;
 pub mod providers;
 

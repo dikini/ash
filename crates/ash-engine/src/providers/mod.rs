@@ -3,12 +3,16 @@
 //! This module provides built-in capability providers for common I/O operations:
 //! - `StdioProvider`: Standard input/output operations (print, println, `read_line`)
 //! - `FsProvider`: Filesystem operations (`read_file`, `write_file`, `exists`)
+//! - `McpProvider`: MCP (Model Context Protocol) for LLM communication
 
 use ash_core::{Effect, Value};
 use async_trait::async_trait;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+
+pub mod mcp;
+pub use mcp::{McpCapabilities, McpConfig, McpProvider};
 
 /// Standard I/O capability provider
 ///
@@ -621,7 +625,7 @@ mod tests {
         let provider = FsProvider::new();
         // Use the provider source file as test subject
         let result = provider
-            .observe("exists", &[Value::String("src/providers.rs".into())])
+            .observe("exists", &[Value::String("src/providers/mod.rs".into())])
             .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Value::Bool(true));
@@ -644,7 +648,7 @@ mod tests {
     async fn test_fs_read_file() {
         let provider = FsProvider::new();
         let result = provider
-            .observe("read_file", &[Value::String("src/providers.rs".into())])
+            .observe("read_file", &[Value::String("src/providers/mod.rs".into())])
             .await;
         assert!(result.is_ok());
         let content = result.unwrap();

@@ -133,10 +133,13 @@ async fn execute_command(cli: &Cli) -> CliResult<()> {
 }
 
 /// Initialize logging based on verbosity level
+///
+/// Default is WARN to keep output clean. Use -v for INFO, -vv for DEBUG, -vvv for TRACE.
 fn init_logging(verbosity: u8) {
     let level = match verbosity {
-        0 => tracing::Level::INFO,
-        1 => tracing::Level::DEBUG,
+        0 => tracing::Level::WARN,
+        1 => tracing::Level::INFO,
+        2 => tracing::Level::DEBUG,
         _ => tracing::Level::TRACE,
     };
 

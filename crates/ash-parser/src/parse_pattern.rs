@@ -495,7 +495,11 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
-            if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
+            if after
+                .chars()
+                .next()
+                .is_none_or(|c| !c.is_ascii_alphanumeric())
+            {
                 for c in word.chars() {
                     input.state.advance(c);
                 }

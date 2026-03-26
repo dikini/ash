@@ -76,7 +76,7 @@ let wf = Workflow::Let {
 ```rust
 pub use ast::*;        // Workflow, Expr, Pattern, etc.
 pub use effect::*;     // Effect, EffectContext
-pubuse provenance::*;  // Provenance, AuditTrail
+pub use provenance::*; // Provenance, AuditTrail
 pub use value::*;      // Value
 pub use visualize::*;  // Visualization helpers
 ```

@@ -7,15 +7,29 @@ This directory contains the canonical specifications for the Ash workflow langua
 | Spec | Title | Status | Description |
 |------|-------|--------|-------------|
 | SPEC-001 | Intermediate Representation | Active | Core AST types, serialization, and IR semantics |
-| SPEC-002 | Capability System | Active | Capability definition, effects, and authority model |
+| SPEC-002 | Surface Language | Active | Surface syntax and parsing |
 | SPEC-003 | Type System | Active | Type checking, inference, and constraint solving |
-| SPEC-004 | Policy Framework | Active | Policy definition, evaluation, and decision semantics |
-| SPEC-005 | Provenance and Audit | Active | Audit trails, provenance tracking, and lineage |
-| SPEC-006 | Workflow Execution | Active | Runtime semantics and execution model |
-| SPEC-007 | Module System | Active | Namespaces, imports, and module resolution |
-| SPEC-020 | Generics and Type Parameters | Active | Generic types, constraints, and polymorphism |
-| SPEC-021 | Algebraic Data Types | Active | Sum types, product types, and pattern matching |
+| SPEC-004 | Operational Semantics | Active | Operational semantics and evaluation rules |
+| SPEC-005 | Ash CLI Specification | Active | Command-line interface and commands |
+| SPEC-006 | Policy Definition Syntax | Active | Policy definition and structure |
+| SPEC-007 | Policy Combinators | Active | Policy combination operators |
+| SPEC-008 | Dynamic Policies | Active | Runtime policy modification |
+| SPEC-009 | Module System | Active | Namespaces, imports, and module resolution |
+| SPEC-010 | Embedding | Active | Embedding Ash in host applications |
+| SPEC-011 | REPL | Active | Interactive REPL semantics |
+| SPEC-012 | Imports | Active | Import system and resolution |
+| SPEC-013 | Streams | Active | Stream processing and semantics |
+| SPEC-014 | Behaviours | Active | Behaviour definitions and contracts |
+| SPEC-015 | Typed Providers | Active | Capability providers with types |
+| SPEC-016 | Output | Active | Output formatting and destinations |
+| SPEC-017 | Capability Integration | Active | Capability integration with system features |
+| SPEC-018 | Capability Matrix | Active | Capability permission matrix |
+| SPEC-019 | Role Runtime Semantics | Active | Role-based execution semantics |
+| SPEC-020 | Algebraic Data Types | Active | Sum types, product types, and pattern matching |
+| SPEC-021 | Lean Reference | Active | Reference Lean formalization |
+| SPEC-021 | Runtime Observable Behavior | Active | Runtime behavior observation |
 | SPEC-022 | Workflow Typing with Constraints | Active | Contracts, obligations, and linear resource tracking |
+| SPEC-023 | Proxy Workflows | Active | Proxy workflow patterns and semantics |
 
 ## Deprecated Specifications
 

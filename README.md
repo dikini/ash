@@ -42,7 +42,7 @@ ash run examples/support_ticket.ash
 ash check examples/code_review.ash
 
 # Run with provenance tracking
-ash run --trace examples/multi_agent.ash
+ash run --trace examples/multi_agent_research.ash
 ```
 
 ## Language Example

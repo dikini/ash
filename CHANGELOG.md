@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Stale Documentation Update (TASK-255)**
+  - Fixed `README.md` example reference from non-existent `examples/multi_agent.ash` to `examples/multi_agent_research.ash`
+  - Fixed `docs/API.md` syntax error: `pubuse provenance::*;` → `pub use provenance::*;`
+  - Updated `docs/spec/README.md` with correct spec file mappings matching actual SPEC files
+
 ### Added
 
 - **Trace Flags Implementation (TASK-254)**

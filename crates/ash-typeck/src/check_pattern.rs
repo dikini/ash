@@ -3,6 +3,8 @@
 //! Provides type checking for patterns in match expressions, including
 //! variable binding extraction and type compatibility checking.
 
+#![allow(clippy::result_large_err)]
+
 use crate::solver::TypeError;
 use crate::types::{Type, TypeVar};
 use ash_core::ast::TypeBody;

@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc ace32562da056db3d2dd6bd2f6967b70771bf6d59f007206f718c6817feb33b4 # shrinks to pat = List([List([Variable("_")], None)], Some("_"))
+cc dc2d9fe3c792bd9871e726a13f1744786a21d0fdbfdb3f61ece93bd4ee3e2567 # shrinks to pat = Record([("A", List([], Some("G_"))), ("a", Variable("G_"))])

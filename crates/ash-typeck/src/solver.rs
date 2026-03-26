@@ -2,8 +2,10 @@
 //!
 //! Provides constraint solving using unification and error reporting.
 
+#![allow(clippy::result_large_err)]
+
 use crate::constraints::Constraint;
-use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
+use crate::types::{unify, Substitution, Type, TypeVar, UnifyError};
 use ash_core::Effect;
 use std::fmt;
 

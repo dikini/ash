@@ -9,10 +9,11 @@ use ash_interp::{
     behaviour::BehaviourContext,
     capability::CapabilityContext,
     context::Context,
+    execute_workflow_with_behaviour_in_state,
     policy::PolicyEvaluator,
+    proxy_registry::ProxyRegistry,
     runtime_state::RuntimeState,
     yield_state::{SuspendedYields, YieldState},
-    execute_workflow_with_behaviour_in_state, proxy_registry::ProxyRegistry,
 };
 
 /// Helper to create a minimal runtime state for testing
@@ -39,6 +40,7 @@ fn create_yield_workflow(role: &str, request_value: Value, response_type: TypeEx
 }
 
 /// Helper to create a yield workflow with pattern-matching continuation
+#[allow(dead_code)]
 fn create_yield_with_arms(
     _role: &str,
     _request_value: Value,
@@ -86,13 +88,17 @@ async fn test_yield_suspends_workflow() {
         &policy_eval,
         &behaviour_ctx,
         &runtime,
-    ).await;
+    )
+    .await;
 
     // Should return a YieldState::Suspended indication
     // For now, it returns an error indicating yield was processed
     // After full implementation, this should properly suspend
-    assert!(result.is_err(), "Yield should suspend workflow and not return a value");
-    
+    assert!(
+        result.is_err(),
+        "Yield should suspend workflow and not return a value"
+    );
+
     // Check that a yield was suspended
     let suspended_guard = runtime.suspended_yields();
     let suspended = suspended_guard.lock().await;
@@ -122,13 +128,18 @@ async fn test_yield_without_registered_proxy_fails() {
         &policy_eval,
         &behaviour_ctx,
         &runtime,
-    ).await;
+    )
+    .await;
 
-    assert!(result.is_err(), "Should fail when no proxy registered for role");
+    assert!(
+        result.is_err(),
+        "Should fail when no proxy registered for role"
+    );
     let err_msg = format!("{:?}", result.unwrap_err());
     assert!(
         err_msg.contains("proxy") || err_msg.contains("not found") || err_msg.contains("No proxy"),
-        "Error should indicate missing proxy: {}", err_msg
+        "Error should indicate missing proxy: {}",
+        err_msg
     );
 }
 
@@ -160,7 +171,7 @@ fn test_correlation_id_generation() {
 
     // IDs should be different
     assert_ne!(id1, id2, "Correlation IDs should be unique");
-    
+
     // Both should be in suspended
     assert!(suspended.contains(id1));
     assert!(suspended.contains(id2));
@@ -171,7 +182,7 @@ async fn test_resume_continues_workflow() {
     // This test verifies that when a proxy response is received,
     // the suspended workflow can be resumed
     let runtime = setup_test_runtime();
-    
+
     // Create and suspend a yield state manually
     let correlation_id = ash_interp::yield_state::CorrelationId::new();
     let state = YieldState {
@@ -374,7 +385,11 @@ async fn test_multiple_yields_same_role() {
     let behaviour_ctx = BehaviourContext::new();
 
     // First yield
-    let workflow1 = create_yield_workflow("test_role", Value::Int(1), TypeExpr::Named("Int".to_string()));
+    let workflow1 = create_yield_workflow(
+        "test_role",
+        Value::Int(1),
+        TypeExpr::Named("Int".to_string()),
+    );
     let _result1 = execute_workflow_with_behaviour_in_state(
         &workflow1,
         ctx.clone(),
@@ -382,10 +397,15 @@ async fn test_multiple_yields_same_role() {
         &policy_eval,
         &behaviour_ctx,
         &runtime,
-    ).await;
+    )
+    .await;
 
     // Second yield to same role
-    let workflow2 = create_yield_workflow("test_role", Value::Int(2), TypeExpr::Named("Int".to_string()));
+    let workflow2 = create_yield_workflow(
+        "test_role",
+        Value::Int(2),
+        TypeExpr::Named("Int".to_string()),
+    );
     let _result2 = execute_workflow_with_behaviour_in_state(
         &workflow2,
         ctx,
@@ -393,10 +413,15 @@ async fn test_multiple_yields_same_role() {
         &policy_eval,
         &behaviour_ctx,
         &runtime,
-    ).await;
+    )
+    .await;
 
     // Should have two suspended yields
     let suspended_guard = runtime.suspended_yields();
     let suspended = suspended_guard.lock().await;
-    assert_eq!(suspended.len(), 2, "Should have two suspended yields to the same role");
+    assert_eq!(
+        suspended.len(),
+        2,
+        "Should have two suspended yields to the same role"
+    );
 }

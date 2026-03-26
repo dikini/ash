@@ -6,6 +6,9 @@ license.workspace = true
 authors.workspace = true
 description = "Type checker for the Ash workflow language"
 
+[features]
+proptest = []
+
 [dependencies]
 ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }

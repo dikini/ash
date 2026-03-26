@@ -60,6 +60,7 @@ impl ProxyRegistry {
     /// removed from the old proxy's role set and mapped to the new proxy.
     pub fn register(&mut self, role: RoleName, proxy: InstanceAddr) {
         // Remove from old proxy if role was already registered
+        #[allow(clippy::collapsible_if)]
         if let Some(old_proxy) = self.role_proxies.get(&role) {
             if let Some(roles) = self.proxy_roles.get_mut(old_proxy) {
                 roles.remove(&role);
@@ -74,10 +75,7 @@ impl ProxyRegistry {
         self.role_proxies.insert(role.clone(), proxy.clone());
 
         // Update proxy -> roles mapping
-        self.proxy_roles
-            .entry(proxy)
-            .or_default()
-            .insert(role);
+        self.proxy_roles.entry(proxy).or_default().insert(role);
     }
 
     /// Unregister a role, returning its associated proxy if it existed

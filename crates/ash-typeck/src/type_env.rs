@@ -2,6 +2,8 @@
 //!
 //! Provides `TypeEnv` for managing type definitions and looking up constructors.
 
+#![allow(clippy::result_large_err)]
+
 use crate::error::TypeEnvError;
 use crate::solver::TypeError;
 use crate::types::{Substitution, Type, TypeVar};

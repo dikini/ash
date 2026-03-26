@@ -213,7 +213,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -235,7 +237,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        None, None)
+                            None,
+                            None,
+                        )
                         .await
                     }
                     Value::Bool(false) => {
@@ -248,7 +252,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        None, None)
+                            None,
+                            None,
+                        )
                         .await
                     }
                     _ => Err(ExecError::Eval(EvalError::TypeMismatch {
@@ -269,7 +275,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox.clone(),
                     control_registry.clone(),
-                None, None)
+                    None,
+                    None,
+                )
                 .await?;
                 execute_workflow_inner(
                     second,
@@ -280,7 +288,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -303,7 +313,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox.clone(),
                             control_registry.clone(),
-                        None, None)
+                            None,
+                            None,
+                        )
                     })
                     .collect();
 
@@ -340,7 +352,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -356,7 +370,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -395,7 +411,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -424,7 +442,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        None, None)
+                            None,
+                            None,
+                        )
                         .await
                     }
                     ash_core::Decision::Deny => Err(ExecError::PolicyDenied {
@@ -471,7 +491,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                                 stream_ctx,
                                 mailbox.clone(),
                                 control_registry.clone(),
-                            None, None)
+                                None,
+                                None,
+                            )
                             .await?;
                         }
 
@@ -500,7 +522,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -515,7 +539,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox.clone(),
                     control_registry.clone(),
-                None, None)
+                    None,
+                    None,
+                )
                 .await
                 {
                     Ok(result) => Ok(result),
@@ -529,7 +555,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                        None, None)
+                            None,
+                            None,
+                        )
                         .await
                     }
                 }
@@ -546,7 +574,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -565,7 +595,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -583,7 +615,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -707,7 +741,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -741,7 +777,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -765,7 +803,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -793,7 +833,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -821,7 +863,9 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
@@ -849,26 +893,35 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                None, None)
+                    None,
+                    None,
+                )
                 .await
             }
 
             // OBLIGE - Introduce a linear obligation (contract tracking)
-            Workflow::Oblige { name, .. } => {
-                // TODO: Implement obligation tracking in execution context
-                // For now, return null as obligations are tracked at type-check time
-                Err(ExecError::ExecutionFailed(format!(
-                    "OBLIGE '{name}' not yet implemented in interpreter"
-                )))
+            Workflow::Oblige { name, span: _ } => {
+                // Check for linearity violation (duplicate obligation)
+                if ctx.has_obligation(name) {
+                    return Err(ExecError::ExecutionFailed(format!(
+                        "Linear obligation violation: obligation '{name}' already exists"
+                    )));
+                }
+
+                // Add the obligation to the context
+                ctx.add_obligation(name.clone());
+
+                // Return null as per spec
+                Ok(Value::Null)
             }
 
             // CHECK - Check/discharge a linear obligation (contract tracking)
-            Workflow::CheckObligation { name, .. } => {
-                // TODO: Implement obligation checking in execution context
-                // For now, return true as obligations are tracked at type-check time
-                Err(ExecError::ExecutionFailed(format!(
-                    "CHECK '{name}' not yet implemented in interpreter"
-                )))
+            Workflow::CheckObligation { name, span: _ } => {
+                // Attempt to discharge the obligation
+                let discharged = ctx.discharge_obligation(name);
+
+                // Return true if obligation was found and discharged, false otherwise
+                Ok(Value::Bool(discharged))
             }
 
             // YIELD - Yield control to proxy (awaiting resume)
@@ -895,9 +948,10 @@ pub(crate) fn execute_workflow_inner<'a>(
                     match registry.lookup(role) {
                         Some(addr) => addr.clone(),
                         None => {
-                            return Err(ExecError::ExecutionFailed(
-                                format!("No proxy registered for role '{}'", role)
-                            ));
+                            return Err(ExecError::ExecutionFailed(format!(
+                                "No proxy registered for role '{}'",
+                                role
+                            )));
                         }
                     }
                 };
@@ -907,13 +961,13 @@ pub(crate) fn execute_workflow_inner<'a>(
                     Some(s) => s,
                     None => {
                         return Err(ExecError::ExecutionFailed(
-                            "YIELD requires suspended yields registry".to_string()
+                            "YIELD requires suspended yields registry".to_string(),
                         ));
                     }
                 };
 
                 // Evaluate the request expression
-                let request_value = eval_expr(request, &ctx).map_err(ExecError::Eval)?;
+                let _request_value = eval_expr(request, &ctx).map_err(ExecError::Eval)?;
 
                 // Generate correlation ID and create yield state
                 let correlation_id = CorrelationId::new();
@@ -935,25 +989,23 @@ pub(crate) fn execute_workflow_inner<'a>(
                 // For now, we return an error indicating the workflow is suspended
                 // In a full implementation, this would send a message to the proxy
                 // and the workflow would be resumed when the proxy responds
-                Err(ExecError::ExecutionFailed(
-                    format!("YIELD suspended: request sent to proxy at {} for role '{}' with correlation_id={}", 
-                        proxy_addr, role, correlation_id.0)
-                ))
+                Err(ExecError::ExecutionFailed(format!(
+                    "YIELD suspended: request sent to proxy at {} for role '{}' with correlation_id={}",
+                    proxy_addr, role, correlation_id.0
+                )))
             }
 
             // PROXY_RESUME - Resume after proxy yields
-            Workflow::ProxyResume { .. } => {
-                Err(ExecError::ExecutionFailed(
-                    "PROXY_RESUME not yet implemented in interpreter".to_string()
-                ))
-            }
+            Workflow::ProxyResume { .. } => Err(ExecError::ExecutionFailed(
+                "PROXY_RESUME not yet implemented in interpreter".to_string(),
+            )),
         }
     })
 }
 /// Convert a workflow_contract TypeExpr to a typeck Type
 fn convert_type_expr(type_expr: &ash_core::workflow_contract::TypeExpr) -> ash_typeck::types::Type {
     use ash_core::workflow_contract::TypeExpr;
-    
+
     match type_expr {
         TypeExpr::Named(name) => {
             match name.as_str() {
@@ -1068,7 +1120,9 @@ pub fn execute_workflow_with_stream_in_state<'a>(
         Some(stream_ctx),
         mailbox,
         control_registry,
-    None, None)
+        None,
+        None,
+    )
 }
 
 /// Execute a workflow with default contexts using explicit runtime-owned state.

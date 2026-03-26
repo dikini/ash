@@ -579,7 +579,10 @@ mod tests {
     fn debug_formatting() {
         let id = CorrelationId(42);
         let debug_str = format!("{:?}", id);
-        assert!(debug_str.contains("42"), "Debug should contain the ID value");
+        assert!(
+            debug_str.contains("42"),
+            "Debug should contain the ID value"
+        );
 
         let suspended = SuspendedYields::new();
         let debug_str = format!("{:?}", suspended);

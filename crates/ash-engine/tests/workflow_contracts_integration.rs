@@ -2,6 +2,8 @@
 //!
 //! Tests end-to-end obligation lifecycle, requirement checking, and contract enforcement.
 
+#![allow(clippy::no_effect_underscore_binding)]
+
 use ash_core::workflow_contract::{
     ArithConstraint, Contract, Effect, ObligationError, ObligationSet, PostPredicate, Requirement,
     Span, Workflow, WorkflowDef,
@@ -84,9 +86,8 @@ fn test_check_with_decision_pattern_false_branch() {
 
 #[test]
 fn test_undischarged_obligation_error() {
-    let set = ObligationSet::new();
-    // Create obligation in a separate scope to leave it undischarged
-    let mut inner_set = set.clone();
+    // Create obligation set with an undischarged obligation
+    let mut inner_set = ObligationSet::new();
     inner_set.insert("cleanup").expect("insert should succeed");
     // obligation "cleanup" never removed
 

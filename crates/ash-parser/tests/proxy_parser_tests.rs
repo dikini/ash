@@ -7,7 +7,7 @@
 
 use ash_parser::input::new_input;
 use ash_parser::parse_module::{proxy_def, parse_yield, parse_resume};
-use ash_parser::surface::{Workflow, Expr, Literal};
+use ash_parser::surface::Workflow;
 use winnow::prelude::*;
 
 // ============================================================================

@@ -939,3 +939,138 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-239](tasks/TASK-239-PROXY-WORKFLOW-IMPL.md) | Implement proxy workflow runtime | SPEC-023 | 50 | ✅ Complete |
 
 **Note:** No release is currently planned for these phases. Work can proceed according to dependency constraints and priorities.
+
+---
+
+## Phase 44: Audit Convergence
+
+**Goal:** Fix all audit findings from codex-comprehensive-review.md. This is blocking work.
+
+**Duration:** 4-6 weeks  
+**Dependencies:** None  
+**Status:** Ready to start
+
+### 44.1: Critical Runtime Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-240](tasks/TASK-240-oblige-execution.md) | Implement Workflow::Oblige execution | SPEC-022 | 6 | ⏳ Planned |
+| [TASK-241](tasks/TASK-241-check-obligation-execution.md) | Implement Workflow::CheckObligation execution | SPEC-022 | 6 | ⏳ Planned |
+| [TASK-242](tasks/TASK-242-yield-lowering.md) | Replace Yield placeholder lowering | SPEC-023 | 8 | ⏳ Planned |
+| [TASK-243](tasks/TASK-243-yield-execution.md) | Implement YIELD runtime execution | SPEC-023 | 10 | ⏳ Planned |
+| [TASK-244](tasks/TASK-244-proxy-resume-execution.md) | Implement PROXY_RESUME runtime | SPEC-023 | 8 | ⏳ Planned |
+
+### 44.2: Safety and API Hardening
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-245](tasks/TASK-245-smt-context-threading.md) | Redesign SmtContext threading | Security | 8 | ⏳ Planned |
+| [TASK-246](tasks/TASK-246-engine-builder-real.md) | Make EngineBuilder methods real | SPEC-010 | 10 | ⏳ Planned |
+| [TASK-247](tasks/TASK-247-stub-providers.md) | Implement stub providers | SPEC-010/014 | 12 | ⏳ Planned |
+| [TASK-248](tasks/TASK-248-role-obligation-discharge.md) | Fix role obligation discharge | SPEC-019 | 6 | ⏳ Planned |
+
+### 44.3: Quality Gate Remediation
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-249](tasks/TASK-249-fix-clippy-warnings.md) | Fix clippy warnings | Quality | 4 | ⏳ Planned |
+| [TASK-250](tasks/TASK-250-cargo-fmt.md) | Run cargo fmt | Quality | 2 | ⏳ Planned |
+| [TASK-251](tasks/TASK-251-fix-rustdoc-warnings.md) | Fix rustdoc warnings | Quality | 6 | ⏳ Planned |
+| [TASK-252](tasks/TASK-252-fix-unexpected-cfgs.md) | Fix unexpected_cfgs warning | Quality | 2 | ⏳ Planned |
+
+### 44.4: Numeric and CLI Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-253](tasks/TASK-253-fix-float-handling.md) | Fix float handling | SPEC-002 | 6 | ⏳ Planned |
+| [TASK-254](tasks/TASK-254-implement-trace-flags.md) | Implement trace flags or remove | SPEC-005 | 4 | ⏳ Planned |
+| [TASK-255](tasks/TASK-255-update-stale-docs.md) | Update stale documentation | Docs | 8 | ⏳ Planned |
+
+### 44.5: Phase Closeout
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-256](tasks/TASK-256-phase-44-closeout.md) | Phase 44 closeout verification | Audit | 4 | ⏳ Planned |
+
+**Phase 44 Deliverable:** All audit issues resolved, quality gates passing.
+
+---
+
+## Phase 45: Syntax Reduction Specification
+
+**Goal:** Produce canonicalized reduced syntax specification (SPEC-024).
+
+**Duration:** 1 week  
+**Dependencies:** Phase 44 complete  
+**Status:** Blocked on Phase 44
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-257](tasks/TASK-257-syntax-reduction-spec.md) | Write reduced syntax specification | SPEC-024 | 8 | ⏳ Planned |
+| [TASK-258](tasks/TASK-258-update-spec-017.md) | Update SPEC-017 with constraint syntax | SPEC-017 | 4 | ⏳ Planned |
+| [TASK-271](tasks/TASK-271-phase-45-closeout.md) | Phase 45 closeout verification | SPEC-024 | 2 | ⏳ Planned |
+
+**Phase 45 Deliverable:** Approved reduced syntax specification ready for implementation.
+
+---
+
+## Phase 46: Unified Capability-Role Implementation
+
+**Goal:** Implement reduced syntax features for unified capability-role-workflow system.
+
+**Duration:** 6-8 weeks  
+**Dependencies:** Phase 45 complete  
+**Status:** Blocked on Phase 45
+
+### 46.1: Parser Extensions
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-259](tasks/TASK-259-parse-plays-role.md) | Parse plays role(R) clause | SPEC-024 | 6 | ⏳ Planned |
+| [TASK-260](tasks/TASK-260-parse-capabilities-constraints.md) | Parse capabilities with @ constraints | SPEC-024 | 10 | ⏳ Planned |
+| [TASK-261](tasks/TASK-261-implicit-role-lowering.md) | Lower implicit default role generation | SPEC-024 | 8 | ⏳ Planned |
+
+### 46.2: Type System Integration
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-262](tasks/TASK-262-type-check-role-inclusion.md) | Type check role inclusion | SPEC-019 | 8 | ⏳ Planned |
+| [TASK-263](tasks/TASK-263-validate-capability-constraints.md) | Validate capability constraints | SPEC-017 | 10 | ⏳ Planned |
+| [TASK-264](tasks/TASK-264-compose-effective-capabilities.md) | Compose effective capability sets | SPEC-024 | 8 | ⏳ Planned |
+
+### 46.3: Runtime Integration
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-265](tasks/TASK-265-runtime-role-resolution.md) | Runtime role resolution | SPEC-019 | 8 | ⏳ Planned |
+| [TASK-266](tasks/TASK-266-constraint-enforcement.md) | Capability constraint enforcement | SPEC-017 | 10 | ⏳ Planned |
+| [TASK-267](tasks/TASK-267-yield-routing.md) | Yield routing by role | SPEC-023 | 10 | ⏳ Planned |
+
+### 46.4: Agent Harness (Optional)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-268](tasks/TASK-268-define-agent-harness-capability.md) | Define agent_harness capability | Design | 4 | ⏳ Planned |
+| [TASK-269](tasks/TASK-269-implement-harness-workflow.md) | Implement harness workflow pattern | Design | 12 | ⏳ Planned |
+| [TASK-270](tasks/TASK-270-mcp-capability-provider.md) | MCP capability provider | Design | 10 | ⏳ Planned |
+
+### 46.5: Phase Closeout
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-272](tasks/TASK-272-phase-46-closeout.md) | Phase 46 closeout verification | SPEC-024 | 4 | ⏳ Planned |
+
+**Phase 46 Deliverable:** Unified capability-role-workflow system with reduced syntax.
+
+---
+
+## Phase 44-46 Summary
+
+| Phase | Tasks | Est. Hours | Status |
+|-------|-------|------------|--------|
+| 44 | 17 | 102-108 | ⏳ Planned |
+| 45 | 3 | 14 | ⏳ Planned |
+| 46 | 13 | 98-108 | ⏳ Planned |
+| **Total** | **33** | **214-230** | |
+
+**Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

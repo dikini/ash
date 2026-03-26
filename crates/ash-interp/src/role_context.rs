@@ -35,7 +35,7 @@
 //! assert!(!ctx.discharge("audit")); // Already discharged
 //! ```
 
-use ash_core::{Capability, Name, Role, RoleObligationRef};
+use ash_core::{Capability, Name, Role};
 use std::cell::RefCell;
 use std::collections::HashSet;
 

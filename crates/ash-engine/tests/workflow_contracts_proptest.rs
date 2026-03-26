@@ -3,6 +3,8 @@
 //! These tests verify that obligation operations maintain expected invariants
 //! across a wide range of inputs using proptest.
 
+#![allow(clippy::no_effect_underscore_binding)]
+
 use ash_core::workflow_contract::{
     ArithConstraint, Contract, Effect, ObligationError, ObligationSet, PostPredicate, Requirement,
     Span, Workflow, WorkflowDef,
@@ -220,9 +222,9 @@ proptest! {
 
         // Compare via remaining() since active is private
         let remaining_ab: std::collections::HashSet<_> = union_ab.remaining()
-            .iter().map(|s| s.to_string()).collect();
+            .iter().map(|s| (*s).clone()).collect();
         let remaining_ba: std::collections::HashSet<_> = union_ba.remaining()
-            .iter().map(|s| s.to_string()).collect();
+            .iter().map(|s| (*s).clone()).collect();
         prop_assert_eq!(remaining_ab, remaining_ba);
     }
 
@@ -246,9 +248,9 @@ proptest! {
 
         // Compare via remaining() since active is private
         let remaining_ab: std::collections::HashSet<_> = intersection_ab.remaining()
-            .iter().map(|s| s.to_string()).collect();
+            .iter().map(|s| (*s).clone()).collect();
         let remaining_ba: std::collections::HashSet<_> = intersection_ba.remaining()
-            .iter().map(|s| s.to_string()).collect();
+            .iter().map(|s| (*s).clone()).collect();
         prop_assert_eq!(remaining_ab, remaining_ba);
     }
 
@@ -303,7 +305,7 @@ proptest! {
 
         for i in 0..count {
             contract = contract.with_requirement(Requirement::HasRole(
-                format!("role_{}", i)
+                format!("role_{i}")
             ));
         }
 
@@ -319,7 +321,7 @@ proptest! {
 
         for i in 0..count {
             contract = contract.with_ensures(PostPredicate::StateAssertion(
-                format!("state_{}", i)
+                format!("state_{i}")
             ));
         }
 
@@ -375,10 +377,9 @@ proptest! {
 
         // Check that remaining contains only what we didn't remove
         let remaining: std::collections::HashSet<_> = set.remaining()
-            .iter().map(|s| s.to_string()).collect();
+            .iter().map(|s| (*s).clone()).collect();
         let expected_remaining: std::collections::HashSet<_> = names.iter()
-            .filter(|name| name.len() % 2 == 1)
-            .map(|n| n.clone())
+            .filter(|name| name.len() % 2 == 1).cloned()
             .collect();
 
         prop_assert_eq!(remaining, expected_remaining);
@@ -441,12 +442,12 @@ proptest! {
     ) {
         let contract = Contract::new()
             .with_requirement(Requirement::HasCapability {
-                cap: cap_name.clone(),
+                cap: cap_name,
                 min_effect: Effect::Epistemic,
             })
-            .with_requirement(Requirement::HasRole(role_name.clone()))
+            .with_requirement(Requirement::HasRole(role_name))
             .with_requirement(Requirement::Arithmetic {
-                var: var_name.clone(),
+                var: var_name,
                 constraint: ArithConstraint::Gt(constraint_val),
             });
 
@@ -494,9 +495,9 @@ proptest! {
         s1 in "[a-z_]{1,20}",
         s2 in "[a-z_]{1,20}"
     ) {
-        let _eq = PostPredicate::Eq(s1.clone(), s2.clone());
+        let _eq = PostPredicate::Eq(s1.clone(), s2);
         let _result = PostPredicate::ResultSatisfies(ArithConstraint::Gt(0));
-        let _state = PostPredicate::StateAssertion(s1.clone());
+        let _state = PostPredicate::StateAssertion(s1);
 
         prop_assert!(true);
     }
@@ -583,7 +584,7 @@ proptest! {
         role in "[a-z_]{1,20}"
     ) {
         let def = WorkflowDef {
-            name: name.clone(),
+            name,
             params: vec![],
             body: Workflow::Done,
             export: true,

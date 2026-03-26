@@ -13,7 +13,7 @@ use crate::module::{ModuleDecl, ModuleSource};
 use crate::parse_expr::expr;
 use crate::parse_visibility::parse_visibility;
 use crate::surface::{
-    CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, Param, Pattern,
+    CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, Param,
     Predicate, ProxyDef, RoleDef, Type, Workflow, YieldArm,
 };
 

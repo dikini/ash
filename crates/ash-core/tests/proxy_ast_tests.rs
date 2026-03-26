@@ -172,7 +172,7 @@ fn test_workflow_yield_construction() {
     match yield_workflow {
         Workflow::Yield {
             role,
-            request,
+            request: _,
             expected_response_type,
             continuation,
             span,
@@ -214,7 +214,7 @@ fn test_workflow_proxy_resume_construction() {
         Workflow::ProxyResume {
             value,
             value_type,
-            correlation_id,
+            correlation_id: _,
             span,
         } => {
             assert!(matches!(*value, Expr::Literal(_)));

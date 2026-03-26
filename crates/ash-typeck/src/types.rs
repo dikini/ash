@@ -3,6 +3,9 @@
 //! Defines the type representation, type variables, substitutions,
 //! and unification algorithm for the Ash type checker.
 
+#![allow(clippy::result_large_err)]
+#![allow(clippy::collapsible_if)]
+
 use crate::{Kind, QualifiedName};
 use ash_core::{Effect, Value};
 use std::collections::HashMap;
@@ -447,11 +450,10 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
 
 /// Bind a type variable to a type, checking for infinite types
 fn bind_var(var: TypeVar, ty: &Type) -> Result<Substitution, UnifyError> {
-    if let Type::Var(v) = ty {
-        if *v == var {
+    if let Type::Var(v) = ty
+        && *v == var {
             return Ok(Substitution::new()); // T = T
         }
-    }
 
     if occurs_in(var, ty) {
         return Err(UnifyError::InfiniteType(var, ty.clone()));

@@ -104,6 +104,7 @@ fn arb_role() -> impl Strategy<Value = Role> {
 }
 
 /// Generate a capability that is guaranteed to be in the given authority
+#[allow(dead_code)]
 fn arb_allowed_capability(authority: Vec<Capability>) -> BoxedStrategy<Capability> {
     // If authority is empty, generate any capability (will be denied)
     if authority.is_empty() {
@@ -127,6 +128,7 @@ fn arb_allowed_capability(authority: Vec<Capability>) -> BoxedStrategy<Capabilit
         .boxed()
 }
 /// Generate a capability that is guaranteed NOT to be in the given authority
+#[allow(dead_code)]
 fn arb_denied_capability(authority: Vec<Capability>) -> impl Strategy<Value = Capability> {
     arb_capability().prop_filter("capability not in authority", move |cap| {
         !authority.iter().any(|auth| auth.name == cap.name)
@@ -909,7 +911,7 @@ fn test_authority_check_before_policy_evaluation() {
     // In the actual implementation, this ordering is ensured by the capability
     // invocation code. Here we document the expected behavior.
 
-    use ash_core::{Capability, Effect, Role, RoleObligationRef};
+    use ash_core::{Capability, Effect, Role};
     use ash_interp::role_context::RoleContext;
 
     let role = Role {
@@ -977,7 +979,7 @@ fn test_workflow_completion_blocked_with_pending_obligations() {
 
 #[test]
 fn test_role_obligations_tracked_separately_from_local() {
-    use ash_core::{Capability, Effect, Role, RoleObligationRef};
+    use ash_core::{Role, RoleObligationRef};
     use ash_interp::role_context::RoleContext;
 
     // Simulate a workflow with both local and role obligations
@@ -1004,7 +1006,7 @@ fn test_role_obligations_tracked_separately_from_local() {
 
 #[test]
 fn test_authority_denial_fail_closed() {
-    use ash_core::{Capability, Effect, Role, RoleObligationRef};
+    use ash_core::{Capability, Effect, Role};
     use ash_interp::role_context::RoleContext;
 
     // Role with no authority should deny all access (fail closed)
@@ -1027,7 +1029,7 @@ fn test_authority_denial_fail_closed() {
 
 #[test]
 fn test_obligation_discharge_linear_semantics() {
-    use ash_core::{Capability, Effect, Role, RoleObligationRef};
+    use ash_core::{Role, RoleObligationRef};
     use ash_interp::role_context::RoleContext;
 
     let role = Role {

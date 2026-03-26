@@ -8,6 +8,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Workflow::Oblige Execution (TASK-240)**
+  - Implemented runtime execution for `Workflow::Oblige` to satisfy SPEC-022 contract requirements
+  - Obligations are now tracked in the runtime `Context` with linearity checking (duplicate oblige fails)
+  - `CheckObligation` discharges obligations and returns boolean indicating success
+  - Added 15 integration tests in `crates/ash-interp/tests/obligation_execution_tests.rs`
+
+- Comprehensive workspace audit for 2026-03-26 in `docs/audit/codex-comprehensive-review.md`. The report captures current spec-compliance gaps, tooling failures, security observations, and a prioritized remediation list for the live Rust workspace.
+
 - **Workflow Contracts with Linear Obligation Tracking (Phase 37, SPEC-022)**
   - Hoare-style workflow contracts with `requires` and `ensures` clauses
   - Linear obligation tracking: `oblige obligation_name` creates, `check obligation_name` discharges

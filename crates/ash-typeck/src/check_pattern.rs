@@ -163,8 +163,8 @@ fn check_pattern_inner(
                 Ok(())
             } else {
                 Err(TypeError::PatternMismatch {
-                    expected: expected.clone(),
-                    actual: lit_type,
+                    expected: Box::new(expected.clone()),
+                    actual: Box::new(lit_type),
                 })
             }
         }
@@ -230,8 +230,8 @@ fn check_variant_pattern(
 ) -> Result<(), TypeError> {
     if !matches!(expected, Type::Var(_)) {
         return Err(TypeError::PatternMismatch {
-            expected: expected.clone(),
-            actual: Type::Var(TypeVar::fresh()),
+            expected: Box::new(expected.clone()),
+            actual: Box::new(Type::Var(TypeVar::fresh())),
         });
     }
 
@@ -370,14 +370,14 @@ fn check_tuple_pattern(
             Ok(())
         }
         _ => Err(TypeError::PatternMismatch {
-            expected: expected.clone(),
-            actual: Type::Record(
+            expected: Box::new(expected.clone()),
+            actual: Box::new(Type::Record(
                 patterns
                     .iter()
                     .enumerate()
                     .map(|(i, _)| (Box::from(format!("{i}")), Type::Var(TypeVar::fresh())))
                     .collect(),
-            ),
+            )),
         }),
     }
 }
@@ -413,13 +413,13 @@ fn check_record_pattern(
             Ok(())
         }
         _ => Err(TypeError::PatternMismatch {
-            expected: expected.clone(),
-            actual: Type::Record(
+            expected: Box::new(expected.clone()),
+            actual: Box::new(Type::Record(
                 field_patterns
                     .iter()
                     .map(|(n, _)| (n.clone(), Type::Var(TypeVar::fresh())))
                     .collect(),
-            ),
+            )),
         }),
     }
 }
@@ -456,8 +456,8 @@ fn check_list_pattern(
             Ok(())
         }
         _ => Err(TypeError::PatternMismatch {
-            expected: expected.clone(),
-            actual: Type::List(Box::new(Type::Var(TypeVar::fresh()))),
+            expected: Box::new(expected.clone()),
+            actual: Box::new(Type::List(Box::new(Type::Var(TypeVar::fresh())))),
         }),
     }
 }

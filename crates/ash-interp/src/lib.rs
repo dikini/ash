@@ -64,9 +64,9 @@ pub use error::{
 pub use eval::eval_expr;
 pub use exec_send::execute_send;
 pub use execute::{
-    execute_simple, execute_simple_in_state, execute_workflow, execute_workflow_with_behaviour,
-    execute_workflow_with_behaviour_in_state, execute_workflow_with_stream,
-    execute_workflow_with_stream_in_state,
+    execute_simple, execute_simple_in_state, execute_with_bindings_in_state, execute_workflow,
+    execute_workflow_with_behaviour, execute_workflow_with_behaviour_in_state,
+    execute_workflow_with_stream, execute_workflow_with_stream_in_state,
 };
 pub use execute_observe::{execute_changed, execute_observe};
 pub use execute_set::execute_set;

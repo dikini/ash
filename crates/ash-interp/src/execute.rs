@@ -1207,6 +1207,39 @@ pub async fn execute_simple_in_state(
     .await
 }
 
+/// Execute a workflow with initial input bindings using explicit runtime-owned state.
+///
+/// This is similar to `execute_simple_in_state` but allows passing initial variable
+/// bindings that will be available in the workflow's execution context.
+///
+/// # Arguments
+/// * `workflow` - The workflow to execute
+/// * `runtime_state` - The runtime state with configured providers
+/// * `input_bindings` - Initial variable bindings (e.g., from CLI --input)
+///
+/// # Errors
+///
+/// Returns execution errors from the interpreter.
+pub async fn execute_with_bindings_in_state(
+    workflow: &Workflow,
+    runtime_state: &RuntimeState,
+    input_bindings: std::collections::HashMap<String, Value>,
+) -> ExecResult<Value> {
+    let ctx = Context::with_bindings(input_bindings);
+    let cap_ctx = CapabilityContext::new();
+    let policy_eval = PolicyEvaluator::new();
+    let behaviour_ctx = BehaviourContext::new();
+    execute_workflow_with_behaviour_in_state(
+        workflow,
+        ctx,
+        &cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        runtime_state,
+    )
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

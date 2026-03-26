@@ -73,7 +73,7 @@ pub use runtime_verification::{
 };
 pub use solver::{Solver, TypeError};
 pub use types::*;
-pub use visibility::{VisibilityChecker, VisibilityError};
+pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
 
 /// Type check a workflow
 ///
@@ -116,9 +116,20 @@ pub fn type_check_workflow(
     // Step 4: Effect inference
     let inferred_effect = crate::effect::infer_effect(workflow);
 
-    // Step 5: Obligation checking
-    let tracker = ObligationTracker::new();
-    let obligation_result = tracker.check_obligations();
+    // Step 5: Obligation checking using ObligationCollector (TASK-275)
+    let mut obligation_ctx = crate::obligations::LinearObligationContext::new();
+    let mut collector = crate::obligations::ObligationCollector::new();
+
+    // Collect and verify obligations from the workflow AST
+    let obligation_result = collector
+        .collect(workflow, &mut obligation_ctx)
+        .and_then(|()| collector.finalize(&obligation_ctx))
+        .map(|()| crate::obligations::ObligationCheckResult::Success)
+        .unwrap_or_else(|_e| {
+            // Convert TypeError to obligation check result
+            // For now, we track it as a failed obligation
+            crate::obligations::ObligationCheckResult::Failed(vec![])
+        });
 
     Ok(TypeCheckResult {
         substitution,

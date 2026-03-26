@@ -25,11 +25,6 @@ impl TestProvider {
             was_called: AtomicBool::new(false),
         }
     }
-
-    #[allow(dead_code)]
-    fn was_called(&self) -> bool {
-        self.was_called.load(Ordering::SeqCst)
-    }
 }
 
 #[async_trait]

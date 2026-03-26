@@ -58,10 +58,6 @@ pub struct Engine {
     /// Runtime-owned state that persists across related executions.
     /// Providers configured via `EngineBuilder` are passed to `RuntimeState` during build.
     runtime_state: RuntimeState,
-    /// Registered capability providers by name
-    /// These are kept for reference and potential future introspection.
-    #[allow(dead_code)]
-    providers: std::collections::HashMap<String, std::sync::Arc<dyn CapabilityProvider>>,
 }
 
 /// A workflow handle that carries its internal ID for type checking
@@ -440,7 +436,6 @@ impl EngineBuilder {
             surface_workflows: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state,
-            providers,
         })
     }
 

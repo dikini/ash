@@ -156,14 +156,6 @@ impl RuntimeState {
         self.providers.blocking_lock().contains_key(name)
     }
 
-    /// Get a reference to the providers registry.
-    ///
-    /// This is used internally by the interpreter to access providers during execution.
-    #[allow(dead_code)]
-    pub(crate) fn providers(&self) -> Arc<Mutex<HashMap<String, Arc<dyn CapabilityProvider>>>> {
-        self.providers.clone()
-    }
-
     pub(crate) fn control_registry(&self) -> Arc<Mutex<ControlLinkRegistry>> {
         self.control_registry.clone()
     }

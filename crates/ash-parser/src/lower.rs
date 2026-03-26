@@ -73,6 +73,157 @@ pub fn lower_workflow(def: &WorkflowDef) -> Result<CoreWorkflow, LoweringError> 
     lower_workflow_body(&def.body, &provenance)
 }
 
+/// Result of lowering a workflow definition with optional implicit role.
+#[derive(Debug, Clone)]
+pub struct LoweredWorkflow {
+    /// The lowered workflow body
+    pub workflow: CoreWorkflow,
+    /// The implicit role generated from capabilities, if any
+    pub implicit_role: Option<CoreRole>,
+    /// The updated plays_roles (includes implicit role if generated)
+    pub plays_roles: Vec<String>,
+}
+
+/// Lower a workflow definition with implicit role generation.
+///
+/// Per SPEC-024 Section 5.1: `capabilities: [...]` desugars to implicit role.
+/// The implicit role name is `{workflow_name}_default`.
+///
+/// ```ash
+/// -- Surface:
+/// workflow X capabilities: [C1, C2] { ... }
+///
+/// -- Lowered:
+/// role X_default { capabilities: [C1, C2] }
+/// workflow X plays role(X_default) { ... }
+/// ```
+pub fn lower_workflow_def(def: &WorkflowDef) -> Result<LoweredWorkflow, LoweringError> {
+    // Start with explicit plays_roles
+    let mut plays_roles: Vec<String> = def.plays_roles.iter().map(|r| r.name.to_string()).collect();
+
+    // Generate implicit role if capabilities are declared
+    let implicit_role = if !def.capabilities.is_empty() {
+        let role_name = generate_implicit_role_name(def.name.as_ref());
+
+        let role = CoreRole {
+            name: role_name.clone(),
+            authority: def
+                .capabilities
+                .iter()
+                .map(lower_capability_decl)
+                .collect::<Result<Vec<_>, _>>()?,
+            obligations: vec![],
+        };
+
+        // Add implicit role to workflow's plays_roles
+        plays_roles.push(role_name);
+
+        Some(role)
+    } else {
+        None
+    };
+
+    // Lower the workflow body
+    let workflow = lower_workflow(def)?;
+
+    Ok(LoweredWorkflow {
+        workflow,
+        implicit_role,
+        plays_roles,
+    })
+}
+
+/// Generate implicit role name for a workflow.
+///
+/// The implicit role name is `{workflow_name}_default`.
+fn generate_implicit_role_name(workflow_name: &str) -> String {
+    format!("{}_default", workflow_name)
+}
+
+/// Lower a capability declaration to core Capability.
+fn lower_capability_decl(
+    decl: &crate::surface::CapabilityDecl,
+) -> Result<Capability, LoweringError> {
+    Ok(Capability {
+        name: decl.capability.to_string(),
+        effect: Effect::Epistemic, // Default effect for workflow capabilities
+        constraints: lower_capability_constraints(decl.constraints.as_ref())?,
+    })
+}
+
+/// Lower capability constraints from surface to core.
+fn lower_capability_constraints(
+    constraints: Option<&crate::surface::ConstraintBlock>,
+) -> Result<Vec<ash_core::Constraint>, LoweringError> {
+    let Some(block) = constraints else {
+        return Ok(vec![]);
+    };
+
+    block
+        .fields
+        .iter()
+        .map(lower_constraint_field)
+        .collect::<Result<Vec<_>, _>>()
+}
+
+/// Lower a constraint field to core Constraint.
+fn lower_constraint_field(
+    field: &crate::surface::ConstraintField,
+) -> Result<ash_core::Constraint, LoweringError> {
+    // Convert constraint value to predicate arguments
+    let args = vec![lower_constraint_value(&field.value)?];
+
+    Ok(ash_core::Constraint {
+        predicate: ash_core::Predicate {
+            name: field.name.to_string(),
+            arguments: args,
+        },
+    })
+}
+
+/// Lower a constraint value to core expression.
+fn lower_constraint_value(
+    value: &crate::surface::ConstraintValue,
+) -> Result<CoreExpr, LoweringError> {
+    match value {
+        crate::surface::ConstraintValue::Bool(b) => {
+            Ok(CoreExpr::Literal(ash_core::Value::Bool(*b)))
+        }
+        crate::surface::ConstraintValue::Int(n) => Ok(CoreExpr::Literal(ash_core::Value::Int(*n))),
+        crate::surface::ConstraintValue::String(s) => {
+            Ok(CoreExpr::Literal(ash_core::Value::String(s.clone())))
+        }
+        crate::surface::ConstraintValue::Array(arr) => {
+            let elements = arr
+                .iter()
+                .map(lower_constraint_value)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(CoreExpr::Literal(ash_core::Value::List(Box::new(
+                elements
+                    .into_iter()
+                    .map(|e| match e {
+                        CoreExpr::Literal(v) => v,
+                        _ => ash_core::Value::Null,
+                    })
+                    .collect(),
+            ))))
+        }
+        crate::surface::ConstraintValue::Object(obj) => {
+            // Objects are lowered as record literals (HashMap)
+            use std::collections::HashMap;
+            let mut fields = HashMap::new();
+            for (k, v) in obj {
+                let value = lower_constraint_value(v).map(|e| match e {
+                    CoreExpr::Literal(v) => v,
+                    _ => ash_core::Value::Null,
+                })?;
+                fields.insert(k.clone(), value);
+            }
+            Ok(CoreExpr::Literal(ash_core::Value::Record(Box::new(fields))))
+        }
+    }
+}
+
 #[cfg(test)]
 fn lower_role_def_with_definitions(
     def: &RoleDef,

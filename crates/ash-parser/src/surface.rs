@@ -211,6 +211,61 @@ pub struct Contract {
     pub ensures: Vec<EnsuresClause>,
 }
 
+/// A reference to a role in a `plays role(R)` clause.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RoleRef {
+    /// Name of the role
+    pub name: Name,
+    /// Source span
+    pub span: Span,
+}
+
+/// A capability declaration in a workflow header (e.g., `capabilities: [file, network @ { ... }]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityDecl {
+    /// The capability name
+    pub capability: Name,
+    /// Optional constraint refinement (e.g., `@ { paths: ["/tmp/*"] }`)
+    pub constraints: Option<ConstraintBlock>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A constraint block for capability refinement.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConstraintBlock {
+    /// Fields in the constraint block
+    pub fields: Vec<ConstraintField>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A single field in a constraint block.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConstraintField {
+    /// Field name
+    pub name: Name,
+    /// Field value
+    pub value: ConstraintValue,
+    /// Source span
+    pub span: Span,
+}
+
+/// A constraint value - can be primitive or composite.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConstraintValue {
+    /// Boolean value
+    Bool(bool),
+    /// Integer value
+    Int(i64),
+    /// String value
+    String(String),
+    /// Array of values
+    Array(Vec<ConstraintValue>),
+    /// Object with key-value pairs
+    Object(Vec<(String, ConstraintValue)>),
+}
+
 /// A workflow definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowDef {
@@ -218,6 +273,10 @@ pub struct WorkflowDef {
     pub name: Name,
     /// Workflow parameters (name: type)
     pub params: Vec<Parameter>,
+    /// Roles this workflow plays (from `plays role(R)` clauses)
+    pub plays_roles: Vec<RoleRef>,
+    /// Capabilities this workflow uses (from `capabilities: [...]` clause)
+    pub capabilities: Vec<CapabilityDecl>,
     /// The workflow body
     pub body: Workflow,
     /// Optional contract (requires/ensures)
@@ -1151,6 +1210,8 @@ mod tests {
             workflow: WorkflowDef {
                 name: "main".into(),
                 params: vec![],
+                plays_roles: vec![],
+                capabilities: vec![],
                 body: Workflow::Done {
                     span: Span::new(0, 4, 1, 1),
                 },
@@ -1287,6 +1348,8 @@ mod tests {
         let workflow_def = WorkflowDef {
             name: "process_order".into(),
             params: vec![],
+            plays_roles: vec![],
+            capabilities: vec![],
             body: Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
             },

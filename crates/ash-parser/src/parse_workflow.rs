@@ -14,12 +14,13 @@ use crate::parse_receive::parse_receive;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
-    ActionRef, CheckTarget, Contract, EnsuresClause, Expr, Guard, Name, ObligationRef, Parameter,
-    Requirement, Type, Workflow, WorkflowDef,
+    ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
+    Contract, EnsuresClause, Expr, Guard, Name, ObligationRef, Parameter, Requirement, RoleRef,
+    Type, Workflow, WorkflowDef,
 };
 use crate::token::Span;
 
-/// Parse a workflow definition: `workflow <name>[(<params>)] [<contract>] { <body> }`
+/// Parse a workflow definition: `workflow <name>[(<params>)] [plays role(R)*] [<contract>] { <body> }`
 pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     let start_pos = input.state;
 
@@ -35,6 +36,14 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
         vec![]
     };
 
+    // Parse optional `plays role(R)` clauses
+    skip_whitespace_and_comments(input);
+    let plays_roles = parse_plays_roles(input)?;
+
+    // Parse optional `capabilities: [...]` clause
+    skip_whitespace_and_comments(input);
+    let capabilities = parse_capabilities_clause(input)?;
+
     // Parse optional contract clauses (requires/ensures)
     skip_whitespace_and_comments(input);
     let contract = parse_opt_contract(input)?;
@@ -47,10 +56,390 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     Ok(WorkflowDef {
         name: name.into(),
         params,
+        plays_roles,
+        capabilities,
         body,
         contract,
         span,
     })
+}
+
+/// Parse zero or more `plays role(R)` clauses.
+fn parse_plays_roles(input: &mut ParseInput) -> ModalResult<Vec<RoleRef>> {
+    let mut roles = Vec::new();
+
+    loop {
+        skip_whitespace_and_comments(input);
+
+        // Check if we have a "plays" keyword
+        if !input.input.starts_with("plays") {
+            break;
+        }
+
+        // Verify it's actually the keyword (not a prefix of another word)
+        let after_plays = &input.input["plays".len()..];
+        if after_plays
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphanumeric())
+        {
+            break;
+        }
+
+        let role_ref = parse_single_plays_role(input)?;
+        roles.push(role_ref);
+    }
+
+    Ok(roles)
+}
+
+/// Parse a single `plays role(R)` clause.
+fn parse_single_plays_role(input: &mut ParseInput) -> ModalResult<RoleRef> {
+    let start_pos = input.state;
+
+    let _ = keyword("plays").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("role").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let role_name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(")").parse_next(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(RoleRef {
+        name: role_name.into(),
+        span,
+    })
+}
+
+/// Parse optional `capabilities: [...]` clause.
+fn parse_capabilities_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
+    if !starts_with_keyword(input, "capabilities") {
+        return Ok(Vec::new());
+    }
+
+    let _ = keyword("capabilities").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    delimited(literal_str("["), parse_capability_list, literal_str("]")).parse_next(input)
+}
+
+/// Parse a comma-separated list of capability declarations.
+fn parse_capability_list(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
+    let mut capabilities = Vec::new();
+
+    skip_whitespace_and_comments(input);
+
+    // Check for empty list
+    if input.input.starts_with("]") {
+        return Ok(capabilities);
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+        let cap = parse_capability_decl(input)?;
+        capabilities.push(cap);
+
+        skip_whitespace_and_comments(input);
+
+        // Check for comma
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            continue;
+        }
+
+        break;
+    }
+
+    Ok(capabilities)
+}
+
+/// Parse a single capability declaration: `name [@ { constraints }]`
+fn parse_capability_decl(input: &mut ParseInput) -> ModalResult<CapabilityDecl> {
+    let start_pos = input.state;
+
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse optional constraint refinement: @ { ... }
+    let constraints = if input.input.starts_with("@") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('@');
+        skip_whitespace_and_comments(input);
+        Some(parse_constraint_block(input)?)
+    } else {
+        None
+    };
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(CapabilityDecl {
+        capability: name.into(),
+        constraints,
+        span,
+    })
+}
+
+/// Parse a constraint block: `{ field: value, ... }`
+fn parse_constraint_block(input: &mut ParseInput) -> ModalResult<ConstraintBlock> {
+    let start_pos = input.state;
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut fields = Vec::new();
+
+    // Check for empty block
+    if input.input.starts_with("}") {
+        let _ = literal_str("}").parse_next(input)?;
+        let span = span_from(&start_pos, &input.state);
+        return Ok(ConstraintBlock { fields, span });
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+        let field = parse_constraint_field(input)?;
+        fields.push(field);
+
+        skip_whitespace_and_comments(input);
+
+        // Check for comma
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            continue;
+        }
+
+        break;
+    }
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("}").parse_next(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+    Ok(ConstraintBlock { fields, span })
+}
+
+/// Parse a single constraint field: `name: value`
+fn parse_constraint_field(input: &mut ParseInput) -> ModalResult<ConstraintField> {
+    let start_pos = input.state;
+
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let value = parse_constraint_value(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(ConstraintField {
+        name: name.into(),
+        value,
+        span,
+    })
+}
+
+/// Parse a constraint value (bool, int, string, array, or object).
+fn parse_constraint_value(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    skip_whitespace_and_comments(input);
+
+    // Try boolean
+    if keyword("true").parse_next(input).is_ok() {
+        return Ok(ConstraintValue::Bool(true));
+    }
+    if keyword("false").parse_next(input).is_ok() {
+        return Ok(ConstraintValue::Bool(false));
+    }
+
+    // Try string
+    if input.input.starts_with('"') {
+        return parse_constraint_string(input);
+    }
+
+    // Try array
+    if input.input.starts_with('[') {
+        return parse_constraint_array(input);
+    }
+
+    // Try object
+    if input.input.starts_with('{') {
+        return parse_constraint_object(input);
+    }
+
+    // Try integer (or fall back to identifier as string)
+    parse_constraint_int_or_string(input)
+}
+
+/// Parse a string literal for constraint value.
+fn parse_constraint_string(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let _ = literal_str("\"").parse_next(input)?;
+    let mut result = String::new();
+
+    while !input.input.is_empty() && !input.input.starts_with('"') {
+        if input.input.starts_with("\\") {
+            // Handle escape sequences
+            let _ = input.input.next_slice(1);
+            input.state.advance('\\');
+            if let Some(c) = input.input.chars().next() {
+                let _ = input.input.next_slice(1);
+                input.state.advance(c);
+                match c {
+                    'n' => result.push('\n'),
+                    't' => result.push('\t'),
+                    'r' => result.push('\r'),
+                    '\\' => result.push('\\'),
+                    '"' => result.push('"'),
+                    _ => result.push(c),
+                }
+            }
+        } else {
+            let c = input.input.chars().next().unwrap();
+            let _ = input.input.next_slice(1);
+            input.state.advance(c);
+            result.push(c);
+        }
+    }
+
+    let _ = literal_str("\"").parse_next(input)?;
+    Ok(ConstraintValue::String(result))
+}
+
+/// Parse an array of constraint values: `[value, ...]`
+fn parse_constraint_array(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let _ = literal_str("[").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut values = Vec::new();
+
+    // Check for empty array
+    if input.input.starts_with("]") {
+        let _ = literal_str("]").parse_next(input)?;
+        return Ok(ConstraintValue::Array(values));
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+        let value = parse_constraint_value(input)?;
+        values.push(value);
+
+        skip_whitespace_and_comments(input);
+
+        // Check for comma
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            continue;
+        }
+
+        break;
+    }
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("]").parse_next(input)?;
+    Ok(ConstraintValue::Array(values))
+}
+
+/// Parse an object with key-value pairs: `{ key: value, ... }`
+fn parse_constraint_object(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut pairs = Vec::new();
+
+    // Check for empty object
+    if input.input.starts_with("}") {
+        let _ = literal_str("}").parse_next(input)?;
+        return Ok(ConstraintValue::Object(pairs));
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+
+        // Parse key (identifier or string)
+        let key = if input.input.starts_with('"') {
+            // Parse string key
+            let _ = literal_str("\"").parse_next(input)?;
+            let mut key_str = String::new();
+            while !input.input.is_empty() && !input.input.starts_with('"') {
+                let c = input.input.chars().next().unwrap();
+                let _ = input.input.next_slice(1);
+                input.state.advance(c);
+                key_str.push(c);
+            }
+            let _ = literal_str("\"").parse_next(input)?;
+            key_str
+        } else {
+            identifier(input)?.to_string()
+        };
+
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let value = parse_constraint_value(input)?;
+        pairs.push((key, value));
+
+        skip_whitespace_and_comments(input);
+
+        // Check for comma
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            continue;
+        }
+
+        break;
+    }
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("}").parse_next(input)?;
+    Ok(ConstraintValue::Object(pairs))
+}
+
+/// Parse an integer or identifier (as string).
+fn parse_constraint_int_or_string(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let start = input.state;
+
+    // Try to parse a number (optional minus followed by digits)
+    let mut is_negative = false;
+    if input.input.starts_with('-') {
+        is_negative = true;
+        let _ = input.input.next_slice(1);
+        input.state.advance('-');
+    }
+
+    let digits: &str = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
+
+    if is_negative || !digits.is_empty() {
+        // We have a number
+        if let Ok(num) = digits.parse::<i64>() {
+            let result = if is_negative { -num } else { num };
+            return Ok(ConstraintValue::Int(result));
+        }
+    }
+
+    // Not a number - backtrack and try identifier
+    input.state = start;
+    let name = identifier(input)?;
+    Ok(ConstraintValue::String(name.to_string()))
+}
+
+/// Check if input starts with a keyword (ensures word boundary).
+fn starts_with_keyword(input: &ParseInput, word: &str) -> bool {
+    if !input.input.starts_with(word) {
+        return false;
+    }
+    let after = &input.input[word.len()..];
+    after
+        .chars()
+        .next()
+        .is_none_or(|c| !c.is_ascii_alphanumeric() && c != '_')
 }
 
 /// Parse workflow parameters: `(x: Int, y: String)`

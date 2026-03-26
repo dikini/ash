@@ -76,21 +76,33 @@ fn valid_type_name() -> impl Strategy<Value = String> {
 fn is_keyword(s: &str) -> bool {
     matches!(
         s,
-        "capability"
-            | "role"
-            | "policy"
+        // Core language keywords
+        "let"
+            | "if"
+            | "else"
+            | "match"
             | "workflow"
+            | "role"
+            | "capability"
             | "observe"
+            | "act"
+            | "done"
+            | "ret"
+            | "yield"
+            | "plays"
+            | "capabilities"
+            // Effect types
             | "read"
             | "analyze"
             | "decide"
-            | "act"
             | "write"
             | "external"
             | "epistemic"
             | "deliberative"
             | "evaluative"
             | "operational"
+            // Other reserved words
+            | "policy"
             | "returns"
             | "where"
             | "authority"
@@ -286,9 +298,9 @@ proptest! {
     #[test]
     fn prop_capability_with_multiple_params(
         cap_name in valid_identifier(),
-        param1_name in "[a-z]{3,10}",
+        param1_name in valid_identifier(),
         param1_type in valid_type_name(),
-        param2_name in "[a-z]{3,10}",
+        param2_name in valid_identifier(),
         param2_type in valid_type_name()
     ) {
         // Ensure param names are different

@@ -31,6 +31,8 @@ fn test_yield_lowers_to_yield_not_done() {
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
         params: vec![],
+        plays_roles: vec![],
+        capabilities: vec![],
         body: surface_workflow,
         contract: None,
         span: ash_parser::token::Span::new(0, 100, 1, 1),
@@ -65,6 +67,8 @@ fn test_yield_preserves_role() {
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
         params: vec![],
+        plays_roles: vec![],
+        capabilities: vec![],
         body: surface_workflow,
         contract: None,
         span: ash_parser::token::Span::new(0, 100, 1, 1),
@@ -100,6 +104,8 @@ fn test_yield_preserves_request_expr() {
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
         params: vec![],
+        plays_roles: vec![],
+        capabilities: vec![],
         body: surface_workflow,
         contract: None,
         span: ash_parser::token::Span::new(0, 100, 1, 1),
@@ -140,6 +146,8 @@ fn test_yield_creates_continuation() {
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
         params: vec![],
+        plays_roles: vec![],
+        capabilities: vec![],
         body: surface_workflow,
         contract: None,
         span: ash_parser::token::Span::new(0, 100, 1, 1),
@@ -181,6 +189,8 @@ fn test_yield_with_multiple_arms_creates_continuation() {
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
         params: vec![],
+        plays_roles: vec![],
+        capabilities: vec![],
         body: surface_workflow,
         contract: None,
         span: ash_parser::token::Span::new(0, 100, 1, 1),
@@ -215,6 +225,8 @@ fn test_yield_preserves_span() {
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
         params: vec![],
+        plays_roles: vec![],
+        capabilities: vec![],
         body: surface_workflow,
         contract: None,
         span: ash_parser::token::Span::new(0, 100, 1, 1),
@@ -251,6 +263,8 @@ fn test_yield_continuation_has_let_binding() {
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
         params: vec![],
+        plays_roles: vec![],
+        capabilities: vec![],
         body: surface_workflow,
         contract: None,
         span: ash_parser::token::Span::new(0, 100, 1, 1),

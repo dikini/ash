@@ -7,3 +7,4 @@
 cc cba8ac4b526ceab8f56ed9692c8c613a13fa68ed7986c2d999161b315fe3d9a9 # shrinks to cap_name = "_", leading_ws = ""
 cc f3269876d53e765e1181890a84aac17533c280921084dc32609c432dd167e8f8 # shrinks to cap_name = "A", pred_name = "in"
 cc 846e0ddd029c8dd086eb73bfe4c2b25b60223d8a672547ae6ec29d726388d833 # shrinks to cap_name = "in", leading_ws = ""
+cc 2a4337a019e23a354a4b9a4e755d6f22670c217c14ecc9dbe36336f93b05e028 # shrinks to cap_name = "A", param1_name = "let", param1_type = "A", param2_name = "aaa", param2_type = "A"

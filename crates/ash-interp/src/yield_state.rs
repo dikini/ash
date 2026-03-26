@@ -20,6 +20,7 @@
 //!     origin_workflow: "instance-1".to_string(),
 //!     target_role: "admin".to_string(),
 //!     request_sent_at: std::time::Instant::now(),
+//!     resume_var: "response".to_string(),
 //! };
 //!
 //! // Suspend the workflow

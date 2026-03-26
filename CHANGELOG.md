@@ -29,6 +29,37 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Updated `Engine` to store registered providers (wired for future execution integration)
   - Added 10 new tests covering HTTP capabilities, custom providers, and combined builder configuration
 
+- **Float Handling with Explicit Errors (TASK-253)**
+  - Added `LoweringError::FloatNotSupported` variant for explicit float rejection
+  - Lowering functions now return `Result` types for proper error propagation
+  - JSON float handling in CLI now returns clear error instead of silent Null
+
+- **Provider Implementations (TASK-247)**
+  - Implemented `StdioProvider` with real stdio operations (print, println, read_line)
+  - Implemented `FsProvider` with real filesystem operations (exists, read_file, write_file)
+  - Added `FsConfig` for capability constraints (allowed_paths, read_only, base_dir)
+  - Added 43 comprehensive tests for provider functionality
+
+- **Workflow::CheckObligation Execution (TASK-241)**
+  - Implemented runtime execution for `Workflow::CheckObligation` per SPEC-022
+  - Discharges obligations and returns boolean result
+  - Integrated with linear obligation tracking in Context
+
+- **Yield Placeholder Replacement (TASK-242)**
+  - Replaced `Yield` placeholder lowering with real implementation
+  - Added `lower_type_to_type_expr()` and `lower_yield_arms()` helper functions
+  - Added 7 comprehensive lowering tests
+
+- **YIELD Runtime Execution (TASK-243)**
+  - Implemented `ExecError::YieldSuspended` variant with full yield context
+  - Yield now evaluates request expression and creates proper suspension
+  - Added `yield_execution_tests.rs` with 6 integration tests
+
+- **PROXY_RESUME Runtime (TASK-244)**
+  - Implemented full PROXY_RESUME workflow execution
+  - Added `resume_var` field to `YieldState` for response binding
+  - Resumes suspended yields by correlation_id with continuation binding
+
 - **Workflow::Oblige Execution (TASK-240)**
   - Implemented runtime execution for `Workflow::Oblige` to satisfy SPEC-022 contract requirements
   - Obligations are now tracked in the runtime `Context` with linearity checking (duplicate oblige fails)
@@ -62,6 +93,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Type alias expansion now properly unfolds to underlying types.
 
 ### Code Quality
+
+- Fixed clippy warnings across workspace (TASK-249)
+  - Fixed dead_code warnings in test files
+  - Fixed redundant clone warnings
+  - All files now pass `clippy -D warnings`
+
+- Fixed unexpected_cfgs warning in ash-typeck (TASK-252)
+  - Removed empty `proptest` feature from Cargo.toml
+  - Simplified cfg condition to `#[cfg(test)]`
 
 - Formatted all code with `cargo fmt` (TASK-250)
 - Fixed all rustdoc warnings for clean documentation generation (TASK-251)

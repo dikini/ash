@@ -40,6 +40,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - `build_constructor_type` now returns the constructor type (e.g., `Option<T>`) instead of just the type parameter.
 - Type alias expansion now properly unfolds to underlying types.
 
+### Code Quality
+
+- Formatted all code with `cargo fmt` (TASK-250)
+
 ### Fixed
 
 - `Option<Int>` and `Option<String>` no longer incorrectly unify.

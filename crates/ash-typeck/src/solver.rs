@@ -5,7 +5,7 @@
 #![allow(clippy::result_large_err)]
 
 use crate::constraints::Constraint;
-use crate::types::{unify, Substitution, Type, TypeVar, UnifyError};
+use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use ash_core::Effect;
 use std::fmt;
 

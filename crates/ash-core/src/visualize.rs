@@ -639,9 +639,7 @@ impl DotGenerator {
                 id
             }
             Workflow::Yield {
-                role,
-                continuation,
-                ..
+                role, continuation, ..
             } => {
                 let id = self.next_id();
                 let cont_id = self.visit_workflow(continuation);
@@ -655,9 +653,7 @@ impl DotGenerator {
                 writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
                 id
             }
-            Workflow::ProxyResume {
-                correlation_id, ..
-            } => {
+            Workflow::ProxyResume { correlation_id, .. } => {
                 let id = self.next_id();
                 writeln!(
                     self.output,

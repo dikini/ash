@@ -6,7 +6,7 @@
 //! - Resume statements for returning values
 
 use ash_parser::input::new_input;
-use ash_parser::parse_module::{proxy_def, parse_yield, parse_resume};
+use ash_parser::parse_module::{parse_resume, parse_yield, proxy_def};
 use ash_parser::surface::Workflow;
 use winnow::prelude::*;
 
@@ -24,7 +24,11 @@ fn test_parse_minimal_proxy_definition() {
     let mut input = new_input(input);
     let result = proxy_def.parse_next(&mut input);
 
-    assert!(result.is_ok(), "Expected successful parse, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Expected successful parse, got: {:?}",
+        result
+    );
     let proxy = result.unwrap();
     assert_eq!(proxy.name.as_ref(), "manager_proxy");
     assert_eq!(proxy.role.as_ref(), "manager");
@@ -43,14 +47,21 @@ fn test_parse_proxy_with_receives() {
     let mut input = new_input(input);
     let result = proxy_def.parse_next(&mut input);
 
-    assert!(result.is_ok(), "Expected successful parse, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Expected successful parse, got: {:?}",
+        result
+    );
     let proxy = result.unwrap();
     assert_eq!(proxy.name.as_ref(), "manager_proxy");
     assert_eq!(proxy.role.as_ref(), "manager");
     assert!(proxy.observes.is_empty());
     assert_eq!(proxy.receives.len(), 1);
     assert_eq!(proxy.receives[0].name.as_ref(), "requests");
-    assert_eq!(proxy.receives[0].channel.as_ref().map(|s| s.as_ref()), Some("approval_request"));
+    assert_eq!(
+        proxy.receives[0].channel.as_ref().map(|s| s.as_ref()),
+        Some("approval_request")
+    );
 }
 
 #[test]
@@ -64,13 +75,20 @@ fn test_parse_proxy_with_observes() {
     let mut input = new_input(input);
     let result = proxy_def.parse_next(&mut input);
 
-    assert!(result.is_ok(), "Expected successful parse, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Expected successful parse, got: {:?}",
+        result
+    );
     let proxy = result.unwrap();
     assert_eq!(proxy.name.as_ref(), "manager_proxy");
     assert_eq!(proxy.role.as_ref(), "manager");
     assert_eq!(proxy.observes.len(), 1);
     assert_eq!(proxy.observes[0].name.as_ref(), "events");
-    assert_eq!(proxy.observes[0].channel.as_ref().map(|s| s.as_ref()), Some("status_update"));
+    assert_eq!(
+        proxy.observes[0].channel.as_ref().map(|s| s.as_ref()),
+        Some("status_update")
+    );
     assert!(proxy.receives.is_empty());
 }
 
@@ -86,7 +104,11 @@ fn test_parse_proxy_with_observes_and_receives() {
     let mut input = new_input(input);
     let result = proxy_def.parse_next(&mut input);
 
-    assert!(result.is_ok(), "Expected successful parse, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Expected successful parse, got: {:?}",
+        result
+    );
     let proxy = result.unwrap();
     assert_eq!(proxy.name.as_ref(), "manager_proxy");
     assert_eq!(proxy.role.as_ref(), "manager");
@@ -106,7 +128,11 @@ fn test_parse_proxy_with_multiple_capabilities() {
     let mut input = new_input(input);
     let result = proxy_def.parse_next(&mut input);
 
-    assert!(result.is_ok(), "Expected successful parse, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Expected successful parse, got: {:?}",
+        result
+    );
     let proxy = result.unwrap();
     assert_eq!(proxy.observes.len(), 2);
     assert_eq!(proxy.receives.len(), 2);
@@ -162,7 +188,11 @@ fn test_parse_yield_with_variable() {
     let mut input = new_input(input);
     let result = parse_yield.parse_next(&mut input);
 
-    assert!(result.is_ok(), "Expected successful parse, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Expected successful parse, got: {:?}",
+        result
+    );
 }
 
 // ============================================================================
@@ -176,11 +206,17 @@ fn test_parse_resume_statement() {
     let mut input = new_input(input);
     let result = parse_resume.parse_next(&mut input);
 
-    assert!(result.is_ok(), "Expected successful parse, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Expected successful parse, got: {:?}",
+        result
+    );
     let workflow = result.unwrap();
     match workflow {
         Workflow::Resume { ty, .. } => {
-            assert!(matches!(ty, ash_parser::surface::Type::Name(name) if name.as_ref() == "ApprovalResponse"));
+            assert!(
+                matches!(ty, ash_parser::surface::Type::Name(name) if name.as_ref() == "ApprovalResponse")
+            );
         }
         _ => panic!("Expected Resume workflow, got: {:?}", workflow),
     }
@@ -224,7 +260,10 @@ fn test_parse_proxy_missing_role() {
     let mut input = new_input(input);
     let result = proxy_def.parse_next(&mut input);
 
-    assert!(result.is_err(), "Expected parse to fail without handles role clause");
+    assert!(
+        result.is_err(),
+        "Expected parse to fail without handles role clause"
+    );
 }
 
 #[test]
@@ -249,7 +288,10 @@ fn test_parse_yield_missing_role() {
     let mut input = new_input(input);
     let result = parse_yield.parse_next(&mut input);
 
-    assert!(result.is_err(), "Expected parse to fail without role clause");
+    assert!(
+        result.is_err(),
+        "Expected parse to fail without role clause"
+    );
 }
 
 #[test]
@@ -258,7 +300,10 @@ fn test_parse_yield_missing_resume() {
     let mut input = new_input(input);
     let result = parse_yield.parse_next(&mut input);
 
-    assert!(result.is_err(), "Expected parse to fail without resume clause");
+    assert!(
+        result.is_err(),
+        "Expected parse to fail without resume clause"
+    );
 }
 
 #[test]
@@ -267,7 +312,10 @@ fn test_parse_resume_missing_type() {
     let mut input = new_input(input);
     let result = parse_resume.parse_next(&mut input);
 
-    assert!(result.is_err(), "Expected parse to fail without type annotation");
+    assert!(
+        result.is_err(),
+        "Expected parse to fail without type annotation"
+    );
 }
 
 #[test]
@@ -276,7 +324,10 @@ fn test_parse_resume_missing_colon() {
     let mut input = new_input(input);
     let result = parse_resume.parse_next(&mut input);
 
-    assert!(result.is_err(), "Expected parse to fail without colon separator");
+    assert!(
+        result.is_err(),
+        "Expected parse to fail without colon separator"
+    );
 }
 
 #[test]
@@ -290,5 +341,8 @@ fn test_parse_proxy_malformed_capability_ref() {
     let mut input = new_input(input);
     let result = proxy_def.parse_next(&mut input);
 
-    assert!(result.is_err(), "Expected parse to fail with malformed capability reference");
+    assert!(
+        result.is_err(),
+        "Expected parse to fail with malformed capability reference"
+    );
 }

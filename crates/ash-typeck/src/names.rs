@@ -383,11 +383,7 @@ impl NameResolver {
                 }
             }
 
-            Workflow::Yield {
-                expr,
-                arms,
-                ..
-            } => {
+            Workflow::Yield { expr, arms, .. } => {
                 // Resolve the request expression
                 self.resolve_expr(expr);
                 // Resolve all arm bodies
@@ -396,10 +392,7 @@ impl NameResolver {
                 }
             }
 
-            Workflow::Resume {
-                expr,
-                ..
-            } => {
+            Workflow::Resume { expr, .. } => {
                 // Resolve the response value expression
                 self.resolve_expr(expr);
             }

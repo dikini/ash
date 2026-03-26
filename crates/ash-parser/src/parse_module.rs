@@ -13,8 +13,8 @@ use crate::module::{ModuleDecl, ModuleSource};
 use crate::parse_expr::expr;
 use crate::parse_visibility::parse_visibility;
 use crate::surface::{
-    CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, Param,
-    Predicate, ProxyDef, RoleDef, Type, Workflow, YieldArm,
+    CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, Param, Predicate,
+    ProxyDef, RoleDef, Type, Workflow, YieldArm,
 };
 
 /// Parse a module declaration.
@@ -668,7 +668,6 @@ fn parse_receives_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityRe
 
 /// Parse comma-separated capability references.
 fn parse_capability_refs(input: &mut ParseInput) -> ModalResult<Vec<CapabilityRef>> {
-
     let mut refs = Vec::new();
 
     // Parse first capability reference

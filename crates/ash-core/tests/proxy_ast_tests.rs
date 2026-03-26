@@ -38,7 +38,10 @@ fn test_input_capability_creation() {
         channel: Some("temperature".to_string()),
     };
     match observes {
-        InputCapability::Observes { capability, channel } => {
+        InputCapability::Observes {
+            capability,
+            channel,
+        } => {
             assert_eq!(capability.name, "sensor");
             assert_eq!(channel, Some("temperature".to_string()));
         }
@@ -51,7 +54,10 @@ fn test_input_capability_creation() {
         channel: Some("requests".to_string()),
     };
     match receives {
-        InputCapability::Receives { capability, channel } => {
+        InputCapability::Receives {
+            capability,
+            channel,
+        } => {
             assert_eq!(capability.name, "mailbox");
             assert_eq!(channel, Some("requests".to_string()));
         }
@@ -64,12 +70,10 @@ fn test_proxy_def_construction() {
     let proxy_def = ProxyDef {
         name: "manager_proxy".to_string(),
         handled_role: test_role("manager"),
-        inputs: vec![
-            InputCapability::Receives {
-                capability: test_capability("requests"),
-                channel: Some("approval_request".to_string()),
-            },
-        ],
+        inputs: vec![InputCapability::Receives {
+            capability: test_capability("requests"),
+            channel: Some("approval_request".to_string()),
+        }],
         body: Workflow::Done,
         span: test_span(),
     };

@@ -18,8 +18,8 @@ use ash_core::RoleObligationRef as CoreRoleObligationRef;
 
 use crate::surface::{
     ActionRef, BinaryOp, CapabilityDef, CheckTarget, EffectType, Expr, Guard, Literal,
-    ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, UnaryOp,
-    Workflow as SurfaceWorkflow, WorkflowDef,
+    ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, Type, UnaryOp,
+    Workflow as SurfaceWorkflow, WorkflowDef, YieldArm,
 };
 
 #[cfg(test)]
@@ -390,17 +390,106 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             expr: lower_expr(expr),
         },
 
-        // Proxy workflow constructs - for now, lower to a placeholder
-        // These will be expanded in future work for full proxy support
-        SurfaceWorkflow::Yield { .. } => {
-            // Yield is not yet supported in core IR
-            // For now, return Done as a placeholder
-            CoreWorkflow::Done
+        // Proxy workflow constructs
+        SurfaceWorkflow::Yield {
+            role,
+            expr,
+            resume_var,
+            resume_type,
+            arms,
+            span,
+        } => {
+            // Lower the request expression
+            let request = Box::new(lower_expr(expr));
+
+            // Convert surface Type to core TypeExpr
+            let expected_response_type = lower_type_to_type_expr(resume_type);
+
+            // Lower the yield arms into a continuation workflow
+            let continuation = Box::new(lower_yield_arms(resume_var, arms, provenance));
+
+            // Convert surface span to core span
+            let core_span = ash_core::Span {
+                start: span.start,
+                end: span.end,
+            };
+
+            CoreWorkflow::Yield {
+                role: role.to_string(),
+                request,
+                expected_response_type,
+                continuation,
+                span: core_span,
+            }
         }
 
         SurfaceWorkflow::Resume { expr, .. } => CoreWorkflow::Ret {
             expr: lower_expr(expr),
         },
+    }
+}
+
+/// Convert a surface Type to a core TypeExpr.
+fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
+    use ash_core::workflow_contract::TypeExpr;
+    match ty {
+        Type::Name(name) => TypeExpr::Named(name.to_string()),
+        Type::List(inner) => TypeExpr::Constructor {
+            name: "List".to_string(),
+            args: vec![lower_type_to_type_expr(inner)],
+        },
+        Type::Record(fields) => TypeExpr::Constructor {
+            name: "Record".to_string(),
+            args: fields
+                .iter()
+                .map(|(_, t)| lower_type_to_type_expr(t))
+                .collect(),
+        },
+        Type::Capability(name) => TypeExpr::Constructor {
+            name: "Capability".to_string(),
+            args: vec![TypeExpr::Named(name.to_string())],
+        },
+    }
+}
+
+/// Lower yield arms into a continuation workflow.
+///
+/// The resume_var is bound to the response value, and then the arms
+/// are processed as pattern matches.
+fn lower_yield_arms(resume_var: &str, arms: &[YieldArm], provenance: &Provenance) -> CoreWorkflow {
+    if arms.is_empty() {
+        return CoreWorkflow::Done;
+    }
+
+    // Convert the arms into a match expression
+    // For now, we create a Let binding for the resume variable
+    // followed by the body of the first arm (single arm case)
+    // or a series of If expressions for multiple arms
+
+    if arms.len() == 1 {
+        // Single arm: bind the pattern and execute the body
+        let arm = &arms[0];
+        CoreWorkflow::Let {
+            pattern: lower_pattern(&arm.pattern),
+            expr: CoreExpr::Variable(resume_var.to_string()),
+            continuation: Box::new(lower_workflow_body(&arm.body, provenance)),
+        }
+    } else {
+        // Multiple arms: create a cascade of If expressions
+        // For now, use the first arm's pattern as the main match
+        // and subsequent arms as fallbacks
+        let first_arm = &arms[0];
+        let _rest_continuation = if arms.len() > 1 {
+            lower_yield_arms(resume_var, &arms[1..], provenance)
+        } else {
+            CoreWorkflow::Done
+        };
+
+        CoreWorkflow::Let {
+            pattern: lower_pattern(&first_arm.pattern),
+            expr: CoreExpr::Variable(resume_var.to_string()),
+            continuation: Box::new(lower_workflow_body(&first_arm.body, provenance)),
+        }
     }
 }
 

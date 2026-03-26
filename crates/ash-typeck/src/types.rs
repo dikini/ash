@@ -451,9 +451,10 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
 /// Bind a type variable to a type, checking for infinite types
 fn bind_var(var: TypeVar, ty: &Type) -> Result<Substitution, UnifyError> {
     if let Type::Var(v) = ty
-        && *v == var {
-            return Ok(Substitution::new()); // T = T
-        }
+        && *v == var
+    {
+        return Ok(Substitution::new()); // T = T
+    }
 
     if occurs_in(var, ty) {
         return Err(UnifyError::InfiniteType(var, ty.clone()));

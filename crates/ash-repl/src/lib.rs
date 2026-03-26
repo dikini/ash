@@ -23,14 +23,19 @@
 
 mod completer;
 mod error;
+pub mod input;
+pub mod session;
 
-use ash_core::value::Value;
+pub use input::{InputDetector, InputStatus};
+
+pub use ash_core::Value;
 use ash_engine::Engine;
 use colored::Colorize;
 use completer::AshCompleter;
 use error::{format_error, suggest_fix};
 use rustyline::error::ReadlineError;
 use rustyline::{Config, Editor};
+pub use session::{EvalResult, Session};
 use std::io::Write;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -68,11 +73,32 @@ pub enum ReplError {
     /// Readline error.
     #[error("readline error: {0}")]
     Readline(String),
+    /// Type error during type checking.
+    #[error("type error: {0}")]
+    TypeError(String),
+    /// Unknown workflow referenced.
+    #[error("unknown workflow: {name}")]
+    UnknownWorkflow {
+        /// The name of the unknown workflow.
+        name: String,
+    },
+    /// Parse error.
+    #[error("parse error: {0}")]
+    ParseError(String),
 }
 
 impl From<ash_engine::EngineError> for ReplError {
     fn from(err: ash_engine::EngineError) -> Self {
-        Self::Engine(err.to_string())
+        match err {
+            ash_engine::EngineError::Type(msg) => Self::TypeError(msg),
+            ash_engine::EngineError::Parse(msg) | ash_engine::EngineError::Execution(msg) => {
+                Self::Engine(msg)
+            }
+            ash_engine::EngineError::Io(e) => Self::Io(e),
+            ash_engine::EngineError::CapabilityNotFound(cap) => {
+                Self::Engine(format!("capability not found: {cap}"))
+            }
+        }
     }
 }
 
@@ -336,7 +362,7 @@ impl Repl {
                 multi_line_input.push_str(&input);
 
                 // Try to parse - if successful, execute
-                if !self.is_incomplete(&multi_line_input) {
+                if !Self::is_incomplete(&multi_line_input) {
                     let source = multi_line_input.clone();
                     let result = self.eval(&source).await;
                     Self::display_result(result, &source);
@@ -345,7 +371,7 @@ impl Repl {
                 }
             } else {
                 // Check if input is incomplete
-                if self.is_incomplete(&input) {
+                if Self::is_incomplete(&input) {
                     multi_line_input = input;
                     is_multiline = true;
                 } else {
@@ -404,29 +430,9 @@ impl Repl {
     /// # Returns
     ///
     /// `true` if the input is incomplete and needs more lines.
-    fn is_incomplete(&self, input: &str) -> bool {
-        if input.trim().is_empty() {
-            return false;
-        }
-
-        // Try parsing as-is
-        if let Err(ash_engine::EngineError::Parse(msg)) = self.engine.parse(input) {
-            // Check for incomplete indicators in parse error
-            let incomplete_indicators = [
-                "unexpected end of input",
-                "incomplete",
-                "unterminated",
-                "unexpected eof",
-                "expected",
-            ];
-
-            let msg_lower = msg.to_lowercase();
-            incomplete_indicators
-                .iter()
-                .any(|&ind| msg_lower.contains(ind))
-        } else {
-            false
-        }
+    fn is_incomplete(input: &str) -> bool {
+        let mut detector = InputDetector::new();
+        matches!(detector.check(input), InputStatus::Incomplete(_))
     }
 
     /// Handle REPL commands.
@@ -576,24 +582,24 @@ mod tests {
 
     #[test]
     fn test_multiline_incomplete_brace() {
-        let repl = Repl::new(true).unwrap();
+        let _repl = Repl::new(true).unwrap();
         // A workflow with unclosed brace may be incomplete depending on parser behavior
         // Just verify the method runs without panic
-        let _ = repl.is_incomplete("workflow test {");
+        let _ = Repl::is_incomplete("workflow test {");
     }
 
     #[test]
     fn test_multiline_complete_expression() {
-        let repl = Repl::new(true).unwrap();
+        let _repl = Repl::new(true).unwrap();
         // A complete expression should not be incomplete
-        assert!(!repl.is_incomplete("42"));
+        assert!(!Repl::is_incomplete("42"));
     }
 
     #[test]
     fn test_multiline_complete_workflow() {
-        let repl = Repl::new(true).unwrap();
+        let _repl = Repl::new(true).unwrap();
         // A complete workflow should not be incomplete
-        assert!(!repl.is_incomplete(
+        assert!(!Repl::is_incomplete(
             "\n            workflow test {\n                ret 42;\n            }\n        "
         ));
     }

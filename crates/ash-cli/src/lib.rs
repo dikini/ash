@@ -20,5 +20,11 @@
 //! ```
 
 pub mod commands;
+pub mod error;
+pub mod output;
+pub mod value_convert;
 
 pub use commands::*;
+pub use error::{CliError, CliResult};
+pub use output::*;
+pub use value_convert::{json_to_value, value_to_json};

@@ -18,6 +18,7 @@ thiserror = { workspace = true }
 rustyline = { version = "15.0", features = ["derive"] }
 directories = "6.0"
 colored = { workspace = true }
+winnow = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

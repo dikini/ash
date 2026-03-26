@@ -2,13 +2,26 @@
 //!
 //! TASK-053: Implement `check` command for type checking workflows.
 //! TASK-076: Updated to use ash-engine.
+//! TASK-280: Fixed JSON output schema compliance.
 
+use crate::output::json::{JsonLocation, JsonOutput};
 use anyhow::{Context, Result};
 use ash_engine::EngineError;
 use clap::Args;
 use colored::Colorize;
 use std::path::Path;
+use std::time::Instant;
 use walkdir::WalkDir;
+
+/// Output format for check command
+#[derive(Debug, Clone, Copy, Default, clap::ValueEnum)]
+pub enum CheckOutputFormat {
+    /// Human-readable format
+    #[default]
+    Human,
+    /// JSON format
+    Json,
+}
 
 /// Arguments for the check command
 #[derive(Args, Debug, Clone)]
@@ -22,12 +35,16 @@ pub struct CheckArgs {
     pub all: bool,
 
     /// Enable strict mode (treat warnings as errors)
-    #[arg(short, long)]
+    #[arg(short = 's', long)]
     pub strict: bool,
 
     /// Output format (human, json)
-    #[arg(short, long, default_value = "human")]
-    pub format: String,
+    #[arg(short = 'f', long, value_enum, default_value = "human")]
+    pub format: CheckOutputFormat,
+
+    /// Enable policy verification
+    #[arg(long)]
+    pub policy_check: bool,
 }
 
 /// Run type checking on workflow files
@@ -43,24 +60,36 @@ pub fn check(args: &CheckArgs) -> Result<()> {
 
 /// Check a single workflow file
 fn check_file(path: &Path, args: &CheckArgs) -> Result<()> {
+    // Start timing
+    let total_start = Instant::now();
+    let parse_start = Instant::now();
+
     // Create the engine
     let engine = ash_engine::Engine::new()
         .build()
         .context("Failed to build engine")?;
 
     // Parse and type check the file
-    let workflow = engine
-        .parse_file(path)
-        .map_err(|e| anyhow::anyhow!("Parse error: {e}"))?;
+    let parse_result = engine.parse_file(path);
+    let parse_time = parse_start.elapsed();
 
-    // Convert EngineError to anyhow::Error for consistent error handling
-    let check_result: Result<(), EngineError> = engine.check(&workflow);
-    let check_result: Result<()> = check_result.map_err(|e| anyhow::anyhow!("{e}"));
+    let tc_start = Instant::now();
+    let check_result = match parse_result {
+        Ok(workflow) => {
+            let check_result: Result<(), EngineError> = engine.check(&workflow);
+            check_result.map_err(|e| anyhow::anyhow!("{e}"))
+        }
+        Err(e) => Err(anyhow::anyhow!("Parse error: {e}")),
+    };
+    let tc_time = tc_start.elapsed();
+    let total_time = total_start.elapsed();
 
     // Output results
-    match args.format.as_str() {
-        "json" => output_json(path, &check_result, args),
-        _ => output_human(path, &check_result, args),
+    match args.format {
+        CheckOutputFormat::Json => {
+            output_json(path, &check_result, args, parse_time, tc_time, total_time)
+        }
+        CheckOutputFormat::Human => output_human(path, &check_result, args),
     }
 }
 
@@ -130,17 +159,44 @@ fn output_human(path: &Path, result: &Result<()>, args: &CheckArgs) -> Result<()
 }
 
 /// Output results in JSON format
-fn output_json(path: &Path, result: &Result<()>, args: &CheckArgs) -> Result<()> {
+fn output_json(
+    path: &Path,
+    result: &Result<()>,
+    args: &CheckArgs,
+    parse_time: std::time::Duration,
+    tc_time: std::time::Duration,
+    total_time: std::time::Duration,
+) -> Result<()> {
     let success = result.is_ok();
-    let error_message = result.as_ref().err().map(|e| format!("{e}"));
+    let exit_code = if success { 0 } else { 3 };
 
-    let output = serde_json::json!({
-        "file": path.display().to_string(),
-        "success": success,
-        "strict": args.strict,
-        "error": error_message,
-    });
-    println!("{}", serde_json::to_string_pretty(&output)?);
+    // Build the JSON output
+    let mut output = JsonOutput::new(path)
+        .with_strict(args.strict)
+        .with_exit_code(exit_code)
+        .with_timing(parse_time, tc_time, total_time);
+
+    // Add errors if present
+    if let Err(e) = result {
+        let error_str = format!("{e}");
+        // Determine error code based on error content
+        let code = if error_str.contains("Parse") {
+            "E0001"
+        } else if error_str.contains("Type") {
+            "E0002"
+        } else {
+            "E9999"
+        };
+        output = output.with_error(
+            &error_str,
+            code,
+            Some(JsonLocation::new(path.display().to_string(), 0, 0)),
+        );
+    }
+
+    // Print the JSON output
+    println!("{}", output.to_json()?);
+
     if success {
         Ok(())
     } else {
@@ -162,13 +218,14 @@ mod tests {
             path: "test.ash".to_string(),
             all: false,
             strict: true,
-            format: "human".to_string(),
+            format: CheckOutputFormat::Human,
+            policy_check: false,
         };
 
         assert_eq!(args.path, "test.ash");
         assert!(args.strict);
         assert!(!args.all);
-        assert_eq!(args.format, "human");
+        assert!(matches!(args.format, CheckOutputFormat::Human));
     }
 
     #[test]
@@ -177,8 +234,21 @@ mod tests {
             path: "test.ash".to_string(),
             all: false,
             strict: false,
-            format: "human".to_string(),
+            format: CheckOutputFormat::Human,
+            policy_check: false,
         };
-        assert_eq!(args.format, "human");
+        assert!(matches!(args.format, CheckOutputFormat::Human));
+    }
+
+    #[test]
+    fn test_check_args_policy_check() {
+        let args = CheckArgs {
+            path: "test.ash".to_string(),
+            all: false,
+            strict: false,
+            format: CheckOutputFormat::Json,
+            policy_check: true,
+        };
+        assert!(args.policy_check);
     }
 }

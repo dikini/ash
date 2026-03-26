@@ -13,6 +13,17 @@ use clap::Args;
 use serde::Serialize;
 use std::path::Path;
 
+/// Export format for trace command
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+pub enum TraceExportFormat {
+    /// JSON format
+    Json,
+    /// PROV-N format
+    Provn,
+    /// Cypher graph format
+    Cypher,
+}
+
 /// Arguments for the trace command
 #[derive(Args, Debug, Clone)]
 pub struct TraceArgs {
@@ -39,6 +50,22 @@ pub struct TraceArgs {
     /// Verify trace integrity
     #[arg(long)]
     pub verify: bool,
+
+    /// Cryptographically sign trace
+    #[arg(long)]
+    pub sign: bool,
+
+    /// Export format
+    #[arg(long, value_enum)]
+    pub export: Option<TraceExportFormat>,
+
+    /// Output in PROV-N format
+    #[arg(long)]
+    pub provn: bool,
+
+    /// Output Cypher graph
+    #[arg(long)]
+    pub cypher: bool,
 }
 
 /// Run a workflow with full provenance tracing
@@ -302,12 +329,56 @@ mod tests {
             format: "json".to_string(),
             lineage: true,
             verify: false,
+            sign: true,
+            export: Some(TraceExportFormat::Json),
+            provn: false,
+            cypher: false,
         };
 
         assert_eq!(args.path, "test.ash");
         assert_eq!(args.format, "json");
         assert!(args.lineage);
         assert!(!args.verify);
+        assert!(args.sign);
+        assert!(matches!(args.export, Some(TraceExportFormat::Json)));
+    }
+
+    #[test]
+    fn test_trace_args_new_flags() {
+        let args = TraceArgs {
+            path: "test.ash".to_string(),
+            input: None,
+            output: None,
+            format: "json".to_string(),
+            lineage: false,
+            verify: false,
+            sign: false,
+            export: Some(TraceExportFormat::Provn),
+            provn: true,
+            cypher: false,
+        };
+
+        assert!(args.provn);
+        assert!(matches!(args.export, Some(TraceExportFormat::Provn)));
+    }
+
+    #[test]
+    fn test_trace_args_cypher() {
+        let args = TraceArgs {
+            path: "test.ash".to_string(),
+            input: None,
+            output: None,
+            format: "json".to_string(),
+            lineage: false,
+            verify: false,
+            sign: false,
+            export: Some(TraceExportFormat::Cypher),
+            provn: false,
+            cypher: true,
+        };
+
+        assert!(args.cypher);
+        assert!(matches!(args.export, Some(TraceExportFormat::Cypher)));
     }
 
     #[test]

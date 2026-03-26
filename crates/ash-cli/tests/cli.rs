@@ -57,7 +57,7 @@ fn test_check_nonexistent_file() {
     cmd.args(["check", "nonexistent.ash"]);
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("Error:"));
+        .stderr(predicate::str::contains("error"));
 }
 
 #[test]
@@ -66,5 +66,5 @@ fn test_dot_nonexistent_file() {
     cmd.args(["dot", "nonexistent.ash"]);
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("Error:"));
+        .stderr(predicate::str::contains("error"));
 }

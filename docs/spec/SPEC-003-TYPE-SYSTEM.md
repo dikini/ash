@@ -705,7 +705,97 @@ error[E004]: Type mismatch
    = note:     Expected Int, found String
 ```
 
-## 10. Related Documents
+## 10. Error Handling Conventions
+
+### 10.1 Boxed Error Types for Stack Efficiency
+
+Type errors in the Ash type system use boxed types to maintain reasonable stack sizes. This follows the pattern used by serde_json and other mature Rust libraries.
+
+**Rationale:**
+
+The `Type` enum contains large variants (e.g., `Constructor` with `QualifiedName` and `Vec<Type>`). When `TypeError` contains unboxed `Type` values, the error type can exceed 200 bytes, causing:
+
+- Stack overflow in deeply recursive type checking
+- Poor cache locality when passing errors by value
+- Binary bloat from large memcpy operations
+
+**Convention:**
+
+Error variants that contain `Type` should use `Box<Type>`:
+
+```rust
+// GOOD: Boxed types keep error size small
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
+pub enum TypeError {
+    #[error("Type mismatch: expected {expected:?}, found {found:?}")]
+    Mismatch { 
+        expected: Box<Type>, 
+        found: Box<Type> 
+    },
+    
+    #[error("Infinite type: type variable {var:?} occurs in {typ:?}")]
+    InfiniteType { 
+        var: TypeVar, 
+        typ: Box<Type> 
+    },
+    
+    #[error("Pattern mismatch: expected {expected:?}, got {actual:?}")]
+    PatternMismatch { 
+        expected: Box<Type>, 
+        actual: Box<Type> 
+    },
+    
+    // Small types don't need boxing
+    #[error("Unbound variable: {0}")]
+    UnboundVariable(String),
+    
+    #[error("Unknown variant: {0}")]
+    UnknownVariant(String),
+}
+```
+
+**Anti-pattern (DO NOT DO):**
+
+```rust
+// BAD: Large error type causes stack bloat
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
+pub enum TypeError {
+    #[error("Type mismatch: expected {expected:?}, found {found:?}")]
+    Mismatch { 
+        expected: Type,  // Type can be 100+ bytes
+        found: Type,     // Error type now > 200 bytes
+    },
+}
+```
+
+**Reference Implementation:**
+
+See serde_json's error type for the canonical example:
+https://docs.rs/serde_json/latest/src/serde_json/error.rs.html#15-20
+
+### 10.2 Error Type Size Target
+
+Error types should aim to stay under 64 bytes on the stack. This provides:
+
+- Efficient register passing on x86_64 and ARM64
+- Cache-friendly error propagation
+- Stack safety in recursive algorithms
+
+Use `std::mem::size_of::<TypeError>()` to verify size after changes.
+
+### 10.3 Result Type Aliases
+
+Use boxed error types in result aliases:
+
+```rust
+// For functions that may fail with type errors
+pub type TypeResult<T> = Result<T, TypeError>;
+
+// For functions with multiple error sources
+pub type CheckResult<T> = Result<T, Box<dyn std::error::Error>>;
+```
+
+## 11. Related Documents
 
 - SPEC-001: IR
 - SPEC-002: Surface Language

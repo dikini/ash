@@ -1131,13 +1131,59 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 ---
 
+## Phase 47: Spec Compliance Fixes (Post-46 Audit)
+
+**Goal:** Address critical spec violations identified in external code review.
+
+**Source:** External audit findings from comprehensive code review  
+**Priority:** Critical to Medium  
+**Status:** ✅ Complete
+
+### 47.1: Critical Runtime Contract Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-274](tasks/TASK-274-engine-provider-wiring.md) | Wire engine capability providers to runtime | Embedding | 8 | ✅ Complete |
+| [TASK-275](tasks/TASK-275-enable-obligation-checking.md) | Enable workflow obligation checking in type checker | SPEC-022 | 12 | ✅ Complete |
+| [TASK-276](tasks/TASK-276-fix-unsound-expression-typing.md) | Fix unsound expression typing | SPEC-003 | 16 | ✅ Complete |
+
+### 47.2: High Priority CLI/REPL Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-277](tasks/TASK-277-repl-workflow-storage.md) | REPL workflow definition storage | SPEC-011 | 8 | ✅ Complete |
+| [TASK-278](tasks/TASK-278-cli-input-functional.md) | Make CLI --input functional | SPEC-005 | 6 | ✅ Complete |
+| [TASK-279](tasks/TASK-279-cli-spec-compliance.md) | Align CLI surface with SPEC-005 | SPEC-005 | 12 | ✅ Complete |
+
+### 47.3: Medium Priority Compliance Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-280](tasks/TASK-280-json-output-schema.md) | Fix JSON output schema | SPEC-005/021 | 6 | ✅ Complete |
+| [TASK-281](tasks/TASK-281-adt-qualified-names.md) | Preserve ADT qualified names | SPEC-003/020 | 8 | ✅ Complete |
+| [TASK-282](tasks/TASK-282-pub-super-visibility.md) | Fix pub(super) visibility | SPEC-009 | 8 | ✅ Complete |
+| [TASK-283](tasks/TASK-283-repl-multiline-errors.md) | Fix REPL multiline error detection | SPEC-011 | 4 | ✅ Complete |
+
+**Phase 47 Deliverable:** All critical spec violations resolved, user-facing contracts functional.
+
+**Summary:**
+- All 10 tasks completed across three sub-phases
+- Critical runtime fixes: Provider wiring, obligation checking, type soundness
+- CLI/REPL fixes: Input handling, spec compliance, exit codes, workflow storage
+- Compliance fixes: JSON schema, ADT names, visibility, multiline detection
+- 90+ new tests added across all tasks
+- Build passes with only minor pre-existing warnings
+
+---
+
 ## Phase 44-46 Summary
 
 | Phase | Tasks | Est. Hours | Status |
 |-------|-------|------------|--------|
-| 44 | 17 | 102-108 | ⏳ Planned |
-| 45 | 3 | 14 | ⏳ Planned |
+| 44 | 17 | 102-108 | ✅ Complete |
+| 45 | 3 | 14 | ✅ Complete |
 | 46 | 13 | 98-108 | ✅ Complete |
-| **Total** | **33** | **214-230** | |
+| 47 | 10 | 90 | 🔄 Planned |
+| **Total** | **43** | **304-324** | |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

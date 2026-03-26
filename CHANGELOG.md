@@ -8,6 +8,62 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Phase 47: Spec Compliance Fixes (Post-46 Audit)**
+  - **Critical Runtime Contract Fixes (47.1):**
+    - TASK-274: Wire engine capability providers to RuntimeState
+      - Added provider registry to RuntimeState with HashMap storage
+      - Engine now passes configured providers during execution
+      - Fixed Embedding API contract where providers were non-functional
+      - 7 tests for provider wiring verification
+    - TASK-275: Enable workflow obligation checking in type checker
+      - Implemented ObligationCollector to walk AST and track obligations
+      - Linear obligation tracking: oblige registers, check satisfies
+      - Error types: UnsatisfiedObligations, UnknownObligation, ObligationAlreadySatisfied
+      - 14 tests including property-based tests for obligation soundness
+    - TASK-276: Fix unsound expression typing
+      - Variable expressions now look up type from environment (not fresh type vars)
+      - Implemented proper type inference for Block, Loop, For expressions
+      - Added error types: UnboundVariable, NotIterable, UnsupportedExpression
+      - 18 tests for type soundness verification
+  - **Architecture Improvements:**
+    - Type error variants now use `Box<Type>` to reduce stack size from ~200 bytes to ~64 bytes
+    - Follows serde_json pattern for large error type handling
+    - Documented in SPEC-003 Section 10 (Error Handling Conventions)
+    - All clippy warnings resolved (clean build)
+  - **High Priority CLI/REPL Fixes (47.2):**
+    - TASK-277: REPL workflow definition storage
+      - SessionState now stores workflows in HashMap<String, CompiledWorkflow>
+      - Type checking occurs at definition time (fail-fast)
+      - Support for workflow invocation by name in REPL session
+      - 9 tests for workflow storage and invocation
+    - TASK-278: Make CLI --input functional
+      - JSON to Value conversion utilities (json_to_value, value_to_json)
+      - Input binding to workflow parameters via --input flag
+      - Validation of input against workflow signature
+      - 12 tests for input functionality
+    - TASK-279: Align CLI surface with SPEC-005
+      - Proper exit codes: 2=parse, 3=type, 4=verification, 5=runtime, 6=I/O, 7=timeout
+      - Global flags: --quiet, --color auto|always|never, repeatable -v
+      - Command flags: --policy-check, --dry-run, --timeout, --capability
+      - 22 tests for SPEC-005 compliance
+  - **Medium Priority Compliance Fixes (47.3):**
+    - TASK-280: Fix JSON output schema
+      - Full SPEC-005 compliant JSON: schema_version, errors[], warnings[], timing{}, verification{}
+      - Structured errors with severity, code, message, location, context, help
+      - 13 tests for JSON schema compliance
+    - TASK-281: Preserve ADT qualified names
+      - AdtName struct with qualified, module, root fields
+      - Same-name ADTs in different modules are distinct types
+      - 19 tests for qualified name preservation
+    - TASK-282: Fix pub(super) visibility
+      - Proper ModulePath type with parent(), starts_with(), is_ancestor_of()
+      - Correct "parent module and descendants" visibility checking
+      - 20 tests for visibility compliance
+    - TASK-283: Fix REPL multiline error detection
+      - InputDetector with structural analysis for braces, strings
+      - Distinguishes incomplete input from actual syntax errors
+      - 16 tests for multiline detection
+
 - **Phase 46: Unified Capability-Role Implementation (Partial)**
   - **Parser Extensions (46.1):**
     - TASK-259: Parse `plays role(R)` clause in workflow headers

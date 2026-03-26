@@ -88,14 +88,28 @@ impl InputDetector {
             return InputStatus::Complete;
         }
 
-        // Phase 1: Structural analysis
+        // Phase 1: Structural analysis (unclosed delimiters/strings)
         match self.check_structure(input) {
-            StructuralStatus::Unclosed { reason } => InputStatus::Incomplete(reason),
-            StructuralStatus::Balanced => {
-                // Phase 2: Parse analysis
-                Self::check_parse(input)
+            StructuralStatus::Unclosed { reason } => {
+                // Check if it's a structural issue (delimiters, strings) or trailing operator
+                // Structural issues are definitely incomplete
+                // Trailing operators need verification from the parser
+                if self.has_unclosed_delimiters_or_strings() {
+                    return InputStatus::Incomplete(reason);
+                }
+                // For trailing operators, we need to check with the parser
+                // Fall through to parse analysis
             }
+            StructuralStatus::Balanced => {}
         }
+
+        // Phase 2: Parse analysis
+        Self::check_parse(input)
+    }
+
+    /// Returns true if there are unclosed delimiters or strings.
+    const fn has_unclosed_delimiters_or_strings(&self) -> bool {
+        self.in_string || !self.brace_stack.is_empty()
     }
 
     /// Reset the detector's internal state.
@@ -126,7 +140,7 @@ impl InputDetector {
             self.handle_delimiter(ch);
         }
 
-        self.determine_structural_status()
+        self.determine_structural_status(input)
     }
 
     /// Handle escape character processing within strings.
@@ -197,7 +211,7 @@ impl InputDetector {
     }
 
     /// Determine the final structural status based on accumulated state.
-    fn determine_structural_status(&self) -> StructuralStatus {
+    fn determine_structural_status(&self, input: &str) -> StructuralStatus {
         if self.in_string {
             return StructuralStatus::Unclosed {
                 reason: format!("unclosed string literal (missing '{}')", self.string_delim),
@@ -220,7 +234,40 @@ impl InputDetector {
             };
         }
 
+        // Check for trailing operators that indicate more input is expected
+        if let Some(reason) = Self::check_trailing_operator(input) {
+            return StructuralStatus::Unclosed { reason };
+        }
+
         StructuralStatus::Balanced
+    }
+
+    /// Check if input ends with a trailing operator (indicating continuation).
+    fn check_trailing_operator(input: &str) -> Option<String> {
+        let trimmed = input.trim_end();
+
+        // Check for trailing operators that suggest more input is coming
+        if trimmed.ends_with('+')
+            || trimmed.ends_with('-')
+            || trimmed.ends_with('*')
+            || trimmed.ends_with('/')
+            || trimmed.ends_with('%')
+            || trimmed.ends_with('=')
+            || trimmed.ends_with('.')
+            || trimmed.ends_with("->")
+            || trimmed.ends_with("=>")
+            || trimmed.ends_with("&&")
+            || trimmed.ends_with("||")
+        {
+            return Some("trailing operator, expecting more input".to_string());
+        }
+
+        // Check for trailing comma in function calls or arrays
+        if trimmed.ends_with(',') {
+            return Some("trailing comma, expecting more arguments".to_string());
+        }
+
+        None
     }
 
     /// Try parsing the input to detect syntax errors.
@@ -231,10 +278,13 @@ impl InputDetector {
         let engine = Engine::default();
         let trimmed = input.trim();
 
+        // Check for trailing operators before parsing
+        let has_trailing_operator = Self::check_trailing_operator(input).is_some();
+
         // First, try parsing as-is (for workflow definitions, module declarations, etc.)
         match engine.parse(trimmed) {
             Ok(_) => InputStatus::Complete,
-            Err(ash_engine::EngineError::Parse(_)) => {
+            Err(ash_engine::EngineError::Parse(_err_msg)) => {
                 // Try wrapping in a workflow as the REPL does for expressions
                 let wrapped = format!("workflow __repl__ {{ ret {trimmed}; }}");
                 match engine.parse(&wrapped) {
@@ -243,6 +293,13 @@ impl InputDetector {
                         if Self::is_incomplete_error(&msg) {
                             return InputStatus::Incomplete(msg);
                         }
+                        // If we have a trailing operator but the parse error doesn't indicate
+                        // incompleteness, check if it's an expression context
+                        if has_trailing_operator && Self::looks_like_expression_prefix(trimmed) {
+                            return InputStatus::Incomplete(
+                                "trailing operator, expecting more input".to_string(),
+                            );
+                        }
                         InputStatus::Error(msg)
                     }
                     Err(other) => InputStatus::Error(other.to_string()),
@@ -250,6 +307,24 @@ impl InputDetector {
             }
             Err(other) => InputStatus::Error(other.to_string()),
         }
+    }
+
+    /// Check if input looks like an expression prefix (not a statement).
+    fn looks_like_expression_prefix(input: &str) -> bool {
+        let trimmed = input.trim();
+
+        // If it starts with 'let', it's a statement, not an expression
+        if trimmed.starts_with("let ") {
+            return false;
+        }
+
+        // If it starts with 'workflow', it's a definition
+        if trimmed.starts_with("workflow ") {
+            return false;
+        }
+
+        // Otherwise, assume it could be an expression
+        true
     }
 
     /// Determine if a parse error indicates incomplete input vs a real syntax error.

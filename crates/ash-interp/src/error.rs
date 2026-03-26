@@ -55,7 +55,18 @@ pub enum EvalError {
 /// Errors that can occur during workflow execution
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExecError {
+    /// Parse error - syntax error in source code (exit code 2)
+    Parse(String),
+
+    /// Type error - type checking failure (exit code 3)
+    Type(String),
+
+    /// I/O error - file or network operation failure (exit code 4)
+    Io(String),
+
+    /// Evaluation error during expression evaluation
     Eval(EvalError),
+
     PatternMatchFailed {
         pattern: String,
         value: Value,
@@ -77,6 +88,7 @@ pub enum ExecError {
         operation: String,
         capability: Name,
     },
+    /// Execution error - runtime execution failure (exit code 5)
     ExecutionFailed(String),
     ParallelFailed(String),
     ForEachFailed(String),
@@ -129,6 +141,9 @@ impl From<ash_core::MailboxOverflowError> for ExecError {
 impl std::fmt::Display for ExecError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Parse(msg) => write!(f, "parse error: {msg}"),
+            Self::Type(msg) => write!(f, "type error: {msg}"),
+            Self::Io(msg) => write!(f, "io error: {msg}"),
             Self::Eval(e) => write!(f, "evaluation error: {e}"),
             Self::PatternMatchFailed { pattern, value } => {
                 write!(f, "pattern match failed: {pattern} does not match {value}")
@@ -191,6 +206,45 @@ impl std::fmt::Display for ExecError {
 }
 
 impl ExecError {
+    /// Get the exit code for this error type per SPEC-021.
+    ///
+    /// Exit codes:
+    /// - 0 = Success
+    /// - 1 = General error
+    /// - 2 = Parse error
+    /// - 3 = Type error
+    /// - 4 = I/O error
+    /// - 5 = Execution error
+    /// - 6 = Capability/verification error
+    /// - 127 = Command not found
+    pub fn exit_code(&self) -> std::process::ExitCode {
+        match self {
+            Self::Parse(_) => std::process::ExitCode::from(2),
+            Self::Type(_) => std::process::ExitCode::from(3),
+            Self::Io(_) => std::process::ExitCode::from(4),
+            Self::ExecutionFailed(_) => std::process::ExitCode::from(5),
+            Self::CapabilityNotAvailable(_) => std::process::ExitCode::from(6),
+            Self::PolicyDenied { .. } => std::process::ExitCode::from(6),
+            Self::ValidationFailed(_) => std::process::ExitCode::from(4),
+            _ => std::process::ExitCode::from(1),
+        }
+    }
+
+    /// Get the error category for logging/debugging
+    pub fn category(&self) -> &'static str {
+        match self {
+            Self::Parse(_) => "parse",
+            Self::Type(_) => "type",
+            Self::Io(_) => "io",
+            Self::Eval(_) => "eval",
+            Self::ExecutionFailed(_) => "execution",
+            Self::CapabilityNotAvailable(_) => "capability",
+            Self::PolicyDenied { .. } => "policy",
+            Self::ValidationFailed(_) => "validation",
+            _ => "runtime",
+        }
+    }
+
     /// Create a type mismatch error for a provider
     pub fn type_mismatch(
         provider: impl Into<String>,

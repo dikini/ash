@@ -24,7 +24,7 @@ fn test_pub_super_in_parent() {
     let item_module = path(&["crate", "a", "b"]);
     let from_module = path(&["crate", "a"]); // parent of b
 
-    assert!(Visibility::Super.is_visible_path(&item_module, &from_module));
+    assert!(Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn test_pub_super_in_descendant_of_parent() {
     let item_module = path(&["crate", "a", "b"]);
     let from_module = path(&["crate", "a", "c", "d"]); // descendant of a (parent)
 
-    assert!(Visibility::Super.is_visible_path(&item_module, &from_module));
+    assert!(Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn test_pub_super_not_in_sibling() {
     let from_module = path(&["crate", "a", "c"]); // sibling of b under same parent a
 
     // c IS a descendant of a, so it should be visible
-    assert!(Visibility::Super.is_visible_path(&item_module, &from_module));
+    assert!(Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn test_pub_super_not_in_grandparent() {
     let item_module = path(&["crate", "a", "b"]);
     let from_module = path(&["crate"]); // grandparent, not parent
 
-    assert!(!Visibility::Super.is_visible_path(&item_module, &from_module));
+    assert!(!Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn test_pub_super_not_in_unrelated_branch() {
     let item_module = path(&["crate", "a", "b"]);
     let from_module = path(&["crate", "x", "y"]); // unrelated branch
 
-    assert!(!Visibility::Super.is_visible_path(&item_module, &from_module));
+    assert!(!Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn test_pub_super_at_root_is_crate() {
     let from_anywhere = path(&["crate", "a", "b"]);
 
     // pub(super) at root = pub(crate)
-    assert!(Visibility::Super.is_visible_path(&root, &from_anywhere));
+    assert!(Visibility::Super { levels: 1 }.is_visible_path(&root, &from_anywhere));
 }
 
 // ============================================================
@@ -246,7 +246,7 @@ fn test_pub_super_single_segment() {
     let from = path(&["a", "b"]);
 
     // a's parent is root, so pub(super) should be visible everywhere
-    assert!(Visibility::Super.is_visible_path(&item, &from));
+    assert!(Visibility::Super { levels: 1 }.is_visible_path(&item, &from));
 }
 
 #[test]

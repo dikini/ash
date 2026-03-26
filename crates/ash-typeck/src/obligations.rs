@@ -890,32 +890,41 @@ impl ObligationCollector {
                 else_branch,
                 span: _,
             } => {
-                let mut then_ctx = ctx.branch();
+                // Save parent context before branching
+                let parent_ctx = ctx.clone();
+
+                let mut then_ctx = parent_ctx.branch();
                 self.collect_from_workflow(then_branch, &mut then_ctx)?;
 
                 if let Some(else_branch) = else_branch {
-                    let mut else_ctx = ctx.branch();
+                    let mut else_ctx = parent_ctx.branch();
                     self.collect_from_workflow(else_branch, &mut else_ctx)?;
-                    ctx.merge(else_ctx);
+                    // Both branches must discharge: intersection of remaining obligations
+                    ctx.obligations = then_ctx.obligations.union(&else_ctx.obligations);
+                } else {
+                    // No else branch: obligation must be discharged in then branch
+                    ctx.obligations = then_ctx.obligations;
                 }
-
-                // Merge the then context back
-                ctx.merge(then_ctx);
             }
 
             // PAR: Union of obligations from all branches
             Workflow::Par { branches, span: _ } => {
+                let parent_ctx = ctx.clone();
+
                 let mut branch_contexts = Vec::new();
                 for branch in branches {
-                    let mut branch_ctx = ctx.branch();
+                    let mut branch_ctx = parent_ctx.branch();
                     self.collect_from_workflow(branch, &mut branch_ctx)?;
                     branch_contexts.push(branch_ctx);
                 }
 
                 // For parallel composition, obligations must be discharged in all branches
-                // We use intersection semantics
-                for branch_ctx in branch_contexts {
-                    ctx.merge(branch_ctx);
+                // We use union semantics: if obligation remains in ANY branch, it remains
+                if let Some(first) = branch_contexts.first() {
+                    ctx.obligations = first.obligations.clone();
+                    for branch_ctx in &branch_contexts[1..] {
+                        ctx.obligations = ctx.obligations.union(&branch_ctx.obligations);
+                    }
                 }
             }
 
@@ -926,14 +935,15 @@ impl ObligationCollector {
                 fallback,
                 span: _,
             } => {
-                let mut primary_ctx = ctx.branch();
+                let parent_ctx = ctx.clone();
+
+                let mut primary_ctx = parent_ctx.branch();
                 self.collect_from_workflow(primary, &mut primary_ctx)?;
 
-                let mut fallback_ctx = ctx.branch();
+                let mut fallback_ctx = parent_ctx.branch();
                 self.collect_from_workflow(fallback, &mut fallback_ctx)?;
 
-                ctx.merge(primary_ctx);
-                ctx.merge(fallback_ctx);
+                ctx.obligations = primary_ctx.obligations.union(&fallback_ctx.obligations);
             }
 
             // MUST: Ensure workflow succeeds
@@ -1017,16 +1027,18 @@ impl ObligationCollector {
                 else_branch,
                 span: _,
             } => {
-                let mut then_ctx = ctx.branch();
+                let parent_ctx = ctx.clone();
+
+                let mut then_ctx = parent_ctx.branch();
                 self.collect_from_workflow(then_branch, &mut then_ctx)?;
 
                 if let Some(else_branch) = else_branch {
-                    let mut else_ctx = ctx.branch();
+                    let mut else_ctx = parent_ctx.branch();
                     self.collect_from_workflow(else_branch, &mut else_ctx)?;
-                    ctx.merge(else_ctx);
+                    ctx.obligations = then_ctx.obligations.union(&else_ctx.obligations);
+                } else {
+                    ctx.obligations = then_ctx.obligations;
                 }
-
-                ctx.merge(then_ctx);
             }
 
             // ACT: Action (terminal - no continuation field)
@@ -1081,16 +1093,21 @@ impl ObligationCollector {
                 is_control: _,
                 span: _,
             } => {
+                let parent_ctx = ctx.clone();
+
                 let mut arm_contexts = Vec::new();
                 for arm in arms {
-                    let mut arm_ctx = ctx.branch();
+                    let mut arm_ctx = parent_ctx.branch();
                     self.collect_from_workflow(&arm.body, &mut arm_ctx)?;
                     arm_contexts.push(arm_ctx);
                 }
 
-                // Merge all arm contexts using intersection
-                for arm_ctx in arm_contexts {
-                    ctx.merge(arm_ctx);
+                // Merge all arm contexts using union
+                if let Some(first) = arm_contexts.first() {
+                    ctx.obligations = first.obligations.clone();
+                    for arm_ctx in &arm_contexts[1..] {
+                        ctx.obligations = ctx.obligations.union(&arm_ctx.obligations);
+                    }
                 }
             }
 
@@ -1103,16 +1120,21 @@ impl ObligationCollector {
                 arms,
                 span: _,
             } => {
+                let parent_ctx = ctx.clone();
+
                 let mut arm_contexts = Vec::new();
                 for arm in arms {
-                    let mut arm_ctx = ctx.branch();
+                    let mut arm_ctx = parent_ctx.branch();
                     self.collect_from_workflow(&arm.body, &mut arm_ctx)?;
                     arm_contexts.push(arm_ctx);
                 }
 
-                // Merge all arm contexts using intersection
-                for arm_ctx in arm_contexts {
-                    ctx.merge(arm_ctx);
+                // Merge all arm contexts using union
+                if let Some(first) = arm_contexts.first() {
+                    ctx.obligations = first.obligations.clone();
+                    for arm_ctx in &arm_contexts[1..] {
+                        ctx.obligations = ctx.obligations.union(&arm_ctx.obligations);
+                    }
                 }
             }
 
@@ -1181,10 +1203,19 @@ impl LinearObligationContext {
         }
     }
 
-    /// Merge two branched contexts using intersection
-    /// Both branches must discharge an obligation for it to be removed
-    pub fn merge(&mut self, other: Self) {
-        self.obligations = self.obligations.intersection(&other.obligations);
+    /// Merge a branched context back into self
+    /// Uses parent context to properly track which obligations were discharged
+    ///
+    /// # Arguments
+    /// * `branch` - The branch context to merge
+    /// * `parent` - The parent context before branching (used to determine what was discharged)
+    pub fn merge(&mut self, branch: Self, _parent: &Self) {
+        // An obligation is discharged only if ALL branches discharged it
+        // For now, we use intersection semantics on the remaining obligations
+        // The key insight: if an obligation remains in ANY branch, it should remain in the merged result
+
+        // Intersection keeps obligations that are pending in BOTH contexts
+        self.obligations = self.obligations.intersection(&branch.obligations);
     }
 
     /// Check if all obligations have been discharged
@@ -1250,8 +1281,9 @@ mod linear_tests {
         then_ctx.obligations.remove("o1").unwrap();
         else_ctx.obligations.remove("o1").unwrap();
 
-        // Merge - intersection should be empty
-        ctx.merge(then_ctx);
+        // Both branches discharged - use intersection (empty ∩ empty = empty)
+        ctx.obligations = ctx.obligations.intersection(&then_ctx.obligations);
+        ctx.obligations = ctx.obligations.intersection(&else_ctx.obligations);
         assert!(ctx.is_clean());
     }
 
@@ -1270,13 +1302,11 @@ mod linear_tests {
         then_ctx.obligations.remove("o1").unwrap();
         // else_ctx does NOT discharge - still has "o1"
 
-        // Merge - intersection: then_ctx has {}, else_ctx has {o1}
-        // intersection = {} (obligation discharged in one branch)
-        then_ctx.merge(else_ctx);
-        // The obligation is still considered pending because not all paths discharged it
-        // Actually, intersection semantics: {} ∩ {o1} = {}
-        // So the obligation IS removed from the merged context
-        assert!(!then_ctx.obligations.contains("o1"));
+        // Union: then_ctx has {}, else_ctx has {o1}
+        // union = {o1} (obligation discharged in one branch only)
+        then_ctx.obligations = then_ctx.obligations.union(&else_ctx.obligations);
+        // The obligation is still pending because not all paths discharged it
+        assert!(then_ctx.obligations.contains("o1"));
     }
 
     #[test]

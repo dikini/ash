@@ -58,7 +58,7 @@ pub fn parse_visibility(input: &mut ParseInput) -> ModalResult<Visibility> {
 fn parse_restricted_body(input: &mut ParseInput) -> ModalResult<Visibility> {
     alt((
         keyword("crate").map(|_| Visibility::Crate),
-        keyword("super").map(|_| Visibility::Super),
+        keyword("super").map(|_| Visibility::Super { levels: 1 }),
         keyword("self").map(|_| Visibility::Self_),
         preceded(keyword("in"), preceded(opt(parse_whitespace), parse_path))
             .map(|path| Visibility::Restricted { path }),
@@ -139,7 +139,7 @@ mod tests {
     fn test_parse_pub_super() {
         let mut input = new_input("pub(super)");
         let result = parse_visibility(&mut input).unwrap();
-        assert_eq!(result, Visibility::Super);
+        assert_eq!(result, Visibility::Super { levels: 1 });
     }
 
     #[test]

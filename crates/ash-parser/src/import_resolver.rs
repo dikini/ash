@@ -481,7 +481,7 @@ impl<'a> ImportResolver<'a> {
             Visibility::Public => true,
             Visibility::Crate => true,
             Visibility::Inherited => false, // Private items not visible
-            Visibility::Super => true,      // Simplified: allow for now
+            Visibility::Super { .. } => true, // Simplified: allow for now
             Visibility::Self_ => false,
             Visibility::Restricted { .. } => true, // Simplified: allow for now
         }

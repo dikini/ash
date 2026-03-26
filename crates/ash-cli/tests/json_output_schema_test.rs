@@ -145,31 +145,34 @@ fn test_json_error_structure() {
         "success should be false when there are errors"
     );
 
-    // Should have errors array
+    // Should have diagnostics array (SPEC-005 compliant)
     assert!(
-        json.get("errors").is_some(),
-        "errors field should be present when there are errors"
+        json.get("diagnostics").is_some(),
+        "diagnostics field should be present when there are errors"
     );
-    assert!(json["errors"].is_array(), "errors should be an array");
+    assert!(
+        json["diagnostics"].is_array(),
+        "diagnostics should be an array"
+    );
 
-    // Check error structure if there are errors
-    if let Some(errors) = json["errors"].as_array()
-        && !errors.is_empty()
-    {
-        let error = &errors[0];
-        assert!(
-            error.get("severity").is_some(),
-            "error should have severity field"
-        );
-        assert!(error.get("code").is_some(), "error should have code field");
-        assert!(
-            error.get("message").is_some(),
-            "error should have message field"
-        );
-        assert!(
-            error.get("location").is_some(),
-            "error should have location field"
-        );
+    // Check diagnostic structure if there are errors
+    if let Some(diagnostics) = json["diagnostics"].as_array() {
+        if !diagnostics.is_empty() {
+            let error = &diagnostics[0];
+            assert!(
+                error.get("severity").is_some(),
+                "error should have severity field"
+            );
+            assert!(error.get("code").is_some(), "error should have code field");
+            assert!(
+                error.get("message").is_some(),
+                "error should have message field"
+            );
+            assert!(
+                error.get("location").is_some(),
+                "error should have location field"
+            );
+        }
     }
 }
 
@@ -198,22 +201,22 @@ fn test_json_location_structure() {
     let json: Value = serde_json::from_str(&json_str).expect("Failed to parse JSON output");
 
     // Check location structure if there are errors
-    if let Some(errors) = json["errors"].as_array()
-        && !errors.is_empty()
-    {
-        let location = &errors[0]["location"];
-        assert!(
-            location.get("file").is_some(),
-            "location should have file field"
-        );
-        assert!(
-            location.get("line").is_some(),
-            "location should have line field"
-        );
-        assert!(
-            location.get("column").is_some(),
-            "location should have column field"
-        );
+    if let Some(diagnostics) = json["diagnostics"].as_array() {
+        if !diagnostics.is_empty() {
+            let location = &diagnostics[0]["location"];
+            assert!(
+                location.get("file").is_some(),
+                "location should have file field"
+            );
+            assert!(
+                location.get("line").is_some(),
+                "location should have line field"
+            );
+            assert!(
+                location.get("column").is_some(),
+                "location should have column field"
+            );
+        }
     }
 }
 
@@ -414,14 +417,14 @@ fn test_json_errors_array_when_parse_error() {
         "success should be false for parse error"
     );
 
-    // Should have errors array with at least one error
-    if let Some(errors) = json["errors"].as_array() {
+    // Should have diagnostics array with at least one error (SPEC-005 compliant)
+    if let Some(diagnostics) = json["diagnostics"].as_array() {
         assert!(
-            !errors.is_empty(),
-            "errors array should not be empty for parse error"
+            !diagnostics.is_empty(),
+            "diagnostics array should not be empty for parse error"
         );
     } else {
-        panic!("errors field should be present for parse error");
+        panic!("diagnostics field should be present for parse error");
     }
 }
 

@@ -151,7 +151,7 @@ mod tests {
             Visibility::Inherited,
             Visibility::Public,
             Visibility::Crate,
-            Visibility::Super,
+            Visibility::Super { levels: 1 },
             Visibility::Self_,
             Visibility::Restricted {
                 path: "crate::foo".into(),
@@ -174,7 +174,7 @@ mod tests {
                 (0, Visibility::Inherited) => {}
                 (1, Visibility::Public) => {}
                 (2, Visibility::Crate) => {}
-                (3, Visibility::Super) => {}
+                (3, Visibility::Super { levels: 1 }) => {}
                 (4, Visibility::Self_) => {}
                 (5, Visibility::Restricted { path }) => {
                     assert_eq!(path.as_ref(), "crate::foo");

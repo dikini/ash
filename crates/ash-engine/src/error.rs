@@ -8,10 +8,11 @@ use thiserror::Error;
 impl From<EngineError> for ash_interp::ExecError {
     fn from(err: EngineError) -> Self {
         match err {
-            EngineError::Parse(msg) => Self::ExecutionFailed(format!("parse error: {msg}")),
-            EngineError::Type(msg) => Self::ExecutionFailed(format!("type error: {msg}")),
+            // Preserve distinct error types per SPEC-021
+            EngineError::Parse(msg) => Self::Parse(msg),
+            EngineError::Type(msg) => Self::Type(msg),
             EngineError::Execution(msg) => Self::ExecutionFailed(msg),
-            EngineError::Io(io_err) => Self::ExecutionFailed(format!("io error: {io_err}")),
+            EngineError::Io(io_err) => Self::Io(io_err.to_string()),
             EngineError::CapabilityNotFound(cap) => Self::CapabilityNotAvailable(cap),
         }
     }

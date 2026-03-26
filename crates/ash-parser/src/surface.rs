@@ -140,8 +140,13 @@ pub enum Visibility {
     Public,
     /// `pub(crate)` - visible within the crate/package
     Crate,
-    /// `pub(super)` - visible to parent module
-    Super,
+    /// `pub(super)` - visible to parent module and its descendants
+    ///
+    /// The `levels` field indicates how many levels up (1 = parent, 2 = grandparent, etc.)
+    Super {
+        /// Number of parent levels this item is visible to (1 = parent, 2 = grandparent, etc.)
+        levels: usize,
+    },
     /// `pub(self)` - equivalent to private (explicit)
     Self_,
     /// `pub(in path)` - visible in specific module path
@@ -164,7 +169,7 @@ impl Visibility {
             Visibility::Inherited => from == owner,
             Visibility::Public => true,
             Visibility::Crate => !from.starts_with("external"),
-            Visibility::Super => from.starts_with(owner),
+            Visibility::Super { .. } => from.starts_with(owner),
             Visibility::Self_ => from == owner,
             Visibility::Restricted { path } => from.starts_with(path.as_ref()),
         }
@@ -2454,7 +2459,7 @@ mod visibility_tests {
 
     #[test]
     fn test_visibility_super() {
-        let vis = Visibility::Super;
+        let vis = Visibility::Super { levels: 1 };
         assert!(vis.is_pub());
         assert!(vis.is_visible_in_module("crate::foo::bar", "crate::foo"));
     }

@@ -1,6 +1,6 @@
 # TASK-293: Align CLI Surface with SPEC-005
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

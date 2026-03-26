@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use tokio::sync::Mutex;
 
 use crate::capability::CapabilityProvider;
@@ -10,6 +11,53 @@ use crate::control_link::ControlLinkRegistry;
 use crate::proxy_registry::ProxyRegistry;
 use crate::yield_routing::YieldRouter;
 use crate::yield_state::SuspendedYields;
+
+/// Wrapper that adapts an `Arc<dyn CapabilityProvider>` to work as a `Box<dyn CapabilityProvider>`.
+///
+/// This is used internally by `RuntimeState` to create a `CapabilityContext` from
+/// its stored providers. The wrapper delegates all trait methods to the inner
+/// Arc-wrapped provider.
+#[derive(Clone)]
+struct ArcProviderWrapper {
+    inner: Arc<dyn CapabilityProvider>,
+}
+
+impl ArcProviderWrapper {
+    /// Create a new wrapper around the given Arc-wrapped provider.
+    fn new(inner: Arc<dyn CapabilityProvider>) -> Self {
+        Self { inner }
+    }
+}
+
+impl std::fmt::Debug for ArcProviderWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ArcProviderWrapper")
+            .field("capability_name", &self.inner.capability_name())
+            .finish()
+    }
+}
+
+#[async_trait]
+impl CapabilityProvider for ArcProviderWrapper {
+    fn capability_name(&self) -> &str {
+        self.inner.capability_name()
+    }
+
+    fn effect(&self) -> ash_core::Effect {
+        self.inner.effect()
+    }
+
+    async fn observe(
+        &self,
+        constraints: &[ash_core::Constraint],
+    ) -> crate::ExecResult<ash_core::Value> {
+        self.inner.observe(constraints).await
+    }
+
+    async fn execute(&self, action: &ash_core::Action) -> crate::ExecResult<ash_core::Value> {
+        self.inner.execute(action).await
+    }
+}
 
 /// Shared runtime state that must persist across related top-level executions.
 ///
@@ -154,6 +202,36 @@ impl RuntimeState {
     /// Returns `true` if a provider with the given name is registered.
     pub fn has_provider(&self, name: &str) -> bool {
         self.providers.blocking_lock().contains_key(name)
+    }
+
+    /// Get the number of registered providers.
+    ///
+    /// Returns the count of providers currently registered.
+    pub fn provider_count(&self) -> usize {
+        self.providers.blocking_lock().len()
+    }
+
+    /// Create a CapabilityContext from the registered providers.
+    ///
+    /// This allows the interpreter to access capability providers
+    /// during workflow execution.
+    pub async fn create_capability_context(&self) -> crate::capability::CapabilityContext {
+        use crate::capability::{CapabilityContext, CapabilityRegistry};
+
+        let mut registry = CapabilityRegistry::new();
+
+        // Convert Arc<dyn CapabilityProvider> from RuntimeState to Box<dyn CapabilityProvider>
+        // for the CapabilityContext. We clone the Arc to get a reference, then create
+        // a wrapper that delegates to the original provider.
+        let providers = self.providers.lock().await;
+        for (_name, provider) in providers.iter() {
+            // Create a wrapper that implements the CapabilityProvider trait
+            // by delegating to the Arc-wrapped provider
+            let wrapper = Box::new(ArcProviderWrapper::new(provider.clone()));
+            registry.register(wrapper);
+        }
+
+        CapabilityContext::with_registry(registry)
     }
 
     pub(crate) fn control_registry(&self) -> Arc<Mutex<ControlLinkRegistry>> {

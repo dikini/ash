@@ -178,16 +178,19 @@ async fn output_result(
 }
 
 fn classify_exec_error(error: ExecError) -> anyhow::Error {
+    // Per SPEC-021: preserve distinct error classes for observable behavior
     match error {
-        ExecError::ExecutionFailed(message) if message.starts_with("parse error:") => {
-            anyhow::anyhow!("{message}")
-        }
-        ExecError::ExecutionFailed(message) if message.starts_with("type error:") => {
-            anyhow::anyhow!("{message}")
-        }
+        // Parse errors - will exit with code 2
+        ExecError::Parse(_) => anyhow::anyhow!("{error}"),
+        // Type errors - will exit with code 3
+        ExecError::Type(_) => anyhow::anyhow!("{error}"),
+        // IO errors - will exit with code 4
+        ExecError::Io(_) => anyhow::anyhow!("{error}"),
+        // Capability/verification errors - exit code 6
         ExecError::CapabilityNotAvailable(name) => {
             anyhow::anyhow!("verification error: capability not available: {name}")
         }
+        // Policy errors
         ExecError::PolicyDenied { policy } => anyhow::anyhow!("policy denial: {policy}"),
         ExecError::RequiresApproval {
             role,
@@ -199,7 +202,8 @@ fn classify_exec_error(error: ExecError) -> anyhow::Error {
             operation,
             capability
         ),
-        other => anyhow::anyhow!("runtime error: {other}"),
+        // Other execution errors - exit code 5
+        other => anyhow::anyhow!("{other}"),
     }
 }
 

@@ -272,3 +272,92 @@ fn test_incomplete_reason_provided() {
         panic!("expected Incomplete status");
     }
 }
+
+#[test]
+fn test_trailing_operator_continues() {
+    let mut detector = InputDetector::new();
+
+    // Trailing + should continue
+    assert!(
+        matches!(detector.check("1 +"), InputStatus::Incomplete(_)),
+        "trailing + should be incomplete"
+    );
+
+    // Trailing - should continue
+    assert!(
+        matches!(detector.check("5 -"), InputStatus::Incomplete(_)),
+        "trailing - should be incomplete"
+    );
+
+    // Trailing * should continue
+    assert!(
+        matches!(detector.check("2 *"), InputStatus::Incomplete(_)),
+        "trailing * should be incomplete"
+    );
+
+    // Trailing / should continue
+    assert!(
+        matches!(detector.check("10 /"), InputStatus::Incomplete(_)),
+        "trailing / should be incomplete"
+    );
+}
+
+#[test]
+fn test_trailing_comma_in_args_continues() {
+    let mut detector = InputDetector::new();
+
+    // Trailing comma in function call should continue
+    assert!(
+        matches!(detector.check("foo(1, 2,"), InputStatus::Incomplete(_)),
+        "trailing comma in args should be incomplete"
+    );
+
+    // Trailing comma in array should continue
+    assert!(
+        matches!(detector.check("[1, 2,"), InputStatus::Incomplete(_)),
+        "trailing comma in array should be incomplete"
+    );
+}
+
+#[test]
+fn test_invalid_identifier_error_surfaces() {
+    let mut detector = InputDetector::new();
+
+    // 123foo is not a valid identifier
+    let result = detector.check("let 123foo = 1");
+    assert!(
+        !matches!(result, InputStatus::Incomplete(_)),
+        "invalid identifier should not be incomplete, got {result:?}"
+    );
+}
+
+#[test]
+fn test_unexpected_token_error_surfaces() {
+    let mut detector = InputDetector::new();
+
+    // } without opening {
+    let result = detector.check("}");
+    assert!(
+        !matches!(result, InputStatus::Incomplete(_)),
+        "unexpected closing brace should not be incomplete, got {result:?}"
+    );
+
+    // Mismatched braces
+    let result = detector.check("let x = }");
+    assert!(
+        !matches!(result, InputStatus::Incomplete(_)),
+        "mismatched brace should not be incomplete, got {result:?}"
+    );
+}
+
+#[test]
+fn test_type_error_is_complete() {
+    let mut detector = InputDetector::new();
+
+    // Type errors (post-parse) should be Complete
+    // The input parses successfully, type checking happens at execution
+    assert!(
+        matches!(detector.check("1 + \"string\""), InputStatus::Complete),
+        "type error should be Complete (parses ok, fails at execution)"
+    );
+}

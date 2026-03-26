@@ -1282,7 +1282,8 @@ pub async fn execute_with_bindings_in_state(
     input_bindings: std::collections::HashMap<String, Value>,
 ) -> ExecResult<Value> {
     let ctx = Context::with_bindings(input_bindings);
-    let cap_ctx = CapabilityContext::new();
+    // Use capability providers from RuntimeState instead of creating an empty context
+    let cap_ctx = runtime_state.create_capability_context().await;
     let policy_eval = PolicyEvaluator::new();
     let behaviour_ctx = BehaviourContext::new();
     execute_workflow_with_behaviour_in_state(

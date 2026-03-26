@@ -78,6 +78,21 @@ impl ModulePath {
         &self.segments
     }
 
+    /// Get ancestors up to n levels.
+    ///
+    /// Returns a vector of ancestor paths, from closest to farthest.
+    /// For example, for path `a::b::c` with levels=2, returns `[a::b, a]`.
+    pub fn ancestors(&self, levels: usize) -> Vec<ModulePath> {
+        let mut result = vec![];
+        let max_levels = levels.min(self.segments.len());
+        for i in 1..=max_levels {
+            result.push(ModulePath::new(
+                self.segments[..self.segments.len() - i].to_vec(),
+            ));
+        }
+        result
+    }
+
     /// Parse a module path from a string using `::` as delimiter.
     pub fn parse(path: &str) -> Self {
         if path.is_empty() || path == "crate" {
@@ -120,14 +135,19 @@ impl VisibilityExt for Visibility {
                 true
             }
 
-            Visibility::Super => {
-                let parent = item_module.parent();
-                if parent.is_root() {
+            Visibility::Super { levels } => {
+                // Get ancestors of item_module up to levels
+                let ancestors = item_module.ancestors(*levels);
+
+                if ancestors.is_empty() {
                     // At root, pub(super) = pub(crate)
                     return true;
                 }
-                // Visible if from_module is parent or descendant of parent
-                from_module == &parent || from_module.starts_with(&parent)
+
+                // Visible if from_module is one of the ancestors or a descendant of any ancestor
+                ancestors
+                    .iter()
+                    .any(|ancestor| from_module == ancestor || from_module.starts_with(ancestor))
             }
 
             Visibility::Self_ => from_module == item_module,
@@ -271,7 +291,7 @@ mod tests {
         let item_module = ModulePath::parse("crate::a::b");
         let from_module = ModulePath::parse("crate::a"); // parent of b
 
-        assert!(Visibility::Super.is_visible_path(&item_module, &from_module));
+        assert!(Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
     }
 
     #[test]
@@ -279,7 +299,7 @@ mod tests {
         let item_module = ModulePath::parse("crate::a::b");
         let from_module = ModulePath::parse("crate::a::c::d"); // descendant of a
 
-        assert!(Visibility::Super.is_visible_path(&item_module, &from_module));
+        assert!(Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
     }
 
     #[test]
@@ -287,7 +307,7 @@ mod tests {
         let item_module = ModulePath::parse("crate::a::b");
         let from_module = ModulePath::parse("crate"); // grandparent
 
-        assert!(!Visibility::Super.is_visible_path(&item_module, &from_module));
+        assert!(!Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
     }
 
     #[test]
@@ -295,7 +315,7 @@ mod tests {
         let item_module = ModulePath::parse("crate::a::b");
         let from_module = ModulePath::parse("crate::x::y"); // unrelated branch
 
-        assert!(!Visibility::Super.is_visible_path(&item_module, &from_module));
+        assert!(!Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_module));
     }
 
     #[test]
@@ -304,7 +324,7 @@ mod tests {
         let from_anywhere = ModulePath::parse("crate::a::b");
 
         // pub(super) at root = pub(crate)
-        assert!(Visibility::Super.is_visible_path(&root, &from_anywhere));
+        assert!(Visibility::Super { levels: 1 }.is_visible_path(&root, &from_anywhere));
     }
 
     // ============================================================
@@ -470,7 +490,7 @@ mod tests {
     #[test]
     fn test_pub_super_accessible_from_parent() {
         let checker = VisibilityChecker::new();
-        let visibility = Visibility::Super;
+        let visibility = Visibility::Super { levels: 1 };
 
         // Should be accessible from parent module
         assert!(
@@ -488,7 +508,7 @@ mod tests {
     #[test]
     fn test_pub_super_accessible_from_sibling() {
         let checker = VisibilityChecker::new();
-        let visibility = Visibility::Super;
+        let visibility = Visibility::Super { levels: 1 };
 
         // Should be accessible from sibling modules (same parent)
         assert!(
@@ -506,7 +526,7 @@ mod tests {
     #[test]
     fn test_pub_super_not_accessible_from_unrelated() {
         let checker = VisibilityChecker::new();
-        let visibility = Visibility::Super;
+        let visibility = Visibility::Super { levels: 1 };
 
         // Should NOT be accessible from unrelated modules
         // Using crate::a::foo so parent is crate::a, not crate (root)
@@ -517,7 +537,7 @@ mod tests {
     #[test]
     fn test_pub_super_not_accessible_from_grandparent() {
         let checker = VisibilityChecker::new();
-        let visibility = Visibility::Super;
+        let visibility = Visibility::Super { levels: 1 };
 
         // Should NOT be accessible from grandparent
         let result = checker.check_access(&visibility, "crate::a::b", "crate", "item");

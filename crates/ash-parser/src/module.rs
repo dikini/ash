@@ -359,7 +359,7 @@ mod tests {
             Visibility::Inherited,
             Visibility::Public,
             Visibility::Crate,
-            Visibility::Super,
+            Visibility::Super { levels: 1 },
             Visibility::Self_,
             Visibility::Restricted {
                 path: "some::path".into(),

@@ -14,6 +14,23 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - TASK-286: `receive` now enforces capability-policy checks before non-blocking fallback and canonical stream-source selection, closing the runtime compliance gap with `observe`, `set`, and `send`.
 
+- TASK-295: Preserve ADT qualified names (SPEC-003 Section 3.3 compliance)
+  - `QualifiedName::parse()` now supports `::` separator for ADT naming conventions
+  - `QualifiedName::display()` now uses `::` separator (e.g., `std::option::Option`)
+  - Types with same root name in different modules are now distinct (e.g., `std::option::Option` ≠ `my::option::Option`)
+  - Backward compatibility maintained for `.` separator
+  - 8 new tests for qualified name parsing and equality
+
+- TASK-296: Fix pub(super) visibility implementation (SPEC-009 compliance)
+  - Changed `Visibility::Super` from unit variant to `Visibility::Super { levels: usize }`
+  - This properly encodes parent-module semantics for restricted visibility
+  - `levels` field indicates how many levels up (1 = parent, 2 = grandparent, etc.)
+  - Added `ModulePath::ancestors()` method to support multi-level visibility checks
+  - Updated `VisibilityExt::is_visible_path()` to use ancestor-based checking
+  - Visibility checker now correctly restricts `pub(super)` to parent and its descendants
+  - Parser updated to set `levels: 1` for `pub(super)` syntax
+  - 30+ tests updated and passing for all visibility variants
+
 ### Added
 
 - **Phase 47: Spec Compliance Fixes (Post-46 Audit)**

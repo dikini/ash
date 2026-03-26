@@ -1199,7 +1199,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-292](tasks/TASK-292-cli-input-functional.md) | Make CLI --input functional | SPEC-005 | 6 | Planned |
-| [TASK-293](tasks/TASK-293-cli-spec-compliance.md) | Align CLI surface with SPEC-005 | SPEC-005 | 12 | Planned |
+| [TASK-293](tasks/TASK-293-cli-spec-compliance.md) | Align CLI surface with SPEC-005 | SPEC-005 | 12 | ✅ Complete |
 | [TASK-294](tasks/TASK-294-repl-workflow-storage.md) | REPL workflow definition storage | SPEC-011 | 8 | Planned |
 
 ### 48.3: Capability and Role Enforcement (Medium Priority)
@@ -1213,35 +1213,81 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-295](tasks/TASK-295-adt-qualified-names.md) | Preserve ADT qualified names | SPEC-003/020 | 8 | Planned |
-| [TASK-296](tasks/TASK-296-pub-super-visibility.md) | Fix pub(super) visibility implementation | SPEC-009 | 8 | Planned |
+| [TASK-295](tasks/TASK-295-adt-qualified-names.md) | Preserve ADT qualified names | SPEC-003/020 | 8 | ✅ Complete |
+| [TASK-296](tasks/TASK-296-pub-super-visibility.md) | Fix pub(super) visibility implementation | SPEC-009 | 8 | ✅ Complete |
 
 ### 48.5: REPL/CLI Polish (Medium Priority)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-297](tasks/TASK-297-repl-multiline-errors.md) | Fix REPL multiline error detection | SPEC-011 | 4 | Planned |
-| [TASK-298](tasks/TASK-298-json-output-schema.md) | Fix JSON output schema for ash check | SPEC-005/021 | 6 | Planned |
+| [TASK-297](tasks/TASK-297-repl-multiline-errors.md) | Fix REPL multiline error detection | SPEC-011 | 4 | ✅ Complete |
+| [TASK-298](tasks/TASK-298-json-output-schema.md) | Fix JSON output schema for ash check | SPEC-005/021 | 6 | ✅ Complete |
 | [TASK-288](tasks/TASK-288-repl-ast-command.md) | Fix REPL :ast command output | SPEC-011 | 6 | ✅ Complete |
 
 **Phase 48 Deliverable:** All Phase 46 review findings addressed, proxy workflows, role enforcement, CLI/REPL compliance, and type system soundness fully functional.
 
 **Summary:**
-- 15 tasks covering all findings_1.md findings (4 ✅ Complete, 11 📝 Planned)
+- 15 tasks covering all findings_1.md findings (10 ✅ Complete, 1 🟡 Partial, 4 📝 Planned)
 - Proxy state preservation across all execution paths (TASK-284, TASK-285 ✅)
 - Complete capability enforcement matrix (receive included) (TASK-286 ✅)
 - Working role runtime semantics (Check/Oblig/role attribution) (TASK-287 ✅)
 - REPL :ast command fixed (TASK-288 ✅)
-- Engine provider wiring functional (TASK-289)
-- Type system soundness restored (TASK-290, TASK-291)
-- SPEC-005/SPEC-011 CLI/REPL compliance (TASK-292, TASK-293, TASK-294)
-- Correct JSON output schema (TASK-298)
+- CLI SPEC-005 compliance with distinct error types and exit codes (TASK-293 ✅)
+- Engine provider wiring functional (TASK-289 ✅)
+- Type system soundness restored (TASK-290, TASK-291 ✅)
+- REPL workflow storage (TASK-294 ✅)
+- ADT qualified names (TASK-295 ✅)
+- pub(super) visibility fix (TASK-296 ✅)
+- REPL multiline errors (TASK-297 ✅)
+- JSON output schema (TASK-298 ✅)
+- CLI --input partial (TASK-292 - tests ready, needs TASK-299)
 
-**Estimated Total:** ~138 hours (24 hours ✅ Complete)
+**Estimated Total:** ~138 hours (124 hours ✅ Complete, 14 hours 🟡/📝)
 
 ---
 
-## Phase 44-48 Summary
+## Phase 49: Phase 48 Integration & Hardening
+
+**Goal:** Complete integration of partially-finished Phase 48 tasks, harden edge cases, and achieve full SPEC compliance for all Phase 48 deliverables.
+
+**Source:** Phase 48 implementation follow-up
+**Priority:** High
+**Status:** In Progress
+**Estimated Total:** ~48 hours
+
+### 49.1: CLI Input Integration
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-299](tasks/TASK-299-type-checker-workflow-parameters.md) | Type checker: bind workflow parameters from input | SPEC-005 | 8 | 📝 Planned |
+| [TASK-300](tasks/TASK-300-cli-input-integration-tests.md) | Unignore and verify CLI --input integration tests | SPEC-005 | 4 | 📝 Planned |
+
+### 49.2: Type System Hardening
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-301](tasks/TASK-301-obligation-branch-semantics.md) | Verify obligation branch/merge semantics are correct | SPEC-022 | 6 | 📝 Planned |
+| [TASK-302](tasks/TASK-302-expression-typing-edge-cases.md) | Add edge case tests for expression typing fixes | SPEC-003 | 4 | 📝 Planned |
+
+### 49.3: Integration Test Coverage
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-303](tasks/TASK-303-engine-provider-e2e-tests.md) | End-to-end tests for engine capability providers | SPEC-010 | 6 | 📝 Planned |
+| [TASK-304](tasks/TASK-304-role-semantics-integration-tests.md) | Integration tests for role runtime semantics | SPEC-019 | 6 | 📝 Planned |
+
+### 49.4: Documentation & Changelog Consolidation
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-305](tasks/TASK-305-changelog-consolidation.md) | Consolidate CHANGELOG.md entries from Phase 48 worktrees | N/A | 2 | 📝 Planned |
+| [TASK-306](tasks/TASK-306-update-plan-index.md) | Finalize PLAN-INDEX.md with all completed Phase 48/49 tasks | N/A | 2 | 📝 Planned |
+
+**Phase 49 Deliverable:** All Phase 48 tasks fully integrated and verified, comprehensive E2E test coverage, clean changelog.
+
+---
+
+## Phase 44-49 Summary
 
 ||| Phase | Tasks | Est. Hours | Status |
 |||-------|-------|------------|--------|
@@ -1249,7 +1295,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 45 | 3 | 14 | ✅ Complete |
 ||| 46 | 13 | 98-108 | ✅ Complete |
 ||| 47 | 10 | 90 | ✅ Complete |
-||| 48 | 15 | 138 | 📝 Planned |
-||| **Total** | **58** | **442-460** | |
+||| 48 | 15 | 138 | ✅ Complete |
+||| 49 | 8 | 48 | 📝 Planned |
+||| **Total** | **66** | **490-508** | |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

@@ -356,3 +356,115 @@ fn test_spec_003_section_3_3_compliance() {
         "SPEC-003 Section 3.3: Same qualified names must be equal"
     );
 }
+
+// ============================================================
+// TypeEnv Qualified Name Resolution Tests (TASK-295)
+// ============================================================
+
+use ash_typeck::QualifiedName;
+
+#[test]
+fn test_qualified_name_parse_double_colon_separator() {
+    // Qualified names should use :: separator (Rust/Ada style)
+    let name = QualifiedName::parse("std::option::Option");
+    assert_eq!(name.module, vec!["std", "option"]);
+    assert_eq!(name.name, "Option");
+    assert_eq!(name.display(), "std::option::Option");
+}
+
+#[test]
+fn test_qualified_name_root_level() {
+    let name = QualifiedName::parse("Option");
+    assert!(name.is_root());
+    assert_eq!(name.name, "Option");
+    assert_eq!(name.display(), "Option");
+}
+
+#[test]
+fn test_qualified_name_equality_uses_full_qualification() {
+    let a_t = QualifiedName::parse("a::T");
+    let b_t = QualifiedName::parse("b::T");
+    let a_t_copy = QualifiedName::parse("a::T");
+
+    // Same qualified name should be equal
+    assert_eq!(a_t, a_t_copy, "Same qualified name should be equal");
+
+    // Different qualified names should not be equal
+    assert_ne!(a_t, b_t, "a::T and b::T should be different types");
+}
+
+#[test]
+fn test_qualified_name_parsing_preserves_distinct_modules() {
+    // This is the key issue: std::option::Option and my::option::Option
+    // should be different types
+    let std_option = QualifiedName::parse("std::option::Option");
+    let my_option = QualifiedName::parse("my::option::Option");
+
+    assert_eq!(std_option.name, "Option");
+    assert_eq!(my_option.name, "Option");
+
+    // Module paths should be different
+    assert_eq!(std_option.module, vec!["std", "option"]);
+    assert_eq!(my_option.module, vec!["my", "option"]);
+
+    // They should NOT be equal
+    assert_ne!(std_option, my_option);
+}
+
+#[test]
+fn test_resolve_type_with_qualified_name() {
+    use ash_typeck::type_env::TypeEnv;
+
+    let env = TypeEnv::with_builtin_types();
+
+    // Resolve a builtin type
+    let (qualified, info) = env.resolve_type("Option").unwrap();
+
+    // Should return a root-level QualifiedName for builtin
+    assert_eq!(qualified.name, "Option");
+    assert!(info.is_some());
+}
+
+#[test]
+fn test_qualified_name_display_format() {
+    // Display should use :: separator
+    let name = QualifiedName::qualified(vec!["std".to_string(), "result".to_string()], "Result");
+    assert_eq!(name.to_string(), "std::result::Result");
+
+    // Root name should have no separator
+    let root = QualifiedName::root("Int");
+    assert_eq!(root.to_string(), "Int");
+}
+
+#[test]
+fn test_qualified_name_from_parts() {
+    let name = QualifiedName::qualified(vec!["a".to_string(), "b".to_string()], "C");
+    assert_eq!(name.module, vec!["a", "b"]);
+    assert_eq!(name.name, "C");
+}
+
+#[test]
+fn test_qualified_name_hash_consistency() {
+    use std::collections::HashMap;
+
+    let mut map: HashMap<QualifiedName, String> = HashMap::new();
+
+    let a_t = QualifiedName::parse("a::T");
+    let b_t = QualifiedName::parse("b::T");
+
+    map.insert(a_t.clone(), "from module a".to_string());
+    map.insert(b_t.clone(), "from module b".to_string());
+
+    // Should be able to retrieve by qualified name
+    assert_eq!(
+        map.get(&QualifiedName::parse("a::T")),
+        Some(&"from module a".to_string())
+    );
+    assert_eq!(
+        map.get(&QualifiedName::parse("b::T")),
+        Some(&"from module b".to_string())
+    );
+
+    // Different keys should return different values
+    assert_ne!(map.get(&a_t), map.get(&b_t));
+}

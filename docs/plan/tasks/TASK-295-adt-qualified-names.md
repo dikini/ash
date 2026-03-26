@@ -1,6 +1,6 @@
 # TASK-295: Preserve ADT Qualified Names
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

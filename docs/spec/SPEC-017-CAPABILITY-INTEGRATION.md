@@ -276,9 +276,86 @@ pub enum ObligationViolation {
 }
 ```
 
-## 5. Policies Integration
+## 5. Constraint Refinement
 
-### 5.1 Policy-Controlled Capabilities
+Capabilities can be refined with constraints at declaration site:
+
+```ash
+capability file {
+    effect: Operational,
+    permissions: { read: bool, write: bool }
+}
+
+-- Usage with constraints
+workflow processor capabilities: [
+    file @ { 
+        paths: ["/var/log/*", "/tmp/llm-*"],
+        read: true,
+        write: false
+    }
+]
+```
+
+### 5.1 Constraint Semantics
+
+Constraints narrow the capability grant:
+
+- **`paths`**: Limits accessible file paths to the specified glob patterns
+- **`permissions`**: Narrows available operations (e.g., `read: true, write: false` grants read-only access)
+- **Additional fields**: Depend on the specific capability type and its defined schema
+
+Constraints are evaluated as a conjunction (all must be satisfied). If any constraint evaluates to false, the capability invocation is denied.
+
+### 5.2 Constraint Checking
+
+Constraints are checked at two phases:
+
+**Static checking (compile time):**
+- Constraint field names are validated against capability definition
+- Field value types are checked against capability schema
+- Constant expressions are evaluated where possible
+
+**Dynamic checking (runtime):**
+- Variable constraint values are evaluated at invocation time
+- Path patterns are matched against actual access requests
+- Permission flags are checked before operations execute
+
+Constraint failures at runtime result in `ValidationError` with details about which constraint was violated.
+
+### 5.3 Relationship to Roles
+
+Roles bundle capabilities with constraints, providing a reusable authorization pattern:
+
+```ash
+role log_processor {
+    capabilities: [
+        file @ { paths: ["/var/log/*"], read: true }
+    ]
+}
+
+workflow analyzer plays role(log_processor) {
+    -- Can only read files matching /var/log/*
+    act file.read with { path: "/var/log/app.log" };
+    done;
+}
+```
+
+Workflows can also declare capabilities directly with constraints:
+
+```ash
+workflow processor capabilities: [
+    file @ { paths: ["/tmp/worker-*"], read: true, write: true }
+] {
+    -- Has constrained access without explicit role
+    done;
+}
+```
+
+See SPEC-024 for full syntax specification.
+
+## 6. Policies Integration
+
+### 6.1 Policy-Controlled Capabilities
 
 Policies can restrict both input and output:
 
@@ -336,7 +413,7 @@ two-step read-then-write protocol. `MonitorLink` sharing is non-consuming by def
 distinct from control transfer, so policy can constrain the visible monitor count without making
 monitor authority linear or affine.
 
-### 5.2 Policy Evaluation Context
+### 6.2 Policy Evaluation Context
 
 ```rust
 pub struct CapabilityContext {
@@ -377,7 +454,7 @@ The runtime context is responsible for:
 - provenance capture,
 - effect-ceiling enforcement.
 
-### 5.3 Pre-Operation Policy Check
+### 6.3 Pre-Operation Policy Check
 
 ```rust
 pub async fn check_policy(
@@ -407,7 +484,7 @@ pub async fn check_policy(
 }
 ```
 
-### 5.4 Input Transformations
+### 6.4 Input Transformations
 
 Policies can transform input data:
 
@@ -437,7 +514,7 @@ Verification warnings are separate from policy decisions:
 - `Warn` is advisory only and is recorded in aggregate verification or provenance without blocking
   execution.
 
-### 5.5 Provider-Level Policies
+### 6.5 Provider-Level Policies
 
 ```rust
 pub trait PolicyAwareProvider {
@@ -459,9 +536,9 @@ impl PolicyAwareProvider for DatabaseProvider {
 }
 ```
 
-## 6. Provenance Integration
+## 7. Provenance Integration
 
-### 6.1 Provenance Events for All Capabilities
+### 7.1 Provenance Events for All Capabilities
 
 ```rust
 pub struct ProvenanceEvent {
@@ -486,7 +563,7 @@ pub enum CapabilityEventType {
 }
 ```
 
-### 6.2 Input Provenance
+### 7.2 Input Provenance
 
 ```
 [2024-01-15T10:30:00Z] workflow:analyzer
@@ -503,7 +580,7 @@ pub enum CapabilityEventType {
   Effect: Epistemic
 ```
 
-### 6.3 Output Provenance
+### 7.3 Output Provenance
 
 ```
 [2024-01-15T10:31:00Z] workflow:controller
@@ -522,7 +599,7 @@ pub enum CapabilityEventType {
   Effect: Operational
 ```
 
-### 6.4 Provenance-Aware Execution
+### 7.4 Provenance-Aware Execution
 
 ```rust
 pub async fn execute_capability(
@@ -558,9 +635,9 @@ pub async fn execute_capability(
 }
 ```
 
-## 7. Capability Safety
+## 8. Capability Safety
 
-### 7.1 Declaration Requirements
+### 8.1 Declaration Requirements
 
 All capabilities must be declared:
 
@@ -608,7 +685,7 @@ Declaration requirements are canonical:
 - `set cap:channel = ...` requires `sets cap:channel`
 - `send cap:channel ...` requires `sends cap:channel`
 
-### 7.2 Capability Registry
+### 8.2 Capability Registry
 
 ```rust
 pub struct WorkflowCapabilities {
@@ -637,7 +714,7 @@ impl WorkflowCapabilities {
 }
 ```
 
-### 7.3 Compile-Time Verification
+### 8.3 Compile-Time Verification
 
 ```rust
 pub fn verify_capabilities(workflow: &Workflow) -> Result<(), CapabilityError> {
@@ -665,9 +742,9 @@ pub fn verify_capabilities(workflow: &Workflow) -> Result<(), CapabilityError> {
 }
 ```
 
-## 8. Type Safety Integration
+## 9. Type Safety Integration
 
-### 8.1 Read/Write Type Schemas
+### 9.1 Read/Write Type Schemas
 
 ```rust
 pub struct CapabilitySchema {
@@ -694,7 +771,7 @@ impl CapabilitySchema {
 }
 ```
 
-### 8.2 Type Checking Example
+### 9.2 Type Checking Example
 
 ```ash
 -- Schema: sensor:temperature reads Int, writes nothing
@@ -715,9 +792,9 @@ workflow bad_type observes sensor:temp, sets config:mode {
 }
 ```
 
-## 9. Error Handling
+## 10. Error Handling
 
-### 9.1 Unified Capability Errors
+### 10.1 Unified Capability Errors
 
 ```rust
 pub enum CapabilityError {
@@ -746,7 +823,7 @@ pub enum CapabilityError {
 }
 ```
 
-### 9.2 Recoverable Handling
+### 10.2 Recoverable Handling
 
 Recoverable capability failures are represented explicitly as `Result` values and handled with
 `match`.
@@ -783,7 +860,7 @@ workflow resilient
 }
 ```
 
-## 10. Summary Table
+## 11. Summary Table
 
 | Feature | Input (observe/receive) | Output (set/send) |
 |---------|------------------------|-------------------|
@@ -795,7 +872,7 @@ workflow resilient
 | **Type Safety** | Read schema validated | Write schema validated |
 | **Errors** | Unavailable, Timeout | Failed, Rejected, BufferFull |
 
-## 11. Implementation Tasks
+## 12. Implementation Tasks
 
 - TASK-108: Effect tracking for all capabilities
 - TASK-109: Obligation checking with capabilities
@@ -805,3 +882,15 @@ workflow resilient
 - TASK-113: Read/write type checking
 - TASK-233: Capability definition parsing specification (completed)
 - TASK-234: Capability definition parser implementation (pending)
+
+## References
+
+- SPEC-001: Core Ash Language Specification
+- SPEC-002: Stream and Behaviour Semantics
+- SPEC-006: Policy System Overview
+- SPEC-007: Policy Decision Framework
+- SPEC-013: Source Scheduling
+- SPEC-019: Role Runtime Semantics
+- SPEC-022: Workflow Typing
+- SPEC-023: Proxy Workflows
+- SPEC-024: Capability-Role-Workflow Syntax (Reduced)

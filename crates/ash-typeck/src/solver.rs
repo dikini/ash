@@ -7,6 +7,7 @@
 use crate::constraints::Constraint;
 use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use ash_core::Effect;
+use ash_parser::token::Span;
 use std::fmt;
 
 /// Type error with detailed information (TASK-025)
@@ -63,6 +64,23 @@ pub enum TypeError {
     /// Not a constructor
     #[error("Not a constructor: {0}")]
     NotAConstructor(String),
+    /// Unknown capability referenced
+    #[error("Unknown capability: '{name}' does not exist")]
+    UnknownCapability { name: String, span: Span },
+    /// Invalid constraint field for capability
+    #[error("Invalid constraint field '{field}' for capability '{capability}'")]
+    InvalidConstraintField {
+        capability: String,
+        field: String,
+        span: Span,
+    },
+    /// Constraint value type mismatch
+    #[error("Constraint type mismatch for field '{field}': expected {expected}, found {found}")]
+    ConstraintTypeMismatch {
+        field: String,
+        expected: String,
+        found: String,
+    },
 }
 
 impl From<UnifyError> for TypeError {

@@ -1,7 +1,7 @@
 //! Kinds classify types and type constructors.
 //!
 //! Kind notation:
-//! - `*`           - proper type (Int, String, List<Int>)
+//! - `*`           - proper type (Int, String, `List<Int>`)
 //! - `* -> *`      - type constructor (List, Option)
 //! - `* -> * -> *` - binary type constructor (Result, Pair)
 

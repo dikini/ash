@@ -46,7 +46,7 @@ pub enum Type {
     /// Control link (affine - must be used exactly once)
     ControlLink { workflow_type: Box<str> },
 
-    /// Type constructor application: Option<Int>, List<T>, Result<T, E>
+    /// Type constructor application: `Option<Int>`, `List<T>`, `Result<T, E>`
     Constructor {
         /// Fully qualified constructor name
         name: QualifiedName,

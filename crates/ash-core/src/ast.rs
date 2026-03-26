@@ -441,7 +441,7 @@ pub enum Expr {
     },
 
     /// Split expression: split instance_expr
-    /// Returns a tuple (InstanceAddr, Option<ControlLink>)
+    /// Returns a tuple (InstanceAddr, `Option<ControlLink>`)
     Split(Box<Expr>),
 
     /// Check obligation expression: `check obligation_name`
@@ -455,7 +455,7 @@ pub enum Expr {
     /// - If obligation was never created, returns `false`
     ///
     /// # Example
-    /// ```
+    /// ```text
     /// // workflow example {
     /// //     oblige audit_trail;      // Creates obligation
     /// //     let ok = check audit_trail;  // Returns true, discharges
@@ -669,7 +669,7 @@ pub enum Visibility {
 pub enum TypeExpr {
     /// Named type (e.g., Int, String, MyType)
     Named(Name),
-    /// Type constructor application (e.g., Option<Int>)
+    /// Type constructor application (e.g., `Option<Int>`)
     Constructor { name: Name, args: Vec<TypeExpr> },
     /// Tuple type (e.g., (Int, String))
     Tuple(Vec<TypeExpr>),

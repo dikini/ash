@@ -63,7 +63,7 @@ pub enum Visibility {
 pub enum TypeExpr {
     /// Named type (e.g., Int, String, MyType)
     Named(String),
-    /// Type constructor application (e.g., Option<Int>)
+    /// Type constructor application (e.g., `Option<Int>`)
     Constructor { name: String, args: Vec<TypeExpr> },
     /// Tuple type (e.g., (Int, String))
     Tuple(Vec<TypeExpr>),

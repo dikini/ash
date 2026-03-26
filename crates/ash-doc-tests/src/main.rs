@@ -3,7 +3,7 @@
 //! Extracts and tests code examples from markdown specification documents.
 //!
 //! # Usage
-//! ```
+//! ```text
 //! ash-doc-tests docs/spec/*.md
 //! ```
 

@@ -531,7 +531,7 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
-    /// Index access: base[index]
+    /// Index access: base\[index\]
     IndexAccess {
         /// Base expression
         base: Box<Expr>,
@@ -857,7 +857,7 @@ pub struct Param {
 pub enum Type {
     /// Named type
     Name(Name),
-    /// List type: [T]
+    /// List type: \[T\]
     List(Box<Type>),
     /// Record type: { field: T, ... }
     Record(Vec<(Name, Type)>),

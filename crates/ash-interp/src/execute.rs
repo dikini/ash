@@ -129,6 +129,30 @@ pub(crate) fn shared_suspended_yields(runtime_state: &RuntimeState) -> SharedSus
     runtime_state.suspended_yields()
 }
 
+fn active_actor(ctx: &Context) -> Role {
+    ctx.role_context()
+        .map(|role_ctx| Role::new(role_ctx.active_role.name.clone()))
+        .unwrap_or_else(|| Role::new("system"))
+}
+
+fn require_active_role(ctx: &Context, expected_role: &ash_core::Role) -> ExecResult<()> {
+    let role_ctx = ctx.role_context().ok_or_else(|| {
+        ExecError::ExecutionFailed(format!(
+            "obligation check requires active role '{}'",
+            expected_role.name
+        ))
+    })?;
+
+    if role_ctx.active_role.name == expected_role.name {
+        Ok(())
+    } else {
+        Err(ExecError::ExecutionFailed(format!(
+            "active role '{}' does not match obligation role '{}'",
+            role_ctx.active_role.name, expected_role.name
+        )))
+    }
+}
+
 pub fn execute_workflow_with_behaviour_in_state<'a>(
     workflow: &'a Workflow,
     ctx: Context,
@@ -213,8 +237,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -237,8 +261,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                            None,
-                            None,
+                            proxy_registry.clone(),
+                            suspended_yields.clone(),
                         )
                         .await
                     }
@@ -252,8 +276,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                            None,
-                            None,
+                            proxy_registry.clone(),
+                            suspended_yields.clone(),
                         )
                         .await
                     }
@@ -275,8 +299,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox.clone(),
                     control_registry.clone(),
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await?;
                 execute_workflow_inner(
@@ -288,8 +312,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -313,8 +337,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox.clone(),
                             control_registry.clone(),
-                            None,
-                            None,
+                            proxy_registry.clone(),
+                            suspended_yields.clone(),
                         )
                     })
                     .collect();
@@ -352,8 +376,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -370,8 +394,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -411,8 +435,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -442,8 +466,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                            None,
-                            None,
+                            proxy_registry.clone(),
+                            suspended_yields.clone(),
                         )
                         .await
                     }
@@ -491,8 +515,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                                 stream_ctx,
                                 mailbox.clone(),
                                 control_registry.clone(),
-                                None,
-                                None,
+                                proxy_registry.clone(),
+                                suspended_yields.clone(),
                             )
                             .await?;
                         }
@@ -522,8 +546,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -539,8 +563,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox.clone(),
                     control_registry.clone(),
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
                 {
@@ -555,8 +579,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             stream_ctx,
                             mailbox,
                             control_registry,
-                            None,
-                            None,
+                            proxy_registry.clone(),
+                            suspended_yields.clone(),
                         )
                         .await
                     }
@@ -574,18 +598,42 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
 
             // Check obligation (simplified - just continue)
             Workflow::Check {
-                obligation: _,
+                obligation,
                 continuation,
             } => {
-                // In a full implementation, this would check obligations
+                match obligation {
+                    ash_core::Obligation::Obliged { role, condition } => {
+                        require_active_role(&ctx, role)?;
+
+                        match eval_expr(condition, &ctx).map_err(ExecError::Eval)? {
+                            Value::Bool(true) => {}
+                            Value::Bool(false) => {
+                                return Err(ExecError::ExecutionFailed(
+                                    "obligation check failed".to_string(),
+                                ));
+                            }
+                            value => {
+                                return Err(ExecError::ExecutionFailed(format!(
+                                    "obligation condition did not evaluate to Bool: {value}"
+                                )));
+                            }
+                        }
+                    }
+                    other => {
+                        return Err(ExecError::ExecutionFailed(format!(
+                            "unsupported runtime obligation check: {other:?}"
+                        )));
+                    }
+                }
+
                 execute_workflow_inner(
                     continuation,
                     ctx,
@@ -595,17 +643,19 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
 
             // Obligate a role (simplified - just execute workflow)
             Workflow::Oblig {
-                role: _,
+                role,
                 workflow: inner,
             } => {
+                let ctx =
+                    ctx.with_role_context(crate::role_context::RoleContext::new(role.clone()));
                 execute_workflow_inner(
                     inner,
                     ctx,
@@ -615,8 +665,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -629,7 +679,7 @@ pub(crate) fn execute_workflow_inner<'a>(
             } => {
                 let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
                 let capability_policy_eval = CapabilityPolicyEvaluator::new();
-                let actor = Role::new("system");
+                let actor = active_actor(&ctx);
                 execute_set(
                     capability,
                     channel,
@@ -655,7 +705,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 })?;
                 let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
                 let capability_policy_eval = CapabilityPolicyEvaluator::new();
-                let actor = Role::new("system");
+                let actor = active_actor(&ctx);
                 execute_send(
                     capability,
                     channel,
@@ -673,6 +723,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                 arms,
                 control,
             } => {
+                let capability_policy_eval = CapabilityPolicyEvaluator::new();
+                let actor = Role::new("system");
                 let stream_ctx = stream_ctx.ok_or_else(|| {
                     ExecError::ExecutionFailed(
                         "Receive requires StreamContext - use execute_workflow_with_stream"
@@ -687,11 +739,13 @@ pub(crate) fn execute_workflow_inner<'a>(
                     CoreReceiveRuntime {
                         mailbox,
                         control_registry,
-                        proxy_registry: None,
-                        suspended_yields: None,
+                        proxy_registry,
+                        suspended_yields,
                         stream_ctx,
                         cap_ctx,
                         policy_eval,
+                        capability_policy_eval: &capability_policy_eval,
+                        actor: &actor,
                         behaviour_ctx,
                     },
                 )
@@ -741,8 +795,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -777,8 +831,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -803,8 +857,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -833,8 +887,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -863,8 +917,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -893,8 +947,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     stream_ctx,
                     mailbox,
                     control_registry,
-                    None,
-                    None,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
                 )
                 .await
             }
@@ -1173,6 +1227,8 @@ pub fn execute_workflow_with_stream_in_state<'a>(
 ) -> BoxFuture<'a, ExecResult<Value>> {
     let mailbox = shared_mailbox();
     let control_registry = shared_control_registry(runtime_state);
+    let proxy_registry = shared_proxy_registry(runtime_state);
+    let suspended_yields = shared_suspended_yields(runtime_state);
     execute_workflow_inner(
         workflow,
         ctx,
@@ -1182,8 +1238,8 @@ pub fn execute_workflow_with_stream_in_state<'a>(
         Some(stream_ctx),
         mailbox,
         control_registry,
-        None,
-        None,
+        Some(proxy_registry),
+        Some(suspended_yields),
     )
 }
 
@@ -1243,13 +1299,96 @@ pub async fn execute_with_bindings_in_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::{Action, BinaryOp, Capability, Effect, Guard, Provenance};
+    use ash_core::{Action, BinaryOp, Capability, Effect, Expr, Guard, Obligation, Provenance};
+
+    fn test_role(name: &str) -> ash_core::Role {
+        ash_core::Role {
+            name: name.to_string(),
+            authority: vec![],
+            obligations: vec![],
+        }
+    }
 
     #[tokio::test]
     async fn test_execute_done() {
         let workflow = Workflow::Done;
         let result = execute_simple(&workflow).await.unwrap();
         assert_eq!(result, Value::Null);
+    }
+
+    #[tokio::test]
+    async fn test_oblig_provides_active_role_context_to_check() {
+        let workflow = Workflow::Oblig {
+            role: test_role("reviewer"),
+            workflow: Box::new(Workflow::Check {
+                obligation: Obligation::Obliged {
+                    role: test_role("reviewer"),
+                    condition: Expr::Literal(Value::Bool(true)),
+                },
+                continuation: Box::new(Workflow::Ret {
+                    expr: Expr::Literal(Value::String("ok".to_string())),
+                }),
+            }),
+        };
+
+        let result = execute_simple(&workflow).await;
+
+        assert_eq!(result, Ok(Value::String("ok".to_string())));
+    }
+
+    #[tokio::test]
+    async fn test_check_fails_when_active_role_does_not_match_obligation_role() {
+        let workflow = Workflow::Oblig {
+            role: test_role("reviewer"),
+            workflow: Box::new(Workflow::Check {
+                obligation: Obligation::Obliged {
+                    role: test_role("approver"),
+                    condition: Expr::Literal(Value::Bool(true)),
+                },
+                continuation: Box::new(Workflow::Done),
+            }),
+        };
+
+        let result = execute_simple(&workflow).await;
+
+        assert!(matches!(
+            result,
+            Err(ExecError::ExecutionFailed(message))
+                if message.contains("active role")
+                    && message.contains("reviewer")
+                    && message.contains("approver")
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_check_fails_when_obligation_condition_is_false() {
+        let workflow = Workflow::Oblig {
+            role: test_role("reviewer"),
+            workflow: Box::new(Workflow::Check {
+                obligation: Obligation::Obliged {
+                    role: test_role("reviewer"),
+                    condition: Expr::Literal(Value::Bool(false)),
+                },
+                continuation: Box::new(Workflow::Done),
+            }),
+        };
+
+        let result = execute_simple(&workflow).await;
+
+        assert!(matches!(
+            result,
+            Err(ExecError::ExecutionFailed(message))
+                if message.contains("obligation check failed")
+        ));
+    }
+
+    #[test]
+    fn test_active_actor_uses_role_context_before_system_fallback() {
+        let ctx = Context::new()
+            .with_role_context(crate::role_context::RoleContext::new(test_role("operator")));
+
+        assert_eq!(active_actor(&ctx), Role::new("operator"));
+        assert_eq!(active_actor(&Context::new()), Role::new("system"));
     }
 
     #[tokio::test]

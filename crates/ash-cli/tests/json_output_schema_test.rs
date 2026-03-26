@@ -154,22 +154,23 @@ fn test_json_error_structure() {
 
     // Check error structure if there are errors
     if let Some(errors) = json["errors"].as_array()
-        && !errors.is_empty() {
-            let error = &errors[0];
-            assert!(
-                error.get("severity").is_some(),
-                "error should have severity field"
-            );
-            assert!(error.get("code").is_some(), "error should have code field");
-            assert!(
-                error.get("message").is_some(),
-                "error should have message field"
-            );
-            assert!(
-                error.get("location").is_some(),
-                "error should have location field"
-            );
-        }
+        && !errors.is_empty()
+    {
+        let error = &errors[0];
+        assert!(
+            error.get("severity").is_some(),
+            "error should have severity field"
+        );
+        assert!(error.get("code").is_some(), "error should have code field");
+        assert!(
+            error.get("message").is_some(),
+            "error should have message field"
+        );
+        assert!(
+            error.get("location").is_some(),
+            "error should have location field"
+        );
+    }
 }
 
 #[test]
@@ -198,21 +199,22 @@ fn test_json_location_structure() {
 
     // Check location structure if there are errors
     if let Some(errors) = json["errors"].as_array()
-        && !errors.is_empty() {
-            let location = &errors[0]["location"];
-            assert!(
-                location.get("file").is_some(),
-                "location should have file field"
-            );
-            assert!(
-                location.get("line").is_some(),
-                "location should have line field"
-            );
-            assert!(
-                location.get("column").is_some(),
-                "location should have column field"
-            );
-        }
+        && !errors.is_empty()
+    {
+        let location = &errors[0]["location"];
+        assert!(
+            location.get("file").is_some(),
+            "location should have file field"
+        );
+        assert!(
+            location.get("line").is_some(),
+            "location should have line field"
+        );
+        assert!(
+            location.get("column").is_some(),
+            "location should have column field"
+        );
+    }
 }
 
 #[test]

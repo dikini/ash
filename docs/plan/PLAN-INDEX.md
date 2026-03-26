@@ -1164,26 +1164,92 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-282](tasks/TASK-282-pub-super-visibility.md) | Fix pub(super) visibility | SPEC-009 | 8 | ✅ Complete |
 | [TASK-283](tasks/TASK-283-repl-multiline-errors.md) | Fix REPL multiline error detection | SPEC-011 | 4 | ✅ Complete |
 
-**Phase 47 Deliverable:** All critical spec violations resolved, user-facing contracts functional.
+|**Phase 47 Deliverable:** All critical spec violations resolved, user-facing contracts functional.
+
+|**Summary:**
+|- All 10 tasks completed across three sub-phases
+|- Critical runtime fixes: Provider wiring, obligation checking, type soundness
+|- CLI/REPL fixes: Input handling, spec compliance, exit codes, workflow storage
+|- Compliance fixes: JSON schema, ADT names, visibility, multiline detection
+|- 90+ new tests added across all tasks
+|- Build passes with only minor pre-existing warnings
+
+|---
+
+## Phase 48: Phase 46 Code Review Findings
+
+**Goal:** Address all critical and medium findings from Phase 46 comprehensive code review (findings_1.md).
+
+**Source:** External audit findings from comprehensive code review  
+**Priority:** Critical to Medium  
+**Status:** In Progress
+
+### 48.1: Critical Runtime Fixes (High Priority)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-284](tasks/TASK-284-proxy-state-recursive-paths.md) | Fix proxy state dropped on recursive execution paths | SPEC-023 | 10 | ✅ Complete |
+| [TASK-285](tasks/TASK-285-receive-proxy-state.md) | Fix proxy state dropped in receive paths | SPEC-023 | 10 | ✅ Complete |
+| [TASK-289](tasks/TASK-289-engine-provider-wiring.md) | Wire engine capability providers to runtime | SPEC-010 | 8 | Planned |
+| [TASK-290](tasks/TASK-290-enable-obligation-checking.md) | Enable workflow obligation checking in type checker | SPEC-022 | 12 | Planned |
+| [TASK-291](tasks/TASK-291-fix-unsound-expression-typing.md) | Fix unsound expression typing for variables | SPEC-003 | 16 | Planned |
+
+### 48.2: Critical CLI/REPL Fixes (High Priority)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-292](tasks/TASK-292-cli-input-functional.md) | Make CLI --input functional | SPEC-005 | 6 | Planned |
+| [TASK-293](tasks/TASK-293-cli-spec-compliance.md) | Align CLI surface with SPEC-005 | SPEC-005 | 12 | Planned |
+| [TASK-294](tasks/TASK-294-repl-workflow-storage.md) | REPL workflow definition storage | SPEC-011 | 8 | Planned |
+
+### 48.3: Capability and Role Enforcement (Medium Priority)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-286](tasks/TASK-286-receive-capability-enforcement.md) | Add capability-policy enforcement to receive | SPEC-017 | 8 | ✅ Complete |
+| [TASK-287](tasks/TASK-287-role-runtime-semantics.md) | Implement role runtime semantics | SPEC-019 | 14 | ✅ Complete |
+
+### 48.4: Type System Fixes (Medium Priority)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-295](tasks/TASK-295-adt-qualified-names.md) | Preserve ADT qualified names | SPEC-003/020 | 8 | Planned |
+| [TASK-296](tasks/TASK-296-pub-super-visibility.md) | Fix pub(super) visibility implementation | SPEC-009 | 8 | Planned |
+
+### 48.5: REPL/CLI Polish (Medium Priority)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-297](tasks/TASK-297-repl-multiline-errors.md) | Fix REPL multiline error detection | SPEC-011 | 4 | Planned |
+| [TASK-298](tasks/TASK-298-json-output-schema.md) | Fix JSON output schema for ash check | SPEC-005/021 | 6 | Planned |
+| [TASK-288](tasks/TASK-288-repl-ast-command.md) | Fix REPL :ast command output | SPEC-011 | 6 | ✅ Complete |
+
+**Phase 48 Deliverable:** All Phase 46 review findings addressed, proxy workflows, role enforcement, CLI/REPL compliance, and type system soundness fully functional.
 
 **Summary:**
-- All 10 tasks completed across three sub-phases
-- Critical runtime fixes: Provider wiring, obligation checking, type soundness
-- CLI/REPL fixes: Input handling, spec compliance, exit codes, workflow storage
-- Compliance fixes: JSON schema, ADT names, visibility, multiline detection
-- 90+ new tests added across all tasks
-- Build passes with only minor pre-existing warnings
+- 15 tasks covering all findings_1.md findings (4 ✅ Complete, 11 📝 Planned)
+- Proxy state preservation across all execution paths (TASK-284, TASK-285 ✅)
+- Complete capability enforcement matrix (receive included) (TASK-286 ✅)
+- Working role runtime semantics (Check/Oblig/role attribution) (TASK-287 ✅)
+- REPL :ast command fixed (TASK-288 ✅)
+- Engine provider wiring functional (TASK-289)
+- Type system soundness restored (TASK-290, TASK-291)
+- SPEC-005/SPEC-011 CLI/REPL compliance (TASK-292, TASK-293, TASK-294)
+- Correct JSON output schema (TASK-298)
+
+**Estimated Total:** ~138 hours (24 hours ✅ Complete)
 
 ---
 
-## Phase 44-46 Summary
+## Phase 44-48 Summary
 
-| Phase | Tasks | Est. Hours | Status |
-|-------|-------|------------|--------|
-| 44 | 17 | 102-108 | ✅ Complete |
-| 45 | 3 | 14 | ✅ Complete |
-| 46 | 13 | 98-108 | ✅ Complete |
-| 47 | 10 | 90 | 🔄 Planned |
-| **Total** | **43** | **304-324** | |
+||| Phase | Tasks | Est. Hours | Status |
+|||-------|-------|------------|--------|
+||| 44 | 17 | 102-108 | ✅ Complete |
+||| 45 | 3 | 14 | ✅ Complete |
+||| 46 | 13 | 98-108 | ✅ Complete |
+||| 47 | 10 | 90 | ✅ Complete |
+||| 48 | 15 | 138 | 📝 Planned |
+||| **Total** | **58** | **442-460** | |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

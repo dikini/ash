@@ -3,13 +3,28 @@
 //! Tests the implementation of YIELD runtime execution for proxy workflows.
 //! See SPEC-023 (Proxy Workflows) for specification details.
 
-use ash_core::ast::Span;
-use ash_core::workflow_contract::TypeExpr;
-use ash_core::{BinaryOp, Expr, Value, Workflow};
-use ash_interp::{
-    behaviour::BehaviourContext, capability::CapabilityContext, context::Context, error::ExecError,
-    execute_workflow_with_behaviour_in_state, policy::PolicyEvaluator, runtime_state::RuntimeState,
+use std::{sync::Arc, time::Duration};
+
+use ash_core::ast::{Obligation, ReceiveArm, ReceiveMode, ReceivePattern, Role, Span};
+use ash_core::stream::{
+    Receive as StreamReceive, ReceiveArm as StreamReceiveArm, ReceiveMode as StreamReceiveMode,
 };
+use ash_core::workflow_contract::TypeExpr;
+use ash_core::{BinaryOp, Capability, Effect, Expr, Pattern, Value, Workflow};
+use ash_interp::{
+    Mailbox, TypedStreamProvider,
+    behaviour::BehaviourContext,
+    capability::{CapabilityContext, MockProvider},
+    context::Context,
+    error::ExecError,
+    execute::execute_workflow_with_stream_in_state,
+    execute_stream::execute_receive_in_state,
+    execute_workflow_with_behaviour_in_state,
+    policy::PolicyEvaluator,
+    runtime_state::RuntimeState,
+    stream::{MockStreamProvider, StreamContext},
+};
+use ash_typeck::Type;
 
 /// Helper to create a minimal runtime state for testing
 fn setup_test_runtime() -> RuntimeState {
@@ -33,6 +48,113 @@ fn create_yield_workflow(role: &str, request_value: Value, response_type: TypeEx
         span: Span::default(),
         resume_var: "response".to_string(),
     }
+}
+
+fn create_resumable_yield(role: &str, request: Expr) -> Workflow {
+    Workflow::Yield {
+        role: role.to_string(),
+        request: Box::new(request),
+        expected_response_type: TypeExpr::Named("Int".to_string()),
+        continuation: Box::new(Workflow::Ret {
+            expr: Expr::Variable("response".to_string()),
+        }),
+        span: Span::default(),
+        resume_var: "response".to_string(),
+    }
+}
+
+async fn setup_proxy_role(runtime: &RuntimeState, role: &str) {
+    let registry_guard = runtime.proxy_registry();
+    let mut registry = registry_guard.lock().await;
+    registry.register(role.to_string(), format!("proxy://{role}"));
+}
+
+async fn assert_nested_yield_round_trip(
+    workflow: &Workflow,
+    cap_ctx: &CapabilityContext,
+    runtime: &RuntimeState,
+    expected_request: Value,
+) {
+    let ctx = setup_test_context();
+    let policy_eval = PolicyEvaluator::new();
+    let behaviour_ctx = BehaviourContext::new();
+
+    let correlation_id = match execute_workflow_with_behaviour_in_state(
+        workflow,
+        ctx.clone(),
+        cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        runtime,
+    )
+    .await
+    {
+        Err(ExecError::YieldSuspended {
+            request,
+            correlation_id,
+            ..
+        }) => {
+            assert_eq!(*request, expected_request);
+            correlation_id
+        }
+        Err(other) => panic!("expected nested yield to suspend, got: {other:?}"),
+        Ok(value) => panic!("expected nested yield to suspend, got value: {value:?}"),
+    };
+
+    let resume = Workflow::ProxyResume {
+        value: Box::new(Expr::Literal(Value::Int(99))),
+        value_type: TypeExpr::Named("Int".to_string()),
+        correlation_id: ash_core::ast::CorrelationId::new(
+            correlation_id
+                .parse()
+                .expect("yield correlation IDs are numeric"),
+        ),
+        span: Span::default(),
+    };
+
+    let resumed = execute_workflow_with_behaviour_in_state(
+        &resume,
+        ctx,
+        cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        runtime,
+    )
+    .await
+    .expect("proxy resume should continue nested workflow");
+
+    assert_eq!(resumed, Value::Int(99));
+}
+
+async fn resume_suspended_yield(
+    runtime: &RuntimeState,
+    cap_ctx: &CapabilityContext,
+    correlation_id: String,
+) -> Value {
+    let policy_eval = PolicyEvaluator::new();
+    let behaviour_ctx = BehaviourContext::new();
+
+    let resume = Workflow::ProxyResume {
+        value: Box::new(Expr::Literal(Value::Int(99))),
+        value_type: TypeExpr::Named("Int".to_string()),
+        correlation_id: ash_core::ast::CorrelationId::new(
+            correlation_id
+                .parse()
+                .expect("yield correlation IDs are numeric"),
+        ),
+        span: Span::default(),
+    };
+
+    execute_workflow_with_behaviour_in_state(
+        &resume,
+        setup_test_context(),
+        cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        runtime,
+    )
+    .await
+    .expect("proxy resume should continue nested workflow")
 }
 
 #[tokio::test]
@@ -393,4 +515,373 @@ async fn test_yield_with_complex_request_type() {
         Err(other) => panic!("Expected YieldSuspended, got: {:?}", other),
         Ok(_) => panic!("Should suspend"),
     }
+}
+
+#[tokio::test]
+async fn test_yield_inside_let_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "nested_let").await;
+
+    let workflow = Workflow::Let {
+        pattern: Pattern::Variable("ignored".to_string()),
+        expr: Expr::Literal(Value::Int(7)),
+        continuation: Box::new(create_resumable_yield(
+            "nested_let",
+            Expr::Literal(Value::Int(7)),
+        )),
+    };
+
+    let cap_ctx = CapabilityContext::new();
+    assert_nested_yield_round_trip(&workflow, &cap_ctx, &runtime, Value::Int(7)).await;
+}
+
+#[tokio::test]
+async fn test_yield_inside_if_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "nested_if").await;
+
+    let workflow = Workflow::If {
+        condition: Expr::Literal(Value::Bool(true)),
+        then_branch: Box::new(create_resumable_yield(
+            "nested_if",
+            Expr::Literal(Value::Bool(true)),
+        )),
+        else_branch: Box::new(Workflow::Done),
+    };
+
+    let cap_ctx = CapabilityContext::new();
+    assert_nested_yield_round_trip(&workflow, &cap_ctx, &runtime, Value::Bool(true)).await;
+}
+
+#[tokio::test]
+async fn test_yield_inside_observe_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "nested_observe").await;
+
+    let mut cap_ctx = CapabilityContext::new();
+    cap_ctx.register(Box::new(
+        MockProvider::new("sensor", Effect::Epistemic).with_observe_value(Value::Int(42)),
+    ));
+
+    let workflow = Workflow::Observe {
+        capability: Capability {
+            name: "sensor".to_string(),
+            effect: Effect::Epistemic,
+            constraints: vec![],
+        },
+        pattern: Pattern::Variable("observed".to_string()),
+        continuation: Box::new(create_resumable_yield(
+            "nested_observe",
+            Expr::Variable("observed".to_string()),
+        )),
+    };
+
+    assert_nested_yield_round_trip(&workflow, &cap_ctx, &runtime, Value::Int(42)).await;
+}
+
+#[tokio::test]
+async fn test_yield_inside_receive_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "nested_receive").await;
+
+    let workflow = Workflow::Receive {
+        mode: ReceiveMode::NonBlocking,
+        arms: vec![ReceiveArm {
+            pattern: ReceivePattern::Stream {
+                capability: "sensor".to_string(),
+                channel: "temp".to_string(),
+                pattern: Pattern::Variable("reading".to_string()),
+            },
+            guard: None,
+            body: create_resumable_yield("nested_receive", Expr::Variable("reading".to_string())),
+        }],
+        control: false,
+    };
+
+    let mut stream_ctx = StreamContext::new();
+    stream_ctx.register(TypedStreamProvider::new(
+        MockStreamProvider::with_values("sensor", "temp", vec![Value::Int(42)]),
+        Type::Int,
+    ));
+
+    let cap_ctx = CapabilityContext::new();
+    let ctx = setup_test_context();
+    let policy_eval = PolicyEvaluator::new();
+    let behaviour_ctx = BehaviourContext::new();
+
+    let correlation_id = match execute_workflow_with_stream_in_state(
+        &workflow,
+        ctx,
+        &cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        &stream_ctx,
+        &runtime,
+    )
+    .await
+    {
+        Err(ExecError::YieldSuspended {
+            request,
+            correlation_id,
+            ..
+        }) => {
+            assert_eq!(*request, Value::Int(42));
+            correlation_id
+        }
+        Err(other) => panic!("expected receive arm yield to suspend, got: {other:?}"),
+        Ok(value) => panic!("expected receive arm yield to suspend, got value: {value:?}"),
+    };
+
+    let resumed = resume_suspended_yield(&runtime, &cap_ctx, correlation_id).await;
+    assert_eq!(resumed, Value::Int(99));
+}
+
+#[tokio::test]
+async fn test_yield_inside_stream_receive_wildcard_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "stream_receive").await;
+
+    let receive = StreamReceive {
+        mode: StreamReceiveMode::NonBlocking,
+        arms: vec![StreamReceiveArm {
+            pattern: Pattern::Wildcard,
+            guard: None,
+            body: create_resumable_yield("stream_receive", Expr::Literal(Value::Int(7))),
+        }],
+        control_arms: None,
+    };
+
+    let cap_ctx = CapabilityContext::new();
+    let ctx = setup_test_context();
+    let policy_eval = PolicyEvaluator::new();
+    let stream_ctx = StreamContext::new();
+    let mailbox = Arc::new(tokio::sync::Mutex::new(Mailbox::new()));
+
+    let correlation_id = match execute_receive_in_state(
+        &receive,
+        ctx,
+        mailbox,
+        &stream_ctx,
+        &cap_ctx,
+        &policy_eval,
+        &runtime,
+    )
+    .await
+    {
+        Err(ExecError::YieldSuspended {
+            request,
+            correlation_id,
+            ..
+        }) => {
+            assert_eq!(*request, Value::Int(7));
+            correlation_id
+        }
+        Err(other) => panic!("expected wildcard receive yield to suspend, got: {other:?}"),
+        Ok(value) => panic!("expected wildcard receive yield to suspend, got value: {value:?}"),
+    };
+
+    let resumed = resume_suspended_yield(&runtime, &cap_ctx, correlation_id).await;
+    assert_eq!(resumed, Value::Int(99));
+}
+
+#[tokio::test]
+async fn test_yield_inside_stream_receive_control_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "control_receive").await;
+
+    let receive = StreamReceive {
+        mode: StreamReceiveMode::NonBlocking,
+        arms: vec![],
+        control_arms: Some(vec![StreamReceiveArm {
+            pattern: Pattern::Literal(Value::String("shutdown".to_string())),
+            guard: None,
+            body: create_resumable_yield("control_receive", Expr::Literal(Value::Int(5))),
+        }]),
+    };
+
+    let cap_ctx = CapabilityContext::new();
+    let ctx = setup_test_context();
+    let policy_eval = PolicyEvaluator::new();
+    let stream_ctx = StreamContext::new();
+    let mailbox = Arc::new(tokio::sync::Mutex::new(Mailbox::new()));
+    {
+        let mut mailbox_guard = mailbox.lock().await;
+        mailbox_guard
+            .push(ash_core::stream::MailboxEntry::new(
+                "__control__",
+                "__mailbox__",
+                Value::String("shutdown".to_string()),
+            ))
+            .expect("control mailbox entry should be inserted");
+    }
+
+    let correlation_id = match execute_receive_in_state(
+        &receive,
+        ctx,
+        mailbox,
+        &stream_ctx,
+        &cap_ctx,
+        &policy_eval,
+        &runtime,
+    )
+    .await
+    {
+        Err(ExecError::YieldSuspended {
+            request,
+            correlation_id,
+            ..
+        }) => {
+            assert_eq!(*request, Value::Int(5));
+            correlation_id
+        }
+        Err(other) => panic!("expected control receive yield to suspend, got: {other:?}"),
+        Ok(value) => panic!("expected control receive yield to suspend, got value: {value:?}"),
+    };
+
+    let resumed = resume_suspended_yield(&runtime, &cap_ctx, correlation_id).await;
+    assert_eq!(resumed, Value::Int(99));
+}
+
+#[tokio::test]
+async fn test_yield_inside_stream_receive_matching_arm_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "stream_match").await;
+
+    let receive = StreamReceive {
+        mode: StreamReceiveMode::NonBlocking,
+        arms: vec![StreamReceiveArm {
+            pattern: Pattern::Variable("reading".to_string()),
+            guard: None,
+            body: create_resumable_yield("stream_match", Expr::Variable("reading".to_string())),
+        }],
+        control_arms: None,
+    };
+
+    let cap_ctx = CapabilityContext::new();
+    let ctx = setup_test_context();
+    let policy_eval = PolicyEvaluator::new();
+    let stream_ctx = StreamContext::new();
+    let mailbox = Arc::new(tokio::sync::Mutex::new(Mailbox::new()));
+    {
+        let mut mailbox_guard = mailbox.lock().await;
+        mailbox_guard
+            .push(ash_core::stream::MailboxEntry::new(
+                "sensor",
+                "temp",
+                Value::Int(11),
+            ))
+            .expect("stream mailbox entry should be inserted");
+    }
+
+    let correlation_id = match execute_receive_in_state(
+        &receive,
+        ctx,
+        mailbox,
+        &stream_ctx,
+        &cap_ctx,
+        &policy_eval,
+        &runtime,
+    )
+    .await
+    {
+        Err(ExecError::YieldSuspended {
+            request,
+            correlation_id,
+            ..
+        }) => {
+            assert_eq!(*request, Value::Int(11));
+            correlation_id
+        }
+        Err(other) => panic!("expected matching receive arm yield to suspend, got: {other:?}"),
+        Ok(value) => panic!("expected matching receive arm yield to suspend, got value: {value:?}"),
+    };
+
+    let resumed = resume_suspended_yield(&runtime, &cap_ctx, correlation_id).await;
+    assert_eq!(resumed, Value::Int(99));
+}
+
+#[tokio::test]
+async fn test_yield_inside_stream_receive_timeout_wildcard_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "timed_stream_receive").await;
+
+    let receive = StreamReceive {
+        mode: StreamReceiveMode::Blocking(Some(Duration::from_millis(5))),
+        arms: vec![StreamReceiveArm {
+            pattern: Pattern::Wildcard,
+            guard: None,
+            body: create_resumable_yield("timed_stream_receive", Expr::Literal(Value::Int(13))),
+        }],
+        control_arms: None,
+    };
+
+    let cap_ctx = CapabilityContext::new();
+    let ctx = setup_test_context();
+    let policy_eval = PolicyEvaluator::new();
+    let stream_ctx = StreamContext::new();
+    let mailbox = Arc::new(tokio::sync::Mutex::new(Mailbox::new()));
+
+    let correlation_id = match execute_receive_in_state(
+        &receive,
+        ctx,
+        mailbox,
+        &stream_ctx,
+        &cap_ctx,
+        &policy_eval,
+        &runtime,
+    )
+    .await
+    {
+        Err(ExecError::YieldSuspended {
+            request,
+            correlation_id,
+            ..
+        }) => {
+            assert_eq!(*request, Value::Int(13));
+            correlation_id
+        }
+        Err(other) => panic!("expected timeout wildcard yield to suspend, got: {other:?}"),
+        Ok(value) => panic!("expected timeout wildcard yield to suspend, got value: {value:?}"),
+    };
+
+    let resumed = resume_suspended_yield(&runtime, &cap_ctx, correlation_id).await;
+    assert_eq!(resumed, Value::Int(99));
+}
+
+#[tokio::test]
+async fn test_yield_inside_check_preserves_proxy_state() {
+    let runtime = setup_test_runtime();
+    setup_proxy_role(&runtime, "nested_check").await;
+
+    // Wrap Check in Oblig to establish active role context (per TASK-287 semantics)
+    let workflow = Workflow::Oblig {
+        role: Role {
+            name: "reviewer".to_string(),
+            authority: vec![],
+            obligations: vec![],
+        },
+        workflow: Box::new(Workflow::Check {
+            obligation: Obligation::Obliged {
+                role: Role {
+                    name: "reviewer".to_string(),
+                    authority: vec![],
+                    obligations: vec![],
+                },
+                condition: Expr::Literal(Value::Bool(true)),
+            },
+            continuation: Box::new(create_resumable_yield(
+                "nested_check",
+                Expr::Literal(Value::String("checked".to_string())),
+            )),
+        }),
+    };
+
+    let cap_ctx = CapabilityContext::new();
+    assert_nested_yield_round_trip(
+        &workflow,
+        &cap_ctx,
+        &runtime,
+        Value::String("checked".to_string()),
+    )
+    .await;
 }

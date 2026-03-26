@@ -16,7 +16,10 @@ use std::fmt;
 pub enum TypeError {
     /// Types cannot be unified
     #[error("Type mismatch: expected {expected:?}, found {found:?}")]
-    Mismatch { expected: Box<Type>, found: Box<Type> },
+    Mismatch {
+        expected: Box<Type>,
+        found: Box<Type>,
+    },
     /// Infinite type detected (occurs check failed)
     #[error("Infinite type: type variable {var:?} occurs in {typ:?}")]
     InfiniteType { var: TypeVar, typ: Box<Type> },
@@ -61,7 +64,10 @@ pub enum TypeError {
     UnsatisfiedObligations { obligations: Vec<String> },
     /// Pattern type mismatch
     #[error("Pattern mismatch: expected {expected:?}, got {actual:?}")]
-    PatternMismatch { expected: Box<Type>, actual: Box<Type> },
+    PatternMismatch {
+        expected: Box<Type>,
+        actual: Box<Type>,
+    },
     /// Unknown variant in pattern
     #[error("Unknown variant: {0}")]
     UnknownVariant(String),

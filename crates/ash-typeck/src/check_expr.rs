@@ -305,17 +305,19 @@ fn resolve_enum_type_def_for_match<'a>(
 ) -> Option<&'a TypeDef> {
     if let Expr::Constructor { name, .. } = scrutinee
         && let Some((type_name, _)) = env.lookup_constructor(name.as_ref())
-            && let Some(def) = env.lookup_type(type_name.as_str())
-                && matches!(&def.body, TypeBody::Enum(_)) {
-                    return Some(def);
-                }
+        && let Some(def) = env.lookup_type(type_name.as_str())
+        && matches!(&def.body, TypeBody::Enum(_))
+    {
+        return Some(def);
+    }
     for arm in arms {
         if let SurfacePattern::Variant { name, .. } = &arm.pattern
             && let Some((type_name, _)) = env.lookup_constructor(name.as_ref())
-                && let Some(def) = env.lookup_type(type_name.as_str())
-                    && matches!(&def.body, TypeBody::Enum(_)) {
-                        return Some(def);
-                    }
+            && let Some(def) = env.lookup_type(type_name.as_str())
+            && matches!(&def.body, TypeBody::Enum(_))
+        {
+            return Some(def);
+        }
     }
     None
 }

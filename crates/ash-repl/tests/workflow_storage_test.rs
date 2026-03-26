@@ -6,7 +6,7 @@
 //! evaluator gaps that need to be addressed.
 //!
 //! To run these tests when working on TASK-277:
-//!   cargo test -p ash-repl --test workflow_storage_test -- --ignored
+//!   cargo test -p ash-repl --test `workflow_storage_test` -- --ignored
 
 use ash_repl::{EvalResult, Session, Value};
 
@@ -153,14 +153,8 @@ async fn test_multiple_workflows_stored() {
     let mut session = Session::new();
 
     // Define multiple workflows
-    session
-        .evaluate(r"workflow one { ret 1; }")
-        .await
-        .unwrap();
-    session
-        .evaluate(r"workflow two { ret 2; }")
-        .await
-        .unwrap();
+    session.evaluate(r"workflow one { ret 1; }").await.unwrap();
+    session.evaluate(r"workflow two { ret 2; }").await.unwrap();
 
     // Both should be callable
     let result1 = session.evaluate("one()").await;

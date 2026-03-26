@@ -13,6 +13,8 @@ use ash_core::{Expr, Pattern, Value};
 
 use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
+use crate::capability_policy::{CapabilityOperation, CapabilityPolicyEvaluator, Direction, Role};
+use crate::capability_policy_runtime::{build_policy_context, check_policy};
 use crate::context::Context;
 use crate::control_link::ControlLinkRegistry;
 use crate::error::{EvalError, ExecError, ExecResult};
@@ -23,7 +25,7 @@ use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
 use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_state::RuntimeState;
-use crate::stream::StreamContext;
+use crate::stream::{StreamContext, StreamProvider};
 use crate::yield_state::SuspendedYields;
 
 const CONTROL_CAPABILITY: &str = "__control__";
@@ -37,6 +39,8 @@ pub struct CoreReceiveRuntime<'a> {
     pub stream_ctx: &'a StreamContext,
     pub cap_ctx: &'a CapabilityContext,
     pub policy_eval: &'a PolicyEvaluator,
+    pub capability_policy_eval: &'a CapabilityPolicyEvaluator,
+    pub actor: &'a Role,
     pub behaviour_ctx: &'a BehaviourContext,
 }
 
@@ -50,6 +54,12 @@ pub async fn execute_core_receive(
 ) -> ExecResult<Value> {
     if !control {
         verify_stream_bindings_available(arms, runtime.stream_ctx)?;
+        let stream_sources = collect_core_stream_sources(arms);
+        enforce_receive_policy_for_sources(
+            &stream_sources,
+            runtime.capability_policy_eval,
+            runtime.actor,
+        )?;
     }
     let stream_sources = collect_core_stream_sources(arms);
 
@@ -85,8 +95,8 @@ pub async fn execute_core_receive(
                         Some(runtime.stream_ctx),
                         runtime.mailbox.clone(),
                         runtime.control_registry.clone(),
-                        None,
-                        None,
+                        runtime.proxy_registry.clone(),
+                        runtime.suspended_yields.clone(),
                     )
                     .await;
                 }
@@ -116,8 +126,8 @@ pub async fn execute_core_receive(
                         Some(runtime.stream_ctx),
                         runtime.mailbox.clone(),
                         runtime.control_registry.clone(),
-                        None,
-                        None,
+                        runtime.proxy_registry.clone(),
+                        runtime.suspended_yields.clone(),
                     )
                     .await;
                 }
@@ -159,8 +169,8 @@ pub async fn execute_core_receive(
                                 Some(runtime.stream_ctx),
                                 runtime.mailbox.clone(),
                                 runtime.control_registry.clone(),
-                                None,
-                                None,
+                                runtime.proxy_registry.clone(),
+                                runtime.suspended_yields.clone(),
                             )
                             .await;
                         }
@@ -198,13 +208,17 @@ pub async fn execute_receive(
     policy_eval: &PolicyEvaluator,
 ) -> ExecResult<Value> {
     let runtime_state = RuntimeState::new();
-    execute_receive_in_state(
+    let capability_policy_eval = CapabilityPolicyEvaluator::new();
+    let actor = Role::new("system");
+    execute_receive_in_state_with_policy(
         receive,
         ctx,
         mailbox,
         stream_ctx,
         cap_ctx,
         policy_eval,
+        &capability_policy_eval,
+        &actor,
         &runtime_state,
     )
     .await
@@ -219,17 +233,47 @@ pub async fn execute_receive_in_state(
     policy_eval: &PolicyEvaluator,
     runtime_state: &RuntimeState,
 ) -> ExecResult<Value> {
+    let capability_policy_eval = CapabilityPolicyEvaluator::new();
+    let actor = Role::new("system");
+    execute_receive_in_state_with_policy(
+        receive,
+        ctx,
+        mailbox,
+        stream_ctx,
+        cap_ctx,
+        policy_eval,
+        &capability_policy_eval,
+        &actor,
+        runtime_state,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn execute_receive_in_state_with_policy(
+    receive: &Receive,
+    ctx: Context,
+    mailbox: SharedMailbox,
+    stream_ctx: &StreamContext,
+    cap_ctx: &CapabilityContext,
+    policy_eval: &PolicyEvaluator,
+    capability_policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
+    runtime_state: &RuntimeState,
+) -> ExecResult<Value> {
     let control_registry = runtime_state.control_registry();
+    let proxy_registry = runtime_state.proxy_registry();
+    let suspended_yields = runtime_state.suspended_yields();
     // Check control arms first if present (non-blocking check)
     if let Some(ref control_arms) = receive.control_arms {
         let control_result = execute_receive_control(
             control_arms,
             ctx.clone(),
             mailbox.clone(),
-            control_registry.clone(),
             stream_ctx,
             cap_ctx,
             policy_eval,
+            runtime_state,
         )
         .await?;
         // If a control arm matched and returned a value other than Null, return it
@@ -278,8 +322,8 @@ pub async fn execute_receive_in_state(
                         Some(stream_ctx),
                         mailbox.clone(),
                         control_registry.clone(),
-                        None,
-                        None,
+                        Some(proxy_registry.clone()),
+                        Some(suspended_yields.clone()),
                     )
                     .await;
                 }
@@ -287,23 +331,34 @@ pub async fn execute_receive_in_state(
 
             // Check for wildcard pattern (always matches) - only in non-blocking mode
             // In blocking modes, we need to wait for a real message or timeout
-            if receive.mode.is_non_blocking()
-                && let Some(wildcard_arm) = receive.arms.iter().find(|a| is_wildcard(&a.pattern))
-            {
-                let behaviour_ctx = BehaviourContext::new();
-                return execute_workflow_inner(
-                    &wildcard_arm.body,
-                    ctx,
-                    cap_ctx,
-                    policy_eval,
-                    &behaviour_ctx,
-                    Some(stream_ctx),
+            if receive.mode.is_non_blocking() {
+                if pump_available_message(
                     mailbox.clone(),
-                    control_registry.clone(),
-                    None,
-                    None,
+                    stream_ctx,
+                    capability_policy_eval,
+                    actor,
                 )
-                .await;
+                .await?
+                {
+                    continue;
+                }
+
+                if let Some(wildcard_arm) = receive.arms.iter().find(|a| is_wildcard(&a.pattern)) {
+                    let behaviour_ctx = BehaviourContext::new();
+                    return execute_workflow_inner(
+                        &wildcard_arm.body,
+                        ctx,
+                        cap_ctx,
+                        policy_eval,
+                        &behaviour_ctx,
+                        Some(stream_ctx),
+                        mailbox.clone(),
+                        control_registry.clone(),
+                        Some(proxy_registry.clone()),
+                        Some(suspended_yields.clone()),
+                    )
+                    .await;
+                }
             }
         }
 
@@ -315,12 +370,18 @@ pub async fn execute_receive_in_state(
             }
             ReceiveMode::Blocking(None) => {
                 // Block forever until message arrives
-                wait_for_message(mailbox.clone(), stream_ctx).await?;
+                wait_for_message(mailbox.clone(), stream_ctx, capability_policy_eval, actor)
+                    .await?;
                 // Loop back to retry matching
             }
             ReceiveMode::Blocking(Some(duration)) => {
                 // Block with timeout
-                match timeout(duration, wait_for_message(mailbox.clone(), stream_ctx)).await {
+                match timeout(
+                    duration,
+                    wait_for_message(mailbox.clone(), stream_ctx, capability_policy_eval, actor),
+                )
+                .await
+                {
                     Ok(Ok(())) => {
                         // Message arrived, retry matching
                     }
@@ -340,8 +401,8 @@ pub async fn execute_receive_in_state(
                                 Some(stream_ctx),
                                 mailbox.clone(),
                                 control_registry.clone(),
-                                None,
-                                None,
+                                Some(proxy_registry.clone()),
+                                Some(suspended_yields.clone()),
                             )
                             .await;
                         }
@@ -368,11 +429,14 @@ async fn execute_receive_control(
     control_arms: &[ReceiveArm],
     ctx: Context,
     mailbox: SharedMailbox,
-    control_registry: std::sync::Arc<tokio::sync::Mutex<ControlLinkRegistry>>,
     stream_ctx: &StreamContext,
     cap_ctx: &CapabilityContext,
     policy_eval: &PolicyEvaluator,
+    runtime_state: &RuntimeState,
 ) -> ExecResult<Value> {
+    let control_registry = runtime_state.control_registry();
+    let proxy_registry = Some(runtime_state.proxy_registry());
+    let suspended_yields = Some(runtime_state.suspended_yields());
     let mb = mailbox.lock().await;
 
     for arm in control_arms {
@@ -403,8 +467,8 @@ async fn execute_receive_control(
                 Some(stream_ctx),
                 mailbox.clone(),
                 control_registry.clone(),
-                None,
-                None,
+                proxy_registry.clone(),
+                suspended_yields.clone(),
             )
             .await;
         }
@@ -425,33 +489,99 @@ async fn execute_receive_control(
 ///
 /// # Returns
 /// Ok(()) when a message has been added to the mailbox
-async fn wait_for_message(mailbox: SharedMailbox, stream_ctx: &StreamContext) -> ExecResult<()> {
-    // Poll all registered streams until one has a message
+async fn wait_for_message(
+    mailbox: SharedMailbox,
+    stream_ctx: &StreamContext,
+    capability_policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
+) -> ExecResult<()> {
     loop {
-        // Try to receive from any available stream
-        if let Some((cap, chan, result)) = stream_ctx.try_recv_any() {
-            let mut mb = mailbox.lock().await;
-            match result {
-                Ok(value) => {
-                    mb.push(MailboxEntry::new(cap.clone(), chan.clone(), value))?;
-                }
-                Err(e) => {
-                    // Log error but continue polling - don't crash on stream errors
-                    eprintln!("Stream error from {cap}:{chan}: {e}");
-                }
-            }
+        if pump_available_message(mailbox.clone(), stream_ctx, capability_policy_eval, actor)
+            .await?
+        {
             return Ok(());
         }
 
-        // Yield to avoid busy-waiting
         sleep(Duration::from_millis(1)).await;
 
-        // Also check if any message was already in mailbox
         let mb = mailbox.lock().await;
         if !mb.is_empty() {
             return Ok(());
         }
     }
+}
+
+async fn pump_available_message(
+    mailbox: SharedMailbox,
+    stream_ctx: &StreamContext,
+    capability_policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
+) -> ExecResult<bool> {
+    if let Some((cap, chan, result)) =
+        try_recv_any_permitted(stream_ctx, capability_policy_eval, actor)?
+    {
+        let mut mb = mailbox.lock().await;
+        match result {
+            Ok(value) => {
+                mb.push(MailboxEntry::new(cap.clone(), chan.clone(), value))?;
+            }
+            Err(e) => {
+                eprintln!("Stream error from {cap}:{chan}: {e}");
+            }
+        }
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+fn enforce_receive_policy_for_sources(
+    stream_sources: &[(String, String)],
+    capability_policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
+) -> ExecResult<()> {
+    for (capability, channel) in stream_sources {
+        enforce_receive_policy(capability_policy_eval, actor, capability, channel)?;
+    }
+
+    Ok(())
+}
+
+fn enforce_receive_policy(
+    capability_policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
+    capability: &str,
+    channel: &str,
+) -> ExecResult<()> {
+    let policy_ctx = build_policy_context(
+        CapabilityOperation::Receive,
+        Direction::Input,
+        capability,
+        channel,
+        None,
+        &[],
+        actor,
+    );
+    let _ = check_policy(capability_policy_eval, &policy_ctx)?;
+    Ok(())
+}
+
+fn try_recv_any_permitted(
+    stream_ctx: &StreamContext,
+    capability_policy_eval: &CapabilityPolicyEvaluator,
+    actor: &Role,
+) -> ExecResult<Option<(String, String, ExecResult<Value>)>> {
+    for provider in stream_ctx.iter_providers() {
+        let capability = provider.capability_name();
+        let channel = provider.channel_name();
+        enforce_receive_policy(capability_policy_eval, actor, capability, channel)?;
+
+        if let Some(result) = provider.try_recv() {
+            return Ok(Some((capability.to_string(), channel.to_string(), result)));
+        }
+    }
+
+    Ok(None)
 }
 
 /// Find the first mailbox entry matching the given pattern
@@ -757,6 +887,10 @@ fn build_arm_context(base_ctx: Context, value: &Value, pattern: &Pattern) -> Exe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::capability_policy::{CapabilityPolicyEvaluator, Policy, PolicyDecision, Role};
+    use ash_core::ast::{
+        ReceiveArm as CoreReceiveArm, ReceiveMode as CoreReceiveMode, ReceivePattern,
+    };
     use ash_core::{BinaryOp, Expr, Pattern, Workflow};
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -854,6 +988,138 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_receive_non_blocking_denied_source_fails_before_wildcard_fallback() {
+        let ctx = Context::new();
+        let mailbox: SharedMailbox = Arc::new(Mutex::new(Mailbox::new()));
+        let mut stream_ctx = StreamContext::new();
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+        let runtime_state = RuntimeState::new();
+        let mut capability_policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+
+        stream_ctx.register(crate::TypedStreamProvider::new(
+            crate::stream::MockStreamProvider::new("sensor", "temp"),
+            ash_typeck::Type::Int,
+        ));
+        capability_policy_eval.add_input_policy(Policy {
+            capability_pattern: "sensor:temp".into(),
+            condition: Box::new(|_| true),
+            decision: Box::new(|_| PolicyDecision::Deny),
+        });
+
+        let receive = Receive {
+            mode: ReceiveMode::NonBlocking,
+            arms: vec![
+                create_arm(
+                    Pattern::Variable("reading".to_string()),
+                    Workflow::Ret {
+                        expr: Expr::Variable("reading".to_string()),
+                    },
+                ),
+                create_arm(
+                    Pattern::Wildcard,
+                    Workflow::Ret {
+                        expr: Expr::Literal(Value::String("wildcard".to_string())),
+                    },
+                ),
+            ],
+            control_arms: None,
+        };
+
+        let result = execute_receive_in_state_with_policy(
+            &receive,
+            ctx,
+            mailbox,
+            &stream_ctx,
+            &cap_ctx,
+            &policy_eval,
+            &capability_policy_eval,
+            &actor,
+            &runtime_state,
+        )
+        .await;
+
+        assert_eq!(
+            result,
+            Err(ExecError::PolicyDenied {
+                policy: "sensor:temp".to_string(),
+            })
+        );
+    }
+
+    #[tokio::test]
+    async fn test_core_receive_non_blocking_denied_source_fails_before_wildcard_fallback() {
+        let ctx = Context::new();
+        let mailbox: SharedMailbox = Arc::new(Mutex::new(Mailbox::new()));
+        let mut stream_ctx = StreamContext::new();
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+        let runtime_state = RuntimeState::new();
+        let mut capability_policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+
+        stream_ctx.register(crate::TypedStreamProvider::new(
+            crate::stream::MockStreamProvider::new("sensor", "temp"),
+            ash_typeck::Type::Int,
+        ));
+        capability_policy_eval.add_input_policy(Policy {
+            capability_pattern: "sensor:temp".into(),
+            condition: Box::new(|_| true),
+            decision: Box::new(|_| PolicyDecision::Deny),
+        });
+
+        let arms = vec![
+            CoreReceiveArm {
+                pattern: ReceivePattern::Stream {
+                    capability: "sensor".into(),
+                    channel: "temp".into(),
+                    pattern: Pattern::Variable("reading".to_string()),
+                },
+                guard: None,
+                body: Workflow::Ret {
+                    expr: Expr::Variable("reading".to_string()),
+                },
+            },
+            CoreReceiveArm {
+                pattern: ReceivePattern::Wildcard,
+                guard: None,
+                body: Workflow::Ret {
+                    expr: Expr::Literal(Value::String("wildcard".to_string())),
+                },
+            },
+        ];
+
+        let result = execute_core_receive(
+            &CoreReceiveMode::NonBlocking,
+            &arms,
+            false,
+            ctx,
+            CoreReceiveRuntime {
+                mailbox,
+                control_registry: runtime_state.control_registry(),
+                proxy_registry: Some(runtime_state.proxy_registry()),
+                suspended_yields: Some(runtime_state.suspended_yields()),
+                stream_ctx: &stream_ctx,
+                cap_ctx: &cap_ctx,
+                policy_eval: &policy_eval,
+                capability_policy_eval: &capability_policy_eval,
+                actor: &actor,
+                behaviour_ctx: &behaviour_ctx,
+            },
+        )
+        .await;
+
+        assert_eq!(
+            result,
+            Err(ExecError::PolicyDenied {
+                policy: "sensor:temp".to_string(),
+            })
+        );
+    }
+
+    #[tokio::test]
     async fn test_receive_blocking_waits() {
         let ctx = Context::new();
         let mailbox = create_test_mailbox(vec![]);
@@ -934,6 +1200,67 @@ mod tests {
         // Should execute wildcard arm on timeout
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Value::String("timeout".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_receive_timeout_denied_source_fails_before_timeout_fallback() {
+        let ctx = Context::new();
+        let mailbox: SharedMailbox = Arc::new(Mutex::new(Mailbox::new()));
+        let mut stream_ctx = StreamContext::new();
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+        let runtime_state = RuntimeState::new();
+        let mut capability_policy_eval = CapabilityPolicyEvaluator::new();
+        let actor = Role::new("system");
+
+        stream_ctx.register(crate::TypedStreamProvider::new(
+            crate::stream::MockStreamProvider::new("sensor", "temp"),
+            ash_typeck::Type::Int,
+        ));
+        capability_policy_eval.add_input_policy(Policy {
+            capability_pattern: "sensor:temp".into(),
+            condition: Box::new(|_| true),
+            decision: Box::new(|_| PolicyDecision::Deny),
+        });
+
+        let receive = Receive {
+            mode: ReceiveMode::Blocking(Some(Duration::from_millis(10))),
+            arms: vec![
+                create_arm(
+                    Pattern::Variable("reading".to_string()),
+                    Workflow::Ret {
+                        expr: Expr::Variable("reading".to_string()),
+                    },
+                ),
+                create_arm(
+                    Pattern::Wildcard,
+                    Workflow::Ret {
+                        expr: Expr::Literal(Value::String("timeout".to_string())),
+                    },
+                ),
+            ],
+            control_arms: None,
+        };
+
+        let result = execute_receive_in_state_with_policy(
+            &receive,
+            ctx,
+            mailbox,
+            &stream_ctx,
+            &cap_ctx,
+            &policy_eval,
+            &capability_policy_eval,
+            &actor,
+            &runtime_state,
+        )
+        .await;
+
+        assert_eq!(
+            result,
+            Err(ExecError::PolicyDenied {
+                policy: "sensor:temp".to_string(),
+            })
+        );
     }
 
     #[tokio::test]

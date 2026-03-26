@@ -212,19 +212,11 @@ mod tests {
     #[test]
     fn test_exit_codes() {
         assert_eq!(
-            CliError::parse(
-                "test",
-                std::io::Error::other("test")
-            )
-            .exit_code(),
+            CliError::parse("test", std::io::Error::other("test")).exit_code(),
             ExitCode::from(2)
         );
         assert_eq!(
-            CliError::type_error(
-                "test",
-                std::io::Error::other("test")
-            )
-            .exit_code(),
+            CliError::type_error("test", std::io::Error::other("test")).exit_code(),
             ExitCode::from(3)
         );
         assert_eq!(
@@ -232,20 +224,11 @@ mod tests {
             ExitCode::from(4)
         );
         assert_eq!(
-            CliError::runtime(
-                "test",
-                std::io::Error::other("test")
-            )
-            .exit_code(),
+            CliError::runtime("test", std::io::Error::other("test")).exit_code(),
             ExitCode::from(5)
         );
         assert_eq!(
-            CliError::io(
-                "test",
-                None,
-                std::io::Error::other("test")
-            )
-            .exit_code(),
+            CliError::io("test", None, std::io::Error::other("test")).exit_code(),
             ExitCode::from(6)
         );
         assert_eq!(CliError::timeout(30).exit_code(), ExitCode::from(7));

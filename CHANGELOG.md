@@ -6,6 +6,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- TASK-288: `ash-repl` `:ast` now formats `ash_parser::surface::Expr` and `WorkflowDef` in the SPEC-011 structural shape, without synthetic workflow wrappers, spans, or debug-only internals.
+
+- TASK-287: `ash-interp` now carries the active role in `Context.role_context`, enforces `Workflow::Oblig` and `Workflow::Check` against that runtime role context, and attributes `set`/`send` operations to the active role instead of the hardcoded `system` actor.
+
+- TASK-286: `receive` now enforces capability-policy checks before non-blocking fallback and canonical stream-source selection, closing the runtime compliance gap with `observe`, `set`, and `send`.
+
 ### Added
 
 - **Phase 47: Spec Compliance Fixes (Post-46 Audit)**
@@ -109,6 +117,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Kept syntax: `plays role(R)`, `capabilities: [...]`, `capability @ { constraints }`
 
 ### Fixed
+
+- TASK-285: Preserved proxy registry and suspended yield state across receive execution paths in `ash-interp`, so receive-driven proxy workflows can suspend and resume correctly through matched, wildcard, and control receive arms per SPEC-023.
+
+- TASK-284: Preserved proxy workflow state across recursive execution paths in `ash-interp`, so nested `yield`/`proxy resume` flows now survive `let`, `if`, `observe`, `check`, and related control-flow wrappers per SPEC-023.
 
 - **Code Quality Fixes (Phase 46 Follow-up)**
   - Fixed failing property test `prop_capability_with_multiple_params` by excluding reserved keywords from parameter name generation

@@ -917,7 +917,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "proptest"))]
+#[cfg(test)]
 mod property_tests {
     use super::*;
     use proptest::prelude::*;

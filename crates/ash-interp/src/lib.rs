@@ -20,6 +20,7 @@ pub mod capability;
 pub mod capability_policy;
 pub mod capability_policy_runtime;
 pub mod capability_provenance;
+pub mod constraint_enforcement;
 pub mod context;
 pub mod control_link;
 pub mod error;
@@ -35,9 +36,11 @@ pub mod pattern;
 pub mod policy;
 pub mod proxy_registry;
 pub mod role_context;
+pub mod role_runtime;
 pub mod runtime_state;
 pub mod stream;
 pub mod typed_provider;
+pub mod yield_routing;
 pub mod yield_state;
 
 pub use behaviour::{
@@ -51,6 +54,7 @@ pub use capability_policy::{
     Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Reason, Role,
     Transformation,
 };
+pub use constraint_enforcement::{ConstraintEnforcer, ConstraintViolation};
 pub use context::Context;
 pub use control_link::{ControlLinkError, ControlLinkRegistry, LinkState};
 pub use error::{
@@ -72,6 +76,9 @@ pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyRule};
 pub use proxy_registry::{InstanceAddr, ProxyRegistry, RoleName};
 pub use role_context::RoleContext;
+pub use role_runtime::{
+    CapabilityError, CapabilityGrant, RoleError, RoleRegistry, RuntimeCapabilitySet,
+};
 pub use runtime_state::RuntimeState;
 pub use stream::{
     BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,
@@ -79,6 +86,7 @@ pub use stream::{
     StreamContext, StreamProvider, StreamRegistry, TypedSendableProvider,
 };
 pub use typed_provider::{TypedBehaviourProvider, TypedStreamProvider};
+pub use yield_routing::{PendingYield, ResumeResult, YieldError, YieldId, YieldRouter};
 pub use yield_state::{CorrelationId, SuspendedYields, YieldState};
 
 use ash_core::{Value, Workflow};

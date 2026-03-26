@@ -6,17 +6,19 @@ use tokio::sync::Mutex;
 
 use crate::control_link::ControlLinkRegistry;
 use crate::proxy_registry::ProxyRegistry;
+use crate::yield_routing::YieldRouter;
 use crate::yield_state::SuspendedYields;
 
 /// Shared runtime state that must persist across related top-level executions.
 ///
 /// This is the runtime-owned carrier for lifecycle state such as reusable control authority,
-/// proxy registrations, and suspended yields.
+/// proxy registrations, suspended yields, and yield routing.
 #[derive(Clone, Debug, Default)]
 pub struct RuntimeState {
     control_registry: Arc<Mutex<ControlLinkRegistry>>,
     proxy_registry: Arc<Mutex<ProxyRegistry>>,
     suspended_yields: Arc<Mutex<SuspendedYields>>,
+    yield_router: Arc<Mutex<YieldRouter>>,
 }
 
 impl RuntimeState {
@@ -26,6 +28,7 @@ impl RuntimeState {
             control_registry: Arc::new(Mutex::new(ControlLinkRegistry::new())),
             proxy_registry: Arc::new(Mutex::new(ProxyRegistry::new())),
             suspended_yields: Arc::new(Mutex::new(SuspendedYields::new())),
+            yield_router: Arc::new(Mutex::new(YieldRouter::new())),
         }
     }
 
@@ -41,5 +44,10 @@ impl RuntimeState {
     /// Get access to the suspended yields registry
     pub fn suspended_yields(&self) -> Arc<Mutex<SuspendedYields>> {
         self.suspended_yields.clone()
+    }
+
+    /// Get access to the yield router
+    pub fn yield_router(&self) -> Arc<Mutex<YieldRouter>> {
+        self.yield_router.clone()
     }
 }

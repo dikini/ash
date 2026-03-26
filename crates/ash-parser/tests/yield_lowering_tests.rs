@@ -36,7 +36,7 @@ fn test_yield_lowers_to_yield_not_done() {
         span: ash_parser::token::Span::new(0, 100, 1, 1),
     };
 
-    let core = lower_workflow(&wf_def);
+    let core = lower_workflow(&wf_def).unwrap();
 
     assert!(
         matches!(core, CoreWorkflow::Yield { .. }),
@@ -70,7 +70,7 @@ fn test_yield_preserves_role() {
         span: ash_parser::token::Span::new(0, 100, 1, 1),
     };
 
-    let core = lower_workflow(&wf_def);
+    let core = lower_workflow(&wf_def).unwrap();
 
     match core {
         CoreWorkflow::Yield { role, .. } => {
@@ -105,7 +105,7 @@ fn test_yield_preserves_request_expr() {
         span: ash_parser::token::Span::new(0, 100, 1, 1),
     };
 
-    let core = lower_workflow(&wf_def);
+    let core = lower_workflow(&wf_def).unwrap();
 
     match core {
         CoreWorkflow::Yield { request, .. } => {
@@ -145,7 +145,7 @@ fn test_yield_creates_continuation() {
         span: ash_parser::token::Span::new(0, 100, 1, 1),
     };
 
-    let core = lower_workflow(&wf_def);
+    let core = lower_workflow(&wf_def).unwrap();
 
     match core {
         CoreWorkflow::Yield { continuation, .. } => {
@@ -186,7 +186,7 @@ fn test_yield_with_multiple_arms_creates_continuation() {
         span: ash_parser::token::Span::new(0, 100, 1, 1),
     };
 
-    let core = lower_workflow(&wf_def);
+    let core = lower_workflow(&wf_def).unwrap();
 
     assert!(
         matches!(core, CoreWorkflow::Yield { .. }),
@@ -220,7 +220,7 @@ fn test_yield_preserves_span() {
         span: ash_parser::token::Span::new(0, 100, 1, 1),
     };
 
-    let core = lower_workflow(&wf_def);
+    let core = lower_workflow(&wf_def).unwrap();
 
     match core {
         CoreWorkflow::Yield { span, .. } => {
@@ -256,7 +256,7 @@ fn test_yield_continuation_has_let_binding() {
         span: ash_parser::token::Span::new(0, 100, 1, 1),
     };
 
-    let core = lower_workflow(&wf_def);
+    let core = lower_workflow(&wf_def).unwrap();
 
     match core {
         CoreWorkflow::Yield { continuation, .. } => {

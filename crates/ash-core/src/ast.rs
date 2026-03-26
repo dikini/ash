@@ -174,6 +174,8 @@ pub enum Workflow {
         continuation: Box<Workflow>,
         /// Source span for error reporting
         span: Span,
+        /// Variable name to bind the response value to when resuming
+        resume_var: Name,
     },
 
     /// RESUME from yield with response value

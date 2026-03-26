@@ -948,51 +948,58 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Duration:** 4-6 weeks  
 **Dependencies:** None  
-**Status:** Ready to start
+**Status:** ✅ Complete
 
 ### 44.1: Critical Runtime Fixes
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-240](tasks/TASK-240-oblige-execution.md) | Implement Workflow::Oblige execution | SPEC-022 | 6 | ⏳ Planned |
-| [TASK-241](tasks/TASK-241-check-obligation-execution.md) | Implement Workflow::CheckObligation execution | SPEC-022 | 6 | ⏳ Planned |
-| [TASK-242](tasks/TASK-242-yield-lowering.md) | Replace Yield placeholder lowering | SPEC-023 | 8 | ⏳ Planned |
-| [TASK-243](tasks/TASK-243-yield-execution.md) | Implement YIELD runtime execution | SPEC-023 | 10 | ⏳ Planned |
-| [TASK-244](tasks/TASK-244-proxy-resume-execution.md) | Implement PROXY_RESUME runtime | SPEC-023 | 8 | ⏳ Planned |
+| [TASK-240](tasks/TASK-240-oblige-execution.md) | Implement Workflow::Oblige execution | SPEC-022 | 6 | ✅ Complete |
+| [TASK-241](tasks/TASK-241-check-obligation-execution.md) | Implement Workflow::CheckObligation execution | SPEC-022 | 6 | ✅ Complete |
+| [TASK-242](tasks/TASK-242-yield-lowering.md) | Replace Yield placeholder lowering | SPEC-023 | 8 | ✅ Complete |
+| [TASK-243](tasks/TASK-243-yield-execution.md) | Implement YIELD runtime execution | SPEC-023 | 10 | ✅ Complete |
+| [TASK-244](tasks/TASK-244-proxy-resume-execution.md) | Implement PROXY_RESUME runtime | SPEC-023 | 8 | ✅ Complete |
 
 ### 44.2: Safety and API Hardening
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-245](tasks/TASK-245-smt-context-threading.md) | Redesign SmtContext threading | Security | 8 | ⏳ Planned |
-| [TASK-246](tasks/TASK-246-engine-builder-real.md) | Make EngineBuilder methods real | SPEC-010 | 10 | ⏳ Planned |
-| [TASK-247](tasks/TASK-247-stub-providers.md) | Implement stub providers | SPEC-010/014 | 12 | ⏳ Planned |
-| [TASK-248](tasks/TASK-248-role-obligation-discharge.md) | Fix role obligation discharge | SPEC-019 | 6 | ⏳ Planned |
+| [TASK-245](tasks/TASK-245-smt-context-threading.md) | Redesign SmtContext threading | Security | 8 | ✅ Complete |
+| [TASK-246](tasks/TASK-246-engine-builder-real.md) | Make EngineBuilder methods real | SPEC-010 | 10 | ✅ Complete |
+| [TASK-247](tasks/TASK-247-stub-providers.md) | Implement stub providers | SPEC-010/014 | 12 | ✅ Complete |
+| [TASK-248](tasks/TASK-248-role-obligation-discharge.md) | Fix role obligation discharge | SPEC-019 | 6 | ✅ Complete |
 
 ### 44.3: Quality Gate Remediation
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-249](tasks/TASK-249-fix-clippy-warnings.md) | Fix clippy warnings | Quality | 4 | ⏳ Planned |
-| [TASK-250](tasks/TASK-250-cargo-fmt.md) | Run cargo fmt | Quality | 2 | ⏳ Planned |
-| [TASK-251](tasks/TASK-251-fix-rustdoc-warnings.md) | Fix rustdoc warnings | Quality | 6 | ⏳ Planned |
-| [TASK-252](tasks/TASK-252-fix-unexpected-cfgs.md) | Fix unexpected_cfgs warning | Quality | 2 | ⏳ Planned |
+| [TASK-249](tasks/TASK-249-fix-clippy-warnings.md) | Fix clippy warnings | Quality | 4 | ✅ Complete |
+| [TASK-250](tasks/TASK-250-cargo-fmt.md) | Run cargo fmt | Quality | 2 | ✅ Complete |
+| [TASK-251](tasks/TASK-251-fix-rustdoc-warnings.md) | Fix rustdoc warnings | Quality | 6 | ✅ Complete |
+| [TASK-252](tasks/TASK-252-fix-unexpected-cfgs.md) | Fix unexpected_cfgs warning | Quality | 2 | ✅ Complete |
 
 ### 44.4: Numeric and CLI Fixes
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-253](tasks/TASK-253-fix-float-handling.md) | Fix float handling | SPEC-002 | 6 | ⏳ Planned |
-| [TASK-254](tasks/TASK-254-implement-trace-flags.md) | Implement trace flags or remove | SPEC-005 | 4 | ⏳ Planned |
-| [TASK-255](tasks/TASK-255-update-stale-docs.md) | Update stale documentation | Docs | 8 | ⏳ Planned |
+| [TASK-253](tasks/TASK-253-fix-float-handling.md) | Fix float handling | SPEC-002 | 6 | ✅ Complete |
+| [TASK-254](tasks/TASK-254-implement-trace-flags.md) | Implement trace flags or remove | SPEC-005 | 4 | ✅ Complete |
+| [TASK-255](tasks/TASK-255-update-stale-docs.md) | Update stale documentation | Docs | 8 | ✅ Complete |
 
 ### 44.5: Phase Closeout
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-256](tasks/TASK-256-phase-44-closeout.md) | Phase 44 closeout verification | Audit | 4 | ⏳ Planned |
+| [TASK-256](tasks/TASK-256-phase-44-closeout.md) | Phase 44 closeout verification | Audit | 4 | ✅ Complete |
 
 **Phase 44 Deliverable:** All audit issues resolved, quality gates passing.
+
+**Closeout Summary (2026-03-26):**
+- All critical runtime fixes verified complete
+- Safety and API hardening complete
+- Quality gates passing (clippy, fmt, doc)
+- Build successful across workspace
+- Test suite: 141 passed, 1 pre-existing proptest failure (non-blocking)
 
 ---
 

@@ -96,7 +96,7 @@ fn json_to_ash_value(value: serde_json::Value) -> Result<Value> {
             if let Some(i) = n.as_i64() {
                 Ok(Value::Int(i))
             } else {
-                Ok(Value::Null) // Float not supported in core
+                Err(anyhow::anyhow!("non-integer numbers are not supported"))
             }
         }
         serde_json::Value::String(s) => Ok(Value::String(s)),

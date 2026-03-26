@@ -6,8 +6,8 @@
 use anyhow::{Context, Result};
 use ash_engine::EngineError;
 use ash_interp::ExecError;
-use ash_provenance::export::ExportFormat;
 use ash_provenance::LineageTracker;
+use ash_provenance::export::ExportFormat;
 use ash_provenance::integrity::{TamperEvidentLog, hash_value};
 use clap::Args;
 use serde::Serialize;
@@ -127,9 +127,9 @@ async fn execute_with_full_trace(
 
     // Collect lineage data if requested
     let lineage = if args.lineage {
-        lineage_tracker.as_ref().map(|tracker| {
-            tracker.all().cloned().collect::<Vec<_>>()
-        })
+        lineage_tracker
+            .as_ref()
+            .map(|tracker| tracker.all().cloned().collect::<Vec<_>>())
     } else {
         None
     };
@@ -161,12 +161,12 @@ fn compute_integrity_data(events: &[ash_provenance::TraceEvent]) -> Result<Optio
     let mut log = TamperEvidentLog::new();
 
     for event in events {
-        let hash = hash_value(event)
-            .map_err(|e| anyhow::anyhow!("failed to hash event: {}", e))?;
+        let hash = hash_value(event).map_err(|e| anyhow::anyhow!("failed to hash event: {}", e))?;
         log.append(hash.as_bytes());
     }
 
-    let root_hash = log.root()
+    let root_hash = log
+        .root()
         .map(|h: ash_provenance::integrity::Hash| h.to_hex())
         .unwrap_or_default();
 

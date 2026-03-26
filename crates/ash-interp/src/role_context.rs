@@ -30,14 +30,37 @@
 //!
 //! // Manage obligations
 //! assert!(!ctx.is_discharged("audit"));
-//! assert!(ctx.discharge("audit"));
+//! assert!(ctx.discharge("audit").is_ok());
 //! assert!(ctx.is_discharged("audit"));
-//! assert!(!ctx.discharge("audit")); // Already discharged
+//! assert!(ctx.discharge("audit").is_err()); // Already discharged
 //! ```
 
 use ash_core::{Capability, Name, Role};
 use std::cell::RefCell;
 use std::collections::HashSet;
+use std::fmt;
+
+/// Errors that can occur when discharging an obligation
+#[derive(Debug, Clone, PartialEq)]
+pub enum DischargeError {
+    /// The obligation was not declared on the role
+    UndeclaredObligation,
+    /// The obligation was already discharged
+    AlreadyDischarged,
+}
+
+impl fmt::Display for DischargeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DischargeError::UndeclaredObligation => {
+                write!(f, "obligation not declared on role")
+            }
+            DischargeError::AlreadyDischarged => write!(f, "obligation already discharged"),
+        }
+    }
+}
+
+impl std::error::Error for DischargeError {}
 
 /// Runtime context for role-based authority and obligation enforcement
 ///
@@ -78,19 +101,32 @@ impl RoleContext {
 
     /// Discharge an obligation (mark it as fulfilled)
     ///
-    /// Returns true if the obligation was found and discharged,
-    /// false if it was already discharged or not found.
+    /// Returns `Ok(())` if the obligation was successfully discharged.
+    /// Returns `Err(DischargeError)` if:
+    /// - The obligation was not declared on the role
+    /// - The obligation was already discharged
     ///
     /// This follows linear semantics: first discharge succeeds,
-    /// subsequent discharges return false.
-    pub fn discharge(&self, obligation: &str) -> bool {
+    /// subsequent discharges return `AlreadyDischarged` error.
+    pub fn discharge(&self, obligation: &str) -> Result<(), DischargeError> {
+        // Check if the obligation is declared on the role
+        let is_declared = self
+            .active_role
+            .obligations
+            .iter()
+            .any(|obl| obl.name == obligation);
+
+        if !is_declared {
+            return Err(DischargeError::UndeclaredObligation);
+        }
+
         let mut discharged = self.discharged_obligations.borrow_mut();
         if discharged.contains(obligation) {
             // Already discharged
-            false
+            Err(DischargeError::AlreadyDischarged)
         } else {
             discharged.insert(obligation.to_string());
-            true
+            Ok(())
         }
     }
 
@@ -198,11 +234,14 @@ mod tests {
         assert!(!ctx.is_discharged("audit"));
 
         // First discharge succeeds
-        assert!(ctx.discharge("audit"));
+        assert!(ctx.discharge("audit").is_ok());
         assert!(ctx.is_discharged("audit"));
 
-        // Second discharge returns false
-        assert!(!ctx.discharge("audit"));
+        // Second discharge returns AlreadyDischarged error
+        assert_eq!(
+            ctx.discharge("audit"),
+            Err(DischargeError::AlreadyDischarged)
+        );
     }
 
     #[test]
@@ -214,11 +253,11 @@ mod tests {
         assert!(!ctx.all_discharged());
 
         // Discharge first obligation
-        ctx.discharge("audit");
+        ctx.discharge("audit").unwrap();
         assert!(!ctx.all_discharged());
 
         // Discharge second obligation
-        ctx.discharge("log");
+        ctx.discharge("log").unwrap();
         assert!(ctx.all_discharged());
     }
 
@@ -234,27 +273,30 @@ mod tests {
         assert!(pending.contains(&"log".to_string()));
 
         // Discharge one
-        ctx.discharge("audit");
+        ctx.discharge("audit").unwrap();
         let pending = ctx.pending_obligations();
         assert_eq!(pending.len(), 1);
         assert!(!pending.contains(&"audit".to_string()));
         assert!(pending.contains(&"log".to_string()));
 
         // Discharge all
-        ctx.discharge("log");
+        ctx.discharge("log").unwrap();
         let pending = ctx.pending_obligations();
         assert!(pending.is_empty());
     }
 
     #[test]
-    fn test_discharge_unknown_obligation() {
+    fn test_discharge_unknown_obligation_fails() {
         let role = create_test_role();
         let ctx = RoleContext::new(role);
 
-        // Discharging an obligation not in the role still works
-        // (it's tracked but not required by all_discharged)
-        assert!(ctx.discharge("unknown"));
-        assert!(ctx.is_discharged("unknown"));
+        // Discharging an obligation not declared on the role fails
+        assert_eq!(
+            ctx.discharge("unknown"),
+            Err(DischargeError::UndeclaredObligation)
+        );
+        // Unknown obligation is not tracked
+        assert!(!ctx.is_discharged("unknown"));
     }
 
     #[test]

@@ -12,7 +12,7 @@ fn receive_lowering_preserves_mode_and_arm_structure() {
         "workflow main { receive wait 30s { sensor:temp as reading if ready => done, _ => done } }",
     );
     let surface = workflow_def(&mut input).expect("workflow should parse");
-    let lowered = lower_workflow(&surface);
+    let lowered = lower_workflow(&surface).unwrap();
 
     match lowered {
         CoreWorkflow::Receive {
@@ -45,7 +45,7 @@ fn receive_lowering_preserves_mode_and_arm_structure() {
 fn control_receive_lowering_preserves_literal_patterns() {
     let mut input = new_input("workflow main { receive control { \"shutdown\" => done } }");
     let surface = workflow_def(&mut input).expect("workflow should parse");
-    let lowered = lower_workflow(&surface);
+    let lowered = lower_workflow(&surface).unwrap();
 
     match lowered {
         CoreWorkflow::Receive {

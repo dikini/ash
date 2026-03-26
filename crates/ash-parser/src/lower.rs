@@ -3,7 +3,6 @@
 //! This module converts the surface syntax AST into the core IR representation
 //! used by the ash-core crate.
 
-#[cfg(test)]
 use std::fmt;
 
 use ash_core::{
@@ -24,6 +23,25 @@ use crate::surface::{
 
 #[cfg(test)]
 use crate::surface::{Definition, RoleDef};
+
+/// Error returned when lowering surface AST to core IR fails.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoweringError {
+    /// Float literals are not supported in the core IR.
+    FloatNotSupported,
+}
+
+impl fmt::Display for LoweringError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LoweringError::FloatNotSupported => {
+                write!(f, "float literals are not supported")
+            }
+        }
+    }
+}
+
+impl std::error::Error for LoweringError {}
 
 /// Error returned when parsed role metadata cannot be lowered honestly.
 #[cfg(test)]
@@ -48,7 +66,7 @@ impl fmt::Display for RoleLoweringError {
 impl std::error::Error for RoleLoweringError {}
 
 /// Lower a workflow definition to core IR.
-pub fn lower_workflow(def: &WorkflowDef) -> CoreWorkflow {
+pub fn lower_workflow(def: &WorkflowDef) -> Result<CoreWorkflow, LoweringError> {
     // Create a provenance for the workflow
     let provenance = Provenance::new();
 
@@ -103,7 +121,7 @@ fn lower_role_authority(
         .iter()
         .find_map(|definition| match definition {
             Definition::Capability(capability) if capability.name.as_ref() == authority_name => {
-                Some(lower_capability_def(capability))
+                lower_capability_def(capability).ok()
             }
             _ => None,
         })
@@ -114,23 +132,32 @@ fn lower_role_authority(
 }
 
 #[allow(dead_code)]
-fn lower_capability_def(def: &CapabilityDef) -> Capability {
-    Capability {
+fn lower_capability_def(def: &CapabilityDef) -> Result<Capability, LoweringError> {
+    Ok(Capability {
         name: def.name.to_string(),
         effect: lower_effect_type(def.effect),
-        constraints: def.constraints.iter().map(lower_constraint).collect(),
-    }
+        constraints: def
+            .constraints
+            .iter()
+            .map(lower_constraint)
+            .collect::<Result<Vec<_>, _>>()?,
+    })
 }
 
 #[allow(dead_code)]
-fn lower_constraint(constraint: &crate::surface::Constraint) -> ash_core::Constraint {
-    ash_core::Constraint {
-        predicate: lower_predicate(&constraint.predicate),
-    }
+fn lower_constraint(
+    constraint: &crate::surface::Constraint,
+) -> Result<ash_core::Constraint, LoweringError> {
+    Ok(ash_core::Constraint {
+        predicate: lower_predicate(&constraint.predicate)?,
+    })
 }
 
 /// Lower a workflow body to core IR.
-fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> CoreWorkflow {
+fn lower_workflow_body(
+    workflow: &SurfaceWorkflow,
+    provenance: &Provenance,
+) -> Result<CoreWorkflow, LoweringError> {
     match workflow {
         SurfaceWorkflow::Observe {
             capability,
@@ -141,14 +168,16 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let pattern = binding
                 .as_ref()
                 .map(lower_pattern)
+                .transpose()?
                 .unwrap_or(CorePattern::Wildcard);
 
             let cont = continuation
                 .as_ref()
                 .map(|c| lower_workflow_body(c, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
-            CoreWorkflow::Observe {
+            Ok(CoreWorkflow::Observe {
                 capability: Capability {
                     name: capability.to_string(),
                     effect: Effect::Epistemic,
@@ -156,7 +185,7 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
                 },
                 pattern,
                 continuation: Box::new(cont),
-            }
+            })
         }
 
         SurfaceWorkflow::Orient {
@@ -168,12 +197,13 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let cont = continuation
                 .as_ref()
                 .map(|c| lower_workflow_body(c, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
-            CoreWorkflow::Orient {
-                expr: lower_expr(expr),
+            Ok(CoreWorkflow::Orient {
+                expr: lower_expr(expr)?,
                 continuation: Box::new(cont),
-            }
+            })
         }
 
         SurfaceWorkflow::Propose {
@@ -185,12 +215,13 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let cont = continuation
                 .as_ref()
                 .map(|c| lower_workflow_body(c, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
-            CoreWorkflow::Propose {
-                action: lower_action(action),
+            Ok(CoreWorkflow::Propose {
+                action: lower_action(action)?,
                 continuation: Box::new(cont),
-            }
+            })
         }
 
         SurfaceWorkflow::Decide {
@@ -205,14 +236,14 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
                 "legacy decide else-branches are not part of the canonical lowering contract"
             );
 
-            CoreWorkflow::Decide {
-                expr: lower_expr(expr),
+            Ok(CoreWorkflow::Decide {
+                expr: lower_expr(expr)?,
                 policy: policy
                     .as_ref()
                     .expect("canonical decide lowering requires an explicit named policy")
                     .to_string(),
-                continuation: Box::new(lower_workflow_body(then_branch, provenance)),
-            }
+                continuation: Box::new(lower_workflow_body(then_branch, provenance)?),
+            })
         }
 
         SurfaceWorkflow::Check {
@@ -223,24 +254,29 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let cont = continuation
                 .as_ref()
                 .map(|c| lower_workflow_body(c, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
-            CoreWorkflow::Check {
-                obligation: lower_check_target(target),
+            Ok(CoreWorkflow::Check {
+                obligation: lower_check_target(target)?,
                 continuation: Box::new(cont),
-            }
+            })
         }
 
-        SurfaceWorkflow::Oblige { obligation, .. } => CoreWorkflow::Oblige {
+        SurfaceWorkflow::Oblige { obligation, .. } => Ok(CoreWorkflow::Oblige {
             name: obligation.to_string(),
             span: Default::default(),
-        },
+        }),
 
-        SurfaceWorkflow::Act { action, guard, .. } => CoreWorkflow::Act {
-            action: lower_action(action),
-            guard: guard.as_ref().map(lower_guard).unwrap_or(CoreGuard::Always),
+        SurfaceWorkflow::Act { action, guard, .. } => Ok(CoreWorkflow::Act {
+            action: lower_action(action)?,
+            guard: guard
+                .as_ref()
+                .map(lower_guard)
+                .transpose()?
+                .unwrap_or(CoreGuard::Always),
             provenance: provenance.clone(),
-        },
+        }),
 
         SurfaceWorkflow::Set {
             capability,
@@ -252,16 +288,17 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let cont = continuation
                 .as_ref()
                 .map(|c| lower_workflow_body(c, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
-            CoreWorkflow::Seq {
+            Ok(CoreWorkflow::Seq {
                 first: Box::new(CoreWorkflow::Set {
                     capability: capability.to_string(),
                     channel: channel.to_string(),
-                    value: lower_expr(value),
+                    value: lower_expr(value)?,
                 }),
                 second: Box::new(cont),
-            }
+            })
         }
 
         SurfaceWorkflow::Send {
@@ -274,16 +311,17 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let cont = continuation
                 .as_ref()
                 .map(|c| lower_workflow_body(c, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
-            CoreWorkflow::Seq {
+            Ok(CoreWorkflow::Seq {
                 first: Box::new(CoreWorkflow::Send {
                     capability: capability.to_string(),
                     channel: channel.to_string(),
-                    value: lower_expr(value),
+                    value: lower_expr(value)?,
                 }),
                 second: Box::new(cont),
-            }
+            })
         }
 
         SurfaceWorkflow::Receive {
@@ -291,14 +329,14 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             arms,
             is_control,
             ..
-        } => CoreWorkflow::Receive {
+        } => Ok(CoreWorkflow::Receive {
             mode: lower_receive_mode(mode),
             arms: arms
                 .iter()
                 .map(|arm| lower_receive_arm(arm, provenance))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             control: *is_control,
-        },
+        }),
 
         SurfaceWorkflow::Let {
             pattern,
@@ -309,13 +347,14 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let cont = continuation
                 .as_ref()
                 .map(|c| lower_workflow_body(c, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
-            CoreWorkflow::Let {
-                pattern: lower_pattern(pattern),
-                expr: lower_expr(expr),
+            Ok(CoreWorkflow::Let {
+                pattern: lower_pattern(pattern)?,
+                expr: lower_expr(expr)?,
                 continuation: Box::new(cont),
-            }
+            })
         }
 
         SurfaceWorkflow::If {
@@ -327,14 +366,15 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             let else_wf = else_branch
                 .as_ref()
                 .map(|e| lower_workflow_body(e, provenance))
+                .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
-            let then_wf = lower_workflow_body(then_branch, provenance);
+            let then_wf = lower_workflow_body(then_branch, provenance)?;
 
-            CoreWorkflow::If {
-                condition: lower_expr(condition),
+            Ok(CoreWorkflow::If {
+                condition: lower_expr(condition)?,
                 then_branch: Box::new(then_wf),
                 else_branch: Box::new(else_wf),
-            }
+            })
         }
 
         SurfaceWorkflow::For {
@@ -342,53 +382,53 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             collection,
             body,
             ..
-        } => CoreWorkflow::ForEach {
-            pattern: lower_pattern(pattern),
-            collection: lower_expr(collection),
-            body: Box::new(lower_workflow_body(body, provenance)),
-        },
+        } => Ok(CoreWorkflow::ForEach {
+            pattern: lower_pattern(pattern)?,
+            collection: lower_expr(collection)?,
+            body: Box::new(lower_workflow_body(body, provenance)?),
+        }),
 
         SurfaceWorkflow::Par { branches, .. } => {
             let workflows: Vec<_> = branches
                 .iter()
                 .map(|b| lower_workflow_body(b, provenance))
-                .collect();
+                .collect::<Result<Vec<_>, _>>()?;
 
-            CoreWorkflow::Par { workflows }
+            Ok(CoreWorkflow::Par { workflows })
         }
 
         SurfaceWorkflow::With {
             capability, body, ..
-        } => CoreWorkflow::With {
+        } => Ok(CoreWorkflow::With {
             capability: Capability {
                 name: capability.to_string(),
                 effect: Effect::Epistemic,
                 constraints: vec![],
             },
-            workflow: Box::new(lower_workflow_body(body, provenance)),
-        },
+            workflow: Box::new(lower_workflow_body(body, provenance)?),
+        }),
 
         SurfaceWorkflow::Maybe {
             primary, fallback, ..
-        } => CoreWorkflow::Maybe {
-            primary: Box::new(lower_workflow_body(primary, provenance)),
-            fallback: Box::new(lower_workflow_body(fallback, provenance)),
-        },
+        } => Ok(CoreWorkflow::Maybe {
+            primary: Box::new(lower_workflow_body(primary, provenance)?),
+            fallback: Box::new(lower_workflow_body(fallback, provenance)?),
+        }),
 
-        SurfaceWorkflow::Must { body, .. } => CoreWorkflow::Must {
-            workflow: Box::new(lower_workflow_body(body, provenance)),
-        },
+        SurfaceWorkflow::Must { body, .. } => Ok(CoreWorkflow::Must {
+            workflow: Box::new(lower_workflow_body(body, provenance)?),
+        }),
 
-        SurfaceWorkflow::Seq { first, second, .. } => CoreWorkflow::Seq {
-            first: Box::new(lower_workflow_body(first, provenance)),
-            second: Box::new(lower_workflow_body(second, provenance)),
-        },
+        SurfaceWorkflow::Seq { first, second, .. } => Ok(CoreWorkflow::Seq {
+            first: Box::new(lower_workflow_body(first, provenance)?),
+            second: Box::new(lower_workflow_body(second, provenance)?),
+        }),
 
-        SurfaceWorkflow::Done { .. } => CoreWorkflow::Done,
+        SurfaceWorkflow::Done { .. } => Ok(CoreWorkflow::Done),
 
-        SurfaceWorkflow::Ret { expr, .. } => CoreWorkflow::Ret {
-            expr: lower_expr(expr),
-        },
+        SurfaceWorkflow::Ret { expr, .. } => Ok(CoreWorkflow::Ret {
+            expr: lower_expr(expr)?,
+        }),
 
         // Proxy workflow constructs
         SurfaceWorkflow::Yield {
@@ -400,13 +440,13 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
             span,
         } => {
             // Lower the request expression
-            let request = Box::new(lower_expr(expr));
+            let request = Box::new(lower_expr(expr)?);
 
             // Convert surface Type to core TypeExpr
             let expected_response_type = lower_type_to_type_expr(resume_type);
 
             // Lower the yield arms into a continuation workflow
-            let continuation = Box::new(lower_yield_arms(resume_var, arms, provenance));
+            let continuation = Box::new(lower_yield_arms(resume_var, arms, provenance)?);
 
             // Convert surface span to core span
             let core_span = ash_core::Span {
@@ -414,18 +454,19 @@ fn lower_workflow_body(workflow: &SurfaceWorkflow, provenance: &Provenance) -> C
                 end: span.end,
             };
 
-            CoreWorkflow::Yield {
+            Ok(CoreWorkflow::Yield {
                 role: role.to_string(),
                 request,
                 expected_response_type,
                 continuation,
                 span: core_span,
-            }
+                resume_var: resume_var.to_string(),
+            })
         }
 
-        SurfaceWorkflow::Resume { expr, .. } => CoreWorkflow::Ret {
-            expr: lower_expr(expr),
-        },
+        SurfaceWorkflow::Resume { expr, .. } => Ok(CoreWorkflow::Ret {
+            expr: lower_expr(expr)?,
+        }),
     }
 }
 
@@ -456,9 +497,13 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
 ///
 /// The resume_var is bound to the response value, and then the arms
 /// are processed as pattern matches.
-fn lower_yield_arms(resume_var: &str, arms: &[YieldArm], provenance: &Provenance) -> CoreWorkflow {
+fn lower_yield_arms(
+    resume_var: &str,
+    arms: &[YieldArm],
+    provenance: &Provenance,
+) -> Result<CoreWorkflow, LoweringError> {
     if arms.is_empty() {
-        return CoreWorkflow::Done;
+        return Ok(CoreWorkflow::Done);
     }
 
     // Convert the arms into a match expression
@@ -469,79 +514,81 @@ fn lower_yield_arms(resume_var: &str, arms: &[YieldArm], provenance: &Provenance
     if arms.len() == 1 {
         // Single arm: bind the pattern and execute the body
         let arm = &arms[0];
-        CoreWorkflow::Let {
-            pattern: lower_pattern(&arm.pattern),
+        Ok(CoreWorkflow::Let {
+            pattern: lower_pattern(&arm.pattern)?,
             expr: CoreExpr::Variable(resume_var.to_string()),
-            continuation: Box::new(lower_workflow_body(&arm.body, provenance)),
-        }
+            continuation: Box::new(lower_workflow_body(&arm.body, provenance)?),
+        })
     } else {
         // Multiple arms: create a cascade of If expressions
         // For now, use the first arm's pattern as the main match
         // and subsequent arms as fallbacks
         let first_arm = &arms[0];
         let _rest_continuation = if arms.len() > 1 {
-            lower_yield_arms(resume_var, &arms[1..], provenance)
+            lower_yield_arms(resume_var, &arms[1..], provenance)?
         } else {
             CoreWorkflow::Done
         };
 
-        CoreWorkflow::Let {
-            pattern: lower_pattern(&first_arm.pattern),
+        Ok(CoreWorkflow::Let {
+            pattern: lower_pattern(&first_arm.pattern)?,
             expr: CoreExpr::Variable(resume_var.to_string()),
-            continuation: Box::new(lower_workflow_body(&first_arm.body, provenance)),
-        }
+            continuation: Box::new(lower_workflow_body(&first_arm.body, provenance)?),
+        })
     }
 }
 
 /// Lower a surface expression to core IR.
-pub fn lower_expr(expr: &Expr) -> CoreExpr {
+pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
     match expr {
-        Expr::Literal(lit) => CoreExpr::Literal(lower_literal(lit)),
+        Expr::Literal(lit) => Ok(CoreExpr::Literal(lower_literal(lit)?)),
 
-        Expr::Variable(name) => CoreExpr::Variable(name.to_string()),
+        Expr::Variable(name) => Ok(CoreExpr::Variable(name.to_string())),
 
-        Expr::FieldAccess { base, field, .. } => CoreExpr::FieldAccess {
-            expr: Box::new(lower_expr(base)),
+        Expr::FieldAccess { base, field, .. } => Ok(CoreExpr::FieldAccess {
+            expr: Box::new(lower_expr(base)?),
             field: field.to_string(),
-        },
+        }),
 
-        Expr::IndexAccess { base, index, .. } => CoreExpr::IndexAccess {
-            expr: Box::new(lower_expr(base)),
-            index: Box::new(lower_expr(index)),
-        },
+        Expr::IndexAccess { base, index, .. } => Ok(CoreExpr::IndexAccess {
+            expr: Box::new(lower_expr(base)?),
+            index: Box::new(lower_expr(index)?),
+        }),
 
-        Expr::Unary { op, operand, .. } => CoreExpr::Unary {
+        Expr::Unary { op, operand, .. } => Ok(CoreExpr::Unary {
             op: lower_unary_op(*op),
-            expr: Box::new(lower_expr(operand)),
-        },
+            expr: Box::new(lower_expr(operand)?),
+        }),
 
         Expr::Binary {
             op, left, right, ..
-        } => CoreExpr::Binary {
+        } => Ok(CoreExpr::Binary {
             op: lower_binary_op(*op),
-            left: Box::new(lower_expr(left)),
-            right: Box::new(lower_expr(right)),
-        },
+            left: Box::new(lower_expr(left)?),
+            right: Box::new(lower_expr(right)?),
+        }),
 
-        Expr::Call { func, args, .. } => CoreExpr::Call {
+        Expr::Call { func, args, .. } => Ok(CoreExpr::Call {
             func: func.to_string(),
-            arguments: args.iter().map(lower_expr).collect(),
-        },
+            arguments: args.iter().map(lower_expr).collect::<Result<Vec<_>, _>>()?,
+        }),
 
         Expr::Match {
             scrutinee, arms, ..
-        } => CoreExpr::Match {
-            scrutinee: Box::new(lower_expr(scrutinee)),
+        } => Ok(CoreExpr::Match {
+            scrutinee: Box::new(lower_expr(scrutinee)?),
             arms: arms
                 .iter()
-                .map(|arm| CoreMatchArm {
-                    pattern: lower_pattern(&arm.pattern),
-                    body: lower_expr(&arm.body),
+                .map(|arm| {
+                    Ok(CoreMatchArm {
+                        pattern: lower_pattern(&arm.pattern)?,
+                        body: lower_expr(&arm.body)?,
+                    })
                 })
-                .collect(),
-        },
+                .collect::<Result<Vec<_>, _>>()?,
+        }),
 
-        Expr::Policy(policy_expr) => lower_policy_expr(policy_expr),
+        Expr::Policy(policy_expr) => Ok(lower_policy_expr(policy_expr)),
 
         Expr::IfLet {
             pattern,
@@ -549,28 +596,28 @@ pub fn lower_expr(expr: &Expr) -> CoreExpr {
             then_branch,
             else_branch,
             ..
-        } => CoreExpr::IfLet {
-            pattern: lower_pattern(pattern),
-            expr: Box::new(lower_expr(expr)),
-            then_branch: Box::new(lower_expr(then_branch)),
-            else_branch: Box::new(lower_expr(else_branch)),
-        },
+        } => Ok(CoreExpr::IfLet {
+            pattern: lower_pattern(pattern)?,
+            expr: Box::new(lower_expr(expr)?),
+            then_branch: Box::new(lower_expr(then_branch)?),
+            else_branch: Box::new(lower_expr(else_branch)?),
+        }),
 
-        Expr::CheckObligation { obligation, span } => CoreExpr::CheckObligation {
+        Expr::CheckObligation { obligation, span } => Ok(CoreExpr::CheckObligation {
             obligation: obligation.to_string(),
             span: ash_core::Span {
                 start: span.start,
                 end: span.end,
             },
-        },
+        }),
 
-        Expr::Constructor { name, fields, .. } => CoreExpr::Constructor {
+        Expr::Constructor { name, fields, .. } => Ok(CoreExpr::Constructor {
             name: name.to_string(),
             fields: fields
                 .iter()
-                .map(|(n, e)| (n.to_string(), lower_expr(e)))
-                .collect(),
-        },
+                .map(|(n, e)| Ok((n.to_string(), lower_expr(e)?)))
+                .collect::<Result<_, _>>()?,
+        }),
     }
 }
 
@@ -588,34 +635,37 @@ fn lower_receive_mode(mode: &crate::surface::ReceiveMode) -> ash_core::ReceiveMo
     }
 }
 
-fn lower_receive_arm(arm: &crate::surface::ReceiveArm, provenance: &Provenance) -> CoreReceiveArm {
-    CoreReceiveArm {
-        pattern: lower_receive_pattern(&arm.pattern),
-        guard: arm.guard.as_ref().map(lower_expr),
-        body: lower_workflow_body(&arm.body, provenance),
-    }
+fn lower_receive_arm(
+    arm: &crate::surface::ReceiveArm,
+    provenance: &Provenance,
+) -> Result<CoreReceiveArm, LoweringError> {
+    Ok(CoreReceiveArm {
+        pattern: lower_receive_pattern(&arm.pattern)?,
+        guard: arm.guard.as_ref().map(lower_expr).transpose()?,
+        body: lower_workflow_body(&arm.body, provenance)?,
+    })
 }
 
-fn lower_receive_pattern(pattern: &StreamPattern) -> CoreReceivePattern {
+fn lower_receive_pattern(pattern: &StreamPattern) -> Result<CoreReceivePattern, LoweringError> {
     match pattern {
         StreamPattern::Binding {
             capability,
             channel,
             pattern,
-        } => CoreReceivePattern::Stream {
+        } => Ok(CoreReceivePattern::Stream {
             capability: capability.to_string(),
             channel: channel.to_string(),
-            pattern: lower_pattern(pattern),
-        },
-        StreamPattern::Literal(value) => {
-            CoreReceivePattern::Literal(ash_core::Value::String(value.to_string()))
-        }
-        StreamPattern::Wildcard => CoreReceivePattern::Wildcard,
+            pattern: lower_pattern(pattern)?,
+        }),
+        StreamPattern::Literal(value) => Ok(CoreReceivePattern::Literal(ash_core::Value::String(
+            value.to_string(),
+        ))),
+        StreamPattern::Wildcard => Ok(CoreReceivePattern::Wildcard),
     }
 }
 
 /// Lower a check target to core IR.
-fn lower_check_target(target: &CheckTarget) -> CoreObligation {
+fn lower_check_target(target: &CheckTarget) -> Result<CoreObligation, LoweringError> {
     match target {
         CheckTarget::Obligation(obl) => lower_obligation(obl),
         CheckTarget::Policy(_) => panic!("policy instances are not valid canonical check targets"),
@@ -623,22 +673,21 @@ fn lower_check_target(target: &CheckTarget) -> CoreObligation {
 }
 
 /// Lower a literal value.
-fn lower_literal(lit: &Literal) -> ash_core::Value {
+fn lower_literal(lit: &Literal) -> Result<ash_core::Value, LoweringError> {
     use ash_core::Value;
 
     match lit {
-        Literal::Int(n) => Value::Int(*n),
-        Literal::Float(f) => {
-            // TODO: Add Value::Float support
-            // For now, truncate to Int as a placeholder
-            Value::Int(*f as i64)
-        }
-        Literal::String(s) => Value::String(s.to_string()),
-        Literal::Bool(b) => Value::Bool(*b),
-        Literal::Null => Value::Null,
+        Literal::Int(n) => Ok(Value::Int(*n)),
+        Literal::Float(_) => Err(LoweringError::FloatNotSupported),
+        Literal::String(s) => Ok(Value::String(s.to_string())),
+        Literal::Bool(b) => Ok(Value::Bool(*b)),
+        Literal::Null => Ok(Value::Null),
         Literal::List(elements) => {
-            let lowered: Vec<_> = elements.iter().map(lower_literal).collect();
-            Value::List(Box::new(lowered))
+            let lowered: Vec<_> = elements
+                .iter()
+                .map(lower_literal)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Value::List(Box::new(lowered)))
         }
     }
 }
@@ -671,60 +720,71 @@ fn lower_binary_op(op: BinaryOp) -> ash_core::BinaryOp {
 }
 
 /// Lower a pattern to core IR.
-pub fn lower_pattern(pattern: &Pattern) -> CorePattern {
+pub fn lower_pattern(pattern: &Pattern) -> Result<CorePattern, LoweringError> {
     match pattern {
-        Pattern::Variable(name) => CorePattern::Variable(name.to_string()),
+        Pattern::Variable(name) => Ok(CorePattern::Variable(name.to_string())),
 
-        Pattern::Wildcard => CorePattern::Wildcard,
+        Pattern::Wildcard => Ok(CorePattern::Wildcard),
 
         Pattern::Tuple(patterns) => {
-            CorePattern::Tuple(patterns.iter().map(lower_pattern).collect())
+            let lowered: Result<Vec<_>, _> = patterns.iter().map(lower_pattern).collect();
+            Ok(CorePattern::Tuple(lowered?))
         }
 
         Pattern::Record(fields) => {
-            let lowered: Vec<_> = fields
+            let lowered: Result<Vec<_>, _> = fields
                 .iter()
-                .map(|(name, pat)| (name.to_string(), lower_pattern(pat)))
+                .map(|(name, pat)| Ok((name.to_string(), lower_pattern(pat)?)))
                 .collect();
-            CorePattern::Record(lowered)
+            Ok(CorePattern::Record(lowered?))
         }
 
-        Pattern::List { elements, rest } => CorePattern::List(
-            elements.iter().map(lower_pattern).collect(),
-            rest.as_ref().map(|r| r.to_string()),
-        ),
+        Pattern::List { elements, rest } => {
+            let lowered: Result<Vec<_>, _> = elements.iter().map(lower_pattern).collect();
+            Ok(CorePattern::List(
+                lowered?,
+                rest.as_ref().map(|r| r.to_string()),
+            ))
+        }
 
-        Pattern::Variant { name, fields } => CorePattern::Variant {
+        Pattern::Variant { name, fields } => Ok(CorePattern::Variant {
             name: name.to_string(),
-            fields: fields.as_ref().map(|fs| {
-                fs.iter()
-                    .map(|(n, p)| (n.to_string(), lower_pattern(p)))
-                    .collect()
-            }),
-        },
+            fields: fields
+                .as_ref()
+                .map(|fs| {
+                    fs.iter()
+                        .map(|(n, p)| Ok((n.to_string(), lower_pattern(p)?)))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
+        }),
 
-        Pattern::Literal(lit) => CorePattern::Literal(lower_literal(lit)),
+        Pattern::Literal(lit) => Ok(CorePattern::Literal(lower_literal(lit)?)),
     }
 }
 
 /// Lower an action reference to core Action.
-fn lower_action(action: &ActionRef) -> CoreAction {
-    CoreAction {
+fn lower_action(action: &ActionRef) -> Result<CoreAction, LoweringError> {
+    Ok(CoreAction {
         name: action.name.to_string(),
-        arguments: action.args.iter().map(lower_expr).collect(),
-    }
+        arguments: action
+            .args
+            .iter()
+            .map(lower_expr)
+            .collect::<Result<Vec<_>, _>>()?,
+    })
 }
 
 /// Lower an obligation reference to core Obligation.
-fn lower_obligation(obligation: &ObligationRef) -> CoreObligation {
-    CoreObligation::Obliged {
+fn lower_obligation(obligation: &ObligationRef) -> Result<CoreObligation, LoweringError> {
+    Ok(CoreObligation::Obliged {
         role: CoreRole {
             name: obligation.role.to_string(),
             authority: vec![],
             obligations: vec![],
         },
-        condition: lower_expr(&obligation.condition),
-    }
+        condition: lower_expr(&obligation.condition)?,
+    })
 }
 
 #[cfg(test)]
@@ -735,27 +795,33 @@ fn lower_role_obligation_name(name: &str) -> CoreRoleObligationRef {
 }
 
 /// Lower a guard to core IR.
-fn lower_guard(guard: &Guard) -> CoreGuard {
+fn lower_guard(guard: &Guard) -> Result<CoreGuard, LoweringError> {
     match guard {
-        Guard::Always => CoreGuard::Always,
-        Guard::Never => CoreGuard::Never,
-        Guard::Pred(pred) => CoreGuard::Pred(lower_predicate(pred)),
-        Guard::And(left, right) => {
-            CoreGuard::And(Box::new(lower_guard(left)), Box::new(lower_guard(right)))
-        }
-        Guard::Or(left, right) => {
-            CoreGuard::Or(Box::new(lower_guard(left)), Box::new(lower_guard(right)))
-        }
-        Guard::Not(inner) => CoreGuard::Not(Box::new(lower_guard(inner))),
+        Guard::Always => Ok(CoreGuard::Always),
+        Guard::Never => Ok(CoreGuard::Never),
+        Guard::Pred(pred) => Ok(CoreGuard::Pred(lower_predicate(pred)?)),
+        Guard::And(left, right) => Ok(CoreGuard::And(
+            Box::new(lower_guard(left)?),
+            Box::new(lower_guard(right)?),
+        )),
+        Guard::Or(left, right) => Ok(CoreGuard::Or(
+            Box::new(lower_guard(left)?),
+            Box::new(lower_guard(right)?),
+        )),
+        Guard::Not(inner) => Ok(CoreGuard::Not(Box::new(lower_guard(inner)?))),
     }
 }
 
 /// Lower a predicate to core IR.
-fn lower_predicate(pred: &Predicate) -> CorePredicate {
-    CorePredicate {
+fn lower_predicate(pred: &Predicate) -> Result<CorePredicate, LoweringError> {
+    Ok(CorePredicate {
         name: pred.name.to_string(),
-        arguments: pred.args.iter().map(lower_expr).collect(),
-    }
+        arguments: pred
+            .args
+            .iter()
+            .map(lower_expr)
+            .collect::<Result<Vec<_>, _>>()?,
+    })
 }
 
 /// Lower an effect type to core Effect.
@@ -787,7 +853,7 @@ mod tests {
     #[test]
     fn test_lower_done() {
         let surface = SurfaceWorkflow::Done { span: dummy_span() };
-        let core = lower_workflow_body(&surface, &Provenance::new());
+        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Done));
     }
 
@@ -799,21 +865,21 @@ mod tests {
             continuation: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new());
+        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Let { .. }));
     }
 
     #[test]
     fn test_lower_expr_literal() {
         let surface = SurfaceExpr::Literal(SurfaceLiteral::Int(42));
-        let core = lower_expr(&surface);
+        let core = lower_expr(&surface).unwrap();
         assert!(matches!(core, CoreExpr::Literal(ash_core::Value::Int(42))));
     }
 
     #[test]
     fn test_lower_expr_variable() {
         let surface = SurfaceExpr::Variable("my_var".into());
-        let core = lower_expr(&surface);
+        let core = lower_expr(&surface).unwrap();
         assert!(matches!(core, CoreExpr::Variable(name) if name == "my_var"));
     }
 
@@ -825,7 +891,7 @@ mod tests {
             right: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(2))),
             span: dummy_span(),
         };
-        let core = lower_expr(&surface);
+        let core = lower_expr(&surface).unwrap();
         assert!(matches!(
             core,
             CoreExpr::Binary {
@@ -836,16 +902,24 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)]
+    fn test_lower_expr_float_literal_error() {
+        let surface = SurfaceExpr::Literal(SurfaceLiteral::Float(3.14));
+        let result = lower_expr(&surface);
+        assert!(matches!(result, Err(LoweringError::FloatNotSupported)));
+    }
+
+    #[test]
     fn test_lower_pattern_variable() {
         let surface = Pattern::Variable("x".into());
-        let core = lower_pattern(&surface);
+        let core = lower_pattern(&surface).unwrap();
         assert!(matches!(core, CorePattern::Variable(name) if name == "x"));
     }
 
     #[test]
     fn test_lower_pattern_wildcard() {
         let surface = Pattern::Wildcard;
-        let core = lower_pattern(&surface);
+        let core = lower_pattern(&surface).unwrap();
         assert!(matches!(core, CorePattern::Wildcard));
     }
 
@@ -855,21 +929,21 @@ mod tests {
             Pattern::Variable("a".into()),
             Pattern::Variable("b".into()),
         ]);
-        let core = lower_pattern(&surface);
+        let core = lower_pattern(&surface).unwrap();
         assert!(matches!(core, CorePattern::Tuple(pats) if pats.len() == 2));
     }
 
     #[test]
     fn test_lower_literal_int() {
         let surface = SurfaceLiteral::Int(42);
-        let core = lower_literal(&surface);
+        let core = lower_literal(&surface).unwrap();
         assert!(matches!(core, ash_core::Value::Int(42)));
     }
 
     #[test]
     fn test_lower_literal_string() {
         let surface = SurfaceLiteral::String("hello".into());
-        let core = lower_literal(&surface);
+        let core = lower_literal(&surface).unwrap();
         assert!(matches!(core, ash_core::Value::String(s) if s == "hello"));
     }
 
@@ -880,7 +954,7 @@ mod tests {
             condition: SurfaceExpr::Variable("approved".into()),
         };
 
-        let core = lower_obligation(&surface);
+        let core = lower_obligation(&surface).unwrap();
 
         assert!(matches!(
             core,
@@ -1085,7 +1159,7 @@ mod tests {
             else_branch: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new());
+        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::If { .. }));
     }
 
@@ -1096,7 +1170,7 @@ mod tests {
             second: Box::new(SurfaceWorkflow::Done { span: dummy_span() }),
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new());
+        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Seq { .. }));
     }
 
@@ -1108,7 +1182,7 @@ mod tests {
             continuation: None,
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new());
+        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Observe { .. }));
     }
 
@@ -1120,7 +1194,7 @@ mod tests {
             continuation: None,
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new());
+        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Orient { .. }));
     }
 
@@ -1133,7 +1207,7 @@ mod tests {
             ],
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new());
+        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Par { workflows } if workflows.len() == 2));
     }
 

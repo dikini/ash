@@ -25,7 +25,7 @@ fn parse_surface_and_lower(source: &str) -> (SurfaceWorkflow, Workflow) {
     let mut input = new_input(source);
     let parsed = workflow_def(&mut input).expect("workflow should parse");
     let surface = parsed.body.clone();
-    let lowered = lower_workflow(&parsed);
+    let lowered = lower_workflow(&parsed).expect("lowering should succeed");
     (surface, lowered)
 }
 

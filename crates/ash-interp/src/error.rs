@@ -90,6 +90,19 @@ pub enum ExecError {
     MailboxFull {
         limit: usize,
     },
+    /// Workflow yielded to a proxy role and is awaiting response
+    YieldSuspended {
+        /// Target role that should handle the yield
+        role: String,
+        /// The request value sent to the proxy (boxed to reduce error size)
+        request: Box<Value>,
+        /// Expected response type for validation
+        expected_response_type: String,
+        /// Correlation ID for matching yield/resume pairs
+        correlation_id: String,
+        /// Proxy instance address
+        proxy_addr: String,
+    },
 }
 
 impl std::error::Error for ExecError {
@@ -162,6 +175,17 @@ impl std::fmt::Display for ExecError {
             Self::MailboxFull { limit } => {
                 write!(f, "mailbox full: limit of {limit} entries exceeded")
             }
+            Self::YieldSuspended {
+                role,
+                request,
+                expected_response_type,
+                correlation_id,
+                proxy_addr,
+            } => write!(
+                f,
+                "workflow yielded to role '{}' with request {:?} (expected response: {}) at proxy {} with correlation_id={}",
+                role, request, expected_response_type, proxy_addr, correlation_id
+            ),
         }
     }
 }

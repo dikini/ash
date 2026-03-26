@@ -9,6 +9,7 @@ use ash_interp::{
     behaviour::BehaviourContext,
     capability::CapabilityContext,
     context::Context,
+    error::ExecError,
     execute_workflow_with_behaviour_in_state,
     policy::PolicyEvaluator,
     proxy_registry::ProxyRegistry,
@@ -36,6 +37,7 @@ fn create_yield_workflow(role: &str, request_value: Value, response_type: TypeEx
             expr: Expr::Literal(Value::String("resumed".to_string())),
         }),
         span: Span::default(),
+        resume_var: "response".to_string(),
     }
 }
 
@@ -91,13 +93,24 @@ async fn test_yield_suspends_workflow() {
     )
     .await;
 
-    // Should return a YieldState::Suspended indication
-    // For now, it returns an error indicating yield was processed
-    // After full implementation, this should properly suspend
-    assert!(
-        result.is_err(),
-        "Yield should suspend workflow and not return a value"
-    );
+    // Should return YieldSuspended error with correct details
+    match result {
+        Err(ExecError::YieldSuspended {
+            role,
+            request,
+            expected_response_type,
+            correlation_id,
+            proxy_addr,
+        }) => {
+            assert_eq!(role, "test_role");
+            assert_eq!(*request, Value::Int(42));
+            assert_eq!(expected_response_type, "Named(\"Int\")");
+            assert!(!correlation_id.is_empty());
+            assert_eq!(proxy_addr, "proxy://instance-1");
+        }
+        Err(other) => panic!("Expected YieldSuspended error, got: {:?}", other),
+        Ok(_) => panic!("Yield should suspend workflow and not return a value"),
+    }
 
     // Check that a yield was suspended
     let suspended_guard = runtime.suspended_yields();
@@ -154,6 +167,7 @@ fn test_correlation_id_generation() {
         origin_workflow: "instance-1".to_string(),
         target_role: "admin".to_string(),
         request_sent_at: std::time::Instant::now(),
+        resume_var: "response".to_string(),
     };
 
     let id1 = suspended.suspend(state1.clone());
@@ -166,6 +180,7 @@ fn test_correlation_id_generation() {
         origin_workflow: "instance-2".to_string(),
         target_role: "user".to_string(),
         request_sent_at: std::time::Instant::now(),
+        resume_var: "response".to_string(),
     };
     let id2 = suspended.suspend(state2);
 
@@ -194,6 +209,7 @@ async fn test_resume_continues_workflow() {
         origin_workflow: "instance-1".to_string(),
         target_role: "admin".to_string(),
         request_sent_at: std::time::Instant::now(),
+        resume_var: "response".to_string(),
     };
 
     {
@@ -237,6 +253,7 @@ fn test_correlation_id_matching() {
         origin_workflow: "instance-1".to_string(),
         target_role: "admin".to_string(),
         request_sent_at: std::time::Instant::now(),
+        resume_var: "response".to_string(),
     };
     let id1 = suspended.suspend(state1);
 
@@ -247,6 +264,7 @@ fn test_correlation_id_matching() {
         origin_workflow: "instance-2".to_string(),
         target_role: "user".to_string(),
         request_sent_at: std::time::Instant::now(),
+        resume_var: "response".to_string(),
     };
     let id2 = suspended.suspend(state2);
 
@@ -316,6 +334,7 @@ fn test_yield_state_contains_expected_info() {
         origin_workflow: "test-instance".to_string(),
         target_role: "test_role".to_string(),
         request_sent_at: std::time::Instant::now(),
+        resume_var: "response".to_string(),
     };
 
     assert_eq!(state.correlation_id, correlation_id);
@@ -340,6 +359,7 @@ fn test_suspended_yields_timeout_handling() {
         origin_workflow: "old-instance".to_string(),
         target_role: "admin".to_string(),
         request_sent_at: std::time::Instant::now() - Duration::from_secs(100),
+        resume_var: "response".to_string(),
     };
     let old_id = old_state.correlation_id;
     suspended.suspend(old_state);
@@ -352,6 +372,7 @@ fn test_suspended_yields_timeout_handling() {
         origin_workflow: "recent-instance".to_string(),
         target_role: "user".to_string(),
         request_sent_at: std::time::Instant::now() - Duration::from_secs(5),
+        resume_var: "response".to_string(),
     };
     let recent_id = recent_state.correlation_id;
     suspended.suspend(recent_state);

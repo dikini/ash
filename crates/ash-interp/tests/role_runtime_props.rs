@@ -27,7 +27,7 @@
 //! - Obligation discharge logged to audit trail
 
 use ash_core::{Capability, Effect, Role, RoleObligationRef};
-use ash_interp::role_context::RoleContext;
+use ash_interp::role_context::{DischargeError, RoleContext};
 use proptest::prelude::*;
 
 // ===================================================================
@@ -268,8 +268,8 @@ proptest! {
         prop_assert!(!ctx.is_discharged(obligation_name));
 
         // Discharge should succeed
-        prop_assert!(ctx.discharge(obligation_name),
-            "First discharge of obligation '{}' should return true", obligation_name);
+        prop_assert!(ctx.discharge(obligation_name).is_ok(),
+            "First discharge of obligation '{}' should succeed", obligation_name);
 
         // Now should be discharged
         prop_assert!(ctx.is_discharged(obligation_name));
@@ -288,14 +288,14 @@ proptest! {
         let obligation_name = &role.obligations[0].name;
 
         // First discharge succeeds
-        prop_assert!(ctx.discharge(obligation_name));
+        prop_assert!(ctx.discharge(obligation_name).is_ok());
 
         // Second discharge returns false (already discharged)
-        prop_assert!(!ctx.discharge(obligation_name),
-            "Second discharge of the same obligation should return false (linear semantics)");
+        prop_assert_eq!(ctx.discharge(obligation_name), Err(DischargeError::AlreadyDischarged),
+            "Second discharge of the same obligation should return AlreadyDischarged error");
 
         // Third discharge also returns false
-        prop_assert!(!ctx.discharge(obligation_name));
+        prop_assert_eq!(ctx.discharge(obligation_name), Err(DischargeError::AlreadyDischarged));
     }
 
     /// Property: Workflow completion blocked with pending role obligations.
@@ -319,7 +319,7 @@ proptest! {
         // Discharge obligations one by one
         let total = role.obligations.len();
         for (i, obl) in role.obligations.iter().enumerate() {
-            ctx.discharge(&obl.name);
+            ctx.discharge(&obl.name).unwrap();
 
             if i < total - 1 {
                 prop_assert!(!ctx.all_discharged(),
@@ -351,7 +351,7 @@ proptest! {
             let pending_before = ctx.pending_obligations();
             prop_assert!(pending_before.contains(&obl.name));
 
-            ctx.discharge(&obl.name);
+            ctx.discharge(&obl.name).unwrap();
 
             let pending_after = ctx.pending_obligations();
             prop_assert!(!pending_after.contains(&obl.name),
@@ -381,12 +381,12 @@ proptest! {
             "Role with no obligations should have empty pending_obligations");
     }
 
-    /// Property: Discharging unknown obligations is tracked but not required.
+    /// Property: Discharging unknown obligations fails.
     ///
     /// Discharging an obligation not in the role's obligations list
-    /// should succeed but not affect all_discharged.
+    /// should fail with UndeclaredObligation error.
     #[test]
-    fn prop_discharge_unknown_obligation_tracked_but_not_required(
+    fn prop_discharge_unknown_obligation_fails(
         role in arb_role(),
         unknown_obligation in arb_obligation_name(),
     ) {
@@ -394,19 +394,13 @@ proptest! {
 
         let ctx = RoleContext::new(role.clone());
 
-        // Discharging unknown obligation succeeds
-        prop_assert!(ctx.discharge(&unknown_obligation),
-            "Discharging unknown obligation should succeed");
+        // Discharging unknown obligation fails
+        prop_assert_eq!(ctx.discharge(&unknown_obligation), Err(DischargeError::UndeclaredObligation),
+            "Discharging unknown obligation should fail with UndeclaredObligation");
 
-        // Is tracked
-        prop_assert!(ctx.is_discharged(&unknown_obligation),
-            "Unknown obligation should be tracked as discharged");
-
-        // But not required for all_discharged
-        if role.obligations.is_empty() {
-            prop_assert!(ctx.all_discharged());
-        }
-        // If role has obligations, all_discharged depends on those, not the unknown one
+        // Not tracked
+        prop_assert!(!ctx.is_discharged(&unknown_obligation),
+            "Unknown obligation should not be tracked as discharged");
     }
 
     /// Property: Obligation discharge is case-sensitive.
@@ -429,7 +423,7 @@ proptest! {
         let ctx = RoleContext::new(role);
 
         // Discharging lowercase should work
-        prop_assert!(ctx.discharge(&lowercase));
+        prop_assert!(ctx.discharge(&lowercase).is_ok());
         prop_assert!(ctx.is_discharged(&lowercase));
 
         // Uppercase should not be discharged
@@ -450,13 +444,11 @@ proptest! {
 
         // Discharge all role obligations
         for obl in &role.obligations {
-            ctx.discharge(&obl.name);
+            ctx.discharge(&obl.name).unwrap();
         }
 
-        // Discharge extra obligations
-        for obl_name in &extra_obligations {
-            ctx.discharge(obl_name);
-        }
+        // Extra obligations not declared on role cannot be discharged
+        // (would return Err(DischargeError::UndeclaredObligation))
 
         let discharged = ctx.discharged_set();
 
@@ -466,10 +458,10 @@ proptest! {
                 "Discharged role obligation '{}' should be in discharged_set", obl.name);
         }
 
-        // All extra obligations should be in the set
+        // Extra obligations were not discharged (not declared on role)
         for obl_name in &extra_obligations {
-            prop_assert!(discharged.contains(obl_name),
-                "Discharged extra obligation '{}' should be in discharged_set", obl_name);
+            prop_assert!(!discharged.contains(obl_name),
+                "Undeclared obligation '{}' should not be in discharged_set", obl_name);
         }
     }
 }
@@ -494,7 +486,7 @@ proptest! {
         let obligation_name = &role.obligations[0].name;
 
         // Discharge in ctx1
-        prop_assert!(ctx1.discharge(obligation_name));
+        prop_assert!(ctx1.discharge(obligation_name).is_ok());
 
         // ctx2 should not be affected (they share the discharged_obligations RefCell)
         // Actually, the current implementation uses RefCell which means clone shares state
@@ -517,7 +509,7 @@ proptest! {
 
         // Discharge all obligations
         for obl in &role.obligations {
-            ctx.discharge(&obl.name);
+            ctx.discharge(&obl.name).unwrap();
         }
 
         // Authority should remain unchanged
@@ -562,7 +554,7 @@ proptest! {
 
         // Discharge all obligations
         for obl in &role.obligations {
-            ctx.discharge(&obl.name);
+            ctx.discharge(&obl.name).unwrap();
         }
 
         prop_assert!(ctx.all_discharged());
@@ -598,7 +590,7 @@ proptest! {
 
         // Discharge half the obligations
         for i in 0..to_discharge {
-            ctx.discharge(&role.obligations[i].name);
+            ctx.discharge(&role.obligations[i].name).unwrap();
         }
 
         // Check state
@@ -726,7 +718,7 @@ proptest! {
 
         // Discharge in forward order
         for obl in &obligations {
-            ctx1.discharge(&obl.name);
+            ctx1.discharge(&obl.name).unwrap();
         }
 
         let role2 = Role {
@@ -738,7 +730,7 @@ proptest! {
 
         // Discharge in reverse order
         for obl in obligations.iter().rev() {
-            ctx2.discharge(&obl.name);
+            ctx2.discharge(&obl.name).unwrap();
         }
 
         // Both should have all discharged
@@ -755,12 +747,12 @@ proptest! {
 // ===================================================================
 
 proptest! {
-    /// Property: Role obligations are separate from local obligations.
+    /// Property: Undeclared obligations cannot be discharged.
     ///
-    /// This test verifies that the RoleContext tracks role obligations
-    /// independently of any local obligation tracking.
+    /// This test verifies that the RoleContext only allows discharging
+    /// obligations that are declared on the role.
     #[test]
-    fn prop_role_obligations_tracked_separately(
+    fn prop_undeclared_obligations_cannot_be_discharged(
         role in arb_role(),
         local_obligation in arb_obligation_name(),
     ) {
@@ -768,16 +760,19 @@ proptest! {
 
         let ctx = RoleContext::new(role.clone());
 
-        // Discharge a "local" obligation (not in role)
-        ctx.discharge(&local_obligation);
+        // Discharging an undeclared obligation fails
+        prop_assert_eq!(
+            ctx.discharge(&local_obligation),
+            Err(DischargeError::UndeclaredObligation)
+        );
 
-        // Should be tracked in discharged_set
-        prop_assert!(ctx.is_discharged(&local_obligation));
+        // Should not be tracked in discharged_set
+        prop_assert!(!ctx.is_discharged(&local_obligation));
 
         // all_discharged should still depend only on role obligations
         let all_role_discharged = role.obligations.iter().all(|o| ctx.is_discharged(&o.name));
         prop_assert_eq!(ctx.all_discharged(), all_role_discharged,
-            "all_discharged should only consider role obligations, not extras");
+            "all_discharged should only consider role obligations");
     }
 
     /// Property: Role name is preserved in context.
@@ -844,11 +839,14 @@ proptest! {
         // Should not be all discharged initially
         prop_assert!(!ctx.all_discharged());
 
-        // Discharge once
-        prop_assert!(ctx.discharge(&base_name));
+        // Discharge once (first succeeds)
+        prop_assert!(ctx.discharge(&base_name).is_ok());
 
         // Should now be all discharged (both obligations satisfied by one discharge)
         prop_assert!(ctx.all_discharged());
+
+        // Second discharge returns AlreadyDischarged error
+        prop_assert_eq!(ctx.discharge(&base_name), Err(DischargeError::AlreadyDischarged));
     }
 
     /// Property: Very long obligation names are handled correctly.
@@ -867,7 +865,7 @@ proptest! {
         let ctx = RoleContext::new(role);
 
         prop_assert!(!ctx.all_discharged());
-        prop_assert!(ctx.discharge(&long_name));
+        prop_assert!(ctx.discharge(&long_name).is_ok());
         prop_assert!(ctx.all_discharged());
     }
 
@@ -897,7 +895,7 @@ proptest! {
 
         // Should be able to discharge the obligation
         let obl_name = format!("{}_obl", name);
-        prop_assert!(ctx.discharge(&obl_name));
+        prop_assert!(ctx.discharge(&obl_name).is_ok());
     }
 }
 
@@ -969,11 +967,11 @@ fn test_workflow_completion_blocked_with_pending_obligations() {
     assert!(!ctx.all_discharged());
 
     // Discharge one obligation
-    assert!(ctx.discharge("check_guidelines"));
+    assert!(ctx.discharge("check_guidelines").is_ok());
     assert!(!ctx.all_discharged()); // Still blocked
 
     // Discharge the other
-    assert!(ctx.discharge("security_review"));
+    assert!(ctx.discharge("security_review").is_ok());
     assert!(ctx.all_discharged()); // Now unblocked
 }
 
@@ -995,12 +993,8 @@ fn test_role_obligations_tracked_separately_from_local() {
     // Role obligation not yet discharged
     assert!(!ctx.all_discharged());
 
-    // Simulate local obligation discharge (not tracked in RoleContext)
-    // In real implementation, local obligations are tracked separately
-    // Here we just verify RoleContext only cares about role obligations
-
     // Discharge the role obligation
-    assert!(ctx.discharge("code_review"));
+    assert!(ctx.discharge("code_review").is_ok());
     assert!(ctx.all_discharged());
 }
 
@@ -1042,13 +1036,24 @@ fn test_obligation_discharge_linear_semantics() {
     let ctx = RoleContext::new(role);
 
     // First discharge succeeds
-    assert!(ctx.discharge("audit"), "First discharge should succeed");
+    assert!(
+        ctx.discharge("audit").is_ok(),
+        "First discharge should succeed"
+    );
 
     // Second discharge fails (linear semantics)
-    assert!(!ctx.discharge("audit"), "Second discharge should fail");
+    assert_eq!(
+        ctx.discharge("audit"),
+        Err(DischargeError::AlreadyDischarged),
+        "Second discharge should return AlreadyDischarged error"
+    );
 
     // Third discharge also fails
-    assert!(!ctx.discharge("audit"), "Third discharge should fail");
+    assert_eq!(
+        ctx.discharge("audit"),
+        Err(DischargeError::AlreadyDischarged),
+        "Third discharge should return AlreadyDischarged error"
+    );
 
     // But it's still discharged
     assert!(ctx.is_discharged("audit"));

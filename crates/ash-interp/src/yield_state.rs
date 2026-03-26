@@ -96,6 +96,8 @@ pub struct YieldState {
     pub target_role: String,
     /// Timestamp when the request was sent
     pub request_sent_at: Instant,
+    /// Variable name to bind the response value to when resuming
+    pub resume_var: String,
 }
 
 /// Registry for tracking suspended yields
@@ -266,6 +268,7 @@ mod tests {
             origin_workflow: "instance-1".to_string(),
             target_role: "admin".to_string(),
             request_sent_at: Instant::now(),
+            resume_var: "response".to_string(),
         }
     }
 
@@ -440,6 +443,7 @@ mod tests {
             origin_workflow: "instance-old".to_string(),
             target_role: "admin".to_string(),
             request_sent_at: Instant::now() - Duration::from_secs(100),
+            resume_var: "response".to_string(),
         };
         let old_id = old_state.correlation_id;
 
@@ -451,6 +455,7 @@ mod tests {
             origin_workflow: "instance-recent".to_string(),
             target_role: "user".to_string(),
             request_sent_at: Instant::now() - Duration::from_secs(5),
+            resume_var: "response".to_string(),
         };
         let recent_id = recent_state.correlation_id;
 
@@ -550,6 +555,7 @@ mod tests {
             origin_workflow: "test".to_string(),
             target_role: "test-role".to_string(),
             request_sent_at: Instant::now(),
+            resume_var: "response".to_string(),
         };
 
         let returned_id = suspended.suspend(state);

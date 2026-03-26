@@ -171,6 +171,7 @@ fn test_workflow_yield_construction() {
         expected_response_type,
         continuation,
         span: test_span(),
+        resume_var: "response".to_string(),
     };
 
     match yield_workflow {
@@ -180,7 +181,9 @@ fn test_workflow_yield_construction() {
             expected_response_type,
             continuation,
             span,
+            resume_var,
         } => {
+            assert_eq!(resume_var, "response");
             assert_eq!(role, "manager");
             assert!(matches!(*continuation, Workflow::Done));
             assert_eq!(span, test_span());
@@ -309,6 +312,7 @@ fn test_yield_workflow_with_complex_continuation() {
         expected_response_type: TypeExpr::Named("Response".to_string()),
         continuation,
         span: test_span(),
+        resume_var: "response".to_string(),
     };
 
     match yield_workflow {

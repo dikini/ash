@@ -7,7 +7,7 @@ use ash_parser::parse_workflow::workflow_def;
 fn decide_lowering_preserves_explicit_policy_and_continuation() {
     let mut input = new_input("workflow main { decide { approved } under policy_gate then done }");
     let surface = workflow_def(&mut input).expect("workflow should parse");
-    let lowered = lower_workflow(&surface);
+    let lowered = lower_workflow(&surface).unwrap();
 
     match lowered {
         CoreWorkflow::Decide {
@@ -27,7 +27,7 @@ fn decide_lowering_preserves_explicit_policy_and_continuation() {
 fn check_lowering_preserves_obligation_identity() {
     let mut input = new_input("workflow main { check admin.is_active }");
     let surface = workflow_def(&mut input).expect("workflow should parse");
-    let lowered = lower_workflow(&surface);
+    let lowered = lower_workflow(&surface).unwrap();
 
     match lowered {
         CoreWorkflow::Check {

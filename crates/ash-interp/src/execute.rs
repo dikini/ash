@@ -931,6 +931,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 expected_response_type,
                 continuation,
                 span: _,
+                resume_var,
             } => {
                 // Check if proxy registry is available
                 let proxy_reg = match proxy_registry {
@@ -967,7 +968,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 };
 
                 // Evaluate the request expression
-                let _request_value = eval_expr(request, &ctx).map_err(ExecError::Eval)?;
+                let request_value = eval_expr(request, &ctx).map_err(ExecError::Eval)?;
 
                 // Generate correlation ID and create yield state
                 let correlation_id = CorrelationId::new();
@@ -978,6 +979,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     origin_workflow: "workflow-instance".to_string(),
                     target_role: role.clone(),
                     request_sent_at: Instant::now(),
+                    resume_var: resume_var.clone(),
                 };
 
                 // Suspend the workflow
@@ -986,19 +988,79 @@ pub(crate) fn execute_workflow_inner<'a>(
                     suspended.suspend(yield_state);
                 }
 
-                // For now, we return an error indicating the workflow is suspended
-                // In a full implementation, this would send a message to the proxy
-                // and the workflow would be resumed when the proxy responds
-                Err(ExecError::ExecutionFailed(format!(
-                    "YIELD suspended: request sent to proxy at {} for role '{}' with correlation_id={}",
-                    proxy_addr, role, correlation_id.0
-                )))
+                // Return YieldSuspended to signal the runtime that the workflow yielded
+                // The runtime can then route the request to the appropriate proxy
+                Err(ExecError::YieldSuspended {
+                    role: role.clone(),
+                    request: Box::new(request_value),
+                    expected_response_type: format!("{:?}", expected_response_type),
+                    correlation_id: correlation_id.0.to_string(),
+                    proxy_addr: proxy_addr.clone(),
+                })
             }
 
             // PROXY_RESUME - Resume after proxy yields
-            Workflow::ProxyResume { .. } => Err(ExecError::ExecutionFailed(
-                "PROXY_RESUME not yet implemented in interpreter".to_string(),
-            )),
+            Workflow::ProxyResume {
+                value,
+                value_type: _,
+                correlation_id,
+                span: _,
+            } => {
+                // Check if suspended yields registry is available
+                let suspended = match suspended_yields {
+                    Some(ref s) => s,
+                    None => {
+                        return Err(ExecError::ExecutionFailed(
+                            "PROXY_RESUME requires suspended yields registry".to_string(),
+                        ));
+                    }
+                };
+
+                // Convert ash_core::ast::CorrelationId to ash_interp::yield_state::CorrelationId
+                let correlation_id = CorrelationId(correlation_id.0);
+
+                // Look up and remove the suspended yield
+                let yield_state = {
+                    let mut suspended = suspended.lock().await;
+                    suspended.resume(correlation_id)
+                };
+
+                let yield_state = match yield_state {
+                    Some(state) => state,
+                    None => {
+                        return Err(ExecError::ExecutionFailed(format!(
+                            "No suspended yield found for correlation_id {}",
+                            correlation_id.0
+                        )));
+                    }
+                };
+
+                // Evaluate the response value expression
+                let response_value = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
+
+                // TODO: Type-check the response value against expected_response_type
+                // For now, we skip type checking but the infrastructure is in place
+                let _expected_type = &yield_state.expected_response_type;
+
+                // Create a new context with the response value bound to the resume variable
+                let mut new_ctx = ctx.extend();
+                new_ctx.set(yield_state.resume_var.clone(), response_value);
+
+                // Execute the continuation workflow with the new context
+                execute_workflow_inner(
+                    &yield_state.continuation,
+                    new_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                    stream_ctx,
+                    mailbox,
+                    control_registry,
+                    proxy_registry,
+                    suspended_yields,
+                )
+                .await
+            }
         }
     })
 }

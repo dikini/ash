@@ -111,7 +111,7 @@ async fn execute_command(cli: &Cli) -> CliResult<()> {
     match &cli.command {
         Commands::Check(args) => {
             tracing::info!("Running check command for: {}", args.path);
-            check::check(args).map_err(CliError::from)
+            check::check(args)
         }
         Commands::Run(args) => {
             tracing::info!("Running workflow: {}", args.path);

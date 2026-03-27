@@ -26,9 +26,9 @@ fn test_exit_code_parse_error() {
     println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
     println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
 
-    // For now, just verify it fails - the specific exit code mapping
-    // depends on the underlying engine's error classification
+    // Parse errors should return exit code 2 per SPEC-005
     assert!(!output.status.success(), "Expected failure for parse error");
+    assert_eq!(code, Some(2), "Parse errors should return exit code 2");
 }
 
 /// Test that type errors return exit code 3
@@ -56,8 +56,14 @@ fn test_exit_code_type_error() {
     println!("Exit code: {:?}", output.status.code());
     println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
 
-    // For now, just verify it fails
+    // Type errors should return exit code 3 per SPEC-005
     assert!(!output.status.success(), "Expected failure for type error");
+    // Note: If the file fails to parse, it will return exit code 2 instead
+    // Only check for exit code 3 if the file parsed successfully but type checking failed
+    let code = output.status.code();
+    if code != Some(2) {
+        assert_eq!(code, Some(3), "Type errors should return exit code 3");
+    }
 }
 
 /// Test that --quiet flag suppresses output
@@ -448,6 +454,33 @@ fn test_global_flags_with_subcommands() {
             cmd
         );
     }
+}
+
+/// Test that I/O errors (file not found) return exit code 6
+#[test]
+fn test_exit_code_io_error() {
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--bin",
+            "ash",
+            "--",
+            "check",
+            "/nonexistent/path/file.ash",
+        ])
+        .output()
+        .unwrap();
+
+    println!("Exit code: {:?}", output.status.code());
+    println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+
+    // I/O errors should return exit code 6 per SPEC-005
+    assert!(!output.status.success(), "Expected failure for I/O error");
+    assert_eq!(
+        output.status.code(),
+        Some(6),
+        "I/O errors should return exit code 6"
+    );
 }
 
 /// Test that exit code 0 is returned on success

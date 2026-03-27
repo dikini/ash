@@ -442,6 +442,9 @@ impl EngineBuilder {
         }
 
         // Register HTTP provider if configured
+        // Note: HTTP provider is not yet implemented. The config is accepted for API
+        // compatibility but HTTP operations will require a custom provider.
+        // See: https://github.com/dikini/ash/issues/XXX
         if self.http_config.is_some() {
             // HTTP provider would be registered here when implemented
             // For now, we just acknowledge the config was provided
@@ -896,13 +899,13 @@ mod tests {
         let result = builder.build();
         assert!(
             result.is_ok(),
-            "Builder with HTTP capabilities should build successfully"
+            "Builder with HTTP capabilities should build successfully (config accepted for API compatibility)"
         );
     }
 
     #[test]
     fn test_builder_http_capabilities_with_custom_config() {
-        // Test with custom HTTP configuration
+        // Test with custom HTTP configuration (config accepted for API compatibility)
         let config = HttpConfig {
             timeout_seconds: 60,
             max_redirects: 5,

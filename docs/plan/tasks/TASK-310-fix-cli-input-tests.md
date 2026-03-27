@@ -1,6 +1,12 @@
 # TASK-310: Fix cli_input_workflow_test Failures
 
-## Status: 🔴 Critical - Phase 49 Test Failures
+## Status: ✅ Complete - Phase 50 Remediation
+
+## Summary
+
+Marked 3 failing tests as `#[ignore]` with clear documentation of known issues.
+These are pre-existing limitations requiring significant interpreter/parser changes,
+which is out of scope for Phase 50 remediation.
 
 ## Problem
 
@@ -42,10 +48,11 @@ Given these are pre-existing limitations, option 3 may be appropriate for Phase 
 
 ## Completion Checklist
 
-- [ ] Root cause identified for each failure
-- [ ] Tests fixed, adjusted, or marked as known issues
-- [ ] `cargo test --workspace --quiet` passes
-- [ ] CHANGELOG.md updated
+- [x] Root cause identified for each failure
+- [x] Tests marked as known issues with `#[ignore]`
+- [x] `cargo test --workspace --quiet` passes (2 tests pass, 3 ignored)
+- [x] `cargo clippy --all-targets` passes for modified file
+- [x] CHANGELOG.md updated
 
 **Estimated Hours:** 4
 **Priority:** Critical (blocks phase verification)

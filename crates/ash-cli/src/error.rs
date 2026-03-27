@@ -165,6 +165,8 @@ impl From<anyhow::Error> for CliError {
         // Try to classify the error based on its message content
         let msg = err.to_string().to_lowercase();
 
+        // Check for parse errors - handles "parse error:" after to_lowercase()
+        // which catches "Parse error:", "PARSE ERROR", etc. from check.rs
         if msg.contains("parse error") {
             CliError::ParseError {
                 message: err.to_string(),
@@ -242,6 +244,14 @@ mod tests {
     #[test]
     fn test_from_anyhow_parse() {
         let anyhow_err = anyhow::anyhow!("parse error: unexpected token");
+        let cli_err: CliError = anyhow_err.into();
+        assert_eq!(cli_err.exit_code(), ExitCode::from(2));
+    }
+
+    #[test]
+    fn test_from_anyhow_parse_capital_p() {
+        // This is the format used in check.rs: Err(anyhow::anyhow!("Parse error: {e}"))
+        let anyhow_err = anyhow::anyhow!("Parse error: unexpected token at line 5");
         let cli_err: CliError = anyhow_err.into();
         assert_eq!(cli_err.exit_code(), ExitCode::from(2));
     }

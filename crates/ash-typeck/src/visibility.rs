@@ -130,9 +130,12 @@ impl VisibilityExt for Visibility {
             Visibility::Inherited => from_module == item_module,
 
             Visibility::Crate => {
-                // For now, we assume same crate if both paths start with the same root
-                // In a real implementation, this would check crate roots
-                true
+                // pub(crate) is visible only within the same crate.
+                // We use a simple heuristic: modules are in the same crate if their
+                // first path segment (crate root) matches.
+                let item_root = item_module.segments.first();
+                let from_root = from_module.segments.first();
+                item_root == from_root
             }
 
             Visibility::Super { levels } => {
@@ -481,6 +484,55 @@ mod tests {
                 .check_access(&visibility, "crate::deep::nested", "crate::other", "item")
                 .is_ok()
         );
+    }
+
+    #[test]
+    fn test_pub_crate_not_accessible_from_different_crate() {
+        let checker = VisibilityChecker::new();
+        let visibility = Visibility::Crate;
+
+        // Should NOT be accessible from a different crate (different root)
+        let result = checker.check_access(&visibility, "crate_a::foo", "crate_b::bar", "item");
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert_eq!(
+            err,
+            VisibilityError::PrivateItem {
+                item: "item".to_string(),
+                owner_module: "crate_a::foo".to_string(),
+                current_module: "crate_b::bar".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_pub_crate_not_accessible_from_external_crate() {
+        let checker = VisibilityChecker::new();
+        let visibility = Visibility::Crate;
+
+        // Should NOT be accessible from external crates
+        let result = checker.check_access(&visibility, "my_crate::internal", "external::module", "secret");
+        assert!(result.is_err());
+
+        // Also test the reverse direction
+        let result = checker.check_access(&visibility, "external::module", "my_crate::internal", "item");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_pub_crate_cross_crate_with_similar_paths() {
+        let checker = VisibilityChecker::new();
+        let visibility = Visibility::Crate;
+
+        // Different crates with similar sub-paths should still be isolated
+        let result = checker.check_access(
+            &visibility,
+            "crate_a::utils::helper",
+            "crate_b::utils::helper",
+            "internal_fn"
+        );
+        assert!(result.is_err());
     }
 
     // ============================================================

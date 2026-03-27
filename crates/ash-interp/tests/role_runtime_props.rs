@@ -578,6 +578,14 @@ proptest! {
         role in (arb_role_name(), arb_authority(), prop::collection::vec(arb_obligation_name(), 3..10)),
     ) {
         let (name, authority, obligation_names) = role;
+        
+        // Deduplicate obligation names - discharging by name affects all with same name
+        let unique_names: std::collections::HashSet<_> = obligation_names.into_iter().collect();
+        let obligation_names: Vec<_> = unique_names.into_iter().collect();
+        
+        // Skip if we don't have enough unique obligations after dedup
+        prop_assume!(obligation_names.len() >= 3);
+        
         let obligations: Vec<RoleObligationRef> = obligation_names
             .into_iter()
             .map(|name| RoleObligationRef { name })

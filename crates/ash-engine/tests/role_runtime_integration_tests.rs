@@ -835,6 +835,8 @@ fn test_role_context_clone() {
     ctx.discharge("obl").unwrap();
 
     let cloned = ctx.clone();
+    // Both original and clone should see the discharged obligation
+    assert!(ctx.is_discharged("obl"));
     assert!(cloned.is_discharged("obl"));
     assert!(cloned.can_access(&Capability {
         name: "a".to_string(),

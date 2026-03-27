@@ -1,6 +1,12 @@
 # TASK-317: Fix --capability Provider Binding
 
-## Status: 🔴 Critical - Phase 50 Gap
+## Status: ⚪ Superseded by TASK-323
+
+**Note:** This task has been superseded by TASK-323. The `--capability` flag has been
+removed entirely from the CLI rather than being fixed. Capabilities are now
+defined in Ash source files or imported from libraries.
+
+## Original Status: 🔴 Critical - Phase 50 Gap
 
 ## Problem
 

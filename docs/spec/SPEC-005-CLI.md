@@ -89,38 +89,48 @@ JSON:
 
 ### `ash run` - Execute Workflow
 
-Execute an Ash workflow with the specified capability providers.
+Execute an Ash workflow.
 
 ```bash
-ash run [options] <file.ash> [-- <input>]
+ash run [options] <file.ash>
 ```
 
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `--input <file>` | JSON input file |
 | `--output <file>` | Write output to file |
-| `--format <fmt>` | Output format: json, yaml, toml, raw |
+| `--format <fmt>` | Output format: text, json |
 | `--dry-run` | Validate only, don't execute |
 | `--timeout <secs>` | Maximum execution time |
 | `--trace` | Enable provenance tracing |
-| `--capability <name=uri>` | Bind capability to provider |
+
+**Capability Providers:**
+
+Capabilities are defined in Ash source files using `capability` declarations.
+Built-in providers (stdio, filesystem) are enabled by default. Custom providers
+must be declared in the workflow or imported from libraries.
+
+**Input Parameters:**
+
+Workflow input parameters are not yet supported via CLI. Workflows should use
+`observe` statements or hardcoded values. CLI input binding is planned for a
+future release.
 
 **Examples:**
 
 ```bash
-# Run with JSON input
-ash run workflow.ash --input data.json
-
-# Run with inline input
-ash run workflow.ash -- '{"name": "test"}'
-
-# Run with custom capability binding
-ash run workflow.ash --capability db=postgres://localhost/mydb
+# Run a workflow
+ash run workflow.ash
 
 # Dry run (validate without executing)
 ash run --dry-run workflow.ash
+
+# Run with timeout
+ash run --timeout 30 workflow.ash
+
+# Run with trace output
+ash run --trace workflow.ash
 ```
 
 ### `ash trace` - Execute with Full Provenance

@@ -1368,7 +1368,8 @@ mod tests {
         assert_eq!(result.params[0].name.as_ref(), "items");
         assert!(
             matches!(&result.params[0].ty, Type::Constructor { name, args } if name.as_ref() == "List" && args.len() == 1),
-            "Expected List<Int> constructor type, got {:?}", result.params[0].ty
+            "Expected List<Int> constructor type, got {:?}",
+            result.params[0].ty
         );
     }
 
@@ -1383,7 +1384,11 @@ mod tests {
             assert_eq!(name.as_ref(), "List");
             assert_eq!(args.len(), 1);
             // Check inner List<Int>
-            if let Type::Constructor { name: inner_name, args: inner_args } = &args[0] {
+            if let Type::Constructor {
+                name: inner_name,
+                args: inner_args,
+            } = &args[0]
+            {
                 assert_eq!(inner_name.as_ref(), "List");
                 assert_eq!(inner_args.len(), 1);
                 assert!(matches!(&inner_args[0], Type::Name(n) if n.as_ref() == "Int"));

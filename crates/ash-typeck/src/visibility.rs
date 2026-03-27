@@ -512,11 +512,21 @@ mod tests {
         let visibility = Visibility::Crate;
 
         // Should NOT be accessible from external crates
-        let result = checker.check_access(&visibility, "my_crate::internal", "external::module", "secret");
+        let result = checker.check_access(
+            &visibility,
+            "my_crate::internal",
+            "external::module",
+            "secret",
+        );
         assert!(result.is_err());
 
         // Also test the reverse direction
-        let result = checker.check_access(&visibility, "external::module", "my_crate::internal", "item");
+        let result = checker.check_access(
+            &visibility,
+            "external::module",
+            "my_crate::internal",
+            "item",
+        );
         assert!(result.is_err());
     }
 
@@ -530,7 +540,7 @@ mod tests {
             &visibility,
             "crate_a::utils::helper",
             "crate_b::utils::helper",
-            "internal_fn"
+            "internal_fn",
         );
         assert!(result.is_err());
     }

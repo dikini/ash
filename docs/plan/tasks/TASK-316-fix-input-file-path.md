@@ -1,6 +1,12 @@
 # TASK-316: Fix --input to Fail Fast on File Path Attempts (Options B & C)
 
-## Status: 🔴 Critical - Phase 50 Remediation
+## Status: ⚪ Superseded by TASK-324
+
+**Note:** This task has been superseded by TASK-324. The `--input` flag has been
+removed entirely from the CLI rather than being fixed. Input handling will be
+redesigned in a future phase with a clearer contract.
+
+## Original Status: 🔴 Critical - Phase 50 Remediation
 
 ## Decision
 

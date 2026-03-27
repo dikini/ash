@@ -1,32 +1,31 @@
-//! Tests for CLI --input with workflow parameters
+//! Tests for CLI workflow execution
 //!
-//! These tests verify that input values from --input are correctly bound
-//! to workflow parameters during execution.
+//! NOTE: The --input flag was removed in TASK-324. Input handling will be
+//! redesigned in a future phase. These tests verify basic workflow execution
+//! without input parameters.
 
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// Test that input values are bound to workflow parameters
+/// Test that a workflow without parameters executes successfully
 #[test]
-fn test_input_bound_to_workflow_parameters() {
+fn test_workflow_without_parameters() {
     let temp = TempDir::new().unwrap();
 
-    // Create a workflow with parameters
+    // Create a simple workflow
     let workflow = r#"
-        workflow greet(name: String) {
-            ret "Hello, " + name;
+        workflow main {
+            ret "Hello, World";
         }
     "#;
     let workflow_path = temp.path().join("greet.ash");
     fs::write(&workflow_path, workflow).unwrap();
 
-    // Run with --input providing the parameter
+    // Run without --input
     let output = Command::new("cargo")
         .args(["run", "--bin", "ash", "--", "run"])
         .arg(&workflow_path)
-        .arg("--input")
-        .arg(r#"{"name": "World"}"#)
         .output()
         .expect("Failed to execute");
 
@@ -48,12 +47,14 @@ fn test_input_bound_to_workflow_parameters() {
     );
 }
 
-/// Test that missing required parameters produce an error
+/// Test that a workflow with parameters can still be executed
+/// (parameter binding via CLI is not yet supported per TASK-324)
 #[test]
-fn test_missing_required_parameter() {
+#[ignore = "TASK-324: CLI input binding removed. Workflows with parameters need interpreter support."]
+fn test_workflow_with_parameters_ignored() {
     let temp = TempDir::new().unwrap();
 
-    // Create a workflow with a required parameter
+    // Create a workflow with parameters
     let workflow = r#"
         workflow greet(name: String) {
             ret "Hello, " + name;
@@ -62,7 +63,7 @@ fn test_missing_required_parameter() {
     let workflow_path = temp.path().join("greet.ash");
     fs::write(&workflow_path, workflow).unwrap();
 
-    // Run without --input (missing required parameter)
+    // Run without --input (CLI input binding removed)
     let output = Command::new("cargo")
         .args(["run", "--bin", "ash", "--", "run"])
         .arg(&workflow_path)
@@ -70,73 +71,6 @@ fn test_missing_required_parameter() {
         .expect("Failed to execute");
 
     // Should fail because parameter is not provided
-    // Note: This may pass currently if parameters are silently ignored
     let stderr = String::from_utf8_lossy(&output.stderr);
     println!("stderr: {}", stderr);
-}
-
-/// Test workflow with boolean parameter
-///
-/// **KNOWN ISSUE**: This test is ignored because the interpreter outputs
-/// "off" instead of "true"/"false" for boolean values. See TASK-314.
-#[test]
-#[ignore = "TASK-314: interpreter boolean to string conversion outputs 'off' instead of 'true'/'false'"]
-fn test_boolean_workflow_parameter() {
-    let temp = TempDir::new().unwrap();
-
-    let workflow = r#"
-        workflow toggle(enabled: Bool) {
-            if enabled then {
-                ret "on";
-            }
-            ret "off";
-        }
-    "#;
-    let workflow_path = temp.path().join("toggle.ash");
-    fs::write(&workflow_path, workflow).unwrap();
-
-    // Test with enabled: true
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run"])
-        .arg(&workflow_path)
-        .arg("--input")
-        .arg(r#"{"enabled": true}"#)
-        .output()
-        .expect("Failed to execute");
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("on"),
-        "Expected 'on' in output, got: {}",
-        stdout
-    );
-}
-
-/// Test workflow with list parameter
-#[test]
-fn test_list_workflow_parameter() {
-    let temp = TempDir::new().unwrap();
-
-    let workflow = r#"
-        workflow sum(items: List<Int>) {
-            ret 42;
-        }
-    "#;
-    let workflow_path = temp.path().join("sum.ash");
-    fs::write(&workflow_path, workflow).unwrap();
-
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run"])
-        .arg(&workflow_path)
-        .arg("--input")
-        .arg(r#"{"items": [1, 2, 3]}"#)
-        .output()
-        .expect("Failed to execute");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        output.status.success(),
-        "Workflow should execute successfully. stderr: {}",
-        stderr
-    );
 }

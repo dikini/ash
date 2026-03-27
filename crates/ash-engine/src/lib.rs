@@ -258,7 +258,7 @@ impl Engine {
             SurfaceType::Capability(_) => ash_typeck::Type::Var(ash_typeck::TypeVar::fresh()),
             SurfaceType::Constructor { name, args } => ash_typeck::Type::Constructor {
                 name: ash_typeck::QualifiedName::root(name.as_ref()),
-                args: args.iter().map(|ty| Self::surface_type_to_typeck(ty)).collect(),
+                args: args.iter().map(Self::surface_type_to_typeck).collect(),
                 kind: ash_typeck::Kind::Type,
             },
         }
@@ -502,32 +502,23 @@ impl EngineBuilder {
         self
     }
 
-    /// Add HTTP capabilities (get, post, put, delete)
+    /// Configure HTTP capabilities (not yet implemented)
     ///
-    /// These are operational-effect capabilities for HTTP operations.
-    /// Uses the provided configuration for timeout, redirects, and SSL verification.
+    /// # Errors
     ///
-    /// # Note
-    ///
-    /// HTTP provider is not yet implemented. Calling `build()` after using this method
-    /// will return a `Configuration` error. Use `with_custom_provider()` to add your own
-    /// HTTP implementation.
+    /// This method currently returns a `Configuration` error as the HTTP provider
+    /// is not yet implemented. Use `with_custom_provider()` to add a custom HTTP
+    /// implementation.
     ///
     /// # Example
     ///
-    /// ```should_panic
+    /// ```
     /// use ash_engine::{Engine, HttpConfig};
     ///
-    /// let config = HttpConfig {
-    ///     timeout_seconds: 60,
-    ///     max_redirects: 5,
-    ///     verify_ssl: true,
-    /// };
-    /// // This will panic because HTTP provider is not yet implemented
-    /// let engine = Engine::new()
-    ///     .with_http_capabilities(config)
-    ///     .build()
-    ///     .expect("engine builds");
+    /// let result = Engine::new()
+    ///     .with_http_capabilities(HttpConfig::new())
+    ///     .build();
+    /// assert!(result.is_err()); // HTTP provider not yet implemented
     /// ```
     #[must_use]
     #[allow(clippy::missing_const_for_fn)] // Cannot be const due to HashMap operations in build()

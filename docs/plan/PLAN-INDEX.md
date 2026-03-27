@@ -1503,11 +1503,12 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-332](tasks/TASK-332-import-resolver-pub-crate.md) | Implement pub(crate) enforcement in import resolver | SPEC-009 | 2-3 | ✅ Complete |
+| [TASK-332](tasks/TASK-332-import-resolver-pub-crate.md) | Implement pub(crate) enforcement in import resolver | SPEC-009 | 2-3 | ✅ Complete (see TASK-343 for real resolver fix) |
 | [TASK-333](tasks/TASK-333-import-resolver-pub-super.md) | Implement pub(super) enforcement in import resolver | SPEC-009 | 2-3 | ✅ Complete |
 | [TASK-334](tasks/TASK-334-import-resolver-pub-in-path.md) | Implement pub(in path) enforcement in import resolver | SPEC-009 | 3-4 | ✅ Complete |
 | [TASK-335](tasks/TASK-335-import-resolver-visibility-tests.md) | Add comprehensive visibility tests to import resolver | SPEC-009 | 2-3 | ✅ Complete |
 | [TASK-336](tasks/TASK-336-phase-54-closeout.md) | Phase 54 closeout and verification | N/A | 1 | ✅ Complete |
+| [TASK-343](tasks/TASK-343-fix-pub-crate-real-resolver.md) | Fix pub(crate) for real resolver path | SPEC-009 | 0.5 | ✅ Complete |
 
 **Summary:**
 This phase addressed the critical gaps identified in TASK-329 where the import resolver had placeholder implementations for restricted visibility:

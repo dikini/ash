@@ -221,8 +221,44 @@ workflow main {
 }
 ```
 
-## 10. Future Extensions
+## 10. External Crate Imports
 
-- External crate imports: `use external::crate::item`
+Dependencies declared in crate root metadata can be imported using the `external::` prefix:
+
+### 10.1 Syntax
+
+```
+use external::<alias>::<path>;
+```
+
+Where `<alias>` is the dependency alias declared in a `dependency` statement.
+
+### 10.2 Examples
+
+```ash
+-- Assuming: dependency util from "../util/main.ash";
+use external::util::sanitize::normalize;
+use external::util::helpers::*;
+
+-- Usage in workflow
+workflow process {
+    action sanitize_input {
+        effect: operational;
+        body: |input| -> normalize(input);
+    }
+}
+```
+
+### 10.3 Resolution
+
+External crate imports are resolved by:
+1. Looking up the alias in the declared dependencies
+2. Loading the dependency's crate root from the specified path
+3. Resolving the path within the dependency's module tree
+4. Verifying visibility (only `pub` and `pub(crate)` items are accessible)
+
+## 11. Future Extensions
+
 - Import groups with visibility: `pub(crate) use crate::foo::{a, b}`
 - Restricted use: `use crate::foo::bar as private_bar;` (private alias)
+- Version constraints in dependency declarations

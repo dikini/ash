@@ -223,12 +223,54 @@ specific entry points. When an inline-module parser does not yet implement a can
 `workflow_def` or `datatype_def`, it must reject that item explicitly rather than silently skipping
 it and continuing as though the module parsed successfully.
 
-### 9.3 Future Extensions
+### 9.3 Crate Root Metadata
+
+Crate root files may declare crate identity and external dependencies at the beginning of the file:
+
+#### 9.3.1 Crate Name Declaration
+
+```
+crate <name>;
+```
+
+Declares the name of the current crate, enabling cross-crate references and dependency management.
+
+#### 9.3.2 Dependency Declaration
+
+```
+dependency <alias> from "<path>";
+```
+
+Declares an external crate dependency with:
+- `alias`: The name used to refer to this dependency in `use` statements
+- `path`: Filesystem path to the dependency's crate root (must be quoted)
+
+Example:
+```ash
+crate app;
+
+dependency util from "../util/main.ash";
+dependency policy from "../policy/main.ash";
+```
+
+#### 9.3.3 Grammar
+
+```
+crate_root        ::= crate_metadata? module_item*
+
+crate_metadata    ::= crate_decl dependency_decl*
+
+crate_decl        ::= "crate" IDENTIFIER ";"
+
+dependency_decl   ::= "dependency" IDENTIFIER "from" STRING ";"
+```
+
+### 9.4 Future Extensions
 
 Not in current scope:
 
-- External crate dependencies
 - Binary module compilation
+- Package registry integration
 
 Import statements (`use`) and re-exports (`pub use`) are specified in [SPEC-012](SPEC-012-IMPORTS.md)
 and are not modeled here.

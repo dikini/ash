@@ -9,6 +9,33 @@ use crate::token::Span;
 /// A name/identifier in the source code.
 pub type Name = Box<str>;
 
+/// Crate root metadata for cross-crate dependency management.
+///
+/// This struct represents the crate identity and dependencies declared
+/// at the beginning of a crate root file.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CrateRootMetadata {
+    /// The name of this crate
+    pub crate_name: Box<str>,
+    /// Declared external dependencies
+    pub dependencies: Vec<DependencyDecl>,
+    /// Source span covering the entire metadata
+    pub span: Span,
+}
+
+/// A dependency declaration for external crate roots.
+///
+/// Syntax: `dependency <alias> from "<path>";`
+#[derive(Debug, Clone, PartialEq)]
+pub struct DependencyDecl {
+    /// The alias used to refer to this dependency in imports
+    pub alias: Box<str>,
+    /// The filesystem path to the dependency's crate root
+    pub root_path: Box<str>,
+    /// Source span covering this declaration
+    pub span: Span,
+}
+
 /// A program consists of definitions and a main workflow.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {

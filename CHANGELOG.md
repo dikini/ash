@@ -34,6 +34,24 @@ The format is based on [Common Changelog](https://common-changelog.org/).
     - Documented that `with_http_capabilities()` returns configuration error
     - Users directed to `with_custom_provider()` for HTTP implementation
 
+- **Phase 54: Import Resolver Visibility Enforcement (single-crate model)**
+  - **TASK-332:** Implemented `pub(crate)` enforcement in import resolver
+    - Added `CrateId` tracking to `ModuleGraph` for future multi-crate support
+    - `pub(crate)` now only allows imports within the same crate (same graph)
+  - **TASK-333:** Implemented `pub(super)` enforcement in import resolver
+    - Added parent tracking and `ancestors()` method to `ModuleGraph`
+    - `pub(super)` now only allows imports from parent modules
+  - **TASK-334:** Implemented `pub(in path)` enforcement in import resolver
+    - Added `resolve_path()` and `is_descendant_or_same()` to `ModuleGraph`
+    - `pub(in path)` now only allows imports from descendants of specified path
+  - **TASK-335:** Added comprehensive visibility tests to import resolver
+    - Added 49 visibility tests exceeding 25+ target
+    - Added integration tests for real `.ash` file parsing
+  - **TASK-343:** Fixed `pub(crate)` for real resolver path (regression fix)
+    - Fixed issue where `set_crate()` was only called in tests
+    - `pub(crate)` now works correctly with production resolver-built graphs
+    - Note: True cross-crate enforcement is Phase 55 scope
+
 ### Fixed
 
 - TASK-310: Marked 3 failing cli_input_workflow_test tests as `#[ignore]` with known issue documentation

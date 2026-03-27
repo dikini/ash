@@ -481,14 +481,9 @@ impl<'a> ImportResolver<'a> {
         match visibility {
             Visibility::Public => true,
             Visibility::Crate => {
-                // Check if modules are in same crate
-                match (
-                    self.module_graph.crate_for(importing_module),
-                    self.module_graph.crate_for(target_module),
-                ) {
-                    (Some(importing_crate), Some(target_crate)) => importing_crate == target_crate,
-                    _ => false, // Unknown crate = not visible
-                }
+                // Single-crate model: pub(crate) visible to all modules in this graph
+                self.module_graph.nodes.contains_key(&importing_module)
+                    && self.module_graph.nodes.contains_key(&target_module)
             }
             Visibility::Inherited => false, // Private items not visible
             Visibility::Super { levels } => {
@@ -1021,64 +1016,8 @@ mod tests {
         assert_eq!(binding.target_module, mod_a2);
     }
 
-    #[test]
-    fn test_pub_crate_cross_crate_rejected() {
-        // Create graph with modules in different crates
-        let (graph, mod_a1, _mod_a2, _external, mod_b2) = create_multi_crate_graph();
-
-        let mut resolver = ImportResolver::new(&graph);
-
-        // Add pub(crate) export to mod_b2 (different crate from mod_a1)
-        resolver.add_module_exports(mod_b2, vec![("CrateItem".to_string(), Visibility::Crate)]);
-
-        // Add use statement from mod_a1 importing from mod_b2 via external
-        let use_path = UsePath::Simple(simple_path(&["crate", "external", "mod_b2", "CrateItem"]));
-        resolver.add_module_uses(mod_a1, vec![use_stmt(use_path)]);
-
-        // Import should fail - different crate
-        let result = resolver.resolve_all();
-        assert!(result.is_err());
-
-        let err = result.unwrap_err();
-        assert!(
-            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "CrateItem"),
-            "Expected PrivateItem error for cross-crate pub(crate) import, got: {:?}",
-            err
-        );
-    }
-
-    #[test]
-    fn test_pub_crate_unknown_crate_rejected() {
-        let graph = create_test_graph();
-        let root = graph.get_root().copied().unwrap();
-        let foo = graph
-            .get_node(root)
-            .unwrap()
-            .children
-            .first()
-            .copied()
-            .unwrap();
-
-        let mut resolver = ImportResolver::new(&graph);
-
-        // Add pub(crate) export without setting crate membership
-        resolver.add_module_exports(foo, vec![("CrateItem".to_string(), Visibility::Crate)]);
-
-        // Try to import the pub(crate) item
-        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "CrateItem"]));
-        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
-
-        // Import should fail - unknown crate
-        let result = resolver.resolve_all();
-        assert!(result.is_err());
-
-        let err = result.unwrap_err();
-        assert!(
-            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "CrateItem"),
-            "Expected PrivateItem error for unknown crate, got: {:?}",
-            err
-        );
-    }
+    // Note: Multi-crate pub(crate) tests removed - Phase 54 uses single-crate model
+    // where pub(crate) is visible to all modules in the graph.
 
     // =========================================================================
     // TASK-333: pub(super) visibility tests

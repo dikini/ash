@@ -3,11 +3,20 @@
 //! This module provides functionality to discover and resolve module dependencies
 //! in Ash source files. It supports Rust-style module resolution where `mod foo;`
 //! looks for `foo.ash` or `foo/mod.ash`.
+//!
+//! This resolver also supports multi-crate resolution with dependency management.
 
-use ash_core::module_graph::{ModuleGraph, ModuleId, ModuleNode, ModuleSource as CoreModuleSource};
+use ash_core::module_graph::{
+    CrateId, ModuleGraph, ModuleId, ModuleNode, ModuleSource as CoreModuleSource,
+};
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+
+use crate::input::new_input;
+use crate::parse_crate_root::parse_crate_root_metadata;
+use crate::surface::DependencyDecl;
 
 /// File system abstraction trait for testability.
 ///
@@ -48,6 +57,38 @@ pub enum ResolveError {
         path: PathBuf,
         /// Description of the parse error.
         message: String,
+    },
+
+    /// A crate was not found at the expected location.
+    #[error("dependency crate not found: {crate_name} (expected at {expected_path})")]
+    CrateNotFound {
+        /// The name of the crate that was not found.
+        crate_name: String,
+        /// The path where the crate was expected.
+        expected_path: PathBuf,
+    },
+
+    /// A duplicate crate name was detected.
+    #[error("duplicate crate name: {crate_name}")]
+    DuplicateCrateName {
+        /// The duplicate crate name.
+        crate_name: String,
+    },
+
+    /// A duplicate dependency alias was declared in the same crate.
+    #[error("duplicate dependency alias: {alias} in crate {crate_name}")]
+    DuplicateDependencyAlias {
+        /// The duplicate alias.
+        alias: String,
+        /// The crate that declared the duplicate alias.
+        crate_name: String,
+    },
+
+    /// A circular dependency between crates was detected.
+    #[error("crate dependency cycle detected: {cycle}")]
+    CrateCycle {
+        /// Description of the circular dependency cycle.
+        cycle: String,
     },
 }
 
@@ -94,22 +135,254 @@ impl ModuleResolver {
     /// Discovers all modules reachable from the root and builds a complete
     /// `ModuleGraph`. Returns an error if a module cannot be found or if
     /// a circular dependency is detected.
+    ///
+    /// This method also parses crate root metadata and recursively resolves
+    /// all declared dependency crates.
     pub fn resolve_crate(&self, root_path: impl AsRef<Path>) -> Result<ModuleGraph, ResolveError> {
         let root_path = root_path.as_ref();
         let mut graph = ModuleGraph::new();
         let mut visited = HashSet::new();
         let mut resolution_stack = Vec::new();
 
-        let root_id = self.resolve_module(
-            root_path,
+        // Track loaded crates by path and name to prevent duplicates
+        let mut crate_paths: HashMap<PathBuf, CrateId> = HashMap::new();
+        let mut crate_names: HashMap<String, CrateId> = HashMap::new();
+        // Track crates currently being resolved for cycle detection
+        let mut crate_resolution_stack: Vec<String> = Vec::new();
+
+        // Resolve the root crate with its dependencies
+        let (root_id, _root_crate_id) = self.resolve_crate_internal(
             root_path,
             &mut graph,
             &mut visited,
             &mut resolution_stack,
+            &mut crate_paths,
+            &mut crate_names,
+            &mut crate_resolution_stack,
         )?;
 
         graph.set_root(root_id);
         Ok(graph)
+    }
+
+    /// Internal method to resolve a crate and its dependencies.
+    ///
+    /// Returns the root module ID and the crate ID for this crate.
+    #[allow(clippy::too_many_arguments)]
+    fn resolve_crate_internal(
+        &self,
+        root_path: &Path,
+        graph: &mut ModuleGraph,
+        visited: &mut HashSet<PathBuf>,
+        resolution_stack: &mut Vec<PathBuf>,
+        crate_paths: &mut HashMap<PathBuf, CrateId>,
+        crate_names: &mut HashMap<String, CrateId>,
+        crate_resolution_stack: &mut Vec<String>,
+    ) -> Result<(ModuleId, CrateId), ResolveError> {
+        let canonical_path = root_path;
+
+        // Check if this crate path is already loaded
+        if let Some(&existing_crate_id) = crate_paths.get(canonical_path) {
+            // Check if this crate is currently being resolved (cycle detection)
+            let existing_crate = graph.get_crate(existing_crate_id).unwrap();
+            let crate_name_str = &existing_crate.name;
+            if let Some(pos) = crate_resolution_stack
+                .iter()
+                .position(|n| n == crate_name_str)
+            {
+                let cycle = crate_resolution_stack[pos..]
+                    .iter()
+                    .cloned()
+                    .chain(std::iter::once(crate_name_str.clone()))
+                    .collect::<Vec<_>>()
+                    .join(" -> ");
+                return Err(ResolveError::CrateCycle { cycle });
+            }
+            // Find the root module for this crate
+            return Ok((existing_crate.root_module, existing_crate_id));
+        }
+
+        // Read the root file content
+        let content =
+            self.fs
+                .read_file(canonical_path)
+                .ok_or_else(|| ResolveError::ModuleNotFound {
+                    module_name: canonical_path
+                        .file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into(),
+                    expected_path: canonical_path.to_path_buf(),
+                })?;
+
+        // Parse crate root metadata (or use default if not present)
+        let metadata = self
+            .parse_crate_root_metadata(&content, canonical_path)
+            .unwrap_or_else(|_| crate::surface::CrateRootMetadata {
+                crate_name: canonical_path
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into(),
+                dependencies: Vec::new(),
+                span: crate::token::Span::new(0, 0, 1, 1),
+            });
+
+        // Check for duplicate crate name
+        if let Some(&existing_crate_id) = crate_names.get(metadata.crate_name.as_ref()) {
+            let existing_crate = graph.get_crate(existing_crate_id).unwrap();
+            // Only error if it's a different path (same crate re-loaded is OK)
+            if existing_crate.root_path != canonical_path.display().to_string() {
+                return Err(ResolveError::DuplicateCrateName {
+                    crate_name: metadata.crate_name.to_string(),
+                });
+            }
+        }
+
+        // Check for crate dependency cycle
+        let crate_name_str = metadata.crate_name.to_string();
+        if let Some(pos) = crate_resolution_stack
+            .iter()
+            .position(|n| n == &crate_name_str)
+        {
+            let cycle = crate_resolution_stack[pos..]
+                .iter()
+                .cloned()
+                .chain(std::iter::once(crate_name_str.clone()))
+                .collect::<Vec<_>>()
+                .join(" -> ");
+            return Err(ResolveError::CrateCycle { cycle });
+        }
+
+        // Resolve the root module of this crate (which also resolves submodules)
+        let root_module_id =
+            self.resolve_module(root_path, canonical_path, graph, visited, resolution_stack)?;
+
+        // Add this crate to the graph
+        let root_path_str = canonical_path.display().to_string();
+        let crate_id = graph.add_crate(crate_name_str.clone(), root_path_str, root_module_id);
+
+        // Track this crate
+        crate_paths.insert(canonical_path.to_path_buf(), crate_id);
+        crate_names.insert(crate_name_str.clone(), crate_id);
+
+        // Now resolve dependencies
+        crate_resolution_stack.push(crate_name_str.clone());
+
+        for dep in &metadata.dependencies {
+            self.resolve_dependency_crate(
+                crate_id,
+                dep,
+                graph,
+                visited,
+                resolution_stack,
+                crate_paths,
+                crate_names,
+                crate_resolution_stack,
+            )?;
+        }
+
+        crate_resolution_stack.pop();
+
+        Ok((root_module_id, crate_id))
+    }
+
+    /// Resolve a dependency crate and register it in the graph.
+    #[allow(clippy::too_many_arguments)]
+    fn resolve_dependency_crate(
+        &self,
+        declaring_crate: CrateId,
+        dependency: &DependencyDecl,
+        graph: &mut ModuleGraph,
+        visited: &mut HashSet<PathBuf>,
+        resolution_stack: &mut Vec<PathBuf>,
+        crate_paths: &mut HashMap<PathBuf, CrateId>,
+        crate_names: &mut HashMap<String, CrateId>,
+        crate_resolution_stack: &mut Vec<String>,
+    ) -> Result<CrateId, ResolveError> {
+        let alias = dependency.alias.to_string();
+        let dep_path_str = dependency.root_path.to_string();
+
+        // Get the declaring crate's directory for relative path resolution
+        let declaring_crate_info = graph.get_crate(declaring_crate).unwrap();
+        let declaring_crate_dir = Path::new(&declaring_crate_info.root_path)
+            .parent()
+            .unwrap_or(Path::new("."));
+
+        // Resolve the dependency path relative to the declaring crate
+        let dep_path = declaring_crate_dir.join(&dep_path_str);
+        // Normalize the path to resolve ".." and "." segments
+        let canonical_dep_path = normalize_path(&dep_path);
+
+        // Check for duplicate alias in the declaring crate
+        let declaring_crate_mut = graph.get_crate_mut(declaring_crate).unwrap();
+        if declaring_crate_mut.dependencies.contains_key(&alias) {
+            return Err(ResolveError::DuplicateDependencyAlias {
+                alias,
+                crate_name: declaring_crate_mut.name.clone(),
+            });
+        }
+        // Mutable borrow ends here via drop of the reference
+
+        // Check if this crate is already loaded by path
+        if let Some(&existing_crate_id) = crate_paths.get(&canonical_dep_path) {
+            // Check for cycle: if this crate is currently being resolved, that's a cycle
+            let existing_crate = graph.get_crate(existing_crate_id).unwrap();
+            let dep_crate_name = &existing_crate.name;
+            if let Some(pos) = crate_resolution_stack
+                .iter()
+                .position(|n| n == dep_crate_name)
+            {
+                let cycle = crate_resolution_stack[pos..]
+                    .iter()
+                    .cloned()
+                    .chain(std::iter::once(dep_crate_name.clone()))
+                    .collect::<Vec<_>>()
+                    .join(" -> ");
+                return Err(ResolveError::CrateCycle { cycle });
+            }
+            // Register the dependency alias
+            graph.add_dependency(declaring_crate, alias, existing_crate_id);
+            return Ok(existing_crate_id);
+        }
+
+        // Check that the dependency file exists
+        if !self.fs.file_exists(&canonical_dep_path) {
+            return Err(ResolveError::CrateNotFound {
+                crate_name: alias,
+                expected_path: canonical_dep_path.clone(),
+            });
+        }
+
+        // Recursively resolve the dependency crate
+        let (_, dep_crate_id) = self.resolve_crate_internal(
+            &canonical_dep_path,
+            graph,
+            visited,
+            resolution_stack,
+            crate_paths,
+            crate_names,
+            crate_resolution_stack,
+        )?;
+
+        // Register the dependency alias
+        graph.add_dependency(declaring_crate, alias, dep_crate_id);
+
+        Ok(dep_crate_id)
+    }
+
+    /// Parse crate root metadata from file content.
+    fn parse_crate_root_metadata(
+        &self,
+        content: &str,
+        path: &Path,
+    ) -> Result<crate::surface::CrateRootMetadata, ResolveError> {
+        let mut input = new_input(content);
+
+        parse_crate_root_metadata(&mut input).map_err(|_e| ResolveError::ParseError {
+            path: path.to_path_buf(),
+            message: "Failed to parse crate root metadata".to_string(),
+        })
     }
 
     /// Resolve a single module and its dependencies.
@@ -142,10 +415,11 @@ impl ModuleResolver {
         // Check if already resolved - find existing module ID
         if visited.contains(canonical_path) {
             for (id, node) in &graph.nodes {
-                if let CoreModuleSource::File(file_path) = &node.source
-                    && Path::new(file_path) == canonical_path
-                {
-                    return Ok(*id);
+                #[allow(clippy::collapsible_if)]
+                if let CoreModuleSource::File(file_path) = &node.source {
+                    if Path::new(file_path) == canonical_path {
+                        return Ok(*id);
+                    }
                 }
             }
         }
@@ -267,6 +541,67 @@ impl ModuleResolver {
             expected_path: file_module,
         })
     }
+}
+
+/// Normalize a path by resolving `.` and `..` components.
+/// This does not access the filesystem (unlike `canonicalize`).
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut components = path.components().peekable();
+    let mut result = Vec::new();
+
+    // Preserve the prefix (e.g., Windows drive letter)
+    if let Some(prefix) = components.peek().and_then(|c| match c {
+        std::path::Component::Prefix(p) => Some(*p),
+        _ => None,
+    }) {
+        result.push(std::path::Component::Prefix(prefix));
+        components.next();
+    }
+
+    for component in components {
+        match component {
+            std::path::Component::Prefix(_) => {
+                // Already handled above
+            }
+            std::path::Component::RootDir => {
+                result.push(component);
+            }
+            std::path::Component::CurDir => {
+                // Skip "."
+            }
+            std::path::Component::ParentDir => {
+                // Pop the last component if it's not a RootDir
+                if let Some(last) = result.last() {
+                    match last {
+                        std::path::Component::RootDir => {
+                            // Can't go above root, keep the ..
+                            result.push(component);
+                        }
+                        std::path::Component::Prefix(_) => {
+                            // Can't go above prefix, keep the ..
+                            result.push(component);
+                        }
+                        std::path::Component::ParentDir => {
+                            // Multiple .. in a row, keep it
+                            result.push(component);
+                        }
+                        _ => {
+                            // Pop the normal component
+                            result.pop();
+                        }
+                    }
+                } else {
+                    // Empty result, keep the ..
+                    result.push(component);
+                }
+            }
+            std::path::Component::Normal(name) => {
+                result.push(std::path::Component::Normal(name));
+            }
+        }
+    }
+
+    result.into_iter().collect()
 }
 
 impl Default for ModuleResolver {

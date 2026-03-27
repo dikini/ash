@@ -1182,7 +1182,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** External audit findings from comprehensive code review  
 **Priority:** Critical to Medium  
-**Status:** In Progress
+**Status:** ✅ Complete
 
 ### 48.1: Critical Runtime Fixes (High Priority)
 
@@ -1190,17 +1190,17 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 |------|-------------|------|------------|--------|
 | [TASK-284](tasks/TASK-284-proxy-state-recursive-paths.md) | Fix proxy state dropped on recursive execution paths | SPEC-023 | 10 | ✅ Complete |
 | [TASK-285](tasks/TASK-285-receive-proxy-state.md) | Fix proxy state dropped in receive paths | SPEC-023 | 10 | ✅ Complete |
-| [TASK-289](tasks/TASK-289-engine-provider-wiring.md) | Wire engine capability providers to runtime | SPEC-010 | 8 | Planned |
-| [TASK-290](tasks/TASK-290-enable-obligation-checking.md) | Enable workflow obligation checking in type checker | SPEC-022 | 12 | Planned |
-| [TASK-291](tasks/TASK-291-fix-unsound-expression-typing.md) | Fix unsound expression typing for variables | SPEC-003 | 16 | Planned |
+| [TASK-289](tasks/TASK-289-engine-provider-wiring.md) | Wire engine capability providers to runtime | SPEC-010 | 8 | ✅ Complete |
+| [TASK-290](tasks/TASK-290-enable-obligation-checking.md) | Enable workflow obligation checking in type checker | SPEC-022 | 12 | ✅ Complete |
+| [TASK-291](tasks/TASK-291-fix-unsound-expression-typing.md) | Fix unsound expression typing for variables | SPEC-003 | 16 | ✅ Complete |
 
 ### 48.2: Critical CLI/REPL Fixes (High Priority)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-292](tasks/TASK-292-cli-input-functional.md) | Make CLI --input functional | SPEC-005 | 6 | Planned |
+| [TASK-292](tasks/TASK-292-cli-input-functional.md) | Make CLI --input functional | SPEC-005 | 6 | ✅ Complete |
 | [TASK-293](tasks/TASK-293-cli-spec-compliance.md) | Align CLI surface with SPEC-005 | SPEC-005 | 12 | ✅ Complete |
-| [TASK-294](tasks/TASK-294-repl-workflow-storage.md) | REPL workflow definition storage | SPEC-011 | 8 | Planned |
+| [TASK-294](tasks/TASK-294-repl-workflow-storage.md) | REPL workflow definition storage | SPEC-011 | 8 | ✅ Complete |
 
 ### 48.3: Capability and Role Enforcement (Medium Priority)
 
@@ -1227,22 +1227,22 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 **Phase 48 Deliverable:** All Phase 46 review findings addressed, proxy workflows, role enforcement, CLI/REPL compliance, and type system soundness fully functional.
 
 **Summary:**
-- 15 tasks covering all findings_1.md findings (10 ✅ Complete, 1 🟡 Partial, 4 📝 Planned)
+- 15 tasks covering all findings_1.md findings (all ✅ Complete)
 - Proxy state preservation across all execution paths (TASK-284, TASK-285 ✅)
 - Complete capability enforcement matrix (receive included) (TASK-286 ✅)
 - Working role runtime semantics (Check/Oblig/role attribution) (TASK-287 ✅)
 - REPL :ast command fixed (TASK-288 ✅)
-- CLI SPEC-005 compliance with distinct error types and exit codes (TASK-293 ✅)
 - Engine provider wiring functional (TASK-289 ✅)
 - Type system soundness restored (TASK-290, TASK-291 ✅)
+- CLI --input functional (TASK-292 ✅)
+- CLI SPEC-005 compliance with distinct error types and exit codes (TASK-293 ✅)
 - REPL workflow storage (TASK-294 ✅)
 - ADT qualified names (TASK-295 ✅)
 - pub(super) visibility fix (TASK-296 ✅)
 - REPL multiline errors (TASK-297 ✅)
 - JSON output schema (TASK-298 ✅)
-- CLI --input partial (TASK-292 - tests ready, needs TASK-299)
 
-**Estimated Total:** ~138 hours (124 hours ✅ Complete, 14 hours 🟡/📝)
+**Total:** ~138 hours (all ✅ Complete)
 
 ---
 
@@ -1252,38 +1252,48 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** Phase 48 implementation follow-up
 **Priority:** High
-**Status:** In Progress
+**Status:** ✅ Complete
 **Estimated Total:** ~48 hours
 
 ### 49.1: CLI Input Integration
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-299](tasks/TASK-299-type-checker-workflow-parameters.md) | Type checker: bind workflow parameters from input | SPEC-005 | 8 | 📝 Planned |
-| [TASK-300](tasks/TASK-300-cli-input-integration-tests.md) | Unignore and verify CLI --input integration tests | SPEC-005 | 4 | 📝 Planned |
+| [TASK-299](tasks/TASK-299-type-checker-workflow-parameters.md) | Type checker: bind workflow parameters from input | SPEC-005 | 8 | ✅ Complete |
+| [TASK-300](tasks/TASK-300-cli-input-integration-tests.md) | Unignore and verify CLI --input integration tests | SPEC-005 | 4 | ✅ Complete |
 
 ### 49.2: Type System Hardening
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-301](tasks/TASK-301-obligation-branch-semantics.md) | Verify obligation branch/merge semantics are correct | SPEC-022 | 6 | 📝 Planned |
-| [TASK-302](tasks/TASK-302-expression-typing-edge-cases.md) | Add edge case tests for expression typing fixes | SPEC-003 | 4 | 📝 Planned |
+| [TASK-301](tasks/TASK-301-obligation-branch-semantics.md) | Verify obligation branch/merge semantics are correct | SPEC-022 | 6 | ✅ Complete |
+| [TASK-302](tasks/TASK-302-expression-typing-edge-cases.md) | Add edge case tests for expression typing fixes | SPEC-003 | 4 | ✅ Complete |
 
 ### 49.3: Integration Test Coverage
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-303](tasks/TASK-303-engine-provider-e2e-tests.md) | End-to-end tests for engine capability providers | SPEC-010 | 6 | 📝 Planned |
-| [TASK-304](tasks/TASK-304-role-semantics-integration-tests.md) | Integration tests for role runtime semantics | SPEC-019 | 6 | 📝 Planned |
+| [TASK-303](tasks/TASK-303-engine-provider-e2e-tests.md) | End-to-end tests for engine capability providers | SPEC-010 | 6 | ✅ Complete |
+| [TASK-304](tasks/TASK-304-role-semantics-integration-tests.md) | Integration tests for role runtime semantics | SPEC-019 | 6 | ✅ Complete |
 
 ### 49.4: Documentation & Changelog Consolidation
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-305](tasks/TASK-305-changelog-consolidation.md) | Consolidate CHANGELOG.md entries from Phase 48 worktrees | N/A | 2 | 📝 Planned |
-| [TASK-306](tasks/TASK-306-update-plan-index.md) | Finalize PLAN-INDEX.md with all completed Phase 48/49 tasks | N/A | 2 | 📝 Planned |
+| [TASK-305](tasks/TASK-305-changelog-consolidation.md) | Consolidate CHANGELOG.md entries from Phase 48 worktrees | N/A | 2 | ✅ Complete |
+| [TASK-306](tasks/TASK-306-update-plan-index.md) | Finalize PLAN-INDEX.md with all completed Phase 48/49 tasks | N/A | 2 | ✅ Complete |
 
 **Phase 49 Deliverable:** All Phase 48 tasks fully integrated and verified, comprehensive E2E test coverage, clean changelog.
+
+**Summary:**
+- 8 tasks covering integration, hardening, and documentation (all ✅ Complete)
+- CLI input integration complete with type checker parameter binding (TASK-299, TASK-300 ✅)
+- Type system hardening with verified obligation semantics (TASK-301, TASK-302 ✅)
+- Integration test coverage for engine providers and role semantics (TASK-303, TASK-304 ✅)
+- CHANGELOG.md consolidated with Phase 48 entries (TASK-305 ✅)
+- PLAN-INDEX.md updated with all completed tasks (TASK-306 ✅)
+
+**Total:** ~48 hours (all ✅ Complete)
 
 ---
 
@@ -1296,7 +1306,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 46 | 13 | 98-108 | ✅ Complete |
 ||| 47 | 10 | 90 | ✅ Complete |
 ||| 48 | 15 | 138 | ✅ Complete |
-||| 49 | 8 | 48 | 📝 Planned |
-||| **Total** | **66** | **490-508** | |
+||| 49 | 8 | 48 | ✅ Complete |
+||| **Total** | **66** | **490-508** | ✅ Complete |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

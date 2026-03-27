@@ -31,6 +31,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Parser updated to set `levels: 1` for `pub(super)` syntax
   - 30+ tests updated and passing for all visibility variants
 
+- TASK-273: Fix `arb_pattern` binding name uniqueness in proptest_helpers
+  - Added `PatternGenContext` to track used names during pattern generation
+  - `arb_pattern_with_context()` generates unique sequential names (G_0, G_1, etc.)
+  - Eliminated duplicate bindings between variables and rest patterns in lists
+  - `test_arb_pattern_bindings_unique` property test now passes reliably
+  - Removed inefficient `prop_filter` that was rejecting duplicate patterns
+
 ### Added
 
 - **Phase 47: Spec Compliance Fixes (Post-46 Audit)**

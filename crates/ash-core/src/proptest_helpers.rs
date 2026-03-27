@@ -27,6 +27,8 @@ use crate::Name;
 use crate::ast::{Expr, Pattern};
 use crate::effect::Effect;
 use crate::value::Value;
+use std::cell::Cell;
+use std::rc::Rc;
 
 /// Generate arbitrary Effect values
 pub fn arb_effect() -> impl proptest::strategy::Strategy<Value = Effect> {
@@ -69,41 +71,91 @@ pub fn arb_name() -> impl proptest::strategy::Strategy<Value = Name> {
     "[a-zA-Z_][a-zA-Z0-9_]*".prop_map(String::from)
 }
 
-/// Generate arbitrary Pattern values with unique binding names
+/// Internal state for tracking unique binding names during pattern generation.
+#[derive(Clone, Debug)]
+struct PatternGenContext {
+    counter: Rc<Cell<u64>>,
+}
+
+impl PatternGenContext {
+    fn new() -> Self {
+        Self {
+            counter: Rc::new(Cell::new(0)),
+        }
+    }
+
+    fn next_name(&self) -> Name {
+        let id = self.counter.get();
+        self.counter.set(id + 1);
+        format!("G_{id}")
+    }
+}
+
+/// Generate an arbitrary field name for record patterns (not a binding).
+/// These don't need to be unique since they're field labels, not variable bindings.
+fn arb_field_name() -> impl proptest::strategy::Strategy<Value = Name> {
+    use proptest::prelude::*;
+    "[a-zA-Z_][a-zA-Z0-9_]*".prop_map(String::from)
+}
+
+/// Generate arbitrary Pattern values with unique binding names.
+///
+/// This strategy ensures that all variable bindings within a generated pattern
+/// are unique, preventing conflicts between variables and rest patterns.
 pub fn arb_pattern() -> impl proptest::strategy::Strategy<Value = Pattern> {
     use proptest::prelude::*;
 
-    let leaf = prop_oneof![
-        arb_name().prop_map(Pattern::Variable),
-        Just(Pattern::Wildcard),
-        arb_value().prop_map(Pattern::Literal),
-    ];
-
-    leaf.prop_recursive(
-        4,  // Depth
-        64, // Max size
-        8,  // Items per collection
-        |inner| {
-            prop_oneof![
-                // Tuple pattern
-                prop::collection::vec(inner.clone(), 0..4).prop_map(Pattern::Tuple),
-                // Record pattern
-                prop::collection::vec((arb_name(), inner.clone()), 0..4).prop_map(Pattern::Record),
-                // List pattern with optional rest
-                (
-                    prop::collection::vec(inner, 0..4),
-                    proptest::option::of(arb_name())
-                )
-                    .prop_map(|(prefix, rest)| Pattern::List(prefix, rest)),
-            ]
-        },
-    )
-    // Filter out patterns with duplicate bindings to ensure name uniqueness
-    .prop_filter("unique binding names", |pat| {
-        let bindings = pat.bindings();
-        let unique: std::collections::HashSet<_> = bindings.iter().collect();
-        bindings.len() == unique.len()
+    // Use a constant strategy to provide the context, then chain to the actual pattern generation
+    Just(PatternGenContext::new()).prop_flat_map(|ctx| {
+        arb_pattern_with_context(ctx, 4) // 4 is the max depth
     })
+}
+
+/// Internal function to generate patterns with unique binding tracking.
+fn arb_pattern_with_context(
+    ctx: PatternGenContext,
+    max_depth: u32,
+) -> impl proptest::strategy::Strategy<Value = Pattern> {
+    use proptest::prelude::*;
+
+    if max_depth == 0 {
+        // At max depth, only generate leaf patterns
+        prop_oneof![
+            Just(ctx.clone()).prop_map(|c| Pattern::Variable(c.next_name())),
+            Just(Pattern::Wildcard),
+            arb_value().prop_map(Pattern::Literal),
+        ]
+        .boxed()
+    } else {
+        let leaf = prop_oneof![
+            Just(ctx.clone()).prop_map(|c| Pattern::Variable(c.next_name())),
+            Just(Pattern::Wildcard),
+            arb_value().prop_map(Pattern::Literal),
+        ];
+
+        leaf.prop_recursive(
+            max_depth,
+            64, // Max size
+            8,  // Items per collection
+            move |inner| {
+                let ctx_clone = ctx.clone();
+                prop_oneof![
+                    // Tuple pattern
+                    prop::collection::vec(inner.clone(), 0..4).prop_map(Pattern::Tuple),
+                    // Record pattern - field names don't need to be unique, but nested patterns do
+                    prop::collection::vec((arb_field_name(), inner.clone()), 0..4)
+                        .prop_map(Pattern::Record),
+                    // List pattern with optional rest - rest name must be unique
+                    (
+                        prop::collection::vec(inner, 0..4),
+                        proptest::option::of(Just(ctx_clone.clone()).prop_map(|c| c.next_name()))
+                    )
+                        .prop_map(|(prefix, rest)| Pattern::List(prefix, rest)),
+                ]
+            },
+        )
+        .boxed()
+    }
 }
 
 /// Generate simple expressions (for use in workflows)

@@ -92,13 +92,34 @@ pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityE
 /// use ash_parser::token::Span;
 ///
 /// let workflow = Workflow::Done { span: Span::default() };
-/// let result = type_check_workflow(&workflow);
+/// let result = type_check_workflow(&workflow, None);
+/// ```
+///
+/// With workflow parameters:
+///
+/// ```
+/// use ash_typeck::{type_check_workflow, Type};
+/// use ash_parser::surface::Workflow;
+/// use ash_parser::token::Span;
+///
+/// let workflow = Workflow::Done { span: Span::default() };
+/// let params = vec![("name".to_string(), Type::String)];
+/// let result = type_check_workflow(&workflow, Some(&params));
 /// ```
 pub fn type_check_workflow(
     workflow: &ash_parser::surface::Workflow,
+    param_bindings: Option<&[(String, Type)]>,
 ) -> Result<TypeCheckResult, TypeCheckError> {
     // Step 1: Name resolution
     let mut resolver = NameResolver::new();
+
+    // Inject workflow parameters into the resolver's scope before checking
+    if let Some(params) = param_bindings {
+        for (name, _ty) in params {
+            resolver.bind(name.clone());
+        }
+    }
+
     resolver
         .resolve_workflow(workflow)
         .map_err(|e| TypeCheckError::ResolutionError(format!("{:?}", e)))?;
@@ -214,7 +235,7 @@ mod tests {
     #[test]
     fn test_type_check_workflow_done() {
         let workflow = Workflow::Done { span: test_span() };
-        let result = type_check_workflow(&workflow);
+        let result = type_check_workflow(&workflow, None);
         assert!(result.is_ok());
 
         let tc_result = result.unwrap();
@@ -231,7 +252,7 @@ mod tests {
             span: test_span(),
         };
 
-        let result = type_check_workflow(&workflow);
+        let result = type_check_workflow(&workflow, None);
         assert!(result.is_ok());
     }
 
@@ -244,7 +265,54 @@ mod tests {
             span: test_span(),
         };
 
-        let result = type_check_workflow(&workflow);
+        let result = type_check_workflow(&workflow, None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_type_check_workflow_with_params() {
+        // Test that workflow parameters are properly bound
+        // workflow greet(name: String) { ret "Hello, " + name }
+        let workflow = Workflow::Ret {
+            expr: Expr::Binary {
+                op: ash_parser::surface::BinaryOp::Add,
+                left: Box::new(Expr::Literal(Literal::String("Hello, ".into()))),
+                right: Box::new(Expr::Variable("name".into())),
+                span: test_span(),
+            },
+            span: test_span(),
+        };
+
+        // Without parameters, this should fail with UnboundVariable
+        let result = type_check_workflow(&workflow, None);
+        assert!(result.is_err());
+
+        // With parameters, this should succeed
+        let params = vec![("name".to_string(), Type::String)];
+        let result = type_check_workflow(&workflow, Some(&params));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_type_check_workflow_with_multiple_params() {
+        // Test multiple workflow parameters
+        let workflow = Workflow::Ret {
+            expr: Expr::Binary {
+                op: ash_parser::surface::BinaryOp::Add,
+                left: Box::new(Expr::Variable("x".into())),
+                right: Box::new(Expr::Variable("y".into())),
+                span: test_span(),
+            },
+            span: test_span(),
+        };
+
+        // Without parameters, this should fail
+        let result = type_check_workflow(&workflow, None);
+        assert!(result.is_err());
+
+        // With both parameters, this should succeed
+        let params = vec![("x".to_string(), Type::Int), ("y".to_string(), Type::Int)];
+        let result = type_check_workflow(&workflow, Some(&params));
         assert!(result.is_ok());
     }
 
@@ -266,7 +334,7 @@ mod tests {
     #[test]
     fn test_type_check_result_display_success() {
         let workflow = Workflow::Done { span: test_span() };
-        let result = type_check_workflow(&workflow).unwrap();
+        let result = type_check_workflow(&workflow, None).unwrap();
         let display = format!("{result}");
         assert!(display.contains("succeeded"));
     }

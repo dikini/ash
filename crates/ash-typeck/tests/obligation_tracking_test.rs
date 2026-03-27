@@ -32,7 +32,7 @@ fn test_oblige_requires_check() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -63,7 +63,7 @@ fn test_check_without_obligate_fails() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -97,7 +97,7 @@ fn test_obligate_check_pair_succeeds() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -130,7 +130,7 @@ fn test_branch_obligation_discipline_both_paths() {
     };
 
     // First, verify the oblige step
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok());
     let tc_result = result.unwrap();
     // Just an oblige without check should fail
@@ -165,7 +165,7 @@ fn test_branch_obligation_discipline_both_paths() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&if_workflow);
+    let result = type_check_workflow(&if_workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -209,7 +209,7 @@ fn test_branch_obligation_discipline_partial_failure() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -262,7 +262,7 @@ fn test_nested_obligation_tracking() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -308,7 +308,7 @@ fn test_obligation_linear_usage() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -325,7 +325,7 @@ fn test_empty_workflow_passes() {
     // Should succeed: no obligations to discharge
     let workflow = Workflow::Done { span: test_span() };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();
@@ -367,7 +367,7 @@ fn test_obligation_with_let_binding() {
         span: test_span(),
     };
 
-    let result = type_check_workflow(&workflow);
+    let result = type_check_workflow(&workflow, None);
     assert!(result.is_ok(), "type_check_workflow should return Ok");
 
     let tc_result = result.unwrap();

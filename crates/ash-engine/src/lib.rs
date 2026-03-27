@@ -49,10 +49,10 @@ use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
 /// ```
 #[derive(Debug)]
 pub struct Engine {
-    /// Store surface workflows by a unique ID
-    /// This is a temporary solution until type checking supports core workflows
-    surface_workflows:
-        std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::Workflow>>,
+    /// Store surface workflow definitions by a unique ID
+    /// This stores the full WorkflowDef including parameters for type checking
+    surface_workflow_defs:
+        std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::WorkflowDef>>,
     /// Counter for generating unique IDs
     next_id: std::sync::atomic::AtomicU64,
     /// Runtime-owned state that persists across related executions.
@@ -117,18 +117,18 @@ impl Engine {
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
-    /// Store a surface workflow and return its ID
-    fn store_surface_workflow(&self, surface: ash_parser::surface::Workflow) -> u64 {
+    /// Store a surface workflow definition and return its ID
+    fn store_surface_workflow_def(&self, def: ash_parser::surface::WorkflowDef) -> u64 {
         let id = self.next_workflow_id();
-        if let Ok(mut map) = self.surface_workflows.lock() {
-            map.insert(id, surface);
+        if let Ok(mut map) = self.surface_workflow_defs.lock() {
+            map.insert(id, def);
         }
         id
     }
 
-    /// Retrieve a surface workflow by its ID
-    fn get_surface_workflow(&self, id: u64) -> Option<ash_parser::surface::Workflow> {
-        self.surface_workflows
+    /// Retrieve a surface workflow definition by its ID
+    fn get_surface_workflow_def(&self, id: u64) -> Option<ash_parser::surface::WorkflowDef> {
+        self.surface_workflow_defs
             .lock()
             .map_or(None, |map| map.get(&id).cloned())
     }
@@ -146,10 +146,9 @@ impl Engine {
 
         match workflow_def.parse_next(&mut input) {
             Ok(def) => {
-                let surface = def.body.clone();
                 let core = lower_workflow(&def)
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
-                let id = self.store_surface_workflow(surface);
+                let id = self.store_surface_workflow_def(def);
                 Ok(Workflow { core, id })
             }
             Err(e) => {
@@ -202,13 +201,24 @@ impl Engine {
     ///
     /// Returns `EngineError::Type` if type checking fails.
     pub fn check(&self, workflow: &Workflow) -> Result<(), EngineError> {
-        // Retrieve the surface workflow that was stored during parsing
-        let surface = self
-            .get_surface_workflow(workflow.id)
+        // Retrieve the surface workflow definition that was stored during parsing
+        let def = self
+            .get_surface_workflow_def(workflow.id)
             .ok_or_else(|| EngineError::Type("workflow not found in cache".to_string()))?;
 
-        // Run the type checker
-        match ash_typeck::type_check_workflow(&surface) {
+        // Convert workflow parameters to typeck types
+        let param_bindings: Vec<(String, ash_typeck::Type)> = def
+            .params
+            .iter()
+            .map(|p| (p.name.to_string(), Self::surface_type_to_typeck(&p.ty)))
+            .collect();
+
+        // Run the type checker with parameter bindings
+        let param_refs: Vec<_> = param_bindings
+            .iter()
+            .map(|(n, t)| (n.clone(), t.clone()))
+            .collect();
+        match ash_typeck::type_check_workflow(&def.body, Some(&param_refs)) {
             Ok(result) => {
                 if result.is_ok() {
                     Ok(())
@@ -220,6 +230,32 @@ impl Engine {
                 }
             }
             Err(e) => Err(EngineError::Type(format!("{e}"))),
+        }
+    }
+
+    /// Convert a surface type annotation to a typeck type
+    fn surface_type_to_typeck(surface_type: &ash_parser::surface::Type) -> ash_typeck::Type {
+        use ash_parser::surface::Type as SurfaceType;
+        match surface_type {
+            SurfaceType::Name(name) => match name.as_ref() {
+                "Int" => ash_typeck::Type::Int,
+                "String" => ash_typeck::Type::String,
+                "Bool" => ash_typeck::Type::Bool,
+                "Null" => ash_typeck::Type::Null,
+                "Time" => ash_typeck::Type::Time,
+                "Ref" => ash_typeck::Type::Ref,
+                _ => ash_typeck::Type::Var(ash_typeck::TypeVar::fresh()),
+            },
+            SurfaceType::List(inner) => {
+                ash_typeck::Type::List(Box::new(Self::surface_type_to_typeck(inner)))
+            }
+            SurfaceType::Record(fields) => ash_typeck::Type::Record(
+                fields
+                    .iter()
+                    .map(|(name, ty)| (name.clone(), Self::surface_type_to_typeck(ty)))
+                    .collect(),
+            ),
+            SurfaceType::Capability(_) => ash_typeck::Type::Var(ash_typeck::TypeVar::fresh()),
         }
     }
 
@@ -433,7 +469,7 @@ impl EngineBuilder {
         let runtime_state = RuntimeState::new().with_providers(interp_providers);
 
         Ok(Engine {
-            surface_workflows: std::sync::Mutex::new(std::collections::HashMap::new()),
+            surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state,
         })

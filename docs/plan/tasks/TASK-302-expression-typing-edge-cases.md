@@ -1,6 +1,6 @@
 # TASK-302: Expression Typing Edge Cases
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Description
 
@@ -56,10 +56,12 @@ Add comprehensive edge case tests for the expression typing fixes implemented in
 
 ## Completion Checklist
 
-- [ ] Nested unary operator tests
-- [ ] Chained binary operation tests
-- [ ] Mixed operation precedence tests
-- [ ] Error recovery tests
-- [ ] Property-based tests for expression typing
-- [ ] All new tests pass
-- [ ] `cargo clippy` clean
+- [x] Nested unary operator tests (double/triple not, double neg, mixed !- and -!)
+- [x] Chained binary operation tests (chained arithmetic, logical, comparisons)
+- [x] Mixed operation precedence tests (arithmetic + comparison + logical)
+- [x] Error recovery tests (type mismatches, unbound variables in subexpressions)
+- [x] Property-based tests for expression typing (proptest for int/bool expressions)
+- [x] All new tests pass (40 tests total)
+- [x] `cargo clippy` clean (no warnings in ash-typeck)
+- [x] `cargo fmt` clean
+- [x] CHANGELOG.md updated

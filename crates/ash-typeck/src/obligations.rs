@@ -884,6 +884,9 @@ impl ObligationCollector {
             }
 
             // IF: Both branches must discharge obligations for them to be considered satisfied
+            // Per SPEC-003 Section 4.5: Ω_out = Ω_then ∩ Ω_else (where Ω is discharged set)
+            // For remaining-obligation tracking: union of remaining obligations
+            // If an obligation remains in ANY branch, it wasn't discharged on all paths
             Workflow::If {
                 condition: _,
                 then_branch,
@@ -899,7 +902,7 @@ impl ObligationCollector {
                 if let Some(else_branch) = else_branch {
                     let mut else_ctx = parent_ctx.branch();
                     self.collect_from_workflow(else_branch, &mut else_ctx)?;
-                    // Both branches must discharge: intersection of remaining obligations
+                    // Union: obligation remains if pending in EITHER branch
                     ctx.obligations = then_ctx.obligations.union(&else_ctx.obligations);
                 } else {
                     // No else branch: obligation must be discharged in then branch
@@ -907,7 +910,9 @@ impl ObligationCollector {
                 }
             }
 
-            // PAR: Union of obligations from all branches
+            // PAR: Union of remaining obligations from all branches
+            // Per SPEC-003 Section 4.5: discharged = ∩ discharged_i
+            // For remaining-obligation tracking: union of remaining obligations
             Workflow::Par { branches, span: _ } => {
                 let parent_ctx = ctx.clone();
 
@@ -918,8 +923,7 @@ impl ObligationCollector {
                     branch_contexts.push(branch_ctx);
                 }
 
-                // For parallel composition, obligations must be discharged in all branches
-                // We use union semantics: if obligation remains in ANY branch, it remains
+                // Union: obligation remains if pending in ANY branch
                 if let Some(first) = branch_contexts.first() {
                     ctx.obligations = first.obligations.clone();
                     for branch_ctx in &branch_contexts[1..] {
@@ -929,7 +933,8 @@ impl ObligationCollector {
             }
 
             // MAYBE: Try primary, fallback on failure
-            // Obligations must be discharged in both branches
+            // Per SPEC-003 Section 4.6: Obligations must be discharged in both branches
+            // For remaining-obligation tracking: union of remaining obligations
             Workflow::Maybe {
                 primary,
                 fallback,
@@ -943,6 +948,7 @@ impl ObligationCollector {
                 let mut fallback_ctx = parent_ctx.branch();
                 self.collect_from_workflow(fallback, &mut fallback_ctx)?;
 
+                // Union: obligation remains if pending in EITHER branch
                 ctx.obligations = primary_ctx.obligations.union(&fallback_ctx.obligations);
             }
 
@@ -1020,6 +1026,7 @@ impl ObligationCollector {
             }
 
             // DECIDE: Conditional with branches
+            // Per SPEC-003 Section 4.3: Same semantics as IF
             Workflow::Decide {
                 expr: _,
                 policy: _,
@@ -1035,6 +1042,7 @@ impl ObligationCollector {
                 if let Some(else_branch) = else_branch {
                     let mut else_ctx = parent_ctx.branch();
                     self.collect_from_workflow(else_branch, &mut else_ctx)?;
+                    // Union: obligation remains if pending in EITHER branch
                     ctx.obligations = then_ctx.obligations.union(&else_ctx.obligations);
                 } else {
                     ctx.obligations = then_ctx.obligations;
@@ -1087,6 +1095,7 @@ impl ObligationCollector {
             }
 
             // RECEIVE: Pattern matching on messages
+            // Per SPEC-003 Section 4.1: All arms must discharge obligations
             Workflow::Receive {
                 mode: _,
                 arms,
@@ -1102,7 +1111,7 @@ impl ObligationCollector {
                     arm_contexts.push(arm_ctx);
                 }
 
-                // Merge all arm contexts using union
+                // Union: obligation remains if pending in ANY arm
                 if let Some(first) = arm_contexts.first() {
                     ctx.obligations = first.obligations.clone();
                     for arm_ctx in &arm_contexts[1..] {
@@ -1112,6 +1121,7 @@ impl ObligationCollector {
             }
 
             // YIELD: Role delegation with resumption
+            // Same semantics as RECEIVE: all arms must discharge obligations
             Workflow::Yield {
                 role: _,
                 expr: _,
@@ -1129,7 +1139,7 @@ impl ObligationCollector {
                     arm_contexts.push(arm_ctx);
                 }
 
-                // Merge all arm contexts using union
+                // Union: obligation remains if pending in ANY arm
                 if let Some(first) = arm_contexts.first() {
                     ctx.obligations = first.obligations.clone();
                     for arm_ctx in &arm_contexts[1..] {
@@ -1204,18 +1214,17 @@ impl LinearObligationContext {
     }
 
     /// Merge a branched context back into self
-    /// Uses parent context to properly track which obligations were discharged
+    ///
+    /// Per SPEC-003 Section 4.5: An obligation must be discharged on ALL execution paths.
+    /// Since we track REMAINING obligations, we use union semantics:
+    /// If an obligation remains pending in ANY branch, it remains pending after merge.
     ///
     /// # Arguments
     /// * `branch` - The branch context to merge
-    /// * `parent` - The parent context before branching (used to determine what was discharged)
+    /// * `_parent` - The parent context before branching (used to determine what was discharged)
     pub fn merge(&mut self, branch: Self, _parent: &Self) {
-        // An obligation is discharged only if ALL branches discharged it
-        // For now, we use intersection semantics on the remaining obligations
-        // The key insight: if an obligation remains in ANY branch, it should remain in the merged result
-
-        // Intersection keeps obligations that are pending in BOTH contexts
-        self.obligations = self.obligations.intersection(&branch.obligations);
+        // Union: obligation survives if pending in EITHER context
+        self.obligations = self.obligations.union(&branch.obligations);
     }
 
     /// Check if all obligations have been discharged
@@ -1268,29 +1277,27 @@ mod linear_tests {
 
     #[test]
     fn test_branch_and_merge_both_discharge() {
-        let mut ctx = LinearObligationContext::new();
+        // Start with a context containing an obligation
+        let mut base_ctx = LinearObligationContext::new();
+        base_ctx.obligations.insert("o1".to_string()).unwrap();
 
-        // Create obligation
-        ctx.obligations.insert("o1".to_string()).unwrap();
-
-        // Branch
-        let mut then_ctx = ctx.branch();
-        let mut else_ctx = ctx.branch();
+        // Branch from base
+        let mut then_ctx = base_ctx.branch();
+        let mut else_ctx = base_ctx.branch();
 
         // Both branches discharge
         then_ctx.obligations.remove("o1").unwrap();
         else_ctx.obligations.remove("o1").unwrap();
 
-        // Both branches discharged - use intersection (empty ∩ empty = empty)
-        ctx.obligations = ctx.obligations.intersection(&then_ctx.obligations);
-        ctx.obligations = ctx.obligations.intersection(&else_ctx.obligations);
-        assert!(ctx.is_clean());
+        // Merge: union of remaining obligations (empty ∪ empty = empty)
+        let merged = then_ctx.obligations.union(&else_ctx.obligations);
+        assert!(merged.is_empty());
     }
 
     #[test]
     fn test_branch_and_merge_partial_discharge() {
         // This test verifies that if only one branch discharges an obligation,
-        // the merged result still has the obligation (intersection semantics)
+        // the merged result still has the obligation
         let mut then_ctx = LinearObligationContext::new();
         let mut else_ctx = LinearObligationContext::new();
 
@@ -1303,7 +1310,7 @@ mod linear_tests {
         // else_ctx does NOT discharge - still has "o1"
 
         // Union: then_ctx has {}, else_ctx has {o1}
-        // union = {o1} (obligation discharged in one branch only)
+        // union = {} ∪ {o1} = {o1} (obligation discharged in one branch only)
         then_ctx.obligations = then_ctx.obligations.union(&else_ctx.obligations);
         // The obligation is still pending because not all paths discharged it
         assert!(then_ctx.obligations.contains("o1"));
@@ -1318,5 +1325,238 @@ mod linear_tests {
         let branched = ctx.branch();
 
         assert_eq!(branched.var_types.get("x"), Some(&Type::Int));
+    }
+}
+
+// ============================================================================
+// Property Tests for Obligation Branch/Merge Semantics (TASK-301)
+// ============================================================================
+
+#[cfg(test)]
+mod prop_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Generate a valid obligation name (alphanumeric with underscores)
+    fn arb_obligation_name() -> impl Strategy<Value = String> {
+        "[a-z_][a-z0-9_]*"
+    }
+
+    /// Generate a set of obligation names
+    fn arb_obligation_set() -> impl Strategy<Value = Vec<String>> {
+        prop::collection::vec(arb_obligation_name(), 0..10)
+    }
+
+    proptest! {
+        /// Property: If both branches discharge all obligations, merge is clean
+        #[test]
+        fn prop_both_branches_discharge_all_clean(
+            obligations in arb_obligation_set()
+        ) {
+            // Start with a base context containing obligations
+            let mut base_ctx = LinearObligationContext::new();
+            for obl in &obligations {
+                let _ = base_ctx.obligations.insert(obl.clone());
+            }
+
+            // Branch and discharge all in both
+            let mut then_ctx = base_ctx.branch();
+            let mut else_ctx = base_ctx.branch();
+
+            for obl in &obligations {
+                let _ = then_ctx.obligations.remove(obl);
+                let _ = else_ctx.obligations.remove(obl);
+            }
+
+            // Merge branches with union (not parent with branches)
+            let merged = then_ctx.obligations.union(&else_ctx.obligations);
+
+            prop_assert!(merged.is_empty(),
+                "Both branches discharged all obligations, merge should be clean");
+        }
+
+        /// Property: If any branch leaves an obligation pending, it remains after merge
+        #[test]
+        fn prop_partial_discharge_preserves_obligation(
+            obligation in arb_obligation_name()
+        ) {
+            // Start with a base context containing the obligation
+            let mut base_ctx = LinearObligationContext::new();
+            let _ = base_ctx.obligations.insert(obligation.clone());
+
+            // Branch: then discharges, else does not
+            let mut then_ctx = base_ctx.branch();
+            let else_ctx = base_ctx.branch();
+
+            let _ = then_ctx.obligations.remove(&obligation);
+            // else_ctx does NOT discharge
+
+            // Merge branches (not parent with branches)
+            let merged = then_ctx.obligations.union(&else_ctx.obligations);
+
+            prop_assert!(merged.contains(&obligation),
+                "Obligation should remain when not discharged in all branches");
+        }
+
+        /// Property: Union of remaining obligations is idempotent for clean branches
+        #[test]
+        fn prop_union_idempotent_for_clean(
+            obligations in arb_obligation_set()
+        ) {
+            let mut ctx1 = LinearObligationContext::new();
+            let mut ctx2 = LinearObligationContext::new();
+
+            for obl in &obligations {
+                let _ = ctx1.obligations.insert(obl.clone());
+                let _ = ctx2.obligations.insert(obl.clone());
+            }
+
+            // Both discharge all
+            for obl in &obligations {
+                let _ = ctx1.obligations.remove(obl);
+                let _ = ctx2.obligations.remove(obl);
+            }
+
+            let union1 = ctx1.obligations.union(&ctx2.obligations);
+
+            prop_assert!(union1.is_empty(),
+                "Union of clean branches should be empty");
+
+            // Test idempotence: union with empty set should be empty
+            let union2 = union1.clone().union(&ctx1.obligations);
+            prop_assert!(union2.is_empty(),
+                "Union should be idempotent when both sets are empty");
+            prop_assert_eq!(union1, union2, "Union should be equal");
+        }
+
+        /// Property: Obligations created inside only one branch don't affect parent
+        #[test]
+        fn prop_branch_local_obligations(
+            parent_obl in arb_obligation_name(),
+            branch_obl in arb_obligation_name()
+        ) {
+            prop_assume!(parent_obl != branch_obl);
+
+            let mut ctx = LinearObligationContext::new();
+            let _ = ctx.obligations.insert(parent_obl.clone());
+
+            // Branch creates a new obligation
+            let mut branch_ctx = ctx.branch();
+            let _ = branch_ctx.obligations.insert(branch_obl.clone());
+
+            // Parent should not see branch-local obligation
+            prop_assert!(!ctx.obligations.contains(&branch_obl),
+                "Parent should not see branch-local obligations");
+            prop_assert!(ctx.obligations.contains(&parent_obl),
+                "Parent should retain its obligations");
+        }
+
+        /// Property: Nested branches maintain correct discharge tracking
+        #[test]
+        fn prop_nested_branch_discharge(
+            o1 in arb_obligation_name(),
+            o2 in arb_obligation_name()
+        ) {
+            prop_assume!(o1 != o2);
+
+            // Base context with both obligations
+            let mut base_ctx = LinearObligationContext::new();
+            let _ = base_ctx.obligations.insert(o1.clone());
+            let _ = base_ctx.obligations.insert(o2.clone());
+
+            // Outer then branch - discharges o1 only
+            let mut then_ctx = base_ctx.branch();
+            let _ = then_ctx.obligations.remove(&o1);
+
+            // Outer else branch - has nested if
+            let else_base = base_ctx.branch();
+            // Nested branches
+            let mut nested_then = else_base.branch();
+            let mut nested_else = else_base.branch();
+
+            // Nested then discharges both
+            let _ = nested_then.obligations.remove(&o1);
+            let _ = nested_then.obligations.remove(&o2);
+
+            // Nested else discharges only o2
+            let _ = nested_else.obligations.remove(&o2);
+
+            // Merge nested branches: union of remaining obligations
+            // nested_then: {} (both discharged)
+            // nested_else: {o1} (o2 discharged, o1 remains)
+            // union = {o1}
+            let else_merged = nested_then.obligations.union(&nested_else.obligations);
+
+            // o1 should remain (not discharged in nested_else)
+            prop_assert!(else_merged.contains(&o1),
+                "o1 should remain when not discharged in all nested branches");
+            // o2 discharged in both nested branches
+            prop_assert!(!else_merged.contains(&o2),
+                "o2 should be discharged when removed from all nested branches");
+
+            // Merge outer branches
+            // then_ctx: {o2} (o1 discharged, o2 remains)
+            // else_merged: {o1} (from nested)
+            // union = {o1, o2}
+            let final_merged = then_ctx.obligations.union(&else_merged);
+
+            // Both should remain (each not discharged in one branch)
+            prop_assert!(final_merged.contains(&o1), "o1 not discharged in else branch");
+            prop_assert!(final_merged.contains(&o2), "o2 not discharged in then branch");
+        }
+
+        /// Property: Empty branches don't create obligations
+        #[test]
+        fn prop_empty_branch_no_obligations(
+            obligation in arb_obligation_name()
+        ) {
+            // Base context with obligation
+            let mut base_ctx = LinearObligationContext::new();
+            let _ = base_ctx.obligations.insert(obligation.clone());
+
+            // Branch with no discharge
+            let branch_ctx = base_ctx.branch();
+
+            // Merge base with branch (both have the obligation)
+            let merged = base_ctx.obligations.union(&branch_ctx.obligations);
+
+            prop_assert!(merged.contains(&obligation),
+                "Obligation should remain when branch doesn't discharge it");
+        }
+
+        /// Property: Multiple parallel branches with partial discharge
+        #[test]
+        fn prop_parallel_branches_partial_discharge(
+            o1 in arb_obligation_name(),
+            o2 in arb_obligation_name()
+        ) {
+            prop_assume!(o1 != o2);
+
+            let mut ctx = LinearObligationContext::new();
+            let _ = ctx.obligations.insert(o1.clone());
+            let _ = ctx.obligations.insert(o2.clone());
+
+            // Branch 1: discharges o1 only
+            let mut branch1 = ctx.branch();
+            let _ = branch1.obligations.remove(&o1);
+
+            // Branch 2: discharges o2 only
+            let mut branch2 = ctx.branch();
+            let _ = branch2.obligations.remove(&o2);
+
+            // Branch 3: discharges both
+            let mut branch3 = ctx.branch();
+            let _ = branch3.obligations.remove(&o1);
+            let _ = branch3.obligations.remove(&o2);
+
+            // Merge all with union
+            let merged = branch1.obligations
+                .union(&branch2.obligations)
+                .union(&branch3.obligations);
+
+            // Both should remain (not discharged in ALL branches)
+            prop_assert!(merged.contains(&o1), "o1 not discharged in branch2");
+            prop_assert!(merged.contains(&o2), "o2 not discharged in branch1");
+        }
     }
 }

@@ -8,9 +8,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 /// Test that input values are bound to workflow parameters
-/// Ignored: requires TASK-292 completion - type checker needs to handle workflow parameters
 #[test]
-#[ignore = "TASK-292: Type checker needs to bind workflow parameters from input"]
 fn test_input_bound_to_workflow_parameters() {
     let temp = TempDir::new().unwrap();
 
@@ -78,9 +76,7 @@ fn test_missing_required_parameter() {
 }
 
 /// Test workflow with multiple parameters
-/// Ignored: requires TASK-292 completion
 #[test]
-#[ignore = "TASK-292: Type checker needs to bind workflow parameters from input"]
 fn test_multiple_workflow_parameters() {
     let temp = TempDir::new().unwrap();
 
@@ -121,9 +117,7 @@ fn test_multiple_workflow_parameters() {
 }
 
 /// Test workflow with boolean parameter
-/// Ignored: requires TASK-292 completion
 #[test]
-#[ignore = "TASK-292: Type checker needs to bind workflow parameters from input"]
 fn test_boolean_workflow_parameter() {
     let temp = TempDir::new().unwrap();
 
@@ -156,9 +150,7 @@ fn test_boolean_workflow_parameter() {
 }
 
 /// Test workflow with list parameter
-/// Ignored: requires TASK-292 completion
 #[test]
-#[ignore = "TASK-292: Type checker needs to bind workflow parameters from input"]
 fn test_list_workflow_parameter() {
     let temp = TempDir::new().unwrap();
 

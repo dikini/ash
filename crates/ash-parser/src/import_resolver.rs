@@ -235,7 +235,8 @@ impl<'a> ImportResolver<'a> {
         alias: Option<&str>,
         bindings: &mut BindingTable,
     ) -> Result<(), ImportError> {
-        let (target_module, item_name) = self.resolve_path_to_module_and_item(path)?;
+        let (target_module, item_name) =
+            self.resolve_path_to_module_and_item(importing_module, path)?;
 
         // Check visibility
         let exports =
@@ -287,7 +288,7 @@ impl<'a> ImportResolver<'a> {
         bindings: &mut BindingTable,
     ) -> Result<(), ImportError> {
         // For glob imports, we resolve up to the parent of the glob
-        let target_module = self.resolve_path_to_module(path)?;
+        let target_module = self.resolve_path_to_module(importing_module, path)?;
 
         let exports =
             self.module_exports
@@ -336,7 +337,7 @@ impl<'a> ImportResolver<'a> {
         // So the target module is the full path (we don't strip the last segment)
         // The items are looked up in that module
 
-        let target_module = self.resolve_path_to_module(path)?;
+        let target_module = self.resolve_path_to_module(importing_module, path)?;
 
         for item in items {
             let item_name = item.name.as_ref();
@@ -393,8 +394,12 @@ impl<'a> ImportResolver<'a> {
         Ok(())
     }
 
-    /// Resolve a path to a module.
-    fn resolve_path_to_module(&self, path: &SimplePath) -> Result<ModuleId, ImportError> {
+    /// Resolve a path to a module from the context of the importing module.
+    fn resolve_path_to_module(
+        &self,
+        importing_module: ModuleId,
+        path: &SimplePath,
+    ) -> Result<ModuleId, ImportError> {
         if path.segments.is_empty() {
             return Err(ImportError::InvalidPrefix {
                 prefix: "(empty)".to_string(),
@@ -403,8 +408,8 @@ impl<'a> ImportResolver<'a> {
 
         let first = path.segments[0].as_ref();
         match first {
-            "crate" => self.resolve_current_crate_path(path),
-            "external" => self.resolve_external_path(path),
+            "crate" => self.resolve_current_crate_path(importing_module, path),
+            "external" => self.resolve_external_path(importing_module, path),
             _ => Err(ImportError::InvalidPrefix {
                 prefix: first.to_string(),
             }),
@@ -412,21 +417,32 @@ impl<'a> ImportResolver<'a> {
     }
 
     /// Resolve a path within the current crate (starting with `crate::`).
-    fn resolve_current_crate_path(&self, path: &SimplePath) -> Result<ModuleId, ImportError> {
+    fn resolve_current_crate_path(
+        &self,
+        importing_module: ModuleId,
+        path: &SimplePath,
+    ) -> Result<ModuleId, ImportError> {
         if path.segments.is_empty() {
             return Err(ImportError::InvalidPrefix {
                 prefix: "(empty)".to_string(),
             });
         }
 
-        // Start from root module
-        let root_id =
+        // Get the importing module's crate root
+        // Fall back to global root if no crate metadata is set (backward compatibility)
+        let root_id = if let Some(importing_crate) =
+            self.module_graph.crate_id_for_module(importing_module)
+        {
             self.module_graph
-                .get_root()
-                .copied()
-                .ok_or_else(|| ImportError::ModuleNotFound {
-                    path: "crate".to_string(),
-                })?;
+                .get_crate(importing_crate)
+                .map(|info| info.root_module)
+                .or_else(|| self.module_graph.get_root().copied())
+        } else {
+            self.module_graph.get_root().copied()
+        }
+        .ok_or_else(|| ImportError::ModuleNotFound {
+            path: "crate".to_string(),
+        })?;
 
         // Walk the path segments (skip "crate")
         let mut current_module = root_id;
@@ -458,7 +474,11 @@ impl<'a> ImportResolver<'a> {
     }
 
     /// Resolve a path from an external crate (starting with `external::`).
-    fn resolve_external_path(&self, path: &SimplePath) -> Result<ModuleId, ImportError> {
+    fn resolve_external_path(
+        &self,
+        importing_module: ModuleId,
+        path: &SimplePath,
+    ) -> Result<ModuleId, ImportError> {
         if path.segments.len() < 2 {
             return Err(ImportError::InvalidPrefix {
                 prefix: "external".to_string(),
@@ -466,11 +486,15 @@ impl<'a> ImportResolver<'a> {
         }
 
         // Get the importing module's crate to look up the dependency
-        // For external paths, we need to find the root module of the importing crate
+        // Fall back to using the root's crate if importing module has no crate metadata
         let importing_crate = self
             .module_graph
-            .get_root()
-            .and_then(|&root| self.module_graph.crate_id_for_module(root))
+            .crate_id_for_module(importing_module)
+            .or_else(|| {
+                self.module_graph
+                    .get_root()
+                    .and_then(|&root| self.module_graph.crate_id_for_module(root))
+            })
             .ok_or_else(|| ImportError::ModuleNotFound {
                 path: "crate root".to_string(),
             })?;
@@ -542,6 +566,7 @@ impl<'a> ImportResolver<'a> {
     /// Resolve a path to a module and the final item name.
     fn resolve_path_to_module_and_item(
         &self,
+        importing_module: ModuleId,
         path: &SimplePath,
     ) -> Result<(ModuleId, String), ImportError> {
         if path.segments.len() < 2 {
@@ -560,7 +585,7 @@ impl<'a> ImportResolver<'a> {
             segments: path.segments[..path.segments.len() - 1].to_vec(),
         };
 
-        let module_id = self.resolve_path_to_module(&module_path)?;
+        let module_id = self.resolve_path_to_module(importing_module, &module_path)?;
         Ok((module_id, item_name))
     }
 

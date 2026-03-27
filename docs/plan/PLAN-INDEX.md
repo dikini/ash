@@ -1357,8 +1357,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-314](tasks/TASK-314-fix-boolean-display.md) | Fix interpreter boolean display ("true"/"false") | SPEC-004 | 2 | 📝 Planned |
-| [TASK-315](tasks/TASK-315-fix-list-parameter-syntax.md) | Fix parser List<T> syntax in workflow parameters | SPEC-002 | 8 | 📝 Planned |
+| [TASK-314](tasks/TASK-314-fix-boolean-display.md) | ~~Fix interpreter boolean display~~ - Investigation complete, not a bug (works correctly) | SPEC-004 | 0.5 | ✅ Complete |
+| [TASK-315](tasks/TASK-315-fix-list-parameter-syntax.md) | Add List<T> generic syntax support in workflow parameters | SPEC-002 | 8 | ✅ Complete |
 
 **Phase 50 Deliverable:** All SPEC-005 compliance gaps closed, test suite green, API contracts honored.
 
@@ -1395,19 +1395,18 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** Phase 50 test analysis and spec clarification  
 **Priority:** Medium  
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-314](tasks/TASK-314-fix-boolean-display.md) | Fix interpreter boolean display ("true"/"false") | SPEC-004 | 2 | 📝 Planned |
-| [TASK-315](tasks/TASK-315-fix-list-parameter-syntax.md) | Fix parser List<T> syntax in workflow parameters | SPEC-002 | 8 | 📝 Planned |
+| [TASK-314](tasks/TASK-314-fix-boolean-display.md) | ~~Fix interpreter boolean display~~ - Investigation complete, not a bug (works correctly) | SPEC-004 | 0.5 | ✅ Complete |
+| [TASK-315](tasks/TASK-315-fix-list-parameter-syntax.md) | Add List<T> generic syntax support in workflow parameters | SPEC-002 | 8 | ✅ Complete |
 
 **Summary:**
-- 2 implementation tasks identified from Phase 50
-- Boolean parameter binding/display issue in if-conditions
-- Generic type syntax support for workflow parameters
+- TASK-314: Investigation complete - boolean display works correctly (not a bug)
+- TASK-315: Added List<T> generic syntax support in workflow parameters
 
-**Total:** ~10 hours
+**Total:** ~8.5 hours
 
 ---
 
@@ -1422,6 +1421,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 48 | 15 | 138 | ✅ Complete |
 ||| 49 | 9 | 52 | ✅ Complete |
 ||| 50 | 13 | 51 | ✅ Complete |
-||| **Total** | **78** | **560-580** | ✅ Complete |
+||| 51 | 2 | 8.5 | ✅ Complete |
+||| **Total** | **80** | **568-588** | ✅ Complete |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

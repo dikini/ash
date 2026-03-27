@@ -12,6 +12,10 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ModuleId(pub usize);
 
+/// Unique identifier for a crate
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CrateId(pub usize);
+
 /// Source of a module's content
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -49,6 +53,8 @@ pub struct ModuleGraph {
     pub root: Option<ModuleId>,
     /// Next available module ID
     next_id: usize,
+    /// Track which crate each module belongs to
+    crate_membership: HashMap<ModuleId, CrateId>,
 }
 
 impl ModuleNode {
@@ -70,7 +76,18 @@ impl ModuleGraph {
             nodes: HashMap::new(),
             root: None,
             next_id: 0,
+            crate_membership: HashMap::new(),
         }
+    }
+
+    /// Get the crate for a module
+    pub fn crate_for(&self, module: ModuleId) -> Option<CrateId> {
+        self.crate_membership.get(&module).copied()
+    }
+
+    /// Set crate membership for a module
+    pub fn set_crate(&mut self, module: ModuleId, crate_id: CrateId) {
+        self.crate_membership.insert(module, crate_id);
     }
 
     /// Add a node to the graph and return its assigned ID

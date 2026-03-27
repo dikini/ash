@@ -429,11 +429,12 @@ impl<'a> ImportResolver<'a> {
             // Find child with matching name
             let mut found = None;
             for &child_id in &node.children {
-                if let Some(child_node) = self.module_graph.get_node(child_id)
-                    && child_node.name == segment.as_ref()
-                {
-                    found = Some(child_id);
-                    break;
+                #[allow(clippy::collapsible_if)]
+                if let Some(child_node) = self.module_graph.get_node(child_id) {
+                    if child_node.name == segment.as_ref() {
+                        found = Some(child_id);
+                        break;
+                    }
                 }
             }
 
@@ -474,12 +475,21 @@ impl<'a> ImportResolver<'a> {
     fn is_visible(
         &self,
         visibility: &Visibility,
-        _importing_module: ModuleId,
-        _target_module: ModuleId,
+        importing_module: ModuleId,
+        target_module: ModuleId,
     ) -> bool {
         match visibility {
             Visibility::Public => true,
-            Visibility::Crate => true,
+            Visibility::Crate => {
+                // Check if modules are in same crate
+                match (
+                    self.module_graph.crate_for(importing_module),
+                    self.module_graph.crate_for(target_module),
+                ) {
+                    (Some(importing_crate), Some(target_crate)) => importing_crate == target_crate,
+                    _ => false, // Unknown crate = not visible
+                }
+            }
             Visibility::Inherited => false, // Private items not visible
             Visibility::Super { .. } => true, // Simplified: allow for now
             Visibility::Self_ => false,
@@ -500,7 +510,7 @@ impl<'a> ImportResolver<'a> {
 mod tests {
     use super::*;
     use crate::token::Span;
-    use ash_core::module_graph::ModuleNode;
+    use ash_core::module_graph::{CrateId, ModuleNode};
 
     // Helper to create a simple module graph
     fn create_test_graph() -> ModuleGraph {
@@ -528,6 +538,49 @@ mod tests {
         graph.add_edge(foo, bar);
 
         graph
+    }
+
+    // Helper to create a multi-crate module graph for testing pub(crate)
+    // Structure: mod_a1 (root, crate_a) -> mod_a2 (crate_a)
+    //                         |
+    //                         +--> external (crate_b) -> mod_b2 (crate_b)
+    fn create_multi_crate_graph() -> (ModuleGraph, ModuleId, ModuleId, ModuleId, ModuleId) {
+        use ash_core::module_graph::ModuleSource;
+
+        let mut graph = ModuleGraph::new();
+
+        // Create Crate A with two modules
+        let crate_a = CrateId(0);
+        let mod_a1 = graph.add_node(ModuleNode::new(
+            "mod_a1".to_string(),
+            ModuleSource::File("crate_a/mod_a1.ash".to_string()),
+        ));
+        let mod_a2 = graph.add_node(ModuleNode::new(
+            "mod_a2".to_string(),
+            ModuleSource::File("crate_a/mod_a2.ash".to_string()),
+        ));
+        graph.set_crate(mod_a1, crate_a);
+        graph.set_crate(mod_a2, crate_a);
+        graph.set_root(mod_a1);
+        graph.add_edge(mod_a1, mod_a2);
+
+        // Create Crate B - external module (as child of mod_a1 for path resolution)
+        // but belonging to a different crate
+        let crate_b = CrateId(1);
+        let external = graph.add_node(ModuleNode::new(
+            "external".to_string(),
+            ModuleSource::File("external/lib.ash".to_string()),
+        ));
+        let mod_b2 = graph.add_node(ModuleNode::new(
+            "mod_b2".to_string(),
+            ModuleSource::File("external/mod_b2.ash".to_string()),
+        ));
+        graph.set_crate(external, crate_b);
+        graph.set_crate(mod_b2, crate_b);
+        graph.add_edge(mod_a1, external); // external is accessible from mod_a1
+        graph.add_edge(external, mod_b2);
+
+        (graph, mod_a1, mod_a2, external, mod_b2)
     }
 
     fn simple_path(segments: &[&str]) -> SimplePath {
@@ -913,5 +966,93 @@ mod tests {
 
         let err = result.unwrap_err();
         assert!(matches!(err, ImportError::ModuleNotFound { .. }));
+    }
+
+    // =========================================================================
+    // TASK-332: pub(crate) visibility tests
+    // =========================================================================
+
+    #[test]
+    fn test_pub_crate_same_crate_allowed() {
+        // Create graph with modules in same crate
+        let (graph, mod_a1, mod_a2, _mod_b1, _mod_b2) = create_multi_crate_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(crate) export to mod_a2 (same crate as mod_a1)
+        resolver.add_module_exports(mod_a2, vec![("CrateItem".to_string(), Visibility::Crate)]);
+
+        // Add use statement from mod_a1 importing from mod_a2
+        // Path needs to go from mod_a1 root: mod_a2::CrateItem
+        let use_path = UsePath::Simple(simple_path(&["crate", "mod_a2", "CrateItem"]));
+        resolver.add_module_uses(mod_a1, vec![use_stmt(use_path)]);
+
+        // Import should succeed - same crate
+        let bindings = resolver.resolve_all().unwrap();
+        let mod_a1_bindings = bindings.get(&mod_a1).unwrap();
+
+        assert!(mod_a1_bindings.contains_key("CrateItem"));
+        let binding = mod_a1_bindings.get("CrateItem").unwrap();
+        assert_eq!(binding.item_name, "CrateItem");
+        assert_eq!(binding.target_module, mod_a2);
+    }
+
+    #[test]
+    fn test_pub_crate_cross_crate_rejected() {
+        // Create graph with modules in different crates
+        let (graph, mod_a1, _mod_a2, _external, mod_b2) = create_multi_crate_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(crate) export to mod_b2 (different crate from mod_a1)
+        resolver.add_module_exports(mod_b2, vec![("CrateItem".to_string(), Visibility::Crate)]);
+
+        // Add use statement from mod_a1 importing from mod_b2 via external
+        let use_path = UsePath::Simple(simple_path(&["crate", "external", "mod_b2", "CrateItem"]));
+        resolver.add_module_uses(mod_a1, vec![use_stmt(use_path)]);
+
+        // Import should fail - different crate
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "CrateItem"),
+            "Expected PrivateItem error for cross-crate pub(crate) import, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_pub_crate_unknown_crate_rejected() {
+        let graph = create_test_graph();
+        let root = graph.get_root().copied().unwrap();
+        let foo = graph
+            .get_node(root)
+            .unwrap()
+            .children
+            .first()
+            .copied()
+            .unwrap();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(crate) export without setting crate membership
+        resolver.add_module_exports(foo, vec![("CrateItem".to_string(), Visibility::Crate)]);
+
+        // Try to import the pub(crate) item
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "CrateItem"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        // Import should fail - unknown crate
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "CrateItem"),
+            "Expected PrivateItem error for unknown crate, got: {:?}",
+            err
+        );
     }
 }

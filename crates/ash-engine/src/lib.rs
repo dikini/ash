@@ -50,7 +50,7 @@ use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
 #[derive(Debug)]
 pub struct Engine {
     /// Store surface workflow definitions by a unique ID
-    /// This stores the full WorkflowDef including parameters for type checking
+    /// This stores the full `WorkflowDef` including parameters for type checking
     surface_workflow_defs:
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::WorkflowDef>>,
     /// Counter for generating unique IDs

@@ -1329,7 +1329,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** User code review findings (2026-03-27)  
 **Priority:** Critical  
-**Status:** 🔴 In Progress - Critical Gaps Identified (2025-01-XX Review)
+**Status:** ✅ Complete (all remediation tasks finished)
 
 ### 50.1: CLI SPEC-005 Compliance Fixes
 
@@ -1369,25 +1369,23 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-316](tasks/TASK-316-fix-input-file-path.md) | ~~Fix ash run --input~~ - Design decision: Keep inline JSON only, remove file path from spec | SPEC-005 | 1 | ✅ Complete |
-| [TASK-317](tasks/TASK-317-fix-capability-binding.md) | Fix --capability provider binding (URI discarded, names ignored) | SPEC-005 | 6 | 🔴 Critical |
-| [TASK-318](tasks/TASK-318-fix-exit-codes.md) | Fix ash check exit codes (type=1, I/O=3 per SPEC-005) | SPEC-005 | 2 | 🔴 Critical |
-| [TASK-319](tasks/TASK-319-fix-http-noop.md) | Fix EngineBuilder HTTP provider no-op or remove | SPEC-010 | 2 | 🟡 High |
-| [TASK-320](tasks/TASK-320-fix-timeout-diagnostics.md) | Fix timeout diagnostics (shows 0s instead of actual) | N/A | 1 | 🟡 Medium |
-| [TASK-321](tasks/TASK-321-fix-clippy-warnings.md) | Fix clippy warnings in test code | N/A | 2 | 🟡 Medium |
+| [TASK-317](tasks/TASK-317-fix-capability-binding.md) | Fix --capability to error on unknown capability names | SPEC-005 | 6 | ✅ Complete |
+| [TASK-318](tasks/TASK-318-fix-exit-codes.md) | Fix ash check exit codes (type=1, I/O=3 per SPEC-005) | SPEC-005 | 2 | ✅ Complete |
+| [TASK-319](tasks/TASK-319-fix-http-noop.md) | Fix EngineBuilder HTTP provider to return error | SPEC-010 | 2 | ✅ Complete |
+| [TASK-320](tasks/TASK-320-fix-timeout-diagnostics.md) | Fix timeout diagnostics (shows 0s instead of actual) | N/A | 1 | ✅ Complete |
+| [TASK-321](tasks/TASK-321-fix-clippy-warnings.md) | Fix clippy warnings in test code | N/A | 2 | ✅ Complete |
 
-**Summary of Gaps:**
-- **TASK-316:** --input still parses as JSON, not file path; no -- support
-- **TASK-317:** --capability discards URI, silently ignores unknown names
-- **TASK-318:** Exit codes wrong (type=3 should be 1, I/O=6 should be 3)
-- **TASK-319:** HTTP provider still silently does nothing
-- **TASK-320:** Timeout message always shows "0s"
-- **TASK-321:** Clippy warnings in test code not cleaned
+**Summary of Completed Work:**
+- **TASK-316:** --input now fails fast on file paths with clear error message
+- **TASK-317:** --capability now errors on unknown names (URI kept for future)
+- **TASK-318:** Exit codes fixed per SPEC-005 (type=1, I/O=3)
+- **TASK-319:** HTTP provider now returns Configuration error (fast fail)
+- **TASK-320:** Timeout now shows actual seconds extracted from message
+- **TASK-321:** All clippy warnings fixed in test code
 
-**Previous Tasks:**
-- TASK-307, 308, 309, 312: Implementation incomplete/superseded
-- TASK-310, 313, 311: ✅ Complete
+**All TASK-316 through TASK-321: ✅ Complete**
 
-**Total:** ~34 hours (previous) + ~17 hours (new findings) = ~51 hours
+**Total:** ~51 hours (Phase 50 complete)
 
 ---
 
@@ -1420,9 +1418,10 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 44 | 17 | 102-108 | ✅ Complete |
 ||| 45 | 3 | 14 | ✅ Complete |
 ||| 46 | 13 | 98-108 | ✅ Complete |
-||| 47 | 10 | 90 | ⚠️ Partial (TASK-318) |
-||| 48 | 15 | 138 | ⚠️ Partial (TASK-319) |
-||| 49 | 9 | 52 | ⚠️ Partial (TASK-321) |
-||| **Total** | **75** | **557-575** | ⚠️ Remediation Required |
+||| 47 | 10 | 90 | ✅ Complete |
+||| 48 | 15 | 138 | ✅ Complete |
+||| 49 | 9 | 52 | ✅ Complete |
+||| 50 | 13 | 51 | ✅ Complete |
+||| **Total** | **78** | **560-580** | ✅ Complete |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

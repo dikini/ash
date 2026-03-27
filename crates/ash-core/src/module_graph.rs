@@ -146,6 +146,49 @@ impl ModuleGraph {
     pub fn ancestors(&self, module: ModuleId) -> impl Iterator<Item = ModuleId> + '_ {
         std::iter::successors(Some(module), |&m| self.nodes.get(&m).and_then(|n| n.parent))
     }
+
+    /// Resolve a path string to a ModuleId
+    ///
+    /// Path format: ["crate", "foo", "bar"] representing crate::foo::bar
+    /// Returns None if the path cannot be resolved.
+    pub fn resolve_path(&self, path: &[String]) -> Option<ModuleId> {
+        // Start from root
+        let mut current = self.root?;
+
+        for component in path {
+            // Handle "crate" as the root module name
+            if component == "crate" {
+                // Check if current is root (for the first component)
+                if current == self.root? {
+                    continue;
+                }
+            }
+
+            // Find child with matching name
+            let node = self.nodes.get(&current)?;
+            let child = node.children.iter().find(|&&child_id| {
+                self.nodes
+                    .get(&child_id)
+                    .map(|n| &n.name == component)
+                    .unwrap_or(false)
+            })?;
+            current = *child;
+        }
+        Some(current)
+    }
+
+    /// Check if `module` is a descendant of (or the same as) `ancestor`
+    ///
+    /// Returns true if:
+    /// - module == ancestor (same module)
+    /// - module is a child, grandchild, etc. of ancestor
+    pub fn is_descendant_or_same(&self, module: ModuleId, ancestor: ModuleId) -> bool {
+        if module == ancestor {
+            return true;
+        }
+        // Check if ancestor appears in module's ancestor chain
+        self.ancestors(module).any(|m| m == ancestor)
+    }
 }
 
 #[cfg(test)]
@@ -368,5 +411,165 @@ mod tests {
         assert_eq!(graph.nodes[&main].imports.len(), 2);
         assert!(graph.nodes[&main].imports.contains(&lib1));
         assert!(graph.nodes[&main].imports.contains(&lib2));
+    }
+
+    // ============================================================
+    // TASK-334: resolve_path and is_descendant_or_same tests
+    // ============================================================
+
+    #[test]
+    fn test_resolve_path_root() {
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".into(),
+            ModuleSource::File("main.ash".into()),
+        ));
+        graph.set_root(root);
+
+        // Resolve "crate" should return root
+        let result = graph.resolve_path(&["crate".to_string()]);
+        assert_eq!(result, Some(root));
+    }
+
+    #[test]
+    fn test_resolve_path_nested() {
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".into(),
+            ModuleSource::File("main.ash".into()),
+        ));
+        graph.set_root(root);
+
+        let foo = graph.add_node(ModuleNode::new(
+            "foo".into(),
+            ModuleSource::File("foo.ash".into()),
+        ));
+        graph.add_edge(root, foo);
+
+        let bar = graph.add_node(ModuleNode::new(
+            "bar".into(),
+            ModuleSource::File("foo/bar.ash".into()),
+        ));
+        graph.add_edge(foo, bar);
+
+        // Resolve "crate::foo"
+        let result = graph.resolve_path(&["crate".to_string(), "foo".to_string()]);
+        assert_eq!(result, Some(foo));
+
+        // Resolve "crate::foo::bar"
+        let result = graph.resolve_path(&[
+            "crate".to_string(),
+            "foo".to_string(),
+            "bar".to_string(),
+        ]);
+        assert_eq!(result, Some(bar));
+    }
+
+    #[test]
+    fn test_resolve_path_nonexistent() {
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".into(),
+            ModuleSource::File("main.ash".into()),
+        ));
+        graph.set_root(root);
+
+        // Resolve non-existent path
+        let result = graph.resolve_path(&["crate".to_string(), "nonexistent".to_string()]);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_is_descendant_or_same_same_module() {
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".into(),
+            ModuleSource::File("main.ash".into()),
+        ));
+        graph.set_root(root);
+
+        // Same module is considered descendant of itself
+        assert!(graph.is_descendant_or_same(root, root));
+    }
+
+    #[test]
+    fn test_is_descendant_or_same_child() {
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".into(),
+            ModuleSource::File("main.ash".into()),
+        ));
+        graph.set_root(root);
+
+        let foo = graph.add_node(ModuleNode::new(
+            "foo".into(),
+            ModuleSource::File("foo.ash".into()),
+        ));
+        graph.add_edge(root, foo);
+
+        // foo is a descendant of root
+        assert!(graph.is_descendant_or_same(foo, root));
+        // root is NOT a descendant of foo
+        assert!(!graph.is_descendant_or_same(root, foo));
+    }
+
+    #[test]
+    fn test_is_descendant_or_same_grandchild() {
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".into(),
+            ModuleSource::File("main.ash".into()),
+        ));
+        graph.set_root(root);
+
+        let foo = graph.add_node(ModuleNode::new(
+            "foo".into(),
+            ModuleSource::File("foo.ash".into()),
+        ));
+        graph.add_edge(root, foo);
+
+        let bar = graph.add_node(ModuleNode::new(
+            "bar".into(),
+            ModuleSource::File("foo/bar.ash".into()),
+        ));
+        graph.add_edge(foo, bar);
+
+        // bar is a descendant of root (grandchild)
+        assert!(graph.is_descendant_or_same(bar, root));
+        // bar is a descendant of foo
+        assert!(graph.is_descendant_or_same(bar, foo));
+        // foo is NOT a descendant of bar
+        assert!(!graph.is_descendant_or_same(foo, bar));
+        // root is NOT a descendant of bar
+        assert!(!graph.is_descendant_or_same(root, bar));
+    }
+
+    #[test]
+    fn test_is_descendant_or_same_sibling() {
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".into(),
+            ModuleSource::File("main.ash".into()),
+        ));
+        graph.set_root(root);
+
+        let foo = graph.add_node(ModuleNode::new(
+            "foo".into(),
+            ModuleSource::File("foo.ash".into()),
+        ));
+        graph.add_edge(root, foo);
+
+        let bar = graph.add_node(ModuleNode::new(
+            "bar".into(),
+            ModuleSource::File("bar.ash".into()),
+        ));
+        graph.add_edge(root, bar);
+
+        // Siblings are not descendants of each other
+        assert!(!graph.is_descendant_or_same(foo, bar));
+        assert!(!graph.is_descendant_or_same(bar, foo));
+        // Both are descendants of root
+        assert!(graph.is_descendant_or_same(foo, root));
+        assert!(graph.is_descendant_or_same(bar, root));
     }
 }

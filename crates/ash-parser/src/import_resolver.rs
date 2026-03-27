@@ -503,7 +503,23 @@ impl<'a> ImportResolver<'a> {
                 target_ancestors.contains(&importing_module)
             }
             Visibility::Self_ => false,
-            Visibility::Restricted { .. } => true, // Simplified: allow for now
+            Visibility::Restricted { path } => {
+                // Parse the path string (e.g., "crate::foo::bar" -> ["crate", "foo", "bar"])
+                let path_components: Vec<String> = path
+                    .split("::")
+                    .map(|s| s.to_string())
+                    .collect();
+
+                // Resolve the restricted path to a module
+                match self.module_graph.resolve_path(&path_components) {
+                    Some(restricted_module) => {
+                        // Importing module must be the restricted module or its descendant
+                        self.module_graph
+                            .is_descendant_or_same(importing_module, restricted_module)
+                    }
+                    None => false, // Non-existent path = not visible
+                }
+            }
         }
     }
 
@@ -1291,5 +1307,372 @@ mod tests {
             "Expected PrivateItem error for insufficient levels, got: {:?}",
             err
         );
+    }
+
+    // =========================================================================
+    // TASK-334: pub(in path) visibility tests
+    // =========================================================================
+
+    // Helper to create a four-level module graph for testing pub(in path):
+    // root (crate) -> foo -> bar -> baz
+    //              -> sibling (child of root, sibling of foo)
+    fn create_four_level_graph() -> (ModuleGraph, ModuleId, ModuleId, ModuleId, ModuleId, ModuleId)
+    {
+        let mut graph = ModuleGraph::new();
+
+        // Root module (crate)
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        // foo module as child of root
+        let foo = graph.add_node(ModuleNode::new(
+            "foo".to_string(),
+            ash_core::module_graph::ModuleSource::File("foo.ash".to_string()),
+        ));
+        graph.add_edge(root, foo);
+
+        // bar module as child of foo
+        let bar = graph.add_node(ModuleNode::new(
+            "bar".to_string(),
+            ash_core::module_graph::ModuleSource::File("foo/bar.ash".to_string()),
+        ));
+        graph.add_edge(foo, bar);
+
+        // baz module as child of bar
+        let baz = graph.add_node(ModuleNode::new(
+            "baz".to_string(),
+            ash_core::module_graph::ModuleSource::File("foo/bar/baz.ash".to_string()),
+        ));
+        graph.add_edge(bar, baz);
+
+        // sibling module as child of root (sibling of foo)
+        let sibling = graph.add_node(ModuleNode::new(
+            "sibling".to_string(),
+            ash_core::module_graph::ModuleSource::File("sibling.ash".to_string()),
+        ));
+        graph.add_edge(root, sibling);
+
+        (graph, root, foo, bar, baz, sibling)
+    }
+
+    #[test]
+    fn test_pub_in_path_exact_match_allowed() {
+        // Module importing its own restricted item should succeed
+        let (graph, _root, foo, _bar, _baz, _sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in crate::foo) export to foo module
+        resolver.add_module_exports(
+            foo,
+            vec![(
+                "RestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo".into(),
+                },
+            )],
+        );
+
+        // Add use statement from foo importing from itself
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "RestrictedItem"]));
+        resolver.add_module_uses(foo, vec![use_stmt(use_path)]);
+
+        // Import should succeed - foo is the restricted path
+        let bindings = resolver.resolve_all().unwrap();
+        let foo_bindings = bindings.get(&foo).unwrap();
+
+        assert!(foo_bindings.contains_key("RestrictedItem"));
+    }
+
+    #[test]
+    fn test_pub_in_path_descendant_allowed() {
+        // Descendant module importing restricted ancestor item should succeed
+        let (graph, _root, foo, bar, baz, _sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in crate::foo) export to foo module
+        resolver.add_module_exports(
+            foo,
+            vec![(
+                "RestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo".into(),
+                },
+            )],
+        );
+
+        // Add use statement from bar (child of foo) importing from foo
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "RestrictedItem"]));
+        resolver.add_module_uses(bar, vec![use_stmt(use_path)]);
+
+        // Import should succeed - bar is a descendant of foo
+        let bindings = resolver.resolve_all().unwrap();
+        let bar_bindings = bindings.get(&bar).unwrap();
+
+        assert!(bar_bindings.contains_key("RestrictedItem"));
+
+        // Also test with baz (grandchild of foo)
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(
+            foo,
+            vec![(
+                "RestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo".into(),
+                },
+            )],
+        );
+        let use_path2 = UsePath::Simple(simple_path(&["crate", "foo", "RestrictedItem"]));
+        resolver2.add_module_uses(baz, vec![use_stmt(use_path2)]);
+
+        let bindings2 = resolver2.resolve_all().unwrap();
+        let baz_bindings = bindings2.get(&baz).unwrap();
+
+        assert!(baz_bindings.contains_key("RestrictedItem"));
+    }
+
+    #[test]
+    fn test_pub_in_path_sibling_rejected() {
+        // Sibling of restricted path trying to import should fail
+        let (graph, _root, foo, _bar, _baz, sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in crate::foo) export to foo module
+        resolver.add_module_exports(
+            foo,
+            vec![(
+                "RestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo".into(),
+                },
+            )],
+        );
+
+        // Add use statement from sibling trying to import from foo
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "RestrictedItem"]));
+        resolver.add_module_uses(sibling, vec![use_stmt(use_path)]);
+
+        // Import should fail - sibling is not a descendant of foo
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "RestrictedItem"),
+            "Expected PrivateItem error for sibling import, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_pub_in_path_parent_rejected() {
+        // Parent of restricted path trying to import should fail
+        let (graph, root, foo, _bar, _baz, _sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in crate::foo) export to foo module
+        resolver.add_module_exports(
+            foo,
+            vec![(
+                "RestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo".into(),
+                },
+            )],
+        );
+
+        // Add use statement from root (parent of foo) trying to import from foo
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "RestrictedItem"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        // Import should fail - root is not a descendant of foo
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "RestrictedItem"),
+            "Expected PrivateItem error for parent import, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_pub_in_path_crate_root() {
+        // pub(in crate) should work like pub(crate) - visible to all in crate
+        let (graph, root, foo, _bar, _baz, sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in crate) export to foo module
+        resolver.add_module_exports(
+            foo,
+            vec![(
+                "CrateRestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate".into(),
+                },
+            )],
+        );
+
+        // Add use statement from sibling (different branch but same crate root)
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "CrateRestrictedItem"]));
+        resolver.add_module_uses(sibling, vec![use_stmt(use_path)]);
+
+        // Import should succeed - sibling is a descendant of crate root
+        let bindings = resolver.resolve_all().unwrap();
+        let sibling_bindings = bindings.get(&sibling).unwrap();
+
+        assert!(sibling_bindings.contains_key("CrateRestrictedItem"));
+
+        // Also test from root itself
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(
+            foo,
+            vec![(
+                "CrateRestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate".into(),
+                },
+            )],
+        );
+        let use_path2 = UsePath::Simple(simple_path(&["crate", "foo", "CrateRestrictedItem"]));
+        resolver2.add_module_uses(root, vec![use_stmt(use_path2)]);
+
+        let bindings2 = resolver2.resolve_all().unwrap();
+        let root_bindings = bindings2.get(&root).unwrap();
+
+        assert!(root_bindings.contains_key("CrateRestrictedItem"));
+    }
+
+    #[test]
+    fn test_pub_in_path_nonexistent_rejected() {
+        // Non-existent path should not be visible
+        let (graph, _root, foo, _bar, _baz, _sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in crate::nonexistent) export to foo module
+        resolver.add_module_exports(
+            foo,
+            vec![(
+                "NonExistentPathItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::nonexistent".into(),
+                },
+            )],
+        );
+
+        // Add use statement from foo trying to import
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "NonExistentPathItem"]));
+        resolver.add_module_uses(foo, vec![use_stmt(use_path)]);
+
+        // Import should fail - non-existent path
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "NonExistentPathItem"),
+            "Expected PrivateItem error for non-existent path, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_pub_in_path_nested_module() {
+        // pub(in crate::foo::bar) should be visible to bar and baz, but not foo or sibling
+        let (graph, root, foo, bar, baz, sibling) = create_four_level_graph();
+
+        // Test: bar (exact match) should succeed
+        let mut resolver = ImportResolver::new(&graph);
+        resolver.add_module_exports(
+            bar,
+            vec![(
+                "NestedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo::bar".into(),
+                },
+            )],
+        );
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "bar", "NestedItem"]));
+        resolver.add_module_uses(bar, vec![use_stmt(use_path)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        assert!(bindings.get(&bar).unwrap().contains_key("NestedItem"));
+
+        // Test: baz (descendant of bar) should succeed
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(
+            bar,
+            vec![(
+                "NestedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo::bar".into(),
+                },
+            )],
+        );
+        let use_path2 = UsePath::Simple(simple_path(&["crate", "foo", "bar", "NestedItem"]));
+        resolver2.add_module_uses(baz, vec![use_stmt(use_path2)]);
+
+        let bindings2 = resolver2.resolve_all().unwrap();
+        assert!(bindings2.get(&baz).unwrap().contains_key("NestedItem"));
+
+        // Test: foo (parent of bar) should fail
+        let mut resolver3 = ImportResolver::new(&graph);
+        resolver3.add_module_exports(
+            bar,
+            vec![(
+                "NestedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo::bar".into(),
+                },
+            )],
+        );
+        let use_path3 = UsePath::Simple(simple_path(&["crate", "foo", "bar", "NestedItem"]));
+        resolver3.add_module_uses(foo, vec![use_stmt(use_path3)]);
+
+        let result3 = resolver3.resolve_all();
+        assert!(result3.is_err());
+
+        // Test: root (ancestor of bar) should fail
+        let mut resolver4 = ImportResolver::new(&graph);
+        resolver4.add_module_exports(
+            bar,
+            vec![(
+                "NestedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo::bar".into(),
+                },
+            )],
+        );
+        let use_path4 = UsePath::Simple(simple_path(&["crate", "foo", "bar", "NestedItem"]));
+        resolver4.add_module_uses(root, vec![use_stmt(use_path4)]);
+
+        let result4 = resolver4.resolve_all();
+        assert!(result4.is_err());
+
+        // Test: sibling (unrelated) should fail
+        let mut resolver5 = ImportResolver::new(&graph);
+        resolver5.add_module_exports(
+            bar,
+            vec![(
+                "NestedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::foo::bar".into(),
+                },
+            )],
+        );
+        let use_path5 = UsePath::Simple(simple_path(&["crate", "foo", "bar", "NestedItem"]));
+        resolver5.add_module_uses(sibling, vec![use_stmt(use_path5)]);
+
+        let result5 = resolver5.resolve_all();
+        assert!(result5.is_err());
     }
 }

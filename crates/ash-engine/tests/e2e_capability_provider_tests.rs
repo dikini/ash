@@ -54,6 +54,7 @@ impl CapabilityProvider for TrackingProvider {
         Effect::Operational
     }
 
+    #[allow(clippy::cast_possible_wrap)] // Test code - count won't exceed i64 range in practice
     async fn observe(
         &self,
         _action: &str,
@@ -71,6 +72,7 @@ impl CapabilityProvider for TrackingProvider {
         Ok(Value::Null)
     }
 
+    #[allow(clippy::cast_possible_wrap)] // Test code - count won't exceed i64 range in practice
     async fn execute(
         &self,
         _action: &str,
@@ -475,7 +477,7 @@ async fn test_same_provider_different_workflow_instances() {
         .expect("engine builds");
 
     for i in 0..5 {
-        let result = engine.run(&format!("workflow main {{ ret {}; }}", i)).await;
+        let result = engine.run(&format!("workflow main {{ ret {i}; }}")).await;
         assert!(result.is_ok());
     }
 }
@@ -496,7 +498,7 @@ async fn test_provider_concurrent_workflow_access() {
         let engine_clone = Arc::clone(&engine);
         let handle = tokio::spawn(async move {
             engine_clone
-                .run(&format!("workflow w{} {{ ret {}; }}", i, i))
+                .run(&format!("workflow w{i} {{ ret {i}; }}"))
                 .await
         });
         handles.push(handle);
@@ -643,8 +645,8 @@ proptest! {
     fn prop_multiple_provider_registration_succeeds(count in 1usize..=10) {
         let mut builder = Engine::new();
         for i in 0..count {
-            let provider = TrackingProvider::new(&format!("provider_{}", i));
-            builder = builder.with_custom_provider(&format!("provider_{}", i), Arc::new(provider));
+            let provider = TrackingProvider::new(&format!("provider_{i}"));
+            builder = builder.with_custom_provider(&format!("provider_{i}"), Arc::new(provider));
         }
         let engine = builder.build();
         prop_assert!(engine.is_ok(), "Multiple provider registrations should succeed");
@@ -830,8 +832,8 @@ async fn test_many_providers_registration() {
     let mut builder = Engine::new();
 
     for i in 0..50 {
-        let provider = TrackingProvider::new(&format!("provider_{}", i));
-        builder = builder.with_custom_provider(&format!("provider_{}", i), Arc::new(provider));
+        let provider = TrackingProvider::new(&format!("provider_{i}"));
+        builder = builder.with_custom_provider(&format!("provider_{i}"), Arc::new(provider));
     }
 
     let engine = builder.build().expect("engine builds");
@@ -848,7 +850,7 @@ async fn test_provider_reuse_across_many_executions() {
         .expect("engine builds");
 
     for i in 0..20 {
-        let result = engine.run(&format!("workflow main {{ ret {}; }}", i)).await;
+        let result = engine.run(&format!("workflow main {{ ret {i}; }}")).await;
         assert!(result.is_ok());
     }
 }

@@ -1336,7 +1336,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) | ~~Fix ash check exit codes for parse/type errors~~ | SPEC-005 | 4 | ❌ Superseded by TASK-318 |
-| [TASK-308](tasks/TASK-308-cli-input-file-path.md) | ~~Fix ash run --input to accept file path~~ | SPEC-005 | 6 | ❌ Superseded by TASK-316 |
+| [TASK-308](tasks/TASK-308-cli-input-file-path.md) | ~~Fix ash run --input to accept file path~~ | SPEC-005 | 6 | ❌ Superseded by TASK-316 (design: keep inline JSON only) |
 | [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) | ~~Implement --dry-run, --timeout, --capability~~ | SPEC-005 | 8 | ❌ Superseded by TASK-317 |
 
 ### 50.2: Test Suite Fixes
@@ -1368,7 +1368,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-316](tasks/TASK-316-fix-input-file-path.md) | Fix ash run --input to accept file paths (not inline JSON) | SPEC-005 | 4 | 🔴 Critical |
+| [TASK-316](tasks/TASK-316-fix-input-file-path.md) | ~~Fix ash run --input~~ - Design decision: Keep inline JSON only, remove file path from spec | SPEC-005 | 1 | ✅ Complete |
 | [TASK-317](tasks/TASK-317-fix-capability-binding.md) | Fix --capability provider binding (URI discarded, names ignored) | SPEC-005 | 6 | 🔴 Critical |
 | [TASK-318](tasks/TASK-318-fix-exit-codes.md) | Fix ash check exit codes (type=1, I/O=3 per SPEC-005) | SPEC-005 | 2 | 🔴 Critical |
 | [TASK-319](tasks/TASK-319-fix-http-noop.md) | Fix EngineBuilder HTTP provider no-op or remove | SPEC-010 | 2 | 🟡 High |

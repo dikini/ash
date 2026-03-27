@@ -284,9 +284,21 @@ fn test_complex_role_composition() {
         RoleDef {
             name: "ai_agent".into(),
             capabilities: vec![
-                CapabilityDecl { capability: "llm".into(), constraints: None, span: test_span() },
-                CapabilityDecl { capability: "embedding".into(), constraints: None, span: test_span() },
-                CapabilityDecl { capability: "vector_store".into(), constraints: None, span: test_span() },
+                CapabilityDecl {
+                    capability: "llm".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
+                CapabilityDecl {
+                    capability: "embedding".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
+                CapabilityDecl {
+                    capability: "vector_store".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
             ],
             obligations: vec!["response_safety".into()],
             span: test_span(),
@@ -299,9 +311,21 @@ fn test_complex_role_composition() {
         RoleDef {
             name: "network_client".into(),
             capabilities: vec![
-                CapabilityDecl { capability: "http".into(), constraints: None, span: test_span() },
-                CapabilityDecl { capability: "websocket".into(), constraints: None, span: test_span() },
-                CapabilityDecl { capability: "tls".into(), constraints: None, span: test_span() },
+                CapabilityDecl {
+                    capability: "http".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
+                CapabilityDecl {
+                    capability: "websocket".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
+                CapabilityDecl {
+                    capability: "tls".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
             ],
             obligations: vec![],
             span: test_span(),
@@ -314,8 +338,16 @@ fn test_complex_role_composition() {
         RoleDef {
             name: "file_processor".into(),
             capabilities: vec![
-                CapabilityDecl { capability: "file_read".into(), constraints: None, span: test_span() },
-                CapabilityDecl { capability: "file_write".into(), constraints: None, span: test_span() },
+                CapabilityDecl {
+                    capability: "file_read".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
+                CapabilityDecl {
+                    capability: "file_write".into(),
+                    constraints: None,
+                    span: test_span(),
+                },
             ],
             obligations: vec!["audit_log".into()],
             span: test_span(),

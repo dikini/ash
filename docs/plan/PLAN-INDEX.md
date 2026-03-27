@@ -1464,4 +1464,33 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Total:** ~21-27 hours (including all sub-tasks)
 
+---
+
+## Phase 53: Post-Review Remediation
+
+**Goal:** Address remaining contract gaps, clippy warnings, and spec inconsistencies.
+
+**Source:** Post-Phase 52 review findings  
+**Priority:** High  
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-327](tasks/TASK-327-fix-clippy-pedantic-warnings.md) | Fix clippy pedantic warnings in test code | N/A | 2 | ✅ Complete |
+| [TASK-328](tasks/TASK-328-update-examples-capabilities-syntax.md) | Update examples to capabilities: syntax | SPEC-024 | 3 | ✅ Complete |
+| [TASK-329](tasks/TASK-329-spec-009-compliance-verification.md) | SPEC-009 visibility compliance verification | SPEC-009 | 2 | ✅ Complete |
+| [TASK-330](tasks/TASK-330-documentation-consistency-audit.md) | Documentation and CLI help consistency audit | SPEC-005/010 | 2 | ✅ Complete |
+| [TASK-331](tasks/TASK-331-phase-53-closeout.md) | Phase 53 closeout and final verification | N/A | 1-3 | ✅ Complete |
+
+**Summary:**
+- TASK-327: Fixed 9 clippy pedantic warnings (cast_possible_wrap, uninlined_format_args)
+- TASK-328: Updated 10 example/workflow files from authority: to capabilities: syntax
+- TASK-329: Verified SPEC-009 compliance; documented gaps in import resolver visibility enforcement
+- TASK-330: Fixed documentation inconsistencies; removed lingering --input/--capability flags
+- TASK-331: All verification passed
+
+**Total:** ~10-12 hours
+
+---
+
 |**Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

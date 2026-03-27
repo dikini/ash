@@ -8,7 +8,7 @@ use winnow::prelude::*;
 use winnow::stream::Stream;
 
 use crate::combinators::keyword;
-use crate::input::{update_position, ParseInput};
+use crate::input::{ParseInput, update_position};
 use crate::module::{ModuleDecl, ModuleSource};
 use crate::parse_expr::expr;
 use crate::parse_visibility::parse_visibility;

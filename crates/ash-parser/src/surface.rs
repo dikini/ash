@@ -927,7 +927,7 @@ pub enum Type {
     Record(Vec<(Name, Type)>),
     /// Capability type
     Capability(Name),
-    /// Generic type constructor: List<Int>, Option<String>
+    /// Generic type constructor: `List<Int>`, `Option<String>`
     Constructor { name: Name, args: Vec<Type> },
 }
 
@@ -1376,24 +1376,20 @@ mod tests {
     fn test_role_def_with_capability_decl() {
         let role = RoleDef {
             name: "ai_agent".into(),
-            capabilities: vec![
-                CapabilityDecl {
-                    capability: "file".into(),
-                    constraints: Some(ConstraintBlock {
-                        fields: vec![
-                            ConstraintField {
-                                name: "paths".into(),
-                                value: ConstraintValue::Array(vec![
-                                    ConstraintValue::String("/tmp/*".to_string()),
-                                ]),
-                                span: Span::new(0, 50, 1, 1),
-                            },
-                        ],
-                        span: Span::new(0, 100, 1, 1),
-                    }),
-                    span: Span::new(0, 30, 1, 1),
-                },
-            ],
+            capabilities: vec![CapabilityDecl {
+                capability: "file".into(),
+                constraints: Some(ConstraintBlock {
+                    fields: vec![ConstraintField {
+                        name: "paths".into(),
+                        value: ConstraintValue::Array(vec![ConstraintValue::String(
+                            "/tmp/*".to_string(),
+                        )]),
+                        span: Span::new(0, 50, 1, 1),
+                    }],
+                    span: Span::new(0, 100, 1, 1),
+                }),
+                span: Span::new(0, 30, 1, 1),
+            }],
             obligations: vec![],
             span: Span::new(0, 200, 1, 1),
         };

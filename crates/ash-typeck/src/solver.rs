@@ -11,7 +11,7 @@ use std::fmt;
 /// Type error with detailed information (TASK-025)
 ///
 /// Type values are boxed to keep the error type small on the stack.
-/// See: https://docs.rs/serde_json/latest/src/serde_json/error.rs.html
+/// See: <https://docs.rs/serde_json/latest/src/serde_json/error.rs.html>
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum TypeError {
     /// Types cannot be unified

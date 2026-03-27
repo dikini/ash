@@ -50,8 +50,12 @@ Expected: No warnings
 grep -r "authority:" --include="*.ash" examples/ tests/workflows/
 # Expected: No matches
 
-# Verify examples parse
-find examples tests/workflows -name "*.ash" | head -3 | xargs -I{} cargo run --package ash-cli -- check {}
+# Verify parser coverage for migrated example/workflow files
+cargo test --package ash-parser --quiet
+# Expected: Parser coverage passes for migrated files
+
+# Verify live CLI help does not drift from the removed-input contract
+cargo run --package ash-cli --bin ash -- trace --help
 ```
 
 ### 6. Update PLAN-INDEX.md
@@ -65,6 +69,8 @@ Add Phase 53 section with task statuses.
 - [ ] Format check passes
 - [ ] Documentation builds without warnings
 - [ ] No `authority:` syntax in examples
+- [ ] Parser validation covers migrated example/workflow files
+- [ ] CLI help matches documented flag contract
 - [ ] PLAN-INDEX.md updated with Phase 53
 - [ ] Final commit with closeout message
 

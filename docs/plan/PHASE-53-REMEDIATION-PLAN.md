@@ -14,11 +14,12 @@
 
 ## Overview
 
-This phase addresses three categories of issues:
+This phase addresses four categories of issues:
 
 1. **Code Quality (High):** Clippy warnings at pedantic level that indicate potential issues
-2. **Syntax Consistency (High):** Example files still use deprecated `authority:` syntax
-3. **Spec Compliance (Medium):** Verify SPEC-009 visibility implementation completeness
+2. **Syntax Consistency (High):** Example and workflow fixture files still use deprecated `authority:` syntax
+3. **Spec Compliance (High):** Verify SPEC-009 visibility enforcement across both type checking and import resolution
+4. **CLI/Docs Consistency (Medium):** Verify user-facing help and crate docs match the post-Phase-52 contract
 
 ---
 
@@ -27,9 +28,9 @@ This phase addresses three categories of issues:
 | Task | Description | Files | Est. Hours |
 |------|-------------|-------|------------|
 | TASK-327 | Fix clippy pedantic warnings | Test files | 2 |
-| TASK-328 | Update example files to capabilities syntax | `.ash` files | 3 |
-| TASK-329 | SPEC-009 visibility compliance verification | `ash-typeck/src/visibility.rs` | 2 |
-| TASK-330 | Documentation consistency audit | Specs, CHANGELOG | 2 |
+| TASK-328 | Update example/workflow files to capabilities syntax | `.ash` files, parser validation | 3 |
+| TASK-329 | SPEC-009 visibility compliance verification | `ash-typeck/src/visibility.rs`, `ash-parser/src/import_resolver.rs` | 2 |
+| TASK-330 | Documentation and CLI help consistency audit | Specs, CHANGELOG, `ash-cli` docs/help | 2 |
 | TASK-331 | Final verification and closeout | All | 1-3 |
 
 ---
@@ -116,15 +117,19 @@ Spawn codex sub-agent to verify:
 
 ## TASK-328: Update Example Files to Capabilities Syntax
 
-**Objective:** Update all `.ash` files from deprecated `authority:` syntax to new `capabilities:` syntax
+**Objective:** Update all affected example and workflow `.ash` files from deprecated `authority:` syntax to new `capabilities:` syntax
 
-**Background:** TASK-322 implemented SPEC-024 compliant `capabilities:` syntax, but example files still use old `authority:` syntax.
+**Background:** TASK-322 implemented SPEC-024 compliant `capabilities:` syntax, but several example and workflow fixture files still use old `authority:` syntax.
 
 **Files to Modify:**
 - `examples/code_review.ash`
 - `examples/multi_agent_research.ash`
+- `examples/03-policies/01-role-based.ash`
+- `examples/03-policies/02-time-based.ash`
 - `examples/04-real-world/customer-support.ash`
 - `examples/04-real-world/code-review.ash`
+- `examples/workflows/40_tdd_workflow.ash`
+- `examples/workflows/40a_tdd_concrete_example.ash`
 - `tests/workflows/code_review.ash`
 - `tests/workflows/multi_agent_research.ash`
 
@@ -132,7 +137,7 @@ Spawn codex sub-agent to verify:
 
 Run: `grep -r "authority:" --include="*.ash" .`
 
-Expected: List of 6 files
+Expected: List of 10 files
 
 ### Step 2: Update examples/code_review.ash
 
@@ -216,10 +221,14 @@ Same pattern as examples/code_review.ash
 
 Same pattern as examples/multi_agent_research.ash
 
-### Step 8: Verify syntax with parser
+### Step 8: Verify syntax with the full module/program parser
 
 Run: `cargo test --package ash-parser --quiet`
 Expected: All tests pass
+
+Note: Do **not** rely solely on `ash check` for verification here. The current engine CLI path parses a bare workflow surface and may reject module-shaped examples that contain top-level `role` or `capability` declarations. Validation for this task must exercise the parser entrypoint that supports the full source shape used by the examples.
+
+If the existing parser test suite does not already load these files directly, add a regression test that parses each migrated file through the module/program parser.
 
 ### Step 9: Commit
 
@@ -229,7 +238,7 @@ git commit -m "fix(syntax): TASK-328 - Update examples to capabilities: syntax
 
 - Replace deprecated authority: with capabilities:
 - Remove trailing commas inside capability lists
-- Align all example files with SPEC-024"
+- Align all affected example/workflow files with SPEC-024"
 ```
 
 ### Step 10: Codex Verification
@@ -237,15 +246,15 @@ git commit -m "fix(syntax): TASK-328 - Update examples to capabilities: syntax
 Spawn codex sub-agent to verify:
 - No `authority:` remains in any `.ash` file
 - `cargo test --package ash-parser` passes
-- Example files parse correctly
+- Migrated files are covered by parser validation
 
 ---
 
 ## TASK-329: SPEC-009 Visibility Compliance Verification
 
-**Objective:** Verify SPEC-009 visibility implementation is complete and compliant
+**Objective:** Verify SPEC-009 visibility implementation is complete and compliant across both type checking and import resolution
 
-**Background:** Review identified potential compliance gap in pub(crate) visibility.
+**Background:** Review identified potential compliance gaps in restricted visibility handling, including the import-resolution path.
 
 **Spec Reference:** SPEC-009 Section 3.2, 7.1
 
@@ -258,6 +267,13 @@ Check for:
 - `Visibility::Super { levels }` implementation
 - `is_visible_path()` logic for each variant
 
+Read: `crates/ash-parser/src/import_resolver.rs`
+
+Check for:
+- Import visibility enforcement for `Visibility::Crate`
+- `Visibility::Super { .. }` handling
+- `Visibility::Restricted { .. }` handling
+
 ### Step 2: Review test coverage
 
 Read: `crates/ash-typeck/tests/visibility_test.rs`
@@ -266,6 +282,13 @@ Check for tests covering:
 - `pub(crate)` visibility
 - `pub(super)` visibility with levels
 - Edge cases (root module, nested modules)
+
+Read: `crates/ash-parser/src/import_resolver.rs` tests
+
+Check for tests covering:
+- Private item rejection
+- `pub(super)` import allow/deny cases
+- Restricted-path import allow/deny cases
 
 ### Step 3: Write missing tests (if any)
 
@@ -287,6 +310,9 @@ fn test_pub_crate_not_visible_other_crate() {
 Run: `cargo test --package ash-typeck visibility --quiet`
 Expected: All tests pass
 
+Run: `cargo test --package ash-parser import_resolver --quiet`
+Expected: All tests pass
+
 ### Step 5: Commit (if changes made)
 
 ```bash
@@ -302,13 +328,14 @@ git commit -m "test(visibility): TASK-329 - Add SPEC-009 compliance tests
 Spawn codex sub-agent to verify SPEC-009 compliance:
 - All visibility variants implemented per spec
 - Tests cover all visibility rules from Section 7.1
+- Import resolution enforces the same restrictions as the type checker
 - No TODO/FIXME in visibility code
 
 ---
 
 ## TASK-330: Documentation Consistency Audit
 
-**Objective:** Ensure all specs reflect current implementation state
+**Objective:** Ensure all specs, crate docs, and live CLI help reflect current implementation state
 
 ### Step 1: Audit SPEC-005 against CLI implementation
 
@@ -318,6 +345,7 @@ Verify:
 - `--capability` flag is documented as removed
 - `--input` flag is documented as removed
 - Examples don't use removed flags
+- `ash trace` does not expose removed input binding by accident
 
 ### Step 2: Audit SPEC-010 against engine implementation
 
@@ -335,6 +363,14 @@ Verify:
 - Phase 52 tasks are documented
 - Breaking changes noted
 - Superseded tasks mentioned
+
+### Step 3b: Audit CLI help and crate docs against implementation
+
+Check: `crates/ash-cli/src/lib.rs`
+
+Verify:
+- Crate-level examples do not use removed flags
+- Help text exposed by `ash trace --help` matches the documented contract
 
 ### Step 4: Update any inconsistencies found
 
@@ -356,6 +392,7 @@ git commit -m "docs(spec): TASK-330 - Documentation consistency audit
 Spawn codex sub-agent to verify:
 - No removed flags in documentation examples
 - All specs match implementation
+- Live CLI help does not drift from documented flags
 - CHANGELOG is complete
 
 ---
@@ -386,8 +423,11 @@ Expected: No warnings
 
 ### Step 5: Example file syntax check
 
-Run: `find examples tests/workflows -name "*.ash" -exec cargo run --package ash-cli -- check {} \;`
-Expected: All files parse successfully
+Run: `cargo test --package ash-parser --quiet`
+Expected: Parser coverage passes for migrated example/workflow files
+
+Run: `cargo run --package ash-cli --bin ash -- trace --help`
+Expected: Help output does not advertise removed input binding unless intentionally supported and documented
 
 ### Step 6: Update PLAN-INDEX.md
 
@@ -428,6 +468,8 @@ delegate_task to codex:
     - cargo clippy --workspace --all-targets --all-features -- -D warnings
     - cargo fmt --check
     - Verify no authority: in .ash files
+    - Verify parser coverage for migrated example/workflow files
+    - Verify live CLI help matches the documented flag contract
     - Verify specs match implementation
 ```
 
@@ -440,6 +482,8 @@ Phase 53 is complete when:
 - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` produces no output
 - [ ] `cargo test --workspace` passes with no failures
 - [ ] No `.ash` files contain `authority:` syntax
+- [ ] Migrated example/workflow files are covered by parser validation
+- [ ] Live CLI help matches the documented flag contract
 - [ ] All specs match implementation
 - [ ] PLAN-INDEX.md documents Phase 53 as complete
 - [ ] Codex phase audit passes
@@ -450,8 +494,9 @@ Phase 53 is complete when:
 
 | Risk | Mitigation |
 |------|------------|
-| Example files have complex authority patterns | Test each file after conversion |
-| Visibility tests reveal compliance gaps | Document as new tasks, don't block Phase 53 |
+| Example files have complex authority patterns | Test each file after conversion using parser coverage that supports full modules, not just `ash check` |
+| Visibility tests reveal compliance gaps | Review both `ash-typeck` and `ash-parser` visibility enforcement before closing the task |
+| CLI help or crate docs still expose removed flags | Audit live `ash --help` / `ash trace --help` output alongside spec text |
 | Clippy warnings in dependencies | Only fix project code, not deps |
 
 ---
@@ -468,3 +513,4 @@ None - Phase 53 is self-contained remediation work.
 - TASK-329 may reveal gaps requiring new tasks (don't try to fix everything)
 - TASK-330 depends on all other tasks
 - TASK-331 is the final gate
+- If example validation still fails after TASK-328 syntax migration, treat that as a blocking parser/CLI contract gap and create follow-up remediation work instead of weakening verification

@@ -491,7 +491,17 @@ impl<'a> ImportResolver<'a> {
                 }
             }
             Visibility::Inherited => false, // Private items not visible
-            Visibility::Super { .. } => true, // Simplified: allow for now
+            Visibility::Super { levels } => {
+                // pub(super) means visible to parent modules up to 'levels' steps
+                // Check if importing_module is an ancestor of target_module
+                // within 'levels' steps up from target
+                let target_ancestors: Vec<_> = self
+                    .module_graph
+                    .ancestors(target_module)
+                    .take(*levels + 1) // +1 to include the starting module
+                    .collect();
+                target_ancestors.contains(&importing_module)
+            }
             Visibility::Self_ => false,
             Visibility::Restricted { .. } => true, // Simplified: allow for now
         }
@@ -1052,6 +1062,233 @@ mod tests {
         assert!(
             matches!(err, ImportError::PrivateItem { ref item, .. } if item == "CrateItem"),
             "Expected PrivateItem error for unknown crate, got: {:?}",
+            err
+        );
+    }
+
+    // =========================================================================
+    // TASK-333: pub(super) visibility tests
+    // =========================================================================
+
+    // Helper to create a three-level module graph:
+    // root (level 0) -> foo (level 1) -> bar (level 2)
+    fn create_three_level_graph() -> (ModuleGraph, ModuleId, ModuleId, ModuleId) {
+        let mut graph = ModuleGraph::new();
+
+        // Root module (crate)
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        // foo module as child of root
+        let foo = graph.add_node(ModuleNode::new(
+            "foo".to_string(),
+            ash_core::module_graph::ModuleSource::File("foo.ash".to_string()),
+        ));
+        graph.add_edge(root, foo);
+
+        // bar module as child of foo
+        let bar = graph.add_node(ModuleNode::new(
+            "bar".to_string(),
+            ash_core::module_graph::ModuleSource::File("foo/bar.ash".to_string()),
+        ));
+        graph.add_edge(foo, bar);
+
+        (graph, root, foo, bar)
+    }
+
+    #[test]
+    fn test_pub_super_parent_allowed() {
+        // Parent (foo) importing from child (bar) with pub(super) should succeed
+        let (graph, _root, foo, bar) = create_three_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(super) export to bar module
+        resolver.add_module_exports(
+            bar,
+            vec![("SuperItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+
+        // Add use statement from foo importing from bar
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "bar", "SuperItem"]));
+        resolver.add_module_uses(foo, vec![use_stmt(use_path)]);
+
+        // Import should succeed - foo is parent of bar
+        let bindings = resolver.resolve_all().unwrap();
+        let foo_bindings = bindings.get(&foo).unwrap();
+
+        assert!(foo_bindings.contains_key("SuperItem"));
+        let binding = foo_bindings.get("SuperItem").unwrap();
+        assert_eq!(binding.item_name, "SuperItem");
+        assert_eq!(binding.target_module, bar);
+    }
+
+    #[test]
+    fn test_pub_super_grandparent_allowed() {
+        // Grandparent (root) importing with pub(super, super) should succeed
+        let (graph, root, _foo, bar) = create_three_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(super, super) export to bar module (visible up 2 levels)
+        resolver.add_module_exports(
+            bar,
+            vec![(
+                "SuperSuperItem".to_string(),
+                Visibility::Super { levels: 2 },
+            )],
+        );
+
+        // Add use statement from root importing from bar via foo
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "bar", "SuperSuperItem"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        // Import should succeed - root is grandparent of bar
+        let bindings = resolver.resolve_all().unwrap();
+        let root_bindings = bindings.get(&root).unwrap();
+
+        assert!(root_bindings.contains_key("SuperSuperItem"));
+        let binding = root_bindings.get("SuperSuperItem").unwrap();
+        assert_eq!(binding.item_name, "SuperSuperItem");
+        assert_eq!(binding.target_module, bar);
+    }
+
+    #[test]
+    fn test_pub_super_sibling_rejected() {
+        // Sibling importing should fail
+        let (mut graph, _root, foo, bar) = create_three_level_graph();
+
+        // First, add another module as sibling of bar (child of foo) - BEFORE creating resolver
+        let sibling = graph.add_node(ModuleNode::new(
+            "sibling".to_string(),
+            ash_core::module_graph::ModuleSource::File("foo/sibling.ash".to_string()),
+        ));
+        graph.add_edge(foo, sibling);
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(super) export to bar module
+        resolver.add_module_exports(
+            bar,
+            vec![("SuperItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+
+        // Add use statement from sibling trying to import from bar
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "bar", "SuperItem"]));
+        resolver.add_module_uses(sibling, vec![use_stmt(use_path)]);
+
+        // Import should fail - sibling is not an ancestor
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "SuperItem"),
+            "Expected PrivateItem error for sibling import, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_pub_super_child_rejected() {
+        // Child importing from parent should fail (wrong direction)
+        let (graph, _root, foo, bar) = create_three_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(super) export to foo module
+        resolver.add_module_exports(
+            foo,
+            vec![("ParentItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+
+        // Add use statement from bar (child) trying to import from foo (parent)
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "ParentItem"]));
+        resolver.add_module_uses(bar, vec![use_stmt(use_path)]);
+
+        // Import should fail - bar is not an ancestor of foo
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "ParentItem"),
+            "Expected PrivateItem error for child-to-parent import, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_pub_super_at_root() {
+        // pub(super) at root should not be visible from anywhere (no parent)
+        let mut graph = ModuleGraph::new();
+
+        // Root module only
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        // Create a child module
+        let child = graph.add_node(ModuleNode::new(
+            "child".to_string(),
+            ash_core::module_graph::ModuleSource::File("child.ash".to_string()),
+        ));
+        graph.add_edge(root, child);
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(super) export to root module
+        resolver.add_module_exports(
+            root,
+            vec![("RootItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+
+        // Try to import from child - should fail since root has no parent
+        let use_path = UsePath::Simple(simple_path(&["crate", "RootItem"]));
+        resolver.add_module_uses(child, vec![use_stmt(use_path)]);
+
+        // Import should fail - no parent above root
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "RootItem"),
+            "Expected PrivateItem error for pub(super) at root, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_pub_super_levels_insufficient() {
+        // pub(super) (levels=1) should not be visible from grandparent
+        let (graph, root, _foo, bar) = create_three_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(super) (levels=1) export to bar module
+        resolver.add_module_exports(
+            bar,
+            vec![("SuperItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+
+        // Add use statement from root (grandparent) trying to import from bar
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "bar", "SuperItem"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        // Import should fail - root is 2 levels up, but only 1 level allowed
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "SuperItem"),
+            "Expected PrivateItem error for insufficient levels, got: {:?}",
             err
         );
     }

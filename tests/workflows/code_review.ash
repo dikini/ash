@@ -2,14 +2,14 @@
 -- Demonstrates: roles, obligations, parallel execution
 
 role drafter {
-  authority: [read_code, create_pr, respond_to_comments],
-  obligations: [ensure_tests_pass],
+  capabilities: [read_code, create_pr, respond_to_comments]
+  obligations: [ensure_tests_pass]
   supervises: []
 }
 
 role reviewer {
-  authority: [read_code, comment, request_changes, approve],
-  obligations: [check_tests, check_security, review_logic],
+  capabilities: [read_code, comment, request_changes, approve]
+  obligations: [check_tests, check_security, review_logic]
   supervises: drafter
 }
 

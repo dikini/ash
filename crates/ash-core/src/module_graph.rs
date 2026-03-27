@@ -42,6 +42,8 @@ pub struct ModuleNode {
     pub children: Vec<ModuleId>,
     /// Modules imported by this module
     pub imports: Vec<ModuleId>,
+    /// Parent module (if any) - set when added via add_edge
+    pub parent: Option<ModuleId>,
 }
 
 /// Graph structure tracking all modules and their relationships
@@ -65,6 +67,7 @@ impl ModuleNode {
             source,
             children: Vec::new(),
             imports: Vec::new(),
+            parent: None,
         }
     }
 }
@@ -105,9 +108,14 @@ impl ModuleGraph {
 
     /// Add an edge (parent-child relationship) between two modules
     /// The child is added to the parent's children list
+    /// The parent is set on the child's parent reference
     pub fn add_edge(&mut self, parent: ModuleId, child: ModuleId) {
         if let Some(parent_node) = self.nodes.get_mut(&parent) {
             parent_node.children.push(child);
+        }
+        // Set parent reference on child
+        if let Some(child_node) = self.nodes.get_mut(&child) {
+            child_node.parent = Some(parent);
         }
     }
 
@@ -131,6 +139,12 @@ impl ModuleGraph {
         if let Some(importer_node) = self.nodes.get_mut(&importer) {
             importer_node.imports.push(imported);
         }
+    }
+
+    /// Iterator over ancestors from module up to root
+    /// Returns an iterator that yields the module itself, then its parent, grandparent, etc.
+    pub fn ancestors(&self, module: ModuleId) -> impl Iterator<Item = ModuleId> + '_ {
+        std::iter::successors(Some(module), |&m| self.nodes.get(&m).and_then(|n| n.parent))
     }
 }
 

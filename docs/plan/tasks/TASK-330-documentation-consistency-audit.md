@@ -4,7 +4,7 @@
 
 ## Problem
 
-Documentation may contain inconsistencies with implementation after Phase 52 changes.
+Documentation and user-facing help text may contain inconsistencies with implementation after Phase 52 changes.
 
 ## Audit Checklist
 
@@ -14,6 +14,7 @@ Documentation may contain inconsistencies with implementation after Phase 52 cha
 - [ ] No examples use removed flags
 - [ ] Capability providers section is clear
 - [ ] Input parameters section explains workaround
+- [ ] `ash trace` contract matches the spec and does not expose removed input binding by accident
 
 ### SPEC-010-EMBEDDING.md
 - [ ] HTTP section documents unimplemented status
@@ -31,6 +32,11 @@ Documentation may contain inconsistencies with implementation after Phase 52 cha
 - [ ] All examples use `capabilities:` syntax (related to TASK-328)
 - [ ] Examples don't use removed CLI flags
 
+### CLI Help and Crate Docs
+- [ ] `ash trace --help` does not advertise removed input binding unless intentionally supported and documented
+- [ ] `ash-cli` crate-level examples do not use removed flags
+- [ ] Help text and docs agree on which commands still accept `--capability`
+
 ## Verification
 
 ```bash
@@ -38,6 +44,9 @@ Documentation may contain inconsistencies with implementation after Phase 52 cha
 grep -r "\-\-capability" docs/ --include="*.md"
 grep -r "\-\-input" docs/ --include="*.md"
 # Expected: Only in context of "removed" or "not supported"
+
+# Check live CLI help for drift
+cargo run --package ash-cli --bin ash -- trace --help
 ```
 
 ## Completion Checklist
@@ -45,6 +54,7 @@ grep -r "\-\-input" docs/ --include="*.md"
 - [ ] SPEC-005 audited and consistent
 - [ ] SPEC-010 audited and consistent
 - [ ] CHANGELOG complete and accurate
+- [ ] CLI help and crate docs audited for removed-flag drift
 - [ ] Any inconsistencies fixed
 - [ ] Changes committed
 

@@ -9,17 +9,17 @@ const WEEKEND_DAYS = [6, 7]      // Saturday, Sunday (ISO 8601)
 
 // Define roles with time restrictions
 role operator {
-    authority: [monitor, acknowledge],
+    capabilities: [monitor, acknowledge]
     schedule: business_hours
 }
 
 role oncall {
-    authority: [monitor, acknowledge, escalate, resolve],
+    capabilities: [monitor, acknowledge, escalate, resolve]
     schedule: always
 }
 
 role auditor {
-    authority: [read, generate_reports],
+    capabilities: [read, generate_reports]
     schedule: weekdays
 }
 

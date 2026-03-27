@@ -55,10 +55,10 @@ capability review_reader : observe(task_id: String) returns ReviewFeedback
 -- ============================================================================
 
 role developer {
-    authority: [
-        task_manager, task_updater, test_runner, code_reader, 
+    capabilities: [
+        task_manager, task_updater, test_runner, code_reader,
         code_writer, type_checker, review_reader
-    ],
+    ]
     obligations: [
         must_write_tests_first,
         must_not_commit_without_tests,
@@ -67,10 +67,10 @@ role developer {
 }
 
 role tester {
-    authority: [
+    capabilities: [
         task_manager, test_runner, test_registry, test_definer,
         type_checker, review_reader, review_assigner
-    ],
+    ]
     obligations: [
         must_define_property_tests,
         must_ensure_red_phase_first,
@@ -79,10 +79,10 @@ role tester {
 }
 
 role reviewer {
-    authority: [
+    capabilities: [
         task_manager, code_reader, review_submitter, review_reader,
         test_runner
-    ],
+    ]
     obligations: [
         must_not_review_own_code,
         must_check_test_quality,

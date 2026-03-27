@@ -2,20 +2,20 @@
 -- Demonstrates: parallel deliberation, synthesis, collaboration
 
 role analyst {
-  authority: [search_literature, extract_findings],
-  obligations: [cite_sources],
+  capabilities: [search_literature, extract_findings]
+  obligations: [cite_sources]
   supervises: []
 }
 
 role critic {
-  authority: [review_findings, identify_gaps],
-  obligations: [verify_claims],
+  capabilities: [review_findings, identify_gaps]
+  obligations: [verify_claims]
   supervises: []
 }
 
 role synthesizer {
-  authority: [synthesize_themes, draft_report],
-  obligations: [ensure_coherence],
+  capabilities: [synthesize_themes, draft_report]
+  obligations: [ensure_coherence]
   supervises: [analyst, critic]
 }
 

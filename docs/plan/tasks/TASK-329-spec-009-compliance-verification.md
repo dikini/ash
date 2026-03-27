@@ -4,7 +4,7 @@
 
 ## Problem
 
-Review identified potential SPEC-009 compliance gap in `pub(crate)` visibility implementation. Need to verify implementation matches specification.
+Review identified potential SPEC-009 compliance gaps in visibility enforcement. Need to verify implementation matches specification across both type checking and import resolution.
 
 ## Spec Reference
 
@@ -23,12 +23,22 @@ Check `crates/ash-typeck/src/visibility.rs`:
 - `is_visible_path()` handles `Crate` variant correctly
 - `Visibility::Super { levels }` properly handles multi-level parent visibility
 
+Check `crates/ash-parser/src/import_resolver.rs`:
+- Import visibility is enforced for `pub(crate)`
+- `pub(super)` is not treated as universally visible
+- `pub(in path)` / restricted visibility is not treated as universally visible
+
 ### 2. Review Test Coverage
 
 Check `crates/ash-typeck/tests/visibility_test.rs`:
 - Tests for `pub(crate)` visibility
 - Tests for `pub(super)` with various levels
 - Edge cases (root module, nested modules)
+
+Check `crates/ash-parser/src/import_resolver.rs` tests:
+- Coverage for private item rejection
+- Coverage for `pub(super)` import rejection/allow cases
+- Coverage for restricted-path import rejection/allow cases
 
 ### 3. Identify Gaps
 
@@ -40,17 +50,20 @@ Document any missing test coverage or implementation gaps.
 - [ ] `pub(super)` with levels > 1
 - [ ] `pub(in path)` restricted visibility (if implemented)
 - [ ] Visibility at root module (should behave as `pub(crate)`)
+- [ ] Import resolver applies the same restricted visibility rules as the type checker
 
 ## Verification
 
 ```bash
 cargo test --package ash-typeck visibility --quiet
+cargo test --package ash-parser import_resolver --quiet
 ```
 
 ## Completion Checklist
 
 - [ ] Implementation reviewed against SPEC-009
 - [ ] Test coverage assessed
+- [ ] Import resolution path assessed against SPEC-009
 - [ ] Gaps documented (if any)
 - [ ] New tasks created for any gaps found
 - [ ] Report generated

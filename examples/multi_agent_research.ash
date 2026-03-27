@@ -3,17 +3,17 @@
 -- Reference-oriented example; use `docs/spec/` for the canonical current surface contract.
 
 role analyst {
-  authority: [search_literature, extract_findings],
+  capabilities: [search_literature, extract_findings]
   obligations: [cite_sources]
 }
 
 role critic {
-  authority: [review_findings, identify_gaps],
+  capabilities: [review_findings, identify_gaps]
   obligations: [verify_claims]
 }
 
 role synthesizer {
-  authority: [synthesize_themes, draft_report],
+  capabilities: [synthesize_themes, draft_report]
   obligations: [ensure_coherence]
 }
 

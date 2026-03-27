@@ -6,22 +6,22 @@
 
 // Define roles with authorities and obligations
 role admin {
-    authority: [read, write, delete, approve],
+    capabilities: [read, write, delete, approve]
     obligations: [audit_log]
 }
 
 role manager {
-    authority: [read, write, approve],
+    capabilities: [read, write, approve]
     obligations: [review_reports]
 }
 
 role user {
-    authority: [read, write],
+    capabilities: [read, write]
     obligations: []
 }
 
 role guest {
-    authority: [read],
+    capabilities: [read]
     obligations: []
 }
 

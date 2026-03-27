@@ -24,12 +24,12 @@ capability coverage_analyzer : act(code: SourceCode, tests: TestSuite) returns C
 -- ============================================================================
 
 role developer {
-    authority: [code_repo, code_commit, test_executor, coverage_analyzer],
+    capabilities: [code_repo, code_commit, test_executor, coverage_analyzer]
     obligations: [write_tests_first, green_before_refactor]
 }
 
 role tester {
-    authority: [task_repo, test_db, test_writer, test_executor],
+    capabilities: [task_repo, test_db, test_writer, test_executor]
     obligations: [define_property_tests, ensure_red_phase]
 }
 

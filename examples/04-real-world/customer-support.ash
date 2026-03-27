@@ -44,17 +44,17 @@ capability resolve_ticket {
 
 // Roles
 role supervisor {
-    authority: [view_all, assign, escalate, resolve, refund],
+    capabilities: [view_all, assign, escalate, resolve, refund]
     obligations: []
 }
 
 role agent {
-    authority: [view_assigned, respond, resolve, escalate],
+    capabilities: [view_assigned, respond, resolve, escalate]
     obligations: [respond_within_sla]
 }
 
 role system {
-    authority: [auto_classify, auto_respond, route],
+    capabilities: [auto_classify, auto_respond, route]
     obligations: [log_all_actions]
 }
 

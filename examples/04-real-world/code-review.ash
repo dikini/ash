@@ -43,22 +43,22 @@ capability post_comment {
 
 // Roles
 role maintainer {
-    authority: [merge, approve, request_changes, bypass_checks],
+    capabilities: [merge, approve, request_changes, bypass_checks]
     obligations: []
 }
 
 role reviewer {
-    authority: [approve, request_changes, comment],
+    capabilities: [approve, request_changes, comment]
     obligations: [respond_to_re_review]
 }
 
 role author {
-    authority: [update_pr, respond_to_comments, request_review],
+    capabilities: [update_pr, respond_to_comments, request_review]
     obligations: [address_review_comments]
 }
 
 role ci_system {
-    authority: [run_checks, post_status, auto_merge_patch],
+    capabilities: [run_checks, post_status, auto_merge_patch]
     obligations: [all_checks_pass]
 }
 

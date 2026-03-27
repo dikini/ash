@@ -23,10 +23,6 @@ pub struct ReplArgs {
     /// Config file path
     #[arg(long, value_name = "FILE")]
     pub config: Option<PathBuf>,
-
-    /// Grant capability (repeatable)
-    #[arg(long, value_name = "NAME")]
-    pub capability: Vec<String>,
 }
 
 impl ReplArgs {
@@ -59,14 +55,12 @@ mod tests {
             no_history: false,
             init: Some(PathBuf::from("init.ash")),
             config: Some(PathBuf::from("config.toml")),
-            capability: vec!["fs".to_string(), "http".to_string()],
         };
 
         assert_eq!(args.history, Some(PathBuf::from(".my_history")));
         assert!(!args.no_history);
         assert_eq!(args.init, Some(PathBuf::from("init.ash")));
         assert_eq!(args.config, Some(PathBuf::from("config.toml")));
-        assert_eq!(args.capability.len(), 2);
     }
 
     #[test]
@@ -76,14 +70,12 @@ mod tests {
             no_history: false,
             init: None,
             config: None,
-            capability: vec![],
         };
 
         assert_eq!(args.history, None);
         assert!(!args.no_history);
         assert_eq!(args.init, None);
         assert_eq!(args.config, None);
-        assert!(args.capability.is_empty());
     }
 
     #[test]
@@ -93,7 +85,6 @@ mod tests {
             no_history: false,
             init: None,
             config: None,
-            capability: vec![],
         };
 
         assert_eq!(
@@ -109,7 +100,6 @@ mod tests {
             no_history: true,
             init: None,
             config: None,
-            capability: vec![],
         };
 
         assert_eq!(args.to_config(), ReplConfig::no_history());

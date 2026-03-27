@@ -170,8 +170,6 @@ Options:
   --no-history       Disable history load/save
   --config <PATH>    Use custom config file
   --init <PATH>      Run startup commands before the first prompt
-  --capability <name=uri>
-                     Provide default capability bindings for the session
   -h, --help         Print help
 ```
 

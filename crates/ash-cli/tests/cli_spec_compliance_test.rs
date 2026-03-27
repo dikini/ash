@@ -385,9 +385,9 @@ fn test_repl_config_flag() {
     );
 }
 
-/// Test repl command with --capability flag
+/// Test repl command no longer accepts --capability flag (removed in TASK-323)
 #[test]
-fn test_repl_capability_flag() {
+fn test_repl_capability_flag_removed() {
     let output = Command::new("cargo")
         .args(["run", "--bin", "ash", "--", "repl", "--capability", "fs"])
         .output()
@@ -395,8 +395,8 @@ fn test_repl_capability_flag() {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        !stderr.contains("unexpected argument"),
-        "--capability should be a recognized flag"
+        stderr.contains("unexpected argument") || stderr.contains("error"),
+        "--capability should be rejected as removed flag"
     );
 }
 

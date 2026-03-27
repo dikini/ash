@@ -31,10 +31,6 @@ pub struct TraceArgs {
     #[arg(value_name = "PATH")]
     pub path: String,
 
-    /// Input parameters as JSON object
-    #[arg(short, long, value_name = "JSON")]
-    pub input: Option<String>,
-
     /// Output file for trace data
     #[arg(short, long, value_name = "FILE")]
     pub output: Option<String>,
@@ -327,7 +323,6 @@ mod tests {
     fn test_trace_args_parsing() {
         let args = TraceArgs {
             path: "test.ash".to_string(),
-            input: None,
             output: Some("trace.json".to_string()),
             format: "json".to_string(),
             lineage: true,
@@ -350,7 +345,6 @@ mod tests {
     fn test_trace_args_new_flags() {
         let args = TraceArgs {
             path: "test.ash".to_string(),
-            input: None,
             output: None,
             format: "json".to_string(),
             lineage: false,
@@ -369,7 +363,6 @@ mod tests {
     fn test_trace_args_cypher() {
         let args = TraceArgs {
             path: "test.ash".to_string(),
-            input: None,
             output: None,
             format: "json".to_string(),
             lineage: false,

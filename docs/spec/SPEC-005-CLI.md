@@ -203,7 +203,10 @@ or compatibility shim, not a second product contract.
 | `--no-history` | Disable history load/save for this session |
 | `--init <file>` | Startup script |
 | `--config <file>` | Override the REPL config file path |
-| `--capability <name=uri>` | Default capability bindings passed into the REPL session |
+
+> **Note:** The `--capability` flag was removed in Phase 52 (TASK-323). Capabilities are now
+> defined in Ash source files, libraries, or defaults only. The flag may still be accepted
+> for backward compatibility but has no effect.
 
 **REPL Commands:**
 

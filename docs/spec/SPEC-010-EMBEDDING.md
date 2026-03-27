@@ -268,8 +268,10 @@ async fn execute(
 
 #[tokio::main]
 async fn main() {
+    // Note: with_http_capabilities() returns an error - HTTP is unimplemented.
+    // Use with_custom_provider() to add your own HTTP implementation.
     let engine = Engine::new()
-        .with_http_capabilities()
+        .with_custom_provider("http", Arc::new(MyHttpProvider))
         .build()
         .unwrap();
     

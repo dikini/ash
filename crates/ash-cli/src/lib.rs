@@ -15,7 +15,7 @@
 //!
 //! ```bash
 //! ash check workflow.ash
-//! ash run workflow.ash --input '{"x": 42}'
+//! ash run workflow.ash
 //! ash dot workflow.ash --output graph.dot
 //! ```
 

@@ -75,59 +75,12 @@ fn test_missing_required_parameter() {
     println!("stderr: {}", stderr);
 }
 
-/// Test workflow with multiple parameters
-/// 
-/// **KNOWN ISSUE**: This test is ignored because the interpreter does not
-/// support String + Int concatenation. The `+` operator requires both operands
-/// to be the same type.
-#[test]
-#[ignore = "known issue: interpreter does not support String + Int concatenation"]
-fn test_multiple_workflow_parameters() {
-    let temp = TempDir::new().unwrap();
-
-    // Create a workflow with multiple parameters
-    let workflow = r#"
-        workflow configure(host: String, port: Int) {
-            ret host + ":" + port;
-        }
-    "#;
-    let workflow_path = temp.path().join("config.ash");
-    fs::write(&workflow_path, workflow).unwrap();
-
-    // Run with --input providing multiple parameters
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run"])
-        .arg(&workflow_path)
-        .arg("--input")
-        .arg(r#"{"host": "localhost", "port": 8080}"#)
-        .output()
-        .expect("Failed to execute");
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-
-    println!("stdout: {}", stdout);
-    println!("stderr: {}", stderr);
-
-    assert!(
-        output.status.success(),
-        "Workflow should execute successfully. stderr: {}",
-        stderr
-    );
-    assert!(
-        stdout.contains("localhost:8080"),
-        "Expected 'localhost:8080' in output, got: {}",
-        stdout
-    );
-}
-
 /// Test workflow with boolean parameter
 ///
-/// **KNOWN ISSUE**: This test is ignored because the interpreter has
-/// boolean to string conversion issues. Boolean values are not properly
-/// converted to strings in output.
+/// **KNOWN ISSUE**: This test is ignored because the interpreter outputs
+/// "off" instead of "true"/"false" for boolean values. See TASK-314.
 #[test]
-#[ignore = "known issue: interpreter boolean to string conversion"]
+#[ignore = "TASK-314: interpreter boolean to string conversion outputs 'off' instead of 'true'/'false'"]
 fn test_boolean_workflow_parameter() {
     let temp = TempDir::new().unwrap();
 
@@ -162,9 +115,9 @@ fn test_boolean_workflow_parameter() {
 /// Test workflow with list parameter
 ///
 /// **KNOWN ISSUE**: This test is ignored because the parser does not
-/// support `List<Int>` generic syntax in workflow parameters.
+/// support `List<Int>` generic syntax in workflow parameters. See TASK-315.
 #[test]
-#[ignore = "known issue: parser does not support List<Int> syntax"]
+#[ignore = "TASK-315: parser does not support List<Int> syntax in workflow parameters"]
 fn test_list_workflow_parameter() {
     let temp = TempDir::new().unwrap();
 

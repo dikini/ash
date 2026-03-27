@@ -72,7 +72,7 @@ effect_type     ::= "observe" | "read" | "analyze" | "decide"
                   | "act" | "write" | "external"
 
 param_list      ::= param ("," param)*
-param           ::= IDENTIFIER ":" type
+param           ::= IDENTIFIER ":" type    -- See Section 3.6 for type grammar
 
 constraint_list ::= "where" constraint ("," constraint)*
 constraint      ::= predicate
@@ -141,7 +141,9 @@ exposure_item   ::= obligations_exposure
 
 obligations_exposure ::= "obligations:" "[" workflow_obligation_ref* "]"
 behaviours_exposure   ::= "behaviours:" "[" behaviour_ref* "]"
-values_exposure       ::= "values:" "[" IDENTIFIER* "]"
+values_exposure       ::= "values:" "[" param* "]"
+
+param_decl      ::= IDENTIFIER ":" type
 
 behaviour_ref   ::= capability_ref
 settable_ref    ::= capability_ref
@@ -251,9 +253,20 @@ field           ::= IDENTIFIER ":" type
 
 struct_body     ::= "{" field_list "}"
 alias_body      ::= type
+
+type            ::= simple_type | generic_type
+simple_type     ::= IDENTIFIER
+generic_type    ::= IDENTIFIER "<" type_arg ("," type_arg)* ">"
+type_arg        ::= type
 ```
 
 **Type Definitions** declare algebraic data types (ADTs) with optional type parameters:
+
+**Type Grammar Notes:**
+- `type` is used in parameter declarations (`param ::= IDENTIFIER ":" type`)
+- Simple types: `Int`, `String`, `Bool`, `MyType`
+- Generic types: `List<Int>`, `Option<String>`, `Result<T, E>`
+- Generic type arguments can be nested: `List<List<Int>>`
 
 - **Enum types** have multiple variant constructors (e.g., `Option<T>` with `Some` and `None`)
 - **Struct types** have a single constructor with named fields (e.g., `Point { x: Int, y: Int }`)

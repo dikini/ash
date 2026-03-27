@@ -54,6 +54,26 @@ Variant values are the canonical runtime representation for enum constructors. T
 constructor name plus its named payload fields. The enclosing type name is not stored in the
 runtime value itself.
 
+## 2.1 Value Display Representation
+
+When values are converted to strings for output (e.g., `ret` workflow results, printed output),
+the following canonical representations are used:
+
+| Value Type | Display Format | Example |
+|------------|----------------|---------|
+| `Int(i)` | Decimal integer | `42`, `-17` |
+| `String(s)` | Raw string content | `hello` (not quoted) |
+| `Bool(true)` | `"true"` | `true` |
+| `Bool(false)` | `"false"` | `false` |
+| `Null` | `"null"` | `null` |
+| `List([v, ...])` | `[elem1, elem2, ...]` | `[1, 2, 3]` |
+| `Record({k: v, ...})` | `{k1: v1, k2: v2}` | `{name: "x", val: 5}` |
+
+**Design Rationale:**
+- Boolean values use lowercase `"true"` and `"false"` (not "on"/"off") for consistency with language literals
+- Strings display raw content without quotes to match user expectations for text output
+- This representation is used for CLI output, logging, and debugging displays
+
 ## 3. Big-Step Judgment
 
 ```

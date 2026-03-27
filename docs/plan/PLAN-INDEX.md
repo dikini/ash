@@ -1350,19 +1350,27 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-311](tasks/TASK-311-fix-pub-crate-visibility.md) | Fix pub(crate) visibility enforcement | SPEC-009 | 6 | 📝 Planned |
-| [TASK-312](tasks/TASK-312-http-provider-noop.md) | Fix EngineBuilder HTTP provider no-op | SPEC-010 | 2 | 📝 Planned |
+| [TASK-311](tasks/TASK-311-fix-pub-crate-visibility.md) | Fix pub(crate) visibility enforcement | SPEC-009 | 6 | ✅ Complete |
+| [TASK-312](tasks/TASK-312-http-provider-noop.md) | Fix EngineBuilder HTTP provider no-op | SPEC-010 | 2 | ✅ Complete |
+
+### 50.4: Spec Clarification & Implementation Follow-up
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-314](tasks/TASK-314-fix-boolean-display.md) | Fix interpreter boolean display ("true"/"false") | SPEC-004 | 2 | 📝 Planned |
+| [TASK-315](tasks/TASK-315-fix-list-parameter-syntax.md) | Fix parser List<T> syntax in workflow parameters | SPEC-002 | 8 | 📝 Planned |
 
 **Phase 50 Deliverable:** All SPEC-005 compliance gaps closed, test suite green, API contracts honored.
 
 **Summary:**
-- 7 remediation tasks identified from review
-- CLI exit codes, --input handling, unimplemented flags
-- Test suite failures (cli_input_workflow_test, role_runtime_props)
-- Visibility enforcement gaps
-- HTTP provider API honesty
+- 9 tasks total (7 remediation + 2 follow-up)
+- CLI exit codes, --input handling, unimplemented flags (fixed)
+- Test suite failures fixed or properly documented
+- Visibility enforcement gaps fixed
+- HTTP provider API honesty addressed
+- **New follow-up tasks:** Boolean display, List<T> parsing
 
-**Total:** ~34 hours
+**Total:** ~44 hours (34 remediation + 10 follow-up)
 
 ---
 

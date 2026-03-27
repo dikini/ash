@@ -1283,17 +1283,25 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-305](tasks/TASK-305-changelog-consolidation.md) | Consolidate CHANGELOG.md entries from Phase 48 worktrees | N/A | 2 | ✅ Complete |
 | [TASK-306](tasks/TASK-306-update-plan-index.md) | Finalize PLAN-INDEX.md with all completed Phase 48/49 tasks | N/A | 2 | ✅ Complete |
 
-**Phase 49 Deliverable:** All Phase 48 tasks fully integrated and verified, comprehensive E2E test coverage, clean changelog.
+
+### 49.5: Testing Infrastructure Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-273](tasks/TASK-273-fix-arb-pattern-bindings.md) | Fix arb_pattern binding name uniqueness in proptest_helpers | N/A | 4 | ✅ Complete |
+
+**Phase 49 Deliverable:** All Phase 48 tasks fully integrated and verified, comprehensive E2E test coverage, clean changelog, testing infrastructure hardened.
 
 **Summary:**
-- 8 tasks covering integration, hardening, and documentation (all ✅ Complete)
+- 9 tasks covering integration, hardening, documentation, and testing infrastructure (all ✅ Complete)
 - CLI input integration complete with type checker parameter binding (TASK-299, TASK-300 ✅)
 - Type system hardening with verified obligation semantics (TASK-301, TASK-302 ✅)
 - Integration test coverage for engine providers and role semantics (TASK-303, TASK-304 ✅)
 - CHANGELOG.md consolidated with Phase 48 entries (TASK-305 ✅)
 - PLAN-INDEX.md updated with all completed tasks (TASK-306 ✅)
+- Testing infrastructure fix: proptest_helpers binding uniqueness (TASK-273 ✅)
 
-**Total:** ~48 hours (all ✅ Complete)
+**Total:** ~52 hours (all ✅ Complete)
 
 ---
 
@@ -1306,7 +1314,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 46 | 13 | 98-108 | ✅ Complete |
 ||| 47 | 10 | 90 | ✅ Complete |
 ||| 48 | 15 | 138 | ✅ Complete |
-||| 49 | 8 | 48 | ✅ Complete |
-||| **Total** | **66** | **490-508** | ✅ Complete |
+||| 49 | 9 | 52 | ✅ Complete |
+||| **Total** | **67** | **494-512** | ✅ Complete |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

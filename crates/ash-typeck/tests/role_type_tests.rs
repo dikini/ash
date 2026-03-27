@@ -14,10 +14,17 @@ fn test_span() -> Span {
     Span::new(0, 0, 1, 1)
 }
 
-fn create_role_def(name: &str, authority: Vec<&str>) -> RoleDef {
+fn create_role_def(name: &str, capabilities: Vec<&str>) -> RoleDef {
     RoleDef {
         name: name.into(),
-        authority: authority.into_iter().map(Into::into).collect(),
+        capabilities: capabilities
+            .into_iter()
+            .map(|cap| CapabilityDecl {
+                capability: cap.into(),
+                constraints: None,
+                span: test_span(),
+            })
+            .collect(),
         obligations: vec![],
         span: test_span(),
     }
@@ -276,7 +283,11 @@ fn test_complex_role_composition() {
         "ai_agent".to_string(),
         RoleDef {
             name: "ai_agent".into(),
-            authority: vec!["llm".into(), "embedding".into(), "vector_store".into()],
+            capabilities: vec![
+                CapabilityDecl { capability: "llm".into(), constraints: None, span: test_span() },
+                CapabilityDecl { capability: "embedding".into(), constraints: None, span: test_span() },
+                CapabilityDecl { capability: "vector_store".into(), constraints: None, span: test_span() },
+            ],
             obligations: vec!["response_safety".into()],
             span: test_span(),
         },
@@ -287,7 +298,11 @@ fn test_complex_role_composition() {
         "network_client".to_string(),
         RoleDef {
             name: "network_client".into(),
-            authority: vec!["http".into(), "websocket".into(), "tls".into()],
+            capabilities: vec![
+                CapabilityDecl { capability: "http".into(), constraints: None, span: test_span() },
+                CapabilityDecl { capability: "websocket".into(), constraints: None, span: test_span() },
+                CapabilityDecl { capability: "tls".into(), constraints: None, span: test_span() },
+            ],
             obligations: vec![],
             span: test_span(),
         },
@@ -298,7 +313,10 @@ fn test_complex_role_composition() {
         "file_processor".to_string(),
         RoleDef {
             name: "file_processor".into(),
-            authority: vec!["file_read".into(), "file_write".into()],
+            capabilities: vec![
+                CapabilityDecl { capability: "file_read".into(), constraints: None, span: test_span() },
+                CapabilityDecl { capability: "file_write".into(), constraints: None, span: test_span() },
+            ],
             obligations: vec!["audit_log".into()],
             span: test_span(),
         },

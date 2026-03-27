@@ -94,8 +94,8 @@ pub struct PolicyInstance {
 pub struct RoleDef {
     /// Name of the role
     pub name: Name,
-    /// Authorities granted to this role
-    pub authority: Vec<Name>,
+    /// Capabilities granted to this role (with optional constraints)
+    pub capabilities: Vec<CapabilityDecl>,
     /// Named obligations exposed by this role
     pub obligations: Vec<Name>,
     /// Source span
@@ -1268,7 +1268,18 @@ mod tests {
 
         let role_def = RoleDef {
             name: "admin".into(),
-            authority: vec!["read".into(), "write".into()],
+            capabilities: vec![
+                CapabilityDecl {
+                    capability: "read".into(),
+                    constraints: None,
+                    span: Span::new(0, 10, 1, 1),
+                },
+                CapabilityDecl {
+                    capability: "write".into(),
+                    constraints: None,
+                    span: Span::new(0, 10, 1, 1),
+                },
+            ],
             obligations: vec![],
             span: Span::new(0, 10, 1, 1),
         };
@@ -1339,15 +1350,57 @@ mod tests {
     fn test_role_def_construction() {
         let role = RoleDef {
             name: "manager".into(),
-            authority: vec!["approve".into(), "review".into()],
+            capabilities: vec![
+                CapabilityDecl {
+                    capability: "approve".into(),
+                    constraints: None,
+                    span: Span::new(0, 50, 1, 1),
+                },
+                CapabilityDecl {
+                    capability: "review".into(),
+                    constraints: None,
+                    span: Span::new(0, 100, 1, 1),
+                },
+            ],
             obligations: vec!["audit_log".into()],
-            span: Span::new(0, 100, 1, 1),
+            span: Span::new(0, 150, 1, 1),
         };
 
         assert_eq!(role.name, "manager".into());
-        assert_eq!(role.authority.len(), 2);
+        assert_eq!(role.capabilities.len(), 2);
         assert_eq!(role.obligations.len(), 1);
         assert_eq!(role.obligations[0].as_ref(), "audit_log");
+    }
+
+    #[test]
+    fn test_role_def_with_capability_decl() {
+        let role = RoleDef {
+            name: "ai_agent".into(),
+            capabilities: vec![
+                CapabilityDecl {
+                    capability: "file".into(),
+                    constraints: Some(ConstraintBlock {
+                        fields: vec![
+                            ConstraintField {
+                                name: "paths".into(),
+                                value: ConstraintValue::Array(vec![
+                                    ConstraintValue::String("/tmp/*".to_string()),
+                                ]),
+                                span: Span::new(0, 50, 1, 1),
+                            },
+                        ],
+                        span: Span::new(0, 100, 1, 1),
+                    }),
+                    span: Span::new(0, 30, 1, 1),
+                },
+            ],
+            obligations: vec![],
+            span: Span::new(0, 200, 1, 1),
+        };
+
+        assert_eq!(role.capabilities.len(), 1);
+        assert_eq!(role.capabilities[0].capability.as_ref(), "file");
+        assert!(role.capabilities[0].constraints.is_some());
     }
 
     #[test]

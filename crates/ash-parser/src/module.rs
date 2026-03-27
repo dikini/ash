@@ -230,7 +230,11 @@ mod tests {
     fn test_inline_module_role_definitions_exposes_only_roles() {
         let role_def = Definition::Role(crate::surface::RoleDef {
             name: "reviewer".into(),
-            authority: vec!["approve".into()],
+            capabilities: vec![crate::surface::CapabilityDecl {
+                capability: "approve".into(),
+                constraints: None,
+                span: Span::new(10, 40, 1, 1),
+            }],
             obligations: vec!["check_tests".into()],
             span: Span::new(10, 40, 1, 1),
         });
@@ -256,7 +260,8 @@ mod tests {
 
         assert_eq!(roles.len(), 1);
         assert_eq!(roles[0].name.as_ref(), "reviewer");
-        assert_eq!(roles[0].authority, vec!["approve".into()]);
+        assert_eq!(roles[0].capabilities.len(), 1);
+        assert_eq!(roles[0].capabilities[0].capability.as_ref(), "approve");
         assert_eq!(roles[0].obligations, vec!["check_tests".into()]);
     }
 
@@ -286,7 +291,18 @@ mod tests {
                 }),
                 Definition::Role(crate::surface::RoleDef {
                     name: "reviewer".into(),
-                    authority: vec!["approve".into(), "review".into()],
+                    capabilities: vec![
+                        crate::surface::CapabilityDecl {
+                            capability: "approve".into(),
+                            constraints: None,
+                            span: Span::new(51, 70, 1, 1),
+                        },
+                        crate::surface::CapabilityDecl {
+                            capability: "review".into(),
+                            constraints: None,
+                            span: Span::new(71, 90, 1, 1),
+                        },
+                    ],
                     obligations: vec!["check_tests".into(), "audit_log".into()],
                     span: Span::new(51, 100, 1, 1),
                 }),
@@ -327,13 +343,17 @@ mod tests {
     }
 
     #[test]
-    fn test_inline_module_lower_role_definitions_rejects_unknown_authority_name() {
+    fn test_inline_module_lower_role_definitions_rejects_unknown_capability_name() {
         let decl = ModuleDecl::inline(
             "governance".into(),
             Visibility::Inherited,
             vec![Definition::Role(crate::surface::RoleDef {
                 name: "reviewer".into(),
-                authority: vec!["approve".into()],
+                capabilities: vec![crate::surface::CapabilityDecl {
+                    capability: "approve".into(),
+                    constraints: None,
+                    span: Span::new(10, 70, 1, 1),
+                }],
                 obligations: vec!["check_tests".into()],
                 span: Span::new(10, 70, 1, 1),
             })],
@@ -342,7 +362,7 @@ mod tests {
 
         let error = decl
             .lower_role_definitions()
-            .expect_err("unknown authority names should be rejected");
+            .expect_err("unknown capability names should be rejected");
 
         assert_eq!(error.role, "reviewer");
         assert_eq!(error.authority, "approve");

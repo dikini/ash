@@ -18,7 +18,10 @@
 //! let mut role_defs = HashMap::new();
 //! role_defs.insert("ai_agent".to_string(), RoleDef {
 //!     name: "ai_agent".into(),
-//!     authority: vec!["network".into(), "file".into()],
+//!     capabilities: vec![
+//!         CapabilityDecl { capability: "network".into(), constraints: None, span: Span::default() },
+//!         CapabilityDecl { capability: "file".into(), constraints: None, span: Span::default() },
+//!     ],
 //!     obligations: vec![],
 //!     span: Span::default(),
 //! });
@@ -184,14 +187,9 @@ impl<'a> RoleChecker<'a> {
         let mut effective = EffectiveCapabilities::new();
         let role_name = role_def.name.as_ref();
 
-        // Convert authority names to capability declarations
-        for authority in &role_def.authority {
-            let cap_decl = CapabilityDecl {
-                capability: authority.clone(),
-                constraints: None,
-                span: role_def.span,
-            };
-            effective.add_capability(role_name, cap_decl);
+        // Use existing CapabilityDecl with constraints from role
+        for cap_decl in &role_def.capabilities {
+            effective.add_capability(role_name, cap_decl.clone());
         }
 
         effective
@@ -217,10 +215,17 @@ mod tests {
         Span::new(0, 0, 1, 1)
     }
 
-    fn create_role_def(name: &str, authority: Vec<&str>) -> RoleDef {
+    fn create_role_def(name: &str, capabilities: Vec<&str>) -> RoleDef {
         RoleDef {
             name: name.into(),
-            authority: authority.into_iter().map(Into::into).collect(),
+            capabilities: capabilities
+                .into_iter()
+                .map(|cap| CapabilityDecl {
+                    capability: cap.into(),
+                    constraints: None,
+                    span: test_span(),
+                })
+                .collect(),
             obligations: vec![],
             span: test_span(),
         }

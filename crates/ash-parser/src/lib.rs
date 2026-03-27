@@ -109,7 +109,7 @@ mod lib_tests {
         use winnow::prelude::*;
 
         let mut input = new_input(
-            "mod governance { capability approve: decide(); capability review: analyze(); role reviewer { authority: [approve, review], obligations: [check_tests] } }",
+            "mod governance { capability approve: decide(); capability review: analyze(); role reviewer { capabilities: [approve, review], obligations: [check_tests] } }",
         );
 
         let decl = parse_module_decl.parse_next(&mut input).unwrap();
@@ -131,7 +131,7 @@ mod lib_tests {
         use winnow::prelude::*;
 
         let mut input = new_input(
-            "mod governance { role reviewer { authority: [approve], obligations: [check_tests, } }",
+            "mod governance { role reviewer { capabilities: [approve], obligations: [check_tests, } }",
         );
 
         let result = parse_module_decl.parse_next(&mut input);
@@ -145,7 +145,7 @@ mod lib_tests {
         use winnow::prelude::*;
 
         let mut input = new_input(
-            "mod governance { capability approve: decide() where requires_mfa(); role reviewer { authority: [approve], obligations: [check_tests] } }",
+            "mod governance { capability approve: decide() where requires_mfa(); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
         );
 
         let decl = parse_module_decl.parse_next(&mut input).unwrap();
@@ -180,7 +180,7 @@ mod lib_tests {
         use winnow::prelude::*;
 
         let mut input = new_input(
-            "mod governance { capability approve: decide() where requires_region(\"EU\"); role reviewer { authority: [approve], obligations: [check_tests] } }",
+            "mod governance { capability approve: decide() where requires_region(\"EU\"); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
         );
 
         let decl = parse_module_decl.parse_next(&mut input).unwrap();
@@ -216,7 +216,7 @@ mod lib_tests {
         use winnow::prelude::*;
 
         let mut input = new_input(
-            "mod governance { capability approve: decide() returns Bool where requires_region(\"EU\"); role reviewer { authority: [approve], obligations: [check_tests] } }",
+            "mod governance { capability approve: decide() returns Bool where requires_region(\"EU\"); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
         );
 
         let decl = parse_module_decl.parse_next(&mut input).unwrap();

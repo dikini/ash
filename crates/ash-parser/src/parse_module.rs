@@ -8,10 +8,11 @@ use winnow::prelude::*;
 use winnow::stream::Stream;
 
 use crate::combinators::keyword;
-use crate::input::{ParseInput, update_position};
+use crate::input::{update_position, ParseInput};
 use crate::module::{ModuleDecl, ModuleSource};
 use crate::parse_expr::expr;
 use crate::parse_visibility::parse_visibility;
+use crate::parse_workflow::parse_capabilities_clause;
 use crate::surface::{
     CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, Param, Predicate,
     ProxyDef, RoleDef, Type, Workflow, YieldArm,
@@ -188,7 +189,7 @@ fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     let _ = literal_str("{").parse_next(input)?;
 
     skip_whitespace_and_comments(input);
-    let authority = parse_authority_clause(input)?;
+    let capabilities = parse_capabilities_clause(input)?;
 
     skip_whitespace_and_comments(input);
     consume_optional_comma(input);
@@ -207,18 +208,10 @@ fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
 
     Ok(Definition::Role(RoleDef {
         name: name.into(),
-        authority,
+        capabilities,
         obligations,
         span: crate::input::span_from(&start_pos, &input.state),
     }))
-}
-
-fn parse_authority_clause(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
-    let _ = keyword("authority").parse_next(input)?;
-    skip_whitespace(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace(input);
-    parse_name_list(input)
 }
 
 fn parse_effect_type(input: &mut ParseInput) -> ModalResult<EffectType> {
@@ -1113,7 +1106,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_with_role_definition() {
         let mut input = test_input(
-            "mod governance { role reviewer { authority: [approve, review], obligations: [check_tests, audit_log] } }",
+            "mod governance { role reviewer { capabilities: [approve, review], obligations: [check_tests, audit_log] } }",
         );
 
         let result = parse_module_decl(&mut input);
@@ -1136,7 +1129,9 @@ mod tests {
         };
 
         assert_eq!(role.name.as_ref(), "reviewer");
-        assert_eq!(role.authority, vec!["approve".into(), "review".into()]);
+        assert_eq!(role.capabilities.len(), 2);
+        assert_eq!(role.capabilities[0].capability.as_ref(), "approve");
+        assert_eq!(role.capabilities[1].capability.as_ref(), "review");
         assert_eq!(role.obligations.len(), 2);
         assert_eq!(role.obligations[0].as_ref(), "check_tests");
         assert_eq!(role.obligations[1].as_ref(), "audit_log");
@@ -1145,7 +1140,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_unsupported_inline_workflow_before_role() {
         let mut input = test_input(
-            "mod governance { workflow main { done } role reviewer { authority: [approve] } }",
+            "mod governance { workflow main { done } role reviewer { capabilities: [approve] } }",
         );
 
         let result = parse_module_decl(&mut input);
@@ -1159,7 +1154,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_unsupported_inline_workflow_before_capability_and_role() {
         let mut input = test_input(
-            "mod governance { workflow main { done } capability approve: decide() where requires_mfa(); role reviewer { authority: [approve] } }",
+            "mod governance { workflow main { done } capability approve: decide() where requires_mfa(); role reviewer { capabilities: [approve] } }",
         );
 
         let result = parse_module_decl(&mut input);
@@ -1173,7 +1168,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_unsupported_workflow_after_unknown_item() {
         assert_inline_module_rejects_after_unknown_item(
-            "workflow main { done } role reviewer { authority: [approve] }",
+            "workflow main { done } role reviewer { capabilities: [approve] }",
             "workflow",
         );
     }
@@ -1181,7 +1176,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_unsupported_policy_after_unknown_item() {
         assert_inline_module_rejects_after_unknown_item(
-            "policy approval: when true then permit role reviewer { authority: [approve] }",
+            "policy approval: when true then permit role reviewer { capabilities: [approve] }",
             "policy",
         );
     }
@@ -1189,7 +1184,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_unsupported_datatype_after_unknown_item() {
         assert_inline_module_rejects_after_unknown_item(
-            "datatype review_state = Pending | Approved; role reviewer { authority: [approve] }",
+            "datatype review_state = Pending | Approved; role reviewer { capabilities: [approve] }",
             "datatype",
         );
     }
@@ -1197,7 +1192,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_visibility_qualified_item_after_unknown_item() {
         assert_inline_module_rejects_after_unknown_item(
-            "pub capability approve: decide() role reviewer { authority: [approve] }",
+            "pub capability approve: decide() role reviewer { capabilities: [approve] }",
             "visibility-qualified item",
         );
     }
@@ -1205,7 +1200,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_unsupported_canonical_datatype_definition() {
         let mut input = test_input(
-            "mod governance { datatype review_state = Pending | Approved; role reviewer { authority: [approve] } }",
+            "mod governance { datatype review_state = Pending | Approved; role reviewer { capabilities: [approve] } }",
         );
 
         let result = parse_module_decl(&mut input);
@@ -1341,22 +1336,33 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_inline_module_role_missing_authority_fails() {
+    fn test_parse_inline_module_role_with_empty_capabilities_succeeds() {
+        // Roles can have empty capabilities - they just have no capabilities granted
         let mut input =
             test_input("mod governance { role reviewer { obligations: [check_tests] } }");
 
         let result = parse_module_decl(&mut input);
 
         assert!(
-            result.is_err(),
-            "Expected parse to fail when a role definition is missing authority"
+            result.is_ok(),
+            "Expected parse to succeed with empty capabilities"
         );
+
+        let decl = result.unwrap();
+        let definitions = decl.definitions().unwrap();
+        assert_eq!(definitions.len(), 1);
+
+        let Definition::Role(role) = &definitions[0] else {
+            panic!("expected role definition");
+        };
+        assert!(role.capabilities.is_empty());
+        assert_eq!(role.obligations.len(), 1);
     }
 
     #[test]
     fn test_parse_inline_module_role_with_malformed_obligations_fails() {
         let mut input = test_input(
-            "mod governance { role reviewer { authority: [approve], obligations: [check_tests, } }",
+            "mod governance { role reviewer { capabilities: [approve], obligations: [check_tests, } }",
         );
 
         let result = parse_module_decl(&mut input);
@@ -1370,7 +1376,7 @@ mod tests {
     #[test]
     fn test_parse_inline_module_rejects_unsupported_canonical_policy_definition() {
         let mut input = test_input(
-            "mod governance { policy approval: when true then permit role reviewer { authority: [approve] } }",
+            "mod governance { policy approval: when true then permit role reviewer { capabilities: [approve] } }",
         );
 
         let result = parse_module_decl(&mut input);

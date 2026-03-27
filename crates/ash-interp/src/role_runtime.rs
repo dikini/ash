@@ -12,10 +12,13 @@
 //!
 //! let mut registry = RoleRegistry::new();
 //!
-//! // Register a role with authority
+//! // Register a role with capabilities
 //! let role = RoleDef {
 //!     name: "ai_agent".into(),
-//!     authority: vec!["file".into(), "network".into()],
+//!     capabilities: vec![
+//!         CapabilityDecl { capability: "file".into(), constraints: None, span: ash_parser::token::Span::default() },
+//!         CapabilityDecl { capability: "network".into(), constraints: None, span: ash_parser::token::Span::default() },
+//!     ],
 //!     obligations: vec![],
 //!     span: ash_parser::token::Span::default(),
 //! };
@@ -150,20 +153,36 @@ impl RuntimeCapabilitySet {
     /// If the capability is already granted, this will attempt to merge
     /// the new declaration with the existing grant.
     pub fn grant(&mut self, decl: &CapabilityDecl) -> Result<(), RoleError> {
+        self.grant_with_role(decl, None)
+    }
+
+    /// Grant a capability from a declaration with an optional granting role
+    ///
+    /// If the capability is already granted, this will attempt to merge
+    /// the new declaration with the existing grant and add the role to granted_by.
+    pub fn grant_with_role(
+        &mut self,
+        decl: &CapabilityDecl,
+        role_name: Option<&str>,
+    ) -> Result<(), RoleError> {
         let name = decl.capability.to_string();
 
         if let Some(existing) = self.grants.get_mut(&name) {
             // Merge grants
             existing.merge(decl)?;
+            if let Some(role) = role_name {
+                existing.add_granting_role(role.to_string());
+            }
         } else {
-            self.grants.insert(
-                name.clone(),
-                CapabilityGrant {
-                    capability: name,
-                    constraints: decl.constraints.clone(),
-                    granted_by: vec![], // Filled in by caller
-                },
-            );
+            let mut grant = CapabilityGrant {
+                capability: name.clone(),
+                constraints: decl.constraints.clone(),
+                granted_by: vec![],
+            };
+            if let Some(role) = role_name {
+                grant.add_granting_role(role.to_string());
+            }
+            self.grants.insert(name, grant);
         }
 
         Ok(())
@@ -310,9 +329,9 @@ impl RoleRegistry {
                     name: role_name.clone(),
                 })?;
 
-            // Grant capabilities from the role's authority
-            for cap_name in &role.authority {
-                caps.grant_by_name(cap_name, &role_name);
+            // Grant capabilities from the role's capabilities
+            for cap_decl in &role.capabilities {
+                caps.grant_with_role(cap_decl, Some(&role_name))?;
             }
         }
 
@@ -360,10 +379,17 @@ mod tests {
         Span::default()
     }
 
-    fn create_test_role(name: &str, authority: Vec<&str>) -> RoleDef {
+    fn create_test_role(name: &str, capabilities: Vec<&str>) -> RoleDef {
         RoleDef {
             name: name.into(),
-            authority: authority.into_iter().map(|c| c.into()).collect(),
+            capabilities: capabilities
+                .into_iter()
+                .map(|cap| CapabilityDecl {
+                    capability: cap.into(),
+                    constraints: None,
+                    span: test_span(),
+                })
+                .collect(),
             obligations: vec![],
             span: test_span(),
         }
@@ -406,7 +432,7 @@ mod tests {
 
         let retrieved = registry.get_role("admin").unwrap();
         assert_eq!(retrieved.name, "admin".into());
-        assert_eq!(retrieved.authority.len(), 2);
+        assert_eq!(retrieved.capabilities.len(), 2);
     }
 
     #[test]

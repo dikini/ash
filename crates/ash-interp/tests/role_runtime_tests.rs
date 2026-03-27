@@ -19,7 +19,14 @@ fn test_span() -> Span {
 fn create_test_role(name: &str, capabilities: Vec<&str>) -> RoleDef {
     RoleDef {
         name: name.into(),
-        authority: capabilities.into_iter().map(|c| c.into()).collect(),
+        capabilities: capabilities
+            .into_iter()
+            .map(|cap| CapabilityDecl {
+                capability: cap.into(),
+                constraints: None,
+                span: test_span(),
+            })
+            .collect(),
         obligations: vec![],
         span: test_span(),
     }

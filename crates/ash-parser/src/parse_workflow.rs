@@ -116,7 +116,7 @@ fn parse_single_plays_role(input: &mut ParseInput) -> ModalResult<RoleRef> {
 }
 
 /// Parse optional `capabilities: [...]` clause.
-fn parse_capabilities_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
+pub fn parse_capabilities_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
     if !starts_with_keyword(input, "capabilities") {
         return Ok(Vec::new());
     }

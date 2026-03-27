@@ -232,9 +232,9 @@ fn lower_role_def_with_definitions(
     Ok(CoreRole {
         name: def.name.to_string(),
         authority: def
-            .authority
+            .capabilities
             .iter()
-            .map(|name| lower_role_authority(def.name.as_ref(), name, definitions))
+            .map(|cap| lower_role_capability(def.name.as_ref(), cap, definitions))
             .collect::<Result<Vec<_>, _>>()?,
         obligations: def
             .obligations
@@ -263,22 +263,23 @@ pub(crate) fn lower_module_role_definitions(
 }
 
 #[cfg(test)]
-fn lower_role_authority(
+fn lower_role_capability(
     role_name: &str,
-    authority_name: &str,
+    cap_decl: &crate::surface::CapabilityDecl,
     definitions: &[Definition],
 ) -> Result<Capability, RoleLoweringError> {
+    let cap_name = cap_decl.capability.as_ref();
     definitions
         .iter()
         .find_map(|definition| match definition {
-            Definition::Capability(capability) if capability.name.as_ref() == authority_name => {
+            Definition::Capability(capability) if capability.name.as_ref() == cap_name => {
                 lower_capability_def(capability).ok()
             }
             _ => None,
         })
         .ok_or_else(|| RoleLoweringError {
             role: role_name.to_string(),
-            authority: authority_name.to_string(),
+            authority: cap_name.to_string(),
         })
 }
 
@@ -1128,10 +1129,21 @@ mod tests {
     }
 
     #[test]
-    fn test_lower_role_def_preserves_named_authority_refs_and_obligation_refs() {
+    fn test_lower_role_def_preserves_named_capability_refs_and_obligation_refs() {
         let surface = RoleDef {
             name: "reviewer".into(),
-            authority: vec!["approve".into(), "review".into()],
+            capabilities: vec![
+                crate::surface::CapabilityDecl {
+                    capability: "approve".into(),
+                    constraints: None,
+                    span: dummy_span(),
+                },
+                crate::surface::CapabilityDecl {
+                    capability: "review".into(),
+                    constraints: None,
+                    span: dummy_span(),
+                },
+            ],
             obligations: vec!["check_tests".into()],
             span: dummy_span(),
         };
@@ -1193,7 +1205,11 @@ mod tests {
                 }),
                 crate::surface::Definition::Role(RoleDef {
                     name: "reviewer".into(),
-                    authority: vec!["approve".into()],
+                    capabilities: vec![crate::surface::CapabilityDecl {
+                        capability: "approve".into(),
+                        constraints: None,
+                        span: dummy_span(),
+                    }],
                     obligations: vec!["check_tests".into()],
                     span: dummy_span(),
                 }),
@@ -1234,7 +1250,11 @@ mod tests {
                 }),
                 crate::surface::Definition::Role(RoleDef {
                     name: "reviewer".into(),
-                    authority: vec!["approve".into()],
+                    capabilities: vec![crate::surface::CapabilityDecl {
+                        capability: "approve".into(),
+                        constraints: None,
+                        span: dummy_span(),
+                    }],
                     obligations: vec!["check_tests".into()],
                     span: dummy_span(),
                 }),

@@ -6,6 +6,34 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Phase 52: Critical Contract Gap Remediation**
+  - **TASK-322:** Implemented SPEC-024 compliant `capabilities:` syntax with declaration-site constraints
+    - Changed `RoleDef` AST from `authority: Vec<Name>` to `capabilities: Vec<CapabilityDecl>`
+    - Parser now supports `capabilities: [cap @ { constraints }]` syntax in role definitions
+    - Type checker preserves constraints through capability composition
+    - Runtime enforces constraints at capability invocation time
+    - Lowering updated for implicit default role generation
+    - All tests updated to use new syntax
+  - **TASK-323:** Removed `--capability` CLI flag and updated SPEC-005
+    - Capabilities now defined in Ash source files, libraries, or defaults only
+    - CLI no longer accepts `--capability <name=uri>` argument
+    - Supersedes TASK-317
+  - **TASK-324:** Removed `--input` CLI flag and updated SPEC-005
+    - Input parameters not yet supported via CLI (use `observe` or hardcoded values)
+    - CLI no longer accepts `--input <json>` argument
+    - Supersedes TASK-316
+  - **TASK-325:** Fixed remaining clippy warnings
+    - Fixed `redundant_closure` in `ash-engine/src/lib.rs:261`
+    - Fixed `redundant_closure` in test file
+    - Fixed `redundant_clone` in test file
+    - Fixed `temporary_with_significant_drop` in e2e test
+  - **TASK-326:** Updated SPEC-010 HTTP capability documentation
+    - Added "4.3 Unimplemented Capabilities" section
+    - Documented that `with_http_capabilities()` returns configuration error
+    - Users directed to `with_custom_provider()` for HTTP implementation
+
 ### Fixed
 
 - TASK-310: Marked 3 failing cli_input_workflow_test tests as `#[ignore]` with known issue documentation

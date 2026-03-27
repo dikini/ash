@@ -1410,18 +1410,58 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 ---
 
-## Phase 44-49 Summary
+## Phase 44-52 Summary
 
-||| Phase | Tasks | Est. Hours | Status |
-|||-------|-------|------------|--------|
-||| 44 | 17 | 102-108 | ✅ Complete |
-||| 45 | 3 | 14 | ✅ Complete |
-||| 46 | 13 | 98-108 | ✅ Complete |
-||| 47 | 10 | 90 | ✅ Complete |
-||| 48 | 15 | 138 | ✅ Complete |
-||| 49 | 9 | 52 | ✅ Complete |
-||| 50 | 13 | 51 | ✅ Complete |
-||| 51 | 2 | 8.5 | ✅ Complete |
-||| **Total** | **80** | **568-588** | ✅ Complete |
+|||| Phase | Tasks | Est. Hours | Status |
+||||-------|-------|------------|--------|
+|||| 44 | 17 | 102-108 | ✅ Complete |
+|||| 45 | 3 | 14 | ✅ Complete |
+|||| 46 | 13 | 98-108 | ✅ Complete |
+|||| 47 | 10 | 90 | ✅ Complete |
+|||| 48 | 15 | 138 | ✅ Complete |
+|||| 49 | 9 | 52 | ✅ Complete |
+|||| 50 | 13 | 51 | ✅ Complete |
+|||| 51 | 2 | 8.5 | ✅ Complete |
+|||| 52 | 5 | 21-27 | ✅ Complete |
+|||| **Total** | **85** | **589-615** | ✅ Complete |
 
-**Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)
+---
+
+## Phase 52: Critical Contract Gap Remediation
+
+|**Goal:** Fix critical contract gaps identified in post-Phase 50/51 review.
+
+**Source:** User review findings  
+**Priority:** Critical/High  
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-322](tasks/TASK-322-implement-capabilities-syntax.md) | **Parent:** Implement SPEC-024 `capabilities:` syntax with declaration-site constraints | SPEC-024 | 13-19 | ✅ Complete |
+| ├─ [TASK-322A](tasks/TASK-322A-role-ast-capabilitydecl.md) | Update RoleDef AST to use CapabilityDecl | SPEC-024 | 1-2 | ✅ Complete |
+| ├─ [TASK-322B](tasks/TASK-322B-role-parser-capabilities.md) | Update role parser for capabilities: syntax | SPEC-024 | 2-3 | ✅ Complete |
+| ├─ [TASK-322C](tasks/TASK-322C-typeck-constrained-caps.md) | Update type checker for constrained capabilities | SPEC-024 | 2-3 | ✅ Complete |
+| ├─ [TASK-322D](tasks/TASK-322D-runtime-constraint-enforcement.md) | Runtime constraint enforcement | SPEC-024 | 3-4 | ✅ Complete |
+| ├─ [TASK-322E](tasks/TASK-322E-lower-implicit-role.md) | Update lowering for implicit default role | SPEC-024 | 2-3 | ✅ Complete |
+| └─ [TASK-322F](tasks/TASK-322F-update-tests-integration.md) | Update tests and integration | SPEC-024 | 2-3 | ✅ Complete |
+| [TASK-323](tasks/TASK-323-remove-capability-cli-flag.md) | Remove `--capability` flag from CLI and SPEC-005 | SPEC-005 | 2 | ✅ Complete |
+| [TASK-324](tasks/TASK-324-remove-input-cli-flag.md) | Remove `--input` flag from CLI and SPEC-005 | SPEC-005 | 2 | ✅ Complete |
+| [TASK-325](tasks/TASK-325-fix-clippy-warnings.md) | Fix remaining clippy warnings in production and test code | N/A | 1 | ✅ Complete |
+| [TASK-326](tasks/TASK-326-326-remove-http-capability-docs.md) | Remove HTTP capability documentation from SPEC-010 | SPEC-010 | 1 | ✅ Complete |
+
+**Summary:**
+- TASK-322: Implemented SPEC-024 compliant `capabilities:` syntax with declaration-site constraints
+  - Replaced old `authority:` syntax with `capabilities: [cap @ { constraints }]`
+  - Constraints now stored in AST, checked at type-check time, enforced at runtime
+- TASK-323: Removed `--capability` CLI flag and updated SPEC-005 (supersedes TASK-317)
+- TASK-324: Removed `--input` CLI flag and updated SPEC-005 (supersedes TASK-316)
+- TASK-325: Fixed 4 clippy warnings (redundant_closure ×2, redundant_clone, temporary_with_significant_drop)
+- TASK-326: Updated SPEC-010 to document HTTP as unimplemented capability
+
+**Superseded Tasks:**
+- TASK-316 → TASK-324 (remove instead of fix --input)
+- TASK-317 → TASK-323 (remove instead of fix --capability)
+
+**Total:** ~21-27 hours (including all sub-tasks)
+
+|**Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

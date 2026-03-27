@@ -61,29 +61,29 @@ pub fn parse_crate_root_metadata(input: &mut ParseInput) -> ModalResult<CrateRoo
 }
 
 /// Parse zero or more dependency declarations, stopping at first non-dependency content.
-/// This is lenient - it doesn't fail if there's other content after the dependencies.
+/// Errors if a malformed dependency declaration is encountered.
 fn parse_dependencies(input: &mut ParseInput) -> ModalResult<Vec<DependencyDecl>> {
     let mut dependencies = Vec::new();
 
     loop {
+        // Skip whitespace/newlines before checking
+        let _ = parse_newlines_and_whitespace(input);
+
         // Check if we're at the end of input
         if input.input.is_empty() {
             break;
         }
 
-        // Try to parse a dependency declaration
-        match parse_dependency_decl(input) {
-            Ok(dep) => {
-                dependencies.push(dep);
-                // After a successful parse, allow more whitespace/newlines
-                let _ = parse_newlines_and_whitespace(input);
-            }
-            Err(_) => {
-                // If we can't parse a dependency, stop parsing dependencies
-                // This allows other content (mod, workflow, etc.) to follow
-                break;
-            }
+        // Check if this looks like a dependency declaration
+        // If not, we're done parsing dependencies
+        if !input.input.trim_start().starts_with("dependency") {
+            break;
         }
+
+        // This looks like a dependency, so parse it strictly
+        // Any error here is a real parse error, not "end of dependencies"
+        let dep = parse_dependency_decl(input)?;
+        dependencies.push(dep);
     }
 
     Ok(dependencies)

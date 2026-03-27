@@ -216,9 +216,12 @@ impl ModuleResolver {
                 })?;
 
         // Parse crate root metadata (or use default if not present)
-        let metadata = self
-            .parse_crate_root_metadata(&content, canonical_path)
-            .unwrap_or_else(|_| crate::surface::CrateRootMetadata {
+        // If the file starts with a crate declaration, parse it strictly
+        // Otherwise, use the file stem as the crate name for backward compatibility
+        let metadata = if content.trim().starts_with("crate") {
+            self.parse_crate_root_metadata(&content, canonical_path)?
+        } else {
+            crate::surface::CrateRootMetadata {
                 crate_name: canonical_path
                     .file_stem()
                     .unwrap_or_default()
@@ -226,7 +229,8 @@ impl ModuleResolver {
                     .into(),
                 dependencies: Vec::new(),
                 span: crate::token::Span::new(0, 0, 1, 1),
-            });
+            }
+        };
 
         // Check for duplicate crate name
         if let Some(&existing_crate_id) = crate_names.get(metadata.crate_name.as_ref()) {

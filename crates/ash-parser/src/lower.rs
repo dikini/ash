@@ -641,6 +641,10 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
             name: "Capability".to_string(),
             args: vec![TypeExpr::Named(name.to_string())],
         },
+        Type::Constructor { name, args } => TypeExpr::Constructor {
+            name: name.to_string(),
+            args: args.iter().map(lower_type_to_type_expr).collect(),
+        },
     }
 }
 

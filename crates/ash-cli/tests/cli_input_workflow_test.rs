@@ -113,11 +113,7 @@ fn test_boolean_workflow_parameter() {
 }
 
 /// Test workflow with list parameter
-///
-/// **KNOWN ISSUE**: This test is ignored because the parser does not
-/// support `List<Int>` generic syntax in workflow parameters. See TASK-315.
 #[test]
-#[ignore = "TASK-315: parser does not support List<Int> syntax in workflow parameters"]
 fn test_list_workflow_parameter() {
     let temp = TempDir::new().unwrap();
 

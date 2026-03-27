@@ -256,6 +256,11 @@ impl Engine {
                     .collect(),
             ),
             SurfaceType::Capability(_) => ash_typeck::Type::Var(ash_typeck::TypeVar::fresh()),
+            SurfaceType::Constructor { name, args } => ash_typeck::Type::Constructor {
+                name: ash_typeck::QualifiedName::root(name.as_ref()),
+                args: args.iter().map(|ty| Self::surface_type_to_typeck(ty)).collect(),
+                kind: ash_typeck::Kind::Type,
+            },
         }
     }
 

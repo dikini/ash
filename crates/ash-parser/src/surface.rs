@@ -927,6 +927,8 @@ pub enum Type {
     Record(Vec<(Name, Type)>),
     /// Capability type
     Capability(Name),
+    /// Generic type constructor: List<Int>, Option<String>
+    Constructor { name: Name, args: Vec<Type> },
 }
 
 /// Guard expressions for actions.

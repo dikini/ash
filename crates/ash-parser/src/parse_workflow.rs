@@ -2,7 +2,7 @@
 //!
 //! This module provides parsers for Ash workflow statements and definitions.
 
-use winnow::combinator::{alt, delimited};
+use winnow::combinator::{alt, delimited, separated};
 use winnow::prelude::*;
 use winnow::stream::Stream;
 use winnow::token::take_while;
@@ -502,10 +502,36 @@ fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
     Ok(params)
 }
 
-/// Parse an optional type (simple version - just identifiers for now)
+/// Parse a type: simple identifier or generic constructor like List<Int>
 fn parse_type(input: &mut ParseInput) -> ModalResult<Type> {
     let type_name = identifier(input)?;
-    Ok(Type::Name(type_name.into()))
+    let name = Name::from(type_name);
+
+    skip_whitespace_and_comments(input);
+
+    // Check for generic type arguments: <T, U>
+    if input.input.starts_with("<") {
+        let _ = literal_str("<").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+
+        // Parse type arguments separated by commas
+        let args = separated(1.., parse_type, parse_type_arg_separator).parse_next(input)?;
+
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(">").parse_next(input)?;
+
+        return Ok(Type::Constructor { name, args });
+    }
+
+    Ok(Type::Name(name))
+}
+
+/// Parse type argument separator (comma with optional whitespace)
+fn parse_type_arg_separator(input: &mut ParseInput) -> ModalResult<()> {
+    skip_whitespace_and_comments(input);
+    literal_str(",").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    Ok(())
 }
 
 /// Parse optional contract clauses
@@ -1331,6 +1357,57 @@ mod tests {
         let mut input = test_input("workflow main { done }");
         let result = workflow_def(&mut input).unwrap();
         assert_eq!(result.name.as_ref(), "main");
+    }
+
+    #[test]
+    fn test_workflow_def_with_generic_type_param() {
+        let mut input = test_input("workflow sum(items: List<Int>) { done }");
+        let result = workflow_def(&mut input).unwrap();
+        assert_eq!(result.name.as_ref(), "sum");
+        assert_eq!(result.params.len(), 1);
+        assert_eq!(result.params[0].name.as_ref(), "items");
+        assert!(
+            matches!(&result.params[0].ty, Type::Constructor { name, args } if name.as_ref() == "List" && args.len() == 1),
+            "Expected List<Int> constructor type, got {:?}", result.params[0].ty
+        );
+    }
+
+    #[test]
+    fn test_workflow_def_with_nested_generic_type() {
+        let mut input = test_input("workflow process(items: List<List<Int>>) { done }");
+        let result = workflow_def(&mut input).unwrap();
+        assert_eq!(result.name.as_ref(), "process");
+        assert_eq!(result.params.len(), 1);
+        // Check outer List
+        if let Type::Constructor { name, args } = &result.params[0].ty {
+            assert_eq!(name.as_ref(), "List");
+            assert_eq!(args.len(), 1);
+            // Check inner List<Int>
+            if let Type::Constructor { name: inner_name, args: inner_args } = &args[0] {
+                assert_eq!(inner_name.as_ref(), "List");
+                assert_eq!(inner_args.len(), 1);
+                assert!(matches!(&inner_args[0], Type::Name(n) if n.as_ref() == "Int"));
+            } else {
+                panic!("Expected nested Constructor type, got {:?}", args[0]);
+            }
+        } else {
+            panic!("Expected Constructor type, got {:?}", result.params[0].ty);
+        }
+    }
+
+    #[test]
+    fn test_workflow_def_with_multiple_generic_args() {
+        let mut input = test_input("workflow result(r: Result<Int, String>) { done }");
+        let result = workflow_def(&mut input).unwrap();
+        assert_eq!(result.params.len(), 1);
+        if let Type::Constructor { name, args } = &result.params[0].ty {
+            assert_eq!(name.as_ref(), "Result");
+            assert_eq!(args.len(), 2);
+            assert!(matches!(&args[0], Type::Name(n) if n.as_ref() == "Int"));
+            assert!(matches!(&args[1], Type::Name(n) if n.as_ref() == "String"));
+        } else {
+            panic!("Expected Constructor type, got {:?}", result.params[0].ty);
+        }
     }
 
     #[test]

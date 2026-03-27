@@ -388,4 +388,80 @@ mod tests {
 
         assert!(matches!(result.visibility, Visibility::Crate));
     }
+
+    // =========================================================================
+    // TASK-340: External import parsing tests
+    // =========================================================================
+
+    #[test]
+    fn test_parse_external_simple_import() {
+        let mut input = new_input("use external::util::item;");
+        let result = parse_use(&mut input).unwrap();
+
+        assert!(matches!(result.visibility, Visibility::Inherited));
+        assert!(result.alias.is_none());
+
+        match result.path {
+            UsePath::Simple(path) => {
+                assert_eq!(path.segments.len(), 3);
+                assert_eq!(path.segments[0].as_ref(), "external");
+                assert_eq!(path.segments[1].as_ref(), "util");
+                assert_eq!(path.segments[2].as_ref(), "item");
+            }
+            _ => panic!("Expected Simple path, got {:?}", result.path),
+        }
+    }
+
+    #[test]
+    fn test_parse_external_nested_import_with_aliases() {
+        let mut input = new_input("use external::util::{a, b as c};");
+        let result = parse_use(&mut input).unwrap();
+
+        match result.path {
+            UsePath::Nested(path, items) => {
+                assert_eq!(path.segments.len(), 2);
+                assert_eq!(path.segments[0].as_ref(), "external");
+                assert_eq!(path.segments[1].as_ref(), "util");
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0].name.as_ref(), "a");
+                assert!(items[0].alias.is_none());
+                assert_eq!(items[1].name.as_ref(), "b");
+                assert_eq!(items[1].alias, Some("c".into()));
+            }
+            _ => panic!("Expected Nested path, got {:?}", result.path),
+        }
+    }
+
+    #[test]
+    fn test_parse_external_glob_import() {
+        let mut input = new_input("use external::util::*;");
+        let result = parse_use(&mut input).unwrap();
+
+        match result.path {
+            UsePath::Glob(path) => {
+                assert_eq!(path.segments.len(), 2);
+                assert_eq!(path.segments[0].as_ref(), "external");
+                assert_eq!(path.segments[1].as_ref(), "util");
+            }
+            _ => panic!("Expected Glob path, got {:?}", result.path),
+        }
+    }
+
+    #[test]
+    fn test_parse_external_import_with_alias() {
+        let mut input = new_input("use external::util::helpers as h;");
+        let result = parse_use(&mut input).unwrap();
+
+        assert_eq!(result.alias, Some("h".into()));
+
+        match result.path {
+            UsePath::Simple(path) => {
+                assert_eq!(path.segments.len(), 3);
+                assert_eq!(path.segments[0].as_ref(), "external");
+                assert_eq!(path.segments[1].as_ref(), "util");
+                assert_eq!(path.segments[2].as_ref(), "helpers");
+            }
+            _ => panic!("Expected Simple path, got {:?}", result.path),
+        }
+    }
 }

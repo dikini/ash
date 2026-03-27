@@ -402,9 +402,20 @@ impl<'a> ImportResolver<'a> {
         }
 
         let first = path.segments[0].as_ref();
-        if first != "crate" {
-            return Err(ImportError::InvalidPrefix {
+        match first {
+            "crate" => self.resolve_current_crate_path(path),
+            "external" => self.resolve_external_path(path),
+            _ => Err(ImportError::InvalidPrefix {
                 prefix: first.to_string(),
+            }),
+        }
+    }
+
+    /// Resolve a path within the current crate (starting with `crate::`).
+    fn resolve_current_crate_path(&self, path: &SimplePath) -> Result<ModuleId, ImportError> {
+        if path.segments.is_empty() {
+            return Err(ImportError::InvalidPrefix {
+                prefix: "(empty)".to_string(),
             });
         }
 
@@ -417,9 +428,91 @@ impl<'a> ImportResolver<'a> {
                     path: "crate".to_string(),
                 })?;
 
-        // Walk the path segments
+        // Walk the path segments (skip "crate")
         let mut current_module = root_id;
         for segment in path.segments.iter().skip(1) {
+            let node = self.module_graph.get_node(current_module).ok_or_else(|| {
+                ImportError::ModuleNotFound {
+                    path: segment.to_string(),
+                }
+            })?;
+
+            // Find child with matching name
+            let mut found = None;
+            for &child_id in &node.children {
+                #[allow(clippy::collapsible_if)]
+                if let Some(child_node) = self.module_graph.get_node(child_id) {
+                    if child_node.name == segment.as_ref() {
+                        found = Some(child_id);
+                        break;
+                    }
+                }
+            }
+
+            current_module = found.ok_or_else(|| ImportError::ModuleNotFound {
+                path: segment.to_string(),
+            })?;
+        }
+
+        Ok(current_module)
+    }
+
+    /// Resolve a path from an external crate (starting with `external::`).
+    fn resolve_external_path(&self, path: &SimplePath) -> Result<ModuleId, ImportError> {
+        if path.segments.len() < 2 {
+            return Err(ImportError::InvalidPrefix {
+                prefix: "external".to_string(),
+            });
+        }
+
+        // Get the importing module's crate to look up the dependency
+        // For external paths, we need to find the root module of the importing crate
+        let importing_crate = self
+            .module_graph
+            .get_root()
+            .and_then(|&root| self.module_graph.crate_id_for_module(root))
+            .ok_or_else(|| ImportError::ModuleNotFound {
+                path: "crate root".to_string(),
+            })?;
+
+        // The second segment is the dependency alias (e.g., "util" in "external::util::sanitize")
+        let alias = path.segments[1].as_ref();
+
+        // Look up the target crate ID from the dependency alias
+        let target_crate_id = self
+            .module_graph
+            .dependency_target(importing_crate, alias)
+            .ok_or_else(|| ImportError::ModuleNotFound {
+                path: format!("external::{} (undeclared dependency)", alias),
+            })?;
+
+        // Find the root module of the target crate
+        let target_root = self
+            .module_graph
+            .nodes
+            .iter()
+            .find_map(|(&module_id, _)| {
+                self.module_graph
+                    .crate_id_for_module(module_id)
+                    .filter(|&crate_id| crate_id == target_crate_id)
+                    .and_then(|_| {
+                        // Check if this is a root (no parent or parent is in different crate)
+                        self.module_graph.get_node(module_id).and_then(|node| {
+                            if node.parent.is_none() {
+                                Some(module_id)
+                            } else {
+                                None
+                            }
+                        })
+                    })
+            })
+            .ok_or_else(|| ImportError::ModuleNotFound {
+                path: format!("external::{} (root module)", alias),
+            })?;
+
+        // Walk the remaining path segments within the external crate
+        let mut current_module = target_root;
+        for segment in path.segments.iter().skip(2) {
             let node = self.module_graph.get_node(current_module).ok_or_else(|| {
                 ImportError::ModuleNotFound {
                     path: segment.to_string(),
@@ -478,6 +571,15 @@ impl<'a> ImportResolver<'a> {
         importing_module: ModuleId,
         target_module: ModuleId,
     ) -> bool {
+        // Check cross-crate visibility first
+        let importing_crate = self.module_graph.crate_id_for_module(importing_module);
+        let target_crate = self.module_graph.crate_id_for_module(target_module);
+
+        // If importing from a different crate, only pub items are visible
+        if importing_crate != target_crate {
+            return matches!(visibility, Visibility::Public);
+        }
+
         match visibility {
             Visibility::Public => true,
             Visibility::Crate => {
@@ -2256,5 +2358,280 @@ mod tests {
 
         let result2 = resolver2.resolve_all();
         assert!(result2.is_err());
+    }
+
+    // =========================================================================
+    // TASK-340: External import resolution and cross-crate visibility tests
+    // =========================================================================
+
+    /// Helper to create a graph with external crate dependencies:
+    /// Main crate (id=0): main_mod -> child_mod
+    /// External crate (id=1): util -> sanitize
+    fn create_external_crate_graph() -> (
+        ModuleGraph,
+        CrateId,
+        CrateId,
+        ModuleId,
+        ModuleId,
+        ModuleId,
+        ModuleId,
+    ) {
+        use ash_core::module_graph::ModuleSource;
+
+        let mut graph = ModuleGraph::new();
+
+        // Create main crate modules
+        let main_mod = graph.add_node(ModuleNode::new(
+            "main".to_string(),
+            ModuleSource::File("main.ash".to_string()),
+        ));
+        let child_mod = graph.add_node(ModuleNode::new(
+            "child".to_string(),
+            ModuleSource::File("main/child.ash".to_string()),
+        ));
+        graph.set_root(main_mod);
+        graph.add_edge(main_mod, child_mod);
+
+        // Register main crate using add_crate (properly registers in crates HashMap)
+        let main_crate = graph.add_crate("main".to_string(), "/main".to_string(), main_mod);
+        graph.set_crate(child_mod, main_crate);
+
+        // Create external crate modules - util library
+        let util_mod = graph.add_node(ModuleNode::new(
+            "util".to_string(),
+            ModuleSource::File("util/lib.ash".to_string()),
+        ));
+        let sanitize_mod = graph.add_node(ModuleNode::new(
+            "sanitize".to_string(),
+            ModuleSource::File("util/sanitize.ash".to_string()),
+        ));
+        graph.add_edge(util_mod, sanitize_mod);
+
+        // Register external crate using add_crate
+        let ext_crate = graph.add_crate("util".to_string(), "/util".to_string(), util_mod);
+        graph.set_crate(sanitize_mod, ext_crate);
+
+        // Register the external crate as a dependency of main crate
+        graph.add_dependency(main_crate, "util".to_string(), ext_crate);
+
+        (
+            graph,
+            main_crate,
+            ext_crate,
+            main_mod,
+            child_mod,
+            util_mod,
+            sanitize_mod,
+        )
+    }
+
+    #[test]
+    fn test_external_import_public_item_allowed() {
+        // external::util::sanitize::normalize should succeed when normalize is pub
+        let (graph, _main_crate, _ext_crate, main_mod, _child_mod, _util_mod, sanitize_mod) =
+            create_external_crate_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add public export to sanitize module
+        resolver.add_module_exports(
+            sanitize_mod,
+            vec![("normalize".to_string(), Visibility::Public)],
+        );
+
+        // Add use statement from main module importing from external crate
+        // Path: external::util::sanitize::normalize
+        let use_path = UsePath::Simple(simple_path(&["external", "util", "sanitize", "normalize"]));
+        resolver.add_module_uses(main_mod, vec![use_stmt(use_path)]);
+
+        // Import should succeed - public items are importable across crates
+        let bindings = resolver.resolve_all().unwrap();
+        let main_bindings = bindings.get(&main_mod).unwrap();
+
+        assert!(main_bindings.contains_key("normalize"));
+        let binding = main_bindings.get("normalize").unwrap();
+        assert_eq!(binding.item_name, "normalize");
+        assert_eq!(binding.target_module, sanitize_mod);
+    }
+
+    #[test]
+    fn test_external_import_pub_crate_rejected() {
+        // external::util::sanitize::normalize should fail when normalize is pub(crate)
+        let (graph, _main_crate, _ext_crate, main_mod, _child_mod, _util_mod, sanitize_mod) =
+            create_external_crate_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(crate) export to sanitize module
+        resolver.add_module_exports(
+            sanitize_mod,
+            vec![("internal_func".to_string(), Visibility::Crate)],
+        );
+
+        // Add use statement from main module importing from external crate
+        let use_path = UsePath::Simple(simple_path(&[
+            "external",
+            "util",
+            "sanitize",
+            "internal_func",
+        ]));
+        resolver.add_module_uses(main_mod, vec![use_stmt(use_path)]);
+
+        // Import should fail - pub(crate) is not visible across crate boundaries
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "internal_func"),
+            "Expected PrivateItem error for pub(crate) external import, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_external_import_pub_super_rejected() {
+        // external::util::sanitize::normalize should fail when normalize is pub(super)
+        let (graph, _main_crate, _ext_crate, main_mod, _child_mod, _util_mod, sanitize_mod) =
+            create_external_crate_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(super) export to sanitize module
+        resolver.add_module_exports(
+            sanitize_mod,
+            vec![("parent_item".to_string(), Visibility::Super { levels: 1 })],
+        );
+
+        // Add use statement from main module importing from external crate
+        let use_path = UsePath::Simple(simple_path(&[
+            "external",
+            "util",
+            "sanitize",
+            "parent_item",
+        ]));
+        resolver.add_module_uses(main_mod, vec![use_stmt(use_path)]);
+
+        // Import should fail - pub(super) is not visible across crate boundaries
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "parent_item"),
+            "Expected PrivateItem error for pub(super) external import, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_external_import_undeclared_alias_rejected() {
+        // external::unknown::item should fail when "unknown" is not a declared dependency
+        let (graph, _main_crate, _ext_crate, main_mod, _child_mod, _util_mod, _sanitize_mod) =
+            create_external_crate_graph();
+
+        // Remove the "util" dependency to simulate undeclared alias
+        // We need to create a new graph without the dependency
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Try to import from an undeclared external crate
+        let use_path = UsePath::Simple(simple_path(&["external", "unknown", "item"]));
+        resolver.add_module_uses(main_mod, vec![use_stmt(use_path)]);
+
+        // Import should fail - "unknown" is not a declared dependency alias
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::ModuleNotFound { .. }),
+            "Expected ModuleNotFound error for undeclared external alias, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_external_glob_import_skips_non_public_items() {
+        // external::util::sanitize::* should only import pub items
+        let (graph, _main_crate, _ext_crate, main_mod, _child_mod, _util_mod, sanitize_mod) =
+            create_external_crate_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add mixed visibility exports to sanitize module
+        resolver.add_module_exports(
+            sanitize_mod,
+            vec![
+                ("public_func".to_string(), Visibility::Public),
+                ("crate_func".to_string(), Visibility::Crate),
+                ("super_func".to_string(), Visibility::Super { levels: 1 }),
+                ("private_func".to_string(), Visibility::Inherited),
+            ],
+        );
+
+        // Add glob import from main module
+        let use_path = UsePath::Glob(simple_path(&["external", "util", "sanitize"]));
+        resolver.add_module_uses(main_mod, vec![use_stmt(use_path)]);
+
+        // Glob import should only include public items
+        let bindings = resolver.resolve_all().unwrap();
+        let main_bindings = bindings.get(&main_mod).unwrap();
+
+        assert!(
+            main_bindings.contains_key("public_func"),
+            "Public item should be imported via glob"
+        );
+        assert!(
+            !main_bindings.contains_key("crate_func"),
+            "pub(crate) item should NOT be imported via glob across crates"
+        );
+        assert!(
+            !main_bindings.contains_key("super_func"),
+            "pub(super) item should NOT be imported via glob across crates"
+        );
+        assert!(
+            !main_bindings.contains_key("private_func"),
+            "Private item should NOT be imported via glob"
+        );
+    }
+
+    #[test]
+    fn test_external_import_nested() {
+        // use external::util::{helpers, config as cfg};
+        let (graph, _main_crate, _ext_crate, main_mod, _child_mod, util_mod, _sanitize_mod) =
+            create_external_crate_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add exports to util module (items, not modules)
+        resolver.add_module_exports(
+            util_mod,
+            vec![
+                ("helpers".to_string(), Visibility::Public),
+                ("config".to_string(), Visibility::Public),
+            ],
+        );
+
+        // Add nested import from main module
+        let items = vec![
+            UseItem {
+                name: "helpers".into(),
+                alias: None,
+            },
+            UseItem {
+                name: "config".into(),
+                alias: Some("cfg".into()),
+            },
+        ];
+        let use_path = UsePath::Nested(simple_path(&["external", "util"]), items);
+        resolver.add_module_uses(main_mod, vec![use_stmt(use_path)]);
+
+        // Import should succeed
+        let bindings = resolver.resolve_all().unwrap();
+        let main_bindings = bindings.get(&main_mod).unwrap();
+
+        assert!(main_bindings.contains_key("helpers"));
+        assert!(main_bindings.contains_key("cfg"));
+        assert!(!main_bindings.contains_key("config")); // aliased, not imported under original name
     }
 }

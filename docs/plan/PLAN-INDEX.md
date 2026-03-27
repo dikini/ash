@@ -1499,29 +1499,43 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** TASK-329 verification findings  
 **Priority:** Critical  
-**Status:** 🟡 Planned
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-332](tasks/TASK-332-import-resolver-pub-crate.md) | Implement pub(crate) enforcement in import resolver | SPEC-009 | 2-3 | 🟡 Planned |
-| [TASK-333](tasks/TASK-333-import-resolver-pub-super.md) | Implement pub(super) enforcement in import resolver | SPEC-009 | 2-3 | 🟡 Planned |
-| [TASK-334](tasks/TASK-334-import-resolver-pub-in-path.md) | Implement pub(in path) enforcement in import resolver | SPEC-009 | 3-4 | 🟡 Planned |
-| [TASK-335](tasks/TASK-335-import-resolver-visibility-tests.md) | Add comprehensive visibility tests to import resolver | SPEC-009 | 2-3 | 🟡 Planned |
-| [TASK-336](tasks/TASK-336-phase-54-closeout.md) | Phase 54 closeout and verification | N/A | 1 | 🟡 Planned |
+| [TASK-332](tasks/TASK-332-import-resolver-pub-crate.md) | Implement pub(crate) enforcement in import resolver | SPEC-009 | 2-3 | ✅ Complete |
+| [TASK-333](tasks/TASK-333-import-resolver-pub-super.md) | Implement pub(super) enforcement in import resolver | SPEC-009 | 2-3 | ✅ Complete |
+| [TASK-334](tasks/TASK-334-import-resolver-pub-in-path.md) | Implement pub(in path) enforcement in import resolver | SPEC-009 | 3-4 | ✅ Complete |
+| [TASK-335](tasks/TASK-335-import-resolver-visibility-tests.md) | Add comprehensive visibility tests to import resolver | SPEC-009 | 2-3 | ✅ Complete |
+| [TASK-336](tasks/TASK-336-phase-54-closeout.md) | Phase 54 closeout and verification | N/A | 1 | ✅ Complete |
 
 **Summary:**
-This phase addresses the critical gaps identified in TASK-329 where the import resolver had placeholder implementations for restricted visibility:
-- `pub(crate)` was treated as `pub` (always visible)
-- `pub(super)` was treated as `pub` (always visible)
-- `pub(in path)` was treated as `pub` (always visible)
+This phase addressed the critical gaps identified in TASK-329 where the import resolver had placeholder implementations for restricted visibility:
+- `pub(crate)` was treated as `pub` (always visible) → Now enforces crate boundaries
+- `pub(super)` was treated as `pub` (always visible) → Now checks parent hierarchy
+- `pub(in path)` was treated as `pub` (always visible) → Now validates path prefix
 
-After this phase:
-- `pub(crate)` only allows imports within same crate
-- `pub(super)` only allows imports from parent module(s)
-- `pub(in path)` only allows imports from specified path subtree
-- Import resolver will have 25+ visibility tests (parity with type checker)
+**Implementation Details:**
+- TASK-332: pub(crate) now enforces crate boundaries using CrateId tracking
+- TASK-333: pub(super) now checks parent module hierarchy using ancestors()
+- TASK-334: pub(in path) now validates descendant relationship using resolve_path()
+- TASK-335: 37 visibility tests added (exceeded 25+ target)
+- SPEC-009 compliance: ACHIEVED
 
-**Implementation Plan:** See [PHASE-54-IMPLEMENTATION-PLAN.md](PHASE-54-IMPLEMENTATION-PLAN.md)
+**Files Modified:**
+- `crates/ash-core/src/module_graph.rs` - Added CrateId, parent tracking, ancestors(), resolve_path()
+- `crates/ash-parser/src/import_resolver.rs` - Implemented proper visibility checks in is_visible()
+
+**Test Results:**
+```
+cargo test --package ash-parser import_resolver --quiet
+running 37 tests
+test result: ok. 37 passed; 0 failed
+
+cargo test --package ash-typeck visibility --quiet
+running 33 tests
+test result: ok. 33 passed; 0 failed
+```
 
 **Total:** ~10-14 hours
 

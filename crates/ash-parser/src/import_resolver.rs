@@ -505,10 +505,8 @@ impl<'a> ImportResolver<'a> {
             Visibility::Self_ => false,
             Visibility::Restricted { path } => {
                 // Parse the path string (e.g., "crate::foo::bar" -> ["crate", "foo", "bar"])
-                let path_components: Vec<String> = path
-                    .split("::")
-                    .map(|s| s.to_string())
-                    .collect();
+                let path_components: Vec<String> =
+                    path.split("::").map(|s| s.to_string()).collect();
 
                 // Resolve the restricted path to a module
                 match self.module_graph.resolve_path(&path_components) {
@@ -1316,8 +1314,14 @@ mod tests {
     // Helper to create a four-level module graph for testing pub(in path):
     // root (crate) -> foo -> bar -> baz
     //              -> sibling (child of root, sibling of foo)
-    fn create_four_level_graph() -> (ModuleGraph, ModuleId, ModuleId, ModuleId, ModuleId, ModuleId)
-    {
+    fn create_four_level_graph() -> (
+        ModuleGraph,
+        ModuleId,
+        ModuleId,
+        ModuleId,
+        ModuleId,
+        ModuleId,
+    ) {
         let mut graph = ModuleGraph::new();
 
         // Root module (crate)
@@ -1674,5 +1678,644 @@ mod tests {
 
         let result5 = resolver5.resolve_all();
         assert!(result5.is_err());
+    }
+
+    // =========================================================================
+    // TASK-335: Edge Cases and Comprehensive Visibility Tests
+    // =========================================================================
+
+    #[test]
+    fn test_pub_crate_at_root() {
+        // pub(crate) at root level should be accessible from all modules in crate
+        let mut graph = ModuleGraph::new();
+        let crate_a = CrateId(0);
+
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+        graph.set_crate(root, crate_a);
+
+        let child = graph.add_node(ModuleNode::new(
+            "child".to_string(),
+            ash_core::module_graph::ModuleSource::File("child.ash".to_string()),
+        ));
+        graph.add_edge(root, child);
+        graph.set_crate(child, crate_a);
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(crate) export to root module
+        resolver.add_module_exports(root, vec![("RootCrateItem".to_string(), Visibility::Crate)]);
+
+        // Add use statement from child importing from root
+        let use_path = UsePath::Simple(simple_path(&["crate", "RootCrateItem"]));
+        resolver.add_module_uses(child, vec![use_stmt(use_path)]);
+
+        // Import should succeed - same crate
+        let bindings = resolver.resolve_all().unwrap();
+        let child_bindings = bindings.get(&child).unwrap();
+
+        assert!(child_bindings.contains_key("RootCrateItem"));
+        let binding = child_bindings.get("RootCrateItem").unwrap();
+        assert_eq!(binding.target_module, root);
+    }
+
+    #[test]
+    fn test_pub_crate_deeply_nested() {
+        // pub(crate) at deeply nested level should be accessible from any module in same crate
+        let mut graph = ModuleGraph::new();
+        let crate_a = CrateId(0);
+
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+        graph.set_crate(root, crate_a);
+
+        // Create deep hierarchy: root -> a -> b -> c -> d
+        let mut prev = root;
+        let mut modules = vec![root];
+        for name in ["a", "b", "c", "d"] {
+            let module = graph.add_node(ModuleNode::new(
+                name.to_string(),
+                ash_core::module_graph::ModuleSource::File(format!("{}.ash", name)),
+            ));
+            graph.add_edge(prev, module);
+            graph.set_crate(module, crate_a);
+            modules.push(module);
+            prev = module;
+        }
+
+        let deepest = modules[4]; // d
+        let middle = modules[2]; // b
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(crate) export to deepest module
+        resolver.add_module_exports(deepest, vec![("DeepItem".to_string(), Visibility::Crate)]);
+
+        // Add use statement from middle module importing from deepest
+        let use_path = UsePath::Simple(simple_path(&["crate", "a", "b", "c", "d", "DeepItem"]));
+        resolver.add_module_uses(middle, vec![use_stmt(use_path)]);
+
+        // Import should succeed - same crate regardless of depth
+        let bindings = resolver.resolve_all().unwrap();
+        let middle_bindings = bindings.get(&middle).unwrap();
+
+        assert!(middle_bindings.contains_key("DeepItem"));
+    }
+
+    #[test]
+    fn test_pub_super_multi_level_exact() {
+        // Test pub(super) at exactly the boundary - parent can see, grandparent cannot
+        let (graph, root, foo, bar) = create_three_level_graph();
+
+        // Test with levels=1: only direct parent should see
+        let mut resolver1 = ImportResolver::new(&graph);
+        resolver1.add_module_exports(
+            bar,
+            vec![("Super1Item".to_string(), Visibility::Super { levels: 1 })],
+        );
+
+        // Parent (foo) should succeed
+        let use_path1 = UsePath::Simple(simple_path(&["crate", "foo", "bar", "Super1Item"]));
+        resolver1.add_module_uses(foo, vec![use_stmt(use_path1)]);
+
+        let bindings1 = resolver1.resolve_all().unwrap();
+        assert!(bindings1.get(&foo).unwrap().contains_key("Super1Item"));
+
+        // Grandparent (root) should fail
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(
+            bar,
+            vec![("Super1Item".to_string(), Visibility::Super { levels: 1 })],
+        );
+        let use_path2 = UsePath::Simple(simple_path(&["crate", "foo", "bar", "Super1Item"]));
+        resolver2.add_module_uses(root, vec![use_stmt(use_path2)]);
+
+        let result2 = resolver2.resolve_all();
+        assert!(result2.is_err());
+    }
+
+    #[test]
+    fn test_pub_super_beyond_root() {
+        // pub(super) with levels exceeding tree depth should behave correctly
+        let mut graph = ModuleGraph::new();
+
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        let child = graph.add_node(ModuleNode::new(
+            "child".to_string(),
+            ash_core::module_graph::ModuleSource::File("child.ash".to_string()),
+        ));
+        graph.add_edge(root, child);
+
+        // Test pub(super, super) from child (only 1 level available)
+        let mut resolver = ImportResolver::new(&graph);
+        resolver.add_module_exports(
+            child,
+            vec![("Super2Item".to_string(), Visibility::Super { levels: 2 })],
+        );
+
+        // Root should be able to import (is within 2 levels up)
+        let use_path = UsePath::Simple(simple_path(&["crate", "child", "Super2Item"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        assert!(bindings.get(&root).unwrap().contains_key("Super2Item"));
+    }
+
+    #[test]
+    fn test_pub_in_path_deeply_nested() {
+        // Test pub(in path) with deeply nested restriction path
+        let mut graph = ModuleGraph::new();
+
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        // Create hierarchy: root -> a -> b -> c -> target
+        let a = graph.add_node(ModuleNode::new(
+            "a".to_string(),
+            ash_core::module_graph::ModuleSource::File("a.ash".to_string()),
+        ));
+        graph.add_edge(root, a);
+
+        let b = graph.add_node(ModuleNode::new(
+            "b".to_string(),
+            ash_core::module_graph::ModuleSource::File("a/b.ash".to_string()),
+        ));
+        graph.add_edge(a, b);
+
+        let c = graph.add_node(ModuleNode::new(
+            "c".to_string(),
+            ash_core::module_graph::ModuleSource::File("a/b/c.ash".to_string()),
+        ));
+        graph.add_edge(b, c);
+
+        let target = graph.add_node(ModuleNode::new(
+            "target".to_string(),
+            ash_core::module_graph::ModuleSource::File("a/b/c/target.ash".to_string()),
+        ));
+        graph.add_edge(c, target);
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in crate::a::b) export to target module
+        resolver.add_module_exports(
+            target,
+            vec![(
+                "DeepRestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::a::b".into(),
+                },
+            )],
+        );
+
+        // c (descendant of b) should succeed
+        let use_path1 = UsePath::Simple(simple_path(&[
+            "crate",
+            "a",
+            "b",
+            "c",
+            "target",
+            "DeepRestrictedItem",
+        ]));
+        resolver.add_module_uses(c, vec![use_stmt(use_path1)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        assert!(bindings.get(&c).unwrap().contains_key("DeepRestrictedItem"));
+
+        // a (ancestor of b, not descendant) should fail
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(
+            target,
+            vec![(
+                "DeepRestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::a::b".into(),
+                },
+            )],
+        );
+        let use_path2 = UsePath::Simple(simple_path(&[
+            "crate",
+            "a",
+            "b",
+            "c",
+            "target",
+            "DeepRestrictedItem",
+        ]));
+        resolver2.add_module_uses(a, vec![use_stmt(use_path2)]);
+
+        let result2 = resolver2.resolve_all();
+        assert!(result2.is_err());
+    }
+
+    #[test]
+    fn test_pub_in_path_empty_path_rejected() {
+        // Empty path in pub(in path) should be handled gracefully
+        let (graph, _root, foo, _bar, _baz, _sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add pub(in "") export - empty path
+        resolver.add_module_exports(
+            foo,
+            vec![(
+                "EmptyPathItem".to_string(),
+                Visibility::Restricted { path: "".into() },
+            )],
+        );
+
+        // Try to import from foo itself
+        let use_path = UsePath::Simple(simple_path(&["crate", "foo", "EmptyPathItem"]));
+        resolver.add_module_uses(foo, vec![use_stmt(use_path)]);
+
+        // Import should fail - empty path doesn't resolve
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, ImportError::PrivateItem { ref item, .. } if item == "EmptyPathItem"),
+            "Expected PrivateItem error for empty path, got: {:?}",
+            err
+        );
+    }
+
+    // =========================================================================
+    // TASK-335: Complex Hierarchy Tests
+    // =========================================================================
+
+    /// Helper to create a complex 5-level hierarchy with multiple branches
+    /// Structure:
+    ///                     crate (root)
+    ///                    /      \
+    ///                   /        \
+    ///                 left       right
+    ///                /   \       /   \
+    ///              l1    l2    r1    r2
+    ///             /      |     |      \
+    ///           l1a     l2a   r1a     r2a
+    fn create_complex_hierarchy_graph() -> (
+        ModuleGraph,
+        ModuleId, // root
+        ModuleId, // left
+        ModuleId, // right
+        ModuleId, // l1
+        ModuleId, // l2
+        ModuleId, // r1
+        ModuleId, // r2
+        ModuleId, // l1a
+        ModuleId, // r1a
+    ) {
+        let mut graph = ModuleGraph::new();
+
+        // Root
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        // Level 1: left, right
+        let left = graph.add_node(ModuleNode::new(
+            "left".to_string(),
+            ash_core::module_graph::ModuleSource::File("left.ash".to_string()),
+        ));
+        graph.add_edge(root, left);
+
+        let right = graph.add_node(ModuleNode::new(
+            "right".to_string(),
+            ash_core::module_graph::ModuleSource::File("right.ash".to_string()),
+        ));
+        graph.add_edge(root, right);
+
+        // Level 2: l1, l2 (children of left), r1, r2 (children of right)
+        let l1 = graph.add_node(ModuleNode::new(
+            "l1".to_string(),
+            ash_core::module_graph::ModuleSource::File("left/l1.ash".to_string()),
+        ));
+        graph.add_edge(left, l1);
+
+        let l2 = graph.add_node(ModuleNode::new(
+            "l2".to_string(),
+            ash_core::module_graph::ModuleSource::File("left/l2.ash".to_string()),
+        ));
+        graph.add_edge(left, l2);
+
+        let r1 = graph.add_node(ModuleNode::new(
+            "r1".to_string(),
+            ash_core::module_graph::ModuleSource::File("right/r1.ash".to_string()),
+        ));
+        graph.add_edge(right, r1);
+
+        let r2 = graph.add_node(ModuleNode::new(
+            "r2".to_string(),
+            ash_core::module_graph::ModuleSource::File("right/r2.ash".to_string()),
+        ));
+        graph.add_edge(right, r2);
+
+        // Level 3: l1a (child of l1), r1a (child of r1)
+        let l1a = graph.add_node(ModuleNode::new(
+            "l1a".to_string(),
+            ash_core::module_graph::ModuleSource::File("left/l1/l1a.ash".to_string()),
+        ));
+        graph.add_edge(l1, l1a);
+
+        let r1a = graph.add_node(ModuleNode::new(
+            "r1a".to_string(),
+            ash_core::module_graph::ModuleSource::File("right/r1/r1a.ash".to_string()),
+        ));
+        graph.add_edge(r1, r1a);
+
+        (graph, root, left, right, l1, l2, r1, r2, l1a, r1a)
+    }
+
+    #[test]
+    fn test_visibility_complex_hierarchy() {
+        // Test complex hierarchy with mix of visibility types
+        let (graph, root, left, right, l1, l2, _r1, _r2, l1a, r1a) =
+            create_complex_hierarchy_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add various visibility exports to l1a
+        resolver.add_module_exports(
+            l1a,
+            vec![
+                ("PubItem".to_string(), Visibility::Public),
+                ("SuperItem".to_string(), Visibility::Super { levels: 1 }),
+                (
+                    "RestrictedItem".to_string(),
+                    Visibility::Restricted {
+                        path: "crate::left".into(),
+                    },
+                ),
+                ("PrivateItem".to_string(), Visibility::Inherited),
+            ],
+        );
+
+        // Test 1: l1 (parent of l1a) can import SuperItem
+        let use_path1 = UsePath::Simple(simple_path(&["crate", "left", "l1", "l1a", "SuperItem"]));
+        resolver.add_module_uses(l1, vec![use_stmt(use_path1)]);
+
+        // Test 2: left (grandparent of l1a) can import RestrictedItem (restricted to crate::left)
+        let use_path2 = UsePath::Simple(simple_path(&[
+            "crate",
+            "left",
+            "l1",
+            "l1a",
+            "RestrictedItem",
+        ]));
+        resolver.add_module_uses(left, vec![use_stmt(use_path2)]);
+
+        // Test 3: root can import PubItem
+        let use_path3 = UsePath::Simple(simple_path(&["crate", "left", "l1", "l1a", "PubItem"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path3)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+
+        // Verify all allowed imports
+        assert!(bindings.get(&l1).unwrap().contains_key("SuperItem"));
+        assert!(bindings.get(&left).unwrap().contains_key("RestrictedItem"));
+        assert!(bindings.get(&root).unwrap().contains_key("PubItem"));
+
+        // Test 4: right (different branch) can only import PubItem
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(
+            l1a,
+            vec![
+                ("PubItem".to_string(), Visibility::Public),
+                ("SuperItem".to_string(), Visibility::Super { levels: 1 }),
+                (
+                    "RestrictedItem".to_string(),
+                    Visibility::Restricted {
+                        path: "crate::left".into(),
+                    },
+                ),
+            ],
+        );
+        let use_path4 = UsePath::Simple(simple_path(&["crate", "left", "l1", "l1a", "PubItem"]));
+        resolver2.add_module_uses(right, vec![use_stmt(use_path4)]);
+
+        let bindings2 = resolver2.resolve_all().unwrap();
+        assert!(bindings2.get(&right).unwrap().contains_key("PubItem"));
+
+        // Test 5: right should NOT be able to import SuperItem
+        let mut resolver3 = ImportResolver::new(&graph);
+        resolver3.add_module_exports(
+            l1a,
+            vec![("SuperItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+        let use_path5 = UsePath::Simple(simple_path(&["crate", "left", "l1", "l1a", "SuperItem"]));
+        resolver3.add_module_uses(right, vec![use_stmt(use_path5)]);
+
+        let result3 = resolver3.resolve_all();
+        assert!(result3.is_err());
+
+        // Test 6: r1a should NOT be able to import RestrictedItem (restricted to crate::left)
+        let mut resolver4 = ImportResolver::new(&graph);
+        resolver4.add_module_exports(
+            l1a,
+            vec![(
+                "RestrictedItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::left".into(),
+                },
+            )],
+        );
+        let use_path6 = UsePath::Simple(simple_path(&[
+            "crate",
+            "left",
+            "l1",
+            "l1a",
+            "RestrictedItem",
+        ]));
+        resolver4.add_module_uses(r1a, vec![use_stmt(use_path6)]);
+
+        let result4 = resolver4.resolve_all();
+        assert!(result4.is_err());
+
+        // Test 7: l2 (sibling branch of l1) should NOT be able to import SuperItem
+        let mut resolver5 = ImportResolver::new(&graph);
+        resolver5.add_module_exports(
+            l1a,
+            vec![("SuperItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+        let use_path7 = UsePath::Simple(simple_path(&["crate", "left", "l1", "l1a", "SuperItem"]));
+        resolver5.add_module_uses(l2, vec![use_stmt(use_path7)]);
+
+        let result5 = resolver5.resolve_all();
+        assert!(result5.is_err());
+    }
+
+    #[test]
+    fn test_visibility_cross_branch() {
+        // Test visibility between different branches of module tree
+        let (graph, _root, left, right, l1, _l2, r1, _r2, _l1a, _r1a) =
+            create_complex_hierarchy_graph();
+
+        // Test: pub(crate) should work across branches
+        let mut graph_with_crate = graph;
+        let crate_a = CrateId(0);
+        for module_id in [&left, &right, &l1, &r1] {
+            graph_with_crate.set_crate(*module_id, crate_a);
+        }
+
+        let mut resolver = ImportResolver::new(&graph_with_crate);
+
+        // Add pub(crate) export to l1
+        resolver.add_module_exports(l1, vec![("CrateItem".to_string(), Visibility::Crate)]);
+
+        // r1 (different branch, same crate) should be able to import
+        let use_path = UsePath::Simple(simple_path(&["crate", "left", "l1", "CrateItem"]));
+        resolver.add_module_uses(r1, vec![use_stmt(use_path)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        assert!(bindings.get(&r1).unwrap().contains_key("CrateItem"));
+
+        // Test: pub(in crate::right) from l1 should be rejected by r1
+        let mut resolver2 = ImportResolver::new(&graph_with_crate);
+        resolver2.add_module_exports(
+            l1,
+            vec![(
+                "LeftOnlyItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::left".into(),
+                },
+            )],
+        );
+
+        let use_path2 = UsePath::Simple(simple_path(&["crate", "left", "l1", "LeftOnlyItem"]));
+        resolver2.add_module_uses(r1, vec![use_stmt(use_path2)]);
+
+        let result2 = resolver2.resolve_all();
+        assert!(result2.is_err());
+
+        // Test: pub(in crate::right) from r1 should be visible to r1 but not l1
+        let mut resolver3 = ImportResolver::new(&graph_with_crate);
+        resolver3.add_module_exports(
+            r1,
+            vec![(
+                "RightOnlyItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::right".into(),
+                },
+            )],
+        );
+
+        // r1 can import its own restricted item
+        let use_path3 = UsePath::Simple(simple_path(&["crate", "right", "r1", "RightOnlyItem"]));
+        resolver3.add_module_uses(r1, vec![use_stmt(use_path3)]);
+
+        let bindings3 = resolver3.resolve_all().unwrap();
+        assert!(bindings3.get(&r1).unwrap().contains_key("RightOnlyItem"));
+
+        // l1 cannot import it
+        let mut resolver4 = ImportResolver::new(&graph_with_crate);
+        resolver4.add_module_exports(
+            r1,
+            vec![(
+                "RightOnlyItem".to_string(),
+                Visibility::Restricted {
+                    path: "crate::right".into(),
+                },
+            )],
+        );
+        let use_path4 = UsePath::Simple(simple_path(&["crate", "right", "r1", "RightOnlyItem"]));
+        resolver4.add_module_uses(l1, vec![use_stmt(use_path4)]);
+
+        let result4 = resolver4.resolve_all();
+        assert!(result4.is_err());
+    }
+
+    #[test]
+    fn test_visibility_self_only() {
+        // Test pub(self) visibility - should NOT be visible from any importing module
+        // Note: pub(self) is effectively private; items are only accessible within
+        // the same module without going through import resolution
+        let (graph, _root, foo, _bar, _baz, _sibling) = create_four_level_graph();
+
+        // root (parent) should NOT be able to import from foo with pub(self)
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(foo, vec![("SelfItem".to_string(), Visibility::Self_)]);
+        let use_path2 = UsePath::Simple(simple_path(&["crate", "foo", "SelfItem"]));
+        resolver2.add_module_uses(
+            graph.get_root().copied().unwrap(),
+            vec![use_stmt(use_path2)],
+        );
+
+        let result2 = resolver2.resolve_all();
+        assert!(result2.is_err());
+
+        // bar (descendant) should NOT be able to import from foo with pub(self)
+        let mut resolver3 = ImportResolver::new(&graph);
+        resolver3.add_module_exports(foo, vec![("SelfItem".to_string(), Visibility::Self_)]);
+        let use_path3 = UsePath::Simple(simple_path(&["crate", "foo", "SelfItem"]));
+        resolver3.add_module_uses(_bar, vec![use_stmt(use_path3)]);
+
+        let result3 = resolver3.resolve_all();
+        assert!(result3.is_err());
+    }
+
+    #[test]
+    fn test_visibility_mixed_imports() {
+        // Test module importing items with different visibilities from same source
+        let (graph, root, foo, bar, _baz, _sibling) = create_four_level_graph();
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Add mixed visibility exports to bar (excluding Crate which needs crate assignment)
+        resolver.add_module_exports(
+            bar,
+            vec![
+                ("PubItem".to_string(), Visibility::Public),
+                ("SuperItem".to_string(), Visibility::Super { levels: 1 }),
+                ("PrivateItem".to_string(), Visibility::Inherited),
+            ],
+        );
+
+        // foo (parent of bar) tries to import public and super-visible items
+        let use_items = vec![
+            UseItem {
+                name: "PubItem".into(),
+                alias: None,
+            },
+            UseItem {
+                name: "SuperItem".into(),
+                alias: None,
+            },
+        ];
+        let use_path = UsePath::Nested(simple_path(&["crate", "foo", "bar"]), use_items);
+        resolver.add_module_uses(foo, vec![use_stmt(use_path)]);
+
+        // Should succeed for the visible items
+        let bindings = resolver.resolve_all().unwrap();
+        let foo_bindings = bindings.get(&foo).unwrap();
+
+        assert!(foo_bindings.contains_key("PubItem"));
+        assert!(foo_bindings.contains_key("SuperItem"));
+
+        // root (grandparent) tries to import SuperItem - should fail (levels=1 only allows parent)
+        let mut resolver2 = ImportResolver::new(&graph);
+        resolver2.add_module_exports(
+            bar,
+            vec![("SuperItem".to_string(), Visibility::Super { levels: 1 })],
+        );
+        let use_path2 = UsePath::Simple(simple_path(&["crate", "foo", "bar", "SuperItem"]));
+        resolver2.add_module_uses(root, vec![use_stmt(use_path2)]);
+
+        let result2 = resolver2.resolve_all();
+        assert!(result2.is_err());
     }
 }

@@ -457,11 +457,8 @@ mod tests {
         assert_eq!(result, Some(foo));
 
         // Resolve "crate::foo::bar"
-        let result = graph.resolve_path(&[
-            "crate".to_string(),
-            "foo".to_string(),
-            "bar".to_string(),
-        ]);
+        let result =
+            graph.resolve_path(&["crate".to_string(), "foo".to_string(), "bar".to_string()]);
         assert_eq!(result, Some(bar));
     }
 

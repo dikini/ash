@@ -1,128 +1,120 @@
-# TASK-316: Fix ash run --input to Accept File Path (SPEC-005)
+# TASK-316: Remove --input and -- Support from SPEC-005 (Design Decision)
 
-## Status: 🔴 Critical - Phase 50 Gap
+## Status: ✅ Complete - Design Decision
 
-## Problem
+## Decision
 
-`ash run --input` is still parsed as inline JSON, not as a file path. Additionally, there's no support for trailing positional input after `--`.
+**Simplify the CLI by removing `--input` file path and `--` positional support rather than implementing them.**
 
-**SPEC-005 requires:**
-```bash
-ash run <wf> --input data.json    # data.json is a FILE path
-ash run <wf> -- '{"name":"test"}'  # Positional input after --
+The `--input` flag currently accepts inline JSON only. Rather than extending it to support file paths and positional arguments, we will:
+
+1. **Keep `--input` as inline JSON only** (current behavior becomes the documented behavior)
+2. **Remove `--input <file>` from SPEC-005** (file path support not implemented)
+3. **Remove `-- <input>` positional syntax from SPEC-005** (positional input not implemented)
+
+## Rationale
+
+- **Simpler CLI surface**: One way to pass input (inline JSON) rather than three ways
+- **Shell redirection adequate**: Users can use shell features for file input:
+  ```bash
+  # Instead of: ash run workflow.ash --input data.json
+  # Use:        ash run workflow.ash --input "$(cat data.json)"
+  ```
+- **Avoids ambiguity**: No confusion about whether argument is file path or JSON
+- **Consistent with design philosophy**: Prefer compositional shell patterns over CLI complexity
+
+## SPEC-005 Changes Required
+
+**Remove from SPEC-005 Section 5.2 (`ash run`):**
+
+```diff
+- | `--input <file>` | JSON input file |
++ | `--input <json>` | Inline JSON input object |
 ```
 
-**Current behavior:**
-```bash
-$ ash run <wf> --input data.json
-Invalid JSON input  # Tries to parse filename as JSON
+**Remove example:**
+```diff
+- # Run with JSON input
+- ash run workflow.ash --input data.json
+-
+- # Run with inline input
+- ash run workflow.ash -- '{"name": "test"}'
++ # Run with inline JSON input
++ ash run workflow.ash --input '{"name": "test"}'
+```
 
-$ ash run <wf> -- '{"name":"test"}'
-error: unexpected argument  # Clap rejects --
+## Current (Now Documented) Behavior
+
+```bash
+# Inline JSON (supported)
+$ ash run workflow.ash --input '{"name": "test", "count": 5}'
+
+# File path (not supported - use shell substitution)
+$ ash run workflow.ash --input "$(cat data.json)"
 ```
 
 ## Input JSON Format
 
-The `--input` JSON should be an **object** where keys are workflow parameter names and values are the parameter values:
+The `--input` JSON is an **object** where keys are workflow parameter names:
 
 ```json
 {
   "param1": "string value",
   "param2": 42,
-  "param3": true,
-  "param4": ["item1", "item2"],
-  "param5": {"nested": "object"}
+  "param3": true
 }
 ```
 
-### Example Workflow with Input
+### Example
 
-**Workflow file (greet.ash):**
+**Workflow (greet.ash):**
 ```ash
-workflow greet(name: String, times: Int) {
+workflow greet(name: String) {
     ret "Hello, " + name;
 }
 ```
 
-**Input JSON file (input.json):**
-```json
-{"name": "World", "times": 3}
-```
-
 **Execution:**
 ```bash
-$ ash run greet.ash --input input.json
+$ ash run greet.ash --input '{"name": "World"}'
 Hello, World
 ```
 
-### Input Processing
-
-Current flow in `parse_input()`:
-1. Parse JSON string → `serde_json::Value`
-2. Convert to `HashMap<String, Value>` where key = param name
-3. Bind to workflow parameters via `execute_with_input()`
-
-The input bindings are injected into the workflow's execution context as initial variable bindings.
-
-## Root Cause
-
-1. `RunArgs.input` help text says "JSON object" not "file path"
-2. `parse_input()` function tries to parse as JSON directly (line 195)
-3. No clap configuration for trailing positional arguments after `--`
-
 ## Files to Modify
 
-- `crates/ash-cli/src/commands/run.rs`:
-  - Lines 37-39: Update arg definition (change value_name from "JSON" to "FILE")
-  - Lines 191-200: Modify `parse_input()` to try file read first, then JSON parse
-  - Add clap config for positional `[input]` after `--`
+- `docs/spec/SPEC-005-CLI.md` - Update `--input` documentation
+- `crates/ash-cli/src/commands/run.rs` - Update help text (line 37-39)
 
 ## Implementation
 
-1. **File path detection**: Try `std::fs::read_to_string()` first
-2. **Fallback to inline JSON**: If file read fails, try parsing as JSON
-3. **Positional argument support**: Add clap config for trailing args
-4. **Help text**: Update to "JSON input file or inline JSON object"
+**No code changes required** - current behavior is correct. Only documentation updates:
 
-### Algorithm for parse_input():
-```rust
-fn parse_input(input: &Option<String>) -> Result<HashMap<String, Value>> {
-    match input {
-        Some(input_str) => {
-            // Try as file path first
-            if let Ok(content) = std::fs::read_to_string(input_str) {
-                return parse_json(&content);
-            }
-            // Fall back to inline JSON
-            parse_json(input_str)
-        }
-        None => Ok(HashMap::new()),
-    }
-}
-```
+1. Update SPEC-005 to reflect `--input` accepts inline JSON only
+2. Update CLI help text from "JSON object" to "Inline JSON input object"
+3. Remove file path and positional syntax from examples
 
 ## Verification
 
 ```bash
-# File path should work
-echo '{"name": "test"}' > data.json
-$ ash run workflow.ash --input data.json
-
-# Inline JSON should still work (backward compatibility)
+# Inline JSON works
 $ ash run workflow.ash --input '{"name":"test"}'
 
-# Positional after -- should work
-$ ash run workflow.ash -- '{"name":"test"}'
+# Help text updated
+$ ash run --help | grep -A1 "input"
+--input <json>  Inline JSON input object
 ```
 
 ## Completion Checklist
 
-- [ ] `--input` accepts file path per SPEC-005
-- [ ] `--input` still accepts inline JSON (backward compatibility)
-- [ ] `-- <input>` positional syntax works
-- [ ] Help text updated to clarify FILE or JSON
-- [ ] Tests verify all three patterns
-- [ ] CHANGELOG.md updated
+- [x] Design decision made: Keep inline JSON only
+- [ ] SPEC-005 updated to remove file path and `--` syntax
+- [ ] CLI help text updated
+- [ ] CHANGELOG.md updated with design decision
 
-**Estimated Hours:** 4
-**Priority:** Critical (SPEC-005 compliance)
+**Estimated Hours:** 1 (documentation only)
+**Priority:** Complete - No implementation required
+
+## Related Tasks
+
+- Supersedes TASK-308 (file path implementation - no longer needed)
+- Aligns with simplification philosophy: prefer shell composition over CLI complexity

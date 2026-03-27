@@ -307,6 +307,9 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
             anyhow::anyhow!("verification error: capability not found: {name}")
         }
         EngineError::Io(error) => anyhow::anyhow!("io error: {error}"),
+        EngineError::Configuration(message) => {
+            anyhow::anyhow!("configuration error: {message}")
+        }
     }
 }
 
@@ -456,7 +459,7 @@ mod tests {
     }
 
     #[test]
-    fn test_build_engine_with_http_capability() {
+    fn test_build_engine_with_http_capability_returns_error() {
         let args = RunArgs {
             path: "test.ash".to_string(),
             input: None,
@@ -468,12 +471,15 @@ mod tests {
             capability: vec!["http".to_string()],
         };
 
+        // HTTP provider not yet implemented - should return error
         let result = build_engine(&args);
-        assert!(result.is_ok(), "Engine should build with http capability");
+        assert!(result.is_err(), "Engine should fail with http capability");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("HTTP provider not yet implemented"));
     }
 
     #[test]
-    fn test_build_engine_with_multiple_capabilities() {
+    fn test_build_engine_with_multiple_capabilities_returns_error() {
         let args = RunArgs {
             path: "test.ash".to_string(),
             input: None,
@@ -485,11 +491,14 @@ mod tests {
             capability: vec!["stdio".to_string(), "fs".to_string(), "http".to_string()],
         };
 
+        // HTTP provider not yet implemented - should return error
         let result = build_engine(&args);
         assert!(
-            result.is_ok(),
-            "Engine should build with multiple capabilities"
+            result.is_err(),
+            "Engine should fail when http capability included"
         );
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("HTTP provider not yet implemented"));
     }
 
     #[test]

@@ -100,6 +100,9 @@ impl From<ash_engine::EngineError> for ReplError {
             ash_engine::EngineError::CapabilityNotFound(cap) => {
                 Self::Engine(format!("capability not found: {cap}"))
             }
+            ash_engine::EngineError::Configuration(msg) => {
+                Self::Engine(format!("configuration error: {msg}"))
+            }
         }
     }
 }

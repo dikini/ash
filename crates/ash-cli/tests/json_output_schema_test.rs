@@ -156,8 +156,8 @@ fn test_json_error_structure() {
     );
 
     // Check diagnostic structure if there are errors
-    if let Some(diagnostics) = json["diagnostics"].as_array() {
-        if !diagnostics.is_empty() {
+    if let Some(diagnostics) = json["diagnostics"].as_array()
+        && !diagnostics.is_empty() {
             let error = &diagnostics[0];
             assert!(
                 error.get("severity").is_some(),
@@ -173,7 +173,6 @@ fn test_json_error_structure() {
                 "error should have location field"
             );
         }
-    }
 }
 
 #[test]
@@ -201,8 +200,8 @@ fn test_json_location_structure() {
     let json: Value = serde_json::from_str(&json_str).expect("Failed to parse JSON output");
 
     // Check location structure if there are errors
-    if let Some(diagnostics) = json["diagnostics"].as_array() {
-        if !diagnostics.is_empty() {
+    if let Some(diagnostics) = json["diagnostics"].as_array()
+        && !diagnostics.is_empty() {
             let location = &diagnostics[0]["location"];
             assert!(
                 location.get("file").is_some(),
@@ -217,7 +216,6 @@ fn test_json_location_structure() {
                 "location should have column field"
             );
         }
-    }
 }
 
 #[test]

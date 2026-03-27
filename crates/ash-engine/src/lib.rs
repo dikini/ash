@@ -442,12 +442,11 @@ impl EngineBuilder {
         }
 
         // Register HTTP provider if configured
-        // Note: HTTP provider is not yet implemented. The config is accepted for API
-        // compatibility but HTTP operations will require a custom provider.
-        // See: https://github.com/dikini/ash/issues/XXX
+        // Note: HTTP provider is not yet implemented.
         if self.http_config.is_some() {
-            // HTTP provider would be registered here when implemented
-            // For now, we just acknowledge the config was provided
+            return Err(EngineError::Configuration(
+                "HTTP provider not yet implemented. Use with_custom_provider() to add your own HTTP implementation.".to_string(),
+            ));
         }
 
         // Register custom providers (these can override built-ins)
@@ -503,9 +502,15 @@ impl EngineBuilder {
     /// These are operational-effect capabilities for HTTP operations.
     /// Uses the provided configuration for timeout, redirects, and SSL verification.
     ///
+    /// # Note
+    ///
+    /// HTTP provider is not yet implemented. Calling `build()` after using this method
+    /// will return a `Configuration` error. Use `with_custom_provider()` to add your own
+    /// HTTP implementation.
+    ///
     /// # Example
     ///
-    /// ```
+    /// ```should_panic
     /// use ash_engine::{Engine, HttpConfig};
     ///
     /// let config = HttpConfig {
@@ -513,6 +518,7 @@ impl EngineBuilder {
     ///     max_redirects: 5,
     ///     verify_ssl: true,
     /// };
+    /// // This will panic because HTTP provider is not yet implemented
     /// let engine = Engine::new()
     ///     .with_http_capabilities(config)
     ///     .build()
@@ -891,21 +897,29 @@ mod tests {
     // ============================================================
 
     #[test]
-    fn test_builder_http_capabilities_chaining() {
-        // with_http_capabilities should return Self for chaining
+    fn test_builder_http_capabilities_returns_error() {
+        // HTTP provider is not yet implemented, should return Configuration error
         let config = HttpConfig::new();
-        let builder = Engine::new();
-        let builder = builder.with_http_capabilities(config);
-        let result = builder.build();
+        let result = Engine::new().with_http_capabilities(config).build();
         assert!(
-            result.is_ok(),
-            "Builder with HTTP capabilities should build successfully (config accepted for API compatibility)"
+            result.is_err(),
+            "Builder with HTTP capabilities should return error (not yet implemented)"
+        );
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, EngineError::Configuration(_)),
+            "Error should be Configuration variant"
+        );
+        let err_msg = format!("{err}");
+        assert!(
+            err_msg.contains("HTTP provider not yet implemented"),
+            "Error message should indicate HTTP not implemented: {err_msg}"
         );
     }
 
     #[test]
-    fn test_builder_http_capabilities_with_custom_config() {
-        // Test with custom HTTP configuration (config accepted for API compatibility)
+    fn test_builder_http_capabilities_with_custom_config_returns_error() {
+        // HTTP provider is not yet implemented, should return Configuration error
         let config = HttpConfig {
             timeout_seconds: 60,
             max_redirects: 5,
@@ -913,8 +927,13 @@ mod tests {
         };
         let result = Engine::new().with_http_capabilities(config).build();
         assert!(
-            result.is_ok(),
-            "Builder with custom HTTP config should build successfully"
+            result.is_err(),
+            "Builder with custom HTTP config should return error (not yet implemented)"
+        );
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, EngineError::Configuration(_)),
+            "Error should be Configuration variant"
         );
     }
 
@@ -983,36 +1002,48 @@ mod tests {
     // ============================================================
 
     #[test]
-    fn test_builder_all_capabilities_together() {
-        // All capability methods should work together
+    fn test_builder_stdio_fs_custom_together() {
+        // Test stdio, fs, and custom providers together (HTTP returns error until implemented)
         use providers::StdioProvider;
 
         let result = Engine::new()
             .with_stdio_capabilities()
             .with_fs_capabilities()
-            .with_http_capabilities(HttpConfig::new())
             .with_custom_provider("custom", std::sync::Arc::new(StdioProvider::new()))
             .build();
 
         assert!(
             result.is_ok(),
-            "Builder with all capabilities should build successfully"
+            "Builder with stdio, fs, and custom providers should build successfully"
         );
     }
 
     #[test]
-    fn test_builder_complex_chaining_order() {
-        // Different ordering should all work
-        use providers::StdioProvider;
-
-        let engine1 = Engine::new()
+    fn test_builder_http_with_other_capabilities_returns_error() {
+        // HTTP provider not yet implemented - should return error even with other capabilities
+        let result = Engine::new()
             .with_stdio_capabilities()
             .with_fs_capabilities()
             .with_http_capabilities(HttpConfig::new())
             .build();
 
+        assert!(
+            result.is_err(),
+            "Builder with HTTP should return error (not yet implemented)"
+        );
+    }
+
+    #[test]
+    fn test_builder_complex_chaining_order_without_http() {
+        // Different ordering should all work (without HTTP which returns error)
+        use providers::StdioProvider;
+
+        let engine1 = Engine::new()
+            .with_stdio_capabilities()
+            .with_fs_capabilities()
+            .build();
+
         let engine2 = Engine::new()
-            .with_http_capabilities(HttpConfig::new())
             .with_custom_provider("custom", std::sync::Arc::new(StdioProvider::new()))
             .with_stdio_capabilities()
             .build();

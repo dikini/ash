@@ -17,7 +17,7 @@ pub enum CliError {
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
 
-    /// Type error - exit code 3
+    /// Type error - exit code 1 (per SPEC-005)
     #[error("type error: {message}")]
     TypeError {
         message: String,
@@ -40,7 +40,7 @@ pub enum CliError {
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
 
-    /// I/O error - exit code 6
+    /// I/O error - exit code 3 (per SPEC-005)
     #[error("I/O error: {message}")]
     IoError {
         message: String,
@@ -78,10 +78,10 @@ impl CliError {
     pub fn exit_code(&self) -> ExitCode {
         match self {
             CliError::ParseError { .. } => ExitCode::from(2),
-            CliError::TypeError { .. } => ExitCode::from(3),
+            CliError::TypeError { .. } => ExitCode::from(1),  // SPEC-005: type errors = 1
             CliError::VerificationError { .. } => ExitCode::from(4),
             CliError::RuntimeError { .. } => ExitCode::from(5),
-            CliError::IoError { .. } => ExitCode::from(6),
+            CliError::IoError { .. } => ExitCode::from(3),    // SPEC-005: I/O errors = 3
             CliError::Timeout { .. } => ExitCode::from(7),
             CliError::UnknownCommand { .. } => ExitCode::from(127),
             CliError::General { .. } => ExitCode::from(1),
@@ -194,8 +194,14 @@ impl From<anyhow::Error> for CliError {
                 source: None,
             }
         } else if msg.contains("timeout") {
-            // Try to extract seconds from message
-            CliError::Timeout { seconds: 0 }
+            // Extract seconds from message like "timeout after 5s"
+            let seconds = msg
+                .split("after ")
+                .nth(1)
+                .and_then(|s| s.split('s').next())
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+            CliError::Timeout { seconds }
         } else {
             CliError::General {
                 message: err.to_string(),
@@ -219,7 +225,7 @@ mod tests {
         );
         assert_eq!(
             CliError::type_error("test", std::io::Error::other("test")).exit_code(),
-            ExitCode::from(3)
+            ExitCode::from(1) // SPEC-005: type errors = 1
         );
         assert_eq!(
             CliError::verification("test", vec![]).exit_code(),
@@ -231,7 +237,7 @@ mod tests {
         );
         assert_eq!(
             CliError::io("test", None, std::io::Error::other("test")).exit_code(),
-            ExitCode::from(6)
+            ExitCode::from(3) // SPEC-005: I/O errors = 3
         );
         assert_eq!(CliError::timeout(30).exit_code(), ExitCode::from(7));
         assert_eq!(
@@ -260,6 +266,33 @@ mod tests {
     fn test_from_anyhow_type() {
         let anyhow_err = anyhow::anyhow!("type error: expected int, got string");
         let cli_err: CliError = anyhow_err.into();
-        assert_eq!(cli_err.exit_code(), ExitCode::from(3));
+        assert_eq!(cli_err.exit_code(), ExitCode::from(1)); // SPEC-005: type errors = 1
+    }
+
+    #[test]
+    fn test_from_anyhow_timeout_extracts_seconds() {
+        // Test that timeout seconds are extracted from the message
+        let anyhow_err = anyhow::anyhow!("timeout after 5s");
+        let cli_err: CliError = anyhow_err.into();
+        assert_eq!(cli_err.exit_code(), ExitCode::from(7));
+        assert_eq!(cli_err.to_string(), "timeout after 5s");
+    }
+
+    #[test]
+    fn test_from_anyhow_timeout_large_value() {
+        // Test with a larger timeout value
+        let anyhow_err = anyhow::anyhow!("timeout after 300s");
+        let cli_err: CliError = anyhow_err.into();
+        assert_eq!(cli_err.exit_code(), ExitCode::from(7));
+        assert_eq!(cli_err.to_string(), "timeout after 300s");
+    }
+
+    #[test]
+    fn test_from_anyhow_timeout_defaults_to_zero() {
+        // Test that malformed timeout messages default to 0
+        let anyhow_err = anyhow::anyhow!("timeout occurred");
+        let cli_err: CliError = anyhow_err.into();
+        assert_eq!(cli_err.exit_code(), ExitCode::from(7));
+        assert_eq!(cli_err.to_string(), "timeout after 0s");
     }
 }

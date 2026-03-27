@@ -217,14 +217,14 @@ fn output_json(
     total_time: std::time::Duration,
 ) -> CliResult<()> {
     let success = result.is_ok();
-    // Determine exit code based on error type
+    // Determine exit code based on error type (per SPEC-005)
     let exit_code = if success {
         0
     } else {
         match result {
             Err(CliError::ParseError { .. }) => 2,
-            Err(CliError::TypeError { .. }) => 3,
-            Err(CliError::IoError { .. }) => 6,
+            Err(CliError::TypeError { .. }) => 1,  // SPEC-005: type errors = 1
+            Err(CliError::IoError { .. }) => 3,    // SPEC-005: I/O errors = 3
             _ => 1,
         }
     };

@@ -140,19 +140,37 @@ fn test_engine_with_providers_is_send_sync() {
     let _ = &engine;
 }
 
-/// Test engine with all capabilities combined
+/// Test engine with all capabilities combined (HTTP returns error until implemented)
 #[test]
-fn test_engine_builder_all_capabilities() {
-    use ash_engine::HttpConfig;
-
+fn test_engine_builder_all_capabilities_except_http() {
     let custom_provider = TestProvider::new("custom");
 
+    // HTTP provider not yet implemented - test without it
     let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
-        .with_http_capabilities(HttpConfig::new())
         .with_custom_provider("custom", Arc::new(custom_provider))
         .build();
 
-    assert!(engine.is_ok(), "Engine should build with all capabilities");
+    assert!(
+        engine.is_ok(),
+        "Engine should build with stdio, fs, and custom providers"
+    );
+}
+
+/// Test that HTTP capabilities returns error (not yet implemented)
+#[test]
+fn test_http_capabilities_returns_error() {
+    use ash_engine::HttpConfig;
+
+    let result = Engine::new()
+        .with_stdio_capabilities()
+        .with_fs_capabilities()
+        .with_http_capabilities(HttpConfig::new())
+        .build();
+
+    assert!(
+        result.is_err(),
+        "Engine should return error when HTTP capabilities requested (not yet implemented)"
+    );
 }

@@ -287,6 +287,9 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
             anyhow::anyhow!("verification error: capability not found: {message}")
         }
         EngineError::Io(error) => anyhow::anyhow!("io error: {error}"),
+        EngineError::Configuration(message) => {
+            anyhow::anyhow!("configuration error: {message}")
+        }
     }
 }
 

@@ -751,16 +751,31 @@ async fn test_engine_with_fs_role_simulation() {
 }
 
 #[tokio::test]
-async fn test_engine_with_all_capabilities_role_simulation() {
+async fn test_engine_with_stdio_fs_capabilities_role_simulation() {
+    // HTTP provider not yet implemented - test without it
     let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
-        .with_http_capabilities(HttpConfig::new())
         .build()
         .expect("engine builds");
 
     let result = engine.run("workflow main { ret 42; }").await;
     assert!(result.is_ok());
+}
+
+#[test]
+fn test_engine_with_http_capabilities_returns_error() {
+    // HTTP provider not yet implemented - should return error
+    let result = Engine::new()
+        .with_stdio_capabilities()
+        .with_fs_capabilities()
+        .with_http_capabilities(HttpConfig::new())
+        .build();
+
+    assert!(
+        result.is_err(),
+        "Engine should return error when HTTP capabilities requested"
+    );
 }
 
 // ============================================================

@@ -456,7 +456,7 @@ fn test_global_flags_with_subcommands() {
     }
 }
 
-/// Test that I/O errors (file not found) return exit code 6
+/// Test that I/O errors (file not found) return exit code 3
 #[test]
 fn test_exit_code_io_error() {
     let output = Command::new("cargo")
@@ -474,12 +474,12 @@ fn test_exit_code_io_error() {
     println!("Exit code: {:?}", output.status.code());
     println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
 
-    // I/O errors should return exit code 6 per SPEC-005
+    // I/O errors should return exit code 3 per SPEC-005
     assert!(!output.status.success(), "Expected failure for I/O error");
     assert_eq!(
         output.status.code(),
-        Some(6),
-        "I/O errors should return exit code 6"
+        Some(3),
+        "I/O errors should return exit code 3"
     );
 }
 

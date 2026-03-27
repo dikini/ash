@@ -14,6 +14,9 @@ impl From<EngineError> for ash_interp::ExecError {
             EngineError::Execution(msg) => Self::ExecutionFailed(msg),
             EngineError::Io(io_err) => Self::Io(io_err.to_string()),
             EngineError::CapabilityNotFound(cap) => Self::CapabilityNotAvailable(cap),
+            EngineError::Configuration(msg) => {
+                Self::ExecutionFailed(format!("configuration error: {msg}"))
+            }
         }
     }
 }
@@ -56,6 +59,10 @@ pub enum EngineError {
     /// Capability not found or not available
     #[error("capability not found: {0}")]
     CapabilityNotFound(String),
+
+    /// Configuration error (invalid or unsupported configuration)
+    #[error("configuration error: {0}")]
+    Configuration(String),
 }
 
 #[cfg(test)]

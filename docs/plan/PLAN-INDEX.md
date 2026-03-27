@@ -1182,7 +1182,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** External audit findings from comprehensive code review  
 **Priority:** Critical to Medium  
-**Status:** ✅ Complete
+**Status:** ⚠️ Partial - Critical gaps identified in post-review
 
 ### 48.1: Critical Runtime Fixes (High Priority)
 
@@ -1224,25 +1224,32 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-298](tasks/TASK-298-json-output-schema.md) | Fix JSON output schema for ash check | SPEC-005/021 | 6 | ✅ Complete |
 | [TASK-288](tasks/TASK-288-repl-ast-command.md) | Fix REPL :ast command output | SPEC-011 | 6 | ✅ Complete |
 
-**Phase 48 Deliverable:** All Phase 46 review findings addressed, proxy workflows, role enforcement, CLI/REPL compliance, and type system soundness fully functional.
+**Phase 48 Deliverable:** Partial - Critical gaps identified
 
 **Summary:**
-- 15 tasks covering all findings_1.md findings (all ✅ Complete)
+- 15 tasks marked complete but **CRITICAL GAPS IDENTIFIED**:
+  - TASK-293: CLI SPEC-005 compliance incomplete (exit codes wrong)
+  - TASK-296: pub(super) fix incomplete (pub(crate) still unenforced)
+  - TASK-289: Engine provider wiring has HTTP no-op
 - Proxy state preservation across all execution paths (TASK-284, TASK-285 ✅)
 - Complete capability enforcement matrix (receive included) (TASK-286 ✅)
 - Working role runtime semantics (Check/Oblig/role attribution) (TASK-287 ✅)
 - REPL :ast command fixed (TASK-288 ✅)
-- Engine provider wiring functional (TASK-289 ✅)
+- Engine provider wiring functional (core) (TASK-289 ⚠️)
 - Type system soundness restored (TASK-290, TASK-291 ✅)
-- CLI --input functional (TASK-292 ✅)
-- CLI SPEC-005 compliance with distinct error types and exit codes (TASK-293 ✅)
+- CLI --input functional (inline JSON only) (TASK-292 ⚠️)
 - REPL workflow storage (TASK-294 ✅)
 - ADT qualified names (TASK-295 ✅)
-- pub(super) visibility fix (TASK-296 ✅)
+- pub(super) visibility partial fix (TASK-296 ⚠️)
 - REPL multiline errors (TASK-297 ✅)
 - JSON output schema (TASK-298 ✅)
 
-**Total:** ~138 hours (all ✅ Complete)
+**NEW REMEDIATION TASKS:**
+- [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) - Fix exit codes
+- [TASK-311](tasks/TASK-311-fix-pub-crate-visibility.md) - Fix pub(crate)
+- [TASK-312](tasks/TASK-312-http-provider-noop.md) - Fix HTTP no-op
+
+**Total:** ~138 hours (partial, gaps identified)
 
 ---
 
@@ -1290,18 +1297,72 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 |------|-------------|------|------------|--------|
 | [TASK-273](tasks/TASK-273-fix-arb-pattern-bindings.md) | Fix arb_pattern binding name uniqueness in proptest_helpers | N/A | 4 | ✅ Complete |
 
-**Phase 49 Deliverable:** All Phase 48 tasks fully integrated and verified, comprehensive E2E test coverage, clean changelog, testing infrastructure hardened.
+**Phase 49 Deliverable:** Partial - Critical test failures identified
 
 **Summary:**
-- 9 tasks covering integration, hardening, documentation, and testing infrastructure (all ✅ Complete)
-- CLI input integration complete with type checker parameter binding (TASK-299, TASK-300 ✅)
-- Type system hardening with verified obligation semantics (TASK-301, TASK-302 ✅)
-- Integration test coverage for engine providers and role semantics (TASK-303, TASK-304 ✅)
-- CHANGELOG.md consolidated with Phase 48 entries (TASK-305 ✅)
-- PLAN-INDEX.md updated with all completed tasks (TASK-306 ✅)
-- Testing infrastructure fix: proptest_helpers binding uniqueness (TASK-273 ✅)
+- 9 tasks marked complete but **CRITICAL TEST FAILURES IDENTIFIED**:
+  - `cargo test --workspace --quiet` FAILS
+  - 3/5 cli_input_workflow_test tests fail
+  - prop_partial_discharge_scenario proptest fails
+- CLI input integration type checker binding works (TASK-299 ✅)
+- CLI --input tests fail due to interpreter/parser issues (TASK-300 ❌)
+- Type system hardening with verified obligation semantics (TASK-301 ✅)
+- Expression typing edge case tests (TASK-302 ✅)
+- Integration test coverage added (TASK-303, TASK-304 ✅)
+- CHANGELOG.md consolidated (TASK-305 ✅)
+- PLAN-INDEX.md updated (TASK-306 ✅)
+- Testing infrastructure fix: proptest_helpers (TASK-273 ✅)
 
-**Total:** ~52 hours (all ✅ Complete)
+**NEW REMEDIATION TASKS:**
+- [TASK-308](tasks/TASK-308-cli-input-file-path.md) - Fix --input file path
+- [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) - Implement --dry-run, --timeout
+- [TASK-310](tasks/TASK-310-fix-cli-input-tests.md) - Fix or adjust failing tests
+- [TASK-313](tasks/TASK-313-fix-proptest-obligation.md) - Fix proptest failure
+
+**Total:** ~52 hours (partial, test failures blocking)
+
+---
+
+## Phase 50: Critical Remediation (Post-Review Findings)
+
+**Goal:** Address critical gaps identified in post-implementation review of Phases 47, 48, and 49.
+
+**Source:** User code review findings (2026-03-27)  
+**Priority:** Critical  
+**Status:** 🔴 In Progress
+
+### 50.1: CLI SPEC-005 Compliance Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) | Fix ash check exit codes for parse/type errors | SPEC-005 | 4 | 📝 Planned |
+| [TASK-308](tasks/TASK-308-cli-input-file-path.md) | Fix ash run --input to accept file path | SPEC-005 | 6 | 📝 Planned |
+| [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) | Implement --dry-run, --timeout, --capability | SPEC-005 | 8 | 📝 Planned |
+
+### 50.2: Test Suite Fixes
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-310](tasks/TASK-310-fix-cli-input-tests.md) | Fix cli_input_workflow_test failures | N/A | 4 | 📝 Planned |
+| [TASK-313](tasks/TASK-313-fix-proptest-obligation.md) | Fix prop_partial_discharge_scenario proptest | N/A | 4 | 📝 Planned |
+
+### 50.3: API/Visibility Hardening
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-311](tasks/TASK-311-fix-pub-crate-visibility.md) | Fix pub(crate) visibility enforcement | SPEC-009 | 6 | 📝 Planned |
+| [TASK-312](tasks/TASK-312-http-provider-noop.md) | Fix EngineBuilder HTTP provider no-op | SPEC-010 | 2 | 📝 Planned |
+
+**Phase 50 Deliverable:** All SPEC-005 compliance gaps closed, test suite green, API contracts honored.
+
+**Summary:**
+- 7 remediation tasks identified from review
+- CLI exit codes, --input handling, unimplemented flags
+- Test suite failures (cli_input_workflow_test, role_runtime_props)
+- Visibility enforcement gaps
+- HTTP provider API honesty
+
+**Total:** ~34 hours
 
 ---
 
@@ -1312,9 +1373,9 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 44 | 17 | 102-108 | ✅ Complete |
 ||| 45 | 3 | 14 | ✅ Complete |
 ||| 46 | 13 | 98-108 | ✅ Complete |
-||| 47 | 10 | 90 | ✅ Complete |
-||| 48 | 15 | 138 | ✅ Complete |
-||| 49 | 9 | 52 | ✅ Complete |
-||| **Total** | **67** | **494-512** | ✅ Complete |
+||| 47 | 10 | 90 | ⚠️ Partial |
+||| 48 | 15 | 138 | ⚠️ Partial |
+||| 49 | 9 | 52 | ⚠️ Partial |
+||| **Total** | **67** | **494-512** | ⚠️ Remediation Required |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

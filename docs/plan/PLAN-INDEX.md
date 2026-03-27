@@ -1329,15 +1329,15 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** User code review findings (2026-03-27)  
 **Priority:** Critical  
-**Status:** ✅ Complete (with 2 follow-up tasks planned)
+**Status:** 🔴 In Progress - Critical Gaps Identified (2025-01-XX Review)
 
 ### 50.1: CLI SPEC-005 Compliance Fixes
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) | Fix ash check exit codes for parse/type errors | SPEC-005 | 4 | ✅ Complete |
-| [TASK-308](tasks/TASK-308-cli-input-file-path.md) | Fix ash run --input to accept file path | SPEC-005 | 6 | ✅ Complete |
-| [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) | Implement --dry-run, --timeout, --capability | SPEC-005 | 8 | ✅ Complete |
+| [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) | ~~Fix ash check exit codes for parse/type errors~~ | SPEC-005 | 4 | ❌ Superseded by TASK-318 |
+| [TASK-308](tasks/TASK-308-cli-input-file-path.md) | ~~Fix ash run --input to accept file path~~ | SPEC-005 | 6 | ❌ Superseded by TASK-316 |
+| [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) | ~~Implement --dry-run, --timeout, --capability~~ | SPEC-005 | 8 | ❌ Superseded by TASK-317 |
 
 ### 50.2: Test Suite Fixes
 
@@ -1351,7 +1351,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-311](tasks/TASK-311-fix-pub-crate-visibility.md) | Fix pub(crate) visibility enforcement | SPEC-009 | 6 | ✅ Complete |
-| [TASK-312](tasks/TASK-312-http-provider-noop.md) | Fix EngineBuilder HTTP provider no-op | SPEC-010 | 2 | ✅ Complete |
+| [TASK-312](tasks/TASK-312-http-provider-noop.md) | ~~Fix EngineBuilder HTTP provider no-op~~ | SPEC-010 | 2 | ❌ Superseded by TASK-319 |
 
 ### 50.4: Spec Clarification & Implementation Follow-up
 
@@ -1362,17 +1362,32 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Phase 50 Deliverable:** All SPEC-005 compliance gaps closed, test suite green, API contracts honored.
 
-**Summary:**
-- 7 remediation tasks completed
-- CLI exit codes now compliant with SPEC-005 (exit code 2 for parse errors)
-- ash run --input now accepts file paths per SPEC-005
-- --dry-run, --timeout, --capability flags now functional
-- cli_input_workflow_test failures resolved
-- prop_partial_discharge_scenario proptest fixed
-- pub(crate) visibility enforcement implemented
-- HTTP provider API documented
+**2025-01-XX Review Findings:** Initial Phase 50 implementation did NOT fully resolve the issues. The following critical gaps remain:
 
-**Total:** ~34 hours (all complete)
+### 50.5: Critical Remediation (New Findings)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-316](tasks/TASK-316-fix-input-file-path.md) | Fix ash run --input to accept file paths (not inline JSON) | SPEC-005 | 4 | 🔴 Critical |
+| [TASK-317](tasks/TASK-317-fix-capability-binding.md) | Fix --capability provider binding (URI discarded, names ignored) | SPEC-005 | 6 | 🔴 Critical |
+| [TASK-318](tasks/TASK-318-fix-exit-codes.md) | Fix ash check exit codes (type=1, I/O=3 per SPEC-005) | SPEC-005 | 2 | 🔴 Critical |
+| [TASK-319](tasks/TASK-319-fix-http-noop.md) | Fix EngineBuilder HTTP provider no-op or remove | SPEC-010 | 2 | 🟡 High |
+| [TASK-320](tasks/TASK-320-fix-timeout-diagnostics.md) | Fix timeout diagnostics (shows 0s instead of actual) | N/A | 1 | 🟡 Medium |
+| [TASK-321](tasks/TASK-321-fix-clippy-warnings.md) | Fix clippy warnings in test code | N/A | 2 | 🟡 Medium |
+
+**Summary of Gaps:**
+- **TASK-316:** --input still parses as JSON, not file path; no -- support
+- **TASK-317:** --capability discards URI, silently ignores unknown names
+- **TASK-318:** Exit codes wrong (type=3 should be 1, I/O=6 should be 3)
+- **TASK-319:** HTTP provider still silently does nothing
+- **TASK-320:** Timeout message always shows "0s"
+- **TASK-321:** Clippy warnings in test code not cleaned
+
+**Previous Tasks:**
+- TASK-307, 308, 309, 312: Implementation incomplete/superseded
+- TASK-310, 313, 311: ✅ Complete
+
+**Total:** ~34 hours (previous) + ~17 hours (new findings) = ~51 hours
 
 ---
 
@@ -1405,9 +1420,9 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 44 | 17 | 102-108 | ✅ Complete |
 ||| 45 | 3 | 14 | ✅ Complete |
 ||| 46 | 13 | 98-108 | ✅ Complete |
-||| 47 | 10 | 90 | ✅ Complete |
-||| 48 | 15 | 138 | ✅ Complete |
-||| 49 | 9 | 52 | ✅ Complete |
-||| **Total** | **69** | **540-558** | ✅ Complete |
+||| 47 | 10 | 90 | ⚠️ Partial (TASK-318) |
+||| 48 | 15 | 138 | ⚠️ Partial (TASK-319) |
+||| 49 | 9 | 52 | ⚠️ Partial (TASK-321) |
+||| **Total** | **75** | **557-575** | ⚠️ Remediation Required |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

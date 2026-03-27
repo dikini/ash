@@ -25,9 +25,17 @@ if self.http_config.is_some() {
 3. **Add deprecation warning** and document limitation
 4. **Remove the method** until implemented (breaking change)
 
-## Recommendation
+## Decision
 
-Option 2 (return error) for immediate fix:
+**Option 2 (Return Error - Fast Fail)**: When HTTP is requested, return a clear error immediately.
+
+This approach:
+- Fails fast - users get immediate feedback
+- Provides clear workaround in error message
+- Prevents silent unexpected behavior
+- Documents the gap honestly
+
+Implementation:
 ```rust
 if self.http_config.is_some() {
     return Err(EngineError::Configuration {

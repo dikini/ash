@@ -1,56 +1,73 @@
-# TASK-316: Remove --input and -- Support from SPEC-005 (Design Decision)
+# TASK-316: Fix --input to Fail Fast on File Path Attempts (Options B & C)
 
-## Status: ✅ Complete - Design Decision
+## Status: 🔴 Critical - Phase 50 Remediation
 
 ## Decision
 
-**Simplify the CLI by removing `--input` file path and `--` positional support rather than implementing them.**
+**Implement Options B and C for --input handling:**
 
-The `--input` flag currently accepts inline JSON only. Rather than extending it to support file paths and positional arguments, we will:
-
-1. **Keep `--input` as inline JSON only** (current behavior becomes the documented behavior)
-2. **Remove `--input <file>` from SPEC-005** (file path support not implemented)
-3. **Remove `-- <input>` positional syntax from SPEC-005** (positional input not implemented)
+- **Option B (Fail Fast)**: Return clear error when input looks like a file path
+- **Option C (Document Limitation)**: Document that only inline JSON is supported, with file paths and `--` syntax planned for future
 
 ## Rationale
 
-- **Simpler CLI surface**: One way to pass input (inline JSON) rather than three ways
-- **Shell redirection adequate**: Users can use shell features for file input:
-  ```bash
-  # Instead of: ash run workflow.ash --input data.json
-  # Use:        ash run workflow.ash --input "$(cat data.json)"
-  ```
-- **Avoids ambiguity**: No confusion about whether argument is file path or JSON
-- **Consistent with design philosophy**: Prefer compositional shell patterns over CLI complexity
+- **Fail fast**: Users get immediate feedback instead of confusing "Invalid JSON" error
+- **Clear contract**: Users understand current limitations vs future features
+- **SPEC-005 honesty**: Document what works now, note future enhancements
+- **Backward compatible**: Inline JSON continues to work
 
 ## SPEC-005 Changes Required
 
-**Remove from SPEC-005 Section 5.2 (`ash run`):**
+**Update SPEC-005 Section 5.2 (`ash run`):**
 
-```diff
-- | `--input <file>` | JSON input file |
-+ | `--input <json>` | Inline JSON input object |
+```
+| `--input <json>` | Inline JSON input object (file paths: see Future Enhancements) |
 ```
 
-**Remove example:**
-```diff
-- # Run with JSON input
-- ash run workflow.ash --input data.json
--
-- # Run with inline input
-- ash run workflow.ash -- '{"name": "test"}'
-+ # Run with inline JSON input
-+ ash run workflow.ash --input '{"name": "test"}'
+**Add Future Enhancements section:**
+```markdown
+### Future Enhancements (Post-0.5.0)
+
+- **File path input**: `--input data.json` will read from file
+- **Positional input**: `ash run <wf> -- '<json>'` for shell-free JSON passing
+- These features are planned but not yet implemented. Use shell substitution:
+  `ash run workflow.ash --input "$(cat data.json)"`
 ```
 
-## Current (Now Documented) Behavior
+## Implementation
 
-```bash
-# Inline JSON (supported)
-$ ash run workflow.ash --input '{"name": "test", "count": 5}'
+### 1. Detect File Path Attempts (Option B)
 
-# File path (not supported - use shell substitution)
-$ ash run workflow.ash --input "$(cat data.json)"
+Modify `parse_input()` to fail fast when input looks like a file path:
+
+```rust
+fn parse_input(input: &Option<String>) -> Result<HashMap<String, Value>> {
+    match input {
+        Some(input_str) => {
+            // Fail fast if input looks like a file path
+            if input_str.ends_with(".json") || input_str.contains('/') {
+                return Err(anyhow::anyhow!(
+                    "File path input not yet supported. Use inline JSON or shell substitution: \
+                     --input \"$(cat {})\"",
+                    input_str
+                ));
+            }
+            // Parse as inline JSON
+            let json_value: serde_json::Value =
+                serde_json::from_str(input_str).context("Invalid JSON input")?;
+            json_to_hashmap(json_value)
+        }
+        None => Ok(HashMap::new()),
+    }
+}
+```
+
+### 2. Update CLI Help Text (Option C)
+
+```rust
+/// Input parameters as inline JSON object (file paths not yet supported, use `$(cat file.json)`)
+#[arg(short, long, value_name = "JSON")]
+pub input: Option<String>,
 ```
 
 ## Input JSON Format
@@ -78,20 +95,17 @@ workflow greet(name: String) {
 ```bash
 $ ash run greet.ash --input '{"name": "World"}'
 Hello, World
+
+$ ash run greet.ash --input data.json
+Error: File path input not yet supported. Use inline JSON or shell substitution: --input "$(cat data.json)"
 ```
 
 ## Files to Modify
 
-- `docs/spec/SPEC-005-CLI.md` - Update `--input` documentation
-- `crates/ash-cli/src/commands/run.rs` - Update help text (line 37-39)
-
-## Implementation
-
-**No code changes required** - current behavior is correct. Only documentation updates:
-
-1. Update SPEC-005 to reflect `--input` accepts inline JSON only
-2. Update CLI help text from "JSON object" to "Inline JSON input object"
-3. Remove file path and positional syntax from examples
+- `crates/ash-cli/src/commands/run.rs`:
+  - Lines 37-39: Update help text
+  - Lines 191-200: Add file path detection with clear error
+- `docs/spec/SPEC-005-CLI.md`: Add Future Enhancements section
 
 ## Verification
 
@@ -99,22 +113,26 @@ Hello, World
 # Inline JSON works
 $ ash run workflow.ash --input '{"name":"test"}'
 
+# File path fails with clear error
+$ ash run workflow.ash --input data.json
+Error: File path input not yet supported. Use inline JSON or shell substitution: --input "$(cat data.json)"
+
 # Help text updated
-$ ash run --help | grep -A1 "input"
---input <json>  Inline JSON input object
+$ ash run --help | grep -A2 "input"
+--input <JSON>  Input parameters as inline JSON object (file paths not yet supported)
 ```
 
 ## Completion Checklist
 
-- [x] Design decision made: Keep inline JSON only
-- [ ] SPEC-005 updated to remove file path and `--` syntax
-- [ ] CLI help text updated
-- [ ] CHANGELOG.md updated with design decision
+- [ ] File path detection with clear error message
+- [ ] Help text updated with limitation note
+- [ ] SPEC-005 updated with Future Enhancements section
+- [ ] CHANGELOG.md updated
 
-**Estimated Hours:** 1 (documentation only)
-**Priority:** Complete - No implementation required
+**Estimated Hours:** 2
+**Priority:** Critical (API clarity)
 
 ## Related Tasks
 
-- Supersedes TASK-308 (file path implementation - no longer needed)
-- Aligns with simplification philosophy: prefer shell composition over CLI complexity
+- Supersedes TASK-308 (file path implementation - now documented as future enhancement)
+- Aligns with fail-fast philosophy

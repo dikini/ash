@@ -53,7 +53,7 @@ Configuration uses the builder pattern:
 let engine = Engine::new()
     .with_stdio_capabilities()    -- Add print/read_line
     .with_fs_capabilities()       -- Add file operations
-    .with_http_capabilities()     -- Add HTTP client
+    -- HTTP available via with_custom_provider() until native support added
     .with_custom_provider(MyProvider)
     .build()?;
 ```
@@ -106,7 +106,21 @@ Providers are registered at engine build time:
 engine.with_capability(MyProvider::new())
 ```
 
-### 4.3 Standard Providers
+### 4.3 Unimplemented Capabilities
+
+**HTTP Capabilities:**
+
+The `with_http_capabilities()` method exists in the API but returns a configuration error
+when called. HTTP support is planned for a future release. For now, use `with_custom_provider()`
+to add your own HTTP implementation:
+
+```rust
+let engine = Engine::new()
+    .with_custom_provider("http", Arc::new(MyHttpProvider))
+    .build()?;
+```
+
+### 4.4 Standard Providers
 
 Built-in provider categories:
 

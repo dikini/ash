@@ -245,33 +245,23 @@ fn test_run_timeout_flag() {
     );
 }
 
-/// Test run command with --capability flag
+/// Test run command --capability flag removed (TASK-323)
 #[test]
-fn test_run_capability_flag() {
+fn test_run_capability_flag_removed() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "workflow test { ret 42 }").unwrap();
 
     let output = Command::new("cargo")
-        .args([
-            "run",
-            "--bin",
-            "ash",
-            "--",
-            "run",
-            "--capability",
-            "fs",
-            "--capability",
-            "http",
-        ])
+        .args(["run", "--bin", "ash", "--", "run", "--capability", "fs"])
         .arg(&workflow)
         .output()
         .unwrap();
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        !stderr.contains("unexpected argument"),
-        "--capability should be a recognized flag"
+        stderr.contains("unexpected argument") || !output.status.success(),
+        "--capability should no longer be a recognized flag (removed in TASK-323)"
     );
 }
 

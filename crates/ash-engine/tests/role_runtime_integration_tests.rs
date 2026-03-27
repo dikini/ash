@@ -22,7 +22,10 @@ fn test_span() -> Span {
 fn create_test_role_def(name: &str, authority: Vec<&str>) -> RoleDef {
     RoleDef {
         name: name.into(),
-        authority: authority.into_iter().map(|c| c.into()).collect(),
+        authority: authority
+            .into_iter()
+            .map(std::convert::Into::into)
+            .collect(),
         obligations: vec![],
         span: test_span(),
     }
@@ -828,6 +831,8 @@ fn test_role_context_clone() {
     ctx.discharge("obl").unwrap();
 
     let cloned = ctx.clone();
+    // Both original and clone should see the discharged obligation
+    assert!(ctx.is_discharged("obl"));
     assert!(cloned.is_discharged("obl"));
     assert!(cloned.can_access(&Capability {
         name: "a".to_string(),

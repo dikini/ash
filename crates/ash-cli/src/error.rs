@@ -78,10 +78,10 @@ impl CliError {
     pub fn exit_code(&self) -> ExitCode {
         match self {
             CliError::ParseError { .. } => ExitCode::from(2),
-            CliError::TypeError { .. } => ExitCode::from(1),  // SPEC-005: type errors = 1
+            CliError::TypeError { .. } => ExitCode::from(1), // SPEC-005: type errors = 1
             CliError::VerificationError { .. } => ExitCode::from(4),
             CliError::RuntimeError { .. } => ExitCode::from(5),
-            CliError::IoError { .. } => ExitCode::from(3),    // SPEC-005: I/O errors = 3
+            CliError::IoError { .. } => ExitCode::from(3), // SPEC-005: I/O errors = 3
             CliError::Timeout { .. } => ExitCode::from(7),
             CliError::UnknownCommand { .. } => ExitCode::from(127),
             CliError::General { .. } => ExitCode::from(1),

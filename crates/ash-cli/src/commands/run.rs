@@ -2,8 +2,9 @@
 //!
 //! TASK-054: Implement `run` command for executing workflows.
 //! TASK-076: Updated to use ash-engine.
-//! TASK-278: Added input binding support for --input flag.
-//! TASK-309: Implemented --dry-run, --timeout, --capability flags.
+//! TASK-309: Implemented --dry-run, --timeout flags.
+//! TASK-323: Removed --capability flag.
+//! TASK-324: Removed --input flag.
 
 use anyhow::{Context, Result};
 use ash_core::Value;
@@ -11,11 +12,8 @@ use ash_engine::EngineError;
 use ash_interp::ExecError;
 use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 use clap::Args;
-use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
-
-use crate::value_convert::json_to_value;
 
 /// Output format for run command
 #[derive(Debug, Clone, Copy, Default, clap::ValueEnum)]
@@ -33,10 +31,6 @@ pub struct RunArgs {
     /// Path to workflow file
     #[arg(value_name = "PATH")]
     pub path: String,
-
-    /// Input parameters as JSON object
-    #[arg(short, long, value_name = "JSON")]
-    pub input: Option<String>,
 
     /// Output file for results
     #[arg(short, long, value_name = "FILE")]
@@ -57,15 +51,11 @@ pub struct RunArgs {
     /// Execution timeout in seconds
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
-
-    /// Grant capability (repeatable)
-    #[arg(long, value_name = "NAME")]
-    pub capability: Vec<String>,
 }
 
 /// Run a workflow file
 ///
-/// Supports dry-run mode (validate only), timeout, and custom capabilities.
+/// Supports dry-run mode (validate only) and timeout.
 ///
 /// # Errors
 ///
@@ -78,11 +68,8 @@ pub struct RunArgs {
 pub async fn run(args: &RunArgs) -> Result<()> {
     let path = Path::new(&args.path);
 
-    // Parse input parameters from JSON
-    let input_values = parse_input(&args.input)?;
-
-    // Build engine with configured capabilities
-    let engine = build_engine(args).context("Failed to build engine")?;
+    // Build engine with default capabilities
+    let engine = build_engine().context("Failed to build engine")?;
 
     // Dry-run mode: parse and check only
     if args.dry_run {
@@ -92,19 +79,16 @@ pub async fn run(args: &RunArgs) -> Result<()> {
         return Ok(());
     }
 
-    // Run the workflow file with input bindings and optional timeout
+    // Run the workflow file with optional timeout
     let result = if let Some(timeout_secs) = args.timeout {
         let timeout_duration = Duration::from_secs(timeout_secs);
         let execution_fut = async {
             if args.trace {
                 let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
                 engine.check(&workflow).map_err(classify_engine_error)?;
-                execute_with_trace_and_input(&engine, &workflow, input_values).await
+                execute_with_trace(&engine, &workflow).await
             } else {
-                engine
-                    .run_file_with_input(path, input_values)
-                    .await
-                    .map_err(classify_exec_error)
+                engine.run_file(path).await.map_err(classify_exec_error)
             }
         };
 
@@ -119,12 +103,9 @@ pub async fn run(args: &RunArgs) -> Result<()> {
         if args.trace {
             let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
             engine.check(&workflow).map_err(classify_engine_error)?;
-            execute_with_trace_and_input(&engine, &workflow, input_values).await?
+            execute_with_trace(&engine, &workflow).await?
         } else {
-            engine
-                .run_file_with_input(path, input_values)
-                .await
-                .map_err(classify_exec_error)?
+            engine.run_file(path).await.map_err(classify_exec_error)?
         }
     };
 
@@ -134,92 +115,20 @@ pub async fn run(args: &RunArgs) -> Result<()> {
     Ok(())
 }
 
-/// Build an engine with configured capabilities
+/// Build an engine with default capabilities
 ///
-/// Adds stdio and fs capabilities by default, plus any custom capabilities
-/// specified via --capability flags.
-fn build_engine(args: &RunArgs) -> Result<ash_engine::Engine, ash_engine::EngineError> {
-    let mut builder = ash_engine::Engine::new()
+/// Adds stdio and fs capabilities by default.
+fn build_engine() -> Result<ash_engine::Engine, ash_engine::EngineError> {
+    ash_engine::Engine::new()
         .with_stdio_capabilities()
-        .with_fs_capabilities();
-
-    // Add custom capabilities
-    for cap_str in &args.capability {
-        let (name, _uri) = parse_capability(cap_str);
-
-        // For now, we support the built-in providers by name
-        // In the future, this could support URI-based capability providers
-        match name {
-            "stdio" => {
-                // Already added by default
-            }
-            "fs" => {
-                // Already added by default
-            }
-            "http" => {
-                // Enable HTTP capabilities with default config
-                let config = ash_engine::HttpConfig::new();
-                builder = builder.with_http_capabilities(config);
-            }
-            _ => {
-                // Unknown capability - could be a custom provider URI
-                // For now, we just log this (in production, might want to warn)
-                // In the future, this could load external providers
-            }
-        }
-    }
-
-    builder.build()
+        .with_fs_capabilities()
+        .build()
 }
 
-/// Parse a capability string in the format "name" or "name=uri"
-///
-/// Returns the capability name and optional URI.
-fn parse_capability(cap_str: &str) -> (&str, Option<&str>) {
-    if let Some(pos) = cap_str.find('=') {
-        let (name, uri) = cap_str.split_at(pos);
-        (name, Some(&uri[1..])) // Skip the '=' character
-    } else {
-        (cap_str, None)
-    }
-}
-
-/// Parse input JSON into a HashMap<String, Value>
-///
-/// This function parses a JSON string and converts it into a HashMap
-/// that can be used as input bindings for workflow execution.
-pub fn parse_input(input: &Option<String>) -> Result<HashMap<String, Value>> {
-    match input {
-        Some(json_str) => {
-            let json_value: serde_json::Value =
-                serde_json::from_str(json_str).context("Invalid JSON input")?;
-            json_to_hashmap(json_value)
-        }
-        None => Ok(HashMap::new()),
-    }
-}
-
-/// Convert JSON value to HashMap<String, Value>
-///
-/// The input must be a JSON object (key-value pairs).
-pub fn json_to_hashmap(value: serde_json::Value) -> Result<HashMap<String, Value>> {
-    match value {
-        serde_json::Value::Object(map) => {
-            let mut result = HashMap::new();
-            for (k, v) in map {
-                result.insert(k, json_to_value(v));
-            }
-            Ok(result)
-        }
-        _ => Err(anyhow::anyhow!("Input must be a JSON object")),
-    }
-}
-
-/// Execute a workflow with tracing enabled and input bindings
-async fn execute_with_trace_and_input(
+/// Execute a workflow with tracing enabled
+async fn execute_with_trace(
     engine: &ash_engine::Engine,
     workflow: &ash_engine::Workflow,
-    input_bindings: HashMap<String, Value>,
 ) -> Result<Value> {
     use ash_core::WorkflowId;
 
@@ -227,7 +136,7 @@ async fn execute_with_trace_and_input(
     let recorder = create_trace_recorder(workflow_id);
     let session = WorkflowTraceSession::start(recorder, "main")?;
 
-    match engine.execute_with_input(workflow, input_bindings).await {
+    match engine.execute(workflow).await {
         Ok(value) => {
             let _recorder = session.finish_success()?;
             Ok(value)
@@ -318,207 +227,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_input_empty() {
-        let result = parse_input(&None).unwrap();
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn test_parse_input_valid_json() {
-        let json = r#"{"x": 42, "name": "test"}"#.to_string();
-        let result = parse_input(&Some(json)).unwrap();
-        assert_eq!(result.get("x"), Some(&Value::Int(42)));
-        assert_eq!(result.get("name"), Some(&Value::String("test".to_string())));
-    }
-
-    #[test]
-    fn test_json_to_ash_value_conversions() {
-        use crate::value_convert::json_to_value;
-
-        assert_eq!(json_to_value(serde_json::Value::Null), Value::Null);
-        assert_eq!(
-            json_to_value(serde_json::Value::Bool(true)),
-            Value::Bool(true)
-        );
-        assert_eq!(json_to_value(serde_json::json!(42)), Value::Int(42));
-        assert_eq!(
-            json_to_value(serde_json::json!("hello")),
-            Value::String("hello".to_string())
-        );
-        assert_eq!(
-            json_to_value(serde_json::json!([1, true, "hello"])),
-            Value::List(Box::new(vec![
-                Value::Int(1),
-                Value::Bool(true),
-                Value::String("hello".to_string()),
-            ]))
-        );
-        assert_eq!(
-            json_to_value(serde_json::json!({"nested": {"value": 42}})),
-            Value::Record(Box::new(HashMap::from([(
-                "nested".to_string(),
-                Value::Record(Box::new(HashMap::from([(
-                    "value".to_string(),
-                    Value::Int(42),
-                )]))),
-            )])))
-        );
-    }
-
-    #[test]
     fn test_run_args_parsing() {
         let args = RunArgs {
             path: "test.ash".to_string(),
-            input: Some(r#"{"x": 1}"#.to_string()),
             output: Some("out.json".to_string()),
             trace: true,
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30),
-            capability: vec!["fs".to_string(), "http".to_string()],
         };
 
         assert_eq!(args.path, "test.ash");
         assert!(args.trace);
-        assert!(args.input.is_some());
         assert!(args.output.is_some());
         assert!(matches!(args.format, RunOutputFormat::Text));
         assert!(!args.dry_run);
         assert_eq!(args.timeout, Some(30));
-        assert_eq!(args.capability.len(), 2);
     }
 
     #[test]
     fn test_run_args_format_json() {
         let args = RunArgs {
             path: "test.ash".to_string(),
-            input: None,
             output: None,
             trace: false,
             format: RunOutputFormat::Json,
             dry_run: true,
             timeout: None,
-            capability: vec![],
         };
 
         assert!(matches!(args.format, RunOutputFormat::Json));
         assert!(args.dry_run);
-        assert!(args.capability.is_empty());
     }
 
     // ============================================================
-    // TASK-309: Tests for --dry-run, --timeout, --capability flags
+    // TASK-309: Tests for --dry-run, --timeout flags
     // ============================================================
-
-    #[test]
-    fn test_parse_capability_simple() {
-        let (name, uri) = parse_capability("stdio");
-        assert_eq!(name, "stdio");
-        assert_eq!(uri, None);
-    }
-
-    #[test]
-    fn test_parse_capability_with_uri() {
-        let (name, uri) = parse_capability("fs=/allowed/path");
-        assert_eq!(name, "fs");
-        assert_eq!(uri, Some("/allowed/path"));
-    }
-
-    #[test]
-    fn test_parse_capability_http() {
-        let (name, uri) = parse_capability("http=https://api.example.com");
-        assert_eq!(name, "http");
-        assert_eq!(uri, Some("https://api.example.com"));
-    }
-
-    #[test]
-    fn test_parse_capability_empty_uri() {
-        let (name, uri) = parse_capability("fs=");
-        assert_eq!(name, "fs");
-        assert_eq!(uri, Some(""));
-    }
 
     #[test]
     fn test_build_engine_default_capabilities() {
-        let args = RunArgs {
-            path: "test.ash".to_string(),
-            input: None,
-            output: None,
-            trace: false,
-            format: RunOutputFormat::Text,
-            dry_run: false,
-            timeout: None,
-            capability: vec![],
-        };
-
-        let result = build_engine(&args);
+        let result = build_engine();
         assert!(
             result.is_ok(),
             "Engine should build with default capabilities"
-        );
-    }
-
-    #[test]
-    fn test_build_engine_with_http_capability_returns_error() {
-        let args = RunArgs {
-            path: "test.ash".to_string(),
-            input: None,
-            output: None,
-            trace: false,
-            format: RunOutputFormat::Text,
-            dry_run: false,
-            timeout: None,
-            capability: vec!["http".to_string()],
-        };
-
-        // HTTP provider not yet implemented - should return error
-        let result = build_engine(&args);
-        assert!(result.is_err(), "Engine should fail with http capability");
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("HTTP provider not yet implemented"));
-    }
-
-    #[test]
-    fn test_build_engine_with_multiple_capabilities_returns_error() {
-        let args = RunArgs {
-            path: "test.ash".to_string(),
-            input: None,
-            output: None,
-            trace: false,
-            format: RunOutputFormat::Text,
-            dry_run: false,
-            timeout: None,
-            capability: vec!["stdio".to_string(), "fs".to_string(), "http".to_string()],
-        };
-
-        // HTTP provider not yet implemented - should return error
-        let result = build_engine(&args);
-        assert!(
-            result.is_err(),
-            "Engine should fail when http capability included"
-        );
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("HTTP provider not yet implemented"));
-    }
-
-    #[test]
-    fn test_build_engine_with_unknown_capability() {
-        let args = RunArgs {
-            path: "test.ash".to_string(),
-            input: None,
-            output: None,
-            trace: false,
-            format: RunOutputFormat::Text,
-            dry_run: false,
-            timeout: None,
-            capability: vec!["unknown_custom_cap".to_string()],
-        };
-
-        // Unknown capabilities are silently ignored for now
-        let result = build_engine(&args);
-        assert!(
-            result.is_ok(),
-            "Engine should build even with unknown capabilities"
         );
     }
 
@@ -534,13 +285,11 @@ mod tests {
 
         let args = RunArgs {
             path,
-            input: None,
             output: None,
             trace: false,
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
-            capability: vec![],
         };
 
         let result = run(&args).await;
@@ -559,13 +308,11 @@ mod tests {
 
         let args = RunArgs {
             path,
-            input: None,
             output: None,
             trace: false,
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
-            capability: vec![],
         };
 
         let result = run(&args).await;
@@ -600,13 +347,11 @@ mod tests {
 
         let args = RunArgs {
             path,
-            input: None,
             output: None,
             trace: false,
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
-            capability: vec![],
         };
 
         let _result = run(&args).await;
@@ -626,13 +371,11 @@ mod tests {
 
         let args = RunArgs {
             path,
-            input: None,
             output: None,
             trace: false,
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30), // 30 second timeout
-            capability: vec![],
         };
 
         let result = run(&args).await;
@@ -654,13 +397,11 @@ mod tests {
 
         let args = RunArgs {
             path,
-            input: None,
             output: None,
             trace: false,
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: None, // No timeout
-            capability: vec![],
         };
 
         let result = run(&args).await;

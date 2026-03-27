@@ -182,9 +182,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Added 3 new tests for lineage and integrity flag functionality
 
 - **EngineBuilder Methods Implementation (TASK-246)**
-  - Implemented `with_http_capabilities(config)` to configure HTTP client capabilities with timeout, redirect, and SSL settings
+  - Added `with_http_capabilities(config)` method that returns a configuration error with guidance to use `with_custom_provider()` instead. Native HTTP provider implementation is planned for a future release.
   - Implemented `with_custom_provider(name, provider)` to register custom capability providers that can extend or override built-in providers
-  - Added `HttpConfig` struct for HTTP capability configuration
+  - Added `HttpConfig` struct for HTTP capability configuration (for future use)
   - Updated `Engine` to store registered providers (wired for future execution integration)
   - Added 10 new tests covering HTTP capabilities, custom providers, and combined builder configuration
 

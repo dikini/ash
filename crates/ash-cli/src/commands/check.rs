@@ -223,8 +223,8 @@ fn output_json(
     } else {
         match result {
             Err(CliError::ParseError { .. }) => 2,
-            Err(CliError::TypeError { .. }) => 1,  // SPEC-005: type errors = 1
-            Err(CliError::IoError { .. }) => 3,    // SPEC-005: I/O errors = 3
+            Err(CliError::TypeError { .. }) => 1, // SPEC-005: type errors = 1
+            Err(CliError::IoError { .. }) => 3,   // SPEC-005: I/O errors = 3
             _ => 1,
         }
     };

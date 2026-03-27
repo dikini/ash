@@ -66,6 +66,7 @@ impl CapabilityProvider for TrackingProvider {
                 format!("{}_observed", self.name),
                 Value::Int(self.get_count() as i64),
             );
+            drop(guard); // Explicit drop to reduce resource contention
         }
         Ok(Value::Null)
     }
@@ -82,6 +83,7 @@ impl CapabilityProvider for TrackingProvider {
                 format!("{}_executed", self.name),
                 Value::Int(self.get_count() as i64),
             );
+            drop(guard); // Explicit drop to reduce resource contention
         }
         Ok(Value::Null)
     }
@@ -522,6 +524,7 @@ async fn test_provider_state_persistence() {
 
     let state = shared_state.lock().unwrap();
     assert!(!state.is_empty() || state.is_empty());
+    drop(state); // Explicit drop to reduce resource contention
 }
 
 // ============================================================

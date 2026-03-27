@@ -1329,22 +1329,22 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** User code review findings (2026-03-27)  
 **Priority:** Critical  
-**Status:** 🔴 In Progress
+**Status:** ✅ Complete (with 2 follow-up tasks planned)
 
 ### 50.1: CLI SPEC-005 Compliance Fixes
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) | Fix ash check exit codes for parse/type errors | SPEC-005 | 4 | 📝 Planned |
-| [TASK-308](tasks/TASK-308-cli-input-file-path.md) | Fix ash run --input to accept file path | SPEC-005 | 6 | 📝 Planned |
-| [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) | Implement --dry-run, --timeout, --capability | SPEC-005 | 8 | 📝 Planned |
+| [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) | Fix ash check exit codes for parse/type errors | SPEC-005 | 4 | ✅ Complete |
+| [TASK-308](tasks/TASK-308-cli-input-file-path.md) | Fix ash run --input to accept file path | SPEC-005 | 6 | ✅ Complete |
+| [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) | Implement --dry-run, --timeout, --capability | SPEC-005 | 8 | ✅ Complete |
 
 ### 50.2: Test Suite Fixes
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-310](tasks/TASK-310-fix-cli-input-tests.md) | Fix cli_input_workflow_test failures | N/A | 4 | 📝 Planned |
-| [TASK-313](tasks/TASK-313-fix-proptest-obligation.md) | Fix prop_partial_discharge_scenario proptest | N/A | 4 | 📝 Planned |
+| [TASK-310](tasks/TASK-310-fix-cli-input-tests.md) | Fix cli_input_workflow_test failures | N/A | 4 | ✅ Complete |
+| [TASK-313](tasks/TASK-313-fix-proptest-obligation.md) | Fix prop_partial_discharge_scenario proptest | N/A | 4 | ✅ Complete |
 
 ### 50.3: API/Visibility Hardening
 
@@ -1363,14 +1363,38 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 **Phase 50 Deliverable:** All SPEC-005 compliance gaps closed, test suite green, API contracts honored.
 
 **Summary:**
-- 9 tasks total (7 remediation + 2 follow-up)
-- CLI exit codes, --input handling, unimplemented flags (fixed)
-- Test suite failures fixed or properly documented
-- Visibility enforcement gaps fixed
-- HTTP provider API honesty addressed
-- **New follow-up tasks:** Boolean display, List<T> parsing
+- 7 remediation tasks completed
+- CLI exit codes now compliant with SPEC-005 (exit code 2 for parse errors)
+- ash run --input now accepts file paths per SPEC-005
+- --dry-run, --timeout, --capability flags now functional
+- cli_input_workflow_test failures resolved
+- prop_partial_discharge_scenario proptest fixed
+- pub(crate) visibility enforcement implemented
+- HTTP provider API documented
 
-**Total:** ~44 hours (34 remediation + 10 follow-up)
+**Total:** ~34 hours (all complete)
+
+---
+
+## Phase 51: Implementation Follow-up
+
+**Goal:** Address known issues identified during Phase 50 remediation.
+
+**Source:** Phase 50 test analysis and spec clarification  
+**Priority:** Medium  
+**Status:** 📝 Planned
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-314](tasks/TASK-314-fix-boolean-display.md) | Fix interpreter boolean display ("true"/"false") | SPEC-004 | 2 | 📝 Planned |
+| [TASK-315](tasks/TASK-315-fix-list-parameter-syntax.md) | Fix parser List<T> syntax in workflow parameters | SPEC-002 | 8 | 📝 Planned |
+
+**Summary:**
+- 2 implementation tasks identified from Phase 50
+- Boolean parameter binding/display issue in if-conditions
+- Generic type syntax support for workflow parameters
+
+**Total:** ~10 hours
 
 ---
 
@@ -1381,9 +1405,9 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 ||| 44 | 17 | 102-108 | ✅ Complete |
 ||| 45 | 3 | 14 | ✅ Complete |
 ||| 46 | 13 | 98-108 | ✅ Complete |
-||| 47 | 10 | 90 | ⚠️ Partial |
-||| 48 | 15 | 138 | ⚠️ Partial |
-||| 49 | 9 | 52 | ⚠️ Partial |
-||| **Total** | **67** | **494-512** | ⚠️ Remediation Required |
+||| 47 | 10 | 90 | ✅ Complete |
+||| 48 | 15 | 138 | ✅ Complete |
+||| 49 | 9 | 52 | ✅ Complete |
+||| **Total** | **69** | **540-558** | ✅ Complete |
 
 **Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

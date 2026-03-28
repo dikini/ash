@@ -630,8 +630,8 @@ impl<'a> ImportResolver<'a> {
                 let path_components: Vec<String> =
                     path.split("::").map(|s| s.to_string()).collect();
 
-                // Resolve the restricted path to a module
-                match self.module_graph.resolve_path(&path_components) {
+                // Resolve the restricted path from the importing crate's context
+                match self.resolve_restricted_path(importing_module, &path_components) {
                     Some(restricted_module) => {
                         // Importing module must be the restricted module or its descendant
                         self.module_graph
@@ -641,6 +641,45 @@ impl<'a> ImportResolver<'a> {
                 }
             }
         }
+    }
+
+    /// Resolve a restricted visibility path from the importing crate's context.
+    /// Path format: ["crate", "foo", "bar"] representing crate::foo::bar
+    fn resolve_restricted_path(
+        &self,
+        importing_module: ModuleId,
+        path: &[String],
+    ) -> Option<ModuleId> {
+        // Get the importing module's crate root
+        let crate_root = self
+            .module_graph
+            .crate_id_for_module(importing_module)
+            .and_then(|crate_id| self.module_graph.get_crate(crate_id))
+            .map(|info| info.root_module)
+            .or_else(|| self.module_graph.get_root().copied())?;
+
+        let mut current = crate_root;
+
+        for component in path {
+            // Handle "crate" as the root module name
+            if component == "crate" {
+                // Check if current is root (for the first component)
+                if current == crate_root {
+                    continue;
+                }
+            }
+
+            // Find child with matching name
+            let node = self.module_graph.get_node(current)?;
+            let child = node.children.iter().find(|&&child_id| {
+                self.module_graph
+                    .get_node(child_id)
+                    .map(|n| &n.name == component)
+                    .unwrap_or(false)
+            })?;
+            current = *child;
+        }
+        Some(current)
     }
 
     /// Get the name of a module.

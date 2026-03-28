@@ -155,8 +155,9 @@ enum RestrictedPath {
     Relative(ModulePath),
 }
 
-/// Resolve a restricted visibility path string relative to the item's module.
-fn resolve_restricted_path(path_str: &str, item_module: &ModulePath) -> RestrictedPath {
+/// Resolve a restricted visibility path string.
+/// Note: The actual resolution relative to the item's module happens in `is_visible_path`.
+fn resolve_restricted_path(path_str: &str, _item_module: &ModulePath) -> RestrictedPath {
     if path_str == "crate" {
         return RestrictedPath::Crate;
     }

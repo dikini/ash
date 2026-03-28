@@ -797,7 +797,10 @@ mod tests {
             "external::crate_b::module",
             "item",
         );
-        assert!(result.is_err(), "external::crate_a items should NOT be visible to external::crate_b");
+        assert!(
+            result.is_err(),
+            "external::crate_a items should NOT be visible to external::crate_b"
+        );
 
         // Same external crate SHOULD see its own pub(crate) items
         let result = checker.check_access(
@@ -806,7 +809,10 @@ mod tests {
             "external::crate_a::module2",
             "item",
         );
-        assert!(result.is_ok(), "external::crate_a items SHOULD be visible within external::crate_a");
+        assert!(
+            result.is_ok(),
+            "external::crate_a items SHOULD be visible within external::crate_a"
+        );
     }
 
     #[test]
@@ -821,7 +827,10 @@ mod tests {
             "my_crate::module",
             "item",
         );
-        assert!(result.is_err(), "External pub(crate) items should NOT be visible to local crate");
+        assert!(
+            result.is_err(),
+            "External pub(crate) items should NOT be visible to local crate"
+        );
 
         // External crate should NOT see local crate's pub(crate) items
         let result = checker.check_access(
@@ -830,16 +839,25 @@ mod tests {
             "external::util::helpers",
             "item",
         );
-        assert!(result.is_err(), "Local pub(crate) items should NOT be visible to external crates");
+        assert!(
+            result.is_err(),
+            "Local pub(crate) items should NOT be visible to external crates"
+        );
     }
 
     #[test]
     fn test_module_path_is_external() {
         let external_path = ModulePath::parse("external::crate_a::module");
-        assert!(external_path.is_external(), "Path starting with 'external' should be external");
+        assert!(
+            external_path.is_external(),
+            "Path starting with 'external' should be external"
+        );
 
         let local_path = ModulePath::parse("my_crate::module");
-        assert!(!local_path.is_external(), "Path not starting with 'external' should be local");
+        assert!(
+            !local_path.is_external(),
+            "Path not starting with 'external' should be local"
+        );
 
         let root_path = ModulePath::root();
         assert!(!root_path.is_external(), "Root path should not be external");
@@ -866,12 +884,26 @@ mod tests {
         let visibility = Visibility::Public;
 
         // pub items should be visible from anywhere, including external crates
-        assert!(checker
-            .check_access(&visibility, "my_crate::module", "external::other::module", "item")
-            .is_ok());
-        assert!(checker
-            .check_access(&visibility, "external::crate_a::mod", "external::crate_b::mod", "item")
-            .is_ok());
+        assert!(
+            checker
+                .check_access(
+                    &visibility,
+                    "my_crate::module",
+                    "external::other::module",
+                    "item"
+                )
+                .is_ok()
+        );
+        assert!(
+            checker
+                .check_access(
+                    &visibility,
+                    "external::crate_a::mod",
+                    "external::crate_b::mod",
+                    "item"
+                )
+                .is_ok()
+        );
     }
 
     #[test]
@@ -885,7 +917,9 @@ mod tests {
         assert!(Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_same_crate));
 
         // In different crate: different parents, should not be visible
-        assert!(!Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_different_crate));
+        assert!(
+            !Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_different_crate)
+        );
     }
 
     #[test]
@@ -896,18 +930,34 @@ mod tests {
         };
 
         // Should be visible from the restricted path
-        assert!(checker
-            .check_access(&visibility, "any::module", "external::util::helpers", "item")
-            .is_ok());
+        assert!(
+            checker
+                .check_access(
+                    &visibility,
+                    "any::module",
+                    "external::util::helpers",
+                    "item"
+                )
+                .is_ok()
+        );
 
         // Should be visible from submodules
-        assert!(checker
-            .check_access(&visibility, "any::module", "external::util::helpers::sub", "item")
-            .is_ok());
+        assert!(
+            checker
+                .check_access(
+                    &visibility,
+                    "any::module",
+                    "external::util::helpers::sub",
+                    "item"
+                )
+                .is_ok()
+        );
 
         // Should NOT be visible from parent of restricted path
-        assert!(checker
-            .check_access(&visibility, "any::module", "external::util", "item")
-            .is_err());
+        assert!(
+            checker
+                .check_access(&visibility, "any::module", "external::util", "item")
+                .is_err()
+        );
     }
 }

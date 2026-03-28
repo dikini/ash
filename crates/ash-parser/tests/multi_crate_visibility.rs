@@ -214,12 +214,7 @@ fn test_external_pub_super_import_rejected() {
     );
 
     // Add use statement from main module importing from external crate
-    let use_path = UsePath::Simple(simple_path(&[
-        "external",
-        "util",
-        "helpers",
-        "parent_item",
-    ]));
+    let use_path = UsePath::Simple(simple_path(&["external", "util", "helpers", "parent_item"]));
     resolver.add_module_uses(main_mod, vec![use_stmt(use_path)]);
 
     // Import should fail - pub(super) item is not visible from external crate

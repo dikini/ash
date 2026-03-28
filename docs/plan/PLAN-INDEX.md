@@ -1542,4 +1542,66 @@ test result: ok. 33 passed; 0 failed
 
 ---
 
+## Phase 55: Cross-Crate Boundary Enforcement
+
+**Goal:** Add source-defined crate loading and dependency syntax, then enforce real cross-crate visibility boundaries across module loading, import resolution, and type checking.
+
+**Source:** Follow-up to TASK-329 verification findings and the deliberate single-root limitation documented in Phase 54.  
+**Priority:** Critical (spec compliance and security boundary)  
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-337](tasks/TASK-337-parse-crate-root-dependencies.md) | Add crate root and dependency syntax | SPEC-009/012 | 2-3 | ✅ Complete |
+| [TASK-338](tasks/TASK-338-crate-aware-module-graph.md) | Extend module graph with crate identity | SPEC-009 | 2 | ✅ Complete |
+| [TASK-339](tasks/TASK-339-cross-crate-module-loading.md) | Implement dependency-aware multi-crate loading | SPEC-009 | 3-4 | ✅ Complete |
+| [TASK-340](tasks/TASK-340-external-import-resolution-and-visibility.md) | Resolve external imports and enforce cross-crate visibility | SPEC-009 | 2-3 | ✅ Complete |
+| [TASK-341](tasks/TASK-341-cross-crate-typeck-and-integration-tests.md) | Align type checker and add multi-crate regression coverage | SPEC-009 | 2-3 | ✅ Complete |
+| [TASK-342](tasks/TASK-342-phase-55-closeout.md) | Phase 55 closeout and verification | N/A | 1 | ✅ Complete |
+
+**Summary:**
+This phase implemented real cross-crate visibility enforcement:
+- `crate <name>;` and `dependency <alias> from "<path>";` syntax for crate metadata
+- `CrateId` and `CrateInfo` for tracking crate identity in `ModuleGraph`
+- `external::<alias>::...` import paths with dependency resolution
+- Cross-crate visibility: only `pub` items visible across crate boundaries
+- Type checker alignment with explicit external path semantics
+
+**Implementation Details:**
+- TASK-337: AST types `CrateRootMetadata` and `DependencyDecl`; parser for crate metadata
+- TASK-338: `CrateId`, `CrateInfo`, `module_to_crate` mapping, `dependency_target()` helper
+- TASK-339: Recursive dependency loading with cycle detection and duplicate checking
+- TASK-340: `resolve_external_path()` with cross-crate visibility enforcement
+- TASK-341: `ModulePath::is_external()` and `crate_root()` for proper crate identification
+
+**Files Modified:**
+- `crates/ash-parser/src/parse_crate_root.rs` - New crate metadata parser
+- `crates/ash-parser/src/resolver.rs` - Multi-crate loading with dependency resolution
+- `crates/ash-parser/src/import_resolver.rs` - External path resolution, importer-relative visibility
+- `crates/ash-core/src/module_graph.rs` - Crate identity tracking
+- `crates/ash-typeck/src/visibility.rs` - Explicit external path handling
+
+**Test Results:**
+```
+cargo test --package ash-core module_graph --quiet
+running 28 tests
+test result: ok. 28 passed; 0 failed
+
+cargo test --package ash-parser resolver --quiet
+running 60 tests
+test result: ok. 60 passed; 0 failed
+
+cargo test --package ash-parser import_resolver --quiet
+running 41 tests
+test result: ok. 41 passed; 0 failed
+
+cargo test --package ash-typeck visibility --quiet
+running 40 tests
+test result: ok. 40 passed; 0 failed
+```
+
+**Total:** ~12-16 hours
+
+---
+
 |**Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)

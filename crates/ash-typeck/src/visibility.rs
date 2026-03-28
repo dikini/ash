@@ -180,7 +180,23 @@ impl VisibilityExt for Visibility {
             Visibility::Self_ => from_module == item_module,
 
             Visibility::Restricted { path } => {
+                // Handle special case: pub(in crate) means visible within the same crate
+                if path.as_ref() == "crate" {
+                    return item_module.crate_root() == from_module.crate_root();
+                }
+
+                // Handle other restricted paths like pub(in super), pub(in self), pub(in crate::foo)
                 let restricted_path = ModulePath::parse(path);
+
+                // Special handling for paths starting with "crate"
+                if restricted_path.segments.first().map(|s| s.as_str()) == Some("crate") {
+                    // pub(in crate::foo) - resolve relative to the crate root
+                    // The item's crate root must match the importing module's crate root
+                    if item_module.crate_root() != from_module.crate_root() {
+                        return false;
+                    }
+                }
+
                 from_module == &restricted_path || from_module.starts_with(&restricted_path)
             }
         }

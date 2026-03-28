@@ -126,6 +126,25 @@ impl ModuleGraph {
         id
     }
 
+    /// Create a new crate entry without a root module assigned yet.
+    /// Use `set_crate_root_module` to assign the root after modules are resolved.
+    pub fn create_crate_entry(&mut self, name: String, root_path: String) -> CrateId {
+        let id = CrateId(self.next_crate_id);
+        self.next_crate_id += 1;
+        // Use a placeholder ModuleId(0) - will be updated later
+        let crate_info = CrateInfo::new(name, ModuleId(0), root_path);
+        self.crates.insert(id, crate_info);
+        id
+    }
+
+    /// Set the root module for a crate created with `create_crate_entry`.
+    pub fn set_crate_root_module(&mut self, crate_id: CrateId, root_module: ModuleId) {
+        if let Some(crate_info) = self.crates.get_mut(&crate_id) {
+            crate_info.root_module = root_module;
+        }
+        self.module_to_crate.insert(root_module, crate_id);
+    }
+
     /// Get the crate ID for a module (lookup which crate owns the module)
     pub fn crate_id_for_module(&self, module: ModuleId) -> Option<CrateId> {
         self.module_to_crate.get(&module).copied()

@@ -258,17 +258,28 @@ impl ModuleResolver {
             return Err(ResolveError::CrateCycle { cycle });
         }
 
-        // Resolve the root module of this crate (which also resolves submodules)
-        let root_module_id =
-            self.resolve_module(root_path, canonical_path, graph, visited, resolution_stack)?;
-
-        // Add this crate to the graph
+        // Create the crate entry first (before resolving modules)
+        // This gives us a CrateId to assign to all modules in this crate
         let root_path_str = canonical_path.display().to_string();
-        let crate_id = graph.add_crate(crate_name_str.clone(), root_path_str, root_module_id);
+        let crate_id = graph.create_crate_entry(crate_name_str.clone(), root_path_str);
 
         // Track this crate
         crate_paths.insert(canonical_path.to_path_buf(), crate_id);
         crate_names.insert(crate_name_str.clone(), crate_id);
+
+        // Resolve the root module of this crate (which also resolves submodules)
+        // Pass the CrateId so all modules get properly assigned
+        let root_module_id = self.resolve_module(
+            root_path,
+            canonical_path,
+            graph,
+            visited,
+            resolution_stack,
+            Some(crate_id),
+        )?;
+
+        // Update the crate with the root module
+        graph.set_crate_root_module(crate_id, root_module_id);
 
         // Now resolve dependencies
         crate_resolution_stack.push(crate_name_str.clone());
@@ -404,6 +415,7 @@ impl ModuleResolver {
         graph: &mut ModuleGraph,
         visited: &mut HashSet<PathBuf>,
         resolution_stack: &mut Vec<PathBuf>,
+        crate_id: Option<CrateId>,
     ) -> Result<ModuleId, ResolveError> {
         // Check for circular dependencies
         if let Some(pos) = resolution_stack.iter().position(|p| p == canonical_path) {
@@ -465,14 +477,25 @@ impl ModuleResolver {
         let node = ModuleNode::new(module_name, source);
         let module_id = graph.add_node(node);
 
+        // Assign this module to the crate (if crate_id is provided)
+        if let Some(cid) = crate_id {
+            graph.assign_module_to_crate(module_id, cid);
+        }
+
         visited.insert(canonical_path.to_path_buf());
         resolution_stack.push(canonical_path.to_path_buf());
 
         // Resolve child modules
         for decl in module_decls {
             let child_path = self.resolve_child_module_path(canonical_path, &decl)?;
-            let child_id =
-                self.resolve_module(&child_path, &child_path, graph, visited, resolution_stack)?;
+            let child_id = self.resolve_module(
+                &child_path,
+                &child_path,
+                graph,
+                visited,
+                resolution_stack,
+                crate_id, // Propagate crate_id to children
+            )?;
             graph.add_edge(module_id, child_id);
         }
 

@@ -645,41 +645,84 @@ impl<'a> ImportResolver<'a> {
 
     /// Resolve a restricted visibility path from the importing crate's context.
     /// Path format: ["crate", "foo", "bar"] representing crate::foo::bar
+    /// Also handles "super" and "self" keywords.
     fn resolve_restricted_path(
         &self,
         importing_module: ModuleId,
         path: &[String],
     ) -> Option<ModuleId> {
-        // Get the importing module's crate root
-        let crate_root = self
-            .module_graph
-            .crate_id_for_module(importing_module)
-            .and_then(|crate_id| self.module_graph.get_crate(crate_id))
-            .map(|info| info.root_module)
-            .or_else(|| self.module_graph.get_root().copied())?;
+        if path.is_empty() {
+            return None;
+        }
 
-        let mut current = crate_root;
+        // Handle special path keywords at the start
+        let first = path[0].as_str();
+        let mut current = match first {
+            "crate" => {
+                // Get the crate root
+                self.module_graph
+                    .crate_id_for_module(importing_module)
+                    .and_then(|crate_id| self.module_graph.get_crate(crate_id))
+                    .map(|info| info.root_module)
+                    .or_else(|| self.module_graph.get_root().copied())?
+            }
+            "self" => importing_module,
+            "super" => {
+                // Get parent of importing module
+                self.module_graph
+                    .get_node(importing_module)
+                    .and_then(|n| n.parent)?
+            }
+            _ => {
+                // Regular path component - resolve from crate root
+                self.module_graph
+                    .crate_id_for_module(importing_module)
+                    .and_then(|crate_id| self.module_graph.get_crate(crate_id))
+                    .map(|info| info.root_module)
+                    .or_else(|| self.module_graph.get_root().copied())?;
+                // Try to find child matching first component
+                let root = self
+                    .module_graph
+                    .crate_id_for_module(importing_module)
+                    .and_then(|crate_id| self.module_graph.get_crate(crate_id))
+                    .map(|info| info.root_module)
+                    .or_else(|| self.module_graph.get_root().copied())?;
+                self.find_child_module(root, first)?
+            }
+        };
 
-        for component in path {
-            // Handle "crate" as the root module name
-            if component == "crate" {
-                // Check if current is root (for the first component)
-                if current == crate_root {
-                    continue;
+        // Process remaining path components
+        for component in &path[1..] {
+            match component.as_str() {
+                "super" => {
+                    // Move up to parent
+                    current = self
+                        .module_graph
+                        .get_node(current)
+                        .and_then(|n| n.parent)?;
+                }
+                "self" => {
+                    // Stay at current module (no-op)
+                }
+                _ => {
+                    // Find child with matching name
+                    current = self.find_child_module(current, component)?;
                 }
             }
-
-            // Find child with matching name
-            let node = self.module_graph.get_node(current)?;
-            let child = node.children.iter().find(|&&child_id| {
-                self.module_graph
-                    .get_node(child_id)
-                    .map(|n| &n.name == component)
-                    .unwrap_or(false)
-            })?;
-            current = *child;
         }
+
         Some(current)
+    }
+
+    /// Find a child module with the given name.
+    fn find_child_module(&self, parent: ModuleId, name: &str) -> Option<ModuleId> {
+        let node = self.module_graph.get_node(parent)?;
+        node.children.iter().find_map(|&child_id| {
+            self.module_graph
+                .get_node(child_id)
+                .filter(|n| n.name == name)
+                .map(|_| child_id)
+        })
     }
 
     /// Get the name of a module.

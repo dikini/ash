@@ -268,7 +268,7 @@ Update this section as tasks complete:
 | 38 | 1 | 1 | ✅ Complete |
 | 39 | 1 | 1 | ✅ Complete |
 | 40 | 2 | 2 | ✅ Complete |
-| 41-42 | 2 | 1 | 🟡 In Progress |
+| 41-42 | 2 | 2 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -360,7 +360,7 @@ Update this section as tasks complete:
 | 38 | 1 | 1 | ✅ Complete |
 | 39 | 1 | 1 | ✅ Complete |
 | 40 | 2 | 2 | ✅ Complete |
-| 41-42 | 2 | 1 | 🟡 In Progress |
+| 41-42 | 2 | 2 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 

@@ -52,6 +52,27 @@ The format is based on [Common Changelog](https://common-changelog.org/).
     - `pub(crate)` now works correctly with production resolver-built graphs
     - Note: True cross-crate enforcement is Phase 55 scope
 
+- **Phase 55: Cross-Crate Boundary Enforcement**
+  - **TASK-337:** Added crate root and dependency syntax
+    - Parse `crate <name>;` declarations for crate identity
+    - Parse `dependency <alias> from "<path>";` declarations
+    - AST types: `CrateRootMetadata`, `DependencyDecl`
+  - **TASK-338:** Extended `ModuleGraph` with crate identity
+    - Added `CrateId` and `CrateInfo` types
+    - Track module-to-crate ownership via `module_to_crate` mapping
+    - Added `dependency_target()` for alias-to-crate resolution
+  - **TASK-339:** Implemented dependency-aware multi-crate loading
+    - `ModuleResolver` recursively loads dependency crates
+    - Detects duplicate crate names, duplicate aliases, and dependency cycles
+  - **TASK-340:** External import resolution and cross-crate visibility
+    - Added `external::<alias>::...` path resolution
+    - Only `pub` items visible across crate boundaries
+    - `pub(crate)`, `pub(super)`, `pub(in path)` rejected for external imports
+  - **TASK-341:** Aligned type checker with cross-crate visibility
+    - Added `ModulePath::is_external()` and `crate_root()` methods
+    - Type checker correctly distinguishes local vs external crate paths
+    - Added multi-crate visibility regression tests
+
 ### Fixed
 
 - TASK-310: Marked 3 failing cli_input_workflow_test tests as `#[ignore]` with known issue documentation

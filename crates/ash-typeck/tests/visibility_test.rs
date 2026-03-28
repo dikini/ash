@@ -259,3 +259,72 @@ fn test_restricted_at_root() {
     };
     assert!(vis.is_visible_path(&ModulePath::root(), &from_anywhere));
 }
+
+// ============================================================
+// TASK-341: Cross-crate visibility tests
+// ============================================================
+
+#[test]
+fn test_pub_crate_not_visible_from_external() {
+    // pub(crate) from external path should fail when accessing from different crate
+    let item_module = path(&["external", "util_crate", "internal"]);
+    let from_module = path(&["my_crate", "consumer"]);
+
+    // Different crate roots - should NOT be visible
+    assert!(!Visibility::Crate.is_visible_path(&item_module, &from_module));
+}
+
+#[test]
+fn test_pub_visible_from_external() {
+    // pub from external path should succeed
+    let item_module = path(&["external", "util_crate", "module"]);
+    let from_external = path(&["my_crate", "consumer"]);
+    let from_different_external = path(&["external", "other_crate", "module"]);
+
+    // Public items should be visible from anywhere
+    assert!(Visibility::Public.is_visible_path(&item_module, &from_external));
+    assert!(Visibility::Public.is_visible_path(&item_module, &from_different_external));
+}
+
+#[test]
+fn test_pub_super_not_visible_from_external() {
+    // pub(super) from external path should fail when from_module is not in same parent
+    let item_module = path(&["external", "crate_a", "module"]);
+    let from_different_crate = path(&["external", "crate_b", "other"]);
+
+    // Different external crates have different parents - should NOT be visible
+    assert!(!Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_different_crate));
+}
+
+#[test]
+fn test_pub_in_path_not_visible_from_external() {
+    // pub(in path) from external path should fail when from_module is outside the path
+    let item_module = path(&["crate", "any"]);
+    let restricted_to = "external::util::helpers".to_string();
+    let from_outside = path(&["external", "other", "module"]);
+
+    let vis = Visibility::Restricted {
+        path: restricted_to.into(),
+    };
+
+    // from_outside is not within external::util::helpers subtree
+    assert!(!vis.is_visible_path(&item_module, &from_outside));
+}
+
+#[test]
+fn test_external_crate_root_identification() {
+    // Verify that crate_root() correctly identifies external crates
+    let external_a = path(&["external", "crate_a", "module", "sub"]);
+    let external_b = path(&["external", "crate_b", "module"]);
+    let local = path(&["my_crate", "module"]);
+
+    // external::crate_a and external::crate_b should have different crate roots
+    assert_ne!(external_a.crate_root(), external_b.crate_root());
+
+    // Both should be external
+    assert!(external_a.is_external());
+    assert!(external_b.is_external());
+
+    // Local should not be external
+    assert!(!local.is_external());
+}

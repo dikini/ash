@@ -38,6 +38,30 @@ impl ModulePath {
         }
     }
 
+    /// Check if this path is an external crate path.
+    ///
+    /// External paths start with "external" segment.
+    pub fn is_external(&self) -> bool {
+        self.segments.first().map(|s| s.as_str()) == Some("external")
+    }
+
+    /// Get the crate root identifier for this path.
+    ///
+    /// For local paths: returns the first segment (e.g., "crate" or custom crate name).
+    /// For external paths: returns first two segments (e.g., "external::crate_name").
+    /// This ensures external crates are properly isolated from each other.
+    pub fn crate_root(&self) -> &[String] {
+        if self.is_external() {
+            // External paths: first two segments identify the crate
+            // e.g., "external::util_lib::helpers" -> ["external", "util_lib"]
+            &self.segments[..self.segments.len().min(2)]
+        } else {
+            // Local paths: first segment identifies the crate
+            // e.g., "my_crate::module" -> ["my_crate"]
+            &self.segments[..self.segments.len().min(1)]
+        }
+    }
+
     /// Create a child module path by appending a segment.
     pub fn child(&self, name: impl Into<String>) -> Self {
         let mut segments = self.segments.clone();
@@ -131,11 +155,11 @@ impl VisibilityExt for Visibility {
 
             Visibility::Crate => {
                 // pub(crate) is visible only within the same crate.
-                // We use a simple heuristic: modules are in the same crate if their
-                // first path segment (crate root) matches.
-                let item_root = item_module.segments.first();
-                let from_root = from_module.segments.first();
-                item_root == from_root
+                // Use crate_root() to properly handle external crate paths:
+                // - Local paths: first segment identifies the crate
+                // - External paths: first two segments identify the crate
+                // This ensures external::crate_a and external::crate_b are isolated.
+                item_module.crate_root() == from_module.crate_root()
             }
 
             Visibility::Super { levels } => {
@@ -755,5 +779,135 @@ mod tests {
 
         let display = format!("{err}");
         assert!(display.contains("missing visibility context"));
+    }
+
+    // ============================================================
+    // TASK-341: External path handling tests
+    // ============================================================
+
+    #[test]
+    fn test_pub_crate_isolates_external_crates() {
+        let checker = VisibilityChecker::new();
+        let visibility = Visibility::Crate;
+
+        // Two different external crates should NOT see each other's pub(crate) items
+        let result = checker.check_access(
+            &visibility,
+            "external::crate_a::module",
+            "external::crate_b::module",
+            "item",
+        );
+        assert!(result.is_err(), "external::crate_a items should NOT be visible to external::crate_b");
+
+        // Same external crate SHOULD see its own pub(crate) items
+        let result = checker.check_access(
+            &visibility,
+            "external::crate_a::module1",
+            "external::crate_a::module2",
+            "item",
+        );
+        assert!(result.is_ok(), "external::crate_a items SHOULD be visible within external::crate_a");
+    }
+
+    #[test]
+    fn test_pub_crate_external_vs_local() {
+        let checker = VisibilityChecker::new();
+        let visibility = Visibility::Crate;
+
+        // Local crate should NOT see external crate's pub(crate) items
+        let result = checker.check_access(
+            &visibility,
+            "external::util::helpers",
+            "my_crate::module",
+            "item",
+        );
+        assert!(result.is_err(), "External pub(crate) items should NOT be visible to local crate");
+
+        // External crate should NOT see local crate's pub(crate) items
+        let result = checker.check_access(
+            &visibility,
+            "my_crate::internal",
+            "external::util::helpers",
+            "item",
+        );
+        assert!(result.is_err(), "Local pub(crate) items should NOT be visible to external crates");
+    }
+
+    #[test]
+    fn test_module_path_is_external() {
+        let external_path = ModulePath::parse("external::crate_a::module");
+        assert!(external_path.is_external(), "Path starting with 'external' should be external");
+
+        let local_path = ModulePath::parse("my_crate::module");
+        assert!(!local_path.is_external(), "Path not starting with 'external' should be local");
+
+        let root_path = ModulePath::root();
+        assert!(!root_path.is_external(), "Root path should not be external");
+    }
+
+    #[test]
+    fn test_module_path_crate_root() {
+        // Local path: first segment is crate root
+        let local = ModulePath::parse("my_crate::a::b");
+        assert_eq!(local.crate_root(), &["my_crate"]);
+
+        // External path: first two segments identify the crate
+        let external = ModulePath::parse("external::util::helpers");
+        assert_eq!(external.crate_root(), &["external", "util"]);
+
+        // Root path
+        let root = ModulePath::root();
+        assert!(root.crate_root().is_empty());
+    }
+
+    #[test]
+    fn test_pub_visible_from_external() {
+        let checker = VisibilityChecker::new();
+        let visibility = Visibility::Public;
+
+        // pub items should be visible from anywhere, including external crates
+        assert!(checker
+            .check_access(&visibility, "my_crate::module", "external::other::module", "item")
+            .is_ok());
+        assert!(checker
+            .check_access(&visibility, "external::crate_a::mod", "external::crate_b::mod", "item")
+            .is_ok());
+    }
+
+    #[test]
+    fn test_pub_super_not_visible_across_external_crates() {
+        // pub(super) logic uses ancestors, but we should verify external boundaries
+        let item_module = ModulePath::parse("external::crate_a::module");
+        let from_same_crate = ModulePath::parse("external::crate_a::other");
+        let from_different_crate = ModulePath::parse("external::crate_b::module");
+
+        // In same crate: both share parent "external::crate_a", so visible
+        assert!(Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_same_crate));
+
+        // In different crate: different parents, should not be visible
+        assert!(!Visibility::Super { levels: 1 }.is_visible_path(&item_module, &from_different_crate));
+    }
+
+    #[test]
+    fn test_pub_restricted_external_path() {
+        let checker = VisibilityChecker::new();
+        let visibility = Visibility::Restricted {
+            path: "external::util::helpers".into(),
+        };
+
+        // Should be visible from the restricted path
+        assert!(checker
+            .check_access(&visibility, "any::module", "external::util::helpers", "item")
+            .is_ok());
+
+        // Should be visible from submodules
+        assert!(checker
+            .check_access(&visibility, "any::module", "external::util::helpers::sub", "item")
+            .is_ok());
+
+        // Should NOT be visible from parent of restricted path
+        assert!(checker
+            .check_access(&visibility, "any::module", "external::util", "item")
+            .is_err());
     }
 }

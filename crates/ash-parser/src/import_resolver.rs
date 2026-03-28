@@ -630,8 +630,11 @@ impl<'a> ImportResolver<'a> {
                 let path_components: Vec<String> =
                     path.split("::").map(|s| s.to_string()).collect();
 
-                // Resolve the restricted path from the importing crate's context
-                match self.resolve_restricted_path(importing_module, &path_components) {
+                // SPEC-009: Restricted paths are resolved from the DEFINING module's context
+                // (where the item is declared), not the importing module's context
+                // Example: item in crate::owner with pub(in foo) checks against owner::foo,
+                // not the importer's foo
+                match self.resolve_restricted_path(target_module, &path_components) {
                     Some(restricted_module) => {
                         // Importing module must be the restricted module or its descendant
                         self.module_graph

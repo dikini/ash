@@ -146,8 +146,9 @@ enum RestrictedPath {
     Crate,
     /// pub(in self) - visible only in the defining module
     Self_,
-    /// pub(in super) or pub(in super::super) - visible from parent modules
-    Super { levels: usize },
+    /// pub(in super) or pub(in super::super::foo) - visible from parent modules
+    /// The path is resolved from the parent module(s) indicated by levels
+    Super { levels: usize, suffix: Option<ModulePath> },
     /// pub(in crate::foo::bar) - absolute path from crate root
     Absolute(ModulePath),
     /// pub(in foo::bar) - relative path from the defining module
@@ -169,8 +170,19 @@ fn resolve_restricted_path(path_str: &str, item_module: &ModulePath) -> Restrict
     let super_count = parts.iter().take_while(|&&p| p == "super").count();
 
     if super_count > 0 {
-        // pub(in super) or pub(in super::super::...)
-        return RestrictedPath::Super { levels: super_count };
+        // pub(in super) or pub(in super::super::foo)
+        // Capture any suffix after the super components
+        let suffix = if super_count < parts.len() {
+            let suffix_segments: Vec<String> =
+                parts[super_count..].iter().map(|s| s.to_string()).collect();
+            Some(ModulePath::new(suffix_segments))
+        } else {
+            None
+        };
+        return RestrictedPath::Super {
+            levels: super_count,
+            suffix,
+        };
     }
 
     // Check if path starts with "crate"
@@ -239,22 +251,34 @@ impl VisibilityExt for Visibility {
                         // pub(in self) - visible only in item's module
                         from_module == item_module
                     }
-                    RestrictedPath::Super { levels } => {
-                        // pub(in super) - visible from parent modules
+                    RestrictedPath::Super { levels, ref suffix } => {
+                        // pub(in super) or pub(in super::foo) - visible from parent modules
                         // Get ancestors of item_module up to 'levels'
-                        let ancestors: Vec<_> = std::iter::successors(Some(item_module.clone()), |m| {
+                        let ancestor = std::iter::successors(Some(item_module.clone()), |m| {
                             if m.segments.is_empty() {
                                 None
                             } else {
                                 Some(m.parent())
                             }
                         })
-                        .take(levels + 1) // +1 to include item_module itself
-                        .collect();
+                        .nth(levels); // Get the ancestor at 'levels' steps up
 
-                        ancestors.iter().any(|ancestor| {
-                            from_module == ancestor || from_module.starts_with(ancestor)
-                        })
+                        match ancestor {
+                            None => false, // At root, no such ancestor
+                            Some(base) => {
+                                // If there's a suffix (e.g., super::foo), resolve it from the ancestor
+                                let restricted_path = match suffix {
+                                    None => base,
+                                    Some(s) => {
+                                        let mut segments = base.segments.clone();
+                                        segments.extend(s.segments.iter().cloned());
+                                        ModulePath::new(segments)
+                                    }
+                                };
+                                from_module == &restricted_path
+                                    || from_module.starts_with(&restricted_path)
+                            }
+                        }
                     }
                     RestrictedPath::Absolute(ref path) => {
                         // pub(in crate::foo) - absolute path from crate root

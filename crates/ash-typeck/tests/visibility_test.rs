@@ -250,14 +250,31 @@ fn test_pub_super_single_segment() {
 }
 
 #[test]
-fn test_restricted_at_root() {
-    let restricted_to = "crate".to_string();
-    let from_anywhere = path(&["crate", "a", "b"]);
+fn test_restricted_in_crate_same_crate() {
+    // pub(in crate) means visible within the same crate
+    let item_module = path(&["my_crate", "internal"]);
+    let from_same_crate = path(&["my_crate", "consumer"]);
 
     let vis = Visibility::Restricted {
-        path: restricted_to.into(),
+        path: "crate".into(),
     };
-    assert!(vis.is_visible_path(&ModulePath::root(), &from_anywhere));
+
+    // Same crate - should be visible
+    assert!(vis.is_visible_path(&item_module, &from_same_crate));
+}
+
+#[test]
+fn test_restricted_in_crate_different_crate() {
+    // pub(in crate) from external crate should NOT be visible
+    let item_module = path(&["external", "util_crate", "internal"]);
+    let from_different_crate = path(&["my_crate", "consumer"]);
+
+    let vis = Visibility::Restricted {
+        path: "crate".into(),
+    };
+
+    // Different crate - should NOT be visible
+    assert!(!vis.is_visible_path(&item_module, &from_different_crate));
 }
 
 // ============================================================

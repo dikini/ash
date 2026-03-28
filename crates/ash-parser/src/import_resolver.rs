@@ -674,20 +674,9 @@ impl<'a> ImportResolver<'a> {
                     .and_then(|n| n.parent)?
             }
             _ => {
-                // Regular path component - resolve from crate root
-                self.module_graph
-                    .crate_id_for_module(importing_module)
-                    .and_then(|crate_id| self.module_graph.get_crate(crate_id))
-                    .map(|info| info.root_module)
-                    .or_else(|| self.module_graph.get_root().copied())?;
-                // Try to find child matching first component
-                let root = self
-                    .module_graph
-                    .crate_id_for_module(importing_module)
-                    .and_then(|crate_id| self.module_graph.get_crate(crate_id))
-                    .map(|info| info.root_module)
-                    .or_else(|| self.module_graph.get_root().copied())?;
-                self.find_child_module(root, first)?
+                // Regular path component - resolve relative to importing_module
+                // SPEC-009: foo::bar is relative to the current module, not crate root
+                self.find_child_module(importing_module, first)?
             }
         };
 

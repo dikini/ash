@@ -139,6 +139,52 @@ impl std::fmt::Display for ModulePath {
     }
 }
 
+/// Represents the resolved form of a restricted visibility path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RestrictedPath {
+    /// pub(in crate) - visible within the same crate
+    Crate,
+    /// pub(in self) - visible only in the defining module
+    Self_,
+    /// pub(in super) or pub(in super::super) - visible from parent modules
+    Super { levels: usize },
+    /// pub(in crate::foo::bar) - absolute path from crate root
+    Absolute(ModulePath),
+    /// pub(in foo::bar) - relative path from the defining module
+    Relative(ModulePath),
+}
+
+/// Resolve a restricted visibility path string relative to the item's module.
+fn resolve_restricted_path(path_str: &str, item_module: &ModulePath) -> RestrictedPath {
+    if path_str == "crate" {
+        return RestrictedPath::Crate;
+    }
+
+    if path_str == "self" {
+        return RestrictedPath::Self_;
+    }
+
+    // Count leading "super" components
+    let parts: Vec<&str> = path_str.split("::").collect();
+    let super_count = parts.iter().take_while(|&&p| p == "super").count();
+
+    if super_count > 0 {
+        // pub(in super) or pub(in super::super::...)
+        return RestrictedPath::Super { levels: super_count };
+    }
+
+    // Check if path starts with "crate"
+    if parts.first() == Some(&"crate") {
+        // Absolute path from crate root
+        let path = ModulePath::parse(path_str);
+        return RestrictedPath::Absolute(path);
+    }
+
+    // Relative path from item's module
+    let path = ModulePath::parse(path_str);
+    RestrictedPath::Relative(path)
+}
+
 /// Extension trait for Visibility to work with ModulePath.
 pub trait VisibilityExt {
     /// Check if an item with this visibility in `item_module`
@@ -180,24 +226,66 @@ impl VisibilityExt for Visibility {
             Visibility::Self_ => from_module == item_module,
 
             Visibility::Restricted { path } => {
-                // Handle special case: pub(in crate) means visible within the same crate
-                if path.as_ref() == "crate" {
-                    return item_module.crate_root() == from_module.crate_root();
-                }
+                // Parse the restricted path and resolve it relative to the item's module
+                let resolved_path = resolve_restricted_path(path, item_module);
 
-                // Handle other restricted paths like pub(in super), pub(in self), pub(in crate::foo)
-                let restricted_path = ModulePath::parse(path);
+                // Handle special cases
+                match resolved_path {
+                    RestrictedPath::Crate => {
+                        // pub(in crate) - visible within same crate
+                        item_module.crate_root() == from_module.crate_root()
+                    }
+                    RestrictedPath::Self_ => {
+                        // pub(in self) - visible only in item's module
+                        from_module == item_module
+                    }
+                    RestrictedPath::Super { levels } => {
+                        // pub(in super) - visible from parent modules
+                        // Get ancestors of item_module up to 'levels'
+                        let ancestors: Vec<_> = std::iter::successors(Some(item_module.clone()), |m| {
+                            if m.segments.is_empty() {
+                                None
+                            } else {
+                                Some(m.parent())
+                            }
+                        })
+                        .take(levels + 1) // +1 to include item_module itself
+                        .collect();
 
-                // Special handling for paths starting with "crate"
-                if restricted_path.segments.first().map(|s| s.as_str()) == Some("crate") {
-                    // pub(in crate::foo) - resolve relative to the crate root
-                    // The item's crate root must match the importing module's crate root
-                    if item_module.crate_root() != from_module.crate_root() {
-                        return false;
+                        ancestors.iter().any(|ancestor| {
+                            from_module == ancestor || from_module.starts_with(ancestor)
+                        })
+                    }
+                    RestrictedPath::Absolute(ref path) => {
+                        // pub(in crate::foo) - absolute path from crate root
+                        // Must be in same crate
+                        if item_module.crate_root() != from_module.crate_root() {
+                            return false;
+                        }
+                        // Resolve "crate" prefix to actual crate root
+                        // path is ["crate", "foo", "bar"], resolve to [<crate_root>, "foo", "bar"]
+                        let resolved_segments: Vec<String> = item_module
+                            .crate_root()
+                            .iter()
+                            .map(|s| s.to_string())
+                            .chain(path.segments.iter().skip(1).cloned())
+                            .collect();
+                        let resolved_path = ModulePath::new(resolved_segments);
+                        from_module == &resolved_path || from_module.starts_with(&resolved_path)
+                    }
+                    RestrictedPath::Relative(ref path) => {
+                        // pub(in foo::bar) - relative path from item's module
+                        // Resolve relative to item_module
+                        let base = if item_module.segments.is_empty() {
+                            path.clone()
+                        } else {
+                            let mut segments = item_module.segments.clone();
+                            segments.extend(path.segments.iter().cloned());
+                            ModulePath::new(segments)
+                        };
+                        from_module == &base || from_module.starts_with(&base)
                     }
                 }
-
-                from_module == &restricted_path || from_module.starts_with(&restricted_path)
             }
         }
     }
@@ -941,38 +1029,53 @@ mod tests {
     #[test]
     fn test_pub_restricted_external_path() {
         let checker = VisibilityChecker::new();
+
+        // Test pub(in crate::foo) with external crate paths
+        // Item is in external::util, visibility restricted to external::util::helpers
         let visibility = Visibility::Restricted {
-            path: "external::util::helpers".into(),
+            path: "crate::helpers".into(),
         };
 
-        // Should be visible from the restricted path
+        // Should be visible from the restricted path (same crate)
         assert!(
             checker
                 .check_access(
                     &visibility,
-                    "any::module",
+                    "external::util::module",
                     "external::util::helpers",
                     "item"
                 )
                 .is_ok()
         );
 
-        // Should be visible from submodules
+        // Should be visible from submodules (same crate)
         assert!(
             checker
                 .check_access(
                     &visibility,
-                    "any::module",
+                    "external::util::module",
                     "external::util::helpers::sub",
                     "item"
                 )
                 .is_ok()
         );
 
-        // Should NOT be visible from parent of restricted path
+        // Should NOT be visible from parent of restricted path (same crate)
         assert!(
             checker
-                .check_access(&visibility, "any::module", "external::util", "item")
+                .check_access(&visibility, "external::util::module", "external::util", "item")
+                .is_err()
+        );
+
+        // Should NOT be visible from a different crate
+        assert!(
+            checker
+                .check_access(
+                    &visibility,
+                    "external::util::module",
+                    "other::crate::helpers",
+                    "item"
+                )
                 .is_err()
         );
     }

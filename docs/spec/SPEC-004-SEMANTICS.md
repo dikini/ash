@@ -25,7 +25,7 @@ or any monitor/exposure behavior.
 ## 2. Semantic Domains
 
 ```
-Value      ::= Int(i) | String(s) | Bool(b) | Null 
+Value      ::= Int(i) | Float(f) | String(s) | Bool(b) | Null 
              | Time(t) | Ref(r) | List([v, ...]) | Record({k: v, ...})
              | Cap(c)
              | Variant(name, {k: v, ...})
@@ -86,6 +86,7 @@ the following canonical representations are used:
 | Value Type | Display Format | Example |
 |------------|----------------|---------|
 | `Int(i)` | Decimal integer | `42`, `-17` |
+| `Float(f)` | Decimal floating-point | `3.14`, `-0.5` |
 | `String(s)` | Raw string content | `hello` (not quoted) |
 | `Bool(true)` | `"true"` | `true` |
 | `Bool(false)` | `"false"` | `false` |

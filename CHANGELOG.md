@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Extended the normative `SPEC-004` runtime value domain and display contract to include `Float(f)` alongside `Int(i)`, keeping the proof-grade semantics aligned with the neighboring float-capable specs.
+
 - Added a proof-grade design, task, and implementation plan for revising `SPEC-004` into a complete big-step core semantics suitable for Lean-oriented proofs and later small-step refinement work.
 
 - Normalized the `SPEC-004` semantic backbone with explicit front-matter algebra, runtime failure categories, and separate workflow, expression, pattern, and helper judgment contracts (TASK-350).

@@ -148,7 +148,10 @@ enum RestrictedPath {
     Self_,
     /// pub(in super) or pub(in super::super::foo) - visible from parent modules
     /// The path is resolved from the parent module(s) indicated by levels
-    Super { levels: usize, suffix: Option<ModulePath> },
+    Super {
+        levels: usize,
+        suffix: Option<ModulePath>,
+    },
     /// pub(in crate::foo::bar) - absolute path from crate root
     Absolute(ModulePath),
     /// pub(in foo::bar) - relative path from the defining module
@@ -1088,7 +1091,12 @@ mod tests {
         // Should NOT be visible from parent of restricted path (same crate)
         assert!(
             checker
-                .check_access(&visibility, "external::util::module", "external::util", "item")
+                .check_access(
+                    &visibility,
+                    "external::util::module",
+                    "external::util",
+                    "item"
+                )
                 .is_err()
         );
 

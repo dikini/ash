@@ -8,6 +8,24 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added a proof-grade design, task, and implementation plan for revising `SPEC-004` into a complete big-step core semantics suitable for Lean-oriented proofs and later small-step refinement work.
+
+- Normalized the `SPEC-004` semantic backbone with explicit front-matter algebra, runtime failure categories, and separate workflow, expression, pattern, and helper judgment contracts (TASK-350).
+
+- Completed the canonical `SPEC-004` pure-expression section for the core `Expr` forms by adding explicit `IndexAccess`, `Unary`, `Binary`, and `Call` judgment rules plus helper-boundary ownership text (TASK-350).
+
+- Completed the canonical `SPEC-004` pattern semantics in one `PAT-*` section, explicitly covering wildcard, variable, literal, tuple, list, record, variant, duplicate-binder, and non-match versus rejection behavior while demoting legacy `bind(...)` prose to a historical note (TASK-350).
+
+- Tightened `SPEC-004` pattern integration by routing `match`, `receive`, `observe`, and `let` through the canonical `⊢p` judgment and helper contracts, with explicit `PatternBindFailure` ownership for required-binding sites (TASK-350).
+
+- Added normative propagation, lookup-failure, and post-lowering conventions to `SPEC-004` so rejection ownership, trace/effect preservation, and malformed-runtime handling have one proof-facing home (TASK-350).
+
+- Extracted a dedicated `SPEC-004` helper-contract summary covering lookup, receive selection, action performance, obligation checking, parallel outcome combination, and provenance/trace helper laws (TASK-350).
+
+- Clarified `SPEC-004` with explicit determinism/nondeterminism, semantic invariants, and proof-target/conformance sections, and aligned the formalization boundary note with that proof-facing structure (TASK-350).
+
+- Aligned adjacent specs with the revised `SPEC-004` vocabulary by standardizing on `implicit control mailbox` in SPEC-013 and `Permit` as the canonical capability-verification allow decision in SPEC-017 (TASK-350).
+
 - **Phase 52: Critical Contract Gap Remediation**
   - **TASK-322:** Implemented SPEC-024 compliant `capabilities:` syntax with declaration-site constraints
     - Changed `RoleDef` AST from `authority: Vec<Name>` to `capabilities: Vec<CapabilityDecl>`

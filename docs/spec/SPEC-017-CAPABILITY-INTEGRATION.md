@@ -504,7 +504,7 @@ then mask(fields: ["ssn", "salary"])
 
 Capability-verification policy decisions are canonical:
 
-- `Proceed` means the operation may continue unchanged.
+- `Permit` means the operation may continue unchanged.
 - `Deny` is a hard error and the operation does not execute.
 - `RequireApproval` pauses or queues the operation for approval handling.
 - `Transform` rewrites the observable or transferable value and then execution continues.

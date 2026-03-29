@@ -433,6 +433,7 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Overall Progress**: 248/248 tasks complete (1 deferred)
 **Remaining Tasks**:
+
 - 1 deferred: `TASK-063` (dynamic policy registration)
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
@@ -995,6 +996,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 **Phase 44 Deliverable:** All audit issues resolved, quality gates passing.
 
 **Closeout Summary (2026-03-26):**
+
 - All critical runtime fixes verified complete
 - Safety and API hardening complete
 - Quality gates passing (clippy, fmt, doc)
@@ -1020,6 +1022,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 **Phase 45 Deliverable:** Approved reduced syntax specification ready for implementation.
 
 **Closeout Summary (2026-03-26):**
+
 - SPEC-024: Complete reduced syntax specification with EBNF grammar
 - DESIGN-014: Syntax reduction decisions documented
 - SPEC-017: Updated with Section 5 (Constraint Refinement)
@@ -1054,6 +1057,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-264](tasks/TASK-264-compose-effective-capabilities.md) | Compose effective capability sets | SPEC-024 | 8 | ✅ Complete |
 
 **46.2 Closeout Summary:**
+
 - RoleChecker: Validates role existence, composes capabilities from multiple roles
 - ConstraintChecker: Validates constraint fields and types per capability schema
 - EffectiveCapabilitySet: Merges capabilities from roles and implicit defaults
@@ -1069,6 +1073,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-267](tasks/TASK-267-yield-routing.md) | Yield routing by role | SPEC-023 | 10 | ✅ Complete |
 
 **46.3 Closeout Summary:**
+
 - RoleRegistry: Resolves workflow plays_roles to runtime capability grants
 - RuntimeCapabilitySet: Tracks effective capabilities with constraint checking
 - ConstraintEnforcer: Validates path, host, and permission constraints at runtime
@@ -1101,12 +1106,14 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 **Actual Hours:** ~90
 
 **Deliverables:**
+
 - ✅ Parser Extensions: plays role(R), capabilities: [...], implicit role lowering
 - ✅ Type System: RoleChecker, ConstraintChecker, EffectiveCapabilitySet
 - ✅ Runtime: RoleRegistry, ConstraintEnforcer, YieldRouter
 - ✅ Agent Harness: Capability types, harness workflow, MCP provider
 
 **Test Coverage:**
+
 - 46.1: 647 tests (parser extensions)
 - 46.2: 600 tests (type system)
 - 46.3: 487 tests (runtime integration)
@@ -1114,18 +1121,21 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 - **Total:** 1,794 new tests
 
 **Specifications:**
+
 - SPEC-024: Reduced syntax specification implemented
 - SPEC-019: Role runtime semantics implemented
 - SPEC-017: Capability integration implemented
 - SPEC-023: Proxy workflows implemented
 
 **Code Quality:**
+
 - All clippy warnings resolved
 - Format clean
 - Documentation complete
 - rust-skills compliant
 
 **Notes:**
+
 - One pre-existing test failure in proptest_helpers (tracked as TASK-273)
 - Phase 46.4 (Agent Harness) was optional but completed
 
@@ -1227,6 +1237,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 **Phase 48 Deliverable:** Partial - Critical gaps identified
 
 **Summary:**
+
 - 15 tasks marked complete but **CRITICAL GAPS IDENTIFIED**:
   - TASK-293: CLI SPEC-005 compliance incomplete (exit codes wrong)
   - TASK-296: pub(super) fix incomplete (pub(crate) still unenforced)
@@ -1245,6 +1256,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 - JSON output schema (TASK-298 ✅)
 
 **NEW REMEDIATION TASKS:**
+
 - [TASK-307](tasks/TASK-307-cli-exit-code-fix.md) - Fix exit codes
 - [TASK-311](tasks/TASK-311-fix-pub-crate-visibility.md) - Fix pub(crate)
 - [TASK-312](tasks/TASK-312-http-provider-noop.md) - Fix HTTP no-op
@@ -1290,7 +1302,6 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-305](tasks/TASK-305-changelog-consolidation.md) | Consolidate CHANGELOG.md entries from Phase 48 worktrees | N/A | 2 | ✅ Complete |
 | [TASK-306](tasks/TASK-306-update-plan-index.md) | Finalize PLAN-INDEX.md with all completed Phase 48/49 tasks | N/A | 2 | ✅ Complete |
 
-
 ### 49.5: Testing Infrastructure Fixes
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1300,6 +1311,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 **Phase 49 Deliverable:** Partial - Critical test failures identified
 
 **Summary:**
+
 - 9 tasks marked complete but **CRITICAL TEST FAILURES IDENTIFIED**:
   - `cargo test --workspace --quiet` FAILS
   - 3/5 cli_input_workflow_test tests fail
@@ -1314,6 +1326,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 - Testing infrastructure fix: proptest_helpers (TASK-273 ✅)
 
 **NEW REMEDIATION TASKS:**
+
 - [TASK-308](tasks/TASK-308-cli-input-file-path.md) - Fix --input file path
 - [TASK-309](tasks/TASK-309-cli-run-unimplemented-flags.md) - Implement --dry-run, --timeout
 - [TASK-310](tasks/TASK-310-fix-cli-input-tests.md) - Fix or adjust failing tests
@@ -1376,6 +1389,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-321](tasks/TASK-321-fix-clippy-warnings.md) | Fix clippy warnings in test code | N/A | 2 | ✅ Complete |
 
 **Summary of Completed Work:**
+
 - **TASK-316:** --input now fails fast on file paths with clear error message
 - **TASK-317:** --capability now errors on unknown names (URI kept for future)
 - **TASK-318:** Exit codes fixed per SPEC-005 (type=1, I/O=3)
@@ -1403,6 +1417,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-315](tasks/TASK-315-fix-list-parameter-syntax.md) | Add List<T> generic syntax support in workflow parameters | SPEC-002 | 8 | ✅ Complete |
 
 **Summary:**
+
 - TASK-314: Investigation complete - boolean display works correctly (not a bug)
 - TASK-315: Added List<T> generic syntax support in workflow parameters
 
@@ -1450,6 +1465,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-326](tasks/TASK-326-326-remove-http-capability-docs.md) | Remove HTTP capability documentation from SPEC-010 | SPEC-010 | 1 | ✅ Complete |
 
 **Summary:**
+
 - TASK-322: Implemented SPEC-024 compliant `capabilities:` syntax with declaration-site constraints
   - Replaced old `authority:` syntax with `capabilities: [cap @ { constraints }]`
   - Constraints now stored in AST, checked at type-check time, enforced at runtime
@@ -1459,6 +1475,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 - TASK-326: Updated SPEC-010 to document HTTP as unimplemented capability
 
 **Superseded Tasks:**
+
 - TASK-316 → TASK-324 (remove instead of fix --input)
 - TASK-317 → TASK-323 (remove instead of fix --capability)
 
@@ -1483,6 +1500,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-331](tasks/TASK-331-phase-53-closeout.md) | Phase 53 closeout and final verification | N/A | 1-3 | ✅ Complete |
 
 **Summary:**
+
 - TASK-327: Fixed 9 clippy pedantic warnings (cast_possible_wrap, uninlined_format_args)
 - TASK-328: Updated 10 example/workflow files from authority: to capabilities: syntax
 - TASK-329: Verified SPEC-009 compliance; documented gaps in import resolver visibility enforcement
@@ -1512,11 +1530,13 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Summary:**
 This phase addressed the critical gaps identified in TASK-329 where the import resolver had placeholder implementations for restricted visibility:
+
 - `pub(crate)` was treated as `pub` (always visible) → Now enforces crate boundaries
 - `pub(super)` was treated as `pub` (always visible) → Now checks parent hierarchy
 - `pub(in path)` was treated as `pub` (always visible) → Now validates path prefix
 
 **Implementation Details:**
+
 - TASK-332: pub(crate) now enforces crate boundaries using CrateId tracking
 - TASK-333: pub(super) now checks parent module hierarchy using ancestors()
 - TASK-334: pub(in path) now validates descendant relationship using resolve_path()
@@ -1524,10 +1544,12 @@ This phase addressed the critical gaps identified in TASK-329 where the import r
 - SPEC-009 compliance: ACHIEVED
 
 **Files Modified:**
+
 - `crates/ash-core/src/module_graph.rs` - Added CrateId, parent tracking, ancestors(), resolve_path()
 - `crates/ash-parser/src/import_resolver.rs` - Implemented proper visibility checks in is_visible()
 
 **Test Results:**
+
 ```
 cargo test --package ash-parser import_resolver --quiet
 running 37 tests
@@ -1561,6 +1583,7 @@ test result: ok. 33 passed; 0 failed
 
 **Summary:**
 This phase implemented real cross-crate visibility enforcement:
+
 - `crate <name>;` and `dependency <alias> from "<path>";` syntax for crate metadata
 - `CrateId` and `CrateInfo` for tracking crate identity in `ModuleGraph`
 - `external::<alias>::...` import paths with dependency resolution
@@ -1568,6 +1591,7 @@ This phase implemented real cross-crate visibility enforcement:
 - Type checker alignment with explicit external path semantics
 
 **Implementation Details:**
+
 - TASK-337: AST types `CrateRootMetadata` and `DependencyDecl`; parser for crate metadata
 - TASK-338: `CrateId`, `CrateInfo`, `module_to_crate` mapping, `dependency_target()` helper
 - TASK-339: Recursive dependency loading with cycle detection and duplicate checking
@@ -1575,6 +1599,7 @@ This phase implemented real cross-crate visibility enforcement:
 - TASK-341: `ModulePath::is_external()` and `crate_root()` for proper crate identification
 
 **Files Modified:**
+
 - `crates/ash-parser/src/parse_crate_root.rs` - New crate metadata parser
 - `crates/ash-parser/src/resolver.rs` - Multi-crate loading with dependency resolution
 - `crates/ash-parser/src/import_resolver.rs` - External path resolution, importer-relative visibility
@@ -1582,6 +1607,7 @@ This phase implemented real cross-crate visibility enforcement:
 - `crates/ash-typeck/src/visibility.rs` - Explicit external path handling
 
 **Test Results:**
+
 ```
 cargo test --package ash-core module_graph --quiet
 running 28 tests
@@ -1601,6 +1627,44 @@ test result: ok. 40 passed; 0 failed
 ```
 
 **Total:** ~12-16 hours
+
+---
+
+## Phase 56: SPEC-004 Big-Step Core Semantics Proof Completion
+
+**Goal:** Revise `SPEC-004` into a complete, proof-suitable big-step core semantics with explicit judgments, helper contracts, determinism boundaries, and cross-spec proof-facing alignment.
+
+**Source:** SPEC-004 semantics review and follow-up planning
+**Priority:** High
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-350](tasks/TASK-350-revise-spec-004-to-complete-big-step-core-semantics.md) | Revise SPEC-004 to complete big-step core semantics | SPEC-004 | 8-12 | ✅ Complete |
+
+**Summary:**
+
+- Added explicit workflow, expression, and pattern judgments to `SPEC-004`.
+- Unified canonical pure expression and pattern semantics and centralized runtime failure ownership.
+- Extracted helper contracts, determinism/nondeterminism boundaries, semantic invariants, and proof targets.
+- Aligned `SPEC-013`, `SPEC-017`, and the formalization boundary note with the revised proof-facing terminology.
+
+**Files Modified:**
+
+- `docs/spec/SPEC-004-SEMANTICS.md`
+- `docs/reference/formalization-boundary.md`
+- `docs/spec/SPEC-013-STREAMS.md`
+- `docs/spec/SPEC-017-CAPABILITY-INTEGRATION.md`
+- `docs/plans/2026-03-29-spec-004-big-step-core-design.md`
+- `docs/plans/2026-03-29-spec-004-big-step-core-implementation-plan.md`
+- `docs/plan/tasks/TASK-350-revise-spec-004-to-complete-big-step-core-semantics.md`
+- `CHANGELOG.md`
+
+**Verification:**
+
+- Cross-spec terminology review completed.
+- `git diff --check` clean for the documentation changes.
+- Pre-closeout quality gate currently blocked by pre-existing workspace formatting drift outside the TASK-350 docs set.
 
 ---
 

@@ -58,6 +58,7 @@ Where:
 ```rust
 pub enum Type {
     Int,
+    Float,
     String,
     Bool,
     Null,

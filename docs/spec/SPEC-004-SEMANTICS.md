@@ -75,6 +75,9 @@ Variant values are the canonical runtime representation for enum constructors. T
 constructor name plus its named payload fields. The enclosing type name is not stored in the
 runtime value itself.
 
+The canonical runtime value domain does not store a separate tuple value. Tuple-shaped pattern
+matching therefore operates over fixed-length `List` values.
+
 ## 2.1 Value Display Representation
 
 When values are converted to strings for output (e.g., `ret` workflow results, printed output),
@@ -279,6 +282,12 @@ as shorthand for
 
 and read tuple conclusions with trailing `error: err` as shorthand for the corresponding
 `Reject(err, eff, T, Ω', π')` outcome.
+
+Unless a rule says otherwise, this document specifies post-verification execution only.
+Capability-verification outcomes such as `Deny`, `Transform`, and `RequireApproval` at concrete
+`observe`, `receive`, `set`, `send`, and `act` sites remain owned by SPEC-017 and SPEC-018; the
+rules below describe the execution branch after the runtime has admitted the operation for
+execution.
 
 The evaluation relation is execution-neutral:
 
@@ -650,6 +659,10 @@ background cleanup in the same runtime state.
                π,
                error: GuardViolation(action, guard)
 ```
+
+These `ACT` rules likewise describe execution after capability verification has admitted the
+operation. Verification-time `Deny`, `Transform`, and `RequireApproval` outcomes remain defined by
+SPEC-017 and SPEC-018 rather than by this operational semantics layer.
 
 ### 4.6 Expression Evaluation
 

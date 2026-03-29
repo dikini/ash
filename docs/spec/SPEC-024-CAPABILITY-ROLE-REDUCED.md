@@ -45,7 +45,7 @@ type-expr         ::= primitive-type
                     | "[" type-expr "]"
                     | identifier
 
-primitive-type    ::= "bool" | "int" | "string" | "effect"
+primitive-type    ::= "bool" | "int" | "float" | "string" | "effect"
 
 field-def         ::= identifier ":" type-expr
 ```

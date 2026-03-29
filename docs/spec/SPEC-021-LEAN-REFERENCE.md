@@ -111,6 +111,7 @@ inductive Pattern where
 
 inductive Value where
   | int (i : Int)
+  | float (f : Float)
   | string (s : String)
   | bool (b : Bool)
   | null

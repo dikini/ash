@@ -25,11 +25,13 @@ KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
               | "epistemic" | "deliberative" | "evaluative" | "operational"
               | "authority" | "obligations"
               | "when" | "returns" | "where"
-
+              | "Int" | "Float" | "String" | "Bool"
+```
 IDENTIFIER  ::= [a-zA-Z_][a-zA-Z0-9_-]*
 
 STRING      ::= "\"" [^"]* "\""
-NUMBER      ::= [0-9]+ ("." [0-9]+)?
+NUMBER      ::= [0-9]+
+FLOAT       ::= [0-9]+ "." [0-9]+
 BOOL        ::= "true" | "false"
 NULL        ::= "null"
 
@@ -312,7 +314,7 @@ field_assignment  ::= IDENTIFIER ":" expression
 
 arguments       ::= expression ("," expression)*
 
-literal         ::= STRING | NUMBER | BOOL | NULL | list_literal
+literal         ::= STRING | NUMBER | FLOAT | BOOL | NULL | list_literal
 
 list_literal    ::= "[" (expression ("," expression)*)? "]"
 

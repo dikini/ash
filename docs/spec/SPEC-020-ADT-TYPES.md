@@ -530,7 +530,7 @@ This approach:
 ```rust
 pub enum Value {
     // Existing...
-    Int(i64), String(String), Bool(bool), /* ... */
+    Int(i64), Float(f64), String(String), Bool(bool), /* ... */
 
     /// Enum variant
     Variant {

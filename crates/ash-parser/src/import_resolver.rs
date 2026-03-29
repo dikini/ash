@@ -688,10 +688,7 @@ impl<'a> ImportResolver<'a> {
             match component.as_str() {
                 "super" => {
                     // Move up to parent
-                    current = self
-                        .module_graph
-                        .get_node(current)
-                        .and_then(|n| n.parent)?;
+                    current = self.module_graph.get_node(current).and_then(|n| n.parent)?;
                 }
                 "self" => {
                     // Stay at current module (no-op)

@@ -79,6 +79,14 @@ The first proof targets should be small and judgment-shaped:
 5. Explicit recoverable failure: recoverable failures are represented and handled through `Result`
    dataflow, not exceptional `catch` control flow.
 
+For SPEC-004 specifically, these initial proof targets now align with its explicit judgment and
+meta-property structure:
+
+- workflow outcomes and propagation conventions;
+- pure expression and pattern determinism;
+- helper-backed conformance obligations and permitted nondeterminism;
+- semantic invariants around effect accumulation, trace preservation, and rejection ownership.
+
 ## Initial Bisimulation Targets
 
 The first bisimulation-style comparisons should cover:

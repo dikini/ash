@@ -125,9 +125,9 @@ modifier. For each selected source mailbox, arms are considered in declaration o
 matching happens before guard evaluation, and a message is removed from the mailbox only after the
 selected arm's guard succeeds.
 
-### 3.3 Control Stream
+### 3.3 Implicit Control Mailbox
 
-Every workflow has an implicit control stream:
+Every workflow has an implicit control mailbox:
 
 ```ash
 receive control {

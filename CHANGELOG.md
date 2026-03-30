@@ -8,7 +8,25 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- Extended the normative `SPEC-004` runtime value domain and display contract to include `Float(f)` alongside `Int(i)`, keeping the proof-grade semantics aligned with the neighboring float-capable specs.
+|- **Phase 57: Entry Point and Program Execution Planning**
+  - Established 7 SPEC-first tasks (S57-1 through S57-7) for entry point semantics
+    - S57-1: SPEC-004 control-link completion payload semantics
+    - S57-2: SPEC-005 CLI exit-immediately policy
+    - S57-3: SPEC-021 observable exit behavior
+    - S57-4: SPEC-009/012 stdlib import/namespace rules
+    - S57-5: SPEC-017 runtime-provided capability syntax
+    - S57-6: SPEC-003/022 entry workflow typing contract
+    - S57-7: Post-SPEC-update review of implementation tasks
+  - Established 13 implementation tasks (359-369) with validation gates
+    - Stdlib foundation: TASK-359, 360, 361, 362
+    - Runtime bootstrap: TASK-363a, 363b, 363c, 364, 365
+    - CLI integration: TASK-366, 367
+    - Testing: TASK-368a (minimum), 368b (deferred), 369
+  - All tasks reference normative SPEC (not MCE) per project policy
+
+|- Extended the normative `SPEC-004` runtime value domain and display contract to include `Float(f)` alongside `Int(i)`, keeping the proof-grade semantics aligned with the neighboring float-capable specs.
+
+|- Added an exploratory workflow declaration/runtime behavior design note that centers workflow as a callable, workflow-backed capability with boundary contracts, and records obligation-boundary alternatives for future small-step semantics work.
 
 - Added a proof-grade design, task, and implementation plan for revising `SPEC-004` into a complete big-step core semantics suitable for Lean-oriented proofs and later small-step refinement work.
 

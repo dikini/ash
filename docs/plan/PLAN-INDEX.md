@@ -1669,3 +1669,114 @@ test result: ok. 40 passed; 0 failed
 ---
 
 |**Roadmap Document:** [PHASE-44-46-ROADMAP.md](PHASE-44-46-ROADMAP.md)
+
+---
+
+## Phase 57: Entry Point and Program Execution
+
+**Goal:** Implement the Ash program entry point mechanism: CLI invocation, runtime bootstrap, system supervisor, and the `main` workflow convention.
+
+**Source:** [MCE-001: Entry Point](../ideas/minimal-core/MCE-001-ENTRY-POINT.md)  
+**Priority:** Critical (minimal core execution environment)  
+**Status:** 🔄 Planning (SPEC updates required before implementation)
+
+### Critical Note: SPEC-First Implementation
+
+Per architectural review, **MCE-001 provides guidance only; normative truth resides in SPEC files**. Implementation tasks are **blocked** until SPEC updates establish:
+
+1. **Control-link completion payload** (SPEC-004, SPEC-021)
+2. **Exit-immediately process policy** (SPEC-005, SPEC-021)
+3. **Supervisor/main contract** (SPEC-004, SPEC-019)
+
+Phase 57 is split into **57A (SPEC updates)** and **57B (implementation, blocked on 57A)**.
+
+---
+
+### Phase 57A: SPEC Updates for Entry Point Semantics
+
+**Goal:** Update SPEC files with normative entry point semantics before implementation.
+
+**Status:** 🔄 Ready to start
+
+| Task | Description | Spec | Est. Hours | Status | Blocks |
+|------|-------------|------|------------|--------|--------|
+| [TASK-S57-1](tasks/TASK-S57-1-spec-004-control-link-completion.md) | Update SPEC-004 with control-link completion payload semantics | SPEC-004 | 4-6 | ⬜ Pending | 57B stdlib, runtime tasks |
+| [TASK-S57-2](tasks/TASK-S57-2-spec-005-cli-exit-policy.md) | Update SPEC-005 with exit-immediately CLI policy | SPEC-005 | 2-3 | ⬜ Pending | 57B CLI tasks |
+| [TASK-S57-3](tasks/TASK-S57-3-spec-021-observable-exit.md) | Update SPEC-021 with observable exit behavior | SPEC-021 | 3-4 | ⬜ Pending | 57B runtime, tests |
+| [TASK-S57-4](tasks/TASK-S57-4-spec-009-012-stdlib-imports.md) | Update SPEC-009/SPEC-012 with stdlib import/namespace rules | SPEC-009/012 | 3-4 | ⬜ Pending | All 57B stdlib usage |
+| [TASK-S57-5](tasks/TASK-S57-5-spec-017-runtime-capabilities.md) | Update SPEC-017 with runtime-provided capability syntax | SPEC-017 | 3-4 | ⬜ Pending | All 57B capability params |
+| [TASK-S57-6](tasks/TASK-S57-6-spec-003-022-entry-typing.md) | Update SPEC-003/SPEC-022 with entry workflow typing contract | SPEC-003/022 | 2-3 | ⬜ Pending | TASK-364 (verification) |
+| [TASK-S57-7](tasks/TASK-S57-7-post-spec-review.md) | Post-SPEC-update review of 57B tasks for validity | N/A | 2-3 | ⬜ Pending | All 57B tasks (validation gate) |
+
+**Total:** ~19-27 hours
+
+**Deliverable:** Updated SPEC files with normative entry point behavior, unblocking implementation.
+
+---
+
+### Phase 57B: Implementation (Blocked on 57A)
+
+**Goal:** Implement entry point mechanism per updated SPEC.
+
+**Status:** ⛔ Blocked (pending SPEC updates from 57A)
+
+#### Stdlib: Foundation
+
+| Task | Description | Spec | Est. Hours | Status | Blocked On |
+|------|-------------|------|------------|--------|------------|
+| [TASK-359](tasks/TASK-359-stdlib-initialization.md) | Extend ash-std with runtime modules | SPEC-009/012 after S57-4 | 4-6 | ⛔ Blocked | S57-4 (import syntax) |
+
+#### Stdlib: Runtime Types and Capabilities
+
+| Task | Description | Spec | Est. Hours | Status | Blocked On |
+|------|-------------|------|------------|--------|------------|
+| [TASK-360](tasks/TASK-360-runtime-error-type.md) | Define `RuntimeError` type | SPEC-020/TYPES-001 after S57-x | 2-3 | ⛔ Blocked | S57-1 (payload), S57-4 (imports) |
+| [TASK-361](tasks/TASK-361-args-capability.md) | Define `Args` capability interface | SPEC-017 after S57-5 | 3-4 | ⛔ Blocked | S57-4 (imports), S57-5 (cap syntax) |
+| [TASK-362](tasks/TASK-362-system-supervisor.md) | Implement system supervisor workflow | SPEC-004 after S57-1 | 4-6 | ⛔ Blocked | S57-1 (supervisor/main), S57-4 (imports), S57-5 (cap syntax) |
+
+#### Runtime: Bootstrap and Execution
+
+| Task | Description | Spec | Est. Hours | Status | Blocked On |
+|------|-------------|------|------------|--------|------------|
+| [TASK-363a](tasks/TASK-363a-runtime-stdlib-loading.md) | Runtime stdlib loading via Engine API | SPEC-010, SPEC-009 after S57-4 | 2-3 | ⛔ Blocked | S57-4 (stdlib loading) |
+| [TASK-363b](tasks/TASK-363b-runtime-main-verification.md) | Runtime entry workflow verification | SPEC-003/022 after S57-6 | 2-3 | ⛔ Blocked | S57-6 (entry typing), TASK-363a |
+| [TASK-363c](tasks/TASK-363c-runtime-bootstrap-execution.md) | Complete bootstrap and supervisor execution | SPEC-004/005/021 after S57-1/2/3 | 3-4 | ⛔ Blocked | All 363a/b, TASK-362, S57-1, S57-2, S57-3 |
+| [TASK-364](tasks/TASK-364-main-verification.md) | Type-level verification of entry workflow signature | SPEC-003/022 after S57-6 | 2-3 | ⛔ Blocked | S57-6 (entry typing) |
+| [TASK-365](tasks/TASK-365-exit-code-handling.md) | Propagate exit code from supervisor to OS | SPEC-005/021 after S57-2/3 | 1-2 | ⛔ Blocked | S57-2, S57-3 (exit policy), TASK-363c |
+
+#### CLI: Command-Line Interface
+
+| Task | Description | Spec | Est. Hours | Status | Blocked On |
+|------|-------------|------|------------|--------|------------|
+| [TASK-366](tasks/TASK-366-cli-run-semantics.md) | Redefine `ash run` entry-point semantics | SPEC-005 after S57-2 | 2-3 | ⛔ Blocked | S57-2 (CLI spec), TASK-363c |
+| [TASK-367](tasks/TASK-367-cli-error-reporting.md) | Error messages for entry point failures | SPEC-005/021 after S57-2/6 | 2-3 | ⛔ Blocked | S57-2 (CLI spec), S57-6 (typing contract for errors) |
+
+#### Testing and Integration
+
+| Task | Description | Spec | Est. Hours | Status | Blocked On |
+|------|-------------|------|------------|--------|------------|
+| [TASK-368a](tasks/TASK-368a-entry-point-tests-minimum.md) | Minimum entry point tests (success, error, missing main) | SPEC-021 after S57-3 | 2-3 | ⛔ Blocked | S57-3 (observable behavior), all above |
+| [TASK-368b](tasks/TASK-368b-entry-point-tests-extended.md) | Extended tests (deferred - stdout, assertions) | Future | — | ⛔ Deferred | Future phase |
+| [TASK-369](tasks/TASK-369-phase-57-closeout.md) | Phase 57 closeout and verification | All above SPEC | 1 | ⛔ Blocked | All 57A, 57B minimum |
+
+**Total (57B only):** ~32-41 hours (minimum, excluding deferred 368b)
+**Total (57A + 57B):** ~51-68 hours (57A: 19-27, 57B: 32-41)
+
+**Deliverable:** Complete program execution from `ash run <file>` through exit code, with supervision and error handling, per normative SPEC.
+
+### Dependencies Between 57A Tasks
+
+**Can proceed in parallel:**
+- S57-1, S57-2, S57-3 (different specs, independent)
+- S57-4 (import syntax) can proceed with S57-1, S57-2, S57-3
+- S57-5 (capability syntax) can proceed with S57-1, S57-2, S57-3
+
+**Sequential:**
+- S57-6 (entry typing) should follow S57-1 (completion semantics)
+- All 57B tasks blocked on their respective 57A specs
+
+**Recommended order:**
+1. S57-2, S57-3, S57-4 (independent, unblock different areas)
+2. S57-1, S57-5 (runtime semantics, capability syntax)
+3. S57-6 (entry typing, builds on S57-1)
+4. All 57B implementation tasks

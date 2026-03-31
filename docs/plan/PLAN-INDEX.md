@@ -1705,7 +1705,7 @@ Phase 57 is split into **57A (SPEC updates)** and **57B (implementation, blocked
 | [TASK-S57-3](tasks/TASK-S57-3-spec-021-observable-exit.md) | Update SPEC-021 with observable exit behavior | SPEC-021 | 3-4 | ✅ Complete | 57B runtime, tests |
 | [TASK-S57-4](tasks/TASK-S57-4-spec-009-012-stdlib-imports.md) | Update SPEC-009/SPEC-012 with stdlib import/namespace rules | SPEC-009/012 | 3-4 | ✅ Complete | All 57B stdlib usage |
 | [TASK-S57-5](tasks/TASK-S57-5-spec-017-runtime-capabilities.md) | Update SPEC-017 with runtime-provided capability syntax | SPEC-017 | 3-4 | ✅ Complete | All 57B capability params |
-| [TASK-S57-6](tasks/TASK-S57-6-spec-003-022-entry-typing.md) | Update SPEC-003/SPEC-022 with entry workflow typing contract | SPEC-003/022 | 2-3 | ⬜ Pending | TASK-364 (verification) |
+| [TASK-S57-6](tasks/TASK-S57-6-spec-003-022-entry-typing.md) | Update SPEC-003/SPEC-022 with canonical entry workflow typing contract | SPEC-003/022 | 2-3 | ✅ Complete | TASK-364 (verification) |
 | [TASK-S57-7](tasks/TASK-S57-7-post-spec-review.md) | Post-SPEC-update review of 57B tasks for validity | N/A | 2-3 | ⬜ Pending | All 57B tasks (validation gate) |
 
 **Total:** ~19-27 hours
@@ -1741,7 +1741,7 @@ Phase 57 is split into **57A (SPEC updates)** and **57B (implementation, blocked
 | [TASK-363a](tasks/TASK-363a-runtime-stdlib-loading.md) | Runtime stdlib loading via Engine API | SPEC-010, SPEC-009 after S57-4 | 2-3 | ⛔ Blocked | S57-4 (stdlib loading) |
 | [TASK-363b](tasks/TASK-363b-runtime-main-verification.md) | Runtime entry workflow verification | SPEC-003/022 after S57-6 | 2-3 | ⛔ Blocked | S57-6 (entry typing), TASK-363a |
 | [TASK-363c](tasks/TASK-363c-runtime-bootstrap-execution.md) | Complete bootstrap and supervisor execution | SPEC-004/005/021 after S57-1/2/3 | 3-4 | ⛔ Blocked | All 363a/b, TASK-362, S57-1, S57-2, S57-3 |
-| [TASK-364](tasks/TASK-364-main-verification.md) | Type-level verification of entry workflow signature | SPEC-003/022 after S57-6 | 2-3 | ⛔ Blocked | S57-6 (entry typing) |
+| [TASK-364](tasks/TASK-364-main-verification.md) | Type-level verification of entry workflow signature | SPEC-003/022 after S57-6 | 2-3 | ⬜ Pending | — |
 | [TASK-365](tasks/TASK-365-exit-code-handling.md) | Propagate exit code from supervisor to OS | SPEC-005/021 after S57-2/3 | 1-2 | ⛔ Blocked | S57-2, S57-3 (exit policy), TASK-363c |
 
 #### CLI: Command-Line Interface

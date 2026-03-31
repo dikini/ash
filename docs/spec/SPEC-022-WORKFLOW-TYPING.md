@@ -168,6 +168,47 @@ Spawn creates **isolated** obligation scope:
 
 Child's obligations do not propagate to parent. Parent's obligations do not propagate to child. They are completely separate.
 
+### 4.7 Entry Workflow Typing
+
+The canonical entry-workflow typing rule applies only to the designated program entry workflow.
+It does not constrain helper workflows, imported workflows, or non-entry declarations.
+
+```
+(ENTRY-MAIN)
+    params = [(x₁ : cap C₁), …, (xₙ : cap Cₙ)]    n ≥ 0
+    Γ_params, Σ, ∅ ⊢ body : Result<(), RuntimeError> ▷ Γ_out
+    obligations(Γ_out) = ∅
+    ───────────────────────────────────────────────────────────
+    Σ ⊢entry workflow main(params) -> Result<(), RuntimeError> { body } valid
+```
+
+A workflow is a well-typed entry workflow iff:
+
+- its identifier is exactly `main`
+- its declared return type is exactly `Result<(), RuntimeError>`
+- its parameter list may be empty, or may contain one or more parameters, but every parameter
+    type must be a usage-site capability type of the form `cap X`
+- its effect classification is inferred from the body by the ordinary workflow typing rules; this
+    section adds no special effect annotation or effect ceiling rule
+
+The entry-workflow typing rule rejects:
+
+- a designated entry workflow whose identifier is not `main`
+- a designated entry workflow whose declared return type is not exactly
+    `Result<(), RuntimeError>`
+- a designated entry workflow that declares any non-capability parameter
+
+Example:
+
+```ash
+workflow main(args: cap Args) -> Result<(), RuntimeError> {
+    done;
+}
+```
+
+This rule constrains entry selection and signature shape only. Capability availability remains a
+runtime verification concern rather than a pure typing judgment.
+
 ---
 
 ## 5. Requirement Checking

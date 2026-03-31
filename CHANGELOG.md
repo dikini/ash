@@ -32,6 +32,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   at workflow boundaries and read-like capability use remains effect-first (`observe Args 0`)
   (TASK-S57-5).
 
+- Clarified SPEC-022 and SPEC-003 so the designated program entry workflow is typed by a
+  canonical `main` contract: exact return type `Result<(), RuntimeError>`, zero or more
+  usage-site capability parameters `cap X`, and ordinary body-inferred effects (TASK-S57-6).
+
 |- **Phase 57: Entry Point and Program Execution Planning**
 
 - Established 7 SPEC-first tasks (S57-1 through S57-7) for entry point semantics

@@ -1,28 +1,24 @@
 # TASK-364: Verify Entry Workflow Type Signature
 
-## Status: ⛔ Blocked
+## Status: ⬜ Pending
 
 ## Description
 
 Type-level verification that entry workflow `main` conforms to entry contract: correct name, return type, and parameter types.
 
-**VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
+S57-6 now defines the exact normative contract in SPEC-022, with a supporting ownership note in
+SPEC-003.
 
-1. **Verify S57-6 (entry typing)**: ✅ Complete - confirms exact contract
-2. **Confirm these decisions**:
-   - Is `Result<(), RuntimeError>` **exact** or `Result<T, RuntimeError>` for any T?
-   - Are **zero parameters** allowed?
-   - Are **arbitrary capability parameters** allowed or only specific ones?
-
-**If S57-6 differs from below, update this task.**
-
-## Entry Contract (assumed - verify in S57-6)
+## Entry Contract
 
 | Aspect | Constraint |
 |--------|------------|
 | Name | `main` (exact) |
 | Return | `Result<(), RuntimeError>` (exact - unit success payload) |
 | Params | Zero or more, **capability types only** |
+
+Effects remain inferred from the workflow body by the ordinary typing rules; this verification
+task does not introduce a separate entry-effect rule.
 
 ## Verification Logic
 
@@ -59,20 +55,32 @@ fn verify_main_signature(wf: &Workflow) -> Result<(), TypeError> {
 ## TDD Steps
 
 ### Test 1: Valid Main (No Params)
+
 ```rust
 let wf = parse_workflow("workflow main() -> Result<(), RuntimeError> { Ok(()) }");
 assert!(verify_main_signature(&wf).is_ok());
 ```
 
 ### Test 2: Valid Main (With Args)
+
 ```rust
 let wf = parse_workflow(r#"
-  workflow main(args: capability Args) -> Result<(), RuntimeError> { Ok(()) }
+    workflow main(args: cap Args) -> Result<(), RuntimeError> { Ok(()) }
+"#);
+assert!(verify_main_signature(&wf).is_ok());
+```
+
+### Test 2b: Valid Main (Multiple Capability Params)
+
+```rust
+let wf = parse_workflow(r#"
+    workflow main(args: cap Args, stdout: cap Stdout) -> Result<(), RuntimeError> { Ok(()) }
 "#);
 assert!(verify_main_signature(&wf).is_ok());
 ```
 
 ### Test 3: Wrong Return Type
+
 ```rust
 let wf = parse_workflow("workflow main() -> Int { 42 }");
 let err = verify_main_signature(&wf).unwrap_err();
@@ -80,6 +88,7 @@ assert!(matches!(err, TypeError::WrongReturnType { .. }));
 ```
 
 ### Test 4: Non-Capability Param
+
 ```rust
 let wf = parse_workflow(r#"
   workflow main(n: Int) -> Result<(), RuntimeError> { Ok(()) }
@@ -88,14 +97,14 @@ let err = verify_main_signature(&wf).unwrap_err();
 assert!(matches!(err, TypeError::NonCapabilityParam { .. }));
 ```
 
-## Precisions Needed from S57-6
+## Confirmed by S57-6
 
-Before implementing, confirm:
-
-1. **Exact return**: `Result<(), RuntimeError>` only? Or generic success payload?
-2. **Zero params allowed**: Is `main()` valid or must have at least `capability Args`?
-3. **Multiple caps**: Is `main(a: A, b: B, c: C)` valid?
-4. **Error messages**: Standard format per SPEC-005?
+1. **Exact return**: `Result<(), RuntimeError>` only.
+2. **Zero params allowed**: Yes, `main()` is valid.
+3. **Multiple caps**: Yes, arbitrary capability parameters are valid so long as every parameter
+    type is a usage-site capability type.
+4. **Error messages**: CLI-facing wording remains downstream work, but the typing failure classes
+    are now normative.
 
 ## Dependencies
 
@@ -118,7 +127,7 @@ Before implementing, confirm:
 
 ## Acceptance Criteria
 
-- [ ] S57-6 shows ✅ Complete with precise contract (VALIDATION GATE)
+- [x] S57-6 shows ✅ Complete with precise contract (VALIDATION GATE)
 - [ ] Detects wrong name
 - [ ] Detects wrong return type
 - [ ] Detects non-capability params

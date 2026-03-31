@@ -5,11 +5,13 @@
 ## 1. Overview
 
 The type system tracks:
+
 1. **Value types**: What kind of data flows through
 2. **Effect types**: What computational power is used
 3. **Obligation types**: What deontic constraints apply
 
 Canonical workflow effect vocabulary used throughout this spec:
+
 - **Epistemic** — input acquisition and read-only observation
 - **Deliberative** — analysis, planning, and proposal formation
 - **Evaluative** — policy and obligation evaluation
@@ -24,6 +26,9 @@ compatibility. It does not own parser acceptance or runtime execution outcomes.
 - Lowering rejection belongs to SPEC-001 and lowering boundary references.
 - Type rejection belongs here when a workflow, expression, pattern, or declaration cannot be
   assigned a valid type, effect, or obligation shape.
+- Entry-workflow signature rejection is a specialized workflow-typing judgment owned by
+    SPEC-022. This spec does not restate that canonical rule; it only establishes that entry
+    signature validation belongs to typing rather than parsing or runtime execution.
 - Runtime rejection belongs to SPEC-004 and the runtime-observable contract family.
 - Verification-time availability checks belong to runtime verification, not pure typing.
 - Workflow effect ceilings are compared by runtime verification after the type layer establishes
@@ -113,12 +118,14 @@ pub enum Kind {
 ```
 
 Kinds classify types and type constructors:
+
 - `Kind::Type` (written `*`) is the kind of all concrete value types
 - `Kind::Arrow(k1, k2)` (written `k1 -> k2`) is the kind of type constructors
   taking one type argument of kind `k1` and producing a type of kind `k2`
 - Kinds are curried: binary constructors like `Result` have kind `* -> * -> *`
 
 Examples:
+
 - `Int`, `String` have kind `Type` (or `*`)
 - `Option` has kind `Type -> Type` (or `* -> *`)
 - `Result` has kind `Type -> Type -> Type` (or `* -> * -> *`)
@@ -594,12 +601,14 @@ impl TypeVarNames {
 ```
 
 Naming scheme:
+
 - First 26 variables: `a`, `b`, `c`, ..., `z`
 - Variables 26-51: `a1`, `b1`, ..., `z1`
 - Variables 52-77: `a2`, `b2`, ..., `z2`
 - And so on...
 
 This produces readable error messages like:
+
 ```
 error[E003]: Type mismatch
   --> example.ash:10:5
@@ -688,6 +697,7 @@ impl TypeDiff {
 ```
 
 Example error with structural difference highlighting:
+
 ```
 error[E004]: Type mismatch
   --> example.ash:15:20
@@ -772,7 +782,7 @@ pub enum TypeError {
 **Reference Implementation:**
 
 See serde_json's error type for the canonical example:
-https://docs.rs/serde_json/latest/src/serde_json/error.rs.html#15-20
+<https://docs.rs/serde_json/latest/src/serde_json/error.rs.html#15-20>
 
 ### 10.2 Error Type Size Target
 

@@ -6,6 +6,10 @@
 
 All capabilities (input: `observe`, `receive`; output: `set`, `send`) must integrate with Ash's system features: obligations, policies, effects, provenance, and capability safety.
 
+This specification distinguishes declaration-site capability definitions from usage-site
+capability types. Declaration sites use `capability`; usage sites may use `cap <Identifier>`
+where a workflow boundary expects a capability value.
+
 ## 2. Capability Definitions
 
 Capabilities can be defined in `.ash` source files using the `capability` keyword. This allows user-defined capabilities without requiring pre-registration in Rust.
@@ -24,7 +28,10 @@ effect_type     ::= "observe" | "read" | "analyze" | "decide"
                   | "epistemic" | "deliberative" | "evaluative" | "operational"
 
 param_list      ::= param ("," param)*
-param           ::= IDENTIFIER ":" type
+param           ::= IDENTIFIER ":" param_type
+
+param_type      ::= type | capability_type
+capability_type ::= "cap" IDENTIFIER
 
 constraint_list ::= "where" constraint ("," constraint)*
 constraint      ::= expression
@@ -32,34 +39,58 @@ constraint      ::= expression
 visibility      ::= "pub" | "private"  -- default: private
 ```
 
+`cap` is a usage-site type-forming keyword. `cap C` denotes a parameter or other type position
+that expects a capability value for the capability named `C`. It is not a second capability
+declaration form.
+
 ### 2.2 Examples
 
 Minimal capability (no parameters, no constraints):
+
 ```ash
 capability get_timestamp : observe ()
 ```
 
 Capability with parameters:
+
 ```ash
 capability read_file : read (path : String)
 ```
 
 Capability with return type:
+
 ```ash
 capability fetch_user : observe (id : Int) returns User
 ```
 
 Capability with constraints:
+
 ```ash
 capability transfer_funds : act (amount : Int, to : Account)
     where amount > 0 and balance >= amount
 ```
 
 Public capability (exported from module):
+
 ```ash
 pub capability system_restart : act ()
     where role == admin
 ```
+
+Runtime-provided capability declaration and use:
+
+```ash
+pub capability Args : observe (index : Int) returns Option<String>
+
+workflow main(args: cap Args) -> Result<(), RuntimeError> {
+    let argv0 = observe Args 0;
+    done;
+}
+```
+
+Here `cap Args` is the parameter type. The capability itself is still declared with
+`capability Args ...`. Capability invocation remains effect-first and explicit; dotted or
+method-like forms such as `args.get(0)` and `observe Args.get(0)` are not normative in SPEC-017.
 
 ### 2.3 Semantic Requirements
 
@@ -73,15 +104,35 @@ pub capability system_restart : act ()
 | `act`, `write`, `external`, `operational` | `Effect::Operational` |
 
 **Constraint Evaluation:**
+
 - Constraints are evaluated at capability invocation time
 - All constraints must evaluate to `true` for invocation to proceed
 - Constraint failure results in `ValidationError`
 - Constraints may reference capability parameters
 
 **Visibility:**
+
 - `pub` capabilities are exported and can be imported by other modules
 - `private` (default) capabilities are module-local
 - Visibility is checked during module linking
+
+**Usage-Site Capability Types:**
+
+- `cap C` is well-formed only if `C` resolves to a declared or imported capability identity
+- `cap C` describes a required capability value at a workflow boundary; it does not declare `C`
+- The parameter binder for `p: cap C` is an authorization witness for the provided capability, not a method-dispatch receiver; explicit invocation continues to name the capability identity `C`
+- A workflow boundary must not declare multiple parameters of the same capability type `cap C`
+
+**Runtime-Provided Capability Values:**
+
+- The runtime may satisfy `cap`-typed parameters at workflow entry or at another runtime-defined boundary only when that boundary explicitly specifies the same authorization contract
+- User code does not construct these values directly in this specification
+
+**Invocation Syntax:**
+
+- Capability invocation remains effect-first and explicit
+- Read-like runtime capabilities such as `Args` use `observe`, so `observe Args 0` is canonical
+- This specification does not introduce ordinary member-call or method-dispatch semantics for capabilities
 
 ### 2.4 Core AST Representation
 
@@ -105,19 +156,24 @@ pub struct Param {
 ### 2.5 Integration Points
 
 **Module System:**
+
 - Capability definitions are module items
 - Public capabilities are exported in module interface
 - Imported capabilities are resolved during lowering
 
 **Type Checker:**
+
 - Capability parameters are type-checked at definition
 - Capability return type is validated at invocation
 - Constraints are type-checked as boolean expressions
+- Usage-site forms such as `cap Args` resolve `Args` as a capability identity, not as a nominal data type
 
 **Runtime:**
+
 - Capability definitions populate `CapabilityRegistry`
 - Runtime looks up capabilities by name
 - Constraints are evaluated before capability execution
+- Runtime may inject capability values that satisfy `cap`-typed parameters at workflow entry or at another runtime-defined boundary only when that boundary explicitly specifies the same authorization contract
 
 ## 3. Effects System
 
@@ -130,6 +186,9 @@ pub struct Param {
 | Stream | `receive` | Epistemic | Mailbox input acquisition; consumes queued workflow input without producing external side effects |
 | Stream | `send` | Operational | External side effect that produces an outgoing event |
 | Monitor view | `observe` via `MonitorLink` | Epistemic | Read-only observation of an exposed workflow view |
+
+Runtime-provided capabilities obey the same effect mapping. For example, when `Args` is declared
+as an observe-like capability, `observe Args 0` is an epistemic operation.
 
 ### 3.2 Effect Lattice
 
@@ -311,11 +370,13 @@ Constraints are evaluated as a conjunction (all must be satisfied). If any const
 Constraints are checked at two phases:
 
 **Static checking (compile time):**
+
 - Constraint field names are validated against capability definition
 - Field value types are checked against capability schema
 - Constant expressions are evaluated where possible
 
 **Dynamic checking (runtime):**
+
 - Variable constraint values are evaluated at invocation time
 - Path patterns are matched against actual access requests
 - Permission flags are checked before operations execute
@@ -684,6 +745,14 @@ Declaration requirements are canonical:
 - `receive control { ... }` requires no explicit declaration because the control mailbox is implicit
 - `set cap:channel = ...` requires `sets cap:channel`
 - `send cap:channel ...` requires `sends cap:channel`
+
+Runtime-provided capability parameters are an additional authorization source only where a
+runtime-defined boundary explicitly says so. At workflow entry, if the boundary requires a
+parameter of type `cap C`, the corresponding runtime-provided capability `C` is authorized for the
+explicit effect-form operations defined for that capability without requiring a separate
+`observes` / `receives` / `sets` / `sends` header clause. This does not create a general exemption
+for arbitrary workflows or non-entry bindings; any future boundary with the same behavior must
+specify that authorization contract explicitly.
 
 ### 8.2 Capability Registry
 

@@ -27,6 +27,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   from a compiler-provided root namespace and are imported with `::` syntax
   only; legacy dot-style import examples are invalid (TASK-S57-4).
 
+- Clarified SPEC-017 so runtime-provided capability parameters use `cap <Identifier>` at
+  usage sites while capability declarations remain `capability ...`; runtime injection occurs
+  at workflow boundaries and read-like capability use remains effect-first (`observe Args 0`)
+  (TASK-S57-5).
+
 |- **Phase 57: Entry Point and Program Execution Planning**
 
 - Established 7 SPEC-first tasks (S57-1 through S57-7) for entry point semantics

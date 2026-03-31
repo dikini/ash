@@ -53,6 +53,7 @@ ash check [options] <file.ash>
 **Output Formats:**
 
 Human (default):
+
 ```
 error: Type mismatch in ORIENT
   --> workflow.ash:12:5
@@ -64,6 +65,7 @@ error: Type mismatch in ORIENT
 ```
 
 JSON:
+
 ```json
 {
   "diagnostics": [
@@ -82,6 +84,7 @@ JSON:
 ```
 
 **Exit Codes:**
+
 - `0`: No errors (warnings ok unless `--strict`)
 - `1`: Type errors or policy violations
 - `2`: Parse errors
@@ -92,7 +95,7 @@ JSON:
 Execute an Ash workflow.
 
 ```bash
-ash run [options] <file.ash>
+ash run [options] <file.ash> [-- <args>...]
 ```
 
 **Options:**
@@ -111,11 +114,39 @@ Capabilities are defined in Ash source files using `capability` declarations.
 Built-in providers (stdio, filesystem) are enabled by default. Custom providers
 must be declared in the workflow or imported from libraries.
 
+**Process Exit Policy:**
+
+`ash run` creates an OS process for the command invocation, executes the entry
+workflow `main`, and exits immediately when `main` completes. Workflows spawned
+by `main` or its descendants do not extend the lifetime of the `ash run`
+process. The fate of those descendants after process exit is
+implementation-defined and outside the CLI contract.
+
+**Exit Codes:**
+
+- `0`: `main` completes successfully and all obligations are discharged.
+- `N`: `main` completes with a runtime error carrying exit code `N`; `ash run`
+  propagates that code.
+- `1`: bootstrap or verification fails before `main` completes.
+
+Exit-code derivation is defined only from the entry-workflow completion
+semantics in [SPEC-004: Operational Semantics](SPEC-004-SEMANTICS.md) and the
+observable outcome classes in
+[SPEC-021: Runtime Observable Behavior](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
+Failures in descendants after `main` completes do not change the process exit
+code.
+
 **Input Parameters:**
 
-Workflow input parameters are not yet supported via CLI. Workflows should use
-`observe` statements or hardcoded values. CLI input binding is planned for a
-future release.
+Arbitrary CLI binding for workflow input parameters is not specified by this
+document.
+
+When present, `-- <args>...` separates Ash CLI options from trailing program
+arguments. Those trailing arguments are passed to the program via the `Args`
+capability.
+
+Additional workflow input-binding conventions remain out of scope for this CLI
+contract and may be specified separately in a future release.
 
 **Examples:**
 
@@ -303,6 +334,7 @@ ash fmt [options] <file-or-path>
 | `--stdin` | Read from stdin, write to stdout |
 
 **Exit Codes:**
+
 - `0`: Files are formatted (or `--check` and formatted)
 - `1`: Formatting needed (with `--check`)
 
@@ -322,6 +354,7 @@ ash lsp [options]
 | `--port <n>` | Use TCP port |
 
 **LSP Features:**
+
 - Syntax highlighting
 - Error squiggles
 - Hover type information

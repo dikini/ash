@@ -1,6 +1,6 @@
 # TASK-S57-2: Update SPEC-005 with Exit-Immediately CLI Policy
 
-## Status: ⬜ Pending
+## Status: ✅ Complete
 
 ## Description
 
@@ -9,6 +9,7 @@ Update SPEC-005 (CLI Specification) with the exit-immediately process policy: th
 ## Background
 
 Per architectural review, the process exit policy needs explicit specification:
+
 - Does the process wait for all spawned workflows to complete?
 - Or does it exit immediately when `main` returns?
 
@@ -19,9 +20,9 @@ Per architectural review, the process exit policy needs explicit specification:
 Update SPEC-005 with:
 
 1. **Process lifecycle**: `ash run <file>` creates process, runs `main`, exits on `main` completion
-2. **Exit code source**: Derived from `main`'s `Result<(), RuntimeError>`
+2. **Exit code source**: Derived from `main` completion, using an abstract CLI mapping for success, runtime-provided exit code, and bootstrap/verification failure
 3. **Descendant policy**: Spawned workflows do not extend process lifetime
-4. **Supervisor termination**: System supervisor exits after `main` completion, propagating exit code
+4. **CLI boundary**: Process termination is defined at the CLI boundary; descendant fate and internal supervisor/runtime teardown remain outside the CLI contract
 
 ## SPEC-005 Sections to Update
 
@@ -34,6 +35,7 @@ Add explicit statement:
 ### Section on Command Syntax (update)
 
 Clarify:
+
 ```
 ash run <file> [-- <args>...]
 ```
@@ -49,32 +51,50 @@ ash run <file> [-- <args>...]
 Current: SPEC-005 Section 4 "Exit Codes"
 
 Add:
+
 - Exit code 0: `main` returned `Ok(())` with obligations discharged
 - Exit code N: `main` returned `Err(RuntimeError { exit_code: N, ... })`
 - Exit code 1: Bootstrap or verification error
 - Note: Descendant workflow failures do not affect exit code; descendant fate after exit is not part of CLI contract
 
-## Open Questions
+## Resolved Design Choices
 
-### Q1: Orphaned Workflows
-- What happens to spawned descendants when process exits?
-- **Resolution:** Outside CLI contract; implementation-defined
+### Process Lifetime Boundary
 
-### Q2: Detach Support
-- Should there be `spawn detached` for workflows that outlive main?
-- Or is this out of scope for minimal core?
+- `ash run` now specifies that the OS process exits immediately when the entry
+  workflow `main` completes.
+- Spawned descendants do not extend process lifetime and are not part of the
+  CLI liveness contract.
 
-### Q3: Cleanup Guarantees
-- Does runtime guarantee any cleanup of spawned workflows?
-- **Resolution:** Not part of CLI/observable contract
+### Exit-Code Derivation
+
+- SPEC-005 now derives `ash run` exit codes from `main` completion only.
+- Successful completion with obligations discharged exits `0`.
+- Runtime failures propagate the runtime-provided exit code `N`.
+- Bootstrap or verification failures exit `1`.
+- Descendant failures after `main` completes do not change the process exit
+  code.
+
+### Argument Separator and Input Scope
+
+- The command synopsis now explicitly uses `ash run <file> [-- <args>...]`.
+- Trailing arguments after `--` are passed through the `Args` capability.
+- Additional workflow input binding remains outside this CLI contract.
+
+### Descendant Fate and Cleanup
+
+- The fate of descendant workflows after process exit remains
+  implementation-defined.
+- Cleanup guarantees and detached-workflow support are not specified by
+  SPEC-005 and remain future-design topics outside this task.
 
 ## Acceptance Criteria
 
-- [ ] SPEC-005 states exit-immediately policy
-- [ ] SPEC-005 defines exit code derivation from `main`
-- [ ] SPEC-005 clarifies descendant workflow policy
-- [ ] SPEC-005 updates exit code documentation
-- [ ] Cross-reference to SPEC-004 (completion semantics)
+- [x] SPEC-005 states exit-immediately policy
+- [x] SPEC-005 defines exit code derivation from `main`
+- [x] SPEC-005 clarifies descendant workflow policy
+- [x] SPEC-005 updates exit code documentation
+- [x] Cross-reference to SPEC-004 (completion semantics)
 
 ## Related
 

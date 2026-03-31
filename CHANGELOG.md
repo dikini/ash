@@ -12,6 +12,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   including runtime-internal supervisor observation, `CompletionPayload`/`EffectTrace`, and
   terminal-control outcomes for spawned workflow completion.
 
+- Defined SPEC-005 `ash run` exit-immediately policy (TASK-S57-2), including
+  `ash run <file> [-- <args>...]`, `main`-derived exit codes, and the explicit
+  boundary that descendant workflows do not extend process lifetime.
+
 |- **Phase 57: Entry Point and Program Execution Planning**
 
 - Established 7 SPEC-first tasks (S57-1 through S57-7) for entry point semantics

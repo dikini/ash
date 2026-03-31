@@ -1701,7 +1701,7 @@ Phase 57 is split into **57A (SPEC updates)** and **57B (implementation, blocked
 | Task | Description | Spec | Est. Hours | Status | Blocks |
 |------|-------------|------|------------|--------|--------|
 | [TASK-S57-1](tasks/TASK-S57-1-spec-004-control-link-completion.md) | Update SPEC-004 with control-link completion payload semantics | SPEC-004 | 4-6 | ✅ Complete | 57B stdlib, runtime tasks |
-| [TASK-S57-2](tasks/TASK-S57-2-spec-005-cli-exit-policy.md) | Update SPEC-005 with exit-immediately CLI policy | SPEC-005 | 2-3 | ⬜ Pending | 57B CLI tasks |
+| [TASK-S57-2](tasks/TASK-S57-2-spec-005-cli-exit-policy.md) | Update SPEC-005 with exit-immediately CLI policy | SPEC-005 | 2-3 | ✅ Complete | 57B CLI tasks |
 | [TASK-S57-3](tasks/TASK-S57-3-spec-021-observable-exit.md) | Update SPEC-021 with observable exit behavior | SPEC-021 | 3-4 | ⬜ Pending | 57B runtime, tests |
 | [TASK-S57-4](tasks/TASK-S57-4-spec-009-012-stdlib-imports.md) | Update SPEC-009/SPEC-012 with stdlib import/namespace rules | SPEC-009/012 | 3-4 | ⬜ Pending | All 57B stdlib usage |
 | [TASK-S57-5](tasks/TASK-S57-5-spec-017-runtime-capabilities.md) | Update SPEC-017 with runtime-provided capability syntax | SPEC-017 | 3-4 | ⬜ Pending | All 57B capability params |

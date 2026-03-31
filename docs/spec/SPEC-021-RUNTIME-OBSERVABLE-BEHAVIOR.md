@@ -42,7 +42,41 @@ ordinary pattern matching.
 `catch` is not part of the canonical observable contract. Any recoverable failure surfaced to users
 or tooling must be representable as an explicit value and observed through `match` or `if let`.
 
-### 2.3 CLI Tooling Outcomes
+### 2.3 Process Exit Observables
+
+For `ash run`, the externally observable terminal event is OS process termination with an exit
+code.
+
+The observable completion boundary is the completion of the entry workflow `main`. Runtime-internal
+supervision, descendant completion, and control-authority bookkeeping do not add a second external
+completion boundary.
+
+The observable exit code is derived from the entry-workflow outcome only:
+
+- `0` when `main` completes successfully and its required obligations are discharged;
+- `N` when `main` completes with a runtime error carrying exit code `N`;
+- `1` when bootstrap, loading, verification, or other pre-entry failures prevent successful
+  execution of `main`.
+
+Spawned descendants do not extend the externally observable process lifetime after `main`
+completes. Their fate after process exit is not part of the observable contract. Implementations
+may terminate, orphan, continue, or otherwise manage descendants after that point.
+
+This document owns only the observable boundary. The `ash run` command/process contract is defined
+by [SPEC-005](SPEC-005-CLI.md), and the runtime-internal completion/control mechanics that produce
+the entry-workflow outcome are defined by [SPEC-004](SPEC-004-SEMANTICS.md).
+
+Conformance-oriented observable assertions include:
+
+- if `main` completes successfully, `ash run` exits `0` even if a spawned descendant encounters
+  its own failure outside the parent's exit boundary;
+- if `main` completes with a runtime error carrying exit code `N`, `ash run` exits `N`;
+- if bootstrap or verification fails before successful `main` execution, the process exits through
+  the pre-entry failure path with code `1`;
+- conformance tests must not assert whether descendants terminate, continue, or emit further
+  effects after the externally observable process exit.
+
+### 2.4 CLI Tooling Outcomes
 
 The CLI surface must preserve the same failure classes and observability rules:
 
@@ -50,8 +84,10 @@ The CLI surface must preserve the same failure classes and observability rules:
   collapsing them into one undifferentiated error class.
 - `ash check` surfaces verification warnings as observable diagnostics rather than hiding them or
   collapsing them into success.
-- `ash run` and `ash trace` surface runtime execution failures observably instead of silently
-  swallowing them.
+- `ash run` surfaces runtime execution failures and final process exit observably, with the
+  externally visible exit outcome derived from `main` completion rather than descendant
+  completion.
+- `ash trace` surfaces runtime execution failures observably instead of silently swallowing them.
 - `ash repl` surfaces interactive parse, type, and runtime failures using the same canonical
   observable categories.
 
@@ -75,7 +111,7 @@ The authoritative interactive command set is limited to:
 
 | REPL feature | Observable behavior |
 |---|---|
-| prompt | normal prompt is `ash> ` and multiline continuation prompt is `... ` |
+| prompt | normal prompt is `ash>` and multiline continuation prompt is `...` |
 | `:help` | lists the supported commands and aliases |
 | `:quit` | exits the session |
 | `:type <expr>` | prints a canonical Ash type name from the type vocabulary |
@@ -145,6 +181,13 @@ Observable control behavior follows the runtime control contract:
 - while that runtime state remains alive, retained tombstones must keep surfacing terminal-control
   failure rather than silently collapsing into `NotFound`
 
+`ControlLink` may also support runtime-internal observation of a child workflow's terminal
+completion, including the sealed completion payload defined by [SPEC-004](SPEC-004-SEMANTICS.md).
+That completion observation is not itself a user-visible event, does not introduce user-visible
+`await` syntax, and becomes observable only if some later external boundary chooses to surface a
+derived value or failure. For `ash run`, the externally observable terminal event remains process
+exit derived from `main` completion as defined in §2.3 and by [SPEC-005](SPEC-005-CLI.md).
+
 ### 4.3 Monitor Views
 
 Workflow instances may expose a monitor view via `exposes { ... }`.
@@ -169,6 +212,7 @@ external data with unexpected shapes, or unsafe operations), the runtime signals
 failure** as an observable error.
 
 **Observable error must include**:
+
 - The scrutinee value that failed to match
 - The match location (source position)
 - The available match arms (for diagnosis)
@@ -197,8 +241,9 @@ These guarantees are about visible behavior, not about requiring one internal st
 
 ## 6. Related Documents
 
-- [SPEC-001](../SPEC-001-IR.md): IR - Core intermediate representation including `Value::Variant`
-- [SPEC-002](../SPEC-002-SURFACE.md): Surface Language - Surface syntax for ADTs and match
-- [SPEC-003](../SPEC-003-TYPE-SYSTEM.md): Type System - Type checking and exhaustiveness
-- [SPEC-004](../SPEC-004-SEMANTICS.md): Operational Semantics - Pattern matching semantics
-- [SPEC-020](../SPEC-020-ADT-TYPES.md): ADT Types - Algebraic data type specifications
+- [SPEC-001](SPEC-001-IR.md): IR - Core intermediate representation including `Value::Variant`
+- [SPEC-002](SPEC-002-SURFACE.md): Surface Language - Surface syntax for ADTs and match
+- [SPEC-003](SPEC-003-TYPE-SYSTEM.md): Type System - Type checking and exhaustiveness
+- [SPEC-004](SPEC-004-SEMANTICS.md): Operational Semantics - Runtime completion and pattern semantics
+- [SPEC-005](SPEC-005-CLI.md): CLI Specification - `ash run` command and process contract
+- [SPEC-020](SPEC-020-ADT-TYPES.md): ADT Types - Algebraic data type specifications

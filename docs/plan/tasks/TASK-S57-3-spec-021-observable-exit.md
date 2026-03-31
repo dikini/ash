@@ -1,6 +1,6 @@
 # TASK-S57-3: Update SPEC-021 with Observable Exit Behavior
 
-## Status: ⬜ Pending
+## Status: ✅ Complete
 
 ## Description
 
@@ -9,6 +9,7 @@ Update SPEC-021 (Runtime Observable Behavior) with observable semantics for proc
 ## Background
 
 Per architectural review, the observable behavior of process exit needs specification:
+
 - What does an external observer see when `ash run` completes?
 - What happens to spawned workflows after exit?
 - What is testable/verifiable behavior?
@@ -29,42 +30,55 @@ Update SPEC-021 with:
 Add:
 
 > **Observable Event**: Process termination with exit code
-> 
+>
 > **Trigger**: Entry workflow (`main`) completion
-> 
-> **Exit Code Source**: 
+>
+> **Exit Code Source**:
+>
 > - 0 if `main` returns `Ok(())` with obligations discharged
 > - N if `main` returns `Err(RuntimeError { exit_code: N, ... })`
 > - 1 for bootstrap/verification errors
-> 
+>
 > **Non-Observable**: The fate of spawned descendant workflows after process exit is not part of the observable contract.
 
 ### Section on Control Authority (reference)
 
 Update references to control authority / completion observation being runtime-internal, not user-observable.
 
-## Open Questions
+## Resolution Notes
 
 ### Q1: Testing Observable Behavior
+
 - How to test that exit code comes from main, not descendants?
 - Need test harness that can spawn and check exit codes
-- **Approach:** Spawn workflow that spawns child, child exits with error, parent exits 0; verify exit code is 0
+- **Resolution:** Spawn workflow that spawns child, child exits with error, parent exits 0; verify exit code is 0
 
 ### Q2: Logging/Tracing
+
 - Can descendants log after main completes?
 - **Resolution:** Not part of observable contract; implementation-defined
 
 ### Q3: Signal Handling
+
 - SIGTERM before main completes?
 - **Resolution:** To be defined in future signal-handling spec
 
 ## Acceptance Criteria
 
-- [ ] SPEC-021 defines observable exit event
-- [ ] SPEC-021 defines exit code source
-- [ ] SPEC-021 states descendant behavior is non-observable
-- [ ] SPEC-021 provides testable assertions
-- [ ] Cross-references to SPEC-004 and SPEC-005
+- [x] SPEC-021 defines observable exit event
+- [x] SPEC-021 defines exit code source
+- [x] SPEC-021 states descendant behavior is non-observable
+- [x] SPEC-021 provides testable assertions
+- [x] Cross-references to SPEC-004 and SPEC-005
+
+## Completion Notes
+
+- SPEC-021 now defines process exit as the external observable event for `ash run`.
+- The spec ties that observable boundary and exit-code derivation to entry-workflow `main`
+  completion.
+- Descendant fate after process exit is explicitly non-observable and implementation-defined.
+- Control-authority completion observation remains runtime-internal and cross-referenced to
+  SPEC-004 and SPEC-005.
 
 ## Related
 

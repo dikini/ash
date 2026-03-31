@@ -16,6 +16,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `ash run <file> [-- <args>...]`, `main`-derived exit codes, and the explicit
   boundary that descendant workflows do not extend process lifetime.
 
+- Defined SPEC-021 observable exit behavior (TASK-S57-3), tying external
+  process exit to `main` completion, clarifying that descendant fate after exit
+  is non-observable and implementation-defined, and aligning the observable
+  boundary with SPEC-004 and SPEC-005.
+
 |- **Phase 57: Entry Point and Program Execution Planning**
 
 - Established 7 SPEC-first tasks (S57-1 through S57-7) for entry point semantics

@@ -11,6 +11,7 @@ Extended integration tests for entry point: stdout capture, assertions, complex 
 ## Test Coverage (Extended - Not Minimum)
 
 ### Test: Stdout Capture
+
 ```rust
 #[test]
 fn program_writes_stdout() {
@@ -20,8 +21,8 @@ fn program_writes_stdout() {
         use runtime::RuntimeError
         use io::Stdout  -- Requires io module in stdlib
         
-        workflow main(stdout: capability Stdout) -> Result<(), RuntimeError> {
-            act stdout.write("Hello, World!");
+        workflow main(stdout: cap Stdout) -> Result<(), RuntimeError> {
+            send Stdout "Hello, World!";
             Ok(())
         }
     "#;
@@ -33,6 +34,7 @@ fn program_writes_stdout() {
 ```
 
 ### Test: Assertions in Ash
+
 ```rust
 #[test]
 fn ash_assertions_work() {
@@ -54,10 +56,13 @@ fn ash_assertions_work() {
 ```
 
 ### Test: Large Exit Code
+
 ```rust
 #[test]
 fn large_exit_code() {
     let entry = r#"
+        use runtime::RuntimeError
+
         workflow main() -> Result<(), RuntimeError> {
             Err(RuntimeError { exit_code: 255, message: "max" })
         }
@@ -71,8 +76,10 @@ fn large_exit_code() {
 ## Why Deferred
 
 These tests require:
+
 - `io::Stdout` capability (not in minimum core)
 - Test assertion helpers (not in minimum core)
+- A finalized stdlib `io` capability surface for concrete send/set examples
 - More stdlib surface area
 
 Minimum core (TASK-368a) tests the entry point mechanism without requiring full stdlib.

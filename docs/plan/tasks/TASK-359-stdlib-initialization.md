@@ -4,11 +4,14 @@
 
 ## Description
 
-Extend the existing `ash-std` crate (already in workspace) with entry point support: `RuntimeError` type, `Args` capability interface, and system supervisor workflow.
+Extend the existing `ash-std` package (source rooted at `std/`) with entry point support:
+`RuntimeError` type, `Args` capability interface, and system supervisor workflow.
 
 **VALIDATION GATE:** Before implementing, verify:
+
 - [ ] S57-4 (stdlib imports) shows ✅ Complete - confirms `use` syntax
-- [ ] S57-5 (capability syntax) shows ✅ Complete - confirms `capability` declaration syntax
+- [ ] S57-5 (capability syntax) shows ✅ Complete - confirms usage-site `cap X` syntax and
+  explicit effect-form capability use
 - [ ] This task content aligns with updated SPEC - if SPEC uses different syntax than assumed here, update this task first
 
 ## Background
@@ -17,7 +20,7 @@ Workspace already has `ash-std` crate per `Cargo.toml`. This task extends it rat
 
 ## Scope
 
-Add to existing `ash-std`:
+Add to the existing standard-library package under `std/`:
 
 1. **`runtime/error.ash`**: `RuntimeError` record type
 2. **`runtime/args.ash`**: `Args` capability interface
@@ -27,7 +30,7 @@ Add to existing `ash-std`:
 ## Structure
 
 ```
-ash-std/src/
+std/src/
   lib.ash              # Existing - update exports
   result.ash           # Existing
   option.ash           # Existing
@@ -49,6 +52,7 @@ ash-std/src/
 ## TDD Steps
 
 ### Test 1: ash-std Builds with New Modules
+
 ```rust
 let status = Command::new("cargo")
     .args(["build", "-p", "ash-std"])
@@ -58,6 +62,7 @@ assert!(status.success());
 ```
 
 ### Test 2: RuntimeError Available
+
 ```rust
 // Use normative syntax per updated SPEC
 let source = r#"
@@ -72,12 +77,16 @@ assert!(result.is_ok());
 ```
 
 ### Test 3: Args Capability Available
+
 ```rust
 let source = r#"
+  use result::Result
+  use runtime::RuntimeError
   use runtime::Args
   
-  fn get_first(args: capability Args) -> Option<String> {
-    args.get(0)  // method per capability interface
+  workflow main(args: cap Args) -> Result<(), RuntimeError> {
+    let first = observe Args 0;
+    done;
   }
 "#;
 let result = compile_with_stdlib(source);
@@ -87,11 +96,13 @@ assert!(result.is_ok());
 ## Implementation Notes
 
 **Uses existing architecture:**
-- Extend `crates/ash-std/` (already in workspace)
+
+- Extend `std/` (package name `ash-std`, already in workspace)
 - Follow existing module patterns
 - Use normative syntax from S57-4, S57-5
 
 **Engine integration:**
+
 - Uses existing `Engine` API (SPEC-010)
 - No fictional `Runtime::new()`
 

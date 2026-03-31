@@ -4,27 +4,22 @@
 
 ## Description
 
-Define the `Args` capability interface in `ash-std/src/runtime/args.ash` for accessing command-line arguments.
+Define the `Args` capability interface in `std/src/runtime/args.ash` for accessing command-line arguments.
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
 1. **Verify S57-4 (import syntax)**: ✅ Complete - confirms `use runtime::Args`
-2. **Verify S57-5 (capability syntax)**: ✅ Complete - confirms `capability Args { ... }`
+2. **Verify S57-5 (capability syntax)**: ✅ Complete - confirms usage-site `cap Args` typing and explicit effect-form capability use
 3. **If SPEC uses different syntax**: Update this task description to match
 
 ## Design (per updated SPEC)
 
 ```ash
--- ash-std/src/runtime/args.ash
-pub capability Args {
-  fn get(index: Int) -> Option<String>
-  fn all() -> [String]
-  fn len() -> Int
-  fn is_empty() -> Bool
-}
+-- std/src/runtime/args.ash
+pub capability Args : observe (index: Int) returns Option<String>
 ```
 
-**Note on argv[0]**: `get(0)` returns program name (first arg), `get(1)` returns first user arg. This matches common convention but verify in S57-2 if different.
+**Note on CLI args**: Do not assume method-style access or a C-style `argv[0]` slot in the normative interface. Align the injected capability with the `ash run <file> [-- <args>...]` contract and the explicit observation form `observe Args <index>`.
 
 ## Requirements
 
@@ -35,30 +30,34 @@ pub capability Args {
 ## TDD Steps
 
 ### Test 1: Capability Interface Compiles
+
 ```rust
 let source = r#"
+  use result::Result
+  use runtime::RuntimeError
   use runtime::Args
   
-  workflow main(args: capability Args) -> Result<(), RuntimeError> {
-    let first = args.get(0);
-    Ok(())
+  workflow main(args: cap Args) -> Result<(), RuntimeError> {
+    let first = observe Args 0;
+    done;
   }
 "#;
 let result = compile_with_stdlib(source);
 assert!(result.is_ok());
 ```
 
-### Test 2: Args Methods Work
+### Test 2: Repeated Args Observation Works
+
 ```rust
 let source = r#"
+  use result::Result
+  use runtime::RuntimeError
   use runtime::Args
   
-  fn check_args(args: capability Args) -> Bool {
-    if args.is_empty() {
-      false
-    } else {
-      args.len() > 0
-    }
+  workflow main(args: cap Args) -> Result<(), RuntimeError> {
+    let first = observe Args 0;
+    let second = observe Args 1;
+    done;
   }
 "#;
 let result = compile_and_typecheck(source);
@@ -67,9 +66,9 @@ assert!(result.is_ok());
 
 ## Implementation Notes
 
-- **Location**: `ash-std/src/runtime/args.ash`
+- **Location**: `std/src/runtime/args.ash`
 - **Export**: Add to `runtime/mod.ash`
-- **Style**: `capability` keyword per SPEC-017 after S57-5
+- **Style**: ordinary `capability` declaration plus explicit `observe` usage per SPEC-017
 
 ## Runtime Integration (Future)
 
@@ -78,7 +77,7 @@ The capability is **injected** by runtime, not constructed:
 ```rust
 // Runtime side (Rust) - future implementation
 let args_cap = ArgsCapability::from_env();
-engine.inject_capability("args", args_cap);
+engine.inject_capability("Args", args_cap);
 ```
 
 This is **not part of this task** - belongs to TASK-363.
@@ -87,14 +86,14 @@ This is **not part of this task** - belongs to TASK-363.
 
 - TASK-359: ash-std structure
 - S57-4: Import syntax (`use runtime::Args`)
-- S57-5: Capability syntax (`capability Args`)
+- S57-5: Capability syntax (`cap Args` at usage sites, explicit effect-form invocation)
 
 ## Blocks
 
 - TASK-362: System supervisor receives Args from runtime
 - TASK-366: CLI passes args to runtime
 
-## Spec Citations (Update After 57A)
+## Spec Citations
 
 | Aspect | Spec |
 |--------|------|
@@ -107,7 +106,7 @@ This is **not part of this task** - belongs to TASK-363.
 - [ ] S57-4, S57-5 show ✅ Complete (VALIDATION GATE)
 - [ ] Capability interface defined
 - [ ] Can use as workflow parameter
-- [ ] Methods typecheck
+- [ ] Explicit observation interface typechecks
 - [ ] Tests pass
 
 ## Est. Hours: 3-4

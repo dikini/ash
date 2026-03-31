@@ -15,9 +15,10 @@ Verify entry file contains `main` workflow with correct signature using type inf
 ## Verification Contract (per S57-6)
 
 Check entry workflow:
+
 - **Name**: `main`
-- **Return type**: `Result<(), RuntimeError>` (exact or per S57-6)
-- **Parameters**: Only capability types (`capability X`)
+- **Return type**: `Result<(), RuntimeError>` (exact)
+- **Parameters**: Only usage-site capability types (`cap X`)
 
 ## Implementation Sketch
 
@@ -58,14 +59,22 @@ pub fn verify_entry_workflow(
 ## TDD Steps
 
 ### Test 1: Accepts Valid Main
+
 ```rust
 let engine = Engine::with_stdlib();
-let entry = "workflow main() -> Result<(), RuntimeError> { Ok(()) }";
+let entry = r#"
+    use result::Result
+    use result::Ok
+    use runtime::RuntimeError
+
+    workflow main() -> Result<(), RuntimeError> { Ok(()) }
+"#;
 let module = engine.load_module(entry)?;
 assert!(verify_entry_workflow(&engine, &module).is_ok());
 ```
 
 ### Test 2: Rejects Missing Main
+
 ```rust
 let entry = "workflow other() {}";
 let result = verify_entry_workflow(&engine, &module);
@@ -74,8 +83,14 @@ assert!(result.unwrap_err().to_string().contains("no 'main'"));
 ```
 
 ### Test 3: Rejects Non-Capability Param
+
 ```rust
-let entry = "workflow main(n: Int) -> Result<(), RuntimeError> { ... }";
+let entry = r#"
+    use result::Result
+    use runtime::RuntimeError
+
+    workflow main(n: Int) -> Result<(), RuntimeError> { done; }
+"#;
 let result = verify_entry_workflow(&engine, &module);
 assert!(result.is_err());
 assert!(result.unwrap_err().to_string().contains("capability"));

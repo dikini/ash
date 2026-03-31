@@ -17,6 +17,7 @@ This task **redefines** the `ash run` command to use the new entry-point bootstr
 ## Current State
 
 `ash run` exists but likely uses old execution model. Need to:
+
 1. Identify current `ash run` implementation
 2. Determine what needs changing
 3. Migrate to TASK-363c bootstrap
@@ -61,12 +62,13 @@ fn cmd_run(file: &Path, args: Vec<String>) -> i32 {
 |--------|-------------------|-----|
 | Entry point | ? | `main` workflow |
 | Return type | ? | `Result<(), RuntimeError>` |
-| Args passing | ? | `capability Args` injection |
-| Stdlib | ? | `ash-std` loaded |
+| Args passing | ? | `cap Args` injection |
+| Stdlib | ? | standard-library root modules loaded |
 
 ## TDD Steps
 
 ### Test 1: Command Still Works
+
 ```rust
 // Verify `ash run` executes
 let output = Command::new("ash")
@@ -77,6 +79,7 @@ assert!(output.status.code().is_some());
 ```
 
 ### Test 2: New Semantics Active
+
 ```rust
 // Test.ash contains `main` workflow
 let output = Command::new("ash")

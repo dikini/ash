@@ -8,13 +8,18 @@ Complete bootstrap: load stdlib, compile entry, verify `main`, spawn supervisor,
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
-1. **Verify all blocking tasks complete**: 
-   - TASK-363a (stdlib loading) ✅
-   - TASK-363b (main verification) ✅
-   - TASK-362 (system supervisor) ✅
-   - S57-1 (control authority) ✅
-   - S57-2 (exit policy) ✅
-   - S57-3 (observable behavior) ✅
+1. **Verify all blocking tasks complete**:
+
+- TASK-363a (stdlib loading)
+- TASK-363b (main verification)
+- TASK-362 (system supervisor)
+
+2. **Verify completed spec prerequisites remain satisfied**:
+
+- S57-1 (control authority) ✅
+- S57-2 (exit policy) ✅
+- S57-3 (observable behavior) ✅
+- S57-7 (post-spec review) ✅
 
 ## Bootstrap Flow
 
@@ -63,6 +68,7 @@ pub fn bootstrap(entry_path: &Path) -> Result<i32, BootstrapError> {
 ## TDD Steps
 
 ### Test 1: Full Bootstrap Success
+
 ```rust
 let entry = temp_file(r#"
   use result::Result
@@ -79,8 +85,13 @@ assert_eq!(exit_code, 0);
 ```
 
 ### Test 2: Bootstrap Returns Error Code
+
 ```rust
 let entry = temp_file(r#"
+  use result::Result
+  use result::Err
+  use runtime::RuntimeError
+
   workflow main() -> Result<(), RuntimeError> {
     Err(RuntimeError { exit_code: 42, message: "test" })
   }
@@ -91,6 +102,7 @@ assert_eq!(exit_code, 42);
 ```
 
 ### Test 3: Missing Main Fails
+
 ```rust
 let entry = temp_file("workflow other() {}");
 let result = bootstrap(entry.path());

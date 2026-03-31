@@ -4,13 +4,13 @@
 
 ## Description
 
-Implement the system supervisor workflow in `ash-std/src/runtime/supervisor.ash`. This workflow spawns `main` and observes its terminal completion via control authority.
+Implement the system supervisor workflow in `std/src/runtime/supervisor.ash`. This workflow spawns `main` and observes its terminal completion via control authority.
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
 1. **Verify S57-1 (control authority)**: ✅ Complete - confirms how supervisor observes completion
 2. **Verify S57-4 (imports)**: ✅ Complete - confirms `use runtime::{Args, RuntimeError}`
-3. **Verify S57-5 (capabilities)**: ✅ Complete - confirms `capability Args` usage
+3. **Verify S57-5 (capabilities)**: ✅ Complete - confirms `cap Args` usage-site typing and explicit capability invocation
 4. **Verify S57-6 (entry typing)**: ✅ Complete - confirms `main` signature
 5. **If SPEC differs**: Update this task description to match
 
@@ -21,14 +21,14 @@ Current AST/surface has **no** `await` construct. Use "observe terminal completi
 ## Design (per updated SPEC)
 
 ```ash
--- ash-std/src/runtime/supervisor.ash
+-- std/src/runtime/supervisor.ash
 use result::Result
 use result::Ok
 use result::Err
 use runtime::RuntimeError
 use runtime::Args
 
-workflow system_supervisor(args: capability Args) -> Int {
+workflow system_supervisor(args: cap Args) -> Int {
   -- Spawn main, receive control authority (runtime-internal)
   -- (spawn semantics per SPEC-004 after S57-1)
   
@@ -74,11 +74,12 @@ let exit_code = supervisor_form_exit_code(completion_payload);
 ## TDD Steps
 
 ### Test 1: Supervisor Compiles
+
 ```rust
 let source = r#"
   use runtime::supervisor
   
-  -- Verify type: system_supervisor : (capability Args) -> Int
+  -- Verify type: system_supervisor : (cap Args) -> Int
   fn check() {}
 "#;
 let result = compile_with_stdlib(source);
@@ -86,6 +87,7 @@ assert!(result.is_ok());
 ```
 
 ### Test 2: Integration (Rust side)
+
 ```rust
 // Test via Engine API (SPEC-010), not fictional Runtime::new()
 let engine = Engine::new();
@@ -96,7 +98,7 @@ assert_eq!(exit_code, 0);  // When main returns Ok(())
 
 ## Implementation Notes
 
-- **Location**: `ash-std/src/runtime/supervisor.ash`
+- **Location**: `std/src/runtime/supervisor.ash`
 - **Uses**: Normative spawn, normative observation (per S57-1)
 - **No `await`**: Not in surface language
 - **Record access**: `runtime_error.exit_code` (matches TASK-360)
@@ -113,7 +115,7 @@ assert_eq!(exit_code, 0);  // When main returns Ok(())
 
 - TASK-363c: Bootstrap spawns supervisor
 
-## Spec Citations (Update After 57A)
+## Spec Citations
 
 | Aspect | Spec |
 |--------|------|

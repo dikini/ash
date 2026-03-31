@@ -4,7 +4,7 @@
 
 ## Description
 
-Define the `RuntimeError` record type in `ash-std/src/runtime/error.ash` for entry point error reporting.
+Define the `RuntimeError` record type in `std/src/runtime/error.ash` for entry point error reporting.
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
@@ -16,7 +16,7 @@ Define the `RuntimeError` record type in `ash-std/src/runtime/error.ash` for ent
 ## Design (per updated SPEC)
 
 ```ash
--- ash-std/src/runtime/error.ash
+-- std/src/runtime/error.ash
 pub type RuntimeError = RuntimeError { 
   exit_code: Int, 
   message: String 
@@ -34,6 +34,7 @@ pub type RuntimeError = RuntimeError {
 ## TDD Steps
 
 ### Test 1: Type Definition Compiles
+
 ```rust
 let source = r#"
   use runtime::RuntimeError
@@ -47,6 +48,7 @@ assert!(result.is_ok());
 ```
 
 ### Test 2: Used in Entry Point Signature
+
 ```rust
 let source = r#"
   use result::Result
@@ -64,9 +66,9 @@ assert!(result.is_ok());
 
 ## Implementation Notes
 
-- **Location**: `ash-std/src/runtime/error.ash`
+- **Location**: `std/src/runtime/error.ash`
 - **Export**: Add to `runtime/mod.ash` and `lib.ash`
-- **Style**: Record ADT (matches existing ash-std patterns)
+- **Style**: Record ADT (matches existing standard-library patterns)
 
 ## Dependencies
 
@@ -77,7 +79,7 @@ assert!(result.is_ok());
 
 - TASK-362: System supervisor returns RuntimeError
 
-## Spec Citations (Update After 57A)
+## Spec Citations
 
 | Aspect | Spec |
 |--------|------|

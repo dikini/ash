@@ -8,13 +8,14 @@ Minimum integration tests for entry point execution: success path, error code, m
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
-1. **Verify all 57A complete**: S57-1 through S57-6 show ✅ Complete
+1. **Verify all 57A complete**: S57-1 through S57-7 show ✅ Complete
 2. **Verify S57-3 (observable)**: Confirms what's testable
 3. **This is MINIMUM core**: Does NOT test stdlib features (stdout, etc.)
 
 ## Test Coverage (Minimum)
 
 ### Test 1: Success Path
+
 ```rust
 #[test]
 fn entry_point_success_exits_zero() {
@@ -34,6 +35,7 @@ fn entry_point_success_exits_zero() {
 ```
 
 ### Test 2: Error Code Propagation
+
 ```rust
 #[test]
 fn runtime_error_returns_exit_code() {
@@ -53,6 +55,7 @@ fn runtime_error_returns_exit_code() {
 ```
 
 ### Test 3: Missing Main Detected
+
 ```rust
 #[test]
 fn missing_main_reports_error() {
@@ -64,7 +67,8 @@ fn missing_main_reports_error() {
 }
 ```
 
-### Test 4: Args Capability Works
+### Test 4: Args Capability Is Available at Entry
+
 ```rust
 #[test]
 fn args_capability_receives_args() {
@@ -74,10 +78,9 @@ fn args_capability_receives_args() {
         use runtime::RuntimeError
         use runtime::Args
         
-        workflow main(args: capability Args) -> Result<(), RuntimeError> {
-            -- Verify args received
-            assert_eq!(args.len(), 2);
-            assert_eq!(args.get(0), Some("hello"));
+        workflow main(args: cap Args) -> Result<(), RuntimeError> {
+            let first = observe Args 0;
+            let second = observe Args 1;
             Ok(())
         }
     "#;
@@ -117,13 +120,13 @@ fn run_program_with_args(source: &str, args: &[&str]) -> i32 {
 
 ## Dependencies
 
-- All 57A tasks: ✅ Complete (VALIDATION GATE)
-- All 57B tasks up to 367: ✅ Complete
+- All 57A tasks including S57-7: ✅ Complete (VALIDATION GATE)
+- 57B prerequisites through TASK-367: complete in dependency order before these minimum tests begin
 - Test infrastructure: `assert_cmd`, `tempfile`
 
 ## Acceptance Criteria
 
-- [ ] All 57A show ✅ Complete (VALIDATION GATE)
+- [ ] All 57A including S57-7 show ✅ Complete (VALIDATION GATE)
 - [ ] Success test passes
 - [ ] Error code test passes
 - [ ] Missing main test passes

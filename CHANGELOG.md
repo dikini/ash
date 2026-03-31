@@ -36,6 +36,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   canonical `main` contract: exact return type `Result<(), RuntimeError>`, zero or more
   usage-site capability parameters `cap X`, and ordinary body-inferred effects (TASK-S57-6).
 
+- Reviewed and aligned the downstream Phase 57B task plans with the completed S57-1 through
+  S57-6 specs, correcting stale capability syntax, entry-signature assumptions, and stdlib path
+  references before implementation begins (TASK-S57-7).
+
 |- **Phase 57: Entry Point and Program Execution Planning**
 
 - Established 7 SPEC-first tasks (S57-1 through S57-7) for entry point semantics

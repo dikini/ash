@@ -57,7 +57,13 @@ fn verify_main_signature(wf: &Workflow) -> Result<(), TypeError> {
 ### Test 1: Valid Main (No Params)
 
 ```rust
-let wf = parse_workflow("workflow main() -> Result<(), RuntimeError> { Ok(()) }");
+let wf = parse_workflow(r#"
+    use result::Result
+    use result::Ok
+    use runtime::RuntimeError
+
+    workflow main() -> Result<(), RuntimeError> { Ok(()) }
+"#);
 assert!(verify_main_signature(&wf).is_ok());
 ```
 
@@ -65,6 +71,11 @@ assert!(verify_main_signature(&wf).is_ok());
 
 ```rust
 let wf = parse_workflow(r#"
+    use result::Result
+    use result::Ok
+    use runtime::RuntimeError
+    use runtime::Args
+
     workflow main(args: cap Args) -> Result<(), RuntimeError> { Ok(()) }
 "#);
 assert!(verify_main_signature(&wf).is_ok());
@@ -74,6 +85,12 @@ assert!(verify_main_signature(&wf).is_ok());
 
 ```rust
 let wf = parse_workflow(r#"
+    use result::Result
+    use result::Ok
+    use runtime::RuntimeError
+    use runtime::Args
+    use io::Stdout
+
     workflow main(args: cap Args, stdout: cap Stdout) -> Result<(), RuntimeError> { Ok(()) }
 "#);
 assert!(verify_main_signature(&wf).is_ok());
@@ -82,7 +99,11 @@ assert!(verify_main_signature(&wf).is_ok());
 ### Test 3: Wrong Return Type
 
 ```rust
-let wf = parse_workflow("workflow main() -> Int { 42 }");
+let wf = parse_workflow(r#"
+    use runtime::RuntimeError
+
+    workflow main() -> Int { 42 }
+"#);
 let err = verify_main_signature(&wf).unwrap_err();
 assert!(matches!(err, TypeError::WrongReturnType { .. }));
 ```
@@ -91,7 +112,11 @@ assert!(matches!(err, TypeError::WrongReturnType { .. }));
 
 ```rust
 let wf = parse_workflow(r#"
-  workflow main(n: Int) -> Result<(), RuntimeError> { Ok(()) }
+        use result::Result
+        use result::Ok
+        use runtime::RuntimeError
+
+        workflow main(n: Int) -> Result<(), RuntimeError> { Ok(()) }
 "#);
 let err = verify_main_signature(&wf).unwrap_err();
 assert!(matches!(err, TypeError::NonCapabilityParam { .. }));

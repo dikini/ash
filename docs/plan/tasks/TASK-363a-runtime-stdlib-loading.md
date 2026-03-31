@@ -8,13 +8,14 @@ Integrate stdlib loading into runtime using existing `Engine` API (SPEC-010), no
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
-1. **Verify S57-4 (stdlib loading)**: ✅ Complete - confirms how Engine loads ash-std
+1. **Verify S57-4 (stdlib loading)**: ✅ Complete - confirms how Engine loads standard-library modules from the stdlib root
 2. **Verify existing Engine API**: Review SPEC-010 for `Engine::load_module` or equivalent
 3. **If SPEC differs**: Update this task description
 
 ## Background
 
 Current architecture (SPEC-010) has `Engine` for embedding:
+
 ```rust
 // SPEC-010-EMBEDDING.md:14-36
 pub struct Engine { ... }
@@ -29,7 +30,7 @@ This task uses **existing** `Engine`, not a new `Runtime` type.
 
 ## Requirements
 
-1. **Engine loads ash-std** at initialization
+1. **Engine loads the standard library** at initialization
 2. **Stdlib modules available** for `use` resolution
 3. **No fictional APIs** - use SPEC-010 `Engine`
 
@@ -39,7 +40,7 @@ This task uses **existing** `Engine`, not a new `Runtime` type.
 // In runtime/bootstrap (future TASK-363c)
 let mut engine = Engine::new();
 
-// Load ash-std modules
+// Load standard-library modules
 let stdlib_modules = load_ash_std_modules()?;  // This task
 for module in stdlib_modules {
     engine.load_module(&module)?;
@@ -51,6 +52,7 @@ for module in stdlib_modules {
 ## TDD Steps
 
 ### Test 1: Engine Loads ash-std
+
 ```rust
 let mut engine = Engine::new();
 let stdlib = load_ash_std().expect("ash-std loads");
@@ -64,11 +66,18 @@ assert!(engine.has_module("result"));
 ```
 
 ### Test 2: Entry File Can Import Stdlib
+
 ```rust
 let mut engine = Engine::new();
 load_ash_std_into(&mut engine)?;
 
-let entry_src = r#"use runtime::Args; workflow main(args: capability Args) { ... }"#;
+let entry_src = r#"
+    use result::Result
+    use runtime::RuntimeError
+    use runtime::Args
+
+    workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
+"#;
 let result = engine.load_module(entry_src);
 assert!(result.is_ok());  // Args resolves from ash-std
 ```

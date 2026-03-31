@@ -68,15 +68,27 @@ fn main() {
 ## TDD Steps
 
 ### Test 1: Success Returns 0
+
 ```rust
-let entry = "workflow main() -> Result<(), RuntimeError> { Ok(()) }";
+let entry = r#"
+    use result::Result
+    use result::Ok
+    use runtime::RuntimeError
+
+    workflow main() -> Result<(), RuntimeError> { Ok(()) }
+"#;
 let code = run_and_get_exit_code(entry);
 assert_eq!(code, 0);
 ```
 
 ### Test 2: RuntimeError Returns Code
+
 ```rust
 let entry = r#"
+    use result::Result
+    use result::Err
+    use runtime::RuntimeError
+
   workflow main() -> Result<(), RuntimeError> {
     Err(RuntimeError { exit_code: 42, message: "test" })
   }
@@ -86,6 +98,7 @@ assert_eq!(code, 42);
 ```
 
 ### Test 3: Bootstrap Error Returns 1
+
 ```rust
 let entry = "workflow other() {}";  // No main
 let code = run_and_get_exit_code(entry);

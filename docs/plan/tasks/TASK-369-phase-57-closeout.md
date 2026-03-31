@@ -23,7 +23,7 @@ Final verification and closeout for Phase 57: Entry Point and Program Execution.
 - [ ] Can run: `ash run hello.ash` → exits 0
 - [ ] Args work: `ash run echo.ash -- hello world` → receives args
 - [ ] Errors reported: `ash run bad.ash` → helpful error, exit 1
-- [ ] Exit codes: Program returning `Err(RuntimeError 42 _)` → exits 42
+- [ ] Exit codes: Program returning `Err(RuntimeError { exit_code: 42, ... })` → exits 42
 - [ ] Stdlib loads: `use runtime::RuntimeError` works
 
 ### SPEC Alignment
@@ -86,16 +86,19 @@ echo $?  # Should be 1
 ## Deliverables Summary
 
 **Modified crates:**
+
 - `ash-std`: Extended with runtime modules
 - `ash-cli`: Updated `run` command semantics
 - `ash-engine`: Bootstrap integration (if modified)
 
 **Documentation:**
+
 - Entry point specification (grounded in SPEC)
 - CLI usage guide
 - Stdlib organization
 
 **Tests:**
+
 - Unit tests: per-component
 - Integration tests: minimum entry point flow
 

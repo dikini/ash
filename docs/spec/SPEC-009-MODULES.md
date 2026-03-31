@@ -27,6 +27,10 @@ Resolution follows Rust's rules:
 1. `name.ash` (module file)
 2. `name/mod.ash` (module directory with mod.ash)
 
+The standard library follows the same file-based convention, rooted at `std/src/`.
+For example, a root standard-library module named `result` resolves from
+`std/src/result.ash` or `std/src/result/mod.ash`.
+
 ### 2.2 Inline Modules
 
 A module declaration with a body defines the module inline:
@@ -108,6 +112,10 @@ module_path ::= "crate" | "super" | "self"
               | IDENTIFIER ("::" IDENTIFIER)*
 ```
 
+`::` is the only normative module-path separator. Dot-separated paths such as
+`foo.bar` are not valid Ash module syntax. Import grouping syntax is defined in
+SPEC-012 and likewise uses `::`, not `.`.
+
 ### 4.3 Path Resolution
 
 ```
@@ -116,6 +124,27 @@ super::baz         -- Parent module
 self::helper       -- Current module (redundant but valid)
 foo::bar           -- Relative path from current module
 ```
+
+### 4.4 Standard Library Root Namespace
+
+Ash provides the standard library as a compiler-defined root namespace. Standard-library
+modules resolve as top-level modules and do not require a `std::` prefix.
+
+Standard-library root module names are reserved in the root namespace. A program must not
+declare or import a top-level user module whose root name collides with a standard-library root
+module name. Such collisions are compile-time errors rather than ambiguous name-resolution cases.
+
+Examples of valid standard-library module paths when those modules are present:
+
+```
+result::Result
+runtime::Args
+io::Stdout
+```
+
+Standard-library module resolution follows the same file-based module rules as user code,
+but is rooted at `std/src/`. For example, `use result::Result;` resolves `result` from
+`std/src/result.ash` or `std/src/result/mod.ash`.
 
 ## 5. Item References
 
@@ -134,10 +163,18 @@ workflow main {
 
 ### 5.2 Name Resolution Order
 
-1. Current module (`self`)
-2. Parent modules (for `super`)
-3. Root module (for `crate`)
-4. Imported names (see SPEC-012)
+For unqualified item references, name resolution checks in order:
+
+1. Current module definitions (`self`)
+2. Names made available by the prelude
+3. Explicit imported names (see SPEC-012)
+
+Only names made available by the standard prelude are implicitly in scope in every module.
+Other standard-library modules and items must be brought into scope with explicit `use`
+declarations as defined in SPEC-012.
+
+Qualified `super::...` and `crate::...` paths resolve explicitly and are not part of
+unqualified fallback lookup.
 
 ## 6. Module Graph
 
@@ -242,10 +279,12 @@ dependency <alias> from "<path>";
 ```
 
 Declares an external crate dependency with:
+
 - `alias`: The name used to refer to this dependency in `use` statements
 - `path`: Filesystem path to the dependency's crate root (must be quoted)
 
 Example:
+
 ```ash
 crate app;
 

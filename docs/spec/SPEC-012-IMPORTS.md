@@ -13,7 +13,13 @@ The import system enables bringing items from other modules into scope via `use`
 ```
 use crate::foo::bar;           -- Import specific item
 use crate::foo::bar as baz;    -- Import with alias
+use result::Result;            -- Import a standard-library item
+use runtime::Args;             -- Import from a standard-library root module
 ```
+
+Import paths use `::` as the only valid separator between path segments.
+Dot-separated forms such as `use runtime.Args;` and `use result.{Result, Ok, Err};`
+are invalid.
 
 ### 2.2 Glob Imports
 
@@ -35,11 +41,59 @@ use self::foo;                 -- Import from current module
 use super::bar;                -- Import from parent module
 ```
 
+### 2.5 Standard-Library Imports
+
+Standard-library modules are imported from the compiler-provided root namespace using
+ordinary `use` declarations. They do not require a `std::` prefix.
+
+Valid examples:
+
+```
+use result::Result;
+use result::{Result, Ok, Err};
+use runtime::Args;
+use io::Stdout;
+```
+
+Legacy dot-style examples are invalid:
+
+```
+use result.{Result, Ok, Err};
+use runtime.Args;
+use io.Stdout;
+```
+
+Standard-library module resolution follows SPEC-009 file-based rules rooted at `std/src/`.
+For example, `use result::Result;` resolves `result` from `std/src/result.ash` or
+`std/src/result/mod.ash`.
+
+### 2.6 Prelude
+
+Every module implicitly imports the standard prelude defined by `std/src/prelude.ash`.
+That prelude must make the following names available in all modules:
+
+- `Option`
+- `Some`
+- `None`
+- `Result`
+- `Ok`
+- `Err`
+
+Additional items re-exported by the prelude are also implicitly available when
+present in `std/src/prelude.ash`. No other standard-library modules or bindings are imported
+implicitly unless they are re-exported by the prelude; access to other standard-library items
+requires an explicit `use` declaration.
+
 ## 3. Import Resolution
 
 ### 3.1 Resolution Algorithm
 
 1. Resolve the path in the `use` statement relative to current module
+     - `crate`, `self`, and `super` use ordinary module-path resolution
+     - A leading identifier that names a standard-library root module resolves against the
+         compiler-provided standard-library namespace
+     - If a top-level user module root name collides with a standard-library root module name,
+         the program is ill-formed and the import must be rejected
 2. Verify target item exists and is visible
 3. Add item to current module's scope with given name (or alias)
 
@@ -142,17 +196,22 @@ simple_path     ::= "crate" | "self" | "super" | IDENTIFIER
                   | simple_path "::" IDENTIFIER
 ```
 
+The grammar above intentionally excludes dot-separated import forms. Conforming
+implementations must reject `use foo.bar;` and `use foo.{bar, baz};`.
+
 ## 7. Implementation Notes
 
 ### 7.1 Import Collection
 
 During parsing/AST construction:
+
 1. Collect all `use` statements
 2. Store with their visibility and target module
 
 ### 7.2 Import Resolution Phase
 
 After module resolution but before type checking:
+
 1. Resolve each import path to actual item
 2. Build name binding table per module
 3. Verify visibility constraints
@@ -161,10 +220,13 @@ After module resolution but before type checking:
 ### 7.3 Name Resolution Integration
 
 The name resolver should check in order:
+
 1. Local definitions (let bindings, parameters)
 2. Current module definitions
-3. Imported names (with shadowing order)
-4. Parent module (for items in scope)
+3. Prelude-imported names and explicit imported names (with shadowing order)
+
+Qualified `super::...` and `crate::...` paths resolve explicitly and are not part of
+unqualified fallback lookup.
 
 ## 8. Error Messages
 
@@ -252,6 +314,7 @@ workflow process {
 ### 10.3 Resolution
 
 External crate imports are resolved by:
+
 1. Looking up the alias in the declared dependencies
 2. Loading the dependency's crate root from the specified path
 3. Resolving the path within the dependency's module tree

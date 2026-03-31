@@ -1,94 +1,86 @@
 # TASK-S57-4: Update SPEC-009/SPEC-012 with Stdlib Import/Namespace Rules
 
-## Status: ⬜ Pending
+## Status: ✅ Complete
 
 ## Description
 
-Update SPEC-009 (Module System) and/or SPEC-012 (Imports) with normative rules for standard library imports, resolving the mismatch between current `use result.{Result, Ok, Err}` syntax and the Rust-style `::` import syntax in current specs.
+Update SPEC-009 (Module System) and SPEC-012 (Imports) with normative rules for standard-library imports, resolving the mismatch between legacy dot-style examples such as `use result.{Result, Ok, Err}` and the canonical `::` syntax used elsewhere in the specs.
 
 ## Background
 
-Per architectural review, 57B implementation relies heavily on:
+Per architectural review, early 57B task prose relied on dot-style examples such as:
+
 ```ash
 use result.{Result, Ok, Err}
 use runtime.Args
 use io.Stdout
 ```
 
-But current import spec (SPEC-012-IMPORTS.md:10-29) uses Rust-style `::` syntax. This mismatch must be resolved before implementation.
+But the current module and import specs use `::` paths. This task resolves that mismatch by keeping one import/path syntax and defining how standard-library modules and the prelude are resolved.
 
-**Options:**
-1. Update SPEC-012 to support dot-style `use module.{item}` syntax
-2. Rewrite 57B to use current `::` syntax: `use result::Result`
-3. Define stdlib as special case with different import rules
+## Resolved Design
+
+- `::` is the only normative module and import path separator.
+- The standard library is a compiler-provided root namespace, so standard-library modules are
+  imported as top-level modules such as `result`, `runtime`, and `io` without a `std::` prefix.
+- Standard-library module resolution follows the same file-based rules as user modules, rooted at
+  `std/src/`.
+- The standard prelude is defined by `std/src/prelude.ash`.
+- `Option`, `Some`, `None`, `Result`, `Ok`, and `Err` are implicitly available in all modules;
+  other standard-library modules and items require explicit `use` unless re-exported by the
+  prelude.
 
 ## Requirements
 
-Update SPEC-009 or SPEC-012 with:
+Update SPEC-009 and SPEC-012 with:
 
-1. **Import syntax**: Resolve `use module.{item}` vs `use module::item`
+1. **Import syntax**: Define `::` as the only normative module/import separator
 2. **Stdlib namespace**: How is `result`, `runtime`, `io` resolved?
 3. **Prelude**: What is auto-imported without explicit `use`?
-4. **Module path resolution**: How does `runtime.Args` resolve to file?
+4. **Module path resolution**: How does `runtime::Args` resolve to file?
 
 ## SPEC Sections to Update
 
-### Option A: Update SPEC-012 to Support Dot Syntax
+### SPEC-009
 
-Update import grammar:
-```
-use_path ::= simple_path | dotted_import
-dotted_import ::= identifier "." "{" identifier_list "}"
-```
+- Define the standard-library root namespace
+- Define file-based resolution rooted at `std/src/`
+- Cross-reference the prelude boundary in SPEC-012
 
-Examples:
-```ash
-use result.{Result, Ok, Err}  -- new dot syntax
-use runtime.Args              -- simple import
-```
+### SPEC-012
 
-### Option B: Use Current Syntax, Update 57B
+- Define `::` as the only valid import separator
+- Mark dot-style stdlib imports invalid
+- Define explicit standard-library import examples
+- Define prelude-imported names and the boundary for explicit imports
 
-Keep SPEC-012 as-is (Rust-style), rewrite 57B:
+## Examples
+
+Valid:
+
 ```ash
 use result::Result
-use result::Ok
-use result::Err
+use result::{Result, Ok, Err}
 use runtime::Args
+use io::Stdout
 ```
 
-### Option C: Mixed Approach
+Invalid legacy examples:
 
-- Simple imports: `use runtime.Args` (dot as namespace separator)
-- Explicit lists: `use result.{Result, Ok}` (dot + braces)
-- Or: `use result::{Result, Ok}` (double colon + braces)
-
-## Open Questions
-
-### Q1: Dot vs Double-Colon
-- Is `.` namespace separator or field access?
-- Can both coexist? `use foo.bar` vs `use foo::bar`?
-
-### Q2: Stdlib Location
-- Where do `result`, `runtime`, `io` resolve?
-- `std/src/result.ash` → module `result`?
-- `std/src/runtime/args.ash` → module `runtime.Args`?
-
-### Q3: Prelude
-- Is `Result`/`Option` in prelude (auto-imported)?
-- Or must always `use result.{Result}`?
-
-### Q4: Nested Modules
-- Can stdlib have nested modules?
-- `std/src/io/stdout.ash` → `io.stdout`?
+```ash
+use result.{Result, Ok, Err}
+use runtime.Args
+use io.Stdout
+```
 
 ## Acceptance Criteria
 
-- [ ] Import syntax for stdlib is normatively specified
-- [ ] Module path resolution rules defined
-- [ ] Examples show valid stdlib imports
-- [ ] Prelude (if any) explicitly defined
-- [ ] 57B tasks can be written using normative syntax
+- [x] Import syntax for stdlib is normatively specified
+- [x] Module path resolution rules defined
+- [x] Examples show valid stdlib imports
+- [x] Prelude is explicitly defined
+- [x] Legacy dot-style examples are marked invalid
+- [x] 57B tasks can be written using normative syntax
 
 ## Related
 
@@ -101,4 +93,13 @@ use runtime::Args
 
 ## Blocking
 
-- All 57B tasks using `use result.{...}` or `use runtime.X`
+- All 57B tasks using stdlib imports
+
+## Completion Summary
+
+SPEC-009 and SPEC-012 now define the standard library as a compiler-provided root namespace,
+keep `::` as the only normative path separator, and tie implicit imports to the standard prelude
+defined in `std/src/prelude.ash`.
+
+Legacy planning and idea documents that still show dot-style imports remain follow-up cleanup
+work under TASK-S57-7; this task completes the normative specification update only.

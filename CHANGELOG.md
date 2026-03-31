@@ -21,6 +21,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   is non-observable and implementation-defined, and aligning the observable
   boundary with SPEC-004 and SPEC-005.
 
+### Changed
+
+- Clarified SPEC-009 and SPEC-012 so that Ash standard-library modules resolve
+  from a compiler-provided root namespace and are imported with `::` syntax
+  only; legacy dot-style import examples are invalid (TASK-S57-4).
+
 |- **Phase 57: Entry Point and Program Execution Planning**
 
 - Established 7 SPEC-first tasks (S57-1 through S57-7) for entry point semantics

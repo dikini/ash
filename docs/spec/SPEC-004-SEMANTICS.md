@@ -38,17 +38,29 @@ Effect     ::= Epistemic | Deliberative | Evaluative | Operational
 
 Trace      ::= ε | TraceEvent :: Trace
 
+EffectTrace ::= EffectTrace { terminal: Effect, reached: Set(Effect) }
+
 Provenance ::= Prov { id, parent, lineage, ... }
+
+Result<Value, Error> ::= Ok(Value) | Err(Error)
 
 PolicyEnv  ::= PolicyName → Policy
 
 ObligationState ::= Set(Obligation)
+
+CompletionPayload ::= {
+  result: Result<Value, Error>,
+  obligations: ObligationState,
+  provenance: Provenance,
+  effects: EffectTrace,
+}
 
 Error      ::= PolicyViolation(policy, v)
              | ObligationViolation(obligation)
              | GuardViolation(action, guard)
              | PatternBindFailure
              | PatternMatchFailure(v)
+             | TerminalControl(action, target, reason)
              | RuntimeFailure(reason)
 
 Context    ::= Γ × C × P × Ω × π
@@ -77,6 +89,12 @@ runtime value itself.
 
 The canonical runtime value domain does not store a separate tuple value. Tuple-shaped pattern
 matching therefore operates over fixed-length `List` values.
+
+`EffectTrace` is the terminal effect-summary domain used when reporting completion to the holder
+of a `ControlLink`. It records exactly `terminal`, the effect classification at terminal
+completion, and `reached`, the set of effect layers reached during execution. It is not a
+transport for the full execution `Trace`, which remains internal to the authoritative workflow
+outcome.
 
 ## 2.1 Value Display Representation
 
@@ -180,8 +198,13 @@ Runtime rejections in this document fall into the following semantic categories:
 - `ObligationViolation(obligation)` for workflow-level `check` failures.
 - `GuardViolation(action, guard)` for `act` guard failures.
 - `PatternBindFailure` and `PatternMatchFailure(v)` for pattern-owned binding or match failure.
+- `TerminalControl(action, target, reason)` for terminal-control-owned outcomes: either a
+  terminal interruption initiated by the holder of the control authority when that interruption
+  becomes the child's terminal outcome reported as `CompletionPayload.result = Err(...)`, or a
+  later terminal-control rejection against a retained terminal tombstone.
 - `RuntimeFailure(reason)` for runtime-boundary failures such as missing capabilities, provider
-  failures, mailbox/runtime selection failures, or invalid control/runtime state.
+  failures, mailbox/runtime selection failures, or invalid control/runtime state that is not a
+  terminal-control-owned outcome.
 
 These categories preserve runtime authority: parser, lowering, and static type-check failures are
 outside this operational layer.
@@ -364,6 +387,80 @@ For the pattern-sensitive helpers used below:
   admissible arms fail to match or have false guards, it fails as `PatternMatchFailure(v)`.
 - `select_receive_outcome(...)` and `combine_parallel_outcomes(...)` are helper-backed runtime
   relations whose full contracts live normatively in §6.2 and §6.5.
+
+### 3.5 Control Authority and Terminal Completion Payloads
+
+`spawn` allocates a runtime-owned `ControlLink` together with the spawned instance. This
+`ControlLink` is the reusable control authority referenced elsewhere in the runtime contract; in
+this section, “control authority” names that same `ControlLink` authority rather than a separate
+semantic object. Through that authority, the runtime grants its holder the right to observe the
+spawned instance's terminal completion.
+Completion observation through this authority is internal to the runtime and the authority holder:
+it is not surface syntax, does not introduce a user-visible `await` form, and does not by itself
+make the sealed payload a first-class workflow value.
+
+When a spawned workflow reaches a terminal workflow outcome, the runtime seals exactly one
+associated `CompletionPayload` for that control authority:
+
+- if the child outcome is `Return(v, eff, T, Ω', π')`, then the sealed payload has
+  `result = Ok(v)`, `obligations = Ω'`, `provenance = π'`, and `effects` equal to the terminal
+  `EffectTrace` summary derived from that completion;
+- if the child outcome is `Reject(err, eff, T, Ω', π')`, then the sealed payload has
+  `result = Err(err)`, `obligations = Ω'`, `provenance = π'`, and `effects` equal to the terminal
+  `EffectTrace` summary derived from that completion;
+- in both cases, `effects.terminal = eff` and `effects.reached` is the set of effect layers
+  reached by that completion; `effects` is a summary value, and the runtime must not treat
+  `CompletionPayload` as a transport for the full execution `Trace`; the authoritative trace
+  sequence remains the workflow-internal `Trace` domain of the big-step judgment.
+
+Once sealed, the payload is stable for the lifetime of that control authority. The holder of that
+authority may observe terminal completion through it according to the runtime contract, but this
+document does not thereby introduce new user-visible syntax or alter the canonical core IR.
+
+Operationally, `spawn` creates a runtime pair `(inst, κ)` where `inst` is the spawned instance
+handle and `κ` is the `ControlLink` authority associated with that instance. Equivalently, the
+runtime creates `Instance × ControlAuthority`, where the control-authority component is exactly
+the same reusable `ControlLink` named by the existing runtime contract rather than a second,
+distinct surface value.
+
+The terminal obligation state sealed into `CompletionPayload.obligations` is the child's
+authoritative completion state and therefore must remain consistent with the completion/obligation
+rules owned by [SPEC-019](SPEC-019-ROLE-RUNTIME-SEMANTICS.md), especially the workflow-completion
+check in §4.3. Observation of the sealed payload through `ControlLink` remains runtime-internal;
+only values or failures that are later surfaced across an external boundary become observable
+under [SPEC-021](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), especially §§2 and 4.2.
+
+### 3.6 Runtime-Internal Supervisor Observation
+
+The following schema is normative for the runtime/supervisor contract only. It is not surface
+syntax, does not introduce a user-visible `await` form, and does not add a new canonical IR node.
+The helper names `spawn_runtime`, `seal_completion`, and `supervisor_observe` are presentation-
+local runtime notation for this contract, not new user-visible operations.
+
+```text
+(SUPERVISOR-OBSERVE-COMPLETION)
+  spawn_runtime(w, Γ, C, P, Ω, π) ↝ (inst, κ)
+  Γ, C, P, Ω, π ⊢wf w ⇓ out
+  seal_completion(κ, out) ↝ payload
+  payload.result = r
+  ─────────────────────────────────────────────────────────────────
+  supervisor_observe(κ) ↝ (payload, r)
+```
+
+Read normatively:
+
+- `spawn_runtime(...) ↝ (inst, κ)` allocates the spawned instance together with its reusable
+  control authority `κ`; this is the runtime meaning of `spawn` creating `Instance ×
+  ControlAuthority`.
+- `seal_completion(κ, out) ↝ payload` seals exactly one `CompletionPayload` for the terminal child
+  outcome `out`; repeated observation through the same valid `ControlLink` yields that same sealed
+  payload rather than a freshly computed value.
+- `supervisor_observe(κ) ↝ (payload, r)` means the supervisor observes the terminal payload only
+  through the control authority and projects `payload.result` as `r` for its own completion
+  handling.
+- This observation rule does not expose the full internal `Trace`, does not make
+  `CompletionPayload` a general workflow value, and does not by itself enlarge the user-visible
+  observable surface beyond the boundaries owned by [SPEC-021](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md).
 
 ## 4. Inference Rules
 
@@ -594,11 +691,20 @@ Runtime and evaluation reject:
 - missing or unavailable runtime capabilities and providers
 - mailbox or provider failures that prevent a receive arm or action from completing at runtime
 - provider-level input/output mismatches that arise from actual runtime values
-- invalid control operations caused by missing authority, unknown instance state, or terminally
-  shut down instances
+- invalid control operations caused by missing authority or unknown instance state
+- terminal interruption initiated by the holder of the control authority when that interruption
+  becomes the child's terminal outcome reported in `CompletionPayload.result`
+- later terminal-control rejections against retained tombstones
 
 These are runtime boundary failures. They are not parser or lowering failures, and they are not
 type-checking failures once the type layer has validated the relevant shapes.
+
+Terminal interruption initiated by the holder of the control authority is classified as
+`TerminalControl(action, target, reason)` when that interruption becomes the child's terminal
+outcome reported in `CompletionPayload.result`; the same classification applies when a retained
+terminal tombstone rejects later terminal-control attempts. By contrast, `RuntimeFailure(reason)`
+remains the class for runtime-boundary control errors such as missing authority or unknown
+instance state that do not become the child's terminal outcome.
 
 Timeout expiry and receive fallthrough remain normal control flow under the canonical `RECEIVE`
 contract; they are not runtime rejections by themselves.
@@ -609,8 +715,8 @@ control such as kill invalidates future control operations for the target instan
 
 While the owning runtime state remains alive, terminally controlled instances remain retained as
 runtime-owned tombstones rather than being silently forgotten. Later control attempts therefore
-continue to fail as terminal-control runtime failures, not as unknown-link failures caused by
-background cleanup in the same runtime state.
+continue to fail as `TerminalControl(action, target, reason)`, not as unknown-link failures caused
+by background cleanup in the same runtime state.
 
 ### 4.5 Operational Layer
 

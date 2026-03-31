@@ -1,6 +1,6 @@
 # TASK-S57-1: Update SPEC-004 with Control-Link Completion Payload Semantics
 
-## Status: ⬜ Pending
+## Status: ✅ Complete
 
 ## Description
 
@@ -9,6 +9,7 @@ Update SPEC-004 (Operational Semantics) with normative semantics for control-lin
 ## Background
 
 Per architectural review, the supervisor/main contract is currently underspecified:
+
 - What information flows over the control link when a workflow completes?
 - How does the supervisor observe terminal completion?
 - What is the structure of the completion payload?
@@ -16,6 +17,7 @@ Per architectural review, the supervisor/main contract is currently underspecifi
 **Current state:** SPEC-004 has `spawn` and control links mentioned but does not normatively define completion payload.
 
 **Target state:** SPEC-004 explicitly defines:
+
 ```
 spawn creates (Instance, ControlAuthority)
 ControlAuthority yields CompletionPayload upon terminal completion
@@ -38,6 +40,7 @@ Update SPEC-004 with:
 ### Section 3.x: Control Authority Semantics (NEW)
 
 Add new section defining:
+
 - Control authority as communication channel between spawner and spawned
 - Terminal completion protocol
 - Payload structure
@@ -45,11 +48,12 @@ Add new section defining:
 ### Section 3.x: Completion Payload (NEW)
 
 Define:
+
 ```
 CompletionPayload ::= {
   result: Result<Value, Error>,
   obligations: ObligationState,  -- discharged or pending
-  provenance: Provenance,        -- execution trace
+  provenance: Provenance,        -- terminal provenance summary
   effects: EffectTrace,          -- effect summary
 }
 ```
@@ -57,40 +61,51 @@ CompletionPayload ::= {
 ### Update Existing Spawn Rule
 
 Current (from SPEC-022):
+
 ```
 Γ ⊢ spawn w : Handle<τ> ▷ Γ
 ```
 
 Add semantics:
+
 ```
 Γ ⊢ spawn w : Instance<τ> × ControlAuthority ▷ Γ
 ControlAuthority observes: CompletionPayload
 ```
 
-## Open Questions
+## Resolved Design Choices
 
-### Q1: Payload Contents
-- Does completion payload include full trace or summary?
-- Is obligation state just boolean (all discharged?) or detailed?
-- What provenance information is included?
+### Payload Contents
 
-### Q2: Error Handling in Payload
-- If workflow panics/terminates abnormally, what result?
-- Is there a `Kill` or `Abort` variant in `Error`?
+- `CompletionPayload.effects` carries an `EffectTrace` summary only; the full execution `Trace`
+  remains workflow-internal and is not transported over the control link.
+- `CompletionPayload.obligations` carries the child's authoritative terminal `ObligationState`,
+  not a boolean summary.
+- `CompletionPayload.provenance` carries the child's terminal `Provenance` value.
 
-### Q3: User Visibility
-- If CompletionPayload becomes user-visible, needs SPEC-003/SPEC-022 typing
-- For now, keep as supervisor/runtime-internal
+### Error Handling in Payload
+
+- Abnormal or interrupted terminal completion is reported through
+  `CompletionPayload.result = Err(...)`.
+- SPEC-004 now uses `TerminalControl(action, target, reason)` as the terminal-control-owned
+  error contract instead of introducing separate `Kill` or `Abort` variants.
+
+### User Visibility
+
+- Completion observation remains supervisor/runtime-internal only.
+- The new contract does not add surface `await` syntax and does not make
+  `CompletionPayload` a typed user-visible workflow value; any future surface exposure would
+  require coordinated SPEC-003/SPEC-022 updates.
 
 ## Acceptance Criteria
 
-- [ ] SPEC-004 defines control authority creation on spawn
-- [ ] SPEC-004 defines terminal completion observation (runtime-internal)
-- [ ] SPEC-004 defines `CompletionPayload` structure
-- [ ] SPEC-004 shows supervisor extracting result from payload
-- [ ] Explicitly notes: completion observation is supervisor/runtime-internal, not surface syntax
-- [ ] Cross-references to SPEC-019 (role runtime) for supervision
-- [ ] Cross-references to SPEC-021 for observable behavior
+- [x] SPEC-004 defines control authority creation on spawn
+- [x] SPEC-004 defines terminal completion observation (runtime-internal)
+- [x] SPEC-004 defines `CompletionPayload` structure
+- [x] SPEC-004 shows supervisor extracting result from payload
+- [x] Explicitly notes: completion observation is supervisor/runtime-internal, not surface syntax
+- [x] Cross-references to SPEC-019 (role runtime) for supervision
+- [x] Cross-references to SPEC-021 for observable behavior
 
 ## Related
 

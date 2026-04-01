@@ -1,29 +1,29 @@
 # TASK-360: Define RuntimeError Type in ash-std
 
-## Status: ⛔ Blocked
+## Status: ✅ Complete
 
 ## Description
 
-Define the `RuntimeError` record type in `std/src/runtime/error.ash` for entry point error reporting.
+Define the canonical single-variant `RuntimeError` ADT in `std/src/runtime/error.ash` for entry-point error reporting.
 
-**VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
+**Validation status:**
 
 1. **Verify S57-4 (import syntax)**: ✅ Complete - use `use runtime::RuntimeError`
-2. **Verify TYPES-001 or SPEC**: Confirm record vs tuple syntax is normative
-3. **If SPEC differs from below**: Update this task description to match normative syntax
-4. **Verify no syntax mismatch**: Ensure `RuntimeError { exit_code, message }` matches SPEC
+2. **Verify TYPES-001 or SPEC**: ✅ Complete - canonical ADT form is a single-variant record payload
+3. **Verify task description matches the normative syntax**: ✅ Complete
+4. **Verify no syntax mismatch**: ✅ Complete - `RuntimeError { exit_code, message }` matches the exported stdlib surface
 
 ## Design (per updated SPEC)
 
 ```ash
 -- std/src/runtime/error.ash
-pub type RuntimeError = RuntimeError { 
-  exit_code: Int, 
-  message: String 
+pub type RuntimeError = RuntimeError {
+  exit_code: Int,
+  message: String
 };
 ```
 
-**Style:** Record syntax (consistent with existing ADT style in ash-std).
+**Style:** Canonical single-variant ADT syntax with a record payload (consistent with the ash-std surface tests).
 
 ## Requirements
 
@@ -89,10 +89,10 @@ assert!(result.is_ok());
 
 ## Acceptance Criteria
 
-- [ ] S57-4, TYPES-001 show ✅ Complete (VALIDATION GATE)
-- [ ] Type definition compiles
-- [ ] Can construct RuntimeError values
-- [ ] Can use in workflow return types
-- [ ] Tests pass
+- [x] S57-4, TYPES-001 show ✅ Complete (validation gate)
+- [x] Type definition compiles
+- [x] Can construct RuntimeError values
+- [x] Can use in workflow return types
+- [x] Tests pass
 
 ## Est. Hours: 2-3

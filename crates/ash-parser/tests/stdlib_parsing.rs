@@ -6,8 +6,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use ash_parser::{
-    input::new_input, parse_module_decl, parse_type_def::parse_type_def, parse_use, workflow,
-    Definition, Workflow,
+    Definition, Workflow, input::new_input, parse_module_decl, parse_type_def::parse_type_def,
+    parse_use, workflow,
 };
 use winnow::prelude::*;
 
@@ -25,6 +25,10 @@ fn stdlib_src_path() -> PathBuf {
 fn read_stdlib_file(filename: &str) -> String {
     let path = stdlib_src_path().join(filename);
     fs::read_to_string(&path).unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e))
+}
+
+fn normalize_whitespace(source: &str) -> String {
+    source.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn parse_capability(source: &str) -> Result<ash_parser::CapabilityDef, String> {
@@ -148,13 +152,18 @@ fn test_result_type_definition_parses() {
 #[test]
 fn test_runtime_error_type_definition_parses() {
     let content = read_stdlib_file("runtime/error.ash");
+    let normalized = normalize_whitespace(&content);
 
-    let type_def_line = content
-        .lines()
-        .find(|l| l.contains("pub type RuntimeError"))
-        .expect("Should find RuntimeError type definition");
+    assert!(
+        normalized.contains("pub type RuntimeError = RuntimeError {"),
+        "RuntimeError should use the canonical single-variant ADT syntax"
+    );
+    assert!(
+        !normalized.contains("pub type RuntimeError = {"),
+        "RuntimeError should reject the legacy plain record-alias syntax"
+    );
 
-    let mut input = new_input(type_def_line);
+    let mut input = new_input(&content);
     let result = parse_type_def(&mut input);
 
     assert!(
@@ -166,6 +175,29 @@ fn test_runtime_error_type_definition_parses() {
     let type_def = result.unwrap();
     assert_eq!(type_def.name, "RuntimeError");
     assert!(type_def.params.is_empty());
+
+    let variants = match &type_def.body {
+        ash_parser::parse_type_def::TypeBody::Enum(variants) => variants,
+        other => {
+            panic!("RuntimeError body should parse as a single-variant enum ADT, got {other:?}")
+        }
+    };
+
+    assert_eq!(
+        variants.len(),
+        1,
+        "RuntimeError should have exactly one variant"
+    );
+
+    let variant = &variants[0];
+    assert_eq!(variant.name, "RuntimeError");
+    assert_eq!(
+        variant.fields.len(),
+        2,
+        "RuntimeError variant should expose exactly two fields"
+    );
+    assert_eq!(variant.fields[0].0, "exit_code");
+    assert_eq!(variant.fields[1].0, "message");
 }
 
 #[test]

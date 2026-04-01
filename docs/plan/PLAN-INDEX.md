@@ -1731,7 +1731,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 | Task | Description | Spec | Est. Hours | Status | Blocked On |
 |------|-------------|------|------------|--------|------------|
-| [TASK-360](tasks/TASK-360-runtime-error-type.md) | Define `RuntimeError` type | SPEC-020/TYPES-001, SPEC-012, SPEC-003/022 | 2-3 | ⛔ Blocked | TASK-359 |
+| [TASK-360](tasks/TASK-360-runtime-error-type.md) | Define `RuntimeError` type | SPEC-020/TYPES-001, SPEC-012, SPEC-003/022 | 2-3 | ✅ Complete | TASK-359 |
 | [TASK-361](tasks/TASK-361-args-capability.md) | Define `Args` capability interface | SPEC-017 | 3-4 | ⛔ Blocked | TASK-359 |
 | [TASK-362](tasks/TASK-362-system-supervisor.md) | Implement system supervisor workflow | SPEC-004 | 4-6 | ⛔ Blocked | TASK-359, TASK-360, TASK-361 |
 

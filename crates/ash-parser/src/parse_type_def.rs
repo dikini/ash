@@ -242,6 +242,7 @@ fn is_enum_body(input: &mut ParseInput) -> bool {
     // Save state
     let state = input.state;
     let checkpoint = input.input.checkpoint();
+    let mut has_field_block = false;
 
     // Try to parse first variant
     skip_whitespace_and_comments(input);
@@ -256,6 +257,7 @@ fn is_enum_body(input: &mut ParseInput) -> bool {
 
     // Check for { after variant name (field block)
     if input.input.starts_with('{') {
+        has_field_block = true;
         // Skip the field block
         let _ = literal_str("{").parse_next(input);
         skip_whitespace_and_comments(input);
@@ -275,8 +277,9 @@ fn is_enum_body(input: &mut ParseInput) -> bool {
         skip_whitespace_and_comments(input);
     }
 
-    // Check if there's a | after the first variant
-    let is_enum = input.input.starts_with('|');
+    // Check if there's a | after the first variant, or if this is a
+    // constructor-bearing single-variant ADT that ends before `;`.
+    let is_enum = input.input.starts_with('|') || (has_field_block && input.input.starts_with(';'));
 
     // Restore state
     input.state = state;
@@ -686,5 +689,27 @@ mod tests {
         let mut input = new_input("type Status =\n  Pending\n  | Processing;");
         let result = parse_type_def(&mut input);
         assert!(result.is_ok(), "Parse failed: {:?}", result);
+    }
+
+    #[test]
+    fn test_parse_single_variant_constructor_adt() {
+        let mut input =
+            new_input("type RuntimeError = RuntimeError { exit_code: Int, message: String };");
+        let result = parse_type_def(&mut input);
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+
+        let type_def = result.unwrap();
+        assert_eq!(type_def.name, "RuntimeError");
+
+        match type_def.body {
+            TypeBody::Enum(variants) => {
+                assert_eq!(variants.len(), 1);
+                assert_eq!(variants[0].name, "RuntimeError");
+                assert_eq!(variants[0].fields.len(), 2);
+                assert_eq!(variants[0].fields[0].0, "exit_code");
+                assert_eq!(variants[0].fields[1].0, "message");
+            }
+            _ => panic!("Expected single-variant enum body"),
+        }
     }
 }

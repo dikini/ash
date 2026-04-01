@@ -12,6 +12,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   the `Args` capability declaration, and a minimal supervisor scaffold for entry-point work
   (TASK-359).
 
+- Defined the canonical `runtime::RuntimeError` stdlib type as a single-variant ADT with
+  `exit_code` and `message` fields for `Result<(), RuntimeError>` entry-point contracts
+  (TASK-360).
+
 - Defined SPEC-004 control-link completion payload semantics (TASK-S57-1),
   including runtime-internal supervisor observation, `CompletionPayload`/`EffectTrace`, and
   terminal-control outcomes for spawned workflow completion.

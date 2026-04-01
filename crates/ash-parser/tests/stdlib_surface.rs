@@ -20,6 +20,10 @@ fn read_stdlib_file(path: &str) -> String {
     read_file(workspace_root().join("std/src").join(path))
 }
 
+fn normalize_whitespace(source: &str) -> String {
+    source.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 fn runtime_mod_path() -> PathBuf {
     workspace_root().join("std/src/runtime/mod.ash")
 }
@@ -67,6 +71,7 @@ fn examples_readme_describes_the_canonical_adt_helper_surface() {
 #[test]
 fn runtime_stdlib_surface_is_exposed() {
     let runtime_error = read_stdlib_file("runtime/error.ash");
+    let runtime_error_normalized = normalize_whitespace(&runtime_error);
     let runtime_args = read_stdlib_file("runtime/args.ash");
     let runtime_supervisor = read_stdlib_file("runtime/supervisor.ash");
     let lib = read_stdlib_file("lib.ash");
@@ -74,6 +79,14 @@ fn runtime_stdlib_surface_is_exposed() {
     assert!(
         runtime_error.contains("pub type RuntimeError"),
         "runtime/error.ash should declare RuntimeError"
+    );
+    assert!(
+        runtime_error_normalized.contains("pub type RuntimeError = RuntimeError {"),
+        "runtime/error.ash should expose RuntimeError with the canonical single-variant ADT syntax"
+    );
+    assert!(
+        !runtime_error_normalized.contains("pub type RuntimeError = {"),
+        "runtime/error.ash should not expose RuntimeError as a plain record alias"
     );
     assert!(
         runtime_args.contains("pub capability Args"),

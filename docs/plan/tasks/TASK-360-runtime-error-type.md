@@ -6,6 +6,8 @@
 
 Define the canonical single-variant `RuntimeError` ADT in `std/src/runtime/error.ash` for entry-point error reporting.
 
+Current verification scope for this task is the stdlib ADT surface itself in the parser, direct constructor compatibility in the current typechecker pipeline, and nested variant-pattern extraction in the interpreter pipeline. Full designated-entry-workflow verification remains downstream work for [TASK-364](TASK-364-main-verification.md) and [TASK-368a](TASK-368a-entry-point-tests-minimum.md).
+
 **Validation status:**
 
 1. **Verify S57-4 (import syntax)**: ✅ Complete - use `use runtime::RuntimeError`
@@ -23,7 +25,7 @@ pub type RuntimeError = RuntimeError {
 };
 ```
 
-**Style:** Canonical single-variant ADT syntax with a record payload (consistent with the ash-std surface tests).
+**Style:** Canonical single-variant ADT syntax with a record payload, consumed downstream through constructor expressions and variant-pattern destructuring rather than direct field access.
 
 ## Requirements
 
@@ -33,42 +35,25 @@ pub type RuntimeError = RuntimeError {
 
 ## TDD Steps
 
-### Test 1: Type Definition Compiles
+### Test 1: Constructor Form Typechecks
 
 ```rust
-let source = r#"
-  use runtime::RuntimeError
-  
-  fn make_error() -> RuntimeError {
-    RuntimeError { exit_code: 1, message: "failed" }
-  }
-"#;
-let result = parse_and_typecheck(source);
+let result = check_runtime_error_constructor();
 assert!(result.is_ok());
 ```
 
-### Test 2: Used in Entry Point Signature
+### Test 2: Composes with Result and Runtime Pattern Extraction
 
 ```rust
-let source = r#"
-  use result::Result
-  use result::Ok
-  use result::Err
-  use runtime::RuntimeError
-  
-  workflow main() -> Result<(), RuntimeError> {
-    Err(RuntimeError { exit_code: 1, message: "error" })
-  }
-"#;
-let result = parse_and_typecheck(source);
-assert!(result.is_ok());
+assert!(check_runtime_error_inside_err_constructor().is_ok());
+assert!(match_runtime_error_exit_code_pattern().is_ok());
 ```
 
 ## Implementation Notes
 
 - **Location**: `std/src/runtime/error.ash`
 - **Export**: Add to `runtime/mod.ash` and `lib.ash`
-- **Style**: Record ADT (matches existing standard-library patterns)
+- **Style**: Record-payload ADT consumed via constructor expressions and nested variant patterns
 
 ## Dependencies
 
@@ -90,9 +75,9 @@ assert!(result.is_ok());
 ## Acceptance Criteria
 
 - [x] S57-4, TYPES-001 show ✅ Complete (validation gate)
-- [x] Type definition compiles
-- [x] Can construct RuntimeError values
-- [x] Can use in workflow return types
+- [x] Type definition parses and exports from the stdlib surface
+- [x] `RuntimeError { exit_code, message }` constructor expressions typecheck in the ADT pipeline
+- [x] `RuntimeError` values compose inside `Err { error: ... }` constructors, and runtime pattern matching can extract `exit_code` from the nested ADT payload
 - [x] Tests pass
 
 ## Est. Hours: 2-3

@@ -31,6 +31,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Aligned the downstream entry-point task docs with the `RuntimeError` single-variant ADT shape and added direct typechecker coverage for constructor composition plus interpreter coverage for nested variant-pattern extraction (TASK-360).
+
 - Expanded the ad-hoc polymorphism exploration docs with a preserved `TYPES-002` review note and
   a new `TYPES-002 V2` synthesis document that cleans up dead ends, adds Ash-native examples,
   introduces decision-driving workloads, and clarifies that effects are a distinct typing

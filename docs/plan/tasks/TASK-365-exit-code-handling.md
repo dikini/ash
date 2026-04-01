@@ -16,8 +16,8 @@ Propagate exit code from supervisor completion to OS process exit.
 
 | Condition | Exit Code |
 |-----------|-----------|
-| `main` returns `Ok(())` | 0 |
-| `main` returns `Err(RuntimeError { exit_code: N, .. })` | N |
+| `main` returns a successful `Ok { value: ... }` payload | 0 |
+| `main` returns `Err { error: RuntimeError { exit_code: N, message: _ } }` | N |
 | Bootstrap/verification error | 1 |
 | Supervisor crash (implementation error) | 1 |
 
@@ -63,23 +63,19 @@ fn main() {
 - **Exit immediately** on main completion (S57-2)
 - **Descendants** not waited for (S57-3)
 - **Error code 1** for all bootstrap failures
-- **User code** controls exit via `RuntimeError.exit_code`
+- **User code** controls exit via the `RuntimeError` `exit_code` payload, extracted by supervisor-side variant destructuring
 
 ## TDD Steps
 
 ### Test 1: Success Returns 0
 
 ```rust
-let entry = r#"
-    use result::Result
-    use result::Ok
-    use runtime::RuntimeError
-
-    workflow main() -> Result<(), RuntimeError> { Ok(()) }
-"#;
+let entry = success_entry_workflow_source();
 let code = run_and_get_exit_code(entry);
 assert_eq!(code, 0);
 ```
+
+`success_entry_workflow_source()` should emit the canonical successful `Result` constructor shape for the current entry-point surface instead of the obsolete tuple-style `Ok(())` notation.
 
 ### Test 2: RuntimeError Returns Code
 
@@ -90,7 +86,7 @@ let entry = r#"
     use runtime::RuntimeError
 
   workflow main() -> Result<(), RuntimeError> {
-    Err(RuntimeError { exit_code: 42, message: "test" })
+        Err { error: RuntimeError { exit_code: 42, message: "test" } }
   }
 "#;
 let code = run_and_get_exit_code(entry);

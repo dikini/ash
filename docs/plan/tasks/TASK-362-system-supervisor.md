@@ -40,18 +40,18 @@ workflow system_supervisor(args: cap Args) -> Int {
   
   -- Form exit code
   match result {
-    Ok(()) => {
+    Ok { value: _ } => {
       -- Check obligations discharged (per SPEC)
       0
     }
-    Err(runtime_error) => {
-      runtime_error.exit_code  -- Record access, not tuple destructuring
+    Err { error: RuntimeError { exit_code: code, message: _ } } => {
+      code  -- Nested variant destructuring, not field access
     }
   }
 }
 ```
 
-**Note**: Uses **record access** (`runtime_error.exit_code`) matching TASK-360's record-style RuntimeError.
+**Note**: Uses nested variant destructuring because `RuntimeError` is a single-variant ADT and the current expression pipeline does not support direct field access.
 
 ## Requirements
 
@@ -93,7 +93,7 @@ assert!(result.is_ok());
 let engine = Engine::new();
 let args = vec!["test".to_string()];
 let exit_code = engine.run_supervisor(args);
-assert_eq!(exit_code, 0);  // When main returns Ok(())
+assert_eq!(exit_code, 0);  // When main completes with a successful Ok { value: ... } payload
 ```
 
 ## Implementation Notes
@@ -101,7 +101,7 @@ assert_eq!(exit_code, 0);  // When main returns Ok(())
 - **Location**: `std/src/runtime/supervisor.ash`
 - **Uses**: Normative spawn, normative observation (per S57-1)
 - **No `await`**: Not in surface language
-- **Record access**: `runtime_error.exit_code` (matches TASK-360)
+- **Pattern extraction**: destructure `Err { error: RuntimeError { exit_code: code, message: _ } }` to obtain the exit code from the `RuntimeError` payload
 
 ## Dependencies
 
@@ -131,7 +131,7 @@ assert_eq!(exit_code, 0);  // When main returns Ok(())
 - [ ] Spawns `main` per normative spawn
 - [ ] Observes completion (no `await` syntax)
 - [ ] Returns Int exit code
-- [ ] Record-style RuntimeError access (not tuple)
+- [ ] Extracts `RuntimeError` exit codes via nested variant destructuring (not direct field access)
 - [ ] Tests pass
 
 ## Est. Hours: 4-6

@@ -1,6 +1,6 @@
 # TASK-359: Extend Existing ash-std with Entry Point Support
 
-## Status: ⬜ Pending
+## Status: ✅ Complete
 
 ## Description
 
@@ -120,12 +120,12 @@ assert!(result.is_ok());
 
 ## Acceptance Criteria
 
-- [ ] `cargo build -p ash-std` succeeds
-- [ ] New modules (`runtime::*`) available
-- [ ] RuntimeError type usable
-- [ ] Args capability interface defined
-- [ ] System supervisor workflow present
-- [ ] Tests pass
+- [x] `cargo build -p ash-std` succeeds
+- [x] New modules (`runtime::*`) available
+- [x] RuntimeError type usable
+- [x] Args capability interface defined
+- [x] System supervisor workflow present
+- [x] Tests pass
 
 ## Related
 

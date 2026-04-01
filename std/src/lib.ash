@@ -5,6 +5,8 @@
 -- Core types
 pub use option::{Option, Some, None};
 pub use result::{Result, Ok, Err};
+pub use runtime::{RuntimeError, Args};
+pub use runtime::supervisor::{system_supervisor};
 
 -- Helper functions
 pub use option::{

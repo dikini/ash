@@ -10,6 +10,7 @@ members = [
     "crates/ash-macros",
     "crates/ash-doc-tests",
     "crates/ash-repl",
+    "std",
 ]
 # ash-fuzz excluded - requires nightly toolchain for fuzzing
 # Excluded from main build:

@@ -1725,7 +1725,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 | Task | Description | Spec | Est. Hours | Status | Blocked On |
 |------|-------------|------|------------|--------|------------|
-| [TASK-359](tasks/TASK-359-stdlib-initialization.md) | Extend ash-std with runtime modules | SPEC-009/012 | 4-6 | ⬜ Pending | — |
+| [TASK-359](tasks/TASK-359-stdlib-initialization.md) | Extend ash-std with runtime modules | SPEC-009/012 | 4-6 | ✅ Complete | — |
 
 #### Stdlib: Runtime Types and Capabilities
 

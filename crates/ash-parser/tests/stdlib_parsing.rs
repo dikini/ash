@@ -5,7 +5,11 @@
 use std::fs;
 use std::path::PathBuf;
 
-use ash_parser::{input::new_input, parse_type_def::parse_type_def};
+use ash_parser::{
+    input::new_input, parse_module_decl, parse_type_def::parse_type_def, parse_use, workflow,
+    Definition, Workflow,
+};
+use winnow::prelude::*;
 
 /// Get the path to the stdlib source directory
 fn stdlib_src_path() -> PathBuf {
@@ -21,6 +25,25 @@ fn stdlib_src_path() -> PathBuf {
 fn read_stdlib_file(filename: &str) -> String {
     let path = stdlib_src_path().join(filename);
     fs::read_to_string(&path).unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e))
+}
+
+fn parse_capability(source: &str) -> Result<ash_parser::CapabilityDef, String> {
+    let normalized = source
+        .trim()
+        .trim_start_matches("pub ")
+        .trim_end_matches(';');
+    let wrapped = format!("mod runtime {{ {} }}", normalized);
+    let mut input = new_input(&wrapped);
+    let decl = parse_module_decl
+        .parse_next(&mut input)
+        .map_err(|e| format!("{e:?}"))?;
+
+    let definitions = decl.definitions().ok_or("expected inline module")?;
+
+    match &definitions[0] {
+        Definition::Capability(cap) => Ok(cap.clone()),
+        _ => Err("first definition is not a capability".into()),
+    }
 }
 
 #[test]
@@ -45,6 +68,30 @@ fn test_prelude_file_exists() {
 fn test_lib_file_exists() {
     let path = stdlib_src_path().join("lib.ash");
     assert!(path.exists(), "lib.ash should exist");
+}
+
+#[test]
+fn test_runtime_mod_file_exists() {
+    let path = stdlib_src_path().join("runtime/mod.ash");
+    assert!(path.exists(), "runtime/mod.ash should exist");
+}
+
+#[test]
+fn test_runtime_error_file_exists() {
+    let path = stdlib_src_path().join("runtime/error.ash");
+    assert!(path.exists(), "runtime/error.ash should exist");
+}
+
+#[test]
+fn test_runtime_args_file_exists() {
+    let path = stdlib_src_path().join("runtime/args.ash");
+    assert!(path.exists(), "runtime/args.ash should exist");
+}
+
+#[test]
+fn test_runtime_supervisor_file_exists() {
+    let path = stdlib_src_path().join("runtime/supervisor.ash");
+    assert!(path.exists(), "runtime/supervisor.ash should exist");
 }
 
 #[test]
@@ -96,6 +143,106 @@ fn test_result_type_definition_parses() {
     assert_eq!(type_def.params.len(), 2);
     assert_eq!(type_def.params[0], "T");
     assert_eq!(type_def.params[1], "E");
+}
+
+#[test]
+fn test_runtime_error_type_definition_parses() {
+    let content = read_stdlib_file("runtime/error.ash");
+
+    let type_def_line = content
+        .lines()
+        .find(|l| l.contains("pub type RuntimeError"))
+        .expect("Should find RuntimeError type definition");
+
+    let mut input = new_input(type_def_line);
+    let result = parse_type_def(&mut input);
+
+    assert!(
+        result.is_ok(),
+        "RuntimeError type definition should parse: {:?}",
+        result
+    );
+
+    let type_def = result.unwrap();
+    assert_eq!(type_def.name, "RuntimeError");
+    assert!(type_def.params.is_empty());
+}
+
+#[test]
+fn test_runtime_args_capability_definition_parses() {
+    let content = read_stdlib_file("runtime/args.ash");
+    let use_line = content
+        .lines()
+        .find(|l| l.trim_start().starts_with("use option::Option;"))
+        .expect("Should find Option import in runtime/args.ash");
+    let mut use_input = new_input(use_line);
+    assert!(
+        parse_use(&mut use_input).is_ok(),
+        "runtime/args.ash should use canonical stdlib import syntax"
+    );
+
+    let capability_line = content
+        .lines()
+        .find(|l| l.contains("pub capability Args"))
+        .expect("Should find Args capability definition");
+
+    let capability = parse_capability(capability_line).expect("Args capability should parse");
+
+    assert_eq!(capability.name.as_ref(), "Args");
+    assert_eq!(capability.params.len(), 1);
+    assert_eq!(capability.params[0].name.as_ref(), "index");
+    assert!(capability.return_type.is_some());
+}
+
+#[test]
+fn test_runtime_supervisor_workflow_definition_parses() {
+    let content = read_stdlib_file("runtime/supervisor.ash");
+    for use_line in content
+        .lines()
+        .filter(|line| line.trim_start().starts_with("use "))
+    {
+        let mut use_input = new_input(use_line.trim());
+        assert!(
+            parse_use(&mut use_input).is_ok(),
+            "system supervisor imports should parse: {use_line}"
+        );
+    }
+
+    assert!(
+        content.contains("pub workflow system_supervisor(args: cap Args) -> Int {"),
+        "system_supervisor scaffold should expose the canonical signature"
+    );
+
+    let body_source = content
+        .lines()
+        .find(|line| line.trim_start().starts_with("ret "))
+        .expect("system_supervisor should contain a return body")
+        .trim();
+
+    let mut input = new_input(body_source);
+    let result = workflow(&mut input);
+
+    assert!(
+        result.is_ok(),
+        "system_supervisor body should parse: {:?}",
+        result
+    );
+
+    assert!(matches!(result.unwrap(), Workflow::Ret { .. }));
+}
+
+#[test]
+fn test_runtime_import_examples_parse_with_canonical_syntax() {
+    for source in [
+        "use runtime::RuntimeError;",
+        "use runtime::Args;",
+        "use runtime::{RuntimeError, Args};",
+    ] {
+        let mut input = new_input(source);
+        let result = parse_use(&mut input);
+
+        assert!(result.is_ok(), "runtime import should parse: {source}");
+    }
 }
 
 #[test]

@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added the initial `runtime` stdlib surface under `std/src/`, including `RuntimeError`,
+  the `Args` capability declaration, and a minimal supervisor scaffold for entry-point work
+  (TASK-359).
+
 - Defined SPEC-004 control-link completion payload semantics (TASK-S57-1),
   including runtime-internal supervisor observation, `CompletionPayload`/`EffectTrace`, and
   terminal-control outcomes for spawned workflow completion.

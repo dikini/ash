@@ -23,6 +23,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Expanded the ad-hoc polymorphism exploration docs with a preserved `TYPES-002` review note and
+  a new `TYPES-002 V2` synthesis document that cleans up dead ends, adds Ash-native examples,
+  introduces decision-driving workloads, and clarifies that effects are a distinct typing
+  dimension rather than ordinary value-level payloads.
+
+- Added `TYPES-003`, a judgment-oriented exploration note that disambiguates capability
+  declarations, capability witnesses, providers, effects, policies, obligations, and provenance
+  so future Ash design discussions can use sharper language.
+
+- Added `TYPES-004`, an effect-typing exploration note that treats the current lattice as Ash's
+  coarse effect grade system, enumerates effect-producing workflow forms, frames provider
+  metadata as compatible with but distinct from source-level effect typing, and proposes `Pure`
+  as a surfaced bottom element for effect-neutral forms and normalized composition.
+
 - Clarified SPEC-009 and SPEC-012 so that Ash standard-library modules resolve
   from a compiler-provided root namespace and are imported with `::` syntax
   only; legacy dot-style import examples are invalid (TASK-S57-4).

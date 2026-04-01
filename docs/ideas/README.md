@@ -42,6 +42,19 @@ This directory tracks **pre-specification explorations** — design questions, c
 | ID | Title | Status | Last Revised | Notes |
 |----|-------|--------|--------------|-------|
 | TYPES-001 | [Tuple Variant Syntax](type-system/TYPES-001-tuple-variants.md) | `drafting` | 2026-03-30 | Tuple vs record syntax for ADT variants |
+| TYPES-002 | [Ad-Hoc Polymorphism](type-system/TYPES-002-ad-hoc-polymorphism.md) | `drafting` | 2026-04-01 | Preserved reasoning trace with review note; intentionally meandering |
+| TYPES-002 V2 | [Ad-Hoc Polymorphism V2](type-system/TYPES-002-ad-hoc-polymorphism-v2.md) | `reviewing` | 2026-04-01 | Cleaner open exploration with Ash-native examples and decision-driving workloads |
+| TYPES-003 | [Capability and Effect Vocabulary](type-system/TYPES-003-capabilities-effects-vocabulary.md) | `drafting` | 2026-04-01 | Judgment-oriented bridge note to disambiguate capability facets and their relation to effects |
+| TYPES-004 | [Effect Typing Foundations](type-system/TYPES-004-effect-typing-foundations.md) | `drafting` | 2026-04-01 | Grade-first exploration of effect-producing forms, composition, and the provider metadata boundary |
+
+### OTP / Actor Model Explorations
+
+Research and design explorations for OTP-like supervision, fault tolerance, and process management in Ash.
+
+| ID | Title | Status | Last Revised | Notes |
+|----|-------|--------|--------------|-------|
+| OTP-001 | [Erlang/OTP Architecture Analysis](otp/OTP-001-erlang-otp-analysis.md) | `drafting` | 2026-03-31 | Comprehensive analysis of gen_server and supervisor behaviors |
+| OTP-002 | [Ash OTP Design Considerations](otp/OTP-002-ash-otp-design.md) | `drafting` | 2026-03-31 | Design options for OTP-like functionality in Ash |
 
 ### Future / Deferred
 

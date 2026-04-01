@@ -1099,6 +1099,106 @@ The two surveys (typeclasses and effects) reveal a convergence:
 | 2026-03-31 | Reasoning trace added | Documented exploration from initial conflation to associated effects design |
 | 2026-03-31 | Associated effects proposed | Typeclasses can declare associated effects that instances specify; enables effect polymorphism |
 | 2026-04-01 | Effect systems literature review added | Reviewed foundational papers on algebraic effects (Eff, Plotkin/Pretnar, Frank) and row-based effects (Koka) |
+| 2026-04-01 | Authority elevation pattern identified | Logical authority vs implementation authority mismatch; need for documented elevation mechanism |
+
+---
+
+## Discussion: Logical vs Implementation Authority Elevation (2026-04-01)
+
+This section documents a recurring pattern in Ash: the mismatch between **logical authority** (what policy permits for a given purpose) and **implementation authority** (what the mechanism requires to execute).
+
+### The Pattern
+
+Ash needs to distinguish between:
+
+- **design authority**: what the workflow or policy intentionally authorizes for the purpose at hand;
+- **implementation authority**: what the chosen mechanism actually requires in order to execute.
+
+The LLM provider case illustrates this clearly:
+
+| Case | Design authority | Implementation authority | Why it matters |
+|------|------------------|--------------------------|----------------|
+| Local model inference | Deliberative | Deliberative | Purpose and mechanism line up |
+| Hosted model inference | Deliberative | Operational (network, credentials, billing) | Same purpose, different operational needs |
+
+A workflow may be authorized only for Deliberative-grade reasoning, but a hosted LLM call still
+needs outbound network access, credential use, and billable remote execution.
+
+This is **not specific to LLMs**. Similar mismatches occur with:
+- Database queries (logical: Epistemic read; implementation: network I/O)
+- External API calls (logical: Deliberative decision support; implementation: Operational outbound)
+- File operations on distributed storage (logical: local persistence; implementation: network filesystem)
+
+### The Policy Problem
+
+If Ash policies enforce maximum authority limits naively (e.g., "this workflow may not exceed Deliberative"), they block legitimate operations where the **purpose** is within policy but the **mechanism** requires higher authority.
+
+The policy would be "correct" by inspection but useless in practice.
+
+### Design Requirement: Documented Elevation
+
+Ash needs a mechanism for **raising authority** that:
+- Is **explicit** (visible in code, logs, audit trails)
+- Is **justified** (linked to logical purpose, not arbitrary)
+- Is **non-obstructive** (doesn't make legitimate operations painful)
+- Is **discoverable** (operators can see where elevation happens without surprises during debugging)
+
+### Candidate Elevation Choices
+
+**1. Audit-only elevation**
+The runtime permits the operation, but provenance and audit must record that implementation
+authority exceeded the surrounding design authority.
+
+- Strength: minimal surface disruption
+- Risk: the decision is visible after execution, but not where the author made it
+
+**2. Capability-embedded elevation metadata**
+The capability or provider carries metadata describing the implementation authority it may require,
+while policy still reasons about the logical purpose exposed by the interface.
+
+- Strength: centralizes recurring cases such as hosted LLMs or remote stores
+- Risk: the actual elevation decision can disappear into declarations and be easy to miss at the
+  call site
+
+**3. Explicit elevation site**
+An auditable, scoped source-level point where authority is raised and justified:
+
+```ash
+-- Elevation is explicit, justified, and recorded
+with elevation
+  purpose "deliberative analysis"
+  requires [network_outbound, credential_use, billable_api]
+{
+  let result = remote_provider.operation(input)
+}
+```
+
+- Strength: visible in code, auditable in runtime records, and scalable from trivial to dangerous
+  cases
+- Risk: introduces new syntax and policy surface that must stay ergonomic
+
+### Implications for Interface Design
+
+This strengthens Direction 1 in v2 (closed-world interfaces, separate from capabilities):
+
+- **Interface** describes the **semantic contract** and design authority
+- **Capability** grants **operational authority** (implementation requirements)
+- **Elevation site** records the decision to bridge the gap when implementation needs exceed design
+  authority
+- **Policy** must be able to approve or reject that bridge explicitly, not only inspect the
+  surrounding interface
+
+Without this separation, every backend call becomes a potential policy violation.
+
+### Open Questions
+
+1. Should explicit elevation sites be required whenever implementation authority exceeds design
+   authority, or are there narrow cases where audit-only recording is enough?
+2. How should capability or provider metadata feed into source-level elevation requirements without
+   hiding the decision point?
+3. How does elevation interact with provenance tracking? The audit trail likely needs both the
+   design authority and the implementation authority actually exercised.
+4. How do we prevent hidden or habitual elevation without making legitimate operations painful?
 
 ---
 

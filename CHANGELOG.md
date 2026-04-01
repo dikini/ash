@@ -28,6 +28,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   introduces decision-driving workloads, and clarifies that effects are a distinct typing
   dimension rather than ordinary value-level payloads.
 
+- Clarified the `TYPES-002` and `TYPES-002 V2` exploration notes so authority elevation is framed
+  explicitly as the gap between design authority and implementation authority, with v1 preserving
+  three design choices and v2 recommending explicit source-level elevation sites backed by audit
+  and provenance semantics.
+
 - Added `TYPES-003`, a judgment-oriented exploration note that disambiguates capability
   declarations, capability witnesses, providers, effects, policies, obligations, and provenance
   so future Ash design discussions can use sharper language.

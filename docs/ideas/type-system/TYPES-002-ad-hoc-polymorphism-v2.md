@@ -62,6 +62,11 @@ Several points now look more like design constraints than open questions:
 5. **Ash should prefer design leverage over language cosplay.**
    A familiar Haskell or Rust surface is only good if it fits Ash's deeper semantics.
 
+6. **Authority separation needs an explicit bridge, not only a conceptual split.**
+   It is not enough to say that interfaces describe semantic intent while capabilities provide
+   runtime access. Ash also needs a way to represent the decision to use higher implementation
+   authority when the design-authorized purpose remains lower-grade.
+
 ## Big Design Pressure
 
 The central question is not really:
@@ -221,6 +226,8 @@ The current leaning is:
 
 - prefer **closed-world interfaces** over open global instance search;
 - keep **capabilities separate** from interface abstraction;
+- model **authority elevation** as an explicit, scoped source-level decision backed by audit and
+  provenance semantics;
 - treat **explicit evidence passing** as a semantic model and fallback, not necessarily as the
   primary surface;
 - postpone **associated effects** until the core abstraction boundary is clearer.
@@ -343,6 +350,83 @@ carrying very different operational consequences.
 This is promising, but also where Ash should move carefully. Once interface abstraction starts to
 carry effect variables or associated effects, inference and diagnostics become substantially more
 complex.
+
+## Authority Elevation at Implementation Boundaries
+
+### Problem Summary
+
+Some Ash operations are authorized by design at one level, but can only be executed by a mechanism
+that needs more operational authority.
+
+That gap is not just a provider detail. It is a design decision:
+
+- the workflow has a **design authority** tied to its intended purpose;
+- the selected implementation has an **implementation authority** tied to its operational needs;
+- when those differ, someone must decide to authorize the difference and Ash should make that
+  decision visible.
+
+This matters even when the operation is routine. A hosted LLM call may be used only for
+Deliberative drafting, but it still requires outbound network access, credentials, and billable
+remote execution. A remote database read may be epistemic in purpose while still operational in
+mechanism. More dangerous cases, such as downloading and executing code from the public internet,
+raise the same structural issue with a much higher review burden.
+
+### Example
+
+The same deliberative task can require different implementation authority depending on the chosen
+backend:
+
+```ash
+workflow draft_reply(
+  ticket: SupportTicket,
+  llm: cap HostedLlm
+) -> Result<ReplyDraft, RuntimeError> {
+  let prompt = Redact::redact_for_review(ticket)
+
+  with elevation
+    purpose "deliberative reply drafting"
+    requires [network_outbound, credential_use, billable_api]
+    because "the selected model runs remotely"
+  {
+    act llm.complete(prompt)
+  }
+}
+```
+
+If the same workflow used a local model, the deliberative purpose could remain the same while the
+elevation site disappeared because the implementation authority no longer exceeded the design
+authority. That is the key point: the semantic task is stable, but the implementation choice can
+still force an explicit authority decision.
+
+### Recommended Design
+
+The recommended direction is a single integrated model:
+
+- **Interfaces and workflow contracts** describe the semantic operation and its design authority.
+- **Capabilities and providers** describe the implementation mechanism and the operational
+  authority it requires.
+- **Elevation sites** are explicit, scoped source-level markers used when implementation authority
+  exceeds the authority otherwise available to the workflow.
+- **Policy** approves or rejects the elevation as a distinct decision, not merely as a side effect
+  of using a capability.
+- **Audit and provenance** record the elevation event itself, including purpose, justification,
+  requested authority, and the operation performed.
+
+This fits the current Direction 1 preference. It keeps interfaces and capabilities separate while
+admitting that the crossing between them can itself be semantically important.
+
+The core rule should be:
+
+> No hidden authority escalation. If a design-authorized action requires higher implementation
+> authority, Ash should require an explicit elevation site and record it in the runtime semantics.
+
+This gives Ash one design that covers the full range:
+
+- routine remote execution cases such as hosted LLM calls;
+- infrastructure-shaped cases such as remote reads and distributed storage;
+- high-risk cases such as downloading and executing code from the public internet.
+
+The cases differ in policy burden, not in whether the elevation decision exists at all.
 
 ## Decision-Driving Workloads
 

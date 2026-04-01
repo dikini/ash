@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use ash_parser::{
     Definition, Workflow, input::new_input, parse_module_decl, parse_type_def::parse_type_def,
-    parse_use, workflow,
+    parse_use, workflow, workflow_def,
 };
 use winnow::prelude::*;
 
@@ -224,6 +224,42 @@ fn test_runtime_args_capability_definition_parses() {
     assert_eq!(capability.params.len(), 1);
     assert_eq!(capability.params[0].name.as_ref(), "index");
     assert!(capability.return_type.is_some());
+}
+
+#[test]
+fn test_runtime_args_usage_surface_parses() {
+    let source = r#"
+        workflow main(args: cap Args) {
+            observe Args 0;
+            done;
+        }
+    "#;
+
+    let mut input = new_input(source);
+    let result = workflow_def(&mut input);
+
+    assert!(
+        result.is_ok(),
+        "Args usage surface should parse: {:?}",
+        result
+    );
+
+    let workflow = result.unwrap();
+    assert_eq!(workflow.params.len(), 1);
+    assert!(matches!(
+        &workflow.params[0].ty,
+        ash_parser::Type::Capability(name) if name.as_ref() == "Args"
+    ));
+
+    match workflow.body {
+        Workflow::Seq { first, .. } => match *first {
+            Workflow::Observe { capability, .. } => {
+                assert_eq!(capability.as_ref(), "Args:0");
+            }
+            other => panic!("Expected observe statement, got {other:?}"),
+        },
+        other => panic!("Expected sequential workflow body, got {other:?}"),
+    }
 }
 
 #[test]

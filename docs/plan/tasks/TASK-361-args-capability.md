@@ -1,6 +1,6 @@
 # TASK-361: Define Args Capability Interface
 
-## Status: ⛔ Blocked
+## Status: ✅ Complete
 
 ## Description
 
@@ -69,6 +69,7 @@ assert!(result.is_ok());
 - **Location**: `std/src/runtime/args.ash`
 - **Export**: Add to `runtime/mod.ash`
 - **Style**: ordinary `capability` declaration plus explicit `observe` usage per SPEC-017
+- **Scope boundary**: This task defines and verifies the `Args` interface surface (`cap Args` parsing, explicit `observe Args <index>` use, and direct regression coverage). Entry-workflow signature verification and capability-only parameter enforcement remain owned by TASK-364 and TASK-363b.
 
 ## Runtime Integration (Future)
 
@@ -103,10 +104,10 @@ This is **not part of this task** - belongs to TASK-363.
 
 ## Acceptance Criteria
 
-- [ ] S57-4, S57-5 show ✅ Complete (VALIDATION GATE)
-- [ ] Capability interface defined
-- [ ] Can use as workflow parameter
-- [ ] Explicit observation interface typechecks
-- [ ] Tests pass
+- [x] S57-4, S57-5 show ✅ Complete (VALIDATION GATE)
+- [x] Capability interface defined
+- [x] Can use as workflow parameter
+- [x] Explicit observation interface typechecks
+- [x] Tests pass
 
 ## Est. Hours: 3-4

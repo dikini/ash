@@ -31,6 +31,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Parser support now accepts canonical runtime capability parameters as `cap Args`, normalizes `observe Args 0` into the existing internal `Args:0` observe name used by capability checking, and adds focused parser plus parse-to-typecheck regression coverage for that entry-workflow surface (TASK-361).
+
 - Aligned the downstream entry-point task docs with the `RuntimeError` single-variant ADT shape and added direct typechecker coverage for constructor composition plus interpreter coverage for nested variant-pattern extraction (TASK-360).
 
 - Expanded the ad-hoc polymorphism exploration docs with a preserved `TYPES-002` review note and

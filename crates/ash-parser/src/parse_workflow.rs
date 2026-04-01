@@ -504,6 +504,15 @@ fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
 
 /// Parse a type: simple identifier or generic constructor like List<Int>
 fn parse_type(input: &mut ParseInput) -> ModalResult<Type> {
+    skip_whitespace_and_comments(input);
+
+    if starts_with_keyword(input, "cap") {
+        let _ = keyword("cap").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let name = identifier(input)?;
+        return Ok(Type::Capability(name.into()));
+    }
+
     let type_name = identifier(input)?;
     let name = Name::from(type_name);
 
@@ -681,9 +690,21 @@ fn observe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let _ = keyword("observe").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let capability = identifier(input)?;
+    skip_whitespace_and_comments(input);
+
+    let capability: Name = if capability == "Args" && starts_with_observe_index(input) {
+        let index = parse_observe_index(input)?;
+        format!("{capability}:{index}").into_boxed_str()
+    } else {
+        capability.into()
+    };
+
+    skip_whitespace_and_comments(input);
 
     // Check for optional binding
-    let binding = if keyword("as").parse_next(input).is_ok() {
+    let binding = if starts_with_keyword(input, "as") {
+        let _ = keyword("as").parse_next(input)?;
+        skip_whitespace_and_comments(input);
         Some(pattern(input)?)
     } else {
         None
@@ -692,11 +713,34 @@ fn observe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let span = span_from(&start_pos, &input.state);
 
     Ok(Workflow::Observe {
-        capability: capability.into(),
+        capability,
         binding,
         continuation: None,
         span,
     })
+}
+
+fn starts_with_observe_index(input: &ParseInput) -> bool {
+    input
+        .input
+        .chars()
+        .next()
+        .is_some_and(|c| c == '-' || c.is_ascii_digit())
+}
+
+fn parse_observe_index(input: &mut ParseInput) -> ModalResult<Box<str>> {
+    let mut index = String::new();
+
+    if input.input.starts_with('-') {
+        let _ = input.input.next_slice(1);
+        input.state.advance('-');
+        index.push('-');
+    }
+
+    let digits: &str = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
+    index.push_str(digits);
+
+    Ok(index.into_boxed_str())
 }
 
 /// Parse an orient statement: `orient <expr> [as <pattern>]`
@@ -1416,10 +1460,76 @@ mod tests {
     }
 
     #[test]
+    fn test_workflow_def_with_args_capability_param_type() {
+        let mut input = test_input("workflow main(args: cap Args) { done }");
+        let result = workflow_def(&mut input).unwrap();
+
+        assert_eq!(result.params.len(), 1);
+        assert!(matches!(
+            &result.params[0].ty,
+            Type::Capability(name) if name.as_ref() == "Args"
+        ));
+    }
+
+    #[test]
     fn test_observe_stmt() {
         let mut input = test_input("observe read_db");
         let result = parse_stmt(&mut input).unwrap();
         assert!(matches!(result, Workflow::Observe { .. }));
+    }
+
+    #[test]
+    fn test_observe_stmt_with_args_index() {
+        let mut input = test_input("observe Args 0");
+        let result = parse_stmt(&mut input).unwrap();
+
+        match result {
+            Workflow::Observe {
+                capability,
+                binding,
+                ..
+            } => {
+                assert_eq!(capability.as_ref(), "Args:0");
+                assert!(binding.is_none());
+            }
+            _ => panic!("Expected Observe"),
+        }
+    }
+
+    #[test]
+    fn test_workflow_def_rejects_non_args_observe_index_surface() {
+        let mut input = test_input(
+            r"
+            workflow main {
+                observe sensor 0;
+                done;
+            }
+        ",
+        );
+
+        let result = workflow_def(&mut input);
+        assert!(
+            result.is_err(),
+            "non-Args indexed observe syntax should remain invalid"
+        );
+    }
+
+    #[test]
+    fn test_observe_stmt_with_args_index_and_binding() {
+        let mut input = test_input("observe Args 0 as arg");
+        let result = parse_stmt(&mut input).unwrap();
+
+        match result {
+            Workflow::Observe {
+                capability,
+                binding,
+                ..
+            } => {
+                assert_eq!(capability.as_ref(), "Args:0");
+                assert!(matches!(binding, Some(Pattern::Variable(name)) if name.as_ref() == "arg"));
+            }
+            _ => panic!("Expected Observe"),
+        }
     }
 
     #[test]

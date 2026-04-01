@@ -121,6 +121,26 @@ mod tests {
     }
 
     #[test]
+    fn test_check_valid_workflow_with_args_capability_surface() {
+        let engine = Engine::new().build().unwrap();
+        let workflow = engine
+            .parse(
+                r"
+            workflow main(args: cap Args) {
+                observe Args 0;
+                done
+            }
+        ",
+            )
+            .unwrap();
+        let result = engine.check(&workflow);
+        assert!(
+            result.is_ok(),
+            "Workflow with Args capability surface should pass type checking: {result:?}"
+        );
+    }
+
+    #[test]
     fn test_check_valid_workflow_with_act() {
         let engine = Engine::new().build().unwrap();
         let workflow = engine

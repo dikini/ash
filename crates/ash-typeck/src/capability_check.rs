@@ -729,6 +729,20 @@ mod tests {
     }
 
     #[test]
+    fn test_verify_observe_args_capability_index_declared() {
+        let checker = CapabilityChecker::new().observe("Args", "0");
+        let workflow = Workflow::Observe {
+            capability: "Args:0".into(),
+            binding: Some(Pattern::Variable("arg".into())),
+            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_ok());
+    }
+
+    #[test]
     fn test_verify_observe_undeclared() {
         let checker = CapabilityChecker::new();
         let workflow = Workflow::Observe {

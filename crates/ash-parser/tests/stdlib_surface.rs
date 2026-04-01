@@ -93,6 +93,10 @@ fn runtime_stdlib_surface_is_exposed() {
         "runtime/args.ash should declare Args"
     );
     assert!(
+        runtime_supervisor.contains("use result::{Result, Err};"),
+        "runtime/supervisor.ash should import the canonical Result surface"
+    );
+    assert!(
         runtime_supervisor.contains("use super::error::RuntimeError;"),
         "runtime/supervisor.ash should import RuntimeError from its sibling module"
     );
@@ -102,11 +106,51 @@ fn runtime_stdlib_surface_is_exposed() {
     );
     assert!(
         runtime_supervisor.contains("pub workflow system_supervisor(args: cap Args) -> Int {"),
-        "runtime/supervisor.ash should expose the canonical system_supervisor scaffold"
+        "runtime/supervisor.ash should expose the canonical system_supervisor contract"
     );
     assert!(
-        runtime_supervisor.contains("0"),
-        "runtime/supervisor.ash should keep the minimal placeholder exit-code body"
+        runtime_supervisor.contains("Result<(), RuntimeError>"),
+        "runtime/supervisor.ash should document the runtime-provided terminal Result contract"
+    );
+    assert!(
+        !runtime_supervisor.contains("parser-feasible stand-in"),
+        "runtime/supervisor.ash should drop the parser-feasible completion placeholder wording"
+    );
+    assert!(
+        !runtime_supervisor.contains("supervisor_completion"),
+        "runtime/supervisor.ash should reject the unresolved supervisor_completion placeholder"
+    );
+    assert!(
+        !runtime_supervisor.contains("let completion="),
+        "runtime/supervisor.ash should not bind a fake completion payload"
+    );
+    assert!(
+        runtime_supervisor.contains("if let Err"),
+        "runtime/supervisor.ash should shape RuntimeError exit codes through if-let destructuring"
+    );
+    assert!(
+        runtime_supervisor.contains("Err { error: RuntimeError { exit_code: code, message: _ } }"),
+        "runtime/supervisor.ash should keep the nested RuntimeError exit-code destructuring intent"
+    );
+    assert!(
+        runtime_supervisor.contains("then code else 0"),
+        "runtime/supervisor.ash should preserve the fallback exit-code shaping intent"
+    );
+    assert!(
+        runtime_supervisor.contains("ret exit_code;"),
+        "runtime/supervisor.ash should return the shaped exit code"
+    );
+    assert!(
+        !runtime_supervisor.contains("ret 0;"),
+        "runtime/supervisor.ash should reject the old placeholder return body"
+    );
+    assert!(
+        !runtime_supervisor.contains("await"),
+        "runtime/supervisor.ash should not invent await syntax"
+    );
+    assert!(
+        runtime_supervisor.contains("TASK-363c wires that bootstrap behavior"),
+        "runtime/supervisor.ash should keep the runtime/bootstrap boundary explicit"
     );
     let runtime_mod = read_stdlib_file("runtime/mod.ash");
     assert!(

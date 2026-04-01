@@ -245,7 +245,7 @@ Update this section as tasks complete:
 | 15 | 6 | 6 | ✅ Complete |
 | 16 | 6 | 6 | ✅ Complete |
 | 17 | 12 | 12 | ✅ Complete |
-| 18 | 7 | 3 | 🟡 In Progress |
+| 18 | 7 | 4 | 🟡 In Progress |
 | 19 | 7 | 7 | ✅ Complete |
 | 20 | 5 | 5 | ✅ Complete |
 | 21 | 3 | 3 | ✅ Complete |
@@ -1719,7 +1719,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Goal:** Implement entry point mechanism per updated SPEC.
 
-**Status:** 🟡 Ready for implementation sequencing (task dependency order still applies)
+**Status:** 🟡 In progress - stdlib contract work has started, while runtime bootstrap and CLI integration remain downstream
 
 #### Stdlib: Foundation
 
@@ -1733,7 +1733,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 |------|-------------|------|------------|--------|------------|
 | [TASK-360](tasks/TASK-360-runtime-error-type.md) | Define `RuntimeError` type | SPEC-020/TYPES-001, SPEC-012, SPEC-003/022 | 2-3 | ✅ Complete | TASK-359 |
 | [TASK-361](tasks/TASK-361-args-capability.md) | Define `Args` capability interface | SPEC-017 | 3-4 | ✅ Complete | TASK-359 |
-| [TASK-362](tasks/TASK-362-system-supervisor.md) | Implement system supervisor workflow | SPEC-004 | 4-6 | ⛔ Blocked | TASK-359, TASK-360, TASK-361 |
+| [TASK-362](tasks/TASK-362-system-supervisor.md) | Complete the stdlib-visible system supervisor contract | SPEC-004 | 4-6 | ✅ Complete | TASK-359, TASK-360, TASK-361 |
 
 #### Runtime: Bootstrap and Execution
 

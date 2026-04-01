@@ -278,14 +278,70 @@ fn test_runtime_supervisor_workflow_definition_parses() {
 
     assert!(
         content.contains("pub workflow system_supervisor(args: cap Args) -> Int {"),
-        "system_supervisor scaffold should expose the canonical signature"
+        "system_supervisor contract should expose the canonical signature"
+    );
+    assert!(
+        content.contains("use result::{Result, Err};"),
+        "system_supervisor should import the canonical Result surface"
+    );
+    assert!(
+        content.contains("Result<(), RuntimeError>"),
+        "system_supervisor should document the terminal Result contract"
+    );
+    assert!(
+        !content.contains("parser-feasible stand-in"),
+        "system_supervisor should drop the parser-feasible completion placeholder wording"
+    );
+    assert!(
+        !content.contains("supervisor_completion"),
+        "system_supervisor should reject the unresolved supervisor_completion placeholder"
+    );
+    assert!(
+        !content.contains("let completion="),
+        "system_supervisor should not bind a fake completion payload"
+    );
+    assert!(
+        !content.contains("ret 0;"),
+        "system_supervisor should reject the old placeholder return body"
+    );
+    assert!(
+        !content.contains("await"),
+        "system_supervisor should not introduce await syntax"
+    );
+    assert!(
+        content.contains("if let Err"),
+        "system_supervisor should keep the if-let exit-code shaping intent"
+    );
+    assert!(
+        content.contains("Err { error: RuntimeError { exit_code: code, message: _ } }"),
+        "system_supervisor should keep nested RuntimeError destructuring intent"
+    );
+    assert!(
+        content.contains("then code else 0"),
+        "system_supervisor should keep the fallback exit-code shaping intent"
+    );
+    assert!(
+        content.contains("ret exit_code;"),
+        "system_supervisor should return the shaped exit code"
     );
 
-    let body_source = content
+    let workflow_source = content
         .lines()
-        .find(|line| line.trim_start().starts_with("ret "))
-        .expect("system_supervisor should contain a return body")
-        .trim();
+        .skip_while(|line| {
+            !line
+                .trim_start()
+                .starts_with("pub workflow system_supervisor")
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let workflow_body_start = workflow_source
+        .find('{')
+        .expect("system_supervisor definition should contain an opening brace");
+    let workflow_body_end = workflow_source
+        .rfind('}')
+        .expect("system_supervisor definition should contain a closing brace");
+    let body_source = &workflow_source[(workflow_body_start + 1)..workflow_body_end];
 
     let mut input = new_input(body_source);
     let result = workflow(&mut input);
@@ -295,8 +351,6 @@ fn test_runtime_supervisor_workflow_definition_parses() {
         "system_supervisor body should parse: {:?}",
         result
     );
-
-    assert!(matches!(result.unwrap(), Workflow::Ret { .. }));
 }
 
 #[test]

@@ -37,6 +37,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   metadata as compatible with but distinct from source-level effect typing, and proposes `Pure`
   as a surfaced bottom element for effect-neutral forms and normalized composition.
 
+- Added the `OTP-001` and `OTP-002` exploration notes to git so the OTP case-study material is
+  preserved alongside the type-system explorations and can inform later design work and examples.
+
 - Clarified SPEC-009 and SPEC-012 so that Ash standard-library modules resolve
   from a compiler-provided root namespace and are imported with `::` syntax
   only; legacy dot-style import examples are invalid (TASK-S57-4).

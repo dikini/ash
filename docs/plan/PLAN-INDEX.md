@@ -1719,7 +1719,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Goal:** Implement entry point mechanism per updated SPEC.
 
-**Status:** 🟡 In progress - stdlib contract work has started, while runtime bootstrap and CLI integration remain downstream
+**Status:** 🟡 In progress - runtime bootstrap and CLI entry semantics are complete, while minimum entry integration tests and closeout remain downstream
 
 #### Stdlib: Foundation
 
@@ -1743,20 +1743,20 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-363b](tasks/TASK-363b-runtime-main-verification.md) | Runtime entry workflow verification | SPEC-003/022 | 2-3 | ✅ Complete | — |
 | [TASK-363c](tasks/TASK-363c-runtime-bootstrap-execution.md) | Complete bootstrap and supervisor execution | SPEC-004/005/021 | 3-4 | ✅ Complete | — |
 | [TASK-364](tasks/TASK-364-main-verification.md) | Type-level verification of entry workflow signature | SPEC-003/022 | 2-3 | ✅ Complete | — |
-| [TASK-365](tasks/TASK-365-exit-code-handling.md) | Propagate exit code from supervisor to OS | SPEC-005/021 | 1-2 | ⬜ Pending | — |
+| [TASK-365](tasks/TASK-365-exit-code-handling.md) | Propagate exit code from supervisor to OS | SPEC-005/021 | 1-2 | ✅ Complete | — |
 
 #### CLI: Command-Line Interface
 
 | Task | Description | Spec | Est. Hours | Status | Blocked On |
 |------|-------------|------|------------|--------|------------|
-| [TASK-366](tasks/TASK-366-cli-run-semantics.md) | Redefine `ash run` entry-point semantics | SPEC-005 | 2-3 | ⬜ Pending | — |
-| [TASK-367](tasks/TASK-367-cli-error-reporting.md) | Error messages for entry point failures | SPEC-005/021, SPEC-003/022 | 2-3 | ⛔ Blocked | TASK-366 |
+| [TASK-366](tasks/TASK-366-cli-run-semantics.md) | Redefine `ash run` entry-point semantics | SPEC-005 | 2-3 | ✅ Complete | — |
+| [TASK-367](tasks/TASK-367-cli-error-reporting.md) | Error messages for entry point failures | SPEC-005/021, SPEC-003/022 | 2-3 | ✅ Complete | — |
 
 #### Testing and Integration
 
 | Task | Description | Spec | Est. Hours | Status | Blocked On |
 |------|-------------|------|------------|--------|------------|
-| [TASK-368a](tasks/TASK-368a-entry-point-tests-minimum.md) | Minimum entry point tests (success, error, missing main) | SPEC-021 | 2-3 | ⛔ Blocked | TASK-359 through TASK-367 |
+| [TASK-368a](tasks/TASK-368a-entry-point-tests-minimum.md) | Minimum entry point tests (success, error, missing main) | SPEC-021 | 2-3 | ⬜ Pending | — |
 | [TASK-368b](tasks/TASK-368b-entry-point-tests-extended.md) | Extended tests (deferred - stdout, assertions) | Future | — | ⛔ Deferred | Future phase |
 | [TASK-369](tasks/TASK-369-phase-57-closeout.md) | Phase 57 closeout and verification | All above SPEC | 1 | ⛔ Blocked | All 57A, 57B minimum |
 

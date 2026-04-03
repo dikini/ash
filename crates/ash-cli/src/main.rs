@@ -119,7 +119,7 @@ async fn execute_command(cli: &Cli) -> CliResult<ExitCode> {
             run::run(args)
                 .await
                 .map(|outcome| outcome.exit_code())
-                .map_err(CliError::from)
+                .map_err(run::classify_run_cli_error)
         }
         Commands::Trace(args) => {
             tracing::info!("Tracing workflow: {}", args.path);

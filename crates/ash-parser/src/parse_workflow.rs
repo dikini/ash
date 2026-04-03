@@ -36,6 +36,10 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
         vec![]
     };
 
+    // Parse optional declared return type: -> Type
+    skip_whitespace_and_comments(input);
+    let declared_return_type = parse_optional_declared_return_type(input)?;
+
     // Parse optional `plays role(R)` clauses
     skip_whitespace_and_comments(input);
     let plays_roles = parse_plays_roles(input)?;
@@ -56,6 +60,7 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     Ok(WorkflowDef {
         name: name.into(),
         params,
+        declared_return_type,
         plays_roles,
         capabilities,
         body,
@@ -506,6 +511,11 @@ fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
 fn parse_type(input: &mut ParseInput) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
 
+    if input.input.starts_with("()") {
+        let _ = literal_str("()").parse_next(input)?;
+        return Ok(Type::Name("()".into()));
+    }
+
     if starts_with_keyword(input, "cap") {
         let _ = keyword("cap").parse_next(input)?;
         skip_whitespace_and_comments(input);
@@ -533,6 +543,17 @@ fn parse_type(input: &mut ParseInput) -> ModalResult<Type> {
     }
 
     Ok(Type::Name(name))
+}
+
+/// Parse an optional declared workflow return type: `-> Type`.
+fn parse_optional_declared_return_type(input: &mut ParseInput) -> ModalResult<Option<Type>> {
+    if !input.input.starts_with("->") {
+        return Ok(None);
+    }
+
+    let _ = literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    parse_type(input).map(Some)
 }
 
 /// Parse type argument separator (comma with optional whitespace)
@@ -1468,6 +1489,23 @@ mod tests {
         assert!(matches!(
             &result.params[0].ty,
             Type::Capability(name) if name.as_ref() == "Args"
+        ));
+    }
+
+    #[test]
+    fn test_workflow_def_preserves_declared_return_type() {
+        let mut input =
+            test_input("workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }");
+        let result = workflow_def(&mut input).unwrap();
+
+        assert_eq!(result.params.len(), 1);
+        assert!(matches!(
+            &result.declared_return_type,
+            Some(Type::Constructor { name, args })
+                if name.as_ref() == "Result"
+                    && args.len() == 2
+                    && matches!(&args[0], Type::Name(unit) if unit.as_ref() == "()")
+                    && matches!(&args[1], Type::Name(error) if error.as_ref() == "RuntimeError")
         ));
     }
 

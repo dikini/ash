@@ -10,10 +10,34 @@ use anyhow::{Context, Result};
 use ash_core::Value;
 use ash_engine::EngineError;
 use ash_interp::ExecError;
+use ash_parser::parse_utils::skip_whitespace_and_comments;
+use ash_parser::{Token, TokenKind, expr, lex_with_recovery, new_input};
 use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 use clap::Args;
 use std::path::Path;
+use std::process::ExitCode;
 use std::time::Duration;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RunOutcome {
+    Completed,
+    Exit(ExitCode),
+}
+
+impl RunOutcome {
+    #[must_use]
+    pub const fn completed() -> Self {
+        Self::Completed
+    }
+
+    #[must_use]
+    pub fn exit_code(self) -> ExitCode {
+        match self {
+            Self::Completed => ExitCode::SUCCESS,
+            Self::Exit(code) => code,
+        }
+    }
+}
 
 /// Output format for run command
 #[derive(Debug, Clone, Copy, Default, clap::ValueEnum)]
@@ -65,18 +89,52 @@ pub struct RunArgs {
 /// - Type checking fails (in dry-run or normal mode)
 /// - Execution fails
 /// - Timeout is exceeded
-pub async fn run(args: &RunArgs) -> Result<()> {
+pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     let path = Path::new(&args.path);
 
     // Build engine with default capabilities
     let engine = build_engine().context("Failed to build engine")?;
+    let source = std::fs::read_to_string(path)
+        .with_context(|| format!("Failed to read workflow file: {}", path.display()))?;
+    let source_kind = classify_workflow_source(&source);
 
     // Dry-run mode: parse and check only
     if args.dry_run {
-        let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
+        let workflow = parse_runnable_workflow(&engine, &source, source_kind)
+            .map_err(classify_engine_error)?;
         engine.check(&workflow).map_err(classify_engine_error)?;
+
+        if matches!(source_kind, WorkflowSourceKind::Entry) {
+            engine
+                .verify_entry_workflow(&workflow)
+                .map_err(classify_entry_verification_error)?;
+        }
+
         println!("Dry run successful");
-        return Ok(());
+        return Ok(RunOutcome::completed());
+    }
+
+    if matches!(source_kind, WorkflowSourceKind::Entry) {
+        let exit_code = if let Some(timeout_secs) = args.timeout {
+            match tokio::time::timeout(
+                Duration::from_secs(timeout_secs),
+                engine.bootstrap_entry_source(&source),
+            )
+            .await
+            {
+                Ok(result) => result.map_err(classify_entry_bootstrap_error)?,
+                Err(_) => {
+                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                }
+            }
+        } else {
+            engine
+                .bootstrap_entry_source(&source)
+                .await
+                .map_err(classify_entry_bootstrap_error)?
+        };
+
+        return Ok(RunOutcome::Exit(ExitCode::from(exit_code)));
     }
 
     // Run the workflow file with optional timeout
@@ -84,11 +142,12 @@ pub async fn run(args: &RunArgs) -> Result<()> {
         let timeout_duration = Duration::from_secs(timeout_secs);
         let execution_fut = async {
             if args.trace {
-                let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
+                let workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                    .map_err(classify_engine_error)?;
                 engine.check(&workflow).map_err(classify_engine_error)?;
                 execute_with_trace(&engine, &workflow).await
             } else {
-                engine.run_file(path).await.map_err(classify_exec_error)
+                run_workflow_source(&engine, &source, source_kind).await
             }
         };
 
@@ -101,18 +160,19 @@ pub async fn run(args: &RunArgs) -> Result<()> {
     } else {
         // No timeout - run normally
         if args.trace {
-            let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
+            let workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                .map_err(classify_engine_error)?;
             engine.check(&workflow).map_err(classify_engine_error)?;
             execute_with_trace(&engine, &workflow).await?
         } else {
-            engine.run_file(path).await.map_err(classify_exec_error)?
+            run_workflow_source(&engine, &source, source_kind).await?
         }
     };
 
     // Output results
     output_result(&result, &args.output, args.format).await?;
 
-    Ok(())
+    Ok(RunOutcome::completed())
 }
 
 /// Build an engine with default capabilities
@@ -220,6 +280,335 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
             anyhow::anyhow!("configuration error: {message}")
         }
     }
+}
+
+fn classify_entry_verification_error(error: ash_engine::EntryVerificationError) -> anyhow::Error {
+    anyhow::anyhow!("verification error: {error}")
+}
+
+fn classify_entry_bootstrap_error(error: ash_engine::EntryBootstrapError) -> anyhow::Error {
+    match error {
+        ash_engine::EntryBootstrapError::Engine(engine_error) => {
+            classify_engine_error(engine_error)
+        }
+        ash_engine::EntryBootstrapError::Verification(error) => {
+            classify_entry_verification_error(error)
+        }
+        ash_engine::EntryBootstrapError::Execution(message) => {
+            anyhow::anyhow!("runtime error: {message}")
+        }
+        ash_engine::EntryBootstrapError::InvalidExitCode { code } => {
+            anyhow::anyhow!("runtime error: invalid exit code {code}")
+        }
+    }
+}
+
+fn has_leading_entry_prelude(tokens: &[Token]) -> bool {
+    let mut index = 0;
+    let mut saw_entry_use = false;
+
+    while let Some(token) = tokens.get(index) {
+        if matches!(token.kind, TokenKind::Eof) {
+            break;
+        }
+
+        let Some(next_index) = consume_entry_prelude_use(tokens, index) else {
+            break;
+        };
+
+        saw_entry_use = true;
+        index = next_index;
+    }
+
+    saw_entry_use
+        && matches!(
+            tokens.get(index).map(|token| &token.kind),
+            Some(TokenKind::Workflow) | Some(TokenKind::Eof) | None
+        )
+}
+
+fn consume_entry_prelude_use(tokens: &[Token], start: usize) -> Option<usize> {
+    if !matches_ident(tokens.get(start), "use") {
+        return None;
+    }
+
+    let first_segment = ident_name(tokens.get(start + 1)?)?;
+    if first_segment != "result" && first_segment != "runtime" {
+        return None;
+    }
+
+    if !matches!(tokens.get(start + 2)?.kind, TokenKind::Colon)
+        || !matches!(tokens.get(start + 3)?.kind, TokenKind::Colon)
+    {
+        return None;
+    }
+
+    let mut index = start + 4;
+    while let Some(token) = tokens.get(index) {
+        match token.kind {
+            TokenKind::Semicolon => return Some(index + 1),
+            TokenKind::Workflow | TokenKind::Eof => return Some(index),
+            _ => index += 1,
+        }
+    }
+
+    Some(index)
+}
+
+fn first_workflow_looks_like_entry(source: &str, tokens: &[Token]) -> bool {
+    let Some(workflow_index) = tokens
+        .iter()
+        .position(|token| matches!(token.kind, TokenKind::Workflow))
+    else {
+        return false;
+    };
+
+    let mut index = workflow_index + 1;
+    if !matches_ident(tokens.get(index), "main") {
+        return false;
+    }
+
+    index += 1;
+    let Some(next_index) = skip_parenthesized_tokens(tokens, index) else {
+        return false;
+    };
+    index = next_index;
+
+    if !matches!(
+        tokens.get(index).map(|token| &token.kind),
+        Some(TokenKind::Minus)
+    ) || !matches!(
+        tokens.get(index + 1).map(|token| &token.kind),
+        Some(TokenKind::Gt)
+    ) {
+        return false;
+    }
+    index += 2;
+
+    if !matches_ident(tokens.get(index), "Result")
+        || !matches!(
+            tokens.get(index + 1).map(|token| &token.kind),
+            Some(TokenKind::Lt)
+        )
+        || !matches!(
+            tokens.get(index + 2).map(|token| &token.kind),
+            Some(TokenKind::LParen)
+        )
+        || !matches!(
+            tokens.get(index + 3).map(|token| &token.kind),
+            Some(TokenKind::RParen)
+        )
+        || !matches!(
+            tokens.get(index + 4).map(|token| &token.kind),
+            Some(TokenKind::Comma)
+        )
+        || !matches_ident(tokens.get(index + 5), "RuntimeError")
+        || !matches!(
+            tokens.get(index + 6).map(|token| &token.kind),
+            Some(TokenKind::Gt)
+        )
+    {
+        return false;
+    }
+
+    index += 7;
+
+    skip_optional_entry_header_clauses(source, tokens, index)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WorkflowSourceKind {
+    Ordinary,
+    LeadingRuntimePrelude,
+    Entry,
+}
+
+#[cfg(test)]
+fn is_entry_workflow_source(source: &str) -> bool {
+    matches!(classify_workflow_source(source), WorkflowSourceKind::Entry)
+}
+
+fn classify_workflow_source(source: &str) -> WorkflowSourceKind {
+    let (tokens, _errors) = lex_with_recovery(source);
+
+    if first_workflow_looks_like_entry(source, &tokens) {
+        WorkflowSourceKind::Entry
+    } else if has_leading_entry_prelude(&tokens) {
+        WorkflowSourceKind::LeadingRuntimePrelude
+    } else {
+        WorkflowSourceKind::Ordinary
+    }
+}
+
+fn parse_runnable_workflow(
+    engine: &ash_engine::Engine,
+    source: &str,
+    source_kind: WorkflowSourceKind,
+) -> std::result::Result<ash_engine::Workflow, EngineError> {
+    match source_kind {
+        WorkflowSourceKind::Ordinary => engine.parse(source),
+        WorkflowSourceKind::LeadingRuntimePrelude | WorkflowSourceKind::Entry => {
+            engine.load_runtime_stdlib()?;
+            engine.parse_entry_source(source)
+        }
+    }
+}
+
+async fn run_workflow_source(
+    engine: &ash_engine::Engine,
+    source: &str,
+    source_kind: WorkflowSourceKind,
+) -> Result<Value> {
+    let workflow =
+        parse_runnable_workflow(engine, source, source_kind).map_err(classify_engine_error)?;
+    engine.check(&workflow).map_err(classify_engine_error)?;
+    engine.execute(&workflow).await.map_err(classify_exec_error)
+}
+
+fn skip_optional_entry_header_clauses(source: &str, tokens: &[Token], mut index: usize) -> bool {
+    loop {
+        match tokens.get(index).map(|token| &token.kind) {
+            Some(TokenKind::LBrace) => return true,
+            Some(TokenKind::Eof) | None => return false,
+            _ if matches_ident(tokens.get(index), "plays") => {
+                let Some(next_index) = consume_entry_plays_clause(tokens, index) else {
+                    return false;
+                };
+                index = next_index;
+            }
+            _ if matches_ident(tokens.get(index), "capabilities") => {
+                let Some(next_index) = consume_entry_capabilities_clause(tokens, index) else {
+                    return false;
+                };
+                index = next_index;
+            }
+            _ if matches_ident(tokens.get(index), "requires")
+                || matches_ident(tokens.get(index), "ensures") =>
+            {
+                let Some(next_index) = consume_entry_contract_clause(source, tokens, index) else {
+                    return false;
+                };
+                index = next_index;
+            }
+            _ => return false,
+        }
+    }
+}
+
+fn consume_entry_plays_clause(tokens: &[Token], start: usize) -> Option<usize> {
+    if !matches_ident(tokens.get(start), "plays") || !matches_ident(tokens.get(start + 1), "role") {
+        return None;
+    }
+
+    skip_parenthesized_tokens(tokens, start + 2)
+}
+
+fn consume_entry_capabilities_clause(tokens: &[Token], start: usize) -> Option<usize> {
+    if !matches_ident(tokens.get(start), "capabilities")
+        || !matches!(
+            tokens.get(start + 1).map(|token| &token.kind),
+            Some(TokenKind::Colon)
+        )
+    {
+        return None;
+    }
+
+    skip_bracketed_tokens(tokens, start + 2)
+}
+
+fn consume_entry_contract_clause(source: &str, tokens: &[Token], start: usize) -> Option<usize> {
+    if !matches!(
+        tokens.get(start + 1).map(|token| &token.kind),
+        Some(TokenKind::Colon)
+    ) {
+        return None;
+    }
+
+    let expression_start = tokens.get(start + 2)?.span.start;
+    let mut input = new_input(&source[expression_start..]);
+    skip_whitespace_and_comments(&mut input);
+    let _ = expr(&mut input).ok()?;
+    skip_whitespace_and_comments(&mut input);
+
+    let next_offset = expression_start + (source[expression_start..].len() - input.input.len());
+
+    tokens
+        .iter()
+        .enumerate()
+        .skip(start + 2)
+        .find(|(_, token)| token.span.start >= next_offset || matches!(token.kind, TokenKind::Eof))
+        .map(|(index, _)| index)
+}
+
+fn skip_parenthesized_tokens(tokens: &[Token], start: usize) -> Option<usize> {
+    if !matches!(
+        tokens.get(start).map(|token| &token.kind),
+        Some(TokenKind::LParen)
+    ) {
+        return None;
+    }
+
+    let mut depth = 0usize;
+    let mut index = start;
+    while let Some(token) = tokens.get(index) {
+        match token.kind {
+            TokenKind::LParen => depth += 1,
+            TokenKind::RParen => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some(index + 1);
+                }
+            }
+            TokenKind::Eof => return None,
+            _ => {}
+        }
+        index += 1;
+    }
+
+    None
+}
+
+fn skip_bracketed_tokens(tokens: &[Token], start: usize) -> Option<usize> {
+    if !matches!(
+        tokens.get(start).map(|token| &token.kind),
+        Some(TokenKind::LBracket)
+    ) {
+        return None;
+    }
+
+    let mut depth = 0usize;
+    let mut index = start;
+    while let Some(token) = tokens.get(index) {
+        match token.kind {
+            TokenKind::LBracket => depth += 1,
+            TokenKind::RBracket => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some(index + 1);
+                }
+            }
+            TokenKind::Eof => return None,
+            _ => {}
+        }
+        index += 1;
+    }
+
+    None
+}
+
+fn matches_ident(token: Option<&Token>, expected: &str) -> bool {
+    ident_name_from_option(token).is_some_and(|name| name == expected)
+}
+
+fn ident_name(token: &Token) -> Option<&str> {
+    match &token.kind {
+        TokenKind::Ident(name) => Some(name.as_ref()),
+        _ => None,
+    }
+}
+
+fn ident_name_from_option(token: Option<&Token>) -> Option<&str> {
+    token.and_then(ident_name)
 }
 
 #[cfg(test)]
@@ -406,5 +795,27 @@ mod tests {
 
         let result = run(&args).await;
         assert!(result.is_ok(), "Run without timeout should succeed");
+    }
+
+    #[test]
+    fn test_import_free_entry_detector_accepts_capabilities_clause_after_return_type() {
+        let source = r#"
+            workflow main() -> Result<(), RuntimeError>
+            capabilities: []
+            { done; }
+        "#;
+
+        assert!(is_entry_workflow_source(source));
+    }
+
+    #[test]
+    fn test_import_free_entry_detector_rejects_unknown_clause_after_return_type() {
+        let source = r#"
+            workflow main() -> Result<(), RuntimeError>
+            unexpected: []
+            { done; }
+        "#;
+
+        assert!(!is_entry_workflow_source(source));
     }
 }

@@ -1,12 +1,15 @@
 # TASK-366: Redefine `ash run` Entry-Point Semantics
 
-## Status: ⛔ Blocked
+## Status: ⛔ Pending broader `ash run` migration and CLI alignment
 
 ## Description
 
-**CRITICAL: This is NOT implementing `ash run` - it already exists in `main.rs:52-77` and `run.rs:23-113`.**
+**CRITICAL: This is NOT introducing `ash run` from scratch.** The command surface and its
+current CLI execution slice are already landed in `ash-cli`; this task remains the downstream
+migration that redefines the normal `ash run` path around the designated-entry bootstrap.
 
-This task **redefines** the `ash run` command to use the new entry-point bootstrap (TASK-363c) instead of current behavior.
+This task **redefines** the existing `ash run` command to use the new entry-point bootstrap
+(TASK-363c) instead of the current direct parse/check/execute path.
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
@@ -16,11 +19,19 @@ This task **redefines** the `ash run` command to use the new entry-point bootstr
 
 ## Current State
 
-`ash run` exists but likely uses old execution model. Need to:
+This is currently a **partial, narrow migration** rather than a full run-path cutover.
 
-1. Identify current `ash run` implementation
-2. Determine what needs changing
-3. Migrate to TASK-363c bootstrap
+- **Already migrated:** detected entry sources in the current bootstrap-aware slice already route
+    through the designated-entry bootstrap path.
+- **Still on the older path:** the broader normal `ash run` execution flow and its full CLI
+    behavior alignment are not migrated yet.
+
+The remaining downstream work is to:
+
+1. Preserve the existing command surface and flag behavior
+2. Replace the normal execution path with TASK-363c entry bootstrap semantics
+3. Thread CLI arguments into the runtime-owned `Args` capability path when that migration lands
+4. Keep dry-run, tracing, timeout, and error-reporting behavior aligned with the migrated entry path
 
 ## Redefinition Scope
 
@@ -37,7 +48,7 @@ ash run myapp.ash -- --flag value
 
 ## Implementation
 
-Replace current `ash run` handler with:
+Migrate the current `ash run` handler from direct workflow execution to:
 
 ```rust
 // In run.rs or main.rs
@@ -58,12 +69,12 @@ fn cmd_run(file: &Path, args: Vec<String>) -> i32 {
 
 ## Changes from Current
 
-| Aspect | Current (assumed) | New |
-|--------|-------------------|-----|
-| Entry point | ? | `main` workflow |
-| Return type | ? | `Result<(), RuntimeError>` |
-| Args passing | ? | `cap Args` injection |
-| Stdlib | ? | standard-library root modules loaded |
+| Aspect | Current landed slice | TASK-366 target |
+|--------|----------------------|-----------------|
+| Entry point | Direct `engine.run_file()` / traced parse-check-execute path | Canonical `main` workflow bootstrap |
+| Return type | Existing workflow execution semantics | Exact `Result<(), RuntimeError>` contract |
+| Args passing | No runtime-owned `Args` injection yet | `cap Args` runtime injection |
+| Stdlib | No narrow runtime-entry stdlib bootstrap on normal `ash run` | Runtime entry stdlib roots loaded before bootstrap |
 
 ## TDD Steps
 
@@ -96,6 +107,14 @@ assert_eq!(output.status.code(), Some(0));
 - TASK-363c: Bootstrap ready
 - Existing `ash run` command structure
 
+## Current Boundary
+
+- **Already landed:** the baseline `ash run` CLI command, flag parsing, output handling, and the
+    current partial bootstrap-aware slice for detected entry sources
+- **Still pending downstream work:** migrating the broader normal `ash run` execution path to the
+    designated entry bootstrap contract without regressing CLI-specific behavior or observable
+    behavior alignment
+
 ## Migration Notes
 
 - **Preserve**: CLI argument parsing
@@ -112,7 +131,7 @@ assert_eq!(output.status.code(), Some(0));
 ## Acceptance Criteria
 
 - [ ] S57-2 shows ✅ Complete (VALIDATION GATE)
-- [ ] Existing `ash run` command structure preserved
+- [ ] Existing landed `ash run` command structure preserved
 - [ ] Uses TASK-363c bootstrap
 - [ ] Args passed correctly
 - [ ] Exit codes propagated

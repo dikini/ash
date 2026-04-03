@@ -28,6 +28,7 @@
 //! let workflow = WorkflowDef {
 //!     name: "test".into(),
 //!     params: vec![],
+//!     declared_return_type: None,
 //!     plays_roles: vec![RoleRef { name: "ai_agent".into(), span: ash_parser::token::Span::default() }],
 //!     capabilities: vec![],
 //!     body: ash_parser::surface::Workflow::Done { span: ash_parser::token::Span::default() },
@@ -399,6 +400,7 @@ mod tests {
         WorkflowDef {
             name: name.into(),
             params: vec![],
+            declared_return_type: None,
             plays_roles: plays_roles
                 .into_iter()
                 .map(|r| RoleRef {

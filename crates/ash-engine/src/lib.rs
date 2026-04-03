@@ -14,12 +14,17 @@
 //! ```
 
 pub mod check;
+pub mod entry;
 pub mod error;
 pub mod execute;
 pub mod harness;
 pub mod parse;
 pub mod providers;
 
+pub use entry::{
+    EntryBootstrapError, EntryVerificationError, RuntimeEntryStdlibSource,
+    load_runtime_entry_stdlib_sources, verify_entry_workflow_def,
+};
 pub use error::EngineError;
 pub use providers::CapabilityProvider;
 
@@ -53,6 +58,9 @@ pub struct Engine {
     /// This stores the full `WorkflowDef` including parameters for type checking
     surface_workflow_defs:
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::WorkflowDef>>,
+    /// Narrow engine-owned registry of runtime stdlib module sources keyed by
+    /// canonical module path.
+    runtime_stdlib_modules: std::sync::Mutex<std::collections::HashMap<String, String>>,
     /// Counter for generating unique IDs
     next_id: std::sync::atomic::AtomicU64,
     /// Runtime-owned state that persists across related executions.
@@ -133,12 +141,89 @@ impl Engine {
             .map_or(None, |map| map.get(&id).cloned())
     }
 
+    /// Register a runtime stdlib module source under its canonical module path.
+    fn register_runtime_stdlib_module(
+        &self,
+        module_path: &str,
+        source: String,
+    ) -> Result<(), EngineError> {
+        self.runtime_stdlib_modules
+            .lock()
+            .map_err(|_| {
+                EngineError::Configuration("runtime stdlib registry lock poisoned".to_string())
+            })?
+            .insert(module_path.to_string(), source);
+        Ok(())
+    }
+
+    /// Load the narrow runtime stdlib registry owned by this engine.
+    ///
+    /// This only registers the canonical runtime entry modules currently needed
+    /// by the Phase 57 entry path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineError::Io`] if a required stdlib source file cannot be read
+    /// or [`EngineError::Configuration`] if the registry cannot be updated.
+    pub fn load_runtime_stdlib(&self) -> Result<(), EngineError> {
+        for module in load_runtime_entry_stdlib_sources()? {
+            self.register_runtime_stdlib_module(module.module_path, module.source)?;
+        }
+
+        Ok(())
+    }
+
+    /// Return whether the engine has registered the canonical runtime module path.
+    #[must_use]
+    pub fn has_registered_runtime_module(&self, module_path: &str) -> bool {
+        self.runtime_stdlib_modules
+            .lock()
+            .is_ok_and(|registry| registry.contains_key(module_path))
+    }
+
     /// Parse source code into a Workflow
     ///
     /// # Errors
     ///
     /// Returns `EngineError::Parse` if the source contains syntax errors.
     pub fn parse(&self, source: &str) -> Result<Workflow, EngineError> {
+        self.parse_workflow_source(source)
+    }
+
+    /// Parse entry source into a [`Workflow`], tolerating a leading `use` prelude.
+    ///
+    /// This helper is intentionally narrow and only exists for the runtime entry
+    /// path. It validates contiguous leading runtime `use` declarations against
+    /// the engine-owned runtime stdlib registry before stripping them and
+    /// delegating to the ordinary single-workflow parser.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Parse` if the leading runtime imports are not
+    /// supported or not registered, or if the remaining workflow source
+    /// contains syntax errors.
+    pub fn parse_entry_source(&self, source: &str) -> Result<Workflow, EngineError> {
+        entry::validate_runtime_entry_import_prelude(source, |module_path| {
+            self.has_registered_runtime_module(module_path)
+        })?;
+        self.parse_workflow_source(entry::strip_leading_entry_use_lines(source))
+    }
+
+    /// Parse entry source from a file, tolerating the narrow leading `use` prelude.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Io` if the file cannot be read and `EngineError::Parse`
+    /// if the entry workflow source is invalid.
+    pub fn parse_entry_file(
+        &self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<Workflow, EngineError> {
+        let source = std::fs::read_to_string(path)?;
+        self.parse_entry_source(&source)
+    }
+
+    fn parse_workflow_source(&self, source: &str) -> Result<Workflow, EngineError> {
         use ash_parser::{lower_workflow, new_input, workflow_def};
         use winnow::prelude::*;
 
@@ -231,6 +316,23 @@ impl Engine {
             }
             Err(e) => Err(EngineError::Type(format!("{e}"))),
         }
+    }
+
+    /// Verify that a parsed workflow matches the canonical entry workflow contract.
+    ///
+    /// This is a pure metadata validation over the cached parsed `WorkflowDef`.
+    /// It does not load the standard library, resolve imports, or perform bootstrap.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EntryVerificationError`] if the cached surface metadata is missing
+    /// or if the workflow signature does not match the canonical `main` contract.
+    pub fn verify_entry_workflow(&self, workflow: &Workflow) -> Result<(), EntryVerificationError> {
+        let def = self
+            .get_surface_workflow_def(workflow.id)
+            .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
+
+        verify_entry_workflow_def(&def)
     }
 
     /// Convert a surface type annotation to a typeck type
@@ -347,6 +449,56 @@ impl Engine {
         let workflow = self.parse_file(path)?;
         self.check(&workflow)?;
         self.execute_with_input(&workflow, input_bindings).await
+    }
+
+    /// Parse, check, verify, and execute an entry workflow source, returning its exit code.
+    ///
+    /// This is the narrow Phase 57 runtime entry path. It loads the engine-owned runtime
+    /// stdlib registry, parses entry source with leading-`use` tolerance, checks the
+    /// workflow, validates the canonical `main` signature, executes it, and derives the
+    /// observable process exit code from the terminal result payload.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EntryBootstrapError`] if stdlib loading fails, the entry source does not
+    /// parse or type-check, the `main` contract is invalid, execution fails, or the runtime
+    /// error payload carries an out-of-range exit code.
+    pub async fn bootstrap_entry_source(&self, source: &str) -> Result<u8, EntryBootstrapError> {
+        self.load_runtime_stdlib()?;
+        let workflow = self.parse_entry_source(source)?;
+        self.check(&workflow)?;
+        self.verify_entry_workflow(&workflow)?;
+
+        let def = self
+            .get_surface_workflow_def(workflow.id)
+            .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
+        let input_bindings = entry::entry_input_bindings(&def);
+
+        let result = if input_bindings.is_empty() {
+            self.execute(&workflow)
+                .await
+                .map_err(|error| EntryBootstrapError::Execution(error.to_string()))?
+        } else {
+            self.execute_with_input(&workflow, input_bindings)
+                .await
+                .map_err(|error| EntryBootstrapError::Execution(error.to_string()))?
+        };
+
+        entry::derive_entry_exit_code(&result)
+    }
+
+    /// Parse, check, verify, and execute an entry workflow file, returning its exit code.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EntryBootstrapError`] for any stdlib, I/O, parse, type, verification,
+    /// execution, or exit-code derivation failure.
+    pub async fn bootstrap_entry_file(
+        &self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<u8, EntryBootstrapError> {
+        let source = std::fs::read_to_string(path).map_err(EngineError::Io)?;
+        self.bootstrap_entry_source(&source).await
     }
 }
 
@@ -477,6 +629,7 @@ impl EngineBuilder {
 
         Ok(Engine {
             surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
+            runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state,
         })

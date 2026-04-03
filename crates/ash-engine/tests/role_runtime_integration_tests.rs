@@ -39,6 +39,7 @@ fn create_test_workflow_def(name: &str, plays_roles: Vec<&str>) -> WorkflowDef {
     WorkflowDef {
         name: name.into(),
         params: vec![],
+        declared_return_type: None,
         plays_roles: plays_roles
             .into_iter()
             .map(|r| RoleRef {

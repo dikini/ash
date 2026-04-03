@@ -305,6 +305,8 @@ pub struct WorkflowDef {
     pub name: Name,
     /// Workflow parameters (name: type)
     pub params: Vec<Parameter>,
+    /// Optional declared return type from the workflow header
+    pub declared_return_type: Option<Type>,
     /// Roles this workflow plays (from `plays role(R)` clauses)
     pub plays_roles: Vec<RoleRef>,
     /// Capabilities this workflow uses (from `capabilities: [...]` clause)
@@ -1244,6 +1246,7 @@ mod tests {
             workflow: WorkflowDef {
                 name: "main".into(),
                 params: vec![],
+                declared_return_type: None,
                 plays_roles: vec![],
                 capabilities: vec![],
                 body: Workflow::Done {
@@ -1431,6 +1434,7 @@ mod tests {
         let workflow_def = WorkflowDef {
             name: "process_order".into(),
             params: vec![],
+            declared_return_type: None,
             plays_roles: vec![],
             capabilities: vec![],
             body: Workflow::Done {

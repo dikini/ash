@@ -1,10 +1,14 @@
 # TASK-364: Verify Entry Workflow Type Signature
 
-## Status: ⬜ Pending
+## Status: ✅ Complete
 
 ## Description
 
 Type-level verification that entry workflow `main` conforms to entry contract: correct name, return type, and parameter types.
+
+Implemented in `ash-engine` as canonical entry signature verification over parsed workflow
+metadata, supported by parser preservation of declared workflow return types and focused engine
+integration tests.
 
 S57-6 now defines the exact normative contract in SPEC-022, with a supporting ownership note in
 SPEC-003.
@@ -153,10 +157,10 @@ assert!(matches!(err, TypeError::NonCapabilityParam { .. }));
 ## Acceptance Criteria
 
 - [x] S57-6 shows ✅ Complete with precise contract (VALIDATION GATE)
-- [ ] Detects wrong name
-- [ ] Detects wrong return type
-- [ ] Detects non-capability params
-- [ ] Error messages clear
-- [ ] Tests pass
+- [x] Detects wrong name
+- [x] Detects wrong return type
+- [x] Detects non-capability params
+- [x] Error messages clear
+- [x] Tests pass
 
 ## Est. Hours: 2-3

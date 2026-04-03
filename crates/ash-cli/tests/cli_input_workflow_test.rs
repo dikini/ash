@@ -1,23 +1,24 @@
-//! Tests for CLI workflow execution
+//! Tests for CLI entry workflow execution.
 //!
-//! NOTE: The --input flag was removed in TASK-324. Input handling will be
-//! redesigned in a future phase. These tests verify basic workflow execution
-//! without input parameters.
+//! NOTE: Phase 57 redefines `ash run` around the canonical entry workflow
+//! contract. These tests therefore exercise `main() -> Result<(), RuntimeError>`
+//! entry sources rather than the legacy generic workflow execution path.
 
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// Test that a workflow without parameters executes successfully
+/// Test that a canonical entry workflow executes successfully
 #[test]
 fn test_workflow_without_parameters() {
     let temp = TempDir::new().unwrap();
 
-    // Create a simple workflow
+    // Create a simple canonical entry workflow
     let workflow = r#"
-        workflow main {
-            ret "Hello, World";
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        workflow main() -> Result<(), RuntimeError> { done; }
     "#;
     let workflow_path = temp.path().join("greet.ash");
     fs::write(&workflow_path, workflow).unwrap();
@@ -37,12 +38,12 @@ fn test_workflow_without_parameters() {
 
     assert!(
         output.status.success(),
-        "Workflow should execute successfully. stderr: {}",
+        "Entry workflow should execute successfully. stderr: {}",
         stderr
     );
     assert!(
-        stdout.contains("Hello, World"),
-        "Expected 'Hello, World' in output, got: {}",
+        stdout.is_empty(),
+        "Expected no stdout output, got: {}",
         stdout
     );
 }

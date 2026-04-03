@@ -7,16 +7,20 @@
 //! TASK-324: Removed --input flag.
 
 use anyhow::{Context, Result};
-use ash_core::Value;
+use ash_core::{Effect, Value};
 use ash_engine::EngineError;
 use ash_interp::ExecError;
 use ash_parser::parse_utils::skip_whitespace_and_comments;
 use ash_parser::{Token, TokenKind, expr, lex_with_recovery, new_input};
 use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
+use async_trait::async_trait;
 use clap::Args;
 use std::path::Path;
 use std::process::ExitCode;
+use std::sync::Arc;
 use std::time::Duration;
+
+use crate::error::CliError;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RunOutcome {
@@ -75,6 +79,10 @@ pub struct RunArgs {
     /// Execution timeout in seconds
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
+
+    /// Runtime arguments passed to the entry workflow after `--`
+    #[arg(last = true, value_name = "ARGS")]
+    pub program_args: Vec<String>,
 }
 
 /// Run a workflow file
@@ -93,32 +101,30 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     let path = Path::new(&args.path);
 
     // Build engine with default capabilities
-    let engine = build_engine().context("Failed to build engine")?;
-    let source = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read workflow file: {}", path.display()))?;
+    let engine = build_engine(&args.program_args).context("Failed to build engine")?;
+    let source =
+        std::fs::read_to_string(path).map_err(|error| classify_run_read_error(path, error))?;
     let source_kind = classify_workflow_source(&source);
+    let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
 
     // Dry-run mode: parse and check only
     if args.dry_run {
-        let workflow = parse_runnable_workflow(&engine, &source, source_kind)
+        let workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
             .map_err(classify_engine_error)?;
         engine.check(&workflow).map_err(classify_engine_error)?;
-
-        if matches!(source_kind, WorkflowSourceKind::Entry) {
-            engine
-                .verify_entry_workflow(&workflow)
-                .map_err(classify_entry_verification_error)?;
-        }
+        engine
+            .verify_entry_workflow(&workflow)
+            .map_err(classify_entry_verification_error)?;
 
         println!("Dry run successful");
         return Ok(RunOutcome::completed());
     }
 
-    if matches!(source_kind, WorkflowSourceKind::Entry) {
+    if use_entry_bootstrap {
         let exit_code = if let Some(timeout_secs) = args.timeout {
             match tokio::time::timeout(
                 Duration::from_secs(timeout_secs),
-                engine.bootstrap_entry_source(&source),
+                execute_entry_source(&engine, &source, args.trace),
             )
             .await
             {
@@ -128,11 +134,14 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 }
             }
         } else {
-            engine
-                .bootstrap_entry_source(&source)
+            execute_entry_source(&engine, &source, args.trace)
                 .await
                 .map_err(classify_entry_bootstrap_error)?
         };
+
+        if exit_code == 0 {
+            emit_entry_output(args).await?;
+        }
 
         return Ok(RunOutcome::Exit(ExitCode::from(exit_code)));
     }
@@ -178,11 +187,63 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
 /// Build an engine with default capabilities
 ///
 /// Adds stdio and fs capabilities by default.
-fn build_engine() -> Result<ash_engine::Engine, ash_engine::EngineError> {
-    ash_engine::Engine::new()
+fn build_engine(program_args: &[String]) -> Result<ash_engine::Engine, ash_engine::EngineError> {
+    let mut builder = ash_engine::Engine::new()
         .with_stdio_capabilities()
-        .with_fs_capabilities()
-        .build()
+        .with_fs_capabilities();
+
+    for (index, value) in program_args.iter().enumerate() {
+        let provider = Arc::new(RuntimeArgProvider::new(index, value));
+        let provider_name = provider.name.clone();
+        builder = builder.with_custom_provider(&provider_name, provider);
+    }
+
+    builder.build()
+}
+
+#[derive(Debug)]
+struct RuntimeArgProvider {
+    name: String,
+    value: String,
+}
+
+impl RuntimeArgProvider {
+    fn new(index: usize, value: &str) -> Self {
+        Self {
+            name: format!("Args:{index}"),
+            value: value.to_string(),
+        }
+    }
+}
+
+#[async_trait]
+impl ash_engine::CapabilityProvider for RuntimeArgProvider {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn effect(&self) -> Effect {
+        Effect::Epistemic
+    }
+
+    async fn observe(
+        &self,
+        _action: &str,
+        _args: &[Value],
+    ) -> Result<Value, ash_engine::providers::ProviderError> {
+        Ok(Value::variant(
+            "Some",
+            vec![("value", Value::String(self.value.clone()))],
+        ))
+    }
+
+    async fn execute(
+        &self,
+        _action: &str,
+        _args: &[Value],
+    ) -> Result<Value, ash_engine::providers::ProviderError> {
+        Ok(Value::Null)
+    }
 }
 
 /// Execute a workflow with tracing enabled
@@ -209,6 +270,40 @@ async fn execute_with_trace(
 }
 
 /// Output the result to stdout or file
+async fn execute_entry_source(
+    engine: &ash_engine::Engine,
+    source: &str,
+    trace: bool,
+) -> std::result::Result<u8, ash_engine::EntryBootstrapError> {
+    if !trace {
+        return engine.bootstrap_entry_source(source).await;
+    }
+
+    use ash_core::WorkflowId;
+
+    let workflow_id = WorkflowId::new();
+    let recorder = create_trace_recorder(workflow_id);
+    let session = WorkflowTraceSession::start(recorder, "main")
+        .map_err(|error| ash_engine::EntryBootstrapError::Execution(error.to_string()))?;
+
+    match engine.bootstrap_entry_source(source).await {
+        Ok(exit_code) => {
+            let _recorder = session
+                .finish_success()
+                .map_err(|error| ash_engine::EntryBootstrapError::Execution(error.to_string()))?;
+            Ok(exit_code)
+        }
+        Err(error) => {
+            let _recorder = session
+                .finish_error(format!("{error:?}"), Some("bootstrap_entry_source"))
+                .map_err(|trace_error| {
+                    ash_engine::EntryBootstrapError::Execution(trace_error.to_string())
+                })?;
+            Err(error)
+        }
+    }
+}
+
 async fn output_result(
     result: &Value,
     output_path: &Option<String>,
@@ -232,6 +327,16 @@ async fn output_result(
         None => {
             println!("{output}");
         }
+    }
+
+    Ok(())
+}
+
+async fn emit_entry_output(args: &RunArgs) -> Result<()> {
+    if let Some(path) = &args.output {
+        tokio::fs::write(path, "")
+            .await
+            .with_context(|| format!("Failed to write output to {path}"))?;
     }
 
     Ok(())
@@ -283,7 +388,22 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
 }
 
 fn classify_entry_verification_error(error: ash_engine::EntryVerificationError) -> anyhow::Error {
-    anyhow::anyhow!("verification error: {error}")
+    match error {
+        ash_engine::EntryVerificationError::MissingMain => {
+            anyhow::anyhow!("entry file has no 'main' workflow")
+        }
+        ash_engine::EntryVerificationError::MissingWorkflowMetadata => {
+            anyhow::anyhow!("entry workflow metadata is unavailable")
+        }
+        ash_engine::EntryVerificationError::WrongReturnType { expected, found } => {
+            anyhow::anyhow!(
+                "'main' has wrong return type\n  expected: {expected}\n  found: {found}"
+            )
+        }
+        ash_engine::EntryVerificationError::NonCapabilityParameter { name, found } => {
+            anyhow::anyhow!("parameter '{name}' must be capability type\n  found: {found}")
+        }
+    }
 }
 
 fn classify_entry_bootstrap_error(error: ash_engine::EntryBootstrapError) -> anyhow::Error {
@@ -298,8 +418,32 @@ fn classify_entry_bootstrap_error(error: ash_engine::EntryBootstrapError) -> any
             anyhow::anyhow!("runtime error: {message}")
         }
         ash_engine::EntryBootstrapError::InvalidExitCode { code } => {
-            anyhow::anyhow!("runtime error: invalid exit code {code}")
+            anyhow::anyhow!("invalid runtime exit code {code}")
         }
+    }
+}
+
+fn classify_run_read_error(path: &Path, error: std::io::Error) -> anyhow::Error {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        anyhow::anyhow!("file not found: {}", path.display())
+    } else {
+        anyhow::anyhow!("failed to read workflow file {}: {error}", path.display())
+    }
+}
+
+pub fn classify_run_cli_error(error: anyhow::Error) -> CliError {
+    let message = error.to_string();
+    let lower = message.to_lowercase();
+
+    if lower.contains("file not found:")
+        || lower.contains("entry file has no 'main' workflow")
+        || lower.contains("'main' has wrong return type")
+        || lower.contains("must be capability type")
+        || lower.contains("invalid runtime exit code")
+    {
+        CliError::general(message)
+    } else {
+        CliError::from(error)
     }
 }
 
@@ -355,23 +499,28 @@ fn consume_entry_prelude_use(tokens: &[Token], start: usize) -> Option<usize> {
     Some(index)
 }
 
-fn first_workflow_looks_like_entry(source: &str, tokens: &[Token]) -> bool {
-    let Some(workflow_index) = tokens
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct EntryHeaderShape {
+    name_is_main: bool,
+    canonical_return_type: bool,
+}
+
+fn first_workflow_entry_header_shape(source: &str, tokens: &[Token]) -> Option<EntryHeaderShape> {
+    let workflow_index = tokens
         .iter()
-        .position(|token| matches!(token.kind, TokenKind::Workflow))
-    else {
-        return false;
-    };
+        .position(|token| matches!(token.kind, TokenKind::Workflow))?;
 
     let mut index = workflow_index + 1;
-    if !matches_ident(tokens.get(index), "main") {
-        return false;
+    let name_is_main = matches_ident(tokens.get(index), "main");
+
+    let name_token = tokens.get(index)?;
+
+    if !matches!(name_token.kind, TokenKind::Ident(_)) {
+        return None;
     }
 
     index += 1;
-    let Some(next_index) = skip_parenthesized_tokens(tokens, index) else {
-        return false;
-    };
+    let next_index = skip_parenthesized_tokens(tokens, index)?;
     index = next_index;
 
     if !matches!(
@@ -381,45 +530,59 @@ fn first_workflow_looks_like_entry(source: &str, tokens: &[Token]) -> bool {
         tokens.get(index + 1).map(|token| &token.kind),
         Some(TokenKind::Gt)
     ) {
-        return false;
+        return None;
     }
     index += 2;
 
-    if !matches_ident(tokens.get(index), "Result")
-        || !matches!(
+    let canonical_return_type = matches_ident(tokens.get(index), "Result")
+        && matches!(
             tokens.get(index + 1).map(|token| &token.kind),
             Some(TokenKind::Lt)
         )
-        || !matches!(
+        && matches!(
             tokens.get(index + 2).map(|token| &token.kind),
             Some(TokenKind::LParen)
         )
-        || !matches!(
+        && matches!(
             tokens.get(index + 3).map(|token| &token.kind),
             Some(TokenKind::RParen)
         )
-        || !matches!(
+        && matches!(
             tokens.get(index + 4).map(|token| &token.kind),
             Some(TokenKind::Comma)
         )
-        || !matches_ident(tokens.get(index + 5), "RuntimeError")
-        || !matches!(
+        && matches_ident(tokens.get(index + 5), "RuntimeError")
+        && matches!(
             tokens.get(index + 6).map(|token| &token.kind),
             Some(TokenKind::Gt)
-        )
-    {
-        return false;
+        );
+
+    if !canonical_return_type {
+        while let Some(token) = tokens.get(index) {
+            match token.kind {
+                TokenKind::LBrace | TokenKind::Eof => break,
+                _ => index += 1,
+            }
+        }
+    } else {
+        index += 7;
     }
 
-    index += 7;
+    if !skip_optional_entry_header_clauses(source, tokens, index) {
+        return None;
+    }
 
-    skip_optional_entry_header_clauses(source, tokens, index)
+    Some(EntryHeaderShape {
+        name_is_main,
+        canonical_return_type,
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WorkflowSourceKind {
     Ordinary,
     LeadingRuntimePrelude,
+    EntryCandidate,
     Entry,
 }
 
@@ -431,8 +594,16 @@ fn is_entry_workflow_source(source: &str) -> bool {
 fn classify_workflow_source(source: &str) -> WorkflowSourceKind {
     let (tokens, _errors) = lex_with_recovery(source);
 
-    if first_workflow_looks_like_entry(source, &tokens) {
-        WorkflowSourceKind::Entry
+    if let Some(shape) = first_workflow_entry_header_shape(source, &tokens) {
+        if shape.name_is_main && shape.canonical_return_type {
+            WorkflowSourceKind::Entry
+        } else if shape.name_is_main || shape.canonical_return_type {
+            WorkflowSourceKind::EntryCandidate
+        } else if has_leading_entry_prelude(&tokens) {
+            WorkflowSourceKind::LeadingRuntimePrelude
+        } else {
+            WorkflowSourceKind::Ordinary
+        }
     } else if has_leading_entry_prelude(&tokens) {
         WorkflowSourceKind::LeadingRuntimePrelude
     } else {
@@ -447,11 +618,20 @@ fn parse_runnable_workflow(
 ) -> std::result::Result<ash_engine::Workflow, EngineError> {
     match source_kind {
         WorkflowSourceKind::Ordinary => engine.parse(source),
-        WorkflowSourceKind::LeadingRuntimePrelude | WorkflowSourceKind::Entry => {
+        WorkflowSourceKind::LeadingRuntimePrelude
+        | WorkflowSourceKind::EntryCandidate
+        | WorkflowSourceKind::Entry => {
             engine.load_runtime_stdlib()?;
             engine.parse_entry_source(source)
         }
     }
+}
+
+fn should_use_entry_bootstrap(source_kind: WorkflowSourceKind) -> bool {
+    matches!(
+        source_kind,
+        WorkflowSourceKind::Entry | WorkflowSourceKind::EntryCandidate
+    )
 }
 
 async fn run_workflow_source(
@@ -624,6 +804,7 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30),
+            program_args: vec!["hello".to_string()],
         };
 
         assert_eq!(args.path, "test.ash");
@@ -632,6 +813,7 @@ mod tests {
         assert!(matches!(args.format, RunOutputFormat::Text));
         assert!(!args.dry_run);
         assert_eq!(args.timeout, Some(30));
+        assert_eq!(args.program_args, vec!["hello"]);
     }
 
     #[test]
@@ -643,6 +825,7 @@ mod tests {
             format: RunOutputFormat::Json,
             dry_run: true,
             timeout: None,
+            program_args: vec![],
         };
 
         assert!(matches!(args.format, RunOutputFormat::Json));
@@ -655,7 +838,7 @@ mod tests {
 
     #[test]
     fn test_build_engine_default_capabilities() {
-        let result = build_engine();
+        let result = build_engine(&[]);
         assert!(
             result.is_ok(),
             "Engine should build with default capabilities"
@@ -667,9 +850,18 @@ mod tests {
         use std::io::Write;
         use tempfile::NamedTempFile;
 
-        // Create a temporary file with a valid workflow
+        // Create a temporary file with a valid canonical entry workflow
         let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
-        write!(temp_file, "workflow main {{ ret 42; }}").unwrap();
+        write!(
+            temp_file,
+            r#"
+            use result::Result
+            use runtime::RuntimeError
+
+            workflow main() -> Result<(), RuntimeError> {{ done; }}
+            "#
+        )
+        .unwrap();
         let path = temp_file.path().to_str().unwrap().to_string();
 
         let args = RunArgs {
@@ -679,6 +871,7 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            program_args: vec![],
         };
 
         let result = run(&args).await;
@@ -702,6 +895,7 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            program_args: vec![],
         };
 
         let result = run(&args).await;
@@ -741,6 +935,7 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            program_args: vec![],
         };
 
         let _result = run(&args).await;
@@ -755,7 +950,16 @@ mod tests {
 
         // Create a temporary file with a simple workflow
         let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
-        write!(temp_file, "workflow main {{ ret 42; }}").unwrap();
+        write!(
+            temp_file,
+            r#"
+            use result::Result
+            use runtime::RuntimeError
+
+            workflow main() -> Result<(), RuntimeError> {{ done; }}
+            "#
+        )
+        .unwrap();
         let path = temp_file.path().to_str().unwrap().to_string();
 
         let args = RunArgs {
@@ -765,6 +969,7 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30), // 30 second timeout
+            program_args: vec![],
         };
 
         let result = run(&args).await;
@@ -781,7 +986,16 @@ mod tests {
 
         // Create a temporary file with a simple workflow
         let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
-        write!(temp_file, "workflow main {{ ret 42; }}").unwrap();
+        write!(
+            temp_file,
+            r#"
+            use result::Result
+            use runtime::RuntimeError
+
+            workflow main() -> Result<(), RuntimeError> {{ done; }}
+            "#
+        )
+        .unwrap();
         let path = temp_file.path().to_str().unwrap().to_string();
 
         let args = RunArgs {
@@ -791,6 +1005,7 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: None, // No timeout
+            program_args: vec![],
         };
 
         let result = run(&args).await;

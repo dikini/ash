@@ -89,16 +89,17 @@ fn test_value_to_json_roundtrip() {
     assert_eq!(original, back_to_json);
 }
 
-/// Integration test: Verify that the CLI can execute a simple workflow
+/// Integration test: Verify that the CLI can execute a simple entry workflow
 #[test]
 fn test_run_simple_workflow() {
     let temp = TempDir::new().unwrap();
 
-    // Create a simple workflow that returns a value
+    // Create a simple canonical entry workflow.
     let workflow = r#"
-        workflow main() {
-            ret 42
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        workflow main() -> Result<(), RuntimeError> { done; }
     "#;
     let workflow_path = temp.path().join("simple.ash");
     fs::write(&workflow_path, workflow).unwrap();
@@ -111,10 +112,10 @@ fn test_run_simple_workflow() {
         .expect("Failed to execute");
 
     let stdout = String::from_utf8(output.stdout).unwrap();
-    // The workflow should execute successfully
+    // The entry workflow should execute successfully without emitting a final value.
     assert!(
-        output.status.success() || stdout.contains("42"),
-        "Workflow should execute. stdout: {}, stderr: {}",
+        output.status.success() && stdout.is_empty(),
+        "Workflow should execute successfully with empty stdout. stdout: {}, stderr: {}",
         stdout,
         String::from_utf8_lossy(&output.stderr)
     );

@@ -31,6 +31,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Redefined the default `ash run` path around the canonical Phase 57 entry bootstrap so normal execution, `--trace`, and dry-run now validate `main() -> Result<(), RuntimeError>`, accept trailing runtime args after `--` via injected `Args:<index>` providers, and keep `--output` producing an empty artifact for successful entry runs without a printable terminal value (TASK-365, TASK-366).
+
 - Added a narrow engine-owned runtime stdlib registry keyed by canonical module path so `bootstrap_entry_source()` loads runtime stdlib through the engine and `parse_entry_source()` validates leading runtime imports before stripping the entry prelude; this remains limited to the entry/runtime stdlib slice rather than a general module graph (TASK-363a).
 
 - Added narrow `ash-engine` entry bootstrap helpers that parse, check, verify, execute, and derive process exit codes from canonical `Result<(), RuntimeError>` entry workflow results, and wired `ash run` through that prerequisite slice only for obvious runtime entry sources while preserving ordinary workflow execution behavior; full TASK-366 CLI semantics remain downstream work (TASK-363b, TASK-363c, TASK-364).
@@ -79,6 +81,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   usage-site capability parameters `cap X`, and ordinary body-inferred effects (TASK-S57-6).
 
 ### Fixed
+
+- Aligned `ash run` entry failure reporting with the Phase 57 contract so missing files, missing `main`, wrong entry return types, and non-capability entry parameters now surface direct user-facing diagnostics on stderr with exit code `1` instead of falling back to legacy workflow execution or generic CLI error reclassification (TASK-367).
 
 - Preserve canonical entry detection for import-free `requires:`/`ensures:` clauses whose expressions reference identifiers like `capabilities`, so `ash run` keeps bootstrap exit semantics on valid entry workflows.
 

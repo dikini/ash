@@ -1719,7 +1719,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Goal:** Implement entry point mechanism per updated SPEC.
 
-**Status:** 🟡 In progress - runtime bootstrap and CLI entry semantics are complete, while minimum entry integration tests and closeout remain downstream
+**Status:** ✅ Complete - runtime bootstrap, CLI entry semantics, minimum integration coverage, and Phase 57 closeout are complete; extended entry tests remain explicitly deferred to TASK-368b
 
 #### Stdlib: Foundation
 
@@ -1756,9 +1756,9 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 | Task | Description | Spec | Est. Hours | Status | Blocked On |
 |------|-------------|------|------------|--------|------------|
-| [TASK-368a](tasks/TASK-368a-entry-point-tests-minimum.md) | Minimum entry point tests (success, error, missing main) | SPEC-021 | 2-3 | ⬜ Pending | — |
+| [TASK-368a](tasks/TASK-368a-entry-point-tests-minimum.md) | Minimum entry point tests (success, error, missing main) | SPEC-021 | 2-3 | ✅ Complete | — |
 | [TASK-368b](tasks/TASK-368b-entry-point-tests-extended.md) | Extended tests (deferred - stdout, assertions) | Future | — | ⛔ Deferred | Future phase |
-| [TASK-369](tasks/TASK-369-phase-57-closeout.md) | Phase 57 closeout and verification | All above SPEC | 1 | ⛔ Blocked | All 57A, 57B minimum |
+| [TASK-369](tasks/TASK-369-phase-57-closeout.md) | Phase 57 closeout and verification | All above SPEC | 1 | ✅ Complete | All 57A, 57B minimum |
 
 **Total (57B only):** ~32-41 hours (minimum, excluding deferred 368b)
 **Total (57A + 57B):** ~51-68 hours (57A: 19-27, 57B: 32-41)

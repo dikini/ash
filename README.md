@@ -7,6 +7,7 @@ Ash is an executable semantics and runtime for the Sharo Core workflow language,
 ## Overview
 
 Ash provides:
+
 - **Parser**: Surface language → IR
 - **Type Checker**: Effect tracking and obligation verification
 - **Interpreter**: Big-step operational semantics
@@ -36,13 +37,33 @@ ash/
 cargo build --release
 
 # Run a workflow
-ash run examples/support_ticket.ash
+ash run examples/entrypoint_minimal.ash
 
-# Type check
-ash check examples/code_review.ash
+# Pass runtime args to a canonical entry workflow
+ash run examples/entrypoint_args.ash -- hello world
 
 # Run with provenance tracking
-ash run --trace examples/multi_agent_research.ash
+ash run --trace examples/entrypoint_minimal.ash
+```
+
+The larger files in [examples/support_ticket.ash](examples/support_ticket.ash) and
+[examples/multi_agent_research.ash](examples/multi_agent_research.ash) are
+reference-oriented workflow samples, not canonical Phase 57 entry files. They
+are not expected to run or type-check unchanged in this worktree's current
+Phase 57 CLI path. Adapt them to the `main(...) -> Result<(), RuntimeError>`
+entry contract shown below before running them with `ash run`.
+
+Phase 57 canonical entry workflows use the `main` contract shown below:
+
+```ash
+use result::Result
+use runtime::RuntimeError
+use runtime::Args
+
+workflow main(args: cap Args) -> Result<(), RuntimeError> {
+  observe Args 0 as _;
+  done;
+}
 ```
 
 ## Language Example

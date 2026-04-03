@@ -29,7 +29,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   is non-observable and implementation-defined, and aligning the observable
   boundary with SPEC-004 and SPEC-005.
 
+- Added minimum `ash-cli` entry integration coverage for canonical success,
+  declared runtime-error exit-code propagation, missing-`main` diagnostics, and
+  injected runtime `Args` handling, closing the required Phase 57 minimum test
+  slice (TASK-368a).
+
 ### Changed
+
+- Corrected the README Phase 57 quick-start commands so the documented `ash run`
+  and `ash run --trace` examples now point to real canonical entry files, while
+  the larger `support_ticket` and `multi_agent_research` samples are labeled as
+  reference-oriented workflows that need adaptation before they can run through
+  the Phase 57 `main(...) -> Result<(), RuntimeError>` entry path.
 
 - Redefined the default `ash run` path around the canonical Phase 57 entry bootstrap so normal execution, `--trace`, and dry-run now validate `main() -> Result<(), RuntimeError>`, accept trailing runtime args after `--` via injected `Args:<index>` providers, and keep `--output` producing an empty artifact for successful entry runs without a printable terminal value (TASK-365, TASK-366).
 
@@ -79,6 +90,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Clarified SPEC-022 and SPEC-003 so the designated program entry workflow is typed by a
   canonical `main` contract: exact return type `Result<(), RuntimeError>`, zero or more
   usage-site capability parameters `cap X`, and ordinary body-inferred effects (TASK-S57-6).
+
+- Closed out Phase 57 task tracking and user-facing entry documentation by
+  marking the minimum integration slice complete, updating README guidance for
+  canonical `ash run` entry workflows, and recording verification-driven
+  completion of the implementation phase while leaving TASK-368b deferred
+  (TASK-369).
 
 ### Fixed
 

@@ -42,6 +42,7 @@ fn create_workflow_def_with_roles(role_names: Vec<&str>) -> WorkflowDef {
     WorkflowDef {
         name: "test_workflow".into(),
         params: vec![],
+        declared_return_type: None,
         plays_roles,
         capabilities: vec![],
         body: ash_parser::surface::Workflow::Done { span: test_span() },

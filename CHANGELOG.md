@@ -31,6 +31,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added a narrow engine-owned runtime stdlib registry keyed by canonical module path so `bootstrap_entry_source()` loads runtime stdlib through the engine and `parse_entry_source()` validates leading runtime imports before stripping the entry prelude; this remains limited to the entry/runtime stdlib slice rather than a general module graph (TASK-363a).
+
+- Added narrow `ash-engine` entry bootstrap helpers that parse, check, verify, execute, and derive process exit codes from canonical `Result<(), RuntimeError>` entry workflow results, and wired `ash run` through that prerequisite slice only for obvious runtime entry sources while preserving ordinary workflow execution behavior; full TASK-366 CLI semantics remain downstream work (TASK-363b, TASK-363c, TASK-364).
+
+- Added canonical entry workflow signature verification in `ash-engine` as a pure check over cached parsed workflow metadata, rejecting missing `main`, wrong return types, and non-capability parameters without starting bootstrap work (TASK-364).
+
 - Completed the canonical `runtime::system_supervisor(args: cap Args) -> Int` stdlib contract, keeping spawn/completion observation runtime-internal for downstream bootstrap work while adding focused parser regressions for the exposed supervisor surface and workflow-body parse (TASK-362).
 
 - Parser support now accepts canonical runtime capability parameters as `cap Args`, normalizes `observe Args 0` into the existing internal `Args:0` observe name used by capability checking, and adds focused parser plus parse-to-typecheck regression coverage for that entry-workflow surface (TASK-361).
@@ -71,6 +77,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Clarified SPEC-022 and SPEC-003 so the designated program entry workflow is typed by a
   canonical `main` contract: exact return type `Result<(), RuntimeError>`, zero or more
   usage-site capability parameters `cap X`, and ordinary body-inferred effects (TASK-S57-6).
+
+### Fixed
+
+- Preserve canonical entry detection for import-free `requires:`/`ensures:` clauses whose expressions reference identifiers like `capabilities`, so `ash run` keeps bootstrap exit semantics on valid entry workflows.
+
+- Normalized narrow runtime entry import matching in `ash-engine` so supported bootstrap imports still validate when inline block comments or extra whitespace appear inside canonical paths like `result::Result` and `runtime::RuntimeError`, keeping the scope limited to the entry prelude rather than widening into general import parsing (TASK-363a).
+
+- Tightened `ash run` entry-candidate detection so CLI bootstrap now keys off a structural
+  leading `runtime`/`result` prelude or the first canonical `workflow main() -> Result<(), RuntimeError>`
+  header, avoiding false positives from comments or string literals that merely mention
+  `RuntimeError` while preserving verification routing for genuine entry files; the structural
+  fallback now also tolerates canonical post-return header clauses such as `capabilities: []`
+  before the workflow body so import-free entry workflows still take the bootstrap path (TASK-363c).
 
 - Reviewed and aligned the downstream Phase 57B task plans with the completed S57-1 through
   S57-6 specs, correcting stale capability syntax, entry-signature assumptions, and stdlib path

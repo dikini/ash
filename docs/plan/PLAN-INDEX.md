@@ -1739,18 +1739,18 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 | Task | Description | Spec | Est. Hours | Status | Blocked On |
 |------|-------------|------|------------|--------|------------|
-| [TASK-363a](tasks/TASK-363a-runtime-stdlib-loading.md) | Runtime stdlib loading via Engine API | SPEC-010, SPEC-009 | 2-3 | ⛔ Blocked | TASK-359 |
-| [TASK-363b](tasks/TASK-363b-runtime-main-verification.md) | Runtime entry workflow verification | SPEC-003/022 | 2-3 | ⛔ Blocked | TASK-363a, TASK-364 |
-| [TASK-363c](tasks/TASK-363c-runtime-bootstrap-execution.md) | Complete bootstrap and supervisor execution | SPEC-004/005/021 | 3-4 | ⛔ Blocked | TASK-362, TASK-363a, TASK-363b |
-| [TASK-364](tasks/TASK-364-main-verification.md) | Type-level verification of entry workflow signature | SPEC-003/022 | 2-3 | ⬜ Pending | — |
-| [TASK-365](tasks/TASK-365-exit-code-handling.md) | Propagate exit code from supervisor to OS | SPEC-005/021 | 1-2 | ⛔ Blocked | TASK-363c |
+| [TASK-363a](tasks/TASK-363a-runtime-stdlib-loading.md) | Narrow engine-owned runtime stdlib registry and entry import validation | SPEC-010, SPEC-009 | 2-3 | ✅ Complete | — |
+| [TASK-363b](tasks/TASK-363b-runtime-main-verification.md) | Runtime entry workflow verification | SPEC-003/022 | 2-3 | ✅ Complete | — |
+| [TASK-363c](tasks/TASK-363c-runtime-bootstrap-execution.md) | Complete bootstrap and supervisor execution | SPEC-004/005/021 | 3-4 | ✅ Complete | — |
+| [TASK-364](tasks/TASK-364-main-verification.md) | Type-level verification of entry workflow signature | SPEC-003/022 | 2-3 | ✅ Complete | — |
+| [TASK-365](tasks/TASK-365-exit-code-handling.md) | Propagate exit code from supervisor to OS | SPEC-005/021 | 1-2 | ⬜ Pending | — |
 
 #### CLI: Command-Line Interface
 
 | Task | Description | Spec | Est. Hours | Status | Blocked On |
 |------|-------------|------|------------|--------|------------|
-| [TASK-366](tasks/TASK-366-cli-run-semantics.md) | Redefine `ash run` entry-point semantics | SPEC-005 | 2-3 | ⛔ Blocked | TASK-363c |
-| [TASK-367](tasks/TASK-367-cli-error-reporting.md) | Error messages for entry point failures | SPEC-005/021, SPEC-003/022 | 2-3 | ⛔ Blocked | TASK-364, TASK-366 |
+| [TASK-366](tasks/TASK-366-cli-run-semantics.md) | Redefine `ash run` entry-point semantics | SPEC-005 | 2-3 | ⬜ Pending | — |
+| [TASK-367](tasks/TASK-367-cli-error-reporting.md) | Error messages for entry point failures | SPEC-005/021, SPEC-003/022 | 2-3 | ⛔ Blocked | TASK-366 |
 
 #### Testing and Integration
 

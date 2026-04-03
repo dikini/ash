@@ -375,6 +375,21 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let name = identifier(input)?;
     let name_str: Name = name.into();
 
+    if parse_inline_constructor_start(input) {
+        skip_whitespace_and_comments(input);
+        let fields = if literal_str("}").parse_next(input).is_ok() {
+            vec![]
+        } else {
+            parse_constructor_fields(input)?
+        };
+        let span = span_from(&start_pos, &input.state);
+        return Ok(Expr::Constructor {
+            name: name_str,
+            fields,
+            span,
+        });
+    }
+
     // Check for field access or method call
     let mut expr = Expr::Variable(name_str.clone());
 
@@ -430,6 +445,62 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     Ok(expr)
+}
+
+fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Expr)>> {
+    let mut fields = vec![parse_constructor_field(input)?];
+
+    loop {
+        skip_whitespace_and_comments(input);
+        if opt(literal_str(",")).parse_next(input)?.is_some() {
+            skip_whitespace_and_comments(input);
+            if literal_str("}").parse_next(input).is_ok() {
+                break;
+            }
+
+            fields.push(parse_constructor_field(input)?);
+        } else {
+            break;
+        }
+    }
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("}").parse_next(input)?;
+    Ok(fields)
+}
+
+fn parse_constructor_field(input: &mut ParseInput) -> ModalResult<(Name, Expr)> {
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let value = expr(input)?;
+    Ok((name.into(), value))
+}
+
+fn parse_inline_constructor_start(input: &mut ParseInput) -> bool {
+    let source = input.input;
+    let inline_ws_len = source
+        .chars()
+        .take_while(|c| matches!(c, ' ' | '\t'))
+        .map(char::len_utf8)
+        .sum::<usize>();
+
+    let Some(rest) = source.get(inline_ws_len..) else {
+        return false;
+    };
+
+    if !rest.starts_with('{') {
+        return false;
+    }
+
+    let consumed = &source[..inline_ws_len + 1];
+    for c in consumed.chars() {
+        input.state.advance(c);
+    }
+    let _ = input.input.next_slice(inline_ws_len + 1);
+    true
 }
 
 /// Parse function call arguments
@@ -1147,6 +1218,52 @@ mod tests {
                 ));
             }
             _ => panic!("Expected IfLet expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_constructor_expression() {
+        let mut input = test_input("Ok { value: 42 }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::Constructor { name, fields, .. } => {
+                assert_eq!(name.as_ref(), "Ok");
+                assert_eq!(fields.len(), 1);
+                assert_eq!(fields[0].0.as_ref(), "value");
+                assert!(matches!(fields[0].1, Expr::Literal(Literal::Int(42))));
+            }
+            other => panic!("Expected Constructor expression, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_nested_constructor_expression() {
+        let mut input =
+            test_input(r#"Err { error: RuntimeError { exit_code: 42, message: "boom" } }"#);
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::Constructor { name, fields, .. } => {
+                assert_eq!(name.as_ref(), "Err");
+                assert_eq!(fields.len(), 1);
+                assert_eq!(fields[0].0.as_ref(), "error");
+                match &fields[0].1 {
+                    Expr::Constructor { name, fields, .. } => {
+                        assert_eq!(name.as_ref(), "RuntimeError");
+                        assert_eq!(fields.len(), 2);
+                        assert_eq!(fields[0].0.as_ref(), "exit_code");
+                        assert!(matches!(fields[0].1, Expr::Literal(Literal::Int(42))));
+                        assert_eq!(fields[1].0.as_ref(), "message");
+                        assert!(matches!(
+                            fields[1].1,
+                            Expr::Literal(Literal::String(ref s)) if s.as_ref() == "boom"
+                        ));
+                    }
+                    other => panic!("Expected nested constructor, got {other:?}"),
+                }
+            }
+            other => panic!("Expected Constructor expression, got {other:?}"),
         }
     }
 }

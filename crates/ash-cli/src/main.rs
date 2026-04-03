@@ -91,7 +91,7 @@ async fn main() -> ExitCode {
     let result = execute_command(&cli).await;
 
     match result {
-        Ok(_) => ExitCode::SUCCESS,
+        Ok(code) => code,
         Err(e) => {
             if !cli.quiet {
                 eprintln!("{}: {}", "error".red().bold(), e);
@@ -107,27 +107,34 @@ async fn main() -> ExitCode {
 }
 
 /// Execute the appropriate command based on CLI arguments
-async fn execute_command(cli: &Cli) -> CliResult<()> {
+async fn execute_command(cli: &Cli) -> CliResult<ExitCode> {
     match &cli.command {
         Commands::Check(args) => {
             tracing::info!("Running check command for: {}", args.path);
-            check::check(args)
+            check::check(args)?;
+            Ok(ExitCode::SUCCESS)
         }
         Commands::Run(args) => {
             tracing::info!("Running workflow: {}", args.path);
-            run::run(args).await.map_err(CliError::from)
+            run::run(args)
+                .await
+                .map(|outcome| outcome.exit_code())
+                .map_err(CliError::from)
         }
         Commands::Trace(args) => {
             tracing::info!("Tracing workflow: {}", args.path);
-            trace::trace(args).await.map_err(CliError::from)
+            trace::trace(args).await.map_err(CliError::from)?;
+            Ok(ExitCode::SUCCESS)
         }
         Commands::Repl(args) => {
             tracing::info!("Starting REPL");
-            repl::repl(args).await.map_err(CliError::from)
+            repl::repl(args).await.map_err(CliError::from)?;
+            Ok(ExitCode::SUCCESS)
         }
         Commands::Dot(args) => {
             tracing::info!("Generating DOT for: {}", args.path);
-            dot::dot(args).map_err(CliError::from)
+            dot::dot(args).map_err(CliError::from)?;
+            Ok(ExitCode::SUCCESS)
         }
     }
 }

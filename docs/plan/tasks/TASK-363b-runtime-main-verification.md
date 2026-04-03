@@ -1,10 +1,15 @@
 # TASK-363b: Runtime Entry Workflow Verification
 
-## Status: ⛔ Blocked
+## Status: ✅ Complete
 
 ## Description
 
 Verify entry file contains `main` workflow with correct signature using type information from Engine.
+
+Implemented in `ash-engine` as `verify_entry_workflow_def()` plus
+`Engine::verify_entry_workflow()`, operating over cached parsed `WorkflowDef` metadata.
+The verifier now rejects missing `main`, wrong declared return types, and non-capability
+parameters with dedicated error variants and focused integration coverage.
 
 **VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
 
@@ -116,11 +121,11 @@ assert!(result.unwrap_err().to_string().contains("capability"));
 
 ## Acceptance Criteria
 
-- [ ] S57-5, S57-6 show ✅ Complete (VALIDATION GATE)
-- [ ] Detects missing `main`
-- [ ] Verifies return type
-- [ ] Verifies capability-only params
-- [ ] Clear error messages
-- [ ] Tests pass
+- [x] S57-5, S57-6 show ✅ Complete (VALIDATION GATE)
+- [x] Detects missing `main`
+- [x] Verifies return type
+- [x] Verifies capability-only params
+- [x] Clear error messages
+- [x] Tests pass
 
 ## Est. Hours: 2-3

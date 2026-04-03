@@ -1,16 +1,18 @@
 # TASK-363a: Runtime Stdlib Loading Integration
 
-## Status: ⛔ Blocked
+## Status: ✅ Complete
 
 ## Description
 
-Integrate stdlib loading into runtime using existing `Engine` API (SPEC-010), not fictional `Runtime::new()`.
+Completed the narrow runtime stdlib-loading slice needed for entry verification and bootstrap using
+the existing `Engine` API (SPEC-010), without claiming a full general module system.
 
-**VALIDATION GATE - REQUIRED BEFORE IMPLEMENTATION:**
-
-1. **Verify S57-4 (stdlib loading)**: ✅ Complete - confirms how Engine loads standard-library modules from the stdlib root
-2. **Verify existing Engine API**: Review SPEC-010 for `Engine::load_module` or equivalent
-3. **If SPEC differs**: Update this task description
+`Engine` now owns a narrow runtime stdlib registry keyed by canonical module path. It exposes
+`load_runtime_stdlib()` to register the canonical entry/runtime modules and
+`has_registered_runtime_module()` for narrow registry checks. `parse_entry_source()` now validates
+leading runtime `use` imports against that registry before stripping the entry prelude, and
+`bootstrap_entry_source()` loads the runtime stdlib through the engine registry path instead of
+depending only on raw preflight source loading.
 
 ## Background
 
@@ -26,67 +28,66 @@ impl Engine {
 }
 ```
 
-This task uses **existing** `Engine`, not a new `Runtime` type.
+This task uses **existing** `Engine`, not a new `Runtime` type. The implemented scope is limited to
+the entry/runtime stdlib slice and does **not** introduce a general module graph or arbitrary module
+loading pipeline.
 
 ## Requirements
 
-1. **Engine loads the standard library** at initialization
-2. **Stdlib modules available** for `use` resolution
-3. **No fictional APIs** - use SPEC-010 `Engine`
+1. **Engine owns a narrow runtime stdlib registry** keyed by canonical module path
+2. **Leading entry runtime imports validate honestly** against the engine registry before the entry prelude is stripped
+3. **Bootstrap uses the same registry-backed load path** via `load_runtime_stdlib()`
+4. **No fictional APIs** - use SPEC-010 `Engine`
+5. **Scope remains narrow** to entry/runtime stdlib support, not a full general module system
 
 ## Implementation Sketch
 
 ```rust
-// In runtime/bootstrap (future TASK-363c)
+// In runtime/bootstrap
 let mut engine = Engine::new();
 
-// Load standard-library modules
-let stdlib_modules = load_ash_std_modules()?;  // This task
-for module in stdlib_modules {
-    engine.load_module(&module)?;
-}
+// Register the narrow runtime stdlib slice needed for entry bootstrap.
+engine.load_runtime_stdlib()?;
 
-// Now entry file can `use runtime::Args`
+// Entry parsing now validates leading runtime imports against the registry
+// before stripping the runtime prelude.
+let parsed = engine.parse_entry_source(entry_src)?;
 ```
 
 ## TDD Steps
 
-### Test 1: Engine Loads ash-std
+### Test 1: Engine Registers Runtime Stdlib Modules
 
 ```rust
 let mut engine = Engine::new();
-let stdlib = load_ash_std().expect("ash-std loads");
+engine.load_runtime_stdlib()?;
 
-for module_src in stdlib.modules() {
-    engine.load_module(module_src)?;
-}
-
-// Verify result module available
-assert!(engine.has_module("result"));
+assert!(engine.has_registered_runtime_module("runtime"));
 ```
 
-### Test 2: Entry File Can Import Stdlib
+### Test 2: Entry File Validates Leading Runtime Imports
 
 ```rust
 let mut engine = Engine::new();
-load_ash_std_into(&mut engine)?;
+engine.load_runtime_stdlib()?;
 
 let entry_src = r#"
-    use result::Result
     use runtime::RuntimeError
     use runtime::Args
 
     workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
 "#;
-let result = engine.load_module(entry_src);
-assert!(result.is_ok());  // Args resolves from ash-std
+let result = engine.parse_entry_source(entry_src);
+assert!(result.is_ok());
 ```
 
 ## Implementation Notes
 
 - **Use existing**: `Engine` from `ash-engine` crate
 - **No new types**: No `Runtime::new()`
-- **Source loading**: Load ash-std source files, compile via Engine
+- **Registry ownership**: Runtime stdlib registration lives on `Engine`
+- **Honest validation**: `parse_entry_source()` checks leading runtime imports against the registry before prelude stripping
+- **Narrow scope**: This is entry/runtime stdlib support only, not a full general module loader
 
 ## Dependencies
 
@@ -107,10 +108,11 @@ assert!(result.is_ok());  // Args resolves from ash-std
 
 ## Acceptance Criteria
 
-- [ ] S57-4, SPEC-010 verified (VALIDATION GATE)
-- [ ] Engine loads ash-std modules
-- [ ] Stdlib types resolve in entry files
-- [ ] Uses existing Engine, no fictional APIs
-- [ ] Tests pass
+- [x] `Engine` owns a narrow runtime stdlib registry keyed by canonical module path
+- [x] `Engine::load_runtime_stdlib()` registers the canonical runtime entry modules through the engine-owned path
+- [x] `Engine::has_registered_runtime_module()` exposes narrow registry membership checks
+- [x] `parse_entry_source()` validates leading runtime imports against the engine registry before stripping the prelude
+- [x] `bootstrap_entry_source()` loads the runtime stdlib through the engine registry path
+- [x] Uses existing `Engine`, with scope kept to the entry/runtime stdlib slice rather than a full general module graph
 
 ## Est. Hours: 2-3

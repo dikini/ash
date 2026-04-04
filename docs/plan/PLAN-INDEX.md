@@ -1793,11 +1793,11 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Source:** [MCE-002: IR Core Forms Audit](../ideas/minimal-core/MCE-002-IR-AUDIT.md)  
 **Priority:** High (unblocks MCE-004, MCE-007)  
-**Status:** 🟡 Ready for implementation
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-370](tasks/TASK-370-ir-core-forms-audit.md) | IR Core Forms Audit - inventory and expressibility analysis | MCE-002 | 8-12 | 📝 Ready |
+| [TASK-370](tasks/TASK-370-ir-core-forms-audit.md) | IR Core Forms Audit - inventory and expressibility analysis | MCE-002 | 8-12 | ✅ Done |
 
 **Deliverable:** Comprehensive audit report with specific recommendations for minimizing the IR surface while preserving semantics.
 

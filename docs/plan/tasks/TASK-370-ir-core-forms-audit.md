@@ -1,6 +1,6 @@
 # TASK-370: IR Core Forms Audit (MCE-002)
 
-## Status: 📝 Ready for Development
+## Status: ✅ Done
 
 ## Description
 
@@ -40,7 +40,7 @@ Inventory all current IR forms in `ash-core` and identify candidates for elimina
 | 24 | `Resume` | Resume a workflow instance | Active |
 | 25 | `CheckHealth` | Check health of a workflow instance | Active |
 | 26 | `Oblige` | OBLIGE obligation_name (linear) | Active |
-| 27 | `CheckObligation` | CHECK obligation_name, returns Bool | **Overlap with Check?** |
+| 27 | `CheckObligation` | CHECK obligation_name as a workflow form with `name`/`span` payload | **Overlap with Expr::CheckObligation / Check?** |
 | 28 | `Yield` | YIELD to role with request, suspend | Active |
 | 29 | `ProxyResume` | RESUME from yield with response | Active |
 | 30 | `Done` | Terminal workflow | Active |
@@ -95,7 +95,7 @@ Inventory all current IR forms in `ash-core` and identify candidates for elimina
    | `IfLet` | Sugar | `Match` | High | Already documented |
    | `Set` | Review | `Act` with capability? | Low | Check effect semantics |
    | `Send` | Review | `Act` with capability? | Low | Check effect semantics |
-   | `CheckObligation` | Merge | Unify with `Check` | Medium | Resolve semantic overlap |
+   | `CheckObligation` | Review | Consolidate with workflow/expression check carriers only if semantics can be preserved | Medium | Resolve semantic overlap without assuming direct unification with `Check` |
    | `Expr::Spawn` | Unify | `Workflow::Spawn` | High | Expression vs statement context |
 
 4. **Minimal Core Proposal**: Define essential forms for:
@@ -218,22 +218,22 @@ Propose minimal essential forms:
 
 ## Completion Checklist
 
-- [ ] Complete inventory of all 30 Workflow forms
-- [ ] Complete inventory of all 13 Expr forms
-- [ ] Expressibility analysis for each candidate form
-- [ ] Documented rewriting rules for eliminations
-- [ ] Minimal core proposal with rationale
-- [ ] Impact assessment on existing tests/examples
-- [ ] Updated MCE-002 exploration status
-- [ ] CHANGELOG.md entry
+- [x] Complete inventory of all 30 Workflow forms
+- [x] Complete inventory of all 13 Expr forms
+- [x] Expressibility analysis for each candidate form
+- [x] Documented rewriting rules for eliminations
+- [x] Minimal core proposal with rationale
+- [x] Impact assessment on existing tests/examples
+- [x] Updated MCE-002 exploration status
+- [x] CHANGELOG.md entry
 
-## Open Questions to Resolve
+## Resolution Summary
 
 1. ✅ **Seq elimination**: **RESOLVED** - `Seq` is primitive; no valid elimination path exists.
-2. **Check forms**: Can Check and CheckObligation be unified?
-3. **Expression forms**: Are `Expr::Spawn`/`Expr::Split` needed, or can they be lowered to their `Workflow` counterparts with appropriate binding?
-4. **Match as If**: What's the cost of eliminating `Expr::Match`?
-5. **Set/Send vs Act**: Are these distinct or expressible via Act?
+2. ✅ **Check-form overlap**: **PARTIALLY RESOLVED** - `Check`, `Workflow::CheckObligation`, and `Expr::CheckObligation` overlap in name/intention but are not currently shape-equivalent; do not assume direct unification of `Check` with `CheckObligation`.
+3. ✅ **Expression/workflow duplication**: **PARTIALLY RESOLVED** - `Expr::Spawn`/`Expr::Split` duplicate workflow-level concepts but should remain until the language chooses a clearer statement-vs-expression lowering discipline.
+4. ✅ **Expr::Match elimination**: **RESOLVED FOR NOW** - keep `Expr::Match`; elimination is not justified until pattern tests/extractors are made more explicit.
+5. ✅ **Set/Send vs Act**: **RESOLVED FOR NOW** - keep `Set` and `Send` as distinct forms pending clearer capability-operation semantics.
 
 ## Related Work
 

@@ -39,7 +39,7 @@ Goal: A minimal but sufficient IR for the execution environment.
 - IR is the canonical representation after lowering from surface syntax
 - Current forms include: Let, If, Match, Call, Spawn, Par, Seq, Act, Observe, Return, etc.
 - Some forms may overlap (Par vs async Spawn)
-- Some forms may be sugar (under investigation in TASK-370)
+- Some forms are now confirmed sugar or primitive by TASK-370 (`Expr::IfLet` is sugar over `Match`; `Workflow::Seq` is primitive)
 
 ### What we're uncertain about
 
@@ -96,17 +96,19 @@ Essential forms for minimal execution:
 5. **Effects:** Act (with capability)
 6. **Observation:** Observe (may merge with Act)
 
-Elimination candidates (analysis ongoing in TASK-370):
+Elimination candidates (post-TASK-370 status):
 - ~~`Seq` → Open question (no valid rewrite identified)~~ **RESOLVED:** `Seq` is primitive, kept as essential sequencing form
-- `Expr::Match` → Potentially expressible as `If` + primitive destructuring (TBD)
+- `Expr::Match` → Keep for now; elimination deferred until pattern tests/extractors are more explicit
+- `Expr::IfLet` → Confirmed sugar over `Match`
+- `workflow_contract.rs` duplicate carriers / duplicate `Effect` / duplicate receive carriers → highest-value consolidation targets
 
-## Open Questions
+## Remaining Follow-up Questions
 
-1. What is the current complete list of IR forms?
-2. Which forms does the interpreter actually implement natively?
-3. Can we formally define "primitive" vs "derived"?
-4. What is the cost of Match elimination on code size?
-5. Do we need explicit forms for obligation discharge, or is it implicit in Act/Return?
+1. What migration path best removes duplicate carrier types from `workflow_contract.rs` without breaking current parser/interpreter users of `workflow_contract::TypeExpr`, `Span`, and `Contract`?
+2. Should `Workflow::CheckObligation` eventually lower to expression-level checking plus explicit workflow composition, or remain as a distinct workflow form?
+3. Should the receive representation be normalized around `ast.rs` or `stream.rs` as the canonical carrier?
+4. Are `ModuleItem` and `Definition` both still needed, or is one now effectively legacy/low-impact duplication?
+5. What is the lowest-risk path for eventually revisiting `Set`/`Send` as specialized capability operations?
 
 ## Related Explorations
 
@@ -128,6 +130,6 @@ This exploration has been promoted to a formal task:
 ## Next Steps
 
 - [x] Inventory all current IR forms from codebase (30 Workflow + 13 Expr forms identified)
-- [ ] Document semantics of each form in detail (TASK-370)
-- [ ] Prototype eliminations in test cases (TASK-370)
-- [ ] Measure impact on example programs (TASK-370)
+- [x] Document semantics of each form in detail (see `MCE-002-IR-AUDIT-REPORT.md`, TASK-370)
+- [x] Measure impact on example programs and repository references (see `MCE-002-IR-AUDIT-REPORT.md`, TASK-370)
+- [ ] Prototype elimination/consolidation changes in follow-on implementation tasks

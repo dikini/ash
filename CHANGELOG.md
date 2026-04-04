@@ -8,7 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- Completed TASK-370 / MCE-002 with a formal IR audit report at `docs/ideas/minimal-core/MCE-002-IR-AUDIT-REPORT.md`, identifying `crates/ash-core/src/ast.rs` as the de facto primary AST carrier and recommended future source of truth, documenting the current 30 Workflow and 13 Expr forms plus related helper carriers, rejecting `Workflow::Seq` elimination, confirming `Expr::IfLet` as sugar over `Match`, identifying duplication across `workflow_contract.rs` and `stream.rs` as the highest-value consolidation target, and proposing a conservative minimal-core direction that defers deeper form eliminations until semantics/lowering are cleaner.
+- Completed TASK-370 / MCE-002 with a formal IR audit report at `docs/ideas/minimal-core/MCE-002-IR-AUDIT-REPORT.md`, identifying `crates/ash-core/src/ast.rs` as the de facto primary core-AST carrier and recommended future source of truth for the core layer, documenting the current 30 Workflow and 13 Expr forms plus related helper carriers, rejecting `Workflow::Seq` elimination, confirming `Expr::IfLet` as sugar over `Match`, identifying duplication across `workflow_contract.rs`, `stream.rs`, and the active parser-surface/typechecker representation path as the highest-value consolidation target, and proposing a conservative minimal-core direction that defers deeper form eliminations until semantics/lowering are cleaner.
 
 ### Fixed
 

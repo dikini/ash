@@ -7,20 +7,21 @@ Supporting sources: `crates/ash-core/src/workflow_contract.rs`, `crates/ash-core
 
 ## Executive Summary
 
-The current Ash core IR has one clearly canonical AST in `crates/ash-core/src/ast.rs` containing:
+The current Ash core IR is centered on one de facto primary core-AST carrier in `crates/ash-core/src/ast.rs` containing:
 - 30 `Workflow` forms (`ast.rs:17-198`)
 - 13 `Expr` forms (`ast.rs:393-473`)
 
 The main audit conclusion is that the immediate minimization opportunity is not the removal of large numbers of `Workflow` or `Expr` forms from `ast.rs`. Instead, the highest-value simplifications are:
 
-1. Treat `ast.rs` as the de facto primary workflow/expression carrier and the recommended future source of truth.
-2. Consolidate or remove duplicate mini-IR carriers that currently exist in `workflow_contract.rs`, while accounting for the fact that `ast.rs` and downstream code still depend on some of them today.
-3. Consolidate overlapping receive and contract representations that are split across `ast.rs`, `workflow_contract.rs`, and `stream.rs`.
-4. Treat `Expr::IfLet` as confirmed sugar.
-5. Keep `Workflow::Seq` as primitive.
-6. Defer elimination of `Match`, `Set`, `Send`, and statement/expression duplication (`Spawn`, `Split`, `CheckObligation`) until lowering and semantics are made more explicit.
+1. Treat `ast.rs` as the de facto primary core workflow/expression carrier and the recommended future source of truth for the core AST layer.
+2. Account explicitly for the fact that the current repository still has a major parser-surface/typechecker representation layer alongside the core AST, plus additional coupling through `workflow_contract.rs`.
+3. Consolidate or remove duplicate mini-IR carriers that currently exist in `workflow_contract.rs`, while accounting for the fact that `ast.rs` and downstream code still depend on some of them today.
+4. Consolidate overlapping receive and contract representations that are split across `ast.rs`, `workflow_contract.rs`, and `stream.rs`.
+5. Treat `Expr::IfLet` as confirmed sugar.
+6. Keep `Workflow::Seq` as primitive.
+7. Defer elimination of `Match`, `Set`, `Send`, and statement/expression duplication (`Spawn`, `Split`, `CheckObligation`) until lowering and semantics are made more explicit.
 
-In other words: the current IR surface is larger than necessary, but the main problem is duplicated representation layers rather than a single bloated enum.
+In other words: the current IR surface is larger than necessary, but the main problem is duplicated representation layers rather than a single bloated enum, and those layers currently include not just `workflow_contract.rs` and `stream.rs`, but also an active parser-surface/typechecker representation path.
 
 ## Method
 
@@ -29,7 +30,7 @@ This audit used:
 - cross-checking against parser, typechecker, interpreter, REPL, benchmark, and test references across `crates/`
 - reference-hit counts (`Workflow::X` / `Expr::X`) as a rough impact signal only
 
-Important note: reference-hit counts below are not runtime-frequency measurements. They are repository reference counts and mainly indicate migration impact.
+Important note: reference-hit counts below are not runtime-frequency measurements. They are repository reference counts from repository-wide `Workflow::X` / `Expr::X` searches under `crates/` and mainly indicate migration impact.
 
 ## Canonical Source Map
 
@@ -45,6 +46,7 @@ Important note: reference-hit counts below are not runtime-frequency measurement
 - `crates/ash-core/src/workflow_contract.rs:53-65` — duplicate `Effect`
 - `crates/ash-core/src/workflow_contract.rs:172-214` — duplicate `Parameter`, `TypeExpr`, `Span`, `WorkflowDef`, and a mini `Workflow`
 - `crates/ash-core/src/stream.rs:87-178` — alternate `ReceiveMode`, `ReceiveArm`, and `Receive`
+- `ash_parser::surface` + `ash-typeck` workflows/expressions — active downstream surface/typechecker representation layer that still coexists with the core AST in practice (for example `crates/ash-parser/src/lower.rs`, `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/capability_check.rs`, and `crates/ash-typeck/src/names.rs` still operate on parser-surface carriers)
 
 ## Inventory Summary
 
@@ -205,11 +207,13 @@ Current shapes are not identical:
 Assessment:
 - these forms overlap in name and intent but do not yet encode the same semantics
 - the expression form is the clearest carrier for “check and return Bool”
-- the workflow-form `CheckObligation` looks like the weakest justification for a separate form because it lacks an obvious continuation/value-binding story in its current shape
+- however, `Expr::CheckObligation` is not yet fully viable as a normalization target because current typechecking still rejects it as unsupported (`crates/ash-typeck/src/check_expr.rs`) even though the interpreter can execute it (`crates/ash-interp/src/eval.rs`)
+- the workflow-form `CheckObligation` is also executable today (`crates/ash-interp/src/execute.rs`), so current implementation evidence mainly shows different gaps between workflow execution, expression execution, and typechecker support rather than a cleanly dominant representation
 
 Decision:
 - do not unify `Check` with `CheckObligation`
-- do evaluate removing `Workflow::CheckObligation` in favor of `Expr::CheckObligation` plus `Let`/`If`-based workflow composition
+- treat any attempt to remove `Workflow::CheckObligation` in favor of `Expr::CheckObligation` plus `Let`/`If`-based workflow composition as blocked until expression-level obligation checking is supported cleanly by the typechecker and downstream control-flow sites
+- do not read the current implementation as proving `Workflow::CheckObligation` is categorically better supported overall; the present evidence mainly shows different gaps between workflow execution, expression execution, and typechecker support
 - first confirm all interpreter/typechecker sites can express the same control flow cleanly
 
 ### `Workflow::Spawn` vs `Expr::Spawn`; `Workflow::Split` vs `Expr::Split`
@@ -265,7 +269,7 @@ Recommendation:
 - import it from contract code
 
 Priority: high
-Risk: low
+Risk: moderate; the consolidation itself is straightforward, but current `workflow_contract::Effect` users in downstream code mean the migration surface is larger than the enum definition alone suggests
 
 ### 3. Duplicate receive representation
 
@@ -282,7 +286,7 @@ These are clearly related but not identical:
 - stream `Receive` has `control_arms: Option<Vec<ReceiveArm>>`
 
 Recommendation:
-- choose one canonical receive representation for IR
+- treat `ast.rs` receive carriers as the leading candidate for canonical IR because current core execution already bridges through them
 - keep runtime mailbox/container logic in `stream.rs`
 - avoid maintaining two quasi-IR receive carrier sets
 
@@ -296,21 +300,23 @@ Risk: moderate
 - `Definition` (`ast.rs:684-689`)
 
 Assessment:
-- this may represent overlapping top-level carriers, but current repository evidence for active downstream use is weaker than for the `workflow_contract.rs` and `stream.rs` duplications
-- treat this as a lower-confidence cleanup target until usage is better characterized
+- this is still a weaker duplication concern than the `workflow_contract.rs` and `stream.rs` overlaps
+- however, current repository evidence is not fully symmetric: `ModuleItem` has at least test usage, while `Definition` appears to have little or no meaningful downstream use beyond its declaration
 
 Recommendation:
-- measure actual downstream use of `ModuleItem` vs `Definition`
-- remove one only after confirming the other is the real surviving carrier
+- confirm whether `Definition` is effectively legacy or unused
+- if that holds, prefer removing `Definition` rather than treating both carriers as equally likely survivors
 
 Priority: medium
-Risk: low to moderate, but current evidence is weaker than for other consolidation targets
+Risk: low to moderate; current evidence already points toward asymmetry, even if a final cleanup should still verify usage before deletion
 
 ## Minimal Core Proposal
 
 This proposal is intentionally conservative. It minimizes the IR only where the source already gives strong evidence.
 
 ### Essential workflow forms to keep
+
+This list is intentionally conservative and should be read as the minimum workflow set the audit is willing to defend today, not as proof that every omitted form should be removed next.
 
 #### Control and binding
 - `Let`
@@ -327,6 +333,7 @@ This proposal is intentionally conservative. It minimizes the IR only where the 
 - `Pause`
 - `Resume`
 - `CheckHealth`
+- `ForEach`
 
 #### Communication
 - `Receive`
@@ -341,6 +348,13 @@ This proposal is intentionally conservative. It minimizes the IR only where the 
 - `Decide`
 - `Act`
 - `With`
+- `Check`
+- `Oblig`
+- `Oblige`
+
+#### Workflow control forms still kept pending deeper semantics review
+- `Maybe`
+- `Must`
 
 ### Essential expression forms to keep
 - `Literal`
@@ -354,7 +368,7 @@ This proposal is intentionally conservative. It minimizes the IR only where the 
 - `Match`
 
 ### Confirmed sugar/derived forms
-- `Expr::IfLet` — lower to `Expr::Match`
+- `Expr::IfLet` — semantically sugar over `Expr::Match`; current lowering/documentation should move toward normalizing it, but the repository does not yet lower it away everywhere today
 
 ### Forms to review next, but not eliminate yet
 - `Set`
@@ -454,7 +468,7 @@ The safest near-term simplification work is:
 | `Expr::Match` | Keep for now |
 | `Set` / `Send` | Keep, review later |
 | `Workflow::CheckObligation` | Review for consolidation |
-| `Expr::CheckObligation` | Keep for now; likely preferred Bool-returning carrier |
+| `Expr::CheckObligation` | Keep for now; natural Bool-returning carrier once typechecker support exists |
 | `Workflow::Spawn` / `Expr::Spawn` | Keep both for now |
 | `Workflow::Split` / `Expr::Split` | Keep both for now |
 | `workflow_contract.rs` mini-IR duplicates | Remove / consolidate |
@@ -468,5 +482,5 @@ The safest near-term simplification work is:
 - MCE-007: Full layer alignment
 
 Both should now proceed using this working assumption:
-- `ast.rs` is the de facto primary AST carrier and the recommended future source of truth, though some `workflow_contract` coupling remains
+- `ast.rs` is the de facto primary core-AST carrier and the recommended future source of truth for the core layer, though current parser-surface/typechecker flows and `workflow_contract` coupling remain significant and should not be ignored in migration planning
 - the next cleanup wins come from representation consolidation first, and only then from selective form elimination

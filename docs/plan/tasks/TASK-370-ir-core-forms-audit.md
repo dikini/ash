@@ -6,7 +6,7 @@
 
 Inventory all current IR forms in `ash-core` and identify candidates for elimination or consolidation. Produce a formal audit report with specific recommendations for minimizing the IR surface while preserving semantics.
 
-**Reference:** [MCE-002 Exploration](../ideas/minimal-core/MCE-002-IR-AUDIT.md)
+**Reference:** [MCE-002 Exploration](../../ideas/minimal-core/MCE-002-IR-AUDIT.md)
 
 ## Current Inventory (from codebase analysis)
 
@@ -75,7 +75,7 @@ Inventory all current IR forms in `ash-core` and identify candidates for elimina
 
 ### Functional Requirements
 
-1. **Complete Inventory**: Document every IR form with:
+1. **Complete Inventory**: Document every canonical core IR form in `ast.rs`, plus any overlapping secondary carriers that materially affect consolidation decisions, with:
    - Source location (file, line)
    - Purpose and semantics
    - Current usage in codebase
@@ -96,7 +96,7 @@ Inventory all current IR forms in `ash-core` and identify candidates for elimina
    | `Set` | Review | `Act` with capability? | Low | Check effect semantics |
    | `Send` | Review | `Act` with capability? | Low | Check effect semantics |
    | `CheckObligation` | Review | Consolidate with workflow/expression check carriers only if semantics can be preserved | Medium | Resolve semantic overlap without assuming direct unification with `Check` |
-   | `Expr::Spawn` | Unify | `Workflow::Spawn` | High | Expression vs statement context |
+   | `Expr::Spawn` | Review | Keep duplicated with `Workflow::Spawn` until statement-vs-expression lowering is clearer | High | Expression vs statement context |
 
 4. **Minimal Core Proposal**: Define essential forms for:
    - Values and bindings
@@ -218,12 +218,12 @@ Propose minimal essential forms:
 
 ## Completion Checklist
 
-- [x] Complete inventory of all 30 Workflow forms
-- [x] Complete inventory of all 13 Expr forms
+- [x] Complete inventory of all 30 canonical `Workflow` forms in `ast.rs`
+- [x] Complete inventory of all 13 canonical `Expr` forms in `ast.rs`
 - [x] Expressibility analysis for each candidate form
 - [x] Documented rewriting rules for eliminations
 - [x] Minimal core proposal with rationale
-- [x] Impact assessment on existing tests/examples
+- [x] Impact assessment on existing tests/examples and on major overlapping carriers outside `ast.rs`
 - [x] Updated MCE-002 exploration status
 - [x] CHANGELOG.md entry
 

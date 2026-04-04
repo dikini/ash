@@ -5,7 +5,7 @@ last-revised: 2026-04-03
 related-plan-tasks: [TASK-370]
 tags: [ir, minimal-core, forms, elimination]
 archived: true
-archive-note: Promoted to TASK-370. See docs/plan/tasks/TASK-370-ir-core-forms-audit.md for active work.
+archive-note: Promoted to TASK-370. See docs/plan/tasks/TASK-370-ir-core-forms-audit.md for the completed audit and current tracking record.
 ---
 
 # MCE-002: IR Core Forms Audit
@@ -36,17 +36,17 @@ Goal: A minimal but sufficient IR for the execution environment.
 
 ### What we know
 
-- IR is the canonical representation after lowering from surface syntax
-- Current forms include: Let, If, Match, Call, Spawn, Par, Seq, Act, Observe, Return, etc.
+- The intended architecture is for IR to be the canonical representation after lowering from surface syntax, though current repository reality still includes active parser-surface/typechecker representation paths alongside the core AST
+- Current forms include: Let, If, Match, Call, Spawn, Par, Seq, Act, Observe, Ret, etc.
 - Some forms may overlap (Par vs async Spawn)
 - Some forms are now confirmed sugar or primitive by TASK-370 (`Expr::IfLet` is sugar over `Match`; `Workflow::Seq` is primitive)
 
-### What we're uncertain about
+### What remains uncertain after TASK-370
 
-- Complete inventory of current IR forms
-- Which forms are actually primitive vs derived
-- Performance implications of elimination
-- Semantics preservation under rewriting
+- The safest migration path for eliminating duplicate carrier types in `workflow_contract.rs`
+- Whether `Workflow::CheckObligation` should eventually lower to expression-level checking plus explicit workflow composition
+- Which receive representation should survive as canonical (`ast.rs` vs `stream.rs`)
+- The eventual cost/benefit of revisiting `Set`/`Send` as specialized capability operations
 
 ## Candidate Forms for Elimination
 
@@ -87,14 +87,21 @@ Match(e, [(pat1, e1), (pat2, e2)])
 
 ## Minimal Core Proposal
 
+Current TASK-370 direction is conservative rather than aggressively eliminative.
+
 Essential forms for minimal execution:
 
 1. **Values:** Literal, Variable
 2. **Binding:** Let
-3. **Control:** If, Call, Return
-4. **Concurrency:** Par, Spawn
-5. **Effects:** Act (with capability)
-6. **Observation:** Observe (may merge with Act)
+3. **Control:** If, Call, Ret, Match, Seq, Done
+4. **Concurrency:** Par, Spawn, Split
+5. **Effects:** Act (with capability), Observe, Decide, Orient, Propose
+6. **Communication/runtime:** Receive, Send, Yield, ProxyResume, lifecycle control forms
+
+Important TASK-370 conclusions:
+- `Seq` remains a primitive sequencing form and should stay explicit in the core workflow set
+- `Done` remains the terminal workflow form
+- the highest-value simplification target is representation consolidation (`workflow_contract.rs`, `stream.rs`, duplicate `Effect`, and the active parser-surface/typechecker representation path) before deeper form elimination inside `ast.rs`
 
 Elimination candidates (post-TASK-370 status):
 - ~~`Seq` → Open question (no valid rewrite identified)~~ **RESOLVED:** `Seq` is primitive, kept as essential sequencing form

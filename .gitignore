@@ -19,6 +19,17 @@ Thumbs.db
 /test-output
 *.trace
 *.provenance
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Local runtime/state artifacts
+/.agents/
+/tools/agent-pipeline/.agents/
+/tools/agent-pipeline/REPLACE_TMPDIR/
 
 # Environment
 .env

@@ -15,6 +15,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Updated repository ignore rules so local `.agents` runtime state, Python cache directories, Ruff/Pytest caches, `__pycache__`, `*.py[cod]`, `*.egg-info`, and `tools/agent-pipeline/REPLACE_TMPDIR` no longer appear as untracked noise during agent-pipeline development (TASK-377).
+
 - Updated `tools/agent-pipeline` so the supervisor persists its effective stage-agent mapping into `status/dashboard.json`, `ash-pipeline status --format json` prefers that runtime mapping when available, and invalid `--stage-agents` or `AGENT_PIPELINE_STAGE_AGENTS` input now fails with concise Click-facing errors instead of uncaught tracebacks (TASK-376).
 
 - Exposed the effective `tools/agent-pipeline` stage-agent mapping in `ash-pipeline status --format json`, so runtime agent overrides are directly observable from the status surface without changing text-mode behavior (TASK-375).

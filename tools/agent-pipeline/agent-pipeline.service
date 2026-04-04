@@ -1,0 +1,30 @@
+[Unit]
+Description=Ash Agent Pipeline Supervisor
+Documentation=https://github.com/yourusername/ash/tree/main/tools/agent-pipeline
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=@TOOL_DIR@
+Environment=PYTHONPATH=@TOOL_DIR@/src
+Environment=AGENT_PIPELINE_WORKSPACE_ROOT=@REPO_ROOT@
+Environment=AGENT_PIPELINE_BASE_DIR=@STATE_DIR@
+Environment=RUST_LOG=info
+Environment=PATH=%h/.cargo/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/ash-pipeline daemon --interval 5
+Restart=always
+RestartSec=10
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=50%
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@REPO_ROOT@ @STATE_DIR@
+
+[Install]
+WantedBy=default.target

@@ -8,6 +8,30 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Created TASK-370 for MCE-002 (IR Core Forms Audit) with complete inventory of 30 Workflow
+  and 13 Expr forms, expressibility analysis, and elimination candidates (TASK-370).
+
+- Promoted MCE-002 from `drafting` to `accepted` status and archived per promotion workflow (TASK-370).
+
+### Fixed
+
+- Updated `tools/agent-pipeline` so the supervisor persists its effective stage-agent mapping into `status/dashboard.json`, `ash-pipeline status --format json` prefers that runtime mapping when available, and invalid `--stage-agents` or `AGENT_PIPELINE_STAGE_AGENTS` input now fails with concise Click-facing errors instead of uncaught tracebacks (TASK-376).
+
+- Exposed the effective `tools/agent-pipeline` stage-agent mapping in `ash-pipeline status --format json`, so runtime agent overrides are directly observable from the status surface without changing text-mode behavior (TASK-375).
+
+- Made `tools/agent-pipeline` stage-agent selection configurable at runtime via shared CLI/supervisor/spawner validation, preserving the default stage graph plus existing prompt and artifact contracts while rejecting invalid stage or agent overrides clearly (TASK-374).
+
+- Upgraded `tools/agent-pipeline` to use shared prompt-contract fragments, stricter design/spec/plan/impl/qa/validate artifact expectations, and fail-closed QA/validate review blocking without changing the external stage graph (TASK-373).
+
+- Fixed the packaged `tools/agent-pipeline` deployment so installer and Vila helper scripts derive clone-local paths, the systemd unit sets explicit workspace/state environment variables with sandbox writes that match `impl` needs, and `queue --from-spec` now rejects missing input before creating task state (TASK-372).
+
+- Hardened `tools/agent-pipeline` supervision so staged agents now launch asynchronously, task bundles move as full directories with colocated context files, status lookups include completed tasks, abort/steer controls persist correctly, and agent execution no longer depends on a hard-coded Ash workspace path (TASK-371).
+
+- TASK-370/MCE-002 documentation: marked `Seq` elimination as **rejected**; fixed
+  `Workflow::Split` description; converted all absolute paths to repo-relative; reframed
+  Task 4 to remove incorrect `Orient` binding language; aligned MCE-002 Seq status with
+  TASK-370 conclusion.
+
 - Added the initial `runtime` stdlib surface under `std/src/`, including `RuntimeError`,
   the `Args` capability declaration, and a minimal supervisor scaffold for entry-point work
   (TASK-359).

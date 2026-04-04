@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a Python-based task orchestrator for the multi-agent pipeline (design → spec → verify → plan → verify → impl → qa → validate) that manages state via files, spawns agents (codex --yolo, hermes subagents), and supports local supervision.
+Build a Python-based task orchestrator for the multi-agent pipeline (design → spec → verify → plan → verify → impl → qa → validate) that manages state via files, spawns agents (Hermes by default, with optional Codex overrides), and supports local supervision.
 
 ## Location
 
@@ -35,20 +35,20 @@ Build a Python-based task orchestrator for the multi-agent pipeline (design → 
 ```
 
 **Stages:**
-1. `design` (codex)
+1. `design` (hermes)
 2. `spec_write` (hermes)
-3. `spec_verify` (codex)
+3. `spec_verify` (hermes)
 4. `plan_write` (hermes)
-5. `plan_verify` (codex)
+5. `plan_verify` (hermes)
 6. `impl` (hermes)
 7. `qa` (hermes)
-8. `validate` (codex)
+8. `validate` (hermes)
 
 ### 2. Agent Spawner (`agents.py`)
 
 **Responsibilities:**
-- Spawn codex with `--yolo` flag
-- Delegate to hermes subagents via delegate_task equivalent
+- Spawn Hermes stage sessions by default
+- Allow optional Codex overrides for selected stages when explicitly configured
 - Manage agent lifecycle (start, monitor, timeout)
 - Capture stdout/stderr to event log
 

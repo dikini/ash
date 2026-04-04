@@ -7,6 +7,18 @@ from pathlib import Path
 STRICT_VERDICTS = "Use strict verdict vocabulary: VERIFIED, BLOCKED, NEEDS_REVISION."
 
 
+def execution_roots_contract(task_dir: Path, repo_root: Path) -> str:
+    """Return shared wording that separates the repository worktree from task-bundle artifacts."""
+    return f"""
+Execution roots:
+- Repository workspace/worktree root: {repo_root}
+- Task bundle artifact directory: {task_dir}
+- Use the repository workspace/worktree root for code edits and repo-relative paths.
+- Use the task bundle artifact directory only for generated stage artifacts, reviews, logs, manifests, and prompt files.
+- Keep repository code changes in the worktree and keep generated task artifacts under {task_dir}.
+""".strip()
+
+
 def design_contract(task_dir: Path) -> str:
     """Return the shared design-stage quality contract."""
     return f"""

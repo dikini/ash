@@ -8,11 +8,13 @@ import subprocess
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
+from io import TextIOWrapper
 from pathlib import Path
 
 from agent_pipeline.prompt_contracts import (
     design_contract,
     document_quality_contract,
+    execution_roots_contract,
     implementation_contract,
     qa_contract,
     validate_contract,
@@ -51,6 +53,10 @@ class RunningAgent:
     task_dir: Path
     cwd: Path
     command: tuple[str, ...]
+    stdout_log_path: Path
+    stderr_log_path: Path
+    stdout_log_file: TextIOWrapper | None
+    stderr_log_file: TextIOWrapper | None
     result: SpawnResult | None = None
 
 
@@ -58,14 +64,14 @@ class AgentSpawner:
     """Spawns and manages agent processes."""
     
     DEFAULT_STAGE_AGENTS: dict[Stage, AgentType] = {
-        Stage.DESIGN: AgentType.CODEX,
+        Stage.DESIGN: AgentType.HERMES,
         Stage.SPEC_WRITE: AgentType.HERMES,
-        Stage.SPEC_VERIFY: AgentType.CODEX,
+        Stage.SPEC_VERIFY: AgentType.HERMES,
         Stage.PLAN_WRITE: AgentType.HERMES,
-        Stage.PLAN_VERIFY: AgentType.CODEX,
+        Stage.PLAN_VERIFY: AgentType.HERMES,
         Stage.IMPL: AgentType.HERMES,
         Stage.QA: AgentType.HERMES,
-        Stage.VALIDATE: AgentType.CODEX,
+        Stage.VALIDATE: AgentType.HERMES,
     }
     
     # Default timeout for agent execution (1 hour)
@@ -78,11 +84,13 @@ class AgentSpawner:
         *,
         workspace_root: Path | None = None,
         codex_executable: str = "codex",
+        hermes_executable: str = "hermes",
         stage_agents: Mapping[Stage | str, AgentType | str] | None = None,
     ):
         self.base_dir = Path(base_dir)
         self.workspace_root = self._resolve_workspace_root(workspace_root)
         self.codex_executable = codex_executable
+        self.hermes_executable = hermes_executable
         self.stage_agents = self.resolve_stage_agents(stage_agents)
 
     @classmethod
@@ -170,7 +178,13 @@ class AgentSpawner:
         except Exception as e:
             return SpawnResult(success=False, exit_code=-1, error=str(e))
 
-    def launch(self, manifest: TaskManifest, stage: Stage) -> RunningAgent:
+    def launch(
+        self,
+        manifest: TaskManifest,
+        stage: Stage,
+        *,
+        execution_cwd: Path | None = None,
+    ) -> RunningAgent:
         """Launch an agent process and return its running handle immediately."""
         task_dir = self._get_task_dir(manifest)
         task_dir.mkdir(parents=True, exist_ok=True)
@@ -178,14 +192,28 @@ class AgentSpawner:
         if self.is_agent_running(manifest, stage):
             raise RuntimeError("Agent already running for this stage")
 
-        command, cwd, agent_type = self._prepare_command(manifest, stage)
-        process = subprocess.Popen(
-            command,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
+        command, cwd, agent_type = self._prepare_command(
+            manifest,
+            stage,
+            execution_cwd=execution_cwd,
         )
+        stdout_log_path = self._get_log_path(manifest, stage, "stdout")
+        stderr_log_path = self._get_log_path(manifest, stage, "stderr")
+        stdout_log_file = stdout_log_path.open("w", encoding="utf-8")
+        stderr_log_file = stderr_log_path.open("w", encoding="utf-8")
+
+        try:
+            process = subprocess.Popen(
+                command,
+                cwd=cwd,
+                stdout=stdout_log_file,
+                stderr=stderr_log_file,
+                text=True,
+            )
+        except Exception:
+            stdout_log_file.close()
+            stderr_log_file.close()
+            raise
 
         pid_file = self._get_pid_file(manifest, stage)
         pid_file.write_text(str(process.pid))
@@ -200,6 +228,10 @@ class AgentSpawner:
             task_dir=task_dir,
             cwd=cwd,
             command=tuple(command),
+            stdout_log_path=stdout_log_path,
+            stderr_log_path=stderr_log_path,
+            stdout_log_file=stdout_log_file,
+            stderr_log_file=stderr_log_file,
         )
 
     def poll(self, handle: RunningAgent) -> SpawnResult | None:
@@ -237,28 +269,80 @@ class AgentSpawner:
         return self.base_dir / "in-progress" / manifest.task_id
 
     @staticmethod
-    def _build_guidance_context(task_dir: Path) -> str:
-        """Return prompt text for optional operator steering guidance."""
-        guidance_file = task_dir / "steering.md"
-        if not guidance_file.exists():
-            return ""
+    def _resolve_task_relative_path(task_dir: Path, relative_path: str) -> Path | None:
+        """Resolve a task-bundle relative path and ignore traversal outside the bundle."""
+        candidate = (task_dir / relative_path).resolve()
+        task_root = task_dir.resolve()
+        if candidate != task_root and task_root not in candidate.parents:
+            return None
+        return candidate
 
-        return f"""
+    @staticmethod
+    def _build_guidance_context(task_dir: Path) -> str:
+        """Return prompt text for optional operator steering guidance and structured feedback resolution."""
+        context_parts: list[str] = []
+
+        guidance_file = task_dir / "steering.md"
+        if guidance_file.exists():
+            context_parts.append(
+                f"""
 
 Operator guidance is available at: {guidance_file}
 Read and incorporate it before you act.
 """
+            )
+
+        feedback_resolution = task_dir / "feedback-resolution.md"
+        if feedback_resolution.exists():
+            context_parts.append(
+                f"""
+
+Structured feedback resolution is available at: {feedback_resolution}
+Read and incorporate it before you act.
+"""
+            )
+
+            resolution_text = feedback_resolution.read_text(encoding="utf-8")
+            for line in resolution_text.splitlines():
+                if not line.startswith("Source review artifact:"):
+                    continue
+                review_artifact = line.split(":", 1)[1].strip()
+                if not review_artifact:
+                    break
+                review_artifact_path = AgentSpawner._resolve_task_relative_path(task_dir, review_artifact)
+                if review_artifact_path is not None and review_artifact_path.exists():
+                    context_parts.append(
+                        f"""
+
+Original review feedback is available at: {review_artifact_path}
+Read and incorporate it before you act.
+"""
+                    )
+                break
+
+        return "".join(context_parts)
     
+    def _resolve_execution_root(self, manifest: TaskManifest, execution_cwd: Path | None = None) -> Path:
+        """Resolve the repository worktree root used for code execution and repo-relative references."""
+        if execution_cwd is not None:
+            return Path(execution_cwd).resolve()
+        if manifest.worktree is not None:
+            return Path(manifest.worktree.path).resolve()
+        return self.workspace_root.resolve()
+
     def _build_codex_prompt(
         self,
         manifest: TaskManifest,
         stage: Stage,
         attempt: int = 0,
         task_dir: Path | None = None,
+        execution_root: Path | None = None,
     ) -> str:
         """Build prompt for codex agent."""
         if task_dir is None:
             task_dir = self._get_task_dir(manifest)
+        if execution_root is None:
+            execution_root = self._resolve_execution_root(manifest)
 
         guidance_context = self._build_guidance_context(task_dir)
         retry_context = ""
@@ -359,19 +443,21 @@ Check:
         }
 
         prompt = prompts.get(stage, f"Verify {stage.value} for {manifest.task_id}")
-        return f"{prompt}{guidance_context}"
+        roots_contract = execution_roots_contract(task_dir, execution_root)
+        return f"{roots_contract}\n\n{prompt}{guidance_context}"
     
     def _spawn_codex_for_hermes_task(self, manifest: TaskManifest, stage: Stage, prompt: str) -> tuple[list[str], Path]:
         """Build the temporary codex stand-in command for hermes tasks."""
+        execution_root = self._resolve_execution_root(manifest)
         cmd = [
             self.codex_executable,
             "exec",
             "--yolo",
-            "-C", str(self.workspace_root),
+            "-C", str(execution_root),
             prompt,
         ]
 
-        return cmd, self.workspace_root
+        return cmd, execution_root
     
     def _build_hermes_prompt(
         self,
@@ -379,10 +465,13 @@ Check:
         stage: Stage,
         attempt: int = 0,
         task_dir: Path | None = None,
+        execution_root: Path | None = None,
     ) -> str:
         """Build prompt for hermes agent."""
         if task_dir is None:
             task_dir = self._get_task_dir(manifest)
+        if execution_root is None:
+            execution_root = self._resolve_execution_root(manifest)
 
         guidance_context = self._build_guidance_context(task_dir)
         retry_context = ""
@@ -393,6 +482,20 @@ Check:
             )
 
         prompts = {
+            Stage.DESIGN: f"""Task: Design {manifest.task_id}
+{retry_context}CRITICAL: You MUST create the output file: {task_dir}/design.md
+
+Read the task file at: {task_dir}/task.md
+Write design to: {task_dir}/design.md
+
+Include:
+1. Problem statement
+2. Analysis approach
+3. Success criteria
+4. Risk assessment
+
+{design_contract(task_dir)}
+""",
             Stage.SPEC_WRITE: f"""Load /write-docs-workflow skill.
 
 Task: Write SPEC for {manifest.task_id}
@@ -404,6 +507,26 @@ Write spec to: {task_dir}/spec.md
 Follow SPEC template. Include all sections.
 
 {document_quality_contract(task_dir)}
+""",
+            Stage.SPEC_VERIFY: f"""Task: Verify the spec document for {manifest.task_id}
+{retry_context}CRITICAL: You MUST create one output file:
+- If pass: {task_dir}/spec.verified
+- If fail: {task_dir}/spec.review
+
+Read:
+- Design: {task_dir}/design.md
+- Spec: {task_dir}/spec.md
+
+Check:
+1. All design requirements captured?
+2. No contradictions with existing SPECs?
+3. Completion criteria measurable?
+4. Error cases documented?
+
+{document_quality_contract(task_dir)}
+
+Write the review so the final verdict clearly uses VERIFIED, BLOCKED, or NEEDS_REVISION.
+Be pedantic. Find all issues.
 """,
             Stage.PLAN_WRITE: f"""Load /plan skill.
 
@@ -417,6 +540,21 @@ Break into actionable tasks with estimates.
 
 {document_quality_contract(task_dir)}
 Be explicit about exact file paths, verification commands, and requirement-to-task traceability.
+""",
+            Stage.PLAN_VERIFY: f"""Task: Verify the implementation plan for {manifest.task_id}
+{retry_context}CRITICAL: You MUST create one output file:
+- If pass: {task_dir}/plan.verified
+- If fail: {task_dir}/plan.review
+
+Read:
+- Spec: {task_dir}/spec.md
+- Plan: {task_dir}/plan.md
+
+Check traceability: Design req → Spec section → Plan task → Test case
+
+{document_quality_contract(task_dir)}
+
+Write the review so the final verdict clearly uses VERIFIED, BLOCKED, or NEEDS_REVISION.
 """,
             Stage.IMPL: f"""Load /rust-skills, /test-driven-development, /verification-before-completion skills.
 
@@ -443,7 +581,7 @@ Read:
 - Read plan: {task_dir}/plan.md
 - Read implementation summary: {task_dir}/impl.summary.md
 - Read verification evidence: {task_dir}/impl.verification.md
-- Review the implementation directly in the repository workspace at: {self.workspace_root}
+- Review the implementation directly in the repository workspace/worktree at: {execution_root}
 
 Run:
 - cargo test
@@ -454,23 +592,45 @@ Run:
 Write QA report to: {task_dir}/qa.md
 
 Report any issues found.""",
+            Stage.VALIDATE: f"""Task: Perform final validation for {manifest.task_id}
+{retry_context}{validate_contract(task_dir)}
+
+Check:
+1. All stages completed?
+2. All artifacts present?
+3. Tests passing?
+4. Documentation updated?
+""",
         }
 
         prompt = prompts.get(stage, f"Implement {stage.value} for {manifest.task_id}")
-        return f"{prompt}{guidance_context}"
+        roots_contract = execution_roots_contract(task_dir, execution_root)
+        return f"{roots_contract}\n\n{prompt}{guidance_context}"
     
-    def _prepare_command(self, manifest: TaskManifest, stage: Stage) -> tuple[list[str], Path, AgentType]:
+    def _prepare_command(
+        self,
+        manifest: TaskManifest,
+        stage: Stage,
+        *,
+        execution_cwd: Path | None = None,
+    ) -> tuple[list[str], Path, AgentType]:
         """Prepare the command, working directory, and agent type for a stage."""
         agent_type = self.get_agent_type(stage)
 
         if agent_type == AgentType.CODEX:
-            cmd, cwd = self._prepare_codex_command(manifest, stage)
+            cmd, cwd = self._prepare_codex_command(manifest, stage, execution_cwd=execution_cwd)
         else:
-            cmd, cwd = self._prepare_hermes_command(manifest, stage)
+            cmd, cwd = self._prepare_hermes_command(manifest, stage, execution_cwd=execution_cwd)
 
         return cmd, cwd, agent_type
 
-    def _prepare_codex_command(self, manifest: TaskManifest, stage: Stage) -> tuple[list[str], Path]:
+    def _prepare_codex_command(
+        self,
+        manifest: TaskManifest,
+        stage: Stage,
+        *,
+        execution_cwd: Path | None = None,
+    ) -> tuple[list[str], Path]:
         """Build the codex command for a stage."""
         task_dir = self._get_task_dir(manifest)
         task_dir.mkdir(parents=True, exist_ok=True)
@@ -483,42 +643,70 @@ Report any issues found.""",
         # Get attempt number for retry context
         attempt = manifest.attempts.get(stage, 0)
 
+        execution_root = self._resolve_execution_root(manifest, execution_cwd)
+
         # Use absolute path for clarity
         abs_task_dir = task_dir.absolute()
-        prompt = self._build_codex_prompt(manifest, stage, attempt, abs_task_dir)
+        prompt = self._build_codex_prompt(manifest, stage, attempt, abs_task_dir, execution_root)
 
         cmd = [
             self.codex_executable,
             "exec",
             "--yolo",
-            "-C", str(self.workspace_root),
+            "-C", str(execution_root),
             prompt,
         ]
 
-        return cmd, self.workspace_root
+        return cmd, execution_root
 
-    def _prepare_hermes_command(self, manifest: TaskManifest, stage: Stage) -> tuple[list[str], Path]:
-        """Build the temporary hermes stand-in command."""
+    def _prepare_hermes_command(
+        self,
+        manifest: TaskManifest,
+        stage: Stage,
+        *,
+        execution_cwd: Path | None = None,
+    ) -> tuple[list[str], Path]:
+        """Build the hermes command for a stage."""
         task_dir = self._get_task_dir(manifest)
         task_dir.mkdir(parents=True, exist_ok=True)
 
-        # Get attempt number for retry context
+        task_file = task_dir / "task.md"
+        if not task_file.exists():
+            task_file.write_text(
+                f"# {manifest.task_id}\n\nTask description not provided.\nPlease create appropriate artifacts for this task.\n",
+                encoding="utf-8",
+            )
+
         attempt = manifest.attempts.get(stage, 0)
+        execution_root = self._resolve_execution_root(manifest, execution_cwd)
         abs_task_dir = task_dir.absolute()
-        prompt = self._build_hermes_prompt(manifest, stage, attempt, abs_task_dir)
+        prompt = self._build_hermes_prompt(manifest, stage, attempt, abs_task_dir, execution_root)
 
-        # Write prompt to file for reference
         prompt_file = task_dir / f"{stage.value}_prompt.txt"
-        prompt_file.write_text(prompt)
+        prompt_file.write_text(prompt, encoding="utf-8")
 
-        # Run hermes via CLI if available, otherwise fail with instructions
-        # For now, use codex as a stand-in for hermes tasks
-        return self._spawn_codex_for_hermes_task(manifest, stage, prompt)
+        cmd = [
+            self.hermes_executable,
+            "chat",
+            "-Q",
+            "--yolo",
+            "--toolsets",
+            "terminal,file",
+            "-q",
+            prompt,
+        ]
+
+        return cmd, execution_root
     
     def _get_pid_file(self, manifest: TaskManifest, stage: Stage) -> Path:
         """Get path to PID file for tracking running agents."""
         task_dir = self._get_task_dir(manifest)
         return task_dir / f"{stage.value}.pid"
+
+    def _get_log_path(self, manifest: TaskManifest, stage: Stage, stream: str) -> Path:
+        """Get deterministic path for a stage stdout/stderr log."""
+        task_dir = self._get_task_dir(manifest)
+        return task_dir / f"{stage.value}.{stream}.log"
     
     def is_agent_running(self, manifest: TaskManifest, stage: Stage) -> bool:
         """Check if an agent is already running for this task/stage."""
@@ -543,7 +731,15 @@ Report any issues found.""",
         if handle.result is not None:
             return handle.result
 
-        stdout, stderr = handle.process.communicate()
+        if handle.stdout_log_file is not None and not handle.stdout_log_file.closed:
+            handle.stdout_log_file.close()
+        if handle.stderr_log_file is not None and not handle.stderr_log_file.closed:
+            handle.stderr_log_file.close()
+        handle.stdout_log_file = None
+        handle.stderr_log_file = None
+
+        stdout = handle.stdout_log_path.read_text(encoding="utf-8")
+        stderr = handle.stderr_log_path.read_text(encoding="utf-8")
         handle.pid_file.unlink(missing_ok=True)
 
         result = SpawnResult(
@@ -605,4 +801,10 @@ Report any issues found.""",
             proc.wait()
 
         if isinstance(process, RunningAgent):
+            if process.stdout_log_file is not None and not process.stdout_log_file.closed:
+                process.stdout_log_file.close()
+            if process.stderr_log_file is not None and not process.stderr_log_file.closed:
+                process.stderr_log_file.close()
+            process.stdout_log_file = None
+            process.stderr_log_file = None
             process.pid_file.unlink(missing_ok=True)

@@ -10,10 +10,12 @@ Discord (you)
     → Hermes Agent
     → vila-integration.sh
     → agent-pipeline daemon (systemd)
-    → spawns codex/kimi agents
+    → spawns Hermes-driven stage agents by default
 ```
 
 The pipeline runs independently as a systemd service. Vila interacts with it via the CLI wrapper.
+
+Current default runtime policy: every stage is handled by Hermes unless an explicit stage-agent override is configured.
 
 ## Setup
 
@@ -60,6 +62,8 @@ Vila: [runs vila-integration.sh queue TASK-370 vila]
 Vila: "✅ TASK-370 queued successfully! It's now in the design stage."
 ```
 
+Important: queue now fails closed unless the wrapper can auto-resolve exactly one matching task spec from `docs/plan/tasks/TASK-370-*.md`. If there are zero or multiple matches, Vila should report the error instead of queueing a placeholder task.
+
 **Check status:**
 
 ```
@@ -99,6 +103,9 @@ If Vila supports slash commands or command prefix:
 /pipeline resume TASK-370
 /pipeline abort TASK-370
 /pipeline steer TASK-370 "message"
+/pipeline resolve-feedback TASK-370 spec.review "summary" "changes" "success condition"
+/pipeline retry-feedback TASK-370 queue
+/pipeline logs TASK-370
 /pipeline events TASK-370
 ```
 
@@ -110,9 +117,15 @@ If Vila supports slash commands or command prefix:
 4. **The script** calls `ash-pipeline` CLI
 5. **CLI** writes to `.agents/queue/` directory
 6. **Supervisor daemon** (running via systemd) picks up the task
-7. **Supervisor** spawns appropriate agent (codex/kimi)
+7. **Supervisor** spawns the configured stage agent (Hermes by default)
 8. **Agents** write artifacts to `.agents/in-progress/TASK-XXX/`
 9. **You** can check status anytime via Vila
+
+For review-blocked tasks, the normal operator flow is now:
+1. inspect the blocking review artifact
+2. run `resolve-feedback`
+3. run `retry-feedback`
+4. re-check status/events/logs
 
 ## Non-Blocking Operation
 
@@ -167,13 +180,15 @@ ash-pipeline abort TASK-XXX
 
 ```bash
 journalctl --user -u agent-pipeline -n 100 --no-pager
+ash-pipeline logs TASK-370
+ash-pipeline logs TASK-370 --stream stderr --follow
 ```
 
 ## Security Notes
 
 - The systemd service runs as your user (not root)
 - It has limited filesystem access to the repository root plus the tool-local `.agents/` state directory
-- Network access is unrestricted (needed for codex/kimi APIs)
+- Network access is unrestricted (needed for Hermes/tool-driven stage execution and optional external providers)
 - Discord token is not stored in the pipeline (it's in Vila/Hermes)
 
 ## Integration with Ash Dogfooding

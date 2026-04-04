@@ -44,3 +44,13 @@ def test_install_and_vila_scripts_derive_paths_from_their_own_location() -> None
     assert "REPO_ROOT=" in install_script
     assert "SCRIPT_DIR=" in vila_script
     assert "REPO_ROOT=" in vila_script
+
+
+def test_vila_wrapper_queue_fails_closed_when_spec_auto_discovery_is_missing_or_ambiguous() -> None:
+    """RED: The wrapper should not enqueue tasks without a resolved task spec by default."""
+    vila_script = _read("vila-integration.sh")
+
+    assert "queueing without --from-spec" not in vila_script
+    assert "No docs/plan/tasks match found" in vila_script
+    assert "Multiple task spec matches found" in vila_script
+    assert "exit 1" in vila_script

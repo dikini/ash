@@ -1784,3 +1784,55 @@ S57-7 complete, 57B now follows the validated dependency order below.
 2. S57-1, S57-5 (runtime semantics, capability syntax)
 3. S57-6 (entry typing, builds on S57-1)
 4. All 57B implementation tasks
+
+---
+
+## Phase 58: IR Core Forms Audit (MCE-002)
+
+**Goal:** Inventory all current IR forms in `ash-core` and identify candidates for elimination or consolidation.
+
+**Source:** [MCE-002: IR Core Forms Audit](../ideas/minimal-core/MCE-002-IR-AUDIT.md)  
+**Priority:** High (unblocks MCE-004, MCE-007)  
+**Status:** 🟡 Ready for implementation
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-370](tasks/TASK-370-ir-core-forms-audit.md) | IR Core Forms Audit - inventory and expressibility analysis | MCE-002 | 8-12 | 📝 Ready |
+
+**Deliverable:** Comprehensive audit report with specific recommendations for minimizing the IR surface while preserving semantics.
+
+**Blocks:**
+- MCE-004: Big-step semantics alignment (needs stable IR definition)
+- MCE-007: Full layer alignment (depends on IR audit)
+
+---
+
+## Phase 59: Agent Pipeline Worktree Isolation
+
+**Goal:** Add per-task git worktree isolation to `tools/agent-pipeline` so each task executes against an isolated repository workspace while the existing `.agents/` task bundle state model remains intact.
+
+**Source:** Agent-pipeline operational follow-up after supervision/configuration fixes  
+**Priority:** High (operator safety, isolation, and reproducibility)  
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-383](tasks/TASK-383-agent-pipeline-task-dependency-gating.md) | Add task-level dependency gating so queued tasks can wait on prerequisites | N/A | 2-4 | ✅ Done |
+| [TASK-384](tasks/TASK-384-agent-pipeline-live-stage-logs.md) | Capture live stage stdout/stderr and expose operator log peeking | N/A | 2-4 | ✅ Done |
+| [TASK-385](tasks/TASK-385-agent-pipeline-feedback-resolution-and-retry-guidance.md) | Add structured feedback-resolution artifacts and retry guidance surfaces for review-blocked tasks | N/A | 2-4 | ✅ Done |
+| [TASK-386](tasks/TASK-386-agent-pipeline-feedback-retry-helper.md) | Add a native helper to release feedback-resolved blocked tasks back to queue or in-progress safely | N/A | 2-4 | ✅ Done |
+| [TASK-387](tasks/TASK-387-agent-pipeline-hermes-only-default-stage-handlers.md) | Switch the default agent-pipeline stage-agent mapping to Hermes for every stage so normal operation no longer depends on Codex tokens | N/A | 2-4 | ✅ Done |
+| [TASK-388](tasks/TASK-388-agent-pipeline-phase-59-review-fixes.md) | Address Phase 59 review findings around cleanup safety, reproducible verification, and closeout doc consistency | N/A | 2-4 | ✅ Done |
+| [TASK-389](tasks/TASK-389-agent-pipeline-phase-59-review-round-2-fixes.md) | Address remaining Phase 59 review findings around persisted task-id safety, stale worktree reuse, and invalid metadata reporting | N/A | 2-4 | ✅ Done |
+| [TASK-390](tasks/TASK-390-agent-pipeline-phase-59-review-round-3-fixes.md) | Ensure supervisor honors configured workspace root, surface aggregate invalid metadata, and align README runtime docs | N/A | 2-4 | ✅ Done |
+| [TASK-391](tasks/TASK-391-agent-pipeline-phase-59-review-round-4-fixes.md) | Harden stale-worktree recovery, base-dir-only cleanup robustness, and prune-failure manifest consistency | N/A | 2-4 | ✅ Done |
+| [TASK-392](tasks/TASK-392-agent-pipeline-phase-59-review-round-5-fixes.md) | Fail closed on missing configured workspace roots, harden malformed absolute cleanup paths, and align README cleanup semantics | N/A | 2-4 | ✅ Done |
+| [TASK-378](tasks/TASK-378-agent-pipeline-worktree-metadata-and-provisioning.md) | Persist worktree metadata and provision per-task worktrees | N/A | 4-6 | ✅ Done |
+| [TASK-379](tasks/TASK-379-agent-pipeline-worktree-execution-roots.md) | Run stages from task worktrees with explicit dual-root prompts | N/A | 3-4 | ✅ Done |
+| [TASK-380](tasks/TASK-380-agent-pipeline-worktree-cli-status-and-cleanup.md) | Expose worktree metadata via CLI/status and add safe cleanup | N/A | 3-4 | ✅ Done |
+| [TASK-381](tasks/TASK-381-agent-pipeline-worktree-recovery-and-reuse.md) | Harden restart recovery and worktree reuse semantics | N/A | 2-3 | ✅ Done |
+| [TASK-382](tasks/TASK-382-phase-59-closeout.md) | Phase 59 closeout and verification | N/A | 1-2 | ✅ Done |
+
+**Plan:** [2026-04-04-agent-pipeline-worktree-isolation-plan.md](../plans/2026-04-04-agent-pipeline-worktree-isolation-plan.md)
+
+**Deliverable:** Per-task worktrees under `.worktrees/<TASK-ID>/`, explicit task/workspace path contracts in prompts, operator-visible worktree status, and safe cleanup/recovery behavior.

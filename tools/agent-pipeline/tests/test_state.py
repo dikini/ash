@@ -12,6 +12,8 @@ from agent_pipeline.state import (
     TaskStatus,
     StateManager,
     MAX_ATTEMPTS,
+    WorktreeMetadataState,
+    validate_safe_task_id,
 )
 
 
@@ -39,6 +41,96 @@ class TestTaskManifest:
         assert restored.task_id == manifest.task_id
         assert restored.current_stage == manifest.current_stage
         assert restored.status == manifest.status
+
+    def test_manifest_serialization_round_trips_dependencies(self):
+        """RED: Dependency metadata should survive manifest JSON round-trip."""
+        manifest = TaskManifest.create("TASK-001", started_by="cli", dependencies=["TASK-100", "TASK-200"])
+
+        json_str = manifest.to_json()
+        restored = TaskManifest.from_json(json_str)
+
+        assert restored.dependencies == ["TASK-100", "TASK-200"]
+
+    def test_manifest_serialization_round_trips_worktree_metadata(self):
+        """RED: Worktree metadata should survive manifest JSON round-trip with absolute path fidelity."""
+        manifest = TaskManifest.create("TASK-001", started_by="cli")
+        manifest.set_worktree(path=Path("/repo/.worktrees/TASK-001"), branch="agent-pipeline/TASK-001")
+
+        restored = TaskManifest.from_json(manifest.to_json())
+
+        assert restored.worktree is not None
+        assert restored.worktree.path == "/repo/.worktrees/TASK-001"
+        assert restored.worktree.branch == "agent-pipeline/TASK-001"
+        assert restored.worktree_metadata_state() == WorktreeMetadataState.VALID
+
+    def test_manifest_without_worktree_metadata_stays_provisionable(self):
+        """RED: Newly created manifests should treat missing worktree metadata as absent rather than invalid."""
+        manifest = TaskManifest.create("TASK-001", started_by="cli")
+
+        assert manifest.worktree is None
+        assert manifest.worktree_metadata_state() == WorktreeMetadataState.ABSENT
+        assert manifest.worktree_block_reason() is None
+
+    def test_manifest_marks_malformed_worktree_metadata_invalid(self):
+        """RED: Malformed persisted worktree metadata should load but remain supervisor-visible as invalid."""
+        restored = TaskManifest.from_json(
+            json.dumps(
+                {
+                    "task_id": "TASK-001",
+                    "current_stage": "design",
+                    "status": "in_progress",
+                    "attempts": {stage.value: 0 for stage in Stage},
+                    "max_attempts": MAX_ATTEMPTS,
+                    "artifacts": {},
+                    "blockers": [],
+                    "dependencies": [],
+                    "started_by": "cli",
+                    "created_at": "2026-04-04T00:00:00",
+                    "updated_at": "2026-04-04T00:00:00",
+                    "worktree": {"path": "relative/path", "branch": 42},
+                }
+            )
+        )
+
+        assert restored.worktree is None
+        assert restored.worktree_metadata_state() == WorktreeMetadataState.INVALID
+        assert restored.worktree_block_reason() == (
+            "invalid persisted worktree metadata: worktree.path must be an absolute path string; "
+            "worktree.branch must be a string"
+        )
+
+    def test_manifest_invalid_worktree_metadata_round_trips_without_flattening_to_absent(self):
+        """RED: Saving an invalid worktree payload should preserve invalid-state visibility instead of silently dropping it."""
+        original = TaskManifest.from_json(
+            json.dumps(
+                {
+                    "task_id": "TASK-001",
+                    "current_stage": "design",
+                    "status": "in_progress",
+                    "attempts": {stage.value: 0 for stage in Stage},
+                    "max_attempts": MAX_ATTEMPTS,
+                    "artifacts": {},
+                    "blockers": [],
+                    "dependencies": [],
+                    "started_by": "cli",
+                    "created_at": "2026-04-04T00:00:00",
+                    "updated_at": "2026-04-04T00:00:00",
+                    "worktree": {"path": "relative/path", "branch": 42},
+                }
+            )
+        )
+
+        restored = TaskManifest.from_json(original.to_json())
+
+        assert restored.worktree is None
+        assert restored.worktree_metadata_state() == WorktreeMetadataState.INVALID
+        assert restored.worktree_block_reason() == original.worktree_block_reason()
+
+    def test_validate_safe_task_id_rejects_path_separators(self):
+        """RED: Persisted task ids should use the same safe identifier contract as CLI task ids."""
+        assert validate_safe_task_id("../TASK-001") is not None
+        assert validate_safe_task_id("TASK/001") is not None
+        assert validate_safe_task_id("TASK-001") is None
 
     def test_increment_attempt(self):
         """RED: Should increment attempt counter for current stage."""
@@ -130,6 +222,36 @@ class TestStateManager:
         assert data["task_id"] == "TASK-001"
         assert data["started_by"] == "cli"
 
+    def test_create_task_persists_dependencies_in_queue_manifest(self, manager, temp_dir):
+        """RED: Queue manifests should persist dependency metadata."""
+        manager.create_task("TASK-001", started_by="cli", dependencies=["TASK-000"])
+
+        queue_file = temp_dir / "queue" / "TASK-001" / "manifest.json"
+        data = json.loads(queue_file.read_text())
+        loaded = manager.load_task("TASK-001", subdir="queue")
+
+        assert data["dependencies"] == ["TASK-000"]
+        assert loaded.dependencies == ["TASK-000"]
+
+    def test_save_task_persists_worktree_metadata(self, manager, temp_dir):
+        """RED: Saved manifests should persist deterministic worktree assignment metadata."""
+        manifest = manager.create_task("TASK-001", started_by="cli")
+        manifest.set_worktree(
+            path=Path("/repo/.worktrees/TASK-001"),
+            branch="agent-pipeline/TASK-001",
+        )
+
+        manager.save_task(manifest, subdir="queue")
+
+        stored = json.loads((temp_dir / "queue" / "TASK-001" / "manifest.json").read_text())
+        loaded = manager.load_task("TASK-001", subdir="queue")
+        assert stored["worktree"] == {
+            "path": "/repo/.worktrees/TASK-001",
+            "branch": "agent-pipeline/TASK-001",
+        }
+        assert loaded.worktree is not None
+        assert loaded.worktree.path == "/repo/.worktrees/TASK-001"
+
     def test_load_task(self, manager, temp_dir):
         """RED: Should load task from file."""
         manager.create_task("TASK-001", started_by="cli")
@@ -186,6 +308,22 @@ class TestStateManager:
         loaded = manager.load_task_from_path(temp_dir / "blocked" / "TASK-001" / "manifest.json")
         assert loaded.status == TaskStatus.BLOCKED
         assert loaded.blockers == ["max retries exceeded"]
+
+    def test_move_task_relocates_entire_bundle_between_lifecycle_directories(self, manager, temp_dir):
+        """RED: A generic move helper should preserve colocated task artifacts when restoring blocked work."""
+        manager.create_task("TASK-001", started_by="cli")
+        manager.move_to_in_progress("TASK-001")
+        task_dir = temp_dir / "in-progress" / "TASK-001"
+        (task_dir / "task.md").write_text("# TASK-001\n")
+        (task_dir / "feedback-resolution.md").write_text("# Feedback Resolution\n")
+
+        manager.move_task("TASK-001", "in-progress", "blocked")
+
+        assert not (temp_dir / "in-progress" / "TASK-001").exists()
+        moved_dir = temp_dir / "blocked" / "TASK-001"
+        assert (moved_dir / "manifest.json").exists()
+        assert (moved_dir / "task.md").read_text() == "# TASK-001\n"
+        assert (moved_dir / "feedback-resolution.md").read_text() == "# Feedback Resolution\n"
 
     def test_find_task_across_subdirectories(self, manager):
         """RED: Should find task regardless of lifecycle directory."""

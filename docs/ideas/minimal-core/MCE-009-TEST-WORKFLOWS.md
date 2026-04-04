@@ -179,6 +179,153 @@ This exploration depends on all others being at least `candidate` status:
 |------|----------|-----------|
 | 2026-03-30 | Exploration created | Need validation criteria |
 
+## Ash Bowl: Example Workflow Ideas
+
+A collection of real-world workflow patterns that exercise Ash capabilities. These serve as both integration tests and documentation.
+
+### Agent Orchestration Patterns
+
+#### 1. Multi-Agent Pipeline Supervisor
+
+A workflow that manages a pipeline of specialized agents (design → spec → implementation → QA → validation), with retry logic and human escalation.
+
+**Capabilities:** `fs.FileSystem`, `process.Spawn`, `channel.Notify`
+
+**Demonstrates:**
+- Long-running supervision
+- File-based state machine
+- Retry with exponential backoff
+- Human-in-the-loop escalation
+
+```ash
+workflow PipelineSupervisor {
+  receive {
+    QueueTask { task_id } => {
+      spawn TaskExecutor with task_id
+    }
+    AgentComplete { task_id, result } => {
+      if result == Success {
+        advance_stage(task_id)
+      } else if attempts[task_id] >= 5 {
+        notify_human(task_id, "max retries")
+      } else {
+        schedule_retry(task_id)
+      }
+    }
+  }
+}
+```
+
+#### 2. Local Status Dashboard
+
+A workflow that polls status files and renders a live dashboard to multiple outputs (CLI, Discord, file).
+
+**Capabilities:** `fs.FileSystem`, `io.Stdout`, `time.Timer`, `discord.Bot` (local)
+
+**Demonstrates:**
+- Polling loops
+- Multi-format output
+- Concurrent updates
+- Graceful degradation (Discord optional)
+
+#### 3. CLI Tool Chain
+
+A sequence of workflows that parse command arguments, dispatch to subcommands, handle errors consistently, and produce structured output.
+
+**Capabilities:** `env.Args`, `io.Stdout`, `io.Stderr`, `process.Exit`
+
+**Demonstrates:**
+- Command parsing
+- Error propagation
+- Exit codes
+- Help generation
+
+#### 4. Cron-Scheduled Batch Processor
+
+A workflow that runs on a schedule, reads a queue of pending items, processes them in batches, and reports results.
+
+**Capabilities:** `time.Cron`, `fs.FileSystem`, `http.Client` (optional)
+
+**Demonstrates:**
+- Scheduled execution
+- Batch processing
+- Idempotent operations
+- Result aggregation
+
+### System Integration Patterns
+
+#### 5. File Watcher with Debounce
+
+Watch a directory for changes, debounce rapid events, trigger actions.
+
+**Capabilities:** `fs.Watch`, `time.Timer`
+
+**Demonstrates:**
+- Event coalescing
+- Resource cleanup
+- Concurrent event handling
+
+#### 6. Request Batcher
+
+Collect incoming requests, batch them when threshold reached or timeout expires, process as group.
+
+**Capabilities:** `channel.Receive`, `time.Timer`, `par`
+
+**Demonstrates:**
+- Windowed operations
+- Dynamic parallelism
+- Backpressure
+
+#### 7. Circuit Breaker
+
+Wrap external calls with failure detection, open circuit after threshold, periodically test recovery.
+
+**Capabilities:** `process.Spawn`, `time.Timer`, `state.Store`
+
+**Demonstrates:**
+- State machines
+- Error counting
+- Recovery testing
+
+### Human-in-the-Loop Patterns
+
+#### 8. Approval Workflow
+
+Submit request, wait for human approval (via Discord/CLI), proceed or reject based on response.
+
+**Capabilities:** `channel.Receive`, `discord.DM`, `time.Timer`
+
+**Demonstrates:**
+- Blocking receive with timeout
+- External event integration
+- Cancellation
+
+#### 9. Interactive Wizard
+
+Step-by-step CLI interaction, collect inputs, validate, produce configuration.
+
+**Capabilities:** `io.Stdin`, `io.Stdout`, `fs.FileSystem`
+
+**Demonstrates:**
+- Stateful interaction
+- Input validation
+- Partial completion handling
+
+### Capability Testing Examples
+
+#### 10. Mock Capability Framework
+
+A test workflow that uses mock capabilities to verify behavior without real side effects.
+
+```ash
+workflow TestWithMockStdout {
+  use mock: MockStdout
+  
+  act mock.write("hello")
+  assert mock.captures == ["hello"]
+}
+```
+
 ## Next Steps
 
 - [ ] Draft initial test cases for each category
@@ -186,3 +333,4 @@ This exploration depends on all others being at least `candidate` status:
 - [ ] Define test harness interface
 - [ ] Create mock capability framework
 - [ ] Establish CI/integration testing
+- [ ] Implement Ash Bowl examples as MCE validation suite

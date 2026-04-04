@@ -1,9 +1,11 @@
 ---
-status: drafting
+status: accepted
 created: 2026-03-30
-last-revised: 2026-03-30
-related-plan-tasks: []
+last-revised: 2026-04-03
+related-plan-tasks: [TASK-370]
 tags: [ir, minimal-core, forms, elimination]
+archived: true
+archive-note: Promoted to TASK-370. See docs/plan/tasks/TASK-370-ir-core-forms-audit.md for active work.
 ---
 
 # MCE-002: IR Core Forms Audit
@@ -37,7 +39,7 @@ Goal: A minimal but sufficient IR for the execution environment.
 - IR is the canonical representation after lowering from surface syntax
 - Current forms include: Let, If, Match, Call, Spawn, Par, Seq, Act, Observe, Return, etc.
 - Some forms may overlap (Par vs async Spawn)
-- Some forms may be sugar (Seq as nested Let)
+- Some forms may be sugar (under investigation in TASK-370)
 
 ### What we're uncertain about
 
@@ -50,30 +52,26 @@ Goal: A minimal but sufficient IR for the execution environment.
 
 | Form | Current Status | Candidate For | Expressible As | Confidence |
 |------|----------------|---------------|----------------|------------|
-| `Seq` | Body construct | Elimination | Nested `Let` | Medium |
+| `Seq` | Body construct | **Keep** | Primitive sequencing (no valid rewrite to `Let`) | High |
 | `Par` | Body construct | Keep (primitive) | — | High |
 | `Spawn` | Operation | Keep (primitive) | — | High |
 | `Call` | Operation | Keep (primitive) | — | High |
 | `Observe` | Effect | Review | `Act` with pure capability? | Low |
 | `Let` | Binding | Keep (primitive) | — | High |
-| `Match` | Control flow | Review | Nested `If` + destructuring? | Medium |
+| `Expr::Match` | Control flow | Review | Nested `If` + destructuring? | Medium |
 | `If` | Control flow | Keep (primitive) | — | High |
 
 ## Analysis
 
-### Seq as Nested Let
+### Seq Elimination Status
 
-```
--- Current: seq(e1, e2)
-Seq(e1, e2)
+**Status: REJECTED** — `Seq` is a primitive form.
 
--- Potential: let _ = e1 in e2
-Let("_", e1, e2)
-```
+The hypothesis that `Seq(a, b)` could rewrite to `Let { pattern: "_", expr: a, continuation: b }`
+is **invalid** because `Workflow::Seq` composes two `Workflow`s while `Workflow::Let` expects an `Expr`.
 
-**Pros:** One fewer form
-**Cons:** Loses explicit sequencing intent, may affect effect ordering
-
+**Conclusion (from TASK-370):** `Seq` cannot be eliminated. It is a primitive sequencing construct
+required for composing workflows where the first component is not an expression.
 ### Match as If+Destructuring
 
 ```
@@ -98,9 +96,9 @@ Essential forms for minimal execution:
 5. **Effects:** Act (with capability)
 6. **Observation:** Observe (may merge with Act)
 
-Eliminated/sugar:
-- Seq → Let
-- Match → If + primitive destructuring (TBD)
+Elimination candidates (analysis ongoing in TASK-370):
+- ~~`Seq` → Open question (no valid rewrite identified)~~ **RESOLVED:** `Seq` is primitive, kept as essential sequencing form
+- `Expr::Match` → Potentially expressible as `If` + primitive destructuring (TBD)
 
 ## Open Questions
 
@@ -122,9 +120,14 @@ Eliminated/sugar:
 |------|----------|-----------|
 | 2026-03-30 | Exploration created | Initial inventory needed |
 
+## Task Reference
+
+This exploration has been promoted to a formal task:
+- **[TASK-370: IR Core Forms Audit](../../plan/tasks/TASK-370-ir-core-forms-audit.md)**
+
 ## Next Steps
 
-- [ ] Inventory all current IR forms from codebase
-- [ ] Document semantics of each form
-- [ ] Prototype eliminations in test cases
-- [ ] Measure impact on example programs
+- [x] Inventory all current IR forms from codebase (30 Workflow + 13 Expr forms identified)
+- [ ] Document semantics of each form in detail (TASK-370)
+- [ ] Prototype eliminations in test cases (TASK-370)
+- [ ] Measure impact on example programs (TASK-370)

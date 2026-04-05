@@ -1,10 +1,12 @@
 # TASK-397: Five-Layer Alignment Matrix and Closure Contract (MCE-007)
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
 Create the execution-ready planning backbone for MCE-007 by defining one canonical five-layer alignment matrix over construct families, one evidence model for each layer boundary, and one explicit closure contract for what it will mean to mark full-layer alignment complete later. This task is documentation/planning only. It must not claim that runtime/interpreter correspondence is closed before MCE-006 provides the required runtime-mapping evidence.
+
+This task is now reconciled as complete. Its intended framing outputs were realized incrementally by the final published MCE-007 corpus rather than remaining as a separately unfinished scaffold. In particular, the canonical matrix shape, the residual-gap/status layer, and the closeout/signoff contract now live in [MCE-007: Full Layer Alignment](../../ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md). That documentation/planning closeout does not imply that remaining runtime-side true residual drift is resolved; it means the planning and signoff surface is now complete and frozen enough for downstream follow-on to reference directly.
 
 ## Specification Reference
 
@@ -25,8 +27,7 @@ Create the execution-ready planning backbone for MCE-007 by defining one canonic
 - ✅ [TASK-394: Small-Step Semantics Scope and Configuration Contract](TASK-394-small-step-semantics-scope-and-configuration-contract.md)
 - ✅ [TASK-395: Canonical Workflow Small-Step Rule Set and Concurrency Semantics](TASK-395-canonical-workflow-small-step-rule-set-and-concurrency-semantics.md)
 - ✅ [TASK-396: Small-Step / Big-Step Correspondence and MCE-006 Handoff](TASK-396-small-step-big-step-correspondence-and-mce-006-handoff.md)
-- ✅ [TASK-396: Small-Step / Big-Step Correspondence and MCE-006 Handoff](TASK-396-small-step-big-step-correspondence-and-mce-006-handoff.md)
-- Note: TASK-397 is executable now; only later MCE-007 runtime-evidence ingestion tasks are gated on MCE-006 maturity
+- Historical note: this framing/scaffold task became schedulable before MCE-006 closeout, but the final realized corpus now incorporates its outputs together with later MCE-007 ingestion/classification/closeout work.
 
 ## Requirements
 
@@ -85,6 +86,14 @@ This task is complete when:
 - closed-versus-pending-on-MCE-006 status is explicit;
 - later MCE-007 tasks can be written against the frozen matrix/closure contract without guessing scope.
 
+Reconciled completion outcome:
+
+- the canonical construct-family matrix now exists in the final MCE-007 artifact;
+- the original row-status vocabulary has been realized in the stronger residual-gap classification layer plus row-level closeout wording;
+- the MCE-006 gating boundary was preserved during ingestion rather than erased;
+- the final closeout/signoff section now serves as the realized closure contract for the phase;
+- the documentation/planning scaffold is complete even though true runtime-side residual drift remains explicitly open.
+
 ## Files
 
 - Modify: `docs/ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md`
@@ -94,6 +103,13 @@ This task is complete when:
 - Reference: `docs/ideas/minimal-core/MCE-006-SMALL-STEP-IR.md`
 - Reference: `docs/ideas/minimal-core/MCE-005-SMALL-STEP.md`
 - Reference: `docs/ideas/minimal-core/MCE-004-BIG-STEP-ALIGNMENT.md`
+
+Realized primarily via:
+
+- `docs/ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md` (final matrix, residual-gap layer, closeout/signoff contract)
+- `docs/plan/tasks/TASK-398-runtime-interpreter-correspondence-ingestion-for-mce-007.md`
+- `docs/plan/tasks/TASK-399-five-layer-drift-resolution-and-residual-gap-classification.md`
+- `docs/plan/tasks/TASK-400-mce-007-closeout-summary-and-drift-prevention-checklist.md`
 
 ## TDD Steps
 
@@ -134,29 +150,37 @@ Expected pass condition:
 
 - a reader can tell exactly what “full-layer alignment” means, what evidence is required, which rows are already closed, and what remains blocked on MCE-006.
 
+Historical realization note:
+
+- these pass conditions were satisfied incrementally across the final MCE-007 closeout corpus rather than by this task file alone.
+
 ## Completion Checklist
 
-- [ ] TASK-397 task file created
-- [ ] MCE-007 reframed as a closeout/meta-alignment phase
-- [ ] canonical construct-family matrix shape defined
-- [ ] evidence model per boundary defined
-- [ ] row status vocabulary defined
-- [ ] MCE-006 gating language made explicit
-- [ ] PLAN-INDEX updated with dedicated MCE-007 phase
+- [x] TASK-397 task file created
+- [x] MCE-007 reframed as a closeout/meta-alignment phase
+- [x] canonical construct-family matrix shape defined
+- [x] evidence model per boundary defined
+- [x] row status vocabulary defined, later strengthened into the published residual-gap / closeout vocabulary
+- [x] MCE-006 gating language made explicit and preserved during later runtime-evidence ingestion
+- [x] PLAN-INDEX updated with dedicated MCE-007 phase and now reconciled as phase-complete
 
-## Dependencies for Next Task
+## Downstream Realization
 
-This task outputs:
+This task originally defined these outputs:
 
 - one canonical five-layer matrix frame,
 - one closure contract for MCE-007,
 - one explicit boundary between MCE-006 runtime mapping and MCE-007 closeout.
 
-Required by:
+These outputs were then consumed and materially realized by:
 
 - TASK-398: Runtime/Interpreter Correspondence Ingestion for MCE-007
 - TASK-399: Five-Layer Drift Resolution and Residual Gap Classification
 - TASK-400: MCE-007 Closeout Summary and Drift-Prevention Checklist
+
+Reconciliation result:
+
+- TASK-397 should be read as the earlier scaffold/framing task for the now-published MCE-007 closeout corpus, not as a still-pending work item.
 
 ## Notes
 
@@ -173,3 +197,8 @@ Edge cases to keep visible in the matrix:
 - helper-backed `Par` aggregation and branch interleaving,
 - spawn/completion authority boundaries,
 - capability/policy/obligation flows whose runtime realization may be indirect.
+
+Reconciliation note:
+
+- The planning/documentation side of these edge cases is now closed out in the published MCE-007 matrix and residual register.
+- They remain conservatively visible because several of them still participate in the frozen runtime-side true residual drift set.

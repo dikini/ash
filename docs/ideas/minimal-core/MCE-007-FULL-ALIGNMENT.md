@@ -3,6 +3,7 @@ status: closeout-published
 created: 2026-03-30
 last-revised: 2026-04-05
 related-plan-tasks: [TASK-394, TASK-395, TASK-396, TASK-397, TASK-398, TASK-399, TASK-400]
+related-plan-notes: TASK-397 is reconciled complete as the earlier framing/scaffold task whose intended outputs were materially realized by the published matrix, residual-gap classification layer, and closeout/signoff contract in this document.
 tags: [alignment, surface, ir, semantics, interpreter, consolidation]
 ---
 

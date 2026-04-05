@@ -1,6 +1,6 @@
 # MCE-007 Full Layer Alignment Plan
 
-> **For Hermes:** Use subagent-driven-development to execute this plan task-by-task. TASK-397 is actionable now; MCE-006 Phase 63 is now closed, so TASK-398 through TASK-400 can consume the frozen runtime/interpreter handoff packet rather than waiting on additional MCE-006 packaging.
+> **For Hermes:** Use subagent-driven-development to execute this plan task-by-task. TASK-397 is now reconciled as complete framing work whose intended outputs were materially realized by the published MCE-007 closeout corpus; MCE-006 Phase 63 is closed, and TASK-398 through TASK-400 now stand as the completed ingestion/classification/closeout realization path.
 
 **Goal:** Turn MCE-007 from a broad exploration into an execution-ready five-layer alignment closeout plan that consumes accepted MCE-004 and MCE-005 results, gates on MCE-006 for runtime/interpreter evidence, and ends with a durable drift-prevention checklist.
 
@@ -74,7 +74,7 @@ Status after TASK-400:
 
 ### Task 1: Create the MCE-007 matrix and closure contract
 
-Status: TASK-397 created; execution remains pending.
+Status: TASK-397 reconciled complete as earlier scaffold/framing work; its intended outputs were realized incrementally by the final published MCE-007 matrix, residual-gap layer, and closeout/signoff contract.
 
 **Objective:** Freeze the alignment frame so later MCE-007 work has one canonical matrix, one evidence model, and one closure vocabulary.
 
@@ -132,6 +132,11 @@ State clearly that MCE-007 consumes runtime/interpreter evidence from MCE-006 an
 - runtime scheduler/queue structures,
 - continuation or residual-workflow representations,
 - concrete trace/effect accumulation data structures.
+
+Completed result:
+- TASK-397 should now be read as the framing task that defined the intended matrix/closure shape.
+- Those outputs were later realized materially by the published MCE-007 corpus, especially through the final matrix, the residual-gap classification layer, and the closeout/signoff contract.
+- This reconciliation closes the planning/documentation scaffold without claiming that the remaining runtime-side true residual drift has been resolved.
 
 ### Task 2: Runtime/interpreter evidence ingestion
 
@@ -277,7 +282,7 @@ Completed result:
 
 This plan is successful when:
 - a dedicated MCE-007 task scaffold exists,
-- TASK-397 exists and clearly freezes the matrix/closure contract,
+- TASK-397 exists as the original framing scaffold, and the later published MCE-007 corpus now clearly freezes the matrix/closure contract,
 - the future tasks cleanly separate matrix setup, runtime evidence ingestion, residual-gap classification, and drift-prevention closeout,
 - MCE-006 ownership is preserved,
 - later MCE-007 execution can proceed without re-litigating scope.

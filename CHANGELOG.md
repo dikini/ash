@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Reconciled TASK-397 as completed framing/scaffold work for MCE-007 by marking the task and Phase 62 planning surfaces complete, recording that its intended outputs were materially realized by the published MCE-007 matrix / residual-gap / closeout corpus, and preserving the conservative note that true runtime-side residual drift remains open.
+
 - Completed TASK-400 as documentation/planning/full-stack closeout work for MCE-007, adding a final closeout/signoff/drift-prevention section to `docs/ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md`, freezing the accepted five-layer matrix state and current residual register, explicitly preserving the mixed sequencing / binding / branching row as accepted local execution alignment plus unresolved cumulative-carrier drift, publishing signoff conditions that distinguish closeout completion from full runtime closure, and updating the surrounding planning/reporting corpus to reflect that the closeout artifact is complete while true residual runtime drift remains open.
 
 - Completed TASK-399 as documentation/planning/full-stack alignment work for MCE-007, adding a dedicated residual-gap classification layer to `docs/ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md`, freezing the categories `packaging-only`, `accepted partiality`, and `true residual drift`, assigning owners to every remaining non-closed issue, and distinguishing accepted owner-bound limitations from the true residual drift set around blocked-state classification, cumulative semantic-carrier packaging, retained completion observation, and helper-backed `Par` aggregation.

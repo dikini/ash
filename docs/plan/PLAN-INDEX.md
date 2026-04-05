@@ -1874,15 +1874,15 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 ## Phase 62: Full Layer Alignment Closeout (MCE-007)
 
-**Goal:** Build the execution-ready closeout scaffold for verifying canonical minimal-core alignment across all five layers — surface syntax, canonical IR, big-step semantics, small-step semantics, and interpreter/runtime — consuming accepted MCE-004 and MCE-005 outputs and, after TASK-398, working from the ingested runtime/interpreter evidence packet from MCE-006.
+**Goal:** Publish and preserve the coherent MCE-007 closeout corpus for verifying canonical minimal-core alignment across all five layers — surface syntax, canonical IR, big-step semantics, small-step semantics, and interpreter/runtime — consuming accepted MCE-004 and MCE-005 outputs and the frozen runtime/interpreter evidence packet from MCE-006.
 
 **Source:** [MCE-007: Full Layer Alignment](../ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md)
 **Priority:** Medium-High (important consolidation work; runtime/interpreter evidence is now ingested, residual classification is frozen, and the final closeout/checklist artifact is now published)
-**Status:** 🟡 In Progress (TASK-398 through TASK-400 are complete; TASK-397 remains tracked in this phase as the earlier framing artifact, while the MCE-007 closeout now freezes the accepted matrix state, residual register, signoff conditions, and drift-prevention checklist)
+**Status:** ✅ Complete (TASK-397 is now reconciled as the earlier framing/scaffold task whose intended outputs were materially realized by the published MCE-007 matrix, residual-gap layer, and closeout/signoff contract. The phase is documentation/planning complete even though true runtime-side residual drift remains explicitly open.)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-397](tasks/TASK-397-five-layer-alignment-matrix-and-closure-contract.md) | Define the canonical five-layer matrix, evidence model, row status vocabulary, and closeout contract for MCE-007 | MCE-007 | 2-4 | 📝 Planned |
+| [TASK-397](tasks/TASK-397-five-layer-alignment-matrix-and-closure-contract.md) | Define the canonical five-layer matrix, evidence model, row status vocabulary, and closeout contract for MCE-007; now reconciled as the earlier framing task whose outputs were realized by the final MCE-007 corpus | MCE-007 | 2-4 | ✅ Complete |
 | [TASK-398](tasks/TASK-398-runtime-interpreter-correspondence-ingestion-for-mce-007.md) | Consume the frozen MCE-006 runtime/interpreter correspondence packet into the MCE-007 matrix and classify each Small-step → Interpreter row conservatively | MCE-007 | 2-4 | ✅ Complete |
 | [TASK-399](tasks/TASK-399-five-layer-drift-resolution-and-residual-gap-classification.md) | Classify the remaining MCE-007 rows into packaging-only work, accepted partiality, or true residual drift, and assign explicit owners | MCE-007 | 2-4 | ✅ Complete |
 | [TASK-400](tasks/TASK-400-mce-007-closeout-summary-and-drift-prevention-checklist.md) | Publish the MCE-007 closeout summary and a future-change drift-prevention checklist | MCE-007 | 2-3 | ✅ Complete |

@@ -21,7 +21,7 @@ This report assesses the implementability of 16 design explorations across three
 
 | Area | Documents | Readiness | Primary Blockers |
 |------|-----------|-----------|------------------|
-| minimal-core | 9 | Medium-High | MCE-003 design uncertainty, remaining small-step/interpreter alignment, runtime cleanup |
+| minimal-core | 9 | Medium-High | MCE-003 design uncertainty, frozen MCE-007 true residual drift set (blocked-state classification, cumulative carriers, completion retention, `Par` aggregation), runtime cleanup |
 | type-system | 5 | Low-Medium | Ad-hoc polymorphism design decisions |
 | otp | 2 | Low | Generic/concrete split for behaviors |
 
@@ -136,31 +136,31 @@ Phase 61 converted MCE-005 from an exploratory note into an accepted small-step 
 
 ---
 
-### 1.6 MCE-006: Small-Step ↔ IR Execution Alignment — UNBLOCKED BY PHASE 61
+### 1.6 MCE-006: Small-Step ↔ IR Execution Alignment — PHASE 63 CLOSEOUT COMPLETE
 
 **Status:** Drafting  
-**Implementability:** MEDIUM — semantic target fixed; runtime mapping still open
+**Implementability:** MEDIUM-HIGH as planning/design corpus — semantic target fixed and Phase 63 runtime correspondence now packaged conservatively for downstream MCE-007 use
 
 **Summary:**
-MCE-006 now consumes the accepted MCE-005 backbone and focuses on the remaining runtime/interpreter questions: configuration-to-runtime mapping, blocked-state carriers, `Par` interleaving realization, cumulative trace/effect accumulation, and `ControlLink`/completion realization.
+MCE-006 now consumes the accepted MCE-005 backbone and, after Phase 63 / TASK-401 through TASK-404, includes a canonical semantic-carrier → runtime mapping table, one explicit operational correspondence section for residual control / blocked-suspended realization / completion-control authority, one explicit `Par` correspondence section, and one explicit closeout section for observable preservation, divergence taxonomy, and MCE-007 handoff packaging. The frozen runtime story is conservative: ordinary residual execution is primarily direct AST recursion, blocking receive is realized implicitly through mailbox/stream wait loops, yield suspension is explicit through `YieldState` plus `ExecError::YieldSuspended`, `ControlLinkRegistry` directly realizes reusable-versus-terminal control authority, `Workflow::Par` is documented as bulk async child execution with cloned branch-local `Context` state plus shared runtime registries and list-value terminal collation, and authoritative cumulative carriers for `π`, `T`, `ε̂`, and stronger terminal `Ω` / completion-payload packaging remain partial or missing.
 
-**Assessment:** This work is no longer blocked on undefined semantics. The remaining dependency is practical understanding of the current interpreter/runtime model and how it preserves the fixed observables.
+**Assessment:** MCE-006 is now complete as a documentation/planning/runtime-correspondence phase. The resulting verdict is intentionally conservative: the current interpreter partially realizes the accepted small-step backbone for observable purposes, but MCE-007 should still keep cumulative-carrier and retained-completion rows marked partial/follow-up rather than closed.
 
-**Recommendation:** Proceed with runtime-structure inventory and semantic-carrier mapping rather than reopening small-step design.
+**Recommendation:** Treat TASK-401 through TASK-404 as the frozen MCE-006 evidence packet. MCE-007 should consume that packet directly and avoid reopening carrier/control/`Par` correspondence stories unless new runtime evidence appears.
 
 ---
 
-### 1.7 MCE-007: Full Layer Alignment — META-TRACKING AFTER PHASE 61
+### 1.7 MCE-007: Full Layer Alignment — CLOSEOUT ARTIFACT PUBLISHED, TRUE RESIDUAL DRIFT STILL OPEN
 
-**Status:** Drafting  
-**Implementability:** LOW — Depends on all other MCE-*
+**Status:** Closeout artifact published  
+**Implementability:** MEDIUM-HIGH as planning/closeout corpus — frozen runtime evidence is ingested, residual gaps are classified, and the final checklist/signoff artifact is now published; remaining work is runtime-side follow-on for the true residual drift set
 
 **Summary:**
-Consolidates all five layers: Surface → IR → Big-step → Small-step → Interpreter. Provides verification matrix showing most constructs are "Partial" or "Needs work."
+Consolidates all five layers: Surface → IR → Big-step → Small-step → Interpreter. TASK-398 consumes the frozen MCE-006 Phase 63 packet directly into the MCE-007 verification matrix, TASK-399 adds a dedicated residual-gap layer that classifies the remaining partial rows into packaging-only work, accepted partiality, and true residual drift with explicit owners, and TASK-400 publishes the final closeout/signoff/checklist section that freezes the accepted matrix state and current residual register.
 
-**Assessment:** This remains a tracking/consolidation document, but Phase 61 materially reduced its semantic uncertainty. The primary remaining open dependency is MCE-006 runtime/interpreter correspondence, not the existence of a small-step backbone.
+**Assessment:** This remains a tracking/consolidation document, but it is no longer blocked on un-ingested MCE-006 evidence, on re-deriving which residuals are real drift, or on missing closeout packaging. The corpus now explicitly treats packaged big-step ↔ small-step correspondence as closed by the TASK-400 closeout artifact, keeps rejected-vs-runtime-failure subtype cleanup as accepted partiality, freezes the true residual drift set to blocked/terminal/invalid runtime classification, authoritative cumulative `Ω` / `π` / `T` / `ε̂` packaging, retained completion-payload observation, and full helper-backed `Par` aggregation, and keeps sequencing / binding / branching explicit as a mixed case: locally aligned execution with one remaining cumulative-carrier drift dependency.
 
-**Recommendation:** Use as living document to track cross-layer consistency. Update as prerequisites resolve.
+**Recommendation:** Use as the living closeout matrix, frozen residual register, and signoff/checklist artifact. Future work should focus on runtime/interpreter follow-on for the true residual drift set, not on re-deriving the Phase 63 packet or rebuilding the closeout prose.
 
 ---
 
@@ -392,7 +392,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 | Action | Owner | Rationale |
 |--------|-------|-----------|
 | Resolve TYPES-002 ad-hoc polymorphism | Language team | Unblocks OTP and influences MCE-003 |
-| Execute MCE-006 runtime/interpreter alignment against the accepted MCE-005 backbone | Research / Core team | Phase 61 fixed the semantic target; remaining work is realization and correspondence |
+| Use the published TASK-400 closeout artifact as the baseline for any future runtime drift follow-on | Research / Core team | The matrix, residual register, signoff conditions, and drift-prevention checklist are now frozen; later work should resolve true drift rather than repackage the closeout |
 | Implement MCE-001 Phase 57B | Core team | Entry point implementation |
 | Decide MCE-003 functions vs capabilities | Language team | Fundamental language design |
 
@@ -401,8 +401,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 | Action | Blocked On | ETA |
 |--------|-----------|-----|
 | OTP implementation | TYPES-002 resolution | Post-type-system |
-| MCE-007 full alignment | MCE-006 | Late in minimal-core |
-| MCE-006 small-step ↔ IR alignment | runtime/interpreter inventory and mapping work | Post-Phase-61 |
+| MCE-007 true residual runtime closure | Later runtime/interpreter follow-on for blocked-state classification, cumulative carriers, completion retention, and `Par` aggregation | Late in minimal-core |
 
 ---
 
@@ -434,7 +433,7 @@ The Ash ideas collection shows healthy exploration across multiple dimensions. T
 
 - **Ready now:** MCE-001 (entry point), TYPES-001/003/004 (type system refinements)
 - **Needs research:** TYPES-002 (ad-hoc polymorphism), MCE-003 (functions vs capabilities)
-- **Blocked:** OTP-* (depends on type system), MCE-007 closeout (depends mainly on MCE-006 runtime/interpreter alignment)
+- **Blocked:** OTP-* (depends on type system), full runtime-side closure of the MCE-007 true residual drift set
 
 The critical path runs through TYPES-002. Resolution of ad-hoc polymorphism will unblock OTP and inform MCE-003. Until then, work should focus on:
 

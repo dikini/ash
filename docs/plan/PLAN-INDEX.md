@@ -1869,3 +1869,41 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-396](tasks/TASK-396-small-step-big-step-correspondence-and-mce-006-handoff.md) | Package small-step / big-step correspondence and the explicit MCE-006 runtime handoff | MCE-005 | 2-4 | ✅ Done |
 
 **Deliverable:** Accepted Phase 61 planning/design corpus for MCE-005: a fixed workflow-level small-step backbone, canonical rule inventory, explicit blocked-vs-stuck and observability contracts, and a direct handoff target for MCE-006 and MCE-007.
+
+---
+
+## Phase 62: Full Layer Alignment Closeout (MCE-007)
+
+**Goal:** Build the execution-ready closeout scaffold for verifying canonical minimal-core alignment across all five layers — surface syntax, canonical IR, big-step semantics, small-step semantics, and interpreter/runtime — consuming accepted MCE-004 and MCE-005 outputs and, after TASK-398, working from the ingested runtime/interpreter evidence packet from MCE-006.
+
+**Source:** [MCE-007: Full Layer Alignment](../ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md)
+**Priority:** Medium-High (important consolidation work; runtime/interpreter evidence is now ingested, residual classification is frozen, and the final closeout/checklist artifact is now published)
+**Status:** 🟡 In Progress (TASK-398 through TASK-400 are complete; TASK-397 remains tracked in this phase as the earlier framing artifact, while the MCE-007 closeout now freezes the accepted matrix state, residual register, signoff conditions, and drift-prevention checklist)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-397](tasks/TASK-397-five-layer-alignment-matrix-and-closure-contract.md) | Define the canonical five-layer matrix, evidence model, row status vocabulary, and closeout contract for MCE-007 | MCE-007 | 2-4 | 📝 Planned |
+| [TASK-398](tasks/TASK-398-runtime-interpreter-correspondence-ingestion-for-mce-007.md) | Consume the frozen MCE-006 runtime/interpreter correspondence packet into the MCE-007 matrix and classify each Small-step → Interpreter row conservatively | MCE-007 | 2-4 | ✅ Complete |
+| [TASK-399](tasks/TASK-399-five-layer-drift-resolution-and-residual-gap-classification.md) | Classify the remaining MCE-007 rows into packaging-only work, accepted partiality, or true residual drift, and assign explicit owners | MCE-007 | 2-4 | ✅ Complete |
+| [TASK-400](tasks/TASK-400-mce-007-closeout-summary-and-drift-prevention-checklist.md) | Publish the MCE-007 closeout summary and a future-change drift-prevention checklist | MCE-007 | 2-3 | ✅ Complete |
+
+**Deliverable:** A five-layer alignment closeout corpus for canonical minimal-core Ash: a construct-family matrix with explicit evidence links across all adjacent layers, an ingested Small-step → Interpreter classification based on the frozen MCE-006 packet, a frozen residual-gap register distinguishing accepted partiality from true residual drift, explicit signoff conditions, and a durable checklist preventing future layer drift. The closeout artifact is complete even though true runtime-side residual drift remains explicitly open.
+
+---
+
+## Phase 63: Small-Step ↔ IR Execution Alignment (MCE-006)
+
+**Goal:** Build the execution-ready runtime/interpreter correspondence scaffold for the accepted MCE-005 backbone by mapping semantic carriers onto executable IR evaluation structures, explaining control/blocking/concurrency realization, and packaging the runtime evidence that MCE-007 will later consume.
+
+**Source:** [MCE-006: Align Small-Step Semantics with IR Execution](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md)
+**Priority:** High (the main remaining dependency between accepted MCE-005 semantics and eventual MCE-007 full-stack closeout)
+**Status:** ✅ Complete (TASK-401 through TASK-404 now freeze the MCE-006 runtime correspondence corpus. Phase numbering follows planning/index order even though later Phase 62 MCE-007 work depends on this Phase 63 evidence.)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-401](tasks/TASK-401-runtime-carrier-inventory-and-semantic-mapping-table.md) | Inventory runtime/interpreter carriers and define the canonical semantic mapping table for MCE-006 | MCE-006 | 2-4 | ✅ Complete |
+| [TASK-402](tasks/TASK-402-residual-control-blocked-state-and-completion-realization.md) | Explain residual control, blocked-state carriers, and completion/control realization | MCE-006 | 2-4 | ✅ Complete |
+| [TASK-403](tasks/TASK-403-par-interleaving-branch-state-and-aggregation-correspondence.md) | Define `Par` interleaving, branch-local state, and helper-backed aggregation correspondence | MCE-006 | 2-4 | ✅ Complete |
+| [TASK-404](tasks/TASK-404-observable-preservation-gap-classification-and-mce-007-handoff.md) | Package observable preservation, gap classification, and the MCE-007 runtime handoff | MCE-006 | 2-4 | ✅ Complete | 
+
+**Deliverable:** A frozen MCE-006 runtime correspondence corpus for canonical small-step execution: a semantic-carrier → runtime-structure mapping table, explicit control/blocking/concurrency realization notes, a conservative observable-preservation checklist, a divergence taxonomy, and a concise runtime-evidence packet for MCE-007 ingestion.

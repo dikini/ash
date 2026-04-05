@@ -1792,7 +1792,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 **Goal:** Inventory all current IR forms in `ash-core` and identify candidates for elimination or consolidation.
 
 **Source:** [MCE-002: IR Core Forms Audit](../ideas/minimal-core/MCE-002-IR-AUDIT.md)  
-**Priority:** High (unblocks MCE-004, MCE-007)  
+**Priority:** High (informed MCE-004 and unblocks MCE-007)
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1802,7 +1802,6 @@ S57-7 complete, 57B now follows the validated dependency order below.
 **Deliverable:** Comprehensive audit report with specific recommendations for minimizing the IR surface while preserving semantics.
 
 **Blocks:**
-- MCE-004: Big-step semantics alignment (needs stable IR definition)
 - MCE-007: Full layer alignment (depends on IR audit)
 
 ---
@@ -1836,3 +1835,19 @@ S57-7 complete, 57B now follows the validated dependency order below.
 **Plan:** [2026-04-04-agent-pipeline-worktree-isolation-plan.md](../plans/2026-04-04-agent-pipeline-worktree-isolation-plan.md)
 
 **Deliverable:** Per-task worktrees under `.worktrees/<TASK-ID>/`, explicit task/workspace path contracts in prompts, operator-visible worktree status, and safe cleanup/recovery behavior.
+
+---
+
+## Phase 60: Big-Step Semantics Alignment (MCE-004)
+
+**Goal:** Record the now-resolved alignment between surface syntax lowering, canonical IR, and the proof-shaped big-step semantics so MCE-004 is closed as documentation/planning work rather than tracked as an open semantics gap.
+
+**Source:** [MCE-004: Big-Step Semantics Alignment](../ideas/minimal-core/MCE-004-BIG-STEP-ALIGNMENT.md)
+**Priority:** Medium (documentation/spec convergence)
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-393](tasks/TASK-393-big-step-semantics-alignment.md) | Consolidate the resolved MCE-004 surface ↔ IR ↔ big-step alignment decisions into task/planning/docs artifacts | MCE-004 | 1-2 | ✅ Done |
+
+**Deliverable:** Accepted MCE-004 documentation that cross-references `SPEC-001`, `SPEC-004`, TASK-350, MCE-002, and the lowering contract while recording the resolved Seq, Par, spawn-completion, and Match/if-let alignment decisions.

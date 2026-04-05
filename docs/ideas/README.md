@@ -30,7 +30,7 @@ This directory tracks **pre-specification explorations** — design questions, c
 | MCE-001 | [Entry Point](minimal-core/MCE-001-ENTRY-POINT.md) | `candidate` | 2026-03-30 | How Ash programs start → [Phase 57](../plan/PLAN-INDEX.md#phase-57-entry-point-and-program-execution) |
 | MCE-002 | [IR Core Forms Audit](minimal-core/MCE-002-IR-AUDIT.md) | `accepted` | 2026-04-03 | Promoted to [TASK-370](../plan/tasks/TASK-370-ir-core-forms-audit.md) |
 | MCE-003 | [Functions vs Capabilities](minimal-core/MCE-003-FUNCTIONS-VS-CAPS.md) | `drafting` | 2026-03-30 | Do we need functions or are capabilities enough? |
-| MCE-004 | [Big-Step Semantics Alignment](minimal-core/MCE-004-BIG-STEP-ALIGNMENT.md) | `drafting` | 2026-03-30 | Surface syntax ↔ IR ↔ big-step cleanup |
+| MCE-004 | [Big-Step Semantics Alignment](minimal-core/MCE-004-BIG-STEP-ALIGNMENT.md) | `accepted` | 2026-04-05 | Resolved surface syntax ↔ canonical IR ↔ big-step alignment → [TASK-393](../plan/tasks/TASK-393-big-step-semantics-alignment.md) |
 | MCE-005 | [Small-Step Semantics](minimal-core/MCE-005-SMALL-STEP.md) | `drafting` | 2026-03-30 | Develop small-step semantics |
 | MCE-006 | [Small-Step ↔ IR Execution](minimal-core/MCE-006-SMALL-STEP-IR.md) | `drafting` | 2026-03-30 | Align small-step with IR execution |
 | MCE-007 | [Full Layer Alignment](minimal-core/MCE-007-FULL-ALIGNMENT.md) | `drafting` | 2026-03-30 | Surface, IR, both semantics, interpreter |

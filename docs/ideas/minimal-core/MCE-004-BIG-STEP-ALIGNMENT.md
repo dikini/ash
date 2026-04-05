@@ -1,122 +1,127 @@
 ---
-status: drafting
+status: accepted
 created: 2026-03-30
-last-revised: 2026-03-30
-related-plan-tasks: []
+last-revised: 2026-04-05
+related-plan-tasks: [TASK-393]
 tags: [semantics, big-step, surface, ir, alignment]
 ---
 
 # MCE-004: Big-Step Semantics Alignment
 
-## Problem Statement
+## Status Summary
 
-Surface syntax, IR, and big-step semantics have drifted during initial exploration. This exploration identifies misalignments and defines the corrected relationship between these layers.
+This exploration is resolved as documentation/spec alignment work.
 
-Goal: A coherent big-step semantics that accurately describes current (intended) Ash behavior.
+The main big-step alignment questions it originally raised are now answered by the current corpus:
+
+- `SPEC-001` defines the canonical IR contract.
+- The parser-to-core lowering contract defines how surface syntax lowers into that canonical IR.
+- `SPEC-004`, especially after [TASK-350](../../plan/tasks/TASK-350-revise-spec-004-to-complete-big-step-core-semantics.md), defines the proof-shaped big-step meaning of the canonical IR forms.
+- [MCE-002 Audit Report](MCE-002-IR-AUDIT-REPORT.md) resolved the relevant IR-form questions needed for this alignment pass.
 
 ## Scope
 
-- **In scope:**
-  - Surface syntax → IR lowering
-  - IR → big-step semantics rules
-  - Identifying inconsistencies or gaps
-  - Documenting intended behavior
+In scope:
 
-- **Out of scope:**
-  - Small-step semantics (MCE-005)
-  - Interpreter implementation details
-  - Optimization passes
+- surface syntax → canonical IR lowering
+- canonical IR → big-step semantics
+- documenting the resolved contract between those layers
 
-- **Related but separate:**
-  - MCE-002: IR audit (what forms exist)
-  - MCE-007: Full layer alignment (includes small-step)
+Out of scope:
 
-## Current Understanding
+- small-step semantics
+- interpreter or runtime implementation internals
+- optimization or lowering implementation strategy beyond the normative handoff
 
-### What we know
+## Resolved Alignment
 
-- Big-step semantics defines "evaluates to" relation
-- Surface syntax is user-facing, expressive
-- IR is simplified, canonical
-- Some surface constructs lower to multiple IR forms
-- Obligation tracking happens at IR level
+### 1. Surface syntax lowers to canonical IR first
 
-### What we're uncertain about
+The big-step semantics are defined over canonical IR, not over raw surface syntax.
 
-- Exact surface → IR mapping for all constructs
-- Whether big-step rules match current IR structure
-- How effects are threaded through big-step rules
-- How obligations are discharged in big-step
+That relationship is now explicit across the docs set:
 
-## Alignment Matrix
+- `docs/spec/SPEC-001-IR.md` defines the canonical workflow, expression, and pattern forms.
+- `docs/reference/parser-to-core-lowering-contract.md` defines the surface-to-core lowering boundary.
+- `docs/spec/SPEC-004-SEMANTICS.md` states that its rules define the meaning of the canonical core IR from `SPEC-001` and treat surface constructs as semantically relevant only through lowering.
 
-| Surface Construct | IR Form(s) | Big-Step Rule | Status |
-|-------------------|------------|---------------|--------|
-| `let x = e1 in e2` | `Let(x, e1, e2)` | Let rule | ✅ Aligned |
-| `if e then e1 else e2` | `If(e, e1, e2)` | If-True, If-False | ✅ Aligned |
-| `match e { ... }` | `Match(e, arms)` | Match rules | ⚠️ Needs review |
-| `par { e1 | e2 }` | `Par(e1, e2)` | Par rule | ⚠️ Effect aggregation? |
-| `seq(e1, e2)` | `Seq(e1, e2)` or `Let` | Seq rule | ❌ Unclear |
-| `call(w)` | `Call(w)` | Call-Sync | ✅ Aligned |
-| `spawn(w)` | `Spawn(w)` | Call-Async | ⚠️ Obligation semantics? |
-| `act c.m()` | `Act(c, m, args)` | Act rule | ✅ Aligned |
-| `observe c.m()` | `Observe(c, m, args)` | Observe rule | ⚠️ Effect category? |
+So the intended evaluation pipeline is:
 
-## Identified Issues
+1. parse surface syntax
+2. lower to canonical IR
+3. evaluate the canonical IR under the big-step semantics
 
-### Issue 1: Seq vs Let
+### 2. `Seq` remains a primitive workflow form
 
-Current IR may have both `Seq` and `Let`. If `Seq` is just `Let` with ignored binding, big-step should reflect this.
+This question is resolved.
 
-**Options:**
-- Keep Seq with its own rule
-- Eliminate Seq, use Let in both IR and semantics
+Per [MCE-002 Audit Report](MCE-002-IR-AUDIT-REPORT.md), `Workflow::Seq` must remain primitive:
 
-### Issue 2: Effect Aggregation in Par
+- `Seq` composes workflows;
+- `Let` binds an `Expr` and continues with a workflow;
+- therefore there is no valid `Seq` → `Let` rewrite in the current IR contract.
 
-Big-step `Par` rule needs to define how effects from both branches combine.
+This aligns with `SPEC-001`, which keeps `Seq` in the canonical workflow set, and with `SPEC-004`, which gives workflow forms their own explicit big-step treatment rather than trying to erase sequencing into expression binding.
 
-**Question:** Is the Par result effect the join of branch effects?
+### 3. `Par` uses branch-effect join plus helper-backed aggregation
 
-### Issue 3: Obligation Discharge in Spawn
+This question is resolved in `SPEC-004`.
 
-Big-step `Spawn` rule needs to clarify: does the spawned workflow discharge obligations independently?
+Parallel composition is not left as an unspecified effect merge. The current big-step semantics define concurrent combination using helper-backed contracts, with the all-success case combining branch effects by join:
 
-**Current understanding:** Yes, obligations are isolated per workflow instance.
+- terminal effect = `⊔ eff_i` across successful branches;
+- concurrent obligation/provenance aggregation is handled by the explicit helper contracts around parallel outcome combination.
 
-### Issue 4: Match as Primitive
+So MCE-004 no longer needs to ask whether parallel effects join; the normative answer is yes, with helper-owned aggregation contracts for the concurrent outcome details.
 
-If Match lowers to If+destructuring, big-step semantics should define the lowering or eliminate Match as a primitive rule.
+### 4. Spawned completion seals the child's own authoritative terminal state
 
-## Proposed Alignment
+This question is also resolved in `SPEC-004`.
 
-1. **Surface → IR:** Define explicit lowering for each construct
-2. **IR → Big-step:** One rule per primitive IR form
-3. **Effect propagation:** Explicit in all rules
-4. **Obligation discharge:** Explicit at Call and Return
+The `CompletionPayload` for a spawned child seals the child's terminal result together with the child's authoritative:
 
-## Open Questions
+- obligation state,
+- provenance state,
+- effect summary.
 
-1. Should big-step rules reference surface syntax or IR?
-2. How are runtime errors modeled in big-step?
-3. Do we need a separate "configurations" layer between IR and big-step?
-4. How does capability checking interact with big-step?
+That means spawned completion is modeled as the completion of the child workflow instance itself, not as mutation of one shared ambient completion payload. The payload records the child's terminal obligation state as its own completion artifact.
 
-## Related Explorations
+### 5. `Match` remains a primitive core expression; `if let` is sugar
 
-- MCE-002: IR audit (determines what forms need rules)
-- MCE-003: Functions vs capabilities (affects Call rule)
-- MCE-005: Small-step semantics (may inform big-step cleanup)
+This question is resolved jointly by `MCE-002`, `SPEC-001`, and the lowering contract.
+
+- `Expr::Match` remains a primitive canonical core expression.
+- Surface `match` lowers directly to `Expr::Match`.
+- Surface `if let` lowers to `Expr::Match` with a wildcard fallback arm.
+
+So the core semantics need direct `Match` behavior, and `if let` does not require its own canonical runtime form.
+
+### 6. Big-step semantics already have the explicit judgment structure MCE-004 asked for
+
+The original exploration asked for clearer workflow/expression/pattern judgments and more explicit helper contracts.
+
+That work is now present in `SPEC-004` after [TASK-350](../../plan/tasks/TASK-350-revise-spec-004-to-complete-big-step-core-semantics.md):
+
+- explicit workflow big-step judgment
+- explicit expression evaluation judgment
+- explicit pattern matching judgment
+- explicit helper-relation contracts
+- centralized propagation and failure conventions
+
+This means MCE-004 has effectively been promoted from an exploratory gap list into a resolved alignment note.
+
+## Canonical Cross-References
+
+- Canonical IR: [docs/spec/SPEC-001-IR.md](../../spec/SPEC-001-IR.md)
+- Big-step semantics: [docs/spec/SPEC-004-SEMANTICS.md](../../spec/SPEC-004-SEMANTICS.md)
+- Surface-to-core lowering: [docs/reference/parser-to-core-lowering-contract.md](../../reference/parser-to-core-lowering-contract.md)
+- IR audit: [MCE-002 Audit Report](MCE-002-IR-AUDIT-REPORT.md)
+- Proof-shaped semantics completion: [TASK-350](../../plan/tasks/TASK-350-revise-spec-004-to-complete-big-step-core-semantics.md)
+- Planning closeout: [TASK-393](../../plan/tasks/TASK-393-big-step-semantics-alignment.md)
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-30 | Exploration created | Alignment issues identified |
-
-## Next Steps
-
-- [ ] Document current surface → IR lowering
-- [ ] Review existing big-step rules against IR
-- [ ] Identify specific mismatches
-- [ ] Draft corrected big-step semantics
+| 2026-03-30 | Exploration created | Initial alignment questions captured while semantics and IR contracts were still being normalized |
+| 2026-04-05 | Exploration accepted as resolved planning artifact | The current corpus already settles the Seq, Par, spawn-completion, Match, and judgment-structure questions |

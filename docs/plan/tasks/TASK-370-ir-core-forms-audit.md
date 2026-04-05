@@ -238,7 +238,7 @@ Propose minimal essential forms:
 ## Related Work
 
 - **MCE-003**: Functions vs Capabilities (affects Call form)
-- **MCE-004**: Big-step semantics alignment (forms must support transition rules)
+- **MCE-004**: Big-step semantics alignment (used this audit to settle canonical-form questions)
 - **MCE-007**: Full layer alignment (depends on this audit)
 
 ## Estimated Effort
@@ -255,6 +255,5 @@ Nothing
 
 ## Blocks
 
-- MCE-004: Needs IR audit to determine what forms need semantics
 - MCE-007: Depends on stable IR definition
 - Any IR form elimination work

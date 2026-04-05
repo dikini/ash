@@ -1,14 +1,14 @@
 ---
 status: draft
 created: 2026-04-03
-last-revised: 2026-04-03
+last-revised: 2026-04-05
 tags: [analysis, roadmap, implementation, assessment]
 ---
 
 # Ash Ideas Implementability Report
 
 **Scope:** docs/ideas/minimal-core/, docs/ideas/type-system/, docs/ideas/otp/  
-**Assessment Date:** 2026-04-03  
+**Assessment Date:** 2026-04-05
 **Assessor:** Hermes Agent (Software Engineer/Analyst)
 
 ---
@@ -21,7 +21,7 @@ This report assesses the implementability of 16 design explorations across three
 
 | Area | Documents | Readiness | Primary Blockers |
 |------|-----------|-----------|------------------|
-| minimal-core | 9 | Medium-High | SPEC updates, semantics alignment |
+| minimal-core | 9 | Medium-High | MCE-003 design uncertainty, remaining small-step/interpreter alignment, runtime cleanup |
 | type-system | 5 | Low-Medium | Ad-hoc polymorphism design decisions |
 | otp | 2 | Low | Generic/concrete split for behaviors |
 
@@ -60,20 +60,21 @@ Document explicitly calls for SPEC-first approach:
 
 ---
 
-### 1.2 MCE-002: IR Core Forms Audit — NEEDS INVENTORY
+### 1.2 MCE-002: IR Core Forms Audit — COMPLETE
 
-**Status:** Drafting  
-**Implementability:** MEDIUM — Needs codebase inventory
+**Status:** Accepted
+**Implementability:** COMPLETE — Closed via TASK-370 and the audit report
 
 **Summary:**
-Proposes eliminating or consolidating IR forms (Seq → Let, Match as sugar). Identifies essential forms: Values, Let, If, Call, Return, Par, Spawn, Act, Observe.
+The IR audit is complete. The repository now has a formal audit report documenting the current canonical core carriers, the active duplication layers, and conservative recommendations for future consolidation work.
 
-**What's Missing:**
-- Complete inventory of current IR forms from codebase
-- Verification of which forms the interpreter implements natively
-- Cost/benefit analysis of eliminations
+**Key Results:**
+- Identified `crates/ash-core/src/ast.rs` as the de facto primary core-AST carrier.
+- Confirmed `Workflow::Seq` is primitive and rejected `Seq` → `Let`.
+- Confirmed `Expr::IfLet` is sugar over `Expr::Match`.
+- Deferred deeper eliminations until semantics and lowering are clearer.
 
-**Assessment:** This is foundational cleanup work. Cannot proceed without understanding current implementation. Recommend delegating to a sub-agent to inventory `ash-core` IR forms.
+**Assessment:** MCE-002 is no longer a missing-inventory blocker. It now serves as an accepted input to later work such as MCE-004 closeout and MCE-007 full-stack alignment.
 
 **Risk:** Medium. Form elimination affects all downstream semantics.
 
@@ -99,21 +100,21 @@ This is a fundamental design question with far-reaching implications:
 
 ---
 
-### 1.4 MCE-004: Big-Step Semantics Alignment — PARTIALLY ALIGNED
+### 1.4 MCE-004: Big-Step Semantics Alignment — RESOLVED
 
-**Status:** Drafting  
-**Implementability:** MEDIUM — Needs gap analysis
+**Status:** Accepted
+**Implementability:** COMPLETE — Alignment recorded in current corpus via TASK-393
 
 **Summary:**
-Documents alignment between surface syntax, IR, and big-step semantics. Provides alignment matrix showing most constructs are aligned or need review.
+This exploration started as a gap-analysis note for surface syntax, IR, and big-step semantics alignment, but the relevant questions are now settled by the existing corpus. `SPEC-001` defines the canonical IR, the parser-to-core lowering contract defines the surface-to-core handoff, and `SPEC-004` now provides explicit workflow/expression/pattern judgments plus helper contracts after TASK-350.
 
-**Identified Issues:**
-1. Seq vs Let (needs decision)
-2. Effect aggregation in Par (needs definition)
-3. Obligation discharge in Spawn (needs clarification)
-4. Match as primitive vs lowered (needs decision)
+**Resolved Decisions:**
+1. `Workflow::Seq` stays primitive; MCE-002 rejected any `Seq` → `Let` rewrite because `Seq` composes workflows while `Let` binds an `Expr`.
+2. `Par` effect aggregation is defined in `SPEC-004` as branch-effect join in the all-success case, with helper-backed obligation/provenance aggregation.
+3. Spawn completion seals the child's own authoritative terminal obligation/provenance/effect state in `CompletionPayload`.
+4. `Expr::Match` remains a primitive core expression, and `if let` lowers to `Expr::Match` with a wildcard fallback arm.
 
-**Assessment:** This is documentation of known issues. Progress depends on decisions from MCE-002 and MCE-003.
+**Assessment:** MCE-004 is no longer an open research gap. It is completed documentation/planning alignment work captured by TASK-393.
 
 ---
 
@@ -371,7 +372,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 |--------|-------|-----------|
 | Proceed with MCE-001 SPEC phase (57A tasks) | Core team | Most mature, unblocks entry point |
 | Adopt TYPES-003 vocabulary in existing specs | Documentation | Immediate clarity improvement |
-| Inventory ash-core IR forms (for MCE-002) | Sub-agent | Unblocks IR cleanup |
+| Use TASK-370 audit findings to scope any future IR-consolidation work | Documentation/Core team | MCE-002 is complete; future work should build on the accepted audit |
 | Decide TYPES-001 tuple syntax | Language team | Simple syntax decision, unblocks RuntimeError |
 | Add `Pure` grade per TYPES-004 | Type system | Foundation for effect typing |
 
@@ -390,7 +391,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 | Action | Owner | Rationale |
 |--------|-------|-----------|
 | Resolve TYPES-002 ad-hoc polymorphism | Language team | Unblocks OTP and influences MCE-003 |
-| Complete MCE-004/MCE-005 semantics alignment | Research | Formal foundation |
+| Continue MCE-005 small-step semantics work after MCE-004 closeout | Research | MCE-004 is resolved; remaining semantics research is now on the small-step side |
 | Implement MCE-001 Phase 57B | Core team | Entry point implementation |
 | Decide MCE-003 functions vs capabilities | Language team | Fundamental language design |
 
@@ -448,9 +449,9 @@ The explorations demonstrate good design discipline: separating concerns, identi
 
 ### Minimal Core (MCE-*)
 - MCE-001: Entry Point — Candidate status
-- MCE-002: IR Core Forms Audit — Drafting
+- MCE-002: IR Core Forms Audit — Accepted
 - MCE-003: Functions vs Capabilities — Drafting
-- MCE-004: Big-Step Semantics Alignment — Drafting
+- MCE-004: Big-Step Semantics Alignment — Accepted
 - MCE-005: Small-Step Semantics — Drafting
 - MCE-006: Small-Step ↔ IR Execution — Drafting
 - MCE-007: Full Layer Alignment — Drafting

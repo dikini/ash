@@ -1,7 +1,7 @@
 ---
 status: drafting
 created: 2026-03-30
-last-revised: 2026-03-30
+last-revised: 2026-04-05
 related-plan-tasks: []
 tags: [alignment, surface, ir, semantics, interpreter, consolidation]
 ---
@@ -12,7 +12,7 @@ tags: [alignment, surface, ir, semantics, interpreter, consolidation]
 
 All layers of Ash must be consistent: surface syntax → IR → big-step semantics → small-step semantics → interpreter.
 
-This exploration consolidates the partial alignments (MCE-004, MCE-006) into a complete, verified stack.
+This exploration consolidates the accepted big-step alignment from MCE-004 together with the later small-step and interpreter alignment work into a complete, verified stack.
 
 ## Scope
 
@@ -28,7 +28,7 @@ This exploration consolidates the partial alignments (MCE-004, MCE-006) into a c
   - Non-semantic concerns (formatting, etc.)
 
 - **Related but separate:**
-  - MCE-004: Big-step alignment (prerequisite)
+  - MCE-004: Big-step alignment (accepted prerequisite; surface → IR → big-step contract settled)
   - MCE-005: Small-step semantics (prerequisite)
   - MCE-006: Small-step ↔ IR execution (prerequisite)
 
@@ -80,40 +80,38 @@ For each construct, we need:
 |-----------|------------|--------|-----------|--------------|--------|
 | Let | ✅ | ✅ | ❓ | ❓ | Partial |
 | If | ✅ | ✅ | ❓ | ❓ | Partial |
-| Match | ⚠️ | ⚠️ | ❓ | ❓ | Needs work |
-| Par | ✅ | ⚠️ | ❓ | ❓ | Needs work |
+| Match | ⚠️ | ✅ | ❓ | ❓ | Partial |
+| Par | ✅ | ✅ | ❓ | ❓ | Partial |
 | Call | ✅ | ✅ | ❓ | ❓ | Partial |
-| Spawn | ✅ | ⚠️ | ❓ | ❓ | Needs work |
+| Spawn | ✅ | ✅ | ❓ | ❓ | Partial |
 | Act | ✅ | ✅ | ❓ | ❓ | Partial |
-| Observe | ✅ | ⚠️ | ❓ | ❓ | Needs work |
+| Observe | ✅ | ✅ | ❓ | ❓ | Partial |
 
-## Known Misalignments
+## Remaining Full-Stack Gaps
 
-### Misalignment 1: Seq elimination
+The canonical surface → IR → big-step questions that were previously tracked under MCE-004 are now resolved and should be treated as fixed inputs to this exploration:
 
-- **Surface:** `seq(e1, e2)`
-- **IR:** May be `Seq` or `Let`
-- **Semantics:** Depends on IR form
-- **Resolution:** Decide on canonical IR form
+- `Workflow::Seq` remains primitive.
+- `Expr::Match` remains primitive, and `if let` lowers to `Expr::Match`.
+- `Par` effect aggregation is defined in big-step semantics via branch-effect join plus helper-backed concurrent aggregation.
+- Spawn completion seals the child workflow's authoritative terminal state in `CompletionPayload`.
 
-### Misalignment 2: Match complexity
+The remaining open work for MCE-007 is therefore cross-layer work beyond MCE-004's scope.
 
-- **Surface:** Full pattern matching
-- **IR:** `Match` form or lowered to If
-- **Resolution:** Define canonical lowering or keep Match primitive
+### Gap 1: Big-step ↔ small-step correspondence
 
-### Misalignment 3: Par effect aggregation
+- Show that the future small-step configuration semantics refine the accepted big-step rules.
+- Make concurrency, interleaving, and fairness choices explicit enough to compare with big-step `Par` and spawn behavior.
 
-- **Big-step:** How are branch effects combined?
-- **Small-step:** Interleaving model
-- **Interpreter:** Actual scheduling
-- **Resolution:** Define and verify consistency
+### Gap 2: Small-step ↔ interpreter correspondence
 
-### Misalignment 4: Async obligation isolation
+- Document how the executable interpreter/runtime realizes the later small-step model.
+- Verify that runtime scheduling, control-link handling, and completion/reporting behavior match the semantic contracts.
 
-- **Semantics:** Obligations isolated per workflow
-- **Runtime:** How is this enforced?
-- **Resolution:** Verify runtime tracks per-workflow obligations
+### Gap 3: Ongoing drift prevention
+
+- Define how future language or runtime changes should be checked against the full five-layer stack.
+- Decide whether any of those checks should become automated.
 
 ## Deliverables
 

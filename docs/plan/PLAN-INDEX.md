@@ -1851,3 +1851,21 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-393](tasks/TASK-393-big-step-semantics-alignment.md) | Consolidate the resolved MCE-004 surface ↔ IR ↔ big-step alignment decisions into task/planning/docs artifacts | MCE-004 | 1-2 | ✅ Done |
 
 **Deliverable:** Accepted MCE-004 documentation that cross-references `SPEC-001`, `SPEC-004`, TASK-350, MCE-002, and the lowering contract while recording the resolved Seq, Par, spawn-completion, and Match/if-let alignment decisions.
+
+---
+
+## Phase 61: Small-Step Semantics (MCE-005)
+
+**Goal:** Define a canonical small-step semantics planning backbone for SPEC-001 workflows that refines the accepted SPEC-004 big-step contract, makes concurrency and blocking explicit, and provides the semantic handoff required by MCE-006 and MCE-007.
+
+**Source:** [MCE-005: Small-Step Semantics](../ideas/minimal-core/MCE-005-SMALL-STEP.md)
+**Priority:** High (blocks MCE-006 and is prerequisite for MCE-007)
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-394](tasks/TASK-394-small-step-semantics-scope-and-configuration-contract.md) | Freeze the workflow-level small-step semantic subject, configuration contract, observability strategy, and MCE-005/MCE-006 boundary | MCE-005 | 2-4 | ✅ Done |
+| [TASK-395](tasks/TASK-395-canonical-workflow-small-step-rule-set-and-concurrency-semantics.md) | Define the canonical workflow small-step rule inventory, concurrency stance, and blocking semantics | MCE-005 | 4-6 | ✅ Done |
+| [TASK-396](tasks/TASK-396-small-step-big-step-correspondence-and-mce-006-handoff.md) | Package small-step / big-step correspondence and the explicit MCE-006 runtime handoff | MCE-005 | 2-4 | ✅ Done |
+
+**Deliverable:** Accepted Phase 61 planning/design corpus for MCE-005: a fixed workflow-level small-step backbone, canonical rule inventory, explicit blocked-vs-stuck and observability contracts, and a direct handoff target for MCE-006 and MCE-007.

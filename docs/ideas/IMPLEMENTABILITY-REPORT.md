@@ -118,38 +118,39 @@ This exploration started as a gap-analysis note for surface syntax, IR, and big-
 
 ---
 
-### 1.5 MCE-005: Small-Step Semantics — THEORY IN PROGRESS
+### 1.5 MCE-005: Small-Step Semantics — PHASE 61 COMPLETE
 
-**Status:** Drafting  
-**Implementability:** MEDIUM — Needs configuration design
+**Status:** Accepted
+**Implementability:** HIGH as planning/design corpus — backbone fixed, runtime realization still downstream
 
 **Summary:**
-Develops small-step semantics for concurrency interleaving, step-level debugging, and fairness. Proposes configuration structure ⟨e, ρ, O, S⟩.
+Phase 61 converted MCE-005 from an exploratory note into an accepted small-step planning/design artifact. The corpus now fixes:
 
-**Open Questions:**
-- Labeled transition system needed?
-- Fairness model for par/spawn interleaving?
-- Stack frame modeling?
+- workflow-first canonical configurations over `SPEC-001` workflows;
+- ambient context as `(C, P)` and dynamic state in `Γ`, `Ω`, `π`, cumulative trace, cumulative effect summary, and residual workflow terms;
+- a deliberate split between configuration-carried cumulative state and label-carried local step deltas;
+- explicit blocked/suspended versus stuck distinction;
+- a canonical rule inventory for workflow forms, with pure expressions/patterns remaining atomic in v1.
 
-**Assessment:** This is research-oriented. Small-step semantics are valuable for formal verification but not strictly required for implementation. Can proceed in parallel with implementation.
+**Assessment:** MCE-005 is no longer blocked on foundational ambiguity. It is resolved enough to unblock MCE-006 while still remaining documentation/spec-planning work rather than interpreter implementation.
 
 ---
 
-### 1.6 MCE-006: Small-Step ↔ IR Execution Alignment — BLOCKED ON MCE-005
+### 1.6 MCE-006: Small-Step ↔ IR Execution Alignment — UNBLOCKED BY PHASE 61
 
 **Status:** Drafting  
-**Implementability:** LOW — Depends on MCE-005
+**Implementability:** MEDIUM — semantic target fixed; runtime mapping still open
 
 **Summary:**
-Ensures small-step semantics correspond to actual IR execution. Identifies potential gaps: configuration mismatch, atomicity, nondeterminism.
+MCE-006 now consumes the accepted MCE-005 backbone and focuses on the remaining runtime/interpreter questions: configuration-to-runtime mapping, blocked-state carriers, `Par` interleaving realization, cumulative trace/effect accumulation, and `ControlLink`/completion realization.
 
-**Assessment:** Cannot proceed until MCE-005 defines small-step semantics. Also requires understanding current interpreter execution model.
+**Assessment:** This work is no longer blocked on undefined semantics. The remaining dependency is practical understanding of the current interpreter/runtime model and how it preserves the fixed observables.
 
-**Recommendation:** Wait for MCE-005 to mature, then document current interpreter model.
+**Recommendation:** Proceed with runtime-structure inventory and semantic-carrier mapping rather than reopening small-step design.
 
 ---
 
-### 1.7 MCE-007: Full Layer Alignment — META-TRACKING
+### 1.7 MCE-007: Full Layer Alignment — META-TRACKING AFTER PHASE 61
 
 **Status:** Drafting  
 **Implementability:** LOW — Depends on all other MCE-*
@@ -157,7 +158,7 @@ Ensures small-step semantics correspond to actual IR execution. Identifies poten
 **Summary:**
 Consolidates all five layers: Surface → IR → Big-step → Small-step → Interpreter. Provides verification matrix showing most constructs are "Partial" or "Needs work."
 
-**Assessment:** This is a tracking document, not implementation work. Its completion criterion is the completion of MCE-002 through MCE-006.
+**Assessment:** This remains a tracking/consolidation document, but Phase 61 materially reduced its semantic uncertainty. The primary remaining open dependency is MCE-006 runtime/interpreter correspondence, not the existence of a small-step backbone.
 
 **Recommendation:** Use as living document to track cross-layer consistency. Update as prerequisites resolve.
 
@@ -391,7 +392,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 | Action | Owner | Rationale |
 |--------|-------|-----------|
 | Resolve TYPES-002 ad-hoc polymorphism | Language team | Unblocks OTP and influences MCE-003 |
-| Continue MCE-005 small-step semantics work after MCE-004 closeout | Research | MCE-004 is resolved; remaining semantics research is now on the small-step side |
+| Execute MCE-006 runtime/interpreter alignment against the accepted MCE-005 backbone | Research / Core team | Phase 61 fixed the semantic target; remaining work is realization and correspondence |
 | Implement MCE-001 Phase 57B | Core team | Entry point implementation |
 | Decide MCE-003 functions vs capabilities | Language team | Fundamental language design |
 
@@ -400,8 +401,8 @@ The document correctly identifies that the primary blocker is the generic/concre
 | Action | Blocked On | ETA |
 |--------|-----------|-----|
 | OTP implementation | TYPES-002 resolution | Post-type-system |
-| MCE-007 full alignment | MCE-002 through MCE-006 | Late in minimal-core |
-| MCE-006 small-step ↔ IR alignment | MCE-005 | Post-small-step |
+| MCE-007 full alignment | MCE-006 | Late in minimal-core |
+| MCE-006 small-step ↔ IR alignment | runtime/interpreter inventory and mapping work | Post-Phase-61 |
 
 ---
 
@@ -433,7 +434,7 @@ The Ash ideas collection shows healthy exploration across multiple dimensions. T
 
 - **Ready now:** MCE-001 (entry point), TYPES-001/003/004 (type system refinements)
 - **Needs research:** TYPES-002 (ad-hoc polymorphism), MCE-003 (functions vs capabilities)
-- **Blocked:** OTP-* (depends on type system), MCE-006/007 (depends on semantics)
+- **Blocked:** OTP-* (depends on type system), MCE-007 closeout (depends mainly on MCE-006 runtime/interpreter alignment)
 
 The critical path runs through TYPES-002. Resolution of ad-hoc polymorphism will unblock OTP and inform MCE-003. Until then, work should focus on:
 
@@ -452,7 +453,7 @@ The explorations demonstrate good design discipline: separating concerns, identi
 - MCE-002: IR Core Forms Audit — Accepted
 - MCE-003: Functions vs Capabilities — Drafting
 - MCE-004: Big-Step Semantics Alignment — Accepted
-- MCE-005: Small-Step Semantics — Drafting
+- MCE-005: Small-Step Semantics — Accepted
 - MCE-006: Small-Step ↔ IR Execution — Drafting
 - MCE-007: Full Layer Alignment — Drafting
 - MCE-008: Runtime Cleanup — Drafting

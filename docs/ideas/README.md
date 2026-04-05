@@ -31,9 +31,9 @@ This directory tracks **pre-specification explorations** — design questions, c
 | MCE-002 | [IR Core Forms Audit](minimal-core/MCE-002-IR-AUDIT.md) | `accepted` | 2026-04-03 | Promoted to [TASK-370](../plan/tasks/TASK-370-ir-core-forms-audit.md) |
 | MCE-003 | [Functions vs Capabilities](minimal-core/MCE-003-FUNCTIONS-VS-CAPS.md) | `drafting` | 2026-03-30 | Do we need functions or are capabilities enough? |
 | MCE-004 | [Big-Step Semantics Alignment](minimal-core/MCE-004-BIG-STEP-ALIGNMENT.md) | `accepted` | 2026-04-05 | Resolved surface syntax ↔ canonical IR ↔ big-step alignment → [TASK-393](../plan/tasks/TASK-393-big-step-semantics-alignment.md) |
-| MCE-005 | [Small-Step Semantics](minimal-core/MCE-005-SMALL-STEP.md) | `drafting` | 2026-03-30 | Develop small-step semantics |
-| MCE-006 | [Small-Step ↔ IR Execution](minimal-core/MCE-006-SMALL-STEP-IR.md) | `drafting` | 2026-03-30 | Align small-step with IR execution |
-| MCE-007 | [Full Layer Alignment](minimal-core/MCE-007-FULL-ALIGNMENT.md) | `drafting` | 2026-03-30 | Surface, IR, both semantics, interpreter |
+| MCE-005 | [Small-Step Semantics](minimal-core/MCE-005-SMALL-STEP.md) | `accepted` | 2026-04-05 | Accepted Phase 61 small-step backbone and rule inventory → [TASK-394](../plan/tasks/TASK-394-small-step-semantics-scope-and-configuration-contract.md), [TASK-395](../plan/tasks/TASK-395-canonical-workflow-small-step-rule-set-and-concurrency-semantics.md), [TASK-396](../plan/tasks/TASK-396-small-step-big-step-correspondence-and-mce-006-handoff.md) |
+| MCE-006 | [Small-Step ↔ IR Execution](minimal-core/MCE-006-SMALL-STEP-IR.md) | `drafting` | 2026-04-05 | Now consumes the accepted MCE-005 backbone; remaining work is runtime/interpreter alignment |
+| MCE-007 | [Full Layer Alignment](minimal-core/MCE-007-FULL-ALIGNMENT.md) | `drafting` | 2026-04-05 | Full-stack closeout now depends mainly on MCE-006 runtime/interpreter correspondence |
 | MCE-008 | [Runtime Cleanup](minimal-core/MCE-008-RUNTIME-CLEANUP.md) | `drafting` | 2026-03-30 | Libraries and capabilities runtime support |
 | MCE-009 | [Test & Example Workflows](minimal-core/MCE-009-TEST-WORKFLOWS.md) | `drafting` | 2026-03-30 | Develop and run test/example workflows |
 

@@ -2,7 +2,7 @@
 status: drafting
 created: 2026-03-30
 last-revised: 2026-04-05
-related-plan-tasks: []
+related-plan-tasks: [TASK-394, TASK-395, TASK-396]
 tags: [alignment, surface, ir, semantics, interpreter, consolidation]
 ---
 
@@ -10,146 +10,150 @@ tags: [alignment, surface, ir, semantics, interpreter, consolidation]
 
 ## Problem Statement
 
-All layers of Ash must be consistent: surface syntax → IR → big-step semantics → small-step semantics → interpreter.
+All layers of Ash must remain consistent:
 
-This exploration consolidates the accepted big-step alignment from MCE-004 together with the later small-step and interpreter alignment work into a complete, verified stack.
+surface syntax → canonical IR → big-step semantics → small-step semantics → interpreter/runtime.
+
+This exploration is the full-stack consolidation point. It now treats:
+
+- [MCE-004](MCE-004-BIG-STEP-ALIGNMENT.md) as resolved for the surface → IR → big-step side; and
+- [MCE-005](MCE-005-SMALL-STEP.md) as materially defined for the canonical small-step backbone.
+
+The heaviest remaining dependency is therefore no longer “what is the small-step backbone?” but “how is that backbone realized by the interpreter/runtime?” — the central concern of [MCE-006](MCE-006-SMALL-STEP-IR.md).
 
 ## Scope
 
-- **In scope:**
-  - All five layers: Surface, IR, Big-step, Small-step, Interpreter
-  - Cross-layer consistency checks
-  - Resolution of conflicts between layers
-  - Documentation of the complete pipeline
+In scope:
 
-- **Out of scope:**
-  - New feature design
-  - Optimization
-  - Non-semantic concerns (formatting, etc.)
+- all five layers: Surface, IR, Big-step, Small-step, Interpreter;
+- cross-layer consistency checks;
+- documentation of correspondence obligations between adjacent layers;
+- identification of remaining drift after MCE-004 and Phase 61.
 
-- **Related but separate:**
-  - MCE-004: Big-step alignment (accepted prerequisite; surface → IR → big-step contract settled)
-  - MCE-005: Small-step semantics (prerequisite)
-  - MCE-006: Small-step ↔ IR execution (prerequisite)
+Out of scope:
+
+- new feature design;
+- optimization work;
+- low-level runtime implementation changes.
+
+Related but separate:
+
+- [MCE-004](MCE-004-BIG-STEP-ALIGNMENT.md): accepted prerequisite for surface → IR → big-step
+- [MCE-005](MCE-005-SMALL-STEP.md): accepted small-step planning/design backbone
+- [MCE-006](MCE-006-SMALL-STEP-IR.md): remaining runtime/interpreter alignment prerequisite
 
 ## The Five Layers
 
-```
+```text
 ┌─────────────────────────────────────┐
-│  Layer 1: Surface Syntax            │  User-facing Ash language
-│  Example: `let x = 1 in x + 2`      │
+│ Layer 1: Surface Syntax             │ User-facing Ash language
 └──────────────┬──────────────────────┘
                │ lowering
                ▼
 ┌─────────────────────────────────────┐
-│  Layer 2: Intermediate (IR)         │  Canonical representation
-│  Example: `Let("x", Lit(1), ...)   │
+│ Layer 2: Canonical IR               │ `SPEC-001`
 └──────────────┬──────────────────────┘
-               │ semantics
+               │ big-step meaning
                ▼
 ┌─────────────────────────────────────┐
-│  Layer 3: Big-Step Semantics        │  "Evaluates to" relation
-│  Example: `e ⇓ v`                   │
+│ Layer 3: Big-Step Semantics         │ `SPEC-004`
 └──────────────┬──────────────────────┘
-               │ refinement
+               │ small-step refinement
                ▼
 ┌─────────────────────────────────────┐
-│  Layer 4: Small-Step Semantics      │  Single-step transitions
-│  Example: `e → e'`                  │
+│ Layer 4: Small-Step Semantics       │ MCE-005 backbone
 └──────────────┬──────────────────────┘
-               │ implementation
+               │ runtime realization
                ▼
 ┌─────────────────────────────────────┐
-│  Layer 5: Interpreter               │  Executable implementation
-│  Rust code in ash-core              │
+│ Layer 5: Interpreter / Runtime      │ executable implementation
 └─────────────────────────────────────┘
 ```
 
-## Alignment Verification
+## Alignment Verification Obligations
 
-For each construct, we need:
+For each canonical construct, MCE-007 ultimately needs:
 
-1. **Surface → IR:** Lowering function defined
-2. **IR → Big-step:** Semantic rule defined
-3. **Big-step → Small-step:** Correspondence argument
-4. **Small-step → Interpreter:** Implementation matches
+1. Surface → IR: lowering contract defined.
+2. IR → Big-step: big-step semantic rule defined.
+3. Big-step → Small-step: correspondence argument defined.
+4. Small-step → Interpreter: runtime realization argument defined.
 
-### Verification Matrix
+## Current Alignment State
 
-| Construct | Surface→IR | IR→Big | Big→Small | Small→Interp | Status |
-|-----------|------------|--------|-----------|--------------|--------|
-| Let | ✅ | ✅ | ❓ | ❓ | Partial |
-| If | ✅ | ✅ | ❓ | ❓ | Partial |
-| Match | ⚠️ | ✅ | ❓ | ❓ | Partial |
-| Par | ✅ | ✅ | ❓ | ❓ | Partial |
-| Call | ✅ | ✅ | ❓ | ❓ | Partial |
-| Spawn | ✅ | ✅ | ❓ | ❓ | Partial |
-| Act | ✅ | ✅ | ❓ | ❓ | Partial |
-| Observe | ✅ | ✅ | ❓ | ❓ | Partial |
+### Resolved inputs
 
-## Remaining Full-Stack Gaps
-
-The canonical surface → IR → big-step questions that were previously tracked under MCE-004 are now resolved and should be treated as fixed inputs to this exploration:
+The following are already fixed and should not be reopened here:
 
 - `Workflow::Seq` remains primitive.
 - `Expr::Match` remains primitive, and `if let` lowers to `Expr::Match`.
-- `Par` effect aggregation is defined in big-step semantics via branch-effect join plus helper-backed concurrent aggregation.
-- Spawn completion seals the child workflow's authoritative terminal state in `CompletionPayload`.
+- `Par` big-step aggregation is helper-backed with successful branch-effect join.
+- Spawn completion seals the child workflow's own authoritative terminal state in `CompletionPayload`.
+- Small-step is workflow-first, uses the accepted configuration/label split from MCE-005, keeps expressions/patterns atomic in v1, and distinguishes blocked/suspended states from stuckness.
 
-The remaining open work for MCE-007 is therefore cross-layer work beyond MCE-004's scope.
+### Updated verification matrix
 
-### Gap 1: Big-step ↔ small-step correspondence
+| Construct family | Surface→IR | IR→Big | Big→Small | Small→Interp | Status |
+|---|---|---|---|---|---|
+| Sequencing / binding / branching | ✅ | ✅ | Backbone fixed; per-form correspondence still to package | ❓ | Partial |
+| Pattern-driven control | ✅ | ✅ | Backbone fixed; correspondence still to package | ❓ | Partial |
+| Receive / blocking behavior | ✅ | ✅ | Backbone fixed; blocked-vs-stuck settled | ❓ | Partial |
+| Parallel composition | ✅ | ✅ | Backbone fixed; interleaving + helper aggregation settled | ❓ | Partial |
+| Capability / policy / obligation workflows | ✅ | ✅ | Backbone fixed; detailed correspondence still to package | ❓ | Partial |
+| Spawn / completion observation contracts | ✅ | ✅ | Helper/runtime contract fixed as input | ❓ | Partial |
 
-- Show that the future small-step configuration semantics refine the accepted big-step rules.
-- Make concurrency, interleaving, and fairness choices explicit enough to compare with big-step `Par` and spawn behavior.
+The remaining `❓` weight is concentrated in runtime/interpreter realization, not in the existence of a small-step backbone.
+
+## Remaining Full-Stack Gaps
+
+### Gap 1: Packaged big-step ↔ small-step correspondence
+
+After Phase 61, the backbone is no longer the blocker. The remaining semantic packaging work is to make the correspondence explicit enough that later readers can see how:
+
+- terminal outcomes are reconstructed from terminal configurations;
+- traces/effects/provenance/obligations are preserved across repeated steps;
+- blocked/suspended states refine, rather than contradict, the `SPEC-004` worldview.
+
+This is the closeout space tracked by Phase 61 correspondence work and the relevant sections of MCE-005.
 
 ### Gap 2: Small-step ↔ interpreter correspondence
 
-- Document how the executable interpreter/runtime realizes the later small-step model.
-- Verify that runtime scheduling, control-link handling, and completion/reporting behavior match the semantic contracts.
+This is now the primary open dependency.
+
+MCE-007 still needs MCE-006 to explain:
+
+- how workflow configurations map to runtime structures;
+- how `Par` interleaving is realized;
+- how blocked states are represented operationally;
+- how terminal observables are preserved by the interpreter/runtime.
 
 ### Gap 3: Ongoing drift prevention
 
-- Define how future language or runtime changes should be checked against the full five-layer stack.
-- Decide whether any of those checks should become automated.
+Once MCE-006 matures, MCE-007 should also define how future changes are checked against the full five-layer stack so the repo does not drift back into layer disagreement.
 
 ## Deliverables
 
-1. **Alignment Document:** For each construct, the complete pipeline
-2. **Correspondence Proofs/Arguments:** Why layers are consistent
-3. **Gap Analysis:** What's missing or inconsistent
-4. **Remediation Plan:** How to fix gaps
+MCE-007 should eventually produce:
 
-## Open Questions
-
-1. Do we need formal proofs or strong arguments?
-2. What level of detail for correspondence arguments?
-3. Should alignment be checked automatically (e.g., via property tests)?
-4. How do we handle evolution — how to keep layers aligned over time?
+1. a construct-by-construct five-layer alignment matrix;
+2. explicit correspondence notes for the remaining nontrivial constructs;
+3. a runtime-realization summary consuming MCE-006;
+4. a drift-prevention checklist for future language/runtime changes.
 
 ## Dependencies
 
 This exploration depends on:
-- MCE-002 (IR forms known)
-- MCE-004 (Big-step aligned)
-- MCE-005 (Small-step defined)
-- MCE-006 (Execution aligned)
 
-**Recommendation:** Don't start this until prerequisites are at least `candidate` status.
+- MCE-002 (IR inventory known)
+- MCE-004 (surface → IR → big-step alignment accepted)
+- MCE-005 (small-step backbone accepted in Phase 61)
+- MCE-006 (runtime/interpreter alignment still needed)
 
-## Related Explorations
-
-- All other MCE-* explorations feed into this
+Recommendation: keep MCE-007 drafting until MCE-006 matures enough to close the interpreter side of the matrix.
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-30 | Exploration created | Need complete alignment view |
-
-## Next Steps
-
-- [ ] Wait for prerequisite explorations to mature
-- [ ] Create verification matrix for all constructs
-- [ ] Document correspondence arguments
-- [ ] Identify critical gaps for remediation
+| 2026-03-30 | Exploration created | Need a complete alignment view |
+| 2026-04-05 | Reframed after Phase 61 | MCE-005 is now materially defined; remaining dependency weight is on MCE-006 and runtime/interpreter correspondence |

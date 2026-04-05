@@ -1,141 +1,210 @@
 ---
 status: drafting
 created: 2026-03-30
-last-revised: 2026-03-30
-related-plan-tasks: []
+last-revised: 2026-04-05
+related-plan-tasks: [TASK-396]
 tags: [small-step, ir, execution, alignment, interpreter]
 ---
 
 # MCE-006: Align Small-Step Semantics with IR Execution
 
+## Status Summary
+
+MCE-006 is no longer blocked on an undefined small-step target.
+
+Phase 61 fixed the upstream semantic backbone in [MCE-005](MCE-005-SMALL-STEP.md):
+
+- workflow-first configurations are canonical;
+- ambient context is `(C, P)`;
+- dynamic state is expressed in `Γ`, `Ω`, `π`, cumulative trace, cumulative effect summary, and residual workflow terms;
+- the main relation is `A ⊢ κ —μ→ κ'`;
+- observables are split across configuration state and step labels;
+- pure expressions/patterns remain atomic in v1;
+- blocked/suspended configurations are distinct from stuckness;
+- `Par` uses interleaving plus helper-backed terminal aggregation.
+
+What remains open here is the runtime/interpreter realization of that accepted backbone.
+
 ## Problem Statement
 
-Small-step semantics must correspond to actual IR execution. This exploration ensures the theoretical small-step rules can be efficiently and correctly implemented by the interpreter.
+Small-step semantics must correspond to executable IR evaluation without collapsing the semantic/runtime boundary.
 
-Gap to close: Theory (small-step) ↔ Practice (interpreter execution)
+The problem is now concrete:
+
+- MCE-005 defines the semantic contract;
+- MCE-006 must explain how the interpreter/runtime realizes that contract;
+- any mismatch must be described as an implementation mapping issue, not as lingering ambiguity in the semantic backbone.
 
 ## Scope
 
-- **In scope:**
-  - Mapping small-step transitions to interpreter operations
-  - Identifying implementation challenges in small-step rules
-  - Ensuring small-step configurations match runtime structures
-  - Defining the abstract machine implied by small-step
+In scope:
 
-- **Out of scope:**
-  - Optimized JIT compilation
-  - Backend code generation
-  - Distributed execution
+- mapping the accepted MCE-005 configurations onto interpreter/runtime structures;
+- identifying where the current runtime already matches the backbone and where it diverges;
+- defining the abstract-machine or equivalent execution view implied by the runtime;
+- validating that runtime observables preserve the small-step and `SPEC-004` contracts.
 
-- **Related but separate:**
-  - MCE-005: Small-step semantics development
-  - MCE-007: Full layer alignment
-  - MCE-009: Test workflows (validation)
+Out of scope:
 
-## Current Understanding
+- revising the semantic backbone fixed by MCE-005;
+- inventing new surface syntax or new canonical workflow forms;
+- backend/JIT/distributed execution design.
 
-### What we know
+Related but separate:
 
-- Interpreter currently implements big-step-like evaluation
-- IR is the interpreter's input format
-- Runtime has: stack, capability registry, obligation tracker
-- Async execution uses some form of thread/task scheduling
+- [MCE-005](MCE-005-SMALL-STEP.md): accepted semantic backbone
+- [MCE-007](MCE-007-FULL-ALIGNMENT.md): full five-layer closeout
+- [MCE-008](MCE-008-RUNTIME-CLEANUP.md): adjacent runtime inventory/cleanup work
 
-### What we're uncertain about
+## Accepted Upstream Contract Consumed from MCE-005
 
-- Does current execution match intended small-step semantics?
-- What is the gap between theory and implementation?
-- How are configurations represented at runtime?
-- Is the interpreter already doing small-step under a different name?
+The following are now fixed inputs for this exploration.
 
-## Alignment Questions
+### 1. Configuration vocabulary
 
-| Small-Step Concept | IR/Runtime Concept | Aligned? |
-|-------------------|-------------------|----------|
-| Configuration ⟨e, ρ, O, S⟩ | Stack frame + obligation set? | ❓ |
-| Transition e → e' | Single evaluator step? | ❓ |
-| Congruence rules | Recursive evaluation? | ❓ |
-| Par interleaving | Thread scheduler? | ❓ |
-| Spawn new thread | Task creation? | ❓ |
-| Handle h | Task ID / Future? | ❓ |
+MCE-006 must map some runtime representation to the semantic carriers:
 
-## Potential Gaps
+- ambient authority/policy context `A = (C, P)`;
+- environment `Γ`;
+- obligation state `Ω`;
+- provenance state `π`;
+- cumulative trace `T`;
+- cumulative effect summary `ε̂`;
+- residual canonical workflow or terminal result state.
 
-### Gap 1: Configuration Mismatch
+A runtime may represent these indirectly, compactly, or across multiple data structures, but the mapping must preserve their observable meaning.
 
-Small-step may define configurations that don't match runtime structures.
+### 2. Step granularity
 
-**Example:** Small-step has explicit obligation set `O`, but runtime may track obligations differently.
+The runtime target is workflow-first, not expression-first.
 
-**Resolution:** Either adjust small-step or document the mapping.
+So MCE-006 should assume:
 
-### Gap 2: Atomicity
+- small-step transitions are anchored at workflow boundaries;
+- pure expressions and patterns stay atomic in v1;
+- helper-backed actions such as receive selection, policy checks, provenance joins, and parallel aggregation are semantic boundaries, not accidental implementation details.
 
-Small-step may assume atomic steps that aren't atomic in implementation.
+### 3. Observable contract
 
-**Example:** `act` may involve multiple runtime operations (capability lookup, permission check, effect recording).
+MCE-006 must preserve the accepted split:
 
-**Resolution:** Define small-step "atomic" as "observable at language level" not "single CPU instruction."
+- configuration state is authoritative for cumulative obligations, provenance, traces, effects, and terminal outcome class;
+- labels carry step-local trace/effect deltas.
 
-### Gap 3: Nondeterminism
+An implementation may not silently discard that distinction if doing so would break trace/effect/provenance reconstruction or make blocking behavior unobservable.
 
-Small-step Par rules may allow interleavings that implementation restricts.
+### 4. Blocking contract
 
-**Example:** Small-step allows any interleaving; implementation may use cooperative scheduling.
+A runtime realization must distinguish:
 
-**Resolution:** Document scheduling guarantees as implementation-defined.
+- terminal completion;
+- progress transitions;
+- blocked/suspended waiting states;
+- invalid/stuck states that should instead be owned by a declared failure boundary.
 
-## Implementation Strategy
+This matters especially for `Receive` and for runtime-owned control/completion interactions.
 
-### Option 1: Direct Implementation
+### 5. Concurrency contract
 
-Implement small-step rules directly as interpreter algorithm.
+`Par` remains semantically interleaving-based with helper-backed terminal aggregation.
 
-**Pros:** Faithful to semantics
-**Cons:** May be inefficient (many small allocations, context switches)
+MCE-006 therefore owns the operational question:
 
-### Option 2: Abstract Machine
+- how does the runtime choose the next branch to step,
+- and how does it encode/helper-call the combined terminal outcome,
 
-Define an abstract machine (CEK, SECD, etc.) that corresponds to small-step.
+without reinterpreting the semantic contract as simple left-to-right sequential execution.
 
-**Pros:** Better performance characteristics
-**Cons:** Extra translation layer
+## Remaining Runtime/Interpreter Alignment Questions
 
-### Option 3: Current Interpreter + Validation
+The open questions are now implementation-facing.
 
-Keep current interpreter, validate against small-step.
+### 1. Residual workflow representation
 
-**Pros:** Minimal change
-**Cons:** May hide semantic bugs
+How does the runtime represent the residual workflow component of `κ`?
 
-## Proposed Approach
+Possible realizations include:
 
-1. Define small-step semantics (MCE-005)
-2. Define abstract machine configuration matching small-step
-3. Prove/show correspondence: small-step ↔ abstract machine
-4. Implement abstract machine (or show current interpreter is one)
+- direct residual AST values;
+- explicit continuation frames;
+- a hybrid control stack plus current node pointer.
 
-## Open Questions
+This question belongs here, not in MCE-005.
 
-1. Is the current interpreter stack-based or continuation-based?
-2. How does the runtime represent suspended workflows?
-3. What is the exact capability call protocol at runtime?
-4. How are effects logged/aggregated during execution?
+### 2. Branch-local state for `Par`
 
-## Related Explorations
+The semantic model allows interleaved branch progress plus helper-backed aggregation. The runtime must decide:
 
-- MCE-005: Small-step semantics
-- MCE-008: Runtime cleanup (runtime structures)
+- whether branch state is stored as separate workflow instances, frames, tasks, or scheduler entries;
+- where branch-local traces/effects/obligations/provenance accumulate before aggregation;
+- how helper-owned concurrent combination is surfaced.
+
+### 3. Blocked-state carrier
+
+The runtime needs an explicit representation for blocked/suspended states, especially for:
+
+- blocking `Receive`;
+- mailbox/control waits;
+- runtime-owned completion observation boundaries.
+
+This may be a scheduler state, queue registration, parked task record, or equivalent.
+
+### 4. Effect and trace accumulation
+
+How are the cumulative `T` and `ε̂` carriers realized operationally?
+
+Key alignment questions:
+
+- append-only trace log vs incremental event sink;
+- per-branch effect summaries vs shared accumulator with rollback-free updates;
+- projection of runtime records back into `SPEC-004` terminal outcome fields.
+
+### 5. Provenance and obligation mutation boundaries
+
+The semantic model speaks in terms of state transitions over `Ω` and `π`. MCE-006 must explain:
+
+- where those state carriers live at runtime;
+- when updates are committed;
+- how helper-owned joins/discharges map to concrete operations.
+
+### 6. ControlLink and completion realization
+
+`SPEC-004` already fixes spawned-child completion semantics. MCE-006 must map that contract to runtime structures such as:
+
+- control handles;
+- completion tombstones or sealed payload records;
+- supervisor-owned observation channels.
+
+This remains runtime/helper work, not a new user-level syntax design.
+
+## Alignment Strategy
+
+The conservative strategy for MCE-006 is:
+
+1. start from the accepted MCE-005 backbone;
+2. inventory the current interpreter/runtime structures that correspond to each semantic carrier;
+3. document gaps explicitly as representation or scheduling mismatches;
+4. decide whether the current interpreter already realizes the backbone, needs a thin abstract-machine description, or needs contract-preserving refactoring.
+
+This keeps theory and implementation aligned without moving runtime design pressure back upstream into MCE-005.
+
+## Expected Outputs
+
+MCE-006 should eventually produce:
+
+1. a semantic-carrier-to-runtime mapping table;
+2. a branch/interleaving realization story for `Par`;
+3. a blocked-state realization story for `Receive` and control-owned waits;
+4. a terminal observable preservation checklist for traces, effects, obligations, provenance, and rejection/return outcomes;
+5. a statement of whether the current interpreter already realizes the accepted small-step backbone or only approximates it.
+
+## Relationship to MCE-007
+
+Once MCE-006 is mature, [MCE-007](MCE-007-FULL-ALIGNMENT.md) can treat the main remaining work as full-stack verification rather than unresolved semantic design.
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-30 | Exploration created | Need to close theory-practice gap |
-
-## Next Steps
-
-- [ ] Document current interpreter execution model
-- [ ] Compare with small-step configuration
-- [ ] Identify specific mismatches
-- [ ] Design abstract machine or adaptation
+| 2026-04-05 | Reframed around the accepted MCE-005 backbone | Phase 61 fixed the semantic target; remaining work is runtime/interpreter alignment rather than upstream semantic ambiguity |

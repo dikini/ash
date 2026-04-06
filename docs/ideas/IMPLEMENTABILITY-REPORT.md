@@ -1,36 +1,36 @@
 ---
 status: draft
 created: 2026-04-03
-last-revised: 2026-04-05
+last-revised: 2026-04-06
 tags: [analysis, roadmap, implementation, assessment]
 ---
 
 # Ash Ideas Implementability Report
 
 **Scope:** docs/ideas/minimal-core/, docs/ideas/type-system/, docs/ideas/otp/  
-**Assessment Date:** 2026-04-05
+**Assessment Date:** 2026-04-06
 **Assessor:** Hermes Agent (Software Engineer/Analyst)
 
 ---
 
 ## Executive Summary
 
-This report assesses the implementability of 16 design explorations across three directories. The goal is to identify which ideas are ready for specification work, which need further exploration, and which have blocking dependencies.
+This report assesses the implementability of 17 design explorations across three directories. The goal is to identify which ideas are ready for specification work, which need further exploration, and which have blocking dependencies.
 
 ### Overall Assessment
 
 | Area | Documents | Readiness | Primary Blockers |
 |------|-----------|-----------|------------------|
 | minimal-core | 9 | Medium-High | MCE-003 design uncertainty, frozen MCE-007 true residual drift set (blocked-state classification, cumulative carriers, completion retention, `Par` aggregation), runtime cleanup |
-| type-system | 5 | Low-Medium | Ad-hoc polymorphism design decisions |
+| type-system | 6 | Low-Medium | Closed-world-interface MVP still needs normative spec and later implementation work |
 | otp | 2 | Low | Generic/concrete split for behaviors |
 
 ### Key Findings
 
 1. **MCE-001 (Entry Point)** is the most mature exploration—ready for SPEC-first implementation path
-2. **Type system explorations** have significant theoretical depth but lack convergent design direction
+2. **Type system explorations** still have significant theoretical depth, but `TYPES-002` now has a narrowed closed-world-interface MVP follow-on target instead of only a broad `v1`/`v2` exploration pair
 3. **OTP explorations** identified a fundamental architectural uncertainty: the generic/concrete split without type classes
-4. **Cross-cutting concern:** Ad-hoc polymorphism decisions in TYPES-002 block OTP progress and influence minimal-core
+4. **Cross-cutting concern:** Ad-hoc polymorphism still blocks OTP progress and influences minimal-core, but the active target is now the closed-world-interface MVP boundary rather than the whole exploration space
 
 ---
 
@@ -200,79 +200,68 @@ Defines test workflow categories, example programs, and success criteria for min
 
 ## 2. Type System Explorations (TYPES-*)
 
-### 2.1 TYPES-001: Tuple Variant Syntax — SYNTAX DECISION NEEDED
+### 2.1 TYPES-001: Tuple Variant Syntax — DECISION MADE, READY FOR SPEC PROMOTION
 
-**Status:** Drafting  
-**Implementability:** HIGH — Pure syntax choice
+**Status:** Candidate
+**Implementability:** MEDIUM-HIGH — Source-contract work first, implementation next
 
 **Summary:**
-Proposes syntax for tuple-style enum variants (needed for `RuntimeError Int String`). Options: space-separated (ambiguous), explicit tuple `()` (recommended), or hybrid.
+`TYPES-001` now selects one canonical tuple-variant syntax: explicit parenthesized payloads such as `RuntimeError(Int, String)` and matching positional patterns such as `RuntimeError(code, msg)`.
 
 **Assessment:**
-This is a straightforward syntax decision. Option B (explicit tuple `()`) is recommended and unambiguous. No deep semantic issues.
+The syntax decision itself is now settled and low-risk. The remaining work is to align the normative ADT/surface/type/runtime docs first, then implement the feature across parser, ADT metadata, pattern matching, and runtime representation.
 
-**Recommendation:** Make decision, update SPEC-002 grammar, implement. Low risk.
+**Recommendation:** TASK-413 now completes the contract-promotion step for tuple variants. The next follow-on should be parser/typechecker/runtime implementation work against the frozen parenthesized tuple-variant contract.
 
 ---
 
-### 2.2 TYPES-002 V1/V2: Ad-Hoc Polymorphism — DEEP DESIGN SPACE
+### 2.2 TYPES-002 V1/V2/MVP: Ad-Hoc Polymorphism — NARROWED DOCS/SPEC TARGET NOW FROZEN
 
-**Status:** V1=Drafting, V2=Reviewing  
-**Implementability:** LOW — Fundamental type system extension
+**Status:** V1=Drafting, V2=Reviewing, MVP Cut=Candidate
+**Implementability:** LOW for implementation, MEDIUM-HIGH for follow-on normative spec work against the frozen MVP boundary
 
 **Summary:**
-V1 explores four approaches: Haskell-style typeclasses, Rust-style traits, capability-inspired interfaces, minimal constraints. V2 synthesizes, identifies **closed-world interfaces** as most promising direction.
+V1 remains the preserved non-normative reasoning trace. V2 remains the broader polished exploration. The MVP cut is now the narrowed follow-on target: closed-world interfaces with explicit `interface`/`impl` declarations, constrained generic parameters, one canonical bound form (`T: Interface`), one canonical method-call form (`Interface::method(value)`), strong coherence, capability/interface separation, and effect-conservative methods in the first pass.
 
 **Key Insight from V2:**
 > "Capabilities and interfaces are not the same thing. Capabilities represent runtime authority and governed access to external resources. Interface constraints describe what operations are available for a type or family of types."
 
 **Assessment:**
-This is the deepest design space in the type system explorations. Decision affects:
-- OTP (generic/concrete split for behaviors)
-- MCE-003 (functions vs capabilities—are typeclass methods functions?)
-- Authority elevation semantics (TYPES-002 V2 Section 4)
+This remains the deepest type-system design space, but the repository now has a concrete next step rather than an open-ended one: future work can target the frozen closed-world-interface MVP boundary instead of reopening open-world typeclasses, associated items, dynamic dispatch, and capability/interface unification all at once.
 
-**Risk:** VERY HIGH. This is a major language feature that touches almost everything.
+**Risk:** VERY HIGH for direct implementation of the whole design space. Medium for work that stays inside the frozen MVP boundary.
 
-**Recommendation:** V2's approach of keeping options open while identifying design pressures is correct. Need workload-driven evaluation before committing. Suggest:
-1. Expand workload table with concrete Ash examples
-2. Prototype closed-world interface sketch
-3. Explore explicit evidence passing as semantic model
-4. Do NOT implement until design pressure is better understood
+**Recommendation:** [TASK-415](../plan/tasks/TASK-415-closed-world-interfaces-mvp-spec-cut.md) now completes the narrowing pass. Keep v1 as background only, use v2 plus the MVP cut as the serious discussion surfaces, and do not begin parser/typechecker/runtime work until normative specs are written against that frozen MVP boundary.
 
 ---
 
-### 2.3 TYPES-003: Capability and Effect Vocabulary — PROSE REFINEMENT
+### 2.3 TYPES-003: Capability and Effect Vocabulary — READY FOR CORPUS CLEANUP
 
-**Status:** Drafting  
-**Implementability:** HIGH — Documentation only
+**Status:** Candidate
+**Implementability:** HIGH — Documentation/spec cleanup only
 
 **Summary:**
-Disambiguates "capability" as used across specs: capability declaration, capability identity, capability witness, provider, effect, policy context, obligation context, provenance context.
+`TYPES-003` now acts as the reasoning record behind promoted vocabulary guidance. The repository now has a reusable prose target in `docs/reference/type-system-vocabulary-guidance.md` covering capability declarations, identities, witnesses, providers, effect classifications, policy context, obligation context, and provenance context.
 
 **Assessment:**
-This is clarifying documentation, not implementation. Proposes Direction 2 (split prose vocabulary, preserve surface syntax).
+This remains documentation/spec cleanup rather than implementation, but it is now actionable planning work rather than loose drafting.
 
-**Recommendation:** Adopt Direction 2 immediately. Update existing specs to use precise terminology. No code changes required.
+**Recommendation:** TASK-414 now completes the main vocabulary-promotion pass. Follow-on work should focus on remaining corpus cleanup and any later implementation work that relies on the promoted terminology.
 
 ---
 
-### 2.4 TYPES-004: Effect Typing Foundations — SOLID FOUNDATION
+### 2.4 TYPES-004: Effect Typing Foundations — READY FOR NARROW CONTRACT PROMOTION
 
-**Status:** Drafting  
-**Implementability:** MEDIUM-HIGH — Build on existing specs
+**Status:** Candidate
+**Implementability:** MEDIUM-HIGH — Docs/spec convergence now, selective implementation later
 
 **Summary:**
-Proposes practical starting point for effect typing:
-- Add `Pure` as bottom element to existing lattice
-- Enumerate effect-producing workflow forms
-- Composition by join
-- Capability declarations constrain but don't replace effect typing
+`TYPES-004` now serves as the basis for a narrow promoted task: freeze the current coarse workflow-form effect classifications, make provider effect metadata explicitly secondary to source-level effect typing, and stage the `Pure` question as a deliberate follow-up instead of mixing it silently into the current normative story.
 
 **Assessment:**
-This is well-scoped and builds on existing spec anchors (SPEC-001, SPEC-003, SPEC-004). The proposal to add `Pure` grade is sensible.
+This remains one of the strongest and most implementable type-system explorations. The current best next step is contract promotion and cleanup, not immediate whole-system redesign.
 
-**Recommendation:** Proceed with implementation. This is tractable incremental work.
+**Recommendation:** TASK-414 now freezes the narrow coarse effect-typing contract. Any later work on `Pure` should remain an explicit follow-on rather than an implicit normative change.
 
 ---
 
@@ -301,10 +290,10 @@ This is a research document, not implementation. Its value is identifying the ar
 
 ---
 
-### 3.2 OTP-002: Ash OTP Design — BLOCKED ON AD-HOC POLYMORPHISM
+### 3.2 OTP-002: Ash OTP Design — BLOCKED ON CLOSED-WORLD INTERFACES FOLLOW-ON
 
 **Status:** Drafting  
-**Implementability:** LOW — Blocked on TYPES-002
+**Implementability:** LOW — Blocked on the narrowed closed-world interfaces MVP follow-on after TASK-415
 
 **Summary:**
 Explores four options: Direct Erlang Port (rejected), Capability-Based Supervision (recommended), Runtime-Based Isolation (out of scope), Structured Concurrency Integration.
@@ -316,7 +305,7 @@ Explores four options: Direct Erlang Port (rejected), Capability-Based Supervisi
 - Event streaming
 
 **Assessment:**
-The document correctly identifies that the primary blocker is the generic/concrete split (OTP-001 Section 9). This maps directly to TYPES-002 (ad-hoc polymorphism).
+The document correctly identifies that the primary blocker is the generic/concrete split (OTP-001 Section 9). In the current repo state, that should be read through the narrowed closed-world interfaces MVP follow-on after TASK-415 rather than through the entire unconstrained TYPES-002 design space.
 
 **Key Quote:**
 > "The primary architectural uncertainty is the generic/concrete split (OTP-001, Section 9), not fundamental semantic mismatches."
@@ -324,7 +313,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 **Risk:** HIGH. Cannot proceed meaningfully without resolving how Ash expresses "generic code parameterized by concrete implementation."
 
 **Recommendation:**
-1. Block OTP implementation on TYPES-002 resolution
+1. Block OTP implementation on the closed-world interfaces MVP follow-on after TASK-415
 2. In parallel, investigate besedarium session types for typed message protocols (noted as relevant but difficult in Ash)
 3. Document that OTP is a secondary priority until type system foundations settle
 
@@ -334,12 +323,12 @@ The document correctly identifies that the primary blocker is the generic/concre
 
 ### 4.1 The Ad-Hoc Polymorphism Dependency
 
-**Pattern:** TYPES-002 is a dependency for:
+**Pattern:** The narrowed closed-world interfaces MVP follow-on after TASK-415 is now the relevant dependency surface for:
 - OTP-002 (generic/concrete split)
 - MCE-003 (functions vs capabilities—are methods functions?)
-- MCE-002 (Call form semantics if methods are different from functions)
+- future interface-constrained generic library work
 
-**Implication:** TYPES-002 is on the critical path for significant future features.
+**Implication:** the closed-world interfaces MVP boundary is now the practical critical path for significant future features that need interface-constrained generic code.
 
 ### 4.2 The Capability/Effect/Interface Distinction
 
@@ -352,16 +341,20 @@ The document correctly identifies that the primary blocker is the generic/concre
 
 **Implication:** These should remain separate mechanisms. TYPES-002 V2 correctly warns against capability/interface unification.
 
-### 4.3 The Pure Grade Addition
+### 4.3 The Pure Grade Follow-Up
 
 **Proposal:** TYPES-004 suggests adding `Pure` below `Epistemic` in the effect lattice.
 
-**Impact:** Affects:
-- SPEC-001 (effect lattice)
-- All workflow form effect tables
-- Diagnostic messages
+**Current status:** TASK-414 does not adopt `Pure` as already normative across the corpus. Instead,
+it promotes a narrower contract and records `Pure` as explicit follow-up work until the affected
+normative specs can be updated coherently together.
 
-**Assessment:** Low-risk, high-value addition.
+**Impact if promoted later:**
+- SPEC-001 (effect lattice)
+- workflow-form effect tables and inference examples
+- diagnostic and reporting messages
+
+**Assessment:** Valuable, but only once the corpus is updated coherently rather than piecemeal.
 
 ---
 
@@ -374,15 +367,15 @@ The document correctly identifies that the primary blocker is the generic/concre
 | Proceed with MCE-001 SPEC phase (57A tasks) | Core team | Most mature, unblocks entry point |
 | Adopt TYPES-003 vocabulary in existing specs | Documentation | Immediate clarity improvement |
 | Use TASK-370 audit findings to scope any future IR-consolidation work | Documentation/Core team | MCE-002 is complete; future work should build on the accepted audit |
-| Decide TYPES-001 tuple syntax | Language team | Simple syntax decision, unblocks RuntimeError |
-| Add `Pure` grade per TYPES-004 | Type system | Foundation for effect typing |
+| Implement parser/typechecker/runtime support for canonical tuple variants after TASK-413 | Language/Core team | The source contract is now frozen; the remaining work is implementation against that contract |
+| Keep `Pure` as explicit follow-up after TASK-414 and continue residual corpus cleanup | Documentation / Type system | The current coarse contract is now frozen without silent lattice drift |
 
 ### 5.2 Short-Term Actions (Next Month)
 
 | Action | Owner | Rationale |
 |--------|-------|-----------|
-| Expand TYPES-002 V2 workload table | Research | Data-driven design decision |
-| Prototype closed-world interface sketch | Research | Test Direction 1 feasibility |
+| Draft normative interface spec text directly from the frozen TASK-415 MVP boundary | Documentation / Language team | Advances the narrowed target without reopening the full design space |
+| Keep any future interface sketches/prototypes inside the canonical MVP surface (`T: Interface`, `Interface::method(value)`) | Research | Tests feasibility without expanding scope |
 | Inventory current runtime components | Sub-agent | Unblocks MCE-008 |
 | Draft example programs (MCE-009) | Design | Design probes for other features |
 | Document generic/concrete split options | Research | Clarify OTP blocker |
@@ -391,7 +384,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 
 | Action | Owner | Rationale |
 |--------|-------|-----------|
-| Resolve TYPES-002 ad-hoc polymorphism | Language team | Unblocks OTP and influences MCE-003 |
+| Promote the TASK-415 closed-world-interface MVP into normative specs, then stage implementation work against that boundary | Language team | Unblocks OTP and influences MCE-003 without reopening the full exploration space |
 | Use the published TASK-400 closeout artifact as the baseline for any future runtime drift follow-on | Research / Core team | The matrix, residual register, signoff conditions, and drift-prevention checklist are now frozen; later work should resolve true drift rather than repackage the closeout |
 | Implement MCE-001 Phase 57B | Core team | Entry point implementation |
 | Decide MCE-003 functions vs capabilities | Language team | Fundamental language design |
@@ -400,7 +393,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 
 | Action | Blocked On | ETA |
 |--------|-----------|-----|
-| OTP implementation | TYPES-002 resolution | Post-type-system |
+| OTP implementation | Closed-world interfaces MVP follow-on after TASK-415 | Post-type-system |
 | MCE-007 true residual runtime closure | Later runtime/interpreter follow-on for blocked-state classification, cumulative carriers, completion retention, and `Par` aggregation | Late in minimal-core |
 
 ---
@@ -422,7 +415,7 @@ The document correctly identifies that the primary blocker is the generic/concre
 
 6. **TYPES-001 tuple syntax** — Pure syntax choice
 7. **TYPES-003 vocabulary** — Documentation only
-8. **TYPES-004 Pure grade** — Additive change
+8. **TYPES-004 effect-typing contract** — Narrow contract promoted; `Pure` remains explicit follow-up
 9. **MCE-001 entry point** — Design mature, well-specified
 
 ---
@@ -435,7 +428,7 @@ The Ash ideas collection shows healthy exploration across multiple dimensions. T
 - **Needs research:** TYPES-002 (ad-hoc polymorphism), MCE-003 (functions vs capabilities)
 - **Blocked:** OTP-* (depends on type system), full runtime-side closure of the MCE-007 true residual drift set
 
-The critical path runs through TYPES-002. Resolution of ad-hoc polymorphism will unblock OTP and inform MCE-003. Until then, work should focus on:
+The critical path now runs through the narrowed closed-world interfaces MVP follow-on defined by TASK-415, rather than the unconstrained TYPES-002 design space as a whole. That MVP boundary should unblock more honest follow-on work for OTP and inform MCE-003. Until then, work should focus on:
 
 1. Completing MCE-001 (entry point) — delivers user-visible value
 2. Refining type system foundations (TYPES-001/003/004) — incremental improvements
@@ -459,10 +452,12 @@ The explorations demonstrate good design discipline: separating concerns, identi
 - MCE-009: Test and Example Workflows — Drafting
 
 ### Type System (TYPES-*)
-- TYPES-001: Tuple Variant Syntax — Drafting
-- TYPES-002 V1/V2: Ad-Hoc Polymorphism — Drafting/Reviewing
-- TYPES-003: Capability and Effect Vocabulary — Drafting
-- TYPES-004: Effect Typing Foundations — Drafting
+- TYPES-001: Tuple Variant Syntax — Candidate
+- TYPES-002: Ad-Hoc Polymorphism (v1 reasoning trace) — Drafting
+- TYPES-002 V2: Ad-Hoc Polymorphism — Reviewing
+- TYPES-002 MVP: Closed-World Interfaces MVP Cut — Candidate
+- TYPES-003: Capability and Effect Vocabulary — Candidate
+- TYPES-004: Effect Typing Foundations — Candidate
 
 ### OTP (OTP-*)
 - OTP-001: Erlang/OTP Analysis — Drafting

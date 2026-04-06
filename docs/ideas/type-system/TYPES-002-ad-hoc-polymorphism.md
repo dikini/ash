@@ -2,8 +2,8 @@
 status: drafting
 version: v1
 created: 2026-03-31
-last-revised: 2026-04-01
-related-plan-tasks: []
+last-revised: 2026-04-06
+related-plan-tasks: [TASK-415]
 tags: [type-system, typeclasses, traits, ad-hoc-polymorphism, generics]
 ---
 
@@ -740,7 +740,10 @@ Typeclasses provide **interface abstraction** (data dimension); other dimensions
 
 ## Associated Effects: Design Proposal
 
-Based on the reasoning trace, the current design direction for Ash:
+This section is preserved as part of the v1 reasoning trace. It is not the current MVP direction
+for Ash after TASK-415. The narrowed follow-on target is the closed-world interfaces MVP cut in
+`TYPES-002-v2-mvp-cut.md`, which explicitly defers associated effects and keeps interfaces
+separate from capabilities in the first pass.
 
 ### Syntax
 
@@ -849,6 +852,10 @@ capability Backend<B> {
 | 2026-03-31 | Associated effects proposed | Typeclasses can declare associated effects that instances specify; enables effect polymorphism |
 
 ## Next Steps
+
+This checklist is preserved as part of the v1 reasoning record. After TASK-415, it should not be
+read as the active repo execution plan. The active narrowed follow-on target is the closed-world
+interfaces MVP cut in `TYPES-002-v2-mvp-cut.md`.
 
 - [x] Survey Rust trait system design decisions (coherence, orphan rules)
 - [x] Analyze Haskell typeclass pitfalls (incoherence, slow instance search)
@@ -1220,3 +1227,7 @@ For a cleaner continuation of the same exploration, see the sibling document
 `TYPES-002-ad-hoc-polymorphism-v2.md`, which preserves the open design space while pruning
 several obvious dead ends and reorganizing the material around Ash-native examples and design
 pressures.
+
+For the narrowed follow-on target that current planning/spec work should treat as serious, see
+`TYPES-002-v2-mvp-cut.md`. This `v1` document should remain background reasoning material rather
+than the implementation/planning target by itself.

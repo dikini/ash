@@ -48,7 +48,7 @@ This exploration defines the test/example requirements and validates that the mi
 | Call | Sync invocation, argument passing | High |
 | Spawn | Async creation, handle return | High |
 | Act | Effect recording, capability call | High |
-| Observe | Pure observation | Medium |
+| Observe | Epistemic observation / input acquisition | Medium |
 | Return | Early return, tail return | High |
 
 ### 2. Integration Tests (Patterns)

@@ -1,121 +1,219 @@
 ---
-status: drafting
+status: candidate
 created: 2026-03-30
-last-revised: 2026-03-30
-related-plan-tasks: []
+last-revised: 2026-04-06
+related-plan-tasks: [TASK-413]
 tags: [type-system, syntax, variants, tuples, adt]
 ---
 
-# TYPES-001: Tuple Variant Syntax for ADTs
+# TYPES-001: Canonical Tuple Variant Syntax for ADTs
 
 ## Problem Statement
 
-The current Ash spec (SPEC-002, SPEC-020) only defines **record-style** enum variants:
+The current Ash ADT specs define enum variants in record style:
 
 ```ash
 type Result<T, E> = Ok { value: T } | Err { error: E };
 ```
 
-But for `RuntimeError` and similar types, we want **tuple-style** variants:
+That works well for self-describing payloads, but it is awkward for newtype-like and tuple-like
+constructors such as `RuntimeError`, wrapper types, and compact sum-type payloads.
+
+Ash therefore needs one canonical source-level syntax for tuple variants.
+
+## Decision
+
+Ash should use explicit parenthesized tuple payload syntax for tuple variants.
+
+Canonical source form:
 
 ```ash
-type RuntimeError = RuntimeError Int String;  -- exit_code, message
+type RuntimeError = RuntimeError(Int, String);
+type Box<T> = Box(T);
+type Status = Pending | Processing | Completed;
 ```
 
-This exploration defines the syntax and semantics for tuple variants.
+This replaces the earlier option inventory. Tuple variants are no longer an open syntax question in
+this exploration.
 
-## Current Grammar (SPEC-002)
+## Why This Syntax
 
-```
-variant         ::= IDENTIFIER ("{" field_list "}")?
-field_list      ::= field ("," field)*
-field           ::= IDENTIFIER ":" type
-```
+This choice is the best fit for Ash because it is:
 
-This only supports record-style variants with named fields.
+1. unambiguous;
+2. visually distinct from record variants;
+3. consistent with tuple type syntax;
+4. straightforward to lower into explicit constructor metadata;
+5. easier to explain in constructor expressions and patterns than space-separated payload syntax.
 
-## Proposed Extensions
+The rejected alternative:
 
-### Option A: Multiple Type Arguments (Space-Separated)
-
-```
-variant         ::= IDENTIFIER ("{" field_list "}" | type*)?
-```
-
-Examples:
 ```ash
-type RuntimeError = RuntimeError Int String;     -- two anonymous fields
-type Box<T> = Box T;                              -- one field (newtype)
-type Status = Pending | Processing | Completed;  -- zero fields (unit)
+type RuntimeError = RuntimeError Int String;
 ```
 
-**Concern:** `IDENTIFIER type*` is ambiguous. `Foo Bar Baz` could be:
-- Variant `Foo` with two fields `Bar` and `Baz`
-- Generic application `Foo<Bar>` with stray `Baz`
+looks concise but creates unnecessary parsing and readability ambiguity around constructor/type
+application boundaries.
 
-### Option B: Explicit Tuple Syntax (Parentheses)
+## Canonical Source Model
 
+Ash should support three variant payload shapes at the source level:
+
+- unit variants
+- record variants
+- tuple variants
+
+Canonical examples:
+
+```ash
+type Status = Pending | Processing | Completed;
+
+type Option<T> =
+  Some { value: T }
+| None;
+
+type RuntimeError = RuntimeError(Int, String);
+
+type PairBox<T, U> = PairBox(T, U);
 ```
-variant         ::= IDENTIFIER ("{" field_list "}" | "(" type_list ")")?
+
+### Canonical Reading
+
+- `Pending` is a unit variant
+- `Some { value: T }` is a record variant
+- `RuntimeError(Int, String)` is a tuple variant
+
+## Constructor Expressions
+
+Tuple variants should use the same parenthesized payload form in expressions:
+
+```ash
+let err = RuntimeError(2, "missing config");
+let wrapped = Box(value);
+```
+
+Record variants remain record-shaped:
+
+```ash
+let ok = Ok { value: 42 };
+```
+
+Unit variants remain bare constructor names:
+
+```ash
+let status = Pending;
+```
+
+## Pattern Syntax
+
+Tuple variants should be matched positionally:
+
+```ash
+match err {
+  RuntimeError(code, msg) => msg,
+}
+```
+
+Nested examples:
+
+```ash
+match result {
+  Ok { value: RuntimeError(code, msg) } => msg,
+  Err { error: e } => e,
+}
+```
+
+Record variants remain field-based:
+
+```ash
+match opt {
+  Some { value: x } => x,
+  None => 0,
+}
+```
+
+## MVP Scope
+
+The MVP source contract should include:
+
+1. tuple-variant declarations in type definitions;
+2. tuple-variant constructor expressions;
+3. tuple-variant patterns in `match` and `if let`-style lowering contexts.
+
+The MVP should explicitly exclude positional field projection syntax such as:
+
+```ash
+err.0
+err.1
+```
+
+For the first pass, tuple-variant payload extraction should happen through pattern matching rather
+than positional projection.
+
+## Source-Level Grammar Direction
+
+Canonical grammar shape:
+
+```bnf
+variant         ::= IDENTIFIER variant_payload?
+variant_payload ::= record_payload | tuple_payload
+record_payload  ::= "{" field_list "}"
+tuple_payload   ::= "(" type_list ")"
 type_list       ::= type ("," type)*
 ```
 
-Examples:
-```ash
-type RuntimeError = RuntimeError (Int, String);  -- tuple payload
-type Box<T> = Box (T);                            -- single-element tuple
-type Status = Pending | Processing | Completed;   -- no parens = unit
+Constructor/pattern surface should mirror that payload shape:
+
+```bnf
+constructor_expr    ::= IDENTIFIER tuple_expr_payload?
+tuple_expr_payload  ::= "(" expr_list ")"
+variant_pattern     ::= IDENTIFIER tuple_pattern_payload?
+tuple_pattern_payload ::= "(" pattern_list ")"
 ```
 
-**Benefits:**
-- Unambiguous
-- Consistent with tuple type syntax `(Int, String)`
-- Clear distinction between record `{ }` and tuple `( )` variants
+This note intentionally fixes the tuple-variant surface shape. It does not require the runtime to
+store tuple payloads as a distinct user-visible value form. Internal elaboration remains an
+implementation concern so long as constructor typing and pattern matching preserve the positional
+source contract.
 
-### Option C: Hybrid - Allow Both in Different Contexts
+## Spec Impact
 
-- Record syntax for most variants (clear field names)
-- Tuple syntax for simple wrappers (`RuntimeError`, `Box`)
+The main normative follow-on should be:
 
-## Use Cases
+- `SPEC-020` for ADT source definitions, constructor expressions, and variant patterns;
+- `SPEC-002` for parser-facing grammar;
+- `SPEC-003` and the type/runtime boundary references for tuple-variant constructor/pattern typing;
+- `SPEC-004` only insofar as runtime/pattern semantics need to acknowledge tuple-variant source
+  payloads.
 
-| Type | Preferred Syntax | Rationale |
-|------|------------------|-----------|
-| `RuntimeError` | `RuntimeError (Int, String)` | Simple wrapper, no semantic field names needed |
-| `Result<T, E>` | `Ok { value: T }` | Clear semantics, self-documenting |
-| `Option<T>` | `Some { value: T }` / `None` | Record for `Some`, unit for `None` |
-| `Box<T>` | `Box (T)` | Newtype pattern, no name needed |
+## Design Constraints
 
-## Open Questions
+This decision carries a few important constraints:
 
-1. **Should we support both record and tuple syntax?** Or mandate one style?
-2. **Access syntax:** If `err: RuntimeError`, how do we extract fields?
-   - `err.0`, `err.1` (positional)?
-   - `err.exit_code`, `err.message` (requires named fields)?
-   - Pattern matching only?
-3. **Pattern matching:** How do we match tuple variants?
-   ```ash
-   match err {
-     RuntimeError (code, msg) => ...
-   }
-   ```
-4. **Generic tuple variants:** Can type parameters appear in tuple position?
-   ```ash
-   type Pair<T, U> = Pair (T, U);
-   ```
+1. record and tuple variants must stay distinct source forms;
+2. pattern syntax must preserve the same distinction;
+3. no implicit field names should be exposed at source level for tuple variants;
+4. internal implementation may elaborate tuple payloads however it likes, but that elaboration must
+   not become the user-facing contract.
 
-## Related
+## Non-Goals
 
-- MCE-001 (Entry Point): Uses `RuntimeError` as motivating example
-- SPEC-020 (ADT Types): Current canonical ADT specification
-- SPEC-002 (Surface): Grammar for type definitions
+This note does not define:
 
-## Decision Needed
+- positional field projection syntax;
+- automatic conversion between tuple and record variants;
+- tuple values as a separate first-class runtime value family;
+- deriving or generic-programming behavior for tuple variants.
 
-Which syntax option should be canonical for Ash?
+## Recommended Follow-On
 
-| Option | Status | Notes |
-|--------|--------|-------|
-| A: Space-separated | Draft | Ambiguity concerns |
-| B: Explicit tuple `()` | Draft | Recommended |
-| C: Hybrid | Draft | Most flexible |
+Promote this note through a narrow contract-first task:
+
+- [TASK-413: Canonical Tuple Variant Syntax and ADT Contract Alignment](../../plan/tasks/TASK-413-canonical-tuple-variant-syntax.md)
+
+## Decision Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-03-30 | Exploration opened | Needed a place to evaluate tuple-variant syntax for `RuntimeError` and wrapper types |
+| 2026-04-06 | Explicit parenthesized tuple payload syntax chosen as canonical | Lowest ambiguity, cleanest parser story, best fit for constructor/pattern symmetry |

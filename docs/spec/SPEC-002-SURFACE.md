@@ -249,16 +249,21 @@ type_params     ::= "<" IDENTIFIER ("," IDENTIFIER)* ">"
 type_body       ::= enum_body | struct_body | alias_body
 
 enum_body       ::= variant ("|" variant)*
-variant         ::= IDENTIFIER ("{" field_list "}")?
+variant         ::= IDENTIFIER variant_payload?
+variant_payload ::= record_variant_payload | tuple_variant_payload
+record_variant_payload ::= "{" field_list "}"
+tuple_variant_payload ::= "(" type_list ")"
 field_list      ::= field ("," field)*
 field           ::= IDENTIFIER ":" type
 
 struct_body     ::= "{" field_list "}"
 alias_body      ::= type
 
-type            ::= simple_type | generic_type
+type            ::= simple_type | generic_type | tuple_type
 simple_type     ::= IDENTIFIER
 generic_type    ::= IDENTIFIER "<" type_arg ("," type_arg)* ">"
+tuple_type      ::= "(" type_list ")"
+type_list       ::= type ("," type)*
 type_arg        ::= type
 ```
 
@@ -270,7 +275,8 @@ type_arg        ::= type
 - Generic types: `List<Int>`, `Option<String>`, `Result<T, E>`
 - Generic type arguments can be nested: `List<List<Int>>`
 
-- **Enum types** have multiple variant constructors (e.g., `Option<T>` with `Some` and `None`)
+- **Enum types** have multiple variant constructors. Variants may be unit (`None`), record-shaped
+  (`Some { value: T }`), or tuple-shaped (`RuntimeError(Int, String)`).
 - **Struct types** have a single constructor with named fields (e.g., `Point { x: Int, y: Int }`)
 - **Type aliases** create synonyms for existing types (e.g., `IntList = List<Int>`)
 
@@ -278,8 +284,11 @@ type_arg        ::= type
 ```ash
 type Option<T> = Some { value: T } | None;
 type Result<T, E> = Ok { value: T } | Err { error: E };
+type RuntimeError = RuntimeError(Int, String);
+type Box<T> = Box(T);
 type List<T> = Cons { head: T, tail: List<T> } | Nil;
 type Point = { x: Int, y: Int };
+type PointTuple = (Int, Int);
 type IntList = List<Int>;
 ```
 
@@ -308,7 +317,10 @@ primary         ::= literal
                   | constructor_expr
                   | "(" expression ")"
 
-constructor_expr ::= IDENTIFIER "{" field_assignments "}"
+constructor_expr ::= IDENTIFIER constructor_payload?
+constructor_payload ::= record_constructor_payload | tuple_constructor_payload
+record_constructor_payload ::= "{" field_assignments "}"
+tuple_constructor_payload ::= "(" arguments? ")"
 field_assignments ::= field_assignment ("," field_assignment)*
 field_assignment  ::= IDENTIFIER ":" expression
 
@@ -335,17 +347,28 @@ pattern         ::= IDENTIFIER
 
 field_pattern   ::= IDENTIFIER (":" pattern)?
 
-variant_pattern ::= IDENTIFIER ("{" variant_field_patterns "}")?
+variant_pattern ::= IDENTIFIER variant_pattern_payload?
+variant_pattern_payload ::= record_variant_pattern_payload | tuple_variant_pattern_payload
+record_variant_pattern_payload ::= "{" variant_field_patterns "}"
+tuple_variant_pattern_payload ::= "(" pattern_list? ")"
 variant_field_patterns ::= variant_field_pattern ("," variant_field_pattern)*
 variant_field_pattern  ::= IDENTIFIER (":" pattern)?
+pattern_list ::= pattern ("," pattern)*
 ```
 
-**Variant Patterns** match ADT constructor values. The pattern consists of a constructor name optionally followed by field patterns in braces.
+**Variant Patterns** match ADT constructor values. The pattern consists of a constructor name
+optionally followed by a payload shape that mirrors the declaration:
+
+- unit variants use the bare constructor name
+- record variants use named field patterns in braces
+- tuple variants use positional patterns in parentheses
 
 **Examples:**
 ```ash
 Some { value: x }           -- Matches Some with any value, binds to x
 None                        -- Matches None (unit variant)
+RuntimeError(code, msg)     -- Matches tuple variant payload by position
+Box(value)                  -- Matches a single-element tuple variant
 Ok { value: Some { value: x } }  -- Nested pattern matching
 Err { error: e }            -- Matches Err, binds error field to e
 ```

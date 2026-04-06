@@ -59,6 +59,15 @@ non-runtime language layers. In particular:
 
 ### 2.1 Effect Lattice
 
+This IR section freezes the current coarse effect-grade lattice used by the promoted TASK-414
+contract. In current normative docs, the surfaced lattice elements remain `Epistemic`,
+`Deliberative`, `Evaluative`, and `Operational`.
+
+The open question of whether Ash should add an explicit `Pure` bottom element remains follow-up
+work. This spec therefore does not yet normalize control-only forms around surfaced `Pure`, and the
+identity law below should be read as the current coarse-lattice contract rather than as a final
+statement about future bottom-element design.
+
 ```rust
 /// Effect levels form a complete lattice
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -83,6 +92,11 @@ pub enum Effect {
 3. Idempotence: `join(a, a) == a`
 4. Identity: `join(Epistemic, a) == a`, `join(Operational, a) == Operational`
 5. Absorption: `meet(a, join(a, b)) == a`
+
+Current workflow-form effect classification is derived from canonical workflow forms and
+source-level contracts, with composition defined by lattice join. Embedding-side provider effect
+metadata may be checked for compatibility elsewhere, but it is not the primary source of this IR
+effect classification contract.
 
 ### 2.2 Workflow AST
 
@@ -269,8 +283,10 @@ pub enum Value {
 **Value::Variant** represents ADT constructor values at runtime:
 
 - `name` is the constructor name (e.g., `"Some"`, `"None"`, `"Ok"`, `"Err"`)
-- `fields` contains the named field bindings for record-style variants
-- Unit variants (no fields) have an empty `fields` vector
+- `fields` contains the canonical lowered payload bindings for the constructor
+- Record variants lower with their declared field names; unit variants lower with an empty `fields`
+  vector; tuple variants may lower with implementation-defined internal field names so long as the
+  positional source contract is preserved by later phases
 
 Examples:
 ```rust
@@ -326,8 +342,8 @@ pub enum Pattern {
 
 A `Variant` pattern matches a `Value::Variant` when:
 1. The constructor `name` matches exactly
-2. Each field pattern matches the corresponding field value
-3. All fields in the pattern must exist in the value (field subset matching)
+2. The lowered payload metadata is compatible with the constructor's declared source payload shape
+3. Record variants match by named field compatibility, tuple variants match by positional payload order, and unit variants match with an empty payload
 
 ```rust
 // Example: Matching Some { value: x }
@@ -342,7 +358,19 @@ let value = Value::Variant {
 };
 
 // Match succeeds, binding x = Value::Int(42)
+
+// Example: Matching RuntimeError(code, msg)
+// Tuple variants may elaborate to internal field names such as "0" and "1",
+// but positional source order remains the contract.
+let tuple_pattern = Pattern::Variant {
+    name: "RuntimeError".into(),
+    fields: Box::new([
+        ("0".into(), Pattern::Variable("code".into())),
+        ("1".into(), Pattern::Variable("msg".into())),
+    ]),
+};
 ```
+
 
 **Exhaustiveness**: The type checker ensures that variant patterns cover all constructors
 of the scrutinee type. A non-exhaustive match is a type error (see SPEC-020 Section 6.3).

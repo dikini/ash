@@ -15,8 +15,9 @@ This directory tracks **pre-specification explorations** — design questions, c
 |--------|---------|-------------|
 | `drafting` | Initial thoughts, stream of consciousness | Iterate, add structure |
 | `reviewing` | Ready for discussion and refinement | Review with collaborator |
-| `candidate` | Mature enough to become formal work | Promote to PLAN-INDEX |
-| `accepted` | Content moved to `docs/spec/` or implemented | Archive with reference |
+| `candidate` | Mature enough to become formal work or to anchor a formal promotion task | Promote to PLAN-INDEX or derive a task/reference artifact |
+| `accepted` | Content moved into `docs/spec/`, a reference artifact, or otherwise materially realized | Archive with reference |
+| `closeout-published` | Closeout/reporting artifact published while residual follow-on work may still remain | Keep indexed as a published closeout artifact |
 | `rejected` | Approach abandoned | Move to `archived/` with rationale |
 | `merged` | Content absorbed into another exploration | Archive, link to successor |
 | `deferred` | Valid idea, postponed to future work | Keep in `future/`, revisit later |
@@ -41,11 +42,12 @@ This directory tracks **pre-specification explorations** — design questions, c
 
 | ID | Title | Status | Last Revised | Notes |
 |----|-------|--------|--------------|-------|
-| TYPES-001 | [Tuple Variant Syntax](type-system/TYPES-001-tuple-variants.md) | `drafting` | 2026-03-30 | Tuple vs record syntax for ADT variants |
-| TYPES-002 | [Ad-Hoc Polymorphism](type-system/TYPES-002-ad-hoc-polymorphism.md) | `drafting` | 2026-04-01 | Preserved reasoning trace with review note; intentionally meandering |
-| TYPES-002 V2 | [Ad-Hoc Polymorphism V2](type-system/TYPES-002-ad-hoc-polymorphism-v2.md) | `reviewing` | 2026-04-01 | Cleaner open exploration with Ash-native examples and decision-driving workloads |
-| TYPES-003 | [Capability and Effect Vocabulary](type-system/TYPES-003-capabilities-effects-vocabulary.md) | `drafting` | 2026-04-01 | Judgment-oriented bridge note to disambiguate capability facets and their relation to effects |
-| TYPES-004 | [Effect Typing Foundations](type-system/TYPES-004-effect-typing-foundations.md) | `drafting` | 2026-04-01 | Grade-first exploration of effect-producing forms, composition, and the provider metadata boundary |
+| TYPES-001 | [Canonical Tuple Variant Syntax](type-system/TYPES-001-tuple-variants.md) | `candidate` | 2026-04-06 | Canonicalizes parenthesized tuple-variant syntax; TASK-413 completed the initial spec-promotion pass and follow-on implementation/reconciliation work remains |
+| TYPES-002 | [Ad-Hoc Polymorphism](type-system/TYPES-002-ad-hoc-polymorphism.md) | `drafting` | 2026-04-06 | Preserved reasoning trace only; intentionally non-normative and not the planning target by itself |
+| TYPES-002 V2 | [Ad-Hoc Polymorphism V2](type-system/TYPES-002-ad-hoc-polymorphism-v2.md) | `reviewing` | 2026-04-06 | Main polished exploration and broader serious discussion surface; pair with the narrowed [MVP cut](type-system/TYPES-002-v2-mvp-cut.md) for active planning |
+| TYPES-003 | [Capability and Effect Vocabulary](type-system/TYPES-003-capabilities-effects-vocabulary.md) | `candidate` | 2026-04-06 | Reasoning record behind the promoted [type-system vocabulary guidance](../reference/type-system-vocabulary-guidance.md); docs/spec convergence completed by [TASK-414](../plan/tasks/TASK-414-effect-typing-contract-promotion.md) |
+| TYPES-004 | [Effect Typing Foundations](type-system/TYPES-004-effect-typing-foundations.md) | `candidate` | 2026-04-06 | Reasoning record behind the promoted coarse effect-typing contract and workflow-form grading tables; follow-on `Pure` staging remains explicit after [TASK-414](../plan/tasks/TASK-414-effect-typing-contract-promotion.md) |
+| TYPES-002 MVP | [Closed-World Interfaces MVP Cut](type-system/TYPES-002-v2-mvp-cut.md) | `candidate` | 2026-04-06 | Narrowed follow-on target frozen by [TASK-415](../plan/tasks/TASK-415-closed-world-interfaces-mvp-spec-cut.md): canonical `T: Interface` bounds, canonical `Interface::method(value)` calls, strong coherence, and explicit deferrals |
 
 ### OTP / Actor Model Explorations
 
@@ -73,10 +75,10 @@ Research and design explorations for OTP-like supervision, fault tolerance, and 
 
 When an exploration reaches `candidate` status:
 
-1. Create task file in `docs/plan/tasks/`
-2. Reference the exploration document in task description
-3. Set exploration status to `accepted`
-4. Archive the exploration with link to new task
+1. Create a task file in `docs/plan/tasks/` or derive a reusable reference/spec artifact
+2. Reference the exploration document in the promoted artifact
+3. Keep the exploration as `candidate` while the promotion work is underway, or mark it `accepted` once the promoted corpus materially realizes it
+4. Archive the exploration only when it has truly been superseded by the promoted artifact
 
 ## Maintenance
 

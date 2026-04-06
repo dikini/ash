@@ -32,6 +32,16 @@ Out of scope:
 - REPL/CLI rendering details
 - transport- or provider-specific runtime internals
 
+Current promoted effect-typing contract:
+
+- workflow effect classification is computed from canonical workflow forms and source-level
+  contracts;
+- provider effect metadata is compatibility/validation metadata, not the primary source of
+  source-level effect typing;
+- composition remains join-based over the current coarse effect lattice;
+- whether Ash should add a surfaced `Pure` bottom element remains explicit follow-up work rather
+  than current normative assumption.
+
 ## Required Type-Layer Outputs
 
 The type layer must establish, directly or indirectly, the following runtime-relevant facts:
@@ -47,6 +57,17 @@ The type layer must establish, directly or indirectly, the following runtime-rel
 | `receive` guard well-typed as `Bool` | runtime must not execute untyped guard logic |
 | ADT constructor and variant-pattern resolution against canonical enum metadata | runtime pattern matching and constructor evaluation need one shared enum model |
 | `match` exhaustiveness success for required exhaustive sites | runtime must not rely on impossible fallback semantics for exhaustive ADT matches |
+
+Current coarse workflow-form classification summary consumed across the type/runtime boundary:
+
+| Workflow form family | Current coarse effect classification |
+|---|---|
+| `Observe`, `Receive` | `Epistemic` base effect |
+| `Orient`, `Propose` | `Deliberative` base effect |
+| `Decide`, `Check` | `Evaluative` base effect |
+| `Act` | `Operational` |
+| control/modal forms such as `Let`, `If`, `Seq`, `Par`, `ForEach`, `Ret`, `Done`, `With`, `Maybe`, `Must` | no extra surfaced grade of their own; compose enclosed effects by join |
+| `Oblig` | currently treated as governance structure rather than a separate coarse effect grade by itself |
 
 ## Required Runtime Consumers
 
@@ -82,7 +103,7 @@ The workflow runtime consumes the following already-typed assumptions:
   behavior defined in SPEC-013 and SPEC-004
 - `receive wait DURATION` uses one timeout budget for the whole receive operation; retries do not
   reset it
-- constructor expressions have fields compatible with the resolved constructor
+- constructor expressions have payloads compatible with the resolved constructor
 - variant patterns refer to real constructors on the resolved enum type
 - exhaustive `match` sites do not need synthetic runtime fallback behavior
 
@@ -94,7 +115,7 @@ The following states must be rejected before runtime execution:
 - workflow `decide` sites whose resolved policy can lower to outcomes outside `{Permit, Deny}`
 - non-boolean `receive` guards
 - unknown ADT constructors or variant patterns
-- constructor field mismatches against resolved enum metadata
+- constructor payload mismatches against resolved enum metadata
 - non-exhaustive ADT `match` where the contract requires exhaustiveness
 - workflow effect requirements above the declared or verified maximum permitted effect
 
@@ -143,12 +164,15 @@ The type-to-runtime boundary for ADTs is:
    metadata,
 2. constructor typing and variant-pattern typing use the same resolved enum metadata,
 3. runtime constructor evaluation and pattern matching operate over the same constructor names and
-   named fields,
+   source payload contracts: named fields for record variants, positional arity/order for tuple
+   variants, and zero payload for unit variants,
 4. exhaustiveness reasoning is done over constructors of the resolved enum type, not synthetic
    tags.
 
 `if let` is typed and lowered as the same match construct with a wildcard fallback branch; it does
 not introduce a separate runtime path or separate recoverable-failure semantics.
 
-The runtime therefore consumes resolved enum metadata and variant names/fields, not ad hoc
-record-tag encodings as a contract surface.
+The runtime therefore consumes resolved enum metadata and constructor payload contracts, not ad hoc
+record-tag encodings as a contract surface. If an implementation elaborates tuple payloads into
+internal field names or equivalent metadata, that elaboration remains internal and does not replace
+the positional source contract.

@@ -1,13 +1,26 @@
 ---
-status: drafting
+status: candidate
 version: v1
 created: 2026-04-01
-last-revised: 2026-04-01
-related-plan-tasks: []
+last-revised: 2026-04-06
+related-plan-tasks: [TASK-414]
 tags: [type-system, effects, effect-typing, semantics, judgments, capabilities]
 ---
 
 # TYPES-004: Effect Typing Foundations
+
+## Promotion Note
+
+`TASK-414` promotes one narrow contract from this exploration into the planning/spec corpus:
+
+- effect classification is computed from Ash workflow forms and source-level contracts;
+- provider effect metadata remains compatibility/validation metadata, not the primary source of
+  source-level effect typing;
+- composition remains join-based over the current coarse grade lattice;
+- the `Pure` bottom-element question stays explicit follow-up work rather than becoming silently
+  normative everywhere.
+
+This exploration remains the broader design space and follow-up reasoning record.
 
 ## Problem Statement
 

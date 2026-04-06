@@ -93,10 +93,15 @@ pub trait CapabilityProvider: Send + Sync {
 }
 ```
 
-The `effect()` method is a coarse provider-level declaration. It classifies the
-embedding boundary for provider registration and diagnostics, but it does not
-introduce a new per-call effect lattice or widen runtime semantics beyond the
-canonical effect model defined elsewhere in the spec set.
+The `effect()` method is coarse provider effect metadata. It classifies the
+embedding boundary for registration, compatibility checks, and diagnostics, but it
+is not the primary source of source-level effect typing.
+
+Current normative effect classification is computed from Ash workflow forms and
+source-level contracts, with composition defined by join over the coarse lattice.
+Provider metadata is expected to be compatible with that source-level effect
+classification; it does not replace it or introduce a separate per-call effect
+lattice.
 
 ### 4.2 Registration
 

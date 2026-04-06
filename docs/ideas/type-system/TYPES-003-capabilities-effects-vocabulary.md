@@ -1,13 +1,22 @@
 ---
-status: drafting
+status: candidate
 version: v1
 created: 2026-04-01
-last-revised: 2026-04-01
-related-plan-tasks: []
+last-revised: 2026-04-06
+related-plan-tasks: [TASK-414]
 tags: [type-system, capabilities, effects, semantics, vocabulary, judgments]
 ---
 
 # TYPES-003: Capability and Effect Vocabulary
+
+## Promotion Note
+
+`TASK-414` promotes the reusable vocabulary from this exploration into
+`docs/reference/type-system-vocabulary-guidance.md` and aligns the main affected specs around that
+terminology.
+
+This exploration remains the reasoning record. The promoted guidance is the normative cleanup
+target for current docs/spec convergence work.
 
 ## Problem Statement
 

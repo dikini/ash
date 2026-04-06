@@ -8,7 +8,12 @@ All capabilities (input: `observe`, `receive`; output: `set`, `send`) must integ
 
 This specification distinguishes declaration-site capability definitions from usage-site
 capability types. Declaration sites use `capability`; usage sites may use `cap <Identifier>`
-where a workflow boundary expects a capability value.
+where a workflow boundary expects a capability witness.
+
+Terminology in this spec follows `docs/reference/type-system-vocabulary-guidance.md`: use
+"capability declaration" for the source contract, "capability identity" for the resolved invoked
+name, "capability witness" for usage-site `cap C` values at workflow boundaries, and "provider"
+for the runtime implementation.
 
 ## 2. Capability Definitions
 
@@ -40,7 +45,7 @@ visibility      ::= "pub" | "private"  -- default: private
 ```
 
 `cap` is a usage-site type-forming keyword. `cap C` denotes a parameter or other type position
-that expects a capability value for the capability named `C`. It is not a second capability
+that expects a capability witness for the capability named `C`. It is not a second capability
 declaration form.
 
 ### 2.2 Examples
@@ -119,7 +124,7 @@ method-like forms such as `args.get(0)` and `observe Args.get(0)` are not normat
 **Usage-Site Capability Types:**
 
 - `cap C` is well-formed only if `C` resolves to a declared or imported capability identity
-- `cap C` describes a required capability value at a workflow boundary; it does not declare `C`
+- `cap C` describes a required capability witness at a workflow boundary; it does not declare `C`
 - The parameter binder for `p: cap C` is an authorization witness for the provided capability, not a method-dispatch receiver; explicit invocation continues to name the capability identity `C`
 - A workflow boundary must not declare multiple parameters of the same capability type `cap C`
 
@@ -173,11 +178,15 @@ pub struct Param {
 - Capability definitions populate `CapabilityRegistry`
 - Runtime looks up capabilities by name
 - Constraints are evaluated before capability execution
-- Runtime may inject capability values that satisfy `cap`-typed parameters at workflow entry or at another runtime-defined boundary only when that boundary explicitly specifies the same authorization contract
+- Runtime may inject capability witnesses that satisfy `cap`-typed parameters at workflow entry or at another runtime-defined boundary only when that boundary explicitly specifies the same authorization contract
 
 ## 3. Effects System
 
 ### 3.1 Effect Classification
+
+Current promoted contract: effect classification is computed from Ash workflow forms and
+source-level contracts first. Provider metadata may be used for compatibility/validation, but it is
+not the primary source of source-level effect typing.
 
 | Capability | Operation | Effect | Rationale |
 |------------|-----------|--------|-----------|
@@ -189,6 +198,10 @@ pub struct Param {
 
 Runtime-provided capabilities obey the same effect mapping. For example, when `Args` is declared
 as an observe-like capability, `observe Args 0` is an epistemic operation.
+
+This section intentionally stays within the current four surfaced coarse grades. Whether Ash should
+surface an explicit `Pure` bottom element for control-only forms remains follow-up work rather than
+current normative text here.
 
 ### 3.2 Effect Lattice
 
@@ -209,6 +222,17 @@ act ──────────┘
 ```
 
 ### 3.3 Workflow Effect Inference
+
+The current coarse workflow-form mapping is:
+
+| Workflow form | Current coarse effect classification |
+|---|---|
+| `observe` | `Epistemic` |
+| `receive` | `Epistemic` |
+| `orient` / `propose` | `Deliberative` |
+| `decide` / `check` | `Evaluative` |
+| `set` / `send` / `act` | `Operational` |
+| control and modal forms | compose by join over enclosed effects; no extra surfaced grade of their own |
 
 ```ash
 workflow reader observes sensor:temp {
@@ -361,7 +385,7 @@ Constraints narrow the capability grant:
 
 - **`paths`**: Limits accessible file paths to the specified glob patterns
 - **`permissions`**: Narrows available operations (e.g., `read: true, write: false` grants read-only access)
-- **Additional fields**: Depend on the specific capability type and its defined schema
+- **Additional fields**: Depend on the specific capability declaration/schema being described
 
 Constraints are evaluated as a conjunction (all must be satisfied). If any constraint evaluates to false, the capability invocation is denied.
 

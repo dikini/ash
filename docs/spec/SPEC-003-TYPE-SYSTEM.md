@@ -17,6 +17,14 @@ Canonical workflow effect vocabulary used throughout this spec:
 - **Evaluative** — policy and obligation evaluation
 - **Operational** — external side effects and irreversible outputs
 
+For the current promoted coarse-grade contract, workflow effect classification is computed from
+canonical workflow forms plus source-level contracts. Provider effect metadata may be checked for
+compatibility at embedding/runtime boundaries, but it is not the primary source of source-level
+effect typing.
+
+The possible addition of an explicit surfaced `Pure` bottom element remains follow-up work rather
+than current normative type-system text.
+
 ## 1.1 Phase-Owned Boundaries
 
 The type system owns judgments that prove or reject type, effect, obligation, and ADT
@@ -71,7 +79,7 @@ pub enum Type {
     Ref(Box<str>),
     List(Box<Type>),
     Record(Vec<(Box<str>, Type)>),
-    Cap(Box<str>, Effect),  // Capability with effect
+    Cap(Box<str>, Effect),  // Usage-site capability witness type with implementation-carried effect metadata
     Fun(Vec<Type>, Box<Type>, Effect),  // Function type
     Var(TypeVar),           // Type variable (for inference)
     Constructor {
@@ -96,7 +104,8 @@ User-defined ADT declarations are specified in source form by `TypeDef`, `TypeBo
 That source model is canonical:
 
 - `TypeDef` introduces a named type with generic parameters and visibility.
-- `TypeBody::Enum` defines constructors and their named fields.
+- `TypeBody::Enum` defines constructors together with their source payload shape: unit, record, or
+  tuple.
 - `TypeBody::Struct` and `TypeBody::Alias` define nominal wrappers over `TypeExpr`.
 - `TypeExpr` is the source-level type language used inside ADT declarations.
 
@@ -246,7 +255,7 @@ Type checking rejects:
   set required by the consumer: `{Permit, Deny, RequireApproval, Transform}`
 - non-boolean `receive` guards
 - unknown ADT constructors or variant patterns
-- constructor field mismatches against resolved enum metadata
+- constructor payload mismatches against resolved enum metadata
 - non-exhaustive ADT `match` where exhaustiveness is required by the contract
 
 These are type-layer boundary failures. They must not be deferred to runtime execution or treated
@@ -324,14 +333,46 @@ same resolved enum definition derived from the source `TypeDef`.
 fallback branch; it does not introduce a separate ADT typing rule.
 
 - A constructor expression such as `Some { value: 42 }` has the instantiated parent enum type.
+- A tuple-variant constructor expression such as `RuntimeError(2, "missing config")` has that same
+  instantiated parent enum type, with payload checking by positional arity and order.
 - A variant pattern such as `Some { value: x }` is typed against that same enum definition and
   binds fields using the declared field types.
+- A tuple-variant pattern such as `RuntimeError(code, msg)` is typed against the same enum
+  definition and binds payload positions using the declared tuple element types.
 - Exhaustiveness analyzes constructor coverage for the resolved enum type, not record fields or
   synthetic tag names.
 - Internal checker approximations such as `__variant`-tagged records are implementation details
-  and are not part of the language contract.
+  and are not part of the language contract. The same holds for any implementation-defined names
+  used internally to elaborate tuple payload positions.
 
 ## 5. Effect Inference
+
+Effects are inferred bottom-up from workflow forms and source-level contracts, then composed by
+join over the current coarse lattice. Under the current promoted contract, control/modal forms such
+as `Let`, `If`, `Seq`, `Par`, `ForEach`, `Ret`, `Done`, `With`, `Maybe`, and `Must` do not add a
+new effect classification of their own beyond the effects of their constituent expressions,
+branches, or subworkflows. Because the normative lattice has not yet adopted surfaced `Pure`, this
+spec records those forms as effect-neutral in themselves without renaming that neutrality to a new
+fifth grade.
+
+Current workflow-form classification summary:
+
+| Workflow form | Current coarse effect classification |
+|---|---|
+| `Observe` | `Epistemic` base effect, joined with continuation |
+| `Receive` | `Epistemic` base effect, joined with guard/body effects |
+| `Orient` | `Deliberative` base effect, joined with continuation |
+| `Propose` | `Deliberative` base effect, joined with continuation |
+| `Decide` | `Evaluative` base effect, joined with continuation |
+| `Check` | `Evaluative` base effect, joined with continuation |
+| `Act` | `Operational` |
+| `Let` / `If` / `Seq` / `Par` / `ForEach` | join-based composition over constituent effects; no extra grade of their own |
+| `Ret` / `Done` | no extra grade of their own |
+| `With` / `Maybe` / `Must` | no extra grade of their own beyond enclosed workflows |
+| `Oblig` | governance/obligation form; no separate coarse grade beyond enclosed workflow unless later revised |
+
+The `Pure` bottom-element question remains explicit follow-up work before any corpus-wide lattice
+rewrite.
 
 Effects are inferred bottom-up:
 
@@ -340,12 +381,28 @@ fn infer_effect(workflow: &Workflow) -> Effect {
     match workflow {
         Observe { continuation, .. } => 
             Effect::Epistemic.join(infer_effect(continuation)),
-      Receive { arms, .. } =>
-        arms.iter().fold(Effect::Epistemic, |acc, arm| {
-            acc.join(infer_guard_effect(arm.guard.as_ref()))
-              .join(infer_effect(&arm.body))
-        }),
+        Receive { arms, .. } =>
+            arms.iter().fold(Effect::Epistemic, |acc, arm| {
+                acc.join(infer_guard_effect(arm.guard.as_ref()))
+                  .join(infer_effect(&arm.body))
+            }),
+        Orient { continuation, .. } =>
+            Effect::Deliberative.join(infer_effect(continuation)),
+        Propose { continuation, .. } =>
+            Effect::Deliberative.join(infer_effect(continuation)),
+        Decide { continuation, .. } =>
+            Effect::Evaluative.join(infer_effect(continuation)),
+        Check { continuation, .. } =>
+            Effect::Evaluative.join(infer_effect(continuation)),
         Act { .. } => Effect::Operational,
+        Oblig { workflow, .. } =>
+            infer_effect(workflow),
+        Let { expr, continuation, .. } =>
+            infer_expr_effect(expr).join(infer_effect(continuation)),
+        If { condition, then_branch, else_branch } =>
+            infer_expr_effect(condition)
+                .join(infer_effect(then_branch))
+                .join(infer_effect(else_branch)),
         Seq { first, second } => 
             infer_effect(first).join(infer_effect(second)),
         Par { workflows } => 
@@ -353,10 +410,26 @@ fn infer_effect(workflow: &Workflow) -> Effect {
                 Effect::Epistemic, 
                 Effect::join
             ),
+        ForEach { collection, body, .. } =>
+            infer_expr_effect(collection).join(infer_effect(body)),
+        Ret { expr } =>
+            infer_expr_effect(expr),
+        With { workflow, .. } =>
+            infer_effect(workflow),
+        Maybe { primary, fallback } =>
+            infer_effect(primary).join(infer_effect(fallback)),
+        Must { workflow } =>
+            infer_effect(workflow),
+        Done => Effect::Epistemic,
         // ... etc
     }
 }
 ```
+
+The pseudocode above is illustrative rather than a full executable algorithm. Its role is to make
+the current contract explicit: workflow-form classification is syntax-directed and join-based.
+Where examples use `Epistemic` as the current identity element, that reflects today's surfaced
+coarse lattice, not a silent decision that `Pure` has already been adopted normatively.
 
 ## 6. Proof Obligations
 

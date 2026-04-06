@@ -2,9 +2,9 @@
 status: reviewing
 version: v2
 created: 2026-04-01
-last-revised: 2026-04-01
+last-revised: 2026-04-06
 derived-from: TYPES-002-ad-hoc-polymorphism.md
-related-plan-tasks: []
+related-plan-tasks: [TASK-415]
 tags: [type-system, typeclasses, traits, ad-hoc-polymorphism, effects, capabilities]
 ---
 
@@ -17,6 +17,10 @@ This is a second-pass exploration of ad-hoc polymorphism in Ash.
 It does not try to collapse the design space into a premature MVP. Instead, it keeps the
 important options open while pruning a few dead ends from the earlier draft and making the
 decision pressure more explicit.
+
+The companion `TYPES-002 V2 MVP Cut` document is the narrowed follow-on target for planning/spec
+work. This `v2` document remains intentionally broader so the tradeoffs, workloads, and deferred
+branches stay legible.
 
 The long-term goal remains the same: Ash should support executable, verifiable workflows with
 provenance, effect tracking, and governed collaboration between human and AI participants. Any
@@ -34,6 +38,9 @@ This `v2` document is a synthesis pass:
 - syntax is more schematic and less committal;
 - examples are more Ash-native or future-Ash-native;
 - evaluation is organized around workloads, not only around familiar language families.
+
+For serious planning discussion, use this `v2` document together with the companion MVP cut. Do
+not treat `v1` by itself as the implementation target.
 
 ## What Seems Solid
 
@@ -127,11 +134,13 @@ Current preference:
 - strong coherence;
 - explicit impl locality;
 - no overlapping impls by default;
+- one canonical bound form in the first pass (`T: Explain`);
+- one canonical associated call form in the first pass (`Explain::explain(value)`);
 - capability invocation remains effect-first and explicit.
 
 What remains open:
 
-- exact surface syntax;
+- exact token-level surface spelling around those schematic forms;
 - whether local instances exist at all;
 - whether dynamic dispatch or existential packaging is ever needed;
 - whether associated items belong in the first serious design pass.
@@ -489,7 +498,9 @@ Current stance:
 ## Next Steps
 
 - Keep `v1` as the preserved reasoning trace.
-- Use this `v2` document as the main discussion surface.
+- Use this `v2` document plus the companion MVP cut as the serious discussion surfaces.
+- Treat the MVP cut, not the unconstrained exploration alone, as the immediate follow-on target for
+  planning/spec work.
 - Expand the workload table with concrete examples from runtime, policy, audit, and review flows.
 - Explore at least one closed-world interface sketch and one explicit-evidence sketch in more detail.
 - Defer any serious attempt at capability/interface unification until the semantic payoff is clear.

@@ -87,11 +87,14 @@ for lowering. Binding-to-core meaning belongs to the lowering contract in TASK-1
 | Surface form | Required parser output | Notes |
 |---|---|---|
 | `type Option<T> = Some { value: T } | None;` | `parse_type_def::TypeDef { body: TypeBody::Enum(...), .. }` | Enum declarations use the canonical `TypeDef` model. |
+| `type RuntimeError = RuntimeError(Int, String);` | `parse_type_def::TypeDef { body: TypeBody::Enum(...), .. }` | Tuple-variant declarations are part of the canonical enum surface. |
 | `type Point = { x: Int, y: Int };` | `TypeDef { body: TypeBody::Struct(...), .. }` | Struct declarations are source-level record forms. |
 | `type Alias = (Int, String);` | `TypeDef { body: TypeBody::Alias(TypeExpr::Tuple(...)), .. }` | Alias declarations preserve source type expressions. |
-| `Some { value: x }` in expression position | expression tree with constructor syntax preserved for later lowering/type checking | Constructor resolution is not a parser responsibility. |
-| `Some { value: x }` in pattern position | `surface::Pattern::Variant { name, fields: Some(...) }` | Variant patterns are constructor-name plus named fields. |
-| `None` in pattern position | `surface::Pattern::Variant { name, fields: None }` | Unit variants remain variants, not plain identifiers. |
+| `Some { value: x }` in expression position | expression tree that preserves constructor-shaped syntax for later lowering/type checking | Parser preserves constructor shape; constructor resolution is not a parser responsibility. |
+| `RuntimeError(code, msg)` in expression position | expression tree that preserves tuple-constructor-shaped syntax and payload order for later lowering/type checking | Parser preserves the tuple-constructor shape without deciding type-level constructor resolution. |
+| `Some { value: x }` in pattern position | `surface::Pattern::Variant` or equivalent parser payload node for a record variant | Variant patterns may carry named-field payloads. |
+| `RuntimeError(code, msg)` in pattern position | `surface::Pattern::Variant` or equivalent parser payload node for a tuple variant | Tuple-variant patterns preserve positional payload order. |
+| `None` in pattern position | `surface::Pattern::Variant` or equivalent parser payload node for a unit variant | Unit variants remain variants, not plain identifiers. |
 | `match expr { ... }` | `surface::Expr::Match { scrutinee, arms, .. }` | Exhaustiveness is not decided by parsing. |
 | `if let pat = expr then a else b` | `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | Sugar is preserved through parsing. |
 

@@ -74,6 +74,15 @@ WorkflowOutcome ::= Return(Value, Effect, Trace, ObligationState, Provenance)
                   | Reject(Error, Effect, Trace, ObligationState, Provenance)
 ```
 
+This semantics document follows the current promoted coarse effect-classification contract: the
+reported effect is computed from canonical workflow forms and source-level contracts, then composed
+by lattice join. Embedding-side provider metadata may inform compatibility checks elsewhere, but it
+is not the primary source of workflow effect classification in this semantics.
+
+The possible addition of a surfaced `Pure` bottom element remains explicit follow-up work. Until
+that broader corpus change is made, this document continues to use the current four-grade lattice
+without silently treating `Pure` as already normative.
+
 Notation used below:
 
 - `eff`, `eff1`, `eff2`, ... range over `Effect` values.
@@ -84,8 +93,15 @@ Notation used below:
 - `Return(...)` and `Reject(...)` name the authoritative workflow outcomes defined by the runtime.
 
 Variant values are the canonical runtime representation for enum constructors. They store the
-constructor name plus its named payload fields. The enclosing type name is not stored in the
+constructor name plus a runtime payload mapping. The enclosing type name is not stored in the
 runtime value itself.
+
+At the source level, Ash distinguishes record variants from tuple variants. Record variants expose
+named fields in source syntax; tuple variants expose positional payloads such as
+`RuntimeError(Int, String)` and `RuntimeError(code, msg)`. This document specifies post-lowering
+core semantics, so implementations may elaborate tuple payload positions into canonical internal
+variant-field metadata before evaluation, provided constructor identity and positional arity/order
+remain the preserved source contract.
 
 The canonical runtime value domain does not store a separate tuple value. Tuple-shaped pattern
 matching therefore operates over fixed-length `List` values.
@@ -144,6 +160,11 @@ The explanatory layer comments in the domain declaration above are normative:
 
 Rule schemata may use lowercase aliases `epistemic`, `deliberative`, `evaluative`, and
 `operational` for those same four lattice elements.
+
+Under the current coarse-grade contract, control-only workflow forms may be effect-neutral in
+themselves while still reporting at least `epistemic` once composed into the surfaced four-grade
+lattice. That is a consequence of the current lattice presentation, not a decision that an explicit
+bottom element has already been adopted.
 
 ## 2.3 Trace and Concatenation
 
@@ -562,6 +583,8 @@ ReceiveOutcome ::= Selected(msg, ΔΓ, body, τr)
 already-arrived workflow input; blocking and timeout behavior are determined by `mode` rather than
 by a higher effect classification.
 
+This is a workflow-form classification rule, not a statement derived from provider metadata.
+
 The selection relation searches according to SPEC-013: it probes declared stream mailboxes or the
 implicit control mailbox under the current source scheduling modifier, then selects the oldest
 queued entry whose arm matches and whose guard succeeds. It is not a single-message poll followed
@@ -900,6 +923,11 @@ section therefore subsumes the earlier standalone constructor prose. Together, t
 cover the canonical core expression forms listed in SPEC-001: `Literal`, `Variable`,
 `FieldAccess`, `IndexAccess`, `Unary`, `Binary`, `Call`, `Match`, and `Constructor`.
 
+Surface tuple-variant constructor expressions lower into this canonical constructor form using
+implementation-defined internal payload metadata derived from the source declaration. That
+elaboration must preserve source positional meaning; it does not change the source-language
+contract into named-field-only construction.
+
 `EXPR-MATCH` defines `Match` in terms of the explicit expression and pattern judgments already
 declared in §3 together with the helper contract for arm selection. It selects the first arm whose
 pattern matches and whose optional guard evaluates to `Bool(true)`, then evaluates that arm body
@@ -1033,6 +1061,11 @@ If the rest position is spelled `_`, read `PAT-LIST-REST` with `ΔΓrest = ∅`.
 `PAT-RECORD` and `PAT-VARIANT` use field-subset matching: the runtime value may contain fields not
 mentioned in the pattern, but every field named by the pattern must be present and must match its
 subpattern. `PAT-VARIANT` additionally requires exact constructor-name equality.
+
+Surface tuple-variant patterns also lower into `PAT-VARIANT`: their positional payload patterns are
+elaborated into the canonical internal variant-field representation before runtime matching. The
+runtime semantics therefore acknowledge tuple-variant source forms without requiring a distinct
+runtime tuple-variant value family.
 
 ### 4.8 Control Flow
 

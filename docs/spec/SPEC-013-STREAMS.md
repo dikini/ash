@@ -194,7 +194,9 @@ queue:jobs as Err { error: reason } => act log::error(reason)
 ```
 
 These variant patterns follow the canonical ADT contract from `SPEC-020`: matching is based on
-constructor name plus named fields, not on synthetic tag fields.
+constructor name plus the declared payload shape: named fields for record variants, positional
+payloads for tuple variants, and no payload for unit variants. It does not rely on synthetic tag
+fields.
 
 ## 5. Guard Clauses
 

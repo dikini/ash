@@ -51,7 +51,13 @@ pub enum TypeBody {
 
 pub struct VariantDef {
     pub name: Name,
-    pub fields: Vec<(Name, TypeExpr)>,
+    pub payload: VariantPayload,
+}
+
+pub enum VariantPayload {
+    Unit,
+    Record(Vec<(Name, TypeExpr)>),
+    Tuple(Vec<TypeExpr>),
 }
 
 pub enum Visibility {
@@ -69,9 +75,15 @@ pub enum TypeExpr {
 ```
 
 This source `TypeDef` plus `TypeExpr` model is canonical for user-written ADT declarations.
-Implementations may elaborate it into internal type metadata for unification or exhaustiveness,
-but that elaborated form is derived from this source model rather than replacing it with a
-second specification-level structure.
+Enum variants are source-level constructors in one of three families:
+
+- `VariantPayload::Unit` for unit variants such as `None`
+- `VariantPayload::Record(...)` for record variants such as `Some { value: T }`
+- `VariantPayload::Tuple(...)` for tuple variants such as `RuntimeError(Int, String)`
+
+Implementations may elaborate this source model into internal type metadata for unification or
+exhaustiveness, but that elaborated form is derived from this source model rather than replacing it
+with a second specification-level structure.
 
 #### Internal Type Representation
 
@@ -145,6 +157,15 @@ type Result<T, E> =
     | Ok { value: T }
     | Err { error: E };
 
+-- Tuple-variant enums
+type RuntimeError = RuntimeError(Int, String);
+type Box<T> = Box(T);
+
+type Response =
+    | Empty
+    | Value(String)
+    | Failed(Int, String);
+
 -- Recursive type
 type List<T> =
     | Cons { head: T, tail: List<T> }
@@ -164,13 +185,23 @@ type Pair<T, U> = { first: T, second: U };
 type PointTuple = (Int, Int);
 ```
 
-### 5.3 Pattern Matching
+### 5.3 Constructor Expressions and Pattern Matching
 
 ```ash
+-- Constructor expressions mirror the declared variant payload shape
+let err = RuntimeError(2, "missing config");
+let wrapped = Box(config);
+let ok = Ok { value: 42 };
+let none = None;
+
 -- Match expression
 match opt {
     Some { value: x } => x * 2,
     None => 0
+}
+
+match err {
+    RuntimeError(code, msg) => msg
 }
 
 -- Pattern in let
@@ -182,6 +213,7 @@ let Some { value: config } = load_config() else {
 match result {
     Ok { value: Some { value: x } } => x,
     Ok { value: None } => 0,
+    Ok { value: RuntimeError(code, msg) } => msg,
     Err { error: e } => { act log with e; 0 }
 }
 
@@ -226,17 +258,32 @@ the same match semantics.
 ### 6.1 Constructor Typing
 
 ```
-(CONSTRUCTOR)
+(CONSTRUCTOR-UNIT)
+  resolve_constructor(Σ, C) = (ParentTypeDef, VariantDef { payload = Unit }, subst)
+  ─────────────────────────────────────────────────────────────
+  Γ ⊢ C : instantiate(ParentTypeDef, subst)
+
+(CONSTRUCTOR-RECORD)
   resolve_constructor(Σ, C) = (ParentTypeDef, VariantDef, subst)
-  VariantDef.fields = [f1:τ1, ..., fn:τn]
+  VariantDef.payload = Record([f1:τ1, ..., fn:τn])
   ∀i. Γ ⊢ ei : σi / εi
   unify(σi, apply_subst(τi, subst)) = ok
   ─────────────────────────────────────────────────────────────
   Γ ⊢ C { f1: e1, ..., fn: en } : instantiate(ParentTypeDef, subst)
+
+(CONSTRUCTOR-TUPLE)
+  resolve_constructor(Σ, C) = (ParentTypeDef, VariantDef, subst)
+  VariantDef.payload = Tuple([τ1, ..., τn])
+  ∀i. Γ ⊢ ei : σi / εi
+  unify(σi, apply_subst(τi, subst)) = ok
+  ─────────────────────────────────────────────────────────────
+  Γ ⊢ C(e1, ..., en) : instantiate(ParentTypeDef, subst)
 ```
 
 Constructor typing is defined from the resolved enum definition associated with the
-constructor name. Unit variants are constructors with an empty field list.
+constructor name. Record variants are checked by named field contract; tuple variants are checked
+by positional arity and order. Internal elaboration may attach synthetic field names or equivalent
+metadata for tuple variants, but that elaboration is not part of the source contract.
 
 ### 6.2 Pattern Typing
 
@@ -245,16 +292,28 @@ constructor name. Unit variants are constructors with an empty field list.
   ─────────────────────────────────────────────────────────────
   Γ ⊢ x : τ ⊣ Γ, x:τ
 
-(PATTERN-VARIANT)
-  resolve_variant(τ_scrutinee, C) = VariantDef { fields: [f1:τ1, ..., fn:τn] }
+(PATTERN-UNIT)
+  resolve_variant(τ_scrutinee, C) = VariantDef { payload = Unit }
+  ─────────────────────────────────────────────────────────────
+  Γ ⊢ C : τ_scrutinee ⊣ Γ
+
+(PATTERN-RECORD)
+  resolve_variant(τ_scrutinee, C) = VariantDef { payload = Record([f1:τ1, ..., fn:τn]) }
   ∀i. Γ ⊢ pi : τi ⊣ Γi
   ─────────────────────────────────────────────────────────────
   Γ ⊢ C { f1: p1, ..., fn: pn } : τ_scrutinee ⊣ Γ1 ∪ ... ∪ Γn
+
+(PATTERN-TUPLE)
+  resolve_variant(τ_scrutinee, C) = VariantDef { payload = Tuple([τ1, ..., τn]) }
+  ∀i. Γ ⊢ pi : τi ⊣ Γi
+  ─────────────────────────────────────────────────────────────
+  Γ ⊢ C(p1, ..., pn) : τ_scrutinee ⊣ Γ1 ∪ ... ∪ Γn
 ```
 
 Variant-pattern typing and constructor typing are two views of the same resolved enum
-metadata. Synthetic tagged-record encodings such as `__variant` are implementation details
-and are not part of the specification contract.
+metadata. Record variants bind by field name; tuple variants bind positionally. Synthetic
+tagged-record encodings such as `__variant`, or implementation-defined internal names for tuple
+payload positions, are implementation details and are not part of the specification contract.
 
 ### 6.3 Exhaustiveness Checking
 
@@ -543,7 +602,12 @@ pub enum Value {
 At runtime, a variant value stores:
 
 - the constructor name, such as `Some`, `None`, `Ok`, or `Err`
-- the named payload fields associated with that constructor
+- canonical lowered payload metadata for that constructor
+
+Record variants lower with their declared field names. Unit variants lower with an empty payload.
+Tuple variants remain positional in the source contract and may elaborate to implementation-defined
+internal payload names so long as positional arity and order are preserved by typing, lowering, and
+pattern matching.
 
 The enclosing type name is not stored inside the runtime value. It is recovered from
 constructor resolution, surrounding type information, or pattern context. Record-tag

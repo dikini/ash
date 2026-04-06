@@ -68,8 +68,9 @@ observe sensor:last_result as Ok { value: reading };
 observe sensor:last_result as Err { error: reason };
 ```
 
-Variant matching for observed values is based on constructor name plus named fields. It does
-not rely on synthetic record tags.
+Variant matching for observed values is based on constructor name plus the declared payload shape:
+named fields for record variants, positional payloads for tuple variants, and no payload for unit
+variants. It does not rely on synthetic record tags.
 
 ### 3.3 Repeated Observation
 

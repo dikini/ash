@@ -81,8 +81,8 @@ workflow-level core form.
 | Parsed surface node | Canonical lowering target | Notes |
 |---|---|---|
 | `parse_type_def::TypeDef` | canonical source `TypeDef` / `TypeBody` / `TypeExpr` metadata consumed by later phases | Lowering preserves the source declaration model; it does not replace it with a second spec-level shape. |
-| `surface::Expr::Constructor { name, fields, .. }` | core constructor expression preserving constructor name plus lowered named fields | Constructor resolution happens against the canonical enum metadata. |
-| `surface::Pattern::Variant { name, fields }` | core variant pattern preserving constructor name plus lowered field patterns | No synthetic `__variant` tags are introduced at the contract level. |
+| parser constructor-shaped expression node | core constructor expression preserving constructor name plus lowered payload metadata | Constructor resolution happens against the canonical enum metadata; tuple payload positions may be elaborated internally. |
+| parser variant-pattern node | core variant pattern preserving constructor name plus lowered payload patterns | No synthetic `__variant` tags are introduced at the contract level, and tuple payload order must be preserved. |
 | `surface::Expr::Match { scrutinee, arms, .. }` | core `Expr::Match` with lowered scrutinee, patterns, and bodies | Arm order is preserved. |
 | `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | core `Expr::Match` with the pattern lowered as the first arm and the `else_branch` lowered as the wildcard fallback arm | `if let` has no separate canonical runtime form. |
 
@@ -110,7 +110,7 @@ Lowering must preserve:
 - explicit policy names used by workflow `decide`
 - source `receive` mode and arm order
 - control-vs-stream receive selection
-- ADT constructor names and named fields
+- ADT constructor names and source payload contracts (named fields for record variants, positional order for tuple variants)
 - `match` arm order and `if let` branch meaning
 
 Lowering may normalize:

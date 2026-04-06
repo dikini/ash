@@ -290,7 +290,7 @@ Runtime (Rust)
 
 ### 5. Discovered Issues (To Resolve in Syntax/Spec Work)
 
-1. **Variant syntax for tuple-like constructors** — Moved to [TYPES-001](../type-system/TYPES-001-tuple-variants.md). Current spec (SPEC-002, SPEC-020) only defines record-style variants (`Ok { value: T }`). For `RuntimeError Int String`, we need tuple-variant syntax. See that exploration for syntax options and design questions.
+1. **Variant syntax for tuple-like constructors** — Moved to [TYPES-001](../type-system/TYPES-001-tuple-variants.md). TASK-413 now freezes the general tuple-variant source contract as parenthesized tuple payload syntax. Existing stdlib-visible `RuntimeError` examples in this note may still reflect the earlier record-shaped contract until the runtime stdlib/type corpus is reconciled in follow-on work.
 
 2. **What is the type of a workflow?** — Moved to [FIRST-CLASS-WORKFLOWS](../future/FIRST-CLASS-WORKFLOWS.md). Deferred to post-minimal-core. The fundamental question: are workflows first-class values? This was initially considered for entry point but postponed in favor of gradual typing at the Rust/Ash boundary.
 
@@ -366,6 +366,6 @@ All core questions resolved in this exploration:
 **Then Phase 57B implementation tasks** (359-369) unblocked per dependency matrix in PLAN-INDEX.
 
 ### Related Work
-- [ ] Coordinate with TYPES-001 for `RuntimeError` syntax (can use record syntax as fallback)
+- [x] Coordinate with TYPES-001 / TASK-413 for the general tuple-variant source contract; concrete `RuntimeError` stdlib reconciliation remains follow-on work
 - [ ] Mark MCE-001 as `accepted` after SPEC updates complete
 - [ ] Archive MCE-001 to `docs/ideas/archived/`

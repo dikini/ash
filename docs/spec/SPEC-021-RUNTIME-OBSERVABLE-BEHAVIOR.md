@@ -139,21 +139,24 @@ The contract does not permit silent fallback that hides one of these failure cla
 Runtime values for ADT constructors are observably constructor-shaped:
 
 - unit variants display as the constructor name
-- non-unit variants display as the constructor name plus named fields
+- record variants display as the constructor name plus named fields
+- tuple variants display as the constructor name plus positional payloads in parentheses
 
 Examples:
 
 - `None`
 - `Some { value: 42 }`
+- `RuntimeError(2, "missing config")`
 - `Ok { value: "hello" }`
 - `Err { error: "not found" }`
 
 The visible shape is:
 
 - constructor name
-- named payload fields
+- named payload fields for record variants
+- positional payloads in parentheses for tuple variants
 
-Tooling and stdlib behavior must not depend on synthetic tag fields such as `__variant`.
+Tooling and stdlib behavior must not depend on synthetic tag fields such as `__variant`, nor on any implementation-defined internal field names used while elaborating tuple payloads.
 
 ### 4.2 Instance and Control Values
 

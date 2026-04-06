@@ -73,7 +73,7 @@ Because downstream tasks depend on `TASK-363a`, the minimum real stdlib-loading 
 
 - workflow identifier must be `main`
 - declared return type must be exactly `Result<(), RuntimeError>`
-- all parameters must be `Type::Capability(_)`
+- all parameters must be usage-site capability witness types (represented in the current type layer as `Type::Cap(...)`)
 
 The verifier should report stable failure classes for:
 

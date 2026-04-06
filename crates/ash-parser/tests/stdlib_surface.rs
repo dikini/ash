@@ -81,12 +81,12 @@ fn runtime_stdlib_surface_is_exposed() {
         "runtime/error.ash should declare RuntimeError"
     );
     assert!(
-        runtime_error_normalized.contains("pub type RuntimeError = RuntimeError {"),
-        "runtime/error.ash should expose RuntimeError with the canonical single-variant ADT syntax"
+        runtime_error_normalized.contains("pub type RuntimeError = RuntimeError(Int, String);"),
+        "runtime/error.ash should expose RuntimeError with the canonical tuple-variant ADT syntax"
     );
     assert!(
-        !runtime_error_normalized.contains("pub type RuntimeError = {"),
-        "runtime/error.ash should not expose RuntimeError as a plain record alias"
+        !runtime_error_normalized.contains("pub type RuntimeError = RuntimeError {"),
+        "runtime/error.ash should not expose RuntimeError with record payload syntax"
     );
     assert!(
         runtime_args.contains("pub capability Args"),
@@ -129,7 +129,7 @@ fn runtime_stdlib_surface_is_exposed() {
         "runtime/supervisor.ash should shape RuntimeError exit codes through if-let destructuring"
     );
     assert!(
-        runtime_supervisor.contains("Err { error: RuntimeError { exit_code: code, message: _ } }"),
+        runtime_supervisor.contains("Err { error: RuntimeError(code, _) }"),
         "runtime/supervisor.ash should keep the nested RuntimeError exit-code destructuring intent"
     );
     assert!(

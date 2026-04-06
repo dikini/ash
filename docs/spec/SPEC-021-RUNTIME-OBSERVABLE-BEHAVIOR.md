@@ -54,7 +54,7 @@ completion boundary.
 The observable exit code is derived from the entry-workflow outcome only:
 
 - `0` when `main` completes successfully and its required obligations are discharged;
-- `N` when `main` completes with a runtime error carrying exit code `N`;
+- `N` when `main` completes with `Err { error: RuntimeError(N, _) }` and the leading tuple payload slot carries exit code `N`;
 - `1` when bootstrap, loading, verification, or other pre-entry failures prevent successful
   execution of `main`.
 
@@ -70,7 +70,7 @@ Conformance-oriented observable assertions include:
 
 - if `main` completes successfully, `ash run` exits `0` even if a spawned descendant encounters
   its own failure outside the parent's exit boundary;
-- if `main` completes with a runtime error carrying exit code `N`, `ash run` exits `N`;
+- if `main` completes with `Err { error: RuntimeError(N, _) }`, `ash run` exits `N`;
 - if bootstrap or verification fails before successful `main` execution, the process exits through
   the pre-entry failure path with code `1`;
 - conformance tests must not assert whether descendants terminate, continue, or emit further

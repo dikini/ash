@@ -1293,8 +1293,7 @@ mod tests {
 
     #[test]
     fn test_parse_nested_constructor_expression() {
-        let mut input =
-            test_input(r#"Err { error: RuntimeError { exit_code: 42, message: "boom" } }"#);
+        let mut input = test_input(r#"Err { error: RuntimeError(42, "boom") }"#);
         let result = expr(&mut input).unwrap();
 
         match result {
@@ -1316,17 +1315,16 @@ mod tests {
                         ..
                     } => {
                         assert_eq!(name.as_ref(), "RuntimeError");
-                        assert_eq!(fields.len(), 2);
-                        assert_eq!(fields[0].0.as_ref(), "exit_code");
-                        assert!(matches!(fields[0].1, Expr::Literal(Literal::Int(42))));
-                        assert_eq!(fields[1].0.as_ref(), "message");
+                        assert!(fields.is_empty());
                         assert!(
-                            matches!(payload, ConstructorPayload::Record(items) if items.len() == 2)
+                            matches!(payload, ConstructorPayload::Tuple(items) if matches!(
+                                items.as_slice(),
+                                [
+                                    Expr::Literal(Literal::Int(42)),
+                                    Expr::Literal(Literal::String(message))
+                                ] if message.as_ref() == "boom"
+                            ))
                         );
-                        assert!(matches!(
-                            fields[1].1,
-                            Expr::Literal(Literal::String(ref s)) if s.as_ref() == "boom"
-                        ));
                     }
                     other => panic!("Expected nested constructor, got {other:?}"),
                 }

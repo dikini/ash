@@ -155,12 +155,12 @@ fn test_runtime_error_type_definition_parses() {
     let normalized = normalize_whitespace(&content);
 
     assert!(
-        normalized.contains("pub type RuntimeError = RuntimeError {"),
-        "RuntimeError should use the canonical single-variant ADT syntax"
+        normalized.contains("pub type RuntimeError = RuntimeError(Int, String);"),
+        "RuntimeError should use the canonical tuple-variant ADT syntax"
     );
     assert!(
-        !normalized.contains("pub type RuntimeError = {"),
-        "RuntimeError should reject the legacy plain record-alias syntax"
+        !normalized.contains("pub type RuntimeError = RuntimeError {"),
+        "RuntimeError should reject record-payload constructor syntax in the stdlib surface"
     );
 
     let mut input = new_input(&content);
@@ -191,13 +191,14 @@ fn test_runtime_error_type_definition_parses() {
 
     let variant = &variants[0];
     assert_eq!(variant.name, "RuntimeError");
-    assert_eq!(
-        variant.fields.len(),
-        2,
-        "RuntimeError variant should expose exactly two fields"
+    assert!(
+        variant.fields.is_empty(),
+        "RuntimeError tuple variants should preserve payload shape without record field names at the parser surface"
     );
-    assert_eq!(variant.fields[0].0, "exit_code");
-    assert_eq!(variant.fields[1].0, "message");
+    assert!(matches!(
+        variant.payload,
+        ash_parser::parse_type_def::VariantPayload::Tuple(ref items) if items.len() == 2
+    ));
 }
 
 #[test]
@@ -313,7 +314,7 @@ fn test_runtime_supervisor_workflow_definition_parses() {
         "system_supervisor should keep the if-let exit-code shaping intent"
     );
     assert!(
-        content.contains("Err { error: RuntimeError { exit_code: code, message: _ } }"),
+        content.contains("Err { error: RuntimeError(code, _) }"),
         "system_supervisor should keep nested RuntimeError destructuring intent"
     );
     assert!(

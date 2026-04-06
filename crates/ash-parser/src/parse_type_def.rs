@@ -749,8 +749,7 @@ mod tests {
 
     #[test]
     fn test_parse_single_variant_constructor_adt() {
-        let mut input =
-            new_input("type RuntimeError = RuntimeError { exit_code: Int, message: String };");
+        let mut input = new_input("type RuntimeError = RuntimeError(Int, String);");
         let result = parse_type_def(&mut input);
         assert!(result.is_ok(), "Parse failed: {:?}", result);
 
@@ -761,12 +760,10 @@ mod tests {
             TypeBody::Enum(variants) => {
                 assert_eq!(variants.len(), 1);
                 assert_eq!(variants[0].name, "RuntimeError");
-                assert_eq!(variants[0].fields.len(), 2);
-                assert_eq!(variants[0].fields[0].0, "exit_code");
-                assert_eq!(variants[0].fields[1].0, "message");
+                assert!(variants[0].fields.is_empty());
                 assert!(matches!(
                     variants[0].payload,
-                    VariantPayload::Record(ref items) if items.len() == 2
+                    VariantPayload::Tuple(ref items) if items.len() == 2
                 ));
             }
             _ => panic!("Expected single-variant enum body"),

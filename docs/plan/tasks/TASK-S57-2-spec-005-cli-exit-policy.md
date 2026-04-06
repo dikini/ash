@@ -53,7 +53,7 @@ Current: SPEC-005 Section 4 "Exit Codes"
 Add:
 
 - Exit code 0: `main` returned `Ok(())` with obligations discharged
-- Exit code N: `main` returned `Err(RuntimeError { exit_code: N, ... })`
+- Exit code N: `main` returned `Err { error: RuntimeError(N, _) }`
 - Exit code 1: Bootstrap or verification error
 - Note: Descendant workflow failures do not affect exit code; descendant fate after exit is not part of CLI contract
 

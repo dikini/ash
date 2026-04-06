@@ -6,6 +6,7 @@
 
 use crate::EngineError;
 use ash_core::Value;
+use ash_core::adt::tuple_field_name;
 use ash_parser::surface::{Type, WorkflowDef};
 use thiserror::Error;
 
@@ -353,7 +354,7 @@ pub(crate) fn derive_entry_exit_code(result: &Value) -> Result<u8, EntryBootstra
 
             let Some((_, Value::Int(code))) = fields
                 .iter()
-                .find(|(field_name, _)| field_name == "exit_code")
+                .find(|(field_name, _)| field_name == &tuple_field_name(0))
             else {
                 return Ok(0);
             };
@@ -437,8 +438,8 @@ mod tests {
                 Value::variant(
                     "RuntimeError",
                     vec![
-                        ("exit_code", Value::Int(42)),
-                        ("message", Value::String("boom".to_string())),
+                        (tuple_field_name(0), Value::Int(42)),
+                        (tuple_field_name(1), Value::String("boom".to_string())),
                     ],
                 ),
             )],

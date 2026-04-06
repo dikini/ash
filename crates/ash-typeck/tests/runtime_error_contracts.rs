@@ -1,3 +1,4 @@
+use ash_core::adt::tuple_field_name;
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload, Visibility};
 use ash_parser::surface::{ConstructorPayload, Expr, Literal};
 use ash_parser::token::Span;
@@ -12,12 +13,12 @@ fn runtime_error_type_def() -> TypeDef {
         body: TypeBody::Enum(vec![VariantDef {
             name: "RuntimeError".to_string(),
             fields: vec![
-                ("exit_code".to_string(), TypeExpr::Named("Int".to_string())),
-                ("message".to_string(), TypeExpr::Named("String".to_string())),
+                (tuple_field_name(0), TypeExpr::Named("Int".to_string())),
+                (tuple_field_name(1), TypeExpr::Named("String".to_string())),
             ],
-            payload: VariantPayload::Record(vec![
-                ("exit_code".to_string(), TypeExpr::Named("Int".to_string())),
-                ("message".to_string(), TypeExpr::Named("String".to_string())),
+            payload: VariantPayload::Tuple(vec![
+                TypeExpr::Named("Int".to_string()),
+                TypeExpr::Named("String".to_string()),
             ]),
         }]),
         visibility: Visibility::Public,
@@ -28,18 +29,18 @@ fn runtime_error_expr(exit_code: i64, message: &str) -> Expr {
     Expr::Constructor {
         name: "RuntimeError".into(),
         fields: vec![
-            ("exit_code".into(), Expr::Literal(Literal::Int(exit_code))),
             (
-                "message".into(),
+                tuple_field_name(0).into(),
+                Expr::Literal(Literal::Int(exit_code)),
+            ),
+            (
+                tuple_field_name(1).into(),
                 Expr::Literal(Literal::String(message.into())),
             ),
         ],
-        payload: ConstructorPayload::Record(vec![
-            ("exit_code".into(), Expr::Literal(Literal::Int(exit_code))),
-            (
-                "message".into(),
-                Expr::Literal(Literal::String(message.into())),
-            ),
+        payload: ConstructorPayload::Tuple(vec![
+            Expr::Literal(Literal::Int(exit_code)),
+            Expr::Literal(Literal::String(message.into())),
         ]),
         span: Span::default(),
     }
@@ -81,7 +82,7 @@ fn runtime_error_composes_inside_result_constructor() {
 
     assert!(
         result.is_ok(),
-        "expected Err {{ error: RuntimeError {{ ... }} }} to typecheck"
+        "expected Err {{ error: RuntimeError(..) }} to typecheck"
     );
     match result.ty {
         Type::Constructor { name, args, .. } => {

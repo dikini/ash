@@ -100,8 +100,9 @@ At the source level, Ash distinguishes record variants from tuple variants. Reco
 named fields in source syntax; tuple variants expose positional payloads such as
 `RuntimeError(Int, String)` and `RuntimeError(code, msg)`. This document specifies post-lowering
 core semantics, so implementations may elaborate tuple payload positions into canonical internal
-variant-field metadata before evaluation, provided constructor identity and positional arity/order
-remain the preserved source contract.
+variant-field metadata such as `_0`, `_1`, ... before evaluation, provided constructor identity and
+positional arity/order remain the preserved source contract and those synthetic names do not become
+a required user-visible contract.
 
 The canonical runtime value domain does not store a separate tuple value. Tuple-shaped pattern
 matching therefore operates over fixed-length `List` values.

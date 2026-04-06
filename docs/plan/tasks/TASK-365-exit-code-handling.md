@@ -17,7 +17,7 @@ Propagate exit code from supervisor completion to OS process exit.
 | Condition | Exit Code |
 |-----------|-----------|
 | `main` returns a successful `Ok { value: ... }` payload | 0 |
-| `main` returns `Err { error: RuntimeError { exit_code: N, message: _ } }` | N |
+| `main` returns `Err { error: RuntimeError(N, _) }` | N |
 | Bootstrap/verification error | 1 |
 | Supervisor crash (implementation error) | 1 |
 
@@ -63,7 +63,7 @@ fn main() {
 - **Exit immediately** on main completion (S57-2)
 - **Descendants** not waited for (S57-3)
 - **Error code 1** for all bootstrap failures
-- **User code** controls exit via the `RuntimeError` `exit_code` payload, extracted by supervisor-side variant destructuring
+- **User code** controls exit via the leading `RuntimeError` tuple payload slot, extracted by supervisor-side variant destructuring
 
 ## TDD Steps
 
@@ -86,7 +86,7 @@ let entry = r#"
     use runtime::RuntimeError
 
   workflow main() -> Result<(), RuntimeError> {
-        Err { error: RuntimeError { exit_code: 42, message: "test" } }
+        Err { error: RuntimeError(42, "test") }
   }
 "#;
 let code = run_and_get_exit_code(entry);

@@ -1,3 +1,4 @@
+use ash_core::adt::tuple_field_name;
 use ash_core::{Pattern, Value};
 use ash_interp::pattern::match_pattern;
 
@@ -37,8 +38,8 @@ fn nested_variant_patterns_extract_runtime_error_exit_code() {
             Pattern::Variant {
                 name: "RuntimeError".into(),
                 fields: Some(vec![
-                    ("exit_code".into(), Pattern::Variable("code".into())),
-                    ("message".into(), Pattern::Wildcard),
+                    (tuple_field_name(0), Pattern::Variable("code".into())),
+                    (tuple_field_name(1), Pattern::Wildcard),
                 ]),
             },
         )]),
@@ -50,8 +51,8 @@ fn nested_variant_patterns_extract_runtime_error_exit_code() {
             Value::variant(
                 "RuntimeError",
                 vec![
-                    ("exit_code", Value::Int(42)),
-                    ("message", Value::String("boom".to_string())),
+                    (tuple_field_name(0), Value::Int(42)),
+                    (tuple_field_name(1), Value::String("boom".to_string())),
                 ],
             ),
         )],

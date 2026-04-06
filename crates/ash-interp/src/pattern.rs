@@ -2,6 +2,7 @@
 //!
 //! Patterns allow extracting and binding values from complex data structures.
 
+use ash_core::adt::is_tuple_field_name;
 use ash_core::{Name, Pattern, Value};
 use std::collections::HashMap;
 
@@ -35,6 +36,17 @@ pub fn match_pattern(
     let mut bindings = HashMap::new();
     match_pattern_recursive(pattern, value, &mut bindings)?;
     Ok(bindings)
+}
+
+fn tuple_variant_fields_match_arity(
+    variant_fields: &[(String, Value)],
+    expected_len: usize,
+) -> bool {
+    variant_fields.len() == expected_len
+        && variant_fields
+            .iter()
+            .enumerate()
+            .all(|(index, (field_name, _))| is_tuple_field_name(field_name, index))
 }
 
 fn match_pattern_recursive(
@@ -165,6 +177,30 @@ fn match_pattern_recursive(
                             Ok(())
                         }
                         Some(field_patterns) => {
+                            // Tuple-variant patterns must match exact positional arity at runtime.
+                            let expects_tuple_payload = field_patterns.iter().enumerate().all(
+                                |(index, (field_name, _))| is_tuple_field_name(field_name, index),
+                            );
+                            if expects_tuple_payload
+                                && !tuple_variant_fields_match_arity(
+                                    variant_fields,
+                                    field_patterns.len(),
+                                )
+                            {
+                                return Err(PatternError::MatchFailed {
+                                    expected: format!(
+                                        "tuple variant {} with {} positional fields",
+                                        name,
+                                        field_patterns.len()
+                                    ),
+                                    actual: format!(
+                                        "variant {} with {} fields",
+                                        name,
+                                        variant_fields.len()
+                                    ),
+                                });
+                            }
+
                             // Pattern expects variant with specific fields
                             // Match each field pattern against the corresponding value field
                             for (field_name, field_pattern) in field_patterns {

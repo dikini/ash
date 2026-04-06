@@ -1,6 +1,6 @@
 # TASK-418: Tuple Variant Runtime Support and RuntimeError Reconciliation
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -84,14 +84,21 @@ Run at least:
 
 ## Completion Checklist
 
-- [ ] tuple constructors evaluate correctly
-- [ ] tuple patterns match correctly
-- [ ] observable display updated
-- [ ] `RuntimeError` contract reconciled
-- [ ] tests added/updated
-- [ ] `CHANGELOG.md` updated
+- [x] tuple constructors evaluate correctly
+- [x] tuple patterns match correctly
+- [x] observable display updated
+- [x] `RuntimeError` contract reconciled
+- [x] tests added/updated
+- [x] `CHANGELOG.md` updated
 
 ## Notes
 
 This task should close the implementation loop for TASK-413. If `RuntimeError` remains deliberately
 record-shaped, that must be treated as an explicit documented exception rather than silent drift.
+
+Completion note:
+- tuple constructor evaluation and tuple-pattern runtime matching now preserve positional semantics
+  while keeping lowered synthetic field names internal-only;
+- observable variant display now renders tuple payloads positionally;
+- the active stdlib/runtime/entry/parser/typeck/doc surfaces now reconcile `RuntimeError` to the
+  tuple-variant contract instead of leaving a silent record-shaped exception.

@@ -36,7 +36,7 @@ Add:
 > **Exit Code Source**:
 >
 > - 0 if `main` returns `Ok(())` with obligations discharged
-> - N if `main` returns `Err(RuntimeError { exit_code: N, ... })`
+> - N if `main` returns `Err { error: RuntimeError(N, _) }`
 > - 1 for bootstrap/verification errors
 >
 > **Non-Observable**: The fate of spawned descendant workflows after process exit is not part of the observable contract.

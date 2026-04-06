@@ -342,7 +342,7 @@ async fn bootstraps_runtime_error_to_declared_exit_code() {
             use runtime::RuntimeError
 
             workflow main() -> Result<(), RuntimeError> {
-                ret Err { error: RuntimeError { exit_code: 42, message: "boom" } };
+                ret Err { error: RuntimeError(42, "boom") };
             }
         "#,
         )

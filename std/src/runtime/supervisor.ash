@@ -8,8 +8,8 @@ use super::args::Args;
 -- TASK-363c wires that bootstrap behavior; this module only shapes the terminal exit code.
 pub workflow system_supervisor(args: cap Args) -> Int {
     -- Runtime-provided `completion : Result<(), RuntimeError>` from `main(args)`.
-    -- Canonical runtime payload shape: `Err { error: RuntimeError { exit_code: code, message: _ } }`.
-    let exit_code=if let Err { error: RuntimeError { exit_code: code, message: _ } } = completion then code else 0;
+    -- Canonical runtime payload shape: `Err { error: RuntimeError(code, _) }`.
+    let exit_code=if let Err { error: RuntimeError(code, _) } = completion then code else 0;
 
     ret exit_code;
 }

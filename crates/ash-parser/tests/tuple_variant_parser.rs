@@ -1,6 +1,6 @@
 use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern};
 use ash_parser::input::new_input;
-use ash_parser::lower::{LoweringError, lower_expr, lower_pattern};
+use ash_parser::lower::{lower_expr, lower_pattern};
 use ash_parser::parse_expr::expr;
 use ash_parser::parse_pattern::pattern;
 use ash_parser::parse_type_def::{TypeBody, VariantPayload, parse_type_def};

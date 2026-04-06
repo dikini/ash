@@ -1,5 +1,6 @@
 //! Runtime values
 
+use crate::adt::is_tuple_field_name;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -101,6 +102,14 @@ impl Value {
             fields: Box::new(vec![]),
         }
     }
+
+    fn variant_fields_are_tuple_payload(fields: &[(String, Value)]) -> bool {
+        !fields.is_empty()
+            && fields
+                .iter()
+                .enumerate()
+                .all(|(index, (field_name, _))| is_tuple_field_name(field_name, index))
+    }
 }
 
 impl std::fmt::Display for InstanceAddr {
@@ -164,14 +173,25 @@ impl std::fmt::Display for Value {
             Value::Variant { name, fields } => {
                 write!(f, "{}", name)?;
                 if !fields.is_empty() {
-                    write!(f, " {{")?;
-                    for (i, (k, v)) in fields.iter().enumerate() {
-                        if i > 0 {
-                            write!(f, ", ")?;
+                    if Self::variant_fields_are_tuple_payload(fields) {
+                        write!(f, "(")?;
+                        for (i, (_, v)) in fields.iter().enumerate() {
+                            if i > 0 {
+                                write!(f, ", ")?;
+                            }
+                            write!(f, "{}", v)?;
                         }
-                        write!(f, "{}: {}", k, v)?;
+                        write!(f, ")")?;
+                    } else {
+                        write!(f, " {{")?;
+                        for (i, (k, v)) in fields.iter().enumerate() {
+                            if i > 0 {
+                                write!(f, ", ")?;
+                            }
+                            write!(f, "{}: {}", k, v)?;
+                        }
+                        write!(f, "}}")?;
                     }
-                    write!(f, "}}")?;
                 }
                 Ok(())
             }

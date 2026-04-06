@@ -158,7 +158,7 @@ fn run_entry_workflow_runtime_error_uses_declared_exit_code() {
         use runtime::RuntimeError
 
         workflow main() -> Result<(), RuntimeError> {
-            ret Err { error: RuntimeError { exit_code: 42, message: "boom" } };
+            ret Err { error: RuntimeError(42, "boom") };
         }
         "#,
     )
@@ -215,7 +215,7 @@ fn run_entry_runtime_error_with_output_does_not_create_output_file() {
         use runtime::RuntimeError
 
         workflow main() -> Result<(), RuntimeError> {
-            ret Err { error: RuntimeError { exit_code: 42, message: "boom" } };
+            ret Err { error: RuntimeError(42, "boom") };
         }
         "#,
     )

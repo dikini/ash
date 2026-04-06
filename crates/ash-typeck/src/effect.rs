@@ -58,7 +58,8 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
             Effect::Evaluative.join(cont_effect)
         }
 
-        Workflow::Oblige { .. } => Effect::Evaluative,
+        // Oblige is governance structure; it does not add a surfaced coarse grade by itself.
+        Workflow::Oblige { .. } => Effect::Epistemic,
 
         Workflow::Act { .. } => Effect::Operational,
 
@@ -97,7 +98,8 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
             then_effect.join(else_effect)
         }
 
-        Workflow::For { body, .. } => Effect::Operational.join(infer_effect(body)),
+        // Control/modal forms compose enclosed effects by join rather than adding their own grade.
+        Workflow::For { body, .. } => infer_effect(body),
 
         Workflow::Par { branches, .. } => {
             // Parallel composition: join of all branch effects
@@ -127,7 +129,8 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
 
         Workflow::Done { .. } => Effect::Epistemic,
 
-        Workflow::Ret { .. } => Effect::Deliberative,
+        // Ret returns a value without adding a surfaced coarse grade of its own.
+        Workflow::Ret { .. } => Effect::Epistemic,
 
         // Receive - Epistemic (read-only consumption) per SPEC-017
         // Join with effects of all arm bodies
@@ -688,6 +691,35 @@ mod tests {
             span: test_span(),
         };
         assert_eq!(infer_effect(&workflow), Effect::Operational);
+    }
+
+    #[test]
+    fn test_infer_effect_oblige_is_governance_structure_only() {
+        let workflow = Workflow::Oblige {
+            obligation: "audit".into(),
+            span: test_span(),
+        };
+        assert_eq!(infer_effect(&workflow), Effect::Epistemic);
+    }
+
+    #[test]
+    fn test_infer_effect_for_is_body_effect_only() {
+        let workflow = Workflow::For {
+            pattern: Pattern::Wildcard,
+            collection: Expr::Literal(Literal::Int(1)),
+            body: Box::new(Workflow::Done { span: test_span() }),
+            span: test_span(),
+        };
+        assert_eq!(infer_effect(&workflow), Effect::Epistemic);
+    }
+
+    #[test]
+    fn test_infer_effect_ret_is_control_only() {
+        let workflow = Workflow::Ret {
+            expr: Expr::Literal(Literal::Int(42)),
+            span: test_span(),
+        };
+        assert_eq!(infer_effect(&workflow), Effect::Epistemic);
     }
 
     #[test]

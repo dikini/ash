@@ -22,6 +22,19 @@ pub enum RequirementError {
         found: Option<Effect>,
     },
 
+    /// Provider metadata is incompatible with source-level capability classification
+    #[error(
+        "incompatible provider metadata for capability '{cap}': source-level classification {source_effect:?} exceeds provider metadata {provider_effect:?}"
+    )]
+    IncompatibleProviderMetadata {
+        /// Capability name
+        cap: String,
+        /// Source-level capability classification
+        source_effect: Effect,
+        /// Provider metadata classification
+        provider_effect: Effect,
+    },
+
     /// Missing required role
     #[error("missing role '{role}'")]
     MissingRole { role: String },
@@ -51,6 +64,8 @@ pub enum RequirementError {
 pub struct RequirementContext {
     /// Available capabilities: cap_name -> effect level
     capabilities: HashMap<String, Effect>,
+    /// Optional provider metadata effect classification for capabilities
+    provider_metadata: HashMap<String, Effect>,
     /// Available roles
     roles: HashSet<String>,
     /// Known facts about variables: var_name -> value
@@ -68,6 +83,22 @@ impl RequirementContext {
     /// Add a capability to the context
     pub fn with_capability(mut self, cap: impl Into<String>, effect: Effect) -> Self {
         self.capabilities.insert(cap.into(), effect);
+        self
+    }
+
+    /// Add a capability with source-level effect classification plus provider metadata.
+    ///
+    /// Source-level classification remains authoritative; provider metadata is retained only for
+    /// compatibility validation.
+    pub fn with_capability_metadata(
+        mut self,
+        cap: impl Into<String>,
+        source_effect: Effect,
+        provider_effect: Effect,
+    ) -> Self {
+        let cap = cap.into();
+        self.capabilities.insert(cap.clone(), source_effect);
+        self.provider_metadata.insert(cap, provider_effect);
         self
     }
 
@@ -104,6 +135,11 @@ impl RequirementContext {
     /// Get all capabilities
     pub fn capabilities(&self) -> &HashMap<String, Effect> {
         &self.capabilities
+    }
+
+    /// Get provider metadata classifications.
+    pub fn provider_metadata(&self) -> &HashMap<String, Effect> {
+        &self.provider_metadata
     }
 
     /// Get all roles
@@ -186,6 +222,17 @@ impl CheckResult {
 pub fn check_requirement(req: &Requirement, ctx: &RequirementContext) -> CheckResult {
     match req {
         Requirement::HasCapability { cap, min_effect } => {
+            if let (Some(&source), Some(&provider)) =
+                (ctx.capabilities.get(cap), ctx.provider_metadata.get(cap))
+                && effect_level(provider) < effect_level(source)
+            {
+                return CheckResult::Failed(RequirementError::IncompatibleProviderMetadata {
+                    cap: cap.clone(),
+                    source_effect: source,
+                    provider_effect: provider,
+                });
+            }
+
             if ctx.has_capability(cap, *min_effect) {
                 CheckResult::Satisfied
             } else {
@@ -449,6 +496,7 @@ mod tests {
     fn test_context_creation() {
         let ctx = RequirementContext::new();
         assert!(ctx.capabilities().is_empty());
+        assert!(ctx.provider_metadata().is_empty());
         assert!(ctx.roles().is_empty());
         assert!(ctx.facts().is_empty());
     }
@@ -490,6 +538,21 @@ mod tests {
         assert_eq!(ctx.capabilities().len(), 2);
         assert_eq!(ctx.roles().len(), 2);
         assert_eq!(ctx.facts().len(), 2);
+    }
+
+    #[test]
+    fn test_context_with_capability_metadata() {
+        let ctx = RequirementContext::new().with_capability_metadata(
+            "file_io",
+            Effect::Evaluative,
+            Effect::Operational,
+        );
+
+        assert!(ctx.has_capability("file_io", Effect::Epistemic));
+        assert_eq!(
+            ctx.provider_metadata().get("file_io"),
+            Some(&Effect::Operational)
+        );
     }
 
     // =========================================================================
@@ -569,6 +632,64 @@ mod tests {
                 assert_eq!(cap, "file_io");
                 assert_eq!(required, Effect::Epistemic);
                 assert_eq!(found, None);
+            }
+            _ => panic!("Expected MissingCapability error"),
+        }
+    }
+
+    #[test]
+    fn test_check_requirement_capability_provider_metadata_incompatible() {
+        let ctx = RequirementContext::new().with_capability_metadata(
+            "file_io",
+            Effect::Evaluative,
+            Effect::Deliberative,
+        );
+
+        let req = Requirement::HasCapability {
+            cap: "file_io".into(),
+            min_effect: Effect::Epistemic,
+        };
+
+        let result = check_requirement(&req, &ctx);
+
+        match result {
+            CheckResult::Failed(RequirementError::IncompatibleProviderMetadata {
+                cap,
+                source_effect,
+                provider_effect,
+            }) => {
+                assert_eq!(cap, "file_io");
+                assert_eq!(source_effect, Effect::Evaluative);
+                assert_eq!(provider_effect, Effect::Deliberative);
+            }
+            _ => panic!("Expected IncompatibleProviderMetadata error"),
+        }
+    }
+
+    #[test]
+    fn test_check_requirement_capability_provider_metadata_does_not_upgrade_source_effect() {
+        let ctx = RequirementContext::new().with_capability_metadata(
+            "file_io",
+            Effect::Epistemic,
+            Effect::Operational,
+        );
+
+        let req = Requirement::HasCapability {
+            cap: "file_io".into(),
+            min_effect: Effect::Operational,
+        };
+
+        let result = check_requirement(&req, &ctx);
+
+        match result {
+            CheckResult::Failed(RequirementError::MissingCapability {
+                cap,
+                required,
+                found,
+            }) => {
+                assert_eq!(cap, "file_io");
+                assert_eq!(required, Effect::Operational);
+                assert_eq!(found, Some(Effect::Epistemic));
             }
             _ => panic!("Expected MissingCapability error"),
         }

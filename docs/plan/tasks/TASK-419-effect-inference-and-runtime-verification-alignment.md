@@ -1,6 +1,6 @@
 # TASK-419: Effect Inference and Runtime Verification Alignment
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -74,11 +74,20 @@ Run at least:
 
 ## Completion Checklist
 
-- [ ] effect inference aligned with promoted workflow-form contract
-- [ ] runtime verification alignment complete
-- [ ] tests added/updated
-- [ ] `CHANGELOG.md` updated
+- [x] effect inference aligned with promoted workflow-form contract
+- [x] runtime verification alignment complete
+- [x] tests added/updated
+- [x] `CHANGELOG.md` updated
 
 ## Notes
 
 This task should leave the door open for a later `Pure` follow-on, but should not silently add it.
+
+Completion note:
+- workflow-form inference now aligns the promoted coarse contract by keeping governance/control forms
+  (`oblige`, `ret`) epistemic and by letting `for` inherit its body effect instead of adding an
+  extra operational grade;
+- runtime verification now checks explicitly type-derived workflow effects, while provider metadata
+  remains compatibility/validation metadata rather than the source of effect typing;
+- join-based composition over the existing coarse lattice remains unchanged, leaving `Pure` and any
+  richer effect-system redesign to later follow-on work.

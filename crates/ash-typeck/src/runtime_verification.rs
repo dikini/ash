@@ -452,9 +452,18 @@ impl EffectChecker {
     /// is `Operational` cannot execute in a runtime that only allows
     /// `Epistemic` effects.
     pub fn check(&self, workflow: &Workflow, max_allowed: Effect) -> VerificationResult {
-        let mut result = VerificationResult::new();
-
         let workflow_effect = crate::effect::infer_effect(workflow);
+
+        self.check_inferred(workflow_effect, max_allowed)
+    }
+
+    /// Check an already type-derived workflow effect against runtime bounds.
+    pub fn check_inferred(
+        &self,
+        workflow_effect: Effect,
+        max_allowed: Effect,
+    ) -> VerificationResult {
+        let mut result = VerificationResult::new();
 
         // Effect comparison: workflow_effect > max_allowed means
         // workflow requires higher privileges than runtime allows
@@ -1467,7 +1476,10 @@ impl VerificationAggregator {
         result.merge(obl_result);
 
         // 3. Check effect bounds
-        let effect_result = self.effect_checker.check(workflow, runtime.max_effect);
+        let workflow_effect = crate::effect::infer_effect(workflow);
+        let effect_result = self
+            .effect_checker
+            .check_inferred(workflow_effect, runtime.max_effect);
         result.merge(effect_result);
 
         // 4. Validate against static policies

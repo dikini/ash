@@ -37,6 +37,7 @@ pub mod policy;
 pub mod proxy_registry;
 pub mod role_context;
 pub mod role_runtime;
+pub mod runtime_outcome_state;
 pub mod runtime_state;
 pub mod stream;
 pub mod typed_provider;
@@ -56,7 +57,11 @@ pub use capability_policy::{
 };
 pub use constraint_enforcement::{ConstraintEnforcer, ConstraintViolation};
 pub use context::Context;
-pub use control_link::{ControlLinkError, ControlLinkRegistry, LinkState};
+pub use control_link::{
+    ConservativeRetainedEffectSummary, ConservativeRetainedObligationsSummary,
+    ConservativeRetainedProvenanceSummary, ControlLinkError, ControlLinkRegistry, LinkState,
+    RetainedCompletionKind, RetainedCompletionRecord,
+};
 pub use error::{
     EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult, ValidationError,
     ValidationResult,
@@ -79,6 +84,7 @@ pub use role_context::RoleContext;
 pub use role_runtime::{
     CapabilityError, CapabilityGrant, RoleError, RoleRegistry, RuntimeCapabilitySet,
 };
+pub use runtime_outcome_state::RuntimeOutcomeState;
 pub use runtime_state::RuntimeState;
 pub use stream::{
     BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,

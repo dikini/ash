@@ -6,11 +6,23 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 
+use ash_core::{ControlLink, Value, Workflow};
+
 use crate::capability::CapabilityProvider;
-use crate::control_link::ControlLinkRegistry;
+use crate::control_link::{
+    ConservativeRetainedEffectSummary, ConservativeRetainedObligationsSummary,
+    ConservativeRetainedProvenanceSummary, ControlLinkRegistry, LinkState,
+    RetainedCompletionRecord, RetainedCompletionWaiter,
+};
+use crate::{ExecError, ExecResult};
+
 use crate::proxy_registry::ProxyRegistry;
+use crate::runtime_outcome_state::RuntimeOutcomeState;
 use crate::yield_routing::YieldRouter;
 use crate::yield_state::SuspendedYields;
+use std::time::Duration;
+
+pub(crate) const SPAWNED_CHILD_CONTROL_BINDING: &str = "__ash_spawn_control_link";
 
 /// Wrapper that adapts an `Arc<dyn CapabilityProvider>` to work as a `Box<dyn CapabilityProvider>`.
 ///
@@ -75,6 +87,7 @@ pub struct RuntimeState {
     proxy_registry: Arc<Mutex<ProxyRegistry>>,
     suspended_yields: Arc<Mutex<SuspendedYields>>,
     yield_router: Arc<Mutex<YieldRouter>>,
+    child_workflows: Arc<Mutex<HashMap<String, Workflow>>>,
     /// Capability provider registry for execution
     providers: Arc<Mutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
 }
@@ -86,6 +99,7 @@ impl std::fmt::Debug for RuntimeState {
             .field("proxy_registry", &self.proxy_registry)
             .field("suspended_yields", &self.suspended_yields)
             .field("yield_router", &self.yield_router)
+            .field("child_workflows", &"<HashMap<String, Workflow>>")
             .field(
                 "providers",
                 &"<HashMap<String, Arc<dyn CapabilityProvider>>>",
@@ -102,8 +116,34 @@ impl RuntimeState {
             proxy_registry: Arc::new(Mutex::new(ProxyRegistry::new())),
             suspended_yields: Arc::new(Mutex::new(SuspendedYields::new())),
             yield_router: Arc::new(Mutex::new(YieldRouter::new())),
+            child_workflows: Arc::new(Mutex::new(HashMap::new())),
             providers: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    /// Register one runtime-owned child workflow entry keyed by `workflow_type`.
+    ///
+    /// The current spawned-child substrate uses a narrow runtime-owned entry contract:
+    /// when a spawned child is executed, the evaluated spawn `init` expression is bound into the
+    /// child context as the variable `init` before this workflow body is run.
+    pub async fn register_child_workflow(
+        &self,
+        workflow_type: impl Into<String>,
+        workflow: Workflow,
+    ) {
+        self.child_workflows
+            .lock()
+            .await
+            .insert(workflow_type.into(), workflow);
+    }
+
+    /// Look up one runtime-owned child workflow entry by `workflow_type`.
+    pub async fn child_workflow(&self, workflow_type: &str) -> Option<Workflow> {
+        self.child_workflows
+            .lock()
+            .await
+            .get(workflow_type)
+            .cloned()
     }
 
     /// Add a capability provider to the registry.
@@ -238,6 +278,176 @@ impl RuntimeState {
         self.control_registry.clone()
     }
 
+    /// Register one spawned control target in the shared runtime state.
+    pub async fn register_spawned_control_link(&self, instance_id: ash_core::WorkflowId) {
+        self.control_registry.lock().await.register(instance_id);
+    }
+
+    /// Register one spawned control target together with the conservative runtime-owned spawn
+    /// provenance the runtime can snapshot today.
+    pub async fn register_spawned_control_link_with_provenance(
+        &self,
+        provenance: ConservativeRetainedProvenanceSummary,
+    ) {
+        self.control_registry
+            .lock()
+            .await
+            .register_with_spawn_provenance(provenance);
+    }
+
+    /// Pause one controlled runtime target.
+    pub async fn pause_control_link(
+        &self,
+        link: &ControlLink,
+    ) -> Result<(), crate::control_link::ControlLinkError> {
+        self.control_registry.lock().await.pause(link)
+    }
+
+    /// Resume one controlled runtime target.
+    pub async fn resume_control_link(
+        &self,
+        link: &ControlLink,
+    ) -> Result<(), crate::control_link::ControlLinkError> {
+        self.control_registry.lock().await.resume(link)
+    }
+
+    /// Kill one controlled runtime target.
+    pub async fn kill_control_link(
+        &self,
+        link: &ControlLink,
+    ) -> Result<(), crate::control_link::ControlLinkError> {
+        self.control_registry.lock().await.kill(link)
+    }
+
+    /// Build the initial input bindings for a runtime-owned child entry execution.
+    ///
+    /// In addition to the user-visible `init` binding, the runtime injects one internal control
+    /// binding so spawned child execution can cooperatively observe pause/resume/kill authority.
+    pub fn spawned_child_init_bindings(
+        init_value: Value,
+        control_link: ControlLink,
+    ) -> HashMap<String, Value> {
+        HashMap::from([
+            ("init".to_string(), init_value),
+            (
+                SPAWNED_CHILD_CONTROL_BINDING.to_string(),
+                Value::ControlLink(control_link),
+            ),
+        ])
+    }
+
+    /// Wait until a controlled spawned child is allowed to make progress.
+    ///
+    /// This is intentionally cooperative rather than preemptive: it checks the control state at
+    /// workflow entry boundaries, blocks while paused, and stops further progress after kill.
+    pub async fn wait_for_control_authority(&self, link: &ControlLink) -> crate::ExecResult<()> {
+        loop {
+            let state = self.control_registry.lock().await.check_health(link);
+            match state {
+                Ok(LinkState::Running) => return Ok(()),
+                Ok(LinkState::Paused) => tokio::time::sleep(Duration::from_millis(1)).await,
+                Ok(LinkState::Terminated) => unreachable!(
+                    "terminated links are reported as errors by ControlLinkRegistry::check_health"
+                ),
+                Err(error) => {
+                    return Err(ExecError::InvalidRuntimeState(format!(
+                        "spawned child control wait failed for instance {:?}: {error}",
+                        link.instance_id
+                    )));
+                }
+            }
+        }
+    }
+
+    /// Record one retained terminal completion-style observation for a control target.
+    pub async fn record_control_completion(
+        &self,
+        link: &ControlLink,
+        result: ExecResult<Value>,
+        effects: ConservativeRetainedEffectSummary,
+        obligations: ConservativeRetainedObligationsSummary,
+        provenance: Option<ConservativeRetainedProvenanceSummary>,
+    ) -> Result<RetainedCompletionRecord, crate::control_link::ControlLinkError> {
+        self.control_registry.lock().await.record_completion(
+            link,
+            result,
+            effects,
+            obligations,
+            provenance,
+        )
+    }
+
+    /// Read the retained terminal completion-style observation for a control target, if one
+    /// exists.
+    ///
+    /// This surface answers a different question from
+    /// [`Self::control_link_runtime_outcome_state`]: once a control link is no longer live, that
+    /// coarse runtime state reports terminal control-liveness (`InvalidOrTerminated`), while this
+    /// retained record preserves the sealed terminal completion subtype/payload captured for that
+    /// target.
+    pub async fn retained_completion(
+        &self,
+        link: &ControlLink,
+    ) -> Option<RetainedCompletionRecord> {
+        self.control_registry
+            .lock()
+            .await
+            .retained_completion(&link.instance_id)
+    }
+
+    /// Wait for the first sealed retained completion-style observation for a control target.
+    ///
+    /// This reuses the same retained completion carrier returned by [`Self::retained_completion`].
+    /// If the target is already sealed when waiting begins, this returns immediately. If the
+    /// target is registered but not yet sealed, this waits until the first authoritative retained
+    /// record is sealed. Invalid or unregistered targets remain distinguishable as
+    /// [`crate::control_link::ControlLinkError`] values rather than being synthesized into a fake
+    /// completion record.
+    pub async fn wait_for_retained_completion(
+        &self,
+        link: &ControlLink,
+    ) -> Result<RetainedCompletionRecord, crate::control_link::ControlLinkError> {
+        let waiter = {
+            self.control_registry
+                .lock()
+                .await
+                .retained_completion_waiter(link)?
+        };
+
+        match waiter {
+            RetainedCompletionWaiter::Ready(record) => Ok(*record),
+            RetainedCompletionWaiter::Pending(mut receiver) => loop {
+                if let Some(record) = receiver.borrow().clone() {
+                    return Ok(record);
+                }
+
+                if receiver.changed().await.is_err() {
+                    return Err(crate::control_link::ControlLinkError::NotFound(
+                        link.instance_id,
+                    ));
+                }
+            },
+        }
+    }
+
+    /// Classify the current runtime-visible control-liveness state of a control link using the
+    /// authoritative runtime outcome/state surface.
+    ///
+    /// This method reports whether the control authority is still live/usable. After a child has
+    /// sealed a retained completion and the link is terminal, this surface intentionally reports
+    /// `InvalidOrTerminated`; callers that need the sealed terminal completion subtype/payload must
+    /// consult [`Self::retained_completion`].
+    pub async fn control_link_runtime_outcome_state(
+        &self,
+        link: &ControlLink,
+    ) -> RuntimeOutcomeState {
+        let registry = self.control_registry.lock().await;
+        match registry.check_health(link) {
+            Ok(state) => state.runtime_outcome_state(),
+            Err(error) => error.runtime_outcome_state(),
+        }
+    }
+
     /// Get access to the proxy registry
     pub fn proxy_registry(&self) -> Arc<Mutex<ProxyRegistry>> {
         self.proxy_registry.clone()
@@ -251,5 +461,212 @@ impl RuntimeState {
     /// Get access to the yield router
     pub fn yield_router(&self) -> Arc<Mutex<YieldRouter>> {
         self.yield_router.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ash_core::{Effect, Expr, Workflow};
+    use tokio::time::{Duration, timeout};
+
+    fn retained_effect_summary(
+        terminal: Effect,
+        reached: &[Effect],
+    ) -> crate::control_link::ConservativeRetainedEffectSummary {
+        crate::control_link::ConservativeRetainedEffectSummary::new(
+            terminal,
+            reached.iter().copied().collect(),
+        )
+    }
+
+    fn retained_obligations_summary() -> crate::control_link::ConservativeRetainedObligationsSummary
+    {
+        crate::control_link::ConservativeRetainedObligationsSummary::new(
+            std::collections::BTreeSet::new(),
+            None,
+            std::collections::BTreeSet::new(),
+            std::collections::BTreeSet::new(),
+        )
+    }
+
+    #[tokio::test]
+    async fn child_workflow_registry_round_trips() {
+        let runtime_state = RuntimeState::new();
+        let workflow = Workflow::Ret {
+            expr: Expr::Literal(Value::Int(1)),
+        };
+
+        runtime_state
+            .register_child_workflow("worker", workflow.clone())
+            .await;
+
+        assert_eq!(runtime_state.child_workflow("worker").await, Some(workflow));
+        assert!(runtime_state.child_workflow("missing").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn control_link_runtime_outcome_state_reports_active_then_invalid() {
+        let runtime_state = RuntimeState::new();
+        let instance_id = ash_core::WorkflowId::new();
+        let link = ControlLink { instance_id };
+
+        {
+            let registry = runtime_state.control_registry();
+            registry.lock().await.register(instance_id);
+        }
+
+        assert_eq!(
+            runtime_state
+                .control_link_runtime_outcome_state(&link)
+                .await,
+            RuntimeOutcomeState::Active
+        );
+
+        {
+            let registry = runtime_state.control_registry();
+            registry.lock().await.kill(&link).unwrap();
+        }
+
+        assert_eq!(
+            runtime_state
+                .control_link_runtime_outcome_state(&link)
+                .await,
+            RuntimeOutcomeState::InvalidOrTerminated
+        );
+    }
+
+    #[tokio::test]
+    async fn retained_completion_round_trips_through_runtime_state() {
+        let runtime_state = RuntimeState::new();
+        let instance_id = ash_core::WorkflowId::new();
+        let link = ControlLink { instance_id };
+
+        runtime_state
+            .register_spawned_control_link(instance_id)
+            .await;
+        let effects = retained_effect_summary(Effect::Operational, &[Effect::Operational]);
+        let obligations = retained_obligations_summary();
+        let record = runtime_state
+            .record_control_completion(
+                &link,
+                Ok(Value::Int(7)),
+                effects.clone(),
+                obligations.clone(),
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(runtime_state.retained_completion(&link).await, Some(record));
+        assert_eq!(
+            runtime_state
+                .retained_completion(&link)
+                .await
+                .unwrap()
+                .conservative_effect_summary(),
+            Some(&effects)
+        );
+        assert_eq!(
+            runtime_state
+                .control_link_runtime_outcome_state(&link)
+                .await,
+            RuntimeOutcomeState::InvalidOrTerminated
+        );
+    }
+
+    #[tokio::test]
+    async fn retained_completion_is_write_once_through_runtime_state() {
+        let runtime_state = RuntimeState::new();
+        let instance_id = ash_core::WorkflowId::new();
+        let link = ControlLink { instance_id };
+
+        runtime_state
+            .register_spawned_control_link(instance_id)
+            .await;
+        let effects = retained_effect_summary(Effect::Operational, &[Effect::Operational]);
+        let obligations = retained_obligations_summary();
+        let record = runtime_state
+            .record_control_completion(
+                &link,
+                Ok(Value::Int(1)),
+                effects.clone(),
+                obligations.clone(),
+                None,
+            )
+            .await
+            .unwrap();
+        let error = runtime_state
+            .record_control_completion(
+                &link,
+                Ok(Value::Int(2)),
+                retained_effect_summary(Effect::Epistemic, &[Effect::Epistemic]),
+                retained_obligations_summary(),
+                None,
+            )
+            .await
+            .expect_err("retained completion should be sealed after first record");
+
+        assert_eq!(
+            error,
+            crate::control_link::ControlLinkError::CompletionAlreadySealed(
+                instance_id,
+                Box::new(record.clone())
+            )
+        );
+        assert_eq!(runtime_state.retained_completion(&link).await, Some(record));
+    }
+
+    #[tokio::test]
+    async fn wait_for_retained_completion_returns_immediately_for_already_sealed_record() {
+        let runtime_state = RuntimeState::new();
+        let instance_id = ash_core::WorkflowId::new();
+        let link = ControlLink { instance_id };
+
+        runtime_state
+            .register_spawned_control_link(instance_id)
+            .await;
+        let record = runtime_state
+            .record_control_completion(
+                &link,
+                Ok(Value::Int(7)),
+                retained_effect_summary(Effect::Operational, &[Effect::Operational]),
+                retained_obligations_summary(),
+                None,
+            )
+            .await
+            .expect("completion should already be sealed");
+
+        let waited = timeout(
+            Duration::from_millis(50),
+            runtime_state.wait_for_retained_completion(&link),
+        )
+        .await
+        .expect("already-sealed record should return immediately")
+        .expect("already-sealed record should still be readable");
+
+        assert_eq!(waited, record);
+    }
+
+    #[tokio::test]
+    async fn wait_for_retained_completion_rejects_unregistered_targets() {
+        let runtime_state = RuntimeState::new();
+        let link = ControlLink {
+            instance_id: ash_core::WorkflowId::new(),
+        };
+
+        let error = timeout(
+            Duration::from_millis(50),
+            runtime_state.wait_for_retained_completion(&link),
+        )
+        .await
+        .expect("unregistered completion wait should not hang")
+        .expect_err("unregistered completion wait should not synthesize a retained record");
+
+        assert!(matches!(
+            error,
+            crate::control_link::ControlLinkError::NotFound(not_found_id)
+                if not_found_id == link.instance_id
+        ));
     }
 }

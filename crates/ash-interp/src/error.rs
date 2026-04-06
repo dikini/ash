@@ -4,6 +4,7 @@ use ash_core::{Name, Value};
 use thiserror::Error;
 
 use crate::capability_policy::Role;
+use crate::runtime_outcome_state::RuntimeOutcomeState;
 
 /// Errors that can occur during expression evaluation
 #[derive(Debug, Error, Clone, PartialEq)]
@@ -99,6 +100,10 @@ pub enum ExecError {
         path: Option<String>,
     },
     ValidationFailed(String),
+    /// Execution is currently blocked or waiting on an external event/input.
+    Blocked(String),
+    /// The targeted runtime state is no longer valid or terminally unusable.
+    InvalidRuntimeState(String),
     MailboxFull {
         limit: usize,
     },
@@ -187,6 +192,8 @@ impl std::fmt::Display for ExecError {
                 }
             }
             Self::ValidationFailed(msg) => write!(f, "validation failed: {msg}"),
+            Self::Blocked(msg) => write!(f, "execution blocked: {msg}"),
+            Self::InvalidRuntimeState(msg) => write!(f, "invalid runtime state: {msg}"),
             Self::MailboxFull { limit } => {
                 write!(f, "mailbox full: limit of {limit} entries exceeded")
             }
@@ -226,6 +233,8 @@ impl ExecError {
             Self::CapabilityNotAvailable(_) => std::process::ExitCode::from(6),
             Self::PolicyDenied { .. } => std::process::ExitCode::from(6),
             Self::ValidationFailed(_) => std::process::ExitCode::from(4),
+            Self::Blocked(_) => std::process::ExitCode::from(1),
+            Self::InvalidRuntimeState(_) => std::process::ExitCode::from(1),
             _ => std::process::ExitCode::from(1),
         }
     }
@@ -241,7 +250,34 @@ impl ExecError {
             Self::CapabilityNotAvailable(_) => "capability",
             Self::PolicyDenied { .. } => "policy",
             Self::ValidationFailed(_) => "validation",
+            Self::Blocked(_) => "blocked",
+            Self::InvalidRuntimeState(_) => "invalid-runtime-state",
             _ => "runtime",
+        }
+    }
+
+    /// Classify this execution error into the authoritative runtime outcome/state surface.
+    pub fn runtime_outcome_state(&self) -> RuntimeOutcomeState {
+        match self {
+            Self::YieldSuspended { .. } | Self::RequiresApproval { .. } | Self::Blocked(..) => {
+                RuntimeOutcomeState::BlockedOrSuspended
+            }
+            Self::InvalidRuntimeState(..) => RuntimeOutcomeState::InvalidOrTerminated,
+            Self::ExecutionFailed(..)
+            | Self::ParallelFailed(..)
+            | Self::ForEachFailed(..)
+            | Self::MailboxFull { .. }
+            | Self::Parse(..)
+            | Self::Type(..)
+            | Self::Io(..)
+            | Self::Eval(..)
+            | Self::PatternMatchFailed { .. }
+            | Self::GuardFailed { .. }
+            | Self::CapabilityNotAvailable(..)
+            | Self::ActionFailed { .. }
+            | Self::PolicyDenied { .. }
+            | Self::TypeMismatch { .. }
+            | Self::ValidationFailed(..) => RuntimeOutcomeState::ExecutionFailure,
         }
     }
 

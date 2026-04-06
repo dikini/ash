@@ -1,8 +1,8 @@
 ---
 status: drafting
 created: 2026-03-30
-last-revised: 2026-03-30
-related-plan-tasks: []
+last-revised: 2026-04-05
+related-plan-tasks: [TASK-405, TASK-406, TASK-407]
 tags: [runtime, capabilities, libraries, ffi, minimal]
 ---
 
@@ -31,6 +31,20 @@ Goal: A lean runtime that provides exactly what's needed, no more.
 - **Related but separate:**
   - MCE-001: Entry point (what runtime provides at start)
   - MCE-003: Functions vs capabilities (affects runtime API)
+
+## Current Runtime Follow-On Status
+
+The first concrete runtime-side follow-on for the frozen MCE-007 true residual drift set is now in progress/completed via [TASK-405](../../plan/tasks/TASK-405-authoritative-runtime-outcome-state-classification.md).
+
+TASK-405 deliberately takes the narrowest contract-first slice of the runtime cleanup space:
+
+- add one authoritative public runtime outcome/state classification in `ash-interp`;
+- wire current interpreter/runtime-facing surfaces into that classification, especially `ExecError`, `ControlLinkError`, and `LinkState`;
+- make blocked/suspended, invalid/terminated, execution-failure, and terminal-success classes directly observable without claiming that cumulative semantic-carrier packaging, retained completion payloads, or helper-backed `Par` aggregation are solved.
+
+This means MCE-008 should now treat runtime-state classification as the first implemented cleanup/follow-on step after the MCE-007 closeout corpus, while keeping the broader runtime cleanup agenda open.
+
+TASK-406 now provides the retained completion-observation carrier slice in `ash-interp`: a minimal retained terminal record keyed by control target and exposed through `RuntimeState`. [TASK-407](../../plan/tasks/TASK-407-spawned-child-execution-substrate-and-completion-sealing.md) then adds the missing spawned-child execution substrate: `RuntimeState` now owns a narrow child-workflow registry keyed by `workflow_type`, `Workflow::Spawn` can launch a real child execution path when such an entry is registered, and that child lifecycle now drives automatic retained completion sealing honestly while still preserving useful live supervisor control authority immediately after spawn. [TASK-408](../../plan/tasks/TASK-408-richer-retained-completion-payload-contents.md) now enriches that retained carrier with one honest `CompletionPayload.result`-like slice by preserving `RetainedCompletionRecord.result: Option<Box<ExecResult<Value>>>` plus the `terminal_result()` accessor for child-owned completions while keeping control tombstones distinct as `result: None`. [TASK-409](../../plan/tasks/TASK-409-retained-completion-effect-summary-contents.md) then adds the next conservative slice: `RetainedCompletionRecord.effects: Option<ConservativeRetainedEffectSummary>` with `conservative_effect_summary()`, `ConservativeRetainedEffectSummary::terminal()`, and `ConservativeRetainedEffectSummary::reached()`. That new effect-summary field is intentionally conservative rather than exact trace transport: `terminal` is a runtime-derived upper-bound summary of the effect layers the child workflow may terminate with, and `reached` is a conservative set of runtime-visible effect layers derivable from the workflow forms the current interpreter can honestly summarize today. [TASK-410](../../plan/tasks/TASK-410-retained-completion-obligations-contents.md) now adds one honest `CompletionPayload.obligations`-like slice based on terminal-visible local pending obligations plus terminal-visible active-role pending/discharged state. [TASK-411](../../plan/tasks/TASK-411-retained-completion-provenance-contents.md) now adds one honest retained provenance slice based on runtime-owned child identity and spawn lineage without claiming exact terminal `π'` transport. [TASK-412](../../plan/tasks/TASK-412-dedicated-completion-wait-carrier.md) now adds one dedicated wait surface for that same retained completion record via `RuntimeState::wait_for_retained_completion(&ControlLink) -> Result<RetainedCompletionRecord, ControlLinkError>`, so callers can await the first sealed terminal observation without polling. The implementation remains intentionally conservative: the child entry contract is only that the evaluated spawn `init` value is bound into child context as `init`, and the retained carrier still does not claim full `SPEC-004` `CompletionPayload` parity.
 
 ## Current Understanding
 

@@ -710,12 +710,11 @@ proptest! {
     /// Discharging obligations in any order should result in the same final state.
     #[test]
     fn prop_obligation_discharge_order_independent(
-        obligation_names in prop::collection::vec(arb_obligation_name(), 1..10),
+        obligations in arb_obligations().prop_filter(
+            "need at least one unique obligation",
+            |obligations| !obligations.is_empty(),
+        ),
     ) {
-        let obligations: Vec<RoleObligationRef> = obligation_names
-            .into_iter()
-            .map(|name| RoleObligationRef { name })
-            .collect();
 
         let role1 = Role {
             name: "test".to_string(),

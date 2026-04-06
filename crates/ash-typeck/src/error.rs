@@ -45,6 +45,19 @@ pub enum ConstructorError {
         actual: String,
     },
 
+    /// Wrong number of positional tuple payload items for a constructor.
+    #[error(
+        "Tuple constructor arity mismatch for '{constructor}': expected {expected}, got {actual}"
+    )]
+    TupleArityMismatch {
+        /// Name of the constructor
+        constructor: String,
+        /// Expected number of positional items
+        expected: usize,
+        /// Actual number of positional items
+        actual: usize,
+    },
+
     /// Match expression does not cover all variants of the scrutinee enum
     #[error("non-exhaustive match on type '{scrutinee_type}': missing {missing}")]
     NonExhaustiveMatch {

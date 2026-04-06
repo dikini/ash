@@ -4,11 +4,15 @@
 
 use crate::error::ConstructorError;
 use crate::exhaustiveness::{Coverage, check_exhaustive};
-use crate::type_env::{TypeEnv, TypeInfo, VariantIndex};
+use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo};
+use ash_core::adt::{tuple_field_name, VariantPayloadShape};
+use ash_parser::surface::ConstructorPayload;
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
 use ash_parser::lower_pattern;
-use ash_parser::surface::{BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp};
+use ash_parser::surface::{
+    BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
+};
 use ash_parser::token::Span;
 use std::collections::HashSet;
 
@@ -69,7 +73,12 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         Expr::Binary {
             op, left, right, ..
         } => check_binary(env, *op, left, right),
-        Expr::Constructor { name, fields, .. } => check_constructor(env, name.as_ref(), fields),
+        Expr::Constructor {
+            name,
+            fields,
+            payload,
+            ..
+        } => check_constructor(env, name.as_ref(), fields, payload),
         Expr::IfLet {
             then_branch,
             else_branch,
@@ -386,8 +395,8 @@ fn check_constructor(
     env: &TypeEnv,
     constructor_name: &str,
     fields: &[(Box<str>, Expr)],
+    payload: &ConstructorPayload,
 ) -> CheckResult {
-    // Look up the constructor
     let (type_def, variant_idx, variant_def) = match env.get_variant(constructor_name) {
         Some(result) => result,
         None => {
@@ -400,17 +409,129 @@ fn check_constructor(
     let mut errors = Vec::new();
     let mut substitution = Substitution::new();
 
-    // Get the expected fields for this variant
+    match variant_def.payload_shape {
+        VariantPayloadShape::Tuple => {
+            check_tuple_constructor_fields(
+                env,
+                constructor_name,
+                variant_def,
+                fields,
+                payload,
+                &mut substitution,
+                &mut errors,
+            );
+        }
+        VariantPayloadShape::Unit | VariantPayloadShape::Record => {
+            check_named_constructor_fields(
+                env,
+                constructor_name,
+                variant_def,
+                fields,
+                &mut substitution,
+                &mut errors,
+            );
+        }
+    }
+
+    let result_type = build_constructor_type(type_def, variant_idx);
+
+    CheckResult {
+        ty: substitution.apply(&result_type),
+        substitution,
+        errors,
+    }
+}
+
+fn check_tuple_constructor_fields(
+    env: &TypeEnv,
+    constructor_name: &str,
+    variant_def: &VariantInfo,
+    fields: &[(Box<str>, Expr)],
+    payload: &ConstructorPayload,
+    substitution: &mut Substitution,
+    errors: &mut Vec<ConstructorError>,
+) {
+    let tuple_items = match payload {
+        ConstructorPayload::Tuple(items) => items,
+        _ => {
+            errors.push(ConstructorError::TupleArityMismatch {
+                constructor: constructor_name.to_string(),
+                expected: variant_def.fields.len(),
+                actual: fields.len(),
+            });
+            return;
+        }
+    };
+
+    if tuple_items.len() != variant_def.fields.len() || fields.len() != variant_def.fields.len() {
+        errors.push(ConstructorError::TupleArityMismatch {
+            constructor: constructor_name.to_string(),
+            expected: variant_def.fields.len(),
+            actual: tuple_items.len(),
+        });
+    }
+
+    for (index, ((expected_name, expected_ty), actual_expr)) in variant_def
+        .fields
+        .iter()
+        .zip(tuple_items.iter())
+        .enumerate()
+    {
+        if fields
+            .get(index)
+            .map(|(field_name, _)| field_name.as_ref())
+            != Some(expected_name.as_str())
+        {
+            errors.push(ConstructorError::TupleArityMismatch {
+                constructor: constructor_name.to_string(),
+                expected: variant_def.fields.len(),
+                actual: tuple_items.len(),
+            });
+            continue;
+        }
+
+        if expected_name != &tuple_field_name(index) {
+            errors.push(ConstructorError::TupleArityMismatch {
+                constructor: constructor_name.to_string(),
+                expected: variant_def.fields.len(),
+                actual: tuple_items.len(),
+            });
+            continue;
+        }
+
+        let field_result = check_expr(env, actual_expr);
+        errors.extend(field_result.errors);
+
+        let expected_ty_subst = substitution.apply(expected_ty);
+        match unify(&expected_ty_subst, &field_result.ty) {
+            Ok(sub) => {
+                *substitution = substitution.compose(&sub);
+            }
+            Err(_) => errors.push(ConstructorError::FieldTypeMismatch {
+                constructor: constructor_name.to_string(),
+                field: expected_name.clone(),
+                expected: expected_ty.to_string(),
+                actual: field_result.ty.to_string(),
+            }),
+        }
+    }
+}
+
+fn check_named_constructor_fields(
+    env: &TypeEnv,
+    constructor_name: &str,
+    variant_def: &VariantInfo,
+    fields: &[(Box<str>, Expr)],
+    substitution: &mut Substitution,
+    errors: &mut Vec<ConstructorError>,
+) {
     let expected_fields: HashSet<&str> = variant_def
         .fields
         .iter()
         .map(|(name, _)| name.as_str())
         .collect();
-
-    // Get the provided field names
     let provided_fields: HashSet<&str> = fields.iter().map(|(name, _)| name.as_ref()).collect();
 
-    // Check for missing fields
     for expected in &expected_fields {
         if !provided_fields.contains(*expected) {
             errors.push(ConstructorError::MissingField {
@@ -420,7 +541,6 @@ fn check_constructor(
         }
     }
 
-    // Check for unknown fields
     for provided in &provided_fields {
         if !expected_fields.contains(*provided) {
             errors.push(ConstructorError::UnknownField {
@@ -430,26 +550,21 @@ fn check_constructor(
         }
     }
 
-    // Create a mapping from field name to expected type
     let expected_types: std::collections::HashMap<&str, &Type> = variant_def
         .fields
         .iter()
         .map(|(name, ty)| (name.as_str(), ty))
         .collect();
 
-    // Check field types
     for (field_name, field_expr) in fields {
         if let Some(expected_ty) = expected_types.get(field_name.as_ref()) {
             let field_result = check_expr(env, field_expr);
-
-            // Collect any errors from the field expression
             errors.extend(field_result.errors);
 
-            // Try to unify the field type with the expected type
             let expected_ty_subst = substitution.apply(expected_ty);
             match unify(&expected_ty_subst, &field_result.ty) {
                 Ok(sub) => {
-                    substitution = substitution.compose(&sub);
+                    *substitution = substitution.compose(&sub);
                 }
                 Err(_) => {
                     errors.push(ConstructorError::FieldTypeMismatch {
@@ -461,15 +576,6 @@ fn check_constructor(
                 }
             }
         }
-    }
-
-    // Build the result type
-    let result_type = build_constructor_type(type_def, variant_idx);
-
-    CheckResult {
-        ty: substitution.apply(&result_type),
-        substitution,
-        errors,
     }
 }
 

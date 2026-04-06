@@ -8,7 +8,8 @@ use crate::error::TypeEnvError;
 use crate::solver::TypeError;
 use crate::types::{Substitution, Type, TypeVar};
 use crate::{Kind, QualifiedName};
-use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef};
+use ash_core::adt::{tuple_field_name, VariantPayloadShape};
+use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use std::collections::HashMap;
 
 /// Type name (e.g., "Option", "Result")
@@ -109,6 +110,8 @@ pub struct VariantInfo {
     /// Fields of the variant: (field_name, field_type)
     /// Types are converted from TypeExpr to Type
     pub fields: Vec<(FieldName, Type)>,
+    /// Canonical payload shape for the variant.
+    pub payload_shape: VariantPayloadShape,
 }
 
 /// Internal representation of a type definition with converted types
@@ -164,6 +167,38 @@ impl TypeInfo {
 }
 
 /// Convert an AST TypeDef to internal TypeInfo
+fn convert_variant_fields(
+    variant: &VariantDef,
+    param_mapping: &HashMap<String, TypeVar>,
+    type_env: &TypeEnv,
+) -> Result<Vec<(FieldName, Type)>, TypeError> {
+    match &variant.payload {
+        VariantPayload::Unit => Ok(vec![]),
+        VariantPayload::Record(fields) => fields
+            .iter()
+            .map(|(fname, ftype)| {
+                type_expr_to_type(ftype, param_mapping, type_env).map(|ty| (fname.clone(), ty))
+            })
+            .collect(),
+        VariantPayload::Tuple(items) => items
+            .iter()
+            .enumerate()
+            .map(|(index, item)| {
+                type_expr_to_type(item, param_mapping, type_env)
+                    .map(|ty| (tuple_field_name(index), ty))
+            })
+            .collect(),
+    }
+}
+
+fn convert_variant_payload_shape(payload: &VariantPayload) -> VariantPayloadShape {
+    match payload {
+        VariantPayload::Unit => VariantPayloadShape::Unit,
+        VariantPayload::Record(_) => VariantPayloadShape::Record,
+        VariantPayload::Tuple(_) => VariantPayloadShape::Tuple,
+    }
+}
+
 fn convert_type_def(type_def: &TypeDef, type_env: &TypeEnv) -> Result<TypeInfo, TypeError> {
     // Create mapping from param names to fresh type variables
     let param_mapping: HashMap<String, TypeVar> = type_def
@@ -183,17 +218,10 @@ fn convert_type_def(type_def: &TypeDef, type_env: &TypeEnv) -> Result<TypeInfo, 
             let converted_variants: Result<Vec<_>, _> = variants
                 .iter()
                 .map(|v| {
-                    let fields: Result<Vec<_>, _> = v
-                        .fields
-                        .iter()
-                        .map(|(fname, ftype)| {
-                            type_expr_to_type(ftype, &param_mapping, type_env)
-                                .map(|ty| (fname.clone(), ty))
-                        })
-                        .collect();
-                    fields.map(|f| VariantInfo {
+                    convert_variant_fields(v, &param_mapping, type_env).map(|fields| VariantInfo {
                         name: v.name.clone(),
-                        fields: f,
+                        fields,
+                        payload_shape: convert_variant_payload_shape(&v.payload),
                     })
                 })
                 .collect();
@@ -338,10 +366,15 @@ impl TypeEnv {
                 VariantDef {
                     name: "Some".to_string(),
                     fields: vec![("value".to_string(), TypeExpr::Named("T".to_string()))],
+                    payload: VariantPayload::Record(vec![(
+                        "value".to_string(),
+                        TypeExpr::Named("T".to_string()),
+                    )]),
                 },
                 VariantDef {
                     name: "None".to_string(),
                     fields: vec![],
+                    payload: VariantPayload::Unit,
                 },
             ]),
             visibility: ash_core::ast::Visibility::Public,
@@ -361,10 +394,18 @@ impl TypeEnv {
                 VariantDef {
                     name: "Ok".to_string(),
                     fields: vec![("value".to_string(), TypeExpr::Named("T".to_string()))],
+                    payload: VariantPayload::Record(vec![(
+                        "value".to_string(),
+                        TypeExpr::Named("T".to_string()),
+                    )]),
                 },
                 VariantDef {
                     name: "Err".to_string(),
                     fields: vec![("error".to_string(), TypeExpr::Named("E".to_string()))],
+                    payload: VariantPayload::Record(vec![(
+                        "error".to_string(),
+                        TypeExpr::Named("E".to_string()),
+                    )]),
                 },
             ]),
             visibility: ash_core::ast::Visibility::Public,
@@ -484,6 +525,7 @@ impl TypeEnv {
                             .iter()
                             .map(|(n, t)| (n.clone(), subst.apply(t)))
                             .collect(),
+                        payload_shape: v.payload_shape.clone(),
                     })
                     .collect();
 
@@ -563,10 +605,12 @@ mod tests {
                 VariantInfo {
                     name: "Some".to_string(),
                     fields: vec![("value".to_string(), Type::Int)],
+                    payload_shape: VariantPayloadShape::Record,
                 },
                 VariantInfo {
                     name: "None".to_string(),
                     fields: vec![],
+                    payload_shape: VariantPayloadShape::Unit,
                 },
             ],
         };
@@ -685,10 +729,15 @@ mod tests {
                 VariantDef {
                     name: "Pending".to_string(),
                     fields: vec![],
+                    payload: VariantPayload::Unit,
                 },
                 VariantDef {
                     name: "Complete".to_string(),
                     fields: vec![("result".to_string(), TypeExpr::Named("Int".to_string()))],
+                    payload: VariantPayload::Record(vec![(
+                        "result".to_string(),
+                        TypeExpr::Named("Int".to_string()),
+                    )]),
                 },
             ]),
             visibility: Visibility::Public,

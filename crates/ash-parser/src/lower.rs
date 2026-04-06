@@ -5,6 +5,7 @@
 
 use std::fmt;
 
+use ash_core::adt::tuple_field_name;
 use ash_core::{
     Action as CoreAction, Capability, Effect, Expr as CoreExpr, Guard as CoreGuard,
     MatchArm as CoreMatchArm, Obligation as CoreObligation, Pattern as CorePattern,
@@ -29,10 +30,6 @@ use crate::surface::{Definition, RoleDef};
 pub enum LoweringError {
     /// Float literals are not supported in the core IR.
     FloatNotSupported,
-    /// Tuple constructor expressions are not lowered until TASK-417.
-    TupleConstructorLoweringNotSupported,
-    /// Tuple variant patterns are not lowered until TASK-417.
-    TupleVariantPatternLoweringNotSupported,
 }
 
 impl fmt::Display for LoweringError {
@@ -40,12 +37,6 @@ impl fmt::Display for LoweringError {
         match self {
             LoweringError::FloatNotSupported => {
                 write!(f, "float literals are not supported")
-            }
-            LoweringError::TupleConstructorLoweringNotSupported => {
-                write!(f, "tuple constructor lowering is not supported yet")
-            }
-            LoweringError::TupleVariantPatternLoweringNotSupported => {
-                write!(f, "tuple variant pattern lowering is not supported yet")
             }
         }
     }
@@ -783,16 +774,25 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             payload,
             ..
         } => {
-            if matches!(payload, crate::surface::ConstructorPayload::Tuple(_)) {
-                return Err(LoweringError::TupleConstructorLoweringNotSupported);
-            }
+            let lowered_fields = match payload {
+                crate::surface::ConstructorPayload::Unit => fields
+                    .iter()
+                    .map(|(n, e)| Ok((n.to_string(), lower_expr(e)?)))
+                    .collect::<Result<Vec<_>, _>>()?,
+                crate::surface::ConstructorPayload::Record(record_fields) => record_fields
+                    .iter()
+                    .map(|(n, e)| Ok((n.to_string(), lower_expr(e)?)))
+                    .collect::<Result<Vec<_>, _>>()?,
+                crate::surface::ConstructorPayload::Tuple(items) => items
+                    .iter()
+                    .enumerate()
+                    .map(|(index, expr)| Ok((tuple_field_name(index), lower_expr(expr)?)))
+                    .collect::<Result<Vec<_>, _>>()?,
+            };
 
             Ok(CoreExpr::Constructor {
                 name: name.to_string(),
-                fields: fields
-                    .iter()
-                    .map(|(n, e)| Ok((n.to_string(), lower_expr(e)?)))
-                    .collect::<Result<_, _>>()?,
+                fields: lowered_fields,
             })
         }
     }
@@ -930,13 +930,8 @@ pub fn lower_pattern(pattern: &Pattern) -> Result<CorePattern, LoweringError> {
             payload,
             ..
         } => {
-            if matches!(payload, crate::surface::VariantPatternPayload::Tuple(_)) {
-                return Err(LoweringError::TupleVariantPatternLoweringNotSupported);
-            }
-
-            Ok(CorePattern::Variant {
-                name: name.to_string(),
-                fields: fields
+            let lowered_fields = match payload {
+                crate::surface::VariantPatternPayload::Unit => fields
                     .as_ref()
                     .map(|fs| {
                         fs.iter()
@@ -944,6 +939,26 @@ pub fn lower_pattern(pattern: &Pattern) -> Result<CorePattern, LoweringError> {
                             .collect::<Result<Vec<_>, _>>()
                     })
                     .transpose()?,
+                crate::surface::VariantPatternPayload::Record(record_fields) => Some(
+                    record_fields
+                        .iter()
+                        .map(|(n, p)| Ok((n.to_string(), lower_pattern(p)?)))
+                        .collect::<Result<Vec<_>, _>>()?,
+                ),
+                crate::surface::VariantPatternPayload::Tuple(items) => Some(
+                    items
+                        .iter()
+                        .enumerate()
+                        .map(|(index, pattern)| {
+                            Ok((tuple_field_name(index), lower_pattern(pattern)?))
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
+                ),
+            };
+
+            Ok(CorePattern::Variant {
+                name: name.to_string(),
+                fields: lowered_fields,
             })
         }
 

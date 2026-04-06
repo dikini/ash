@@ -6,6 +6,29 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+/// Canonical internal payload shape for enum variants.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum VariantPayloadShape {
+    /// Variant has no payload.
+    Unit,
+    /// Variant payload is record-shaped and addressed by field name.
+    Record,
+    /// Variant payload is tuple-shaped and addressed positionally.
+    Tuple,
+}
+
+/// Return the stable synthetic field name used for lowered tuple payload slots.
+#[must_use]
+pub fn tuple_field_name(index: usize) -> String {
+    format!("_{index}")
+}
+
+/// Returns true when the field name matches the canonical synthetic tuple slot naming scheme.
+#[must_use]
+pub fn is_tuple_field_name(name: &str, index: usize) -> bool {
+    name == tuple_field_name(index)
+}
+
 /// Fully qualified name for an Algebraic Data Type (ADT).
 ///
 /// `AdtName` preserves the full module path to allow disambiguating types
@@ -290,6 +313,14 @@ mod tests {
         assert!(r.is_resolved());
         assert_eq!(r.as_str(), "a::b::T");
         assert!(r.resolved().is_some());
+    }
+
+    #[test]
+    fn tuple_field_names_are_stable() {
+        assert_eq!(tuple_field_name(0), "_0");
+        assert_eq!(tuple_field_name(3), "_3");
+        assert!(is_tuple_field_name("_1", 1));
+        assert!(!is_tuple_field_name("value", 1));
     }
 
     // ============================================================

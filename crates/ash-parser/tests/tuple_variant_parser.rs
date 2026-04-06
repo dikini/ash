@@ -1,3 +1,4 @@
+use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern};
 use ash_parser::input::new_input;
 use ash_parser::lower::{LoweringError, lower_expr, lower_pattern};
 use ash_parser::parse_expr::expr;
@@ -144,27 +145,42 @@ fn rejects_malformed_tuple_variant_pattern_payload() {
 }
 
 #[test]
-fn lowering_tuple_constructor_fails_honestly_until_task_417() {
+fn lowers_tuple_constructor_with_stable_positional_fields() {
     let mut input = new_input("RuntimeError(2, \"missing config\")");
     let parsed = expr
         .parse_next(&mut input)
         .expect("tuple constructor should parse before lowering");
 
-    let lowered = lower_expr(&parsed);
+    let lowered = lower_expr(&parsed).expect("tuple constructor should lower");
     assert_eq!(
         lowered,
-        Err(LoweringError::TupleConstructorLoweringNotSupported)
+        CoreExpr::Constructor {
+            name: "RuntimeError".into(),
+            fields: vec![
+                ("_0".into(), CoreExpr::Literal(ash_core::Value::Int(2))),
+                (
+                    "_1".into(),
+                    CoreExpr::Literal(ash_core::Value::String("missing config".into())),
+                ),
+            ],
+        }
     );
 }
 
 #[test]
-fn lowering_tuple_variant_pattern_fails_honestly_until_task_417() {
+fn lowers_tuple_variant_pattern_with_stable_positional_fields() {
     let mut input = new_input("RuntimeError(code, msg)");
     let parsed = pattern(&mut input).expect("tuple variant pattern should parse before lowering");
 
-    let lowered = lower_pattern(&parsed);
+    let lowered = lower_pattern(&parsed).expect("tuple variant pattern should lower");
     assert_eq!(
         lowered,
-        Err(LoweringError::TupleVariantPatternLoweringNotSupported)
+        CorePattern::Variant {
+            name: "RuntimeError".into(),
+            fields: Some(vec![
+                ("_0".into(), CorePattern::Variable("code".into())),
+                ("_1".into(), CorePattern::Variable("msg".into())),
+            ]),
+        }
     );
 }

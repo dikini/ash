@@ -7,8 +7,9 @@
 
 use crate::solver::TypeError;
 use crate::types::{Type, TypeVar};
+use ash_core::adt::tuple_field_name;
 use ash_core::ast::TypeBody;
-use ash_parser::surface::{Literal, Pattern};
+use ash_parser::surface::{Literal, Pattern, VariantPatternPayload};
 use std::collections::HashMap;
 
 pub use ash_core::ast::{TypeDef, VariantDef};
@@ -58,6 +59,7 @@ impl TypeEnv {
         &self,
         variant_name: &str,
         field_patterns: Option<&[(Box<str>, Pattern)]>,
+        payload: &VariantPatternPayload,
     ) -> Result<Option<&VariantDef>, TypeError> {
         let named_matches: Vec<&VariantDef> = self
             .type_defs
@@ -74,12 +76,22 @@ impl TypeEnv {
             [] => Ok(None),
             [variant] => Ok(Some(*variant)),
             _ => {
-                let requested_fields: Option<Vec<&str>> = field_patterns.map(|patterns| {
-                    patterns
-                        .iter()
-                        .map(|(field_name, _)| field_name.as_ref())
-                        .collect()
-                });
+                let requested_fields: Option<Vec<String>> = match payload {
+                    VariantPatternPayload::Tuple(items) => Some(
+                        items
+                            .iter()
+                            .enumerate()
+                            .map(|(index, _)| tuple_field_name(index))
+                            .collect(),
+                    ),
+                    VariantPatternPayload::Unit => None,
+                    VariantPatternPayload::Record(_) => field_patterns.map(|patterns| {
+                        patterns
+                            .iter()
+                            .map(|(field_name, _)| field_name.to_string())
+                            .collect()
+                    }),
+                };
                 let mut disambiguated = named_matches.into_iter().filter(|variant| {
                     requested_fields.as_ref().is_some_and(|requested_fields| {
                         requested_fields.iter().all(|requested| {
@@ -170,9 +182,11 @@ fn check_pattern_inner(
         }
 
         // Variant pattern: check variant exists and field patterns match
-        Pattern::Variant { name, fields } => {
-            check_variant_pattern(env, name, fields.as_deref(), expected, bindings)
-        }
+        Pattern::Variant {
+            name,
+            fields,
+            payload,
+        } => check_variant_pattern(env, name, fields.as_deref(), payload, expected, bindings),
 
         // Tuple pattern: check element count and types
         Pattern::Tuple(patterns) => check_tuple_pattern(env, patterns, expected, bindings),
@@ -225,6 +239,7 @@ fn check_variant_pattern(
     env: &TypeEnv,
     variant_name: &str,
     field_patterns: Option<&[(Box<str>, Pattern)]>,
+    payload: &VariantPatternPayload,
     expected: &Type,
     bindings: &mut Bindings,
 ) -> Result<(), TypeError> {
@@ -235,12 +250,13 @@ fn check_variant_pattern(
         });
     }
 
-    if let Some(variant_def) = env.lookup_variant(variant_name, field_patterns)? {
+    if let Some(variant_def) = env.lookup_variant(variant_name, field_patterns, payload)? {
         return check_variant_fields(
             env,
             variant_name,
             field_patterns,
-            &variant_def.fields,
+            payload,
+            variant_def,
             bindings,
         );
     }
@@ -300,6 +316,30 @@ fn check_variant_fields(
     env: &TypeEnv,
     variant_name: &str,
     field_patterns: Option<&[(Box<str>, Pattern)]>,
+    payload: &VariantPatternPayload,
+    variant_def: &VariantDef,
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    match payload {
+        VariantPatternPayload::Tuple(items) => {
+            check_tuple_variant_fields(env, variant_name, items, &variant_def.fields, bindings)
+        }
+        VariantPatternPayload::Unit | VariantPatternPayload::Record(_) => {
+            check_record_variant_fields(
+                env,
+                variant_name,
+                field_patterns,
+                &variant_def.fields,
+                bindings,
+            )
+        }
+    }
+}
+
+fn check_record_variant_fields(
+    env: &TypeEnv,
+    variant_name: &str,
+    field_patterns: Option<&[(Box<str>, Pattern)]>,
     variant_fields: &[(String, ash_core::ast::TypeExpr)],
     bindings: &mut Bindings,
 ) -> Result<(), TypeError> {
@@ -328,6 +368,43 @@ fn check_variant_fields(
             Ok(())
         }
     }
+}
+
+fn check_tuple_variant_fields(
+    env: &TypeEnv,
+    variant_name: &str,
+    items: &[Pattern],
+    variant_fields: &[(String, ash_core::ast::TypeExpr)],
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    if items.len() != variant_fields.len() {
+        return Err(TypeError::InvalidPattern {
+            message: format!(
+                "tuple variant {variant_name} expects {} positional items, got {}",
+                variant_fields.len(),
+                items.len()
+            ),
+        });
+    }
+
+    for (index, pattern) in items.iter().enumerate() {
+        let expected_name = tuple_field_name(index);
+        let field_type = variant_fields
+            .iter()
+            .find(|(name, _)| name == &expected_name)
+            .map(|(_, ty)| simple_type_expr_to_type(ty))
+            .or_else(|| {
+                variant_fields
+                    .get(index)
+                    .map(|(_, ty)| simple_type_expr_to_type(ty))
+            })
+            .ok_or_else(|| TypeError::InvalidPattern {
+                message: format!("tuple variant {variant_name} is missing positional slot {index}"),
+            })?;
+        check_pattern_inner(env, pattern, &field_type, bindings)?;
+    }
+
+    Ok(())
 }
 
 /// Check a tuple pattern against a type
@@ -465,7 +542,7 @@ fn check_list_pattern(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::ast::{TypeBody, TypeExpr, Visibility};
+    use ash_core::ast::{TypeBody, TypeExpr, VariantPayload, Visibility};
 
     fn option_env() -> TypeEnv {
         let mut env = TypeEnv::new();
@@ -478,10 +555,15 @@ mod tests {
                     VariantDef {
                         name: "Some".to_string(),
                         fields: vec![("value".to_string(), TypeExpr::Named("Int".to_string()))],
+                        payload: VariantPayload::Record(vec![(
+                            "value".to_string(),
+                            TypeExpr::Named("Int".to_string()),
+                        )]),
                     },
                     VariantDef {
                         name: "None".to_string(),
                         fields: vec![],
+                        payload: VariantPayload::Unit,
                     },
                 ]),
                 visibility: Visibility::Public,

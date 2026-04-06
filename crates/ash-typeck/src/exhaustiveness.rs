@@ -3,7 +3,8 @@
 //! Provides exhaustiveness analysis to ensure all pattern match cases are covered.
 //! Uses a pattern matrix approach for analyzing coverage.
 
-use ash_core::ast::{Pattern, TypeBody, TypeDef};
+use ash_core::adt::tuple_field_name;
+use ash_core::ast::{Pattern, TypeBody, TypeDef, VariantPayload};
 
 /// Coverage result for exhaustiveness checking
 #[derive(Debug, Clone, PartialEq)]
@@ -126,19 +127,26 @@ fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Patt
         });
 
         if !is_covered {
+            let witness_fields = match &variant.payload {
+                VariantPayload::Unit => None,
+                VariantPayload::Record(fields) => Some(
+                    fields
+                        .iter()
+                        .map(|(field_name, _)| (field_name.clone(), Pattern::Wildcard))
+                        .collect(),
+                ),
+                VariantPayload::Tuple(items) => Some(
+                    items
+                        .iter()
+                        .enumerate()
+                        .map(|(index, _)| (tuple_field_name(index), Pattern::Wildcard))
+                        .collect(),
+                ),
+            };
+
             missing.push(Pattern::Variant {
                 name: variant.name.clone(),
-                fields: if variant.fields.is_empty() {
-                    None
-                } else {
-                    Some(
-                        variant
-                            .fields
-                            .iter()
-                            .map(|(field_name, _)| (field_name.clone(), Pattern::Wildcard))
-                            .collect(),
-                    )
-                },
+                fields: witness_fields,
             });
         }
     }
@@ -153,7 +161,7 @@ fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Patt
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::ast::{TypeExpr, VariantDef, Visibility};
+    use ash_core::ast::{TypeExpr, VariantDef, VariantPayload, Visibility};
 
     /// Create a test Option type with Some and None variants
     fn make_option_type() -> TypeDef {
@@ -164,10 +172,15 @@ mod tests {
                 VariantDef {
                     name: "Some".to_string(),
                     fields: vec![("value".to_string(), TypeExpr::Named("Int".to_string()))],
+                    payload: VariantPayload::Record(vec![(
+                        "value".to_string(),
+                        TypeExpr::Named("Int".to_string()),
+                    )]),
                 },
                 VariantDef {
                     name: "None".to_string(),
                     fields: vec![],
+                    payload: VariantPayload::Unit,
                 },
             ]),
             visibility: Visibility::Public,

@@ -3,7 +3,7 @@
 //! Provides functionality to instantiate generic types by substituting
 //! type parameters with concrete types.
 
-use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef};
+use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use thiserror::Error;
 
 /// Error during type instantiation
@@ -82,6 +82,18 @@ impl InstantiateSubst {
                 .iter()
                 .map(|(field_name, ty)| (field_name.clone(), self.apply_expr(ty)))
                 .collect(),
+            payload: match &variant.payload {
+                VariantPayload::Unit => VariantPayload::Unit,
+                VariantPayload::Record(fields) => VariantPayload::Record(
+                    fields
+                        .iter()
+                        .map(|(field_name, ty)| (field_name.clone(), self.apply_expr(ty)))
+                        .collect(),
+                ),
+                VariantPayload::Tuple(items) => {
+                    VariantPayload::Tuple(items.iter().map(|ty| self.apply_expr(ty)).collect())
+                }
+            },
         }
     }
 
@@ -133,10 +145,12 @@ impl InstantiateSubst {
 ///         VariantDef {
 ///             name: "Some".into(),
 ///             fields: vec![("value".into(), TypeExpr::Named("T".into()))],
+///             payload: VariantPayload::Record(vec![("value".into(), TypeExpr::Named("T".into()))]),
 ///         },
 ///         VariantDef {
 ///             name: "None".into(),
 ///             fields: vec![],
+///             payload: VariantPayload::Unit,
 ///         },
 ///     ]),
 ///     visibility: Visibility::Public,
@@ -181,10 +195,15 @@ mod tests {
                 VariantDef {
                     name: "Some".into(),
                     fields: vec![("value".into(), TypeExpr::Named("T".into()))],
+                    payload: VariantPayload::Record(vec![(
+                        "value".into(),
+                        TypeExpr::Named("T".into()),
+                    )]),
                 },
                 VariantDef {
                     name: "None".into(),
                     fields: vec![],
+                    payload: VariantPayload::Unit,
                 },
             ]),
             visibility: Visibility::Public,
@@ -200,10 +219,18 @@ mod tests {
                 VariantDef {
                     name: "Ok".into(),
                     fields: vec![("value".into(), TypeExpr::Named("T".into()))],
+                    payload: VariantPayload::Record(vec![(
+                        "value".into(),
+                        TypeExpr::Named("T".into()),
+                    )]),
                 },
                 VariantDef {
                     name: "Err".into(),
                     fields: vec![("error".into(), TypeExpr::Named("E".into()))],
+                    payload: VariantPayload::Record(vec![(
+                        "error".into(),
+                        TypeExpr::Named("E".into()),
+                    )]),
                 },
             ]),
             visibility: Visibility::Public,

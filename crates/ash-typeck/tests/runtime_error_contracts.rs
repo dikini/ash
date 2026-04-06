@@ -1,5 +1,5 @@
-use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, Visibility};
-use ash_parser::surface::{Expr, Literal};
+use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload, Visibility};
+use ash_parser::surface::{ConstructorPayload, Expr, Literal};
 use ash_parser::token::Span;
 use ash_typeck::check_expr::check_expr;
 use ash_typeck::type_env::TypeEnv;
@@ -15,6 +15,10 @@ fn runtime_error_type_def() -> TypeDef {
                 ("exit_code".to_string(), TypeExpr::Named("Int".to_string())),
                 ("message".to_string(), TypeExpr::Named("String".to_string())),
             ],
+            payload: VariantPayload::Record(vec![
+                ("exit_code".to_string(), TypeExpr::Named("Int".to_string())),
+                ("message".to_string(), TypeExpr::Named("String".to_string())),
+            ]),
         }]),
         visibility: Visibility::Public,
     }
@@ -30,6 +34,13 @@ fn runtime_error_expr(exit_code: i64, message: &str) -> Expr {
                 Expr::Literal(Literal::String(message.into())),
             ),
         ],
+        payload: ConstructorPayload::Record(vec![
+            ("exit_code".into(), Expr::Literal(Literal::Int(exit_code))),
+            (
+                "message".into(),
+                Expr::Literal(Literal::String(message.into())),
+            ),
+        ]),
         span: Span::default(),
     }
 }
@@ -62,6 +73,10 @@ fn runtime_error_composes_inside_result_constructor() {
     let expr = Expr::Constructor {
         name: "Err".into(),
         fields: vec![("error".into(), runtime_error_expr(42, "test"))],
+        payload: ConstructorPayload::Record(vec![(
+            "error".into(),
+            runtime_error_expr(42, "test"),
+        )]),
         span: Span::default(),
     };
 

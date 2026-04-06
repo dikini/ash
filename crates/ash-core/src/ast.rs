@@ -653,6 +653,19 @@ pub struct VariantDef {
     pub name: Name,
     /// Fields of the variant (name, type pairs)
     pub fields: Vec<(Name, TypeExpr)>,
+    /// Explicit payload shape for the variant
+    pub payload: VariantPayload,
+}
+
+/// Explicit payload shape for enum variants in source/core metadata.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum VariantPayload {
+    /// Unit variant with no payload
+    Unit,
+    /// Record variant with named fields
+    Record(Vec<(Name, TypeExpr)>),
+    /// Tuple variant with positional items
+    Tuple(Vec<TypeExpr>),
 }
 
 /// Visibility modifier

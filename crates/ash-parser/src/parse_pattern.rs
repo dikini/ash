@@ -12,7 +12,7 @@ use winnow::stream::Stream;
 use winnow::token::take_while;
 
 use crate::input::ParseInput;
-use crate::surface::{Literal, Name, Pattern};
+use crate::surface::{Literal, Name, Pattern, VariantPatternPayload};
 use crate::token::Span;
 
 /// Static set of Ash keywords for O(1) lookup.
@@ -96,12 +96,12 @@ pub fn pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     .parse_next(input)
 }
 
-/// Parse a variant pattern: `Name` or `Name { field: pat, ... }`
+/// Parse a variant pattern: `Name`, `Name { field: pat, ... }`, or `Name(pat, ...)`
 ///
 /// Examples:
 /// - `None` (unit variant)
-/// - `Some { value: x }` (variant with fields)
-/// - `Ok { value: (x, y) }` (nested patterns)
+/// - `Some { value: x }` (record variant)
+/// - `RuntimeError(code, msg)` (tuple variant)
 fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     let start_pos = input.state;
     let checkpoint = *input;
@@ -117,13 +117,12 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
         }
     };
 
-    // Check if followed by `{` (fields) or not (unit variant)
+    // Check if followed by `{` (record payload), `(` (tuple payload), or not (unit variant)
     skip_whitespace_and_comments(input);
 
     if input.input.starts_with('{') {
-        // Parse the fields block
         let fields = match parse_variant_fields(input) {
-            Ok(f) => Some(f),
+            Ok(f) => f,
             Err(_) => {
                 *input = checkpoint;
                 return Err(winnow::error::ErrMode::Backtrack(
@@ -135,11 +134,24 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
         let _span = span_from(&start_pos, &input.state);
         return Ok(Pattern::Variant {
             name: name.into(),
-            fields,
+            fields: Some(fields.clone()),
+            payload: VariantPatternPayload::Record(fields),
         });
     }
 
-    // No `{` after the identifier: parse as a unit variant only when the
+    if input.input.starts_with('(') {
+        let items = parse_variant_tuple_items(input)
+            .map_err(|_| winnow::error::ErrMode::Cut(winnow::error::ContextError::new()))?;
+
+        let _span = span_from(&start_pos, &input.state);
+        return Ok(Pattern::Variant {
+            name: name.into(),
+            fields: None,
+            payload: VariantPatternPayload::Tuple(items),
+        });
+    }
+
+    // No payload after the identifier: parse as a unit variant only when the
     // identifier is UpperCamelCase (uppercase-leading). Otherwise, it is a
     // variable pattern (e.g. `x`).
     let is_uppercase_leading = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
@@ -149,6 +161,7 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
         Ok(Pattern::Variant {
             name: name.into(),
             fields: None,
+            payload: VariantPatternPayload::Unit,
         })
     } else {
         // Backtrack and let variable pattern handle it.
@@ -157,6 +170,33 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
             winnow::error::ContextError::new(),
         ))
     }
+}
+
+fn parse_variant_tuple_items(input: &mut ParseInput) -> ModalResult<Vec<Pattern>> {
+    let _ = literal_str("(").parse_next(input)?;
+    let checkpoint = *input;
+    let items = match parse_pattern_list(input) {
+        Ok(items) => items,
+        Err(err) => {
+            *input = checkpoint;
+            return Err(err);
+        }
+    };
+    if literal_str(")").parse_next(input).is_err() {
+        *input = checkpoint;
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    if input.input.starts_with(':') {
+        *input = checkpoint;
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    Ok(items)
 }
 
 /// Parse variant fields: `{ field: pat, ... }`
@@ -666,9 +706,14 @@ mod tests {
         let mut input = test_input("None");
         let result = pattern(&mut input).unwrap();
         match result {
-            Pattern::Variant { name, fields } => {
+            Pattern::Variant {
+                name,
+                fields,
+                payload,
+            } => {
                 assert_eq!(name.as_ref(), "None");
                 assert!(fields.is_none());
+                assert!(matches!(payload, VariantPatternPayload::Unit));
             }
             _ => panic!("Expected Variant pattern for unit variant"),
         }
@@ -679,13 +724,20 @@ mod tests {
         let mut input = test_input("Some { value: x }");
         let result = pattern(&mut input).unwrap();
         match result {
-            Pattern::Variant { name, fields } => {
+            Pattern::Variant {
+                name,
+                fields,
+                payload,
+            } => {
                 assert_eq!(name.as_ref(), "Some");
                 assert!(fields.is_some());
                 let fields = fields.unwrap();
                 assert_eq!(fields.len(), 1);
                 assert_eq!(fields[0].0.as_ref(), "value");
                 assert!(matches!(&fields[0].1, Pattern::Variable(v) if v.as_ref() == "x"));
+                assert!(
+                    matches!(payload, VariantPatternPayload::Record(items) if items.len() == 1)
+                );
             }
             _ => panic!("Expected Variant pattern, got {:?}", result),
         }
@@ -696,11 +748,18 @@ mod tests {
         let mut input = test_input("Ok { value: x, error: e }");
         let result = pattern(&mut input).unwrap();
         match result {
-            Pattern::Variant { name, fields } => {
+            Pattern::Variant {
+                name,
+                fields,
+                payload,
+            } => {
                 assert_eq!(name.as_ref(), "Ok");
                 assert!(fields.is_some());
                 let fields = fields.unwrap();
                 assert_eq!(fields.len(), 2);
+                assert!(
+                    matches!(payload, VariantPatternPayload::Record(items) if items.len() == 2)
+                );
             }
             _ => panic!("Expected Variant pattern"),
         }
@@ -743,11 +802,18 @@ mod tests {
         let mut input = test_input("Some { value: (x, y) }");
         let result = pattern(&mut input).unwrap();
         match result {
-            Pattern::Variant { name, fields } => {
+            Pattern::Variant {
+                name,
+                fields,
+                payload,
+            } => {
                 assert_eq!(name.as_ref(), "Some");
                 let fields = fields.unwrap();
                 assert_eq!(fields.len(), 1);
                 assert!(matches!(&fields[0].1, Pattern::Tuple(_)));
+                assert!(
+                    matches!(payload, VariantPatternPayload::Record(items) if items.len() == 1)
+                );
             }
             _ => panic!("Expected Variant pattern with nested tuple"),
         }

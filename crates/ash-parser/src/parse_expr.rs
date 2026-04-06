@@ -9,7 +9,7 @@ use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
 use crate::parse_pattern::pattern;
-use crate::surface::{BinaryOp, Expr, Literal, Name, UnaryOp};
+use crate::surface::{BinaryOp, ConstructorPayload, Expr, Literal, Name, UnaryOp};
 use crate::token::Span;
 
 /// Parse an expression (entry point).
@@ -347,6 +347,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse primary expressions: literals, variables, field access, index access, calls
+#[allow(clippy::collapsible_if)]
 fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
 
@@ -375,7 +376,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let name = identifier(input)?;
     let name_str: Name = name.into();
 
-    if parse_inline_constructor_start(input) {
+    if parse_inline_record_constructor_start(input) {
         skip_whitespace_and_comments(input);
         let fields = if literal_str("}").parse_next(input).is_ok() {
             vec![]
@@ -385,7 +386,27 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         let span = span_from(&start_pos, &input.state);
         return Ok(Expr::Constructor {
             name: name_str,
+            payload: ConstructorPayload::Record(fields.clone()),
             fields,
+            span,
+        });
+    }
+
+    let is_uppercase_leading = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
+    if is_uppercase_leading && parse_inline_tuple_constructor_start(input) {
+        skip_whitespace_and_comments(input);
+        let items = if literal_str(")").parse_next(input).is_ok() {
+            vec![]
+        } else {
+            let items = parse_tuple_constructor_items(input)?;
+            let _ = literal_str(")").parse_next(input)?;
+            items
+        };
+        let span = span_from(&start_pos, &input.state);
+        return Ok(Expr::Constructor {
+            name: name.into(),
+            fields: vec![],
+            payload: ConstructorPayload::Tuple(items),
             span,
         });
     }
@@ -395,16 +416,16 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
     loop {
         // Field access: .field
-        if opt(literal_str(".")).parse_next(input)?.is_some()
-            && let Ok(field) = identifier(input)
-        {
-            let span = span_from(&start_pos, &input.state);
-            expr = Expr::FieldAccess {
-                base: Box::new(expr),
-                field: field.into(),
-                span,
-            };
-            continue;
+        if opt(literal_str(".")).parse_next(input)?.is_some() {
+            if let Ok(field) = identifier(input) {
+                let span = span_from(&start_pos, &input.state);
+                expr = Expr::FieldAccess {
+                    base: Box::new(expr),
+                    field: field.into(),
+                    span,
+                };
+                continue;
+            }
         }
 
         // Index access: [index]
@@ -479,7 +500,34 @@ fn parse_constructor_field(input: &mut ParseInput) -> ModalResult<(Name, Expr)> 
     Ok((name.into(), value))
 }
 
-fn parse_inline_constructor_start(input: &mut ParseInput) -> bool {
+fn parse_tuple_constructor_items(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
+    let mut items = vec![expr(input)?];
+
+    loop {
+        skip_whitespace_and_comments(input);
+        if opt(literal_str(",")).parse_next(input)?.is_some() {
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with(")") {
+                break;
+            }
+            items.push(expr(input)?);
+        } else {
+            break;
+        }
+    }
+
+    Ok(items)
+}
+
+fn parse_inline_record_constructor_start(input: &mut ParseInput) -> bool {
+    parse_inline_constructor_delimiter(input, '{')
+}
+
+fn parse_inline_tuple_constructor_start(input: &mut ParseInput) -> bool {
+    parse_inline_constructor_delimiter(input, '(')
+}
+
+fn parse_inline_constructor_delimiter(input: &mut ParseInput, delimiter: char) -> bool {
     let source = input.input;
     let inline_ws_len = source
         .chars()
@@ -491,7 +539,7 @@ fn parse_inline_constructor_start(input: &mut ParseInput) -> bool {
         return false;
     };
 
-    if !rest.starts_with('{') {
+    if !rest.starts_with(delimiter) {
         return false;
     }
 
@@ -1097,7 +1145,7 @@ mod tests {
                 // Unit variants like `None` parse as variant patterns without braces.
                 assert!(matches!(
                     pattern,
-                    crate::surface::Pattern::Variant { name, fields }
+                    crate::surface::Pattern::Variant { name, fields, .. }
                         if name.as_ref() == "None" && fields.is_none()
                 ));
                 // Then branch should be string "none"
@@ -1227,11 +1275,17 @@ mod tests {
         let result = expr(&mut input).unwrap();
 
         match result {
-            Expr::Constructor { name, fields, .. } => {
+            Expr::Constructor {
+                name,
+                fields,
+                payload,
+                ..
+            } => {
                 assert_eq!(name.as_ref(), "Ok");
                 assert_eq!(fields.len(), 1);
                 assert_eq!(fields[0].0.as_ref(), "value");
                 assert!(matches!(fields[0].1, Expr::Literal(Literal::Int(42))));
+                assert!(matches!(payload, ConstructorPayload::Record(items) if items.len() == 1));
             }
             other => panic!("Expected Constructor expression, got {other:?}"),
         }
@@ -1244,17 +1298,31 @@ mod tests {
         let result = expr(&mut input).unwrap();
 
         match result {
-            Expr::Constructor { name, fields, .. } => {
+            Expr::Constructor {
+                name,
+                fields,
+                payload,
+                ..
+            } => {
                 assert_eq!(name.as_ref(), "Err");
                 assert_eq!(fields.len(), 1);
                 assert_eq!(fields[0].0.as_ref(), "error");
+                assert!(matches!(payload, ConstructorPayload::Record(items) if items.len() == 1));
                 match &fields[0].1 {
-                    Expr::Constructor { name, fields, .. } => {
+                    Expr::Constructor {
+                        name,
+                        fields,
+                        payload,
+                        ..
+                    } => {
                         assert_eq!(name.as_ref(), "RuntimeError");
                         assert_eq!(fields.len(), 2);
                         assert_eq!(fields[0].0.as_ref(), "exit_code");
                         assert!(matches!(fields[0].1, Expr::Literal(Literal::Int(42))));
                         assert_eq!(fields[1].0.as_ref(), "message");
+                        assert!(
+                            matches!(payload, ConstructorPayload::Record(items) if items.len() == 2)
+                        );
                         assert!(matches!(
                             fields[1].1,
                             Expr::Literal(Literal::String(ref s)) if s.as_ref() == "boom"

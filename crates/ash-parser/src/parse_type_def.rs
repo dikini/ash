@@ -45,6 +45,19 @@ pub struct VariantDef {
     pub name: String,
     /// Fields of the variant (name, type pairs)
     pub fields: Vec<(String, TypeExpr)>,
+    /// Explicit payload shape for the variant
+    pub payload: VariantPayload,
+}
+
+/// Explicit payload shape for enum variants.
+#[derive(Debug, Clone, PartialEq)]
+pub enum VariantPayload {
+    /// Unit variant with no payload
+    Unit,
+    /// Record variant with named fields
+    Record(Vec<(String, TypeExpr)>),
+    /// Tuple variant with positional items
+    Tuple(Vec<TypeExpr>),
 }
 
 /// Visibility modifier
@@ -242,7 +255,7 @@ fn is_enum_body(input: &mut ParseInput) -> bool {
     // Save state
     let state = input.state;
     let checkpoint = input.input.checkpoint();
-    let mut has_field_block = false;
+    let mut has_payload = false;
 
     // Try to parse first variant
     skip_whitespace_and_comments(input);
@@ -255,9 +268,9 @@ fn is_enum_body(input: &mut ParseInput) -> bool {
 
     skip_whitespace_and_comments(input);
 
-    // Check for { after variant name (field block)
+    // Check for payload after variant name
     if input.input.starts_with('{') {
-        has_field_block = true;
+        has_payload = true;
         // Skip the field block
         let _ = literal_str("{").parse_next(input);
         skip_whitespace_and_comments(input);
@@ -275,11 +288,28 @@ fn is_enum_body(input: &mut ParseInput) -> bool {
             }
         }
         skip_whitespace_and_comments(input);
+    } else if input.input.starts_with('(') {
+        has_payload = true;
+        let _ = literal_str("(").parse_next(input);
+        skip_whitespace_and_comments(input);
+        let mut depth = 1;
+        while depth > 0 && !input.input.is_empty() {
+            if input.input.starts_with('(') {
+                let _ = literal_str("(").parse_next(input);
+                depth += 1;
+            } else if input.input.starts_with(')') {
+                let _ = literal_str(")").parse_next(input);
+                depth -= 1;
+            } else {
+                let _ = input.input.next_token();
+            }
+        }
+        skip_whitespace_and_comments(input);
     }
 
     // Check if there's a | after the first variant, or if this is a
     // constructor-bearing single-variant ADT that ends before `;`.
-    let is_enum = input.input.starts_with('|') || (has_field_block && input.input.starts_with(';'));
+    let is_enum = input.input.starts_with('|') || (has_payload && input.input.starts_with(';'));
 
     // Restore state
     input.state = state;
@@ -310,19 +340,35 @@ fn parse_variant(input: &mut ParseInput) -> ModalResult<VariantDef> {
     let name = parse_type_name(input)?;
     skip_whitespace_and_comments(input);
 
-    // Parse optional fields
-    let fields = if literal_str("{").parse_next(input).is_ok() {
+    // Parse optional payload
+    let (fields, payload) = if literal_str("{").parse_next(input).is_ok() {
         let fields = parse_field_list(input)?;
         literal_str("}").parse_next(input)?;
-        fields
+        let payload = VariantPayload::Record(fields.clone());
+        (fields, payload)
+    } else if literal_str("(").parse_next(input).is_ok() {
+        let items = parse_tuple_payload_types(input)?;
+        literal_str(")").parse_next(input)?;
+        (vec![], VariantPayload::Tuple(items))
     } else {
-        vec![]
+        (vec![], VariantPayload::Unit)
     };
 
     Ok(VariantDef {
         name: name.to_string(),
         fields,
+        payload,
     })
+}
+
+fn parse_tuple_payload_types(input: &mut ParseInput) -> ModalResult<Vec<TypeExpr>> {
+    skip_whitespace_and_comments(input);
+
+    if input.input.starts_with(')') {
+        return Ok(vec![]);
+    }
+
+    separated(1.., parse_type_expr, parse_type_arg_separator).parse_next(input)
 }
 
 /// Parse struct body: `{ field: Type, ... }`
@@ -533,8 +579,10 @@ mod tests {
                 assert_eq!(variants.len(), 2);
                 assert_eq!(variants[0].name, "Pending");
                 assert!(variants[0].fields.is_empty());
+                assert!(matches!(variants[0].payload, VariantPayload::Unit));
                 assert_eq!(variants[1].name, "Processing");
                 assert!(variants[1].fields.is_empty());
+                assert!(matches!(variants[1].payload, VariantPayload::Unit));
             }
             _ => panic!("Expected enum body"),
         }
@@ -557,6 +605,10 @@ mod tests {
                 assert_eq!(variants[0].name, "Ok");
                 assert_eq!(variants[0].fields.len(), 1);
                 assert_eq!(variants[0].fields[0].0, "value");
+                assert!(matches!(
+                    variants[0].payload,
+                    VariantPayload::Record(ref items) if items.len() == 1
+                ));
                 match &variants[0].fields[0].1 {
                     TypeExpr::Named(name) => assert_eq!(name, "Int"),
                     _ => panic!("Expected Named type"),
@@ -566,6 +618,10 @@ mod tests {
                 assert_eq!(variants[1].name, "Err");
                 assert_eq!(variants[1].fields.len(), 1);
                 assert_eq!(variants[1].fields[0].0, "error");
+                assert!(matches!(
+                    variants[1].payload,
+                    VariantPayload::Record(ref items) if items.len() == 1
+                ));
                 match &variants[1].fields[0].1 {
                     TypeExpr::Named(name) => assert_eq!(name, "String"),
                     _ => panic!("Expected Named type"),
@@ -708,6 +764,10 @@ mod tests {
                 assert_eq!(variants[0].fields.len(), 2);
                 assert_eq!(variants[0].fields[0].0, "exit_code");
                 assert_eq!(variants[0].fields[1].0, "message");
+                assert!(matches!(
+                    variants[0].payload,
+                    VariantPayload::Record(ref items) if items.len() == 2
+                ));
             }
             _ => panic!("Expected single-variant enum body"),
         }

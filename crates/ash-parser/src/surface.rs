@@ -694,15 +694,28 @@ pub enum Expr {
         span: Span,
     },
 
-    /// Constructor expression: Some { value: 42 }
+    /// Constructor expression: Some { value: 42 } or RuntimeError(2, "boom")
     Constructor {
         /// Constructor name
         name: Name,
-        /// Field expressions
+        /// Record field expressions preserved for record constructors
         fields: Vec<(Name, Expr)>,
+        /// Explicit constructor payload shape
+        payload: ConstructorPayload,
         /// Source span
         span: Span,
     },
+}
+
+/// Preserved constructor payload shape at the parser surface.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConstructorPayload {
+    /// Unit constructor with no payload
+    Unit,
+    /// Record constructor with named fields
+    Record(Vec<(Name, Expr)>),
+    /// Tuple constructor with positional items
+    Tuple(Vec<Expr>),
 }
 
 /// A single arm in a match expression.
@@ -840,13 +853,26 @@ pub enum Pattern {
     },
     /// Literal pattern
     Literal(Literal),
-    /// Variant pattern: Some { value: x } or None
+    /// Variant pattern: Some { value: x }, RuntimeError(code, msg), or None
     Variant {
         /// Variant name (e.g., "Some", "None")
         name: Name,
-        /// Optional fields with patterns
+        /// Optional record fields with patterns preserved for record variants
         fields: Option<Vec<(Name, Pattern)>>,
+        /// Explicit payload shape for unit/record/tuple variant patterns
+        payload: VariantPatternPayload,
     },
+}
+
+/// Preserved payload shape for parsed variant patterns.
+#[derive(Debug, Clone, PartialEq)]
+pub enum VariantPatternPayload {
+    /// Unit variant pattern without payload
+    Unit,
+    /// Record variant pattern with named fields
+    Record(Vec<(Name, Pattern)>),
+    /// Tuple variant pattern with positional items
+    Tuple(Vec<Pattern>),
 }
 
 /// Literal values.

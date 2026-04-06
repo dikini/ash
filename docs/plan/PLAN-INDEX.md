@@ -1940,7 +1940,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-416](tasks/TASK-416-tuple-variant-parser-and-surface-ast.md) | Add parser and surface-AST substrate for tuple variants | TASK-413, SPEC-002, SPEC-020 | 4-6 | 🟡 Ready |
+| [TASK-416](tasks/TASK-416-tuple-variant-parser-and-surface-ast.md) | Add parser and surface-AST substrate for tuple variants | TASK-413, SPEC-002, SPEC-020 | 4-6 | ✅ Complete |
 | [TASK-417](tasks/TASK-417-tuple-variant-lowering-and-typechecking.md) | Add tuple-variant lowering, typechecking, and exhaustiveness support | TASK-413, TASK-416, SPEC-003, SPEC-020 | 4-6 | 🟡 Ready |
 | [TASK-418](tasks/TASK-418-tuple-variant-runtime-and-entry-contract-reconciliation.md) | Add interpreter/runtime tuple-variant support and reconcile remaining concrete `RuntimeError` drift | TASK-413, TASK-416, TASK-417, SPEC-004, SPEC-021 | 4-6 | 🟡 Ready |
 | [TASK-419](tasks/TASK-419-effect-inference-and-runtime-verification-alignment.md) | Align effect inference and runtime verification with the promoted coarse effect-typing contract | TASK-414, SPEC-001, SPEC-003, SPEC-004, SPEC-010, SPEC-017 | 3-5 | 🟡 Ready |

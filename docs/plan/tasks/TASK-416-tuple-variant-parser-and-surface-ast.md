@@ -1,6 +1,6 @@
 # TASK-416: Tuple Variant Parser and Surface AST Substrate
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -89,11 +89,11 @@ Run at least:
 
 ## Completion Checklist
 
-- [ ] source AST supports tuple-variant payload shape
-- [ ] parser surface AST supports tuple constructors/patterns
-- [ ] parser accepts canonical tuple-variant syntax
-- [ ] parser tests added/updated
-- [ ] `CHANGELOG.md` updated
+- [x] source AST supports tuple-variant payload shape
+- [x] parser surface AST supports tuple constructors/patterns
+- [x] parser accepts canonical tuple-variant syntax
+- [x] parser tests added/updated
+- [x] `CHANGELOG.md` updated
 
 ## Notes
 
@@ -101,3 +101,9 @@ This task is intentionally the parser/surface-AST substrate only. Later tasks sh
 - lowering/internal payload metadata
 - typechecking/exhaustiveness
 - runtime/interpreter support
+
+Completion note:
+- tuple-variant declarations, constructor expressions, and variant patterns now preserve explicit
+  tuple payload shape in the source/parser surface ASTs;
+- lowering now fails honestly for tuple constructor expressions and tuple variant patterns instead
+  of silently erasing tuple payload information, leaving full semantic lowering to TASK-417.

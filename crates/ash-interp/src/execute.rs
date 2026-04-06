@@ -2,14 +2,18 @@
 //!
 //! Executes workflows in a runtime context, handling all workflow variants.
 
-use ash_core::{Expr, Value, Workflow};
+use ash_core::{Effect, Expr, Value, Workflow};
 
 use crate::ExecResult;
 use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
 use crate::capability_policy::{CapabilityPolicyEvaluator, Role};
 use crate::context::Context;
-use crate::control_link::ControlLinkRegistry;
+use crate::control_link::{
+    ConservativeRetainedEffectSummary, ConservativeRetainedObligationsSummary,
+    ConservativeRetainedProvenanceSummary, ControlLinkError, ControlLinkRegistry,
+    RetainedCompletionKind,
+};
 use crate::error::{EvalError, ExecError};
 use crate::eval::eval_expr;
 use crate::exec_send::execute_send;
@@ -20,7 +24,8 @@ use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
 use crate::proxy_registry::ProxyRegistry;
-use crate::runtime_state::RuntimeState;
+use crate::runtime_outcome_state::RuntimeOutcomeState;
+use crate::runtime_state::{RuntimeState, SPAWNED_CHILD_CONTROL_BINDING};
 use crate::stream::StreamContext;
 use crate::yield_state::{CorrelationId, SuspendedYields, YieldState};
 
@@ -28,6 +33,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
+use std::{collections::BTreeSet, iter};
 use tokio::sync::Mutex;
 
 /// Boxed future type for recursive async execution
@@ -165,7 +171,7 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
     let control_registry = shared_control_registry(runtime_state);
     let proxy_registry = shared_proxy_registry(runtime_state);
     let suspended_yields = shared_suspended_yields(runtime_state);
-    execute_workflow_inner(
+    execute_workflow_inner_observed(
         workflow,
         ctx,
         cap_ctx,
@@ -176,6 +182,8 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
         control_registry,
         Some(proxy_registry),
         Some(suspended_yields),
+        runtime_state,
+        None,
     )
 }
 
@@ -191,6 +199,221 @@ fn resolve_control_link(target: &str, ctx: &Context) -> ExecResult<ash_core::Con
     }
 }
 
+fn spawned_child_control_link(ctx: &Context) -> ExecResult<Option<ash_core::ControlLink>> {
+    match ctx.get(SPAWNED_CHILD_CONTROL_BINDING) {
+        Some(Value::ControlLink(link)) => Ok(Some(link.clone())),
+        Some(value) => Err(ExecError::InvalidRuntimeState(format!(
+            "spawned child control binding '{SPAWNED_CHILD_CONTROL_BINDING}' is not a ControlLink: {value}"
+        ))),
+        None => Ok(None),
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TerminalObservationRecorder {
+    obligations: Arc<std::sync::Mutex<Option<ConservativeRetainedObligationsSummary>>>,
+}
+
+impl TerminalObservationRecorder {
+    fn new() -> Self {
+        Self {
+            obligations: Arc::new(std::sync::Mutex::new(None)),
+        }
+    }
+
+    fn record_terminal_result(&self, ctx: &Context, result: &ExecResult<Value>) {
+        if RuntimeOutcomeState::from_exec_result(result).is_terminal() {
+            let mut slot = self
+                .obligations
+                .lock()
+                .expect("terminal observation recorder mutex should not be poisoned");
+            if slot.is_none() {
+                *slot = Some(conservative_obligations_summary_from_context(ctx));
+            }
+        }
+    }
+
+    fn observed_obligations(&self) -> Option<ConservativeRetainedObligationsSummary> {
+        self.obligations
+            .lock()
+            .expect("terminal observation recorder mutex should not be poisoned")
+            .clone()
+    }
+}
+
+fn conservative_obligations_summary_from_context(
+    ctx: &Context,
+) -> ConservativeRetainedObligationsSummary {
+    let (active_role, role_pending, role_discharged) = match ctx.role_context() {
+        Some(role_ctx) => (
+            Some(role_ctx.active_role.name.clone()),
+            role_ctx.pending_obligations_set(),
+            role_ctx.discharged_obligations_set(),
+        ),
+        None => (None, BTreeSet::new(), BTreeSet::new()),
+    };
+
+    ConservativeRetainedObligationsSummary::new(
+        ctx.local_pending_obligations(),
+        active_role,
+        role_pending,
+        role_discharged,
+    )
+}
+
+fn record_terminal_result_if_observed(
+    terminal_observer: Option<&TerminalObservationRecorder>,
+    ctx: &Context,
+    result: &ExecResult<Value>,
+) {
+    if let Some(observer) = terminal_observer {
+        observer.record_terminal_result(ctx, result);
+    }
+}
+
+fn conservative_spawn_provenance_summary(
+    workflow_id: ash_core::WorkflowId,
+    parent_workflow_id: Option<ash_core::WorkflowId>,
+    lineage: Vec<ash_core::WorkflowId>,
+) -> ConservativeRetainedProvenanceSummary {
+    ConservativeRetainedProvenanceSummary::new(workflow_id, parent_workflow_id, lineage)
+}
+
+fn finish_with_terminal_observation(
+    terminal_observer: Option<&TerminalObservationRecorder>,
+    ctx: &Context,
+    result: ExecResult<Value>,
+) -> ExecResult<Value> {
+    record_terminal_result_if_observed(terminal_observer, ctx, &result);
+    result
+}
+
+fn conservative_effect_upper_bound(workflow: &Workflow) -> ConservativeRetainedEffectSummary {
+    let mut reached = conservative_reached_effect_upper_bound(workflow);
+    let terminal = reached.iter().copied().max().unwrap_or(Effect::Epistemic);
+    reached.insert(terminal);
+    ConservativeRetainedEffectSummary::new(terminal, reached)
+}
+
+fn conservative_reached_effect_upper_bound(workflow: &Workflow) -> BTreeSet<Effect> {
+    fn singleton(effect: Effect) -> BTreeSet<Effect> {
+        iter::once(effect).collect()
+    }
+
+    fn union_many<'a>(workflows: impl IntoIterator<Item = &'a Workflow>) -> BTreeSet<Effect> {
+        workflows
+            .into_iter()
+            .flat_map(conservative_reached_effect_upper_bound)
+            .collect()
+    }
+
+    match workflow {
+        Workflow::Observe { continuation, .. } => {
+            let mut reached = conservative_reached_effect_upper_bound(continuation);
+            reached.insert(Effect::Epistemic);
+            reached
+        }
+        Workflow::Receive { arms, .. } => {
+            let mut reached: BTreeSet<_> = arms
+                .iter()
+                .flat_map(|arm| conservative_reached_effect_upper_bound(&arm.body))
+                .collect();
+            reached.insert(Effect::Epistemic);
+            reached
+        }
+        Workflow::Orient { continuation, .. } | Workflow::Propose { continuation, .. } => {
+            let mut reached = conservative_reached_effect_upper_bound(continuation);
+            reached.insert(Effect::Deliberative);
+            reached
+        }
+        Workflow::Decide { continuation, .. }
+        | Workflow::Check { continuation, .. }
+        | Workflow::Yield { continuation, .. } => {
+            let mut reached = conservative_reached_effect_upper_bound(continuation);
+            reached.insert(Effect::Evaluative);
+            reached
+        }
+        Workflow::CheckObligation { .. } | Workflow::Oblige { .. } => singleton(Effect::Evaluative),
+        Workflow::Act { .. }
+        | Workflow::Set { .. }
+        | Workflow::Send { .. }
+        | Workflow::Spawn { .. }
+        | Workflow::Kill { .. }
+        | Workflow::Pause { .. }
+        | Workflow::Resume { .. }
+        | Workflow::ProxyResume { .. } => singleton(Effect::Operational),
+        Workflow::Oblig { workflow, .. }
+        | Workflow::ForEach { body: workflow, .. }
+        | Workflow::With { workflow, .. }
+        | Workflow::Must { workflow } => conservative_reached_effect_upper_bound(workflow),
+        Workflow::Let { continuation, .. } | Workflow::Split { continuation, .. } => {
+            conservative_reached_effect_upper_bound(continuation)
+        }
+        Workflow::CheckHealth { continuation, .. } => {
+            let mut reached = conservative_reached_effect_upper_bound(continuation);
+            reached.insert(Effect::Epistemic);
+            reached
+        }
+        Workflow::If {
+            then_branch,
+            else_branch,
+            ..
+        } => union_many([then_branch.as_ref(), else_branch.as_ref()]),
+        Workflow::Seq { first, second } => union_many([first.as_ref(), second.as_ref()]),
+        Workflow::Par { workflows } => union_many(workflows.iter()),
+        Workflow::Maybe { primary, fallback } => union_many([primary.as_ref(), fallback.as_ref()]),
+        Workflow::Ret { .. } | Workflow::Done => BTreeSet::new(),
+    }
+}
+
+async fn run_spawned_child_workflow(
+    runtime_state: RuntimeState,
+    child_workflow: Workflow,
+    init_value: Value,
+    link: ash_core::ControlLink,
+    provenance: ConservativeRetainedProvenanceSummary,
+) {
+    tokio::task::yield_now().await;
+
+    let effects = conservative_effect_upper_bound(&child_workflow);
+    let terminal_observer = TerminalObservationRecorder::new();
+    let child_result = execute_with_bindings_with_terminal_observation_in_state(
+        &child_workflow,
+        &runtime_state,
+        RuntimeState::spawned_child_init_bindings(init_value, link.clone()),
+        &terminal_observer,
+    )
+    .await;
+
+    let outcome_state = RuntimeOutcomeState::from_exec_result(&child_result);
+    if !outcome_state.is_terminal() {
+        return;
+    }
+
+    let obligations = terminal_observer.observed_obligations().unwrap_or_else(|| {
+        ConservativeRetainedObligationsSummary::new(
+            BTreeSet::new(),
+            None,
+            BTreeSet::new(),
+            BTreeSet::new(),
+        )
+    });
+
+    match runtime_state
+        .record_control_completion(&link, child_result, effects, obligations, Some(provenance))
+        .await
+    {
+        Ok(_) => {}
+        Err(ControlLinkError::CompletionAlreadySealed(_, record))
+            if record.kind() == RetainedCompletionKind::ControlTerminated => {}
+        Err(ControlLinkError::Terminated(..)) => {}
+        Err(error) => panic!(
+            "spawned child completion sealing failed unexpectedly for instance {:?}: {error}",
+            link.instance_id
+        ),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn execute_workflow_inner<'a>(
     workflow: &'a Workflow,
@@ -203,9 +426,46 @@ pub(crate) fn execute_workflow_inner<'a>(
     control_registry: SharedControlRegistry,
     proxy_registry: Option<SharedProxyRegistry>,
     suspended_yields: Option<SharedSuspendedYields>,
+    runtime_state: &'a RuntimeState,
+) -> BoxFuture<'a, ExecResult<Value>> {
+    execute_workflow_inner_observed(
+        workflow,
+        ctx,
+        cap_ctx,
+        policy_eval,
+        behaviour_ctx,
+        stream_ctx,
+        mailbox,
+        control_registry,
+        proxy_registry,
+        suspended_yields,
+        runtime_state,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn execute_workflow_inner_observed<'a>(
+    workflow: &'a Workflow,
+    ctx: Context,
+    cap_ctx: &'a CapabilityContext,
+    policy_eval: &'a PolicyEvaluator,
+    behaviour_ctx: &'a BehaviourContext,
+    stream_ctx: Option<&'a StreamContext>,
+    mailbox: SharedMailbox,
+    control_registry: SharedControlRegistry,
+    proxy_registry: Option<SharedProxyRegistry>,
+    suspended_yields: Option<SharedSuspendedYields>,
+    runtime_state: &'a RuntimeState,
+    terminal_observer: Option<&'a TerminalObservationRecorder>,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
-        match workflow {
+        if let Some(link) = spawned_child_control_link(&ctx)? {
+            runtime_state.wait_for_control_authority(&link).await?;
+        }
+
+        let terminal_ctx_snapshot = ctx.clone();
+        let result = match workflow {
             // Terminal workflow - returns null
             Workflow::Done => Ok(Value::Null),
 
@@ -228,7 +488,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 let mut new_ctx = ctx.extend();
                 new_ctx.set_many(bindings);
 
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     new_ctx,
                     cap_ctx,
@@ -239,6 +499,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -252,7 +514,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 let cond_val = eval_expr(condition, &ctx).map_err(ExecError::Eval)?;
                 match cond_val {
                     Value::Bool(true) => {
-                        execute_workflow_inner(
+                        execute_workflow_inner_observed(
                             then_branch,
                             ctx,
                             cap_ctx,
@@ -263,11 +525,13 @@ pub(crate) fn execute_workflow_inner<'a>(
                             control_registry,
                             proxy_registry.clone(),
                             suspended_yields.clone(),
+                            runtime_state,
+                            terminal_observer,
                         )
                         .await
                     }
                     Value::Bool(false) => {
-                        execute_workflow_inner(
+                        execute_workflow_inner_observed(
                             else_branch,
                             ctx,
                             cap_ctx,
@@ -278,6 +542,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             control_registry,
                             proxy_registry.clone(),
                             suspended_yields.clone(),
+                            runtime_state,
+                            terminal_observer,
                         )
                         .await
                     }
@@ -290,7 +556,7 @@ pub(crate) fn execute_workflow_inner<'a>(
 
             // Sequential composition
             Workflow::Seq { first, second } => {
-                let _ = execute_workflow_inner(
+                let _ = execute_workflow_inner_observed(
                     first,
                     ctx.clone(),
                     cap_ctx,
@@ -301,9 +567,11 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry.clone(),
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await?;
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     second,
                     ctx,
                     cap_ctx,
@@ -314,6 +582,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -328,7 +598,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 let futures: Vec<_> = workflows
                     .iter()
                     .map(|wf| {
-                        execute_workflow_inner(
+                        execute_workflow_inner_observed(
                             wf,
                             ctx.clone(),
                             cap_ctx,
@@ -339,6 +609,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             control_registry.clone(),
                             proxy_registry.clone(),
                             suspended_yields.clone(),
+                            runtime_state,
+                            terminal_observer,
                         )
                     })
                     .collect();
@@ -367,7 +639,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 let mut new_ctx = ctx.extend();
                 new_ctx.set_many(bindings);
 
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     new_ctx,
                     cap_ctx,
@@ -378,6 +650,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -385,7 +659,7 @@ pub(crate) fn execute_workflow_inner<'a>(
             // Orient - evaluate expression and continue
             Workflow::Orient { expr, continuation } => {
                 let _ = eval_expr(expr, &ctx).map_err(ExecError::Eval)?;
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     ctx,
                     cap_ctx,
@@ -396,6 +670,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -426,7 +702,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 continuation,
             } => {
                 // Proposal is advisory - just continue
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     ctx,
                     cap_ctx,
@@ -437,6 +713,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -457,7 +735,7 @@ pub(crate) fn execute_workflow_inner<'a>(
 
                 match decision {
                     ash_core::Decision::Permit => {
-                        execute_workflow_inner(
+                        execute_workflow_inner_observed(
                             continuation,
                             ctx,
                             cap_ctx,
@@ -468,6 +746,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             control_registry,
                             proxy_registry.clone(),
                             suspended_yields.clone(),
+                            runtime_state,
+                            terminal_observer,
                         )
                         .await
                     }
@@ -506,7 +786,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                             let mut iter_ctx = ctx.extend();
                             iter_ctx.set_many(bindings);
 
-                            last_result = execute_workflow_inner(
+                            last_result = execute_workflow_inner_observed(
                                 body,
                                 iter_ctx,
                                 cap_ctx,
@@ -517,6 +797,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                                 control_registry.clone(),
                                 proxy_registry.clone(),
                                 suspended_yields.clone(),
+                                runtime_state,
+                                terminal_observer,
                             )
                             .await?;
                         }
@@ -537,7 +819,7 @@ pub(crate) fn execute_workflow_inner<'a>(
             } => {
                 // For now, just execute the workflow
                 // In a full implementation, this would set up capability context
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     workflow,
                     ctx,
                     cap_ctx,
@@ -548,13 +830,15 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
 
             // Maybe - try primary, fallback on failure
             Workflow::Maybe { primary, fallback } => {
-                match execute_workflow_inner(
+                match execute_workflow_inner_observed(
                     primary,
                     ctx.clone(),
                     cap_ctx,
@@ -565,12 +849,14 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry.clone(),
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
                 {
                     Ok(result) => Ok(result),
                     Err(_) => {
-                        execute_workflow_inner(
+                        execute_workflow_inner_observed(
                             fallback,
                             ctx,
                             cap_ctx,
@@ -581,6 +867,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                             control_registry,
                             proxy_registry.clone(),
                             suspended_yields.clone(),
+                            runtime_state,
+                            terminal_observer,
                         )
                         .await
                     }
@@ -589,7 +877,7 @@ pub(crate) fn execute_workflow_inner<'a>(
 
             // Must - fail if workflow fails
             Workflow::Must { workflow: inner } => {
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     inner,
                     ctx,
                     cap_ctx,
@@ -600,6 +888,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -634,7 +924,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                     }
                 }
 
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     ctx,
                     cap_ctx,
@@ -645,6 +935,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -656,7 +948,7 @@ pub(crate) fn execute_workflow_inner<'a>(
             } => {
                 let ctx =
                     ctx.with_role_context(crate::role_context::RoleContext::new(role.clone()));
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     inner,
                     ctx,
                     cap_ctx,
@@ -667,6 +959,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -747,6 +1041,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                         capability_policy_eval: &capability_policy_eval,
                         actor: &actor,
                         behaviour_ctx,
+                        runtime_state,
                     },
                 )
                 .await
@@ -754,25 +1049,43 @@ pub(crate) fn execute_workflow_inner<'a>(
 
             // Spawn a workflow instance
             Workflow::Spawn {
-                workflow_type: _,
+                workflow_type,
                 init,
                 pattern,
                 continuation,
             } => {
-                // Evaluate the spawn expression
-                let instance_value = eval_expr(
-                    &Expr::Spawn {
-                        workflow_type: "spawned".to_string(),
-                        init: Box::new(init.clone()),
+                let init_value = eval_expr(init, &ctx).map_err(ExecError::Eval)?;
+                let child_workflow = runtime_state.child_workflow(workflow_type).await;
+                let instance_id = ash_core::WorkflowId::new();
+                let control = child_workflow
+                    .as_ref()
+                    .map(|_| ash_core::ControlLink { instance_id });
+                let instance_value = Value::Instance(Box::new(ash_core::Instance {
+                    addr: ash_core::InstanceAddr {
+                        workflow_type: workflow_type.clone(),
+                        instance_id,
                     },
-                    &ctx,
-                )
-                .map_err(ExecError::Eval)?;
+                    control: control.clone(),
+                }));
 
-                if let Value::Instance(instance) = &instance_value
-                    && let Some(control) = instance.control.as_ref()
-                {
-                    control_registry.lock().await.register(control.instance_id);
+                if let (Some(control), Some(child_workflow)) = (control, child_workflow) {
+                    let parent_workflow_id = None;
+                    let parent_lineage = vec![];
+                    let provenance = conservative_spawn_provenance_summary(
+                        control.instance_id,
+                        parent_workflow_id,
+                        parent_lineage,
+                    );
+                    runtime_state
+                        .register_spawned_control_link_with_provenance(provenance.clone())
+                        .await;
+                    tokio::spawn(run_spawned_child_workflow(
+                        runtime_state.clone(),
+                        child_workflow,
+                        init_value.clone(),
+                        control,
+                        provenance,
+                    ));
                 }
 
                 // Match pattern and bind
@@ -786,7 +1099,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 let mut new_ctx = ctx.extend();
                 new_ctx.set_many(bindings);
 
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     new_ctx,
                     cap_ctx,
@@ -797,6 +1110,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -822,7 +1137,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 let mut new_ctx = ctx.extend();
                 new_ctx.set_many(bindings);
 
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     new_ctx,
                     cap_ctx,
@@ -833,6 +1148,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -844,11 +1161,11 @@ pub(crate) fn execute_workflow_inner<'a>(
             } => {
                 let link = resolve_control_link(target, &ctx)?;
                 control_registry.lock().await.kill(&link).map_err(|error| {
-                    ExecError::ExecutionFailed(format!(
+                    ExecError::InvalidRuntimeState(format!(
                         "kill on control target '{target}' failed: {error}"
                     ))
                 })?;
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     ctx,
                     cap_ctx,
@@ -859,6 +1176,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -874,11 +1193,11 @@ pub(crate) fn execute_workflow_inner<'a>(
                     .await
                     .pause(&link)
                     .map_err(|error| {
-                        ExecError::ExecutionFailed(format!(
+                        ExecError::InvalidRuntimeState(format!(
                             "pause on control target '{target}' failed: {error}"
                         ))
                     })?;
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     ctx,
                     cap_ctx,
@@ -889,6 +1208,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -904,11 +1225,11 @@ pub(crate) fn execute_workflow_inner<'a>(
                     .await
                     .resume(&link)
                     .map_err(|error| {
-                        ExecError::ExecutionFailed(format!(
+                        ExecError::InvalidRuntimeState(format!(
                             "resume on control target '{target}' failed: {error}"
                         ))
                     })?;
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     ctx,
                     cap_ctx,
@@ -919,6 +1240,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -934,11 +1257,11 @@ pub(crate) fn execute_workflow_inner<'a>(
                     .await
                     .check_health(&link)
                     .map_err(|error| {
-                        ExecError::ExecutionFailed(format!(
+                        ExecError::InvalidRuntimeState(format!(
                             "check_health on control target '{target}' failed: {error}"
                         ))
                     })?;
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     continuation,
                     ctx,
                     cap_ctx,
@@ -949,6 +1272,8 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry.clone(),
                     suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
@@ -1101,7 +1426,7 @@ pub(crate) fn execute_workflow_inner<'a>(
                 new_ctx.set(yield_state.resume_var.clone(), response_value);
 
                 // Execute the continuation workflow with the new context
-                execute_workflow_inner(
+                execute_workflow_inner_observed(
                     &yield_state.continuation,
                     new_ctx,
                     cap_ctx,
@@ -1112,10 +1437,13 @@ pub(crate) fn execute_workflow_inner<'a>(
                     control_registry,
                     proxy_registry,
                     suspended_yields,
+                    runtime_state,
+                    terminal_observer,
                 )
                 .await
             }
-        }
+        };
+        finish_with_terminal_observation(terminal_observer, &terminal_ctx_snapshot, result)
     })
 }
 /// Convert a workflow_contract TypeExpr to a typeck Type
@@ -1229,7 +1557,7 @@ pub fn execute_workflow_with_stream_in_state<'a>(
     let control_registry = shared_control_registry(runtime_state);
     let proxy_registry = shared_proxy_registry(runtime_state);
     let suspended_yields = shared_suspended_yields(runtime_state);
-    execute_workflow_inner(
+    execute_workflow_inner_observed(
         workflow,
         ctx,
         cap_ctx,
@@ -1240,6 +1568,8 @@ pub fn execute_workflow_with_stream_in_state<'a>(
         control_registry,
         Some(proxy_registry),
         Some(suspended_yields),
+        runtime_state,
+        None,
     )
 }
 
@@ -1293,6 +1623,37 @@ pub async fn execute_with_bindings_in_state(
         &policy_eval,
         &behaviour_ctx,
         runtime_state,
+    )
+    .await
+}
+
+async fn execute_with_bindings_with_terminal_observation_in_state(
+    workflow: &Workflow,
+    runtime_state: &RuntimeState,
+    input_bindings: std::collections::HashMap<String, Value>,
+    terminal_observer: &TerminalObservationRecorder,
+) -> ExecResult<Value> {
+    let ctx = Context::with_bindings(input_bindings);
+    let cap_ctx = runtime_state.create_capability_context().await;
+    let policy_eval = PolicyEvaluator::new();
+    let behaviour_ctx = BehaviourContext::new();
+    let mailbox = shared_mailbox();
+    let control_registry = shared_control_registry(runtime_state);
+    let proxy_registry = shared_proxy_registry(runtime_state);
+    let suspended_yields = shared_suspended_yields(runtime_state);
+    execute_workflow_inner_observed(
+        workflow,
+        ctx,
+        &cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        None,
+        mailbox,
+        control_registry,
+        Some(proxy_registry),
+        Some(suspended_yields),
+        runtime_state,
+        Some(terminal_observer),
     )
     .await
 }

@@ -37,7 +37,7 @@
 
 use ash_core::{Capability, Name, Role};
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::fmt;
 
 /// Errors that can occur when discharging an obligation
@@ -141,6 +141,11 @@ impl RoleContext {
 
     /// Get list of pending (non-discharged) obligations
     pub fn pending_obligations(&self) -> Vec<Name> {
+        self.pending_obligations_set().into_iter().collect()
+    }
+
+    /// Get the pending obligations as a stable sorted set.
+    pub fn pending_obligations_set(&self) -> BTreeSet<Name> {
         let discharged = self.discharged_obligations.borrow();
         self.active_role
             .obligations
@@ -153,6 +158,15 @@ impl RoleContext {
     /// Get the set of discharged obligations (for testing/inspection)
     pub fn discharged_set(&self) -> HashSet<Name> {
         self.discharged_obligations.borrow().clone()
+    }
+
+    /// Get the discharged obligations as a stable sorted set.
+    pub fn discharged_obligations_set(&self) -> BTreeSet<Name> {
+        self.discharged_obligations
+            .borrow()
+            .iter()
+            .cloned()
+            .collect()
     }
 
     /// Reset all discharged obligations (for testing)

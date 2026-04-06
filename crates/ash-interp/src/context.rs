@@ -4,14 +4,14 @@
 
 use ash_core::{Name, Value};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 /// Runtime execution context with variable bindings and obligation tracking
 ///
 /// Contexts form a hierarchy - lookups traverse from child to parent.
 /// Bindings are immutable once set (functional style).
 /// Obligations use interior mutability for linear discharge semantics.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Context {
     bindings: HashMap<Name, Value>,
     parent: Option<Box<Context>>,
@@ -19,6 +19,12 @@ pub struct Context {
     obligations: RefCell<HashSet<Name>>,
     /// Optional role context for authority and obligation tracking
     role_context: Option<crate::role_context::RoleContext>,
+}
+
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Context {
@@ -122,6 +128,11 @@ impl Context {
             .as_ref()
             .map(|rc| rc.pending_obligations())
             .unwrap_or_default()
+    }
+
+    /// Return the local pending obligations visible in this context frame.
+    pub fn local_pending_obligations(&self) -> BTreeSet<Name> {
+        self.obligations.borrow().iter().cloned().collect()
     }
 
     /// Get all bindings in this context (excluding parent)

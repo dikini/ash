@@ -111,7 +111,7 @@ This exploration started as a gap-analysis note for surface syntax, IR, and big-
 **Resolved Decisions:**
 1. `Workflow::Seq` stays primitive; MCE-002 rejected any `Seq` → `Let` rewrite because `Seq` composes workflows while `Let` binds an `Expr`.
 2. `Par` effect aggregation is defined in `SPEC-004` as branch-effect join in the all-success case, with helper-backed obligation/provenance aggregation.
-3. Spawn completion seals the child's own authoritative terminal obligation/provenance/effect state in `CompletionPayload`.
+3. Spawn completion seals the child's own authoritative terminal obligation/provenance/effect state in `CompletionPayload`; the current runtime now partially realizes this through retained `result` plus a conservative retained effect summary, while exact obligation/provenance/effect parity remains open.
 4. `Expr::Match` remains a primitive core expression, and `if let` lowers to `Expr::Match` with a wildcard fallback arm.
 
 **Assessment:** MCE-004 is no longer an open research gap. It is completed documentation/planning alignment work captured by TASK-393.
@@ -160,7 +160,7 @@ Consolidates all five layers: Surface → IR → Big-step → Small-step → Int
 
 **Assessment:** This remains a tracking/consolidation document, but it is no longer blocked on un-ingested MCE-006 evidence, on re-deriving which residuals are real drift, or on missing closeout packaging. The corpus now explicitly treats packaged big-step ↔ small-step correspondence as closed by the TASK-400 closeout artifact, keeps rejected-vs-runtime-failure subtype cleanup as accepted partiality, freezes the true residual drift set to blocked/terminal/invalid runtime classification, authoritative cumulative `Ω` / `π` / `T` / `ε̂` packaging, retained completion-payload observation, and full helper-backed `Par` aggregation, and keeps sequencing / binding / branching explicit as a mixed case: locally aligned execution with one remaining cumulative-carrier drift dependency.
 
-**Recommendation:** Use as the living closeout matrix, frozen residual register, and signoff/checklist artifact. Future work should focus on runtime/interpreter follow-on for the true residual drift set, not on re-deriving the Phase 63 packet or rebuilding the closeout prose.
+**Recommendation:** Use as the living closeout matrix, frozen residual register, and signoff/checklist artifact. Future work should focus on runtime/interpreter follow-on for the true residual drift set, not on re-deriving the Phase 63 packet or rebuilding the closeout prose. TASK-405 now provides the first such runtime-side follow-on by introducing a conservative authoritative runtime outcome/state classification in `ash-interp` for blocked/suspended, invalid/terminated, execution-failure, and terminal-success distinctions. TASK-406 is now complete for its scoped goal of introducing one explicit sealed/write-once retained completion-observation carrier in `ash-interp`. TASK-407 then supplies the runtime-owned spawned-child execution substrate and honest automatic completion sealing path. TASK-408 adds the next honest retained payload slice by preserving direct child terminal `Result<Value, ExecError>` data in `RetainedCompletionRecord.result` and exposing it via `terminal_result()`. The still-open follow-ons are obligations/provenance/effects parity, cumulative carriers, and helper-backed `Par` aggregation.
 
 ---
 

@@ -732,9 +732,9 @@ impl StreamProvider for MockStreamProvider {
                 "stream is closed".to_string(),
             ))
         } else {
-            // In a real implementation, this would wait for a value
-            // For the mock, we return an error indicating no value available
-            Err(crate::error::ExecError::ExecutionFailed(
+            // In a real implementation, this would wait for a value.
+            // For the mock, classify the empty-open-stream case as blocked rather than failed.
+            Err(crate::error::ExecError::Blocked(
                 "no value available".to_string(),
             ))
         }

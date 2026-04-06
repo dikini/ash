@@ -42,6 +42,7 @@ pub struct CoreReceiveRuntime<'a> {
     pub capability_policy_eval: &'a CapabilityPolicyEvaluator,
     pub actor: &'a Role,
     pub behaviour_ctx: &'a BehaviourContext,
+    pub runtime_state: &'a RuntimeState,
 }
 
 /// Execute a canonical core receive using the shared stream-aware execution path.
@@ -97,6 +98,7 @@ pub async fn execute_core_receive(
                         runtime.control_registry.clone(),
                         runtime.proxy_registry.clone(),
                         runtime.suspended_yields.clone(),
+                        runtime.runtime_state,
                     )
                     .await;
                 }
@@ -128,6 +130,7 @@ pub async fn execute_core_receive(
                         runtime.control_registry.clone(),
                         runtime.proxy_registry.clone(),
                         runtime.suspended_yields.clone(),
+                        runtime.runtime_state,
                     )
                     .await;
                 }
@@ -171,6 +174,7 @@ pub async fn execute_core_receive(
                                 runtime.control_registry.clone(),
                                 runtime.proxy_registry.clone(),
                                 runtime.suspended_yields.clone(),
+                                runtime.runtime_state,
                             )
                             .await;
                         }
@@ -324,6 +328,7 @@ async fn execute_receive_in_state_with_policy(
                         control_registry.clone(),
                         Some(proxy_registry.clone()),
                         Some(suspended_yields.clone()),
+                        runtime_state,
                     )
                     .await;
                 }
@@ -356,6 +361,7 @@ async fn execute_receive_in_state_with_policy(
                         control_registry.clone(),
                         Some(proxy_registry.clone()),
                         Some(suspended_yields.clone()),
+                        runtime_state,
                     )
                     .await;
                 }
@@ -403,6 +409,7 @@ async fn execute_receive_in_state_with_policy(
                                 control_registry.clone(),
                                 Some(proxy_registry.clone()),
                                 Some(suspended_yields.clone()),
+                                runtime_state,
                             )
                             .await;
                         }
@@ -469,6 +476,7 @@ async fn execute_receive_control(
                 control_registry.clone(),
                 proxy_registry.clone(),
                 suspended_yields.clone(),
+                runtime_state,
             )
             .await;
         }
@@ -1107,6 +1115,7 @@ mod tests {
                 capability_policy_eval: &capability_policy_eval,
                 actor: &actor,
                 behaviour_ctx: &behaviour_ctx,
+                runtime_state: &runtime_state,
             },
         )
         .await;

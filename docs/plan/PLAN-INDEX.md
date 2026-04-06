@@ -1944,7 +1944,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-417](tasks/TASK-417-tuple-variant-lowering-and-typechecking.md) | Add tuple-variant lowering, typechecking, and exhaustiveness support | TASK-413, TASK-416, SPEC-003, SPEC-020 | 4-6 | ✅ Complete |
 | [TASK-418](tasks/TASK-418-tuple-variant-runtime-and-entry-contract-reconciliation.md) | Add interpreter/runtime tuple-variant support and reconcile remaining concrete `RuntimeError` drift | TASK-413, TASK-416, TASK-417, SPEC-004, SPEC-021 | 4-6 | ✅ Complete |
 | [TASK-419](tasks/TASK-419-effect-inference-and-runtime-verification-alignment.md) | Align effect inference and runtime verification with the promoted coarse effect-typing contract | TASK-414, SPEC-001, SPEC-003, SPEC-004, SPEC-010, SPEC-017 | 3-5 | ✅ Complete |
-| [TASK-420](tasks/TASK-420-pure-bottom-effect-follow-on-decision.md) | Evaluate and optionally implement `Pure` as an explicit bottom element after baseline effect alignment | TASK-414, TASK-419, TYPES-004 | 2-4 | 📝 Planned |
+| [TASK-420](tasks/TASK-420-pure-bottom-effect-follow-on-decision.md) | Decide the `Pure` follow-on explicitly; defer surfaced `Pure` for now and keep the current four-grade lattice | TASK-414, TASK-419, TYPES-004 | 2-4 | ✅ Complete |
 | [TASK-421](tasks/TASK-421-closed-world-interfaces-ast-and-parser-substrate.md) | Add parser/AST substrate for the frozen closed-world interfaces MVP | TASK-415, TYPES-002 MVP | 4-6 | 🟡 Ready |
 | [TASK-422](tasks/TASK-422-closed-world-interfaces-coherence-and-method-resolution.md) | Add typechecker support for interface environments, strict coherence, bounds, and canonical method calls | TASK-415, TASK-421, TYPES-002 MVP | 5-8 | 🟡 Ready |
 

@@ -73,10 +73,7 @@ fn runtime_error_composes_inside_result_constructor() {
     let expr = Expr::Constructor {
         name: "Err".into(),
         fields: vec![("error".into(), runtime_error_expr(42, "test"))],
-        payload: ConstructorPayload::Record(vec![(
-            "error".into(),
-            runtime_error_expr(42, "test"),
-        )]),
+        payload: ConstructorPayload::Record(vec![("error".into(), runtime_error_expr(42, "test"))]),
         span: Span::default(),
     };
 

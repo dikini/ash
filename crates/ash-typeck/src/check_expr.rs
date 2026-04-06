@@ -5,14 +5,12 @@
 use crate::error::ConstructorError;
 use crate::exhaustiveness::{Coverage, check_exhaustive};
 use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo};
-use ash_core::adt::{tuple_field_name, VariantPayloadShape};
-use ash_parser::surface::ConstructorPayload;
 use crate::types::{Substitution, Type, TypeVar, unify};
+use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
 use ash_parser::lower_pattern;
-use ash_parser::surface::{
-    BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
-};
+use ash_parser::surface::ConstructorPayload;
+use ash_parser::surface::{BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp};
 use ash_parser::token::Span;
 use std::collections::HashSet;
 
@@ -334,12 +332,66 @@ fn resolve_enum_type_def_for_match<'a>(
 fn format_missing_witnesses(witnesses: &[CorePattern]) -> String {
     witnesses
         .iter()
-        .map(|p| match p {
-            CorePattern::Variant { name, .. } => name.clone(),
-            _ => format!("{p:?}"),
-        })
+        .map(format_pattern_witness)
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn format_pattern_witness(pattern: &CorePattern) -> String {
+    match pattern {
+        CorePattern::Variant { name, fields } => match fields {
+            None => name.clone(),
+            Some(fields) if is_tuple_witness_fields(fields) => {
+                let items = fields
+                    .iter()
+                    .map(|(_, pattern)| format_pattern_witness(pattern))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{name}({items})")
+            }
+            Some(fields) => {
+                let items = fields
+                    .iter()
+                    .map(|(field, pattern)| format!("{field}: {}", format_pattern_witness(pattern)))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{name} {{ {items} }}")
+            }
+        },
+        CorePattern::Wildcard => "_".to_string(),
+        CorePattern::Variable(name) => name.clone(),
+        CorePattern::Tuple(items) => format!(
+            "({})",
+            items
+                .iter()
+                .map(format_pattern_witness)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        CorePattern::Record(fields) => format!(
+            "{{ {} }}",
+            fields
+                .iter()
+                .map(|(field, pattern)| format!("{field}: {}", format_pattern_witness(pattern)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        CorePattern::List(items, rest) => {
+            let mut rendered = items.iter().map(format_pattern_witness).collect::<Vec<_>>();
+            if let Some(rest) = rest {
+                rendered.push(format!("..{rest}"));
+            }
+            format!("[{}]", rendered.join(", "))
+        }
+        CorePattern::Literal(value) => format!("{value:?}"),
+    }
+}
+
+fn is_tuple_witness_fields(fields: &[(String, CorePattern)]) -> bool {
+    fields
+        .iter()
+        .enumerate()
+        .all(|(index, (field, _))| field == &tuple_field_name(index))
 }
 
 fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResult {
@@ -477,9 +529,7 @@ fn check_tuple_constructor_fields(
         .zip(tuple_items.iter())
         .enumerate()
     {
-        if fields
-            .get(index)
-            .map(|(field_name, _)| field_name.as_ref())
+        if fields.get(index).map(|(field_name, _)| field_name.as_ref())
             != Some(expected_name.as_str())
         {
             errors.push(ConstructorError::TupleArityMismatch {
@@ -507,9 +557,9 @@ fn check_tuple_constructor_fields(
             Ok(sub) => {
                 *substitution = substitution.compose(&sub);
             }
-            Err(_) => errors.push(ConstructorError::FieldTypeMismatch {
+            Err(_) => errors.push(ConstructorError::TupleFieldTypeMismatch {
                 constructor: constructor_name.to_string(),
-                field: expected_name.clone(),
+                position: index,
                 expected: expected_ty.to_string(),
                 actual: field_result.ty.to_string(),
             }),
@@ -675,6 +725,10 @@ mod tests {
         let expr = Expr::Constructor {
             name: "Some".into(),
             fields: vec![("value".into(), Expr::Literal(Literal::Int(42)))],
+            payload: ConstructorPayload::Record(vec![(
+                "value".into(),
+                Expr::Literal(Literal::Int(42)),
+            )]),
             span: Span::default(),
         };
 
@@ -702,6 +756,7 @@ mod tests {
         let expr = Expr::Constructor {
             name: "None".into(),
             fields: vec![],
+            payload: ConstructorPayload::Unit,
             span: Span::default(),
         };
 
@@ -722,6 +777,10 @@ mod tests {
         let expr = Expr::Constructor {
             name: "Unknown".into(),
             fields: vec![("value".into(), Expr::Literal(Literal::Int(42)))],
+            payload: ConstructorPayload::Record(vec![(
+                "value".into(),
+                Expr::Literal(Literal::Int(42)),
+            )]),
             span: Span::default(),
         };
 
@@ -743,6 +802,7 @@ mod tests {
         let expr = Expr::Constructor {
             name: "Some".into(),
             fields: vec![],
+            payload: ConstructorPayload::Record(vec![]),
             span: Span::default(),
         };
 
@@ -767,6 +827,10 @@ mod tests {
                 ("value".into(), Expr::Literal(Literal::Int(42))),
                 ("extra".into(), Expr::Literal(Literal::String("bad".into()))),
             ],
+            payload: ConstructorPayload::Record(vec![
+                ("value".into(), Expr::Literal(Literal::Int(42))),
+                ("extra".into(), Expr::Literal(Literal::String("bad".into()))),
+            ]),
             span: Span::default(),
         };
 
@@ -792,6 +856,10 @@ mod tests {
         let expr = Expr::Constructor {
             name: "Ok".into(),
             fields: vec![("value".into(), Expr::Literal(Literal::Int(42)))],
+            payload: ConstructorPayload::Record(vec![(
+                "value".into(),
+                Expr::Literal(Literal::Int(42)),
+            )]),
             span: Span::default(),
         };
 
@@ -815,6 +883,10 @@ mod tests {
                 "error".into(),
                 Expr::Literal(Literal::String("message".into())),
             )],
+            payload: ConstructorPayload::Record(vec![(
+                "error".into(),
+                Expr::Literal(Literal::String("message".into())),
+            )]),
             span: Span::default(),
         };
 
@@ -840,12 +912,17 @@ mod tests {
             scrutinee: Box::new(Expr::Constructor {
                 name: "None".into(),
                 fields: vec![],
+                payload: ConstructorPayload::Unit,
                 span: Span::default(),
             }),
             arms: vec![ash_parser::surface::MatchArm {
                 pattern: ash_parser::surface::Pattern::Variant {
                     name: "Some".into(),
                     fields: Some(vec![(
+                        "value".into(),
+                        ash_parser::surface::Pattern::Variable("x".into()),
+                    )]),
+                    payload: ash_parser::surface::VariantPatternPayload::Record(vec![(
                         "value".into(),
                         ash_parser::surface::Pattern::Variable("x".into()),
                     )]),
@@ -886,6 +963,7 @@ mod tests {
             scrutinee: Box::new(Expr::Constructor {
                 name: "None".into(),
                 fields: vec![],
+                payload: ConstructorPayload::Unit,
                 span: Span::default(),
             }),
             arms: vec![
@@ -893,6 +971,10 @@ mod tests {
                     pattern: ash_parser::surface::Pattern::Variant {
                         name: "Some".into(),
                         fields: Some(vec![(
+                            "value".into(),
+                            ash_parser::surface::Pattern::Wildcard,
+                        )]),
+                        payload: ash_parser::surface::VariantPatternPayload::Record(vec![(
                             "value".into(),
                             ash_parser::surface::Pattern::Wildcard,
                         )]),
@@ -904,6 +986,7 @@ mod tests {
                     pattern: ash_parser::surface::Pattern::Variant {
                         name: "None".into(),
                         fields: None,
+                        payload: ash_parser::surface::VariantPatternPayload::Unit,
                     },
                     body: Box::new(Expr::Literal(Literal::Int(0))),
                     span: Span::default(),
@@ -940,6 +1023,10 @@ mod tests {
         let expr = Expr::Constructor {
             name: "Some".into(),
             fields: vec![("value".into(), Expr::Literal(Literal::Int(42)))],
+            payload: ConstructorPayload::Record(vec![(
+                "value".into(),
+                Expr::Literal(Literal::Int(42)),
+            )]),
             span: Span::default(),
         };
 
@@ -961,6 +1048,10 @@ mod tests {
         let expr = Expr::Constructor {
             name: "Some".into(),
             fields: vec![("value".into(), Expr::Literal(Literal::Int(42)))],
+            payload: ConstructorPayload::Record(vec![(
+                "value".into(),
+                Expr::Literal(Literal::Int(42)),
+            )]),
             span: Span::default(),
         };
 
@@ -994,5 +1085,18 @@ mod tests {
         assert!(!result.is_ok());
         assert_eq!(result.errors.len(), 1);
         assert_eq!(result.errors[0], err);
+    }
+
+    #[test]
+    fn test_format_missing_witnesses_preserves_tuple_shape() {
+        let rendered = format_missing_witnesses(&[CorePattern::Variant {
+            name: "RuntimeError".into(),
+            fields: Some(vec![
+                ("_0".into(), CorePattern::Wildcard),
+                ("_1".into(), CorePattern::Wildcard),
+            ]),
+        }]);
+
+        assert_eq!(rendered, "RuntimeError(_, _)");
     }
 }

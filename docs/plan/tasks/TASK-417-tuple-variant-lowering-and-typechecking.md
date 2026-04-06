@@ -1,6 +1,6 @@
 # TASK-417: Tuple Variant Lowering, Typechecking, and Exhaustiveness
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -83,15 +83,22 @@ Run at least:
 
 ## Completion Checklist
 
-- [ ] lowering preserves tuple payload order
-- [ ] type environment tracks tuple payload shape
-- [ ] tuple constructors typecheck correctly
-- [ ] tuple patterns typecheck correctly
-- [ ] exhaustiveness logic updated
-- [ ] tests added/updated
-- [ ] `CHANGELOG.md` updated
+- [x] lowering preserves tuple payload order
+- [x] type environment tracks tuple payload shape
+- [x] tuple constructors typecheck correctly
+- [x] tuple patterns typecheck correctly
+- [x] exhaustiveness logic updated
+- [x] tests added/updated
+- [x] `CHANGELOG.md` updated
 
 ## Notes
 
 This task intentionally stops at lowering/typechecking. Runtime evaluation and observable behavior
 for tuple variants should land in the next task.
+
+Completion note:
+- tuple declarations/constructors/patterns now lower through stable synthetic positional field names
+  (`_0`, `_1`, ...) while preserving source positional order as the contract;
+- tuple constructor expressions are now typechecked by positional arity and payload type;
+- tuple variant patterns now bind payload positions by order and exhaustiveness/missing-pattern
+  reporting preserves tuple witness shape in user-facing diagnostics.

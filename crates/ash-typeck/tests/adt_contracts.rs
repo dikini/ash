@@ -150,7 +150,11 @@ fn tuple_variant_constructor_typing_succeeds_positionally() {
 
     let result = check_expr(&env, &expr);
 
-    assert!(result.is_ok(), "expected success, got errors: {:?}", result.errors);
+    assert!(
+        result.is_ok(),
+        "expected success, got errors: {:?}",
+        result.errors
+    );
     assert!(matches!(
         result.ty,
         Type::Constructor { ref name, .. } if name.to_string() == "RuntimeError"
@@ -163,19 +167,21 @@ fn tuple_variant_constructor_rejects_arity_mismatch() {
     let expr = Expr::Constructor {
         name: "RuntimeError".into(),
         fields: vec![("_0".into(), Expr::Literal(Literal::Int(2)))],
-        payload: ash_parser::surface::ConstructorPayload::Tuple(vec![Expr::Literal(
-            Literal::Int(2),
-        )]),
+        payload: ash_parser::surface::ConstructorPayload::Tuple(vec![Expr::Literal(Literal::Int(
+            2,
+        ))]),
         span: Span::default(),
     };
 
     let result = check_expr(&env, &expr);
 
     assert!(!result.is_ok(), "expected arity mismatch failure");
-    assert!(result
-        .errors
-        .iter()
-        .any(|error| error.to_string().contains("arity")));
+    assert!(
+        result
+            .errors
+            .iter()
+            .any(|error| error.to_string().contains("arity"))
+    );
 }
 
 #[test]
@@ -184,10 +190,7 @@ fn tuple_variant_constructor_rejects_payload_type_mismatch() {
     let expr = Expr::Constructor {
         name: "RuntimeError".into(),
         fields: vec![
-            (
-                "_0".into(),
-                Expr::Literal(Literal::String("wrong".into())),
-            ),
+            ("_0".into(), Expr::Literal(Literal::String("wrong".into()))),
             (
                 "_1".into(),
                 Expr::Literal(Literal::String("missing config".into())),
@@ -203,12 +206,10 @@ fn tuple_variant_constructor_rejects_payload_type_mismatch() {
     let result = check_expr(&env, &expr);
 
     assert!(!result.is_ok(), "expected payload type mismatch failure");
-    assert!(result.errors.iter().any(
-        |error| matches!(
-            error,
-            ash_typeck::error::ConstructorError::FieldTypeMismatch { field, .. } if field == "_0"
-        )
-    ));
+    assert!(result.errors.iter().any(|error| matches!(
+        error,
+        ash_typeck::error::ConstructorError::TupleFieldTypeMismatch { position, .. } if *position == 0
+    )));
 }
 
 #[test]

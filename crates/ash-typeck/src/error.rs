@@ -37,8 +37,23 @@ pub enum ConstructorError {
     FieldTypeMismatch {
         /// Name of the constructor
         constructor: String,
-        /// Name of the field
+        /// Source-facing field label or tuple slot label
         field: String,
+        /// Expected type
+        expected: String,
+        /// Actual type
+        actual: String,
+    },
+
+    /// Type mismatch in positional tuple payload item
+    #[error(
+        "Type mismatch in positional item {position} of constructor '{constructor}': expected {expected}, got {actual}"
+    )]
+    TupleFieldTypeMismatch {
+        /// Name of the constructor
+        constructor: String,
+        /// Zero-based tuple position
+        position: usize,
         /// Expected type
         expected: String,
         /// Actual type
@@ -172,6 +187,21 @@ mod tests {
         assert!(msg.contains("Type mismatch"));
         assert!(msg.contains("Some"));
         assert!(msg.contains("value"));
+        assert!(msg.contains("Int"));
+        assert!(msg.contains("String"));
+    }
+
+    #[test]
+    fn test_tuple_field_type_mismatch_error() {
+        let err = ConstructorError::TupleFieldTypeMismatch {
+            constructor: "RuntimeError".to_string(),
+            position: 0,
+            expected: "Int".to_string(),
+            actual: "String".to_string(),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("positional item 0"));
+        assert!(msg.contains("RuntimeError"));
         assert!(msg.contains("Int"));
         assert!(msg.contains("String"));
     }

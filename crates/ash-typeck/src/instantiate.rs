@@ -135,7 +135,7 @@ impl InstantiateSubst {
 ///
 /// ```
 /// use ash_typeck::instantiate::instantiate;
-/// use ash_core::ast::{TypeDef, TypeBody, TypeExpr, VariantDef, Visibility};
+/// use ash_core::ast::{TypeDef, TypeBody, TypeExpr, VariantDef, VariantPayload, Visibility};
 ///
 /// // Create a simple type definition: type Option<T> = Some { value: T } | None
 /// let type_def = TypeDef {

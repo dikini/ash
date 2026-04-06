@@ -243,6 +243,28 @@ fn check_variant_pattern(
     expected: &Type,
     bindings: &mut Bindings,
 ) -> Result<(), TypeError> {
+    if let Type::Constructor { name, .. } = expected {
+        let variant_def =
+            env.lookup_type_def(&name.name)
+                .and_then(|type_def| match &type_def.body {
+                    TypeBody::Enum(variants) => {
+                        variants.iter().find(|variant| variant.name == variant_name)
+                    }
+                    _ => None,
+                });
+
+        if let Some(variant_def) = variant_def {
+            return check_variant_fields(
+                env,
+                variant_name,
+                field_patterns,
+                payload,
+                variant_def,
+                bindings,
+            );
+        }
+    }
+
     if !matches!(expected, Type::Var(_)) {
         return Err(TypeError::PatternMismatch {
             expected: Box::new(expected.clone()),
@@ -261,10 +283,7 @@ fn check_variant_pattern(
         );
     }
 
-    match expected {
-        Type::Var(_) => Err(TypeError::UnknownVariant(variant_name.to_string())),
-        _ => Err(TypeError::UnknownVariant(variant_name.to_string())),
-    }
+    Err(TypeError::UnknownVariant(variant_name.to_string()))
 }
 
 /// Simple local conversion of TypeExpr to Type for pattern checking.
@@ -672,6 +691,10 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            payload: VariantPatternPayload::Record(vec![(
+                "value".into(),
+                Pattern::Variable("x".into()),
+            )]),
         };
 
         let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
@@ -684,6 +707,10 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            payload: VariantPatternPayload::Record(vec![(
+                "value".into(),
+                Pattern::Variable("x".into()),
+            )]),
         };
 
         let result = check_pattern(&env, &pattern, &Type::Int);
@@ -696,6 +723,7 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "None".into(),
             fields: None,
+            payload: VariantPatternPayload::Unit,
         };
 
         let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
@@ -708,6 +736,10 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            payload: VariantPatternPayload::Record(vec![(
+                "value".into(),
+                Pattern::Variable("x".into()),
+            )]),
         };
 
         let type_var = Type::Var(TypeVar::fresh());
@@ -881,6 +913,10 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            payload: VariantPatternPayload::Record(vec![(
+                "value".into(),
+                Pattern::Variable("x".into()),
+            )]),
         };
 
         let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
@@ -893,6 +929,7 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "None".into(),
             fields: None,
+            payload: VariantPatternPayload::Unit,
         };
 
         let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
@@ -917,10 +954,18 @@ mod tests {
                                 ("1".to_string(), TypeExpr::Named("String".to_string())),
                             ]),
                         )],
+                        payload: VariantPayload::Record(vec![(
+                            "value".to_string(),
+                            TypeExpr::Record(vec![
+                                ("0".to_string(), TypeExpr::Named("Int".to_string())),
+                                ("1".to_string(), TypeExpr::Named("String".to_string())),
+                            ]),
+                        )]),
                     },
                     VariantDef {
                         name: "None".to_string(),
                         fields: vec![],
+                        payload: VariantPayload::Unit,
                     },
                 ]),
                 visibility: Visibility::Public,
@@ -929,6 +974,13 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![(
+                "value".into(),
+                Pattern::Tuple(vec![
+                    Pattern::Variable("a".into()),
+                    Pattern::Variable("b".into()),
+                ]),
+            )]),
+            payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
                 Pattern::Tuple(vec![
                     Pattern::Variable("a".into()),
@@ -954,10 +1006,15 @@ mod tests {
                     VariantDef {
                         name: "Some".to_string(),
                         fields: vec![("other".to_string(), TypeExpr::Named("Bool".to_string()))],
+                        payload: VariantPayload::Record(vec![(
+                            "other".to_string(),
+                            TypeExpr::Named("Bool".to_string()),
+                        )]),
                     },
                     VariantDef {
                         name: "Never".to_string(),
                         fields: vec![],
+                        payload: VariantPayload::Unit,
                     },
                 ]),
                 visibility: Visibility::Public,
@@ -967,9 +1024,35 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Some".into(),
             fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            payload: VariantPatternPayload::Record(vec![(
+                "value".into(),
+                Pattern::Variable("x".into()),
+            )]),
         };
 
         let bindings = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap();
+        assert_eq!(bindings.get("x"), Some(&Type::Int));
+    }
+
+    #[test]
+    fn test_variant_pattern_accepts_expected_constructor_type() {
+        let env = option_env();
+        let pattern = Pattern::Variant {
+            name: "Some".into(),
+            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            payload: VariantPatternPayload::Record(vec![(
+                "value".into(),
+                Pattern::Variable("x".into()),
+            )]),
+        };
+        let expected = Type::Constructor {
+            name: crate::QualifiedName::root("Option"),
+            args: vec![Type::Int],
+            kind: crate::Kind::Type,
+        };
+
+        let bindings = check_pattern(&env, &pattern, &expected).unwrap();
+
         assert_eq!(bindings.get("x"), Some(&Type::Int));
     }
 }

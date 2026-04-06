@@ -8,7 +8,7 @@ use crate::error::TypeEnvError;
 use crate::solver::TypeError;
 use crate::types::{Substitution, Type, TypeVar};
 use crate::{Kind, QualifiedName};
-use ash_core::adt::{tuple_field_name, VariantPayloadShape};
+use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use std::collections::HashMap;
 

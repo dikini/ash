@@ -4,7 +4,7 @@
 //! and that same-name ADTs in different modules are distinct types.
 
 use ash_core::adt::AdtName;
-use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, Visibility};
+use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload, Visibility};
 use ash_typeck::type_env::{TypeEnv, type_expr_to_type};
 use ash_typeck::types::{Type, TypeVar};
 use std::collections::HashMap;
@@ -75,10 +75,15 @@ fn test_resolve_type_returns_qualified_name() {
             VariantDef {
                 name: "Some".to_string(),
                 fields: vec![("value".to_string(), TypeExpr::Named("T".to_string()))],
+                payload: VariantPayload::Record(vec![(
+                    "value".to_string(),
+                    TypeExpr::Named("T".to_string()),
+                )]),
             },
             VariantDef {
                 name: "None".to_string(),
                 fields: vec![],
+                payload: VariantPayload::Unit,
             },
         ]),
         visibility: Visibility::Public,

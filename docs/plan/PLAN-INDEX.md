@@ -1951,7 +1951,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Deliverable:** A sequenced implementation queue that turns the Phase 64 type-system promotion packet into concrete parser/typechecker/interpreter work without reopening the contracts that Phase 64 just froze.
 
-**Small-step spec note:** The accepted Phase 61 small-step corpus is now also distilled into [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), which serves as the docs/spec home for the workflow-first small-step judgment, configuration contract, rule inventory, and SPEC-004 correspondence boundary derived from MCE-005 / TASK-395 / TASK-396.
+**Small-step spec note:** The accepted Phase 61 small-step corpus is now also distilled into [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), which serves as the docs/spec home for the workflow-first small-step judgment, configuration contract, explicit workflow rule definitions, and SPEC-004 correspondence boundary derived from MCE-005 / TASK-395 / TASK-396.
 
 ---
 
@@ -1985,7 +1985,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-428](tasks/TASK-428-implementation-conformance-contract.md) | Freeze the canonical implementation-conformance contract across big-step, small-step, and runtime-observable layers | SPEC-004, SPEC-025, SPEC-021, SPEC-026 | 3-5 | ✅ Complete |
-| [TASK-429](tasks/TASK-429-spec-025-full-rule-definitions.md) | Expand `SPEC-025` from rule inventory/family wording into full canonical workflow small-step rule definitions | SPEC-025, SPEC-001, SPEC-004 | 4-6 | 📝 Planned |
+| [TASK-429](tasks/TASK-429-spec-025-full-rule-definitions.md) | Expand `SPEC-025` from rule inventory/family wording into full canonical workflow small-step rule definitions | SPEC-025, SPEC-001, SPEC-004 | 4-6 | ✅ Complete |
 | [TASK-430](tasks/TASK-430-small-step-helper-contracts-and-state-taxonomy.md) | Make helper-owned small-step boundaries and blocked/suspended/invalid taxonomy fully explicit and proof-usable | SPEC-025, SPEC-004, MCE-007 | 3-5 | 📝 Planned |
 | [TASK-431](tasks/TASK-431-big-step-small-step-meta-properties-and-formalization-boundary-refresh.md) | Record explicit theorem targets, correspondence obligations, and update the formalization boundary to include the small-step spec | SPEC-004, SPEC-025, formalization-boundary | 3-5 | 📝 Planned |
 | [TASK-432](tasks/TASK-432-semantic-execution-record-and-terminal-projection-contract.md) | Freeze the runtime-facing semantic execution-record contract for cumulative `Ω` / `π` / `T` / `ε̂` and terminal projection | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | 📝 Planned |

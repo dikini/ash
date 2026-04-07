@@ -89,6 +89,9 @@ The first proof targets should be small and judgment-shaped:
 6. Conformance-surface preservation: proof-oriented comparison artifacts respect the surface split
    and bounded nondeterminism frozen in SPEC-026 rather than assuming one accidental
    implementation schedule or carrier layout.
+7. Small-step rule-shape usability: the explicit workflow rule definitions in SPEC-025 are suitable
+   as direct proof subjects for propagation, terminal-shape, and helper-boundary lemmas without
+   reconstructing rule premises from distributed prose.
 
 For SPEC-004 specifically, these initial proof targets now align with its explicit judgment and
 meta-property structure:

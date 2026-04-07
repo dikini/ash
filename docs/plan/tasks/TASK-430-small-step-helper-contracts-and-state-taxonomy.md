@@ -22,7 +22,7 @@ This remains docs/spec work only.
 ## Dependencies
 
 - ✅ [TASK-405: Authoritative Runtime Outcome/State Classification](TASK-405-authoritative-runtime-outcome-state-classification.md)
-- 📝 [TASK-429: SPEC-025 Full Rule Definitions](TASK-429-spec-025-full-rule-definitions.md)
+- ✅ [TASK-429: SPEC-025 Full Rule Definitions](TASK-429-spec-025-full-rule-definitions.md)
 
 ## Requirements
 

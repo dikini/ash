@@ -22,8 +22,8 @@ This remains docs/reference/spec work only.
 
 ## Dependencies
 
-- 📝 [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
-- 📝 [TASK-429: SPEC-025 Full Rule Definitions](TASK-429-spec-025-full-rule-definitions.md)
+- ✅ [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
+- ✅ [TASK-429: SPEC-025 Full Rule Definitions](TASK-429-spec-025-full-rule-definitions.md)
 - 📝 [TASK-430: Small-Step Helper Contracts and State Taxonomy](TASK-430-small-step-helper-contracts-and-state-taxonomy.md)
 
 ## Requirements

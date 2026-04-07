@@ -1,6 +1,6 @@
 # TASK-429: SPEC-025 Full Rule Definitions
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -21,7 +21,7 @@ This remains docs/spec work only.
 ## Dependencies
 
 - ✅ [TASK-427: SPEC-025 Faithful Closeout and Corpus Alignment](TASK-427-spec-025-faithful-closeout-and-corpus-alignment.md)
-- 📝 [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
+- ✅ [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
 
 ## Requirements
 
@@ -74,20 +74,31 @@ This task is complete when:
 ## Files
 
 - Modify: `docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md`
-- Modify: `docs/reference/formalization-boundary.md` (if rule-definition/proof-target wording needs refresh)
+- Modify: `docs/reference/formalization-boundary.md`
 - Modify: `docs/plan/PLAN-INDEX.md`
+- Modify: `docs/plan/tasks/TASK-429-spec-025-full-rule-definitions.md`
 - Modify: `CHANGELOG.md`
 
 ## Completion Checklist
 
-- [ ] `SPEC-025` revised with explicit rule definitions
-- [ ] canonical workflow families covered
-- [ ] premises / side conditions / propagation shapes made explicit
-- [ ] accepted v1 atomicity preserved
-- [ ] helper-owned boundaries preserved explicitly
-- [ ] compatibility with `SPEC-004` retained
-- [ ] planning/reference surfaces updated as needed
-- [ ] `CHANGELOG.md` updated
+- [x] `SPEC-025` revised with explicit rule definitions
+- [x] canonical workflow families covered
+- [x] premises / side conditions / propagation shapes made explicit
+- [x] accepted v1 atomicity preserved
+- [x] helper-owned boundaries preserved explicitly
+- [x] compatibility with `SPEC-004` retained
+- [x] planning/reference surfaces updated as needed
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+Completed 2026-04-07.
+
+- Revised [SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) from a rule-inventory presentation into a proof-usable rule-definition surface, with explicit canonical rules for terminal/structural, binding/branching, capability-policy-obligation, modal/fallback, and receive/concurrency workflow families.
+- Added specification-only residual-form notation (`RetVal`, `LetVal`, `IfVal`, `ForEachIter`, `BoundScope`, `ObligBody`, `WithBody`, `MaybeReject`, `ParState`) so propagation and terminal shape can be stated directly without changing surfaced IR or reopening expression micro-stepping.
+- Kept the accepted v1 helper-owned boundaries explicit: expressions, patterns, guard evaluation, receive selection, parallel aggregation, and obligation/provenance/control helpers remain atomic/helper-owned rather than flattened into fake machine detail.
+- Preserved honest wording that stronger runtime closure for cumulative carriers, retained completion packaging, and full helper-backed `Par` aggregation remains partial in current implementation evidence.
+- Updated the formalization boundary and Phase 67 plan/index surfaces so later proof/conformance tasks can cite `SPEC-025` as the rule-definition surface rather than reconstructing rule shape from distributed prose.
 
 ## Dependencies for Next Task
 
@@ -101,7 +112,7 @@ Required by:
 
 ## Notes
 
-Important constraints:
+Important constraints preserved:
 - Do not silently strengthen runtime claims while strengthening rule presentation.
 - Do not collapse helper-owned nondeterminism into fake deterministic machine rules.
 - Prefer explicit rule-shape clarity over informal paraphrase.

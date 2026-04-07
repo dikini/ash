@@ -38,7 +38,7 @@ This document defines:
 2. the configuration vocabulary carried between steps,
 3. the observability split between configuration state and step labels,
 4. the blocked/suspended vs stuck distinction,
-5. the canonical workflow-form rule inventory for v1 small-step semantics, and
+5. the canonical workflow-form rule definitions for v1 small-step semantics, and
 6. the correspondence contract back to SPEC-004 terminal outcomes.
 
 This document does not define:
@@ -169,7 +169,7 @@ Within `SPEC-025`, the following belong normatively in this specification:
 - the observability split between configuration state and labels;
 - the blocked/suspended vs stuck classification;
 - the v1 atomic-boundary contract;
-- the workflow-form rule inventory and helper-boundary ownership stance;
+- the workflow-form rule definitions and helper-boundary ownership stance;
 - the terminal projection back to SPEC-004;
 - the preserved compatibility constraints and explicit non-goals frozen in this section;
 - conformance requirements stated independently of current interpreter implementation details.
@@ -243,12 +243,15 @@ where:
 - `π` is the current provenance state,
 - `T` is the cumulative trace prefix,
 - `ε̂` is the cumulative effect-summary carrier,
-- `w` is the residual canonical workflow from SPEC-001,
+- `w` is the residual workflow term being reduced: ordinarily a canonical workflow form from
+  SPEC-001, and in §7 also possibly one of the specification-only residual forms introduced there to
+  make propagation and terminal structure explicit,
 - `v` is a returned value,
 - `err` is a runtime rejection owned by the SPEC-004 failure boundaries.
 
 This vocabulary deliberately reuses the semantic carriers already fixed by SPEC-004 rather than
-introducing a generic mutable store `S`.
+introducing a generic mutable store `S`. The specification-only residual forms named in §7 are
+presentation devices for rule definition; they do not enlarge the surfaced canonical IR.
 
 ### 2.4 Step Labels
 
@@ -347,26 +350,70 @@ micro-step their internals here. Where a helper can fail, rejection ownership re
 owning workflow/helper boundary and must stay within the existing SPEC-004 failure taxonomy rather
 than inventing a new small-step error channel.
 
-### 3.5 Rule-Family Presentation Contract
+### 3.5 Rule-Definition Presentation Contract
 
-The uppercase names used later in §7 are normative family markers for the accepted workflow-form
-inventory, not full formal inference schemata.
+The uppercase names used later in §7 are the canonical rule names for this specification's workflow-
+first small-step presentation.
 
-Accordingly:
+Normatively:
 
-- `SPEC-025` normatively fixes which workflow-form families must be covered,
-- it normatively fixes the semantic intent and ownership boundary of each family,
-- it does not require this document to spell out complete premise-by-premise inference rules beyond
-  the inventory/intent level accepted from MCE-005,
-- it does not require a one-to-one correspondence between these family markers and concrete runtime
-  implementation entry points.
+- each named rule in §7 is part of the canonical small-step contract;
+- each rule definition fixes its subject configuration form, result configuration form, and any
+  helper-owned side conditions needed for that step family;
+- helper premises name semantic ownership boundaries only and do not require a one-to-one concrete
+  runtime API;
+- omitted machine detail is omitted intentionally rather than left undefined: if a step depends on an
+  atomic expression, atomic pattern, or named helper boundary, that dependency remains atomic in v1.
+
+### 3.6 Rule Notation and Meta-Conventions
+
+Unless a rule states otherwise, premises are read under one ambient context `A = (C, P)`.
+
+The following meta-conventions are used in §7:
+
+1. `Null` denotes the canonical null value already used by the existing corpus.
+2. `T ++ ΔT` and `append_effect(ε̂, δε)` denote the configuration-side incorporation of the local
+   label deltas carried by `emit(ΔT, δε)`.
+3. If a rule emits `silent`, the cumulative carriers named in its conclusion are preserved exactly as
+   written in the resulting configuration.
+4. A rule with premise `A ⊢ Running(...) —μ→ κ1` is a propagation rule over one workflow subterm; it
+   does not authorize expression-level micro-stepping.
+5. Where a helper may produce multiple admitted outcomes, that bounded nondeterminism remains owned by
+   the helper contract rather than by presentation order in this document.
+
+The following residual forms are specification-only notation used to make rule shape explicit:
+
+- `RetVal(v)` for the post-expression staging state of `Ret`;
+- `LetVal(pat, v, w)` for the post-expression staging state of `Let`;
+- `IfVal(b, w_then, w_else)` for the post-condition staging state of `If`;
+- `ForEachIter(pat, vs, w_body)` for iterator residual structure;
+- `ObligBody(...)`, `ObligBodyRet(...)`, `WithBody(...)`, and `WithBodyRet(...)` for scoped-body
+  progress and scoped exit staging;
+- `MaybeReject(...)` for fallback-pending modal failure classification;
+- `ParState(bs)` for branch-local parallel progress state, with branch entries drawn from running or
+  terminal configurations.
+
+`w[Γ']` notation in a rule conclusion means “the same residual workflow `w`, now to be evaluated
+under environment `Γ'` carried by the resulting configuration.” It is not syntax substitution and not
+a new workflow constructor.
+
+The structural laws for these residual forms are part of the rule-definition contract:
+
+- they are introduced only by the rules in §7 that name them;
+- they are eliminated only by the matching terminal, propagation, or scope-exit rules in §7;
+- they do not introduce new user-visible workflow constructors or reopen the accepted helper-owned
+  boundaries.
+
+These are not surfaced workflow syntax and do not change the canonical IR defined by SPEC-001.
 
 ## 4. Terminal Projection and Big-Step Correspondence
 
 The terminal projection back to SPEC-004 is direct.
 
-- `Returned(v, Ω', π', T, ε̂')` reconstructs `Return(v, eff', T, Ω', π')`
-- `Rejected(err, Ω', π', T, ε̂')` reconstructs `Reject(err, eff', T, Ω', π')`
+```text
+project(Returned(v, Ω', π', T, ε̂')) = Return(v, eff', T, Ω', π')
+project(Rejected(err, Ω', π', T, ε̂')) = Reject(err, eff', T, Ω', π')
+```
 
 where `eff'` is the terminal projection of `ε̂'`.
 
@@ -385,6 +432,15 @@ The correspondence table is:
 
 Repeated small-step transitions must reconstruct the same terminal semantic meaning already owned by
 SPEC-004.
+
+Normatively, any complete small-step execution ending in terminal configuration `κt` must satisfy:
+
+```text
+A ⊢ κ0 —μ1→ κ1 —μ2→ ... —μn→ κt
+κt terminal
+────────────────────────────────────────
+project(κt) is the authoritative SPEC-004 outcome for κ0
+```
 
 ## 5. Progress Classification
 
@@ -446,109 +502,475 @@ This keeps the semantics workflow-first and avoids overcommitting to a machine d
 particular, pure expressions and pure pattern matching remain atomic subjudgments reused from
 SPEC-004 rather than new micro-step families introduced by this document.
 
-## 7. Canonical Rule Inventory
+## 7. Canonical Workflow Rule Definitions
 
-The rule inventory is defined over the canonical workflow forms of SPEC-001.
+The rules below are defined over the canonical workflow forms of SPEC-001.
 
-This section is normative as an inventory-and-intent contract. It fixes the accepted family
-coverage and semantic grouping for v1 small-step presentation, while intentionally stopping short
-of full formal inference schemata.
+This section is normative as the canonical rule-definition surface for the accepted workflow-first
+small-step semantics. It makes premises, side conditions, propagation structure, and terminal shape
+explicit enough for proof and conformance work to cite directly, while preserving helper-owned and
+atomic boundaries exactly where the accepted corpus already freezes them.
 
 ### 7.1 Terminal and Structural Rules
 
-Family markers:
+Canonical rules in this group:
 
 ```text
 DONE-TERM | RET-EVAL | RET-RETURN | SEQ-STEP | SEQ-ADVANCE | SEQ-REJECT
 ```
 
-Intent:
+`Done` is the explicit terminal no-op workflow form in canonical IR. Since terminal configurations
+are represented only by `Returned(...)` or `Rejected(...)`, the `Done` boundary is projected into
+successful terminal completion with the canonical null value.
 
-- `Done` reaches a terminal no-op boundary,
-- `Ret` atomically evaluates its expression and enters `Returned(...)`,
-- `Seq` steps the left workflow until it either returns normally and advances to the right workflow,
-  or rejects and propagates rejection.
+```text
+(DONE-TERM)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Done) —silent→ Returned(Null, Ω, π, T, ε̂)
+```
+
+`Ret` remains expression-atomic in v1. The expression premise is not a reducible workflow step; it
+is the reused SPEC-004 expression judgment.
+
+```text
+(RET-EVAL)
+  Γ ⊢e expr ⇓ v
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Ret { expr }) —silent→
+      Running(Γ, Ω, π, T, ε̂, RetVal(v))
+
+(RET-RETURN)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, RetVal(v)) —silent→ Returned(v, Ω, π, T, ε̂)
+```
+
+`RetVal(v)` is specification-only staging notation for the rule family above. It marks the unique
+post-expression, pre-terminal residual state of `Ret` and does not add surfaced IR syntax or reopen
+expression micro-stepping.
+
+`Seq` propagates the left workflow until that left side becomes terminal. There is no step from a
+right-hand subworkflow until the left side has completed successfully.
+
+```text
+(SEQ-STEP)
+  A ⊢ Running(Γ, Ω, π, T, ε̂, w1) —μ→ Running(Γ', Ω', π', T', ε̂', w1')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Seq { first = w1, second = w2 }) —μ→
+      Running(Γ', Ω', π', T', ε̂', Seq { first = w1', second = w2 })
+
+(SEQ-ADVANCE)
+  A ⊢ Running(Γ, Ω, π, T, ε̂, w1) —μ→ Returned(v, Ω', π', T', ε̂')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Seq { first = w1, second = w2 }) —μ→
+      Running(Γ, Ω', π', T', ε̂', w2)
+
+(SEQ-REJECT)
+  A ⊢ Running(Γ, Ω, π, T, ε̂, w1) —μ→ Rejected(err, Ω', π', T', ε̂')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Seq { first = w1, second = w2 }) —μ→
+      Rejected(err, Ω', π', T', ε̂')
+```
+
+Side conditions for this family:
+
+- `SEQ-STEP` applies only when the left-side step remains non-terminal and returns a new residual
+  workflow.
+- `SEQ-ADVANCE` is the unique sequencing rule that consumes successful completion of the left side;
+  the returned value `v` from the left side is not rebound by `Seq`.
+- `SEQ-REJECT` preserves rejection ownership from the left-side step; the sequencing form does not
+  invent a new rejection category.
 
 ### 7.2 Binding and Branching Rules
 
-Family markers:
+Canonical rules in this group:
 
 ```text
 LET-EVAL | LET-BIND | LET-REJECT | IF-COND | IF-TRUE | IF-FALSE |
 FOREACH-INIT | FOREACH-STEP | FOREACH-DONE
 ```
 
-Intent:
+`Let` keeps both expression evaluation and pattern matching atomic.
 
-- `Let` atomically evaluates the bound expression, then applies canonical pattern binding via
-  `Γ ⊕ ΔΓ`,
-- binding failure is mapped through the existing runtime failure ownership contract,
-- `If` atomically evaluates the condition and chooses the continuation branch,
-- `ForEach` evaluates the collection atomically, then iterates one element at a time while
-  preserving canonical workflow sequencing.
+```text
+(LET-EVAL)
+  Γ ⊢e expr ⇓ v
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Let { pattern = pat, expr, continuation = w }) —silent→
+      Running(Γ, Ω, π, T, ε̂, LetVal(pat, v, w))
+
+(LET-BIND)
+  Γ ⊢p pat ⇐ v ⇓ ΔΓ
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, LetVal(pat, v, w)) —silent→
+      Running(Γ ⊕ ΔΓ, Ω, π, T, ε̂, w)
+
+(LET-REJECT)
+  bind_failure(pat, v) ↝ err
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, LetVal(pat, v, w)) —silent→
+      Rejected(err, Ω, π, T, ε̂)
+```
+
+Side conditions:
+
+- `bind_failure(pat, v) ↝ err` is schematic notation for the existing SPEC-004 pattern-failure
+  ownership boundary; in admissible v1 cases this yields the established pattern-owned rejection
+  category rather than a new small-step-only error class.
+- `LetVal(...)` is specification-only staging notation analogous to `RetVal(...)`.
+
+`If` atomically decides its branch by evaluating the condition once.
+
+```text
+(IF-COND)
+  Γ ⊢e condition ⇓ b
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      If { condition, then_branch = w_then, else_branch = w_else }) —silent→
+      Running(Γ, Ω, π, T, ε̂, IfVal(b, w_then, w_else))
+
+(IF-TRUE)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, IfVal(true, w_then, w_else)) —silent→
+      Running(Γ, Ω, π, T, ε̂, w_then)
+
+(IF-FALSE)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, IfVal(false, w_then, w_else)) —silent→
+      Running(Γ, Ω, π, T, ε̂, w_else)
+```
+
+`ForEach` atomically evaluates its collection, then iterates one element at a time through explicit
+residual workflow structure rather than expression micro-steps.
+
+```text
+(FOREACH-INIT)
+  Γ ⊢e collection ⇓ List(v1, ..., vn)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      ForEach { pattern = pat, collection, body = w_body }) —silent→
+      Running(Γ, Ω, π, T, ε̂, ForEachIter(pat, [v1, ..., vn], w_body))
+
+(FOREACH-STEP)
+  Γ ⊢p pat ⇐ v ⇓ ΔΓ
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, ForEachIter(pat, v :: vs, w_body)) —silent→
+      Running(Γ, Ω, π, T, ε̂,
+        Seq {
+          first = w_body[Γ ⊕ ΔΓ],
+          second = ForEachIter(pat, vs, w_body)
+        })
+
+(FOREACH-DONE)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, ForEachIter(pat, [], w_body)) —silent→
+      Running(Γ, Ω, π, T, ε̂, Done)
+```
+
+Side conditions:
+
+- `FOREACH-INIT` is defined only for collection results in the admitted list-shaped domain of the
+  canonical workflow form.
+- Pattern failure for an element is mapped through the same pattern-owned rejection boundary used by
+  `LET-REJECT`.
+- `ForEachIter(...)` is specification-only residual notation making the iteration structure explicit;
+  it does not add surfaced IR forms.
+- `w_body[Γ ⊕ ΔΓ]` in `FOREACH-STEP` denotes the same canonical workflow body evaluated under the
+  extended environment produced by atomic pattern binding. It is environment-instantiation notation,
+  not a new workflow constructor.
 
 ### 7.3 Capability, Policy, and Obligation Rules
 
-Family markers:
+Canonical rules in this group:
 
 ```text
 OBSERVE-STEP | ORIENT-STEP | PROPOSE-STEP | DECIDE-STEP | CHECK-STEP |
-ACT-STEP | OBLIG-ENTER | OBLIG-EXIT | WITH-ENTER | WITH-EXIT
+ACT-STEP | OBLIG-ENTER | OBLIG-STEP | OBLIG-EXIT |
+WITH-ENTER | WITH-STEP | WITH-EXIT
 ```
 
-Intent:
+These rules preserve the accepted helper-owned boundaries from SPEC-004. The workflow rule fixes the
+surrounding small-step shape; the helper premise owns the operation-specific internals.
 
-- `Observe` performs capability lookup/observation under the existing helper boundary, binds its
-  result pattern, and continues,
-- `Orient` atomically evaluates its expression and continues,
-- `Propose` performs proposal formation under the existing helper contract and continues,
-- `Decide` atomically evaluates its decision expression, applies the named policy, then continues or
-  rejects,
-- `Check` discharges/checks the obligation and continues or rejects,
-- `Act` executes under guard/helper-owned action contracts as already defined by SPEC-004,
-- `Oblig` and `With` preserve scoped obligation/capability transitions without inventing new runtime
-  structure.
+```text
+(OBSERVE-STEP)
+  observe_capability(C, capability, Γ, Ω, π) ↝ ObserveOk(v, ΔΩ, Δπ, ΔT, δε)
+  Γ ⊢p pattern ⇐ v ⇓ ΔΓ
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      Observe { capability, pattern, continuation = w }) —emit(ΔT, δε)→
+      Running(Γ ⊕ ΔΓ, Ω ⊗ ΔΩ, π ⊗ Δπ, T ++ ΔT, append_effect(ε̂, δε), w)
 
-The helper boundaries named here are ownership boundaries only. They must remain faithful to
-SPEC-004's capability/policy/obligation contracts, but `SPEC-025` does not require any particular
-API spelling for them.
+(ORIENT-STEP)
+  Γ ⊢e expr ⇓ v
+  orient_update(Γ, Ω, π, v) ↝ (Γ', Ω', π', ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Orient { expr, continuation = w }) —emit(ΔT, δε)→
+      Running(Γ', Ω', π', T ++ ΔT, append_effect(ε̂, δε), w)
+
+(PROPOSE-STEP)
+  form_proposal(C, P, action, Γ, Ω, π) ↝ ProposalOk(Γ', Ω', π', ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Propose { action, continuation = w }) —emit(ΔT, δε)→
+      Running(Γ', Ω', π', T ++ ΔT, append_effect(ε̂, δε), w)
+
+(DECIDE-STEP)
+  Γ ⊢e expr ⇓ v
+  apply_policy(P, policy, v, Γ, Ω, π) ↝ Permit(Ω', π', ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      Decide { expr, policy, continuation = w }) —emit(ΔT, δε)→
+      Running(Γ, Ω', π', T ++ ΔT, append_effect(ε̂, δε), w)
+
+(CHECK-STEP)
+  check_obligation(Ω, obligation, Γ, π) ↝ Satisfied(Ω', π', ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      Check { obligation, continuation = w }) —emit(ΔT, δε)→
+      Running(Γ, Ω', π', T ++ ΔT, append_effect(ε̂, δε), w)
+
+(ACT-STEP)
+  evaluate_guard(C, P, action, guard, Γ, Ω, π) ↝ GuardOk
+  perform_action(C, action, provenance, Γ, Ω, π) ↝ ActOk(v, Ω', π', ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Act { action, guard, provenance }) —emit(ΔT, δε)→
+      Returned(v, Ω', π', T ++ ΔT, append_effect(ε̂, δε))
+```
+
+Failure-side conditions for this family:
+
+- `observe_capability(...)`, `form_proposal(...)`, `apply_policy(...)`, `check_obligation(...)`,
+  `evaluate_guard(...)`, and `perform_action(...)` may fail only through their already-owned SPEC-004
+  rejection boundaries.
+- Policy denial remains owned by `DECIDE-STEP` and reconstructs the existing
+  `PolicyViolation(policy, v)` category.
+- Obligation failure remains owned by `CHECK-STEP` and reconstructs the existing
+  `ObligationViolation(obligation)` category.
+- Guard failure remains owned by `ACT-STEP` and reconstructs the existing
+  `GuardViolation(action, guard)` category.
+- None of these helpers authorize expression-level micro-steps or runtime-specific machine detail.
+
+Scoped forms preserve helper-owned entry/exit boundaries explicitly.
+
+```text
+(OBLIG-ENTER)
+  enter_obligation_scope(Ω, π, role, Γ) ↝ (Ω_in, π_in)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Oblig { role, workflow = w }) —silent→
+      Running(Γ, Ω_in, π_in, T, ε̂, ObligBody(role, Ω, π, w))
+
+(OBLIG-STEP)
+  A ⊢ Running(Γ, Ω_in, π_in, T, ε̂, w) —μ→ Running(Γ', Ω_in', π_in', T', ε̂', w')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω_in, π_in, T, ε̂, ObligBody(role, Ω_outer, π_outer, w)) —μ→
+      Running(Γ', Ω_in', π_in', T', ε̂', ObligBody(role, Ω_outer, π_outer, w'))
+
+(OBLIG-CAPTURE-RETURN)
+  A ⊢ Running(Γ, Ω_in, π_in, T, ε̂, w) —μ→ Returned(v, Ω_in', π_in', T', ε̂')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω_in, π_in, T, ε̂, ObligBody(role, Ω_outer, π_outer, w)) —μ→
+      Running(Γ, Ω_in', π_in', T', ε̂', ObligBodyRet(role, Ω_outer, π_outer, v))
+
+(OBLIG-EXIT)
+  leave_obligation_scope(role, Ω_outer, π_outer, Ω_in, π_in) ↝ (Ω', π', ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω_in, π_in, T, ε̂, ObligBodyRet(role, Ω_outer, π_outer, v)) —emit(ΔT, δε)→
+      Returned(v, Ω', π', T ++ ΔT, append_effect(ε̂, δε))
+
+(WITH-ENTER)
+  enter_capability_scope(C, capability, Γ, Ω, π) ↝ (Γ', Ω', π')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, With { capability, workflow = w }) —silent→
+      Running(Γ', Ω', π', T, ε̂, WithBody(capability, Γ, Ω, π, w))
+
+(WITH-STEP)
+  A ⊢ Running(Γ_in, Ω_in, π_in, T, ε̂, w) —μ→ Running(Γ_in', Ω_in', π_in', T', ε̂', w')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ_in, Ω_in, π_in, T, ε̂,
+      WithBody(capability, Γ_outer, Ω_outer, π_outer, w)) —μ→
+      Running(Γ_in', Ω_in', π_in', T', ε̂',
+        WithBody(capability, Γ_outer, Ω_outer, π_outer, w'))
+
+(WITH-CAPTURE-RETURN)
+  A ⊢ Running(Γ_in, Ω_in, π_in, T, ε̂, w) —μ→ Returned(v, Ω_in', π_in', T', ε̂')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ_in, Ω_in, π_in, T, ε̂,
+      WithBody(capability, Γ_outer, Ω_outer, π_outer, w)) —μ→
+      Running(Γ_in, Ω_in', π_in', T', ε̂',
+        WithBodyRet(capability, Γ_outer, Ω_outer, π_outer, v))
+
+(WITH-EXIT)
+  leave_capability_scope(capability, Γ_outer, Ω_outer, π_outer, Γ_in, Ω_in, π_in)
+    ↝ (Γ', Ω', π', ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ_in, Ω_in, π_in, T, ε̂,
+      WithBodyRet(capability, Γ_outer, Ω_outer, π_outer, v)) —emit(ΔT, δε)→
+      Returned(v, Ω', π', T ++ ΔT, append_effect(ε̂, δε))
+```
+
+Propagation conventions for scoped forms:
+
+- `ObligBody(...)` and `WithBody(...)` are specification-only residual forms whose inner workflow
+  steps by the same `A ⊢ κ —μ→ κ'` judgment.
+- When the inner workflow rejects, that rejection propagates outward without being reclassified by the
+  scope wrapper unless the owning SPEC-004 helper boundary explicitly says otherwise.
+- When the inner workflow returns, the corresponding `...BodyRet(...)` residual form records the
+  returned value so the unique exit rule can reconcile outgoing `Ω` / `π` state without discarding
+  that terminal value.
 
 ### 7.4 Modal and Fallback Rules
 
-Family markers:
+Canonical rules in this group:
 
 ```text
-MAYBE-PRIMARY | MAYBE-FALLBACK | MUST-STEP | MUST-REJECT
+MAYBE-PRIMARY | MAYBE-CAPTURE-REJECT | MAYBE-FALLBACK | MUST-STEP | MUST-REJECT
 ```
 
-Intent:
+```text
+(MAYBE-PRIMARY)
+  A ⊢ Running(Γ, Ω, π, T, ε̂, w_primary) —μ→ Running(Γ', Ω', π', T', ε̂', w_primary')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      Maybe { primary = w_primary, fallback = w_fallback }) —μ→
+      Running(Γ', Ω', π', T', ε̂',
+        Maybe { primary = w_primary', fallback = w_fallback })
 
-- `Maybe` steps the primary branch first, then switches to fallback only under the rejection class
-  permitted by the canonical contract,
-- `Must` preserves the strengthened mandatory-success behavior already owned by SPEC-004.
+(MAYBE-CAPTURE-REJECT)
+  A ⊢ Running(Γ, Ω, π, T, ε̂, w_primary) —μ→ Rejected(err, Ω', π', T', ε̂')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      Maybe { primary = w_primary, fallback = w_fallback }) —μ→
+      Running(Γ, Ω, π, T, ε̂, MaybeReject(err, fallback = w_fallback))
+
+(MAYBE-FALLBACK)
+  fallback_permitted(err)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      MaybeReject(err, fallback = w_fallback)) —silent→
+      Running(Γ, Ω, π, T, ε̂, w_fallback)
+
+(MUST-STEP)
+  A ⊢ Running(Γ, Ω, π, T, ε̂, w) —μ→ κ'
+  κ' ≠ Rejected(_, _, _, _, _)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Must { workflow = w }) —μ→ wrap_must(κ')
+
+(MUST-REJECT)
+  A ⊢ Running(Γ, Ω, π, T, ε̂, w) —μ→ Rejected(err, Ω', π', T', ε̂')
+  strengthen_must_rejection(err) ↝ err'
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Must { workflow = w }) —μ→
+      Rejected(err', Ω', π', T', ε̂')
+```
+
+Side conditions:
+
+- `MAYBE-FALLBACK` applies only for rejection classes that the canonical contract admits as
+  fallback-triggering; all other rejections propagate unchanged.
+- `MaybeReject(...)` is specification-only staging notation for “primary branch has just rejected,
+  pending fallback classification.”
+- `wrap_must(κ')` means: if `κ'` remains running, rebuild the residual `Must { ... }`; if `κ'` is a
+  successful terminal configuration, preserve that terminal configuration.
+- `strengthen_must_rejection(err)` is owned by the same mandatory-success boundary already defined by
+  SPEC-004; this document does not flatten that contract into ad hoc new machine rules.
 
 ### 7.5 Receive and Concurrency Rules
 
-Family markers:
+Canonical rules in this group:
 
 ```text
 RECEIVE-SELECTED | RECEIVE-FALLBACK | RECEIVE-FALLTHROUGH | RECEIVE-BLOCKED |
-PAR-STEP | PAR-BRANCH-TERM | PAR-AGGREGATE | PAR-REJECT
+PAR-ENTER | PAR-STEP | PAR-AGGREGATE | PAR-REJECT
 ```
 
-Intent:
+`Receive` delegates selection and classification to the already-owned helper boundary.
 
-- selected receive arms continue with their bodies,
-- wildcard/fallback receive behavior remains explicit,
-- blocking receive with no currently selectable arm is blocked/suspended rather than stuck,
-- `Par` progresses by branch-local interleaving,
-- terminal parallel aggregation remains helper-backed rather than encoded as fake left-to-right
-  sequencing,
-- concurrent rejection semantics preserve helper-owned behavior rather than imposing sequential
-  short-circuiting.
+```text
+(RECEIVE-SELECTED)
+  select_receive_outcome(mode, control, arms, Γ, Ω, π)
+    ↝ Selected(msg, ΔΓ, body, ΔΩ, Δπ, ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Receive { mode, arms, control }) —emit(ΔT, δε)→
+      Running(Γ ⊕ ΔΓ, Ω ⊗ ΔΩ, π ⊗ Δπ, T ++ ΔT, append_effect(ε̂, δε), body)
 
-The `Par` family is therefore not a disguised sequential evaluation order. Presentation order in
-this section does not collapse the accepted interleaving semantics into a left-to-right machine.
+(RECEIVE-FALLBACK)
+  select_receive_outcome(mode, control, arms, Γ, Ω, π)
+    ↝ Fallback(body, ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Receive { mode, arms, control }) —emit(ΔT, δε)→
+      Running(Γ, Ω, π, T ++ ΔT, append_effect(ε̂, δε), body)
+
+(RECEIVE-FALLTHROUGH)
+  select_receive_outcome(mode, control, arms, Γ, Ω, π)
+    ↝ Fallthrough(ΔT, δε)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Receive { mode, arms, control }) —emit(ΔT, δε)→
+      Returned(Null, Ω, π, T ++ ΔT, append_effect(ε̂, δε))
+```
+
+`RECEIVE-BLOCKED` is a classification rule, not a transition rule. It records when a receive is live
+but presently non-progressing.
+
+```text
+(RECEIVE-BLOCKED)
+  select_receive_outcome(mode, control, arms, Γ, Ω, π) ↝ Blocked
+  ───────────────────────────────────────────────────────────────
+  Running(Γ, Ω, π, T, ε̂, Receive { mode, arms, control }) is blocked/suspended
+```
+
+Side conditions:
+
+- `Blocked` is admissible only for receive modes whose canonical contract permits waiting.
+- Non-blocking miss remains `RECEIVE-FALLTHROUGH`, not `RECEIVE-BLOCKED`.
+- Receive-side rejection remains helper-owned and reconstructs the existing SPEC-004 receive failure
+  taxonomy rather than inventing a distinct small-step error channel.
+
+`Par` remains interleaving-compatible and helper-backed. The canonical `Par { workflows }` form is
+presented through specification-only residual `ParState(bs)` so branch-local progress can be named
+explicitly without adding new surfaced syntax. The rule presentation below fixes the branch-local
+step and terminal-shape contract without collapsing the semantics into left-to-right sequencing.
+
+```text
+(PAR-ENTER)
+  initialize_parallel_branches(Γ, Ω, π, T, ε̂, workflows) ↝ bs
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, Par { workflows }) —silent→ Running(Γ, Ω, π, T, ε̂, ParState(bs))
+
+(PAR-STEP)
+  i ∈ active_indices(bs)
+  A ⊢ branch_config(bs, i) —μ→ branch_config'(bs, i)
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, ParState(bs)) —μ→
+      Running(Γ, Ω, π, T, ε̂, ParState(update_branch(bs, i, branch_config'(bs, i))))
+
+(PAR-AGGREGATE)
+  all_terminal(bs)
+  combine_parallel_outcomes(Γ, Ω, π, T, ε̂, bs)
+    ↝ ParallelReturn(vs, Ω', π', T', ε̂')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, ParState(bs)) —silent→
+      Returned(vs, Ω', π', T', ε̂')
+
+(PAR-REJECT)
+  all_terminal(bs)
+  combine_parallel_outcomes(Γ, Ω, π, T, ε̂, bs)
+    ↝ ParallelReject(err, Ω', π', T', ε̂')
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂, ParState(bs)) —silent→
+      Rejected(err, Ω', π', T', ε̂')
+```
+
+Side conditions:
+
+- `ParState(bs)` is specification-only residual notation that makes branch-local progress explicit.
+  It is not surfaced syntax and does not prescribe one machine layout.
+- `PAR-STEP` permits any branch index admitted by the concurrency contract; presentation order here is
+  not a scheduler commitment.
+- branch terminal arrival is represented inside `ParState(bs)` branch entries rather than by a
+  separate surfaced workflow form.
+- `combine_parallel_outcomes(...)` remains the authoritative owner of branch-result collation,
+  cumulative-carrier aggregation, and concurrent rejection combination.
+- No rule in this family imposes sequential short-circuiting inconsistent with the accepted helper-
+  backed concurrent contract.
 
 ## 8. Concurrency and Determinism Boundary
 
@@ -592,7 +1014,8 @@ Current inspected interpreter evidence supports the following receive-path corre
 - timeout or wildcard receive continues through the wildcard arm,
 - blocking receive waits for message arrival rather than introducing semantic stuckness.
 
-This is consistent with the canonical `RECEIVE-FALLTHROUGH` and `RECEIVE-BLOCKED` inventory.
+This is consistent with the canonical `RECEIVE-FALLTHROUGH`, `RECEIVE-BLOCKED`, and selected/fallback
+rule families defined above.
 
 ### 9.2 Coarse Runtime Outcome State Evidence
 
@@ -636,7 +1059,8 @@ Evidence class: partial/reconstructed.
 
 Current interpreter evidence shows `Par` being realized by concurrent branch execution followed by
 aggregate result collection. This is partial implementation evidence that terminal aggregation remains
-a distinct boundary, which is consistent with the helper-backed `PAR-AGGREGATE` stance defined here.
+a distinct boundary, which is consistent with the helper-backed `PAR-AGGREGATE` / `PAR-REJECT`
+stance defined here.
 
 This specification does not require that exact implementation strategy. It requires only the same
 semantic boundary and terminal reconstruction contract, and it does not treat the current runtime as
@@ -693,9 +1117,9 @@ An implementation conforms to this specification iff:
 
 Deferred to later work:
 
-- exact fully formal per-rule inference schemata beyond the rule inventory here,
+- fully mechanized meta-proofs over the rule set given here,
+- standalone proof-oriented helper-contract packages and state-taxonomy closure beyond the rule layer,
 - concrete runtime machine mapping and queue/tombstone representation,
-- proof-oriented small-step / big-step correspondence packaging,
 - full interpreter/runtime alignment closeout across all five layers.
 
 These are owned by the downstream MCE-006 / MCE-007 alignment work rather than by this document.

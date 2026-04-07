@@ -242,6 +242,7 @@ mod tests {
 
         WorkflowDef {
             name: "test_workflow".into(),
+            type_params: vec![],
             params: vec![],
             declared_return_type: None,
             plays_roles,

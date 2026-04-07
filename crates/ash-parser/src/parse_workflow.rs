@@ -15,8 +15,8 @@ use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
-    Contract, EnsuresClause, Expr, Guard, Name, ObligationRef, Parameter, Requirement, RoleRef,
-    Type, Workflow, WorkflowDef,
+    Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter,
+    Requirement, RoleRef, Type, TypeParam, Workflow, WorkflowDef,
 };
 use crate::token::Span;
 
@@ -27,6 +27,14 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     let _ = keyword("workflow").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
+
+    // Parse optional generic parameters: <T: Explain>
+    skip_whitespace_and_comments(input);
+    let type_params = if input.input.starts_with("<") {
+        parse_type_params(input)?
+    } else {
+        vec![]
+    };
 
     // Parse optional parameters: (x: Int, y: String)
     skip_whitespace_and_comments(input);
@@ -59,6 +67,7 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
 
     Ok(WorkflowDef {
         name: name.into(),
+        type_params,
         params,
         declared_return_type,
         plays_roles,
@@ -445,6 +454,61 @@ fn starts_with_keyword(input: &ParseInput, word: &str) -> bool {
         .chars()
         .next()
         .is_none_or(|c| !c.is_ascii_alphanumeric() && c != '_')
+}
+
+/// Parse generic type parameters with canonical interface bounds: `<T: Explain>`
+fn parse_type_params(input: &mut ParseInput) -> ModalResult<Vec<TypeParam>> {
+    let _ = literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut params = Vec::new();
+
+    loop {
+        skip_whitespace_and_comments(input);
+        let start = input.state;
+        let name = identifier(input)?;
+        skip_whitespace_and_comments(input);
+
+        let mut bounds = Vec::new();
+        if input.input.starts_with(":") {
+            let _ = literal_str(":").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            bounds.push(parse_interface_bound(input)?);
+        }
+
+        params.push(TypeParam {
+            name: name.into(),
+            bounds,
+            span: span_from(&start, &input.state),
+        });
+
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            continue;
+        }
+
+        if input.input.starts_with(">") {
+            let _ = literal_str(">").parse_next(input)?;
+            break;
+        }
+
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    Ok(params)
+}
+
+fn parse_interface_bound(input: &mut ParseInput) -> ModalResult<InterfaceBound> {
+    let start = input.state;
+    let interface = identifier(input)?;
+    Ok(InterfaceBound {
+        interface: interface.into(),
+        span: span_from(&start, &input.state),
+    })
 }
 
 /// Parse workflow parameters: `(x: Int, y: String)`

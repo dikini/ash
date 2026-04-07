@@ -1,6 +1,6 @@
 # TASK-421: Closed-World Interfaces AST and Parser Substrate
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -73,10 +73,10 @@ Run at least:
 
 ## Completion Checklist
 
-- [ ] interface/impl AST substrate added
-- [ ] parser accepts frozen MVP forms
-- [ ] parser tests added/updated
-- [ ] `CHANGELOG.md` updated
+- [x] interface/impl AST substrate added
+- [x] parser accepts frozen MVP forms
+- [x] parser tests added/updated
+- [x] `CHANGELOG.md` updated
 
 ## Notes
 

@@ -376,6 +376,21 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let name = identifier(input)?;
     let name_str: Name = name.into();
 
+    if opt(literal_str("::")).parse_next(input)?.is_some() {
+        let method = identifier(input)?;
+        let _ = literal_str("(").parse_next(input)?;
+        let argument = expr(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(")").parse_next(input)?;
+        let span = span_from(&start_pos, &input.state);
+        return Ok(Expr::InterfaceMethodCall {
+            interface: name_str,
+            method: method.into(),
+            argument: Box::new(argument),
+            span,
+        });
+    }
+
     if parse_inline_record_constructor_start(input) {
         skip_whitespace_and_comments(input);
         let fields = if literal_str("}").parse_next(input).is_ok() {

@@ -30,6 +30,8 @@ use crate::surface::{Definition, RoleDef};
 pub enum LoweringError {
     /// Float literals are not supported in the core IR.
     FloatNotSupported,
+    /// Interface method calls are parser/AST-only until TASK-422.
+    InterfaceMethodCallNotSupported,
 }
 
 impl fmt::Display for LoweringError {
@@ -37,6 +39,9 @@ impl fmt::Display for LoweringError {
         match self {
             LoweringError::FloatNotSupported => {
                 write!(f, "float literals are not supported")
+            }
+            LoweringError::InterfaceMethodCallNotSupported => {
+                write!(f, "interface method calls are not lowered until TASK-422")
             }
         }
     }
@@ -730,6 +735,8 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             arguments: args.iter().map(lower_expr).collect::<Result<Vec<_>, _>>()?,
         }),
 
+        Expr::InterfaceMethodCall { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
+
         Expr::Match {
             scrutinee, arms, ..
         } => Ok(CoreExpr::Match {
@@ -1110,6 +1117,22 @@ mod tests {
         let surface = SurfaceExpr::Literal(SurfaceLiteral::Float(3.14));
         let result = lower_expr(&surface);
         assert!(matches!(result, Err(LoweringError::FloatNotSupported)));
+    }
+
+    #[test]
+    fn test_interface_method_calls_are_parser_only_until_task_422() {
+        let surface = SurfaceExpr::InterfaceMethodCall {
+            interface: "Explain".into(),
+            method: "explain".into(),
+            argument: Box::new(SurfaceExpr::Variable("value".into())),
+            span: crate::token::Span::new(0, 22, 1, 1),
+        };
+
+        let result = lower_expr(&surface);
+        assert!(matches!(
+            result,
+            Err(LoweringError::InterfaceMethodCallNotSupported)
+        ));
     }
 
     #[test]

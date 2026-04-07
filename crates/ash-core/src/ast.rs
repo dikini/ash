@@ -236,10 +236,26 @@ pub struct Parameter {
     pub span: Span,
 }
 
+/// Generic type parameter with canonical interface bounds.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeParam {
+    pub name: Name,
+    pub bounds: Vec<InterfaceBound>,
+    pub span: Span,
+}
+
+/// Canonical interface bound `T: Interface` preserved in the AST substrate.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InterfaceBound {
+    pub interface: Name,
+    pub span: Span,
+}
+
 /// Workflow definition with contract support
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorkflowDef {
     pub name: Name,
+    pub type_params: Vec<TypeParam>,
     pub params: Vec<Parameter>,
     pub body: Workflow,
     pub export: bool,
@@ -413,6 +429,12 @@ pub enum Expr {
     Call {
         func: Name,
         arguments: Vec<Expr>,
+    },
+    /// Explicit interface method call preserved before TASK-422 lowering/type resolution.
+    InterfaceMethodCall {
+        interface: Name,
+        method: Name,
+        argument: Box<Expr>,
     },
 
     /// Constructor expression: Some { value: 42 }
@@ -620,6 +642,10 @@ pub enum ModuleItem {
     Type(TypeDef),
     /// Role definition
     Role(Role),
+    /// Interface definition
+    Interface(InterfaceDef),
+    /// Interface impl definition
+    Impl(ImplDef),
 }
 
 /// Type definition in source code
@@ -692,6 +718,40 @@ pub enum TypeExpr {
     Record(Vec<(Name, TypeExpr)>),
 }
 
+/// Interface definition in source/core metadata.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InterfaceDef {
+    pub name: Name,
+    pub type_params: Vec<TypeVar>,
+    pub methods: Vec<InterfaceMethodSig>,
+    pub visibility: Visibility,
+}
+
+/// Interface method signature preserved in the AST substrate.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InterfaceMethodSig {
+    pub name: Name,
+    pub params: Vec<TypeExpr>,
+    pub return_type: TypeExpr,
+}
+
+/// Explicit interface implementation preserved for later coherence/resolution work.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImplDef {
+    pub visibility: Visibility,
+    pub interface: Name,
+    pub type_args: Vec<TypeExpr>,
+    pub methods: Vec<ImplMethodDef>,
+}
+
+/// Method body preserved inside an impl block.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImplMethodDef {
+    pub name: Name,
+    pub param: Name,
+    pub body: Expr,
+}
+
 /// Top-level definition
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Definition {
@@ -727,6 +787,34 @@ mod tests {
             }],
             control: false,
         };
+
+        let _interface_call = Expr::InterfaceMethodCall {
+            interface: "Explain".to_string(),
+            method: "explain".to_string(),
+            argument: Box::new(Expr::Variable("value".to_string())),
+        };
+
+        let _module_interface = ModuleItem::Interface(InterfaceDef {
+            name: "Explain".to_string(),
+            type_params: vec!["T".to_string()],
+            methods: vec![InterfaceMethodSig {
+                name: "explain".to_string(),
+                params: vec![TypeExpr::Named("T".to_string())],
+                return_type: TypeExpr::Named("String".to_string()),
+            }],
+            visibility: Visibility::Private,
+        });
+
+        let _module_impl = ModuleItem::Impl(ImplDef {
+            visibility: Visibility::Private,
+            interface: "Explain".to_string(),
+            type_args: vec![TypeExpr::Named("PolicyDecision".to_string())],
+            methods: vec![ImplMethodDef {
+                name: "explain".to_string(),
+                param: "value".to_string(),
+                body: Expr::Literal(Value::String("policy".to_string())),
+            }],
+        });
 
         // Test Orient
         let _orient = Workflow::Orient {

@@ -30,6 +30,7 @@ fn test_yield_lowers_to_yield_not_done() {
     // Create a workflow definition to use with lower_workflow
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: vec![],
@@ -67,6 +68,7 @@ fn test_yield_preserves_role() {
 
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: vec![],
@@ -105,6 +107,7 @@ fn test_yield_preserves_request_expr() {
 
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: vec![],
@@ -148,6 +151,7 @@ fn test_yield_creates_continuation() {
 
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: vec![],
@@ -192,6 +196,7 @@ fn test_yield_with_multiple_arms_creates_continuation() {
 
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: vec![],
@@ -229,6 +234,7 @@ fn test_yield_preserves_span() {
 
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: vec![],
@@ -268,6 +274,7 @@ fn test_yield_continuation_has_let_binding() {
 
     let wf_def = ash_parser::surface::WorkflowDef {
         name: "test".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: vec![],

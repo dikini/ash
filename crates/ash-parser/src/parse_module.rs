@@ -14,8 +14,9 @@ use crate::parse_expr::expr;
 use crate::parse_visibility::parse_visibility;
 use crate::parse_workflow::parse_capabilities_clause;
 use crate::surface::{
-    CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, Param, Predicate,
-    ProxyDef, RoleDef, Type, Workflow, YieldArm,
+    CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, ImplDef, ImplMethodDef,
+    InterfaceDef, InterfaceMethodSig, Param, Predicate, ProxyDef, RoleDef, Type, Visibility,
+    Workflow, YieldArm,
 };
 
 /// Parse a module declaration.
@@ -122,6 +123,16 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             continue;
         }
 
+        if starts_with_visible_keyword(input, "interface") {
+            definitions.push(parse_interface_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "impl") {
+            definitions.push(parse_impl_definition(input)?);
+            continue;
+        }
+
         if starts_with_unsupported_inline_definition(input) {
             return Err(winnow::error::ErrMode::Backtrack(
                 winnow::error::ContextError::new(),
@@ -212,6 +223,171 @@ fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         obligations,
         span: crate::input::span_from(&start_pos, &input.state),
     }))
+}
+
+fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+    let _ = keyword("interface").parse_next(input)?;
+    skip_whitespace(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let type_params = parse_optional_type_parameter_names(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut methods = Vec::new();
+    while !input.input.starts_with("}") {
+        methods.push(parse_interface_method_signature(input)?);
+        skip_whitespace_and_comments(input);
+        consume_optional_comma(input);
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+
+    Ok(Definition::Interface(InterfaceDef {
+        visibility,
+        name: name.into(),
+        type_params,
+        methods,
+        span: crate::input::span_from(&start_pos, &input.state),
+    }))
+}
+
+fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<InterfaceMethodSig> {
+    let start = input.state;
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let param_type = parse_surface_type(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let return_type = parse_surface_type(input)?;
+
+    Ok(InterfaceMethodSig {
+        name: name.into(),
+        params: vec![param_type],
+        return_type,
+        span: crate::input::span_from(&start, &input.state),
+    })
+}
+
+fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+    let _ = keyword("impl").parse_next(input)?;
+    skip_whitespace(input);
+    let interface = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let type_args = parse_optional_type_arguments(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut methods = Vec::new();
+    while !input.input.starts_with("}") {
+        methods.push(parse_impl_method_definition(input)?);
+        skip_whitespace_and_comments(input);
+        consume_optional_comma(input);
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+
+    Ok(Definition::Impl(ImplDef {
+        visibility,
+        interface: interface.into(),
+        type_args,
+        methods,
+        span: crate::input::span_from(&start_pos, &input.state),
+    }))
+}
+
+fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMethodDef> {
+    let start = input.state;
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let param = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let body = expr(input)?;
+
+    Ok(ImplMethodDef {
+        name: name.into(),
+        param: param.into(),
+        body,
+        span: crate::input::span_from(&start, &input.state),
+    })
+}
+
+fn parse_optional_type_parameter_names(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
+    if !input.input.starts_with("<") {
+        return Ok(Vec::new());
+    }
+
+    let _ = literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut params = Vec::new();
+
+    loop {
+        let name = identifier(input)?;
+        params.push(name.into());
+        skip_whitespace_and_comments(input);
+
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            skip_whitespace_and_comments(input);
+            continue;
+        }
+
+        let _ = literal_str(">").parse_next(input)?;
+        break;
+    }
+
+    Ok(params)
+}
+
+fn parse_required_type_arguments(input: &mut ParseInput) -> ModalResult<Vec<Type>> {
+    let _ = literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut args = Vec::new();
+
+    loop {
+        args.push(parse_surface_type(input)?);
+        skip_whitespace_and_comments(input);
+
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            skip_whitespace_and_comments(input);
+            continue;
+        }
+
+        let _ = literal_str(">").parse_next(input)?;
+        break;
+    }
+
+    Ok(args)
+}
+
+fn parse_optional_type_arguments(input: &mut ParseInput) -> ModalResult<Vec<Type>> {
+    if !input.input.starts_with("<") {
+        return Ok(Vec::new());
+    }
+
+    parse_required_type_arguments(input)
 }
 
 fn parse_effect_type(input: &mut ParseInput) -> ModalResult<EffectType> {
@@ -394,6 +570,16 @@ fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
     }
 
     let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+
+    if input.input.starts_with("<") {
+        let args = parse_required_type_arguments(input)?;
+        return Ok(Type::Constructor {
+            name: name.into(),
+            args,
+        });
+    }
+
     Ok(Type::Name(name.into()))
 }
 
@@ -444,9 +630,32 @@ fn starts_with_keyword(input: &ParseInput, word: &str) -> bool {
         .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
 }
 
+fn starts_with_visible_keyword(input: &ParseInput, word: &str) -> bool {
+    if starts_with_keyword(input, word) {
+        return true;
+    }
+
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(Visibility::Inherited) | Err(_) => false,
+        Ok(_) => {
+            skip_whitespace(&mut lookahead);
+            starts_with_keyword(&lookahead, word)
+        }
+    }
+}
+
 fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
     [
-        "pub", "workflow", "policy", "type", "datatype", "memory", "mod",
+        "pub",
+        "workflow",
+        "policy",
+        "type",
+        "datatype",
+        "memory",
+        "mod",
+        "interface",
+        "impl",
     ]
     .into_iter()
     .any(|keyword| starts_with_keyword(input, keyword))
@@ -1212,14 +1421,14 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_inline_module_rejects_visibility_qualified_items_until_supported() {
+    fn test_parse_inline_module_rejects_visibility_qualified_capabilities_until_supported() {
         let mut input = test_input("mod governance { pub capability approve: decide() }");
 
         let result = parse_module_decl(&mut input);
 
         assert!(
             result.is_err(),
-            "Expected inline modules to reject visibility-qualified items explicitly until they are supported"
+            "Expected inline modules to reject visibility-qualified capability items explicitly until they are supported"
         );
     }
 

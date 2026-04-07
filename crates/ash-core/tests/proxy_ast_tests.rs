@@ -134,6 +134,7 @@ fn test_module_item_proxy_variant() {
 fn test_module_item_workflow_variant() {
     let workflow_def = WorkflowDef {
         name: "test_workflow".to_string(),
+        type_params: vec![],
         params: vec![],
         body: Workflow::Done,
         export: false,

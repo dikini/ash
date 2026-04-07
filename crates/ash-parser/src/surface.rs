@@ -56,6 +56,10 @@ pub enum Definition {
     Role(RoleDef),
     /// Proxy definition
     Proxy(ProxyDef),
+    /// Interface definition
+    Interface(InterfaceDef),
+    /// Interface impl definition
+    Impl(ImplDef),
 }
 
 /// A capability definition.
@@ -153,6 +157,82 @@ pub struct ProxyDef {
     pub receives: Vec<CapabilityRef>,
     /// The proxy workflow body
     pub body: Workflow,
+    /// Source span
+    pub span: Span,
+}
+
+/// An interface definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterfaceDef {
+    /// Visibility modifier
+    pub visibility: Visibility,
+    /// Interface name
+    pub name: Name,
+    /// Interface type parameters
+    pub type_params: Vec<Name>,
+    /// Declared method signatures
+    pub methods: Vec<InterfaceMethodSig>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A method signature declared inside an interface.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterfaceMethodSig {
+    /// Method name
+    pub name: Name,
+    /// Positional parameter types
+    pub params: Vec<Type>,
+    /// Return type
+    pub return_type: Type,
+    /// Source span
+    pub span: Span,
+}
+
+/// An explicit interface implementation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplDef {
+    /// Visibility modifier
+    pub visibility: Visibility,
+    /// Implemented interface name
+    pub interface: Name,
+    /// Concrete type arguments for the interface head
+    pub type_args: Vec<Type>,
+    /// Implemented methods
+    pub methods: Vec<ImplMethodDef>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A method implementation inside an impl block.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplMethodDef {
+    /// Method name
+    pub name: Name,
+    /// Single canonical value parameter name
+    pub param: Name,
+    /// Method body expression preserved at the parser surface
+    pub body: Expr,
+    /// Source span
+    pub span: Span,
+}
+
+/// A generic type parameter with interface bounds.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeParam {
+    /// Type parameter name
+    pub name: Name,
+    /// Interface bounds in canonical `T: Interface` form
+    pub bounds: Vec<InterfaceBound>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A canonical interface bound `T: Interface`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterfaceBound {
+    /// Interface name referenced by the bound
+    pub interface: Name,
     /// Source span
     pub span: Span,
 }
@@ -303,6 +383,8 @@ pub enum ConstraintValue {
 pub struct WorkflowDef {
     /// Name of the workflow
     pub name: Name,
+    /// Generic type parameters with explicit interface bounds
+    pub type_params: Vec<TypeParam>,
     /// Workflow parameters (name: type)
     pub params: Vec<Parameter>,
     /// Optional declared return type from the workflow header
@@ -659,6 +741,17 @@ pub enum Expr {
         func: Name,
         /// Arguments
         args: Vec<Expr>,
+        /// Source span
+        span: Span,
+    },
+    /// Explicit interface method call: `Interface::method(value)`
+    InterfaceMethodCall {
+        /// Interface namespace
+        interface: Name,
+        /// Method name
+        method: Name,
+        /// Canonical single value argument
+        argument: Box<Expr>,
         /// Source span
         span: Span,
     },
@@ -1064,6 +1157,7 @@ impl Spanned for Expr {
             Expr::Unary { span, .. } => *span,
             Expr::Binary { span, .. } => *span,
             Expr::Call { span, .. } => *span,
+            Expr::InterfaceMethodCall { span, .. } => *span,
             Expr::Match { span, .. } => *span,
             Expr::Policy(policy_expr) => policy_expr.span(),
             Expr::IfLet { span, .. } => *span,
@@ -1271,6 +1365,7 @@ mod tests {
             definitions: vec![],
             workflow: WorkflowDef {
                 name: "main".into(),
+                type_params: vec![],
                 params: vec![],
                 declared_return_type: None,
                 plays_roles: vec![],
@@ -1459,6 +1554,7 @@ mod tests {
     fn test_workflow_def_construction() {
         let workflow_def = WorkflowDef {
             name: "process_order".into(),
+            type_params: vec![],
             params: vec![],
             declared_return_type: None,
             plays_roles: vec![],

@@ -154,6 +154,22 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 span: *span,
             })
         }
+        Expr::InterfaceMethodCall {
+            interface,
+            method,
+            argument,
+            span,
+        } => {
+            let argument_result = check_expr(env, argument);
+            if !argument_result.is_ok() {
+                return argument_result;
+            }
+
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: format!("InterfaceMethodCall ({interface}::{method})"),
+                span: *span,
+            })
+        }
         Expr::CheckObligation { obligation, span } => {
             CheckResult::error(ConstructorError::UnsupportedExpression {
                 kind: format!("CheckObligation ({obligation})"),
@@ -177,6 +193,7 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Unary { span, .. } => *span,
         Expr::Binary { span, .. } => *span,
         Expr::Call { span, .. } => *span,
+        Expr::InterfaceMethodCall { span, .. } => *span,
         Expr::Match { span, .. } => *span,
         Expr::Policy(_) => Span::default(),
         Expr::IfLet { span, .. } => *span,

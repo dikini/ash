@@ -41,6 +41,7 @@ fn create_workflow_def_with_roles(role_names: Vec<&str>) -> WorkflowDef {
 
     WorkflowDef {
         name: "test_workflow".into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles,

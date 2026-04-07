@@ -1946,6 +1946,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-419](tasks/TASK-419-effect-inference-and-runtime-verification-alignment.md) | Align effect inference and runtime verification with the promoted coarse effect-typing contract | TASK-414, SPEC-001, SPEC-003, SPEC-004, SPEC-010, SPEC-017 | 3-5 | ✅ Complete |
 | [TASK-420](tasks/TASK-420-pure-bottom-effect-follow-on-decision.md) | Decide the `Pure` follow-on explicitly; defer surfaced `Pure` for now and keep the current four-grade lattice | TASK-414, TASK-419, TYPES-004 | 2-4 | ✅ Complete |
 | [TASK-421](tasks/TASK-421-closed-world-interfaces-ast-and-parser-substrate.md) | Add parser/AST substrate for the frozen closed-world interfaces MVP | TASK-415, TYPES-002 MVP | 4-6 | ✅ Complete |
-| [TASK-422](tasks/TASK-422-closed-world-interfaces-coherence-and-method-resolution.md) | Add typechecker support for interface environments, strict coherence, bounds, and canonical method calls | TASK-415, TASK-421, TYPES-002 MVP | 5-8 | 🟡 Ready |
+| [TASK-422](tasks/TASK-422-closed-world-interfaces-coherence-and-method-resolution.md) | Add typechecker support for interface environments, strict coherence, bounds, and canonical method calls | TASK-415, TASK-421, TYPES-002 MVP | 5-8 | ✅ Complete |
+| [TASK-423](tasks/TASK-423-workflow-binding-propagation-and-honest-unsupported-bindings.md) | Tighten Observe/For binding propagation and handle surfaced Propose bindings honestly in workflow validation and declared return checking | TASK-421, TASK-422, TYPES-002 MVP | 3-5 | ✅ Complete |
 
 **Deliverable:** A sequenced implementation queue that turns the Phase 64 type-system promotion packet into concrete parser/typechecker/interpreter work without reopening the contracts that Phase 64 just froze.

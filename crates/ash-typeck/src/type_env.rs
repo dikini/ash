@@ -6,11 +6,12 @@
 
 use crate::error::TypeEnvError;
 use crate::solver::TypeError;
-use crate::types::{Substitution, Type, TypeVar};
+use crate::types::{Substitution, Type, TypeVar, unify};
 use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
-use std::collections::HashMap;
+use ash_parser::surface::{ImplDef, InterfaceDef, InterfaceMethodSig, Type as SurfaceType};
+use std::collections::{HashMap, HashSet};
 
 /// Type name (e.g., "Option", "Result")
 pub type TypeName = String;
@@ -135,6 +136,115 @@ pub enum TypeInfo {
         /// Fields of the struct
         fields: Vec<(FieldName, Type)>,
     },
+}
+
+/// Internal representation of an interface method signature.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterfaceMethodInfo {
+    /// Interface-level type variables corresponding to the interface head.
+    pub type_params: Vec<TypeVar>,
+    /// Canonical single-argument parameter types.
+    pub params: Vec<Type>,
+    /// Declared return type.
+    pub return_type: Type,
+}
+
+/// Internal representation of an interface definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterfaceInfo {
+    /// Interface name.
+    pub name: String,
+    /// Interface-level type parameter names.
+    pub type_params: Vec<String>,
+    /// Methods declared by the interface.
+    pub methods: HashMap<String, InterfaceMethodInfo>,
+}
+
+/// Internal representation of a registered impl.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplInfo {
+    /// Implemented interface name.
+    pub interface: String,
+    /// Concrete type used for the closed-world impl head.
+    pub concrete_type: Type,
+    /// Methods implemented by this impl.
+    pub methods: HashSet<String>,
+}
+
+fn surface_type_to_type(
+    ty: &SurfaceType,
+    param_mapping: &HashMap<String, TypeVar>,
+    type_env: &TypeEnv,
+) -> Result<Type, TypeError> {
+    match ty {
+        SurfaceType::Name(name) => {
+            if let Some(var) = param_mapping.get(name.as_ref()) {
+                return Ok(Type::Var(*var));
+            }
+
+            match name.as_ref() {
+                "Int" => Ok(Type::Int),
+                "String" => Ok(Type::String),
+                "Bool" => Ok(Type::Bool),
+                "Null" => Ok(Type::Null),
+                "Time" => Ok(Type::Time),
+                "Ref" => Ok(Type::Ref),
+                _ => {
+                    let (qualified, _) = type_env.resolve_type(name.as_ref())?;
+                    Ok(Type::Constructor {
+                        name: qualified,
+                        args: vec![],
+                        kind: Kind::Type,
+                    })
+                }
+            }
+        }
+        SurfaceType::List(item) => surface_type_to_type(item, param_mapping, type_env)
+            .map(|item| Type::List(Box::new(item))),
+        SurfaceType::Record(fields) => {
+            let fields = fields
+                .iter()
+                .map(|(name, ty)| {
+                    surface_type_to_type(ty, param_mapping, type_env)
+                        .map(|ty| (Box::from(name.as_ref()), ty))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Type::Record(fields))
+        }
+        SurfaceType::Capability(name) => Ok(Type::Cap {
+            name: Box::from(name.as_ref()),
+            effect: ash_core::Effect::Operational,
+        }),
+        SurfaceType::Constructor { name, args } => {
+            let (qualified, _) = type_env.resolve_type(name.as_ref())?;
+            let args = args
+                .iter()
+                .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Type::Constructor {
+                name: qualified,
+                args,
+                kind: Kind::Type,
+            })
+        }
+    }
+}
+
+fn is_closed_world_nominal_impl_target(ty: &Type) -> bool {
+    match ty {
+        Type::Int
+        | Type::String
+        | Type::Bool
+        | Type::Null
+        | Type::Time
+        | Type::Ref
+        | Type::Instance { .. }
+        | Type::InstanceAddr { .. }
+        | Type::ControlLink { .. } => true,
+        Type::List(_) | Type::Record(_) | Type::Cap { .. } | Type::Fun(_, _, _) => false,
+        Type::Var(_) => false,
+        Type::Constructor { args, .. } => args.iter().all(is_closed_world_nominal_impl_target),
+    }
 }
 
 impl TypeInfo {
@@ -268,6 +378,12 @@ pub struct TypeEnv {
     type_info: HashMap<TypeName, TypeInfo>,
     /// Constructor mappings: constructor name -> (type name, variant index)
     constructors: HashMap<String, (TypeName, VariantIndex)>,
+    /// Registered interfaces by name.
+    interfaces: HashMap<String, InterfaceInfo>,
+    /// Registered closed-world impls by (interface, concrete type).
+    impls: HashMap<(String, Type), ImplInfo>,
+    /// Interface bounds attached to workflow type variables.
+    type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
     /// Variable bindings: variable name -> type
     variables: HashMap<String, crate::types::Type>,
     /// Parent environment for nested scopes (None for root)
@@ -275,6 +391,38 @@ pub struct TypeEnv {
 }
 
 impl TypeEnv {
+    fn convert_interface_method(
+        &self,
+        method: &InterfaceMethodSig,
+        param_mapping: &HashMap<String, TypeVar>,
+    ) -> Result<(String, InterfaceMethodInfo), TypeEnvError> {
+        if method.params.len() != 1 {
+            return Err(TypeEnvError::InvalidDefinition(format!(
+                "canonical interface method '{}' must take exactly one parameter in the MVP",
+                method.name
+            )));
+        }
+
+        let params = method
+            .params
+            .iter()
+            .map(|ty| surface_type_to_type(ty, param_mapping, self))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+
+        let return_type = surface_type_to_type(&method.return_type, param_mapping, self)
+            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+
+        Ok((
+            method.name.to_string(),
+            InterfaceMethodInfo {
+                type_params: param_mapping.values().copied().collect(),
+                params,
+                return_type,
+            },
+        ))
+    }
+
     /// Create a new empty type environment
     #[must_use]
     pub fn new() -> Self {
@@ -282,6 +430,9 @@ impl TypeEnv {
             ast_types: HashMap::with_capacity(10),
             type_info: HashMap::with_capacity(10),
             constructors: HashMap::with_capacity(10),
+            interfaces: HashMap::with_capacity(4),
+            impls: HashMap::with_capacity(4),
+            type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             parent: None,
         }
@@ -299,6 +450,10 @@ impl TypeEnv {
     pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         let type_name = def.name.clone();
 
+        if self.ast_types.contains_key(&type_name) {
+            return Err(TypeEnvError::DuplicateType(type_name));
+        }
+
         // Convert to internal TypeInfo for type checking
         let type_info = convert_type_def(def, self)
             .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
@@ -313,6 +468,158 @@ impl TypeEnv {
 
         self.ast_types.insert(type_name.clone(), def.clone());
         self.type_info.insert(type_name, type_info);
+        Ok(())
+    }
+
+    /// Register an interface declaration.
+    pub fn register_interface(&mut self, def: &InterfaceDef) -> Result<(), TypeEnvError> {
+        let interface_name = def.name.to_string();
+        if self.interfaces.contains_key(&interface_name) {
+            return Err(TypeEnvError::DuplicateInterface(interface_name));
+        }
+
+        let param_mapping: HashMap<String, TypeVar> = def
+            .type_params
+            .iter()
+            .map(|param| (param.to_string(), TypeVar::fresh()))
+            .collect();
+
+        let methods = def
+            .methods
+            .iter()
+            .map(|method| self.convert_interface_method(method, &param_mapping))
+            .collect::<Result<HashMap<_, _>, _>>()?;
+
+        self.interfaces.insert(
+            interface_name.clone(),
+            InterfaceInfo {
+                name: interface_name,
+                type_params: def.type_params.iter().map(ToString::to_string).collect(),
+                methods,
+            },
+        );
+        Ok(())
+    }
+
+    /// Register a closed-world interface impl.
+    pub fn register_impl(&mut self, def: &ImplDef) -> Result<(), TypeEnvError> {
+        let interface_name = def.interface.to_string();
+        let interface = self
+            .interfaces
+            .get(&interface_name)
+            .cloned()
+            .ok_or_else(|| TypeEnvError::MissingInterface(interface_name.clone()))?;
+
+        if interface.type_params.len() != 1 || def.type_args.len() != 1 {
+            return Err(TypeEnvError::InvalidDefinition(format!(
+                "closed-world interface MVP only supports single-parameter impl heads for interface '{interface_name}'"
+            )));
+        }
+
+        let concrete_type = surface_type_to_type(&def.type_args[0], &HashMap::new(), self)
+            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+
+        if !is_closed_world_nominal_impl_target(&concrete_type) {
+            return Err(TypeEnvError::InvalidDefinition(format!(
+                "impl for interface '{interface_name}' must target a concrete nominal type, found {concrete_type}"
+            )));
+        }
+
+        let key = (interface_name.clone(), concrete_type.clone());
+        if self.impls.contains_key(&key) {
+            return Err(TypeEnvError::DuplicateImpl {
+                interface: interface_name,
+                ty: concrete_type.to_string(),
+            });
+        }
+
+        let mut method_names = HashSet::new();
+        for method in &def.methods {
+            let method_name = method.name.to_string();
+            let Some(method_info) = interface.methods.get(&method_name) else {
+                return Err(TypeEnvError::MissingInterfaceMethod {
+                    interface: interface.name.clone(),
+                    method: method_name,
+                });
+            };
+
+            if !method_names.insert(method_name.clone()) {
+                return Err(TypeEnvError::InvalidDefinition(format!(
+                    "duplicate method '{method_name}' in impl for interface '{}'",
+                    interface.name
+                )));
+            }
+
+            if interface.type_params.len() != 1 || method_info.type_params.len() != 1 {
+                return Err(TypeEnvError::InvalidDefinition(format!(
+                    "closed-world interface MVP only supports single-parameter canonical methods for interface '{}'",
+                    interface.name
+                )));
+            }
+
+            if method_info.params.len() != 1 {
+                return Err(TypeEnvError::InvalidDefinition(format!(
+                    "canonical interface method '{}::{}' must take exactly one argument",
+                    interface.name, method_name
+                )));
+            }
+
+            let mut subst = Substitution::new();
+            subst.insert(method_info.type_params[0], concrete_type.clone());
+
+            let param_ty = subst.apply(&method_info.params[0]);
+            let expected_return_ty = subst.apply(&method_info.return_type);
+
+            let mut method_env = self.clone();
+            method_env.bind_variable(method.param.as_ref(), param_ty);
+
+            let body_result = crate::check_expr::check_expr(&method_env, &method.body);
+            if !body_result.is_ok() {
+                let reason = body_result
+                    .errors
+                    .into_iter()
+                    .next()
+                    .map(|error| error.to_string())
+                    .unwrap_or_else(|| {
+                        format!(
+                            "failed to typecheck body for impl method '{}::{}'",
+                            interface.name, method_name
+                        )
+                    });
+
+                return Err(TypeEnvError::InvalidDefinition(format!(
+                    "invalid impl method body for '{}::{}': {}",
+                    interface.name, method_name, reason
+                )));
+            }
+
+            let actual_return_ty = body_result.substitution.apply(&body_result.ty);
+            unify(&expected_return_ty, &actual_return_ty).map_err(|_| {
+                TypeEnvError::InvalidDefinition(format!(
+                    "impl method '{}::{}' must return {}, found {}",
+                    interface.name, method_name, expected_return_ty, actual_return_ty
+                ))
+            })?;
+        }
+
+        for required_method in interface.methods.keys() {
+            if !method_names.contains(required_method) {
+                return Err(TypeEnvError::InvalidDefinition(format!(
+                    "impl for interface '{}' is missing method '{required_method}'",
+                    interface.name
+                )));
+            }
+        }
+
+        self.impls.insert(
+            key,
+            ImplInfo {
+                interface: interface.name,
+                concrete_type,
+                methods: method_names,
+            },
+        );
+
         Ok(())
     }
 
@@ -430,6 +737,14 @@ impl TypeEnv {
         self.variables.insert(name.to_string(), ty);
     }
 
+    /// Record that a workflow type variable satisfies an interface bound.
+    pub fn bind_type_var_interface_bound(&mut self, var: TypeVar, interface: &str) {
+        self.type_var_interface_bounds
+            .entry(var)
+            .or_default()
+            .insert(interface.to_string());
+    }
+
     /// Look up a variable's type in this environment
     ///
     /// Searches current scope first, then parent scopes
@@ -453,9 +768,92 @@ impl TypeEnv {
             ast_types: self.ast_types.clone(),
             type_info: self.type_info.clone(),
             constructors: self.constructors.clone(),
+            interfaces: self.interfaces.clone(),
+            impls: self.impls.clone(),
+            type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             parent: Some(Box::new(self.clone())),
         }
+    }
+
+    /// Check if an interface is registered.
+    pub fn has_interface(&self, name: &str) -> bool {
+        self.interfaces.contains_key(name)
+    }
+
+    /// Look up a registered interface.
+    pub fn lookup_interface(&self, name: &str) -> Option<&InterfaceInfo> {
+        self.interfaces.get(name)
+    }
+
+    fn type_var_has_interface_bound(&self, var: TypeVar, interface: &str) -> bool {
+        self.type_var_interface_bounds
+            .get(&var)
+            .is_some_and(|bounds| bounds.contains(interface))
+            || self
+                .parent
+                .as_ref()
+                .is_some_and(|parent| parent.type_var_has_interface_bound(var, interface))
+    }
+
+    /// Resolve a canonical `Interface::method(value)` call.
+    pub fn resolve_interface_method_call(
+        &self,
+        interface: &str,
+        method: &str,
+        argument_ty: &Type,
+    ) -> Result<Type, TypeEnvError> {
+        let interface_info = self
+            .interfaces
+            .get(interface)
+            .ok_or_else(|| TypeEnvError::MissingInterface(interface.to_string()))?;
+
+        let method_info = interface_info.methods.get(method).ok_or_else(|| {
+            TypeEnvError::MissingInterfaceMethod {
+                interface: interface.to_string(),
+                method: method.to_string(),
+            }
+        })?;
+
+        match argument_ty {
+            Type::Var(var) if self.type_var_has_interface_bound(*var, interface) => {}
+            _ => {
+                let impl_info = self
+                    .impls
+                    .get(&(interface.to_string(), argument_ty.clone()))
+                    .ok_or_else(|| TypeEnvError::MissingImpl {
+                        interface: interface.to_string(),
+                        ty: argument_ty.to_string(),
+                    })?;
+
+                if !impl_info.methods.contains(method) {
+                    return Err(TypeEnvError::InvalidDefinition(format!(
+                        "impl for interface '{interface}' and type '{}' does not define method '{method}'",
+                        argument_ty
+                    )));
+                }
+            }
+        }
+
+        if interface_info.type_params.len() != 1 || method_info.type_params.len() != 1 {
+            return Err(TypeEnvError::InvalidDefinition(format!(
+                "closed-world interface MVP only supports single-parameter canonical methods for interface '{interface}'"
+            )));
+        }
+
+        if method_info.params.len() != 1 {
+            return Err(TypeEnvError::InvalidDefinition(format!(
+                "canonical interface method '{interface}::{method}' must take exactly one argument"
+            )));
+        }
+
+        let mut subst = Substitution::new();
+        subst.insert(method_info.type_params[0], argument_ty.clone());
+        let expected_arg_ty = subst.apply(&method_info.params[0]);
+        unify(&expected_arg_ty, argument_ty)
+            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+
+        Ok(subst.apply(&method_info.return_type))
     }
 
     /// Resolve a type name to its qualified form and info

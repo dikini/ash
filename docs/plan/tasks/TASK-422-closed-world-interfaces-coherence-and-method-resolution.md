@@ -1,6 +1,6 @@
 # TASK-422: Closed-World Interfaces Coherence and Method Resolution
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -23,7 +23,7 @@ This task should make the frozen MVP surface semantically meaningful:
 ## Dependencies
 
 - ✅ TASK-415 complete
-- 🟡 TASK-421 ready/completes parser substrate
+- ✅ TASK-421 complete
 
 ## Requirements
 
@@ -83,12 +83,12 @@ Run at least:
 
 ## Completion Checklist
 
-- [ ] interface/impl environments added
-- [ ] strict coherence enforced
-- [ ] constrained bounds typecheck
-- [ ] canonical method calls resolve/typecheck
-- [ ] tests added/updated
-- [ ] `CHANGELOG.md` updated
+- [x] interface/impl environments added
+- [x] strict coherence enforced
+- [x] constrained bounds typecheck
+- [x] canonical method calls resolve/typecheck
+- [x] tests added/updated
+- [x] `CHANGELOG.md` updated
 
 ## Notes
 

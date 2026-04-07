@@ -108,6 +108,19 @@ pub enum ConstructorError {
         /// Source span
         span: ash_parser::token::Span,
     },
+
+    /// Invalid canonical interface method call
+    #[error("invalid interface method call {interface}::{method}: {reason}")]
+    InvalidInterfaceMethodCall {
+        /// Interface name
+        interface: String,
+        /// Method name
+        method: String,
+        /// Human-readable failure reason
+        reason: String,
+        /// Source span
+        span: ash_parser::token::Span,
+    },
 }
 
 /// Error type for type environment operations
@@ -124,6 +137,41 @@ pub enum TypeEnvError {
     /// Invalid type definition
     #[error("Invalid type definition: {0}")]
     InvalidDefinition(String),
+
+    /// Interface already defined
+    #[error("Interface '{0}' is already defined")]
+    DuplicateInterface(String),
+
+    /// Interface not found
+    #[error("Interface '{0}' not found")]
+    MissingInterface(String),
+
+    /// Duplicate impl for the same interface and concrete nominal type
+    #[error("Impl for interface '{interface}' and type '{ty}' is already defined")]
+    DuplicateImpl {
+        /// Interface name
+        interface: String,
+        /// Concrete nominal type
+        ty: String,
+    },
+
+    /// Impl not found for a canonical interface method call
+    #[error("No impl found for interface '{interface}' and type '{ty}'")]
+    MissingImpl {
+        /// Interface name
+        interface: String,
+        /// Concrete nominal type
+        ty: String,
+    },
+
+    /// Interface method not found
+    #[error("Interface '{interface}' does not define method '{method}'")]
+    MissingInterfaceMethod {
+        /// Interface name
+        interface: String,
+        /// Method name
+        method: String,
+    },
 }
 
 /// Error type for exhaustiveness checking

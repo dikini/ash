@@ -78,11 +78,30 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             ..
         } => check_constructor(env, name.as_ref(), fields, payload),
         Expr::IfLet {
+            pattern,
+            expr,
             then_branch,
             else_branch,
             ..
         } => {
-            let then_result = check_expr(env, then_branch);
+            let matched_result = check_expr(env, expr);
+            if !matched_result.is_ok() {
+                return matched_result;
+            }
+
+            let matched_ty = matched_result.substitution.apply(&matched_result.ty);
+            let mut then_env = env.clone();
+            if let Ok(bindings) = crate::check_pattern::check_pattern(
+                &crate::check_pattern::TypeEnv::new(),
+                pattern,
+                &matched_ty,
+            ) {
+                for (name, ty) in bindings {
+                    then_env.bind_variable(&name, ty);
+                }
+            }
+
+            let then_result = check_expr(&then_env, then_branch);
             let else_result = check_expr(env, else_branch);
             merge_branch_results(then_result, else_result)
         }
@@ -165,10 +184,23 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 return argument_result;
             }
 
-            CheckResult::error(ConstructorError::UnsupportedExpression {
-                kind: format!("InterfaceMethodCall ({interface}::{method})"),
-                span: *span,
-            })
+            match env.resolve_interface_method_call(
+                interface.as_ref(),
+                method.as_ref(),
+                &argument_result.ty,
+            ) {
+                Ok(return_type) => CheckResult {
+                    ty: return_type,
+                    substitution: argument_result.substitution,
+                    errors: argument_result.errors,
+                },
+                Err(err) => CheckResult::error(ConstructorError::InvalidInterfaceMethodCall {
+                    interface: interface.to_string(),
+                    method: method.to_string(),
+                    reason: err.to_string(),
+                    span: *span,
+                }),
+            }
         }
         Expr::CheckObligation { obligation, span } => {
             CheckResult::error(ConstructorError::UnsupportedExpression {
@@ -428,9 +460,21 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
         }
     }
 
+    let scrutinee_ty = scrutinee_result.substitution.apply(&scrutinee_result.ty);
     let mut arm_merged: Option<CheckResult> = None;
     for arm in arms {
-        let body_result = check_expr(env, &arm.body);
+        let mut arm_env = env.clone();
+        if let Ok(bindings) = crate::check_pattern::check_pattern(
+            &crate::check_pattern::TypeEnv::new(),
+            &arm.pattern,
+            &scrutinee_ty,
+        ) {
+            for (name, ty) in bindings {
+                arm_env.bind_variable(&name, ty);
+            }
+        }
+
+        let body_result = check_expr(&arm_env, &arm.body);
         arm_merged = Some(match arm_merged {
             None => body_result,
             Some(prev) => merge_branch_results(prev, body_result),

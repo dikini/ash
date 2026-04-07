@@ -478,7 +478,10 @@ impl NameResolver {
             } => {
                 self.resolve_expr(scrutinee);
                 for arm in arms {
+                    self.push_scope();
+                    self.bind_pattern(&arm.pattern);
                     self.resolve_expr(&arm.body);
+                    self.pop_scope();
                 }
             }
 

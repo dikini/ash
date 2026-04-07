@@ -1160,6 +1160,10 @@ not add a second equation set or any additional laws.
 The rules above cite helpers abstractly. This section gives the minimum normative contract for
 their domain, range, determinism status, failure mapping, and required semantic laws.
 
+`SPEC-025` reuses these same helper-owned boundaries for the workflow-first small-step presentation.
+That later document may package the boundaries by proof/use case, but it must not weaken the failure
+ownership, blocked-versus-terminal distinctions, or determinism constraints fixed here.
+
 ### 6.1 Capability and Policy Lookup
 
 **Capability lookup**

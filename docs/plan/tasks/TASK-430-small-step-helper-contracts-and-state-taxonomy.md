@@ -1,6 +1,6 @@
 # TASK-430: Small-Step Helper Contracts and State Taxonomy
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -88,13 +88,13 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] helper-owned boundaries packaged explicitly
-- [ ] state taxonomy made explicit and coherent
-- [ ] blocked/suspended vs invalid/stuck boundary clarified
-- [ ] determinism / bounded nondeterminism per helper stated
-- [ ] compatibility with TASK-405 runtime classification preserved
-- [ ] planning/reference surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] helper-owned boundaries packaged explicitly
+- [x] state taxonomy made explicit and coherent
+- [x] blocked/suspended vs invalid/stuck boundary clarified
+- [x] determinism / bounded nondeterminism per helper stated
+- [x] compatibility with TASK-405 runtime classification preserved
+- [x] planning/reference surfaces updated
+- [x] `CHANGELOG.md` updated
 
 ## Dependencies for Next Task
 

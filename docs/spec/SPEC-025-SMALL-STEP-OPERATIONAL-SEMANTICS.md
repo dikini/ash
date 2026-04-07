@@ -442,65 +442,304 @@ A ⊢ κ0 —μ1→ κ1 —μ2→ ... —μn→ κt
 project(κt) is the authoritative SPEC-004 outcome for κ0
 ```
 
-## 5. Progress Classification
+## 5. Frozen State Taxonomy
 
-### 5.1 Terminal
+This section freezes the small-step state taxonomy used across the `SPEC-025` / `SPEC-004` /
+TASK-405 correspondence story.
 
-A configuration is terminal iff it is either `Returned(...)` or `Rejected(...)`.
+The taxonomy is intentionally semantic first. It does not require one concrete runtime carrier or one
+Rust enum layout, but it does fix which distinctions later proof work, conformance work, and runtime
+alignment work may rely on.
 
-### 5.2 Blocked or Suspended
+### 5.1 Taxonomy Classes
 
-A configuration is blocked/suspended when it is well-formed and semantically owned by an external
-or helper condition, but no progress step is currently available.
+The canonical v1 taxonomy is:
+
+| Class | Semantic shape | Owner | Notes |
+|---|---|---|---|
+| progress transition | `A ⊢ κ —μ→ κ'` | workflow rule or helper boundary named by the rule | a derivable step exists now |
+| blocked/suspended waiting | `κ = Running(...)` and a blocking classification judgment is derivable | helper-owned or runtime-owned wait boundary | live, non-terminal, and presently non-progressing |
+| terminal success | `κ = Returned(v, Ω, π, T, ε̂)` | workflow semantics | successful completion |
+| terminal rejection/failure | `κ = Rejected(err, Ω, π, T, ε̂)` | owning workflow/helper boundary under SPEC-004 failure taxonomy | semantic terminal failure/rejection |
+| invalid / inadmissible / runtime-failure boundary | meta-level inadmissibility or helper/runtime misuse, not an additional `κ` constructor | lowering/type admissibility plus first owning runtime/helper boundary | must not be mistaken for blocked/suspended waiting |
+
+These classes are exhaustive for proof-facing classification of v1 executions.
+
+### 5.2 Progress and Progress-Capable Running States
+
+`Progress` is a transition fact, not a fourth terminal form:
+
+```text
+progress(κ)  iff  ∃ μ, κ'. A ⊢ κ —μ→ κ'
+```
+
+Accordingly, a running configuration may be classified in exactly one of the following semantic ways:
+
+1. progress-capable now,
+2. blocked/suspended now, or
+3. inadmissible as a semantic state.
+
+There is no separate admitted class of ordinary nonterminal stuck states.
+
+### 5.3 Blocked/Suspended Waiting
+
+A configuration is blocked/suspended iff all of the following hold:
+
+1. `κ = Running(Γ, Ω, π, T, ε̂, w)` for some admitted carriers,
+2. no transition `A ⊢ κ —μ→ κ'` is currently derivable,
+3. the lack of progress is owned by an explicit helper or runtime wait boundary already admitted by
+   the semantics, and
+4. the state remains semantically live rather than terminal or invalid.
 
 Canonical v1 examples:
 
-- blocking `Receive` when no arm is currently selectable,
-- helper-owned waiting on mailbox or external input,
-- runtime-owned child-completion/control observation boundaries,
-- semantically live suspension/wait boundaries that are not terminal and not stuck.
+- blocking `Receive` when `select_receive_outcome(...) ↝ Blocked`,
+- helper-owned mailbox/external wait conditions,
+- runtime-owned control/completion observation waits that are semantically live but not themselves new
+  workflow forms.
 
-Blocked/suspended is not an error.
+Blocked/suspended waiting is therefore not:
 
-### 5.3 Stuck
+- a rejection,
+- a malformed state,
+- a silent terminal state, or
+- evidence that the semantics are stuck.
 
-A configuration is stuck when:
+### 5.4 Terminal Success and Terminal Rejection/Failure
 
-1. it is not terminal,
-2. it is not classified as blocked/suspended, and
-3. no reduction rule applies.
+Terminality is configuration-shaped and final:
 
-Stuckness is not a normal user-visible state. In a correct corpus, dynamic failure should instead be
-owned by existing rejection categories such as:
+```text
+terminal(κ) iff κ = Returned(...) or κ = Rejected(...)
+```
 
-- `PatternBindFailure`,
-- `PatternMatchFailure(v)`,
-- `RuntimeFailure(reason)`,
-- other runtime-owned rejection boundaries already defined by SPEC-004.
+The success/failure split is preserved explicitly:
 
-The intended trichotomy is therefore:
+- `Returned(...)` is terminal success,
+- `Rejected(err, ...)` is terminal rejection/failure,
+- the rejection class `err` remains owned by the same `SPEC-004` failure taxonomy already frozen for
+  policy, obligation, guard, pattern, terminal-control, and runtime failures.
 
-- terminal,
-- progress,
-- blocked/suspended,
+This preserves the distinction required by `SPEC-004`: terminal semantic failure is still terminal,
+but it is not the same thing as blocked/suspended waiting or meta-level inadmissibility.
 
-but not ordinary observable stuckness.
+### 5.5 Invalid, Inadmissible, and Runtime-Failure Boundaries
 
-## 6. v1 Atomic Boundaries
+`SPEC-025` deliberately separates three notions that were previously easy to blur together:
 
-The following remain atomic in v1:
+1. inadmissible state: a malformed or out-of-contract would-be configuration/helper input that is not
+   part of the admitted semantic execution space;
+2. runtime failure: a rejection class already owned by `SPEC-004`, usually surfaced as
+   `Rejected(RuntimeFailure(reason), ...)` once the first owning boundary classifies it;
+3. terminally unusable runtime/control state: a runtime-observable condition such as invalid or dead
+   control authority, which belongs to runtime correspondence surfaces rather than to a new small-step
+   configuration constructor.
 
-1. pure expression evaluation,
-2. pure pattern matching and binding,
-3. guard evaluation,
-4. receive-arm selection,
-5. parallel terminal aggregation,
-6. obligation/provenance helper operations,
-7. spawned-child completion sealing and runtime-owned control observation.
+Normatively:
 
-This keeps the semantics workflow-first and avoids overcommitting to a machine design. In
-particular, pure expressions and pure pattern matching remain atomic subjudgments reused from
-SPEC-004 rather than new micro-step families introduced by this document.
+- inadmissible states are not blocked/suspended,
+- inadmissible states are not ordinary observable progress states,
+- if such a condition crosses into semantic evaluation, the first owning boundary must classify it
+  under the existing `SPEC-004` rejection taxonomy rather than leaving the semantics stuck.
+
+`Stuck` is therefore a proof-failure word, not an admitted runtime/classification target.
+
+### 5.6 Correspondence to TASK-405 Runtime Classification
+
+TASK-405 introduces the coarse runtime surface `RuntimeOutcomeState` with classes such as `Active`,
+`BlockedOrSuspended`, `TerminalSuccess`, `ExecutionFailure`, and `InvalidOrTerminated`.
+
+That runtime surface is compatible with, but coarser than, the semantic taxonomy above:
+
+| Semantic taxonomy here | Compatible TASK-405 runtime surface |
+|---|---|
+| progress-capable `Running(...)` | `Active` |
+| blocked/suspended waiting | `BlockedOrSuspended` |
+| `Returned(...)` | `TerminalSuccess` |
+| `Rejected(err, ...)` | usually `ExecutionFailure`, subject to runtime-side coarse packaging |
+| unusable runtime/control state outside an admitted semantic running/terminal configuration | `InvalidOrTerminated` |
+
+This is a compatibility claim, not a bijection claim. The runtime surface is intentionally coarser and
+runtime-facing; the semantic taxonomy remains the normative proof language.
+
+## 6. v1 Helper Contract Package
+
+This section packages the helper-owned boundaries that remain atomic in v1 as explicit contracts.
+
+The helper names below are semantic ownership markers. They do not require one concrete Rust API,
+trait set, or machine decomposition.
+
+### 6.1 Pure Expression, Pattern, and Guard Boundaries
+
+These remain atomic in v1.
+
+`Γ ⊢e expr ⇓ v`
+
+- Input domain: admitted pure/canonical expressions and environment `Γ`.
+- Output domain: one value `v`.
+- Ownership of failure/blocking/terminality: no independent blocking or terminality; dynamic failure is
+  owned by the enclosing workflow/helper boundary rather than by a second expression-level rejection
+  channel.
+- Determinism vs bounded nondeterminism: deterministic for fixed helper results, as already frozen by
+  `SPEC-004`.
+- Preserved semantic dimensions: preserves `Ω`, `π`, `T`, and `ε̂` directly because it does not own
+  their transition.
+
+`Γ ⊢p pat ⇐ v ⇓ ΔΓ`
+
+- Input domain: admitted patterns, matched value `v`, and environment `Γ`.
+- Output domain: one fresh binding delta `ΔΓ`.
+- Ownership of failure/blocking/terminality: no independent blocking or terminality; bind/match
+  failure classification is owned by the first enclosing workflow/helper boundary.
+- Determinism vs bounded nondeterminism: deterministic on admissible patterns.
+- Preserved semantic dimensions: preserves `Ω`, `π`, `T`, and `ε̂`; changes only the continuation
+  environment through right-biased extension `Γ ⊕ ΔΓ`.
+
+`evaluate_guard(...)`-style guard evaluation
+
+- Input domain: the guard-owned action/context inputs already fixed by `SPEC-004`.
+- Output domain: success/permit to continue, or a guard-owned failure classification.
+- Ownership of failure/blocking/terminality: guard rejection remains owned by the `ACT` boundary;
+  guard evaluation does not own waiting or terminal states of its own.
+- Determinism vs bounded nondeterminism: deterministic for fixed inputs.
+- Preserved semantic dimensions: preserves all cumulative carriers except for any rule-local updates
+  explicitly attributed to the owning `ACT` step.
+
+### 6.2 Capability, Observation, Action, and Proposal Boundaries
+
+This family covers capability lookup/application and proposal formation boundaries already frozen by
+`SPEC-004`, including `observe_capability(...)`, `perform_action(...)`, and `form_proposal(...)`-style
+helpers.
+
+- Input domain: ambient capability context `C`, policy context `P` where applicable, the current
+  environment `Γ`, and any operation-specific value/action/provenance inputs.
+- Output domain: either an operation-specific success payload sufficient for the owning workflow rule
+  (`ObserveOk(...)`, `ActOk(...)`, `ProposalOk(...)`, provider value, etc.) or an owning-boundary
+  failure classification.
+- Ownership of failure/blocking/terminality: lookup/provider/runtime misuse maps at the first owning
+  boundary to existing `SPEC-004` runtime failures; these helpers do not independently classify
+  blocked/suspended waiting or terminal success.
+- Determinism vs bounded nondeterminism: lookup-style parts are deterministic; provider/action
+  execution may be runtime-defined and therefore nondeterministic exactly where the underlying
+  provider behavior is permitted to vary.
+- Preserved semantic dimensions: may update exactly the dimensions admitted by the owning workflow rule
+  (`Γ`, `Ω`, `π`, `T`, `ε̂`) but may not invent new semantic dimensions or bypass policy/guard
+  ownership boundaries.
+
+### 6.3 Policy Decision and Rejection Ownership
+
+This family covers `policy_decision(...)`, `policy_check(...)`, and the `apply_policy(...)`-style
+small-step boundary used by `DECIDE`.
+
+- Input domain: policy environment `P`, named policy/action handle, subject value or action context,
+  and the current semantic carriers required by the rule.
+- Output domain: either permit/success data for the owning workflow step or denial/runtime-failure
+  information to be reified by that step.
+- Ownership of failure/blocking/terminality: denial is owned by the policy boundary and reconstructs
+  `PolicyViolation(...)`; missing/unusable runtime policy state maps to `RuntimeFailure(reason)` at
+  the same owning boundary; policy helpers do not own blocked waiting or terminal success on their
+  own.
+- Determinism vs bounded nondeterminism: deterministic for fixed policy context and inputs.
+- Preserved semantic dimensions: preserves the workflow-first terminal projection contract, may update
+  `Ω`, `π`, `T`, and `ε̂` only where the owning step explicitly says so, and does not alter the
+  blocked/suspended taxonomy.
+
+### 6.4 Obligation Transition, Discharge, and Scoped Reconciliation Ownership
+
+This family covers `check_obligation(...)`, `discharge(...)`, `enter_obligation_scope(...)`,
+`leave_obligation_scope(...)`, and the obligation/provenance reconciliation helpers used by scoped
+forms.
+
+- Input domain: current obligation state `Ω`, provenance `π` where scoped contracts require it,
+  current environment `Γ`, named obligation/role identifiers, and any inner-scope terminal state being
+  reconciled.
+- Output domain: satisfaction/transition results such as `Satisfied(...)`, updated `Ω'` / `π'`, or
+  scoped-entry/scoped-exit carrier deltas.
+- Ownership of failure/blocking/terminality: unmet obligations are classified at the owning `CHECK` or
+  scope-exit boundary as `ObligationViolation(...)`; malformed runtime obligation state maps to
+  `RuntimeFailure(reason)`; obligation helpers do not own blocked waiting, but they do own whether a
+  scoped body may discharge or reconcile obligation state on terminal exit.
+- Determinism vs bounded nondeterminism: deterministic for fixed inputs.
+- Preserved semantic dimensions: preserves the identity of non-mentioned obligations, preserves the
+  same terminal returned value/rejection owned by the surrounding rule, and may change only the
+  obligation/provenance dimensions explicitly admitted by the scoped transition contract plus any
+  emitted `ΔT` / `δε` required by that transition.
+
+### 6.5 Receive-Arm Selection and Waiting Ownership
+
+This family covers `select_receive_outcome(...)` as the atomic owner of receive-arm selection,
+fallback/fallthrough classification, receive-owned rejection, and blocked waiting.
+
+- Input domain: receive mode, optional control selector, lowered arm set, environment `Γ`, and the
+  current semantic state needed for receive-side deltas (`Ω`, `π` in `SPEC-025`; source scheduling
+  modifier and receive runtime context in `SPEC-004`).
+- Output domain: exactly one admitted receive outcome such as `Selected(...)`, `Fallback(...)`,
+  `Fallthrough(...)`, `ReceiveReject(...)`, or `Blocked` where the mode permits waiting.
+- Ownership of failure/blocking/terminality: this helper owns the distinction between immediate
+  fallthrough, fallback, waiting, and receive-owned rejection; it does not itself produce terminal
+  success/failure configurations, but its result determines whether the enclosing receive step
+  progresses, remains blocked/suspended, or rejects.
+- Determinism vs bounded nondeterminism: deterministic once the scheduler/source choice is fixed;
+  bounded nondeterminism is admitted only where the source scheduling modifier/runtime selection law
+  permits multiple valid eligible sources.
+- Preserved semantic dimensions: preserves pattern-before-guard ordering, message-consumption timing,
+  fallback/fallthrough laws, and the distinction between blocked waiting and rejection. It may update
+  only the deltas explicitly owned by receive selection (`ΔΓ`, `ΔΩ`, `Δπ`, `ΔT`, `δε`).
+
+### 6.6 Parallel Branch Progress and Terminal Aggregation Ownership
+
+This family covers the already-frozen helper-backed `Par` boundary, especially
+`combine_parallel_outcomes(...)` together with the branch-state packaging used by `ParState(bs)`.
+
+- Input domain: the parent running carriers plus the terminal branch-state collection `bs` produced by
+  branch-local progress.
+- Output domain: exactly one admitted aggregate terminal result, either `ParallelReturn(...)` or
+  `ParallelReject(...)`.
+- Ownership of failure/blocking/terminality: branch-local progress is owned by the ordinary small-step
+  rules for each branch; aggregate terminal classification, concurrent rejection combination, and
+  terminal carrier collation are owned by `combine_parallel_outcomes(...)`; blocked waiting is not
+  introduced by the aggregation helper itself.
+- Determinism vs bounded nondeterminism: branch-choice/interleaving before all-terminal is scheduler-
+  owned; once terminal branch outcomes are fixed, aggregation is deterministic except for bounded trace
+  interleaving latitude already admitted by `merge_traces(...)`.
+- Preserved semantic dimensions: preserves branch-local result values, preserves each branch's internal
+  trace order, preserves obligation/provenance aggregation laws, preserves the no-sequential-
+  short-circuit `Par` stance, and reconstructs the same terminal success/rejection meaning owned by
+  `SPEC-004`.
+
+### 6.7 Spawned-Child Completion Sealing and Observation Ownership
+
+This family covers `spawn_runtime(...)`, `seal_completion(...)`, and `supervisor_observe(...)` as the
+frozen runtime/supervisor boundary for spawned-child completion.
+
+- Input domain: spawned workflow plus its initial semantic carriers at spawn time, reusable control
+  authority, and the child's terminal outcome once one exists.
+- Output domain: one runtime-owned control authority at spawn time, one sealed completion payload per
+  child terminal outcome, and one observation result projected from that payload.
+- Ownership of failure/blocking/terminality: child terminality remains owned by ordinary workflow
+  semantics; sealing/observation own exactly the completion-packaging and retained-observation
+  boundary; invalid or unusable control/runtime state remains runtime-owned rather than a new workflow
+  constructor; live waiting to observe completion is blocked/suspended, not terminal failure.
+- Determinism vs bounded nondeterminism: deterministic modulo fresh instance/control identities; once a
+  terminal outcome is sealed, repeated observation is deterministic and stable.
+- Preserved semantic dimensions: preserves the child's authoritative terminal `result`, `Ω`, `π`, and
+  effect-summary projection inside the sealed completion contract, while preserving the non-goal that
+  this does not surface a user-visible `await` form or a full trace-as-value transport.
+
+### 6.8 Provenance, Trace, and Carrier-Only Helper Boundaries
+
+This family covers `fork(...)`, `extend_provenance(...)`, `join_provenance(...)`, `merge_traces(...)`,
+and analogous carrier-only helpers.
+
+- Input domain: existing carrier values plus helper-specific action/branch inputs.
+- Output domain: updated provenance/trace carriers or helper-local deltas.
+- Ownership of failure/blocking/terminality: these helpers do not own blocked waiting or terminality;
+  misuse/impossible carrier state maps to `RuntimeFailure(reason)` at the owning boundary.
+- Determinism vs bounded nondeterminism: deterministic except for freshness generation and bounded
+  cross-branch trace interleaving already admitted by the helper laws.
+- Preserved semantic dimensions: preserve lineage ancestry, internal branch trace order, cumulative-
+  carrier monotonicity, and the requirement that helper-local carrier work not invent new workflow
+  results or new rejection classes.
 
 ## 7. Canonical Workflow Rule Definitions
 
@@ -1028,27 +1267,31 @@ Current runtime-side evidence supports a coarse correspondence classification am
 - terminal outcome, and
 - invalid/runtime-failure boundaries.
 
-That coarse correspondence surface is not itself the small-step semantics, but it is compatible with
-the blocked/suspended vs terminal distinction required by this specification. The current runtime does
-not expose that distinction through one uniform first-class result carrier, so this correspondence is
-reconstructed rather than directly packaged.
+That coarse correspondence surface is not itself the small-step semantics, but it is now directly
+packaged by the runtime as `RuntimeOutcomeState` after TASK-405. It remains coarser than the semantic
+taxonomy in §5: in particular, semantic terminal rejection/failure and runtime-side invalid/terminated
+control state are distinguished normatively here even where runtime packaging is intentionally more
+conservative.
 
 ### 9.3 Control and Retained Completion Evidence
 
-Evidence class: mixed — direct for control-authority lifecycle, weak/missing for full retained completion packaging.
+Evidence class: mixed — direct for control-authority lifecycle and retained completion observation,
+partial for exact full `CompletionPayload` parity.
 
-Current runtime evidence is strongest for control-authority lifecycle and weaker for retained
-completion packaging.
+Current runtime evidence is now direct for the existence of runtime-owned control authority, sealed
+retained completion records, and completion waiting/observation APIs, while remaining conservative
+about exact parity with the full semantic `CompletionPayload` contract.
 
 - Control-link lifecycle and terminal invalidation are directly evidenced as runtime-owned
   boundaries.
-- Retained completion-payload realization is only partial/weak on the inspected main execution path
-  summarized by [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
-- Completion-observation waiting as a distinct runtime carrier is weak/missing on the inspected main
-  execution path and should not be overclaimed.
-- Accordingly, this specification preserves the SPEC-004 completion/control contract normatively,
-  but does not claim that the current interpreter already exposes authoritative retained packaging
-  for terminal obligations, provenance, trace, and effect summary as one complete runtime carrier.
+- Retained completion observation is directly evidenced through sealed retained records and a
+  dedicated wait path, but those runtime carriers are still a conservative realization rather than a
+  proof that every semantic completion dimension is packaged identically to `SPEC-004`.
+- Current runtime support preserves honest retained slices for terminal result/effect/obligation/
+  provenance observation, but full exact trace transport and one fully authoritative cumulative
+  execution-record carrier remain outside current evidence.
+- Accordingly, this specification preserves the `SPEC-004` completion/control contract normatively
+  without overclaiming complete runtime parity for every terminal semantic dimension.
 
 This is evidence for the correspondence boundary, not a replacement for the semantic carriers used in
 this specification.
@@ -1118,7 +1361,8 @@ An implementation conforms to this specification iff:
 Deferred to later work:
 
 - fully mechanized meta-proofs over the rule set given here,
-- standalone proof-oriented helper-contract packages and state-taxonomy closure beyond the rule layer,
+- stronger mechanized reuse lemmas and execution-record packaging above the helper/state-taxonomy
+  contract already frozen here,
 - concrete runtime machine mapping and queue/tombstone representation,
 - full interpreter/runtime alignment closeout across all five layers.
 

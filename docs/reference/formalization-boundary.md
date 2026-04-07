@@ -92,6 +92,9 @@ The first proof targets should be small and judgment-shaped:
 7. Small-step rule-shape usability: the explicit workflow rule definitions in SPEC-025 are suitable
    as direct proof subjects for propagation, terminal-shape, and helper-boundary lemmas without
    reconstructing rule premises from distributed prose.
+8. Small-step helper/taxonomy usability: the helper-contract package and frozen state taxonomy in
+   SPEC-025 are suitable as direct proof subjects for blocked-vs-progress lemmas, helper ownership,
+   and runtime-correspondence arguments without reconstructing helper semantics from mixed prose.
 
 For SPEC-004 specifically, these initial proof targets now align with its explicit judgment and
 meta-property structure:
@@ -99,6 +102,8 @@ meta-property structure:
 - workflow outcomes and propagation conventions;
 - pure expression and pattern determinism;
 - helper-backed conformance obligations and permitted nondeterminism;
+- the frozen small-step state taxonomy distinguishing progress, blocked/suspended waiting, terminal
+  success, terminal rejection/failure, and inadmissible/runtime-failure boundaries;
 - semantic invariants around effect accumulation, trace preservation, and rejection ownership.
 
 ## Initial Bisimulation Targets

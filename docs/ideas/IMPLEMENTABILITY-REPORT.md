@@ -124,12 +124,14 @@ This exploration started as a gap-analysis note for surface syntax, IR, and big-
 **Implementability:** HIGH as planning/design corpus — backbone fixed, runtime realization still downstream
 
 **Summary:**
-Phase 61 converted MCE-005 from an exploratory note into an accepted small-step planning/design artifact, and TASK-427 now closes out [SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) as the docs/spec home for that accepted contract. The corpus now fixes:
+Phase 61 converted MCE-005 from an exploratory note into an accepted small-step planning/design artifact, TASK-427 closes out [SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) as the docs/spec home for that accepted contract, and TASK-430 now packages the remaining helper-owned boundaries plus the frozen proof-usable state taxonomy. The corpus now fixes:
 
 - workflow-first canonical configurations over `SPEC-001` workflows;
 - ambient context as `(C, P)` and dynamic state in `Γ`, `Ω`, `π`, cumulative trace, cumulative effect summary, and residual workflow terms;
 - a deliberate split between configuration-carried cumulative state and label-carried local step deltas;
 - explicit blocked/suspended versus stuck distinction;
+- one frozen state taxonomy distinguishing progress, blocked/suspended waiting, terminal success, terminal rejection/failure, and invalid/inadmissible/runtime-failure boundaries;
+- explicit helper-owned contracts for receive selection, parallel aggregation, policy decision ownership, obligation transition/discharge ownership, and spawned-child completion/control observation;
 - a canonical rule inventory for workflow forms, with pure expressions/patterns remaining atomic in v1.
 
 **Assessment:** MCE-005 is no longer blocked on foundational ambiguity. Its accepted semantic backbone is now also packaged in SPEC-025 as the stable docs/spec surface, while MCE-005 remains the accepted design reasoning backplane and MCE-006 remains the runtime-evidence backplane. This is resolved enough to unblock MCE-006 while still remaining documentation/spec-planning work rather than interpreter implementation.

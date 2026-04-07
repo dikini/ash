@@ -17,8 +17,8 @@ This remains docs/spec work only.
 
 ## Dependencies
 
-- 📝 [TASK-424: SPEC-025 Faithfulness and Compatibility Contract](TASK-424-spec-025-faithfulness-and-compatibility-contract.md)
-- 📝 [TASK-425: SPEC-025 Rule-Schema and Helper-Boundary Consolidation](TASK-425-spec-025-rule-schema-and-helper-boundary-consolidation.md)
+- ✅ [TASK-424: SPEC-025 Faithfulness and Compatibility Contract](TASK-424-spec-025-faithfulness-and-compatibility-contract.md)
+- ✅ [TASK-425: SPEC-025 Rule-Schema and Helper-Boundary Consolidation](TASK-425-spec-025-rule-schema-and-helper-boundary-consolidation.md)
 - 📝 [TASK-426: SPEC-025 Big-Step and Runtime Compatibility Audit](TASK-426-spec-025-big-step-and-runtime-compatibility-audit.md)
 
 ## Requirements

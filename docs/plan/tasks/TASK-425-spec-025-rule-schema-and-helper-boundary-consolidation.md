@@ -1,6 +1,6 @@
 # TASK-425: SPEC-025 Rule-Schema and Helper-Boundary Consolidation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,7 +16,7 @@ This is docs/spec work only. It does not introduce new runtime behavior or a con
 
 ## Dependencies
 
-- 📝 [TASK-424: SPEC-025 Faithfulness and Compatibility Contract](TASK-424-spec-025-faithfulness-and-compatibility-contract.md)
+- ✅ [TASK-424: SPEC-025 Faithfulness and Compatibility Contract](TASK-424-spec-025-faithfulness-and-compatibility-contract.md)
 - ✅ [TASK-395: Canonical Workflow Small-Step Rule Set and Concurrency Semantics](TASK-395-canonical-workflow-small-step-rule-set-and-concurrency-semantics.md)
 - ✅ [TASK-396: Small-Step / Big-Step Correspondence and MCE-006 Handoff](TASK-396-small-step-big-step-correspondence-and-mce-006-handoff.md)
 
@@ -68,11 +68,21 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] TASK-425 task file created
-- [ ] rule-family presentation tightened in SPEC-025
-- [ ] helper-boundary wording clarified
-- [ ] normative/informative split made explicit
-- [ ] blocked/suspended and `Par` wording preserved faithfully
+- [x] TASK-425 task file created
+- [x] rule-family presentation tightened in SPEC-025
+- [x] helper-boundary wording clarified
+- [x] normative/informative split made explicit
+- [x] blocked/suspended and `Par` wording preserved faithfully
+
+## Completion Notes
+
+Completed 2026-04-07.
+
+- Tightened [SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) so the normative/informative split is explicit in both `§1.3.5` and the section labeling for `§9`.
+- Reworked the judgment/helper section so helper names are stated as schematic ownership markers rather than required Rust API names, while keeping helper-owned boundaries faithful to [SPEC-004](../../spec/SPEC-004-SEMANTICS.md) and accepted [MCE-005](../../ideas/minimal-core/MCE-005-SMALL-STEP.md).
+- Added a rule-family presentation contract and tightened `§7 Canonical Rule Inventory` so the uppercase entries are clearly normative family markers and inventory/intent contracts, not full formal inference schemata.
+- Preserved the accepted MCE-005 inventory, the blocked/suspended vs stuck distinction, pure-expression/pattern atomicity in v1, and the `Par` stance of interleaving progress plus helper-backed terminal aggregation without left-to-right collapse.
+- Performed a nearby corpus-consistency sweep and updated [PLAN-INDEX](../PLAN-INDEX.md), dependent task references, and [CHANGELOG.md](../../../CHANGELOG.md) to reflect TASK-425 completion.
 
 ## Notes
 

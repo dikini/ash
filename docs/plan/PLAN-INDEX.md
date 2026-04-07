@@ -1966,7 +1966,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-424](tasks/TASK-424-spec-025-faithfulness-and-compatibility-contract.md) | Freeze the exact faithfulness/compatibility contract that a durable `SPEC-025` must satisfy relative to accepted `MCE-005`, `SPEC-004`, and `MCE-006` | SPEC-025, MCE-005, MCE-006, SPEC-004 | 2-4 | ✅ Complete |
-| [TASK-425](tasks/TASK-425-spec-025-rule-schema-and-helper-boundary-consolidation.md) | Tighten `SPEC-025` rule-family presentation, helper-boundary wording, and normative/informative split without reopening accepted semantics | SPEC-025, MCE-005, SPEC-004 | 3-5 | 📝 Planned |
+| [TASK-425](tasks/TASK-425-spec-025-rule-schema-and-helper-boundary-consolidation.md) | Tighten `SPEC-025` rule-family presentation, helper-boundary wording, and normative/informative split without reopening accepted semantics | SPEC-025, MCE-005, SPEC-004 | 3-5 | ✅ Complete |
 | [TASK-426](tasks/TASK-426-spec-025-big-step-and-runtime-compatibility-audit.md) | Audit `SPEC-025` against `SPEC-004` and the frozen `MCE-006` runtime evidence packet to eliminate overclaim and freeze compatibility status row-by-row | SPEC-025, SPEC-004, MCE-006 | 3-5 | 📝 Planned |
 | [TASK-427](tasks/TASK-427-spec-025-faithful-closeout-and-corpus-alignment.md) | Apply the faithful rewrite/audit results to `SPEC-025` and align the surrounding planning/reporting corpus | SPEC-025, MCE-005, MCE-006, SPEC-004 | 2-4 | 📝 Planned |
 

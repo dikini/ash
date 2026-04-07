@@ -16,8 +16,8 @@ This is docs/spec-audit work only.
 
 ## Dependencies
 
-- 📝 [TASK-424: SPEC-025 Faithfulness and Compatibility Contract](TASK-424-spec-025-faithfulness-and-compatibility-contract.md)
-- 📝 [TASK-425: SPEC-025 Rule-Schema and Helper-Boundary Consolidation](TASK-425-spec-025-rule-schema-and-helper-boundary-consolidation.md)
+- ✅ [TASK-424: SPEC-025 Faithfulness and Compatibility Contract](TASK-424-spec-025-faithfulness-and-compatibility-contract.md)
+- ✅ [TASK-425: SPEC-025 Rule-Schema and Helper-Boundary Consolidation](TASK-425-spec-025-rule-schema-and-helper-boundary-consolidation.md)
 - ✅ [TASK-404: Observable Preservation, Gap Classification, and MCE-007 Handoff](TASK-404-observable-preservation-gap-classification-and-mce-007-handoff.md)
 
 ## Requirements

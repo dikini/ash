@@ -121,29 +121,24 @@ second incompatible contract.
 ### 1.3.3 MCE-006 Runtime-Correspondence Honesty Constraints
 
 Implementation correspondence statements in this document must remain conservative relative to the
-evidence frozen in [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
+frozen evidence packet in [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
 
-In particular, `SPEC-025` must not claim that the current runtime already provides:
+Normatively, this section freezes the honesty boundary rather than restating the full evidence packet.
+`SPEC-025` may use runtime correspondence evidence to constrain wording, but it must not promote that
+informative evidence into stronger normative semantic facts.
 
-1. authoritative cumulative runtime carriers for `π`, `T`, or `ε̂` where MCE-006 records only
-   missing or weak realization;
-2. one uniform first-class blocked/suspended runtime result carrier where MCE-006 records mixed
-   implicit waiting and specialized suspension mechanisms;
-3. a full retained completion-packaging realization for SPEC-004-style completion payloads where
-   MCE-006 records only partial or weak evidence on the inspected main execution path;
-4. an explicit scheduler or branch-step machine for `Par` where MCE-006 records only partial
-   operational correspondence via concurrent child execution plus terminal collation;
-5. stronger implementation support for semantic carriers or ownership boundaries than the cited
-   runtime evidence actually demonstrates.
+In particular, `SPEC-025` must not claim stronger implementation support than the informative runtime
+sections and the later compatibility audit can justify for:
 
-Accordingly, runtime notes in this document may use the following evidence classes only:
+1. cumulative semantic carriers such as `π`, `T`, and `ε̂`;
+2. blocked/suspended realization and carrier uniformity;
+3. retained completion packaging or terminal payload collation;
+4. `Par` realization as a fully explicit branch-step machine;
+5. any other helper-owned ownership boundary whose current runtime realization is only partial,
+   reconstructed, or weak.
 
-- direct evidence,
-- partial/reconstructed evidence,
-- weak/missing evidence.
-
-This document may use current runtime artifacts to explain correspondence boundaries, but not to
-upgrade partial implementation evidence into normative semantic facts.
+Detailed runtime evidence belongs informatively in §9 and, row-by-row, in the TASK-426 compatibility
+audit rather than in the normative rule/contract sections.
 
 ### 1.3.4 Frozen Non-Goals
 
@@ -178,6 +173,10 @@ The following belong informatively only:
 
 Informative material may illustrate or justify the normative contract, but it does not override that
 contract and must remain conservative when implementation evidence is partial.
+
+Unless a later section is explicitly labeled informative, it is normative. In particular, the
+runtime-alignment material in §9 is informative-only evidence commentary; it does not add new
+semantic rules, new conformance obligations, or stronger implementation claims.
 
 ## 2. Semantic Backbone
 
@@ -282,7 +281,7 @@ Local per-step deltas live in labels:
 
 This split is normative. Labels are not a second cumulative carrier.
 
-## 3. Judgment Family
+## 3. Judgment Family and Helper Ownership
 
 ### 3.1 Workflow Small-Step Judgment
 
@@ -312,20 +311,45 @@ Pattern matching remains atomic in v1 and reuses the pattern judgment family fro
 
 No pattern-level micro-step relation is introduced by this document.
 
-### 3.4 Helper Relations
+### 3.4 Helper Relations and Ownership Boundaries
 
-Runtime-owned or algebraic helpers remain helper relations rather than inlined machine steps. In
-particular, v1 preserves helper-owned boundaries for:
+Runtime-owned or algebraic helpers remain helper relations rather than inlined machine steps. This
+document uses helper names to mark semantic ownership boundaries already accepted in SPEC-004 and
+MCE-005; it does not require a concrete interpreter to expose identically named Rust functions,
+traits, or modules.
 
-- `select_receive_outcome(...)`-style receive-arm selection,
-- `combine_parallel_outcomes(...)`-style parallel aggregation,
-- guard evaluation,
-- policy lookup/application,
-- obligation/provenance helper operations,
-- spawned-child completion/control observation.
+Normatively, v1 preserves all of the following helper-owned boundaries:
 
-These names are schematic. The semantic requirement is the ownership boundary, not a specific Rust
-function name or exact implementation API.
+- receive-arm selection and receive wait/fallthrough classification at the
+  `select_receive_outcome(...)`-style boundary;
+- `Par` terminal combination and concurrent rejection combination at the
+  `combine_parallel_outcomes(...)`-style boundary;
+- guard evaluation and guard-owned rejection classification at the existing `SPEC-004` boundary;
+- policy lookup/application, capability lookup/application, and proposal formation at their existing
+  `SPEC-004` workflow/helper boundaries;
+- obligation/provenance updates, joins, and scoped transitions at their existing semantic helper
+  boundaries;
+- spawned-child completion sealing, retained terminal observation, and control-authority lifecycle at
+  the existing runtime/supervisor boundary owned by SPEC-004.
+
+These helpers are semantic boundary markers, not extra workflow syntax and not a commitment to
+micro-step their internals here. Where a helper can fail, rejection ownership remains with the
+owning workflow/helper boundary and must stay within the existing SPEC-004 failure taxonomy rather
+than inventing a new small-step error channel.
+
+### 3.5 Rule-Family Presentation Contract
+
+The uppercase names used later in §7 are normative family markers for the accepted workflow-form
+inventory, not full formal inference schemata.
+
+Accordingly:
+
+- `SPEC-025` normatively fixes which workflow-form families must be covered,
+- it normatively fixes the semantic intent and ownership boundary of each family,
+- it does not require this document to spell out complete premise-by-premise inference rules beyond
+  the inventory/intent level accepted from MCE-005,
+- it does not require a one-to-one correspondence between these family markers and concrete runtime
+  implementation entry points.
 
 ## 4. Terminal Projection and Big-Step Correspondence
 
@@ -365,7 +389,7 @@ Canonical v1 examples:
 - blocking `Receive` when no arm is currently selectable,
 - helper-owned waiting on mailbox or external input,
 - runtime-owned child-completion/control observation boundaries,
-- explicit paused/suspended runtime states that remain live rather than terminal.
+- semantically live suspension/wait boundaries that are not terminal and not stuck.
 
 Blocked/suspended is not an error.
 
@@ -405,13 +429,21 @@ The following remain atomic in v1:
 6. obligation/provenance helper operations,
 7. spawned-child completion sealing and runtime-owned control observation.
 
-This keeps the semantics workflow-first and avoids overcommitting to a machine design.
+This keeps the semantics workflow-first and avoids overcommitting to a machine design. In
+particular, pure expressions and pure pattern matching remain atomic subjudgments reused from
+SPEC-004 rather than new micro-step families introduced by this document.
 
 ## 7. Canonical Rule Inventory
 
 The rule inventory is defined over the canonical workflow forms of SPEC-001.
 
+This section is normative as an inventory-and-intent contract. It fixes the accepted family
+coverage and semantic grouping for v1 small-step presentation, while intentionally stopping short
+of full formal inference schemata.
+
 ### 7.1 Terminal and Structural Rules
+
+Family markers:
 
 ```text
 DONE-TERM | RET-EVAL | RET-RETURN | SEQ-STEP | SEQ-ADVANCE | SEQ-REJECT
@@ -425,6 +457,8 @@ Intent:
   or rejects and propagates rejection.
 
 ### 7.2 Binding and Branching Rules
+
+Family markers:
 
 ```text
 LET-EVAL | LET-BIND | LET-REJECT | IF-COND | IF-TRUE | IF-FALSE |
@@ -441,6 +475,8 @@ Intent:
   preserving canonical workflow sequencing.
 
 ### 7.3 Capability, Policy, and Obligation Rules
+
+Family markers:
 
 ```text
 OBSERVE-STEP | ORIENT-STEP | PROPOSE-STEP | DECIDE-STEP | CHECK-STEP |
@@ -460,7 +496,13 @@ Intent:
 - `Oblig` and `With` preserve scoped obligation/capability transitions without inventing new runtime
   structure.
 
+The helper boundaries named here are ownership boundaries only. They must remain faithful to
+SPEC-004's capability/policy/obligation contracts, but `SPEC-025` does not require any particular
+API spelling for them.
+
 ### 7.4 Modal and Fallback Rules
+
+Family markers:
 
 ```text
 MAYBE-PRIMARY | MAYBE-FALLBACK | MUST-STEP | MUST-REJECT
@@ -473,6 +515,8 @@ Intent:
 - `Must` preserves the strengthened mandatory-success behavior already owned by SPEC-004.
 
 ### 7.5 Receive and Concurrency Rules
+
+Family markers:
 
 ```text
 RECEIVE-SELECTED | RECEIVE-FALLBACK | RECEIVE-FALLTHROUGH | RECEIVE-BLOCKED |
@@ -490,6 +534,9 @@ Intent:
 - concurrent rejection semantics preserve helper-owned behavior rather than imposing sequential
   short-circuiting.
 
+The `Par` family is therefore not a disguised sequential evaluation order. Presentation order in
+this section does not collapse the accepted interleaving semantics into a left-to-right machine.
+
 ## 8. Concurrency and Determinism Boundary
 
 This specification fixes the semantic stance without choosing a runtime scheduler.
@@ -506,7 +553,7 @@ The determinism boundary therefore matches the big-step corpus:
 - deterministic where current semantics are deterministic,
 - explicitly helper/runtime-owned where the current corpus already leaves latitude.
 
-## 9. Runtime Alignment Notes
+## 9. Informative Runtime Alignment Notes
 
 This section is informative but grounded in current interpreter/runtime artifacts.
 
@@ -514,6 +561,8 @@ Per §1.3, nothing in this section upgrades partial runtime evidence into a stro
 conformance claim. Where current realization is weak or partial, that limitation is stated directly.
 
 ### 9.1 Receive Realization Evidence
+
+Evidence class: direct.
 
 Current inspected interpreter evidence supports the following receive-path correspondence claims:
 
@@ -525,18 +574,21 @@ This is consistent with the canonical `RECEIVE-FALLTHROUGH` and `RECEIVE-BLOCKED
 
 ### 9.2 Coarse Runtime Outcome State Evidence
 
-Current runtime-side evidence supports a coarse distinction among:
+Evidence class: partial/reconstructed.
 
-- `TerminalSuccess`,
-- `Active`,
-- `BlockedOrSuspended`,
-- `InvalidOrTerminated`,
-- `ExecutionFailure`.
+Current runtime-side evidence supports a coarse correspondence classification among:
 
-That coarse surface is not itself the small-step semantics, but it is compatible with the
-blocked/suspended vs terminal distinction required by this specification.
+- active residual execution,
+- blocked/suspended waiting,
+- terminal outcome, and
+- invalid/runtime-failure boundaries.
+
+That coarse correspondence surface is not itself the small-step semantics, but it is compatible with
+the blocked/suspended vs terminal distinction required by this specification.
 
 ### 9.3 Control and Retained Completion Evidence
+
+Evidence class: mixed — direct for control-authority lifecycle, weak/missing for full retained completion packaging.
 
 Current runtime evidence is strongest for control-authority lifecycle and weaker for retained
 completion packaging.
@@ -553,6 +605,8 @@ This is evidence for the correspondence boundary, not a replacement for the sema
 this specification.
 
 ### 9.4 Current Parallel Realization Boundary
+
+Evidence class: partial/reconstructed.
 
 Current interpreter evidence shows `Par` being realized by concurrent branch execution followed by
 aggregate result collection. This is partial implementation evidence that terminal aggregation remains

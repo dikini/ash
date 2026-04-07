@@ -20,7 +20,7 @@ It no longer serves as an open options note. Its job is now narrower and fixed:
 - record the rule inventory that later formal rule writing must cover;
 - hand off runtime/interpreter realization questions to [MCE-006](MCE-006-SMALL-STEP-IR.md).
 
-This is documentation/spec-planning work only. It does not claim a Rust interpreter, abstract machine, or runtime implementation.
+This is documentation/spec-planning work only. It does not claim a Rust interpreter, abstract machine, or runtime implementation. Its accepted semantic contract is now packaged in [SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) as the stable docs/spec home, while this exploration remains the design reasoning backplane.
 
 ## Scope
 
@@ -322,6 +322,7 @@ What MCE-006 still owns:
 
 - [SPEC-001: Intermediate Representation](../../spec/SPEC-001-IR.md)
 - [SPEC-004: Operational Semantics](../../spec/SPEC-004-SEMANTICS.md)
+- [SPEC-025: Small-Step Operational Semantics](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
 - [MCE-004: Big-Step Semantics Alignment](MCE-004-BIG-STEP-ALIGNMENT.md)
 - [MCE-006: Align Small-Step Semantics with IR Execution](MCE-006-SMALL-STEP-IR.md)
 - [MCE-007: Full Layer Alignment](MCE-007-FULL-ALIGNMENT.md)

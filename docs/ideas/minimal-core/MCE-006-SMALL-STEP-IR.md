@@ -1,5 +1,5 @@
 ---
-status: drafting
+status: accepted
 created: 2026-03-30
 last-revised: 2026-04-05
 related-plan-tasks: [TASK-396, TASK-401, TASK-402, TASK-403, TASK-404]
@@ -23,7 +23,7 @@ Phase 61 fixed the upstream semantic backbone in [MCE-005](MCE-005-SMALL-STEP.md
 - blocked/suspended configurations are distinct from stuckness;
 - `Par` uses interleaving plus helper-backed terminal aggregation.
 
-What remains open here is the runtime/interpreter realization of that accepted backbone.
+What remains open here is the runtime/interpreter realization of that accepted backbone. [SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) is now the aligned docs/spec home for the accepted small-step contract; MCE-006 remains the conservative runtime-correspondence evidence packet rather than a second semantic authority.
 
 Phase 63 / [TASK-401](../../plan/tasks/TASK-401-runtime-carrier-inventory-and-semantic-mapping-table.md) now adds the first frozen runtime-correspondence baseline: one canonical semantic-carrier → runtime mapping table grounded in current interpreter evidence.
 
@@ -55,6 +55,7 @@ Out of scope:
 Related but separate:
 
 - [MCE-005](MCE-005-SMALL-STEP.md): accepted semantic backbone
+- [SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md): docs/spec home for the accepted small-step contract
 - [MCE-007](MCE-007-FULL-ALIGNMENT.md): full five-layer closeout
 - [MCE-008](MCE-008-RUNTIME-CLEANUP.md): adjacent runtime inventory/cleanup work
 

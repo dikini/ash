@@ -1957,17 +1957,17 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 ## Phase 66: Faithful SPEC-025 Small-Step Alignment
 
-**Goal:** Promote `SPEC-025` from an initial distilled small-step document into a faithful, durable docs/spec contract that remains explicitly grounded in accepted `MCE-005`, explicitly compatible with `SPEC-004` big-step semantics, and explicitly honest about current runtime/interpreter evidence from `MCE-006`.
+**Goal:** Close out `SPEC-025` as the faithful, durable docs/spec home for the accepted small-step contract: explicitly grounded in accepted `MCE-005`, explicitly compatible with `SPEC-004` big-step semantics, and explicitly honest about current runtime/interpreter evidence from `MCE-006`.
 
 **Source:** [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), [MCE-005](../ideas/minimal-core/MCE-005-SMALL-STEP.md), [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md)
 **Priority:** High
-**Status:** 🟡 In Progress
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-424](tasks/TASK-424-spec-025-faithfulness-and-compatibility-contract.md) | Freeze the exact faithfulness/compatibility contract that a durable `SPEC-025` must satisfy relative to accepted `MCE-005`, `SPEC-004`, and `MCE-006` | SPEC-025, MCE-005, MCE-006, SPEC-004 | 2-4 | ✅ Complete |
 | [TASK-425](tasks/TASK-425-spec-025-rule-schema-and-helper-boundary-consolidation.md) | Tighten `SPEC-025` rule-family presentation, helper-boundary wording, and normative/informative split without reopening accepted semantics | SPEC-025, MCE-005, SPEC-004 | 3-5 | ✅ Complete |
 | [TASK-426](tasks/TASK-426-spec-025-big-step-and-runtime-compatibility-audit.md) | Audit `SPEC-025` against `SPEC-004` and the frozen `MCE-006` runtime evidence packet to eliminate overclaim and freeze compatibility status row-by-row | SPEC-025, SPEC-004, MCE-006 | 3-5 | ✅ Complete |
-| [TASK-427](tasks/TASK-427-spec-025-faithful-closeout-and-corpus-alignment.md) | Apply the faithful rewrite/audit results to `SPEC-025` and align the surrounding planning/reporting corpus | SPEC-025, MCE-005, MCE-006, SPEC-004 | 2-4 | 📝 Planned |
+| [TASK-427](tasks/TASK-427-spec-025-faithful-closeout-and-corpus-alignment.md) | Apply the faithful rewrite/audit results to `SPEC-025` and align the surrounding planning/reporting corpus | SPEC-025, MCE-005, MCE-006, SPEC-004 | 2-4 | ✅ Complete |
 
-**Deliverable:** One faithful `SPEC-025` small-step operational semantics document that preserves the accepted MCE-005 semantic backbone, stays explicitly compatible with `SPEC-004`, and is honest about the current implementation support captured by MCE-006, together with aligned task/planning/reporting surfaces.
+**Deliverable:** One faithful `SPEC-025` small-step operational semantics document that now serves as the docs/spec home for the accepted small-step contract, preserves the accepted MCE-005 semantic backbone, stays explicitly compatible with `SPEC-004`, and remains honest about the current implementation support captured by MCE-006, together with aligned task/planning/reporting surfaces.

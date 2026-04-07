@@ -6,12 +6,18 @@
 
 This specification defines the canonical small-step operational semantics for Ash workflows.
 
+It is the docs/spec home for the accepted workflow-first small-step contract. The accepted design
+backbone remains [MCE-005](../ideas/minimal-core/MCE-005-SMALL-STEP.md), while current runtime-
+correspondence evidence remains in [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
+This document packages that accepted contract as the stable specification surface without
+superseding either of those upstream design/evidence backplanes.
+
 It is the stepwise companion to [SPEC-004: Operational Semantics](SPEC-004-SEMANTICS.md). SPEC-004
 remains the normative big-step statement of whole-workflow meaning; this document refines that same
 meaning into explicit configuration transitions over the canonical workflow IR from
 [SPEC-001](SPEC-001-IR.md).
 
-This specification is derived from the accepted small-step design corpus:
+This specification faithfully packages the accepted small-step corpus:
 
 - [MCE-005: Small-Step Semantics](../ideas/minimal-core/MCE-005-SMALL-STEP.md)
 - [TASK-395: Canonical Workflow Small-Step Rule Set and Concurrency Semantics](../plan/tasks/TASK-395-canonical-workflow-small-step-rule-set-and-concurrency-semantics.md)
@@ -19,7 +25,10 @@ This specification is derived from the accepted small-step design corpus:
 
 This document is workflow-first, not expression-first. Pure expressions and pure pattern matching
 remain atomic in v1 and are reused from the existing helper/subjudgment structure already accepted
-by SPEC-004.
+by SPEC-004. Current implementation support remains partial for several runtime-correspondence rows,
+especially cumulative carriers, retained completion packaging, and fully explicit helper-backed
+parallel aggregation; those limitations are preserved honestly in §9 rather than erased by spec
+wording.
 
 ## 1.1 Scope
 
@@ -563,6 +572,11 @@ This section is informative but grounded in current interpreter/runtime artifact
 
 Per §1.3, nothing in this section upgrades partial runtime evidence into a stronger semantic or
 conformance claim. Where current realization is weak or partial, that limitation is stated directly.
+
+The closeout verdict from [TASK-426](../plan/tasks/TASK-426-spec-025-big-step-and-runtime-compatibility-audit.md)
+still applies here: this specification is faithful and compatible, but current implementation
+support remains partial for cumulative carriers, retained completion packaging, and fully explicit
+helper-backed `Par` aggregation.
 
 For the explicit row-by-row compatibility audit against [SPEC-004](SPEC-004-SEMANTICS.md) and
 [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md), see

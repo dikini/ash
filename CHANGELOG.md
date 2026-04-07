@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Completed TASK-427 as the faithful closeout and corpus-alignment pass for [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md). The small-step spec now states directly that it is the docs/spec home for the accepted workflow-first small-step contract, keeps [MCE-005](docs/ideas/minimal-core/MCE-005-SMALL-STEP.md) and [MCE-006](docs/ideas/minimal-core/MCE-006-SMALL-STEP-IR.md) as the design/evidence backplanes, and preserves honest wording that current runtime support remains partial for cumulative carriers, retained completion packaging, and fully explicit helper-backed `Par` aggregation; nearby plan/index/ideas/reporting surfaces were aligned accordingly.
+
 - Added [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), a workflow-first small-step operational semantics spec that distills the accepted MCE-005 / TASK-395 / TASK-396 corpus into the docs/spec surface. It presents the small-step judgment, configuration contract, observability split, blocked-vs-stuck distinction, canonical workflow rule inventory, and terminal correspondence boundary back to [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md) without superseding the accepted MCE-005 backbone.
 
 - Completed TASK-426 as a docs/spec audit pass for [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md). The Phase 66 audit now freezes an explicit `SPEC-025 -> SPEC-004` compatibility matrix, an explicit `SPEC-025 runtime-facing claims -> MCE-006` evidence matrix, and a final conservative verdict: `SPEC-025` is faithful and compatible, but current runtime evidence remains partial for cumulative carriers, retained completion packaging, and full helper-backed `Par` aggregation.

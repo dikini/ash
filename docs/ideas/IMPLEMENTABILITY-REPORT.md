@@ -124,7 +124,7 @@ This exploration started as a gap-analysis note for surface syntax, IR, and big-
 **Implementability:** HIGH as planning/design corpus — backbone fixed, runtime realization still downstream
 
 **Summary:**
-Phase 61 converted MCE-005 from an exploratory note into an accepted small-step planning/design artifact. The corpus now fixes:
+Phase 61 converted MCE-005 from an exploratory note into an accepted small-step planning/design artifact, and TASK-427 now closes out [SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) as the docs/spec home for that accepted contract. The corpus now fixes:
 
 - workflow-first canonical configurations over `SPEC-001` workflows;
 - ambient context as `(C, P)` and dynamic state in `Γ`, `Ω`, `π`, cumulative trace, cumulative effect summary, and residual workflow terms;
@@ -132,17 +132,17 @@ Phase 61 converted MCE-005 from an exploratory note into an accepted small-step 
 - explicit blocked/suspended versus stuck distinction;
 - a canonical rule inventory for workflow forms, with pure expressions/patterns remaining atomic in v1.
 
-**Assessment:** MCE-005 is no longer blocked on foundational ambiguity. It is resolved enough to unblock MCE-006 while still remaining documentation/spec-planning work rather than interpreter implementation.
+**Assessment:** MCE-005 is no longer blocked on foundational ambiguity. Its accepted semantic backbone is now also packaged in SPEC-025 as the stable docs/spec surface, while MCE-005 remains the accepted design reasoning backplane and MCE-006 remains the runtime-evidence backplane. This is resolved enough to unblock MCE-006 while still remaining documentation/spec-planning work rather than interpreter implementation.
 
 ---
 
 ### 1.6 MCE-006: Small-Step ↔ IR Execution Alignment — PHASE 63 CLOSEOUT COMPLETE
 
-**Status:** Drafting  
+**Status:** Accepted  
 **Implementability:** MEDIUM-HIGH as planning/design corpus — semantic target fixed and Phase 63 runtime correspondence now packaged conservatively for downstream MCE-007 use
 
 **Summary:**
-MCE-006 now consumes the accepted MCE-005 backbone and, after Phase 63 / TASK-401 through TASK-404, includes a canonical semantic-carrier → runtime mapping table, one explicit operational correspondence section for residual control / blocked-suspended realization / completion-control authority, one explicit `Par` correspondence section, and one explicit closeout section for observable preservation, divergence taxonomy, and MCE-007 handoff packaging. The frozen runtime story is conservative: ordinary residual execution is primarily direct AST recursion, blocking receive is realized implicitly through mailbox/stream wait loops, yield suspension is explicit through `YieldState` plus `ExecError::YieldSuspended`, `ControlLinkRegistry` directly realizes reusable-versus-terminal control authority, `Workflow::Par` is documented as bulk async child execution with cloned branch-local `Context` state plus shared runtime registries and list-value terminal collation, and authoritative cumulative carriers for `π`, `T`, `ε̂`, and stronger terminal `Ω` / completion-payload packaging remain partial or missing.
+MCE-006 now consumes the accepted MCE-005 backbone and, after Phase 63 / TASK-401 through TASK-404, includes a canonical semantic-carrier → runtime mapping table, one explicit operational correspondence section for residual control / blocked-suspended realization / completion-control authority, one explicit `Par` correspondence section, and one explicit closeout section for observable preservation, divergence taxonomy, and MCE-007 handoff packaging. TASK-427 keeps [SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) aligned with that evidence packet without promoting it into stronger implementation claims. The frozen runtime story is conservative: ordinary residual execution is primarily direct AST recursion, blocking receive is realized implicitly through mailbox/stream wait loops, yield suspension is explicit through `YieldState` plus `ExecError::YieldSuspended`, `ControlLinkRegistry` directly realizes reusable-versus-terminal control authority, `Workflow::Par` is documented as bulk async child execution with cloned branch-local `Context` state plus shared runtime registries and list-value terminal collation, and authoritative cumulative carriers for `π`, `T`, `ε̂`, and stronger terminal `Ω` / completion-payload packaging remain partial or missing.
 
 **Assessment:** MCE-006 is now complete as a documentation/planning/runtime-correspondence phase. The resulting verdict is intentionally conservative: the current interpreter partially realizes the accepted small-step backbone for observable purposes, but MCE-007 should still keep cumulative-carrier and retained-completion rows marked partial/follow-up rather than closed.
 
@@ -446,8 +446,8 @@ The explorations demonstrate good design discipline: separating concerns, identi
 - MCE-003: Functions vs Capabilities — Drafting
 - MCE-004: Big-Step Semantics Alignment — Accepted
 - MCE-005: Small-Step Semantics — Accepted
-- MCE-006: Small-Step ↔ IR Execution — Drafting
-- MCE-007: Full Layer Alignment — Drafting
+- MCE-006: Small-Step ↔ IR Execution — Accepted
+- MCE-007: Full Layer Alignment — Closeout artifact published
 - MCE-008: Runtime Cleanup — Drafting
 - MCE-009: Test and Example Workflows — Drafting
 

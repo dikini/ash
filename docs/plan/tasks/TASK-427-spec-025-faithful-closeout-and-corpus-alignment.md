@@ -1,6 +1,6 @@
 # TASK-427: SPEC-025 Faithful Closeout and Corpus Alignment
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -67,11 +67,20 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] TASK-427 task file created
-- [ ] SPEC-025 revised with faithful audited wording
-- [ ] nearby planning/reporting surfaces aligned
-- [ ] CHANGELOG updated
-- [ ] corpus reads coherently after rewrite
+- [x] TASK-427 task file created
+- [x] SPEC-025 revised with faithful audited wording
+- [x] nearby planning/reporting surfaces aligned
+- [x] CHANGELOG updated
+- [x] corpus reads coherently after rewrite
+
+## Completion Notes
+
+Completed 2026-04-07.
+
+- Updated [SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) so it now states directly that it is the docs/spec home for the accepted workflow-first small-step contract while keeping [MCE-005](../../ideas/minimal-core/MCE-005-SMALL-STEP.md) as the accepted design backbone and [MCE-006](../../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md) as the runtime-evidence backplane.
+- Kept the wording conservative about implementation support by explicitly preserving the TASK-426 closeout verdict: cumulative carriers, retained completion packaging, and fully explicit helper-backed `Par` aggregation remain partial in current runtime evidence.
+- Aligned nearby planning/reporting/index surfaces so they point to `SPEC-025` as the stable docs/spec home for the accepted small-step contract instead of treating it as only an initial distillation.
+- Performed a corpus-consistency sweep across plan/index/ideas/reporting/changelog surfaces without reopening Phase 61 or Phase 63 decisions.
 
 ## Notes
 

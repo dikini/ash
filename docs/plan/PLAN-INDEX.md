@@ -1971,3 +1971,31 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-427](tasks/TASK-427-spec-025-faithful-closeout-and-corpus-alignment.md) | Apply the faithful rewrite/audit results to `SPEC-025` and align the surrounding planning/reporting corpus | SPEC-025, MCE-005, MCE-006, SPEC-004 | 2-4 | ✅ Complete |
 
 **Deliverable:** One faithful `SPEC-025` small-step operational semantics document that now serves as the docs/spec home for the accepted small-step contract, preserves the accepted MCE-005 semantic backbone, stays explicitly compatible with `SPEC-004`, and remains honest about the current implementation support captured by MCE-006, together with aligned task/planning/reporting surfaces.
+
+---
+
+## Phase 67: Formal Conformance and Runtime Carrier Alignment
+
+**Goal:** Convert the accepted `SPEC-004` + `SPEC-025` corpus into a verification-grade multi-implementation suite by freezing implementation-conformance contracts, completing proof-usable small-step rule definitions and helper boundaries, closing the highest-value runtime carrier gaps in `ash-interp`, and adding canonical differential-testing infrastructure for Rust, Lean, and future Ash implementations.
+
+**Source:** [SPEC-004: Operational Semantics](../spec/SPEC-004-SEMANTICS.md), [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), [Formalization Boundary and Proof Targets](../reference/formalization-boundary.md), [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md), [MCE-007](../ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md)
+**Priority:** High
+**Status:** 🟡 Ready
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-428](tasks/TASK-428-implementation-conformance-contract.md) | Freeze the canonical implementation-conformance contract across big-step, small-step, and runtime-observable layers | SPEC-004, SPEC-025, SPEC-021 | 3-5 | 📝 Planned |
+| [TASK-429](tasks/TASK-429-spec-025-full-rule-definitions.md) | Expand `SPEC-025` from rule inventory/family wording into full canonical workflow small-step rule definitions | SPEC-025, SPEC-001, SPEC-004 | 4-6 | 📝 Planned |
+| [TASK-430](tasks/TASK-430-small-step-helper-contracts-and-state-taxonomy.md) | Make helper-owned small-step boundaries and blocked/suspended/invalid taxonomy fully explicit and proof-usable | SPEC-025, SPEC-004, MCE-007 | 3-5 | 📝 Planned |
+| [TASK-431](tasks/TASK-431-big-step-small-step-meta-properties-and-formalization-boundary-refresh.md) | Record explicit theorem targets, correspondence obligations, and update the formalization boundary to include the small-step spec | SPEC-004, SPEC-025, formalization-boundary | 3-5 | 📝 Planned |
+| [TASK-432](tasks/TASK-432-semantic-execution-record-and-terminal-projection-contract.md) | Freeze the runtime-facing semantic execution-record contract for cumulative `Ω` / `π` / `T` / `ε̂` and terminal projection | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | 📝 Planned |
+| [TASK-433](tasks/TASK-433-ash-interp-execution-record-substrate.md) | Add the first authoritative execution-record substrate in `ash-interp` and thread cumulative semantic carriers through interpreter execution | TASK-432, ash-interp | 5-8 | 📝 Planned |
+| [TASK-434](tasks/TASK-434-par-branch-state-and-aggregation-contract.md) | Freeze the exact semantic/runtime contract for `Par` branch-local carriers and helper-backed aggregation | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | 📝 Planned |
+| [TASK-435](tasks/TASK-435-par-runtime-aggregation-realization.md) | Implement `Par` runtime aggregation against the frozen branch-state/aggregation contract in `ash-interp` | TASK-434, ash-interp | 5-8 | 📝 Planned |
+| [TASK-436](tasks/TASK-436-completion-payload-parity-contract.md) | Freeze the exact contract for retained completion observation versus full `CompletionPayload` parity | SPEC-004, SPEC-021, MCE-007 | 3-5 | 📝 Planned |
+| [TASK-437](tasks/TASK-437-retained-completion-parity-follow-on.md) | Implement the next honest retained-completion parity slice after TASK-412 under the frozen contract | TASK-436, ash-interp | 4-7 | 📝 Planned |
+| [TASK-438](tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md) | Define the canonical IR semantics corpus and machine-readable expected-result format for cross-implementation verification | SPEC-001, SPEC-004, SPEC-025, SPEC-021 | 4-6 | 📝 Planned |
+| [TASK-439](tasks/TASK-439-differential-conformance-harness-rust-first.md) | Build the first differential conformance harness against the canonical corpus, starting with the Rust implementation | TASK-428, TASK-438 | 5-8 | 📝 Planned |
+| [TASK-440](tasks/TASK-440-lean-reference-refresh-plan-against-current-semantic-corpus.md) | Refresh the Lean/reference implementation plan against the current canonical big-step/small-step corpus and conformance contract | formalization-boundary, TASK-428, TASK-431, TASK-438 | 3-5 | 📝 Planned |
+
+**Deliverable:** A contract-first verification suite for Ash consisting of: (1) an explicit implementation-conformance contract, (2) a proof-usable small-step specification with full rule definitions and helper boundaries, (3) a runtime execution-record contract plus first authoritative `ash-interp` carrier realization for cumulative semantic state, (4) a frozen `Par` aggregation contract with runtime follow-on implementation, (5) a canonical IR semantics corpus with machine-readable expected-result format, and (6) a Rust-first differential conformance harness that can later be extended to Lean and future Ash runtimes.

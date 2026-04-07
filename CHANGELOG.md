@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added Phase 67 planning for formal conformance and runtime carrier alignment. The new plan introduces TASK-428 through TASK-440 as a contract-first queue covering implementation conformance, proof-usable `SPEC-025` rule definitions, helper/state-taxonomy clarification, semantic execution-record contracts, runtime carrier follow-ons in `ash-interp`, canonical IR semantics corpus design, differential conformance harness work, and Lean/reference refresh planning.
+
+- Added planned task files for TASK-428 through TASK-432 covering the implementation-conformance contract, full `SPEC-025` rule definitions, small-step helper contracts and state taxonomy, formalization-boundary refresh, and the semantic execution-record / terminal-projection contract.
+
 - Completed TASK-427 as the faithful closeout and corpus-alignment pass for [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md). The small-step spec now states directly that it is the docs/spec home for the accepted workflow-first small-step contract, keeps [MCE-005](docs/ideas/minimal-core/MCE-005-SMALL-STEP.md) and [MCE-006](docs/ideas/minimal-core/MCE-006-SMALL-STEP-IR.md) as the design/evidence backplanes, and preserves honest wording that current runtime support remains partial for cumulative carriers, retained completion packaging, and fully explicit helper-backed `Par` aggregation; nearby plan/index/ideas/reporting surfaces were aligned accordingly.
 
 - Added [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), a workflow-first small-step operational semantics spec that distills the accepted MCE-005 / TASK-395 / TASK-396 corpus into the docs/spec surface. It presents the small-step judgment, configuration contract, observability split, blocked-vs-stuck distinction, canonical workflow rule inventory, and terminal correspondence boundary back to [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md) without superseding the accepted MCE-005 backbone.

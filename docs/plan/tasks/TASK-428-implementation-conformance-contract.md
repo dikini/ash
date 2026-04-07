@@ -1,6 +1,6 @@
 # TASK-428: Implementation Conformance Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -78,14 +78,32 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] conformance artifact created
-- [ ] big-step conformance defined
-- [ ] small-step conformance defined
-- [ ] runtime-observable conformance defined
-- [ ] bounded nondeterminism rules stated
-- [ ] current-runtime partiality preserved honestly
-- [ ] planning/reporting surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] conformance artifact created
+- [x] big-step conformance defined
+- [x] small-step conformance defined
+- [x] runtime-observable conformance defined
+- [x] bounded nondeterminism rules stated
+- [x] current-runtime partiality preserved honestly
+- [x] planning/reporting surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+Completed 2026-04-07.
+
+- Added [SPEC-026](../../spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md) as the explicit
+  implementation-conformance contract for Ash, with separate big-step, small-step, and
+  runtime-observable conformance surfaces.
+- Froze surface-specific authority, preserved semantic dimensions, implementation freedom, bounded
+  nondeterminism, and comparison rules for helper-owned concurrency and `receive` behavior.
+- Made the differential-testing relationship explicit so later corpus/result-format and harness
+  tasks can compare implementations against allowed result sets rather than one accidental step
+  order.
+- Preserved the honesty boundary from the current runtime-evidence corpus: the Rust runtime is not
+  described as already having full small-step carrier closure or full retained-completion / `Par`
+  aggregation parity.
+- Updated the formalization boundary, spec index, Phase 67 planning surface, ideas/reporting
+  surfaces, and `CHANGELOG.md` so the conformance contract is now a named corpus anchor.
 
 ## Dependencies for Next Task
 

@@ -21,9 +21,12 @@ Lean should treat these documents as authoritative for language semantics:
 - [SPEC-004: Operational Semantics](../spec/SPEC-004-SEMANTICS.md)
 - [SPEC-020: Algebraic Data Types](../spec/SPEC-020-ADT-TYPES.md)
 - [SPEC-021: Runtime Observable Behavior](../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md)
+- [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
+- [SPEC-026: Implementation Conformance Contract](../spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md)
 
-These documents define the canonical core, typing, dynamic semantics, ADT behavior, and
-observable runtime contract. They are the semantic truth for both Rust and Lean work.
+These documents define the canonical core, typing, dynamic semantics, ADT behavior, observable
+runtime contract, and the implementation-comparison contract used to judge future Rust, Lean, and
+alternate Ash implementations. They are the semantic truth for both Rust and Lean work.
 
 ## Authoritative Source and Handoff Contracts
 
@@ -41,6 +44,11 @@ Lean should also treat these documents as authoritative for their own layer-spec
 These contracts are authoritative for source syntax, lowering handoff, CLI/REPL observability,
 and runtime handoff boundaries. They do not replace the canonical semantic corpus above, but Lean
 work should still use them as the contract for their respective layers.
+
+[SPEC-026: Implementation Conformance Contract](../spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md)
+does not replace the big-step, small-step, or observable specifications. Instead, it freezes how
+future implementations and proof artifacts compare themselves against those normative surfaces,
+including bounded nondeterminism and surface-specific result comparison.
 
 ## Historical and Migration-Only Artifacts
 
@@ -78,6 +86,9 @@ The first proof targets should be small and judgment-shaped:
    equivalent implementations.
 5. Explicit recoverable failure: recoverable failures are represented and handled through `Result`
    dataflow, not exceptional `catch` control flow.
+6. Conformance-surface preservation: proof-oriented comparison artifacts respect the surface split
+   and bounded nondeterminism frozen in SPEC-026 rather than assuming one accidental
+   implementation schedule or carrier layout.
 
 For SPEC-004 specifically, these initial proof targets now align with its explicit judgment and
 meta-property structure:
@@ -96,12 +107,17 @@ The first bisimulation-style comparisons should cover:
    inputs.
 3. Rust lowering and type-rejection boundaries versus Lean judgments over the same canonical forms.
 
+These comparisons should be surface-declared rather than implicit: terminal equivalence for
+big-step questions, admissible transition/state-taxonomy equivalence for small-step questions, and
+observable equivalence only for CLI/REPL/runtime-facing questions, as frozen by SPEC-026.
+
 The eventual JIT path is expected to preserve the same canonical IR meaning, but JIT-specific proof
 work is out of scope for this note.
 
 ## Contract Hygiene
 
 - Canonical specs define semantic truth.
+- SPEC-026 defines how implementations are compared against that truth; it does not replace it.
 - Source/handoff contracts define layer-specific authority.
 - Plans and task files define implementation work and migration notes.
 - Recoverable failure is canonical only as explicit `Result` handling.

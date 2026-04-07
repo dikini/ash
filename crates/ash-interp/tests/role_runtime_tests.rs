@@ -35,6 +35,7 @@ fn create_test_role(name: &str, capabilities: Vec<&str>) -> RoleDef {
 fn create_test_workflow(name: &str, plays_roles: Vec<&str>) -> WorkflowDef {
     WorkflowDef {
         name: name.into(),
+        type_params: vec![],
         params: vec![],
         declared_return_type: None,
         plays_roles: plays_roles

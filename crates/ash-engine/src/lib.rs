@@ -375,6 +375,21 @@ impl Engine {
         interpret_in_state(&workflow.core, &self.runtime_state).await
     }
 
+    /// Register a runtime-owned spawned-child workflow entry.
+    ///
+    /// This exposes the interpreter runtime state's narrow `workflow_type` → child-workflow registry
+    /// through the engine so integration tests and embeddings can configure spawned-child execution
+    /// against the same engine-owned runtime state used by top-level executions.
+    pub async fn register_child_workflow(
+        &self,
+        workflow_type: impl Into<String>,
+        workflow: ash_core::Workflow,
+    ) {
+        self.runtime_state
+            .register_child_workflow(workflow_type, workflow)
+            .await;
+    }
+
     /// Execute a workflow asynchronously with input bindings
     ///
     /// The input bindings are injected into the workflow's execution context

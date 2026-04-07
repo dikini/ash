@@ -116,6 +116,18 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             eval_function_call(func, &args)
         }
 
+        Expr::InterfaceMethodCall {
+            interface,
+            method,
+            argument,
+        } => {
+            let argument_value = eval_expr(argument, ctx)?;
+            Err(EvalError::NotImplemented(format!(
+                "interface method call {}::{} cannot be evaluated directly at runtime: {:?}",
+                interface, method, argument_value
+            )))
+        }
+
         Expr::Constructor { name, fields } => {
             // Evaluate each field expression and collect into a vector of (name, value) pairs
             let evaluated_fields: Vec<(String, Value)> = fields
@@ -868,6 +880,23 @@ mod tests {
             arguments: vec![],
         };
         assert!(eval_expr(&expr, &ctx).is_err());
+    }
+
+    #[test]
+    fn test_eval_interface_method_call_reports_not_implemented() {
+        let mut ctx = Context::new();
+        ctx.set("x".to_string(), Value::Int(42));
+        let expr = Expr::InterfaceMethodCall {
+            interface: "Explain".to_string(),
+            method: "explain".to_string(),
+            argument: Box::new(Expr::Variable("x".to_string())),
+        };
+
+        assert!(matches!(
+            eval_expr(&expr, &ctx),
+            Err(EvalError::NotImplemented(message))
+                if message.contains("Explain::explain")
+        ));
     }
 
     #[test]

@@ -1950,3 +1950,5 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-423](tasks/TASK-423-workflow-binding-propagation-and-honest-unsupported-bindings.md) | Tighten Observe/For binding propagation and handle surfaced Propose bindings honestly in workflow validation and declared return checking | TASK-421, TASK-422, TYPES-002 MVP | 3-5 | ✅ Complete |
 
 **Deliverable:** A sequenced implementation queue that turns the Phase 64 type-system promotion packet into concrete parser/typechecker/interpreter work without reopening the contracts that Phase 64 just froze.
+
+**Small-step spec note:** The accepted Phase 61 small-step corpus is now also distilled into [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), which serves as the docs/spec home for the workflow-first small-step judgment, configuration contract, rule inventory, and SPEC-004 correspondence boundary derived from MCE-005 / TASK-395 / TASK-396.

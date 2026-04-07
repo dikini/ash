@@ -93,6 +93,19 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::InterfaceMethodCall {
+            interface,
+            method,
+            argument,
+            ..
+        } => {
+            let mut out = String::from("InterfaceMethodCall {\n");
+            push_field(&mut out, 2, "interface", &format!("{interface:?}"));
+            push_field(&mut out, 2, "method", &format!("{method:?}"));
+            push_field(&mut out, 2, "argument", &render_expr(argument));
+            out.push('}');
+            out
+        }
         Expr::Match {
             scrutinee, arms, ..
         } => {

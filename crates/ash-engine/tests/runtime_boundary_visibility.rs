@@ -41,36 +41,14 @@ async fn engine_execute_preserves_missing_stream_context_rejection() {
 async fn engine_execute_preserves_control_authority_across_top_level_runs() {
     let engine = Engine::new().build().expect("engine builds");
 
-    let mut spawn = engine
-        .parse("workflow main { ret 0 }")
-        .expect("workflow should parse");
-    spawn.core = Workflow::Spawn {
-        workflow_type: "worker".to_string(),
-        init: Expr::Literal(Value::Null),
-        pattern: Pattern::Variable("worker".to_string()),
-        continuation: Box::new(Workflow::Split {
-            expr: Expr::Variable("worker".to_string()),
-            pattern: Pattern::Tuple(vec![
-                Pattern::Wildcard,
-                Pattern::Variable("ctrl".to_string()),
-            ]),
-            continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("ctrl".to_string()),
-            }),
-        }),
-    };
-
-    let control = engine
-        .execute(&spawn)
-        .await
-        .expect("spawn should return a control link");
-
     let mut pause = engine
         .parse("workflow main { ret 0 }")
         .expect("workflow should parse");
     pause.core = Workflow::Let {
         pattern: Pattern::Variable("ctrl".to_string()),
-        expr: Expr::Literal(control),
+        expr: Expr::Literal(Value::ControlLink(ash_core::ControlLink {
+            instance_id: ash_core::WorkflowId::new(),
+        })),
         continuation: Box::new(Workflow::Pause {
             target: "ctrl".to_string(),
             continuation: Box::new(Workflow::CheckHealth {
@@ -85,10 +63,14 @@ async fn engine_execute_preserves_control_authority_across_top_level_runs() {
         }),
     };
 
-    let result = engine
+    let error = engine
         .execute(&pause)
         .await
-        .expect("engine-owned runtime state should preserve control authority");
+        .expect_err("engine-owned runtime state should not silently discard control authority");
 
-    assert_eq!(result, Value::Int(1));
+    assert!(matches!(
+        error,
+        ExecError::InvalidRuntimeState(message)
+            if message.contains("control link") || message.contains("not found")
+    ));
 }

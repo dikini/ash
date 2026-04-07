@@ -1,6 +1,6 @@
 # TASK-424: SPEC-025 Faithfulness and Compatibility Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -81,13 +81,24 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] TASK-424 task file created
-- [ ] explicit SPEC-025 faithfulness contract defined
-- [ ] required preserved decisions from MCE-005 listed
-- [ ] required compatibility constraints from SPEC-004 listed
-- [ ] required honesty constraints from MCE-006 listed
-- [ ] non-goals frozen
-- [ ] PLAN-INDEX updated
+- [x] TASK-424 task file created
+- [x] explicit SPEC-025 faithfulness contract defined
+- [x] required preserved decisions from MCE-005 listed
+- [x] required compatibility constraints from SPEC-004 listed
+- [x] required honesty constraints from MCE-006 listed
+- [x] non-goals frozen
+- [x] PLAN-INDEX updated
+
+## Completion Notes
+
+Completed 2026-04-07.
+
+- Updated [SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) to add one explicit `§1.3 Faithfulness and Compatibility Contract` section.
+- Froze the required preserved semantic decisions from [MCE-005](../../ideas/minimal-core/MCE-005-SMALL-STEP.md): workflow-first subject, canonical configuration vocabulary, state/label observability split, blocked/suspended vs stuck, v1 atomic boundaries, and helper-owned concurrency/aggregation boundaries.
+- Froze the required compatibility constraints from [SPEC-004](../../spec/SPEC-004-SEMANTICS.md): terminal outcome reconstruction, helper-boundary ownership, receive blocking/fallthrough semantics, `Par` aggregation/determinism boundaries, and spawned-child completion/control ownership boundaries.
+- Froze the required runtime-correspondence honesty constraints from [MCE-006](../../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md), including explicit no-overclaim boundaries for `π`, `T`, `ε̂`, blocked/suspended carrier uniformity, retained completion packaging, and current `Par` realization evidence.
+- Added an explicit normative vs informative placement split to SPEC-025 and tightened the runtime-alignment notes so they remain conservative where implementation evidence is partial.
+- Updated [PLAN-INDEX](../PLAN-INDEX.md) to mark TASK-424 complete.
 
 ## Notes
 

@@ -51,6 +51,134 @@ This document does not define:
 - [SPEC-022](SPEC-022-WORKFLOW-TYPING.md) remains the owner of workflow typing and obligation typing
   constraints; this document only describes dynamic obligation state transitions.
 
+## 1.3 Faithfulness and Compatibility Contract
+
+This section freezes what counts as a faithful `SPEC-025`.
+
+`SPEC-025` is normative for the workflow-first small-step presentation introduced here, but it is not
+an independent semantic authority. A faithful `SPEC-025` must satisfy all of the following:
+
+1. preserve the accepted small-step backbone from
+   [MCE-005](../ideas/minimal-core/MCE-005-SMALL-STEP.md),
+2. remain compatible with the normative big-step and helper-boundary contracts of
+   [SPEC-004](SPEC-004-SEMANTICS.md), and
+3. keep all implementation-alignment statements conservative and evidence-based relative to
+   [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
+
+This contract narrows what this specification may claim. It does not reopen accepted MCE-005 design
+decisions, redesign the runtime, or promote partial implementation evidence into stronger semantic or
+conformance claims.
+
+### 1.3.1 Preserved MCE-005 Semantic Decisions
+
+Relative to accepted [MCE-005](../ideas/minimal-core/MCE-005-SMALL-STEP.md), a faithful `SPEC-025`
+must preserve all of the following semantically, not merely approximately in prose:
+
+1. workflow-first semantic subject: the primary judgment remains `A ⊢ κ —μ→ κ'` over workflows,
+   not an expression-first or machine-first semantics;
+2. canonical configuration vocabulary: the v1 configuration domain remains
+   `Running(Γ, Ω, π, T, ε̂, w)`, `Returned(v, Ω, π, T, ε̂)`, and `Rejected(err, Ω, π, T, ε̂)` with
+   ambient context `A = (C, P)`;
+3. state/label observability split: authoritative cumulative state remains in configurations,
+   while labels carry only local step deltas such as `ΔT` and `δε`;
+4. blocked/suspended vs stuck distinction: waiting on helper-owned or external conditions is not
+   semantic stuckness;
+5. v1 atomic boundaries: pure expressions, pure patterns, guards, receive selection, parallel
+   aggregation, obligation/provenance helpers, and spawned-child completion/control observation stay
+   atomic or helper-owned in v1 rather than being micro-stepped here;
+6. helper-owned concurrency and aggregation boundaries: `Par` remains interleaving-based at the
+   semantic level with helper-backed terminal aggregation rather than being rewritten into fake
+   left-to-right sequencing or machine-specific scheduler rules.
+
+`SPEC-025` may restate, organize, or clarify these decisions, but it must not weaken, erase, or
+silently replace them.
+
+### 1.3.2 Preserved SPEC-004 Compatibility Constraints
+
+Relative to [SPEC-004](SPEC-004-SEMANTICS.md), a faithful `SPEC-025` must preserve the following
+compatibility constraints:
+
+1. terminal outcome reconstruction: terminal small-step configurations must reconstruct the same
+   `Return(...)` / `Reject(...)` outcomes already owned by SPEC-004, including the terminal role of
+   `Ω`, `π`, trace, and effect summary projection;
+2. helper-boundary ownership: helper-backed contracts such as
+   `select_receive_outcome(...)` and `combine_parallel_outcomes(...)` remain owned helper
+   boundaries rather than being flattened into accidental machine internals or presentation-order
+   artifacts;
+3. receive blocking/fallthrough semantics: receive-arm selection, fallback, non-blocking
+   fallthrough, timeout behavior, and blocking waits must remain compatible with the receive helper
+   laws and failure ownership already fixed by SPEC-004;
+4. `Par` aggregation and determinism boundaries: `Par` must preserve interleaving-compatible branch
+   progress together with helper-backed concurrent aggregation, and must not impose sequential
+   short-circuiting that contradicts the existing SPEC-004 concurrent combination contract;
+5. spawned-child completion/control ownership boundaries: control authority, terminal completion
+   sealing, and retained completion observation remain owned by the existing SPEC-004 runtime/
+   supervisor contract, not by new surface syntax or new small-step workflow forms introduced here.
+
+Where SPEC-004 is already normative, this document refines presentation only. It does not create a
+second incompatible contract.
+
+### 1.3.3 MCE-006 Runtime-Correspondence Honesty Constraints
+
+Implementation correspondence statements in this document must remain conservative relative to the
+evidence frozen in [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
+
+In particular, `SPEC-025` must not claim that the current runtime already provides:
+
+1. authoritative cumulative runtime carriers for `π`, `T`, or `ε̂` where MCE-006 records only
+   missing or weak realization;
+2. one uniform first-class blocked/suspended runtime result carrier where MCE-006 records mixed
+   implicit waiting and specialized suspension mechanisms;
+3. a full retained completion-packaging realization for SPEC-004-style completion payloads where
+   MCE-006 records only partial or weak evidence on the inspected main execution path;
+4. an explicit scheduler or branch-step machine for `Par` where MCE-006 records only partial
+   operational correspondence via concurrent child execution plus terminal collation;
+5. stronger implementation support for semantic carriers or ownership boundaries than the cited
+   runtime evidence actually demonstrates.
+
+Accordingly, runtime notes in this document may use the following evidence classes only:
+
+- direct evidence,
+- partial/reconstructed evidence,
+- weak/missing evidence.
+
+This document may use current runtime artifacts to explain correspondence boundaries, but not to
+upgrade partial implementation evidence into normative semantic facts.
+
+### 1.3.4 Frozen Non-Goals
+
+This specification does not, by this contract:
+
+1. redesign the runtime or choose a concrete abstract machine;
+2. introduce new workflow syntax, including user-visible `await`;
+3. add expression-level micro-stepping in v1;
+4. state or imply a fairness theorem, scheduler guarantee, or queue-layout contract;
+5. overclaim current runtime support for `π`, `T`, `ε̂`, or retained completion packaging;
+6. reopen accepted MCE-005 or SPEC-004 semantic decisions.
+
+### 1.3.5 Normative vs Informative Placement
+
+Within `SPEC-025`, the following belong normatively in this specification:
+
+- the judgment backbone and configuration vocabulary;
+- the observability split between configuration state and labels;
+- the blocked/suspended vs stuck classification;
+- the v1 atomic-boundary contract;
+- the workflow-form rule inventory and helper-boundary ownership stance;
+- the terminal projection back to SPEC-004;
+- the preserved compatibility constraints and explicit non-goals frozen in this section;
+- conformance requirements stated independently of current interpreter implementation details.
+
+The following belong informatively only:
+
+- current interpreter/runtime evidence;
+- implementation examples, carrier realizations, or mapping sketches;
+- statements about what the runtime presently realizes directly versus only partially;
+- any mention of concrete runtime holder types, registries, or packaging artifacts.
+
+Informative material may illustrate or justify the normative contract, but it does not override that
+contract and must remain conservative when implementation evidence is partial.
+
 ## 2. Semantic Backbone
 
 ### 2.1 Ambient Context
@@ -382,9 +510,12 @@ The determinism boundary therefore matches the big-step corpus:
 
 This section is informative but grounded in current interpreter/runtime artifacts.
 
+Per §1.3, nothing in this section upgrades partial runtime evidence into a stronger semantic or
+conformance claim. Where current realization is weak or partial, that limitation is stated directly.
+
 ### 9.1 Receive Realization Evidence
 
-The current interpreter’s receive execution path already aligns with the v1 small-step stance:
+Current inspected interpreter evidence supports the following receive-path correspondence claims:
 
 - non-blocking `Receive` falls through observably when no arm matches,
 - timeout or wildcard receive continues through the wildcard arm,
@@ -394,7 +525,7 @@ This is consistent with the canonical `RECEIVE-FALLTHROUGH` and `RECEIVE-BLOCKED
 
 ### 9.2 Coarse Runtime Outcome State Evidence
 
-The current runtime-side classification surface distinguishes:
+Current runtime-side evidence supports a coarse distinction among:
 
 - `TerminalSuccess`,
 - `Active`,
@@ -402,30 +533,34 @@ The current runtime-side classification surface distinguishes:
 - `InvalidOrTerminated`,
 - `ExecutionFailure`.
 
-That coarse surface is not itself the small-step semantics, but it supports the blocked/suspended vs
-terminal distinction required by this specification.
+That coarse surface is not itself the small-step semantics, but it is compatible with the
+blocked/suspended vs terminal distinction required by this specification.
 
 ### 9.3 Control and Retained Completion Evidence
 
-Current runtime control-link machinery retains terminal completion observations through
-`RetainedCompletionRecord` and preserves coarse outcome state plus conservative slices of:
+Current runtime evidence is strongest for control-authority lifecycle and weaker for retained
+completion packaging.
 
-- terminal result,
-- effect summary,
-- obligation summary,
-- provenance summary.
+- Control-link lifecycle and terminal invalidation are directly evidenced as runtime-owned
+  boundaries.
+- Retained completion-payload realization is only partial/weak on the inspected main execution path
+  summarized by [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
+- Accordingly, this specification preserves the SPEC-004 completion/control contract normatively,
+  but does not claim that the current interpreter already exposes authoritative retained packaging
+  for terminal obligations, provenance, trace, and effect summary as one complete runtime carrier.
 
-This is evidence for the correspondence/handoff boundary, not a replacement for the semantic carriers
-used in this specification.
+This is evidence for the correspondence boundary, not a replacement for the semantic carriers used in
+this specification.
 
 ### 9.4 Current Parallel Realization Boundary
 
-The current interpreter realizes `Par` by concurrent branch execution followed by aggregate result
-collection. This is implementation evidence that terminal aggregation remains a distinct boundary,
-which is consistent with the helper-backed `PAR-AGGREGATE` stance defined here.
+Current interpreter evidence shows `Par` being realized by concurrent branch execution followed by
+aggregate result collection. This is partial implementation evidence that terminal aggregation remains
+a distinct boundary, which is consistent with the helper-backed `PAR-AGGREGATE` stance defined here.
 
-This specification does not require that exact implementation strategy; it requires only the same
-semantic boundary and terminal reconstruction contract.
+This specification does not require that exact implementation strategy. It requires only the same
+semantic boundary and terminal reconstruction contract, and it does not treat the current runtime as
+already having a fully explicit branch-step interleaving machine.
 
 ## 10. Explicit Non-Goals
 

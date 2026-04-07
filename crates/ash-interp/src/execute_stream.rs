@@ -20,6 +20,7 @@ use crate::control_link::ControlLinkRegistry;
 use crate::error::{EvalError, ExecError, ExecResult};
 use crate::eval::eval_expr;
 use crate::execute::execute_workflow_inner;
+use crate::execution_record::ExecutionRecorder;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
@@ -31,7 +32,7 @@ use crate::yield_state::SuspendedYields;
 const CONTROL_CAPABILITY: &str = "__control__";
 const CONTROL_CHANNEL: &str = "__mailbox__";
 
-pub struct CoreReceiveRuntime<'a> {
+pub(crate) struct CoreReceiveRuntime<'a> {
     pub mailbox: SharedMailbox,
     pub control_registry: std::sync::Arc<tokio::sync::Mutex<ControlLinkRegistry>>,
     pub proxy_registry: Option<std::sync::Arc<tokio::sync::Mutex<ProxyRegistry>>>,
@@ -43,10 +44,11 @@ pub struct CoreReceiveRuntime<'a> {
     pub actor: &'a Role,
     pub behaviour_ctx: &'a BehaviourContext,
     pub runtime_state: &'a RuntimeState,
+    pub execution_recorder: Option<&'a ExecutionRecorder>,
 }
 
 /// Execute a canonical core receive using the shared stream-aware execution path.
-pub async fn execute_core_receive(
+pub(crate) async fn execute_core_receive(
     mode: &CoreReceiveMode,
     arms: &[CoreReceiveArm],
     control: bool,
@@ -99,6 +101,7 @@ pub async fn execute_core_receive(
                         runtime.proxy_registry.clone(),
                         runtime.suspended_yields.clone(),
                         runtime.runtime_state,
+                        runtime.execution_recorder,
                     )
                     .await;
                 }
@@ -131,6 +134,7 @@ pub async fn execute_core_receive(
                         runtime.proxy_registry.clone(),
                         runtime.suspended_yields.clone(),
                         runtime.runtime_state,
+                        runtime.execution_recorder,
                     )
                     .await;
                 }
@@ -175,6 +179,7 @@ pub async fn execute_core_receive(
                                 runtime.proxy_registry.clone(),
                                 runtime.suspended_yields.clone(),
                                 runtime.runtime_state,
+                                runtime.execution_recorder,
                             )
                             .await;
                         }
@@ -329,6 +334,7 @@ async fn execute_receive_in_state_with_policy(
                         Some(proxy_registry.clone()),
                         Some(suspended_yields.clone()),
                         runtime_state,
+                        None,
                     )
                     .await;
                 }
@@ -362,6 +368,7 @@ async fn execute_receive_in_state_with_policy(
                         Some(proxy_registry.clone()),
                         Some(suspended_yields.clone()),
                         runtime_state,
+                        None,
                     )
                     .await;
                 }
@@ -410,6 +417,7 @@ async fn execute_receive_in_state_with_policy(
                                 Some(proxy_registry.clone()),
                                 Some(suspended_yields.clone()),
                                 runtime_state,
+                                None,
                             )
                             .await;
                         }
@@ -477,6 +485,7 @@ async fn execute_receive_control(
                 proxy_registry.clone(),
                 suspended_yields.clone(),
                 runtime_state,
+                None,
             )
             .await;
         }
@@ -1116,6 +1125,7 @@ mod tests {
                 actor: &actor,
                 behaviour_ctx: &behaviour_ctx,
                 runtime_state: &runtime_state,
+                execution_recorder: None,
             },
         )
         .await;

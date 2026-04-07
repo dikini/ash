@@ -135,6 +135,17 @@ impl Context {
         self.obligations.borrow().iter().cloned().collect()
     }
 
+    /// Return the cumulative pending obligations visible from this frame through its parent chain.
+    pub fn visible_pending_obligations(&self) -> BTreeSet<Name> {
+        let mut pending = self
+            .parent
+            .as_ref()
+            .map(|parent| parent.visible_pending_obligations())
+            .unwrap_or_default();
+        pending.extend(self.local_pending_obligations());
+        pending
+    }
+
     /// Get all bindings in this context (excluding parent)
     pub fn local_bindings(&self) -> &HashMap<Name, Value> {
         &self.bindings

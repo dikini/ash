@@ -30,6 +30,7 @@ pub mod execute;
 pub mod execute_observe;
 pub mod execute_set;
 pub mod execute_stream;
+pub mod execution_record;
 pub mod guard;
 pub mod mailbox;
 pub mod pattern;
@@ -75,6 +76,11 @@ pub use execute::{
 };
 pub use execute_observe::{execute_changed, execute_observe};
 pub use execute_set::execute_set;
+pub use execution_record::{
+    ExecutionBlockedReason, ExecutionEffectSummary, ExecutionInvalidReason,
+    ExecutionObligationState, ExecutionPhase, ExecutionRecord, ExecutionTerminal,
+    SemanticCompletionPayload, SemanticEffectTrace, SemanticWorkflowOutcome,
+};
 pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;

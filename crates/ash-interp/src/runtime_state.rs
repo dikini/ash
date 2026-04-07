@@ -16,6 +16,7 @@ use crate::control_link::{
 };
 use crate::{ExecError, ExecResult};
 
+use crate::execution_record::ExecutionRecord;
 use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
 use crate::yield_routing::YieldRouter;
@@ -88,6 +89,7 @@ pub struct RuntimeState {
     suspended_yields: Arc<Mutex<SuspendedYields>>,
     yield_router: Arc<Mutex<YieldRouter>>,
     child_workflows: Arc<Mutex<HashMap<String, Workflow>>>,
+    last_execution_record: Arc<Mutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<Mutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
 }
@@ -100,6 +102,7 @@ impl std::fmt::Debug for RuntimeState {
             .field("suspended_yields", &self.suspended_yields)
             .field("yield_router", &self.yield_router)
             .field("child_workflows", &"<HashMap<String, Workflow>>")
+            .field("last_execution_record", &self.last_execution_record)
             .field(
                 "providers",
                 &"<HashMap<String, Arc<dyn CapabilityProvider>>>",
@@ -117,6 +120,7 @@ impl RuntimeState {
             suspended_yields: Arc::new(Mutex::new(SuspendedYields::new())),
             yield_router: Arc::new(Mutex::new(YieldRouter::new())),
             child_workflows: Arc::new(Mutex::new(HashMap::new())),
+            last_execution_record: Arc::new(Mutex::new(None)),
             providers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -461,6 +465,16 @@ impl RuntimeState {
     /// Get access to the yield router
     pub fn yield_router(&self) -> Arc<Mutex<YieldRouter>> {
         self.yield_router.clone()
+    }
+
+    /// Store the most recent authoritative execution record observed for this runtime state.
+    pub async fn set_last_execution_record(&self, record: ExecutionRecord) {
+        *self.last_execution_record.lock().await = Some(record);
+    }
+
+    /// Read the most recent authoritative execution record observed for this runtime state.
+    pub async fn last_execution_record(&self) -> Option<ExecutionRecord> {
+        (*self.last_execution_record.lock().await).clone()
     }
 }
 

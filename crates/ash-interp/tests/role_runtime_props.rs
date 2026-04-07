@@ -437,8 +437,20 @@ proptest! {
     /// any additional obligations that were discharged.
     #[test]
     fn prop_discharged_set_contains_all_discharged(
-        role in arb_role(),
-        extra_obligations in prop::collection::vec(arb_obligation_name(), 0..5),
+        (role, extra_obligations) in arb_role().prop_flat_map(|role| {
+            let declared: std::collections::HashSet<String> = role
+                .obligations
+                .iter()
+                .map(|obl| obl.name.clone())
+                .collect();
+            (
+                Just(role),
+                prop::collection::vec(arb_obligation_name(), 0..5).prop_filter(
+                    "extra obligations must be undeclared on the role",
+                    move |extra| extra.iter().all(|name| !declared.contains(name)),
+                ),
+            )
+        }),
     ) {
         let ctx = RoleContext::new(role.clone());
 

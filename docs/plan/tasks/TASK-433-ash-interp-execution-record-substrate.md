@@ -1,6 +1,6 @@
 # TASK-433: `ash-interp` Execution-Record Substrate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -102,13 +102,21 @@ Expected pass condition:
 
 ## Completion Checklist
 
-- [ ] TASK-433 task file created
-- [ ] execution-record substrate implemented
-- [ ] interpreter wiring updated
-- [ ] terminal projection made explicit and testable
-- [ ] tests added or updated
-- [ ] docs/planning surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] TASK-433 task file created
+- [x] execution-record substrate implemented
+- [x] interpreter wiring updated
+- [x] terminal projection made explicit and testable
+- [x] tests added or updated
+- [x] docs/planning surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+TASK-433 landed the first authoritative execution-record substrate in `ash-interp` as a new runtime-owned `ExecutionRecord` / `ExecutionRecorder` surface in `crates/ash-interp/src/execution_record.rs`, with explicit phase classification, cumulative obligation/provenance/trace/effect carriage, and direct semantic projections via `project_workflow_outcome()` and `project_completion()`.
+
+The main runtime wiring now stores the most recent authoritative execution record in `RuntimeState::last_execution_record()`, and top-level behaviour/stream execution paths snapshot that record after real interpreter execution. Focused runtime tests now cover terminal success projection, terminal rejection projection, and cumulative orient trace/effect carriage through the execution record.
+
+This closes the first execution-record substrate slice only. It does not claim full `Par` branch aggregation closure, full retained-completion parity, or uniform exact cumulative-carrier packaging across every runtime-owned observation surface.
 
 ## Dependencies for Next Task
 

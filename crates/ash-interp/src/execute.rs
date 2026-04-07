@@ -2,7 +2,7 @@
 //!
 //! Executes workflows in a runtime context, handling all workflow variants.
 
-use ash_core::{Effect, Expr, Value, Workflow};
+use ash_core::{Effect, Expr, Provenance, Value, Workflow};
 
 use crate::ExecResult;
 use crate::behaviour::BehaviourContext;
@@ -19,6 +19,7 @@ use crate::eval::eval_expr;
 use crate::exec_send::execute_send;
 use crate::execute_set::execute_set;
 use crate::execute_stream::{CoreReceiveRuntime, execute_core_receive};
+use crate::execution_record::ExecutionRecorder;
 use crate::guard::eval_guard;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
@@ -167,24 +168,34 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
     behaviour_ctx: &'a BehaviourContext,
     runtime_state: &'a RuntimeState,
 ) -> BoxFuture<'a, ExecResult<Value>> {
-    let mailbox = shared_mailbox();
-    let control_registry = shared_control_registry(runtime_state);
-    let proxy_registry = shared_proxy_registry(runtime_state);
-    let suspended_yields = shared_suspended_yields(runtime_state);
-    execute_workflow_inner_observed(
-        workflow,
-        ctx,
-        cap_ctx,
-        policy_eval,
-        behaviour_ctx,
-        None,
-        mailbox,
-        control_registry,
-        Some(proxy_registry),
-        Some(suspended_yields),
-        runtime_state,
-        None,
-    )
+    Box::pin(async move {
+        let mailbox = shared_mailbox();
+        let control_registry = shared_control_registry(runtime_state);
+        let proxy_registry = shared_proxy_registry(runtime_state);
+        let suspended_yields = shared_suspended_yields(runtime_state);
+        let execution_recorder = ExecutionRecorder::new(Provenance::new());
+        let result = execute_workflow_inner_observed(
+            workflow,
+            ctx,
+            cap_ctx,
+            policy_eval,
+            behaviour_ctx,
+            None,
+            mailbox,
+            control_registry,
+            Some(proxy_registry),
+            Some(suspended_yields),
+            runtime_state,
+            None,
+            Some(&execution_recorder),
+        )
+        .await;
+        execution_recorder.set_phase_from_result(&result);
+        runtime_state
+            .set_last_execution_record(execution_recorder.snapshot())
+            .await;
+        result
+    })
 }
 
 fn resolve_control_link(target: &str, ctx: &Context) -> ExecResult<ash_core::ControlLink> {
@@ -268,6 +279,13 @@ fn record_terminal_result_if_observed(
 ) {
     if let Some(observer) = terminal_observer {
         observer.record_terminal_result(ctx, result);
+    }
+}
+
+fn sync_execution_context(execution_recorder: Option<&ExecutionRecorder>, ctx: &Context) {
+    if let Some(recorder) = execution_recorder {
+        recorder.set_running();
+        recorder.sync_context(ctx);
     }
 }
 
@@ -372,6 +390,7 @@ async fn run_spawned_child_workflow(
     init_value: Value,
     link: ash_core::ControlLink,
     provenance: ConservativeRetainedProvenanceSummary,
+    execution_provenance: Provenance,
 ) {
     tokio::task::yield_now().await;
 
@@ -382,6 +401,7 @@ async fn run_spawned_child_workflow(
         &runtime_state,
         RuntimeState::spawned_child_init_bindings(init_value, link.clone()),
         &terminal_observer,
+        execution_provenance,
     )
     .await;
 
@@ -427,6 +447,7 @@ pub(crate) fn execute_workflow_inner<'a>(
     proxy_registry: Option<SharedProxyRegistry>,
     suspended_yields: Option<SharedSuspendedYields>,
     runtime_state: &'a RuntimeState,
+    execution_recorder: Option<&'a ExecutionRecorder>,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     execute_workflow_inner_observed(
         workflow,
@@ -441,6 +462,7 @@ pub(crate) fn execute_workflow_inner<'a>(
         suspended_yields,
         runtime_state,
         None,
+        execution_recorder,
     )
 }
 
@@ -458,8 +480,10 @@ fn execute_workflow_inner_observed<'a>(
     suspended_yields: Option<SharedSuspendedYields>,
     runtime_state: &'a RuntimeState,
     terminal_observer: Option<&'a TerminalObservationRecorder>,
+    execution_recorder: Option<&'a ExecutionRecorder>,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
+        sync_execution_context(execution_recorder, &ctx);
         if let Some(link) = spawned_child_control_link(&ctx)? {
             runtime_state.wait_for_control_authority(&link).await?;
         }
@@ -501,6 +525,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -527,6 +552,7 @@ fn execute_workflow_inner_observed<'a>(
                             suspended_yields.clone(),
                             runtime_state,
                             terminal_observer,
+                            execution_recorder,
                         )
                         .await
                     }
@@ -544,6 +570,7 @@ fn execute_workflow_inner_observed<'a>(
                             suspended_yields.clone(),
                             runtime_state,
                             terminal_observer,
+                            execution_recorder,
                         )
                         .await
                     }
@@ -569,6 +596,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await?;
                 execute_workflow_inner_observed(
@@ -584,6 +612,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -611,6 +640,7 @@ fn execute_workflow_inner_observed<'a>(
                             suspended_yields.clone(),
                             runtime_state,
                             terminal_observer,
+                            execution_recorder,
                         )
                     })
                     .collect();
@@ -629,6 +659,9 @@ fn execute_workflow_inner_observed<'a>(
                 pattern,
                 continuation,
             } => {
+                if let Some(recorder) = execution_recorder {
+                    recorder.record_observe(&capability.name, capability.effect);
+                }
                 let value = cap_ctx.observe(capability).await?;
                 let bindings =
                     match_pattern(pattern, &value).map_err(|_| ExecError::PatternMatchFailed {
@@ -652,6 +685,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -659,6 +693,9 @@ fn execute_workflow_inner_observed<'a>(
             // Orient - evaluate expression and continue
             Workflow::Orient { expr, continuation } => {
                 let _ = eval_expr(expr, &ctx).map_err(ExecError::Eval)?;
+                if let Some(recorder) = execution_recorder {
+                    recorder.record_orient(&format!("{expr:?}"));
+                }
                 execute_workflow_inner_observed(
                     continuation,
                     ctx,
@@ -672,6 +709,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -693,6 +731,9 @@ fn execute_workflow_inner_observed<'a>(
                     });
                 }
 
+                if let Some(recorder) = execution_recorder {
+                    recorder.record_act(&action.name, &format!("{guard:?}"));
+                }
                 cap_ctx.execute(action, &action.name).await
             }
 
@@ -715,6 +756,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -732,6 +774,9 @@ fn execute_workflow_inner_observed<'a>(
                 decision_ctx.set("decision_value".to_string(), value);
 
                 let decision = policy_eval.evaluate(policy, &decision_ctx)?;
+                if let Some(recorder) = execution_recorder {
+                    recorder.record_decide(policy, decision);
+                }
 
                 match decision {
                     ash_core::Decision::Permit => {
@@ -748,6 +793,7 @@ fn execute_workflow_inner_observed<'a>(
                             suspended_yields.clone(),
                             runtime_state,
                             terminal_observer,
+                            execution_recorder,
                         )
                         .await
                     }
@@ -799,6 +845,7 @@ fn execute_workflow_inner_observed<'a>(
                                 suspended_yields.clone(),
                                 runtime_state,
                                 terminal_observer,
+                                execution_recorder,
                             )
                             .await?;
                         }
@@ -832,6 +879,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -851,6 +899,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
                 {
@@ -869,6 +918,7 @@ fn execute_workflow_inner_observed<'a>(
                             suspended_yields.clone(),
                             runtime_state,
                             terminal_observer,
+                            execution_recorder,
                         )
                         .await
                     }
@@ -890,6 +940,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -904,8 +955,15 @@ fn execute_workflow_inner_observed<'a>(
                         require_active_role(&ctx, role)?;
 
                         match eval_expr(condition, &ctx).map_err(ExecError::Eval)? {
-                            Value::Bool(true) => {}
+                            Value::Bool(true) => {
+                                if let Some(recorder) = execution_recorder {
+                                    recorder.record_obligation_check(&role.name, true);
+                                }
+                            }
                             Value::Bool(false) => {
+                                if let Some(recorder) = execution_recorder {
+                                    recorder.record_obligation_check(&role.name, false);
+                                }
                                 return Err(ExecError::ExecutionFailed(
                                     "obligation check failed".to_string(),
                                 ));
@@ -937,6 +995,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -961,6 +1020,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -1042,6 +1102,7 @@ fn execute_workflow_inner_observed<'a>(
                         actor: &actor,
                         behaviour_ctx,
                         runtime_state,
+                        execution_recorder,
                     },
                 )
                 .await
@@ -1079,12 +1140,20 @@ fn execute_workflow_inner_observed<'a>(
                     runtime_state
                         .register_spawned_control_link_with_provenance(provenance.clone())
                         .await;
+                    let child_execution_provenance = execution_recorder
+                        .map(|recorder| recorder.child_provenance(control.instance_id))
+                        .unwrap_or_else(|| Provenance {
+                            workflow_id: control.instance_id,
+                            parent: None,
+                            lineage: vec![],
+                        });
                     tokio::spawn(run_spawned_child_workflow(
                         runtime_state.clone(),
                         child_workflow,
                         init_value.clone(),
                         control,
                         provenance,
+                        child_execution_provenance,
                     ));
                 }
 
@@ -1112,6 +1181,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -1150,6 +1220,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -1178,6 +1249,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -1210,6 +1282,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -1242,6 +1315,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -1274,6 +1348,7 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields.clone(),
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
@@ -1289,6 +1364,9 @@ fn execute_workflow_inner_observed<'a>(
 
                 // Add the obligation to the context
                 ctx.add_obligation(name.clone());
+                if let Some(recorder) = execution_recorder {
+                    recorder.sync_context(&ctx);
+                }
 
                 // Return null as per spec
                 Ok(Value::Null)
@@ -1298,6 +1376,9 @@ fn execute_workflow_inner_observed<'a>(
             Workflow::CheckObligation { name, span: _ } => {
                 // Attempt to discharge the obligation
                 let discharged = ctx.discharge_obligation(name);
+                if let Some(recorder) = execution_recorder {
+                    recorder.sync_context(&ctx);
+                }
 
                 // Return true if obligation was found and discharged, false otherwise
                 Ok(Value::Bool(discharged))
@@ -1439,11 +1520,17 @@ fn execute_workflow_inner_observed<'a>(
                     suspended_yields,
                     runtime_state,
                     terminal_observer,
+                    execution_recorder,
                 )
                 .await
             }
         };
-        finish_with_terminal_observation(terminal_observer, &terminal_ctx_snapshot, result)
+        let result =
+            finish_with_terminal_observation(terminal_observer, &terminal_ctx_snapshot, result);
+        if let Some(recorder) = execution_recorder {
+            recorder.set_phase_from_result(&result);
+        }
+        result
     })
 }
 /// Convert a workflow_contract TypeExpr to a typeck Type
@@ -1553,24 +1640,34 @@ pub fn execute_workflow_with_stream_in_state<'a>(
     stream_ctx: &'a StreamContext,
     runtime_state: &'a RuntimeState,
 ) -> BoxFuture<'a, ExecResult<Value>> {
-    let mailbox = shared_mailbox();
-    let control_registry = shared_control_registry(runtime_state);
-    let proxy_registry = shared_proxy_registry(runtime_state);
-    let suspended_yields = shared_suspended_yields(runtime_state);
-    execute_workflow_inner_observed(
-        workflow,
-        ctx,
-        cap_ctx,
-        policy_eval,
-        behaviour_ctx,
-        Some(stream_ctx),
-        mailbox,
-        control_registry,
-        Some(proxy_registry),
-        Some(suspended_yields),
-        runtime_state,
-        None,
-    )
+    Box::pin(async move {
+        let mailbox = shared_mailbox();
+        let control_registry = shared_control_registry(runtime_state);
+        let proxy_registry = shared_proxy_registry(runtime_state);
+        let suspended_yields = shared_suspended_yields(runtime_state);
+        let execution_recorder = ExecutionRecorder::new(Provenance::new());
+        let result = execute_workflow_inner_observed(
+            workflow,
+            ctx,
+            cap_ctx,
+            policy_eval,
+            behaviour_ctx,
+            Some(stream_ctx),
+            mailbox,
+            control_registry,
+            Some(proxy_registry),
+            Some(suspended_yields),
+            runtime_state,
+            None,
+            Some(&execution_recorder),
+        )
+        .await;
+        execution_recorder.set_phase_from_result(&result);
+        runtime_state
+            .set_last_execution_record(execution_recorder.snapshot())
+            .await;
+        result
+    })
 }
 
 /// Execute a workflow with default contexts using explicit runtime-owned state.
@@ -1632,6 +1729,7 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
     runtime_state: &RuntimeState,
     input_bindings: std::collections::HashMap<String, Value>,
     terminal_observer: &TerminalObservationRecorder,
+    execution_provenance: Provenance,
 ) -> ExecResult<Value> {
     let ctx = Context::with_bindings(input_bindings);
     let cap_ctx = runtime_state.create_capability_context().await;
@@ -1641,7 +1739,8 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
     let control_registry = shared_control_registry(runtime_state);
     let proxy_registry = shared_proxy_registry(runtime_state);
     let suspended_yields = shared_suspended_yields(runtime_state);
-    execute_workflow_inner_observed(
+    let execution_recorder = ExecutionRecorder::new(execution_provenance);
+    let result = execute_workflow_inner_observed(
         workflow,
         ctx,
         &cap_ctx,
@@ -1654,8 +1753,13 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
         Some(suspended_yields),
         runtime_state,
         Some(terminal_observer),
+        Some(&execution_recorder),
     )
-    .await
+    .await;
+    runtime_state
+        .set_last_execution_record(execution_recorder.snapshot())
+        .await;
+    result
 }
 
 #[cfg(test)]
@@ -1676,6 +1780,116 @@ mod tests {
         let workflow = Workflow::Done;
         let result = execute_simple(&workflow).await.unwrap();
         assert_eq!(result, Value::Null);
+    }
+
+    #[tokio::test]
+    async fn test_last_execution_record_projects_terminal_success() {
+        let runtime_state = RuntimeState::new();
+        let workflow = Workflow::Ret {
+            expr: Expr::Literal(Value::Int(7)),
+        };
+
+        let result = execute_simple_in_state(&workflow, &runtime_state)
+            .await
+            .unwrap();
+        assert_eq!(result, Value::Int(7));
+
+        let record = runtime_state
+            .last_execution_record()
+            .await
+            .expect("top-level execution should store an execution record");
+        assert_eq!(
+            record.phase(),
+            &crate::execution_record::ExecutionPhase::Terminal(
+                crate::execution_record::ExecutionTerminal::Return(Value::Int(7)),
+            )
+        );
+
+        match record
+            .project_workflow_outcome()
+            .expect("terminal success should project")
+        {
+            crate::execution_record::SemanticWorkflowOutcome::Return { value, effect, .. } => {
+                assert_eq!(value, Value::Int(7));
+                assert_eq!(effect, Effect::Epistemic);
+            }
+            other => panic!("expected return projection, got {other:?}"),
+        }
+
+        let completion = record
+            .project_completion()
+            .expect("terminal success should project a completion payload");
+        assert_eq!(completion.result(), &Ok(Value::Int(7)));
+    }
+
+    #[tokio::test]
+    async fn test_last_execution_record_projects_terminal_rejection() {
+        let runtime_state = RuntimeState::new();
+        let workflow = Workflow::Ret {
+            expr: Expr::Variable("missing".to_string()),
+        };
+
+        let result = execute_simple_in_state(&workflow, &runtime_state).await;
+        assert!(matches!(
+            result,
+            Err(ExecError::Eval(EvalError::UndefinedVariable(_)))
+        ));
+
+        let record = runtime_state
+            .last_execution_record()
+            .await
+            .expect("failing top-level execution should still store an execution record");
+
+        match record.phase() {
+            crate::execution_record::ExecutionPhase::Terminal(
+                crate::execution_record::ExecutionTerminal::Reject(ExecError::Eval(
+                    EvalError::UndefinedVariable(name),
+                )),
+            ) => assert_eq!(name, "missing"),
+            other => panic!("expected terminal rejection record, got {other:?}"),
+        }
+
+        let completion = record
+            .project_completion()
+            .expect("terminal rejection should project a completion payload");
+        assert!(matches!(
+            completion.result(),
+            Err(ExecError::Eval(EvalError::UndefinedVariable(name))) if name == "missing"
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_last_execution_record_carries_orient_trace_and_effect() {
+        let runtime_state = RuntimeState::new();
+        let workflow = Workflow::Orient {
+            expr: Expr::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(Expr::Literal(Value::Int(1))),
+                right: Box::new(Expr::Literal(Value::Int(2))),
+            },
+            continuation: Box::new(Workflow::Ret {
+                expr: Expr::Literal(Value::Int(42)),
+            }),
+        };
+
+        let result = execute_simple_in_state(&workflow, &runtime_state)
+            .await
+            .unwrap();
+        assert_eq!(result, Value::Int(42));
+
+        let record = runtime_state
+            .last_execution_record()
+            .await
+            .expect("orient execution should store an execution record");
+        let outcome = record
+            .project_workflow_outcome()
+            .expect("orient success should project");
+
+        assert_eq!(outcome.effect(), Effect::Deliberative);
+        assert!(matches!(
+            outcome.trace(),
+            [ash_core::TraceEvent::Orient { .. }]
+        ));
     }
 
     #[tokio::test]

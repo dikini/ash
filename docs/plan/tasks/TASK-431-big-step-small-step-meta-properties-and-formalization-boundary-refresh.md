@@ -1,6 +1,6 @@
 # TASK-431: Big-Step / Small-Step Meta-Properties and Formalization Boundary Refresh
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -24,7 +24,7 @@ This remains docs/reference/spec work only.
 
 - ✅ [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
 - ✅ [TASK-429: SPEC-025 Full Rule Definitions](TASK-429-spec-025-full-rule-definitions.md)
-- 📝 [TASK-430: Small-Step Helper Contracts and State Taxonomy](TASK-430-small-step-helper-contracts-and-state-taxonomy.md)
+- ✅ [TASK-430: Small-Step Helper Contracts and State Taxonomy](TASK-430-small-step-helper-contracts-and-state-taxonomy.md)
 
 ## Requirements
 
@@ -82,12 +82,12 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] formalization-boundary refreshed to include `SPEC-025`
-- [ ] theorem targets updated for current big-step / small-step corpus
-- [ ] conformance obligations vs proof targets distinguished clearly
-- [ ] historical/planning artifact boundary preserved
-- [ ] planning/reporting surfaces updated as needed
-- [ ] `CHANGELOG.md` updated
+- [x] formalization-boundary refreshed to include `SPEC-025`
+- [x] theorem targets updated for current big-step / small-step corpus
+- [x] conformance obligations vs proof targets distinguished clearly
+- [x] historical/planning artifact boundary preserved
+- [x] planning/reporting surfaces updated as needed
+- [x] `CHANGELOG.md` updated
 
 ## Dependencies for Next Task
 

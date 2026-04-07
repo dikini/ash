@@ -22,7 +22,7 @@ This is real Rust/runtime work. It must remain conservative: the goal is to esta
 ## Dependencies
 
 - ✅ [TASK-412: Dedicated Completion-Wait Carrier](TASK-412-dedicated-completion-wait-carrier.md)
-- 📝 [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
+- ✅ [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
 
 ## Requirements
 

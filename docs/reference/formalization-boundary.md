@@ -40,6 +40,7 @@ Lean should treat the following documents as the canonical semantic and observab
 - [SPEC-021: Runtime Observable Behavior](../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md)
 - [SPEC-022: Workflow Typing](../spec/SPEC-022-WORKFLOW-TYPING.md)
 - [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
+- [Semantic Execution Record Contract](semantic-execution-record-contract.md)
 
 Within that corpus, the authority roles are split explicitly:
 
@@ -50,6 +51,11 @@ Within that corpus, the authority roles are split explicitly:
   is the normative owner of the workflow-first small-step judgment, canonical configuration
   vocabulary, helper-owned atomicity boundaries, the frozen state taxonomy, and the terminal
   projection contract back to SPEC-004.
+- [Semantic Execution Record Contract](semantic-execution-record-contract.md) is the normative owner
+  of the runtime-facing cumulative semantic packaging contract for `Ω`, `π`, `T`, `ε̂`, the
+  runtime-facing execution phase taxonomy, and exact terminal projection from a canonical
+  execution-record carrier back to `SPEC-004` workflow outcomes and completion-style payload
+  projection.
 - [SPEC-021: Runtime Observable Behavior](../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) is the
   normative owner of user-visible and tooling-visible projections of runtime behavior.
 - [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md) and
@@ -170,6 +176,16 @@ Proof-facing obligations included in that target:
 - the terminal effect classification `eff'` is the correct projection of terminal `ε̂'`;
 - the projection preserves the owning success-versus-rejection boundary fixed by SPEC-004.
 
+The execution-record contract in
+[Semantic Execution Record Contract](semantic-execution-record-contract.md) packages the same
+projection target as a runtime-facing cumulative-state record. Future proof and conformance work
+should therefore treat:
+
+- `SPEC-025` terminal configurations as the canonical semantic source for the projection theorem,
+  and
+- the execution-record contract as the canonical runtime-facing packaging target for implementations
+  that wish to expose or preserve those same cumulative semantic dimensions directly.
+
 Planned follow-on correspondence targets may strengthen this into execution-level soundness and, for
 admitted fragments, converse reconstruction results from big-step derivations to terminal small-step
 executions. Those stronger completeness-style results remain staged work rather than already-frozen
@@ -250,6 +266,12 @@ For proof planning, these four dimensions should be treated cumulatively and joi
 optional commentary. Future work may introduce better execution-record packaging for them, but the
 semantic preservation target already exists at the corpus level.
 
+That packaging target is now frozen by
+[Semantic Execution Record Contract](semantic-execution-record-contract.md). Future runtime work may
+adopt it conservatively in stages, but semantic proofs and conformance artifacts should not treat
+weaker retained-completion or coarse outcome-state slices as equivalent to the full canonical
+execution record unless the weaker status is stated explicitly.
+
 ### 6. Secondary Typed and Structural Targets
 
 After the correspondence and classification targets above, later proof work may stage additional
@@ -294,8 +316,8 @@ This note does not claim or require any of the following to be already done:
 - a fairness theorem or concrete scheduler proof;
 - expression-level micro-stepping in SPEC-025 v1;
 - one concrete runtime carrier or storage layout for `Ω`, `π`, `T`, or `ε̂`;
-- full retained-completion parity or the runtime execution-record packaging planned in later Phase 67
-  tasks;
+- full retained-completion parity or full runtime implementation of the already-frozen execution-
+  record contract in later Phase 67 tasks;
 - JIT-specific proof work.
 
 Those are either downstream tasks, implementation work, or intentionally deferred research.

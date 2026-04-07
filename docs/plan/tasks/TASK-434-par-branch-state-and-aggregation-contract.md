@@ -23,7 +23,7 @@ This remains contract/spec work only.
 
 - ✅ [TASK-403: `Par` Interleaving, Branch State, and Aggregation Correspondence](TASK-403-par-interleaving-branch-state-and-aggregation-correspondence.md)
 - 📝 [TASK-430: Small-Step Helper Contracts and State Taxonomy](TASK-430-small-step-helper-contracts-and-state-taxonomy.md)
-- 📝 [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
+- ✅ [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
 
 ## Requirements
 

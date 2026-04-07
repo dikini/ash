@@ -1,6 +1,6 @@
 # TASK-432: Semantic Execution Record and Terminal Projection Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -81,13 +81,23 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] semantic execution-record contract created
-- [ ] cumulative carrier expectations defined for `Ω` / `π` / `T` / `ε̂`
-- [ ] exact vs conservative/staged requirements stated
-- [ ] terminal projection contract stated explicitly
-- [ ] compatibility with TASK-405 through TASK-412 preserved honestly
-- [ ] planning/reference surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] semantic execution-record contract created
+- [x] cumulative carrier expectations defined for `Ω` / `π` / `T` / `ε̂`
+- [x] exact vs conservative/staged requirements stated
+- [x] terminal projection contract stated explicitly
+- [x] compatibility with TASK-405 through TASK-412 preserved honestly
+- [x] planning/reference surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+Completed 2026-04-07.
+
+- Added [docs/reference/semantic-execution-record-contract.md](../../reference/semantic-execution-record-contract.md) as the canonical runtime-facing semantic execution-record contract.
+- Froze one implementation-neutral execution-record shape carrying cumulative `Ω`, `π`, `T`, and `ε̂` together with a runtime-facing phase taxonomy that keeps running, blocked/suspended, terminal success, terminal rejection, and invalid/inadmissible states distinct.
+- Defined exact terminal projection from that record back to `SPEC-004` workflow outcomes and completion-style payload projection, including the boundary that `T` remains part of workflow outcomes but not `CompletionPayload`.
+- Distinguished exactly what must be exact for semantic conformance, what may remain conservative on staged runtime-adoption surfaces, and what remains intentionally out of scope for later `Par`, retained-completion-parity, and concrete runtime-substrate tasks.
+- Updated the formalization boundary, Phase 67 planning surface, implementability report, and changelog so later runtime/conformance tasks can cite one fixed execution-record packaging contract directly.
 
 ## Dependencies for Next Task
 

@@ -1990,8 +1990,13 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-431](tasks/TASK-431-big-step-small-step-meta-properties-and-formalization-boundary-refresh.md) | Record explicit theorem targets, correspondence obligations, and update the formalization boundary to include the small-step spec | SPEC-004, SPEC-025, formalization-boundary | 3-5 | ✅ Complete |
 | [TASK-432](tasks/TASK-432-semantic-execution-record-and-terminal-projection-contract.md) | Freeze the runtime-facing semantic execution-record contract for cumulative `Ω` / `π` / `T` / `ε̂` and terminal projection | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | ✅ Complete |
 | [TASK-433](tasks/TASK-433-ash-interp-execution-record-substrate.md) | Add the first authoritative execution-record substrate in `ash-interp` and thread cumulative semantic carriers through interpreter execution | TASK-432, ash-interp | 5-8 | ✅ Complete |
-| [TASK-434](tasks/TASK-434-par-branch-state-and-aggregation-contract.md) | Freeze the exact semantic/runtime contract for `Par` branch-local carriers and helper-backed aggregation | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | 📝 Planned |
+| [TASK-434](tasks/TASK-434-par-branch-state-and-aggregation-contract.md) | Freeze the exact semantic/runtime contract for `Par` branch-local carriers and helper-backed aggregation | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | ✅ Complete |
 | [TASK-435](tasks/TASK-435-par-runtime-aggregation-realization.md) | Implement `Par` runtime aggregation against the frozen branch-state/aggregation contract in `ash-interp` | TASK-434, ash-interp | 5-8 | 📝 Planned |
+
+**Current Phase 67 note:** TASK-434 now freezes one explicit `Par` branch-state and helper-backed
+aggregation contract in `SPEC-025` plus execution-record compatibility guidance in
+`docs/reference/semantic-execution-record-contract.md`, so TASK-435 can implement branch-local carrier
+preservation and aggregate collation directly without re-deriving `Par` semantics from MCE prose.
 | [TASK-436](tasks/TASK-436-completion-payload-parity-contract.md) | Freeze the exact contract for retained completion observation versus full `CompletionPayload` parity | SPEC-004, SPEC-021, MCE-007 | 3-5 | 📝 Planned |
 | [TASK-437](tasks/TASK-437-retained-completion-parity-follow-on.md) | Implement the next honest retained-completion parity slice after TASK-412 under the frozen contract | TASK-436, ash-interp | 4-7 | 📝 Planned |
 | [TASK-438](tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md) | Define the canonical IR semantics corpus and machine-readable expected-result format for cross-implementation verification | SPEC-001, SPEC-004, SPEC-025, SPEC-021 | 4-6 | 📝 Planned |

@@ -707,6 +707,192 @@ This family covers the already-frozen helper-backed `Par` boundary, especially
   short-circuit `Par` stance, and reconstructs the same terminal success/rejection meaning owned by
   `SPEC-004`.
 
+#### 6.6.1 Frozen Branch-Local Carrier Contract
+
+For one running parent configuration:
+
+```text
+Running(Γp, Ωp, πp, Tp, ε̂p, Par { workflows })
+```
+
+the specification-only residual:
+
+```text
+ParState(bs)
+```
+
+packages one branch entry per branch. Each branch entry denotes one branch-local execution instance.
+
+Normatively, each branch-local execution instance carries its own branch-local semantic configuration:
+
+```text
+Running(Γi, Ωi, πi, Ti, ε̂i, wi)
+Returned(vi, Ωi, πi, Ti, ε̂i)
+Rejected(erri, Ωi, πi, Ti, ε̂i)
+```
+
+with the following ownership boundary:
+
+- `Γi` is branch-local runtime environment state for branch `i`;
+- `Ωi` is branch-local obligation state for branch `i`;
+- `πi` is branch-local provenance state for branch `i`;
+- `Ti` is branch-local cumulative trace for branch `i`;
+- `ε̂i` is branch-local cumulative effect-summary state for branch `i`;
+- `vi` or `erri` is the branch terminal payload once branch `i` becomes terminal.
+
+The parent carriers `Γp`, `Ωp`, `πp`, `Tp`, and `ε̂p` are not incrementally mutated by `PAR-STEP`.
+Instead, `ParState(bs)` owns the branch-local carrier copies or branch-local realizations until the
+aggregate terminal step. This freezes the semantic meaning of branch-locality without prescribing one
+runtime storage layout.
+
+The required initialization law is:
+
+1. every branch starts from the same parent semantic seed for obligations/effects and an admitted
+   branch-local environment/provenance seed derived from the parent;
+2. branch-local provenance seeding is helper-owned and must remain compatible with the `fork(...)`
+   lineage law from `SPEC-004`;
+3. after initialization, later progress of one branch changes only that branch entry in `bs` until
+   aggregate terminal collation occurs.
+
+This is the explicit contract that later runtime work must realize: `Par` does not secretly share one
+mutable cumulative `Ω` / `π` / `T` / `ε̂` across live branches, and it does not collapse branch-local
+progress into fake left-to-right sequential state threading.
+
+#### 6.6.2 Frozen Aggregation Law for `combine_parallel_outcomes(...)`
+
+`combine_parallel_outcomes(Γp, Ωp, πp, Tp, ε̂p, bs)` is defined only when every branch entry in `bs`
+is terminal.
+
+Its contract is to combine the branch-local terminal carriers into one enclosing terminal result
+without reopening branch execution order.
+
+Normatively:
+
+1. it consumes the terminal branch-local outcomes, not partially-running branch states;
+2. it preserves every branch terminal payload exactly;
+3. it combines branch-local `Ωi`, `πi`, `Ti`, and `ε̂i` according to the laws below;
+4. it reconstructs one enclosing `Returned(...)` or `Rejected(...)` configuration compatible with
+   `SPEC-004` `PAR`.
+
+#### 6.6.3 All-Success Aggregation
+
+If every branch is terminal-success:
+
+```text
+bs = [Returned(v1, Ω1, π1, T1, ε̂1), ..., Returned(vn, Ωn, πn, Tn, ε̂n)]
+```
+
+then:
+
+```text
+combine_parallel_outcomes(Γp, Ωp, πp, Tp, ε̂p, bs)
+  ↝ ParallelReturn([v1, ..., vn], Ω', π', T', ε̂')
+```
+
+with the following laws:
+
+1. result collation preserves branch identity/order by branch index, yielding `[v1, ..., vn]`; this is
+   branch-index collation, not evidence of sequential execution order;
+2. `Ω'` is the deterministic helper-owned join of the terminal branch-local obligation states, rooted
+   in the same parent-originating execution slice and preserving every branch-visible obligation
+   transition already made semantically visible;
+3. `π'` is the deterministic helper-owned provenance join rooted at the incoming parent provenance seed
+   `πp` and preserving every branch lineage as an ancestor;
+4. `T'` is the helper-owned trace merge of the terminal branch-local traces together with any admitted
+   parent prefix contribution, preserving the internal order of each `Ti` while permitting only the
+   already-admitted cross-branch interleaving latitude;
+5. `ε̂'` is the helper-owned cumulative effect-summary combination whose terminal projection matches the
+   `SPEC-004` all-success effect join law;
+6. no branch's local `Ωi`, `πi`, `Ti`, or `ε̂i` may be discarded and replaced by an unrelated parent or
+   sibling carrier.
+
+#### 6.6.4 Rejection and Mixed Terminal Aggregation
+
+If one or more branches are terminal rejections:
+
+```text
+bs = [..., Rejected(errj, Ωj, πj, Tj, ε̂j), ...]
+```
+
+then:
+
+```text
+combine_parallel_outcomes(Γp, Ωp, πp, Tp, ε̂p, bs)
+  ↝ ParallelReject(err, Ω', π', T', ε̂')
+```
+
+where concurrent rejection ownership remains helper-backed.
+
+Normatively:
+
+1. `Par` does not use left-to-right first-failure short-circuit semantics;
+2. all branch outcomes that actually reached terminality before aggregation remain semantically relevant
+   inputs to the helper, including successful siblings and multiple rejecting siblings;
+3. the chosen enclosing `err` is the helper-owned concurrent rejection result admitted by the
+   `SPEC-004` `combine_parallel_outcomes(...)` boundary, not a theorem about source-order priority;
+4. `Ω'`, `π'`, `T'`, and `ε̂'` are aggregated from the terminal branch-local carriers actually present in
+   `bs`, including mixed success/rejection outcomes, according to the same preservation laws as the
+   all-success case except that the enclosing terminal class is rejection;
+5. no implementation may claim conformance by discarding concurrent terminal sibling carriers merely
+   because one branch happened to be observed first.
+
+#### 6.6.5 Blocked, Suspended, and Nonterminal Branches
+
+`combine_parallel_outcomes(...)` has no domain on mixed terminal/nonterminal branch collections.
+
+If some branch entries are still running or blocked/suspended, then the enclosing `ParState(bs)` is
+still nonterminal.
+
+Normatively:
+
+1. a blocked/suspended branch remains a live branch-local execution instance carrying its current
+   branch-local `Ωi`, `πi`, `Ti`, and `ε̂i`;
+2. a blocked/suspended branch is not reclassified as a rejection merely to force aggregate completion;
+3. a terminal sibling does not by itself authorize `PAR-AGGREGATE`; the all-terminal precondition is
+   required;
+4. branch-local waiting preserves already accumulated carrier state exactly as in the general blocked
+   taxonomy for `Running(...)` configurations;
+5. mixed active/blocked/terminal branch collections remain represented only inside `ParState(bs)` and
+   preserve interleaving-compatible future progress.
+
+#### 6.6.6 Helper-Owned Concurrent Outcomes and Nondeterminism Boundary
+
+The following choices remain helper-owned or scheduler-owned rather than fixed by presentation order in
+this specification:
+
+- which progress-capable branch steps next;
+- which admitted cross-branch trace interleaving is chosen by trace merge;
+- which helper-admitted concurrent rejection summary is chosen when multiple branch failures are
+  semantically relevant;
+- how an implementation internally realizes branch-local carriers before aggregate collation.
+
+The following are not left open:
+
+- branch-local ownership of `Ω`, `π`, `T`, `ε̂`, and terminal payloads during live `Par` evaluation;
+- all-terminal as the only admitted aggregation point;
+- preservation of each branch's internal trace order;
+- the prohibition on collapsing `Par` into fake sequential state threading;
+- compatibility with `SPEC-004` `PAR` outcome reconstruction and with the execution-record contract for
+  exact terminal carrier meaning.
+
+#### 6.6.7 Implementation Conformance Rule
+
+Two implementations may differ in exact branch execution order, exact branch-step count, or concrete
+runtime packaging and still both conform, iff all of the following hold:
+
+1. each branch execution can be reconstructed as preserving its own branch-local `Ω`, `π`, `T`, `ε̂`,
+   and terminal payload through the live `Par` interval;
+2. any admitted blocked/suspended branch remains nonterminal rather than being collapsed into rejection,
+   invalidity, or hidden sequential waiting;
+3. once the branch terminal multiset-with-branch-indices is fixed, the implementation's aggregate
+   result is one allowed by the helper-backed contract above;
+4. each branch trace's internal order is preserved even if the enclosing aggregate trace differs by an
+   allowed interleaving;
+5. terminal projection back to `SPEC-004` and any claimed execution-record projection remains exact.
+
+Accordingly, semantic equality for `Par` is read modulo admitted branch interleaving and helper-owned
+concurrent aggregation latitude, not modulo arbitrary carrier loss or scheduler-specific theorems.
+
 ### 6.7 Spawned-Child Completion Sealing and Observation Ownership
 
 This family covers `spawn_runtime(...)`, `seal_completion(...)`, and `supervisor_observe(...)` as the
@@ -1202,12 +1388,19 @@ Side conditions:
 
 - `ParState(bs)` is specification-only residual notation that makes branch-local progress explicit.
   It is not surfaced syntax and does not prescribe one machine layout.
+- each branch entry in `bs` denotes one branch-local configuration carrying its own `Γi`, `Ωi`, `πi`,
+  `Ti`, `ε̂i`, and eventual terminal payload.
+- the parent carriers written on the enclosing `Running(...)` configuration during `PAR-STEP` are the
+  pre-aggregation parent carriers, not a hidden shared mutable store for all branches.
 - `PAR-STEP` permits any branch index admitted by the concurrency contract; presentation order here is
   not a scheduler commitment.
 - branch terminal arrival is represented inside `ParState(bs)` branch entries rather than by a
   separate surfaced workflow form.
+- `PAR-AGGREGATE` and `PAR-REJECT` are defined only when every branch entry is terminal; blocked or
+  merely running branches keep the enclosing state in `ParState(bs)`.
 - `combine_parallel_outcomes(...)` remains the authoritative owner of branch-result collation,
   cumulative-carrier aggregation, and concurrent rejection combination.
+- list-valued success collation is by branch index, not by proof of execution order.
 - No rule in this family imposes sequential short-circuiting inconsistent with the accepted helper-
   backed concurrent contract.
 

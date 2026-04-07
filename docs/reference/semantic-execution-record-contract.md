@@ -333,3 +333,60 @@ Those tasks should implement or test against this contract directly rather than 
 - what exact terminal projection means;
 - which current retained-completion surfaces are already exact versus only conservative;
 - how blocked/completion-observation boundaries fit into the execution-record story.
+
+## 10. TASK-434 Compatibility Note for `Par` Branch Execution Records
+
+TASK-434 freezes the normative `Par` branch-state and aggregation contract in
+[SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md). This reference remains compatible with
+that contract as follows.
+
+### 10.1 Branch-Local Execution Record Meaning
+
+If a runtime realizes `Par` branches as distinct runtime-owned execution instances, then each branch may
+carry its own branch-local execution record:
+
+```text
+ExecRecord {
+  phase: Running | Blocked(β) | Terminal(Return(v)) | Terminal(Reject(err)) | Invalid(ι),
+  obligations: Ωi,
+  provenance: πi,
+  trace: Ti,
+  effects: ε̂i,
+}
+```
+
+Normatively, such a branch-local record denotes the same branch-local semantic carriers frozen by the
+`Par` contract: branch-local `Ω`, `π`, `T`, `ε̂`, and eventual terminal payload for one branch execution
+instance.
+
+This does not require a runtime to expose each branch record publicly. It only fixes the semantic
+meaning if the runtime claims to preserve or reconstruct branch-local execution records for conformance.
+
+### 10.2 Aggregate Record Boundary
+
+This reference still treats the canonical execution record as describing one authoritative execution
+instance. For an enclosing `Par`, the aggregate execution record is the parent/enclosing record, not the
+unordered bag of branch-local records.
+
+Accordingly:
+
+1. live branch-local records may coexist before aggregate completion;
+2. blocked/suspended branch-local records remain nonterminal and are not collapsed into parent terminal
+   completion;
+3. the enclosing aggregate record becomes terminal only when the `Par` aggregation precondition holds,
+   i.e. when the branch-state contract admits helper-backed aggregation of terminal branch outcomes;
+4. if an implementation projects one enclosing terminal execution record for `Par`, the projected
+   `Ω`, `π`, `T`, and `ε̂` must equal the helper-backed aggregate carriers admitted by the frozen `Par`
+   contract, not a scheduler-accidental or first-observed approximation.
+
+### 10.3 Conformance with Different Branch Orders
+
+Different runtimes may realize or observe branch records in different orders and still conform, provided
+that:
+
+1. each branch record preserves exact branch-local carrier meaning for that branch;
+2. blocked versus terminal versus invalid branch classification is preserved;
+3. the enclosing terminal record, when one exists, projects exactly to the allowed aggregate `SPEC-004`
+   outcome;
+4. any variation is only in admitted branch interleaving or helper-owned aggregation latitude, not in
+   loss of branch-local semantic content.

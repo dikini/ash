@@ -1,6 +1,6 @@
 # TASK-434: `Par` Branch-State and Aggregation Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,8 +13,10 @@ This remains contract/spec work only.
 - [SPEC-004: Operational Semantics](../../spec/SPEC-004-SEMANTICS.md)
 - [SPEC-021: Runtime Observable Behavior](../../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md)
 - [SPEC-025: Small-Step Operational Semantics](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
+- [SPEC-026: Implementation Conformance Contract](../../spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md)
 - [MCE-006: Align Small-Step Semantics with IR Execution](../../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md)
 - [MCE-007: Full Layer Alignment](../../ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md)
+- [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
 - [TASK-403: `Par` Interleaving, Branch State, and Aggregation Correspondence](TASK-403-par-interleaving-branch-state-and-aggregation-correspondence.md)
 - [TASK-430: Small-Step Helper Contracts and State Taxonomy](TASK-430-small-step-helper-contracts-and-state-taxonomy.md)
 - [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
@@ -22,7 +24,7 @@ This remains contract/spec work only.
 ## Dependencies
 
 - ✅ [TASK-403: `Par` Interleaving, Branch State, and Aggregation Correspondence](TASK-403-par-interleaving-branch-state-and-aggregation-correspondence.md)
-- 📝 [TASK-430: Small-Step Helper Contracts and State Taxonomy](TASK-430-small-step-helper-contracts-and-state-taxonomy.md)
+- ✅ [TASK-430: Small-Step Helper Contracts and State Taxonomy](TASK-430-small-step-helper-contracts-and-state-taxonomy.md)
 - ✅ [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
 
 ## Requirements
@@ -81,13 +83,32 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] explicit `Par` branch-state/aggregation contract added
-- [ ] branch-local carrier ownership defined
-- [ ] aggregation behavior for success/failure/blocked cases defined
-- [ ] helper-owned nondeterminism boundary preserved
-- [ ] compatibility with TASK-432 execution-record contract preserved
-- [ ] planning/reference surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] explicit `Par` branch-state/aggregation contract added
+- [x] branch-local carrier ownership defined
+- [x] aggregation behavior for success/failure/blocked cases defined
+- [x] helper-owned nondeterminism boundary preserved
+- [x] compatibility with TASK-432 execution-record contract preserved
+- [x] planning/reference surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+TASK-434 is completed as a docs/spec/reference/planning contract pass.
+
+The normative `Par` contract now lives directly in
+[SPEC-025](../../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md): branch-local `Γ`, `Ω`, `π`, `T`,
+`ε̂`, and terminal payload ownership are frozen explicitly for live `ParState(bs)` evaluation; helper-
+backed aggregation is defined for all-success, mixed success/rejection, and blocked/nonterminal branch
+collections; and the conformance rule now states what may vary across implementations (interleaving,
+helper-owned concurrent rejection/trace merge latitude, runtime packaging) versus what must remain
+semantically exact.
+
+[docs/reference/semantic-execution-record-contract.md](../../reference/semantic-execution-record-contract.md)
+now records the matching TASK-432 compatibility note for branch-local execution records and enclosing
+aggregate execution-record projection, so TASK-435 can implement runtime `Par` aggregation directly
+against this contract instead of reconstructing it from MCE prose.
+
+This task remains contract-first only. No runtime `Par` implementation was changed here.
 
 ## Dependencies for Next Task
 

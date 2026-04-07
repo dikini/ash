@@ -20,7 +20,7 @@ This is real Rust/runtime work.
 ## Dependencies
 
 - ✅ [TASK-433: `ash-interp` Execution-Record Substrate](TASK-433-ash-interp-execution-record-substrate.md)
-- 📝 [TASK-434: `Par` Branch-State and Aggregation Contract](TASK-434-par-branch-state-and-aggregation-contract.md)
+- ✅ [TASK-434: `Par` Branch-State and Aggregation Contract](TASK-434-par-branch-state-and-aggregation-contract.md)
 
 ## Requirements
 

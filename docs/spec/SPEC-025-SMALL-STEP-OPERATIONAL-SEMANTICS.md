@@ -137,8 +137,9 @@ sections and the later compatibility audit can justify for:
 5. any other helper-owned ownership boundary whose current runtime realization is only partial,
    reconstructed, or weak.
 
-Detailed runtime evidence belongs informatively in §9 and, row-by-row, in the TASK-426 compatibility
-audit rather than in the normative rule/contract sections.
+Detailed runtime evidence belongs informatively in §9 and, row-by-row, in
+[TASK-426: SPEC-025 Big-Step and Runtime Compatibility Audit](../plan/tasks/TASK-426-spec-025-big-step-and-runtime-compatibility-audit.md)
+rather than in the normative rule/contract sections.
 
 ### 1.3.4 Frozen Non-Goals
 
@@ -360,6 +361,9 @@ The terminal projection back to SPEC-004 is direct.
 
 where `eff'` is the terminal projection of `ε̂'`.
 
+This is a semantic reconstruction claim. It does not by itself imply that the current interpreter
+already packages those same terminal dimensions as one direct runtime carrier.
+
 The correspondence table is:
 
 | SPEC-004 terminal dimension | Small-step carrier |
@@ -560,9 +564,13 @@ This section is informative but grounded in current interpreter/runtime artifact
 Per §1.3, nothing in this section upgrades partial runtime evidence into a stronger semantic or
 conformance claim. Where current realization is weak or partial, that limitation is stated directly.
 
+For the explicit row-by-row compatibility audit against [SPEC-004](SPEC-004-SEMANTICS.md) and
+[MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md), see
+[TASK-426](../plan/tasks/TASK-426-spec-025-big-step-and-runtime-compatibility-audit.md).
+
 ### 9.1 Receive Realization Evidence
 
-Evidence class: direct.
+Evidence class: direct for the observed non-blocking/fallback behavior; distributed/partial for the blocked-state carrier story.
 
 Current inspected interpreter evidence supports the following receive-path correspondence claims:
 
@@ -584,7 +592,9 @@ Current runtime-side evidence supports a coarse correspondence classification am
 - invalid/runtime-failure boundaries.
 
 That coarse correspondence surface is not itself the small-step semantics, but it is compatible with
-the blocked/suspended vs terminal distinction required by this specification.
+the blocked/suspended vs terminal distinction required by this specification. The current runtime does
+not expose that distinction through one uniform first-class result carrier, so this correspondence is
+reconstructed rather than directly packaged.
 
 ### 9.3 Control and Retained Completion Evidence
 
@@ -597,6 +607,8 @@ completion packaging.
   boundaries.
 - Retained completion-payload realization is only partial/weak on the inspected main execution path
   summarized by [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md).
+- Completion-observation waiting as a distinct runtime carrier is weak/missing on the inspected main
+  execution path and should not be overclaimed.
 - Accordingly, this specification preserves the SPEC-004 completion/control contract normatively,
   but does not claim that the current interpreter already exposes authoritative retained packaging
   for terminal obligations, provenance, trace, and effect summary as one complete runtime carrier.
@@ -615,6 +627,29 @@ a distinct boundary, which is consistent with the helper-backed `PAR-AGGREGATE` 
 This specification does not require that exact implementation strategy. It requires only the same
 semantic boundary and terminal reconstruction contract, and it does not treat the current runtime as
 already having a fully explicit branch-step interleaving machine.
+
+Current evidence is strongest for successful child-value collation and weaker for helper-backed
+aggregation over cumulative carriers such as `Ω`, `π`, `T`, and `ε̂`. Those stronger cumulative-
+state aggregation claims remain partial or missing in current runtime evidence.
+
+### 9.5 Cumulative Carrier Realization Boundary
+
+Evidence class: mixed — partial/reconstructed for `Ω`, weak/missing for `π`, `T`, and `ε̂`.
+
+The semantic backbone of this specification continues to use cumulative carriers `Ω`, `π`, `T`, and
+`ε̂` because they are part of the preserved semantic contract shared with
+[SPEC-004](SPEC-004-SEMANTICS.md).
+
+Current runtime evidence, however, is uneven:
+
+- `Ω` has a real but distributed runtime story, so correspondence is compatible but reconstructed;
+- `π` is not currently threaded as one authoritative mutable execution carrier on the main path;
+- `T` is not currently threaded as one authoritative cumulative trace carrier on the main path;
+- `ε̂` is not currently threaded as one authoritative cumulative effect-summary carrier on the main
+  path.
+
+Accordingly, this specification may normatively preserve those carriers as semantic dimensions while
+still stating informatively that present runtime support is weak or missing for several of them.
 
 ## 10. Explicit Non-Goals
 

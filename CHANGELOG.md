@@ -22,6 +22,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Fixed parser terminal statement handling (TASK-447 completion). The parser's `lower_stmts_to_nested` function now correctly identifies terminal statements (`Ret`, `Done`, and `Act`) and avoids wrapping them in unnecessary `Seq` constructs when the continuation is `Done`. This ensures that workflows like `workflow main { ret 42 }` and `workflow main { let x = 10; ret x }` return their actual values instead of `null`.
+
 - Fixed API usage in `ash-engine` lexical scope tests (TASK-446 follow-up). Tests now correctly use `engine.execute(&workflow)` and `engine.execute_with_input(&workflow, input)` instead of the incorrect `workflow.execute()` pattern. Tests compile successfully and properly exercise the full parsing/typechecking/execution pipeline for lexical scope functionality.
 
 - Completed TASK-437 in `ash-interp` as one narrow retained-completion parity slice: child-owned retained completions now preserve exact `CompletionPayload.effects` parity from the authoritative sealed child execution record instead of workflow-form conservative upper bounds. The retained effect carrier still remains bounded to terminal/reached effect contents only, control tombstones still keep `effects: None`, and retained obligations/provenance remain on their existing honest subset/conservative classifications.

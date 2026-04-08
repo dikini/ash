@@ -16,7 +16,7 @@ use crate::parse_set::parse_set;
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
     Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter,
-    Requirement, RoleRef, Type, TypeParam, Workflow, WorkflowDef,
+    Requirement, RoleRef, Spanned, Type, TypeParam, Workflow, WorkflowDef,
 };
 use crate::token::Span;
 
@@ -695,22 +695,115 @@ pub fn workflow(input: &mut ParseInput) -> ModalResult<Workflow> {
         });
     }
 
-    if let [stmt] = stmts.as_slice() {
-        return Ok(stmt.clone());
-    }
+    // Lower statements to canonical nested form
+    // Following SPEC-002 Section 4.4: right-associative folding into LET ... IN cont or SEQ forms
+    // Even a single statement should be wrapped in appropriate continuation
+    Ok(lower_stmts_to_nested(&stmts, start_pos, input))
+}
 
-    // Combine statements into sequential composition
-    let mut result = stmts[0].clone();
-    for stmt in &stmts[1..] {
-        let span = span_from(&start_pos, &input.state);
-        result = Workflow::Seq {
-            first: Box::new(result),
-            second: Box::new(stmt.clone()),
-            span,
-        };
+/// Check if a workflow is a binding statement (creates a lexical scope)
+fn is_binding_stmt(stmt: &Workflow) -> bool {
+    match stmt {
+        Workflow::Let { .. } => true,
+        Workflow::Observe { binding, .. } => binding.is_some(),
+        Workflow::Orient { binding, .. } => binding.is_some(),
+        Workflow::Propose { binding, .. } => binding.is_some(),
+        _ => false,
     }
+}
 
-    Ok(result)
+/// Check if a workflow is a terminal statement
+/// Terminal statements are Ret, Done, or Act (which has no continuation)
+fn is_terminal_stmt(stmt: &Workflow) -> bool {
+    matches!(
+        stmt,
+        Workflow::Ret { .. } | Workflow::Done { .. } | Workflow::Act { .. }
+    )
+}
+
+/// Lower a list of statements to canonical nested form
+/// Following SPEC-002 Section 4.4: right-associative folding
+///
+/// Binding statements (let, observe/orient/propose with binding) capture the
+/// lowered remainder as continuation (LET pat = expr IN cont)
+///
+/// Non-binding statements lower via SEQ (SEQ stmt cont)
+fn lower_stmts_to_nested(stmts: &[Workflow], start_pos: Position, input: &ParseInput) -> Workflow {
+    let end_span = span_from(&start_pos, &input.state);
+
+    // Fold right-associatively: [s1, s2, s3, done] becomes
+    // LET/SEQ s1 (LET/SEQ s2 (LET/SEQ s3 Done))
+    stmts
+        .iter()
+        .rfold(Workflow::Done { span: end_span }, |cont, stmt| {
+            let stmt_span = stmt.span();
+
+            if is_binding_stmt(stmt) {
+                // Binding statement: extract components and set continuation
+                match stmt.clone() {
+                    Workflow::Let {
+                        pattern,
+                        expr,
+                        span,
+                        ..
+                    } => Workflow::Let {
+                        pattern,
+                        expr,
+                        continuation: Some(Box::new(cont)),
+                        span,
+                    },
+                    Workflow::Observe {
+                        capability,
+                        binding,
+                        span,
+                        ..
+                    } => Workflow::Observe {
+                        capability,
+                        binding,
+                        continuation: Some(Box::new(cont)),
+                        span,
+                    },
+                    Workflow::Orient {
+                        expr,
+                        binding,
+                        span,
+                        ..
+                    } => Workflow::Orient {
+                        expr,
+                        binding,
+                        continuation: Some(Box::new(cont)),
+                        span,
+                    },
+                    Workflow::Propose {
+                        action,
+                        binding,
+                        span,
+                        ..
+                    } => Workflow::Propose {
+                        action,
+                        binding,
+                        continuation: Some(Box::new(cont)),
+                        span,
+                    },
+                    _ => {
+                        unreachable!("is_binding_stmt should only return true for binding variants")
+                    }
+                }
+            } else {
+                // Check if this is a terminal statement with Done continuation
+                // If so, return the statement directly without wrapping in Seq
+                if is_terminal_stmt(stmt) && matches!(cont, Workflow::Done { .. }) {
+                    stmt.clone()
+                } else {
+                    // Non-binding statement: use SEQ
+                    Workflow::Seq {
+                        first: Box::new(stmt.clone()),
+                        second: Box::new(cont),
+                        span: stmt_span,
+                    }
+                }
+            }
+        })
 }
 
 /// Parse a list of statements separated by semicolons
@@ -1718,7 +1811,8 @@ mod tests {
     fn test_seq_workflow() {
         let mut input = test_input("let x = 1; let y = 2; done");
         let result = workflow(&mut input).unwrap();
-        assert!(matches!(result, Workflow::Seq { .. }));
+        // With the new lexical scoping, binding statements create nested Let structures
+        assert!(matches!(result, Workflow::Let { .. }));
     }
 
     #[test]

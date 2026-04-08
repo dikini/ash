@@ -441,4 +441,23 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Value::Int(100));
     }
+
+    #[tokio::test]
+    #[ignore = "Debug test for workflow structure"]
+    async fn debug_workflow_structure() {
+        use crate::Engine;
+        let engine = Engine::new().build().unwrap();
+
+        // Test 1: Simple ret
+        let workflow = engine.parse("workflow main { ret 10 }").unwrap();
+        println!("Test 1 - ret 10: {:#?}", workflow.core);
+
+        // Test 2: Let with ret
+        let workflow = engine.parse("workflow main { let x = 10; ret x }").unwrap();
+        println!("Test 2 - let x = 10; ret x: {:#?}", workflow.core);
+
+        // Test 3: Multiple let bindings
+        let workflow = engine.parse("workflow main { let x = 10; let y = 20; ret x + y }").unwrap();
+        println!("Test 3 - let x = 10; let y = 20; ret x + y: {:#?}", workflow.core);
+    }
 }

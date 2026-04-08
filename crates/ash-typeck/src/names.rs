@@ -128,12 +128,7 @@ impl NameResolver {
     pub fn bind(&mut self, name: impl Into<Box<str>>) {
         let name = name.into();
         if let Some(scope) = self.scopes.last_mut() {
-            // Check for duplicate binding in current scope
-            if scope.contains(&name) {
-                self.errors
-                    .push(ResolutionError::DuplicateBinding(name.to_string()));
-                return;
-            }
+            // Allow shadowing: replace existing binding if present
             scope.insert(name);
         }
     }
@@ -219,9 +214,15 @@ impl NameResolver {
                 ..
             } => {
                 self.resolve_expr(condition);
+                // Create new scope for then branch
+                self.push_scope();
                 self.resolve_workflow_inner(then_branch);
+                self.pop_scope();
                 if let Some(else_branch) = else_branch {
+                    // Create new scope for else branch
+                    self.push_scope();
                     self.resolve_workflow_inner(else_branch);
+                    self.pop_scope();
                 }
             }
 
@@ -249,9 +250,15 @@ impl NameResolver {
                 ..
             } => {
                 self.resolve_expr(expr);
+                // Create new scope for then branch
+                self.push_scope();
                 self.resolve_workflow_inner(then_branch);
+                self.pop_scope();
                 if let Some(else_branch) = else_branch {
+                    // Create new scope for else branch
+                    self.push_scope();
                     self.resolve_workflow_inner(else_branch);
+                    self.pop_scope();
                 }
             }
 
@@ -1016,16 +1023,16 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_binding_error() {
+    fn test_shadowing_allowed() {
         let mut resolver = NameResolver::new();
         resolver.bind("x");
-        resolver.bind("x"); // Duplicate
+        resolver.bind("x"); // Shadow - should be allowed
 
-        assert!(resolver.has_errors());
-        assert!(matches!(
-            resolver.errors()[0],
-            ResolutionError::DuplicateBinding(_)
-        ));
+        // Shadowing is now allowed, so no errors
+        assert!(!resolver.has_errors());
+
+        // The second binding should shadow the first
+        assert!(resolver.is_bound("x"));
     }
 
     #[test]

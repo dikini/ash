@@ -467,12 +467,16 @@ impl RuntimeState {
         self.yield_router.clone()
     }
 
-    /// Store the most recent authoritative execution record observed for this runtime state.
+    /// Store the most recent authoritative top-level execution record observed for this runtime state.
+    ///
+    /// Spawned-child and other auxiliary execution instances must not overwrite this slot; they own
+    /// distinct execution instances and should surface their terminal state through retained-completion
+    /// or other instance-scoped carriers instead.
     pub async fn set_last_execution_record(&self, record: ExecutionRecord) {
         *self.last_execution_record.lock().await = Some(record);
     }
 
-    /// Read the most recent authoritative execution record observed for this runtime state.
+    /// Read the most recent authoritative top-level execution record observed for this runtime state.
     pub async fn last_execution_record(&self) -> Option<ExecutionRecord> {
         (*self.last_execution_record.lock().await).clone()
     }

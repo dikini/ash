@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
 use ash_core::{Decision, Effect, Name, Provenance, TraceEvent, Value, WorkflowId};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 
 use crate::context::Context;
 use crate::{ExecError, ExecResult, RuntimeOutcomeState};
@@ -111,6 +111,29 @@ impl ExecutionObligationState {
         }
     }
 
+    pub(crate) fn merge_parallel(branches: &[Self]) -> Self {
+        let mut pending = BTreeSet::new();
+        let mut role_pending = BTreeSet::new();
+        let mut role_discharged = BTreeSet::new();
+        let mut active_role = None;
+
+        for branch in branches {
+            pending.extend(branch.pending.iter().cloned());
+            role_pending.extend(branch.role_pending.iter().cloned());
+            role_discharged.extend(branch.role_discharged.iter().cloned());
+            if active_role.is_none() {
+                active_role = branch.active_role.clone();
+            }
+        }
+
+        Self {
+            pending,
+            active_role,
+            role_pending,
+            role_discharged,
+        }
+    }
+
     pub fn pending(&self) -> &BTreeSet<Name> {
         &self.pending
     }
@@ -149,6 +172,15 @@ impl ExecutionEffectSummary {
         self.reached.insert(effect);
     }
 
+    pub(crate) fn merge_parallel(branches: &[Self]) -> Self {
+        let mut merged = Self::default();
+        for branch in branches {
+            merged.terminal = merged.terminal.max(branch.terminal);
+            merged.reached.extend(branch.reached.iter().copied());
+        }
+        merged
+    }
+
     pub fn terminal(&self) -> Effect {
         self.terminal
     }
@@ -167,6 +199,79 @@ pub struct ExecutionRecord {
     effects: ExecutionEffectSummary,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ParallelTraceEvent {
+    branch_index: usize,
+    event: TraceEvent,
+    timestamp: DateTime<Utc>,
+}
+
+impl ParallelTraceEvent {
+    fn new(branch_index: usize, event: TraceEvent) -> Self {
+        let timestamp = trace_event_timestamp(&event);
+        Self {
+            branch_index,
+            event,
+            timestamp,
+        }
+    }
+}
+
+fn trace_event_timestamp(event: &TraceEvent) -> DateTime<Utc> {
+    match event {
+        TraceEvent::Obs { timestamp, .. }
+        | TraceEvent::Orient { timestamp, .. }
+        | TraceEvent::Decide { timestamp, .. }
+        | TraceEvent::Act { timestamp, .. }
+        | TraceEvent::Oblig { timestamp, .. } => *timestamp,
+    }
+}
+
+fn join_parallel_provenance(branches: &[ExecutionRecord]) -> Provenance {
+    if branches.is_empty() {
+        return Provenance::new();
+    }
+
+    let parent = branches.iter().find_map(|branch| branch.provenance.parent);
+    let mut lineage = Vec::<WorkflowId>::new();
+    if let Some(parent_id) = parent {
+        lineage.push(parent_id);
+    }
+    for branch in branches {
+        for ancestor in &branch.provenance.lineage {
+            if !lineage.contains(ancestor) {
+                lineage.push(*ancestor);
+            }
+        }
+        if !lineage.contains(&branch.provenance.workflow_id) {
+            lineage.push(branch.provenance.workflow_id);
+        }
+    }
+
+    Provenance {
+        workflow_id: parent.unwrap_or(branches[0].provenance.workflow_id),
+        parent,
+        lineage,
+    }
+}
+
+fn merge_parallel_traces(branches: &[ExecutionRecord]) -> Vec<TraceEvent> {
+    let mut events = branches
+        .iter()
+        .enumerate()
+        .flat_map(|(branch_index, branch)| {
+            branch
+                .trace
+                .iter()
+                .cloned()
+                .map(move |event| ParallelTraceEvent::new(branch_index, event))
+        })
+        .collect::<Vec<_>>();
+
+    events.sort_by_key(|event| (event.timestamp, event.branch_index));
+    events.into_iter().map(|event| event.event).collect()
+}
+
 impl ExecutionRecord {
     pub fn new(provenance: Provenance) -> Self {
         Self {
@@ -175,6 +280,50 @@ impl ExecutionRecord {
             provenance,
             trace: Vec::new(),
             effects: ExecutionEffectSummary::default(),
+        }
+    }
+
+    pub(crate) fn merge_parallel_success(branches: &[Self]) -> Self {
+        let values = branches
+            .iter()
+            .map(|branch| match branch.phase() {
+                ExecutionPhase::Terminal(ExecutionTerminal::Return(value)) => value.clone(),
+                other => panic!("parallel success merge requires terminal returns, got {other:?}"),
+            })
+            .collect();
+
+        Self::merge_parallel_terminal(
+            branches,
+            ExecutionTerminal::Return(Value::List(Box::new(values))),
+        )
+    }
+
+    pub(crate) fn merge_parallel_rejection(branches: &[Self], error: ExecError) -> Self {
+        Self::merge_parallel_terminal(branches, ExecutionTerminal::Reject(error))
+    }
+
+    fn merge_parallel_terminal(branches: &[Self], terminal: ExecutionTerminal) -> Self {
+        let obligations = ExecutionObligationState::merge_parallel(
+            &branches
+                .iter()
+                .map(|branch| branch.obligations.clone())
+                .collect::<Vec<_>>(),
+        );
+        let effects = ExecutionEffectSummary::merge_parallel(
+            &branches
+                .iter()
+                .map(|branch| branch.effects.clone())
+                .collect::<Vec<_>>(),
+        );
+        let provenance = join_parallel_provenance(branches);
+        let trace = merge_parallel_traces(branches);
+
+        Self {
+            phase: ExecutionPhase::Terminal(terminal),
+            obligations,
+            provenance,
+            trace,
+            effects,
         }
     }
 
@@ -358,6 +507,13 @@ impl ExecutionRecorder {
             .lock()
             .expect("execution recorder mutex should not be poisoned")
             .clone()
+    }
+
+    pub(crate) fn replace_with_snapshot(&self, record: ExecutionRecord) {
+        *self
+            .inner
+            .lock()
+            .expect("execution recorder mutex should not be poisoned") = record;
     }
 
     pub(crate) fn child_provenance(&self, workflow_id: WorkflowId) -> Provenance {

@@ -19,7 +19,7 @@ use crate::eval::eval_expr;
 use crate::exec_send::execute_send;
 use crate::execute_set::execute_set;
 use crate::execute_stream::{CoreReceiveRuntime, execute_core_receive};
-use crate::execution_record::ExecutionRecorder;
+use crate::execution_record::{ExecutionRecord, ExecutionRecorder};
 use crate::guard::eval_guard;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
@@ -402,6 +402,7 @@ async fn run_spawned_child_workflow(
         RuntimeState::spawned_child_init_bindings(init_value, link.clone()),
         &terminal_observer,
         execution_provenance,
+        false,
     )
     .await;
 
@@ -623,34 +624,103 @@ fn execute_workflow_inner_observed<'a>(
                     return Ok(Value::Null);
                 }
 
-                // Execute all workflows in parallel and collect results
-                let futures: Vec<_> = workflows
-                    .iter()
-                    .map(|wf| {
-                        execute_workflow_inner_observed(
-                            wf,
-                            ctx.clone(),
-                            cap_ctx,
-                            policy_eval,
-                            behaviour_ctx,
-                            stream_ctx,
-                            mailbox.clone(),
-                            control_registry.clone(),
-                            proxy_registry.clone(),
-                            suspended_yields.clone(),
-                            runtime_state,
-                            terminal_observer,
-                            execution_recorder,
-                        )
-                    })
-                    .collect();
+                if let Some(parent_recorder) = execution_recorder {
+                    let branch_recorders = workflows
+                        .iter()
+                        .map(|_| {
+                            ExecutionRecorder::new(
+                                parent_recorder.child_provenance(ash_core::WorkflowId::new()),
+                            )
+                        })
+                        .collect::<Vec<_>>();
 
-                let results = futures::future::join_all(futures).await;
+                    let futures: Vec<_> = workflows
+                        .iter()
+                        .zip(branch_recorders.iter())
+                        .map(|(wf, branch_recorder)| {
+                            execute_workflow_inner_observed(
+                                wf,
+                                ctx.clone(),
+                                cap_ctx,
+                                policy_eval,
+                                behaviour_ctx,
+                                stream_ctx,
+                                mailbox.clone(),
+                                control_registry.clone(),
+                                proxy_registry.clone(),
+                                suspended_yields.clone(),
+                                runtime_state,
+                                terminal_observer,
+                                Some(branch_recorder),
+                            )
+                        })
+                        .collect();
 
-                // Check for errors
-                let values: Vec<Value> = results.into_iter().collect::<Result<Vec<_>, _>>()?;
+                    let results = futures::future::join_all(futures).await;
+                    let branch_records = branch_recorders
+                        .iter()
+                        .map(ExecutionRecorder::snapshot)
+                        .collect::<Vec<_>>();
 
-                Ok(Value::List(Box::new(values)))
+                    if let Some(non_terminal) = branch_records
+                        .iter()
+                        .find(|record| !record.phase().is_terminal())
+                    {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "parallel aggregation requires terminal branch records, got {:?}",
+                            non_terminal.phase()
+                        )));
+                    }
+
+                    if let Some(error) = results
+                        .iter()
+                        .find_map(|result| result.as_ref().err())
+                        .cloned()
+                    {
+                        parent_recorder.replace_with_snapshot(
+                            ExecutionRecord::merge_parallel_rejection(
+                                &branch_records,
+                                error.clone(),
+                            ),
+                        );
+                        return Err(error);
+                    }
+
+                    let values = results.into_iter().collect::<Result<Vec<_>, _>>()?;
+                    parent_recorder.replace_with_snapshot(ExecutionRecord::merge_parallel_success(
+                        &branch_records,
+                    ));
+                    Ok(Value::List(Box::new(values)))
+                } else {
+                    // Execute all workflows in parallel and collect results
+                    let futures: Vec<_> = workflows
+                        .iter()
+                        .map(|wf| {
+                            execute_workflow_inner_observed(
+                                wf,
+                                ctx.clone(),
+                                cap_ctx,
+                                policy_eval,
+                                behaviour_ctx,
+                                stream_ctx,
+                                mailbox.clone(),
+                                control_registry.clone(),
+                                proxy_registry.clone(),
+                                suspended_yields.clone(),
+                                runtime_state,
+                                terminal_observer,
+                                execution_recorder,
+                            )
+                        })
+                        .collect();
+
+                    let results = futures::future::join_all(futures).await;
+
+                    // Check for errors
+                    let values: Vec<Value> = results.into_iter().collect::<Result<Vec<_>, _>>()?;
+
+                    Ok(Value::List(Box::new(values)))
+                }
             }
 
             // Observe from capability
@@ -1730,6 +1800,7 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
     input_bindings: std::collections::HashMap<String, Value>,
     terminal_observer: &TerminalObservationRecorder,
     execution_provenance: Provenance,
+    persist_last_execution_record: bool,
 ) -> ExecResult<Value> {
     let ctx = Context::with_bindings(input_bindings);
     let cap_ctx = runtime_state.create_capability_context().await;
@@ -1756,16 +1827,21 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
         Some(&execution_recorder),
     )
     .await;
-    runtime_state
-        .set_last_execution_record(execution_recorder.snapshot())
-        .await;
+    if persist_last_execution_record {
+        runtime_state
+            .set_last_execution_record(execution_recorder.snapshot())
+            .await;
+    }
     result
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::{Action, BinaryOp, Capability, Effect, Expr, Guard, Obligation, Provenance};
+    use ash_core::{
+        Action, BinaryOp, Capability, ControlLink, Effect, Expr, Guard, Obligation, Pattern,
+        Provenance, RoleObligationRef,
+    };
 
     fn test_role(name: &str) -> ash_core::Role {
         ash_core::Role {
@@ -1773,6 +1849,47 @@ mod tests {
             authority: vec![],
             obligations: vec![],
         }
+    }
+
+    fn test_role_with_obligation(name: &str, obligation: &str) -> ash_core::Role {
+        ash_core::Role {
+            name: name.to_string(),
+            authority: vec![],
+            obligations: vec![RoleObligationRef {
+                name: obligation.to_string(),
+            }],
+        }
+    }
+
+    fn spawn_and_return_control(init: Expr) -> Workflow {
+        Workflow::Spawn {
+            workflow_type: "worker".to_string(),
+            init,
+            pattern: Pattern::Variable("worker".to_string()),
+            continuation: Box::new(Workflow::Split {
+                expr: Expr::Variable("worker".to_string()),
+                pattern: Pattern::Tuple(vec![
+                    Pattern::Wildcard,
+                    Pattern::Variable("ctrl".to_string()),
+                ]),
+                continuation: Box::new(Workflow::Ret {
+                    expr: Expr::Variable("ctrl".to_string()),
+                }),
+            }),
+        }
+    }
+
+    async fn wait_for_child_completion(
+        runtime_state: &RuntimeState,
+        link: &ControlLink,
+    ) -> crate::control_link::RetainedCompletionRecord {
+        tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            runtime_state.wait_for_retained_completion(link),
+        )
+        .await
+        .expect("spawned child should eventually seal retained completion")
+        .expect("completion wait should return the sealed retained record")
     }
 
     #[tokio::test]
@@ -1862,20 +1979,16 @@ mod tests {
     async fn test_last_execution_record_carries_orient_trace_and_effect() {
         let runtime_state = RuntimeState::new();
         let workflow = Workflow::Orient {
-            expr: Expr::Binary {
-                op: BinaryOp::Add,
-                left: Box::new(Expr::Literal(Value::Int(1))),
-                right: Box::new(Expr::Literal(Value::Int(2))),
-            },
+            expr: Expr::Literal(Value::Int(1)),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Literal(Value::Int(42)),
+                expr: Expr::Literal(Value::Int(2)),
             }),
         };
 
         let result = execute_simple_in_state(&workflow, &runtime_state)
             .await
             .unwrap();
-        assert_eq!(result, Value::Int(42));
+        assert_eq!(result, Value::Int(2));
 
         let record = runtime_state
             .last_execution_record()
@@ -1890,6 +2003,188 @@ mod tests {
             outcome.trace(),
             [ash_core::TraceEvent::Orient { .. }]
         ));
+    }
+
+    #[tokio::test]
+    async fn test_spawned_child_does_not_overwrite_top_level_last_execution_record() {
+        let runtime_state = RuntimeState::new();
+        runtime_state
+            .register_child_workflow(
+                "worker",
+                Workflow::Ret {
+                    expr: Expr::Literal(Value::Int(7)),
+                },
+            )
+            .await;
+
+        let result = execute_simple_in_state(
+            &spawn_and_return_control(Expr::Literal(Value::Null)),
+            &runtime_state,
+        )
+        .await
+        .expect("spawn should return a control link");
+
+        let Value::ControlLink(link) = result.clone() else {
+            panic!("expected control link, got {result:?}");
+        };
+
+        let _ = wait_for_child_completion(&runtime_state, &link).await;
+
+        let record = runtime_state
+            .last_execution_record()
+            .await
+            .expect("top-level execution should keep its authoritative record");
+        assert_eq!(
+            record.phase(),
+            &crate::execution_record::ExecutionPhase::Terminal(
+                crate::execution_record::ExecutionTerminal::Return(Value::ControlLink(
+                    link.clone(),
+                )),
+            )
+        );
+        assert!(record.provenance().parent.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_spawned_child_does_not_overwrite_stream_top_level_last_execution_record() {
+        let runtime_state = RuntimeState::new();
+        runtime_state
+            .register_child_workflow(
+                "worker",
+                Workflow::Ret {
+                    expr: Expr::Literal(Value::Int(7)),
+                },
+            )
+            .await;
+
+        let ctx = Context::new();
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+        let stream_ctx = StreamContext::new();
+
+        let result = execute_workflow_with_stream_in_state(
+            &spawn_and_return_control(Expr::Literal(Value::Null)),
+            ctx,
+            &cap_ctx,
+            &policy_eval,
+            &behaviour_ctx,
+            &stream_ctx,
+            &runtime_state,
+        )
+        .await
+        .expect("spawn should return a control link");
+
+        let Value::ControlLink(link) = result.clone() else {
+            panic!("expected control link, got {result:?}");
+        };
+
+        let _ = wait_for_child_completion(&runtime_state, &link).await;
+
+        let record = runtime_state
+            .last_execution_record()
+            .await
+            .expect("stream top-level execution should keep its authoritative record");
+        assert_eq!(
+            record.phase(),
+            &crate::execution_record::ExecutionPhase::Terminal(
+                crate::execution_record::ExecutionTerminal::Return(Value::ControlLink(
+                    link.clone(),
+                )),
+            )
+        );
+        assert!(record.provenance().parent.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_par_execution_record_aggregates_branch_local_carriers() {
+        let runtime_state = RuntimeState::new();
+        let mut cap_ctx = CapabilityContext::new();
+        cap_ctx.register(Box::new(
+            crate::capability::MockProvider::new("sensor", Effect::Epistemic)
+                .with_observe_value(Value::Int(11)),
+        ));
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let workflow = Workflow::Par {
+            workflows: vec![
+                Workflow::Observe {
+                    capability: Capability {
+                        name: "sensor".to_string(),
+                        effect: Effect::Epistemic,
+                        constraints: vec![],
+                    },
+                    pattern: Pattern::Variable("obs".to_string()),
+                    continuation: Box::new(Workflow::Ret {
+                        expr: Expr::Variable("obs".to_string()),
+                    }),
+                },
+                Workflow::Oblig {
+                    role: test_role_with_obligation("reviewer", "audit"),
+                    workflow: Box::new(Workflow::Seq {
+                        first: Box::new(Workflow::Check {
+                            obligation: Obligation::Obliged {
+                                role: test_role("reviewer"),
+                                condition: Expr::Literal(Value::Bool(true)),
+                            },
+                            continuation: Box::new(Workflow::Done),
+                        }),
+                        second: Box::new(Workflow::Ret {
+                            expr: Expr::Literal(Value::Int(2)),
+                        }),
+                    }),
+                },
+            ],
+        };
+
+        let result = execute_workflow_with_behaviour_in_state(
+            &workflow,
+            Context::new(),
+            &cap_ctx,
+            &policy_eval,
+            &behaviour_ctx,
+            &runtime_state,
+        )
+        .await
+        .expect("parallel workflow should succeed");
+
+        assert_eq!(
+            result,
+            Value::List(Box::new(vec![Value::Int(11), Value::Int(2)]))
+        );
+
+        let record = runtime_state
+            .last_execution_record()
+            .await
+            .expect("parallel execution should store an execution record");
+        let outcome = record
+            .project_workflow_outcome()
+            .expect("parallel success should project");
+        assert_eq!(
+            outcome.effect(),
+            Effect::Evaluative,
+            "branch effects should be aggregated rather than lost"
+        );
+        assert_eq!(
+            outcome.trace().len(),
+            2,
+            "parallel aggregate should merge branch-local traces"
+        );
+        assert!(matches!(
+            &outcome.trace()[0],
+            ash_core::TraceEvent::Obs { .. } | ash_core::TraceEvent::Oblig { .. }
+        ));
+        assert!(matches!(
+            &outcome.trace()[1],
+            ash_core::TraceEvent::Obs { .. } | ash_core::TraceEvent::Oblig { .. }
+        ));
+        assert_eq!(outcome.obligations().active_role(), Some("reviewer"));
+        assert_eq!(
+            outcome.obligations().role_pending(),
+            &std::iter::once("audit".to_string()).collect()
+        );
+        assert!(!outcome.provenance().lineage.is_empty());
     }
 
     #[tokio::test]

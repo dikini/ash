@@ -1999,9 +1999,11 @@ enclosing `Par` execution record is rebuilt from branch-local trace/effect/oblig
 snapshots rather than one shared recorder. TASK-436 then freezes the retained-completion parity
 contract, TASK-437 lands one bounded runtime follow-on slice under that contract for exact
 child-owned retained `CompletionPayload.effects` parity, and TASK-438 now freezes the shared
-canonical IR corpus plus machine-readable result format that TASK-439 must consume for Rust-first
-differential conformance. Remaining Phase 67 follow-on work now concentrates on the Rust-first
-harness and the Lean/reference refresh plan.
+canonical IR corpus plus machine-readable result format for future conformance work. TASK-442 is
+now landed as the resolver-backed ordinary-file execution slice across stdlib and user-module
+imports. Remaining Phase 67 follow-on work now concentrates on downstream conformance / Lean-reference
+work tracked by the broader phase roadmap.
 | [TASK-436](tasks/TASK-436-completion-payload-parity-contract.md) | Freeze the exact contract for retained completion observation versus full `CompletionPayload` parity | SPEC-004, SPEC-021, MCE-007 | 3-5 | ✅ Complete |
 | [TASK-437](tasks/TASK-437-retained-completion-parity-follow-on.md) | Implement the next honest retained-completion parity slice after TASK-412 under the frozen contract | TASK-436, ash-interp | 4-7 | ✅ Complete |
 | [TASK-438](tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md) | Define the canonical IR semantics corpus and machine-readable expected-result format for conformance testing | TASK-428, TASK-431, TASK-432, TASK-434, TASK-436 | 4-6 | ✅ Complete |
+| [TASK-442](tasks/TASK-442-general-module-resolution-and-stdlib-execution.md) | Make ordinary file workflows resolver-backed across stdlib and user modules, with versioned library roots | SPEC-005, SPEC-009, SPEC-010, TASK-363a, TASK-438 | 5-8 | ✅ Complete |

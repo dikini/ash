@@ -37,6 +37,13 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         Expr::Variable(name) => ctx
             .get(name)
             .cloned()
+            .or_else(|| {
+                if name == "()" {
+                    Some(Value::Null)
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| EvalError::UndefinedVariable(name.clone())),
 
         Expr::FieldAccess { expr, field } => {

@@ -58,6 +58,14 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
     match expr {
         Expr::Literal(lit) => check_literal(lit),
         Expr::Variable(name) => {
+            if name.as_ref() == "()" {
+                return CheckResult::success(Type::Constructor {
+                    name: crate::QualifiedName::root("()"),
+                    args: Vec::new(),
+                    kind: crate::Kind::Type,
+                });
+            }
+
             // FIXED: Look up variable in environment instead of creating fresh type var
             match env.lookup_variable(name.as_ref()) {
                 Some(ty) => CheckResult::success(ty),

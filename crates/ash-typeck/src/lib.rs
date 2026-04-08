@@ -1048,7 +1048,8 @@ fn reject_unsupported_mvp_workflow_features(
     }
 }
 
-fn type_check_workflow_def_in_env(
+/// Type-check a workflow definition against an explicitly prepared type environment.
+pub fn type_check_workflow_def_in_env(
     env: &TypeEnv,
     workflow: &ash_parser::surface::WorkflowDef,
 ) -> Result<TypeCheckResult, TypeCheckError> {

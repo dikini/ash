@@ -18,6 +18,7 @@ pub mod entry;
 pub mod error;
 pub mod execute;
 pub mod harness;
+pub mod module_loader;
 pub mod parse;
 pub mod providers;
 
@@ -30,6 +31,12 @@ pub use providers::CapabilityProvider;
 
 use ash_core::Value;
 use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
+use ash_parser::surface::{
+    ConstructorPayload as SurfaceConstructorPayload, Expr as SurfaceExpr,
+    MatchArm as SurfaceMatchArm, Pattern as SurfacePattern, PolicyExpr as SurfacePolicyExpr,
+    Type as SurfaceType, Workflow as SurfaceWorkflow, WorkflowDef as SurfaceWorkflowDef,
+};
+use std::collections::{HashMap, HashSet};
 
 /// The central engine for all Ash operations
 ///
@@ -58,6 +65,9 @@ pub struct Engine {
     /// This stores the full `WorkflowDef` including parameters for type checking
     surface_workflow_defs:
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::WorkflowDef>>,
+    /// Imported ADT/type definitions keyed by parsed workflow ID.
+    imported_type_defs:
+        std::sync::Mutex<std::collections::HashMap<u64, Vec<ash_core::ast::TypeDef>>>,
     /// Narrow engine-owned registry of runtime stdlib module sources keyed by
     /// canonical module path.
     runtime_stdlib_modules: std::sync::Mutex<std::collections::HashMap<String, String>>,
@@ -134,11 +144,26 @@ impl Engine {
         id
     }
 
+    /// Store imported type definitions for a parsed workflow.
+    fn store_imported_type_defs(&self, workflow_id: u64, defs: Vec<ash_core::ast::TypeDef>) {
+        if let Ok(mut map) = self.imported_type_defs.lock() {
+            map.insert(workflow_id, defs);
+        }
+    }
+
     /// Retrieve a surface workflow definition by its ID
     fn get_surface_workflow_def(&self, id: u64) -> Option<ash_parser::surface::WorkflowDef> {
         self.surface_workflow_defs
             .lock()
             .map_or(None, |map| map.get(&id).cloned())
+    }
+
+    /// Retrieve imported type definitions by workflow ID.
+    fn get_imported_type_defs(&self, id: u64) -> Vec<ash_core::ast::TypeDef> {
+        self.imported_type_defs.lock().map_or_else(
+            |_| Vec::new(),
+            |map| map.get(&id).cloned().unwrap_or_default(),
+        )
     }
 
     /// Register a runtime stdlib module source under its canonical module path.
@@ -187,7 +212,8 @@ impl Engine {
     ///
     /// Returns `EngineError::Parse` if the source contains syntax errors.
     pub fn parse(&self, source: &str) -> Result<Workflow, EngineError> {
-        self.parse_workflow_source(source)
+        let imported_callables = HashMap::new();
+        self.parse_workflow_source_with_imports(source, Vec::new(), &imported_callables)
     }
 
     /// Parse entry source into a [`Workflow`], tolerating a leading `use` prelude.
@@ -206,7 +232,11 @@ impl Engine {
         entry::validate_runtime_entry_import_prelude(source, |module_path| {
             self.has_registered_runtime_module(module_path)
         })?;
-        self.parse_workflow_source(entry::strip_leading_entry_use_lines(source))
+        self.parse_workflow_source_with_imports(
+            entry::strip_leading_entry_use_lines(source),
+            Vec::new(),
+            &HashMap::new(),
+        )
     }
 
     /// Parse entry source from a file, tolerating the narrow leading `use` prelude.
@@ -223,27 +253,7 @@ impl Engine {
         self.parse_entry_source(&source)
     }
 
-    fn parse_workflow_source(&self, source: &str) -> Result<Workflow, EngineError> {
-        use ash_parser::{lower_workflow, new_input, workflow_def};
-        use winnow::prelude::*;
-
-        let mut input = new_input(source);
-
-        match workflow_def.parse_next(&mut input) {
-            Ok(def) => {
-                let core = lower_workflow(&def)
-                    .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
-                let id = self.store_surface_workflow_def(def);
-                Ok(Workflow { core, id })
-            }
-            Err(e) => {
-                // Format the parse error into a readable message
-                let error_message = format!("{e}");
-                Err(EngineError::Parse(error_message))
-            }
-        }
-    }
-
+    #[allow(dead_code)]
     /// Parse a workflow from a file
     ///
     /// # Errors
@@ -251,8 +261,41 @@ impl Engine {
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns `EngineError::Parse` if the file contains syntax errors.
     pub fn parse_file(&self, path: impl AsRef<std::path::Path>) -> Result<Workflow, EngineError> {
-        let source = std::fs::read_to_string(path)?;
-        self.parse(&source)
+        let loaded = module_loader::load_ordinary_file(path.as_ref())?;
+        self.parse_workflow_source_with_imports(
+            &loaded.workflow_source,
+            loaded.imported_type_defs,
+            &loaded.imported_callables,
+        )
+    }
+
+    fn parse_workflow_source_with_imports(
+        &self,
+        source: &str,
+        imported_type_defs: Vec<ash_core::ast::TypeDef>,
+        imported_callables: &HashMap<String, module_loader::InlineCallable>,
+    ) -> Result<Workflow, EngineError> {
+        use ash_parser::{
+            lower_workflow, new_input, parse_utils::skip_whitespace_and_comments, workflow_def,
+        };
+        use winnow::prelude::*;
+
+        let mut input = new_input(source);
+        skip_whitespace_and_comments(&mut input);
+
+        match workflow_def.parse_next(&mut input) {
+            Ok(mut def) => {
+                if !imported_callables.is_empty() {
+                    inline_imported_calls_in_workflow_def(&mut def, imported_callables)?;
+                }
+                let core = lower_workflow(&def)
+                    .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
+                let id = self.store_surface_workflow_def(def);
+                self.store_imported_type_defs(id, imported_type_defs);
+                Ok(Workflow { core, id })
+            }
+            Err(e) => Err(EngineError::Parse(format!("{e}"))),
+        }
     }
 
     /// Infer the canonical Ash type name for an expression.
@@ -291,19 +334,42 @@ impl Engine {
             .get_surface_workflow_def(workflow.id)
             .ok_or_else(|| EngineError::Type("workflow not found in cache".to_string()))?;
 
-        // Convert workflow parameters to typeck types
-        let param_bindings: Vec<(String, ash_typeck::Type)> = def
-            .params
-            .iter()
-            .map(|p| (p.name.to_string(), Self::surface_type_to_typeck(&p.ty)))
-            .collect();
+        let imported_type_defs = self.get_imported_type_defs(workflow.id);
+        if imported_type_defs.is_empty() {
+            let param_refs = def
+                .params
+                .iter()
+                .map(|param| {
+                    surface_type_to_typeck(&param.ty)
+                        .map(|ty| (param.name.to_string(), ty))
+                        .map_err(EngineError::Type)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
 
-        // Run the type checker with parameter bindings
-        let param_refs: Vec<_> = param_bindings
-            .iter()
-            .map(|(n, t)| (n.clone(), t.clone()))
-            .collect();
-        match ash_typeck::type_check_workflow(&def.body, Some(&param_refs)) {
+            match ash_typeck::type_check_workflow(&def.body, Some(&param_refs)) {
+                Ok(result) => {
+                    if result.is_ok() {
+                        return Ok(());
+                    }
+
+                    let errors: Vec<String> =
+                        result.errors.iter().map(|e| format!("{e:?}")).collect();
+                    return Err(EngineError::Type(errors.join("; ")));
+                }
+                Err(e) => return Err(EngineError::Type(format!("{e}"))),
+            }
+        }
+
+        let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+        for imported_type in imported_type_defs {
+            if !type_env.has_type(&imported_type.name) {
+                type_env
+                    .register_type(&imported_type)
+                    .map_err(|error| EngineError::Type(error.to_string()))?;
+            }
+        }
+
+        match ash_typeck::type_check_workflow_def_in_env(&type_env, &def) {
             Ok(result) => {
                 if result.is_ok() {
                     Ok(())
@@ -333,37 +399,6 @@ impl Engine {
             .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
 
         verify_entry_workflow_def(&def)
-    }
-
-    /// Convert a surface type annotation to a typeck type
-    fn surface_type_to_typeck(surface_type: &ash_parser::surface::Type) -> ash_typeck::Type {
-        use ash_parser::surface::Type as SurfaceType;
-        match surface_type {
-            SurfaceType::Name(name) => match name.as_ref() {
-                "Int" => ash_typeck::Type::Int,
-                "String" => ash_typeck::Type::String,
-                "Bool" => ash_typeck::Type::Bool,
-                "Null" => ash_typeck::Type::Null,
-                "Time" => ash_typeck::Type::Time,
-                "Ref" => ash_typeck::Type::Ref,
-                _ => ash_typeck::Type::Var(ash_typeck::TypeVar::fresh()),
-            },
-            SurfaceType::List(inner) => {
-                ash_typeck::Type::List(Box::new(Self::surface_type_to_typeck(inner)))
-            }
-            SurfaceType::Record(fields) => ash_typeck::Type::Record(
-                fields
-                    .iter()
-                    .map(|(name, ty)| (name.clone(), Self::surface_type_to_typeck(ty)))
-                    .collect(),
-            ),
-            SurfaceType::Capability(_) => ash_typeck::Type::Var(ash_typeck::TypeVar::fresh()),
-            SurfaceType::Constructor { name, args } => ash_typeck::Type::Constructor {
-                name: ash_typeck::QualifiedName::root(name.as_ref()),
-                args: args.iter().map(Self::surface_type_to_typeck).collect(),
-                kind: ash_typeck::Kind::Type,
-            },
-        }
     }
 
     /// Execute a workflow asynchronously
@@ -517,6 +552,513 @@ impl Engine {
     }
 }
 
+fn inline_imported_calls_in_workflow_def(
+    def: &mut SurfaceWorkflowDef,
+    imported_callables: &HashMap<String, module_loader::InlineCallable>,
+) -> Result<(), EngineError> {
+    inline_imported_calls_in_workflow(&mut def.body, imported_callables)
+}
+
+fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> {
+    match ty {
+        SurfaceType::Name(name) => match name.as_ref() {
+            "Int" => Ok(ash_typeck::Type::Int),
+            "String" => Ok(ash_typeck::Type::String),
+            "Bool" => Ok(ash_typeck::Type::Bool),
+            "Null" => Ok(ash_typeck::Type::Null),
+            "Time" => Ok(ash_typeck::Type::Time),
+            "Ref" => Ok(ash_typeck::Type::Ref),
+            other => Ok(ash_typeck::Type::Constructor {
+                name: ash_typeck::QualifiedName::root(other.to_string()),
+                args: vec![],
+                kind: ash_typeck::Kind::Type,
+            }),
+        },
+        SurfaceType::List(item) => {
+            surface_type_to_typeck(item).map(|item| ash_typeck::Type::List(Box::new(item)))
+        }
+        SurfaceType::Record(fields) => {
+            let fields = fields
+                .iter()
+                .map(|(name, ty)| {
+                    surface_type_to_typeck(ty).map(|ty| (Box::from(name.as_ref()), ty))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ash_typeck::Type::Record(fields))
+        }
+        SurfaceType::Capability(name) => Ok(ash_typeck::Type::Cap {
+            name: Box::from(name.as_ref()),
+            effect: ash_core::Effect::Operational,
+        }),
+        SurfaceType::Constructor { name, args } => {
+            let args = args
+                .iter()
+                .map(surface_type_to_typeck)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ash_typeck::Type::Constructor {
+                name: ash_typeck::QualifiedName::root(name.as_ref().to_string()),
+                args,
+                kind: ash_typeck::Kind::Type,
+            })
+        }
+    }
+}
+
+fn inline_imported_calls_in_workflow(
+    workflow: &mut SurfaceWorkflow,
+    imported_callables: &HashMap<String, module_loader::InlineCallable>,
+) -> Result<(), EngineError> {
+    match workflow {
+        SurfaceWorkflow::Observe { continuation, .. }
+        | SurfaceWorkflow::Propose { continuation, .. }
+        | SurfaceWorkflow::Check { continuation, .. }
+        | SurfaceWorkflow::Set { continuation, .. }
+        | SurfaceWorkflow::Send { continuation, .. } => {
+            if let Some(continuation) = continuation {
+                inline_imported_calls_in_workflow(continuation, imported_callables)?;
+            }
+        }
+        SurfaceWorkflow::Orient {
+            expr, continuation, ..
+        }
+        | SurfaceWorkflow::Let {
+            expr, continuation, ..
+        } => {
+            inline_imported_calls_in_expr(expr, imported_callables)?;
+            if let Some(continuation) = continuation {
+                inline_imported_calls_in_workflow(continuation, imported_callables)?;
+            }
+        }
+        SurfaceWorkflow::Decide {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            inline_imported_calls_in_expr(expr, imported_callables)?;
+            inline_imported_calls_in_workflow(then_branch, imported_callables)?;
+            if let Some(else_branch) = else_branch {
+                inline_imported_calls_in_workflow(else_branch, imported_callables)?;
+            }
+        }
+        SurfaceWorkflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            inline_imported_calls_in_expr(condition, imported_callables)?;
+            inline_imported_calls_in_workflow(then_branch, imported_callables)?;
+            if let Some(else_branch) = else_branch {
+                inline_imported_calls_in_workflow(else_branch, imported_callables)?;
+            }
+        }
+        SurfaceWorkflow::For {
+            collection, body, ..
+        } => {
+            inline_imported_calls_in_expr(collection, imported_callables)?;
+            inline_imported_calls_in_workflow(body, imported_callables)?;
+        }
+        SurfaceWorkflow::Par { branches, .. } => {
+            for branch in branches {
+                inline_imported_calls_in_workflow(branch, imported_callables)?;
+            }
+        }
+        SurfaceWorkflow::With { body, .. } | SurfaceWorkflow::Must { body, .. } => {
+            inline_imported_calls_in_workflow(body, imported_callables)?;
+        }
+        SurfaceWorkflow::Maybe {
+            primary, fallback, ..
+        } => {
+            inline_imported_calls_in_workflow(primary, imported_callables)?;
+            inline_imported_calls_in_workflow(fallback, imported_callables)?;
+        }
+        SurfaceWorkflow::Seq { first, second, .. } => {
+            inline_imported_calls_in_workflow(first, imported_callables)?;
+            inline_imported_calls_in_workflow(second, imported_callables)?;
+        }
+        SurfaceWorkflow::Ret { expr, .. } | SurfaceWorkflow::Resume { expr, .. } => {
+            inline_imported_calls_in_expr(expr, imported_callables)?;
+        }
+        SurfaceWorkflow::Act { guard, .. } => {
+            if let Some(ash_parser::surface::Guard::Pred(predicate)) = guard {
+                for arg in &mut predicate.args {
+                    inline_imported_calls_in_expr(arg, imported_callables)?;
+                }
+            }
+        }
+        SurfaceWorkflow::Receive { arms, .. } => {
+            for arm in arms {
+                if let Some(guard) = &mut arm.guard {
+                    inline_imported_calls_in_expr(guard, imported_callables)?;
+                }
+                inline_imported_calls_in_workflow(&mut arm.body, imported_callables)?;
+            }
+        }
+        SurfaceWorkflow::Yield { expr, arms, .. } => {
+            inline_imported_calls_in_expr(expr, imported_callables)?;
+            for arm in arms {
+                inline_imported_calls_in_workflow(&mut arm.body, imported_callables)?;
+            }
+        }
+        SurfaceWorkflow::Done { .. } | SurfaceWorkflow::Oblige { .. } => {}
+    }
+
+    Ok(())
+}
+
+fn inline_imported_calls_in_expr(
+    expr: &mut SurfaceExpr,
+    imported_callables: &HashMap<String, module_loader::InlineCallable>,
+) -> Result<(), EngineError> {
+    match expr {
+        SurfaceExpr::Literal(_)
+        | SurfaceExpr::Variable(_)
+        | SurfaceExpr::CheckObligation { .. } => {}
+        SurfaceExpr::FieldAccess { base, .. } | SurfaceExpr::Unary { operand: base, .. } => {
+            inline_imported_calls_in_expr(base, imported_callables)?;
+        }
+        SurfaceExpr::IndexAccess { base, index, .. } => {
+            inline_imported_calls_in_expr(base, imported_callables)?;
+            inline_imported_calls_in_expr(index, imported_callables)?;
+        }
+        SurfaceExpr::Binary { left, right, .. } => {
+            inline_imported_calls_in_expr(left, imported_callables)?;
+            inline_imported_calls_in_expr(right, imported_callables)?;
+        }
+        SurfaceExpr::Call { func, args, .. } => {
+            for arg in args.iter_mut() {
+                inline_imported_calls_in_expr(arg, imported_callables)?;
+            }
+            if let Some(callable) = imported_callables.get(func.as_ref()) {
+                let mut replacement = instantiate_inline_callable(callable, args)?;
+                inline_imported_calls_in_expr(&mut replacement, imported_callables)?;
+                *expr = replacement;
+            }
+        }
+        SurfaceExpr::InterfaceMethodCall { argument, .. } => {
+            inline_imported_calls_in_expr(argument, imported_callables)?;
+        }
+        SurfaceExpr::Match {
+            scrutinee, arms, ..
+        } => {
+            inline_imported_calls_in_expr(scrutinee, imported_callables)?;
+            for arm in arms {
+                inline_imported_calls_in_expr(&mut arm.body, imported_callables)?;
+            }
+        }
+        SurfaceExpr::Policy(policy) => {
+            inline_imported_calls_in_policy_expr(policy, imported_callables)?;
+        }
+        SurfaceExpr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            inline_imported_calls_in_expr(expr, imported_callables)?;
+            inline_imported_calls_in_expr(then_branch, imported_callables)?;
+            inline_imported_calls_in_expr(else_branch, imported_callables)?;
+        }
+        SurfaceExpr::Constructor {
+            fields, payload, ..
+        } => {
+            for (_, field_expr) in fields {
+                inline_imported_calls_in_expr(field_expr, imported_callables)?;
+            }
+            match payload {
+                SurfaceConstructorPayload::Unit => {}
+                SurfaceConstructorPayload::Record(fields) => {
+                    for (_, field_expr) in fields {
+                        inline_imported_calls_in_expr(field_expr, imported_callables)?;
+                    }
+                }
+                SurfaceConstructorPayload::Tuple(items) => {
+                    for item in items {
+                        inline_imported_calls_in_expr(item, imported_callables)?;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn inline_imported_calls_in_policy_expr(
+    policy: &mut SurfacePolicyExpr,
+    imported_callables: &HashMap<String, module_loader::InlineCallable>,
+) -> Result<(), EngineError> {
+    match policy {
+        SurfacePolicyExpr::Var(_) => {}
+        SurfacePolicyExpr::And(items)
+        | SurfacePolicyExpr::Or(items)
+        | SurfacePolicyExpr::Sequential(items)
+        | SurfacePolicyExpr::Concurrent(items) => {
+            for item in items {
+                inline_imported_calls_in_policy_expr(item, imported_callables)?;
+            }
+        }
+        SurfacePolicyExpr::Not(item) => {
+            inline_imported_calls_in_policy_expr(item, imported_callables)?;
+        }
+        SurfacePolicyExpr::Implies(left, right) => {
+            inline_imported_calls_in_policy_expr(left, imported_callables)?;
+            inline_imported_calls_in_policy_expr(right, imported_callables)?;
+        }
+        SurfacePolicyExpr::ForAll { items, body, .. }
+        | SurfacePolicyExpr::Exists { items, body, .. } => {
+            inline_imported_calls_in_expr(items, imported_callables)?;
+            inline_imported_calls_in_policy_expr(body, imported_callables)?;
+        }
+        SurfacePolicyExpr::MethodCall { receiver, args, .. } => {
+            inline_imported_calls_in_policy_expr(receiver, imported_callables)?;
+            for arg in args {
+                inline_imported_calls_in_expr(arg, imported_callables)?;
+            }
+        }
+        SurfacePolicyExpr::Call { args, .. } => {
+            for arg in args {
+                inline_imported_calls_in_expr(arg, imported_callables)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn instantiate_inline_callable(
+    callable: &module_loader::InlineCallable,
+    args: &[SurfaceExpr],
+) -> Result<SurfaceExpr, EngineError> {
+    if callable.params.len() != args.len() {
+        return Err(EngineError::Parse(format!(
+            "imported callable expected {} arguments, got {}",
+            callable.params.len(),
+            args.len()
+        )));
+    }
+
+    let substitutions = callable
+        .params
+        .iter()
+        .cloned()
+        .zip(args.iter().cloned())
+        .collect::<HashMap<_, _>>();
+    Ok(substitute_expr(
+        &callable.body,
+        &substitutions,
+        &HashSet::new(),
+    ))
+}
+
+#[allow(clippy::too_many_lines)]
+fn substitute_expr(
+    expr: &SurfaceExpr,
+    substitutions: &HashMap<String, SurfaceExpr>,
+    bound_names: &HashSet<String>,
+) -> SurfaceExpr {
+    match expr {
+        SurfaceExpr::Literal(literal) => SurfaceExpr::Literal(literal.clone()),
+        SurfaceExpr::Variable(name) => {
+            if bound_names.contains(name.as_ref()) {
+                SurfaceExpr::Variable(name.clone())
+            } else {
+                substitutions
+                    .get(name.as_ref())
+                    .cloned()
+                    .unwrap_or_else(|| SurfaceExpr::Variable(name.clone()))
+            }
+        }
+        SurfaceExpr::FieldAccess { base, field, span } => SurfaceExpr::FieldAccess {
+            base: Box::new(substitute_expr(base, substitutions, bound_names)),
+            field: field.clone(),
+            span: *span,
+        },
+        SurfaceExpr::IndexAccess { base, index, span } => SurfaceExpr::IndexAccess {
+            base: Box::new(substitute_expr(base, substitutions, bound_names)),
+            index: Box::new(substitute_expr(index, substitutions, bound_names)),
+            span: *span,
+        },
+        SurfaceExpr::Unary { op, operand, span } => SurfaceExpr::Unary {
+            op: *op,
+            operand: Box::new(substitute_expr(operand, substitutions, bound_names)),
+            span: *span,
+        },
+        SurfaceExpr::Binary {
+            op,
+            left,
+            right,
+            span,
+        } => SurfaceExpr::Binary {
+            op: *op,
+            left: Box::new(substitute_expr(left, substitutions, bound_names)),
+            right: Box::new(substitute_expr(right, substitutions, bound_names)),
+            span: *span,
+        },
+        SurfaceExpr::Call { func, args, span } => SurfaceExpr::Call {
+            func: func.clone(),
+            args: args
+                .iter()
+                .map(|arg| substitute_expr(arg, substitutions, bound_names))
+                .collect(),
+            span: *span,
+        },
+        SurfaceExpr::InterfaceMethodCall {
+            interface,
+            method,
+            argument,
+            span,
+        } => SurfaceExpr::InterfaceMethodCall {
+            interface: interface.clone(),
+            method: method.clone(),
+            argument: Box::new(substitute_expr(argument, substitutions, bound_names)),
+            span: *span,
+        },
+        SurfaceExpr::Match {
+            scrutinee,
+            arms,
+            span,
+        } => SurfaceExpr::Match {
+            scrutinee: Box::new(substitute_expr(scrutinee, substitutions, bound_names)),
+            arms: arms
+                .iter()
+                .map(|arm| substitute_match_arm(arm, substitutions, bound_names))
+                .collect(),
+            span: *span,
+        },
+        SurfaceExpr::Policy(policy) => SurfaceExpr::Policy(policy.clone()),
+        SurfaceExpr::IfLet {
+            pattern,
+            expr,
+            then_branch,
+            else_branch,
+            span,
+        } => {
+            let mut then_bound = bound_names.clone();
+            collect_pattern_bindings(pattern, &mut then_bound);
+            SurfaceExpr::IfLet {
+                pattern: pattern.clone(),
+                expr: Box::new(substitute_expr(expr, substitutions, bound_names)),
+                then_branch: Box::new(substitute_expr(then_branch, substitutions, &then_bound)),
+                else_branch: Box::new(substitute_expr(else_branch, substitutions, bound_names)),
+                span: *span,
+            }
+        }
+        SurfaceExpr::CheckObligation { obligation, span } => SurfaceExpr::CheckObligation {
+            obligation: obligation.clone(),
+            span: *span,
+        },
+        SurfaceExpr::Constructor {
+            name,
+            fields,
+            payload,
+            span,
+        } => SurfaceExpr::Constructor {
+            name: name.clone(),
+            fields: fields
+                .iter()
+                .map(|(field, field_expr)| {
+                    (
+                        field.clone(),
+                        substitute_expr(field_expr, substitutions, bound_names),
+                    )
+                })
+                .collect(),
+            payload: match payload {
+                ash_parser::surface::ConstructorPayload::Unit => {
+                    ash_parser::surface::ConstructorPayload::Unit
+                }
+                ash_parser::surface::ConstructorPayload::Record(fields) => {
+                    ash_parser::surface::ConstructorPayload::Record(
+                        fields
+                            .iter()
+                            .map(|(field, field_expr)| {
+                                (
+                                    field.clone(),
+                                    substitute_expr(field_expr, substitutions, bound_names),
+                                )
+                            })
+                            .collect(),
+                    )
+                }
+                ash_parser::surface::ConstructorPayload::Tuple(items) => {
+                    ash_parser::surface::ConstructorPayload::Tuple(
+                        items
+                            .iter()
+                            .map(|item| substitute_expr(item, substitutions, bound_names))
+                            .collect(),
+                    )
+                }
+            },
+            span: *span,
+        },
+    }
+}
+
+fn substitute_match_arm(
+    arm: &SurfaceMatchArm,
+    substitutions: &HashMap<String, SurfaceExpr>,
+    bound_names: &HashSet<String>,
+) -> SurfaceMatchArm {
+    let mut arm_bound = bound_names.clone();
+    collect_pattern_bindings(&arm.pattern, &mut arm_bound);
+    SurfaceMatchArm {
+        pattern: arm.pattern.clone(),
+        body: Box::new(substitute_expr(&arm.body, substitutions, &arm_bound)),
+        span: arm.span,
+    }
+}
+
+fn collect_pattern_bindings(pattern: &SurfacePattern, bound_names: &mut HashSet<String>) {
+    match pattern {
+        SurfacePattern::Variable(name) => {
+            bound_names.insert(name.to_string());
+        }
+        SurfacePattern::Wildcard | SurfacePattern::Literal(_) => {}
+        SurfacePattern::Tuple(items) => {
+            for item in items {
+                collect_pattern_bindings(item, bound_names);
+            }
+        }
+        SurfacePattern::Record(fields) => {
+            for (_, pattern) in fields {
+                collect_pattern_bindings(pattern, bound_names);
+            }
+        }
+        SurfacePattern::List { elements, rest } => {
+            for element in elements {
+                collect_pattern_bindings(element, bound_names);
+            }
+            if let Some(rest) = rest {
+                bound_names.insert(rest.to_string());
+            }
+        }
+        SurfacePattern::Variant {
+            fields, payload, ..
+        } => {
+            if let Some(fields) = fields {
+                for (_, pattern) in fields {
+                    collect_pattern_bindings(pattern, bound_names);
+                }
+            }
+            match payload {
+                ash_parser::surface::VariantPatternPayload::Unit => {}
+                ash_parser::surface::VariantPatternPayload::Record(fields) => {
+                    for (_, pattern) in fields {
+                        collect_pattern_bindings(pattern, bound_names);
+                    }
+                }
+                ash_parser::surface::VariantPatternPayload::Tuple(items) => {
+                    for item in items {
+                        collect_pattern_bindings(item, bound_names);
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl Default for Engine {
     /// Creates a default engine with standard configuration.
     ///
@@ -644,6 +1186,7 @@ impl EngineBuilder {
 
         Ok(Engine {
             surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
+            imported_type_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state,

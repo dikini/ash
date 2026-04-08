@@ -26,6 +26,7 @@ tokio-test = "0.4"
 tempfile = "3.10"
 futures = "0.3"
 wiremock = "0.6"
+temp-env = { version = "0.3", features = ["async_closure"] }
 
 [lints]
 workspace = true

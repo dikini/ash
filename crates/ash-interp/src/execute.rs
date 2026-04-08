@@ -2,7 +2,7 @@
 //!
 //! Executes workflows in a runtime context, handling all workflow variants.
 
-use ash_core::{Effect, Expr, Provenance, Value, Workflow};
+use ash_core::{Expr, Provenance, Value, Workflow};
 
 use crate::ExecResult;
 use crate::behaviour::BehaviourContext;
@@ -30,11 +30,11 @@ use crate::runtime_state::{RuntimeState, SPAWNED_CHILD_CONTROL_BINDING};
 use crate::stream::StreamContext;
 use crate::yield_state::{CorrelationId, SuspendedYields, YieldState};
 
+use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
-use std::{collections::BTreeSet, iter};
 use tokio::sync::Mutex;
 
 /// Boxed future type for recursive async execution
@@ -306,84 +306,6 @@ fn finish_with_terminal_observation(
     result
 }
 
-fn conservative_effect_upper_bound(workflow: &Workflow) -> ConservativeRetainedEffectSummary {
-    let mut reached = conservative_reached_effect_upper_bound(workflow);
-    let terminal = reached.iter().copied().max().unwrap_or(Effect::Epistemic);
-    reached.insert(terminal);
-    ConservativeRetainedEffectSummary::new(terminal, reached)
-}
-
-fn conservative_reached_effect_upper_bound(workflow: &Workflow) -> BTreeSet<Effect> {
-    fn singleton(effect: Effect) -> BTreeSet<Effect> {
-        iter::once(effect).collect()
-    }
-
-    fn union_many<'a>(workflows: impl IntoIterator<Item = &'a Workflow>) -> BTreeSet<Effect> {
-        workflows
-            .into_iter()
-            .flat_map(conservative_reached_effect_upper_bound)
-            .collect()
-    }
-
-    match workflow {
-        Workflow::Observe { continuation, .. } => {
-            let mut reached = conservative_reached_effect_upper_bound(continuation);
-            reached.insert(Effect::Epistemic);
-            reached
-        }
-        Workflow::Receive { arms, .. } => {
-            let mut reached: BTreeSet<_> = arms
-                .iter()
-                .flat_map(|arm| conservative_reached_effect_upper_bound(&arm.body))
-                .collect();
-            reached.insert(Effect::Epistemic);
-            reached
-        }
-        Workflow::Orient { continuation, .. } | Workflow::Propose { continuation, .. } => {
-            let mut reached = conservative_reached_effect_upper_bound(continuation);
-            reached.insert(Effect::Deliberative);
-            reached
-        }
-        Workflow::Decide { continuation, .. }
-        | Workflow::Check { continuation, .. }
-        | Workflow::Yield { continuation, .. } => {
-            let mut reached = conservative_reached_effect_upper_bound(continuation);
-            reached.insert(Effect::Evaluative);
-            reached
-        }
-        Workflow::CheckObligation { .. } | Workflow::Oblige { .. } => singleton(Effect::Evaluative),
-        Workflow::Act { .. }
-        | Workflow::Set { .. }
-        | Workflow::Send { .. }
-        | Workflow::Spawn { .. }
-        | Workflow::Kill { .. }
-        | Workflow::Pause { .. }
-        | Workflow::Resume { .. }
-        | Workflow::ProxyResume { .. } => singleton(Effect::Operational),
-        Workflow::Oblig { workflow, .. }
-        | Workflow::ForEach { body: workflow, .. }
-        | Workflow::With { workflow, .. }
-        | Workflow::Must { workflow } => conservative_reached_effect_upper_bound(workflow),
-        Workflow::Let { continuation, .. } | Workflow::Split { continuation, .. } => {
-            conservative_reached_effect_upper_bound(continuation)
-        }
-        Workflow::CheckHealth { continuation, .. } => {
-            let mut reached = conservative_reached_effect_upper_bound(continuation);
-            reached.insert(Effect::Epistemic);
-            reached
-        }
-        Workflow::If {
-            then_branch,
-            else_branch,
-            ..
-        } => union_many([then_branch.as_ref(), else_branch.as_ref()]),
-        Workflow::Seq { first, second } => union_many([first.as_ref(), second.as_ref()]),
-        Workflow::Par { workflows } => union_many(workflows.iter()),
-        Workflow::Maybe { primary, fallback } => union_many([primary.as_ref(), fallback.as_ref()]),
-        Workflow::Ret { .. } | Workflow::Done => BTreeSet::new(),
-    }
-}
-
 async fn run_spawned_child_workflow(
     runtime_state: RuntimeState,
     child_workflow: Workflow,
@@ -394,22 +316,27 @@ async fn run_spawned_child_workflow(
 ) {
     tokio::task::yield_now().await;
 
-    let effects = conservative_effect_upper_bound(&child_workflow);
     let terminal_observer = TerminalObservationRecorder::new();
-    let child_result = execute_with_bindings_with_terminal_observation_in_state(
-        &child_workflow,
-        &runtime_state,
-        RuntimeState::spawned_child_init_bindings(init_value, link.clone()),
-        &terminal_observer,
-        execution_provenance,
-        false,
-    )
-    .await;
+    let (child_result, child_execution_record) =
+        execute_with_bindings_with_terminal_observation_in_state(
+            &child_workflow,
+            &runtime_state,
+            RuntimeState::spawned_child_init_bindings(init_value, link.clone()),
+            &terminal_observer,
+            execution_provenance,
+            false,
+        )
+        .await;
 
     let outcome_state = RuntimeOutcomeState::from_exec_result(&child_result);
     if !outcome_state.is_terminal() {
         return;
     }
+
+    let completion_payload = child_execution_record
+        .project_completion()
+        .expect("terminal child executions should project retained completion payloads");
+    let effects = ConservativeRetainedEffectSummary::from_semantic(completion_payload.effects());
 
     let obligations = terminal_observer.observed_obligations().unwrap_or_else(|| {
         ConservativeRetainedObligationsSummary::new(
@@ -1801,7 +1728,7 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
     terminal_observer: &TerminalObservationRecorder,
     execution_provenance: Provenance,
     persist_last_execution_record: bool,
-) -> ExecResult<Value> {
+) -> (ExecResult<Value>, ExecutionRecord) {
     let ctx = Context::with_bindings(input_bindings);
     let cap_ctx = runtime_state.create_capability_context().await;
     let policy_eval = PolicyEvaluator::new();
@@ -1827,12 +1754,14 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
         Some(&execution_recorder),
     )
     .await;
+    execution_recorder.set_phase_from_result(&result);
+    let execution_record = execution_recorder.snapshot();
     if persist_last_execution_record {
         runtime_state
-            .set_last_execution_record(execution_recorder.snapshot())
+            .set_last_execution_record(execution_record.clone())
             .await;
     }
-    result
+    (result, execution_record)
 }
 
 #[cfg(test)]

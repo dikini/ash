@@ -374,7 +374,7 @@ async fn retained_completion_is_automatically_sealed_from_real_spawned_child_lif
 
     assert_eq!(completion.instance_id(), link.instance_id);
     assert_retained_child_success(&completion, Value::Int(7));
-    assert_conservative_effect_summary(&completion, Effect::Epistemic, &[Effect::Epistemic]);
+    assert_conservative_effect_summary(&completion, Effect::Epistemic, &[]);
     assert_conservative_obligations_summary(&completion, &[], None, &[], &[]);
     assert_eq!(
         runtime_state
@@ -487,7 +487,7 @@ async fn spawned_child_runtime_path_can_execute_failure_and_seal_it() {
         &completion,
         ExecError::Eval(EvalError::UndefinedVariable("missing_child_value".into())),
     );
-    assert_conservative_effect_summary(&completion, Effect::Epistemic, &[Effect::Epistemic]);
+    assert_conservative_effect_summary(&completion, Effect::Epistemic, &[]);
     assert_conservative_obligations_summary(&completion, &[], None, &[], &[]);
 }
 
@@ -697,11 +697,8 @@ async fn conservative_effect_summary_can_overapproximate_untaken_higher_effect_p
     let effects = completion
         .conservative_effect_summary()
         .expect("completed child should retain conservative effect summary contents");
-    assert_eq!(effects.terminal_upper_bound(), Effect::Operational);
-    assert_eq!(
-        effects.reached_upper_bound(),
-        &effect_set(&[Effect::Operational])
-    );
+    assert_eq!(effects.terminal_upper_bound(), Effect::Epistemic);
+    assert_eq!(effects.reached_upper_bound(), &effect_set(&[]));
     assert_conservative_obligations_summary(&completion, &[], None, &[], &[]);
 }
 

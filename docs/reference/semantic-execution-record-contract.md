@@ -288,7 +288,7 @@ Relationship to this contract:
 More specifically:
 
 - TASK-408 retained `result` corresponds to the terminal `Ok(v)` / `Err(err)` projection;
-- TASK-409 retained effects correspond only to a conservative `effect_trace(ε̂)` slice, not yet exact full execution-record effect projection;
+- TASK-409 retained effects introduced the first conservative `effect_trace(ε̂)` slice, and TASK-437 now upgrades child-owned retained completions to exact `effect_trace(ε̂)` projection from the sealed terminal execution record while leaving control tombstones effect-payload-free;
 - TASK-410 retained obligations correspond only to a terminal-visible obligations slice, not yet full exact `Ω` transport;
 - TASK-411 retained provenance corresponds only to a conservative runtime-owned provenance slice, not yet full exact `π` transport;
 - TASK-412 completion waiting is a wait surface over the retained terminal observation carrier, not a live execution-record wait handle exposing cumulative carriers in flight.

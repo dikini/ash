@@ -1996,9 +1996,11 @@ S57-7 complete, 57B now follows the validated dependency order below.
 **Current Phase 67 note:** TASK-435 is now landed as the first runtime-side `Par` aggregation
 realization in `ash-interp`: branch-local execution records are preserved per branch and the
 enclosing `Par` execution record is rebuilt from branch-local trace/effect/obligation/provenance
-snapshots rather than one shared recorder. TASK-436 now complements that runtime slice with one
-explicit retained-completion parity contract, separating exact `CompletionPayload` parity from
-conservative and subset-only retained slices. Remaining Phase 67 follow-on work now concentrates on
-later retained-completion fidelity slices, the canonical corpus/result format, and the Rust-first
-differential conformance harness.
+snapshots rather than one shared recorder. TASK-436 then freezes the retained-completion parity
+contract, and TASK-437 now lands one bounded runtime follow-on slice under that contract: exact
+child-owned retained `CompletionPayload.effects` parity from the sealed terminal execution record,
+while retained obligations/provenance remain on their existing honest subset/conservative
+classifications. Remaining Phase 67 follow-on work now concentrates on the canonical corpus/result
+format and the Rust-first differential conformance harness.
 | [TASK-436](tasks/TASK-436-completion-payload-parity-contract.md) | Freeze the exact contract for retained completion observation versus full `CompletionPayload` parity | SPEC-004, SPEC-021, MCE-007 | 3-5 | ✅ Complete |
+| [TASK-437](tasks/TASK-437-retained-completion-parity-follow-on.md) | Implement the next honest retained-completion parity slice after TASK-412 under the frozen contract | TASK-436, ash-interp | 4-7 | ✅ Complete |

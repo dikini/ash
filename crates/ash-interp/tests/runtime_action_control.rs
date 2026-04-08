@@ -720,10 +720,7 @@ async fn spawned_child_failure_retains_direct_error_payload() {
         .conservative_effect_summary()
         .expect("failed child should retain effect summary contents");
     assert_eq!(effects.terminal_upper_bound(), Effect::Epistemic);
-    assert_eq!(
-        effects.reached_upper_bound(),
-        &effect_set(&[Effect::Epistemic])
-    );
+    assert_eq!(effects.reached_upper_bound(), &effect_set(&[]));
 }
 
 #[tokio::test]

@@ -171,7 +171,7 @@ Current retained-completion slices classify as follows:
 | Runtime surface | Current status under this contract | Notes |
 |---|---|---|
 | `RetainedCompletionRecord.result` | exact for the retained `result` dimension | Child-owned completions preserve the direct terminal `Result<Value, ExecError>`; control tombstones keep `None`. |
-| `RetainedCompletionRecord.effects` | conservative | Current runtime preserves effect upper-bound summaries rather than exact semantic `EffectTrace` parity. |
+| `RetainedCompletionRecord.effects` | exact for child-owned retained completions | Child-owned completions now project the exact semantic `EffectTrace` from the sealed terminal child execution record; control tombstones still keep `None`. |
 | `RetainedCompletionRecord.obligations` | terminal-visible subset only | Current runtime preserves the terminal-visible obligations slice it can honestly snapshot, not exact full parity. |
 | `RetainedCompletionRecord.provenance` | conservative | Current runtime preserves runtime-owned child identity/spawn-lineage slices, not exact full terminal provenance parity. |
 | retained completion wait API | compatible observation/wait surface only | Waiting for the first sealed retained record is useful, but waiting does not itself imply parity. |
@@ -234,7 +234,7 @@ The current corpus should now be read as saying:
   completion;
 - retained completion observation: real and useful;
 - retained `result`: exact for that single dimension;
-- retained `effects`: conservative;
+- retained `effects`: exact for child-owned retained completions;
 - retained `obligations`: terminal-visible subset only;
 - retained `provenance`: conservative;
 - full `CompletionPayload` parity: still open follow-on work.

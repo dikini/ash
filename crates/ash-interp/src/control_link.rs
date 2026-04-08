@@ -6,6 +6,7 @@ use thiserror::Error;
 use tokio::sync::watch;
 
 use crate::error::ExecResult;
+use crate::execution_record::SemanticEffectTrace;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
 
 /// Errors that can occur when using control links.
@@ -52,53 +53,61 @@ pub enum RetainedCompletionKind {
     ControlTerminated,
 }
 
-/// Minimal retained terminal observation for a control target.
+/// Retained terminal effect trace for a control target.
 ///
-/// This is intentionally conservative. It does not claim to carry the full `SPEC-004`
-/// `CompletionPayload`; it only retains one explicit runtime-visible terminal observation record
-/// so completion-style state remains queryable after the target reaches a terminal condition.
+/// For child-owned retained completions this now preserves exact `CompletionPayload.effects`
+/// contents derived from the child's authoritative terminal execution record. The historical type
+/// name is retained for compatibility with existing retained-completion surfaces.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConservativeRetainedEffectSummary {
-    /// Conservative terminal effect-summary field comparable to `CompletionPayload.effects.terminal`.
-    ///
-    /// The current runtime does not yet transport the full authoritative completion carrier, so
-    /// this field is derived from the runtime-visible workflow effect layers the interpreter can
-    /// honestly summarize today. It therefore remains a conservative upper bound rather than a
-    /// proof that the exact big-step terminal `eff` carrier has been preserved.
+    /// Exact terminal effect for child-owned retained completions.
     terminal: Effect,
-    /// Conservative reached-effect summary comparable to `CompletionPayload.effects.reached`.
-    ///
-    /// This is intentionally not a full trace transport. It retains only the surfaced effect
-    /// layers the runtime can currently summarize honestly for the completion record.
+    /// Exact reached-effect set for child-owned retained completions.
     reached: BTreeSet<Effect>,
 }
 
 impl ConservativeRetainedEffectSummary {
-    /// Create one conservative retained effect summary.
+    /// Create one retained effect trace.
     pub fn new(terminal_upper_bound: Effect, reached_upper_bound: BTreeSet<Effect>) -> Self {
-        assert!(
-            reached_upper_bound.contains(&terminal_upper_bound),
-            "retained effect summaries must include the terminal upper bound in the reached upper-bound set"
-        );
         Self {
             terminal: terminal_upper_bound,
             reached: reached_upper_bound,
         }
     }
 
-    /// Return a baseline summary for payload slices that do not yet have retained effect details.
-    pub fn baseline() -> Self {
-        Self::new(Effect::Epistemic, BTreeSet::from([Effect::Epistemic]))
+    /// Project one retained effect trace from the authoritative semantic completion payload trace.
+    pub fn from_semantic(trace: &SemanticEffectTrace) -> Self {
+        Self::new(trace.terminal(), trace.reached().clone())
     }
 
-    /// Return the conservative terminal effect upper bound retained for this completion.
-    pub fn terminal_upper_bound(&self) -> Effect {
+    /// Return a baseline effect trace for payload slices that do not yet have retained effect
+    /// details.
+    pub fn baseline() -> Self {
+        Self::new(Effect::Epistemic, BTreeSet::new())
+    }
+
+    /// Return the exact terminal effect retained for this completion.
+    pub fn terminal(&self) -> Effect {
         self.terminal
     }
 
-    /// Borrow the conservative reached-effect upper-bound set retained for this completion.
-    pub fn reached_upper_bound(&self) -> &BTreeSet<Effect> {
+    /// Return the retained terminal effect.
+    ///
+    /// This historical compatibility accessor now returns the exact retained terminal effect.
+    pub fn terminal_upper_bound(&self) -> Effect {
+        self.terminal()
+    }
+
+    /// Borrow the exact reached-effect set retained for this completion.
+    pub fn reached(&self) -> &BTreeSet<Effect> {
         &self.reached
+    }
+
+    /// Borrow the retained reached-effect set.
+    ///
+    /// This historical compatibility accessor now returns the exact retained reached-effect set.
+    pub fn reached_upper_bound(&self) -> &BTreeSet<Effect> {
+        self.reached()
     }
 }
 
@@ -211,12 +220,11 @@ pub struct RetainedCompletionRecord {
     /// preserve. Control tombstones keep this as `None` so they remain distinguishable from
     /// child-owned completion payloads.
     result: Option<Box<ExecResult<Value>>>,
-    /// Conservative retained `CompletionPayload.effects`-like summary contents for child-owned
-    /// retained completions.
+    /// Exact retained `CompletionPayload.effects` contents for child-owned retained completions.
     ///
-    /// The current runtime does not transport the full authoritative trace/carrier state, so this
-    /// stays as the narrowest honest effect-summary slice it can retain today. Control tombstones
-    /// keep this as `None` so they remain distinct from child-owned retained payloads.
+    /// These contents are projected from the child's authoritative terminal execution record.
+    /// Control tombstones keep this as `None` so they remain distinct from child-owned retained
+    /// payloads.
     effects: Option<ConservativeRetainedEffectSummary>,
     /// Honest retained obligations summary observed at child terminal time for child-owned
     /// completions.
@@ -285,8 +293,8 @@ impl RetainedCompletionRecord {
         self.result.as_deref()
     }
 
-    /// Borrow the retained effect-summary slice, if this record came from child completion rather
-    /// than a control tombstone.
+    /// Borrow the retained effect trace, if this record came from child completion rather than a
+    /// control tombstone.
     pub fn conservative_effect_summary(&self) -> Option<&ConservativeRetainedEffectSummary> {
         self.effects.as_ref()
     }

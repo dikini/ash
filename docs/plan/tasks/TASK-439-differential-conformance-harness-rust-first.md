@@ -24,7 +24,7 @@ This is real implementation/test-infrastructure work.
 - ✅ [TASK-433: `ash-interp` Execution-Record Substrate](TASK-433-ash-interp-execution-record-substrate.md)
 - ✅ [TASK-435: `Par` Runtime Aggregation Realization](TASK-435-par-runtime-aggregation-realization.md)
 - ✅ [TASK-436: Completion-Payload Parity Contract](TASK-436-completion-payload-parity-contract.md)
-- 📝 [TASK-437: Retained-Completion Parity Follow-On](TASK-437-retained-completion-parity-follow-on.md)
+- ✅ [TASK-437: Retained-Completion Parity Follow-On](TASK-437-retained-completion-parity-follow-on.md)
 
 ## Requirements
 

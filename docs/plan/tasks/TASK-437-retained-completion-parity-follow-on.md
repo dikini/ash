@@ -1,6 +1,6 @@
 # TASK-437: Retained-Completion Parity Follow-On
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -91,11 +91,36 @@ Expected pass condition:
 
 ## Completion Checklist
 
-- [ ] TASK-437 task file created
-- [ ] one retained-completion parity slice implemented
-- [ ] tests added or updated
-- [ ] docs/planning surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] TASK-437 task file created
+- [x] one retained-completion parity slice implemented
+- [x] tests added or updated
+- [x] docs/planning surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+TASK-437 is complete as one bounded retained-completion parity follow-on slice.
+
+The selected slice is exact `CompletionPayload.effects` parity for child-owned retained
+completions. `ash-interp` now derives retained effect contents from the authoritative sealed child
+execution record rather than from workflow-form conservative upper bounds. This means retained child
+completions now preserve exact terminal and reached effect summaries for the `effects` dimension,
+while control tombstones remain effect-payload-free (`effects: None`).
+
+This task remains intentionally narrow:
+
+- retained `result` was already exact before this task and remains so;
+- retained `obligations` remain terminal-visible subset only;
+- retained `provenance` remains conservative;
+- retained completion still does not transport trace `T` and does not claim full execution-record
+  closure.
+
+Focused and full-crate verification for the landed slice was run with:
+
+- `cargo test -p ash-interp conservative_effect_summary_can_overapproximate_untaken_higher_effect_paths --test runtime_boundary_visibility -- --exact`
+- `cargo test -p ash-interp`
+- `cargo clippy -p ash-interp --all-targets -- -D warnings`
+- `cargo fmt --check`
 
 ## Dependencies for Next Task
 

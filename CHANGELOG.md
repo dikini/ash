@@ -22,6 +22,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Fixed API usage in `ash-engine` lexical scope tests (TASK-446 follow-up). Tests now correctly use `engine.execute(&workflow)` and `engine.execute_with_input(&workflow, input)` instead of the incorrect `workflow.execute()` pattern. Tests compile successfully and properly exercise the full parsing/typechecking/execution pipeline for lexical scope functionality.
+
 - Completed TASK-437 in `ash-interp` as one narrow retained-completion parity slice: child-owned retained completions now preserve exact `CompletionPayload.effects` parity from the authoritative sealed child execution record instead of workflow-form conservative upper bounds. The retained effect carrier still remains bounded to terminal/reached effect contents only, control tombstones still keep `effects: None`, and retained obligations/provenance remain on their existing honest subset/conservative classifications.
 
 - Completed TASK-435 in `ash-interp` as the first runtime-side `Par` aggregation realization against the frozen TASK-434 contract. Spawned child executions no longer overwrite `RuntimeState::last_execution_record()`, and `Par` execution now preserves branch-local execution records per branch before rebuilding the enclosing parent record from aggregated trace, effect, obligation, and provenance snapshots. Focused regression coverage now includes top-level/stream authority preservation after spawn and branch-local carrier aggregation for `Par`.

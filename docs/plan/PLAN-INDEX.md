@@ -2002,4 +2002,4 @@ preservation and aggregate collation directly without re-deriving `Par` semantic
 | [TASK-438](tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md) | Define the canonical IR semantics corpus and machine-readable expected-result format for cross-implementation verification | SPEC-001, SPEC-004, SPEC-025, SPEC-021 | 4-6 | 📝 Planned |
 | [TASK-439](tasks/TASK-439-differential-conformance-harness-rust-first.md) | Build the first differential conformance harness against the canonical corpus, starting with the Rust implementation | TASK-428, TASK-438 | 5-8 | 📝 Planned |
 | [TASK-440](tasks/TASK-440-lean-reference-refresh-plan-against-current-semantic-corpus.md) | Refresh the Lean/reference implementation plan against the current canonical big-step/small-step corpus and conformance contract | formalization-boundary, TASK-428, TASK-431, TASK-438 | 3-5 | 📝 Planned |
-
+| [TASK-441](tasks/TASK-441-disable-automatic-ci-workflows.md) | Switch repository GitHub Actions workflows from automatic triggers to manual dispatch only | GitHub Actions workflow policy | 1-2 | ✅ Complete |

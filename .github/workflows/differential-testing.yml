@@ -1,21 +1,7 @@
 name: Differential Testing
 
 on:
-  push:
-    branches: [main, master]
-    paths:
-      - 'lean_reference/**'
-      - 'crates/**'
-      - '.github/workflows/differential-testing.yml'
-  pull_request:
-    branches: [main, master]
-    paths:
-      - 'lean_reference/**'
-      - 'crates/**'
-      - '.github/workflows/differential-testing.yml'
-  schedule:
-    # Run daily at 3 AM UTC
-    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always

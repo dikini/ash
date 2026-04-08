@@ -1,16 +1,7 @@
 name: Lean Reference Interpreter
 
 on:
-  push:
-    branches: [main, master]
-    paths:
-      - 'lean_reference/**'
-      - '.github/workflows/lean-reference.yml'
-  pull_request:
-    branches: [main, master]
-    paths:
-      - 'lean_reference/**'
-      - '.github/workflows/lean-reference.yml'
+  workflow_dispatch:
 
 jobs:
   build:

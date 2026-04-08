@@ -8,10 +8,9 @@ use ash_typeck::type_check_workflow;
 
 fn parse_and_check(source: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut input = new_input(source);
-    let def = workflow_def(&mut input)
-        .map_err(|e| format!("Parse error: {:?}", e))?;
-    let _ = type_check_workflow(&def.body, None)
-        .map_err(|e| format!("Type check error: {:?}", e))?;
+    let def = workflow_def(&mut input).map_err(|e| format!("Parse error: {:?}", e))?;
+    let _ =
+        type_check_workflow(&def.body, None).map_err(|e| format!("Type check error: {:?}", e))?;
     Ok(())
 }
 

@@ -457,7 +457,12 @@ mod tests {
         println!("Test 2 - let x = 10; ret x: {:#?}", workflow.core);
 
         // Test 3: Multiple let bindings
-        let workflow = engine.parse("workflow main { let x = 10; let y = 20; ret x + y }").unwrap();
-        println!("Test 3 - let x = 10; let y = 20; ret x + y: {:#?}", workflow.core);
+        let workflow = engine
+            .parse("workflow main { let x = 10; let y = 20; ret x + y }")
+            .unwrap();
+        println!(
+            "Test 3 - let x = 10; let y = 20; ret x + y: {:#?}",
+            workflow.core
+        );
     }
 }

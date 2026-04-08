@@ -2016,14 +2016,14 @@ work tracked by the broader phase roadmap.
 
 **Source:** [SPEC-002: Syntax](../spec/SPEC-002-SYNTAX.md), [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004: Operational Semantics](../spec/SPEC-004-SEMANTICS.md), [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
 **Priority:** High
-**Status:** 🟡 Ready
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-443](tasks/TASK-443-surface-statement-list-scoping-spec-amendment.md) | Amend the specs so surface statement lists lower canonically into lexical-block `LET ... in cont` scope with `SEQ` reserved for non-binding sequencing | SPEC-002, SPEC-003, SPEC-004, SPEC-025 | 3-5 | ✅ Complete |
-| [TASK-444](tasks/TASK-444-parser-and-lowering-lexical-block-normalization.md) | Make parser/lowering normalize newline-separated statement lists into the canonical lexical-block core form | TASK-443, ash-parser, ash-engine | 4-7 | ⏳ Planned |
-| [TASK-445](tasks/TASK-445-type-checker-lexical-scope-conformance.md) | Align type checking and name resolution with the canonical lexical-block lowering so later statements see earlier bindings and true unbound names are rejected consistently | TASK-443, TASK-444, SPEC-003 | 4-6 | ⏳ Planned |
-| [TASK-446](tasks/TASK-446-interpreter-lexical-scope-and-seq-faithfulness.md) | Align interpreter execution with the canonical lowered lexical-block form while preserving explicit `SEQ` semantics | TASK-443, TASK-444, TASK-445, SPEC-004, SPEC-025 | 4-7 | ⏳ Planned |
-| [TASK-447](tasks/TASK-447-surface-binding-scope-conformance-closeout.md) | Add CLI-facing conformance coverage and phase closeout across `ash check`, `ash run`, and `ash trace` for lexical block scope | TASK-443, TASK-444, TASK-445, TASK-446 | 3-5 | ⏳ Planned |
+| [TASK-444](tasks/TASK-444-parser-and-lowering-lexical-block-normalization.md) | Make parser/lowering normalize newline-separated statement lists into the canonical lexical-block core form | TASK-443, ash-parser, ash-engine | 4-7 | ✅ Complete |
+| [TASK-445](tasks/TASK-445-type-checker-lexical-scope-conformance.md) | Align type checking and name resolution with the canonical lexical-block lowering so later statements see earlier bindings and true unbound names are rejected consistently | TASK-443, TASK-444, SPEC-003 | 4-6 | ✅ Complete |
+| [TASK-446](tasks/TASK-446-interpreter-lexical-scope-and-seq-faithfulness.md) | Align interpreter execution with the canonical lowered lexical-block form while preserving explicit `SEQ` semantics | TASK-443, TASK-444, TASK-445, SPEC-004, SPEC-025 | 4-7 | ✅ Complete |
+| [TASK-447](tasks/TASK-447-surface-binding-scope-conformance-closeout.md) | Add CLI-facing conformance coverage and phase closeout across `ash check`, `ash run`, and `ash trace` for lexical block scope | TASK-443, TASK-444, TASK-445, TASK-446 | 3-5 | ✅ Complete |
 
 **Deliverable:** One unambiguous lexical-scope contract for newline-separated surface statements, backed by normative spec text and by aligned parser, lowering, type checking, interpreter, and CLI conformance coverage so compile-time and runtime surfaces agree on ordinary file workflow bindings.

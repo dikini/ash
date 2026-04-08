@@ -10,7 +10,12 @@ use ash_interp::context::Context;
 use ash_interp::execute::execute_workflow_with_behaviour;
 use ash_interp::policy::PolicyEvaluator;
 
-fn execution_contexts() -> (Context, CapabilityContext, PolicyEvaluator, BehaviourContext) {
+fn execution_contexts() -> (
+    Context,
+    CapabilityContext,
+    PolicyEvaluator,
+    BehaviourContext,
+) {
     (
         Context::new(),
         CapabilityContext::new(),
@@ -43,9 +48,10 @@ async fn lexical_scope_let_bindings_visible_in_later_statements() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await
-        .expect("workflow should execute successfully");
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await
+            .expect("workflow should execute successfully");
 
     assert_eq!(result, Value::Int(1));
 }
@@ -59,8 +65,9 @@ async fn lexical_scope_unbound_variable_fails_at_runtime() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await;
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await;
 
     assert!(result.is_err(), "unbound variable should fail");
     let error = result.unwrap_err();
@@ -100,9 +107,10 @@ async fn lexical_scope_nested_let_bindings() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await
-        .expect("workflow should execute successfully");
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await
+            .expect("workflow should execute successfully");
 
     assert_eq!(result, Value::Int(60));
 }
@@ -120,9 +128,10 @@ async fn lexical_scope_binding_not_visible_outside_scope() {
     // After the LET completes, 'inner' should not be in scope
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await
-        .expect("workflow should execute successfully");
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await
+            .expect("workflow should execute successfully");
 
     assert_eq!(result, Value::Null);
 }
@@ -145,11 +154,15 @@ async fn seq_preserves_explicit_sequencing() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await;
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await;
 
     // SEQ does NOT establish lexical scope between first and second
-    assert!(result.is_err(), "variable should not be visible across SEQ boundary");
+    assert!(
+        result.is_err(),
+        "variable should not be visible across SEQ boundary"
+    );
     let error = result.unwrap_err();
     assert!(
         error.to_string().contains("x"),
@@ -180,9 +193,10 @@ async fn seq_with_nested_let_preserves_scope() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await
-        .expect("workflow should execute successfully");
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await
+            .expect("workflow should execute successfully");
 
     // SEQ executes sequentially, returning the value of the last workflow
     assert_eq!(result, Value::Int(20));
@@ -213,9 +227,10 @@ async fn canonical_form_nested_let_bindings() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await
-        .expect("workflow should execute successfully");
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await
+            .expect("workflow should execute successfully");
 
     // The nested LETs make x visible to y, and y visible to the return
     assert_eq!(result, Value::Int(2));
@@ -244,9 +259,10 @@ async fn if_branches_maintain_separate_scope() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await
-        .expect("workflow should execute successfully");
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await
+            .expect("workflow should execute successfully");
 
     assert_eq!(result, Value::Int(1));
 }
@@ -255,14 +271,14 @@ async fn if_branches_maintain_separate_scope() {
 async fn pattern_matching_introduces_bindings() {
     // Test that pattern matching introduces bindings that are visible in the continuation
     let workflow = Workflow::Let {
-        pattern: Pattern::List(vec![
-            Pattern::Variable("first".to_string()),
-            Pattern::Variable("second".to_string()),
-        ], None),
-        expr: Expr::Literal(Value::List(Box::new(vec![
-            Value::Int(1),
-            Value::Int(2),
-        ]))),
+        pattern: Pattern::List(
+            vec![
+                Pattern::Variable("first".to_string()),
+                Pattern::Variable("second".to_string()),
+            ],
+            None,
+        ),
+        expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
         continuation: Box::new(Workflow::Ret {
             expr: Expr::Binary {
                 op: ash_core::BinaryOp::Add,
@@ -274,9 +290,10 @@ async fn pattern_matching_introduces_bindings() {
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
-    let result = execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
-        .await
-        .expect("workflow should execute successfully");
+    let result =
+        execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+            .await
+            .expect("workflow should execute successfully");
 
     assert_eq!(result, Value::Int(3));
 }

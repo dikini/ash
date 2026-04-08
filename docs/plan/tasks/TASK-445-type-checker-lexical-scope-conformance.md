@@ -1,6 +1,6 @@
 # TASK-445: Type Checker Lexical Scope Conformance
 
-## Status: ⏳ Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,8 +15,8 @@ Align type checking with the canonical lexical-block lowering so compile-time na
 
 ## Dependencies
 
-- ⏳ [TASK-443: Surface Statement List Scoping Spec Amendment](TASK-443-surface-statement-list-scoping-spec-amendment.md)
-- ⏳ [TASK-444: Parser And Lowering Lexical Block Normalization](TASK-444-parser-and-lowering-lexical-block-normalization.md)
+- ✅ [TASK-443: Surface Statement List Scoping Spec Amendment](TASK-443-surface-statement-list-scoping-spec-amendment.md)
+- ✅ [TASK-444: Parser And Lowering Lexical Block Normalization](TASK-444-parser-and-lowering-lexical-block-normalization.md)
 
 ## Requirements
 
@@ -37,6 +37,16 @@ Align type checking with the canonical lexical-block lowering so compile-time na
 
 ## Completion Checklist
 
-- [ ] Focused type-check tests cover lexical scope and unbound names
-- [ ] Type environment extension matches canonical `LET ... in cont`
-- [ ] `CHANGELOG.md` records the type-checker alignment
+- [x] Focused type-check tests cover lexical scope and unbound names
+- [x] Type environment extension matches canonical `LET ... in cont`
+- [x] `CHANGELOG.md` records the type-checker alignment
+
+## Implementation Notes
+
+The type checker has been aligned with the canonical lexical-block lowering:
+- Name resolution now correctly extends the type environment for `let` bindings
+- Later statements in the same block can reference earlier bindings
+- Unbound names are rejected with appropriate type errors
+- Test coverage confirms lexical scope behavior
+
+This ensures that compile-time name resolution matches the runtime semantics established by the canonical lowering.

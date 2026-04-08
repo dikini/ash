@@ -1,6 +1,6 @@
 # TASK-444: Parser And Lowering Lexical Block Normalization
 
-## Status: ⏳ Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Implement the parser/lowering changes that make surface statement lists normaliz
 
 ## Dependencies
 
-- ⏳ [TASK-443: Surface Statement List Scoping Spec Amendment](TASK-443-surface-statement-list-scoping-spec-amendment.md)
+- ✅ [TASK-443: Surface Statement List Scoping Spec Amendment](TASK-443-surface-statement-list-scoping-spec-amendment.md)
 
 ## Requirements
 
@@ -37,7 +37,17 @@ Implement the parser/lowering changes that make surface statement lists normaliz
 
 ## Completion Checklist
 
-- [ ] Parser/lowering tests fail before implementation and pass after
-- [ ] Binding statements lower to continuation-owned scope
-- [ ] Non-binding statements still lower via `SEQ`
-- [ ] `CHANGELOG.md` records the parser/lowering normalization
+- [x] Parser/lowering tests fail before implementation and pass after
+- [x] Binding statements lower to continuation-owned scope
+- [x] Non-binding statements still lower via `SEQ`
+- [x] `CHANGELOG.md` records the parser/lowering normalization
+
+## Implementation Notes
+
+The parser and lowering have been updated to:
+- Normalize surface statement lists into canonical nested `LET ... in cont` structures
+- Ensure that `let` bindings create lexical scope visible to subsequent statements
+- Preserve `SEQ` for non-binding sequencing operations
+- Add comprehensive test coverage for the normalized form
+
+This ensures that the surface-to-core transformation is unambiguous and matches the spec amendments from TASK-443.

@@ -1,6 +1,6 @@
 # TASK-443: Surface Statement List Scoping Spec Amendment
 
-**Status:** In Progress
+**Status:** ✅ Complete
 **Phase:** 68 - Surface Binding Scope Conformance
 **Dependencies:** None
 
@@ -39,3 +39,13 @@ This establishes that earlier bindings are lexically visible in later statements
 ## Verification
 
 After amendments, all four specs should present one coherent lexical-scope story.
+
+## Implementation Notes
+
+The spec amendments have been completed to establish that:
+- Surface statement lists lower canonically into nested `LET ... in cont` structures
+- Binding statements capture the lowered remainder as continuation
+- Non-binding statements lower via `SEQ stmt cont`
+- Earlier bindings are lexically visible in later statements of the same block
+
+This provides the normative foundation for parser, lowering, type checking, and runtime conformance work in subsequent tasks.

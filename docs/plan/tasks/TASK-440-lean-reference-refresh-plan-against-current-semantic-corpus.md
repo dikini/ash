@@ -23,9 +23,9 @@ This remains planning/reference work only.
 
 ## Dependencies
 
-- 📝 [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
+- ✅ [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
 - ✅ [TASK-431: Big-Step / Small-Step Meta-Properties and Formalization Boundary Refresh](TASK-431-big-step-small-step-meta-properties-and-formalization-boundary-refresh.md)
-- 📝 [TASK-438: Canonical IR Semantics Corpus and Result Format](TASK-438-canonical-ir-semantics-corpus-and-result-format.md)
+- ✅ [TASK-438: Canonical IR Semantics Corpus and Result Format](TASK-438-canonical-ir-semantics-corpus-and-result-format.md)
 
 ## Requirements
 

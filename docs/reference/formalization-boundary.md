@@ -9,7 +9,7 @@ TASK-431 boundary refresh.
 This note freezes the current formalization boundary for future Lean work and other proof-facing
 reference artifacts.
 
-It exists so proof work, canonical corpus design, and later differential-conformance work all target
+It exists so proof work, canonical corpus design, canonical result-format work, and later differential-conformance work all target
 one explicit authority split:
 
 - canonical semantic and observable specifications define language truth,
@@ -41,6 +41,8 @@ Lean should treat the following documents as the canonical semantic and observab
 - [SPEC-022: Workflow Typing](../spec/SPEC-022-WORKFLOW-TYPING.md)
 - [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
 - [Semantic Execution Record Contract](semantic-execution-record-contract.md)
+- [Canonical IR Semantics Corpus](canonical-ir-semantics-corpus.md)
+- [Canonical Semantics Result Format](canonical-semantics-result-format.md)
 
 Within that corpus, the authority roles are split explicitly:
 
@@ -56,6 +58,12 @@ Within that corpus, the authority roles are split explicitly:
   runtime-facing execution phase taxonomy, and exact terminal projection from a canonical
   execution-record carrier back to `SPEC-004` workflow outcomes and completion-style payload
   projection.
+- [Canonical IR Semantics Corpus](canonical-ir-semantics-corpus.md) is the normative owner of the
+  file-backed canonical case inventory and case-selection policy future conformance harnesses and
+  reference implementations must share.
+- [Canonical Semantics Result Format](canonical-semantics-result-format.md) is the normative owner of
+  the machine-readable expected-result envelope and exact-versus-allowed-set comparison artifact
+  shape for those canonical cases.
 - [SPEC-021: Runtime Observable Behavior](../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) is the
   normative owner of user-visible and tooling-visible projections of runtime behavior.
 - [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md) and
@@ -85,9 +93,11 @@ corpus above. Instead, it freezes:
 
 Accordingly:
 
-- semantic theorems should be stated first against the canonical corpus;
+- semantic theorems should be stated first against the canonical semantic corpus;
 - conformance obligations should then cite SPEC-026 when comparing Rust, Lean, or alternate
   implementations against that corpus;
+- canonical corpus fixtures and expected-result artifacts should then be built against the shared
+  corpus/result-format references rather than per-harness local conventions;
 - proof artifacts must not silently move semantic authority from SPEC-004 or SPEC-025 into
   SPEC-026.
 

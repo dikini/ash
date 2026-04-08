@@ -1,6 +1,6 @@
 # TASK-438: Canonical IR Semantics Corpus and Result Format
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -20,7 +20,7 @@ This remains contract/test-infrastructure planning work only.
 
 ## Dependencies
 
-- 📝 [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
+- ✅ [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
 - ✅ [TASK-431: Big-Step / Small-Step Meta-Properties and Formalization Boundary Refresh](TASK-431-big-step-small-step-meta-properties-and-formalization-boundary-refresh.md)
 - ✅ [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
 - ✅ [TASK-434: `Par` Branch-State and Aggregation Contract](TASK-434-par-branch-state-and-aggregation-contract.md)
@@ -89,12 +89,34 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] canonical IR semantics corpus defined
-- [ ] machine-readable result format defined
-- [ ] bounded nondeterminism representation defined
-- [ ] conformance-contract alignment preserved
-- [ ] planning/reference surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] canonical IR semantics corpus defined
+- [x] machine-readable result format defined
+- [x] bounded nondeterminism representation defined
+- [x] conformance-contract alignment preserved
+- [x] planning/reference surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+TASK-438 is complete as the canonical corpus/result-format definition pass for Phase 67.
+
+The repo now includes:
+
+- [docs/reference/canonical-ir-semantics-corpus.md](../../reference/canonical-ir-semantics-corpus.md)
+- [docs/reference/canonical-semantics-result-format.md](../../reference/canonical-semantics-result-format.md)
+
+Together these references now freeze:
+
+1. one canonical file-backed corpus layout for differential-conformance cases;
+2. one canonical case manifest contract for canonical IR inputs, declared surfaces, authorities, and
+   deterministic-versus-allowed-set classification;
+3. one machine-readable expected-result envelope for exact and allowed-set comparisons;
+4. one explicit bounded nondeterminism policy for `Par` and `receive` cases;
+5. one explicit surface discipline separating big-step, small-step, and runtime-observable
+   comparison objects.
+
+This task remains contract/reference work only. It does not implement the Rust harness itself; that
+is the role of TASK-439.
 
 ## Dependencies for Next Task
 

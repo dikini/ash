@@ -385,3 +385,9 @@ Therefore:
 - Froze the three canonical conformance surfaces: big-step, small-step, and runtime-observable.
 - Froze bounded nondeterminism and differential-testing comparison rules without overclaiming current
   runtime closure.
+
+### 2026-04-08
+
+- TASK-438 now supplies the companion reference artifacts this specification called for:
+  [Canonical IR Semantics Corpus](../reference/canonical-ir-semantics-corpus.md) and
+  [Canonical Semantics Result Format](../reference/canonical-semantics-result-format.md).

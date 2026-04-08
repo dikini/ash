@@ -1997,10 +1997,11 @@ S57-7 complete, 57B now follows the validated dependency order below.
 realization in `ash-interp`: branch-local execution records are preserved per branch and the
 enclosing `Par` execution record is rebuilt from branch-local trace/effect/obligation/provenance
 snapshots rather than one shared recorder. TASK-436 then freezes the retained-completion parity
-contract, and TASK-437 now lands one bounded runtime follow-on slice under that contract: exact
-child-owned retained `CompletionPayload.effects` parity from the sealed terminal execution record,
-while retained obligations/provenance remain on their existing honest subset/conservative
-classifications. Remaining Phase 67 follow-on work now concentrates on the canonical corpus/result
-format and the Rust-first differential conformance harness.
+contract, TASK-437 lands one bounded runtime follow-on slice under that contract for exact
+child-owned retained `CompletionPayload.effects` parity, and TASK-438 now freezes the shared
+canonical IR corpus plus machine-readable result format that TASK-439 must consume for Rust-first
+differential conformance. Remaining Phase 67 follow-on work now concentrates on the Rust-first
+harness and the Lean/reference refresh plan.
 | [TASK-436](tasks/TASK-436-completion-payload-parity-contract.md) | Freeze the exact contract for retained completion observation versus full `CompletionPayload` parity | SPEC-004, SPEC-021, MCE-007 | 3-5 | ✅ Complete |
 | [TASK-437](tasks/TASK-437-retained-completion-parity-follow-on.md) | Implement the next honest retained-completion parity slice after TASK-412 under the frozen contract | TASK-436, ash-interp | 4-7 | ✅ Complete |
+| [TASK-438](tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md) | Define the canonical IR semantics corpus and machine-readable expected-result format for conformance testing | TASK-428, TASK-431, TASK-432, TASK-434, TASK-436 | 4-6 | ✅ Complete |

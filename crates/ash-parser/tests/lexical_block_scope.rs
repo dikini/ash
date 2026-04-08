@@ -74,7 +74,9 @@ fn two_let_bindings_create_right_associative_nesting() {
 fn let_then_ret_creates_nested_let_with_ret_continuation() {
     let parsed = parse_workflow_body("let x = 10; ret x");
 
-    // Should produce: LET x = 10 IN (SEQ (ret x) Done)
+    // Should produce: LET x = 10 IN (ret x)
+    // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
+    // because Seq would discard the return value (see SPEC-025 SEQ-ADVANCE rule)
     match parsed {
         Workflow::Let {
             pattern: Pattern::Variable(name),
@@ -82,14 +84,7 @@ fn let_then_ret_creates_nested_let_with_ret_continuation() {
             ..
         } => {
             assert_eq!(name, "x".into());
-
-            match *cont {
-                Workflow::Seq { first, second, .. } => {
-                    assert!(matches!(*first, Workflow::Ret { .. }));
-                    assert!(matches!(*second, Workflow::Done { .. }));
-                }
-                _ => panic!("Expected Seq with Ret and Done, got: {:?}", cont),
-            }
+            assert!(matches!(*cont, Workflow::Ret { .. }));
         }
         _ => panic!("Expected Let with continuation, got: {:?}", parsed),
     }
@@ -99,7 +94,8 @@ fn let_then_ret_creates_nested_let_with_ret_continuation() {
 fn mixed_binding_and_non_binding_creates_correct_structure() {
     let parsed = parse_workflow_body("let x = 10; act print(x); ret x");
 
-    // Should produce: LET x = 10 IN (SEQ (act print(x)) (SEQ (ret x) Done))
+    // Should produce: LET x = 10 IN (SEQ (act print(x)) (ret x))
+    // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Let {
             pattern: Pattern::Variable(name),
@@ -117,14 +113,8 @@ fn mixed_binding_and_non_binding_creates_correct_structure() {
                     // First should be act
                     assert!(matches!(*first_seq, Workflow::Act { .. }));
 
-                    // Second should be another Seq with ret
-                    match *second_seq {
-                        Workflow::Seq { first, second, .. } => {
-                            assert!(matches!(*first, Workflow::Ret { .. }));
-                            assert!(matches!(*second, Workflow::Done { .. }));
-                        }
-                        _ => panic!("Expected inner Seq, got: {:?}", second_seq),
-                    }
+                    // Second should be ret (not wrapped in Seq due to terminal statement optimization)
+                    assert!(matches!(*second_seq, Workflow::Ret { .. }));
                 }
                 _ => panic!("Expected Seq, got: {:?}", cont),
             }
@@ -137,7 +127,8 @@ fn mixed_binding_and_non_binding_creates_correct_structure() {
 fn observe_with_binding_creates_nested_observe_with_continuation() {
     let parsed = parse_workflow_body("observe cap as x; ret x");
 
-    // Should produce: OBSERVE cap AS x IN (SEQ (ret x) Done)
+    // Should produce: OBSERVE cap AS x IN (ret x)
+    // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Observe {
             binding: Some(Pattern::Variable(name)),
@@ -145,14 +136,7 @@ fn observe_with_binding_creates_nested_observe_with_continuation() {
             ..
         } => {
             assert_eq!(name, "x".into());
-
-            match *cont {
-                Workflow::Seq { first, second, .. } => {
-                    assert!(matches!(*first, Workflow::Ret { .. }));
-                    assert!(matches!(*second, Workflow::Done { .. }));
-                }
-                _ => panic!("Expected Seq, got: {:?}", cont),
-            }
+            assert!(matches!(*cont, Workflow::Ret { .. }));
         }
         _ => panic!(
             "Expected Observe with binding and continuation, got: {:?}",
@@ -165,7 +149,8 @@ fn observe_with_binding_creates_nested_observe_with_continuation() {
 fn orient_with_binding_creates_nested_orient_with_continuation() {
     let parsed = parse_workflow_body("orient 1 + 1 as x; ret x");
 
-    // Should produce: ORIENT { 1 + 1 } AS x IN (SEQ (ret x) Done)
+    // Should produce: ORIENT { 1 + 1 } AS x IN (ret x)
+    // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Orient {
             binding: Some(Pattern::Variable(name)),
@@ -173,14 +158,7 @@ fn orient_with_binding_creates_nested_orient_with_continuation() {
             ..
         } => {
             assert_eq!(name, "x".into());
-
-            match *cont {
-                Workflow::Seq { first, second, .. } => {
-                    assert!(matches!(*first, Workflow::Ret { .. }));
-                    assert!(matches!(*second, Workflow::Done { .. }));
-                }
-                _ => panic!("Expected Seq, got: {:?}", cont),
-            }
+            assert!(matches!(*cont, Workflow::Ret { .. }));
         }
         _ => panic!(
             "Expected Orient with binding and continuation, got: {:?}",
@@ -193,7 +171,8 @@ fn orient_with_binding_creates_nested_orient_with_continuation() {
 fn propose_with_binding_creates_nested_propose_with_continuation() {
     let parsed = parse_workflow_body("propose action as x; ret x");
 
-    // Should produce: PROPOSE action AS x IN (SEQ (ret x) Done)
+    // Should produce: PROPOSE action AS x IN (ret x)
+    // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Propose {
             binding: Some(Pattern::Variable(name)),
@@ -201,14 +180,7 @@ fn propose_with_binding_creates_nested_propose_with_continuation() {
             ..
         } => {
             assert_eq!(name, "x".into());
-
-            match *cont {
-                Workflow::Seq { first, second, .. } => {
-                    assert!(matches!(*first, Workflow::Ret { .. }));
-                    assert!(matches!(*second, Workflow::Done { .. }));
-                }
-                _ => panic!("Expected Seq, got: {:?}", cont),
-            }
+            assert!(matches!(*cont, Workflow::Ret { .. }));
         }
         _ => panic!(
             "Expected Propose with binding and continuation, got: {:?}",

@@ -75,6 +75,9 @@ pub struct NameResolver {
     scopes: Vec<Scope>,
     /// Resolution errors collected
     errors: Vec<ResolutionError>,
+    /// Track bindings in the current pattern being processed
+    /// This is used to detect duplicate bindings within a single pattern
+    pattern_bindings: std::collections::HashSet<Box<str>>,
 }
 
 /// Name resolution error
@@ -103,6 +106,7 @@ impl NameResolver {
         Self {
             scopes: vec![Scope::new(0)],
             errors: Vec::new(),
+            pattern_bindings: std::collections::HashSet::new(),
         }
     }
 
@@ -556,10 +560,29 @@ impl NameResolver {
     }
 
     /// Bind names from a pattern
+    ///
+    /// This method checks for duplicate bindings within the pattern and rejects them.
+    /// Duplicate bindings across different patterns (e.g., in different statements) are allowed.
     fn bind_pattern(&mut self, pattern: &Pattern) {
+        // Clear the pattern bindings set at the start of processing a pattern
+        self.pattern_bindings.clear();
+        self.bind_pattern_recursive(pattern);
+        // Clear the pattern bindings set after processing (not strictly necessary but clean)
+        self.pattern_bindings.clear();
+    }
+
+    /// Recursively bind names from a pattern, checking for duplicates
+    fn bind_pattern_recursive(&mut self, pattern: &Pattern) {
         match pattern {
             Pattern::Variable(name) => {
-                self.bind(name.clone());
+                // Check if this name is already bound in the current pattern
+                if self.pattern_bindings.contains(name.as_ref()) {
+                    self.errors
+                        .push(ResolutionError::DuplicateBinding(name.to_string()));
+                } else {
+                    self.pattern_bindings.insert(name.clone());
+                    self.bind(name.clone());
+                }
             }
 
             Pattern::Wildcard => {
@@ -568,22 +591,29 @@ impl NameResolver {
 
             Pattern::Tuple(patterns) => {
                 for pat in patterns {
-                    self.bind_pattern(pat);
+                    self.bind_pattern_recursive(pat);
                 }
             }
 
             Pattern::Record(fields) => {
                 for (_, pat) in fields {
-                    self.bind_pattern(pat);
+                    self.bind_pattern_recursive(pat);
                 }
             }
 
             Pattern::List { elements, rest } => {
                 for elem in elements {
-                    self.bind_pattern(elem);
+                    self.bind_pattern_recursive(elem);
                 }
                 if let Some(rest_name) = rest {
-                    self.bind(rest_name.clone());
+                    // Check if this name is already bound in the current pattern
+                    if self.pattern_bindings.contains(rest_name.as_ref()) {
+                        self.errors
+                            .push(ResolutionError::DuplicateBinding(rest_name.to_string()));
+                    } else {
+                        self.pattern_bindings.insert(rest_name.clone());
+                        self.bind(rest_name.clone());
+                    }
                 }
             }
 
@@ -594,7 +624,7 @@ impl NameResolver {
             Pattern::Variant { fields, .. } => {
                 if let Some(fields) = fields {
                     for (_, pat) in fields {
-                        self.bind_pattern(pat);
+                        self.bind_pattern_recursive(pat);
                     }
                 }
             }

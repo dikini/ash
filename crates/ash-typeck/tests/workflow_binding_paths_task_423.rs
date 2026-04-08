@@ -123,7 +123,7 @@ fn propose_binding_workflow() -> WorkflowDef {
         name: "proposed_value".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(SurfaceType::Name("String".into())),
+        declared_return_type: None, // No declared return type, so fresh type variable is acceptable
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Propose {
@@ -193,24 +193,17 @@ fn workflow_typecheck_rejects_observe_bound_declared_return_without_honest_resul
 }
 
 #[test]
-fn workflow_typecheck_rejects_propose_binding_until_result_semantics_exist() {
+fn workflow_typecheck_accepts_propose_binding_with_fresh_type_variable() {
     let workflow = propose_binding_workflow();
 
     let result = ash_typeck::type_check_workflow_def(&workflow);
 
+    // Propose binding is now supported, binding with a fresh type variable
+    // (similar to Observe) until result semantics are implemented
     assert!(
-        result.is_err(),
-        "surfaced Propose bindings should be rejected explicitly until result semantics are implemented"
-    );
-    let error = result.unwrap_err();
-    assert!(
-        matches!(error, ash_typeck::TypeCheckError::TypeError(_)),
-        "expected explicit type error for unsupported Propose binding, got: {error:?}"
-    );
-    let error = error.to_string();
-    assert!(
-        error.contains("Propose") && error.contains("binding") && error.contains("MVP"),
-        "expected unsupported Propose binding error, got: {error}"
+        result.is_ok(),
+        "propose bindings should now be accepted (with fresh type variable), got: {:?}",
+        result
     );
 }
 

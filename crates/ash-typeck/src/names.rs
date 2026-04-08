@@ -279,11 +279,17 @@ impl NameResolver {
 
             Workflow::Propose {
                 action,
+                binding,
                 continuation,
                 ..
             } => {
                 for arg in &action.args {
                     self.resolve_expr(arg);
+                }
+
+                // Bind pattern if present
+                if let Some(pat) = binding {
+                    self.bind_pattern(pat);
                 }
 
                 if let Some(cont) = continuation {

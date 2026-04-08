@@ -424,6 +424,38 @@ This is surface sugar only. The canonical core contract still ends in an explici
 form; omitting `done` in surface syntax does not add a separate completion construct or change the
 core workflow-form set.
 
+### 4.4 Statement List Scoping
+
+Newline-separated statement lists are normatively lowered to nested `LET ... in cont` forms that
+establish lexical scoping for binding statements.
+
+```
+-- Surface syntax:
+let items = [1, 2, 3]
+let first = items[0]
+act print(first)
+done
+
+-- Canonical lowering:
+LET items = [1, 2, 3] IN
+  LET first = items[0] IN
+    SEQ (act print(first)) Done
+```
+
+**Lowering rule:**
+
+A surface statement list `[s1; s2; ...; sn; done?]` lowers right-associatively:
+
+- If `si` is a binding statement (`let`, `observe` with binding, `orient` with binding, `propose` with binding):
+  - Lower to `LET pat = expr IN cont` where `cont` is the lowered remainder
+- If `si` is a non-binding statement:
+  - Lower to `SEQ si cont` where `cont` is the lowered remainder
+
+This establishes that earlier bindings are lexically visible in later statements of the same block.
+See [SPEC-003](../SPEC-003-TYPE-SYSTEM.md) for type-environment consequences, [SPEC-004](../SPEC-004-SEMANTICS.md)
+and [SPEC-025](../SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) for operational semantics over the
+canonical lowered form.
+
 ## 5. Error Recovery
 
 The parser should recover from common errors:

@@ -976,6 +976,10 @@ expression micro-stepping.
 `Seq` propagates the left workflow until that left side becomes terminal. There is no step from a
 right-hand subworkflow until the left side has completed successfully.
 
+**Precondition:** The small-step operational semantics defined here operate over canonical core workflow
+forms. Surface statement lists are normatively lowered to nested `LET ... in cont` and `SEQ` forms
+before reaching this layer (see [SPEC-002](../SPEC-002-SURFACE.md) §4.4).
+
 ```text
 (SEQ-STEP)
   A ⊢ Running(Γ, Ω, π, T, ε̂, w1) —μ→ Running(Γ', Ω', π', T', ε̂', w1')

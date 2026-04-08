@@ -303,6 +303,14 @@ as parser or lowering ambiguities.
   Γ, Σ, Ω ⊢ LET pat = expr in cont : τ / ε_expr⊔ε ⊣ Ω'
 ```
 
+**Type-environment consequence for surface statement lists:**
+
+Surface statement lists are lowered to nested `LET ... in cont` forms before type checking
+(see [SPEC-002](../SPEC-002-SURFACE.md) §4.4). Therefore, the type environment extension from a
+binding statement is immediately visible in subsequent statements of the same block, and the
+`Γ ∪ Γ'` environment extension in `(LET-T)` reflects the lexical scope established by the
+canonical lowering.
+
 ### 4.6 Modal Constructs
 
 ```

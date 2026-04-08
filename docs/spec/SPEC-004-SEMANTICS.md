@@ -1070,6 +1070,10 @@ runtime tuple-variant value family.
 
 ### 4.8 Control Flow
 
+**Precondition:** The operational semantics defined here operate over canonical core workflow forms.
+Surface statement lists are normatively lowered to nested `LET ... in cont` and `SEQ` forms before
+reaching this layer (see [SPEC-002](../SPEC-002-SURFACE.md) §4.4).
+
 ```
 (SEQ)
   Γ, C, P, Ω, π ⊢ w1 ⇓ v1, eff1, T1, Ω1, π1

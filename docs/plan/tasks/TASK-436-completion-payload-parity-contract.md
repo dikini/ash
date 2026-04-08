@@ -1,6 +1,6 @@
 # TASK-436: Completion-Payload Parity Contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -81,12 +81,41 @@ This task is complete when:
 
 ## Completion Checklist
 
-- [ ] retained-completion parity contract created
-- [ ] full parity vs conservative slices distinguished clearly
-- [ ] relation to execution-record contract stated explicitly
-- [ ] current runtime surfaces from TASK-406..412 incorporated honestly
-- [ ] planning/reference surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] retained-completion parity contract created
+- [x] full parity vs conservative slices distinguished clearly
+- [x] relation to execution-record contract stated explicitly
+- [x] current runtime surfaces from TASK-406..412 incorporated honestly
+- [x] planning/reference surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+TASK-436 is complete as the explicit retained-completion parity contract pass for Phase 67.
+
+The new reference
+[docs/reference/retained-completion-parity-contract.md](../../reference/retained-completion-parity-contract.md)
+now freezes one centralized boundary between:
+
+- full semantic `CompletionPayload` parity,
+- conservative retained-completion slices,
+- terminal-visible subset-only retained slices,
+- and dimensions that remain outside retained-completion parity itself.
+
+The contract states explicitly that retained completion is downstream terminal observation rather than
+a replacement for the broader semantic execution record, and it records the current honest runtime
+classification of TASK-406 through TASK-412:
+
+- retained `result` is exact for that one dimension;
+- retained `effects` remains conservative;
+- retained `obligations` remains terminal-visible subset only;
+- retained `provenance` remains conservative;
+- waiting for retained completion is an observation surface, not parity by itself.
+
+The execution-record reference now links to this parity contract directly so later work can keep the
+broader execution-record contract distinct from retained `CompletionPayload` parity.
+
+This task remains contract/spec/reference work only. It does not implement a new runtime fidelity
+slice; that is the follow-on role of TASK-437.
 
 ## Dependencies for Next Task
 

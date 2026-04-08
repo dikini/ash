@@ -318,7 +318,22 @@ Implementation freedom remains for:
 - whether the runtime exposes the record publicly, internally, or only through a conformance/differential-testing harness;
 - how runtime-private environment, residual control state, or scheduler data are represented.
 
-## 9. Follow-On Boundary
+## 9. Relationship to the Retained Completion Parity Contract
+
+[Retained Completion Parity Contract](retained-completion-parity-contract.md) is the companion
+reference for the retained terminal observation surface.
+
+Relationship summary:
+
+1. this execution-record contract remains the broader runtime-facing semantic carrier contract;
+2. retained completion parity concerns only the semantic `CompletionPayload` dimensions,
+   not the full execution-record state;
+3. exact trace `T` remains owned by this execution-record contract and is intentionally not required
+   for retained `CompletionPayload` parity;
+4. weaker retained surfaces from TASK-406 through TASK-412 should be classified using the retained
+   parity contract's exact / conservative / subset-only categories rather than described ad hoc.
+
+## 10. Follow-On Boundary
 
 This contract is the fixed input for the next runtime and conformance tasks, especially:
 
@@ -334,7 +349,7 @@ Those tasks should implement or test against this contract directly rather than 
 - which current retained-completion surfaces are already exact versus only conservative;
 - how blocked/completion-observation boundaries fit into the execution-record story.
 
-## 10. TASK-434 Compatibility Note for `Par` Branch Execution Records
+## 11. TASK-434 Compatibility Note for `Par` Branch Execution Records
 
 TASK-434 freezes the normative `Par` branch-state and aggregation contract in
 [SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md). This reference remains compatible with

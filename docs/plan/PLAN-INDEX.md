@@ -1991,15 +1991,14 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-432](tasks/TASK-432-semantic-execution-record-and-terminal-projection-contract.md) | Freeze the runtime-facing semantic execution-record contract for cumulative `Ω` / `π` / `T` / `ε̂` and terminal projection | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | ✅ Complete |
 | [TASK-433](tasks/TASK-433-ash-interp-execution-record-substrate.md) | Add the first authoritative execution-record substrate in `ash-interp` and thread cumulative semantic carriers through interpreter execution | TASK-432, ash-interp | 5-8 | ✅ Complete |
 | [TASK-434](tasks/TASK-434-par-branch-state-and-aggregation-contract.md) | Freeze the exact semantic/runtime contract for `Par` branch-local carriers and helper-backed aggregation | SPEC-004, SPEC-025, MCE-006, MCE-007 | 3-5 | ✅ Complete |
-| [TASK-435](tasks/TASK-435-par-runtime-aggregation-realization.md) | Implement `Par` runtime aggregation against the frozen branch-state/aggregation contract in `ash-interp` | TASK-434, ash-interp | 5-8 | 📝 Planned |
+| [TASK-435](tasks/TASK-435-par-runtime-aggregation-realization.md) | Implement `Par` runtime aggregation against the frozen branch-state/aggregation contract in `ash-interp` | TASK-434, ash-interp | 5-8 | ✅ Complete |
 
-**Current Phase 67 note:** TASK-434 now freezes one explicit `Par` branch-state and helper-backed
-aggregation contract in `SPEC-025` plus execution-record compatibility guidance in
-`docs/reference/semantic-execution-record-contract.md`, so TASK-435 can implement branch-local carrier
-preservation and aggregate collation directly without re-deriving `Par` semantics from MCE prose.
-| [TASK-436](tasks/TASK-436-completion-payload-parity-contract.md) | Freeze the exact contract for retained completion observation versus full `CompletionPayload` parity | SPEC-004, SPEC-021, MCE-007 | 3-5 | 📝 Planned |
-| [TASK-437](tasks/TASK-437-retained-completion-parity-follow-on.md) | Implement the next honest retained-completion parity slice after TASK-412 under the frozen contract | TASK-436, ash-interp | 4-7 | 📝 Planned |
-| [TASK-438](tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md) | Define the canonical IR semantics corpus and machine-readable expected-result format for cross-implementation verification | SPEC-001, SPEC-004, SPEC-025, SPEC-021 | 4-6 | 📝 Planned |
-| [TASK-439](tasks/TASK-439-differential-conformance-harness-rust-first.md) | Build the first differential conformance harness against the canonical corpus, starting with the Rust implementation | TASK-428, TASK-438 | 5-8 | 📝 Planned |
-| [TASK-440](tasks/TASK-440-lean-reference-refresh-plan-against-current-semantic-corpus.md) | Refresh the Lean/reference implementation plan against the current canonical big-step/small-step corpus and conformance contract | formalization-boundary, TASK-428, TASK-431, TASK-438 | 3-5 | 📝 Planned |
-| [TASK-441](tasks/TASK-441-disable-automatic-ci-workflows.md) | Switch repository GitHub Actions workflows from automatic triggers to manual dispatch only | GitHub Actions workflow policy | 1-2 | ✅ Complete |
+**Current Phase 67 note:** TASK-435 is now landed as the first runtime-side `Par` aggregation
+realization in `ash-interp`: branch-local execution records are preserved per branch and the
+enclosing `Par` execution record is rebuilt from branch-local trace/effect/obligation/provenance
+snapshots rather than one shared recorder. TASK-436 now complements that runtime slice with one
+explicit retained-completion parity contract, separating exact `CompletionPayload` parity from
+conservative and subset-only retained slices. Remaining Phase 67 follow-on work now concentrates on
+later retained-completion fidelity slices, the canonical corpus/result format, and the Rust-first
+differential conformance harness.
+| [TASK-436](tasks/TASK-436-completion-payload-parity-contract.md) | Freeze the exact contract for retained completion observation versus full `CompletionPayload` parity | SPEC-004, SPEC-021, MCE-007 | 3-5 | ✅ Complete |

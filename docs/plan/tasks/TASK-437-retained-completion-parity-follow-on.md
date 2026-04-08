@@ -21,7 +21,7 @@ This is real Rust/runtime work.
 ## Dependencies
 
 - ✅ [TASK-433: `ash-interp` Execution-Record Substrate](TASK-433-ash-interp-execution-record-substrate.md)
-- 📝 [TASK-436: Completion-Payload Parity Contract](TASK-436-completion-payload-parity-contract.md)
+- ✅ [TASK-436: Completion-Payload Parity Contract](TASK-436-completion-payload-parity-contract.md)
 
 ## Requirements
 

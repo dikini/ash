@@ -24,7 +24,7 @@ This remains contract/test-infrastructure planning work only.
 - ✅ [TASK-431: Big-Step / Small-Step Meta-Properties and Formalization Boundary Refresh](TASK-431-big-step-small-step-meta-properties-and-formalization-boundary-refresh.md)
 - ✅ [TASK-432: Semantic Execution Record and Terminal Projection Contract](TASK-432-semantic-execution-record-and-terminal-projection-contract.md)
 - ✅ [TASK-434: `Par` Branch-State and Aggregation Contract](TASK-434-par-branch-state-and-aggregation-contract.md)
-- 📝 [TASK-436: Completion-Payload Parity Contract](TASK-436-completion-payload-parity-contract.md)
+- ✅ [TASK-436: Completion-Payload Parity Contract](TASK-436-completion-payload-parity-contract.md)
 
 ## Requirements
 

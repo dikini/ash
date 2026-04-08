@@ -1,6 +1,6 @@
 # TASK-435: `Par` Runtime Aggregation Realization
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -96,12 +96,48 @@ Expected pass condition:
 
 ## Completion Checklist
 
-- [ ] TASK-435 task file created
-- [ ] runtime `Par` aggregation updated
-- [ ] branch-local carrier handling implemented
-- [ ] tests added or updated
-- [ ] docs/planning surfaces updated
-- [ ] `CHANGELOG.md` updated
+- [x] TASK-435 task file created
+- [x] runtime `Par` aggregation updated
+- [x] branch-local carrier handling implemented
+- [x] tests added or updated
+- [x] docs/planning surfaces updated
+- [x] `CHANGELOG.md` updated
+
+## Completion Notes
+
+TASK-435 is complete as the first honest runtime-side `Par` aggregation realization in `ash-interp`.
+
+`Workflow::Par` no longer relies on one shared execution recorder across all concurrent branches.
+Instead, the interpreter now creates branch-local `ExecutionRecorder` instances, executes each
+branch against its own recorder/provenance context, snapshots the branch-local execution records,
+and then rebuilds the enclosing parent execution record from those branch-local records using the
+aggregation helpers in `crates/ash-interp/src/execution_record.rs`.
+
+This landed two material runtime corrections against the frozen TASK-434 contract:
+
+- spawned child execution no longer overwrites `RuntimeState::last_execution_record()` for the
+  enclosing top-level/stream execution path; and
+- `Par` now aggregates branch-local trace, effect, obligation, and provenance carriers into the
+  parent execution record instead of collapsing everything through one shared recorder.
+
+Focused regression coverage now includes:
+
+- `test_spawned_child_does_not_overwrite_top_level_last_execution_record`
+- `test_spawned_child_does_not_overwrite_stream_top_level_last_execution_record`
+- `test_par_execution_record_aggregates_branch_local_carriers`
+
+Verification for the landed runtime slice was run with:
+
+- `cargo test -p ash-interp`
+- `cargo clippy -p ash-interp --all-targets -- -D warnings`
+- `cargo fmt --check`
+
+This closeout remains intentionally conservative. TASK-435 materially improves `Par` runtime
+aggregation and makes the enclosing execution record reflect branch-local carrier state more
+honestly, but it does not claim closure of every residual `Par` gap named by MCE-007. In
+particular, the runtime still does not claim a fully explicit interleaving machine or full closure
+of every helper-backed concurrent aggregation latitude beyond the landed branch-local execution-
+record slice.
 
 ## Dependencies for Next Task
 

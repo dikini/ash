@@ -18,7 +18,7 @@ The surface language is designed to be:
 KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
               | "observe" | "receive" | "orient" | "propose" | "decide" | "act"
               | "oblige" | "check" | "let" | "in" | "if" | "then" | "else"
-              | "for" | "do" | "par" | "with" | "maybe" | "must"
+              | "for" | "do" | "with" | "maybe" | "must"
               | "wait" | "control"
               | "exposes"
               | "timeout" | "done"
@@ -161,7 +161,7 @@ workflow        ::= workflow_stmt (";" workflow_stmt)* ";"? "done"?
 workflow_stmt   ::= observe_stmt | orient_stmt | propose_stmt
                   | decide_stmt | check_stmt | receive_stmt | act_stmt
                   | oblig_stmt | let_stmt | if_stmt
-                  | for_stmt | par_stmt | with_stmt
+                  | for_stmt | with_stmt
                   | maybe_stmt | must_stmt
 
 observe_stmt    ::= "observe" capability_ref ("as" pattern)? 
@@ -203,8 +203,6 @@ if_stmt         ::= "if" expression "then" workflow
                     ("else" workflow)?
 
 for_stmt        ::= "for" pattern "in" expression "do" workflow
-
-par_stmt        ::= "par" "{" workflow ("|" workflow)* "}"
 
 with_stmt       ::= "with" capability_ref "do" workflow
 

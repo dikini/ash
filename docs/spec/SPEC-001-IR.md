@@ -39,7 +39,9 @@ The canonical core language is the contractually meaningful subset of Ash syntax
 These forms are the ones downstream phases must preserve:
 
 - core workflows: `Observe`, `Receive`, `Orient`, `Propose`, `Decide`, `Check`, `Act`, `Oblig`,
-  `Let`, `If`, `Seq`, `Par`, `ForEach`, `Ret`, `With`, `Maybe`, `Must`, `Done`
+  `Let`, `If`, `Seq`, `ForEach`, `Ret`, `With`, `Maybe`, `Must`, `Done`
+
+**Sequential workflow contract**: A single workflow in Ash is sequential. Concurrency and parallelism are modeled at the system level through multiple communicating workflows, not through workflow-internal parallel forms. This spec defines the sequential execution model for individual workflows.
 - core expressions: `Literal`, `Variable`, `FieldAccess`, `IndexAccess`, `Unary`, `Binary`,
   `Call`, `Match`, `Constructor`
 - core patterns: `Variable`, `Tuple`, `Record`, `List`, `Wildcard`, `Literal`, `Variant`
@@ -160,9 +162,6 @@ pub enum Workflow {
     Seq {
         first: Box<Workflow>,
         second: Box<Workflow>,
-    },
-    Par {
-        workflows: Vec<Workflow>,
     },
     ForEach {
         pattern: Pattern,

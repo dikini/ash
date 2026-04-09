@@ -357,7 +357,7 @@ fallback branch; it does not introduce a separate ADT typing rule.
 
 Effects are inferred bottom-up from workflow forms and source-level contracts, then composed by
 join over the current coarse lattice. Under the current promoted contract, control/modal forms such
-as `Let`, `If`, `Seq`, `Par`, `ForEach`, `Ret`, `Done`, `With`, `Maybe`, and `Must` do not add a
+as `Let`, `If`, `Seq`, `ForEach`, `Ret`, `Done`, `With`, `Maybe`, and `Must` do not add a
 new effect classification of their own beyond the effects of their constituent expressions,
 branches, or subworkflows. Because the normative lattice has not yet adopted surfaced `Pure`, this
 spec records those forms as effect-neutral in themselves without renaming that neutrality to a new
@@ -372,9 +372,9 @@ Current workflow-form classification summary:
 | `Orient` | `Deliberative` base effect, joined with continuation |
 | `Propose` | `Deliberative` base effect, joined with continuation |
 | `Decide` | `Evaluative` base effect, joined with continuation |
-| `Check` | `Evaluative` base effect, joined with continuation |
-| `Act` | `Operational` |
-| `Let` / `If` / `Seq` / `Par` / `ForEach` | join-based composition over constituent effects; no extra grade of their own |
+|| `Check` | `Evaluative` base effect, joined with continuation |
+|| `Act` | `Operational` |
+|| `Let` / `If` / `Seq` / `ForEach` | join-based composition over constituent effects; no extra grade of their own |
 | `Ret` / `Done` | no extra grade of their own |
 | `With` / `Maybe` / `Must` | no extra grade of their own beyond enclosed workflows |
 | `Oblig` | governance/obligation form; no separate coarse grade beyond enclosed workflow unless later revised |
@@ -413,11 +413,6 @@ fn infer_effect(workflow: &Workflow) -> Effect {
                 .join(infer_effect(else_branch)),
         Seq { first, second } => 
             infer_effect(first).join(infer_effect(second)),
-        Par { workflows } => 
-            workflows.iter().map(infer_effect).fold(
-                Effect::Epistemic, 
-                Effect::join
-            ),
         ForEach { collection, body, .. } =>
             infer_expr_effect(collection).join(infer_effect(body)),
         Ret { expr } =>

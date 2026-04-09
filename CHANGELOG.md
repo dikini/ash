@@ -202,6 +202,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Removed `Par` from the active Ash language contract. The canonical sequential workflow contract now specifies that a single workflow in Ash is sequential, with concurrency and parallelism modeled at the system level through multiple communicating workflows. All normative `Par` contract references in [SPEC-001](docs/spec/SPEC-001-IR.md), [SPEC-002](docs/spec/SPEC-002-SURFACE.md), [SPEC-003](docs/spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md), [SPEC-022](docs/spec/SPEC-022-WORKFLOW-TYPING.md), [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), and [SPEC-026](docs/spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md) have been amended to mark historical sections with "(Historical)" markers and remove normative language that would imply `Par` is part of the current active contract.
+
 - Corrected the README Phase 57 quick-start commands so the documented `ash run`
   and `ash run --trace` examples now point to real canonical entry files, while
   the larger `support_ticket` and `multi_agent_research` samples are labeled as

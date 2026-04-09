@@ -165,8 +165,9 @@ dimensions for the executions it claims to realize:
 2. the canonical configuration taxonomy, including running versus terminal configurations;
 3. the split between cumulative state carried in configurations and local deltas carried in labels;
 4. the distinction between blocked/suspended states and semantic stuckness;
-5. the ownership boundary for helper-managed operations such as receive selection, `Par`
-   aggregation, and control/completion observation;
+5. the ownership boundary for helper-managed operations such as receive selection and
+   control/completion observation (Historical: prior `Par` aggregation is no longer part of the
+   active language contract);
 6. terminal reconstruction back to the [SPEC-004](SPEC-004-SEMANTICS.md) outcome contract.
 
 For this surface, conformance is not only about the final terminal result. It is also about whether
@@ -193,18 +194,16 @@ Small-step nondeterminism is bounded, not arbitrary.
 
 Allowed nondeterminism includes only:
 
-1. interleavings of semantically concurrent `Par` progress that remain compatible with the canonical
-   helper-owned aggregation contract;
-2. helper-owned `receive` choices among messages, timeout continuation, wildcard continuation, or
-   fallthrough cases already admitted by the authoritative receive contract;
-3. implementation-local silent-step segmentation that does not change the admitted state-taxonomy or
+1. helper-owned `receive` choices among messages, timeout continuation, wildcard continuation, or
+   fallthrough cases already admitted by the authoritative receive contract (Historical: prior
+   `Par` concurrency is no longer part of the active language contract);
+2. implementation-local silent-step segmentation that does not change the admitted state-taxonomy or
    terminal reconstruction.
 
 Disallowed nondeterminism includes:
 
-- changing blocked/suspended behavior into semantic stuckness,
-- imposing a fake left-to-right sequential `Par` contract where the canonical semantics preserves a
-  concurrent one,
+- changing blocked/suspended behavior into semantic stuckness (Historical: prior `Par` contract
+  constraints no longer apply),
 - exposing implementation accidents as new semantic step classes,
 - changing the owning boundary of a runtime failure, pattern failure, or terminal-control outcome.
 
@@ -290,13 +289,15 @@ The normative comparison rules are:
 1. silent/internal stutter may vary if the same admitted semantic milestones are preserved;
 2. helper-owned atomic regions may be collapsed or expanded if the same owning boundary and terminal
    projection are preserved;
-3. `Par` executions are compared up to admissible interleaving of independent branch progress rather
-   than one implementation-specific schedule;
-4. receive behavior is compared by admitted selection/fallback/timeout outcome class and resulting
-   continuation, not by queue-probe count, poll frequency, or one concrete mailbox algorithm;
-5. when a surface is deterministic, the allowed equivalence class has size one.
+3. receive behavior is compared by admitted selection/fallback/timeout outcome class and resulting
+   continuation, not by queue-probe count, poll frequency, or one concrete mailbox algorithm
+   (Historical: prior `Par` interleaving comparison is no longer part of the active language contract);
+4. when a surface is deterministic, the allowed equivalence class has size one.
 
-### 6.3 `Par`-Specific Rule
+### 6.3 `Par`-Specific Rule (Historical)
+
+> **Note**: This section documents prior `Par` conformance rules which are no longer part of the
+> active Ash language contract. The content is preserved for historical reference.
 
 For helper-owned concurrency, implementations need not expose the same branch-step order.
 Conformance requires only that:
@@ -356,7 +357,7 @@ The current evidence packet from
 | Surface | Current conservative status |
 |---|---|
 | big-step / terminal semantic conformance | strongest current target, with substantial direct implementation evidence for many workflow outcomes, but not a blanket proof or certification of full corpus closure |
-| small-step / state-taxonomy conformance | partial / indirect; current runtime evidence remains incomplete for authoritative cumulative `π`, `T`, and `ε̂` carriers, uniform blocked-versus-suspended packaging, full retained completion parity, and fully explicit helper-backed `Par` aggregation |
+| small-step / state-taxonomy conformance | partial / indirect; current runtime evidence remains incomplete for authoritative cumulative `π`, `T`, and `ε̂` carriers, uniform blocked-versus-suspended packaging, and full retained completion parity (Historical: prior `Par` aggregation is no longer part of the active language contract) |
 | runtime-observable conformance | partially realized and strongest where visible exit behavior, visible value shape, and surfaced error/output boundaries are already specified and tested, but still not evidence of full small-step carrier closure |
 
 Therefore:

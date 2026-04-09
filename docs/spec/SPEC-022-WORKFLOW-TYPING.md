@@ -143,19 +143,6 @@ workflow branches(x: Bool) {
 Γ ⊢ w₁; w₂ : τ₂ ▷ Γ₂
 ```
 
-### 4.5 Parallel Composition
-
-Parallel branches each get a **copy** of the obligation set:
-
-```
-Γ ⊢ w₁ : τ₁ ▷ Γ₁
-Γ ⊢ w₂ : τ₂ ▷ Γ₂
-─────────────────────────────────
-Γ ⊢ par { w₁; w₂ } : (τ₁, τ₂) ▷ Γ₁ ∩ Γ₂
-```
-
-If both branches discharge the same obligation, intersection is empty (good). If one branch discharges and other doesn't, intersection still has obligation (error).
-
 ### 4.6 Spawn (Fire-and-Forget)
 
 Spawn creates **isolated** obligation scope:
@@ -366,25 +353,14 @@ workflow check_with_decision {
     }
 }
 
--- Test 3: Parallel - both branches must discharge
-workflow parallel_obligations {
-    oblige o1;
-    oblige o2;
-    
-    par {
-        { act work1; let _ = check o1; }
-        { act work2; let _ = check o2; }
-    }
-}
-
--- Test 4: Error - obligation not discharged
+-- Test 3: Error - obligation not discharged
 workflow bad {
     oblige forgot_this;
     act work;
     -- ERROR: forgot_this not checked
 }
 
--- Test 5: Error - double check
+-- Test 4: Error - double check
 workflow also_bad {
     oblige double;
     let _ = check double;

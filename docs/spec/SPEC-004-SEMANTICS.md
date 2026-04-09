@@ -10,6 +10,8 @@ These rules define the meaning of the canonical core IR from SPEC-001. Surface s
 additional convenience forms, but those forms are only semantically relevant insofar as they lower
 to the canonical core contract.
 
+**Sequential workflow contract**: A single workflow in Ash is sequential. The semantics defined here apply to sequential workflow execution. Concurrency and parallelism are modeled at the system level through multiple communicating workflows. Historical sections referencing `PAR` or parallel workflow forms document prior design stages and are not part of the current active language contract.
+
 ## 1.1 Runtime Authority and Advisory Interaction
 
 This document defines canonical runtime meaning. The runtime owns authoritative state,
@@ -1285,7 +1287,9 @@ discharge(Ω, obligation) ↝ Ω'
   - repeated checking behavior must remain consistent with the obligation-state model already named
     in SPEC-004.
 
-### 6.5 Parallel Outcome Combination
+### 6.5 Parallel Outcome Combination (Historical)
+
+> **Note**: This section documents the prior `PAR` workflow form which is no longer part of the active Ash language contract. The content is preserved for historical reference. The current language uses sequential workflows with system-level concurrency modeled through communicating workflows.
 
 ```text
 combine_parallel_outcomes([out1, ..., outn], π) ↝ out
@@ -1318,7 +1322,9 @@ join_obligations(Ω1, ..., Ωn) ↝ Ω'
 - Laws: the result preserves every obligation state transition already made visible by a branch and
   does not invent unrelated obligations.
 
-### 6.6 Provenance and Trace Helpers
+### 6.6 Provenance and Trace Helpers (Historical)
+
+> **Note**: This section documents helper functions used by the prior `PAR` workflow form. While the underlying provenance/trace infrastructure may be reused by other runtime features, the specific parallel aggregation semantics documented here are not part of the current active language contract.
 
 ```text
 fork(π) ↝ πfork
@@ -1370,9 +1376,7 @@ merge_traces([T1, ..., Tn]) ↝ T
   - receive selection when the current source scheduling modifier permits more than one eligible
     source or message choice;
   - action performance when the underlying runtime/provider is nondeterministic;
-  - provenance freshness (`fork`, fresh identifiers) up to freshness-preserving equivalence;
-  - parallel trace interleaving and concurrent branch aggregation under `PAR` and its helper-backed
-    combination rules.
+  - provenance freshness (`fork`, fresh identifiers) up to freshness-preserving equivalence.
 
   No other semantic family may introduce additional nondeterminism without extending the canonical
   helper contracts that own it.
@@ -1383,8 +1387,6 @@ merge_traces([T1, ..., Tn]) ↝ T
 
   - provenance values may differ by fresh identifiers while preserving the same parent/lineage
     structure and action-history content;
-  - merged traces may differ by interleaving across concurrent branches while preserving each input
-    trace's internal order;
   - helper-backed runtime choices may differ only where the relevant helper contract explicitly
     permits such variation.
 
@@ -1451,8 +1453,6 @@ merge_traces([T1, ..., Tn]) ↝ T
   only if those helper laws remain true observationally:
 
   - receive selection preserves pattern-before-guard ordering and fallback/fallthrough behavior;
-  - parallel combination preserves branch-local trace order and obligation/provenance aggregation
-    laws;
   - provenance helpers preserve lineage ancestry;
   - lookup and policy helpers preserve the declared failure classifications.
 
@@ -1472,8 +1472,6 @@ merge_traces([T1, ..., Tn]) ↝ T
      boundary and do not create hidden extra error channels.
   4. **Effect/trace soundness**: derived effects and traces satisfy the monotonicity conventions from
      §8.2.
-  5. **Parallel conformance modulo helper laws**: `PAR` preserves the aggregation laws declared for
-     `combine_parallel_outcomes`, `join_obligations`, `join_provenance`, and `merge_traces`.
 
   ### 9.2 Conformance Obligations for Runtime Implementations
 

@@ -17,6 +17,8 @@ remains the normative big-step statement of whole-workflow meaning; this documen
 meaning into explicit configuration transitions over the canonical workflow IR from
 [SPEC-001](SPEC-001-IR.md).
 
+**Sequential workflow contract**: A single workflow in Ash is sequential. The small-step semantics defined here apply to sequential workflow execution. Concurrency and parallelism are modeled at the system level through multiple communicating workflows. Historical sections and rules referencing `Par` document prior design stages and are not part of the current active language contract.
+
 This specification faithfully packages the accepted small-step corpus:
 
 - [MCE-005: Small-Step Semantics](../ideas/minimal-core/MCE-005-SMALL-STEP.md)
@@ -92,12 +94,11 @@ must preserve all of the following semantically, not merely approximately in pro
    while labels carry only local step deltas such as `ΔT` and `δε`;
 4. blocked/suspended vs stuck distinction: waiting on helper-owned or external conditions is not
    semantic stuckness;
-5. v1 atomic boundaries: pure expressions, pure patterns, guards, receive selection, parallel
-   aggregation, obligation/provenance helpers, and spawned-child completion/control observation stay
-   atomic or helper-owned in v1 rather than being micro-stepped here;
-6. helper-owned concurrency and aggregation boundaries: `Par` remains interleaving-based at the
-   semantic level with helper-backed terminal aggregation rather than being rewritten into fake
-   left-to-right sequencing or machine-specific scheduler rules.
+5. v1 atomic boundaries: pure expressions, pure patterns, guards, receive selection, and
+   obligation/provenance helpers stay atomic or helper-owned in v1 rather than being micro-stepped here;
+6. helper-owned concurrency boundaries (historical): prior `Par` semantics were interleaving-based at
+   the semantic level with helper-backed terminal aggregation; this section documents historical
+   constraints for that feature, which is no longer part of the active language contract.
 
 `SPEC-025` may restate, organize, or clarify these decisions, but it must not weaken, erase, or
 silently replace them.
@@ -111,16 +112,12 @@ compatibility constraints:
    `Return(...)` / `Reject(...)` outcomes already owned by SPEC-004, including the terminal role of
    `Ω`, `π`, trace, and effect summary projection;
 2. helper-boundary ownership: helper-backed contracts such as
-   `select_receive_outcome(...)` and `combine_parallel_outcomes(...)` remain owned helper
-   boundaries rather than being flattened into accidental machine internals or presentation-order
-   artifacts;
+   `select_receive_outcome(...)` remain owned helper boundaries rather than being flattened into
+   accidental machine internals or presentation-order artifacts;
 3. receive blocking/fallthrough semantics: receive-arm selection, fallback, non-blocking
    fallthrough, timeout behavior, and blocking waits must remain compatible with the receive helper
    laws and failure ownership already fixed by SPEC-004;
-4. `Par` aggregation and determinism boundaries: `Par` must preserve interleaving-compatible branch
-   progress together with helper-backed concurrent aggregation, and must not impose sequential
-   short-circuiting that contradicts the existing SPEC-004 concurrent combination contract;
-5. spawned-child completion/control ownership boundaries: control authority, terminal completion
+4. spawned-child completion/control ownership boundaries: control authority, terminal completion
    sealing, and retained completion observation remain owned by the existing SPEC-004 runtime/
    supervisor contract, not by new surface syntax or new small-step workflow forms introduced here.
 
@@ -686,7 +683,9 @@ fallback/fallthrough classification, receive-owned rejection, and blocked waitin
   fallback/fallthrough laws, and the distinction between blocked waiting and rejection. It may update
   only the deltas explicitly owned by receive selection (`ΔΓ`, `ΔΩ`, `Δπ`, `ΔT`, `δε`).
 
-### 6.6 Parallel Branch Progress and Terminal Aggregation Ownership
+### 6.6 Parallel Branch Progress and Terminal Aggregation Ownership (Historical)
+
+> **Note**: This section documents the prior `Par` workflow form which is no longer part of the active Ash language contract. The content is preserved for historical reference.
 
 This family covers the already-frozen helper-backed `Par` boundary, especially
 `combine_parallel_outcomes(...)` together with the branch-state packaging used by `ParState(bs)`.

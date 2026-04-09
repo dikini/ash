@@ -156,13 +156,14 @@ mod tests {
     #[test]
     fn test_parse_valid_workflow_complex() {
         let engine = Engine::new().build().unwrap();
+        // Uses explicit provider:action syntax to avoid needing capability resolution context
         let result = engine.parse(
             r#"
             workflow complex {
                 let x = 1;
                 let y = 2;
                 if x < y then {
-                    act print("x is smaller");
+                    act stdio:print("x is smaller");
                     done
                 } else done
             }
@@ -294,12 +295,13 @@ mod tests {
         let engine = Engine::new().build().unwrap();
 
         let mut temp_file = tempfile::NamedTempFile::with_suffix(".ash").unwrap();
+        // Uses explicit provider:action syntax to avoid needing capability resolution context
         writeln!(
             temp_file,
             r"
             workflow test {{
                 let x = 42;
-                act print(x);
+                act stdio:print(x);
                 done
             }}
         "

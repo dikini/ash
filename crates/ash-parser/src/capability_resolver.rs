@@ -43,49 +43,6 @@ impl CapabilityResolver {
         }
     }
 
-    /// Create a resolver with built-in mappings for common capabilities.
-    pub fn with_builtin_mappings() -> Self {
-        let mut resolver = Self::new();
-
-        // Register built-in io capabilities (both symbolic and qualified forms)
-        resolver.register("fs_read", "io", "fs_read");
-        resolver.register("io::fs_read", "io", "fs_read");
-        resolver.register("fs_write", "io", "fs_write");
-        resolver.register("io::fs_write", "io", "fs_write");
-        resolver.register("read_file", "io", "read_file");
-        resolver.register("io::read_file", "io", "read_file");
-        resolver.register("write_file", "io", "write_file");
-        resolver.register("io::write_file", "io", "write_file");
-
-        // Register built-in stdio capabilities
-        resolver.register("print", "stdio", "print");
-        resolver.register("stdio::print", "stdio", "print");
-        resolver.register("println", "stdio", "println");
-        resolver.register("stdio::println", "stdio", "println");
-        resolver.register("read_line", "stdio", "read_line");
-        resolver.register("stdio::read_line", "stdio", "read_line");
-        resolver.register("prompt", "stdio", "prompt");
-        resolver.register("stdio::prompt", "stdio", "prompt");
-
-        // Register built-in http capabilities
-        resolver.register("http_get", "http", "get");
-        resolver.register("http::get", "http", "get");
-        resolver.register("http_post", "http", "post");
-        resolver.register("http::post", "http", "post");
-        resolver.register("http_put", "http", "put");
-        resolver.register("http::put", "http", "put");
-        resolver.register("http_delete", "http", "delete");
-        resolver.register("http::delete", "http", "delete");
-
-        // Register built-in env capabilities
-        resolver.register("get_env", "env", "get_env");
-        resolver.register("env::get_env", "env", "get_env");
-        resolver.register("set_env", "env", "set_env");
-        resolver.register("env::set_env", "env", "set_env");
-
-        resolver
-    }
-
     /// Register a capability mapping.
     ///
     /// # Arguments
@@ -134,18 +91,5 @@ mod tests {
         // Unregistered capabilities return None - no fallback
         assert_eq!(resolver.resolve("unknown_cap"), None);
         assert_eq!(resolver.resolve("io_fs_read"), None);
-    }
-
-    #[test]
-    fn test_builtin_mappings() {
-        let resolver = CapabilityResolver::with_builtin_mappings();
-
-        // Built-in mappings should resolve
-        assert!(resolver.resolve("fs_read").is_some());
-        assert!(resolver.resolve("print").is_some());
-        assert!(resolver.resolve("http_get").is_some());
-
-        // Unknown capabilities still return None
-        assert_eq!(resolver.resolve("unknown_cap"), None);
     }
 }

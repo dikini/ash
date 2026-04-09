@@ -16,11 +16,89 @@ use ash_core::{
 #[cfg(test)]
 use ash_core::RoleObligationRef as CoreRoleObligationRef;
 
+use crate::capability_export::{CapabilityResolutionContext, ModuleId};
 use crate::surface::{
     BinaryOp, CapabilityDef, CheckTarget, EffectType, Expr, Guard, Literal, ObligationRef, Pattern,
     PolicyExpr, Predicate, StreamPattern, Type, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
     YieldArm,
 };
+
+/// Context for lowering workflows with capability resolution.
+///
+/// This carries the module-owned capability resolution context that maps
+/// symbolic capability names to (provider, action) pairs.
+#[derive(Debug, Clone, Default)]
+pub struct LoweringContext {
+    /// Capability resolution context from module/import pipeline.
+    pub capability_context: Option<CapabilityResolutionContext>,
+    /// Current module ID for module-scoped capability resolution.
+    pub current_module: Option<ModuleId>,
+}
+
+impl LoweringContext {
+    /// Create a new lowering context without capability resolution.
+    pub fn new() -> Self {
+        Self {
+            capability_context: None,
+            current_module: None,
+        }
+    }
+
+    /// Create a new lowering context with capability resolution.
+    pub fn with_capability_context(capability_context: CapabilityResolutionContext) -> Self {
+        Self {
+            capability_context: Some(capability_context),
+            current_module: None,
+        }
+    }
+
+    /// Create a new lowering context with capability resolution for a specific module.
+    pub fn with_capability_context_for_module(
+        capability_context: CapabilityResolutionContext,
+        module_id: ModuleId,
+    ) -> Self {
+        Self {
+            capability_context: Some(capability_context),
+            current_module: Some(module_id),
+        }
+    }
+
+    /// Check if capability resolution is available.
+    pub fn has_capability_context(&self) -> bool {
+        self.capability_context.is_some()
+    }
+
+    /// Resolve a symbolic capability name to (provider, action).
+    ///
+    /// Returns None if:
+    /// - No capability context is available
+    /// - No current module is set
+    /// - The name is not found in the resolution context
+    pub fn resolve_capability(&self, name: &str) -> Option<(String, String)> {
+        let context = self.capability_context.as_ref()?;
+        let module_id = self.current_module?;
+        context.resolve_unqualified(module_id, name)
+    }
+
+    /// Resolve a module-qualified capability name to (provider, action).
+    ///
+    /// This is used for qualified capability calls like `module::capability()`.
+    /// It uses the dedicated qualified resolution API instead of building a
+    /// combined string for unqualified lookup.
+    ///
+    /// Returns None if:
+    /// - No capability context is available
+    /// - The module name is not registered
+    /// - The capability is not found in the target module
+    pub fn resolve_qualified(
+        &self,
+        module_name: &str,
+        capability_name: &str,
+    ) -> Option<(String, String)> {
+        let context = self.capability_context.as_ref()?;
+        context.resolve_qualified_to_strings(module_name, capability_name)
+    }
+}
 
 #[cfg(test)]
 use crate::surface::{Definition, RoleDef};
@@ -82,10 +160,18 @@ impl std::error::Error for RoleLoweringError {}
 
 /// Lower a workflow definition to core IR.
 pub fn lower_workflow(def: &WorkflowDef) -> Result<CoreWorkflow, LoweringError> {
+    lower_workflow_with_context(def, &LoweringContext::new())
+}
+
+/// Lower a workflow definition to core IR with capability resolution context.
+pub fn lower_workflow_with_context(
+    def: &WorkflowDef,
+    ctx: &LoweringContext,
+) -> Result<CoreWorkflow, LoweringError> {
     // Create a provenance for the workflow
     let provenance = Provenance::new();
 
-    lower_workflow_body(&def.body, &provenance)
+    lower_workflow_body(&def.body, &provenance, ctx)
 }
 
 /// Result of lowering a workflow definition with optional implicit role.
@@ -324,6 +410,7 @@ fn lower_constraint(
 fn lower_workflow_body(
     workflow: &SurfaceWorkflow,
     provenance: &Provenance,
+    ctx: &LoweringContext,
 ) -> Result<CoreWorkflow, LoweringError> {
     match workflow {
         SurfaceWorkflow::Observe {
@@ -340,7 +427,7 @@ fn lower_workflow_body(
 
             let cont = continuation
                 .as_ref()
-                .map(|c| lower_workflow_body(c, provenance))
+                .map(|c| lower_workflow_body(c, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
@@ -363,7 +450,7 @@ fn lower_workflow_body(
         } => {
             let cont = continuation
                 .as_ref()
-                .map(|c| lower_workflow_body(c, provenance))
+                .map(|c| lower_workflow_body(c, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
@@ -381,7 +468,7 @@ fn lower_workflow_body(
         } => {
             let cont = continuation
                 .as_ref()
-                .map(|c| lower_workflow_body(c, provenance))
+                .map(|c| lower_workflow_body(c, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
@@ -430,7 +517,7 @@ fn lower_workflow_body(
                     .as_ref()
                     .expect("canonical decide lowering requires an explicit named policy")
                     .to_string(),
-                continuation: Box::new(lower_workflow_body(then_branch, provenance)?),
+                continuation: Box::new(lower_workflow_body(then_branch, provenance, ctx)?),
             })
         }
 
@@ -441,7 +528,7 @@ fn lower_workflow_body(
         } => {
             let cont = continuation
                 .as_ref()
-                .map(|c| lower_workflow_body(c, provenance))
+                .map(|c| lower_workflow_body(c, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
@@ -457,16 +544,14 @@ fn lower_workflow_body(
         }),
 
         SurfaceWorkflow::Act { action, guard, .. } => {
-            // Use capability resolver to map symbolic/qualified names to (provider, action) pairs
-            // The resolver should be passed in from the module system; for now we use built-in
-            // mappings as a bridge until full module-system integration is complete.
-            let resolver = crate::capability_resolver::CapabilityResolver::with_builtin_mappings();
-
+            // Resolve symbolic/qualified names to (provider, action) pairs using the
+            // module-owned capability resolution context. Explicit provider:action
+            // calls bypass resolution and use the specified target directly.
             let (provider_name, action_name) = match &action.target {
                 crate::surface::OperationalTarget::Symbolic { capability_name } => {
-                    // Symbolic capability call - MUST resolve through explicit mapping
-                    // Per Phase 70 design: no fallback, no default provider
-                    match resolver.resolve(capability_name.as_ref()) {
+                    // Symbolic capability call - resolve through module-owned context
+                    // Per Phase 71: use passed-in context, not built-in mappings
+                    match ctx.resolve_capability(capability_name.as_ref()) {
                         Some((provider, action)) => (provider, action),
                         None => {
                             return Err(LoweringError::UnresolvedCapability {
@@ -480,11 +565,13 @@ fn lower_workflow_body(
                     capability_name,
                 } => {
                     // Module-qualified symbolic call: module::capability
-                    // MUST resolve through explicit resolver metadata
-                    let qualified_name = format!("{}::{}", module, capability_name);
-                    match resolver.resolve(&qualified_name) {
+                    // Use the dedicated qualified resolution API (Phase 72 fix)
+                    // This properly resolves through the target module's exports
+                    // rather than building a string for unqualified lookup.
+                    match ctx.resolve_qualified(module.as_ref(), capability_name.as_ref()) {
                         Some((provider, action)) => (provider, action),
                         None => {
+                            let qualified_name = format!("{}::{}", module, capability_name);
                             return Err(LoweringError::UnresolvedCapability {
                                 name: qualified_name,
                             });
@@ -492,7 +579,7 @@ fn lower_workflow_body(
                     }
                 }
                 crate::surface::OperationalTarget::Explicit { provider, action } => {
-                    // Explicit provider:action call - use as-is
+                    // Explicit provider:action call - use as-is, bypass resolution
                     (provider.to_string(), action.to_string())
                 }
             };
@@ -523,7 +610,7 @@ fn lower_workflow_body(
         } => {
             let cont = continuation
                 .as_ref()
-                .map(|c| lower_workflow_body(c, provenance))
+                .map(|c| lower_workflow_body(c, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
@@ -546,7 +633,7 @@ fn lower_workflow_body(
         } => {
             let cont = continuation
                 .as_ref()
-                .map(|c| lower_workflow_body(c, provenance))
+                .map(|c| lower_workflow_body(c, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
@@ -569,7 +656,7 @@ fn lower_workflow_body(
             mode: lower_receive_mode(mode),
             arms: arms
                 .iter()
-                .map(|arm| lower_receive_arm(arm, provenance))
+                .map(|arm| lower_receive_arm(arm, provenance, ctx))
                 .collect::<Result<Vec<_>, _>>()?,
             control: *is_control,
         }),
@@ -582,7 +669,7 @@ fn lower_workflow_body(
         } => {
             let cont = continuation
                 .as_ref()
-                .map(|c| lower_workflow_body(c, provenance))
+                .map(|c| lower_workflow_body(c, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
@@ -601,10 +688,10 @@ fn lower_workflow_body(
         } => {
             let else_wf = else_branch
                 .as_ref()
-                .map(|e| lower_workflow_body(e, provenance))
+                .map(|e| lower_workflow_body(e, provenance, ctx))
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
-            let then_wf = lower_workflow_body(then_branch, provenance)?;
+            let then_wf = lower_workflow_body(then_branch, provenance, ctx)?;
 
             Ok(CoreWorkflow::If {
                 condition: lower_expr(condition)?,
@@ -621,7 +708,7 @@ fn lower_workflow_body(
         } => Ok(CoreWorkflow::ForEach {
             pattern: lower_pattern(pattern)?,
             collection: lower_expr(collection)?,
-            body: Box::new(lower_workflow_body(body, provenance)?),
+            body: Box::new(lower_workflow_body(body, provenance, ctx)?),
         }),
 
         SurfaceWorkflow::With {
@@ -632,23 +719,23 @@ fn lower_workflow_body(
                 effect: Effect::Epistemic,
                 constraints: vec![],
             },
-            workflow: Box::new(lower_workflow_body(body, provenance)?),
+            workflow: Box::new(lower_workflow_body(body, provenance, ctx)?),
         }),
 
         SurfaceWorkflow::Maybe {
             primary, fallback, ..
         } => Ok(CoreWorkflow::Maybe {
-            primary: Box::new(lower_workflow_body(primary, provenance)?),
-            fallback: Box::new(lower_workflow_body(fallback, provenance)?),
+            primary: Box::new(lower_workflow_body(primary, provenance, ctx)?),
+            fallback: Box::new(lower_workflow_body(fallback, provenance, ctx)?),
         }),
 
         SurfaceWorkflow::Must { body, .. } => Ok(CoreWorkflow::Must {
-            workflow: Box::new(lower_workflow_body(body, provenance)?),
+            workflow: Box::new(lower_workflow_body(body, provenance, ctx)?),
         }),
 
         SurfaceWorkflow::Seq { first, second, .. } => Ok(CoreWorkflow::Seq {
-            first: Box::new(lower_workflow_body(first, provenance)?),
-            second: Box::new(lower_workflow_body(second, provenance)?),
+            first: Box::new(lower_workflow_body(first, provenance, ctx)?),
+            second: Box::new(lower_workflow_body(second, provenance, ctx)?),
         }),
 
         SurfaceWorkflow::Done { .. } => Ok(CoreWorkflow::Done),
@@ -673,7 +760,7 @@ fn lower_workflow_body(
             let expected_response_type = lower_type_to_type_expr(resume_type);
 
             // Lower the yield arms into a continuation workflow
-            let continuation = Box::new(lower_yield_arms(resume_var, arms, provenance)?);
+            let continuation = Box::new(lower_yield_arms(resume_var, arms, provenance, ctx)?);
 
             // Convert surface span to core span
             let core_span = ash_core::Span {
@@ -732,6 +819,7 @@ fn lower_yield_arms(
     resume_var: &str,
     arms: &[YieldArm],
     provenance: &Provenance,
+    ctx: &LoweringContext,
 ) -> Result<CoreWorkflow, LoweringError> {
     if arms.is_empty() {
         return Ok(CoreWorkflow::Done);
@@ -748,7 +836,7 @@ fn lower_yield_arms(
         Ok(CoreWorkflow::Let {
             pattern: lower_pattern(&arm.pattern)?,
             expr: CoreExpr::Variable(resume_var.to_string()),
-            continuation: Box::new(lower_workflow_body(&arm.body, provenance)?),
+            continuation: Box::new(lower_workflow_body(&arm.body, provenance, ctx)?),
         })
     } else {
         // Multiple arms: create a cascade of If expressions
@@ -756,7 +844,7 @@ fn lower_yield_arms(
         // and subsequent arms as fallbacks
         let first_arm = &arms[0];
         let _rest_continuation = if arms.len() > 1 {
-            lower_yield_arms(resume_var, &arms[1..], provenance)?
+            lower_yield_arms(resume_var, &arms[1..], provenance, ctx)?
         } else {
             CoreWorkflow::Done
         };
@@ -764,7 +852,7 @@ fn lower_yield_arms(
         Ok(CoreWorkflow::Let {
             pattern: lower_pattern(&first_arm.pattern)?,
             expr: CoreExpr::Variable(resume_var.to_string()),
-            continuation: Box::new(lower_workflow_body(&first_arm.body, provenance)?),
+            continuation: Box::new(lower_workflow_body(&first_arm.body, provenance, ctx)?),
         })
     }
 }
@@ -891,11 +979,12 @@ fn lower_receive_mode(mode: &crate::surface::ReceiveMode) -> ash_core::ReceiveMo
 fn lower_receive_arm(
     arm: &crate::surface::ReceiveArm,
     provenance: &Provenance,
+    ctx: &LoweringContext,
 ) -> Result<CoreReceiveArm, LoweringError> {
     Ok(CoreReceiveArm {
         pattern: lower_receive_pattern(&arm.pattern)?,
         guard: arm.guard.as_ref().map(lower_expr).transpose()?,
-        body: lower_workflow_body(&arm.body, provenance)?,
+        body: lower_workflow_body(&arm.body, provenance, ctx)?,
     })
 }
 
@@ -1120,7 +1209,8 @@ mod tests {
     #[test]
     fn test_lower_done() {
         let surface = SurfaceWorkflow::Done { span: dummy_span() };
-        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
+        let core =
+            lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Done));
     }
 
@@ -1132,7 +1222,8 @@ mod tests {
             continuation: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
+        let core =
+            lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Let { .. }));
     }
 
@@ -1283,6 +1374,8 @@ mod tests {
                 params: vec![],
                 return_type: None,
                 constraints: vec![],
+                target_provider: None,
+                target_action: None,
                 span: dummy_span(),
             }),
             crate::surface::Definition::Capability(crate::surface::CapabilityDef {
@@ -1292,6 +1385,8 @@ mod tests {
                 params: vec![],
                 return_type: None,
                 constraints: vec![],
+                target_provider: None,
+                target_action: None,
                 span: dummy_span(),
             }),
         ];
@@ -1328,6 +1423,8 @@ mod tests {
                     params: vec![],
                     return_type: None,
                     constraints: vec![],
+                    target_provider: None,
+                    target_action: None,
                     span: dummy_span(),
                 }),
                 crate::surface::Definition::Role(RoleDef {
@@ -1373,6 +1470,8 @@ mod tests {
                             args: vec![],
                         },
                     }],
+                    target_provider: None,
+                    target_action: None,
                     span: dummy_span(),
                 }),
                 crate::surface::Definition::Role(RoleDef {
@@ -1461,7 +1560,8 @@ mod tests {
             else_branch: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
+        let core =
+            lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::If { .. }));
     }
 
@@ -1472,7 +1572,8 @@ mod tests {
             second: Box::new(SurfaceWorkflow::Done { span: dummy_span() }),
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
+        let core =
+            lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Seq { .. }));
     }
 
@@ -1484,7 +1585,8 @@ mod tests {
             continuation: None,
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
+        let core =
+            lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Observe { .. }));
     }
 
@@ -1496,7 +1598,8 @@ mod tests {
             continuation: None,
             span: dummy_span(),
         };
-        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
+        let core =
+            lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Orient { .. }));
     }
 
@@ -1530,5 +1633,168 @@ mod tests {
             lower_effect_type(EffectType::External),
             Effect::Operational
         ));
+    }
+
+    // =========================================================================
+    // Module-Owned Capability Resolution Tests (TASK-475)
+    // =========================================================================
+
+    #[test]
+    fn test_lower_act_with_explicit_target_bypasses_resolution() {
+        // Explicit provider:action calls should bypass capability resolution
+        let surface = SurfaceWorkflow::Act {
+            action: crate::surface::ActionRef {
+                target: crate::surface::OperationalTarget::Explicit {
+                    provider: "io".into(),
+                    action: "fs_read".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: dummy_span(),
+        };
+
+        // Should work even without capability context
+        let ctx = LoweringContext::new();
+        let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
+
+        match core {
+            CoreWorkflow::Act {
+                provider_name,
+                action_name,
+                ..
+            } => {
+                assert_eq!(provider_name, "io");
+                assert_eq!(action_name, "fs_read");
+            }
+            _ => panic!("expected Act workflow, got {:?}", core),
+        }
+    }
+
+    #[test]
+    fn test_lower_act_with_symbolic_target_requires_context() {
+        // Symbolic capability calls require resolution context
+        let surface = SurfaceWorkflow::Act {
+            action: crate::surface::ActionRef {
+                target: crate::surface::OperationalTarget::Symbolic {
+                    capability_name: "fs_read".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: dummy_span(),
+        };
+
+        // Without capability context, should fail to resolve
+        let ctx = LoweringContext::new();
+        let result = lower_workflow_body(&surface, &Provenance::new(), &ctx);
+        assert!(
+            matches!(result, Err(LoweringError::UnresolvedCapability { name }) if name == "fs_read")
+        );
+    }
+
+    #[test]
+    fn test_lower_act_with_capability_context_resolves_symbolic() {
+        // Symbolic capability calls resolve when context has the mapping
+        use crate::capability_export::{
+            CapabilityEffect, CapabilityExport, CapabilityResolutionContext,
+        };
+        use ash_core::module_graph::ModuleId;
+
+        let surface = SurfaceWorkflow::Act {
+            action: crate::surface::ActionRef {
+                target: crate::surface::OperationalTarget::Symbolic {
+                    capability_name: "fs_read".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: dummy_span(),
+        };
+
+        // Build a capability resolution context with the mapping
+        let mut cap_context = CapabilityResolutionContext::new();
+        let export = CapabilityExport {
+            visible_name: "fs_read".into(),
+            declaring_module: ModuleId(0),
+            target_provider: "io".into(),
+            target_action: "fs_read".into(),
+            visibility: crate::surface::Visibility::Public,
+            effect: CapabilityEffect::Act,
+        };
+        cap_context.register(&export);
+
+        let ctx = LoweringContext::with_capability_context_for_module(cap_context, ModuleId(0));
+        let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
+
+        match core {
+            CoreWorkflow::Act {
+                provider_name,
+                action_name,
+                ..
+            } => {
+                assert_eq!(provider_name, "io");
+                assert_eq!(action_name, "fs_read");
+            }
+            _ => panic!("expected Act workflow, got {:?}", core),
+        }
+    }
+
+    #[test]
+    fn test_lower_act_with_qualified_target_uses_dedicated_api() {
+        // Phase 72: Qualified capability calls should use the dedicated
+        // qualified resolution API, not unqualified lookup with a combined string.
+        use crate::capability_export::{
+            CapabilityEffect, CapabilityExport, CapabilityResolutionContext,
+        };
+        use ash_core::module_graph::ModuleId;
+
+        let surface = SurfaceWorkflow::Act {
+            action: crate::surface::ActionRef {
+                target: crate::surface::OperationalTarget::Qualified {
+                    module: "fs".into(),
+                    capability_name: "read".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: dummy_span(),
+        };
+
+        // Build a capability resolution context with module name mappings
+        let mut cap_context = CapabilityResolutionContext::new();
+        let fs_module = ModuleId(1);
+
+        // Register the module name for qualified lookup
+        cap_context.register_module_name("fs", fs_module);
+
+        // Register the capability in the fs module
+        let export = CapabilityExport {
+            visible_name: "read".into(),
+            declaring_module: fs_module,
+            target_provider: "io".into(),
+            target_action: "fs_read".into(),
+            visibility: crate::surface::Visibility::Public,
+            effect: CapabilityEffect::Act,
+        };
+        cap_context.register(&export);
+
+        // Create lowering context - current module doesn't matter for qualified lookup
+        let ctx = LoweringContext::with_capability_context_for_module(cap_context, ModuleId(0));
+        let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
+
+        match core {
+            CoreWorkflow::Act {
+                provider_name,
+                action_name,
+                ..
+            } => {
+                // Should resolve to the target from the fs module, not try
+                // to look up "fs::read" as a combined string
+                assert_eq!(provider_name, "io");
+                assert_eq!(action_name, "fs_read");
+            }
+            _ => panic!("expected Act workflow, got {:?}", core),
+        }
     }
 }

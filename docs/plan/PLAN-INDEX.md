@@ -434,7 +434,7 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 270 complete / 270 tracked tasks
+**Overall Progress**: 269 complete / 284 tracked tasks
 **Remaining Tasks**:
 
 - 1 deferred: `TASK-063` (dynamic policy registration)
@@ -2068,12 +2068,12 @@ interpreter, engine, and specs around one canonical dispatch model.
 **Priority:** High
 **Status:** 📝 In Progress (Bridge Implementation)
 
-|| Task | Description | Spec | Est. Hours | Status |
+| Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-463](tasks/TASK-463-spec-capability-call-dispatch-contract.md) | Freeze the cross-spec contract for split provider/action ACT dispatch and operational call sugar | DESIGN-016, SPEC-001/002/003/004/010/017/025 | 4-6 | ✅ Complete |
 | [TASK-464](tasks/TASK-464-surface-operational-call-sugar.md) | Add parser and surface-AST support for act-less operational calls and explicit `provider:action(...)` | DESIGN-016, SPEC-002 | 4-6 | ✅ Complete |
 | [TASK-465](tasks/TASK-465-core-act-provider-action-shape.md) | Split core `Workflow::Act` and lowering into explicit provider/action fields | DESIGN-016, SPEC-001 | 4-6 | ✅ Complete |
-| [TASK-466](tasks/TASK-466-resolver-capability-target-pairs.md) | Resolve symbolic operational capability names to `(provider, action)` pairs | DESIGN-016, SPEC-003, SPEC-017 | 5-8 | ⚠️ Partial (bridge implementation) |
+| [TASK-466](tasks/TASK-466-resolver-capability-target-pairs.md) | Resolve symbolic operational capability names to `(provider, action)` pairs | DESIGN-016, SPEC-003, SPEC-017 | 5-8 | ✅ Complete (superseded by Phase 71) |
 | [TASK-467](tasks/TASK-467-provider-local-execute-dispatch.md) | Refactor runtime/provider execution to explicit provider lookup plus provider-local action dispatch | DESIGN-016, SPEC-004, SPEC-010 | 5-8 | ✅ Complete |
 | [TASK-468](tasks/TASK-468-engine-provider-split-dispatch.md) | Migrate engine providers and engine wiring to the split dispatch contract | DESIGN-016, SPEC-010, SPEC-017 | 4-7 | ✅ Complete |
 | [TASK-469](tasks/TASK-469-capability-call-docs-and-examples.md) | Update docs, examples, and tutorials for split dispatch and operational call sugar | DESIGN-016, SPEC-002, SPEC-017 | 3-5 | ✅ Complete |
@@ -2083,3 +2083,51 @@ interpreter, engine, and specs around one canonical dispatch model.
 supported in the surface language, and runtime dispatch uses `lookup(provider) -> execute(action_name, args)`.
 Symbolic capability names are supported via a bridge resolver with built-in mappings; full module-system
 integration (where capability declarations automatically register with the resolver) is future work.
+
+## Phase 71: Module-Owned Capability Resolution
+
+Replace the Phase 70 bridge resolver with module-system-owned symbolic capability resolution so
+capability declarations, imports, and re-exports become the source of truth for `(provider, action)`
+targets used by lowering and compile-time checking.
+
+**Plan Reference:** [PLAN-017: Module-Owned Capability Resolution](PLAN-017-MODULE-OWNED-CAPABILITY-RESOLUTION.md)
+**Priority:** High
+**Status:** ✅ Complete (delivered via Phase 72 closure)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-471](tasks/TASK-471-spec-module-owned-capability-resolution.md) | Freeze the spec contract for module-owned symbolic capability resolution | DESIGN-017, SPEC-002/003/009/012/017 | 3-5 | ✅ Complete |
+| [TASK-472](tasks/TASK-472-capability-symbol-export-metadata.md) | Add module/export metadata for capability symbols and canonical target pairs | DESIGN-017, SPEC-009, SPEC-017 | 4-7 | ✅ Complete |
+| [TASK-473](tasks/TASK-473-imported-capability-symbol-bindings.md) | Resolve imported, aliased, and re-exported capability symbols to canonical target pairs | DESIGN-017, SPEC-009, SPEC-012, SPEC-017 | 4-7 | ✅ Complete |
+| [TASK-474](tasks/TASK-474-capability-resolution-context-pipeline.md) | Build and pass one capability-resolution context through the compile-time pipeline | DESIGN-017, SPEC-003, SPEC-017 | 4-7 | ✅ Complete |
+| [TASK-475](tasks/TASK-475-lowering-module-owned-capability-resolution.md) | Make lowering consume module-owned capability resolution instead of local bridge mappings | DESIGN-017, SPEC-001, SPEC-002, SPEC-017 | 4-6 | ✅ Complete |
+| [TASK-476](tasks/TASK-476-typecheck-module-owned-capability-resolution.md) | Make type checking and capability checking consume the shared resolver context | DESIGN-017, SPEC-003, SPEC-017 | 4-6 | ✅ Complete |
+| [TASK-477](tasks/TASK-477-stdlib-capability-bootstrap-and-bridge-removal.md) | Bootstrap std capability symbols through the module pipeline and remove the built-in bridge | DESIGN-017, SPEC-009, SPEC-012, SPEC-017 | 5-8 | ✅ Complete |
+| [TASK-478](tasks/TASK-478-module-owned-capability-resolution-docs.md) | Update active docs/examples and remove bridge wording once the implementation is real | DESIGN-017, SPEC-002, SPEC-009, SPEC-012, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-479](tasks/TASK-479-module-owned-capability-resolution-verification.md) | Run final verification for module-owned capability resolution and bridge removal | DESIGN-017, SPEC-002, SPEC-009, SPEC-012, SPEC-017 | 3-5 | ✅ Complete |
+
+**Deliverable:** Symbolic operational capability calls resolve from module/import-owned metadata,
+not parser/typechecker-local built-in mappings, while explicit `provider:action(...)` remains a
+direct surface form and compile-time consumers share one authoritative resolution context.
+
+## Phase 72: Module-Scoped Capability Resolution Closure
+
+Close the remaining Phase 71 architectural gap by making shared symbolic capability resolution
+explicitly module-scoped in both lowering and type checking, and by removing the last fallback
+resolver path from type checking.
+
+**Plan Reference:** [PLAN-018: Module-Scoped Capability Resolution Closure](PLAN-018-MODULE-SCOPED-CAPABILITY-RESOLUTION-CLOSURE.md)
+**Priority:** High
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-480](tasks/TASK-480-module-scoped-resolution-api.md) | Make the shared capability-resolution API explicitly module-scoped | DESIGN-018, SPEC-009, SPEC-012, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-481](tasks/TASK-481-thread-module-id-through-lowering.md) | Thread `ModuleId` through lowering for symbolic capability resolution | DESIGN-018, SPEC-001, SPEC-002, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-482](tasks/TASK-482-thread-module-id-through-typeck.md) | Thread `ModuleId` through type checking for symbolic capability resolution | DESIGN-018, SPEC-003, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-483](tasks/TASK-483-remove-typeck-fallback-resolver.md) | Remove the remaining type-checker fallback symbolic resolver path | DESIGN-018, SPEC-003, SPEC-017 | 2-4 | ✅ Complete |
+| [TASK-484](tasks/TASK-484-phase-71-closeout-docs-and-verification.md) | Close out Phase 71 docs/status and rerun verification after the architectural gap lands | DESIGN-018, SPEC-002, SPEC-009, SPEC-012, SPEC-017 | 2-4 | ✅ Complete |
+
+**Deliverable:** One fully module-scoped symbolic capability resolution contract where lowering and
+type checking share the same `CapabilityResolutionContext` plus explicit `ModuleId`, with no
+module-agnostic lookup helper and no type-checker fallback resolver path.

@@ -240,6 +240,7 @@ mod tests {
     #[test]
     fn test_check_valid_complex_workflow() {
         let engine = Engine::new().build().unwrap();
+        // Uses explicit provider:action syntax to avoid needing capability resolution context
         let workflow = engine
             .parse(
                 r#"
@@ -247,7 +248,7 @@ mod tests {
                 let x = 1;
                 let y = 2;
                 if x < y then {
-                    act print("x is smaller");
+                    act stdio:print("x is smaller");
                     done
                 } else done
             }
@@ -307,10 +308,11 @@ mod tests {
     #[test]
     fn test_parse_then_check_valid_workflow() {
         let engine = Engine::new().build().unwrap();
+        // Uses explicit provider:action syntax to avoid needing capability resolution context
         let source = r#"
             workflow main {
                 let message = "Hello, World!";
-                act print(message);
+                act stdio:print(message);
                 done
             }
         "#;

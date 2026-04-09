@@ -81,23 +81,6 @@ impl CapabilityResolver {
         self.mappings.get(capability_name).cloned()
     }
 
-    /// Create a resolver with built-in mappings for common capabilities.
-    pub fn with_builtin_mappings() -> Self {
-        let mut resolver = Self::new();
-
-        // Register built-in io capabilities (both symbolic and qualified forms)
-        resolver.register("fs_read", "io", "fs_read");
-        resolver.register("io::fs_read", "io", "fs_read");
-        resolver.register("read_file", "io", "read_file");
-        resolver.register("io::read_file", "io", "read_file");
-
-        // Register built-in stdio capabilities
-        resolver.register("print", "stdio", "print");
-        resolver.register("stdio::print", "stdio", "print");
-
-        resolver
-    }
-
     /// Resolve an operational target to a canonical capability target.
     ///
     /// For symbolic targets, looks up the capability name in the mapping.

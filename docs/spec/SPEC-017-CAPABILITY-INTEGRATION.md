@@ -37,19 +37,43 @@ The canonical ACT representation carries:
 Symbolic capability names in surface syntax resolve to `(provider, action)` pairs:
 
 ```ash
-fs_read("file.txt")           -- Simple symbolic: resolves via explicit mapping
-io::fs_read("file.txt")       -- Module-qualified: resolves via explicit mapping  
-fs:read("file.txt")           -- Explicit: (provider: "fs", action: "read")
+fs_read("file.txt")           -- Simple symbolic: resolves from capability declarations
+io::fs_read("file.txt")       -- Module-qualified: resolves through module/import paths
+io:fs_read("file.txt")        -- Explicit: (provider: "io", action: "fs_read")
 ```
 
 The resolver produces a `ResolvedCapabilityTarget { provider, action }` which lowers
 to the canonical `Act { provider_name, action_name, ... }` IR form.
 
-**Implementation Status:** The current implementation uses explicit capability mappings
-registered with a `CapabilityResolver`. Both lowering and type checking use the same
-resolver with built-in mappings for common capabilities. Full module-system integration
-(where capability declarations in source automatically register with the resolver) is
-planned future work.
+**Resolution Sources:**
+
+Symbolic operational capability names resolve from module-owned metadata:
+
+1. **Local capability declarations** - `capability fs_read : act (...)` declares a visible symbol
+2. **Imported capabilities** - `use io::fs_read` brings a symbol into local scope  
+3. **Re-exports** - `pub use io::fs_read` re-exports with optional aliasing
+4. **Module-qualified paths** - `io::fs_read` resolves through the module graph
+
+**Explicit Form:**
+
+Explicit `provider:action(...)` syntax bypasses symbolic resolution and provides the
+target pair directly. This form is useful when:
+- The capability has no symbolic declaration
+- The caller wants to bypass import resolution
+- Calling a provider action directly without capability metadata
+
+**Compile-Time Resolution:**
+
+Symbolic capability names must resolve at compile time. Unresolved symbolic names are
+compile-time errors, not runtime failures. The resolution context is built once from
+the module/import graph and shared across:
+- Lowering (surface → core AST)
+- Type checking (capability witness validation)
+- Capability checking (declaration vs usage alignment)
+
+**Implementation Status:** Phase 70 implemented a bridge resolver with built-in mappings
+as a transitional step. Phase 71 moves to module-owned resolution where capability
+declarations and imports are the authoritative source of symbolic operational metadata.
 
 ## 2. Capability Definitions
 

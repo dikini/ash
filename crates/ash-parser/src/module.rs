@@ -197,6 +197,8 @@ mod tests {
             params: vec![],
             return_type: None,
             constraints: vec![],
+            target_provider: None,
+            target_action: None,
             span: Span::new(10, 30, 1, 1),
         });
 
@@ -246,6 +248,8 @@ mod tests {
             params: vec![],
             return_type: None,
             constraints: vec![],
+            target_provider: None,
+            target_action: None,
             span: Span::new(45, 75, 1, 1),
         });
 
@@ -278,6 +282,8 @@ mod tests {
                     params: vec![],
                     return_type: None,
                     constraints: vec![],
+                    target_provider: None,
+                    target_action: None,
                     span: Span::new(10, 30, 1, 1),
                 }),
                 Definition::Capability(crate::surface::CapabilityDef {
@@ -287,6 +293,8 @@ mod tests {
                     params: vec![],
                     return_type: None,
                     constraints: vec![],
+                    target_provider: None,
+                    target_action: None,
                     span: Span::new(31, 50, 1, 1),
                 }),
                 Definition::Role(crate::surface::RoleDef {

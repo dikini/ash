@@ -186,6 +186,8 @@ fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition
         params,
         return_type,
         constraints,
+        target_provider: None,
+        target_action: None,
         span: crate::input::span_from(&start_pos, &input.state),
     }))
 }

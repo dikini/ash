@@ -17,7 +17,7 @@
 //! assert!(result.is_ok());
 //! ```
 
-use crate::names::CapabilityResolver;
+use ash_parser::capability_export::{CapabilityResolutionContext, ModuleId};
 use ash_parser::surface::{Expr, OperationalTarget, Workflow};
 use thiserror::Error;
 
@@ -81,8 +81,12 @@ pub struct CapabilityChecker {
     sends: Vec<(String, String)>,
     /// Declared actions: (provider, action) pairs
     actions: Vec<(String, String)>,
-    /// Resolver for symbolic/qualified capability names to (provider, action) pairs
-    resolver: CapabilityResolver,
+    /// Optional shared capability resolution context from module/import pipeline.
+    /// This is the authoritative source for capability name resolution.
+    resolution_context: Option<CapabilityResolutionContext>,
+    /// Optional current module ID for module-scoped capability resolution.
+    /// Used with resolution_context to resolve unqualified names within the correct module scope.
+    current_module: Option<ModuleId>,
 }
 
 impl CapabilityChecker {
@@ -102,24 +106,97 @@ impl CapabilityChecker {
             receives: Vec::new(),
             sends: Vec::new(),
             actions: Vec::new(),
-            resolver: CapabilityResolver::with_builtin_mappings(),
+            resolution_context: None,
+            current_module: None,
         }
     }
 
-    /// Registers a capability mapping for symbolic/qualified name resolution.
+    /// Creates a capability checker with the shared module-owned resolution context.
+    ///
+    /// This is the preferred constructor for module-owned capability resolution,
+    /// as it uses the authoritative context from the module/import pipeline.
     ///
     /// # Arguments
-    /// * `capability_name` - The symbolic name (e.g., "fs_read" or "io::fs_read")
-    /// * `provider` - The provider name (e.g., "io")
-    /// * `action` - The action name (e.g., "fs_read")
-    pub fn register_capability_mapping(
-        mut self,
-        capability_name: &str,
-        provider: &str,
-        action: &str,
+    /// * `context` - The capability resolution context from the parser pipeline
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    /// use ash_parser::capability_export::CapabilityResolutionContext;
+    ///
+    /// let context = CapabilityResolutionContext::new();
+    /// let checker = CapabilityChecker::with_resolution_context(context);
+    /// ```
+    pub fn with_resolution_context(context: CapabilityResolutionContext) -> Self {
+        Self {
+            observes: Vec::new(),
+            sets: Vec::new(),
+            receives: Vec::new(),
+            sends: Vec::new(),
+            actions: Vec::new(),
+            resolution_context: Some(context),
+            current_module: None,
+        }
+    }
+
+    /// Creates a capability checker with the shared module-owned resolution context and module ID.
+    ///
+    /// This is the preferred constructor for module-owned capability resolution,
+    /// as it uses the authoritative context from the module/import pipeline with
+    /// proper module scoping for unqualified name resolution.
+    ///
+    /// # Arguments
+    /// * `context` - The capability resolution context from the parser pipeline
+    /// * `module_id` - The ID of the current module for scoping resolution
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_typeck::capability_check::CapabilityChecker;
+    /// use ash_parser::capability_export::{CapabilityResolutionContext, ModuleId};
+    ///
+    /// let context = CapabilityResolutionContext::new();
+    /// let checker = CapabilityChecker::with_resolution_context_for_module(context, ModuleId(1));
+    /// ```
+    pub fn with_resolution_context_for_module(
+        context: CapabilityResolutionContext,
+        module_id: ModuleId,
     ) -> Self {
-        self.resolver.register(capability_name, provider, action);
-        self
+        Self {
+            observes: Vec::new(),
+            sets: Vec::new(),
+            receives: Vec::new(),
+            sends: Vec::new(),
+            actions: Vec::new(),
+            resolution_context: Some(context),
+            current_module: Some(module_id),
+        }
+    }
+
+    /// Resolve a capability name to (provider, action) using the resolution context.
+    ///
+    /// Requires both resolution_context and current_module to be set.
+    /// Returns None if either is missing or if the name cannot be resolved.
+    fn resolve_capability(&self, name: &str) -> Option<(String, String)> {
+        // Require both resolution_context and current_module for resolution
+        let context = self.resolution_context.as_ref()?;
+        let module_id = self.current_module?;
+        context.resolve_unqualified(module_id, name)
+    }
+
+    /// Resolve a qualified capability name to (provider, action) using the resolution context.
+    ///
+    /// Requires resolution_context to be set.
+    /// Returns None if the context is missing or if the name cannot be resolved.
+    fn resolve_qualified(
+        &self,
+        module_name: &str,
+        capability_name: &str,
+    ) -> Option<(String, String)> {
+        self.resolution_context
+            .as_ref()
+            .and_then(|context| context.resolve_qualified_to_strings(module_name, capability_name))
     }
 
     /// Declares an observe capability.
@@ -301,14 +378,15 @@ impl CapabilityChecker {
         actions: &[(String, String)],
     ) -> CapabilityCheckResult<()> {
         // Create a temporary checker with the provided context
-        // Use builtin mappings to match lowering behavior
+        // Preserves the resolution context and current module if this checker has them
         let temp_checker = Self {
             observes: observes.to_vec(),
             sets: sets.to_vec(),
             receives: receives.to_vec(),
             sends: sends.to_vec(),
             actions: actions.to_vec(),
-            resolver: CapabilityResolver::with_builtin_mappings(),
+            resolution_context: self.resolution_context.clone(),
+            current_module: self.current_module,
         };
         temp_checker.verify_workflow(workflow)
     }
@@ -395,12 +473,12 @@ impl CapabilityChecker {
             // Act - executes an action with potential side effects
             Workflow::Act { action, .. } => {
                 // Resolve symbolic/qualified names to (provider, action) pairs
-                // Per Phase 70: ALL capability targets must resolve through explicit metadata
+                // Per Phase 71: Uses shared resolution context when available
                 let (provider_name, action_name): (String, String) = match &action.target {
                     OperationalTarget::Symbolic { capability_name } => {
-                        // Symbolic names MUST resolve through resolver
-                        match self.resolver.resolve(capability_name.as_ref()) {
-                            Some((provider, action)) => (provider.to_string(), action.to_string()),
+                        // Symbolic names MUST resolve through resolver or shared context
+                        match self.resolve_capability(capability_name.as_ref()) {
+                            Some((provider, action)) => (provider, action),
                             None => {
                                 return Err(CapabilityCheckError::ActionNotDeclared {
                                     action: capability_name.to_string(),
@@ -413,12 +491,11 @@ impl CapabilityChecker {
                         capability_name,
                     } => {
                         // Qualified names (io::fs_read) MUST resolve through resolver
-                        let qualified_name = format!("{}::{}", module, capability_name);
-                        match self.resolver.resolve(&qualified_name) {
-                            Some((provider, action)) => (provider.to_string(), action.to_string()),
+                        match self.resolve_qualified(module.as_ref(), capability_name.as_ref()) {
+                            Some((provider, action)) => (provider, action),
                             None => {
                                 return Err(CapabilityCheckError::ActionNotDeclared {
-                                    action: qualified_name,
+                                    action: format!("{}::{}", module, capability_name),
                                 });
                             }
                         }
@@ -858,9 +935,26 @@ mod tests {
 
     #[test]
     fn test_verify_act_symbolic_resolved() {
-        // Test that symbolic capability calls resolve through the resolver
-        // fs_read should resolve to (io, fs_read) via builtin mappings
-        let checker = CapabilityChecker::new().action("io", "fs_read");
+        // Test that symbolic capability calls resolve through the resolution context
+        // fs_read should resolve to (io, fs_read) via the shared context
+        use ash_parser::capability_export::{CapabilityEffect, CapabilityExport, ModuleId};
+        use ash_parser::surface::{Name, Visibility};
+
+        // Create a resolution context with the capability mapping
+        let mut context = CapabilityResolutionContext::new();
+        let module_id = ModuleId(1);
+        let export = CapabilityExport {
+            visible_name: Name::from("fs_read"),
+            declaring_module: module_id,
+            target_provider: Name::from("io"),
+            target_action: Name::from("fs_read"),
+            visibility: Visibility::Public,
+            effect: CapabilityEffect::Act,
+        };
+        context.register(&export);
+
+        let checker = CapabilityChecker::with_resolution_context_for_module(context, module_id)
+            .action("io", "fs_read");
         let workflow = Workflow::Act {
             action: ActionRef {
                 target: OperationalTarget::Symbolic {
@@ -906,9 +1000,42 @@ mod tests {
 
     #[test]
     fn test_verify_act_qualified_resolved() {
-        // Test that module-qualified capability calls resolve through the resolver
-        // io::fs_read should resolve to (io, fs_read) via builtin mappings
-        let checker = CapabilityChecker::new().action("io", "fs_read");
+        // Test that module-qualified capability calls resolve through the resolution context
+        // io::fs_read should resolve to (io, fs_read) via the shared context
+        use ash_parser::capability_export::{CapabilityEffect, CapabilityExport, ModuleId};
+        use ash_parser::surface::{Name, Visibility};
+
+        // Create a resolution context with the capability mapping
+        let mut context = CapabilityResolutionContext::new();
+        let io_module_id = ModuleId(1);
+        let current_module_id = ModuleId(2);
+
+        // Register module name for qualified resolution (Phase 72)
+        context.register_module_name("io", io_module_id);
+
+        // Register the capability export in the io module
+        let export = CapabilityExport {
+            visible_name: Name::from("fs_read"),
+            declaring_module: io_module_id,
+            target_provider: Name::from("io"),
+            target_action: Name::from("fs_read"),
+            visibility: Visibility::Public,
+            effect: CapabilityEffect::Act,
+        };
+        context.register(&export);
+
+        // Register an import alias in the current module for io::fs_read
+        context.register_import(
+            current_module_id,
+            "io::fs_read",
+            io_module_id,
+            "fs_read",
+            (Name::from("io"), Name::from("fs_read")),
+        );
+
+        let checker =
+            CapabilityChecker::with_resolution_context_for_module(context, current_module_id)
+                .action("io", "fs_read");
         let workflow = Workflow::Act {
             action: ActionRef {
                 target: OperationalTarget::Qualified {

@@ -21,6 +21,8 @@ pub struct Binding {
     pub visibility: Visibility,
     /// The kind of binding (direct, glob, etc.).
     pub kind: BindingKind,
+    /// For operational capabilities: the target (provider, action) pair
+    pub capability_target: Option<(String, String)>,
 }
 
 /// The kind of binding.
@@ -80,6 +82,8 @@ pub struct ImportResolver<'a> {
 struct Export {
     name: String,
     visibility: Visibility,
+    /// For operational capabilities: the target (provider, action) pair
+    capability_target: Option<(String, String)>,
 }
 
 impl Binding {
@@ -95,6 +99,24 @@ impl Binding {
             item_name: item_name.into(),
             visibility,
             kind,
+            capability_target: None,
+        }
+    }
+
+    /// Create a new binding with capability target metadata.
+    pub fn with_capability_target(
+        target_module: ModuleId,
+        item_name: impl Into<String>,
+        visibility: Visibility,
+        kind: BindingKind,
+        capability_target: (String, String),
+    ) -> Self {
+        Self {
+            target_module,
+            item_name: item_name.into(),
+            visibility,
+            kind,
+            capability_target: Some(capability_target),
         }
     }
 }
@@ -135,6 +157,33 @@ impl<'a> ImportResolver<'a> {
                     Export {
                         name,
                         visibility: vis,
+                        capability_target: None,
+                    },
+                )
+            })
+            .collect();
+        self.module_exports.insert(module_id, export_map);
+    }
+
+    /// Add capability exports for a module with target metadata.
+    ///
+    /// This should be called before `resolve_all` to provide the
+    /// exported capability symbols with their (provider, action) targets.
+    pub fn add_capability_exports(
+        &mut self,
+        module_id: ModuleId,
+        exports: Vec<(impl Into<String>, Visibility, String, String)>,
+    ) {
+        let export_map: HashMap<String, Export> = exports
+            .into_iter()
+            .map(|(name, vis, provider, action)| {
+                let name = name.into();
+                (
+                    name.clone(),
+                    Export {
+                        name,
+                        visibility: vis,
+                        capability_target: Some((provider, action)),
                     },
                 )
             })
@@ -270,7 +319,17 @@ impl<'a> ImportResolver<'a> {
             BindingKind::Direct
         };
 
-        let binding = Binding::new(target_module, item_name, export.visibility.clone(), kind);
+        let binding = if let Some((provider, action)) = &export.capability_target {
+            Binding::with_capability_target(
+                target_module,
+                item_name,
+                export.visibility.clone(),
+                kind,
+                (provider.clone(), action.clone()),
+            )
+        } else {
+            Binding::new(target_module, item_name, export.visibility.clone(), kind)
+        };
 
         if bindings.contains_key(&binding_name) {
             return Err(ImportError::ConflictingBinding { name: binding_name });
@@ -308,12 +367,22 @@ impl<'a> ImportResolver<'a> {
                 continue;
             }
 
-            let binding = Binding::new(
-                target_module,
-                name.clone(),
-                export.visibility.clone(),
-                BindingKind::Glob,
-            );
+            let binding = if let Some((provider, action)) = &export.capability_target {
+                Binding::with_capability_target(
+                    target_module,
+                    name.clone(),
+                    export.visibility.clone(),
+                    BindingKind::Glob,
+                    (provider.clone(), action.clone()),
+                )
+            } else {
+                Binding::new(
+                    target_module,
+                    name.clone(),
+                    export.visibility.clone(),
+                    BindingKind::Glob,
+                )
+            };
 
             // Glob imports don't conflict with explicit imports
             // They are shadowed by explicit imports
@@ -377,12 +446,22 @@ impl<'a> ImportResolver<'a> {
                 BindingKind::Direct
             };
 
-            let binding = Binding::new(
-                target_module,
-                item_name.to_string(),
-                export.visibility.clone(),
-                kind,
-            );
+            let binding = if let Some((provider, action)) = &export.capability_target {
+                Binding::with_capability_target(
+                    target_module,
+                    item_name.to_string(),
+                    export.visibility.clone(),
+                    kind,
+                    (provider.clone(), action.clone()),
+                )
+            } else {
+                Binding::new(
+                    target_module,
+                    item_name.to_string(),
+                    export.visibility.clone(),
+                    kind,
+                )
+            };
 
             if bindings.contains_key(&binding_name) {
                 return Err(ImportError::ConflictingBinding { name: binding_name });
@@ -2729,5 +2808,244 @@ mod tests {
         assert!(main_bindings.contains_key("helpers"));
         assert!(main_bindings.contains_key("cfg"));
         assert!(!main_bindings.contains_key("config")); // aliased, not imported under original name
+    }
+
+    // =========================================================================
+    // Capability Symbol Import Tests (TASK-473)
+    // =========================================================================
+
+    #[test]
+    fn test_capability_import_preserves_target_metadata() {
+        // Importing a capability symbol should preserve its (provider, action) target
+        let mut graph = ModuleGraph::new();
+
+        // Create root module (crate)
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        // Create io module as child of root
+        let io_mod = graph.add_node(ModuleNode::new(
+            "io".to_string(),
+            ash_core::module_graph::ModuleSource::File("io.ash".to_string()),
+        ));
+        graph.add_edge(root, io_mod);
+
+        let resolver = ImportResolver::new(&graph);
+        let mut resolver = resolver;
+
+        // Add capability export with target metadata
+        resolver.add_capability_exports(
+            io_mod,
+            vec![(
+                "fs_read",
+                Visibility::Public,
+                "io".to_string(),
+                "fs_read".to_string(),
+            )],
+        );
+
+        // Add use statement importing the capability from crate::io
+        let use_path = UsePath::Simple(simple_path(&["crate", "io", "fs_read"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        // Resolve imports
+        let bindings = resolver.resolve_all().unwrap();
+        let root_bindings = bindings.get(&root).unwrap();
+
+        // Verify binding exists with correct capability target
+        assert!(root_bindings.contains_key("fs_read"));
+        let binding = root_bindings.get("fs_read").unwrap();
+        assert_eq!(
+            binding.capability_target,
+            Some(("io".to_string(), "fs_read".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_capability_import_with_alias() {
+        // Aliased capability imports should preserve target metadata
+        let mut graph = ModuleGraph::new();
+
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        let io_mod = graph.add_node(ModuleNode::new(
+            "io".to_string(),
+            ash_core::module_graph::ModuleSource::File("io.ash".to_string()),
+        ));
+        graph.add_edge(root, io_mod);
+
+        let resolver = ImportResolver::new(&graph);
+        let mut resolver = resolver;
+
+        resolver.add_capability_exports(
+            io_mod,
+            vec![(
+                "fs_read",
+                Visibility::Public,
+                "io".to_string(),
+                "fs_read".to_string(),
+            )],
+        );
+
+        // Import with alias from crate::io
+        let use_stmt = Use {
+            path: UsePath::Simple(simple_path(&["crate", "io", "fs_read"])),
+            alias: Some("read_file".into()),
+            visibility: Visibility::Inherited,
+            span: Span::new(0, 10, 1, 1),
+        };
+        resolver.add_module_uses(root, vec![use_stmt]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        let root_bindings = bindings.get(&root).unwrap();
+
+        // Should be accessible under alias, not original name
+        assert!(!root_bindings.contains_key("fs_read"));
+        assert!(root_bindings.contains_key("read_file"));
+
+        let binding = root_bindings.get("read_file").unwrap();
+        assert_eq!(
+            binding.capability_target,
+            Some(("io".to_string(), "fs_read".to_string()))
+        );
+        assert!(
+            matches!(&binding.kind, BindingKind::Aliased { original } if original == "fs_read")
+        );
+    }
+
+    #[test]
+    fn test_capability_reexport_chain() {
+        // Re-export chains should preserve capability target metadata
+        let mut graph = ModuleGraph::new();
+
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        // fs module defines the capability
+        let fs_mod = graph.add_node(ModuleNode::new(
+            "fs".to_string(),
+            ash_core::module_graph::ModuleSource::File("fs.ash".to_string()),
+        ));
+        graph.add_edge(root, fs_mod);
+
+        // io module re-exports it
+        let io_mod = graph.add_node(ModuleNode::new(
+            "io".to_string(),
+            ash_core::module_graph::ModuleSource::File("io.ash".to_string()),
+        ));
+        graph.add_edge(root, io_mod);
+
+        let resolver = ImportResolver::new(&graph);
+        let mut resolver = resolver;
+
+        // fs module exports read capability
+        resolver.add_capability_exports(
+            fs_mod,
+            vec![(
+                "read",
+                Visibility::Public,
+                "fs".to_string(),
+                "read".to_string(),
+            )],
+        );
+
+        // io module re-exports it as fs_read
+        resolver.add_capability_exports(
+            io_mod,
+            vec![(
+                "fs_read",
+                Visibility::Public,
+                "fs".to_string(),
+                "read".to_string(),
+            )],
+        );
+
+        // root imports from io
+        let use_path = UsePath::Simple(simple_path(&["crate", "io", "fs_read"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        let root_bindings = bindings.get(&root).unwrap();
+
+        // Should resolve to the original fs:read target
+        assert!(root_bindings.contains_key("fs_read"));
+        let binding = root_bindings.get("fs_read").unwrap();
+        assert_eq!(
+            binding.capability_target,
+            Some(("fs".to_string(), "read".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_capability_glob_import() {
+        // Glob imports should include capability symbols with targets
+        let mut graph = ModuleGraph::new();
+
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+
+        let io_mod = graph.add_node(ModuleNode::new(
+            "io".to_string(),
+            ash_core::module_graph::ModuleSource::File("io.ash".to_string()),
+        ));
+        graph.add_edge(root, io_mod);
+
+        let resolver = ImportResolver::new(&graph);
+        let mut resolver = resolver;
+
+        // Add multiple capability exports
+        resolver.add_capability_exports(
+            io_mod,
+            vec![
+                (
+                    "fs_read",
+                    Visibility::Public,
+                    "io".to_string(),
+                    "fs_read".to_string(),
+                ),
+                (
+                    "fs_write",
+                    Visibility::Public,
+                    "io".to_string(),
+                    "fs_write".to_string(),
+                ),
+            ],
+        );
+
+        // Add glob import from crate::io
+        let use_path = UsePath::Glob(simple_path(&["crate", "io"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        let root_bindings = bindings.get(&root).unwrap();
+
+        // Both capabilities should be imported with targets
+        assert!(root_bindings.contains_key("fs_read"));
+        assert!(root_bindings.contains_key("fs_write"));
+
+        let read_binding = root_bindings.get("fs_read").unwrap();
+        assert_eq!(
+            read_binding.capability_target,
+            Some(("io".to_string(), "fs_read".to_string()))
+        );
+
+        let write_binding = root_bindings.get("fs_write").unwrap();
+        assert_eq!(
+            write_binding.capability_target,
+            Some(("io".to_string(), "fs_write".to_string()))
+        );
     }
 }

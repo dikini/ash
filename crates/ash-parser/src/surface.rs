@@ -77,8 +77,27 @@ pub struct CapabilityDef {
     pub return_type: Option<Type>,
     /// Constraints on the capability
     pub constraints: Vec<Constraint>,
+    /// Target provider name for operational capabilities (optional)
+    pub target_provider: Option<Name>,
+    /// Target action name for operational capabilities (optional)
+    pub target_action: Option<Name>,
     /// Source span
     pub span: Span,
+}
+
+impl CapabilityDef {
+    /// Check if this capability has explicit target metadata.
+    pub fn has_target(&self) -> bool {
+        self.target_provider.is_some() && self.target_action.is_some()
+    }
+
+    /// Get the target pair for this capability if defined.
+    pub fn target(&self) -> Option<(Name, Name)> {
+        match (&self.target_provider, &self.target_action) {
+            (Some(provider), Some(action)) => Some((provider.clone(), action.clone())),
+            _ => None,
+        }
+    }
 }
 
 /// A policy definition.
@@ -1401,6 +1420,8 @@ mod tests {
             params: vec![],
             return_type: None,
             constraints: vec![],
+            target_provider: None,
+            target_action: None,
             span: Span::new(0, 20, 1, 1),
         };
         let _def = Definition::Capability(cap_def);
@@ -1465,6 +1486,8 @@ mod tests {
             ],
             return_type: Some(Type::Name("Bool".into())),
             constraints: vec![],
+            target_provider: None,
+            target_action: None,
             span: Span::new(0, 50, 1, 1),
         };
 

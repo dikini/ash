@@ -197,9 +197,60 @@ mod bar;  -- ERROR: circular if bar.ash contains "mod foo;"
 mod foo;  -- creates cycle
 ```
 
-## 7. Visibility Checking
+## 7. Capability Symbol Resolution
 
-### 7.1 Access Rules
+### 7.1 Overview
+
+The module system owns symbolic operational capability resolution. Capability declarations,
+imports, and re-exports determine what symbolic names are visible in each module scope and
+what `(provider, action)` pairs they resolve to.
+
+### 7.2 Resolution Sources
+
+Symbolic capability names resolve from:
+
+1. **Local declarations** - `capability name : act (...)` in the current module
+2. **Imports** - `use path::name` brings a capability symbol into local scope
+3. **Re-exports** - `pub use path::name` re-exports a capability symbol
+4. **Module-qualified paths** - `module::capability` resolves through the module graph
+
+### 7.3 Symbol Metadata
+
+Each visible capability symbol carries:
+
+```
+CapabilitySymbol {
+    visible_name: String,       -- Name as referenced in code
+    declaring_module: ModuleId, -- Module where declared
+    provider: String,           -- Target provider name
+    action: String,             -- Target action name
+    visibility: Visibility,     -- Export visibility
+}
+```
+
+### 7.4 Resolution Context
+
+The module resolution phase builds a `CapabilityResolutionContext` per module:
+
+- Maps symbolic names → `(provider, action)` pairs
+- Resolves module-qualified names through the module graph
+- Enforces visibility constraints
+
+This context is passed to lowering and type checking instead of being reconstructed.
+
+### 7.5 Explicit Form Bypass
+
+Explicit `provider:action(...)` syntax bypasses symbolic resolution entirely:
+
+```ash
+io:fs_read("file.txt")  -- Direct, no symbolic lookup
+```
+
+This form is always available regardless of capability declarations.
+
+## 8. Visibility Checking
+
+### 8.1 Access Rules
 
 An item is accessible from module M if:
 
@@ -209,7 +260,7 @@ An item is accessible from module M if:
 4. The item is `pub(super)` and M is the parent or descendant
 5. The item is `pub(in path)` and M is in the specified path
 
-### 7.2 Type Checking Phase
+### 8.2 Type Checking Phase
 
 Visibility checking occurs during type checking (ash-typeck):
 
@@ -217,9 +268,9 @@ Visibility checking occurs during type checking (ash-typeck):
 - Before type inference
 - Reports visibility violations as errors
 
-## 8. Grammar Extension
+## 10. Grammar Extension
 
-### 8.1 Surface Grammar
+### 10.1 Surface Grammar
 
 ```
 program         ::= module_item*
@@ -237,16 +288,16 @@ visibility      ::= "pub" ( "(" visibility_rest ")" )?
 visibility_rest ::= "crate" | "super" | "self" | "in" module_path
 ```
 
-## 9. Implementation Notes
+## 11. Implementation Notes
 
-### 9.1 Module Resolution
+### 11.1 Module Resolution
 
 Module resolution happens in two phases:
 
 1. **Discovery**: Parse root, find `mod` declarations, recursively discover files
 2. **Loading**: Parse discovered files, build module graph
 
-### 9.2 Error Handling
+### 11.2 Error Handling
 
 Common errors:
 
@@ -260,11 +311,11 @@ specific entry points. When an inline-module parser does not yet implement a can
 `workflow_def` or `datatype_def`, it must reject that item explicitly rather than silently skipping
 it and continuing as though the module parsed successfully.
 
-### 9.3 Crate Root Metadata
+### 11.3 Crate Root Metadata
 
 Crate root files may declare crate identity and external dependencies at the beginning of the file:
 
-#### 9.3.1 Crate Name Declaration
+#### 11.3.1 Crate Name Declaration
 
 ```
 crate <name>;
@@ -272,7 +323,7 @@ crate <name>;
 
 Declares the name of the current crate, enabling cross-crate references and dependency management.
 
-#### 9.3.2 Dependency Declaration
+#### 11.3.2 Dependency Declaration
 
 ```
 dependency <alias> from "<path>";
@@ -292,7 +343,7 @@ dependency util from "../util/main.ash";
 dependency policy from "../policy/main.ash";
 ```
 
-#### 9.3.3 Grammar
+#### 11.3.3 Grammar
 
 ```
 crate_root        ::= crate_metadata? module_item*
@@ -304,7 +355,7 @@ crate_decl        ::= "crate" IDENTIFIER ";"
 dependency_decl   ::= "dependency" IDENTIFIER "from" STRING ";"
 ```
 
-### 9.4 Future Extensions
+### 11.4 Future Extensions
 
 Not in current scope:
 

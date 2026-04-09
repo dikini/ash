@@ -459,16 +459,32 @@ provider:action(args) when guard
 | `provider:action(args) when g` | `Act { ..., guard: g }` |
 | `act provider:action(args) where g` | `Act { provider_name: "provider", action_name: "action", arguments: args, guard: g, ... }` |
 
-Symbolic capability names (e.g., `fs_read`, `io::fs_read`) resolve to `(provider, action)`
-pairs during the lowering phase. The resolver produces a `ResolvedCapabilityTarget { provider, action }`
-which then lowers to the canonical `Act` form.
+**Symbolic vs Explicit Resolution:**
 
-Both simple symbolic names (`fs_read`) and module-qualified names (`io::fs_read`) are
-supported. Module-qualified names are parsed as `Qualified { module, capability_name }`.
+Surface syntax supports two forms for operational capability calls:
 
-**Implementation Status:** The current implementation uses explicit capability mappings
-registered with a `CapabilityResolver`. Full module-system integration (where capability
-declarations in source automatically register with the resolver) is planned future work.
+1. **Symbolic form** - `fs_read(args)` or `io::fs_read(args)`
+   - Resolves through module/import-owned capability metadata
+   - Requires a capability declaration or import in scope
+   - Module-qualified names resolve through the module graph
+   
+2. **Explicit form** - `io:fs_read(args)`
+   - Directly specifies `(provider, action)` pair
+   - Bypasses symbolic resolution entirely
+   - Used when capability metadata is not available or not desired
+
+The lowering phase uses a shared `CapabilityResolutionContext` built from the module/import
+graph to resolve symbolic names. This context maps visible symbolic names to their
+`(provider, action)` targets.
+
+**Compile-Time Resolution Contract:**
+
+Symbolic capability names must resolve at compile time. The resolution context is:
+- Built once from capability declarations, imports, and re-exports
+- Shared across lowering, type checking, and capability checking
+- Passed through the pipeline rather than reconstructed in each phase
+
+Unresolved symbolic names produce compile-time errors.
 
 ### 4.5 Statement List Scoping
 

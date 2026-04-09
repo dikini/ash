@@ -175,9 +175,85 @@ pub workflow public_workflow {
 use crate::foo::helper;        -- ERROR: helper not public
 ```
 
-## 6. Grammar Extension
+## 6. Capability Symbol Imports
 
-### 6.1 Import Statement
+### 6.1 Importing Capability Symbols
+
+Capability declarations can be imported like other module items:
+
+```ash
+-- Import a capability symbol from another module
+use io::fs_read;
+
+-- Import with alias
+use io::fs_read as read_file;
+
+-- Import multiple capabilities
+use io::{fs_read, fs_write};
+
+-- Import from standard library
+use runtime::Args;
+```
+
+### 6.2 Resolution Semantics
+
+Imported capability symbols participate in symbolic operational resolution:
+
+```ash
+-- io.ash
+pub capability fs_read : observe (path : String) returns String;
+
+-- main.ash
+use io::fs_read;
+
+workflow main {
+    -- Symbolic call resolves through the imported capability
+    let content = fs_read("data.txt");
+}
+```
+
+The import brings the capability symbol into scope, which:
+- Makes the symbolic name visible for operational calls
+- Associates the symbol with its declared `(provider, action)` target
+- Enables compile-time resolution through the `CapabilityResolutionContext`
+
+### 6.3 Re-exporting Capabilities
+
+Capabilities can be re-exported to create symbolic aliases:
+
+```ash
+-- fs.ash
+pub capability read : observe (path : String) returns String;
+
+-- io.ash
+pub use fs::read as fs_read;  -- Re-export with different name
+
+-- main.ash
+use io::fs_read;  -- Resolves to fs::read's (provider, action)
+```
+
+### 6.4 Module-Qualified Capability Calls
+
+Module-qualified capability names resolve through imports:
+
+```ash
+-- io.ash
+pub capability fs_read : observe (path : String) returns String;
+
+-- main.ash (no import needed for qualified call)
+workflow main {
+    -- Module-qualified name resolves through module graph
+    let content = io::fs_read("data.txt");
+}
+```
+
+Module-qualified names (`module::capability`) are distinct from explicit provider
+calls (`provider:action`). The former resolves through capability symbol metadata;
+the latter directly specifies the target pair.
+
+## 7. Grammar Extension
+
+### 7.1 Import Statement
 
 ```
 import_stmt     ::= visibility? "use" import_path ";"
@@ -199,16 +275,16 @@ simple_path     ::= "crate" | "self" | "super" | IDENTIFIER
 The grammar above intentionally excludes dot-separated import forms. Conforming
 implementations must reject `use foo.bar;` and `use foo.{bar, baz};`.
 
-## 7. Implementation Notes
+## 8. Implementation Notes
 
-### 7.1 Import Collection
+### 8.1 Import Collection
 
 During parsing/AST construction:
 
 1. Collect all `use` statements
 2. Store with their visibility and target module
 
-### 7.2 Import Resolution Phase
+### 8.2 Import Resolution Phase
 
 After module resolution but before type checking:
 
@@ -217,7 +293,7 @@ After module resolution but before type checking:
 3. Verify visibility constraints
 4. Detect conflicts and cycles
 
-### 7.3 Name Resolution Integration
+### 8.3 Name Resolution Integration
 
 The name resolver should check in order:
 
@@ -228,9 +304,9 @@ The name resolver should check in order:
 Qualified `super::...` and `crate::...` paths resolve explicitly and are not part of
 unqualified fallback lookup.
 
-## 8. Error Messages
+## 9. Error Messages
 
-### 8.1 Common Errors
+### 9.1 Common Errors
 
 ```
 use crate::foo::bar;
@@ -246,7 +322,7 @@ use crate::internal::secret;
 -- HELP: consider making it `pub` or `pub(crate)`
 ```
 
-### 8.2 Cycle Detection
+### 9.2 Cycle Detection
 
 ```
 -- a.ash: use crate::b::item;
@@ -254,9 +330,9 @@ use crate::internal::secret;
 -- ERROR: import cycle detected: a -> b -> a
 ```
 
-## 9. Examples
+## 10. Examples
 
-### 9.1 Complete Example
+### 10.1 Complete Example
 
 ```
 -- utils.ash

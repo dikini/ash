@@ -362,6 +362,8 @@ mod tests {
             params: vec![],
             return_type: None,
             constraints: vec![],
+            target_provider: None,
+            target_action: None,
             span: test_span(),
         }
     }

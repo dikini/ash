@@ -96,7 +96,7 @@ must preserve all of the following semantically, not merely approximately in pro
    semantic stuckness;
 5. v1 atomic boundaries: pure expressions, pure patterns, guards, receive selection, and
    obligation/provenance helpers stay atomic or helper-owned in v1 rather than being micro-stepped here;
-6. helper-owned concurrency boundaries (historical): prior `Par` semantics were interleaving-based at
+6. helper-owned concurrency boundaries (Historical): prior `Par` semantics were interleaving-based at
    the semantic level with helper-backed terminal aggregation; this section documents historical
    constraints for that feature, which is no longer part of the active language contract.
 

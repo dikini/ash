@@ -108,24 +108,32 @@ impl CapabilityContext {
     }
 
     /// Execute an action on a capability
+    ///
+    /// # Arguments
+    /// * `provider_name` - The name of the provider to lookup
+    /// * `action_name` - The name of the action to execute
+    /// * `args` - The evaluated arguments for the action
     pub async fn execute(
         &self,
-        action: &ash_core::Action,
-        capability_name: &str,
+        provider_name: &str,
+        action_name: &str,
+        args: &[Value],
     ) -> ExecResult<Value> {
         let provider = self
             .registry
-            .get(capability_name)
-            .ok_or_else(|| ExecError::CapabilityNotAvailable(capability_name.to_string()))?;
+            .get(provider_name)
+            .ok_or_else(|| ExecError::CapabilityNotAvailable(provider_name.to_string()))?;
 
         if !provider.effect().at_least(Effect::Operational) {
             return Err(ExecError::ExecutionFailed(format!(
-                "capability '{}' does not support actions",
-                capability_name
+                "capability '{provider_name}' does not support actions"
             )));
         }
 
-        provider.execute(action).await.map_err(Self::convert_error)
+        provider
+            .execute(action_name, args)
+            .await
+            .map_err(Self::convert_error)
     }
 }
 
@@ -185,7 +193,7 @@ impl CapabilityProvider for MockProvider {
         Ok(self.observe_value.clone())
     }
 
-    async fn execute(&self, _action: &ash_core::Action) -> Result<Value, CapabilityError> {
+    async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
         self.execute_result.clone()
     }
 }
@@ -208,11 +216,7 @@ mod tests {
         let provider = MockProvider::new("test", Effect::Operational)
             .with_execute_result(Ok(Value::String("done".to_string())));
 
-        let action = ash_core::Action {
-            name: "do_it".to_string(),
-            arguments: vec![],
-        };
-        let result = provider.execute(&action).await.unwrap();
+        let result = provider.execute("do_it", &[]).await.unwrap();
         assert_eq!(result, Value::String("done".to_string()));
     }
 

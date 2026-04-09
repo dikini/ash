@@ -3,7 +3,7 @@
 //! This module defines the shared `CapabilityProvider` trait and `CapabilityError`
 //! type used across the Ash workspace.
 
-use crate::{Action, Constraint, Effect, Value};
+use crate::{Constraint, Effect, Value};
 
 /// Unified error type for all capability operations
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -44,7 +44,11 @@ pub trait CapabilityProvider: Send + Sync + std::fmt::Debug {
     /// Execute an action on this capability
     ///
     /// Arguments are already evaluated (eager evaluation).
-    async fn execute(&self, action: &Action) -> Result<Value, CapabilityError>;
+    ///
+    /// # Arguments
+    /// * `action_name` - The name of the action to execute
+    /// * `args` - The evaluated arguments for the action
+    async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError>;
 }
 
 #[cfg(test)]
@@ -70,8 +74,12 @@ mod tests {
             Ok(Value::Null)
         }
 
-        async fn execute(&self, action: &Action) -> Result<Value, CapabilityError> {
-            Ok(Value::String(format!("executed: {}", action.name)))
+        async fn execute(
+            &self,
+            action_name: &str,
+            _args: &[Value],
+        ) -> Result<Value, CapabilityError> {
+            Ok(Value::String(format!("executed: {action_name}")))
         }
     }
 
@@ -85,12 +93,7 @@ mod tests {
         assert_eq!(provider.name(), "test");
         assert_eq!(provider.effect(), Effect::Operational);
 
-        let action = Action {
-            name: "do_something".to_string(),
-            arguments: vec![],
-        };
-
-        let result = provider.execute(&action).await.unwrap();
+        let result = provider.execute("do_something", &[]).await.unwrap();
         assert_eq!(result, Value::String("executed: do_something".to_string()));
     }
 

@@ -50,7 +50,10 @@ fn join_based_composition_preserves_highest_coarse_grade() {
         }),
         second: Box::new(Workflow::Act {
             action: ActionRef {
-                name: "write".into(),
+                target: ash_parser::surface::OperationalTarget::Explicit {
+                    provider: "io".into(),
+                    action: "write".into(),
+                },
                 args: vec![],
             },
             guard: None,

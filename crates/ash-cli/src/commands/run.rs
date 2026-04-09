@@ -8,7 +8,7 @@
 
 use anyhow::{Context, Result};
 use ash_core::capability::{CapabilityError, CapabilityProvider};
-use ash_core::{Action, Constraint, Effect, Value};
+use ash_core::{Constraint, Effect, Value};
 use ash_engine::EngineError;
 use ash_interp::ExecError;
 use ash_parser::parse_utils::skip_whitespace_and_comments;
@@ -234,7 +234,7 @@ impl CapabilityProvider for RuntimeArgProvider {
         ))
     }
 
-    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
+    async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
         Ok(Value::Null)
     }
 }

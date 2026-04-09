@@ -1594,12 +1594,17 @@ mod tests {
 
         #[test]
         fn test_effect_too_high() {
+            use ash_parser::surface::OperationalTarget;
+
             let aggregator = VerificationAggregator::new();
 
             // Act workflow has Operational effect
             let workflow = Workflow::Act {
                 action: ash_parser::surface::ActionRef {
-                    name: "test".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "test".into(),
+                        action: "test".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -1677,12 +1682,17 @@ mod tests {
 
         #[test]
         fn test_multiple_errors() {
+            use ash_parser::surface::OperationalTarget;
+
             let aggregator = VerificationAggregator::new();
 
             // Act workflow has Operational effect - too high for Epistemic runtime
             let workflow = Workflow::Act {
                 action: ash_parser::surface::ActionRef {
-                    name: "test".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "test".into(),
+                        action: "test".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,

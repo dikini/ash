@@ -15,6 +15,42 @@ Terminology in this spec follows `docs/reference/type-system-vocabulary-guidance
 name, "capability witness" for usage-site `cap C` values at workflow boundaries, and "provider"
 for the runtime implementation.
 
+## 1.1 Split Dispatch Overview
+
+This specification adopts the split dispatch model where provider lookup and provider-local action
+dispatch are explicit and separate:
+
+**Runtime Dispatch Contract:**
+```text
+lookup provider by provider_name -> provider
+provider.execute(action_name, args) -> result
+```
+
+This replaces the previous overloaded model where one name was used for both lookup and dispatch.
+The canonical ACT representation carries:
+- `provider_name`: Used for registry lookup
+- `action_name`: Used for provider-local dispatch
+- `arguments`: Evaluated and passed to the provider
+
+**Symbolic Capability Resolution:**
+
+Symbolic capability names in surface syntax resolve to `(provider, action)` pairs:
+
+```ash
+fs_read("file.txt")           -- Simple symbolic: resolves via explicit mapping
+io::fs_read("file.txt")       -- Module-qualified: resolves via explicit mapping  
+fs:read("file.txt")           -- Explicit: (provider: "fs", action: "read")
+```
+
+The resolver produces a `ResolvedCapabilityTarget { provider, action }` which lowers
+to the canonical `Act { provider_name, action_name, ... }` IR form.
+
+**Implementation Status:** The current implementation uses explicit capability mappings
+registered with a `CapabilityResolver`. Both lowering and type checking use the same
+resolver with built-in mappings for common capabilities. Full module-system integration
+(where capability declarations in source automatically register with the resolver) is
+planned future work.
+
 ## 2. Capability Definitions
 
 Capabilities can be defined in `.ash` source files using the `capability` keyword. This allows user-defined capabilities without requiring pre-registration in Rust.
@@ -504,7 +540,9 @@ monitor authority linear or affine.
 pub struct CapabilityContext {
     pub operation: CapabilityOperation,
     pub direction: Direction,  -- Input or Output
-    pub capability: Name,
+    pub provider_name: Name,   -- Provider for lookup
+    pub action_name: Name,     -- Provider-local action for dispatch
+    pub capability: Name,      -- Legacy: symbolic capability name
     pub channel: Name,
     pub mode: Option<ReceiveMode>,
     pub is_control_stream: bool,
@@ -525,12 +563,29 @@ pub enum CapabilityOperation {
     Receive,
     Set,
     Send,
+    Act,     -- Explicit operational action
 }
 ```
 
+**Split Dispatch Contract:**
+
+Runtime capability execution follows an explicit two-phase dispatch:
+
+1. **Provider Lookup**: `registry.get(provider_name) -> provider`
+   - Maps the provider name to a provider implementation
+   - Lookup failure results in `RuntimeFailure`
+
+2. **Action Dispatch**: `provider.execute(action_name, args) -> result`
+   - The resolved provider handles the action dispatch locally
+   - The provider receives only the action name and evaluated argument values
+
+This split removes the previous overload where one name was used for both provider
+lookup and provider-local action dispatch.
+
 The runtime context is responsible for:
 
-- capability lookup and shape validation,
+- provider lookup via `provider_name`,
+- action dispatch via `action_name` to the resolved provider,
 - mailbox access for declared stream selectors and the implicit control mailbox,
 - scheduler execution for the active source scheduling modifier,
 - policy evaluation,

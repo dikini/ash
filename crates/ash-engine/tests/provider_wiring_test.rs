@@ -4,7 +4,7 @@
 //! are properly passed to `RuntimeState` and available during execution.
 
 use ash_core::capability::{CapabilityError, CapabilityProvider};
-use ash_core::{Action, Constraint, Effect, Value};
+use ash_core::{Constraint, Effect, Value};
 use ash_engine::Engine;
 use async_trait::async_trait;
 use std::sync::{
@@ -43,7 +43,7 @@ impl CapabilityProvider for TestProvider {
         Ok(Value::Null)
     }
 
-    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
+    async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
         self.was_called.store(true, Ordering::SeqCst);
         Ok(Value::Null)
     }

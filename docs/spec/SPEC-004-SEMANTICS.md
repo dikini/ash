@@ -409,6 +409,10 @@ For the pattern-sensitive helpers used below:
   pattern is admissible, whose match derives under `⊢p`, and whose optional guard evaluates to
   `Bool(true)`. If any arm is inadmissible, the helper fails as `PatternBindFailure`. If all
   admissible arms fail to match or have false guards, it fails as `PatternMatchFailure(v)`.
+- `eval_args(Γ, arguments) ↝ values` evaluates a list of argument expressions to values.
+  Each argument is evaluated left-to-right using the expression judgment `Γ ⊢e expr ⇓ v`.
+- `lookup_provider(C, provider_name) ↝ provider` resolves a provider name to a provider
+  implementation via the capability context `C`. Failure maps to `RuntimeFailure(reason)`.
 - `select_receive_outcome(...)` and `combine_parallel_outcomes(...)` are helper-backed runtime
   relations whose full contracts live normatively in §6.2 and §6.5.
 
@@ -749,21 +753,36 @@ by background cleanup in the same runtime state.
 ```
 (ACT)
   eval_guard(Γ, guard) = true
-  policy_check(P, action, Γ) ↝ Permit
-  perform_action(action, Γ, C) ↝ v
-  π' = extend_provenance(π, action, guard, v)
+  policy_check(P, provider_name, action_name, args, Γ) ↝ Permit
+  eval_args(Γ, arguments) ↝ values
+  lookup_provider(C, provider_name) ↝ provider
+  provider.execute(action_name, values) ↝ v
+  π' = extend_provenance(π, provider_name, action_name, guard, v)
   ─────────────────────────────────────────────────────────────────
-  Γ, C, P, Ω, π ⊢ ACT action where guard ⇓ v,
+  Γ, C, P, Ω, π ⊢ ACT provider_name:action_name(args) where guard ⇓ v,
                operational,
-               Act(action, v, guard, now()) :: ε,
+               Act(provider_name, action_name, v, guard, now()) :: ε,
                Ω,
                π'
 
 (ACT-POLICY-FAIL)
   eval_guard(Γ, guard) = true
-  policy_check(P, action, Γ) ↝ error reason
+  policy_check(P, provider_name, action_name, args, Γ) ↝ error reason
   ─────────────────────────────────────────────────────────────────
-  Γ, C, P, Ω, π ⊢ ACT action where guard ⇓ ⊥,
+  Γ, C, P, Ω, π ⊢ ACT provider_name:action_name(args) where guard ⇓ ⊥,
+               operational,
+               ε,
+               Ω,
+               π,
+               error: RuntimeFailure(reason)
+
+(ACT-LOOKUP-FAIL)
+  eval_guard(Γ, guard) = true
+  policy_check(P, provider_name, action_name, args, Γ) ↝ Permit
+  eval_args(Γ, arguments) ↝ values
+  lookup_provider(C, provider_name) ↝ error reason
+  ─────────────────────────────────────────────────────────────────
+  Γ, C, P, Ω, π ⊢ ACT provider_name:action_name(args) where guard ⇓ ⊥,
                operational,
                ε,
                Ω,
@@ -772,10 +791,12 @@ by background cleanup in the same runtime state.
 
 (ACT-RUNTIME-FAIL)
   eval_guard(Γ, guard) = true
-  policy_check(P, action, Γ) ↝ Permit
-  perform_action(action, Γ, C) ↝ error reason
+  policy_check(P, provider_name, action_name, args, Γ) ↝ Permit
+  eval_args(Γ, arguments) ↝ values
+  lookup_provider(C, provider_name) ↝ provider
+  provider.execute(action_name, values) ↝ error reason
   ─────────────────────────────────────────────────────────────────
-  Γ, C, P, Ω, π ⊢ ACT action where guard ⇓ ⊥,
+  Γ, C, P, Ω, π ⊢ ACT provider_name:action_name(args) where guard ⇓ ⊥,
                operational,
                ε,
                Ω,
@@ -785,17 +806,33 @@ by background cleanup in the same runtime state.
 (ACT-GUARD-FAIL)
   eval_guard(Γ, guard) = false
   ─────────────────────────────────────────────────────────────────
-  Γ, C, P, Ω, π ⊢ ACT action where guard ⇓ ⊥,
+  Γ, C, P, Ω, π ⊢ ACT provider_name:action_name(args) where guard ⇓ ⊥,
                operational,
-               GuardFail(action, guard, now()) :: ε,
+               GuardFail(provider_name, action_name, guard, now()) :: ε,
                Ω,
                π,
-               error: GuardViolation(action, guard)
+               error: GuardViolation(provider_name:action_name, guard)
 ```
 
-These `ACT` rules likewise describe execution after capability verification has admitted the
-operation. Verification-time `Deny`, `Transform`, and `RequireApproval` outcomes remain defined by
-SPEC-017 and SPEC-018 rather than by this operational semantics layer.
+**ACT Dispatch Contract:**
+
+The ACT execution follows an explicit two-phase dispatch:
+
+1. **Provider Lookup**: `lookup_provider(C, provider_name) ↝ provider`
+   - The capability context `C` maps provider names to provider implementations
+   - Lookup failure is a `RuntimeFailure`
+
+2. **Action Dispatch**: `provider.execute(action_name, values) ↝ v`
+   - The resolved provider handles the action dispatch locally
+   - The provider receives only the action name and evaluated argument values
+   - Execution failure is a `RuntimeFailure`
+
+This split removes the previous overload where one name was used for both provider lookup and
+provider-local action dispatch.
+
+These `ACT` rules describe execution after capability verification has admitted the operation.
+Verification-time `Deny`, `Transform`, and `RequireApproval` outcomes remain defined by SPEC-017
+and SPEC-018 rather than by this operational semantics layer.
 
 ### 4.6 Expression Evaluation
 

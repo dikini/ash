@@ -3,8 +3,146 @@
 //! Provides scope tracking and name resolution for variables, capabilities,
 //! and other named entities in workflows and expressions.
 
-use ash_parser::surface::{Expr, Pattern, Workflow};
+use ash_parser::surface::{Expr, OperationalTarget, Pattern, Workflow};
 use std::collections::HashMap;
+
+/// Resolved capability target - canonical (provider, action) pair.
+///
+/// This represents a fully resolved operational target where symbolic capability
+/// names have been mapped to their concrete provider:action implementations.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityTarget {
+    /// Provider name (e.g., "io", "http", "db")
+    pub provider: Box<str>,
+    /// Action name (e.g., "fs_read", "get", "query")
+    pub action: Box<str>,
+}
+
+impl CapabilityTarget {
+    /// Create a new capability target from provider and action names.
+    pub fn new(provider: impl Into<Box<str>>, action: impl Into<Box<str>>) -> Self {
+        Self {
+            provider: provider.into(),
+            action: action.into(),
+        }
+    }
+
+    /// Format as "provider:action" string.
+    pub fn format(&self) -> String {
+        format!("{}:{}", self.provider, self.action)
+    }
+}
+
+impl std::fmt::Display for CapabilityTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.provider, self.action)
+    }
+}
+
+/// Capability resolver that maps symbolic capability names to (provider, action) pairs.
+///
+/// This is used during type checking to resolve capability names like `fs_read`
+/// to their concrete implementations like `io:fs_read`.
+#[derive(Debug, Clone, Default)]
+pub struct CapabilityResolver {
+    /// Maps symbolic capability names to (provider, action) pairs.
+    /// For example: "fs_read" -> ("io", "fs_read")
+    mappings: HashMap<Box<str>, (Box<str>, Box<str>)>,
+}
+
+impl CapabilityResolver {
+    /// Create a new empty capability resolver.
+    pub fn new() -> Self {
+        Self {
+            mappings: HashMap::new(),
+        }
+    }
+
+    /// Register a capability mapping.
+    ///
+    /// # Arguments
+    /// * `capability_name` - The symbolic name (e.g., "fs_read")
+    /// * `provider` - The provider name (e.g., "io")
+    /// * `action` - The action name (e.g., "fs_read")
+    pub fn register(
+        &mut self,
+        capability_name: impl Into<Box<str>>,
+        provider: impl Into<Box<str>>,
+        action: impl Into<Box<str>>,
+    ) {
+        let name = capability_name.into();
+        self.mappings.insert(name, (provider.into(), action.into()));
+    }
+
+    /// Resolve a symbolic capability name to a (provider, action) pair.
+    ///
+    /// Returns `None` if the capability name is not registered.
+    pub fn resolve(&self, capability_name: &str) -> Option<(Box<str>, Box<str>)> {
+        self.mappings.get(capability_name).cloned()
+    }
+
+    /// Create a resolver with built-in mappings for common capabilities.
+    pub fn with_builtin_mappings() -> Self {
+        let mut resolver = Self::new();
+
+        // Register built-in io capabilities (both symbolic and qualified forms)
+        resolver.register("fs_read", "io", "fs_read");
+        resolver.register("io::fs_read", "io", "fs_read");
+        resolver.register("read_file", "io", "read_file");
+        resolver.register("io::read_file", "io", "read_file");
+
+        // Register built-in stdio capabilities
+        resolver.register("print", "stdio", "print");
+        resolver.register("stdio::print", "stdio", "print");
+
+        resolver
+    }
+
+    /// Resolve an operational target to a canonical capability target.
+    ///
+    /// For symbolic targets, looks up the capability name in the mapping.
+    /// For explicit targets, uses the provider and action directly.
+    ///
+    /// # Arguments
+    /// * `target` - The operational target to resolve
+    ///
+    /// # Returns
+    /// * `Some(CapabilityTarget)` - The resolved target
+    /// * `None` - If the symbolic capability name is not found
+    pub fn resolve_target(&self, target: &OperationalTarget) -> Option<CapabilityTarget> {
+        match target {
+            OperationalTarget::Symbolic { capability_name } => {
+                let name = capability_name.as_ref();
+                // Try to resolve via mapping
+                self.resolve(name)
+                    .map(|(provider, action)| CapabilityTarget { provider, action })
+            }
+            OperationalTarget::Qualified {
+                module,
+                capability_name,
+            } => {
+                // Module-qualified names like io::fs_read are resolved as
+                // "module::capability_name" in the mapping
+                let qualified_name = format!("{}::{}", module, capability_name);
+                self.resolve(&qualified_name)
+                    .map(|(provider, action)| CapabilityTarget { provider, action })
+            }
+            OperationalTarget::Explicit { provider, action } => {
+                Some(CapabilityTarget::new(provider.as_ref(), action.as_ref()))
+            }
+        }
+    }
+
+    /// Check if a capability name is registered.
+    pub fn contains(&self, capability_name: &str) -> bool {
+        self.mappings.contains_key(capability_name)
+    }
+
+    /// Get all registered capability names.
+    pub fn capability_names(&self) -> Vec<&str> {
+        self.mappings.keys().map(|k| k.as_ref()).collect()
+    }
+}
 
 /// A scope containing variable bindings
 #[derive(Debug, Clone, Default)]
@@ -78,6 +216,8 @@ pub struct NameResolver {
     /// Track bindings in the current pattern being processed
     /// This is used to detect duplicate bindings within a single pattern
     pattern_bindings: std::collections::HashSet<Box<str>>,
+    /// Capability resolver for mapping symbolic names to provider:action pairs
+    capability_resolver: CapabilityResolver,
 }
 
 /// Name resolution error
@@ -92,6 +232,12 @@ pub enum ResolutionError {
     /// Undefined capability
     #[error("Undefined capability: {0}")]
     UndefinedCapability(String),
+    /// Unresolved symbolic capability - capability name could not be mapped to provider:action
+    #[error("Unresolved capability '{capability}': no mapping to provider:action found")]
+    UnresolvedSymbolicCapability {
+        /// The symbolic capability name that could not be resolved
+        capability: String,
+    },
     /// Undefined policy
     #[error("Undefined policy: {0}")]
     UndefinedPolicy(String),
@@ -107,7 +253,30 @@ impl NameResolver {
             scopes: vec![Scope::new(0)],
             errors: Vec::new(),
             pattern_bindings: std::collections::HashSet::new(),
+            capability_resolver: CapabilityResolver::new(),
         }
+    }
+
+    /// Get a reference to the capability resolver
+    pub fn capability_resolver(&self) -> &CapabilityResolver {
+        &self.capability_resolver
+    }
+
+    /// Get a mutable reference to the capability resolver
+    pub fn capability_resolver_mut(&mut self) -> &mut CapabilityResolver {
+        &mut self.capability_resolver
+    }
+
+    /// Resolve an operational target to a capability target.
+    ///
+    /// Returns `Some(CapabilityTarget)` on success, or `None` if the symbolic
+    /// capability cannot be resolved. Note: This does NOT add errors for
+    /// unresolved symbolic capabilities - those are resolved during lowering.
+    pub fn resolve_operational_target(
+        &mut self,
+        target: &OperationalTarget,
+    ) -> Option<CapabilityTarget> {
+        self.capability_resolver.resolve_target(target)
     }
 
     /// Enter a new scope
@@ -187,6 +356,9 @@ impl NameResolver {
             }
 
             Workflow::Act { action, .. } => {
+                // Resolve the operational target (symbolic -> provider:action)
+                let _ = self.resolve_operational_target(&action.target);
+
                 // Resolve arguments
                 for arg in &action.args {
                     self.resolve_expr(arg);
@@ -287,6 +459,9 @@ impl NameResolver {
                 continuation,
                 ..
             } => {
+                // Resolve the operational target (symbolic -> provider:action)
+                let _ = self.resolve_operational_target(&action.target);
+
                 for arg in &action.args {
                     self.resolve_expr(arg);
                 }
@@ -1022,7 +1197,10 @@ mod tests {
 
         let workflow = Workflow::Act {
             action: ActionRef {
-                name: "write".into(),
+                target: OperationalTarget::Explicit {
+                    provider: "io".into(),
+                    action: "write".into(),
+                },
                 args: vec![Expr::Variable("arg".into())],
             },
             guard: None,

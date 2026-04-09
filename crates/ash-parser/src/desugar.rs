@@ -827,7 +827,9 @@ mod tests {
         // x; done should become just x
         let inner = Workflow::Act {
             action: ActionRef {
-                name: "test".into(),
+                target: crate::surface::OperationalTarget::Symbolic {
+                    capability_name: "test".into(),
+                },
                 args: vec![],
             },
             guard: None,

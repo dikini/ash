@@ -8,7 +8,7 @@
 //! All providers implement the unified `ash_core::capability::CapabilityProvider` trait.
 
 use ash_core::capability::{CapabilityError, CapabilityProvider};
-use ash_core::{Action, Constraint, Effect, Value};
+use ash_core::{Constraint, Effect, Value};
 use async_trait::async_trait;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -242,14 +242,13 @@ impl CapabilityProvider for StdioProvider {
         }
     }
 
-    async fn execute(&self, action: &Action) -> Result<Value, CapabilityError> {
-        let text = Self::format_args(&action.arguments);
-        match action.name.as_str() {
+    async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError> {
+        let text = Self::format_args(args);
+        match action_name {
             "print" => self.handle_print(&text),
             "println" => self.handle_println(&text),
             _ => Err(CapabilityError::NotAvailable(format!(
-                "Unknown execute action: {}",
-                action.name
+                "Unknown execute action: {action_name}"
             ))),
         }
     }
@@ -393,10 +392,10 @@ impl CapabilityProvider for FsProvider {
         }
     }
 
-    async fn execute(&self, action: &Action) -> Result<Value, CapabilityError> {
-        match action.name.as_str() {
+    async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError> {
+        match action_name {
             "write_file" => {
-                if action.arguments.len() < 2 {
+                if args.len() < 2 {
                     return Err(CapabilityError::InvalidArgument(
                         "write_file requires path and content arguments".to_string(),
                     ));
@@ -408,8 +407,8 @@ impl CapabilityProvider for FsProvider {
                     ));
                 }
 
-                let path = Self::extract_path(&action.arguments[0])?;
-                let content = Self::extract_content(&action.arguments[1])?;
+                let path = Self::extract_path(&args[0])?;
+                let content = Self::extract_content(&args[1])?;
 
                 self.validate_path(&path)?;
 
@@ -422,8 +421,7 @@ impl CapabilityProvider for FsProvider {
                 Ok(Value::Null)
             }
             _ => Err(CapabilityError::NotAvailable(format!(
-                "Unknown execute action: {}",
-                action.name
+                "Unknown execute action: {action_name}"
             ))),
         }
     }

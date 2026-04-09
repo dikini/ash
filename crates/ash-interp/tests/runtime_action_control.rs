@@ -1,7 +1,6 @@
 use ash_core::capability::CapabilityError;
 use ash_core::{
-    Action, Constraint, ControlLink, Effect, Expr, Guard, Pattern, Provenance, Value, Workflow,
-    WorkflowId,
+    Constraint, ControlLink, Effect, Expr, Guard, Pattern, Provenance, Value, Workflow, WorkflowId,
 };
 use ash_interp::RuntimeState;
 use ash_interp::behaviour::BehaviourContext;
@@ -117,7 +116,7 @@ impl CapabilityProvider for BlockingActionProvider {
         unreachable!("blocking action test provider does not support observe")
     }
 
-    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
+    async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         self.started.notify_waiters();
         if let Some(release_rx) = self.release_rx.lock().await.take() {
@@ -158,7 +157,7 @@ impl CapabilityProvider for CountingActionProvider {
         unreachable!("counting action test provider does not support observe")
     }
 
-    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
+    async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         self.started.notify_waiters();
         Ok(Value::String("counted".to_string()))
@@ -167,8 +166,9 @@ impl CapabilityProvider for CountingActionProvider {
 
 fn blocking_child_action_workflow() -> Workflow {
     Workflow::Act {
+        provider_name: "test".to_string(),
         action_name: "block".to_string(),
-        action_arguments: vec![],
+        arguments: vec![],
         guard: Guard::Always,
         provenance: Provenance::new(),
     }
@@ -178,8 +178,9 @@ fn child_two_step_action_workflow() -> Workflow {
     Workflow::Seq {
         first: Box::new(blocking_child_action_workflow()),
         second: Box::new(Workflow::Act {
+            provider_name: "test".to_string(),
             action_name: "mark".to_string(),
-            action_arguments: vec![],
+            arguments: vec![],
             guard: Guard::Always,
             provenance: Provenance::new(),
         }),
@@ -260,8 +261,9 @@ async fn act_executes_registered_operational_provider() {
     ));
 
     let workflow = Workflow::Act {
+        provider_name: "deploy".to_string(),
         action_name: "deploy".to_string(),
-        action_arguments: vec![],
+        arguments: vec![],
         guard: Guard::Always,
         provenance: Provenance::new(),
     };
@@ -279,8 +281,9 @@ async fn act_guard_failure_still_rejects_execution() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
 
     let workflow = Workflow::Act {
+        provider_name: "deploy".to_string(),
         action_name: "deploy".to_string(),
-        action_arguments: vec![],
+        arguments: vec![],
         guard: Guard::Never,
         provenance: Provenance::new(),
     };
@@ -720,8 +723,9 @@ async fn spawned_child_failure_retains_direct_error_payload() {
 #[tokio::test]
 async fn spawned_child_success_retains_provenance_contents() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
+        provider_name: "deploy".to_string(),
         action_name: "deploy".to_string(),
-        action_arguments: vec![],
+        arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
     })
@@ -760,8 +764,9 @@ async fn spawned_child_success_retains_provenance_contents() {
 #[tokio::test]
 async fn spawned_child_failure_retains_provenance_contents() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
+        provider_name: "deploy".to_string(),
         action_name: "deploy".to_string(),
-        action_arguments: vec![],
+        arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
     })
@@ -803,8 +808,9 @@ async fn spawned_child_failure_retains_provenance_contents() {
 #[tokio::test]
 async fn retained_completion_write_once_keeps_original_provenance_contents() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
+        provider_name: "deploy".to_string(),
         action_name: "deploy".to_string(),
-        action_arguments: vec![],
+        arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
     })

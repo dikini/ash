@@ -87,7 +87,8 @@ workflow process {
 workflow processor {
     receive wait {
         queue:orders as order =>
-            act process_order(order)
+            -- Symbolic capability call (new sugar)
+            process_order(order)
     }
 }
 ```

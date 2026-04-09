@@ -147,7 +147,7 @@ mod tests {
             .parse(
                 r#"
             workflow test {
-                act log_event("test");
+                act logger:log_event("test");
                 done
             }
         "#,

@@ -3,7 +3,7 @@
 //! Provides JSON-RPC 2.0 communication with MCP-compatible LLM servers.
 
 use ash_core::capability::{CapabilityError, CapabilityProvider};
-use ash_core::{Action, Constraint, Effect, Value};
+use ash_core::{Constraint, Effect, Value};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -216,22 +216,20 @@ impl CapabilityProvider for McpProvider {
         }
     }
 
-    async fn execute(&self, action: &Action) -> Result<Value, CapabilityError> {
-        match action.name.as_str() {
+    async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError> {
+        match action_name {
             "call" => {
-                if action.arguments.len() < 2 {
+                if args.len() < 2 {
                     return Err(CapabilityError::InvalidArgument(
                         "call requires method and params".to_string(),
                     ));
                 }
-                let method = action.arguments[0].as_string().unwrap_or("");
-                let params =
-                    serde_json::to_value(&action.arguments[1]).unwrap_or_else(|_| json!({}));
+                let method = args[0].as_string().unwrap_or("");
+                let params = serde_json::to_value(&args[1]).unwrap_or_else(|_| json!({}));
                 self.call(method, params).await
             }
             _ => Err(CapabilityError::NotAvailable(format!(
-                "unknown execute action: {}",
-                action.name
+                "unknown execute action: {action_name}"
             ))),
         }
     }

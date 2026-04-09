@@ -98,17 +98,17 @@ eligible source mailbox yields a matching arm.
 **Mode 1: Non-blocking (default)**
 ```
 receive {
-    sensor:temperature as t if t > 100 => act alert(t),
-    kafka:orders as order => act process(order),
-    _ => act log("no events")
+    sensor:temperature as t if t > 100 => alert(t),
+    kafka:orders as order => process(order),
+    _ => log("no events")
 }
 ```
 
 **Mode 2: Blocking forever**
 ```
 receive wait {
-    sensor:temperature as t => act handle(t),
-    kafka:orders as order => act handle(order)
+    sensor:temperature as t => handle(t),
+    kafka:orders as order => handle(order)
 }
 ```
 

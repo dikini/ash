@@ -212,17 +212,27 @@ impl DotGenerator {
                 id
             }
             Workflow::Act {
+                provider_name,
                 action_name,
-                action_arguments: _,
+                arguments: _,
                 guard,
                 provenance: _,
             } => {
                 let id = self.next_id();
+                let label = if provider_name.is_empty() {
+                    format!("ACT\\n{}", escape_dot(action_name))
+                } else {
+                    format!(
+                        "ACT\\n{}:{}",
+                        escape_dot(provider_name),
+                        escape_dot(action_name)
+                    )
+                };
                 writeln!(
                     self.output,
-                    "  node_{} [label=\"ACT\\n{}\", fillcolor=\"{}\"];",
+                    "  node_{} [label=\"{}\", fillcolor=\"{}\"];",
                     id,
-                    escape_dot(action_name),
+                    label,
                     effect_color(&Effect::Operational)
                 )
                 .unwrap();
@@ -735,8 +745,9 @@ mod tests {
     #[test]
     fn test_act_to_dot() {
         let workflow = Workflow::Act {
+            provider_name: String::new(),
             action_name: "notify".to_string(),
-            action_arguments: vec![],
+            arguments: vec![],
             guard: crate::ast::Guard::Always,
             provenance: crate::Provenance::new(),
         };

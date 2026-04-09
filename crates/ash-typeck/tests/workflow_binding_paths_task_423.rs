@@ -128,7 +128,10 @@ fn propose_binding_workflow() -> WorkflowDef {
         capabilities: vec![],
         body: Workflow::Propose {
             action: ActionRef {
-                name: "draft_policy".into(),
+                target: ash_parser::surface::OperationalTarget::Explicit {
+                    provider: "test".into(),
+                    action: "draft_policy".into(),
+                },
                 args: vec![],
             },
             binding: Some(Pattern::Variable("proposal".into())),

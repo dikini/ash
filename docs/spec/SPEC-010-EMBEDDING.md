@@ -88,10 +88,20 @@ Errors include context for debugging:
 pub trait CapabilityProvider: Send + Sync {
     fn name(&self) -> &str;
     fn effect(&self) -> Effect;
-    async fn observe(&self, args: &[Value]) -> Result<Value, Error>;
-    async fn execute(&self, args: &[Value]) -> Result<Value, Error>;
+    async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, Error>;
 }
 ```
+
+The `execute` method receives:
+- `action_name`: The provider-local action to dispatch (e.g., "read_file", "write_file")
+- `args`: The evaluated argument values for the action
+
+Provider lookup and action dispatch are split:
+- **Lookup**: `registry.get(provider_name) -> provider` (outside the trait)
+- **Dispatch**: `provider.execute(action_name, args)` (trait method)
+
+This removes the previous overload where one name was used for both provider lookup
+and provider-local action dispatch.
 
 The `effect()` method is coarse provider effect metadata. It classifies the
 embedding boundary for registration, compatibility checks, and diagnostics, but it

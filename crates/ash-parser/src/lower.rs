@@ -32,6 +32,8 @@ pub enum LoweringError {
     FloatNotSupported,
     /// Interface method calls are parser/AST-only until TASK-422.
     InterfaceMethodCallNotSupported,
+    /// Symbolic capability name could not be resolved to a (provider, action) pair.
+    UnresolvedCapability { name: String },
 }
 
 impl fmt::Display for LoweringError {
@@ -42,6 +44,13 @@ impl fmt::Display for LoweringError {
             }
             LoweringError::InterfaceMethodCallNotSupported => {
                 write!(f, "interface method calls are not lowered until TASK-422")
+            }
+            LoweringError::UnresolvedCapability { name } => {
+                write!(
+                    f,
+                    "unresolved symbolic capability '{}': no (provider, action) mapping found",
+                    name
+                )
             }
         }
     }
@@ -376,8 +385,24 @@ fn lower_workflow_body(
                 .transpose()?
                 .unwrap_or(CoreWorkflow::Done);
 
+            // Extract action name from the operational target
+            let action_name = match &action.target {
+                crate::surface::OperationalTarget::Symbolic { capability_name } => {
+                    capability_name.to_string()
+                }
+                crate::surface::OperationalTarget::Qualified {
+                    module,
+                    capability_name,
+                } => {
+                    format!("{}::{}", module, capability_name)
+                }
+                crate::surface::OperationalTarget::Explicit { provider, action } => {
+                    format!("{}:{}", provider, action)
+                }
+            };
+
             Ok(CoreWorkflow::Propose {
-                action_name: action.name.to_string(),
+                action_name,
                 action_arguments: action
                     .args
                     .iter()
@@ -431,20 +456,63 @@ fn lower_workflow_body(
             span: Default::default(),
         }),
 
-        SurfaceWorkflow::Act { action, guard, .. } => Ok(CoreWorkflow::Act {
-            action_name: action.name.to_string(),
-            action_arguments: action
-                .args
-                .iter()
-                .map(lower_expr)
-                .collect::<Result<Vec<_>, _>>()?,
-            guard: guard
-                .as_ref()
-                .map(lower_guard)
-                .transpose()?
-                .unwrap_or(CoreGuard::Always),
-            provenance: provenance.clone(),
-        }),
+        SurfaceWorkflow::Act { action, guard, .. } => {
+            // Use capability resolver to map symbolic/qualified names to (provider, action) pairs
+            // The resolver should be passed in from the module system; for now we use built-in
+            // mappings as a bridge until full module-system integration is complete.
+            let resolver = crate::capability_resolver::CapabilityResolver::with_builtin_mappings();
+
+            let (provider_name, action_name) = match &action.target {
+                crate::surface::OperationalTarget::Symbolic { capability_name } => {
+                    // Symbolic capability call - MUST resolve through explicit mapping
+                    // Per Phase 70 design: no fallback, no default provider
+                    match resolver.resolve(capability_name.as_ref()) {
+                        Some((provider, action)) => (provider, action),
+                        None => {
+                            return Err(LoweringError::UnresolvedCapability {
+                                name: capability_name.to_string(),
+                            });
+                        }
+                    }
+                }
+                crate::surface::OperationalTarget::Qualified {
+                    module,
+                    capability_name,
+                } => {
+                    // Module-qualified symbolic call: module::capability
+                    // MUST resolve through explicit resolver metadata
+                    let qualified_name = format!("{}::{}", module, capability_name);
+                    match resolver.resolve(&qualified_name) {
+                        Some((provider, action)) => (provider, action),
+                        None => {
+                            return Err(LoweringError::UnresolvedCapability {
+                                name: qualified_name,
+                            });
+                        }
+                    }
+                }
+                crate::surface::OperationalTarget::Explicit { provider, action } => {
+                    // Explicit provider:action call - use as-is
+                    (provider.to_string(), action.to_string())
+                }
+            };
+
+            Ok(CoreWorkflow::Act {
+                provider_name,
+                action_name,
+                arguments: action
+                    .args
+                    .iter()
+                    .map(lower_expr)
+                    .collect::<Result<Vec<_>, _>>()?,
+                guard: guard
+                    .as_ref()
+                    .map(lower_guard)
+                    .transpose()?
+                    .unwrap_or(CoreGuard::Always),
+                provenance: provenance.clone(),
+            })
+        }
 
         SurfaceWorkflow::Set {
             capability,

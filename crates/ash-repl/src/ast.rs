@@ -552,7 +552,7 @@ fn render_policy_expr(expr: &PolicyExpr) -> String {
 
 fn render_action_ref(action: &ActionRef) -> String {
     let mut out = String::from("ActionRef {\n");
-    push_field(&mut out, 2, "name", &format!("{:?}", action.name));
+    push_field(&mut out, 2, "target", &format!("{:?}", action.target));
     push_field(
         &mut out,
         2,

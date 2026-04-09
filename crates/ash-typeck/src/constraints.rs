@@ -567,10 +567,15 @@ mod tests {
 
     #[test]
     fn test_generate_workflow_act() {
+        use ash_parser::surface::OperationalTarget;
+
         let mut ctx = ConstraintContext::new();
         let workflow = Workflow::Act {
             action: ash_parser::surface::ActionRef {
-                name: "write".into(),
+                target: OperationalTarget::Explicit {
+                    provider: "io".into(),
+                    action: "write".into(),
+                },
                 args: vec![],
             },
             guard: None,

@@ -1245,9 +1245,42 @@ pub(crate) fn parse_single_stmt_or_block(input: &mut ParseInput) -> ModalResult<
     }
 }
 
-/// Parse an action reference: `name(args...)`
+/// Parse an action reference.
+///
+/// Supports three forms:
+/// - `capability(args)` - symbolic capability call (resolved via resolver)
+/// - `module::capability(args)` - module-qualified symbolic call
+/// - `provider:action(args)` - explicit provider:action call
 pub fn action_ref(input: &mut ParseInput) -> ModalResult<ActionRef> {
-    let name = identifier(input)?;
+    let first_name = identifier(input)?;
+
+    skip_whitespace_and_comments(input);
+
+    // Check for :: (module-qualified) or : (explicit provider:action) form
+    let target = if input.input.starts_with("::") {
+        // Module-qualified form: module::capability(args)
+        let _ = literal_str("::").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let capability_name = identifier(input)?;
+        crate::surface::OperationalTarget::Qualified {
+            module: first_name.into(),
+            capability_name: capability_name.into(),
+        }
+    } else if input.input.starts_with(":") {
+        // Explicit form: provider:action(args)
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let action_name = identifier(input)?;
+        crate::surface::OperationalTarget::Explicit {
+            provider: first_name.into(),
+            action: action_name.into(),
+        }
+    } else {
+        // Symbolic form: capability(args)
+        crate::surface::OperationalTarget::Symbolic {
+            capability_name: first_name.into(),
+        }
+    };
 
     let args = if input.input.starts_with("(") {
         delimited(literal_str("("), parse_expr_list, literal_str(")")).parse_next(input)?
@@ -1255,10 +1288,7 @@ pub fn action_ref(input: &mut ParseInput) -> ModalResult<ActionRef> {
         vec![]
     };
 
-    Ok(ActionRef {
-        name: name.into(),
-        args,
-    })
+    Ok(ActionRef { target, args })
 }
 
 /// Parse an obligation reference
@@ -1801,11 +1831,59 @@ mod tests {
     }
 
     #[test]
-    fn test_action_ref() {
+    fn test_action_ref_symbolic() {
         let mut input = test_input("send_email(\"to\", \"subject\")");
         let result = action_ref(&mut input).unwrap();
-        assert_eq!(result.name.as_ref(), "send_email");
+        match &result.target {
+            crate::surface::OperationalTarget::Symbolic { capability_name } => {
+                assert_eq!(capability_name.as_ref(), "send_email");
+            }
+            _ => panic!("Expected symbolic target"),
+        }
         assert_eq!(result.args.len(), 2);
+    }
+
+    #[test]
+    fn test_action_ref_explicit() {
+        // Test explicit provider:action form
+        let mut input = test_input("provider:action");
+
+        // Test step by step
+        let first = identifier(&mut input).expect("Should parse first identifier");
+        assert_eq!(first, "provider");
+
+        skip_whitespace_and_comments(&mut input);
+        assert!(input.input.starts_with(":"));
+
+        literal_str(":")
+            .parse_next(&mut input)
+            .expect("Should parse colon");
+        skip_whitespace_and_comments(&mut input);
+
+        let second = identifier(&mut input).expect("Should parse second identifier");
+        assert_eq!(second, "action");
+
+        // All input should be consumed
+        assert!(input.input.is_empty());
+    }
+
+    #[test]
+    fn test_action_ref_qualified() {
+        // Test module-qualified form: io::fs_read(args)
+        let mut input = test_input("io::fs_read(\"file.txt\")");
+        let result = action_ref(&mut input).unwrap();
+
+        match &result.target {
+            crate::surface::OperationalTarget::Qualified {
+                module,
+                capability_name,
+            } => {
+                assert_eq!(module.as_ref(), "io");
+                assert_eq!(capability_name.as_ref(), "fs_read");
+            }
+            _ => panic!("Expected qualified target, got {:?}", result.target),
+        }
+        assert_eq!(result.args.len(), 1);
     }
 
     #[test]

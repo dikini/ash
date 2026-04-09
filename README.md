@@ -74,8 +74,15 @@ workflow support_ticket {
   orient analyze(docs, ticket) as analysis;
   
   decide { analysis.confidence > 0.8 } under external_comm then {
-    act send_email(to: ticket.customer, body: analysis.reply);
+    -- Symbolic capability call (new sugar)
+    send_email(to: ticket.customer, body: analysis.reply)
+      when approved;
+    
+    -- Explicit provider:action call (new sugar)
+    email:send(to: ticket.customer, body: analysis.reply)
+      when approved;
   } else {
+    -- Legacy act form (still supported, lowers to same contract)
     act escalate(to: senior_agent);
   }
 }

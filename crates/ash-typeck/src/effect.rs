@@ -323,7 +323,7 @@ pub fn infer_effect_with_bounds(workflow: &Workflow, bound: Effect) -> EffectInf
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::surface::{ActionRef, Expr, Literal, Pattern};
+    use ash_parser::surface::{ActionRef, Expr, Literal, OperationalTarget, Pattern};
     use ash_parser::token::Span;
 
     fn test_span() -> Span {
@@ -354,7 +354,10 @@ mod tests {
             binding: None,
             continuation: Some(Box::new(Workflow::Act {
                 action: ActionRef {
-                    name: "write".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "io".into(),
+                        action: "write".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -369,7 +372,10 @@ mod tests {
     fn test_infer_effect_act() {
         let workflow = Workflow::Act {
             action: ActionRef {
-                name: "write".into(),
+                target: OperationalTarget::Explicit {
+                    provider: "io".into(),
+                    action: "write".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -406,7 +412,10 @@ mod tests {
             condition: Expr::Literal(Literal::Bool(true)),
             then_branch: Box::new(Workflow::Act {
                 action: ActionRef {
-                    name: "write".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "io".into(),
+                        action: "write".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -429,7 +438,10 @@ mod tests {
             }),
             second: Box::new(Workflow::Act {
                 action: ActionRef {
-                    name: "write".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "io".into(),
+                        action: "write".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -572,7 +584,10 @@ mod tests {
     fn test_infer_effect_with_bounds_failure() {
         let workflow = Workflow::Act {
             action: ActionRef {
-                name: "write".into(),
+                target: OperationalTarget::Explicit {
+                    provider: "io".into(),
+                    action: "write".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -607,7 +622,10 @@ mod tests {
     fn test_infer_effect_propose() {
         let workflow = Workflow::Propose {
             action: ActionRef {
-                name: "action".into(),
+                target: OperationalTarget::Explicit {
+                    provider: "test".into(),
+                    action: "action".into(),
+                },
                 args: vec![],
             },
             binding: None,
@@ -650,7 +668,10 @@ mod tests {
             capability: "db".into(),
             body: Box::new(Workflow::Act {
                 action: ActionRef {
-                    name: "query".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "db".into(),
+                        action: "query".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -696,7 +717,10 @@ mod tests {
             primary: Box::new(Workflow::Done { span: test_span() }),
             fallback: Box::new(Workflow::Act {
                 action: ActionRef {
-                    name: "write".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "io".into(),
+                        action: "write".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -712,7 +736,10 @@ mod tests {
         let workflow = Workflow::Must {
             body: Box::new(Workflow::Act {
                 action: ActionRef {
-                    name: "write".into(),
+                    target: OperationalTarget::Explicit {
+                        provider: "io".into(),
+                        action: "write".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,

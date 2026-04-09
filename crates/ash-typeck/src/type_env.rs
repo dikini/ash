@@ -388,6 +388,8 @@ pub struct TypeEnv {
     variables: HashMap<String, crate::types::Type>,
     /// Parent environment for nested scopes (None for root)
     parent: Option<Box<TypeEnv>>,
+    /// Registered capability providers (e.g., "io", "http", "db")
+    providers: HashSet<String>,
 }
 
 impl TypeEnv {
@@ -435,6 +437,7 @@ impl TypeEnv {
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             parent: None,
+            providers: HashSet::new(),
         }
     }
 
@@ -773,6 +776,7 @@ impl TypeEnv {
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             parent: Some(Box::new(self.clone())),
+            providers: self.providers.clone(),
         }
     }
 
@@ -956,6 +960,37 @@ impl TypeEnv {
                 Ok(UnfoldedBody::Struct(unfolded_fields))
             }
         }
+    }
+
+    // ============================================================
+    // Capability Provider Methods
+    // ============================================================
+
+    /// Register a capability provider.
+    ///
+    /// # Arguments
+    /// * `name` - The provider name (e.g., "io", "http", "db")
+    pub fn register_provider(&mut self, name: impl Into<String>) {
+        self.providers.insert(name.into());
+    }
+
+    /// Check if a provider is registered.
+    ///
+    /// # Arguments
+    /// * `name` - The provider name to check
+    ///
+    /// # Returns
+    /// * `true` - If the provider is registered or if checking is not strict
+    /// * `false` - If the provider is not registered (only in strict mode)
+    pub fn has_provider(&self, name: &str) -> bool {
+        // For now, accept any provider to maintain backward compatibility
+        // TODO: Add strict mode that only accepts registered providers
+        self.providers.is_empty() || self.providers.contains(name)
+    }
+
+    /// Get all registered providers.
+    pub fn providers(&self) -> &HashSet<String> {
+        &self.providers
     }
 }
 

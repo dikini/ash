@@ -2,6 +2,7 @@
 //!
 //! This crate provides the lexer and parser for the Ash workflow language.
 
+pub mod capability_resolver;
 pub mod combinators;
 pub mod desugar;
 pub mod error;
@@ -30,6 +31,7 @@ pub mod surface;
 pub mod token;
 pub mod use_tree;
 
+pub use capability_resolver::{CapabilityResolver, CapabilityTarget};
 pub use combinators::*;
 pub use desugar::*;
 pub use error::*;

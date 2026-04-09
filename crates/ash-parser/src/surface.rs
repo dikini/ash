@@ -1021,11 +1021,35 @@ pub enum Decision {
     Escalate,
 }
 
+/// Target of an operational call - symbolic, qualified, or explicit provider:action.
+#[derive(Debug, Clone, PartialEq)]
+pub enum OperationalTarget {
+    /// Symbolic capability call: `capability(args)` - resolved via resolver metadata
+    Symbolic {
+        /// The capability name to resolve (e.g., "fs_read")
+        capability_name: Name,
+    },
+    /// Module-qualified symbolic call: `module::capability(args)` - resolved via resolver
+    Qualified {
+        /// Module path (e.g., "io" in "io::fs_read")
+        module: Name,
+        /// Capability name within the module (e.g., "fs_read" in "io::fs_read")
+        capability_name: Name,
+    },
+    /// Explicit provider:action call: `provider:action(args)`
+    Explicit {
+        /// Provider name
+        provider: Name,
+        /// Action name
+        action: Name,
+    },
+}
+
 /// Reference to an action invocation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ActionRef {
-    /// Name of the action
-    pub name: Name,
+    /// Target of the action (symbolic or explicit)
+    pub target: OperationalTarget,
     /// Arguments to the action
     pub args: Vec<Expr>,
 }
@@ -1597,7 +1621,9 @@ mod tests {
     fn test_workflow_propose() {
         let wf = Workflow::Propose {
             action: ActionRef {
-                name: "send_email".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "send_email".into(),
+                },
                 args: vec![],
             },
             binding: None,
@@ -1606,9 +1632,12 @@ mod tests {
         };
 
         match wf {
-            Workflow::Propose { action, .. } => {
-                assert_eq!(action.name, "send_email".into());
-            }
+            Workflow::Propose { action, .. } => match &action.target {
+                OperationalTarget::Symbolic { capability_name } => {
+                    assert_eq!(*capability_name, "send_email".into());
+                }
+                _ => panic!("Expected symbolic target"),
+            },
             _ => panic!("Expected Propose workflow"),
         }
     }
@@ -1675,7 +1704,9 @@ mod tests {
     fn test_workflow_act() {
         let wf = Workflow::Act {
             action: ActionRef {
-                name: "log_action".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "log_action".into(),
+                },
                 args: vec![Expr::Literal(Literal::String("test".into()))],
             },
             guard: Some(Guard::Always),
@@ -1684,7 +1715,12 @@ mod tests {
 
         match wf {
             Workflow::Act { action, guard, .. } => {
-                assert_eq!(action.name, "log_action".into());
+                match &action.target {
+                    OperationalTarget::Symbolic { capability_name } => {
+                        assert_eq!(*capability_name, "log_action".into());
+                    }
+                    _ => panic!("Expected symbolic target"),
+                }
                 assert!(matches!(guard, Some(Guard::Always)));
             }
             _ => panic!("Expected Act workflow"),
@@ -2305,11 +2341,18 @@ mod tests {
     #[test]
     fn test_action_ref() {
         let action = ActionRef {
-            name: "send_email".into(),
+            target: OperationalTarget::Symbolic {
+                capability_name: "send_email".into(),
+            },
             args: vec![Expr::Literal(Literal::String("test".into()))],
         };
 
-        assert_eq!(action.name, "send_email".into());
+        match &action.target {
+            OperationalTarget::Symbolic { capability_name } => {
+                assert_eq!(*capability_name, "send_email".into());
+            }
+            _ => panic!("Expected symbolic target"),
+        }
         assert_eq!(action.args.len(), 1);
     }
 
@@ -2480,7 +2523,9 @@ mod tests {
         assert_eq!(
             Workflow::Propose {
                 action: ActionRef {
-                    name: "x".into(),
+                    target: OperationalTarget::Symbolic {
+                        capability_name: "x".into(),
+                    },
                     args: vec![]
                 },
                 binding: None,
@@ -2516,7 +2561,9 @@ mod tests {
         assert_eq!(
             Workflow::Act {
                 action: ActionRef {
-                    name: "x".into(),
+                    target: OperationalTarget::Symbolic {
+                        capability_name: "x".into(),
+                    },
                     args: vec![]
                 },
                 guard: None,
@@ -2674,7 +2721,9 @@ mod effect_tests {
             binding: Some(Pattern::Variable("data".into())),
             continuation: Some(Box::new(Workflow::Act {
                 action: ActionRef {
-                    name: "process".into(),
+                    target: OperationalTarget::Symbolic {
+                        capability_name: "process".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -2701,7 +2750,9 @@ mod effect_tests {
     fn test_propose_effect() {
         let workflow = Workflow::Propose {
             action: ActionRef {
-                name: "send_email".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "send_email".into(),
+                },
                 args: vec![],
             },
             binding: None,
@@ -2740,7 +2791,9 @@ mod effect_tests {
     fn test_act_effect() {
         let workflow = Workflow::Act {
             action: ActionRef {
-                name: "write_file".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "write_file".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2779,7 +2832,9 @@ mod effect_tests {
         };
         let act = Workflow::Act {
             action: ActionRef {
-                name: "process".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "process".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2827,7 +2882,9 @@ mod effect_tests {
         };
         let act = Workflow::Act {
             action: ActionRef {
-                name: "process".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "process".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2865,7 +2922,9 @@ mod effect_tests {
         // for x in items { act } = Operational
         let act = Workflow::Act {
             action: ActionRef {
-                name: "process".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "process".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2885,7 +2944,9 @@ mod effect_tests {
         // let x = 42 in act = Operational
         let act = Workflow::Act {
             action: ActionRef {
-                name: "process".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "process".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2923,7 +2984,9 @@ mod effect_tests {
         };
         let act = Workflow::Act {
             action: ActionRef {
-                name: "process".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "process".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2942,7 +3005,9 @@ mod effect_tests {
         // must { act } = Operational
         let act = Workflow::Act {
             action: ActionRef {
-                name: "process".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "process".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2960,7 +3025,9 @@ mod effect_tests {
         // with db { act } = Operational
         let act = Workflow::Act {
             action: ActionRef {
-                name: "query".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "query".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -2989,7 +3056,9 @@ mod effect_tests {
         };
         let deliberative = Workflow::Propose {
             action: ActionRef {
-                name: "x".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "x".into(),
+                },
                 args: vec![],
             },
             binding: None,
@@ -3006,7 +3075,9 @@ mod effect_tests {
         };
         let operational = Workflow::Act {
             action: ActionRef {
-                name: "x".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "x".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -3053,7 +3124,9 @@ mod effect_tests {
         // decide with operational branches
         let act_then = Workflow::Act {
             action: ActionRef {
-                name: "process".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "process".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -3061,7 +3134,9 @@ mod effect_tests {
         };
         let act_else = Workflow::Act {
             action: ActionRef {
-                name: "cleanup".into(),
+                target: OperationalTarget::Symbolic {
+                    capability_name: "cleanup".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -3137,7 +3212,9 @@ mod effect_tests {
             guard: None,
             body: Workflow::Act {
                 action: ActionRef {
-                    name: "process".into(),
+                    target: OperationalTarget::Symbolic {
+                        capability_name: "process".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,
@@ -3174,7 +3251,9 @@ mod effect_tests {
             guard: None,
             body: Workflow::Act {
                 action: ActionRef {
-                    name: "shutdown".into(),
+                    target: OperationalTarget::Symbolic {
+                        capability_name: "shutdown".into(),
+                    },
                     args: vec![],
                 },
                 guard: None,

@@ -47,7 +47,8 @@ let status = check obligation_name;  -- Check obligation, returns Bool
 -- Pattern: Check and continue
 workflow simple {
     oblige audit_trail;
-    act process;
+    -- Symbolic capability call (new sugar)
+    process();
     let _ = check audit_trail;  -- Must check before end
 }
 
@@ -63,7 +64,8 @@ workflow with_retry {
                 ret Success;
             } else {
                 -- Deadline passed, escalate
-                act escalate;
+                -- Explicit provider:action call (new sugar)
+                supervisor:escalate(reason: "deadline_missed");
                 ret Failed;
             }
         }
@@ -75,14 +77,17 @@ workflow with_retry {
 workflow with_compensation {
     oblige transaction_atomic;
     
-    act reserve_funds;
+    -- Symbolic capability call
+    reserve_funds();
     let reserved = check transaction_atomic;
     
     if !reserved {
-        act release_funds;  -- Compensate
+        -- Compensate using explicit provider:action
+        payment:release_funds();
         ret Failed;
     }
     
+    -- Legacy act form (still supported, lowers to same split contract)
     act transfer;
 }
 ```
@@ -336,7 +341,8 @@ proptest! {
 -- Test 1: Simple obligation lifecycle
 workflow simple_obligation {
     oblige audit_required;
-    act process;
+    -- Symbolic capability call (new sugar)
+    process();
     let _ = check audit_required;
 }
 
@@ -348,7 +354,8 @@ workflow check_with_decision {
     if met {
         ret Success;
     } else {
-        act escalate;
+        -- Explicit provider:action call (new sugar)
+        supervisor:escalate();
         ret Failed;
     }
 }
@@ -356,7 +363,8 @@ workflow check_with_decision {
 -- Test 3: Error - obligation not discharged
 workflow bad {
     oblige forgot_this;
-    act work;
+    -- Symbolic capability call
+    work();
     -- ERROR: forgot_this not checked
 }
 

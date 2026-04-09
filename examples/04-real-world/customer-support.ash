@@ -131,15 +131,17 @@ workflow process_ticket {
     
     // ACT: Execute based on decision
     if action == "auto_respond" {
-        act send_notification(customer.email, generate_auto_response(analysis))
-        act resolve_ticket(ticket_id, "auto_resolved")
+        // Symbolic capability calls (new sugar)
+        send_notification(customer.email, generate_auto_response(analysis))
+        resolve_ticket(ticket_id, "auto_resolved")
     } else if action == "assign_to_agent" {
         orient {
             let bestAgent = find_best_agent(analysis.category, analysis.priority_score)
         } as assignment
         
-        act assign_ticket(ticket_id, assignment.bestAgent.id)
-        act send_notification(assignment.bestAgent.email, "New ticket assigned: " + ticket_id)
+        // Symbolic capability calls
+        assign_ticket(ticket_id, assignment.bestAgent.id)
+        send_notification(assignment.bestAgent.email, "New ticket assigned: " + ticket_id)
         
         // Create obligation for agent response
         oblige agent respond_within_sla {
@@ -148,15 +150,16 @@ workflow process_ticket {
             max_response_time: ticket.sla.response_time
         }
     } else if action == "escalate_to_supervisor" || action == "immediate_escalate" {
-        act escalate_ticket(ticket_id, "High priority or SLA breach")
+        // Symbolic capability call
+        escalate_ticket(ticket_id, "High priority or SLA breach")
         
-        // Notify supervisor and customer sequentially
-        act send_notification(find_supervisor().email, "URGENT: Escalated ticket " + ticket_id)
-        act send_notification(customer.email, "Your ticket has been escalated to our specialist team.")
+        // Notify supervisor and customer sequentially using explicit provider:action
+        notification:send(find_supervisor().email, "URGENT: Escalated ticket " + ticket_id)
+        notification:send(customer.email, "Your ticket has been escalated to our specialist team.")
     }
     
     // Log all actions for audit
-    act log_ticket_processing {
+    audit:log_ticket_processing {
         ticket_id: ticket_id,
         analysis: analysis,
         decision: action,

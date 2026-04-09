@@ -909,16 +909,16 @@ workflow support_ticket_resolution {
   -- Evaluative: Policy check
   decide { analysis.confidence } under high_confidence then {
     
-    -- Operational: Send (with policy guard)
-    act send_email(
+    -- Operational: Send using symbolic capability call (new sugar)
+    send_email(
       to: ticket.customer_email,
       subject: "Re: " + ticket.subject,
       body: draft.content
-    ) where external_communication;
+    ) when external_communication;
     
   } else {
-    -- Escalation path
-    act escalate(to: senior_agent, reason: "low_confidence");
+    -- Escalation path using explicit provider:action (new sugar)
+    supervisor:escalate(to: senior_agent, reason: "low_confidence");
   }
   
   done
@@ -965,13 +965,16 @@ workflow code_review {
            and diff_analysis.no_critical_issues } then {
     
     if diff_analysis.has_minor_issues then {
-      act request_changes(pr, comments: diff_analysis.issues);
+      -- Symbolic capability call (new sugar)
+      request_changes(pr, comments: diff_analysis.issues);
     } else {
-      act merge_pr(pr) where reviewer_approved;
+      -- Explicit provider:action call (new sugar)
+      git:merge_pr(pr) when reviewer_approved;
     }
     
   } else {
-    act request_changes(
+    -- Symbolic capability call
+    request_changes(
       pr, 
       comments: ["Coverage insufficient", "Critical issues found"]
     );
@@ -1012,12 +1015,15 @@ workflow collaborative_research {
   oblige role: reviewer to verify_claims(report);
   
   decide { report.confidence > threshold } then {
-    act publish_report(report) where peer_reviewed;
+    -- Symbolic capability call (new sugar)
+    publish_report(report) when peer_reviewed;
   } else {
     maybe {
-      act request_feedback(report)
+      -- Symbolic capability call
+      request_feedback(report)
     } else {
-      act archive_as_draft(report)
+      -- Symbolic capability call
+      archive_as_draft(report)
     }
   }
   

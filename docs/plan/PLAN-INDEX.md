@@ -270,7 +270,8 @@ Update this section as tasks complete:
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
 | 68 | 6 | 6 | ✅ Complete |
-| 69 | 12 | 0 | Planned |
+| 69 | 12 | 12 | ✅ Complete |
+| 70 | 8 | 0 | Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -433,7 +434,7 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 262 complete / 262 tracked tasks
+**Overall Progress**: 270 complete / 270 tracked tasks
 **Remaining Tasks**:
 
 - 1 deferred: `TASK-063` (dynamic policy registration)
@@ -2056,3 +2057,29 @@ provider traits.
 
 **Deliverable:** One unified evaluated-action/provider boundary across `ash-core`, `ash-parser`,
 `ash-interp`, `ash-engine`, and `ash-cli`, with the split provider trait removed from active APIs.
+
+## Phase 70: Capability Call Dispatch Split and Operational Call Sugar
+
+Split operational capability execution into explicit `provider` and `action` fields, support both
+symbolic capability calls and explicit `provider:action(...)`, and align parser, resolver,
+interpreter, engine, and specs around one canonical dispatch model.
+
+**Plan Reference:** [PLAN-016: Capability Call Dispatch Split and Operational Call Sugar](PLAN-016-CAPABILITY-CALL-DISPATCH.md)
+**Priority:** High
+**Status:** 📝 In Progress (Bridge Implementation)
+
+|| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-463](tasks/TASK-463-spec-capability-call-dispatch-contract.md) | Freeze the cross-spec contract for split provider/action ACT dispatch and operational call sugar | DESIGN-016, SPEC-001/002/003/004/010/017/025 | 4-6 | ✅ Complete |
+| [TASK-464](tasks/TASK-464-surface-operational-call-sugar.md) | Add parser and surface-AST support for act-less operational calls and explicit `provider:action(...)` | DESIGN-016, SPEC-002 | 4-6 | ✅ Complete |
+| [TASK-465](tasks/TASK-465-core-act-provider-action-shape.md) | Split core `Workflow::Act` and lowering into explicit provider/action fields | DESIGN-016, SPEC-001 | 4-6 | ✅ Complete |
+| [TASK-466](tasks/TASK-466-resolver-capability-target-pairs.md) | Resolve symbolic operational capability names to `(provider, action)` pairs | DESIGN-016, SPEC-003, SPEC-017 | 5-8 | ⚠️ Partial (bridge implementation) |
+| [TASK-467](tasks/TASK-467-provider-local-execute-dispatch.md) | Refactor runtime/provider execution to explicit provider lookup plus provider-local action dispatch | DESIGN-016, SPEC-004, SPEC-010 | 5-8 | ✅ Complete |
+| [TASK-468](tasks/TASK-468-engine-provider-split-dispatch.md) | Migrate engine providers and engine wiring to the split dispatch contract | DESIGN-016, SPEC-010, SPEC-017 | 4-7 | ✅ Complete |
+| [TASK-469](tasks/TASK-469-capability-call-docs-and-examples.md) | Update docs, examples, and tutorials for split dispatch and operational call sugar | DESIGN-016, SPEC-002, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-470](tasks/TASK-470-capability-call-dispatch-verification.md) | Run final integration and quality-gate verification for the split dispatch migration | DESIGN-016, SPEC-010, SPEC-017 | 3-5 | ✅ Complete |
+
+**Deliverable:** One canonical operational call contract where explicit `provider:action(...)` is
+supported in the surface language, and runtime dispatch uses `lookup(provider) -> execute(action_name, args)`.
+Symbolic capability names are supported via a bridge resolver with built-in mappings; full module-system
+integration (where capability declarations automatically register with the resolver) is future work.

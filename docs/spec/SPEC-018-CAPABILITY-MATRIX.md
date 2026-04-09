@@ -18,7 +18,10 @@ workflow controller
     oblig role:operator            -- Required obligation
 {
     observe sensor:temperature as t;
-    receive { kafka:orders as order => act process(order) };
+    receive { kafka:orders as order => 
+        -- Symbolic capability call (new sugar)
+        process(order) 
+    };
     set hvac:target = calculate(t);
 }
 ```

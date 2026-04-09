@@ -193,6 +193,14 @@ receive_pattern ::= IDENTIFIER ":" IDENTIFIER "as" pattern
 duration        ::= NUMBER ("ms" | "s" | "m" | "h")
 
 act_stmt        ::= "act" action_ref ("where" guard)?
+                  | operational_call
+
+operational_call ::= capability_call
+                   | provider_action_call
+
+capability_call  ::= IDENTIFIER "(" arguments? ")" ("when" guard)?
+
+provider_action_call ::= IDENTIFIER ":" IDENTIFIER "(" arguments? ")" ("when" guard)?
 
 oblig_stmt      ::= "oblige" IDENTIFIER "to" check_ref
                     ("then" workflow)?
@@ -422,7 +430,47 @@ This is surface sugar only. The canonical core contract still ends in an explici
 form; omitting `done` in surface syntax does not add a separate completion construct or change the
 core workflow-form set.
 
-### 4.4 Statement List Scoping
+### 4.4 Operational Call Sugar
+
+Operational calls can be written without the `act` keyword. These forms are sugar for the canonical
+`Act` IR node with explicit `(provider_name, action_name)`:
+
+```
+capability(args)
+-- Lowers to: Act { provider_name: resolved_provider, action_name: resolved_action, ... }
+
+capability(args) when guard
+-- Lowers to: Act { ..., guard: guard }
+
+provider:action(args)
+-- Lowers to: Act { provider_name: "provider", action_name: "action", ... }
+
+provider:action(args) when guard
+-- Lowers to: Act { provider_name: "provider", action_name: "action", ..., guard: guard }
+```
+
+**Lowering rules:**
+
+| Surface Form | Canonical IR |
+|--------------|--------------|
+| `capability(args)` | `Act { provider_name: resolved, action_name: resolved, arguments: args, guard: Always, ... }` |
+| `capability(args) when g` | `Act { ..., guard: g }` |
+| `provider:action(args)` | `Act { provider_name: "provider", action_name: "action", arguments: args, guard: Always, ... }` |
+| `provider:action(args) when g` | `Act { ..., guard: g }` |
+| `act provider:action(args) where g` | `Act { provider_name: "provider", action_name: "action", arguments: args, guard: g, ... }` |
+
+Symbolic capability names (e.g., `fs_read`, `io::fs_read`) resolve to `(provider, action)`
+pairs during the lowering phase. The resolver produces a `ResolvedCapabilityTarget { provider, action }`
+which then lowers to the canonical `Act` form.
+
+Both simple symbolic names (`fs_read`) and module-qualified names (`io::fs_read`) are
+supported. Module-qualified names are parsed as `Qualified { module, capability_name }`.
+
+**Implementation Status:** The current implementation uses explicit capability mappings
+registered with a `CapabilityResolver`. Full module-system integration (where capability
+declarations in source automatically register with the resolver) is planned future work.
+
+### 4.5 Statement List Scoping
 
 Newline-separated statement lists are normatively lowered to nested `LET ... in cont` forms that
 establish lexical scoping for binding statements.

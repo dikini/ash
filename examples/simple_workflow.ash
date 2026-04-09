@@ -37,13 +37,14 @@ workflow temperature_monitor {
   
   -- DECIDE: Apply policy check
   decide { reading.temp } under temperature_alert then {
-    -- ACT: Execute based on decision
-    act send_alert(
+    -- ACT: Execute based on decision (new capability call sugar)
+    send_alert(
       severity: status,
       message: "Temperature " + status + ": " + reading.temp
-    ) where notified;
+    ) when notified;
     
-    act log_status({
+    -- Explicit provider:action form
+    logger:log_status({
       sensor: "temp_001",
       temp: reading.temp,
       status: status,
@@ -52,8 +53,8 @@ workflow temperature_monitor {
     
     ret { alert_sent: true, status: status }
   } else {
-    -- Sequential logging for normal operations
-    act log_status({
+    -- Sequential logging for normal operations (symbolic capability call)
+    log_status({
       sensor: "temp_001",
       temp: reading.temp,
       status: status,

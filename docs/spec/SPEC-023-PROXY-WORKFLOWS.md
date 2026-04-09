@@ -44,8 +44,8 @@ proxy board_proxy
     loop {
         receive {
             req : ApprovalRequest => {
-                -- Handle request
-                act process_request with req;
+                -- Handle request using symbolic capability call (new sugar)
+                process_request(req);
                 
                 -- Send response back to original workflow
                 resume Approved(decision) : ApprovalResponse;
@@ -134,7 +134,8 @@ workflow transfer_funds
     yield role(manager) TransferRequest { amount: amount }
     resume response : TransferResponse {
         Approved(sig) => {
-            act transfer with { amount: amount, signature: sig };
+            -- Explicit provider:action call (new sugar)
+            banking:transfer({ amount: amount, signature: sig });
             ret Success;
         },
         Denied(reason) => {

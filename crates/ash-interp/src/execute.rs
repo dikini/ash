@@ -608,37 +608,37 @@ fn execute_workflow_inner_observed<'a>(
 
             // Execute action with guard
             Workflow::Act {
+                provider_name,
                 action_name,
-                action_arguments,
+                arguments,
                 guard,
                 provenance: _,
             } => {
                 // Evaluate guard
                 let guard_result = eval_guard(guard, &ctx).map_err(|_| ExecError::GuardFailed {
-                    guard: format!("{:?}", guard),
+                    guard: format!("{guard:?}"),
                 })?;
 
                 if !guard_result {
                     return Err(ExecError::GuardFailed {
-                        guard: format!("{:?}", guard),
+                        guard: format!("{guard:?}"),
                     });
                 }
 
                 // Evaluate action arguments
-                let evaluated_args = action_arguments
+                let evaluated_args = arguments
                     .iter()
                     .map(|expr| eval_expr(expr, &ctx).map_err(ExecError::Eval))
                     .collect::<Result<Vec<_>, _>>()?;
 
-                let action = ash_core::Action {
-                    name: action_name.clone(),
-                    arguments: evaluated_args,
-                };
-
                 if let Some(recorder) = execution_recorder {
                     recorder.record_act(action_name, &format!("{guard:?}"));
                 }
-                cap_ctx.execute(&action, action_name).await
+
+                // Lookup provider by provider_name and dispatch action
+                cap_ctx
+                    .execute(provider_name, action_name, &evaluated_args)
+                    .await
             }
 
             // Propose action (advisory - just continue)
@@ -2251,8 +2251,9 @@ mod tests {
     #[tokio::test]
     async fn test_execute_act_guard_fails() {
         let workflow = Workflow::Act {
+            provider_name: "test".to_string(),
             action_name: "test".to_string(),
-            action_arguments: vec![],
+            arguments: vec![],
             guard: Guard::Never,
             provenance: Provenance::new(),
         };

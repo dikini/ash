@@ -17,7 +17,8 @@
 //! assert!(result.is_ok());
 //! ```
 
-use ash_parser::surface::{Expr, Workflow};
+use crate::names::CapabilityResolver;
+use ash_parser::surface::{Expr, OperationalTarget, Workflow};
 use thiserror::Error;
 
 /// Capability verification error.
@@ -78,8 +79,10 @@ pub struct CapabilityChecker {
     receives: Vec<(String, String)>,
     /// Declared sent streams: (capability, channel)
     sends: Vec<(String, String)>,
-    /// Declared actions: capability name
-    actions: Vec<String>,
+    /// Declared actions: (provider, action) pairs
+    actions: Vec<(String, String)>,
+    /// Resolver for symbolic/qualified capability names to (provider, action) pairs
+    resolver: CapabilityResolver,
 }
 
 impl CapabilityChecker {
@@ -99,7 +102,24 @@ impl CapabilityChecker {
             receives: Vec::new(),
             sends: Vec::new(),
             actions: Vec::new(),
+            resolver: CapabilityResolver::with_builtin_mappings(),
         }
+    }
+
+    /// Registers a capability mapping for symbolic/qualified name resolution.
+    ///
+    /// # Arguments
+    /// * `capability_name` - The symbolic name (e.g., "fs_read" or "io::fs_read")
+    /// * `provider` - The provider name (e.g., "io")
+    /// * `action` - The action name (e.g., "fs_read")
+    pub fn register_capability_mapping(
+        mut self,
+        capability_name: &str,
+        provider: &str,
+        action: &str,
+    ) -> Self {
+        self.resolver.register(capability_name, provider, action);
+        self
     }
 
     /// Declares an observe capability.
@@ -186,7 +206,8 @@ impl CapabilityChecker {
     ///
     /// # Arguments
     ///
-    /// * `cap` - The action name
+    /// * `provider` - The provider name (e.g., "io", "http")
+    /// * `action` - The action name (e.g., "fs_read", "get")
     ///
     /// # Example
     ///
@@ -194,10 +215,11 @@ impl CapabilityChecker {
     /// use ash_typeck::capability_check::CapabilityChecker;
     ///
     /// let checker = CapabilityChecker::new()
-    ///     .action("notify");
+    ///     .action("io", "fs_read");
     /// ```
-    pub fn action(mut self, cap: &str) -> Self {
-        self.actions.push(cap.to_string());
+    pub fn action(mut self, provider: &str, action: &str) -> Self {
+        self.actions
+            .push((provider.to_string(), action.to_string()));
         self
     }
 
@@ -276,15 +298,17 @@ impl CapabilityChecker {
         sets: &[(String, String)],
         receives: &[(String, String)],
         sends: &[(String, String)],
-        actions: &[String],
+        actions: &[(String, String)],
     ) -> CapabilityCheckResult<()> {
         // Create a temporary checker with the provided context
+        // Use builtin mappings to match lowering behavior
         let temp_checker = Self {
             observes: observes.to_vec(),
             sets: sets.to_vec(),
             receives: receives.to_vec(),
             sends: sends.to_vec(),
             actions: actions.to_vec(),
+            resolver: CapabilityResolver::with_builtin_mappings(),
         };
         temp_checker.verify_workflow(workflow)
     }
@@ -370,11 +394,49 @@ impl CapabilityChecker {
 
             // Act - executes an action with potential side effects
             Workflow::Act { action, .. } => {
-                // Check if action name is in the actions list
-                let action_name = action.name.as_ref();
-                if !self.actions.iter().any(|a| a == action_name) {
+                // Resolve symbolic/qualified names to (provider, action) pairs
+                // Per Phase 70: ALL capability targets must resolve through explicit metadata
+                let (provider_name, action_name): (String, String) = match &action.target {
+                    OperationalTarget::Symbolic { capability_name } => {
+                        // Symbolic names MUST resolve through resolver
+                        match self.resolver.resolve(capability_name.as_ref()) {
+                            Some((provider, action)) => (provider.to_string(), action.to_string()),
+                            None => {
+                                return Err(CapabilityCheckError::ActionNotDeclared {
+                                    action: capability_name.to_string(),
+                                });
+                            }
+                        }
+                    }
+                    OperationalTarget::Qualified {
+                        module,
+                        capability_name,
+                    } => {
+                        // Qualified names (io::fs_read) MUST resolve through resolver
+                        let qualified_name = format!("{}::{}", module, capability_name);
+                        match self.resolver.resolve(&qualified_name) {
+                            Some((provider, action)) => (provider.to_string(), action.to_string()),
+                            None => {
+                                return Err(CapabilityCheckError::ActionNotDeclared {
+                                    action: qualified_name,
+                                });
+                            }
+                        }
+                    }
+                    OperationalTarget::Explicit { provider, action } => {
+                        // Explicit targets use the provided (provider, action)
+                        (provider.to_string(), action.to_string())
+                    }
+                };
+
+                // Check if (provider, action) is in the declared actions list
+                if !self
+                    .actions
+                    .iter()
+                    .any(|(p, a)| p == &provider_name && a == &action_name)
+                {
                     return Err(CapabilityCheckError::ActionNotDeclared {
-                        action: action_name.to_string(),
+                        action: format!("{}:{}", provider_name, action_name),
                     });
                 }
                 Ok(())
@@ -445,22 +507,26 @@ impl CapabilityChecker {
                 arms, is_control, ..
             } => {
                 for arm in arms {
-                    if !is_control
-                        && let ash_parser::surface::StreamPattern::Binding {
+                    #[allow(clippy::collapsible_if)]
+                    if !is_control {
+                        if let ash_parser::surface::StreamPattern::Binding {
                             capability,
                             channel,
                             ..
                         } = &arm.pattern
-                        && !self
-                            .receives
-                            .iter()
-                            .any(|(c, ch)| c == capability.as_ref() && ch == channel.as_ref())
-                    {
-                        return Err(CapabilityCheckError::NotDeclared {
-                            operation: "receive".to_string(),
-                            capability: capability.to_string(),
-                            channel: channel.to_string(),
-                        });
+                        {
+                            if !self
+                                .receives
+                                .iter()
+                                .any(|(c, ch)| c == capability.as_ref() && ch == channel.as_ref())
+                            {
+                                return Err(CapabilityCheckError::NotDeclared {
+                                    operation: "receive".to_string(),
+                                    capability: capability.to_string(),
+                                    channel: channel.to_string(),
+                                });
+                            }
+                        }
                     }
                     self.verify_workflow(&arm.body)?;
                 }
@@ -748,10 +814,13 @@ mod tests {
 
     #[test]
     fn test_verify_act_declared() {
-        let checker = CapabilityChecker::new().action("notify");
+        let checker = CapabilityChecker::new().action("test", "notify");
         let workflow = Workflow::Act {
             action: ActionRef {
-                name: "notify".into(),
+                target: OperationalTarget::Explicit {
+                    provider: "test".into(),
+                    action: "notify".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -767,7 +836,10 @@ mod tests {
         let checker = CapabilityChecker::new();
         let workflow = Workflow::Act {
             action: ActionRef {
-                name: "notify".into(),
+                target: OperationalTarget::Explicit {
+                    provider: "test".into(),
+                    action: "notify".into(),
+                },
                 args: vec![],
             },
             guard: None,
@@ -778,9 +850,107 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(CapabilityCheckError::ActionNotDeclared { action }) => {
-                assert_eq!(action, "notify");
+                assert_eq!(action, "test:notify");
             }
             _ => panic!("Expected ActionNotDeclared error"),
+        }
+    }
+
+    #[test]
+    fn test_verify_act_symbolic_resolved() {
+        // Test that symbolic capability calls resolve through the resolver
+        // fs_read should resolve to (io, fs_read) via builtin mappings
+        let checker = CapabilityChecker::new().action("io", "fs_read");
+        let workflow = Workflow::Act {
+            action: ActionRef {
+                target: OperationalTarget::Symbolic {
+                    capability_name: "fs_read".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(
+            result.is_ok(),
+            "Symbolic fs_read should resolve to io:fs_read"
+        );
+    }
+
+    #[test]
+    fn test_verify_act_symbolic_unresolved() {
+        // Test that unresolved symbolic capability calls fail
+        let checker = CapabilityChecker::new();
+        let workflow = Workflow::Act {
+            action: ActionRef {
+                target: OperationalTarget::Symbolic {
+                    capability_name: "unknown_capability".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_err(), "Unknown symbolic capability should fail");
+        match result {
+            Err(CapabilityCheckError::ActionNotDeclared { action }) => {
+                assert_eq!(action, "unknown_capability");
+            }
+            _ => panic!("Expected ActionNotDeclared error for unresolved symbolic"),
+        }
+    }
+
+    #[test]
+    fn test_verify_act_qualified_resolved() {
+        // Test that module-qualified capability calls resolve through the resolver
+        // io::fs_read should resolve to (io, fs_read) via builtin mappings
+        let checker = CapabilityChecker::new().action("io", "fs_read");
+        let workflow = Workflow::Act {
+            action: ActionRef {
+                target: OperationalTarget::Qualified {
+                    module: "io".into(),
+                    capability_name: "fs_read".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(
+            result.is_ok(),
+            "Qualified io::fs_read should resolve to io:fs_read"
+        );
+    }
+
+    #[test]
+    fn test_verify_act_qualified_unresolved() {
+        // Test that unresolved qualified capability calls fail
+        let checker = CapabilityChecker::new();
+        let workflow = Workflow::Act {
+            action: ActionRef {
+                target: OperationalTarget::Qualified {
+                    module: "unknown".into(),
+                    capability_name: "capability".into(),
+                },
+                args: vec![],
+            },
+            guard: None,
+            span: test_span(),
+        };
+
+        let result = checker.verify(&workflow);
+        assert!(result.is_err(), "Unknown qualified capability should fail");
+        match result {
+            Err(CapabilityCheckError::ActionNotDeclared { action }) => {
+                assert_eq!(action, "unknown::capability");
+            }
+            _ => panic!("Expected ActionNotDeclared error for unresolved qualified"),
         }
     }
 
@@ -934,8 +1104,8 @@ mod tests {
             .observe("sensor", "humidity")
             .set("hvac", "target")
             .send("kafka", "events")
-            .action("notify")
-            .action("log");
+            .action("notify", "send")
+            .action("logger", "log");
 
         // Verify all declarations were added
         assert_eq!(checker.observes.len(), 2);

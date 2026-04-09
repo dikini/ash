@@ -25,12 +25,14 @@ workflow support_ticket {
   propose draft_reply(ticket, docs) as draft;
   
   decide { analysis.confidence } under high_confidence then {
-    act send_email(
+    -- Symbolic capability call (new sugar)
+    send_email(
       to: ticket.customer_email,
       subject: "Re: " + ticket.subject,
       body: draft.content
-    ) where external_communication;
+    ) when external_communication;
   } else {
+    -- Legacy act form (still supported)
     act escalate(to: senior_agent, reason: "low_confidence");
   }
   

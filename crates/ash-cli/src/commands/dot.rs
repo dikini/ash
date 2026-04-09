@@ -226,8 +226,9 @@ mod tests {
         use ash_core::{Guard, Provenance, Workflow};
 
         let workflow = Workflow::Act {
+            provider_name: "test".to_string(),
             action_name: "notify".to_string(),
-            action_arguments: vec![],
+            arguments: vec![],
             guard: Guard::Always,
             provenance: Provenance::new(),
         };

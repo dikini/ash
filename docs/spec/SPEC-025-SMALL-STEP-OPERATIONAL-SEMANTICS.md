@@ -605,13 +605,27 @@ These remain atomic in v1.
 ### 6.2 Capability, Observation, Action, and Proposal Boundaries
 
 This family covers capability lookup/application and proposal formation boundaries already frozen by
-`SPEC-004`, including `observe_capability(...)`, `perform_action(...)`, and `form_proposal(...)`-style
-helpers.
+`SPEC-004`, including `observe_capability(...)`, `eval_args(...)`, `lookup_provider(...)`, and
+`form_proposal(...)`-style helpers.
+
+**Split Dispatch Contract:**
+
+The ACT execution boundary implements explicit two-phase dispatch:
+
+1. **Provider Lookup**: `lookup_provider(C, provider_name) ↝ provider`
+   - Resolves provider name to implementation via capability context `C`
+   - Lookup failure maps to `RuntimeFailure(reason)`
+
+2. **Action Dispatch**: `provider.execute(action_name, values) ↝ v`
+   - Resolved provider handles action dispatch locally
+   - Provider receives action name and evaluated argument values only
+
+This removes the previous overload where one name was used for both lookup and dispatch.
 
 - Input domain: ambient capability context `C`, policy context `P` where applicable, the current
   environment `Γ`, and any operation-specific value/action/provenance inputs.
 - Output domain: either an operation-specific success payload sufficient for the owning workflow rule
-  (`ObserveOk(...)`, `ActOk(...)`, `ProposalOk(...)`, provider value, etc.) or an owning-boundary
+  (`ObserveOk(...)`, provider value from `execute(...)`, `ProposalOk(...)`, etc.) or an owning-boundary
   failure classification.
 - Ownership of failure/blocking/terminality: lookup/provider/runtime misuse maps at the first owning
   boundary to existing `SPEC-004` runtime failures; these helpers do not independently classify
@@ -1157,24 +1171,53 @@ surrounding small-step shape; the helper premise owns the operation-specific int
       Running(Γ, Ω', π', T ++ ΔT, append_effect(ε̂, δε), w)
 
 (ACT-STEP)
-  evaluate_guard(C, P, action, guard, Γ, Ω, π) ↝ GuardOk
-  perform_action(C, action, provenance, Γ, Ω, π) ↝ ActOk(v, Ω', π', ΔT, δε)
+  evaluate_guard(C, P, provider_name, action_name, args, guard, Γ, Ω, π) ↝ GuardOk
+  eval_args(Γ, args) ↝ values
+  lookup_provider(C, provider_name) ↝ provider
+  provider.execute(action_name, values) ↝ v
+  π' = extend_provenance(π, provider_name, action_name, guard, v)
   ───────────────────────────────────────────────────────────────
-  A ⊢ Running(Γ, Ω, π, T, ε̂, Act { action, guard, provenance }) —emit(ΔT, δε)→
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      Act { provider_name, action_name, arguments: args, guard, provenance }) —emit(ΔT, δε)→
       Returned(v, Ω', π', T ++ ΔT, append_effect(ε̂, δε))
+
+(ACT-LOOKUP-FAIL)
+  evaluate_guard(C, P, provider_name, action_name, args, guard, Γ, Ω, π) ↝ GuardOk
+  eval_args(Γ, args) ↝ values
+  lookup_provider(C, provider_name) ↝ error reason
+  ───────────────────────────────────────────────────────────────
+  A ⊢ Running(Γ, Ω, π, T, ε̂,
+      Act { provider_name, action_name, arguments: args, guard, provenance }) —silent→
+      Rejected(RuntimeFailure(reason), Ω, π, T, ε̂)
 ```
+
+**ACT Dispatch Contract:**
+
+The `ACT-STEP` rule implements an explicit two-phase dispatch:
+
+1. **Provider Lookup**: `lookup_provider(C, provider_name) ↝ provider`
+   - The capability context `C` maps provider names to provider implementations
+   - Lookup failure is handled by `ACT-LOOKUP-FAIL`
+
+2. **Action Dispatch**: `provider.execute(action_name, values) ↝ v`
+   - The resolved provider handles the action dispatch locally
+   - The provider receives only the action name and evaluated argument values
+
+This split removes the previous overload where one name was used for both provider lookup
+and provider-local action dispatch.
 
 Failure-side conditions for this family:
 
 - `observe_capability(...)`, `form_proposal(...)`, `apply_policy(...)`, `check_obligation(...)`,
-  `evaluate_guard(...)`, and `perform_action(...)` may fail only through their already-owned SPEC-004
-  rejection boundaries.
+  `evaluate_guard(...)`, `lookup_provider(...)`, and provider `execute(...)` may fail only through
+  their already-owned SPEC-004 rejection boundaries.
 - Policy denial remains owned by `DECIDE-STEP` and reconstructs the existing
   `PolicyViolation(policy, v)` category.
 - Obligation failure remains owned by `CHECK-STEP` and reconstructs the existing
   `ObligationViolation(obligation)` category.
 - Guard failure remains owned by `ACT-STEP` and reconstructs the existing
-  `GuardViolation(action, guard)` category.
+  `GuardViolation(provider_name:action_name, guard)` category.
+- Provider lookup failure is owned by `ACT-LOOKUP-FAIL` and reconstructs `RuntimeFailure(reason)`.
 - None of these helpers authorize expression-level micro-steps or runtime-specific machine detail.
 
 Scoped forms preserve helper-owned entry/exit boundaries explicitly.

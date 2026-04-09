@@ -51,8 +51,9 @@ pub enum Workflow {
     },
     /// ACT action where guard with provenance
     Act {
+        provider_name: Name,
         action_name: Name,
-        action_arguments: Vec<Expr>,
+        arguments: Vec<Expr>,
         guard: Guard,
         provenance: Provenance,
     },

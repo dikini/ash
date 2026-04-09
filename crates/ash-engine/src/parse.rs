@@ -84,7 +84,7 @@ mod tests {
         let result = engine.parse(
             r#"
             workflow test {
-                act log_event("test");
+                act logger:log_event("test");
                 done
             }
         "#,

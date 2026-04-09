@@ -139,7 +139,9 @@ pub enum Workflow {
     
     // Operational layer
     Act {
-        action: Action,
+        provider_name: Name,
+        action_name: Name,
+        arguments: Vec<Expr>,
         guard: Guard,
         provenance: Provenance,
     },
@@ -192,6 +194,12 @@ pub enum Workflow {
 - `Check` is obligation-only in the IR. It discharges or rejects an `Obligation`; policies are evaluated by `Decide`, not `Check`.
 - `Decide` always carries an explicit named `policy`. There is no policy-free core `Decide` form.
 - `Receive` is the canonical IR form for mailbox input. It preserves the receive mode and the ordered arm list from the surface language.
+- `Act` carries an explicit `(provider_name, action_name)` pair. This split representation is canonical regardless of surface syntax:
+  - `act provider:action(args) where guard` lowers to `Act { provider_name, action_name, arguments, guard, provenance }`
+  - `provider:action(args) when guard` lowers to the same canonical form
+  - Symbolic capability calls `capability(args)` resolve to `(provider, action)` during lowering
+- Provider lookup uses `provider_name`: `registry.get(provider_name) -> provider`
+- Provider dispatch uses `action_name`: `provider.execute(action_name, evaluated_arguments)`
 
 **Execution-neutral IR invariants**:
 
@@ -564,10 +572,15 @@ prop_workflow_effect_monotonic()?
 The IR is versioned via:
 
 ```rust
-pub const IR_VERSION: u32 = 1;
+pub const IR_VERSION: u32 = 2;
 ```
 
 Breaking changes increment version. Runtime checks version compatibility.
+
+**Version 2 Changes (TASK-463):**
+- `Workflow::Act` now carries explicit `provider_name` and `action_name` fields instead of `action: Action`
+- This supports the split dispatch model: lookup by provider name, dispatch by action name
+- Previous forms with single overloaded name are no longer supported in the canonical IR
 
 ## 7. Related Documents
 

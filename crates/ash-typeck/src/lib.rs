@@ -538,6 +538,38 @@ fn validate_interface_calls_in_action(
     env: &TypeEnv,
     action: &ash_parser::surface::ActionRef,
 ) -> Result<(), TypeCheckError> {
+    use ash_parser::surface::OperationalTarget;
+
+    // Validate the operational target
+    match &action.target {
+        OperationalTarget::Symbolic { capability_name: _ } => {
+            // For symbolic targets, resolution happens during lowering.
+            // The resolver maps symbolic names to (provider, action) via explicit metadata.
+        }
+        OperationalTarget::Qualified {
+            module: _,
+            capability_name: _,
+        } => {
+            // For module-qualified targets (e.g., io::fs_read), resolution happens
+            // during lowering. The resolver looks up the qualified name in its mappings.
+        }
+        OperationalTarget::Explicit {
+            provider,
+            action: action_name,
+        } => {
+            // For explicit targets, validate that the provider exists
+            if !env.has_provider(provider.as_ref()) {
+                return Err(TypeCheckError::ResolutionError(format!(
+                    "unknown provider '{}' in explicit action target '{}:{}'",
+                    provider.as_ref(),
+                    provider.as_ref(),
+                    action_name.as_ref()
+                )));
+            }
+        }
+    }
+
+    // Validate arguments
     for arg in &action.args {
         validate_interface_calls_in_expr(env, arg)?;
     }

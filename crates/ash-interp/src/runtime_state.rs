@@ -69,9 +69,10 @@ impl ash_core::capability::CapabilityProvider for ArcProviderWrapper {
 
     async fn execute(
         &self,
-        action: &ash_core::Action,
+        action_name: &str,
+        args: &[ash_core::Value],
     ) -> Result<ash_core::Value, ash_core::capability::CapabilityError> {
-        self.inner.execute(action).await
+        self.inner.execute(action_name, args).await
     }
 }
 

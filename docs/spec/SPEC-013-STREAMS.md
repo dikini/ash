@@ -410,7 +410,9 @@ workflow mixed receives sensor:events {
 }
 ```
 
-### 10.1 With Parallel Composition
+### 10.1 With Parallel Composition (Historical)
+
+> **Note:** The `par` construct shown here is no longer part of the active language contract. This example is retained for historical reference only. Current implementations should use alternative patterns for concurrent execution.
 
 Streams within `par` branches have independent mailboxes:
 

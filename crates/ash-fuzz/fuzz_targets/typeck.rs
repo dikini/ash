@@ -266,12 +266,12 @@ fn byte_to_effect(byte: u8) -> ash_core::effect::Effect {
 
 fn generate_random_workflow(data: &[u8]) -> ash_core::Workflow {
     use ash_core::{Workflow, Expr, Value, Pattern};
-    
+
     if data.is_empty() {
         return Workflow::Done;
     }
-    
-    match data[0] % 5 {
+
+    match data[0] % 4 {
         0 => Workflow::Done,
         1 => Workflow::Ret {
             expr: Expr::Literal(Value::Int(data[0] as i64)),
@@ -289,12 +289,6 @@ fn generate_random_workflow(data: &[u8]) -> ash_core::Workflow {
             condition: Expr::Literal(Value::Bool(data[0] % 2 == 0)),
             then_branch: Box::new(generate_random_workflow(&data[1..data.len()/2+1])),
             else_branch: Box::new(generate_random_workflow(&data[data.len()/2+1..])),
-        },
-        4 => Workflow::Par {
-            workflows: vec![
-                generate_random_workflow(&data[1..]),
-                generate_random_workflow(&data[1..]),
-            ],
         },
         _ => Workflow::Done,
     }

@@ -330,17 +330,6 @@ fn render_workflow(workflow: &Workflow) -> String {
             out.push('}');
             out
         }
-        Workflow::Par { branches, .. } => {
-            let mut out = String::from("Par {\n");
-            push_field(
-                &mut out,
-                2,
-                "branches",
-                &render_list(branches.iter().map(render_workflow)),
-            );
-            out.push('}');
-            out
-        }
         Workflow::With {
             capability, body, ..
         } => {

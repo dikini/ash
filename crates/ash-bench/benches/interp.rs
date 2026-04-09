@@ -41,16 +41,6 @@ fn binary_expr_chain(length: usize) -> Expr {
     }
 }
 
-fn parallel_workflow(branches: usize) -> Workflow {
-    let workflows: Vec<Workflow> = (0..branches)
-        .map(|i| Workflow::Ret {
-            expr: Expr::Literal(Value::Int(i as i64)),
-        })
-        .collect();
-    
-    Workflow::Par { workflows }
-}
-
 fn conditional_workflow(depth: usize) -> Workflow {
     if depth == 0 {
         Workflow::Ret {
@@ -85,17 +75,7 @@ fn bench_workflow_construction(c: &mut Criterion) {
             },
         );
     }
-    
-    for branches in [2, 4, 8, 16].iter() {
-        group.bench_with_input(
-            BenchmarkId::new("parallel", branches),
-            branches,
-            |b, &branches| {
-                b.iter(|| black_box(parallel_workflow(branches)));
-            },
-        );
-    }
-    
+
     group.finish();
 }
 
@@ -145,9 +125,6 @@ fn count_workflow_nodes(wf: &Workflow) -> usize {
         }
         Workflow::Seq { first, second } => {
             1 + count_workflow_nodes(first) + count_workflow_nodes(second)
-        }
-        Workflow::Par { workflows } => {
-            1 + workflows.iter().map(count_workflow_nodes).sum::<usize>()
         }
         Workflow::ForEach { body, .. } => 1 + count_workflow_nodes(body),
         Workflow::With { workflow, .. } => 1 + count_workflow_nodes(workflow),

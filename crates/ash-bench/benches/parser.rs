@@ -26,23 +26,18 @@ fn bench_parse_complex_workflow(c: &mut Criterion) {
 workflow complex {
     observe capability "db" as records
     
-    par {
-        branch a {
-            orient { filter records where valid }
-            decide { 
-                if count > 100 then action "batch_process" 
-            }
-        }
-        branch b {
-            orient { sort records by timestamp }
-            decide { 
-                if needs_archival then action "archive" 
-            }
-        }
+    orient {
+        filter records where valid
+        sort records by timestamp
+    }
+    
+    decide {
+        if count > 100 then action "batch_process"
+        else if needs_archival then action "archive"
     }
     
     with capability "notifier" {
-        act notify all_complete
+        act notify complete
     }
 }
 "#;

@@ -2,8 +2,9 @@
 //!
 //! Comprehensive end-to-end tests for engine capability providers per SPEC-010.
 
-use ash_core::{Effect, Value};
-use ash_engine::{CapabilityProvider, Engine, HttpConfig};
+use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::{Action, Constraint, Effect, Value};
+use ash_engine::{Engine, HttpConfig};
 use async_trait::async_trait;
 use proptest::prelude::*;
 use std::collections::HashMap;
@@ -55,11 +56,7 @@ impl CapabilityProvider for TrackingProvider {
     }
 
     #[allow(clippy::cast_possible_wrap)] // Test code - count won't exceed i64 range in practice
-    async fn observe(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
         self.invoke_count.fetch_add(1, Ordering::SeqCst);
         if let Some(ref state) = self.shared_state {
             let mut guard = state.lock().unwrap();
@@ -73,11 +70,7 @@ impl CapabilityProvider for TrackingProvider {
     }
 
     #[allow(clippy::cast_possible_wrap)] // Test code - count won't exceed i64 range in practice
-    async fn execute(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
         self.invoke_count.fetch_add(1, Ordering::SeqCst);
         if let Some(ref state) = self.shared_state {
             let mut guard = state.lock().unwrap();
@@ -117,20 +110,12 @@ impl CapabilityProvider for TimeoutProvider {
         Effect::Operational
     }
 
-    async fn observe(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
         tokio::time::sleep(self.delay).await;
         Ok(Value::String("completed".to_string()))
     }
 
-    async fn execute(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
         tokio::time::sleep(self.delay).await;
         Ok(Value::String("executed".to_string()))
     }
@@ -166,28 +151,24 @@ impl CapabilityProvider for AdvertisingProvider {
         Effect::Operational
     }
 
-    async fn observe(
-        &self,
-        action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
-        if action == "get_capabilities" {
-            Ok(Value::List(Box::new(
-                self.advertised_caps
-                    .iter()
-                    .map(|c| Value::String(c.clone()))
-                    .collect(),
-            )))
-        } else {
-            Ok(Value::Null)
+    #[allow(clippy::collapsible_if)]
+    async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
+        // Note: This provider previously checked action name "get_capabilities"
+        // With unified trait, constraints contain predicates with names
+        if let Some(constraint) = _constraints.first() {
+            if constraint.predicate.name == "get_capabilities" {
+                return Ok(Value::List(Box::new(
+                    self.advertised_caps
+                        .iter()
+                        .map(|c| Value::String(c.clone()))
+                        .collect(),
+                )));
+            }
         }
+        Ok(Value::Null)
     }
 
-    async fn execute(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
         Ok(Value::Null)
     }
 }

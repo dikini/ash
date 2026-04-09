@@ -2,8 +2,8 @@
 //!
 //! Provides JSON-RPC 2.0 communication with MCP-compatible LLM servers.
 
-use super::{CapabilityProvider, ProviderError};
-use ash_core::{Effect, Value};
+use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::{Action, Constraint, Effect, Value};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -80,12 +80,14 @@ impl McpProvider {
     /// Create a new MCP provider with the given config
     ///
     /// # Errors
-    /// Returns `ProviderError` if HTTP client creation fails
-    pub fn new(config: McpConfig) -> Result<Self, ProviderError> {
+    /// Returns `CapabilityError` if HTTP client creation fails
+    pub fn new(config: McpConfig) -> Result<Self, CapabilityError> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_millis(config.timeout_ms))
             .build()
-            .map_err(|e| ProviderError::new(format!("failed to create HTTP client: {e}")))?;
+            .map_err(|e| {
+                CapabilityError::ExecutionFailed(format!("failed to create HTTP client: {e}"))
+            })?;
 
         Ok(Self {
             client,
@@ -97,20 +99,20 @@ impl McpProvider {
     /// Create with default configuration
     ///
     /// # Errors
-    /// Returns `ProviderError` if HTTP client creation fails
-    pub fn default_config() -> Result<Self, ProviderError> {
+    /// Returns `CapabilityError` if HTTP client creation fails
+    pub fn default_config() -> Result<Self, CapabilityError> {
         Self::new(McpConfig::default())
     }
 
     /// Call a JSON-RPC method
     ///
     /// # Errors
-    /// Returns `ProviderError` if HTTP request fails or JSON parsing fails
+    /// Returns `CapabilityError` if HTTP request fails or JSON parsing fails
     pub async fn call(
         &self,
         method: &str,
         params: serde_json::Value,
-    ) -> Result<Value, ProviderError> {
+    ) -> Result<Value, CapabilityError> {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: method.to_string(),
@@ -124,15 +126,15 @@ impl McpProvider {
             .json(&request)
             .send()
             .await
-            .map_err(|e| ProviderError::new(format!("HTTP request failed: {e}")))?;
+            .map_err(|e| CapabilityError::ExecutionFailed(format!("HTTP request failed: {e}")))?;
 
         let rpc_response: JsonRpcResponse = response
             .json()
             .await
-            .map_err(|e| ProviderError::new(format!("JSON parse failed: {e}")))?;
+            .map_err(|e| CapabilityError::ExecutionFailed(format!("JSON parse failed: {e}")))?;
 
         if let Some(error) = rpc_response.error {
-            return Err(ProviderError::new(format!(
+            return Err(CapabilityError::ExecutionFailed(format!(
                 "JSON-RPC error {}: {}",
                 error.code, error.message
             )));
@@ -141,18 +143,18 @@ impl McpProvider {
         rpc_response
             .result
             .map(|v| serde_json::from_value(v).unwrap_or(Value::Null))
-            .ok_or_else(|| ProviderError::new("empty JSON-RPC result".to_string()))
+            .ok_or_else(|| CapabilityError::ExecutionFailed("empty JSON-RPC result".to_string()))
     }
 
     /// Call an MCP tool
     ///
     /// # Errors
-    /// Returns `ProviderError` if tool call fails
+    /// Returns `CapabilityError` if tool call fails
     pub async fn call_tool(
         &self,
         name: &str,
         args: HashMap<String, Value>,
-    ) -> Result<Value, ProviderError> {
+    ) -> Result<Value, CapabilityError> {
         let params = json!({
             "name": name,
             "arguments": args,
@@ -163,12 +165,12 @@ impl McpProvider {
     /// Get an MCP prompt
     ///
     /// # Errors
-    /// Returns `ProviderError` if prompt retrieval fails
+    /// Returns `CapabilityError` if prompt retrieval fails
     pub async fn get_prompt(
         &self,
         name: &str,
         args: HashMap<String, String>,
-    ) -> Result<Value, ProviderError> {
+    ) -> Result<Value, CapabilityError> {
         let params = json!({
             "name": name,
             "arguments": args,
@@ -193,8 +195,14 @@ impl CapabilityProvider for McpProvider {
         Effect::Deliberative
     }
 
-    async fn observe(&self, action: &str, _args: &[Value]) -> Result<Value, ProviderError> {
-        match action {
+    async fn observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError> {
+        if constraints.is_empty() {
+            return Err(CapabilityError::InvalidArgument(
+                "No observe constraints provided".to_string(),
+            ));
+        }
+        let action_name = constraints[0].predicate.name.as_str();
+        match action_name {
             "capabilities" => {
                 let caps = serde_json::json!({
                     "tools": self.capabilities.tools,
@@ -202,26 +210,28 @@ impl CapabilityProvider for McpProvider {
                 });
                 Ok(serde_json::from_value(caps).unwrap_or(Value::Null))
             }
-            _ => Err(ProviderError::new(format!(
-                "unknown observe action: {action}"
+            _ => Err(CapabilityError::NotAvailable(format!(
+                "unknown observe action: {action_name}"
             ))),
         }
     }
 
-    async fn execute(&self, action: &str, args: &[Value]) -> Result<Value, ProviderError> {
-        match action {
+    async fn execute(&self, action: &Action) -> Result<Value, CapabilityError> {
+        match action.name.as_str() {
             "call" => {
-                if args.len() < 2 {
-                    return Err(ProviderError::new(
+                if action.arguments.len() < 2 {
+                    return Err(CapabilityError::InvalidArgument(
                         "call requires method and params".to_string(),
                     ));
                 }
-                let method = args[0].as_string().unwrap_or("");
-                let params = serde_json::to_value(&args[1]).unwrap_or_else(|_| json!({}));
+                let method = action.arguments[0].as_string().unwrap_or("");
+                let params =
+                    serde_json::to_value(&action.arguments[1]).unwrap_or_else(|_| json!({}));
                 self.call(method, params).await
             }
-            _ => Err(ProviderError::new(format!(
-                "unknown execute action: {action}"
+            _ => Err(CapabilityError::NotAvailable(format!(
+                "unknown execute action: {}",
+                action.name
             ))),
         }
     }

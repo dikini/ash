@@ -3,8 +3,9 @@
 //! These tests verify that providers configured via `EngineBuilder`
 //! are properly passed to `RuntimeState` and available during execution.
 
-use ash_core::{Effect, Value};
-use ash_engine::{CapabilityProvider, Engine};
+use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::{Action, Constraint, Effect, Value};
+use ash_engine::Engine;
 use async_trait::async_trait;
 use std::sync::{
     Arc,
@@ -37,20 +38,12 @@ impl CapabilityProvider for TestProvider {
         Effect::Operational
     }
 
-    async fn observe(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
         self.was_called.store(true, Ordering::SeqCst);
         Ok(Value::Null)
     }
 
-    async fn execute(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
         self.was_called.store(true, Ordering::SeqCst);
         Ok(Value::Null)
     }

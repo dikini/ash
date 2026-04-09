@@ -1,33 +1,17 @@
 //! Capability provider trait and registry
 //!
 //! Capabilities represent external resources that workflows can observe or act upon.
+//! This module re-exports the unified `CapabilityProvider` trait from `ash_core`
+//! and provides the `CapabilityContext` for runtime execution.
 
 use ash_core::{Capability, Effect, Name, Value};
-use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::ExecResult;
 use crate::error::ExecError;
 
-/// A capability provider handles observations and actions for a capability
-#[async_trait]
-pub trait CapabilityProvider: Send + Sync {
-    /// Get the capability name this provider handles
-    fn capability_name(&self) -> &str;
-
-    /// Get the effect level of this capability
-    fn effect(&self) -> Effect;
-
-    /// Read/observation from this capability
-    ///
-    /// Should only be called for capabilities with Epistemic or higher effect.
-    async fn observe(&self, constraints: &[ash_core::Constraint]) -> ExecResult<Value>;
-
-    /// Execute an action on this capability
-    ///
-    /// Should only be called for capabilities with Operational effect.
-    async fn execute(&self, action: &ash_core::Action) -> ExecResult<Value>;
-}
+// Re-export the unified capability types from ash_core
+pub use ash_core::capability::{CapabilityError, CapabilityProvider};
 
 /// Registry of capability providers
 #[derive(Default)]
@@ -45,8 +29,7 @@ impl CapabilityRegistry {
 
     /// Register a capability provider
     pub fn register(&mut self, provider: Box<dyn CapabilityProvider>) {
-        self.providers
-            .insert(provider.capability_name().to_string(), provider);
+        self.providers.insert(provider.name().to_string(), provider);
     }
 
     /// Get a provider by name
@@ -93,6 +76,17 @@ impl CapabilityContext {
         self.registry.register(provider);
     }
 
+    /// Convert CapabilityError to ExecError
+    fn convert_error(err: CapabilityError) -> ExecError {
+        match err {
+            CapabilityError::NotAvailable(name) => ExecError::CapabilityNotAvailable(name),
+            CapabilityError::ExecutionFailed(msg) => ExecError::ExecutionFailed(msg),
+            CapabilityError::ValidationFailed(msg) => ExecError::ExecutionFailed(msg),
+            CapabilityError::InvalidArgument(msg) => ExecError::ExecutionFailed(msg),
+            CapabilityError::PermissionDenied(msg) => ExecError::ExecutionFailed(msg),
+        }
+    }
+
     /// Observe a capability
     pub async fn observe(&self, capability: &Capability) -> ExecResult<Value> {
         let provider = self
@@ -107,7 +101,10 @@ impl CapabilityContext {
             )));
         }
 
-        provider.observe(&capability.constraints).await
+        provider
+            .observe(&capability.constraints)
+            .await
+            .map_err(Self::convert_error)
     }
 
     /// Execute an action on a capability
@@ -128,7 +125,7 @@ impl CapabilityContext {
             )));
         }
 
-        provider.execute(action).await
+        provider.execute(action).await.map_err(Self::convert_error)
     }
 }
 
@@ -144,7 +141,7 @@ pub struct MockProvider {
     name: String,
     effect: Effect,
     observe_value: Value,
-    execute_result: ExecResult<Value>,
+    execute_result: Result<Value, CapabilityError>,
 }
 
 impl MockProvider {
@@ -165,15 +162,15 @@ impl MockProvider {
     }
 
     /// Set the result to return from execute
-    pub fn with_execute_result(mut self, result: ExecResult<Value>) -> Self {
+    pub fn with_execute_result(mut self, result: Result<Value, CapabilityError>) -> Self {
         self.execute_result = result;
         self
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl CapabilityProvider for MockProvider {
-    fn capability_name(&self) -> &str {
+    fn name(&self) -> &str {
         &self.name
     }
 
@@ -181,11 +178,14 @@ impl CapabilityProvider for MockProvider {
         self.effect
     }
 
-    async fn observe(&self, _constraints: &[ash_core::Constraint]) -> ExecResult<Value> {
+    async fn observe(
+        &self,
+        _constraints: &[ash_core::Constraint],
+    ) -> Result<Value, CapabilityError> {
         Ok(self.observe_value.clone())
     }
 
-    async fn execute(&self, _action: &ash_core::Action) -> ExecResult<Value> {
+    async fn execute(&self, _action: &ash_core::Action) -> Result<Value, CapabilityError> {
         self.execute_result.clone()
     }
 }

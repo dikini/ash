@@ -608,7 +608,8 @@ fn execute_workflow_inner_observed<'a>(
 
             // Execute action with guard
             Workflow::Act {
-                action,
+                action_name,
+                action_arguments,
                 guard,
                 provenance: _,
             } => {
@@ -623,15 +624,27 @@ fn execute_workflow_inner_observed<'a>(
                     });
                 }
 
+                // Evaluate action arguments
+                let evaluated_args = action_arguments
+                    .iter()
+                    .map(|expr| eval_expr(expr, &ctx).map_err(ExecError::Eval))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let action = ash_core::Action {
+                    name: action_name.clone(),
+                    arguments: evaluated_args,
+                };
+
                 if let Some(recorder) = execution_recorder {
-                    recorder.record_act(&action.name, &format!("{guard:?}"));
+                    recorder.record_act(action_name, &format!("{guard:?}"));
                 }
-                cap_ctx.execute(action, &action.name).await
+                cap_ctx.execute(&action, action_name).await
             }
 
             // Propose action (advisory - just continue)
             Workflow::Propose {
-                action: _,
+                action_name: _,
+                action_arguments: _,
                 continuation,
             } => {
                 // Proposal is advisory - just continue
@@ -1663,8 +1676,8 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
 mod tests {
     use super::*;
     use ash_core::{
-        Action, BinaryOp, Capability, ControlLink, Effect, Expr, Guard, Obligation, Pattern,
-        Provenance, RoleObligationRef,
+        BinaryOp, Capability, ControlLink, Effect, Expr, Guard, Obligation, Pattern, Provenance,
+        RoleObligationRef,
     };
 
     fn test_role(name: &str) -> ash_core::Role {
@@ -2145,10 +2158,8 @@ mod tests {
 
         // Propose is advisory - just continues
         let workflow = Workflow::Propose {
-            action: Action {
-                name: "test".to_string(),
-                arguments: vec![],
-            },
+            action_name: "test".to_string(),
+            action_arguments: vec![],
             continuation: Box::new(Workflow::Ret {
                 expr: Expr::Literal(Value::Int(42)),
             }),
@@ -2240,10 +2251,8 @@ mod tests {
     #[tokio::test]
     async fn test_execute_act_guard_fails() {
         let workflow = Workflow::Act {
-            action: Action {
-                name: "test".to_string(),
-                arguments: vec![],
-            },
+            action_name: "test".to_string(),
+            action_arguments: vec![],
             guard: Guard::Never,
             provenance: Provenance::new(),
         };

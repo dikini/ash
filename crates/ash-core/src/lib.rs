@@ -6,6 +6,7 @@
 pub mod adt;
 pub mod ast;
 pub mod capabilities;
+pub mod capability;
 pub mod effect;
 pub mod module_graph;
 pub mod provenance;

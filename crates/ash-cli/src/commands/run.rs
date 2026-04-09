@@ -7,7 +7,8 @@
 //! TASK-324: Removed --input flag.
 
 use anyhow::{Context, Result};
-use ash_core::{Effect, Value};
+use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::{Action, Constraint, Effect, Value};
 use ash_engine::EngineError;
 use ash_interp::ExecError;
 use ash_parser::parse_utils::skip_whitespace_and_comments;
@@ -217,7 +218,7 @@ impl RuntimeArgProvider {
 }
 
 #[async_trait]
-impl ash_engine::CapabilityProvider for RuntimeArgProvider {
+impl CapabilityProvider for RuntimeArgProvider {
     fn name(&self) -> &str {
         &self.name
     }
@@ -226,22 +227,14 @@ impl ash_engine::CapabilityProvider for RuntimeArgProvider {
         Effect::Epistemic
     }
 
-    async fn observe(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
         Ok(Value::variant(
             "Some",
             vec![("value", Value::String(self.value.clone()))],
         ))
     }
 
-    async fn execute(
-        &self,
-        _action: &str,
-        _args: &[Value],
-    ) -> Result<Value, ash_engine::providers::ProviderError> {
+    async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
         Ok(Value::Null)
     }
 }

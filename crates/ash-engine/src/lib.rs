@@ -27,7 +27,8 @@ pub use entry::{
     load_runtime_entry_stdlib_sources, verify_entry_workflow_def,
 };
 pub use error::EngineError;
-pub use providers::CapabilityProvider;
+// Re-export the unified CapabilityProvider trait from ash_core
+pub use ash_core::capability::CapabilityProvider;
 
 use ash_core::Value;
 use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
@@ -1113,8 +1114,11 @@ pub struct EngineBuilder {
     enable_fs: bool,
     /// HTTP configuration if enabled
     http_config: Option<HttpConfig>,
-    /// Custom providers to register
-    custom_providers: std::collections::HashMap<String, std::sync::Arc<dyn CapabilityProvider>>,
+    /// Custom providers to register (using the unified `CapabilityProvider` trait)
+    custom_providers: std::collections::HashMap<
+        String,
+        std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
+    >,
 }
 
 impl EngineBuilder {
@@ -1132,11 +1136,14 @@ impl EngineBuilder {
     /// Returns `EngineError` if the engine cannot be constructed
     /// (e.g., missing required capabilities or invalid configuration).
     pub fn build(self) -> Result<Engine, EngineError> {
-        use providers::{FsProvider, InterpProviderAdapter, StdioProvider};
+        use providers::{FsProvider, StdioProvider};
         use std::sync::Arc;
 
-        let mut providers: std::collections::HashMap<String, Arc<dyn CapabilityProvider>> =
-            std::collections::HashMap::new();
+        // Providers are stored as the unified trait type from ash_core
+        let mut providers: std::collections::HashMap<
+            String,
+            Arc<dyn ash_core::capability::CapabilityProvider>,
+        > = std::collections::HashMap::new();
 
         // Register stdio provider if enabled
         if self.enable_stdio {
@@ -1163,21 +1170,8 @@ impl EngineBuilder {
             providers.insert(name, provider);
         }
 
-        // Convert engine providers to interpreter-compatible providers
-        // and build the RuntimeState with them
-        let mut interp_providers: std::collections::HashMap<
-            String,
-            Arc<dyn ash_interp::capability::CapabilityProvider>,
-        > = std::collections::HashMap::new();
-
-        for (name, provider) in &providers {
-            // Create an adapter that wraps the engine provider
-            // The adapter implements ash_interp::capability::CapabilityProvider
-            let adapter = InterpProviderAdapter::new(provider.clone());
-            interp_providers.insert(name.clone(), Arc::new(adapter));
-        }
-
-        let runtime_state = RuntimeState::new().with_providers(interp_providers);
+        // Build the RuntimeState with the unified providers
+        let runtime_state = RuntimeState::new().with_providers(providers);
 
         Ok(Engine {
             surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
@@ -1241,8 +1235,9 @@ impl EngineBuilder {
     /// # Example
     ///
     /// ```
-    /// use ash_engine::{Engine, CapabilityProvider};
-    /// use ash_core::{Effect, Value};
+    /// use ash_engine::Engine;
+    /// use ash_core::{Action, Constraint, Effect, Value};
+    /// use ash_core::capability::{CapabilityError, CapabilityProvider};
     /// use async_trait::async_trait;
     /// use std::sync::Arc;
     ///
@@ -1253,10 +1248,10 @@ impl EngineBuilder {
     /// impl CapabilityProvider for MyProvider {
     ///     fn name(&self) -> &str { "my_provider" }
     ///     fn effect(&self) -> Effect { Effect::Operational }
-    ///     async fn observe(&self, _action: &str, _args: &[Value]) -> Result<Value, ash_engine::providers::ProviderError> {
+    ///     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
     ///         Ok(Value::Null)
     ///     }
-    ///     async fn execute(&self, _action: &str, _args: &[Value]) -> Result<Value, ash_engine::providers::ProviderError> {
+    ///     async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
     ///         Ok(Value::Null)
     ///     }
     /// }
@@ -1270,7 +1265,7 @@ impl EngineBuilder {
     pub fn with_custom_provider(
         mut self,
         name: &str,
-        provider: std::sync::Arc<dyn CapabilityProvider>,
+        provider: std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
     ) -> Self {
         self.custom_providers.insert(name.to_string(), provider);
         self

@@ -7,19 +7,19 @@ use std::fmt;
 
 use ash_core::adt::tuple_field_name;
 use ash_core::{
-    Action as CoreAction, Capability, Effect, Expr as CoreExpr, Guard as CoreGuard,
-    MatchArm as CoreMatchArm, Obligation as CoreObligation, Pattern as CorePattern,
-    Predicate as CorePredicate, Provenance, ReceiveArm as CoreReceiveArm,
-    ReceivePattern as CoreReceivePattern, Role as CoreRole, Workflow as CoreWorkflow,
+    Capability, Effect, Expr as CoreExpr, Guard as CoreGuard, MatchArm as CoreMatchArm,
+    Obligation as CoreObligation, Pattern as CorePattern, Predicate as CorePredicate, Provenance,
+    ReceiveArm as CoreReceiveArm, ReceivePattern as CoreReceivePattern, Role as CoreRole,
+    Workflow as CoreWorkflow,
 };
 
 #[cfg(test)]
 use ash_core::RoleObligationRef as CoreRoleObligationRef;
 
 use crate::surface::{
-    ActionRef, BinaryOp, CapabilityDef, CheckTarget, EffectType, Expr, Guard, Literal,
-    ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, Type, UnaryOp,
-    Workflow as SurfaceWorkflow, WorkflowDef, YieldArm,
+    BinaryOp, CapabilityDef, CheckTarget, EffectType, Expr, Guard, Literal, ObligationRef, Pattern,
+    PolicyExpr, Predicate, StreamPattern, Type, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
+    YieldArm,
 };
 
 #[cfg(test)]
@@ -377,7 +377,12 @@ fn lower_workflow_body(
                 .unwrap_or(CoreWorkflow::Done);
 
             Ok(CoreWorkflow::Propose {
-                action: lower_action(action)?,
+                action_name: action.name.to_string(),
+                action_arguments: action
+                    .args
+                    .iter()
+                    .map(lower_expr)
+                    .collect::<Result<Vec<_>, _>>()?,
                 continuation: Box::new(cont),
             })
         }
@@ -427,7 +432,12 @@ fn lower_workflow_body(
         }),
 
         SurfaceWorkflow::Act { action, guard, .. } => Ok(CoreWorkflow::Act {
-            action: lower_action(action)?,
+            action_name: action.name.to_string(),
+            action_arguments: action
+                .args
+                .iter()
+                .map(lower_expr)
+                .collect::<Result<Vec<_>, _>>()?,
             guard: guard
                 .as_ref()
                 .map(lower_guard)
@@ -962,18 +972,6 @@ pub fn lower_pattern(pattern: &Pattern) -> Result<CorePattern, LoweringError> {
 
         Pattern::Literal(lit) => Ok(CorePattern::Literal(lower_literal(lit)?)),
     }
-}
-
-/// Lower an action reference to core Action.
-fn lower_action(action: &ActionRef) -> Result<CoreAction, LoweringError> {
-    Ok(CoreAction {
-        name: action.name.to_string(),
-        arguments: action
-            .args
-            .iter()
-            .map(lower_expr)
-            .collect::<Result<Vec<_>, _>>()?,
-    })
 }
 
 /// Lower an obligation reference to core Obligation.

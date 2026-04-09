@@ -45,15 +45,15 @@ impl ArcProviderWrapper {
 impl std::fmt::Debug for ArcProviderWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ArcProviderWrapper")
-            .field("capability_name", &self.inner.capability_name())
+            .field("name", &self.inner.name())
             .finish()
     }
 }
 
 #[async_trait]
-impl CapabilityProvider for ArcProviderWrapper {
-    fn capability_name(&self) -> &str {
-        self.inner.capability_name()
+impl ash_core::capability::CapabilityProvider for ArcProviderWrapper {
+    fn name(&self) -> &str {
+        self.inner.name()
     }
 
     fn effect(&self) -> ash_core::Effect {
@@ -63,11 +63,14 @@ impl CapabilityProvider for ArcProviderWrapper {
     async fn observe(
         &self,
         constraints: &[ash_core::Constraint],
-    ) -> crate::ExecResult<ash_core::Value> {
+    ) -> Result<ash_core::Value, ash_core::capability::CapabilityError> {
         self.inner.observe(constraints).await
     }
 
-    async fn execute(&self, action: &ash_core::Action) -> crate::ExecResult<ash_core::Value> {
+    async fn execute(
+        &self,
+        action: &ash_core::Action,
+    ) -> Result<ash_core::Value, ash_core::capability::CapabilityError> {
         self.inner.execute(action).await
     }
 }

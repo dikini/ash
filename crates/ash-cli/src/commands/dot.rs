@@ -223,13 +223,11 @@ mod tests {
 
     #[test]
     fn test_dot_generation_act() {
-        use ash_core::{Action, Guard, Provenance, Workflow};
+        use ash_core::{Guard, Provenance, Workflow};
 
         let workflow = Workflow::Act {
-            action: Action {
-                name: "notify".to_string(),
-                arguments: vec![],
-            },
+            action_name: "notify".to_string(),
+            action_arguments: vec![],
             guard: Guard::Always,
             provenance: Provenance::new(),
         };

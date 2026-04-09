@@ -34,7 +34,8 @@ pub enum Workflow {
     },
     /// PROPOSE action (advisory)
     Propose {
-        action: Action,
+        action_name: Name,
+        action_arguments: Vec<Expr>,
         continuation: Box<Workflow>,
     },
     /// DECIDE expression under policy then continue
@@ -50,7 +51,8 @@ pub enum Workflow {
     },
     /// ACT action where guard with provenance
     Act {
-        action: Action,
+        action_name: Name,
+        action_arguments: Vec<Expr>,
         guard: Guard,
         provenance: Provenance,
     },
@@ -270,10 +272,13 @@ pub struct Capability {
 }
 
 /// An action to execute
+///
+/// Arguments are already evaluated to `Value` at the workflow
+/// execution layer before calling providers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Action {
     pub name: Name,
-    pub arguments: Vec<Expr>,
+    pub arguments: Vec<Value>,
 }
 
 /// Receive mode for mailbox intake.
@@ -822,10 +827,8 @@ mod tests {
 
         // Test Propose
         let _propose = Workflow::Propose {
-            action: Action {
-                name: "do_something".to_string(),
-                arguments: vec![],
-            },
+            action_name: "do_something".to_string(),
+            action_arguments: vec![],
             continuation: Box::new(Workflow::Done),
         };
 

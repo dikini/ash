@@ -433,11 +433,10 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 249 complete / 262 tracked tasks
+**Overall Progress**: 262 complete / 262 tracked tasks
 **Remaining Tasks**:
 
 - 1 deferred: `TASK-063` (dynamic policy registration)
-- 12 planned: `TASK-449` through `TASK-452`, and `TASK-455` through `TASK-462`
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
 
@@ -2038,22 +2037,22 @@ provider traits.
 
 **Plan Reference:** [PLAN-015: Unified Action System Implementation](PLAN-015-UNIFIED-ACTION-SYSTEM.md)
 **Priority:** High
-**Status:** Planned
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-449](tasks/TASK-449-action-vec-value.md) | Change `Action` to hold evaluated `Value` arguments and land parser/lowering plus ACT execution boundary changes in the same phase | DESIGN-015, SPEC-001 | 6-8 | Planned |
-| [TASK-450](tasks/TASK-450-unified-provider-trait.md) | Add unified `ash_core::CapabilityProvider` and `CapabilityError` | DESIGN-015, SPEC-017 | 4-6 | Planned |
-| [TASK-451](tasks/TASK-451-capability-context-unified-trait.md) | Update `CapabilityContext` and registry types to use the shared provider trait directly | DESIGN-015, SPEC-017 | 4-6 | Planned |
-| [TASK-452](tasks/TASK-452-remove-interp-provider-adapter.md) | Remove interpreter-side adapter/wrapper scaffolding left over from the split trait model | DESIGN-015 | 2-4 | Planned |
-| [TASK-455](tasks/TASK-455-fs-provider-unified-trait.md) | Migrate `FsProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | Planned |
-| [TASK-456](tasks/TASK-456-stdio-provider-unified-trait.md) | Migrate `StdioProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | Planned |
-| [TASK-457](tasks/TASK-457-mcp-provider-unified-trait.md) | Migrate `McpProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | Planned |
-| [TASK-458](tasks/TASK-458-engine-unified-trait.md) | Update engine builder/provider wiring to use the shared trait directly | DESIGN-015, SPEC-010 | 4-6 | Planned |
-| [TASK-459](tasks/TASK-459-remove-old-provider-trait.md) | Remove the old engine-local provider trait and finalize the API migration | DESIGN-015 | 3-5 | Planned |
-| [TASK-460](tasks/TASK-460-error-handling-unified.md) | Normalize unified provider error handling and boundary conversions | DESIGN-015 | 3-5 | Planned |
-| [TASK-461](tasks/TASK-461-documentation-updates.md) | Update active docs/examples for unified evaluated-action/provider dispatch | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | Planned |
-| [TASK-462](tasks/TASK-462-final-integration-testing.md) | Run final integration and quality-gate verification for the migration | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | Planned |
+| [TASK-449](tasks/TASK-449-action-vec-value.md) | Change `Action` to hold evaluated `Value` arguments and land parser/lowering plus ACT execution boundary changes in the same phase | DESIGN-015, SPEC-001 | 6-8 | ✅ Complete |
+| [TASK-450](tasks/TASK-450-unified-provider-trait.md) | Add unified `ash_core::CapabilityProvider` and `CapabilityError` | DESIGN-015, SPEC-017 | 4-6 | ✅ Complete |
+| [TASK-451](tasks/TASK-451-capability-context-unified-trait.md) | Update `CapabilityContext` and registry types to use the shared provider trait directly | DESIGN-015, SPEC-017 | 4-6 | ✅ Complete |
+| [TASK-452](tasks/TASK-452-remove-interp-provider-adapter.md) | Remove interpreter-side adapter/wrapper scaffolding left over from the split trait model | DESIGN-015 | 2-4 | ✅ Complete |
+| [TASK-455](tasks/TASK-455-fs-provider-unified-trait.md) | Migrate `FsProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-456](tasks/TASK-456-stdio-provider-unified-trait.md) | Migrate `StdioProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-457](tasks/TASK-457-mcp-provider-unified-trait.md) | Migrate `McpProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-458](tasks/TASK-458-engine-unified-trait.md) | Update engine builder/provider wiring to use the shared trait directly | DESIGN-015, SPEC-010 | 4-6 | ✅ Complete |
+| [TASK-459](tasks/TASK-459-remove-old-provider-trait.md) | Remove the old engine-local provider trait and finalize the API migration | DESIGN-015 | 3-5 | ✅ Complete |
+| [TASK-460](tasks/TASK-460-error-handling-unified.md) | Normalize unified provider error handling and boundary conversions | DESIGN-015 | 3-5 | ✅ Complete |
+| [TASK-461](tasks/TASK-461-documentation-updates.md) | Update active docs/examples for unified evaluated-action/provider dispatch | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | ✅ Complete |
+| [TASK-462](tasks/TASK-462-final-integration-testing.md) | Run final integration and quality-gate verification for the migration | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | ✅ Complete |
 
 **Deliverable:** One unified evaluated-action/provider boundary across `ash-core`, `ash-parser`,
 `ash-interp`, `ash-engine`, and `ash-cli`, with the split provider trait removed from active APIs.

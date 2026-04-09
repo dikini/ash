@@ -153,7 +153,8 @@ impl DotGenerator {
                 id
             }
             Workflow::Propose {
-                action,
+                action_name,
+                action_arguments: _,
                 continuation,
             } => {
                 let id = self.next_id();
@@ -162,7 +163,7 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"PROPOSE\\n{}\", fillcolor=\"{}\"];",
                     id,
-                    escape_dot(&action.name),
+                    escape_dot(action_name),
                     effect_color(&Effect::Deliberative)
                 )
                 .unwrap();
@@ -211,7 +212,8 @@ impl DotGenerator {
                 id
             }
             Workflow::Act {
-                action,
+                action_name,
+                action_arguments: _,
                 guard,
                 provenance: _,
             } => {
@@ -220,7 +222,7 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"ACT\\n{}\", fillcolor=\"{}\"];",
                     id,
-                    escape_dot(&action.name),
+                    escape_dot(action_name),
                     effect_color(&Effect::Operational)
                 )
                 .unwrap();
@@ -720,7 +722,7 @@ fn escape_dot(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{Action, Capability, Pattern};
+    use crate::ast::{Capability, Pattern};
 
     #[test]
     fn test_done_to_dot() {
@@ -733,10 +735,8 @@ mod tests {
     #[test]
     fn test_act_to_dot() {
         let workflow = Workflow::Act {
-            action: Action {
-                name: "notify".to_string(),
-                arguments: vec![],
-            },
+            action_name: "notify".to_string(),
+            action_arguments: vec![],
             guard: crate::ast::Guard::Always,
             provenance: crate::Provenance::new(),
         };

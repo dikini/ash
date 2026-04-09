@@ -329,27 +329,6 @@ impl DotGenerator {
                 .unwrap();
                 id
             }
-            Workflow::Par { workflows } => {
-                let id = self.next_id();
-                writeln!(
-                    self.output,
-                    "  node_{} [label=\"PAR\\n({} branches)\", shape=parallelogram, fillcolor=\"lightyellow\"];",
-                    id,
-                    workflows.len()
-                ).unwrap();
-                for (i, w) in workflows.iter().enumerate() {
-                    let branch_id = self.visit_workflow(w);
-                    writeln!(
-                        self.output,
-                        "  node_{} -> node_{} [label=\"{}\"];",
-                        id,
-                        branch_id,
-                        i + 1
-                    )
-                    .unwrap();
-                }
-                id
-            }
             Workflow::ForEach {
                 pattern,
                 collection,

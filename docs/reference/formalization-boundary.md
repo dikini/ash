@@ -231,8 +231,8 @@ At minimum, the deterministic-fragment targets are:
   a helper contract that admits bounded nondeterminism;
 - uniqueness of terminal projection for deterministic complete executions.
 
-These determinism targets must stay honest about excluded fragments. `Par`, helper-owned receive
-selection, and other helper-bounded choices are not to be misclassified as globally deterministic
+These determinism targets must stay honest about excluded fragments. Helper-owned receive
+selection and other helper-bounded choices are not to be misclassified as globally deterministic
 when the canonical corpus intentionally leaves a bounded set of outcomes open.
 
 ### 4. Helper-Bounded Nondeterminism Obligations
@@ -248,7 +248,6 @@ The core obligation is:
 
 At minimum this applies to:
 
-- `Par` interleavings and helper-backed terminal aggregation;
 - `receive` selection, timeout, fallthrough, and blocking outcomes;
 - runtime-owned control/completion observation boundaries where the canonical runtime contract keeps
   behavior helper-owned rather than surface-stepped.

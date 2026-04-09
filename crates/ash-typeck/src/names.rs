@@ -316,14 +316,6 @@ impl NameResolver {
                 self.pop_scope();
             }
 
-            Workflow::Par { branches, .. } => {
-                for branch in branches {
-                    self.push_scope();
-                    self.resolve_workflow_inner(branch);
-                    self.pop_scope();
-                }
-            }
-
             Workflow::With { body, .. } => {
                 self.push_scope();
                 self.resolve_workflow_inner(body);

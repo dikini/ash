@@ -32,7 +32,7 @@ This contract does not define:
 - one required Rust struct, trait, enum, or public API shape;
 - one required scheduler, queue, tombstone, or registry layout;
 - one required representation of `Γ` or the residual workflow term;
-- the full `Par` branch-local aggregation contract, which remains follow-on work;
+- the full `Par` branch-local aggregation contract (Historical - remains follow-on work);
 - full retained-completion API parity, transport shape, or external exposure policy.
 
 ## 1. Contract Role
@@ -43,7 +43,7 @@ Typical instances include:
 
 - one top-level workflow execution;
 - one spawned child workflow execution;
-- one branch-local execution instance if a runtime realizes `Par` branches as distinct runtime-owned executions.
+- one branch-local execution instance if a runtime realizes `Par` (Historical) branches as distinct runtime-owned executions.
 
 An implementation may realize the record directly, indirectly, or distributively across several internal holders, but if it claims to expose or preserve an execution record for semantic conformance, the record must reconstruct the same semantic content frozen here.
 
@@ -245,7 +245,7 @@ The table below freezes the adoption boundary.
 | `ε̂` reached-effect projection | Yes if claiming full completion-style payload projection from the canonical record. | Conservative reached-effect upper bounds remain acceptable on staged retained-completion surfaces such as TASK-409's current summary, provided they are not mislabeled exact. | One required summary data structure. |
 | Terminal result payload | Yes. `v` or `err` must be exact in the terminal record. | Separate retained records may transport the same payload indirectly or lazily. | Serialization/transport shape. |
 | `Γ` and residual workflow `w` packaging | No. They remain owned by `SPEC-025` semantics, but this runtime-facing record contract does not require them to be part of the canonical package. | Implementations may surface them privately or diagnostically. | One required runtime exposure. |
-| `Par` branch-local aggregation details | No. Later work freezes that contract separately. | Current runtimes may remain partial here without violating this document. | Full branch-state / aggregation design. |
+| `Par` branch-local aggregation details (Historical) | No. Later work freezes that contract separately. | Current runtimes may remain partial here without violating this document. | Full branch-state / aggregation design. |
 | Concrete retained-completion API parity | No. This contract only fixes what exact projection means, not the full external retained API. | TASK-406 through TASK-412 style staged slices remain allowed if honestly labeled. | Final retained-completion public API design. |
 
 ## 6. Helper-Boundary and State-Taxonomy Compatibility
@@ -255,7 +255,7 @@ This contract must be read together with the frozen helper/state-taxonomy contra
 Normatively:
 
 1. The execution record does not micro-step helper internals.
-2. Helper-owned receive selection, completion observation, control observation, obligation/provenance transitions, and `Par` aggregation remain helper-owned boundaries.
+2. Helper-owned receive selection, completion observation, control observation, obligation/provenance transitions, and `Par` (Historical) aggregation remain helper-owned boundaries.
 3. The execution record packages the semantic state before and after those boundaries and, for blocked cases, the fact that the execution is waiting at one of those admitted boundaries.
 4. `Blocked(CompletionObservationWait)` is a first-class admitted nonterminal class. It is not a rejection, not ordinary active execution, and not proof that the child lacks a terminal record; it means the observing execution is waiting on a helper/runtime-owned completion boundary.
 5. `Blocked(ReceiveWait)` is likewise admitted nonterminal waiting rather than semantic stuckness.
@@ -349,15 +349,15 @@ Those tasks should implement or test against this contract directly rather than 
 - which current retained-completion surfaces are already exact versus only conservative;
 - how blocked/completion-observation boundaries fit into the execution-record story.
 
-## 11. TASK-434 Compatibility Note for `Par` Branch Execution Records
+## 11. TASK-434 Compatibility Note for `Par` (Historical) Branch Execution Records
 
-TASK-434 freezes the normative `Par` branch-state and aggregation contract in
-[SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md). This reference remains compatible with
+TASK-434 freezes the normative `Par` (Historical) branch-state and aggregation contract in
+[Historical - SPEC-025](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md). This reference remains compatible with
 that contract as follows.
 
 ### 10.1 Branch-Local Execution Record Meaning
 
-If a runtime realizes `Par` branches as distinct runtime-owned execution instances, then each branch may
+If a runtime realizes `Par` (Historical) branches as distinct runtime-owned execution instances, then each branch may
 carry its own branch-local execution record:
 
 ```text
@@ -371,7 +371,7 @@ ExecRecord {
 ```
 
 Normatively, such a branch-local record denotes the same branch-local semantic carriers frozen by the
-`Par` contract: branch-local `Ω`, `π`, `T`, `ε̂`, and eventual terminal payload for one branch execution
+`Par` (Historical) contract: branch-local `Ω`, `π`, `T`, `ε̂`, and eventual terminal payload for one branch execution
 instance.
 
 This does not require a runtime to expose each branch record publicly. It only fixes the semantic
@@ -380,7 +380,7 @@ meaning if the runtime claims to preserve or reconstruct branch-local execution 
 ### 10.2 Aggregate Record Boundary
 
 This reference still treats the canonical execution record as describing one authoritative execution
-instance. For an enclosing `Par`, the aggregate execution record is the parent/enclosing record, not the
+instance. For an enclosing `Par` (Historical), the aggregate execution record is the parent/enclosing record, not the
 unordered bag of branch-local records.
 
 Accordingly:
@@ -388,10 +388,10 @@ Accordingly:
 1. live branch-local records may coexist before aggregate completion;
 2. blocked/suspended branch-local records remain nonterminal and are not collapsed into parent terminal
    completion;
-3. the enclosing aggregate record becomes terminal only when the `Par` aggregation precondition holds,
+3. the enclosing aggregate record becomes terminal only when the `Par` (Historical) aggregation precondition holds,
    i.e. when the branch-state contract admits helper-backed aggregation of terminal branch outcomes;
-4. if an implementation projects one enclosing terminal execution record for `Par`, the projected
-   `Ω`, `π`, `T`, and `ε̂` must equal the helper-backed aggregate carriers admitted by the frozen `Par`
+4. if an implementation projects one enclosing terminal execution record for `Par` (Historical), the projected
+   `Ω`, `π`, `T`, and `ε̂` must equal the helper-backed aggregate carriers admitted by the frozen `Par` (Historical)
    contract, not a scheduler-accidental or first-observed approximation.
 
 ### 10.3 Conformance with Different Branch Orders

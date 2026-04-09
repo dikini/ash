@@ -73,8 +73,6 @@ pub enum Workflow {
         first: Box<Workflow>,
         second: Box<Workflow>,
     },
-    /// Parallel composition
-    Par { workflows: Vec<Workflow> },
     /// FOREACH pattern in expr do workflow
     ForEach {
         pattern: Pattern,
@@ -861,11 +859,6 @@ mod tests {
             second: Box::new(Workflow::Done),
         };
 
-        // Test Par
-        let _par = Workflow::Par {
-            workflows: vec![Workflow::Done, Workflow::Done],
-        };
-
         // Test ForEach with List pattern
         let _foreach = Workflow::ForEach {
             pattern: Pattern::List(
@@ -1099,9 +1092,7 @@ mod tests {
                 }),
                 else_branch: Box::new(Workflow::Seq {
                     first: Box::new(Workflow::Done),
-                    second: Box::new(Workflow::Par {
-                        workflows: vec![Workflow::Done, Workflow::Done],
-                    }),
+                    second: Box::new(Workflow::Done),
                 }),
             }),
         };

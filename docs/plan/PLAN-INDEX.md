@@ -2025,5 +2025,29 @@ work tracked by the broader phase roadmap.
 | [TASK-445](tasks/TASK-445-type-checker-lexical-scope-conformance.md) | Align type checking and name resolution with the canonical lexical-block lowering so later statements see earlier bindings and true unbound names are rejected consistently | TASK-443, TASK-444, SPEC-003 | 4-6 | ✅ Complete |
 | [TASK-446](tasks/TASK-446-interpreter-lexical-scope-and-seq-faithfulness.md) | Align interpreter execution with the canonical lowered lexical-block form while preserving explicit `SEQ` semantics | TASK-443, TASK-444, TASK-445, SPEC-004, SPEC-025 | 4-7 | ✅ Complete |
 | [TASK-447](tasks/TASK-447-surface-binding-scope-conformance-closeout.md) | Add CLI-facing conformance coverage and phase closeout across `ash check`, `ash run`, and `ash trace` for lexical block scope | TASK-443, TASK-444, TASK-445, TASK-446 | 3-5 | ✅ Complete |
+| [TASK-448](tasks/TASK-448-remove-par-form-and-make-single-workflows-sequential.md) | Remove `par` from the active language so a single workflow is sequential and concurrency is modeled by communicating workflows/processes | SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-022, SPEC-025, SPEC-026 | 6-10 | Planned |
+
+## Phase 69: Unified Action System
+
+Unify evaluated action dispatch and provider interfaces across `ash-core`, `ash-parser`,
+`ash-interp`, and `ash-engine`, removing the split between interpreter-facing and engine-facing
+provider traits.
+
+**Plan Reference:** [PLAN-015: Unified Action System Implementation](PLAN-015-UNIFIED-ACTION-SYSTEM.md)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-449](tasks/TASK-449-action-vec-value.md) | Change `Action` to hold evaluated `Value` arguments and land parser/lowering plus ACT execution boundary changes in the same phase | DESIGN-015, SPEC-001 | 6-8 | Planned |
+| [TASK-450](tasks/TASK-450-unified-provider-trait.md) | Add unified `ash_core::CapabilityProvider` and `CapabilityError` | DESIGN-015, SPEC-017 | 4-6 | Planned |
+| [TASK-451](tasks/TASK-451-capability-context-unified-trait.md) | Update `CapabilityContext` and registry types to use the shared provider trait directly | DESIGN-015, SPEC-017 | 4-6 | Planned |
+| [TASK-452](tasks/TASK-452-remove-interp-provider-adapter.md) | Remove interpreter-side adapter/wrapper scaffolding left over from the split trait model | DESIGN-015 | 2-4 | Planned |
+| [TASK-455](tasks/TASK-455-fs-provider-unified-trait.md) | Migrate `FsProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | Planned |
+| [TASK-456](tasks/TASK-456-stdio-provider-unified-trait.md) | Migrate `StdioProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | Planned |
+| [TASK-457](tasks/TASK-457-mcp-provider-unified-trait.md) | Migrate `McpProvider` to the unified provider trait | DESIGN-015, SPEC-017 | 3-5 | Planned |
+| [TASK-458](tasks/TASK-458-engine-unified-trait.md) | Update engine builder/provider wiring to use the shared trait directly | DESIGN-015, SPEC-010 | 4-6 | Planned |
+| [TASK-459](tasks/TASK-459-remove-old-provider-trait.md) | Remove the old engine-local provider trait and finalize the API migration | DESIGN-015 | 3-5 | Planned |
+| [TASK-460](tasks/TASK-460-error-handling-unified.md) | Normalize unified provider error handling and boundary conversions | DESIGN-015 | 3-5 | Planned |
+| [TASK-461](tasks/TASK-461-documentation-updates.md) | Update active docs/examples for unified evaluated-action/provider dispatch | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | Planned |
+| [TASK-462](tasks/TASK-462-final-integration-testing.md) | Run final integration and quality-gate verification for the migration | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | Planned |
 
 **Deliverable:** One unambiguous lexical-scope contract for newline-separated surface statements, backed by normative spec text and by aligned parser, lowering, type checking, interpreter, and CLI conformance coverage so compile-time and runtime surfaces agree on ordinary file workflow bindings.

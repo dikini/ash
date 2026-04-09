@@ -493,37 +493,7 @@ For example:
 }
 ```
 
-### 10.2 Allowed-set `Par` case
-
-```json
-{
-  "schema_version": "ash-expected-result/v1",
-  "case_id": "par-all-success-aggregates",
-  "surface": "small-step",
-  "authorities": ["SPEC-001", "SPEC-004", "SPEC-025", "SPEC-026"],
-  "expectation": {
-    "kind": "allowed_set",
-    "results": [
-      {
-        "outcome_class": "terminal_return",
-        "payload": {
-          "kind": "value",
-          "value": { "type": "list", "value": [1, 2] }
-        }
-      },
-      {
-        "outcome_class": "terminal_return",
-        "payload": {
-          "kind": "value",
-          "value": { "type": "list", "value": [2, 1] }
-        }
-      }
-    ]
-  }
-}
-```
-
-### 10.3 Blocked receive case
+### 10.2 Blocked receive case
 
 ```json
 {

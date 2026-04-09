@@ -66,7 +66,7 @@ Current coarse workflow-form classification summary consumed across the type/run
 | `Orient`, `Propose` | `Deliberative` base effect |
 | `Decide`, `Check` | `Evaluative` base effect |
 | `Act` | `Operational` |
-| control/modal forms such as `Let`, `If`, `Seq`, `Par`, `ForEach`, `Ret`, `Done`, `With`, `Maybe`, `Must` | no extra surfaced grade of their own; compose enclosed effects by join |
+| control/modal forms such as `Let`, `If`, `Seq`, `ForEach`, `Ret`, `Done`, `With`, `Maybe`, `Must` | no extra surfaced grade of their own; compose enclosed effects by join |
 | `Oblig` | currently treated as governance structure rather than a separate coarse effect grade by itself |
 
 ## Required Runtime Consumers

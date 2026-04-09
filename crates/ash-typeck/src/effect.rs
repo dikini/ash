@@ -101,14 +101,6 @@ pub fn infer_effect(workflow: &Workflow) -> Effect {
         // Control/modal forms compose enclosed effects by join rather than adding their own grade.
         Workflow::For { body, .. } => infer_effect(body),
 
-        Workflow::Par { branches, .. } => {
-            // Parallel composition: join of all branch effects
-            branches
-                .iter()
-                .map(infer_effect)
-                .fold(Effect::Epistemic, |acc, e| acc.join(e))
-        }
-
         Workflow::With { body, .. } => infer_effect(body),
 
         Workflow::Maybe {
@@ -443,30 +435,6 @@ mod tests {
                 guard: None,
                 span: test_span(),
             }),
-            span: test_span(),
-        };
-        assert_eq!(infer_effect(&workflow), Effect::Operational);
-    }
-
-    #[test]
-    fn test_infer_effect_par() {
-        let workflow = Workflow::Par {
-            branches: vec![
-                Workflow::Observe {
-                    capability: "read".into(),
-                    binding: None,
-                    continuation: None,
-                    span: test_span(),
-                },
-                Workflow::Act {
-                    action: ActionRef {
-                        name: "write".into(),
-                        args: vec![],
-                    },
-                    guard: None,
-                    span: test_span(),
-                },
-            ],
             span: test_span(),
         };
         assert_eq!(infer_effect(&workflow), Effect::Operational);

@@ -720,12 +720,6 @@ fn validate_interface_calls_in_workflow(
             bind_pattern_variables(&mut body_env, pattern, &item_ty);
             validate_interface_calls_in_workflow(&mut body_env, body)
         }
-        ash_parser::surface::Workflow::Par { branches, .. } => {
-            for branch in branches {
-                validate_interface_calls_in_workflow(&mut env.clone(), branch)?;
-            }
-            Ok(())
-        }
         ash_parser::surface::Workflow::With { body, .. }
         | ash_parser::surface::Workflow::Must { body, .. } => {
             validate_interface_calls_in_workflow(env, body)
@@ -901,25 +895,6 @@ fn infer_workflow_return_type(
                     ))
                 })
         }
-        ash_parser::surface::Workflow::Par { branches, .. } => {
-            let mut branch_types = branches
-                .iter()
-                .map(|branch| infer_workflow_return_type(env, branch));
-            let Some(first_ty) = branch_types.next().transpose()? else {
-                return Ok(Type::Null);
-            };
-            branch_types.try_fold(first_ty, |acc, branch_ty| {
-                let branch_ty = branch_ty?;
-                crate::types::unify(&acc, &branch_ty)
-                    .map(|subst| subst.apply(&acc))
-                    .map_err(|_| {
-                        TypeCheckError::TypeError(format!(
-                            "workflow branch return types do not match: {} vs {}",
-                            acc, branch_ty
-                        ))
-                    })
-            })
-        }
         ash_parser::surface::Workflow::For {
             pattern,
             collection,
@@ -1010,12 +985,6 @@ fn reject_unsupported_mvp_workflow_features(
         | ash_parser::surface::Workflow::With { body, .. }
         | ash_parser::surface::Workflow::Must { body, .. } => {
             reject_unsupported_mvp_workflow_features(body)
-        }
-        ash_parser::surface::Workflow::Par { branches, .. } => {
-            for branch in branches {
-                reject_unsupported_mvp_workflow_features(branch)?;
-            }
-            Ok(())
         }
         ash_parser::surface::Workflow::Maybe {
             primary, fallback, ..

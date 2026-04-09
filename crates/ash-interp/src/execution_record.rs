@@ -111,6 +111,7 @@ impl ExecutionObligationState {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn merge_parallel(branches: &[Self]) -> Self {
         let mut pending = BTreeSet::new();
         let mut role_pending = BTreeSet::new();
@@ -172,6 +173,7 @@ impl ExecutionEffectSummary {
         self.reached.insert(effect);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn merge_parallel(branches: &[Self]) -> Self {
         let mut merged = Self::default();
         for branch in branches {
@@ -199,6 +201,7 @@ pub struct ExecutionRecord {
     effects: ExecutionEffectSummary,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct ParallelTraceEvent {
     branch_index: usize,
@@ -207,6 +210,7 @@ pub(crate) struct ParallelTraceEvent {
 }
 
 impl ParallelTraceEvent {
+    #[allow(dead_code)]
     fn new(branch_index: usize, event: TraceEvent) -> Self {
         let timestamp = trace_event_timestamp(&event);
         Self {
@@ -217,6 +221,7 @@ impl ParallelTraceEvent {
     }
 }
 
+#[allow(dead_code)]
 fn trace_event_timestamp(event: &TraceEvent) -> DateTime<Utc> {
     match event {
         TraceEvent::Obs { timestamp, .. }
@@ -227,6 +232,7 @@ fn trace_event_timestamp(event: &TraceEvent) -> DateTime<Utc> {
     }
 }
 
+#[allow(dead_code)]
 fn join_parallel_provenance(branches: &[ExecutionRecord]) -> Provenance {
     if branches.is_empty() {
         return Provenance::new();
@@ -255,6 +261,7 @@ fn join_parallel_provenance(branches: &[ExecutionRecord]) -> Provenance {
     }
 }
 
+#[allow(dead_code)]
 fn merge_parallel_traces(branches: &[ExecutionRecord]) -> Vec<TraceEvent> {
     let mut events = branches
         .iter()
@@ -283,6 +290,7 @@ impl ExecutionRecord {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn merge_parallel_success(branches: &[Self]) -> Self {
         let values = branches
             .iter()
@@ -298,10 +306,12 @@ impl ExecutionRecord {
         )
     }
 
+    #[allow(dead_code)]
     pub(crate) fn merge_parallel_rejection(branches: &[Self], error: ExecError) -> Self {
         Self::merge_parallel_terminal(branches, ExecutionTerminal::Reject(error))
     }
 
+    #[allow(dead_code)]
     fn merge_parallel_terminal(branches: &[Self], terminal: ExecutionTerminal) -> Self {
         let obligations = ExecutionObligationState::merge_parallel(
             &branches
@@ -509,6 +519,7 @@ impl ExecutionRecorder {
             .clone()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn replace_with_snapshot(&self, record: ExecutionRecord) {
         *self
             .inner

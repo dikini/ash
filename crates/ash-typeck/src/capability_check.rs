@@ -501,14 +501,6 @@ impl CapabilityChecker {
                 self.verify_workflow(body)
             }
 
-            // Parallel composition - verify all branches
-            Workflow::Par { branches, .. } => {
-                for branch in branches {
-                    self.verify_workflow(branch)?;
-                }
-                Ok(())
-            }
-
             // With clause - verify capability usage and body
             Workflow::With { body, .. } => self.verify_workflow(body),
 
@@ -665,21 +657,6 @@ mod tests {
         let workflow = Workflow::Seq {
             first: Box::new(Workflow::Done { span: test_span() }),
             second: Box::new(Workflow::Done { span: test_span() }),
-            span: test_span(),
-        };
-
-        let result = checker.verify(&workflow);
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_verify_par() {
-        let checker = CapabilityChecker::new();
-        let workflow = Workflow::Par {
-            branches: vec![
-                Workflow::Done { span: test_span() },
-                Workflow::Done { span: test_span() },
-            ],
             span: test_span(),
         };
 

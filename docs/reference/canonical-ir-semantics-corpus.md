@@ -48,9 +48,8 @@ The canonical v1 corpus covers the minimum semantic families required by TASK-43
 2. pattern-driven control;
 3. capability / policy / obligation workflows;
 4. receive / blocking / fallback behavior;
-5. `Par`;
-6. spawn / control / completion observation;
-7. representative failure paths.
+5. spawn / control / completion observation;
+6. representative failure paths.
 
 This corpus is canonical-IR-first rather than surface-syntax-first. Surface syntax may be used to
 explain a case informally, but the authoritative executable input for the corpus is the canonical IR
@@ -176,9 +175,6 @@ The table below freezes the minimum canonical v1 case families and initial case 
 | `receive-empty-blocks` | small-step | allowed_set | blocked receive remains blocked/nonterminal, not stuck/reject |
 | `receive-timeout-fallback` | big-step, small-step | allowed_set | timeout/fallback behavior stays within admitted helper-owned set |
 | `receive-wildcard-fallback` | big-step | deterministic | wildcard receive fallback continuation |
-| `par-all-success-aggregates` | big-step, small-step | allowed_set | helper-owned concurrent all-success aggregation |
-| `par-branch-rejection` | big-step, small-step | allowed_set | mixed terminal branch outcomes preserve admitted aggregate rejection |
-| `par-blocked-branch-nonterminal` | small-step | allowed_set | nonterminal blocked branch prevents false terminal aggregate |
 | `spawn-child-success-retained-completion` | big-step, runtime-observable | deterministic | spawned child success with retained completion projection |
 | `spawn-child-rejection-retained-completion` | big-step, runtime-observable | deterministic | spawned child rejection with retained completion projection |
 | `spawn-control-kill-tombstone` | runtime-observable | deterministic | control tombstone remains distinct from child-owned completion payload |
@@ -206,16 +202,7 @@ This is the required representation for v1 corpus nondeterminism.
 The corpus must not use vague prose such as "implementation-dependent" where SPEC-026 already gives
 an admitted bounded set.
 
-### 8.3 `Par` policy
-
-For `Par` cases:
-
-1. the corpus must compare admitted aggregate semantic results, not raw branch-step order;
-2. cases must not encode one accidental scheduler ordering as the only success path;
-3. if more than one aggregate result is semantically allowed, those results must appear explicitly in
-   `expected.json`.
-
-### 8.4 `receive` policy
+### 8.3 `receive` policy
 
 For `receive` cases:
 

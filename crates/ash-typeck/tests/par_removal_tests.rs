@@ -15,7 +15,8 @@ fn test_type_checker_no_par_lowering() {
 
     // We can't directly test this at runtime since the parser no longer
     // produces Par, but we verify the type checker's behavior
-    assert!(true, "Type checker should not need to lower from Par variant");
+    // This is verified at compile time - if Par existed, the type checker
+    // would need to lower from the Par variant
 }
 
 #[test]
@@ -38,8 +39,8 @@ fn test_name_resolution_no_par() {
     // Verify that name resolution doesn't match on Par
     // This is tested indirectly - if Par existed in the AST,
     // the name resolution function would need a match arm for it
-
-    assert!(true, "Name resolution should not need to handle Par variant");
+    // This is verified at compile time - if Par existed, the name resolution
+    // function would require a match arm for it
 }
 
 #[test]
@@ -47,8 +48,8 @@ fn test_obligation_checking_no_par() {
     // Verify that obligation checking doesn't match on Par
     // This is tested indirectly - if Par existed in the AST,
     // the obligation checker would need a match arm for it
-
-    assert!(true, "Obligation checking should not need to handle Par variant");
+    // This is verified at compile time - if Par existed, the obligation checker
+    // would require a match arm for it
 }
 
 #[test]
@@ -56,8 +57,8 @@ fn test_capability_checking_no_par() {
     // Verify that capability checking doesn't match on Par
     // This is tested indirectly - if Par existed in the AST,
     // the capability checker would need a match arm for it
-
-    assert!(true, "Capability checking should not need to handle Par variant");
+    // This is verified at compile time - if Par existed, the capability checker
+    // would require a match arm for it
 }
 
 #[test]
@@ -70,7 +71,8 @@ fn test_surface_workflow_par_removed() {
     // let _ = surface::Workflow::Par { branches: vec![], span: Default::default() };
 
     // Since we can't test compile failures at runtime, we document the expectation
-    assert!(true, "Surface Workflow should not have a Par variant");
+    // This is verified at compile time - if surface::Workflow::Par existed,
+    // the parser would need to produce it
 }
 
 #[test]
@@ -80,6 +82,6 @@ fn test_type_checker_complete_match() {
 
     // We can't call the type checker functions directly (they're crate-private),
     // but the presence of this test documents the expectation that Par has been removed
-
-    assert!(true, "Type checker should not need to handle Par variant");
+    // This is verified at compile time - if Par existed, type checker functions
+    // would need to handle the Par variant
 }

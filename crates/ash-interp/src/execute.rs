@@ -1675,6 +1675,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     fn test_role_with_obligation(name: &str, obligation: &str) -> ash_core::Role {
         ash_core::Role {
             name: name.to_string(),

@@ -910,28 +910,6 @@ impl ObligationCollector {
                 }
             }
 
-            // PAR: Union of remaining obligations from all branches
-            // Per SPEC-003 Section 4.5: discharged = ∩ discharged_i
-            // For remaining-obligation tracking: union of remaining obligations
-            Workflow::Par { branches, span: _ } => {
-                let parent_ctx = ctx.clone();
-
-                let mut branch_contexts = Vec::new();
-                for branch in branches {
-                    let mut branch_ctx = parent_ctx.branch();
-                    self.collect_from_workflow(branch, &mut branch_ctx)?;
-                    branch_contexts.push(branch_ctx);
-                }
-
-                // Union: obligation remains if pending in ANY branch
-                if let Some(first) = branch_contexts.first() {
-                    ctx.obligations = first.obligations.clone();
-                    for branch_ctx in &branch_contexts[1..] {
-                        ctx.obligations = ctx.obligations.union(&branch_ctx.obligations);
-                    }
-                }
-            }
-
             // MAYBE: Try primary, fallback on failure
             // Per SPEC-003 Section 4.6: Obligations must be discharged in both branches
             // For remaining-obligation tracking: union of remaining obligations

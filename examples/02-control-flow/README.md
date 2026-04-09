@@ -16,21 +16,14 @@ Looping constructs:
 - Pattern matching in loops
 - Accumulating results
 
-### 03-parallel.ash
-Parallel execution:
-- `par` blocks for concurrent branches
-- Executing independent operations simultaneously
-- Combining results from parallel branches
-
-### 04-sequential.ash
+### 03-sequential.ash
 Sequential composition:
-- `seq` blocks for ordered execution
-- Chaining dependent operations
-- Error handling in sequences
+- Composing operations in order
+- Building on previous steps
+- Sequential data processing
 
 ## Key Concepts
 
 1. **Conditionals** choose between branches
 2. **For loops** iterate over collections
-3. **Parallel** blocks execute concurrently
-4. **Sequential** blocks ensure ordering
+3. **Sequential composition** chains operations in order

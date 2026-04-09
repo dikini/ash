@@ -22,10 +22,8 @@ capability merge_pr : act(pr: PR) where all_checks_pass
 workflow code_review {
   let pr = observe fetch_pr with pr_id: $input.pr_id;
   
-  par {
-    orient analyze_diff(pr) as diff_analysis;
-    orient check_coverage(pr.tests) as coverage
-  };
+  orient analyze_diff(pr) as diff_analysis;
+  orient check_coverage(pr.tests) as coverage;
   
   oblige reviewer to check_tests(pr);
   oblige reviewer to check_security(pr);

@@ -150,11 +150,9 @@ workflow process_ticket {
     } else if action == "escalate_to_supervisor" || action == "immediate_escalate" {
         act escalate_ticket(ticket_id, "High priority or SLA breach")
         
-        // Notify supervisor
-        par {
-            act send_notification(find_supervisor().email, "URGENT: Escalated ticket " + ticket_id)
-            act send_notification(customer.email, "Your ticket has been escalated to our specialist team.")
-        }
+        // Notify supervisor and customer sequentially
+        act send_notification(find_supervisor().email, "URGENT: Escalated ticket " + ticket_id)
+        act send_notification(customer.email, "Your ticket has been escalated to our specialist team.")
     }
     
     // Log all actions for audit

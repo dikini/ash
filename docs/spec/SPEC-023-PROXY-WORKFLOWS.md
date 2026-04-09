@@ -174,15 +174,13 @@ proxy board_proxy
     loop {
         receive {
             req : DecisionRequest => {
-                -- Collect votes from all board members
-                par {
-                    yield role(m1) req resume v1 => { v1 },
-                    yield role(m2) req resume v2 => { v2 },
-                    yield role(m3) req resume v3 => { v3 }
-                } collect votes;
+                -- Collect votes from all board members sequentially
+                let v1 = yield role(m1) req resume vote => { vote } : DecisionResponse;
+                let v2 = yield role(m2) req resume vote => { vote } : DecisionResponse;
+                let v3 = yield role(m3) req resume vote => { vote } : DecisionResponse;
                 
                 -- Count approvals
-                let approvals = count_approvals(votes);
+                let approvals = count_approvals([v1, v2, v3]);
                 
                 if approvals >= 2 {
                     resume Approved(consensus_sig) : DecisionResponse;

@@ -240,20 +240,15 @@ workflow main {
 }
 ```
 
-### Parallel Execution
+### Sequential Composition
+
+Workflows can compose operations sequentially, with each step building on the previous:
 
 ```ash
 workflow main {
-    par {
-        // Branch 1
-        let result1 = compute_a()
-        
-        // Branch 2
-        let result2 = compute_b()
-        
-        // Branch 3
-        let result3 = compute_c()
-    }
+    let result1 = compute_a();
+    let result2 = compute_b();
+    let result3 = compute_c();
     
     ret { a: result1, b: result2, c: result3 }
 }

@@ -247,7 +247,7 @@ Currently, these are **outline workflows** that demonstrate the Ash language's c
 - **Policy enforcement** at decision points
 - **Loop constructs** for iterative development
 - **Pattern matching** on test results
-- **Parallel composition** (can be used for parallel test execution)
+- **Sequential composition** for ordered test execution
 - **Effect tracking** (evaluative for tests, operational for code changes)
 
 ## Related Examples

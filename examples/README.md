@@ -39,8 +39,7 @@ dot -Tpng workflow.dot -o workflow.png
 ### 02 - Control Flow
 - **01-conditionals.ash**: If/then/else branching
 - **02-foreach.ash**: Looping over collections
-- **03-parallel.ash**: Parallel workflow execution
-- **04-sequential.ash**: Sequential composition
+- **03-sequential.ash**: Sequential composition
 
 ### 03 - Policies
 - **01-role-based.ash**: Role-based access control

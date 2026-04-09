@@ -52,17 +52,15 @@ workflow temperature_monitor {
     
     ret { alert_sent: true, status: status }
   } else {
-    -- Parallel logging for normal operations
-    par {
-      act log_status({
-        sensor: "temp_001",
-        temp: reading.temp,
-        status: status,
-        timestamp: now()
-      });
-      
-      orient { summarize_trend(analysis) }
-    };
+    -- Sequential logging for normal operations
+    act log_status({
+      sensor: "temp_001",
+      temp: reading.temp,
+      status: status,
+      timestamp: now()
+    });
+    
+    orient { summarize_trend(analysis) };
     
     ret { alert_sent: false, status: status }
   }

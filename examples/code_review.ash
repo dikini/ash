@@ -8,7 +8,7 @@
 --
 -- In a full implementation, this would include:
 -- - Role definitions and capability declarations
--- - Parallel analysis using 'par' 
+-- - Sequential analysis using orient blocks
 -- - Obligation checking with 'oblige' and 'check'
 -- - More sophisticated decision logic
 

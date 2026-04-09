@@ -28,20 +28,19 @@ capability publish_report : act(report: Report) where peer_reviewed
 workflow collaborative_research {
   observe search_literature with query: research_question as papers;
   
-  par {
-    with role: analyst do {
-      orient extract_findings(papers) as findings
-    };
-    
-    with role: critic do {
-      orient identify_gaps(papers) as gaps
-    };
-    
-    with role: synthesizer do {
-      orient identify_themes(papers) as themes
-    }
-  } as perspectives;
+  with role: analyst do {
+    orient extract_findings(papers) as findings
+  };
   
+  with role: critic do {
+    orient identify_gaps(papers) as gaps
+  };
+  
+  with role: synthesizer do {
+    orient identify_themes(papers) as themes
+  };
+  
+  let perspectives = [findings, gaps, themes];
   orient synthesize(perspectives) as synthesis;
   propose draft_report(synthesis) as report;
   

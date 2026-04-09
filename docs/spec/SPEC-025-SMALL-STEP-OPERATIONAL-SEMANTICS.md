@@ -139,7 +139,7 @@ sections and the later compatibility audit can justify for:
 1. cumulative semantic carriers such as `π`, `T`, and `ε̂`;
 2. blocked/suspended realization and carrier uniformity;
 3. retained completion packaging or terminal payload collation;
-4. `Par` realization as a fully explicit branch-step machine;
+4. `Par` realization as a fully explicit branch-step machine (Historical);
 5. any other helper-owned ownership boundary whose current runtime realization is only partial,
    reconstructed, or weak.
 
@@ -333,7 +333,7 @@ Normatively, v1 preserves all of the following helper-owned boundaries:
 - receive-arm selection and receive wait/fallthrough classification at the
   `select_receive_outcome(...)`-style boundary;
 - `Par` terminal combination and concurrent rejection combination at the
-  `combine_parallel_outcomes(...)`-style boundary;
+  `combine_parallel_outcomes(...)`-style boundary (Historical: prior design stage, not part of active v1 contract);
 - guard evaluation and guard-owned rejection classification at the existing `SPEC-004` boundary;
 - policy lookup/application, capability lookup/application, and proposal formation at their existing
   `SPEC-004` workflow/helper boundaries;

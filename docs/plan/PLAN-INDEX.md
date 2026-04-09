@@ -269,6 +269,8 @@ Update this section as tasks complete:
 | 39 | 1 | 1 | ✅ Complete |
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
+| 68 | 6 | 6 | ✅ Complete |
+| 69 | 12 | 0 | Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -431,10 +433,11 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 248/248 tasks complete (1 deferred)
+**Overall Progress**: 249 complete / 262 tracked tasks
 **Remaining Tasks**:
 
 - 1 deferred: `TASK-063` (dynamic policy registration)
+- 12 planned: `TASK-449` through `TASK-452`, and `TASK-455` through `TASK-462`
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
 
@@ -2025,7 +2028,7 @@ work tracked by the broader phase roadmap.
 | [TASK-445](tasks/TASK-445-type-checker-lexical-scope-conformance.md) | Align type checking and name resolution with the canonical lexical-block lowering so later statements see earlier bindings and true unbound names are rejected consistently | TASK-443, TASK-444, SPEC-003 | 4-6 | ✅ Complete |
 | [TASK-446](tasks/TASK-446-interpreter-lexical-scope-and-seq-faithfulness.md) | Align interpreter execution with the canonical lowered lexical-block form while preserving explicit `SEQ` semantics | TASK-443, TASK-444, TASK-445, SPEC-004, SPEC-025 | 4-7 | ✅ Complete |
 | [TASK-447](tasks/TASK-447-surface-binding-scope-conformance-closeout.md) | Add CLI-facing conformance coverage and phase closeout across `ash check`, `ash run`, and `ash trace` for lexical block scope | TASK-443, TASK-444, TASK-445, TASK-446 | 3-5 | ✅ Complete |
-| [TASK-448](tasks/TASK-448-remove-par-form-and-make-single-workflows-sequential.md) | Remove `par` from the active language so a single workflow is sequential and concurrency is modeled by communicating workflows/processes | SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-022, SPEC-025, SPEC-026 | 6-10 | Planned |
+| [TASK-448](tasks/TASK-448-remove-par-form-and-make-single-workflows-sequential.md) | Remove `par` from the active language so a single workflow is sequential and concurrency is modeled by communicating workflows/processes | SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-022, SPEC-025, SPEC-026 | 6-10 | ✅ Complete |
 
 ## Phase 69: Unified Action System
 
@@ -2034,6 +2037,8 @@ Unify evaluated action dispatch and provider interfaces across `ash-core`, `ash-
 provider traits.
 
 **Plan Reference:** [PLAN-015: Unified Action System Implementation](PLAN-015-UNIFIED-ACTION-SYSTEM.md)
+**Priority:** High
+**Status:** Planned
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2050,4 +2055,5 @@ provider traits.
 | [TASK-461](tasks/TASK-461-documentation-updates.md) | Update active docs/examples for unified evaluated-action/provider dispatch | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | Planned |
 | [TASK-462](tasks/TASK-462-final-integration-testing.md) | Run final integration and quality-gate verification for the migration | DESIGN-015, SPEC-010, SPEC-017 | 3-5 | Planned |
 
-**Deliverable:** One unambiguous lexical-scope contract for newline-separated surface statements, backed by normative spec text and by aligned parser, lowering, type checking, interpreter, and CLI conformance coverage so compile-time and runtime surfaces agree on ordinary file workflow bindings.
+**Deliverable:** One unified evaluated-action/provider boundary across `ash-core`, `ash-parser`,
+`ash-interp`, `ash-engine`, and `ash-cli`, with the split provider trait removed from active APIs.

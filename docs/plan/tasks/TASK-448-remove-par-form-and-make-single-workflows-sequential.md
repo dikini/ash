@@ -1,6 +1,6 @@
 # TASK-448: Remove `par` Form And Make Single Workflows Sequential
 
-## Status: Planned
+## Status: Complete
 
 ## Description
 
@@ -47,16 +47,38 @@ Remove the `par` workflow form from the active Ash language so a single workflow
 
 ## Completion Checklist
 
-- [ ] Normative specs no longer include `Par` as part of the active language
-- [ ] Parser and lowering reject/remove `par`
-- [ ] Core AST, type checking, and interpreter remove `Par`
-- [ ] Active examples/tutorials/fixtures no longer teach `par`
-- [ ] Active conformance/reference docs no longer depend on `Par`
-- [ ] Full verification gates pass
-- [ ] `PLAN-INDEX.md` and `CHANGELOG.md` updated
+- [x] Normative specs no longer include `Par` as part of the active language
+- [x] Parser and lowering reject/remove `par`
+- [x] Core AST, type checking, and interpreter remove `Par`
+- [x] Active examples/tutorials/fixtures no longer teach `par`
+- [x] Active conformance/reference docs no longer depend on `Par`
+- [x] Full verification gates pass
+- [x] `PLAN-INDEX.md` and `CHANGELOG.md` updated
 
 ## Implementation Notes
 
 - The target semantics are strict: a single workflow is sequential.
 - Concurrency should be explained through communicating workflows/processes rather than within one workflow term.
 - Historical records mentioning `Par` remain valid as history and should not be rewritten merely to erase prior design stages.
+
+## Completion Notes
+
+Completed 2026-04-09 via subagent-driven development following the sequential workflow language plan.
+
+### Commits
+1. c072393 "docs(spec): fix historical marker consistency in SPEC-025"
+2. 232672d "feat(parser): remove par workflow form"
+3. (ash-interp removal) "refactor(core): remove Par from workflow execution model"
+4. 5cac23c "docs(examples): replace par-based workflow examples"
+5. b041716 "test(conformance): remove active Par corpus dependence"
+6. cfb28d2 "Remove engine unit tests that assert par is valid"
+7. 341877a "Fix docs: Mark par examples in SPEC-013-STREAMS.md as historical"
+8. 13ce33f "Fix: Remove par from parser benchmark"
+9. ee6122a "Mark normative Par text in SPEC-025 as historical"
+10. 3f399e7 "Fix low issue: Remove stale par comments in source code"
+
+### Verification
+- All 5 tasks from the plan completed successfully
+- All review findings addressed (2 rounds, 5 total findings)
+- Workspace verification: cargo fmt, cargo check, cargo clippy, cargo test all pass
+- No active references to `par` as valid language syntax remain

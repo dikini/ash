@@ -45,8 +45,6 @@ pub enum TokenKind {
     For,
     /// `do` - Do block
     Do,
-    /// `par` - Parallel block
-    Par,
     /// `with` - With clause
     With,
 
@@ -260,7 +258,6 @@ mod tests {
         let _else = TokenKind::Else;
         let _for = TokenKind::For;
         let _do = TokenKind::Do;
-        let _par = TokenKind::Par;
         let _with = TokenKind::With;
         let _maybe = TokenKind::Maybe;
         let _must = TokenKind::Must;

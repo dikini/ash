@@ -25,7 +25,6 @@ const KEYWORDS: &[&str] = &[
     "else",
     "for",
     "do",
-    "par",
     "with",
     "maybe",
     "must",

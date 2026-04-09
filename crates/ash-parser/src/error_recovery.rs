@@ -94,8 +94,8 @@ where
 /// start new statements.
 fn skip_to_stmt_boundary(input: &mut ParseInput) {
     let stmt_start_keywords = [
-        "workflow", "observe", "orient", "propose", "decide", "act", "let", "if", "for", "par",
-        "with", "maybe", "must", "done", "check",
+        "workflow", "observe", "orient", "propose", "decide", "act", "let", "if", "for", "with",
+        "maybe", "must", "done", "check",
     ];
 
     loop {

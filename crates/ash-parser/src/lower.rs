@@ -546,15 +546,6 @@ fn lower_workflow_body(
             body: Box::new(lower_workflow_body(body, provenance)?),
         }),
 
-        SurfaceWorkflow::Par { branches, .. } => {
-            let workflows: Vec<_> = branches
-                .iter()
-                .map(|b| lower_workflow_body(b, provenance))
-                .collect::<Result<Vec<_>, _>>()?;
-
-            Ok(CoreWorkflow::Par { workflows })
-        }
-
         SurfaceWorkflow::With {
             capability, body, ..
         } => Ok(CoreWorkflow::With {
@@ -1441,19 +1432,6 @@ mod tests {
         };
         let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Orient { .. }));
-    }
-
-    #[test]
-    fn test_lower_par() {
-        let surface = SurfaceWorkflow::Par {
-            branches: vec![
-                SurfaceWorkflow::Done { span: dummy_span() },
-                SurfaceWorkflow::Done { span: dummy_span() },
-            ],
-            span: dummy_span(),
-        };
-        let core = lower_workflow_body(&surface, &Provenance::new()).unwrap();
-        assert!(matches!(core, CoreWorkflow::Par { workflows } if workflows.len() == 2));
     }
 
     #[test]

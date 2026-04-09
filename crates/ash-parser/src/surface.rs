@@ -508,13 +508,6 @@ pub enum Workflow {
         /// Source span
         span: Span,
     },
-    /// Parallel composition: execute branches in parallel
-    Par {
-        /// Branches to execute in parallel
-        branches: Vec<Workflow>,
-        /// Source span
-        span: Span,
-    },
     /// With clause: scoped capability
     With {
         /// Capability to use
@@ -1131,7 +1124,6 @@ impl Spanned for Workflow {
             Workflow::Let { span, .. } => *span,
             Workflow::If { span, .. } => *span,
             Workflow::For { span, .. } => *span,
-            Workflow::Par { span, .. } => *span,
             Workflow::With { span, .. } => *span,
             Workflow::Maybe { span, .. } => *span,
             Workflow::Must { span, .. } => *span,
@@ -1282,12 +1274,6 @@ impl Workflow {
 
             // For loop - effect of body
             Workflow::For { body, .. } => body.effect(),
-
-            // Parallel composition - join of all branches
-            Workflow::Par { branches, .. } => branches
-                .iter()
-                .map(|w| w.effect())
-                .fold(Effect::Epistemic, |a, b| a.join(b)),
 
             // With clause - effect of body
             Workflow::With { body, .. } => body.effect(),
@@ -1766,28 +1752,6 @@ mod tests {
                 assert!(matches!(collection, Expr::Variable(_)));
             }
             _ => panic!("Expected For workflow"),
-        }
-    }
-
-    #[test]
-    fn test_workflow_par() {
-        let wf = Workflow::Par {
-            branches: vec![
-                Workflow::Done {
-                    span: Span::new(0, 4, 1, 1),
-                },
-                Workflow::Done {
-                    span: Span::new(5, 9, 1, 1),
-                },
-            ],
-            span: Span::new(0, 10, 1, 1),
-        };
-
-        match wf {
-            Workflow::Par { branches, .. } => {
-                assert_eq!(branches.len(), 2);
-            }
-            _ => panic!("Expected Par workflow"),
         }
     }
 
@@ -2592,14 +2556,6 @@ mod tests {
             span
         );
         assert_eq!(
-            Workflow::Par {
-                branches: vec![],
-                span
-            }
-            .span(),
-            span
-        );
-        assert_eq!(
             Workflow::With {
                 capability: "x".into(),
                 body: Box::new(Workflow::Done { span }),
@@ -2861,40 +2817,6 @@ mod effect_tests {
     }
 
     #[test]
-    fn test_par_effect_mixed() {
-        // par [observe (Epistemic), act (Operational)] = Operational
-        let observe = Workflow::Observe {
-            capability: "sensor".into(),
-            binding: None,
-            continuation: None,
-            span: dummy_span(),
-        };
-        let act = Workflow::Act {
-            action: ActionRef {
-                name: "process".into(),
-                args: vec![],
-            },
-            guard: None,
-            span: dummy_span(),
-        };
-        let par = Workflow::Par {
-            branches: vec![observe, act],
-            span: dummy_span(),
-        };
-        assert_eq!(par.effect(), Effect::Operational);
-    }
-
-    #[test]
-    fn test_par_effect_empty() {
-        // par [] = Epistemic (identity for join)
-        let par = Workflow::Par {
-            branches: vec![],
-            span: dummy_span(),
-        };
-        assert_eq!(par.effect(), Effect::Epistemic);
-    }
-
-    #[test]
     fn test_if_effect_both_branches() {
         // if cond then observe else act = Operational
         let observe = Workflow::Observe {
@@ -3124,44 +3046,6 @@ mod effect_tests {
             .effect(),
             Effect::Operational
         );
-    }
-
-    #[test]
-    fn test_nested_composite_effects() {
-        // Complex nested workflow: seq { par { observe, observe }, act }
-        let observe1 = Workflow::Observe {
-            capability: "sensor1".into(),
-            binding: None,
-            continuation: None,
-            span: dummy_span(),
-        };
-        let observe2 = Workflow::Observe {
-            capability: "sensor2".into(),
-            binding: None,
-            continuation: None,
-            span: dummy_span(),
-        };
-        let par = Workflow::Par {
-            branches: vec![observe1, observe2],
-            span: dummy_span(),
-        };
-        let act = Workflow::Act {
-            action: ActionRef {
-                name: "process".into(),
-                args: vec![],
-            },
-            guard: None,
-            span: dummy_span(),
-        };
-        let seq = Workflow::Seq {
-            first: Box::new(par),
-            second: Box::new(act),
-            span: dummy_span(),
-        };
-
-        // par { observe, observe } = Epistemic
-        // seq { Epistemic, act } = Operational
-        assert_eq!(seq.effect(), Effect::Operational);
     }
 
     #[test]

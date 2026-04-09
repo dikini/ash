@@ -164,11 +164,6 @@ fn desugar_sequencing(workflow: &Workflow) -> Workflow {
             span: *span,
         },
 
-        Workflow::Par { branches, span } => Workflow::Par {
-            branches: branches.iter().map(desugar_sequencing).collect(),
-            span: *span,
-        },
-
         Workflow::With {
             capability,
             body,
@@ -407,11 +402,6 @@ fn desugar_optional_bindings(workflow: &Workflow) -> Workflow {
             pattern: pattern.clone(),
             collection: collection.clone(),
             body: Box::new(desugar_optional_bindings(body)),
-            span: *span,
-        },
-
-        Workflow::Par { branches, span } => Workflow::Par {
-            branches: branches.iter().map(desugar_optional_bindings).collect(),
             span: *span,
         },
 
@@ -655,11 +645,6 @@ fn desugar_nested_blocks(workflow: &Workflow) -> Workflow {
             span: *span,
         },
 
-        Workflow::Par { branches, span } => Workflow::Par {
-            branches: branches.iter().map(desugar_nested_blocks).collect(),
-            span: *span,
-        },
-
         Workflow::With {
             capability,
             body,
@@ -879,19 +864,6 @@ mod tests {
         };
         let result = desugar_workflow(&wf);
         assert!(matches!(result, Workflow::If { .. }));
-    }
-
-    #[test]
-    fn test_desugar_par() {
-        let wf = Workflow::Par {
-            branches: vec![
-                Workflow::Done { span: dummy_span() },
-                Workflow::Done { span: dummy_span() },
-            ],
-            span: dummy_span(),
-        };
-        let result = desugar_workflow(&wf);
-        assert!(matches!(result, Workflow::Par { branches, .. } if branches.len() == 2));
     }
 
     #[test]

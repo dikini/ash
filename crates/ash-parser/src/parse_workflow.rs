@@ -849,7 +849,6 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         let_stmt,
         if_stmt,
         for_stmt,
-        par_stmt,
         with_stmt,
         maybe_stmt,
         must_stmt,
@@ -1128,47 +1127,6 @@ fn for_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         body,
         span,
     })
-}
-
-/// Parse a parallel block: `par { <workflows> }`
-fn par_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
-
-    let _ = keyword("par").parse_next(input)?;
-    let branches =
-        delimited(literal_str("{"), parse_par_branches, literal_str("}")).parse_next(input)?;
-
-    let span = span_from(&start_pos, &input.state);
-
-    Ok(Workflow::Par { branches, span })
-}
-
-/// Parse parallel branches
-fn parse_par_branches(input: &mut ParseInput) -> ModalResult<Vec<Workflow>> {
-    let mut branches = Vec::new();
-
-    loop {
-        skip_whitespace_and_comments(input);
-
-        if input.input.is_empty() || input.input.starts_with("}") {
-            break;
-        }
-
-        let branch = workflow(input)?;
-        branches.push(branch);
-
-        skip_whitespace_and_comments(input);
-
-        // Optional comma or semicolon between branches
-        if input.input.starts_with(",") || input.input.starts_with(";") {
-            let _ = input.input.next_slice(1);
-            input
-                .state
-                .advance(input.input.chars().next().unwrap_or(' '));
-        }
-    }
-
-    Ok(branches)
 }
 
 /// Parse a with statement: `with <capability> do <workflow>`
@@ -1522,7 +1480,6 @@ fn is_keyword(s: &str) -> bool {
             | "else"
             | "for"
             | "do"
-            | "par"
             | "with"
             | "maybe"
             | "must"

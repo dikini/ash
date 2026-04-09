@@ -732,7 +732,6 @@ fn is_keyword(s: &str) -> bool {
             | "else"
             | "for"
             | "do"
-            | "par"
             | "with"
             | "maybe"
             | "must"

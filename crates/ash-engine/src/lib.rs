@@ -659,11 +659,6 @@ fn inline_imported_calls_in_workflow(
             inline_imported_calls_in_expr(collection, imported_callables)?;
             inline_imported_calls_in_workflow(body, imported_callables)?;
         }
-        SurfaceWorkflow::Par { branches, .. } => {
-            for branch in branches {
-                inline_imported_calls_in_workflow(branch, imported_callables)?;
-            }
-        }
         SurfaceWorkflow::With { body, .. } | SurfaceWorkflow::Must { body, .. } => {
             inline_imported_calls_in_workflow(body, imported_callables)?;
         }

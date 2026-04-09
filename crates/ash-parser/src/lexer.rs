@@ -391,7 +391,6 @@ fn lookup_keyword(ident: &str) -> TokenKind {
         "else" => TokenKind::Else,
         "for" => TokenKind::For,
         "do" => TokenKind::Do,
-        "par" => TokenKind::Par,
         "with" => TokenKind::With,
 
         // Effect keywords

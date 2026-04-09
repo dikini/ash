@@ -1122,6 +1122,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Removed
 
+- Removed `par` workflow form from parser, lexer, and lowering (TASK-448). The `par { ... }` parallel workflow syntax is no longer supported. Removed from token.rs, lexer.rs, parse_workflow.rs, desugar.rs, lower.rs, error_recovery.rs, lexer_props.rs, and ash-engine/src/lib.rs.
+
 ### Fixed
 
 ### Security

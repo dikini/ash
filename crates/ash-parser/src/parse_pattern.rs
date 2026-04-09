@@ -39,7 +39,6 @@ fn get_keywords() -> &'static HashSet<&'static str> {
         set.insert("else");
         set.insert("for");
         set.insert("do");
-        set.insert("par");
         set.insert("with");
         set.insert("maybe");
         set.insert("must");

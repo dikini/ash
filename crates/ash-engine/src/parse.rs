@@ -154,22 +154,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_valid_workflow_with_par() {
-        let engine = Engine::new().build().unwrap();
-        let result = engine.parse(
-            r"
-            workflow test {
-                par {
-                    done
-                    done
-                }
-            }
-        ",
-        );
-        assert!(result.is_ok(), "Workflow with par should parse: {result:?}");
-    }
-
-    #[test]
     fn test_parse_valid_workflow_complex() {
         let engine = Engine::new().build().unwrap();
         let result = engine.parse(

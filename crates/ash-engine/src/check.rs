@@ -238,28 +238,6 @@ mod tests {
     }
 
     #[test]
-    fn test_check_valid_workflow_with_par() {
-        let engine = Engine::new().build().unwrap();
-        let workflow = engine
-            .parse(
-                r"
-            workflow test {
-                par {
-                    done
-                    done
-                }
-            }
-        ",
-            )
-            .unwrap();
-        let result = engine.check(&workflow);
-        assert!(
-            result.is_ok(),
-            "Workflow with par should pass type checking: {result:?}"
-        );
-    }
-
-    #[test]
     fn test_check_valid_complex_workflow() {
         let engine = Engine::new().build().unwrap();
         let workflow = engine

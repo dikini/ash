@@ -5,10 +5,11 @@ use crate::error::ExecError;
 /// Conservative authoritative runtime outcome/state classes for interpreter-facing callers.
 ///
 /// This type intentionally stays coarse-grained. It does not claim to solve cumulative
-/// semantic-carrier packaging, retained completion payload observation, or full `Par`
-/// aggregation. Its role is to provide one public runtime-side classification surface that can
-/// consistently distinguish active, blocked/suspended, invalid/terminated, generic execution
-/// failure, and terminal success outcomes across the current interpreter/runtime boundaries.
+/// semantic-carrier packaging, retained completion payload observation, or full parallel
+/// aggregation (note: the `par` keyword was historically removed from the language). Its role is
+/// to provide one public runtime-side classification surface that can consistently distinguish
+/// active, blocked/suspended, invalid/terminated, generic execution failure, and terminal success
+/// outcomes across the current interpreter/runtime boundaries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RuntimeOutcomeState {
     /// Execution completed successfully with a terminal value.

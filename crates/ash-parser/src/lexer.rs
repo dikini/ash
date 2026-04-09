@@ -593,7 +593,7 @@ mod tests {
         let input = r#"
             workflow capability policy role
             observe orient propose decide act
-            oblige check let if then else for do par with
+            oblige check let if then else for do with
             maybe must attempt retry timeout done
             epistemic deliberative evaluative operational
             authority obligations

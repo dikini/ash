@@ -491,6 +491,11 @@ pub enum Workflow {
         action: ActionRef,
         /// Optional guard
         guard: Option<Guard>,
+        /// Optional binding for the action result
+        result_name: Option<Name>,
+        /// Optional continuation after the action completes.
+        /// `None` means terminal (bare act, equivalent to `Done`).
+        continuation: Option<Box<Workflow>>,
         /// Source span
         span: Span,
     },
@@ -1733,6 +1738,8 @@ mod tests {
                 args: vec![Expr::Literal(Literal::String("test".into()))],
             },
             guard: Some(Guard::Always),
+            result_name: None,
+            continuation: None,
             span: Span::new(0, 20, 1, 1),
         };
 
@@ -2590,6 +2597,8 @@ mod tests {
                     args: vec![]
                 },
                 guard: None,
+                result_name: None,
+                continuation: None,
                 span
             }
             .span(),
@@ -2750,6 +2759,8 @@ mod effect_tests {
                     args: vec![],
                 },
                 guard: None,
+                result_name: None,
+                continuation: None,
                 span: dummy_span(),
             })),
             span: dummy_span(),
@@ -2820,6 +2831,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         assert_eq!(workflow.effect(), Effect::Operational);
@@ -2861,6 +2874,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let seq = Workflow::Seq {
@@ -2911,6 +2926,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let if_workflow = Workflow::If {
@@ -2951,6 +2968,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let for_workflow = Workflow::For {
@@ -2973,6 +2992,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let let_workflow = Workflow::Let {
@@ -3013,6 +3034,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let maybe = Workflow::Maybe {
@@ -3034,6 +3057,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let must = Workflow::Must {
@@ -3054,6 +3079,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let with = Workflow::With {
@@ -3104,6 +3131,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
 
@@ -3153,6 +3182,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let act_else = Workflow::Act {
@@ -3163,6 +3194,8 @@ mod effect_tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let decide = Workflow::Decide {
@@ -3241,6 +3274,8 @@ mod effect_tests {
                     args: vec![],
                 },
                 guard: None,
+                result_name: None,
+                continuation: None,
                 span: dummy_span(),
             },
             span: dummy_span(),
@@ -3280,6 +3315,8 @@ mod effect_tests {
                     args: vec![],
                 },
                 guard: None,
+                result_name: None,
+                continuation: None,
                 span: dummy_span(),
             },
             span: dummy_span(),

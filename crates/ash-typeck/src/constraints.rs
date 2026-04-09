@@ -142,6 +142,8 @@ pub fn generate_workflow_constraints(ctx: &mut ConstraintContext, workflow: &Wor
         Workflow::Act {
             action: _,
             guard: _,
+            result_name: _,
+            continuation: _,
             span: _,
         } => {
             // Act has operational effect
@@ -579,6 +581,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 

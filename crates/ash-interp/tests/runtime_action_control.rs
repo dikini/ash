@@ -171,6 +171,8 @@ fn blocking_child_action_workflow() -> Workflow {
         arguments: vec![],
         guard: Guard::Always,
         provenance: Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
     }
 }
 
@@ -183,6 +185,8 @@ fn child_two_step_action_workflow() -> Workflow {
             arguments: vec![],
             guard: Guard::Always,
             provenance: Provenance::new(),
+            result_name: None,
+            continuation: Box::new(Workflow::Done),
         }),
     }
 }
@@ -266,6 +270,8 @@ async fn act_executes_registered_operational_provider() {
         arguments: vec![],
         guard: Guard::Always,
         provenance: Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
     };
 
     let result =
@@ -286,6 +292,8 @@ async fn act_guard_failure_still_rejects_execution() {
         arguments: vec![],
         guard: Guard::Never,
         provenance: Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
     };
 
     let error =
@@ -728,6 +736,8 @@ async fn spawned_child_success_retains_provenance_contents() {
         arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
     })
     .await
     .with_provider(
@@ -769,6 +779,8 @@ async fn spawned_child_failure_retains_provenance_contents() {
         arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
     })
     .await
     .with_provider(
@@ -813,6 +825,8 @@ async fn retained_completion_write_once_keeps_original_provenance_contents() {
         arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
     })
     .await
     .with_provider(

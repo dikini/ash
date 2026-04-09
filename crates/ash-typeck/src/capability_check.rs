@@ -901,6 +901,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 
@@ -920,6 +922,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 
@@ -963,6 +967,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 
@@ -985,6 +991,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 
@@ -1045,6 +1053,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 
@@ -1068,6 +1078,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 

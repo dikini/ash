@@ -1608,6 +1608,8 @@ mod tests {
                     args: vec![],
                 },
                 guard: None,
+                result_name: None,
+                continuation: None,
                 span: ash_parser::token::Span::default(),
             };
 
@@ -1696,6 +1698,8 @@ mod tests {
                     args: vec![],
                 },
                 guard: None,
+                result_name: None,
+                continuation: None,
                 span: ash_parser::token::Span::default(),
             };
 

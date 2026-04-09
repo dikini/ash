@@ -708,17 +708,19 @@ fn is_binding_stmt(stmt: &Workflow) -> bool {
         Workflow::Observe { binding, .. } => binding.is_some(),
         Workflow::Orient { binding, .. } => binding.is_some(),
         Workflow::Propose { binding, .. } => binding.is_some(),
+        Workflow::Act { result_name, .. } => result_name.is_some(),
         _ => false,
     }
 }
 
 /// Check if a workflow is a terminal statement
-/// Terminal statements are Ret, Done, or Act (which has no continuation)
+/// Terminal statements are Ret, Done, or Act without result_name (fire-and-forget)
 fn is_terminal_stmt(stmt: &Workflow) -> bool {
-    matches!(
-        stmt,
-        Workflow::Ret { .. } | Workflow::Done { .. } | Workflow::Act { .. }
-    )
+    match stmt {
+        Workflow::Ret { .. } | Workflow::Done { .. } => true,
+        Workflow::Act { result_name, .. } => result_name.is_none(),
+        _ => false,
+    }
 }
 
 /// Lower a list of statements to canonical nested form
@@ -782,6 +784,19 @@ fn lower_stmts_to_nested(stmts: &[Workflow], start_pos: Position, input: &ParseI
                     } => Workflow::Propose {
                         action,
                         binding,
+                        continuation: Some(Box::new(cont)),
+                        span,
+                    },
+                    Workflow::Act {
+                        action,
+                        guard,
+                        result_name,
+                        span,
+                        ..
+                    } => Workflow::Act {
+                        action,
+                        guard,
+                        result_name,
                         continuation: Some(Box::new(cont)),
                         span,
                     },
@@ -1037,7 +1052,7 @@ fn check_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     })
 }
 
-/// Parse an act statement: `act <action> [where <guard>]`
+/// Parse an act statement: `act <action> [where <guard>] [as <name>] [then <workflow>]`
 fn act_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
@@ -1052,16 +1067,36 @@ fn act_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         None
     };
 
+    // Optional result binding: as <name>
+    let result_name = if keyword("as").parse_next(input).is_ok() {
+        skip_whitespace_and_comments(input);
+        Some(identifier(input)?.into())
+    } else {
+        None
+    };
+
+    // Optional continuation: then <workflow>
+    let continuation = if keyword("then").parse_next(input).is_ok() {
+        Some(Box::new(parse_single_stmt_or_block(input)?))
+    } else {
+        None
+    };
+
     let span = span_from(&start_pos, &input.state);
 
     Ok(Workflow::Act {
         action,
         guard,
+        result_name,
+        continuation,
         span,
     })
 }
 
 /// Parse a let statement: `let <pattern> = <expr>`
+///
+/// Also handles sugar: `let <name> = <action_ref>` desugars to
+/// `act <action_ref> as <name>` (SurfaceWorkflow::Act).
 fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
@@ -1069,6 +1104,28 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
     let pat = pattern(input)?;
     let _ = literal_str("=").parse_next(input)?;
+
+    // Try action_ref() first (backtracking) for cap-call sugar:
+    //   let name = provider:action(args)  =>  act provider:action(args) as name
+    skip_whitespace_and_comments(input);
+    let checkpoint = *input;
+    if let Ok(action) = action_ref(input) {
+        if let crate::surface::Pattern::Variable(ref name) = pat {
+            let span = span_from(&start_pos, &input.state);
+            return Ok(Workflow::Act {
+                action,
+                guard: None,
+                result_name: Some(name.clone()),
+                continuation: None,
+                span,
+            });
+        }
+        // Pattern is not a simple name; fall through to expr parsing
+        *input = checkpoint;
+    } else {
+        *input = checkpoint;
+    }
+
     let e = expr(input)?;
 
     let span = span_from(&start_pos, &input.state);
@@ -1968,5 +2025,107 @@ mod tests {
             }
             _ => panic!("Expected Send"),
         }
+    }
+
+    #[test]
+    fn test_act_stmt_with_then() {
+        let mut input = test_input("act provider:action(args) then observe status");
+        let result = parse_stmt(&mut input).unwrap();
+        match result {
+            Workflow::Act {
+                action,
+                guard,
+                result_name,
+                continuation,
+                ..
+            } => {
+                assert!(guard.is_none());
+                assert!(result_name.is_none());
+                assert!(continuation.is_some());
+                // Verify continuation is an observe
+                let cont = continuation.unwrap();
+                assert!(
+                    matches!(*cont, Workflow::Observe { .. }),
+                    "Expected Observe continuation, got {:?}",
+                    cont
+                );
+                // Verify the action parsed correctly
+                assert_eq!(action.args.len(), 1);
+            }
+            _ => panic!("Expected Act"),
+        }
+    }
+
+    #[test]
+    fn test_act_stmt_with_as() {
+        let mut input = test_input("act provider:action(args) as result");
+        let result = parse_stmt(&mut input).unwrap();
+        match result {
+            Workflow::Act {
+                action,
+                guard,
+                result_name,
+                continuation,
+                ..
+            } => {
+                assert!(guard.is_none());
+                assert_eq!(result_name.as_deref(), Some("result"));
+                assert!(continuation.is_none());
+                assert_eq!(action.args.len(), 1);
+            }
+            _ => panic!("Expected Act"),
+        }
+    }
+
+    #[test]
+    fn test_act_stmt_bare_regression() {
+        let mut input = test_input("act log_event(\"test\")");
+        let result = parse_stmt(&mut input).unwrap();
+        match result {
+            Workflow::Act {
+                guard,
+                result_name,
+                continuation,
+                ..
+            } => {
+                assert!(guard.is_none());
+                assert!(result_name.is_none());
+                assert!(continuation.is_none());
+            }
+            _ => panic!("Expected Act"),
+        }
+    }
+
+    #[test]
+    fn test_let_action_ref_sugar() {
+        let mut input = test_input("let result = provider:action(args)");
+        let result = parse_stmt(&mut input).unwrap();
+        match result {
+            Workflow::Act {
+                action,
+                guard,
+                result_name,
+                continuation,
+                ..
+            } => {
+                assert!(guard.is_none());
+                assert_eq!(result_name.as_deref(), Some("result"));
+                assert!(continuation.is_none());
+                assert_eq!(action.args.len(), 1);
+            }
+            _ => panic!("Expected Act (from let sugar), got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_let_expr_fallback() {
+        let mut input = test_input("let x = 42");
+        let result = parse_stmt(&mut input).unwrap();
+        // This should still parse as a normal let, not action-ref sugar
+        assert!(
+            matches!(result, Workflow::Let { .. }),
+            "Expected Let, got {:?}",
+            result
+        );
     }
 }

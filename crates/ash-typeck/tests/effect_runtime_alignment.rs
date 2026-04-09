@@ -57,6 +57,8 @@ fn join_based_composition_preserves_highest_coarse_grade() {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         }),
         span: test_span(),

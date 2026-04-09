@@ -217,6 +217,8 @@ impl DotGenerator {
                 arguments: _,
                 guard,
                 provenance: _,
+                result_name: _,
+                continuation: _,
             } => {
                 let id = self.next_id();
                 let label = if provider_name.is_empty() {
@@ -750,6 +752,8 @@ mod tests {
             arguments: vec![],
             guard: crate::ast::Guard::Always,
             provenance: crate::Provenance::new(),
+            result_name: None,
+            continuation: Box::new(Workflow::Done),
         };
         let dot = workflow.to_dot();
         assert!(dot.contains("ACT"));

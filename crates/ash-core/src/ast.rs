@@ -56,6 +56,10 @@ pub enum Workflow {
         arguments: Vec<Expr>,
         guard: Guard,
         provenance: Provenance,
+        /// Binds the action result to this name (Phase 73)
+        result_name: Option<Name>,
+        /// Workflow to execute after action completes (Phase 73)
+        continuation: Box<Workflow>,
     },
     /// OBLIG role to workflow
     Oblig { role: Role, workflow: Box<Workflow> },

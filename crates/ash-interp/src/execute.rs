@@ -613,6 +613,8 @@ fn execute_workflow_inner_observed<'a>(
                 arguments,
                 guard,
                 provenance: _,
+                result_name,
+                continuation,
             } => {
                 // Evaluate guard
                 let guard_result = eval_guard(guard, &ctx).map_err(|_| ExecError::GuardFailed {
@@ -636,9 +638,40 @@ fn execute_workflow_inner_observed<'a>(
                 }
 
                 // Lookup provider by provider_name and dispatch action
-                cap_ctx
+                let result = cap_ctx
                     .execute(provider_name, action_name, &evaluated_args)
-                    .await
+                    .await?;
+
+                // If continuation is Done, return the action result directly (bare act semantics)
+                if matches!(**continuation, Workflow::Done) {
+                    return Ok(result);
+                }
+
+                // Bind result and execute continuation
+                let exec_ctx = if let Some(name) = result_name {
+                    let mut child_ctx = ctx.extend();
+                    child_ctx.set(name.clone(), result);
+                    child_ctx
+                } else {
+                    ctx.clone()
+                };
+
+                execute_workflow_inner_observed(
+                    continuation,
+                    exec_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                    stream_ctx,
+                    mailbox,
+                    control_registry,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
+                    execution_recorder,
+                )
+                .await
             }
 
             // Propose action (advisory - just continue)
@@ -2256,6 +2289,8 @@ mod tests {
             arguments: vec![],
             guard: Guard::Never,
             provenance: Provenance::new(),
+            result_name: None,
+            continuation: Box::new(Workflow::Done),
         };
         let result = execute_simple(&workflow).await;
         assert!(matches!(result, Err(ExecError::GuardFailed { .. })));
@@ -2297,5 +2332,197 @@ mod tests {
 
         let result = execute_simple(&workflow).await.unwrap();
         assert_eq!(result, Value::Int(30));
+    }
+
+    /// Helper: build a CapabilityContext with a single MockProvider for Act tests.
+    fn cap_ctx_with_mock(mock: crate::capability::MockProvider) -> CapabilityContext {
+        let mut cap_ctx = CapabilityContext::new();
+        cap_ctx.register(Box::new(mock));
+        cap_ctx
+    }
+
+    // ------------------------------------------------------------------
+    // TASK-490: Integration tests for Act continuation forms
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_execute_act_with_then_continuation() {
+        // Act with result_name: None and an Orient continuation.
+        // The action result (99) should be discarded and the continuation
+        // should run, returning its own result (42).
+        let mock = crate::capability::MockProvider::new("test", Effect::Operational)
+            .with_execute_result(Ok(Value::Int(99)));
+        let cap_ctx = cap_ctx_with_mock(mock);
+
+        let workflow = Workflow::Act {
+            provider_name: "test".to_string(),
+            action_name: "do_thing".to_string(),
+            arguments: vec![],
+            guard: Guard::Always,
+            provenance: Provenance::new(),
+            result_name: None,
+            continuation: Box::new(Workflow::Ret {
+                expr: Expr::Literal(Value::Int(42)),
+            }),
+        };
+
+        let ctx = Context::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result =
+            execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+                .await
+                .unwrap();
+
+        // Continuation result is the final value, not the action result.
+        assert_eq!(result, Value::Int(42));
+    }
+
+    #[tokio::test]
+    async fn test_execute_act_with_result_binding() {
+        // Act with result_name: Some("result"), MockProvider returns Int(42).
+        // The continuation reads "result" and returns it.
+        let mock = crate::capability::MockProvider::new("test", Effect::Operational)
+            .with_execute_result(Ok(Value::Int(42)));
+        let cap_ctx = cap_ctx_with_mock(mock);
+
+        let workflow = Workflow::Act {
+            provider_name: "test".to_string(),
+            action_name: "fetch_value".to_string(),
+            arguments: vec![],
+            guard: Guard::Always,
+            provenance: Provenance::new(),
+            result_name: Some("result".to_string()),
+            continuation: Box::new(Workflow::Ret {
+                expr: Expr::Variable("result".to_string()),
+            }),
+        };
+
+        let ctx = Context::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result =
+            execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+                .await
+                .unwrap();
+
+        // The bound value should be accessible in the continuation.
+        assert_eq!(result, Value::Int(42));
+    }
+
+    #[tokio::test]
+    async fn test_execute_act_result_binding_and_continuation() {
+        // Combined: result_name binds the action result, and the continuation
+        // uses it in a computation (Let + arithmetic).
+        // Action returns Int(10), continuation doubles it to Int(20).
+        let mock = crate::capability::MockProvider::new("test", Effect::Operational)
+            .with_execute_result(Ok(Value::Int(10)));
+        let cap_ctx = cap_ctx_with_mock(mock);
+
+        let workflow = Workflow::Act {
+            provider_name: "test".to_string(),
+            action_name: "get_number".to_string(),
+            arguments: vec![],
+            guard: Guard::Always,
+            provenance: Provenance::new(),
+            result_name: Some("result".to_string()),
+            continuation: Box::new(Workflow::Let {
+                pattern: Pattern::Variable("doubled".to_string()),
+                expr: Expr::Binary {
+                    op: BinaryOp::Add,
+                    left: Box::new(Expr::Variable("result".to_string())),
+                    right: Box::new(Expr::Variable("result".to_string())),
+                },
+                continuation: Box::new(Workflow::Ret {
+                    expr: Expr::Variable("doubled".to_string()),
+                }),
+            }),
+        };
+
+        let ctx = Context::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result =
+            execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+                .await
+                .unwrap();
+
+        assert_eq!(result, Value::Int(20));
+    }
+
+    #[tokio::test]
+    async fn test_execute_act_bare_regression() {
+        // Bare Act with result_name: None and continuation: Done.
+        // Per DESIGN-019: returns the action result directly.
+        let mock = crate::capability::MockProvider::new("test", Effect::Operational)
+            .with_execute_result(Ok(Value::Int(123)));
+        let cap_ctx = cap_ctx_with_mock(mock);
+
+        let workflow = Workflow::Act {
+            provider_name: "test".to_string(),
+            action_name: "fire".to_string(),
+            arguments: vec![],
+            guard: Guard::Always,
+            provenance: Provenance::new(),
+            result_name: None,
+            continuation: Box::new(Workflow::Done),
+        };
+
+        let ctx = Context::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result =
+            execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+                .await
+                .unwrap();
+
+        // Bare act returns the action result directly (per DESIGN-019 Decision 5)
+        assert_eq!(result, Value::Int(123));
+    }
+
+    #[tokio::test]
+    async fn test_execute_act_continuation_error_propagation() {
+        use ash_core::capability::CapabilityError;
+
+        // Act where the action returns an error. The error should propagate
+        // and the continuation must NOT run.
+        let mock = crate::capability::MockProvider::new("test", Effect::Operational)
+            .with_execute_result(Err(CapabilityError::ExecutionFailed("boom".to_string())));
+        let cap_ctx = cap_ctx_with_mock(mock);
+
+        let workflow = Workflow::Act {
+            provider_name: "test".to_string(),
+            action_name: "fail_action".to_string(),
+            arguments: vec![],
+            guard: Guard::Always,
+            provenance: Provenance::new(),
+            result_name: Some("result".to_string()),
+            continuation: Box::new(Workflow::Ret {
+                expr: Expr::Literal(Value::Int(42)),
+            }),
+        };
+
+        let ctx = Context::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result =
+            execute_workflow_with_behaviour(&workflow, ctx, &cap_ctx, &policy_eval, &behaviour_ctx)
+                .await;
+
+        assert!(result.is_err(), "action error should propagate");
+        match result {
+            Err(ExecError::ExecutionFailed(msg)) => {
+                assert!(
+                    msg.contains("boom"),
+                    "error message should contain 'boom', got: {msg}"
+                );
+            }
+            other => panic!("expected ExecutionFailed error, got: {other:?}"),
+        }
     }
 }

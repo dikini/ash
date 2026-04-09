@@ -108,7 +108,7 @@ the continuation, exactly as `let` already does.
 
 Core IR: `Act { result_name: Some("response"), continuation: <rest>, ... }`
 
-### Decision 4: `let name = <cap> with ...` Desugars to `act ... as name`
+### Decision 4: `let name = <cap-call>` Desugars to `act ... as name`
 
 ```ash
 let response = mcp:call("tools/call", params)
@@ -124,6 +124,18 @@ act mcp:call("tools/call", params) as response
 
 Both lower to the same core IR node. The parser recognizes `let <name> = <operational-call>` as
 an `Act` with `result_name`, not a generic `Let`.
+
+**Parser architecture constraint**: Operational calls are parsed by `action_ref()` which produces
+`ActionRef` (with `OperationalTarget` variants for symbolic, qualified, and explicit forms). This
+is not an `Expr` — it lives in a separate grammar path. The current `let_stmt()` parser calls
+`expr()` for the RHS unconditionally. Therefore the `let <name> = <cap-call>` sugar **must be
+handled at parse time** in `let_stmt()` by attempting `action_ref()` first (via lookahead or
+backtracking) before falling back to generic `expr()` parsing. It cannot be deferred to lowering
+because the parser has already committed to `Expr` vs `ActionRef` by then.
+
+The concrete approach: `let_stmt()` peeks past `let <pattern> =` and tries `action_ref()`. If it
+succeeds, emit `SurfaceWorkflow::Act { result_name, continuation, ... }` instead of `Let`. If it
+fails (backtrack), fall through to `expr()` and emit `SurfaceWorkflow::Let` as before.
 
 ### Decision 5: Execution Semantics
 
@@ -165,6 +177,13 @@ act mcp:call("tools/call", params) as response
 let response = mcp:call("tools/call", params)
   orient response.body
 ```
+
+### Keyword Notes
+
+`as` is already a contextual keyword used by `observe`, `orient`, and `propose`. No lexer or
+keyword-set changes are required — `act_stmt()` extends the existing pattern.
+
+`then` is already used by `if ... then` and `act` can reuse the same contextual parsing approach.
 
 ### Compatibility
 
@@ -223,8 +242,11 @@ Migration is mechanical. Property tests on the old shape verify semantic preserv
 
 ### Risk 3: `as` Keyword Conflicts
 
-**Mitigation**: `as` is not currently a keyword in Ash. Reserve it as a contextual keyword
-following `act` (same approach as `then`).
+**Mitigation**: `as` is already used as a contextual keyword by `observe`, `orient`, and `propose`
+(see `parse_workflow.rs` lines 882, 932, 957). The `act` form extends this existing pattern —
+no new keyword reservation or lexer/token changes are needed. The `act_stmt()` parser simply
+checks for the `as` keyword after the guard clause, following the same `keyword("as").parse_next()`
+pattern already used by `observe_stmt`, `orient_stmt`, and `propose_stmt`.
 
 ## Success Criteria
 

@@ -1187,6 +1187,8 @@ mod tests {
                 args: vec![Expr::Variable("arg".into())],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: test_span(),
         };
 

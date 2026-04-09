@@ -1031,6 +1031,8 @@ impl ObligationCollector {
             Workflow::Act {
                 action: _,
                 guard: _,
+                result_name: _,
+                continuation: _,
                 span: _,
             } => {
                 // Terminal action - no obligations to track

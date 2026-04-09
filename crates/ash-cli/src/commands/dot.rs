@@ -231,6 +231,8 @@ mod tests {
             arguments: vec![],
             guard: Guard::Always,
             provenance: Provenance::new(),
+            result_name: None,
+            continuation: Box::new(Workflow::Done),
         };
 
         let dot = workflow.to_dot();

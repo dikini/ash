@@ -2131,3 +2131,28 @@ resolver path from type checking.
 **Deliverable:** One fully module-scoped symbolic capability resolution contract where lowering and
 type checking share the same `CapabilityResolutionContext` plus explicit `ModuleId`, with no
 module-agnostic lookup helper and no type-checker fallback resolver path.
+
+## Phase 73: Action Result Binding and Continuation
+
+Extend `Workflow::Act` with result binding and continuation so capability actions can produce
+values that flow back into the workflow. Adds `act ... then`, `act ... as`, and `let = cap-call`
+surface forms.
+
+**Plan Reference:** [PLAN-019: Action Result Binding and Continuation](PLAN-019-ACTION-RESULT-BINDING.md)
+**Design Reference:** [DESIGN-019](../design/DESIGN-019-ACTION-RESULT-BINDING.md)
+**Priority:** High
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-486](tasks/TASK-486-core-act-continuation-shape.md) | Update core `Workflow::Act` with `result_name` and `continuation`, migrate all construction sites | DESIGN-019, SPEC-001 | 3-4 | ✅ Complete |
+| [TASK-487](tasks/TASK-487-surface-act-continuation.md) | Extend surface AST `Act` with `result_name` and `continuation`, update lowering | DESIGN-019, SPEC-001, SPEC-002 | 2-3 | ✅ Complete |
+| [TASK-488](tasks/TASK-488-parser-act-then-as.md) | Add parser support for `act ... then`, `act ... as`, and `let <name> = <cap-call>` sugar | DESIGN-019, SPEC-002 | 3-4 | ✅ Complete |
+| [TASK-489](tasks/TASK-489-interpreter-act-continuation.md) | Update interpreter ACT execution to bind result and execute continuation | DESIGN-019, SPEC-004 | 2-3 | ✅ Complete |
+| [TASK-490](tasks/TASK-490-act-continuation-integration-tests.md) | Write integration tests for `act ... then`, `act ... as`, and `let = cap-call` forms | DESIGN-019 | 2-3 | ✅ Complete |
+| [TASK-491](tasks/TASK-491-spec-act-continuation-updates.md) | Update SPEC-001, SPEC-002, SPEC-004, SPEC-025 for Act continuation semantics | DESIGN-019 | 2-3 | ✅ Complete |
+| [TASK-492](tasks/TASK-492-act-continuation-docs-and-verification.md) | Update docs, examples, CHANGELOG, and run final verification | DESIGN-019 | 2-3 | ✅ Complete |
+
+**Deliverable:** `Act` is a full value-producing, continuation-carrying workflow node. Three new
+surface forms (`then`, `as`, `let = cap-call`) parse, lower, and execute correctly. Existing
+bare `act` forms work unchanged. Specs aligned.

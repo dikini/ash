@@ -833,6 +833,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
         let wf = Workflow::Seq {

@@ -543,7 +543,13 @@ fn lower_workflow_body(
             span: Default::default(),
         }),
 
-        SurfaceWorkflow::Act { action, guard, .. } => {
+        SurfaceWorkflow::Act {
+            action,
+            guard,
+            result_name,
+            continuation,
+            ..
+        } => {
             // Resolve symbolic/qualified names to (provider, action) pairs using the
             // module-owned capability resolution context. Explicit provider:action
             // calls bypass resolution and use the specified target directly.
@@ -584,6 +590,12 @@ fn lower_workflow_body(
                 }
             };
 
+            let cont = continuation
+                .as_ref()
+                .map(|c| lower_workflow_body(c, provenance, ctx))
+                .transpose()?
+                .unwrap_or(CoreWorkflow::Done);
+
             Ok(CoreWorkflow::Act {
                 provider_name,
                 action_name,
@@ -598,6 +610,8 @@ fn lower_workflow_body(
                     .transpose()?
                     .unwrap_or(CoreGuard::Always),
                 provenance: provenance.clone(),
+                result_name: result_name.as_ref().map(|n| n.to_string()),
+                continuation: Box::new(cont),
             })
         }
 
@@ -1651,6 +1665,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
 
@@ -1682,6 +1698,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
 
@@ -1709,6 +1727,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
 
@@ -1758,6 +1778,8 @@ mod tests {
                 args: vec![],
             },
             guard: None,
+            result_name: None,
+            continuation: None,
             span: dummy_span(),
         };
 

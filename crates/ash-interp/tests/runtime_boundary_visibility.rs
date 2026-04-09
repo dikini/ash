@@ -606,6 +606,8 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
                     arguments: vec![],
                     guard: ash_core::Guard::Always,
                     provenance: ash_core::Provenance::new(),
+                    result_name: None,
+                    continuation: Box::new(Workflow::Done),
                 }),
             },
         )
@@ -658,6 +660,8 @@ async fn conservative_effect_summary_can_overapproximate_untaken_higher_effect_p
                     arguments: vec![],
                     guard: ash_core::Guard::Always,
                     provenance: ash_core::Provenance::new(),
+                    result_name: None,
+                    continuation: Box::new(Workflow::Done),
                 }),
             },
         )

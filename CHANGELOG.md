@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Pure Functions Phase: Reviewed and fixed specification/plan issues in DESIGN-020, SPEC-027, SPEC-028, and PLAN-023. Addressed critical issues: (1) parser/module model mismatch with new ModuleFile AST, (2) function type syntax coverage in Type enum, (3) AST alignment for Expr::If/Expr::Panic/Expr::Block, (4) explicit fn name resolution/import/export tasks, (5) contract lowering boundary documentation, (6) strengthened milestone acceptance criteria with 28 AC items plus failure mode tests, (7) revised effort estimate (95→120 hours) and task dependencies. Added explicit notes that fn support is cross-cutting (not just parser work).
+
 - TASK-493: Frozen Stdlib IO V1 Contract. Updated SPEC-009-MODULES.md, SPEC-012-IMPORTS.md, SPEC-017-CAPABILITY-INTEGRATION.md, SPEC-010-EMBEDDING.md, and 2026-04-10-stdlib-io-v1-design.md to document the canonical `io` namespace, v1 module tree, capability boundary, and canonical import style.
 - TASK-494: Added io root and pure path surface. Created `std/src/io/mod.ash` with Error, ErrorKind, and Result<T> types. Created `std/src/io/path.ash` with PathBuf type and pure path functions. Updated lib.ash with io exports. All 24 parser tests pass.
 - TASK-495: Added io::stdio surface and provider alignment. Created `std/src/io/stdio.ash` with Stdio capability and functions. Aligned with existing StdioProvider. All 17 tests pass.

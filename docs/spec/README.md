@@ -32,6 +32,8 @@ This directory contains the canonical specifications for the Ash workflow langua
 | SPEC-023 | Proxy Workflows | Active | Proxy workflow patterns and semantics |
 | SPEC-025 | Small-Step Operational Semantics | Active | Workflow-first small-step semantics and state taxonomy |
 | SPEC-026 | Implementation Conformance Contract | Active | Cross-implementation conformance surfaces, bounded nondeterminism, and comparison rules |
+| SPEC-027 | Pure Functions | Draft | fn construct for pure computation, match/if expressions, purity enforcement |
+| SPEC-028 | Function Constraint System | Draft | fn contract vocabulary, constraint evolution path, Z3 integration plan |
 
 ## Deprecated Specifications
 

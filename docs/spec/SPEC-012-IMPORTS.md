@@ -1,6 +1,6 @@
 # SPEC-012: Import System (use statements)
 
-## Status: Draft
+## Status: Draft (IO Import Examples - V1 Frozen)
 
 ## 1. Overview
 
@@ -52,7 +52,9 @@ Valid examples:
 use result::Result;
 use result::{Result, Ok, Err};
 use runtime::Args;
-use io::Stdout;
+use io::fs;
+use io::path::PathBuf;
+use io::stdio;
 ```
 
 Legacy dot-style examples are invalid:
@@ -60,8 +62,39 @@ Legacy dot-style examples are invalid:
 ```
 use result.{Result, Ok, Err};
 use runtime.Args;
-use io.Stdout;
+use io.fs;
 ```
+
+**IO Module Imports:**
+
+The `io` namespace is imported as a top-level stdlib module (not `std::io`):
+
+```ash
+-- Import io submodules
+use io::fs;
+use io::path::{Path, PathBuf};
+use io::stdio;
+use io::dir;
+use io::meta;
+use io::buf;
+
+-- Import specific items
+use io::fs::File;
+use io::path::PathBuf;
+
+-- Usage in workflow
+workflow main {
+    action read_config {
+        effect: operational;
+        body: || -> {
+            let path = PathBuf::new("config.txt");
+            io::fs::read_to_string(path)
+        };
+    }
+}
+```
+
+Note: `io::path` is pure/capability-free, while `io::stdio`, `io::fs`, `io::dir`, `io::meta`, and `io::buf` are capability-bearing.
 
 Standard-library module resolution follows SPEC-009 file-based rules rooted at `std/src/`.
 For example, `use result::Result;` resolves `result` from `std/src/result.ash` or

@@ -1,6 +1,6 @@
 # SPEC-009: Module System
 
-## Status: Draft
+## Status: Draft (Section 4.5 IO Module Tree - V1 Frozen)
 
 ## 1. Overview
 
@@ -139,7 +139,51 @@ Examples of valid standard-library module paths when those modules are present:
 ```
 result::Result
 runtime::Args
-io::Stdout
+io::fs
+io::path::PathBuf
+```
+
+### 4.5 Standard Library IO Module Tree
+
+The `io` namespace is a top-level standard-library module family providing file, directory, path, and standard I/O operations. It is imported as `use io::...`, not `use std::io::...`.
+
+**V1 Module Tree:**
+
+| Module | Description | Capability-Bearing |
+|--------|-------------|-------------------|
+| `io` | Root module with shared `Error`, `ErrorKind`, `Result<T>` alias | No |
+| `io::path` | Pure path manipulation (`Path`, `PathBuf`, `join`, `parent`, etc.) | **No** - Pure functions only |
+| `io::stdio` | Standard I/O operations (`print`, `read_line`, `stdin()`, `stdout()`, etc.) | **Yes** - Host access |
+| `io::fs` | File operations (`read`, `write`, `open`, `create`, `File`, etc.) | **Yes** - Host access |
+| `io::dir` | Directory operations (`create_dir`, `read_dir`, `DirEntry`, etc.) | **Yes** - Host access |
+| `io::meta` | Metadata operations (`metadata`, `Permissions`, etc.) | **Yes** - Host access |
+| `io::buf` | Buffered helpers (`read_to_end`, `lines`, etc.) | **Yes** - Host access |
+
+**Key Design Constraints:**
+
+1. `io::path` is **pure and capability-free** - path manipulation is computation over values without host interaction
+2. All other `io` submodules (`stdio`, `fs`, `dir`, `meta`, `buf`) are **capability-bearing** - they require host authority
+3. The `io` root provides shared types: `io::Error`, `io::ErrorKind`, and `io::Result<T>` as an alias for `result::Result<T, io::Error>`
+4. No separate global `Result` ADT is introduced; `io` reuses `result::Result<T, E>`
+
+**Import Examples:**
+
+```ash
+-- Import io submodules
+use io::fs;
+use io::path::PathBuf;
+use io::stdio;
+
+-- Use imported items
+workflow main {
+    action process {
+        effect: operational;
+        body: || -> {
+            let p = PathBuf::new("/tmp/data.txt");
+            fs::write(p, "hello")
+        };
+    }
+}
 ```
 
 Standard-library module resolution follows the same file-based module rules as user code,

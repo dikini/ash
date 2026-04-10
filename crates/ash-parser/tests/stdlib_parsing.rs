@@ -605,3 +605,754 @@ fn test_stdlib_cargo_toml_exists() {
         "Cargo.toml should have correct name"
     );
 }
+
+// TASK-494: io module parsing tests
+// These tests will fail until the io module and io::path are properly implemented
+
+#[test]
+fn test_io_mod_file_exists() {
+    let path = stdlib_src_path().join("io/mod.ash");
+    assert!(path.exists(), "io/mod.ash should exist");
+}
+
+#[test]
+fn test_io_path_file_exists() {
+    let path = stdlib_src_path().join("io/path.ash");
+    assert!(path.exists(), "io/path.ash should exist");
+}
+
+#[test]
+fn test_io_import_examples_parse_with_canonical_syntax() {
+    for source in [
+        "use io::path;",
+        "use io::path::PathBuf;",
+        "use io::{Error, ErrorKind};",
+        "use io::path::{PathBuf, from_string};",
+    ] {
+        let mut input = new_input(source);
+        let result = parse_use(&mut input);
+
+        assert!(result.is_ok(), "io import should parse: {source}");
+    }
+}
+
+#[test]
+fn test_io_path_type_definition_parses() {
+    let content = read_stdlib_file("io/path.ash");
+
+    // Extract the PathBuf type definition line
+    let type_def_line = content
+        .lines()
+        .find(|l| l.contains("pub type PathBuf"))
+        .expect("Should find PathBuf type definition");
+
+    let mut input = new_input(type_def_line);
+    let result = parse_type_def(&mut input);
+
+    assert!(
+        result.is_ok(),
+        "PathBuf type definition should parse: {:?}",
+        result
+    );
+
+    let type_def = result.unwrap();
+    assert_eq!(type_def.name, "PathBuf");
+}
+
+#[test]
+fn test_io_error_type_definition_parses() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    // Extract the Error type definition line (not ErrorKind)
+    let type_def_line = content
+        .lines()
+        .find(|l| l.contains("pub type Error ="))
+        .expect("Should find Error type definition");
+
+    let mut input = new_input(type_def_line);
+    let result = parse_type_def(&mut input);
+
+    assert!(
+        result.is_ok(),
+        "Error type definition should parse: {:?}",
+        result
+    );
+
+    let type_def = result.unwrap();
+    assert_eq!(type_def.name, "Error");
+}
+
+#[test]
+fn test_io_path_from_string_function_parses() {
+    let content = read_stdlib_file("io/path.ash");
+
+    // Check that from_string function exists and is public
+    assert!(
+        content.contains("pub fn from_string"),
+        "io/path.ash should contain from_string function"
+    );
+}
+
+#[test]
+fn test_io_path_join_function_parses() {
+    let content = read_stdlib_file("io/path.ash");
+
+    assert!(
+        content.contains("pub fn join"),
+        "io/path.ash should contain join function"
+    );
+}
+
+#[test]
+fn test_io_path_parent_function_parses() {
+    let content = read_stdlib_file("io/path.ash");
+
+    assert!(
+        content.contains("pub fn parent"),
+        "io/path.ash should contain parent function"
+    );
+}
+
+#[test]
+fn test_io_path_file_name_function_parses() {
+    let content = read_stdlib_file("io/path.ash");
+
+    assert!(
+        content.contains("pub fn file_name"),
+        "io/path.ash should contain file_name function"
+    );
+}
+
+#[test]
+fn test_io_path_extension_function_parses() {
+    let content = read_stdlib_file("io/path.ash");
+
+    assert!(
+        content.contains("pub fn extension"),
+        "io/path.ash should contain extension function"
+    );
+}
+
+#[test]
+fn test_io_path_is_absolute_function_parses() {
+    let content = read_stdlib_file("io/path.ash");
+
+    assert!(
+        content.contains("pub fn is_absolute"),
+        "io/path.ash should contain is_absolute function"
+    );
+}
+
+#[test]
+fn test_io_mod_exports_path() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    assert!(
+        content.contains("mod path;"),
+        "io/mod.ash should declare path module"
+    );
+    assert!(
+        content.contains("pub use path::"),
+        "io/mod.ash should re-export from path module"
+    );
+}
+
+#[test]
+fn test_io_mod_exports_error_types() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    assert!(
+        content.contains("pub type Error"),
+        "io/mod.ash should export Error type"
+    );
+    assert!(
+        content.contains("pub type ErrorKind"),
+        "io/mod.ash should export ErrorKind type"
+    );
+    assert!(
+        content.contains("pub type Result<T>"),
+        "io/mod.ash should export Result<T> type alias"
+    );
+}
+
+#[test]
+fn test_lib_exports_io() {
+    let content = read_stdlib_file("lib.ash");
+
+    assert!(
+        content.contains("pub use io::"),
+        "lib.ash should export from io module"
+    );
+}
+
+#[test]
+fn test_io_path_usage_example_parses() {
+    // Verify io::path module can be imported and used
+    // Check that the path module has the expected structure
+    let path_content = read_stdlib_file("io/path.ash");
+    let mod_content = read_stdlib_file("io/mod.ash");
+
+    // Verify path module exports the functions needed for typical usage
+    assert!(
+        path_content.contains("pub fn from_string"),
+        "path module should export from_string for creating paths"
+    );
+    assert!(
+        path_content.contains("pub fn join"),
+        "path module should export join for combining paths"
+    );
+    assert!(
+        mod_content.contains("pub use path::"),
+        "io mod should re-export from path"
+    );
+}
+
+#[test]
+fn test_io_path_all_required_functions_exist() {
+    let content = read_stdlib_file("io/path.ash");
+
+    let required_functions = [
+        "from_string",
+        "join",
+        "parent",
+        "file_name",
+        "extension",
+        "is_absolute",
+    ];
+
+    for func in &required_functions {
+        assert!(
+            content.contains(&format!("pub fn {}", func)),
+            "io/path.ash should contain {} function",
+            func
+        );
+    }
+}
+
+// TASK-495: io::stdio module parsing tests
+// These tests will fail until the io::stdio module is properly implemented
+
+#[test]
+fn test_io_stdio_file_exists() {
+    let path = stdlib_src_path().join("io/stdio.ash");
+    assert!(path.exists(), "io/stdio.ash should exist");
+}
+
+#[test]
+fn test_io_stdio_read_line_function_parses() {
+    let content = read_stdlib_file("io/stdio.ash");
+
+    // Check that read_line function exists and is public
+    assert!(
+        content.contains("pub fn read_line"),
+        "io/stdio.ash should contain read_line function"
+    );
+}
+
+#[test]
+fn test_io_stdio_print_function_parses() {
+    let content = read_stdlib_file("io/stdio.ash");
+
+    assert!(
+        content.contains("pub fn print"),
+        "io/stdio.ash should contain print function"
+    );
+}
+
+#[test]
+fn test_io_stdio_println_function_parses() {
+    let content = read_stdlib_file("io/stdio.ash");
+
+    assert!(
+        content.contains("pub fn println"),
+        "io/stdio.ash should contain println function"
+    );
+}
+
+#[test]
+fn test_io_stdio_capability_parses() {
+    let content = read_stdlib_file("io/stdio.ash");
+
+    assert!(
+        content.contains("pub capability Stdio"),
+        "io/stdio.ash should declare Stdio capability"
+    );
+}
+
+#[test]
+fn test_io_mod_exports_stdio() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    assert!(
+        content.contains("mod stdio;"),
+        "io/mod.ash should declare stdio module"
+    );
+    assert!(
+        content.contains("pub use stdio::"),
+        "io/mod.ash should re-export from stdio module"
+    );
+}
+
+#[test]
+fn test_io_stdio_all_required_functions_exist() {
+    let content = read_stdlib_file("io/stdio.ash");
+
+    let required_functions = ["read_line", "print", "println"];
+
+    for func in &required_functions {
+        assert!(
+            content.contains(&format!("pub fn {}", func)),
+            "io/stdio.ash should contain {} function",
+            func
+        );
+    }
+}
+
+#[test]
+fn test_io_stdio_import_examples_parse_with_canonical_syntax() {
+    for source in [
+        "use io::stdio;",
+        "use io::stdio::read_line;",
+        "use io::stdio::{print, println};",
+        "use io::{read_line, print, println};",
+    ] {
+        let mut input = new_input(source);
+        let result = parse_use(&mut input);
+
+        assert!(result.is_ok(), "io::stdio import should parse: {source}");
+    }
+}
+
+// TASK-496: io::fs, io::dir, io::meta module parsing tests
+// These tests will fail until the filesystem modules are properly implemented
+
+#[test]
+fn test_io_fs_file_exists() {
+    let path = stdlib_src_path().join("io/fs.ash");
+    assert!(path.exists(), "io/fs.ash should exist");
+}
+
+#[test]
+fn test_io_dir_file_exists() {
+    let path = stdlib_src_path().join("io/dir.ash");
+    assert!(path.exists(), "io/dir.ash should exist");
+}
+
+#[test]
+fn test_io_meta_file_exists() {
+    let path = stdlib_src_path().join("io/meta.ash");
+    assert!(path.exists(), "io/meta.ash should exist");
+}
+
+#[test]
+fn test_io_fs_capability_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+
+    assert!(
+        content.contains("pub capability Fs"),
+        "io/fs.ash should declare Fs capability"
+    );
+}
+
+#[test]
+fn test_io_dir_capability_parses() {
+    let content = read_stdlib_file("io/dir.ash");
+
+    assert!(
+        content.contains("pub capability Dir"),
+        "io/dir.ash should declare Dir capability"
+    );
+}
+
+#[test]
+fn test_io_meta_capability_parses() {
+    let content = read_stdlib_file("io/meta.ash");
+
+    assert!(
+        content.contains("pub capability Meta"),
+        "io/meta.ash should declare Meta capability"
+    );
+}
+
+#[test]
+fn test_io_fs_import_examples_parse_with_canonical_syntax() {
+    for source in [
+        "use io::fs;",
+        "use io::fs::read;",
+        "use io::fs::{read, write};",
+        "use io::{read, write_string};",
+    ] {
+        let mut input = new_input(source);
+        let result = parse_use(&mut input);
+
+        assert!(result.is_ok(), "io::fs import should parse: {source}");
+    }
+}
+
+#[test]
+fn test_io_dir_import_examples_parse_with_canonical_syntax() {
+    for source in [
+        "use io::dir;",
+        "use io::dir::create_dir;",
+        "use io::dir::{create_dir, remove_dir};",
+        "use io::{create_dir_all, read_dir};",
+    ] {
+        let mut input = new_input(source);
+        let result = parse_use(&mut input);
+
+        assert!(result.is_ok(), "io::dir import should parse: {source}");
+    }
+}
+
+#[test]
+fn test_io_meta_import_examples_parse_with_canonical_syntax() {
+    for source in [
+        "use io::meta;",
+        "use io::meta::metadata;",
+        "use io::meta::{metadata, is_file};",
+        "use io::{is_dir, len, readonly};",
+    ] {
+        let mut input = new_input(source);
+        let result = parse_use(&mut input);
+
+        assert!(result.is_ok(), "io::meta import should parse: {source}");
+    }
+}
+
+#[test]
+fn test_io_fs_read_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn read"),
+        "io/fs.ash should contain read function"
+    );
+}
+
+#[test]
+fn test_io_fs_read_to_string_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn read_to_string"),
+        "io/fs.ash should contain read_to_string function"
+    );
+}
+
+#[test]
+fn test_io_fs_write_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn write"),
+        "io/fs.ash should contain write function"
+    );
+}
+
+#[test]
+fn test_io_fs_write_string_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn write_string"),
+        "io/fs.ash should contain write_string function"
+    );
+}
+
+#[test]
+fn test_io_fs_append_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn append"),
+        "io/fs.ash should contain append function"
+    );
+}
+
+#[test]
+fn test_io_fs_copy_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn copy"),
+        "io/fs.ash should contain copy function"
+    );
+}
+
+#[test]
+fn test_io_fs_rename_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn rename"),
+        "io/fs.ash should contain rename function"
+    );
+}
+
+#[test]
+fn test_io_fs_remove_file_function_parses() {
+    let content = read_stdlib_file("io/fs.ash");
+    assert!(
+        content.contains("pub fn remove_file"),
+        "io/fs.ash should contain remove_file function"
+    );
+}
+
+#[test]
+fn test_io_dir_create_dir_function_parses() {
+    let content = read_stdlib_file("io/dir.ash");
+    assert!(
+        content.contains("pub fn create_dir"),
+        "io/dir.ash should contain create_dir function"
+    );
+}
+
+#[test]
+fn test_io_dir_create_dir_all_function_parses() {
+    let content = read_stdlib_file("io/dir.ash");
+    assert!(
+        content.contains("pub fn create_dir_all"),
+        "io/dir.ash should contain create_dir_all function"
+    );
+}
+
+#[test]
+fn test_io_dir_remove_dir_function_parses() {
+    let content = read_stdlib_file("io/dir.ash");
+    assert!(
+        content.contains("pub fn remove_dir"),
+        "io/dir.ash should contain remove_dir function"
+    );
+}
+
+#[test]
+fn test_io_dir_remove_dir_all_function_parses() {
+    let content = read_stdlib_file("io/dir.ash");
+    assert!(
+        content.contains("pub fn remove_dir_all"),
+        "io/dir.ash should contain remove_dir_all function"
+    );
+}
+
+#[test]
+fn test_io_dir_read_dir_function_parses() {
+    let content = read_stdlib_file("io/dir.ash");
+    assert!(
+        content.contains("pub fn read_dir"),
+        "io/dir.ash should contain read_dir function"
+    );
+}
+
+#[test]
+fn test_io_meta_metadata_function_parses() {
+    let content = read_stdlib_file("io/meta.ash");
+    assert!(
+        content.contains("pub fn metadata"),
+        "io/meta.ash should contain metadata function"
+    );
+}
+
+#[test]
+fn test_io_meta_is_file_function_parses() {
+    let content = read_stdlib_file("io/meta.ash");
+    assert!(
+        content.contains("pub fn is_file"),
+        "io/meta.ash should contain is_file function"
+    );
+}
+
+#[test]
+fn test_io_meta_is_dir_function_parses() {
+    let content = read_stdlib_file("io/meta.ash");
+    assert!(
+        content.contains("pub fn is_dir"),
+        "io/meta.ash should contain is_dir function"
+    );
+}
+
+#[test]
+fn test_io_meta_len_function_parses() {
+    let content = read_stdlib_file("io/meta.ash");
+    assert!(
+        content.contains("pub fn len"),
+        "io/meta.ash should contain len function"
+    );
+}
+
+#[test]
+fn test_io_meta_readonly_function_parses() {
+    let content = read_stdlib_file("io/meta.ash");
+    assert!(
+        content.contains("pub fn readonly"),
+        "io/meta.ash should contain readonly function"
+    );
+}
+
+#[test]
+fn test_io_mod_exports_fs() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    assert!(
+        content.contains("mod fs;"),
+        "io/mod.ash should declare fs module"
+    );
+    assert!(
+        content.contains("pub use fs::"),
+        "io/mod.ash should re-export from fs module"
+    );
+}
+
+#[test]
+fn test_io_mod_exports_dir() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    assert!(
+        content.contains("mod dir;"),
+        "io/mod.ash should declare dir module"
+    );
+    assert!(
+        content.contains("pub use dir::"),
+        "io/mod.ash should re-export from dir module"
+    );
+}
+
+#[test]
+fn test_io_mod_exports_meta() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    assert!(
+        content.contains("mod meta;"),
+        "io/mod.ash should declare meta module"
+    );
+    assert!(
+        content.contains("pub use meta::"),
+        "io/mod.ash should re-export from meta module"
+    );
+}
+
+#[test]
+fn test_io_fs_all_required_functions_exist() {
+    let content = read_stdlib_file("io/fs.ash");
+
+    let required_functions = [
+        "read",
+        "read_to_string",
+        "write",
+        "write_string",
+        "append",
+        "copy",
+        "rename",
+        "remove_file",
+    ];
+
+    for func in &required_functions {
+        assert!(
+            content.contains(&format!("pub fn {}", func)),
+            "io/fs.ash should contain {} function",
+            func
+        );
+    }
+}
+
+#[test]
+fn test_io_dir_all_required_functions_exist() {
+    let content = read_stdlib_file("io/dir.ash");
+
+    let required_functions = [
+        "create_dir",
+        "create_dir_all",
+        "remove_dir",
+        "remove_dir_all",
+        "read_dir",
+    ];
+
+    for func in &required_functions {
+        assert!(
+            content.contains(&format!("pub fn {}", func)),
+            "io/dir.ash should contain {} function",
+            func
+        );
+    }
+}
+
+#[test]
+fn test_io_meta_all_required_functions_exist() {
+    let content = read_stdlib_file("io/meta.ash");
+
+    let required_functions = ["metadata", "is_file", "is_dir", "len", "readonly"];
+
+    for func in &required_functions {
+        assert!(
+            content.contains(&format!("pub fn {}", func)),
+            "io/meta.ash should contain {} function",
+            func
+        );
+    }
+}
+
+// TASK-497: io::buf module parsing tests
+// These tests will fail until the buffered helpers module is properly implemented
+
+#[test]
+fn test_io_buf_file_exists() {
+    let path = stdlib_src_path().join("io/buf.ash");
+    assert!(path.exists(), "io/buf.ash should exist");
+}
+
+#[test]
+fn test_io_buf_read_to_end_function_parses() {
+    let content = read_stdlib_file("io/buf.ash");
+    assert!(
+        content.contains("pub fn read_to_end"),
+        "io/buf.ash should contain read_to_end function"
+    );
+}
+
+#[test]
+fn test_io_buf_read_to_string_function_parses() {
+    let content = read_stdlib_file("io/buf.ash");
+    assert!(
+        content.contains("pub fn read_to_string"),
+        "io/buf.ash should contain read_to_string function"
+    );
+}
+
+#[test]
+fn test_io_buf_write_all_function_parses() {
+    let content = read_stdlib_file("io/buf.ash");
+    assert!(
+        content.contains("pub fn write_all"),
+        "io/buf.ash should contain write_all function"
+    );
+}
+
+#[test]
+fn test_io_buf_lines_function_parses() {
+    let content = read_stdlib_file("io/buf.ash");
+    assert!(
+        content.contains("pub fn lines"),
+        "io/buf.ash should contain lines function"
+    );
+}
+
+#[test]
+fn test_io_mod_exports_buf() {
+    let content = read_stdlib_file("io/mod.ash");
+
+    assert!(
+        content.contains("mod buf;"),
+        "io/mod.ash should declare buf module"
+    );
+    assert!(
+        content.contains("pub use buf::"),
+        "io/mod.ash should re-export from buf module"
+    );
+}
+
+#[test]
+fn test_io_buf_all_required_functions_exist() {
+    let content = read_stdlib_file("io/buf.ash");
+
+    let required_functions = ["read_to_end", "read_to_string", "write_all", "lines"];
+
+    for func in &required_functions {
+        assert!(
+            content.contains(&format!("pub fn {}", func)),
+            "io/buf.ash should contain {} function",
+            func
+        );
+    }
+}

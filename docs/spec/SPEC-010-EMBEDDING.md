@@ -1,6 +1,6 @@
 # SPEC-010: Embedding API
 
-## Status: Draft
+## Status: Draft (IO Provider References - V1 Frozen)
 
 ## 1. Overview
 
@@ -51,12 +51,14 @@ Configuration uses the builder pattern:
 
 ```rust
 let engine = Engine::new()
-    .with_stdio_capabilities()    -- Add print/read_line
-    .with_fs_capabilities()       -- Add file operations
+    .with_stdio_capabilities()    -- Add io::stdio (print/read_line)
+    .with_fs_capabilities()       -- Add io::fs (file operations)
     -- HTTP available via with_custom_provider() until native support added
     .with_custom_provider(MyProvider)
     .build()?;
 ```
+
+The `with_stdio_capabilities()` and `with_fs_capabilities()` methods register the standard library `io` module providers that back `io::stdio` and `io::fs` operations respectively.
 
 ## 3. Error Handling
 
@@ -139,12 +141,16 @@ let engine = Engine::new()
 
 Built-in provider categories:
 
-| Provider | Capabilities | Effect |
-|----------|-------------|--------|
-| stdio | print, println, read_line | Operational |
-| fs | read_file, write_file | Operational |
-| http | get, post, put, delete | Operational |
-| env | get_env, set_env | Operational |
+| Provider | Module | Capabilities | Effect |
+|----------|--------|--------------|--------|
+| stdio | `io::stdio` | print, println, read_line | Operational |
+| fs | `io::fs` | read_file, write_file | Operational |
+| dir | `io::dir` | create_dir, read_dir | Operational |
+| meta | `io::meta` | metadata, permissions | Operational |
+| http | (external) | get, post, put, delete | Operational |
+| env | (external) | get_env, set_env | Operational |
+
+Standard library `io` providers are accessed through the `io` namespace (see SPEC-009, Section 4.5).
 
 ## 5. Usage Patterns
 
@@ -193,12 +199,15 @@ let engine = Engine::new()
     .build()?;
 
 let result = engine.run(r#"
+    use io::fs;
+    use io::stdio;
+    
     workflow main {
         action process {
             effect: operational;
             body: || -> {
-                let data = file:read("input.txt");
-                print("Processing...");
+                let data = fs::read_to_string("input.txt");
+                stdio::print("Processing...");
                 data
             };
         }

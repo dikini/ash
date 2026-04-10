@@ -272,6 +272,7 @@ Update this section as tasks complete:
 | 68 | 6 | 6 | ✅ Complete |
 | 69 | 12 | 12 | ✅ Complete |
 | 70 | 8 | 0 | Planned |
+| 74 | 8 | 0 | Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -364,6 +365,7 @@ Update this section as tasks complete:
 | 39 | 1 | 1 | ✅ Complete |
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
+| 74 | 8 | 0 | 📝 Planned |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -434,7 +436,7 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 269 complete / 284 tracked tasks
+**Overall Progress**: 269 complete / 292 tracked tasks
 **Remaining Tasks**:
 
 - 1 deferred: `TASK-063` (dynamic policy registration)
@@ -2156,3 +2158,27 @@ surface forms.
 **Deliverable:** `Act` is a full value-producing, continuation-carrying workflow node. Three new
 surface forms (`then`, `as`, `let = cap-call`) parse, lower, and execute correctly. Existing
 bare `act` forms work unchanged. Specs aligned.
+
+## Phase 74: Stdlib IO V1
+
+Implement the first real `io` standard-library family as a top-level namespace rooted at `std/src/io/`.
+
+**Plan Reference:** [PLAN-022: Stdlib IO V1](PLAN-022-STDLIB-IO-V1.md)
+**Design Reference:** [Stdlib `io` V1 Design](../plans/2026-04-10-stdlib-io-v1-design.md)
+**Priority:** High
+**Status:** 📝 Planned
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-493](tasks/TASK-493-freeze-stdlib-io-contract.md) | Freeze the canonical `io` namespace, v1 module tree, and capability boundary in active specs/docs before implementation spreads assumptions | PLAN-022, SPEC-009/010/012/017 | 3-5 | 📝 Planned |
+| [TASK-494](tasks/TASK-494-stdlib-io-root-and-path-surface.md) | Add the root `io` module plus the pure `io::path` layer and shared `io` vocabulary under `std/src/io/` | PLAN-022 | 4-6 | 📝 Planned |
+| [TASK-495](tasks/TASK-495-stdlib-io-stdio-surface-and-provider-alignment.md) | Introduce `io::stdio` as the canonical stdlib terminal-I/O surface and align it with the existing `StdioProvider` | PLAN-022, SPEC-010/017 | 4-6 | 📝 Planned |
+| [TASK-496](tasks/TASK-496-stdlib-io-files-dir-meta-surface.md) | Add `io::fs`, `io::dir`, and `io::meta` and expand filesystem-provider support to match the v1 contract | PLAN-022, SPEC-010/017 | 5-8 | 📝 Planned |
+| [TASK-497](tasks/TASK-497-stdlib-io-buffered-helpers-and-ambient-sugar.md) | Add `io::buf` plus the first ergonomic helper layer without introducing a separate execution model | PLAN-022 | 3-5 | 📝 Planned |
+| [TASK-498](tasks/TASK-498-stdlib-io-bootstrap-and-runtime-wiring.md) | Bootstrap the new `io` stdlib modules through module loading, capability export/resolution, and engine provider wiring | PLAN-022, SPEC-009/012/017 | 4-7 | 📝 Planned |
+| [TASK-499](tasks/TASK-499-stdlib-io-integration-tests-and-examples.md) | Add parser, engine, and example coverage that demonstrates the intended Ash `io` style end-to-end | PLAN-022 | 4-6 | 📝 Planned |
+| [TASK-500](tasks/TASK-500-stdlib-io-docs-and-verification.md) | Update docs/examples/changelog and run final verification for the phase | PLAN-022 | 3-5 | 📝 Planned |
+
+**Deliverable:** One coherent `io` stdlib family with pure `io::path`, capability-backed stdio/filesystem
+modules, provider/runtime wiring that matches the stdlib story, and examples/tests that show the intended
+Ash style.

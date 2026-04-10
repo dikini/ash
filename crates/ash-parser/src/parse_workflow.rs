@@ -801,7 +801,7 @@ fn lower_stmts_to_nested(stmts: &[Workflow], start_pos: Position, input: &ParseI
                             Some(inner) => Workflow::Seq {
                                 first: Box::new(*inner),
                                 second: Box::new(cont),
-                                span: span.clone(),
+                                span,
                             },
                             None => cont,
                         };

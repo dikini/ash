@@ -1,6 +1,6 @@
 # SPEC-017: Capability Integration with System Features
 
-## Status: Active (Section 2 Capability Definitions added)
+## Status: Active (Section 2 Capability Definitions, Section 11 IO Capability Boundary - V1 Frozen)
 
 ## 1. Overview
 
@@ -1032,7 +1032,119 @@ workflow resilient
 }
 ```
 
-## 11. Summary Table
+## 11. IO Capability Boundary
+
+The standard library `io` module family defines a clear capability boundary between pure computation and host-touching operations.
+
+### 11.1 IO Module Capability Classification
+
+| Module | Capability-Bearing | Rationale |
+|--------|-------------------|-----------|
+| `io::path` | **No** | Pure path manipulation; computation over values without host interaction |
+| `io::stdio` | **Yes** | Reads from stdin, writes to stdout/stderr; host I/O authority required |
+| `io::fs` | **Yes** | File creation, reading, writing; filesystem authority required |
+| `io::dir` | **Yes** | Directory creation, removal, enumeration; filesystem authority required |
+| `io::meta` | **Yes** | Metadata inspection (permissions, timestamps); filesystem authority required |
+| `io::buf` | **Yes** | Buffered I/O helpers; delegates to capability-bearing operations |
+
+### 11.2 Capability-Free Path Operations
+
+`io::path` provides pure functions that operate only on path values:
+
+```ash
+use io::path::{Path, PathBuf};
+
+workflow pure_path_manipulation {
+    action build_path {
+        effect: evaluative;  -- No host access, pure computation
+        body: || -> {
+            let base = PathBuf::new("/home/user");
+            let config = base.join("config").join("app.conf");
+            let parent = config.parent();  -- Pure computation
+            let ext = config.extension();  -- Pure computation
+            config
+        };
+    }
+}
+```
+
+Path operations are **capability-free** because they:
+- Manipulate string-like path representations only
+- Perform no filesystem access
+- Require no host authority
+- Are deterministic and side-effect free
+
+### 11.3 Capability-Bearing IO Operations
+
+All other `io` submodules require host authority:
+
+```ash
+use io::fs;
+use io::stdio;
+use io::dir;
+
+workflow file_operations {
+    action write_config {
+        effect: operational;  -- Host access required
+        body: || -> {
+            -- Requires filesystem write capability
+            fs::write("/tmp/config.txt", "data")
+        };
+    }
+    
+    action print_message {
+        effect: operational;  -- Host access required
+        body: || -> {
+            -- Requires stdout write capability
+            stdio::println("Hello, World!")
+        };
+    }
+    
+    action list_files {
+        effect: operational;  -- Host access required
+        body: || -> {
+            -- Requires directory read capability
+            dir::read_dir("/tmp")
+        };
+    }
+}
+```
+
+### 11.4 Result Type Reuse
+
+The `io` modules reuse `result::Result<T, E>` rather than introducing a separate global `Result` ADT:
+
+```ash
+use result::Result;
+use io::{Error, ErrorKind};
+
+-- io::Result<T> is an alias for result::Result<T, io::Error>
+let content: io::Result<String> = io::fs::read_to_string("file.txt");
+
+match content {
+    Ok { value: text } -> process(text),
+    Err { error: e } -> handle_error(e),
+}
+```
+
+### 11.5 IO Capability Vocabulary
+
+The initial capability vocabulary for `io` operations includes:
+
+| Capability | Module | Operations |
+|------------|--------|------------|
+| `stdin_read` | `io::stdio` | `read_line`, `stdin().read()` |
+| `stdout_write` | `io::stdio` | `print`, `println`, `stdout().write()` |
+| `stderr_write` | `io::stdio` | `eprint`, `eprintln` |
+| `file_read` | `io::fs` | `read`, `read_to_string`, `File.read()` |
+| `file_write` | `io::fs` | `write`, `append`, `File.write()` |
+| `file_create` | `io::fs` | `create`, `create_new` |
+| `dir_read` | `io::dir` | `read_dir`, `DirEntry` iteration |
+| `dir_create` | `io::dir` | `create_dir`, `create_dir_all` |
+| `dir_remove` | `io::dir` | `remove_dir`, `remove_dir_all` |
+| `meta_read` | `io::meta` | `metadata`, permission queries |
+
+## 12. Summary Table
 
 | Feature | Input (observe/receive) | Output (set/send) |
 |---------|------------------------|-------------------|
@@ -1044,7 +1156,7 @@ workflow resilient
 | **Type Safety** | Read schema validated | Write schema validated |
 | **Errors** | Unavailable, Timeout | Failed, Rejected, BufferFull |
 
-## 12. Implementation Tasks
+## 13. Implementation Tasks
 
 - TASK-108: Effect tracking for all capabilities
 - TASK-109: Obligation checking with capabilities
@@ -1054,6 +1166,7 @@ workflow resilient
 - TASK-113: Read/write type checking
 - TASK-233: Capability definition parsing specification (completed)
 - TASK-234: Capability definition parser implementation (pending)
+- TASK-493: Freeze Stdlib IO V1 Contract (completed - this spec updated)
 
 ## References
 

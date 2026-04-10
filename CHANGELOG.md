@@ -5,12 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+
+### Added
+
+- TASK-493: Frozen Stdlib IO V1 Contract. Updated SPEC-009-MODULES.md, SPEC-012-IMPORTS.md, SPEC-017-CAPABILITY-INTEGRATION.md, SPEC-010-EMBEDDING.md, and 2026-04-10-stdlib-io-v1-design.md to document the canonical `io` namespace, v1 module tree, capability boundary, and canonical import style.
+- TASK-494: Added io root and pure path surface. Created `std/src/io/mod.ash` with Error, ErrorKind, and Result<T> types. Created `std/src/io/path.ash` with PathBuf type and pure path functions. Updated lib.ash with io exports. All 24 parser tests pass.
+- TASK-495: Added io::stdio surface and provider alignment. Created `std/src/io/stdio.ash` with Stdio capability and functions. Aligned with existing StdioProvider. All 17 tests pass.
+- TASK-496: Added io::fs, io::dir, io::meta surface and expanded FsProvider. Created fs.ash with file operations, dir.ash with directory operations, meta.ash with metadata operations. Expanded FsProvider with 11 new actions. 176 tests pass.
+- TASK-497: Added io::buf buffered helpers. Created `std/src/io/buf.ash` with read_to_end, read_to_string, write_all, and lines functions. All tests pass.
+- TASK-498: Bootstrap io modules through runtime wiring. Created io_stdlib_wiring_test.rs with 16 tests. Added provider wiring tests for io capabilities. All 25 tests pass.
+- TASK-499: Added integration tests and examples. Created examples/03-io/ with 3 example workflows. Created tests/std/io_*.ash with 31 test fixtures. All tests pass.
+- TASK-500: Final docs and verification for Phase 74. cargo fmt clean. cargo check passes. Fixed pre-existing clippy warnings. 172 IO-specific tests pass. Pre-existing test failures identified and distinguished from Phase 74 work.
+
 ### Fixed
 
 - Fixed `let <name> = <cap-call>` sugar boundary check consuming newlines and line comments (Phase 73 regression). Added `skip_horizontal_ws_and_comments` that preserves newlines as statement delimiters. Fixed `lower_stmts_to_nested` rfold overwriting explicit `act ... then` continuation bodies — existing continuations now compose with the outer tail via `Seq`. Updated TASK-486 through TASK-492 status from Planned to Done.
 - Fixed `ash-parser` capability definition property generators to validate identifiers through the parser's real `identifier` acceptance path instead of a stale duplicated keyword list. This removes false proptest failures on reserved words such as `do`.
 
 ### Added
+
+- Planned Phase 74 as the stdlib `io` v1 implementation phase. Added [Stdlib `io` V1 Design](docs/plans/2026-04-10-stdlib-io-v1-design.md), [Stdlib IO V1 Implementation Plan](docs/plans/2026-04-10-stdlib-io-v1-implementation-plan.md), [PLAN-022](docs/plan/PLAN-022-STDLIB-IO-V1.md), and [TASK-493](docs/plan/tasks/TASK-493-freeze-stdlib-io-contract.md) through [TASK-500](docs/plan/tasks/TASK-500-stdlib-io-docs-and-verification.md) to land the first top-level `io` stdlib family with pure path values, capability-backed stdio/filesystem modules, provider/runtime wiring, and end-to-end examples.
 
 - Planned Phase 72 as the focused closeout phase for the remaining Phase 71 architectural gap. Added [DESIGN-018](docs/design/DESIGN-018-MODULE-SCOPED-CAPABILITY-RESOLUTION-CLOSURE.md), [PLAN-018](docs/plan/PLAN-018-MODULE-SCOPED-CAPABILITY-RESOLUTION-CLOSURE.md), and [TASK-480](docs/plan/tasks/TASK-480-module-scoped-resolution-api.md) through [TASK-484](docs/plan/tasks/TASK-484-phase-71-closeout-docs-and-verification.md) to finish module-scoped shared-context resolution and remove the last type-checker fallback path.
 

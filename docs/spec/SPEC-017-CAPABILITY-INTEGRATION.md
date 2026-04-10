@@ -32,27 +32,19 @@ The canonical ACT representation carries:
 - `action_name`: Used for provider-local dispatch
 - `arguments`: Evaluated and passed to the provider
 
-**Symbolic Capability Resolution:**
+**Capability Invocation Baseline:**
 
-Symbolic capability names in surface syntax resolve to `(provider, action)` pairs:
+In this spec set's current surface baseline, operational capability invocation is explicit:
 
 ```ash
-fs_read("file.txt")           -- Simple symbolic: resolves from capability declarations
-io::fs_read("file.txt")       -- Module-qualified: resolves through module/import paths
 io:fs_read("file.txt")        -- Explicit: (provider: "io", action: "fs_read")
 ```
 
-The resolver produces a `ResolvedCapabilityTarget { provider, action }` which lowers
-to the canonical `Act { provider_name, action_name, ... }` IR form.
+This lowers directly to the canonical `Act { provider_name, action_name, ... }` IR form.
 
-**Resolution Sources:**
-
-Symbolic operational capability names resolve from module-owned metadata:
-
-1. **Local capability declarations** - `capability fs_read : act (...)` declares a visible symbol
-2. **Imported capabilities** - `use io::fs_read` brings a symbol into local scope  
-3. **Re-exports** - `pub use io::fs_read` re-exports with optional aliasing
-4. **Module-qualified paths** - `io::fs_read` resolves through the module graph
+Capability declarations, imports, and module-qualified names still matter for identity,
+visibility, and resolution metadata, but this section does not define bare `fs_read(...)` or
+module-qualified `io::fs_read(...)` as active capability invocation syntax.
 
 **Explicit Form:**
 

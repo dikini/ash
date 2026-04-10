@@ -22,6 +22,7 @@ KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
               | "wait" | "control"
               | "exposes"
               | "timeout" | "done"
+              | "fn" | "panic"
               | "epistemic" | "deliberative" | "evaluative" | "operational"
               | "authority" | "obligations"
               | "when" | "returns" | "where"
@@ -54,13 +55,23 @@ DOC_COMMENT     ::= "-- |" [^\n]*  (Documentation)
 ### 3.1 Program Structure
 
 ```
-program     ::= definition* workflow_def
+module_file ::= definition* workflow_def?
+
+program     ::= module_file
 
 definition  ::= capability_def | policy_def | role_def 
-              | memory_def | datatype_def
+              | memory_def | datatype_def | fn_def
 
 -- Note: datatype_def is expanded in Section 3.6 Type Definitions
+-- Note: fn_def surface details are introduced in Section 3.7 and elaborated in SPEC-027
 ```
+
+Normative file/root model:
+
+- `module_file` is the authoritative file-level surface grammar for a `.ash` source file.
+- A `module_file` may contain definitions only, or definitions plus one top-level `workflow_def`.
+- `program` is reserved for the executable entry-point view over that parsed file; this section does
+  not further specify entry-point loading or validation.
 
 ### 3.2 Capability Definition
 
@@ -151,7 +162,7 @@ behaviour_ref   ::= capability_ref
 settable_ref    ::= capability_ref
 sendable_ref    ::= capability_ref
 capability_ref  ::= IDENTIFIER (":" IDENTIFIER)?
-action_ref      ::= IDENTIFIER ("(" arguments? ")")?
+action_ref      ::= provider_action_ref
 check_ref       ::= workflow_obligation_ref
 stream_ref      ::= IDENTIFIER (":" IDENTIFIER)?
                   | IDENTIFIER "{" IDENTIFIER ("," IDENTIFIER)+ "}"
@@ -195,10 +206,9 @@ duration        ::= NUMBER ("ms" | "s" | "m" | "h")
 act_stmt        ::= "act" action_ref ("where" guard)?
                   | operational_call
 
-operational_call ::= capability_call
-                   | provider_action_call
+operational_call ::= provider_action_call
 
-capability_call  ::= IDENTIFIER "(" arguments? ")" ("when" guard)?
+provider_action_ref  ::= IDENTIFIER ":" IDENTIFIER ("(" arguments? ")")?
 
 provider_action_call ::= IDENTIFIER ":" IDENTIFIER "(" arguments? ")" ("when" guard)?
 
@@ -235,6 +245,10 @@ must_stmt       ::= "must" workflow
 - `behaviour_ref`, `settable_ref`, and `sendable_ref` are intentionally distinct names even when
   they share the same token shape. The distinction is semantic: `observes` grants read access to
   behaviours, not write authority; write authority is declared separately with `sets` or `sends`.
+- Operational capability invocation is explicit `provider:action(...)` in this baseline. Bare
+  `name(...)` is reserved for ordinary function calls; imported or module-qualified capability
+  symbols participate in resolution metadata and aliasing, but they are not invoked with function
+  call syntax.
 - `exposure_item` is intentionally read-only. Monitor metadata such as `monitor_count` belongs in
   the exposed `values` set when it is meant to be visible.
 - `if let` is surface sugar only. It is accepted for readability, but its canonical meaning is the
@@ -265,7 +279,8 @@ field           ::= IDENTIFIER ":" type
 struct_body     ::= "{" field_list "}"
 alias_body      ::= type
 
-type            ::= simple_type | generic_type | tuple_type
+type            ::= fn_type | simple_type | generic_type | tuple_type
+fn_type         ::= "Fn" "(" type_list? ")" "->" type
 simple_type     ::= IDENTIFIER
 generic_type    ::= IDENTIFIER "<" type_arg ("," type_arg)* ">"
 tuple_type      ::= "(" type_list ")"
@@ -300,7 +315,27 @@ type IntList = List<Int>;
 
 See [SPEC-020](../SPEC-020-ADT-TYPES.md) for detailed ADT semantics and typing rules.
 
-### 3.7 Expressions
+### 3.7 Function Definitions
+
+```
+fn_def          ::= "fn" IDENTIFIER type_params? "(" param_list? ")"
+                    ("->" type)? fn_contract* block_expr
+
+fn_contract     ::= "requires" ":" expression
+                  | "ensures" ":" expression
+
+block_expr      ::= "{" fn_stmt* tail_expr "}"
+fn_stmt         ::= "let" pattern "=" expression ";"
+tail_expr       ::= expression
+```
+
+`fn` is a top-level surface definition in this baseline. SPEC-002 fixes only the shared surface
+syntax contract here; detailed pure-function typing, function semantics, and canonical function-type
+rules live in [SPEC-027](./SPEC-027-PURE-FUNCTIONS.md). In particular, fn bodies require a tail
+expression return, and `if` / `match` inside fn bodies follow the value-producing rules defined
+there.
+
+### 3.8 Expressions
 
 ```
 expression      ::= or_expr
@@ -316,12 +351,18 @@ unary           ::= ("-" | "#" | "not") unary | primary
 
 primary         ::= literal
                   | IDENTIFIER
-                  | "$" IDENTIFIER           -- Input reference
-                  | primary "." IDENTIFIER   -- Field access
-                  | primary "[" expression "]"  -- Index access
-                  | primary "(" arguments ")"   -- Function call
+                  | qualified_name
+                  | "$" IDENTIFIER              -- Input reference
+                  | primary "." IDENTIFIER      -- Field access
+                  | primary "[" expression "]" -- Index access
+                  | primary "(" arguments? ")" -- Function / callable-value call
                   | constructor_expr
+                  | match_expr
+                  | if_expr
+                  | panic_expr
                   | "(" expression ")"
+
+qualified_name  ::= module_path "::" IDENTIFIER
 
 constructor_expr ::= IDENTIFIER constructor_payload?
 constructor_payload ::= record_constructor_payload | tuple_constructor_payload
@@ -337,10 +378,21 @@ literal         ::= STRING | NUMBER | FLOAT | BOOL | NULL | list_literal
 list_literal    ::= "[" (expression ("," expression)*)? "]"
 
 match_expr      ::= "match" expression "{" match_arm ("," match_arm)* ","? "}"
-match_arm       ::= pattern ("if" expression)? "=>" expression
+match_arm       ::= pattern ("if" expression)? "=>" match_body
+match_body      ::= expression | block_expr
+
+if_expr         ::= "if" expression "then" if_branch ("else" if_branch)?
+if_branch       ::= expression | block_expr
+
+panic_expr      ::= "panic" STRING
 ```
 
-### 3.8 Patterns
+These expression forms establish the shared surface baseline for pure-function bodies; SPEC-027 is
+the normative source for `fn` body structure, function-call constraints, `Fn(...) -> ...` typing,
+`module::name(args)` resolution, and panic semantics. `provider:action(args)` remains the separate
+capability-dispatch form.
+
+### 3.9 Patterns
 
 ```
 pattern         ::= IDENTIFIER
@@ -381,7 +433,7 @@ Err { error: e }            -- Matches Err, binds error field to e
 
 See [SPEC-001](../SPEC-001-IR.md) for IR representation and [SPEC-004](../SPEC-004-SEMANTICS.md) for pattern matching semantics.
 
-### 3.9 Guards
+### 3.10 Guards
 
 ```
 guard           ::= "always" | "never" | predicate
@@ -432,16 +484,11 @@ core workflow-form set.
 
 ### 4.4 Operational Call Sugar
 
-Operational calls can be written without the `act` keyword. These forms are sugar for the canonical
-`Act` IR node with explicit `(provider_name, action_name)`:
+Operational calls can be written without the `act` keyword. The sugar form in this baseline keeps
+capability invocation explicit as `provider:action(...)` and lowers to the canonical `Act` IR node
+with explicit `(provider_name, action_name)`:
 
 ```
-capability(args)
--- Lowers to: Act { provider_name: resolved_provider, action_name: resolved_action, ... }
-
-capability(args) when guard
--- Lowers to: Act { ..., guard: guard }
-
 provider:action(args)
 -- Lowers to: Act { provider_name: "provider", action_name: "action", ... }
 
@@ -453,38 +500,12 @@ provider:action(args) when guard
 
 | Surface Form | Canonical IR |
 |--------------|--------------|
-| `capability(args)` | `Act { provider_name: resolved, action_name: resolved, arguments: args, guard: Always, ... }` |
-| `capability(args) when g` | `Act { ..., guard: g }` |
 | `provider:action(args)` | `Act { provider_name: "provider", action_name: "action", arguments: args, guard: Always, ... }` |
 | `provider:action(args) when g` | `Act { ..., guard: g }` |
 | `act provider:action(args) where g` | `Act { provider_name: "provider", action_name: "action", arguments: args, guard: g, ... }` |
 
-**Symbolic vs Explicit Resolution:**
-
-Surface syntax supports two forms for operational capability calls:
-
-1. **Symbolic form** - `fs_read(args)` or `io::fs_read(args)`
-   - Resolves through module/import-owned capability metadata
-   - Requires a capability declaration or import in scope
-   - Module-qualified names resolve through the module graph
-   
-2. **Explicit form** - `io:fs_read(args)`
-   - Directly specifies `(provider, action)` pair
-   - Bypasses symbolic resolution entirely
-   - Used when capability metadata is not available or not desired
-
-The lowering phase uses a shared `CapabilityResolutionContext` built from the module/import
-graph to resolve symbolic names. This context maps visible symbolic names to their
-`(provider, action)` targets.
-
-**Compile-Time Resolution Contract:**
-
-Symbolic capability names must resolve at compile time. The resolution context is:
-- Built once from capability declarations, imports, and re-exports
-- Shared across lowering, type checking, and capability checking
-- Passed through the pipeline rather than reconstructed in each phase
-
-Unresolved symbolic names produce compile-time errors.
+Imported or module-qualified capability symbols may still participate in declaration metadata,
+resolution, and aliasing, but active invocation syntax remains explicit `provider:action(...)`.
 
 ### 4.5 Statement List Scoping
 

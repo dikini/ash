@@ -13,6 +13,8 @@ The import system enables bringing items from other modules into scope via `use`
 ```
 use crate::foo::bar;           -- Import specific item
 use crate::foo::bar as baz;    -- Import with alias
+use crate::math::clamp;        -- Import a public function
+use crate::math::clamp as c;   -- Import a function with alias
 use result::Result;            -- Import a standard-library item
 use runtime::Args;             -- Import from a standard-library root module
 ```
@@ -114,8 +116,9 @@ That prelude must make the following names available in all modules:
 
 Additional items re-exported by the prelude are also implicitly available when
 present in `std/src/prelude.ash`. No other standard-library modules or bindings are imported
-implicitly unless they are re-exported by the prelude; access to other standard-library items
-requires an explicit `use` declaration.
+implicitly unless they are re-exported by the prelude; unqualified access to other standard-library
+items requires an explicit `use` declaration, while qualified references such as `io::path::PathBuf`
+continue to resolve through the module graph.
 
 ## 3. Import Resolution
 
@@ -128,6 +131,8 @@ requires an explicit `use` declaration.
      - If a top-level user module root name collides with a standard-library root module name,
          the program is ill-formed and the import must be rejected
 2. Verify target item exists and is visible
+     - The terminal path segment may name any importable module item, including a type,
+         workflow, function, or capability symbol
 3. Add item to current module's scope with given name (or alias)
 
 ### 3.2 Shadowing Rules
@@ -165,6 +170,22 @@ pub use crate::internal::helper;  -- Re-export helper as foo::helper
 use crate::foo::helper;           -- Works via re-export
 ```
 
+This rule applies uniformly to public module items, including `pub fn` definitions and public
+capability symbols. A function is importable from another module only when it is exported by that
+module, either directly via `pub fn name(...) -> ...` or indirectly via `pub use path::name`.
+
+```ash
+-- math.ash
+pub fn clamp(value: Int, min: Int, max: Int) -> Int;
+
+-- prelude.ash
+pub use crate::math::clamp;
+
+-- main.ash
+use crate::math::clamp;
+use crate::prelude::clamp as clamp_value;
+```
+
 ### 4.2 Use Chains
 
 Re-exports can form chains:
@@ -187,6 +208,30 @@ Imports are private by default:
 ```
 use crate::foo::bar;           -- Private import (only this module)
 pub use crate::foo::bar;       -- Public re-export
+```
+
+Functions follow the same visibility rules as other items:
+
+- `fn helper(...) -> ...` defines a module-private function that cannot be imported from another
+  module
+- `pub fn helper(...) -> ...` exports the function so `use path::helper;` is valid in downstream
+  modules
+- `pub use path::helper;` re-exports that public function from the current module under the same
+  name
+- `pub use path::helper as alias;` re-exports that public function under a new public name
+
+```ash
+-- math.ash
+fn internal_scale(x: Int) -> Int;
+pub fn clamp(value: Int, min: Int, max: Int) -> Int;
+
+-- prelude.ash
+pub use crate::math::clamp as clamp_int;
+
+-- main.ash
+use crate::math::clamp;          -- OK
+use crate::prelude::clamp_int;   -- OK
+use crate::math::internal_scale; -- ERROR: function is not public
 ```
 
 ### 5.2 Accessing Private Imports
@@ -230,7 +275,9 @@ use runtime::Args;
 
 ### 6.2 Resolution Semantics
 
-Imported capability symbols participate in symbolic operational resolution:
+Imported capability symbols participate in module-level capability resolution metadata, but they do
+not create a function-style call form. Operational dispatch remains explicit
+`provider:action(...)` syntax.
 
 ```ash
 -- io.ash
@@ -240,13 +287,13 @@ pub capability fs_read : observe (path : String) returns String;
 use io::fs_read;
 
 workflow main {
-    -- Symbolic call resolves through the imported capability
-    let content = fs_read("data.txt");
+    -- Capability invocation stays explicit; the imported symbol does not create `fs_read(...)`
+    let content = io:fs_read("data.txt");
 }
 ```
 
 The import brings the capability symbol into scope, which:
-- Makes the symbolic name visible for operational calls
+- Makes the symbol available for import/re-export/name-resolution purposes
 - Associates the symbol with its declared `(provider, action)` target
 - Enables compile-time resolution through the `CapabilityResolutionContext`
 
@@ -265,24 +312,38 @@ pub use fs::read as fs_read;  -- Re-export with different name
 use io::fs_read;  -- Resolves to fs::read's (provider, action)
 ```
 
-### 6.4 Module-Qualified Capability Calls
+### 6.4 Module-Qualified Names
 
-Module-qualified capability names resolve through imports:
+Module-qualified names resolve through the module graph. The qualified symbol may denote either a
+function or a capability symbol; `::` is module qualification syntax, not a function-only marker.
+However, only exported functions become callable via ordinary call syntax. Capability dispatch still
+uses explicit `provider:action(...)`.
+
+```ash
+-- math.ash
+pub fn clamp(value: Int, min: Int, max: Int) -> Int;
+
+-- main.ash (`use crate::math::clamp;` is optional here because the reference stays qualified)
+workflow main {
+    let bounded = math::clamp(12, 0, 10);
+}
+```
+
+Qualified references to exported capability symbols also resolve through the same module graph:
 
 ```ash
 -- io.ash
 pub capability fs_read : observe (path : String) returns String;
 
--- main.ash (no import needed for qualified call)
-workflow main {
-    -- Module-qualified name resolves through module graph
-    let content = io::fs_read("data.txt");
-}
+-- main.ash
+use io::fs_read as read_file;
 ```
 
-Module-qualified names (`module::capability`) are distinct from explicit provider
-calls (`provider:action`). The former resolves through capability symbol metadata;
-the latter directly specifies the target pair.
+Module-qualified names (`module::symbol`) are distinct from explicit provider
+calls (`provider:action`). The former resolves through module exports and, for capability symbols,
+their associated metadata; the latter directly specifies the target pair and is the only capability
+invocation form in this baseline. Qualified references do not require `use`; `use` is only needed
+when bringing a symbol into local unqualified scope or re-exporting it.
 
 ## 7. Grammar Extension
 

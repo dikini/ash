@@ -103,6 +103,20 @@ pub(super) workflow helper {
 
 Every Ash program has a root module (the entry point file). All other modules are descendants of the root.
 
+### 4.1a File-Level Parse Model
+
+PLAN-023 freezes a split between generic file parsing and entry-point loading:
+
+- `ModuleFile` is the normative file-level parse result for any `.ash` source file.
+- A `ModuleFile` contains top-level definitions, module declarations, and at most one top-level
+  `workflow_def`.
+- `Program` is not the general file grammar. It is the entry-point view produced only when the
+  loader validates a `ModuleFile` as an executable entry point.
+
+Normatively, a source file is parsed once as a `ModuleFile`. Entry-point loading may then promote
+that parsed file to `Program` if it satisfies the required entry-point workflow shape. Non-entry
+modules remain `ModuleFile`s and do not require a workflow.
+
 ### 4.2 Module Paths
 
 Module paths use `::` as separator:
@@ -241,22 +255,26 @@ mod bar;  -- ERROR: circular if bar.ash contains "mod foo;"
 mod foo;  -- creates cycle
 ```
 
-## 7. Capability Symbol Resolution
+## 7. Capability Symbol Metadata
 
 ### 7.1 Overview
 
-The module system owns symbolic operational capability resolution. Capability declarations,
-imports, and re-exports determine what symbolic names are visible in each module scope and
-what `(provider, action)` pairs they resolve to.
+The module system owns capability symbol visibility and metadata resolution. Capability
+declarations, imports, and re-exports determine what symbolic names are visible in each module
+scope and what `(provider, action)` pairs they denote.
+
+This metadata does not create an additional invocation form. In the current baseline,
+capability execution remains explicit `provider:action(...)`; ordinary `name(...)` and
+`module::name(...)` call syntax is reserved for functions and other callable values.
 
 ### 7.2 Resolution Sources
 
-Symbolic capability names resolve from:
+Capability symbol metadata resolves from:
 
 1. **Local declarations** - `capability name : act (...)` in the current module
 2. **Imports** - `use path::name` brings a capability symbol into local scope
 3. **Re-exports** - `pub use path::name` re-exports a capability symbol
-4. **Module-qualified paths** - `module::capability` resolves through the module graph
+4. **Module-qualified references** - `module::capability` resolves through the module graph as a symbol reference, not a callable surface form
 
 ### 7.3 Symbol Metadata
 
@@ -317,13 +335,14 @@ Visibility checking occurs during type checking (ash-typeck):
 ### 10.1 Surface Grammar
 
 ```
-program         ::= module_item*
+module_file     ::= module_item*
+program         ::= module_file        -- only after entry-point validation/loading
 
 module_item     ::= visibility? definition
                   | visibility? module_decl
 
 definition      ::= capability_def | policy_def | role_def
-                  | memory_def | datatype_def | workflow_def
+                  | memory_def | datatype_def | fn_def | workflow_def
 
 module_decl     ::= "mod" IDENTIFIER ";"           -- File-based
                   | "mod" IDENTIFIER "{" module_item* "}"  -- Inline
@@ -331,6 +350,9 @@ module_decl     ::= "mod" IDENTIFIER ";"           -- File-based
 visibility      ::= "pub" ( "(" visibility_rest ")" )?
 visibility_rest ::= "crate" | "super" | "self" | "in" module_path
 ```
+
+`module_file` is the authoritative top-level grammar for ordinary files. `program` is a loader-level
+entry-point artifact layered on top of `module_file`, not a second independent parse grammar.
 
 ## 11. Implementation Notes
 

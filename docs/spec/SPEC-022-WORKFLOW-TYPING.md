@@ -47,8 +47,7 @@ let status = check obligation_name;  -- Check obligation, returns Bool
 -- Pattern: Check and continue
 workflow simple {
     oblige audit_trail;
-    -- Symbolic capability call (new sugar)
-    process();
+    payment:process();
     let _ = check audit_trail;  -- Must check before end
 }
 
@@ -57,14 +56,13 @@ workflow with_retry {
     oblige complete_within_deadline;
     
     loop {
-        let done = attempt_work();
+        let done = worker:attempt_work();
         if done {
             let met = check complete_within_deadline;
             if met {
                 ret Success;
             } else {
                 -- Deadline passed, escalate
-                -- Explicit provider:action call (new sugar)
                 supervisor:escalate(reason: "deadline_missed");
                 ret Failed;
             }
@@ -77,8 +75,7 @@ workflow with_retry {
 workflow with_compensation {
     oblige transaction_atomic;
     
-    -- Symbolic capability call
-    reserve_funds();
+    payment:reserve_funds();
     let reserved = check transaction_atomic;
     
     if !reserved {
@@ -87,10 +84,12 @@ workflow with_compensation {
         ret Failed;
     }
     
-    -- Legacy act form (still supported, lowers to same split contract)
-    act transfer;
+    act payment:transfer;
 }
 ```
+
+In these examples, capability execution uses explicit `provider:action(...)` or `act provider:action`.
+Bare `name(...)` remains ordinary function-call syntax rather than a capability invocation form.
 
 ---
 
@@ -200,6 +199,20 @@ workflow main(args: cap Args) -> Result<(), RuntimeError> {
 
 This rule constrains entry selection and signature shape only. Capability availability remains a
 runtime verification concern rather than a pure typing judgment.
+
+### 4.8 fn Calls in Workflow Typing
+
+When a workflow call expression resolves to a `fn` as defined in SPEC-027, workflow typing uses the
+fn-contract subset only:
+
+- A `fn` contract may contribute value-level `requires` / `ensures` predicates only.
+- `HasCapability`, `HasRole`, and obligation-oriented requirements are not part of the fn contract
+  vocabulary and are rejected for `fn` definitions.
+
+At a workflow call site, the callee's `requires` predicates become immediate call-site proof
+obligations. The workflow type checker must prove those predicates from the current typing context
+before the call is accepted; they do not become new workflow obligations and they are not deferred
+to workflow completion.
 
 ---
 
@@ -341,8 +354,7 @@ proptest! {
 -- Test 1: Simple obligation lifecycle
 workflow simple_obligation {
     oblige audit_required;
-    -- Symbolic capability call (new sugar)
-    process();
+    audit:process();
     let _ = check audit_required;
 }
 
@@ -354,7 +366,6 @@ workflow check_with_decision {
     if met {
         ret Success;
     } else {
-        -- Explicit provider:action call (new sugar)
         supervisor:escalate();
         ret Failed;
     }
@@ -363,8 +374,7 @@ workflow check_with_decision {
 -- Test 3: Error - obligation not discharged
 workflow bad {
     oblige forgot_this;
-    -- Symbolic capability call
-    work();
+    worker:work();
     -- ERROR: forgot_this not checked
 }
 

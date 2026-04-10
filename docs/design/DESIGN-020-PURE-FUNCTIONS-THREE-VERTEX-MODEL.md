@@ -11,7 +11,7 @@ and establishes a clean separation between pure computation and effectful orches
 
 ## Problem Statement
 
-The `std/` library files use `pub fn`, `match`, `if/else`, `panic`, `Fun(T) -> U`, and other
+The `std/` library files use `pub fn`, `match`, `if/else`, `panic`, `Fn(T) -> U`, and other
 constructs that the current parser cannot handle. The stdlib_parsing.rs tests are ~70% string-matching
 and do not validate these constructs through the parser.
 
@@ -28,7 +28,7 @@ Ash programs are composed from three distinct vertices:
 
 ```
          Transform (pure)
-         fn -- total, deterministic
+         fn -- deterministic, effect-free evaluation; may recurse and therefore may diverge
         / \
        /   \
       /     \
@@ -59,8 +59,9 @@ Mode-specific syntax:
   `attempt`, `retry`, `timeout`, `observe`/`orient`/`propose`/`decide` phases
 - **shared**: `let`, `if ... then ... else`, `match`, function calls, constructors, operators
 
-fn calls use `module::name(args)` (double colon) syntax, distinct from capability calls
-which use `provider:action(args)` with single colon.
+Call syntax follows the shared module/capability split used elsewhere in the language:
+`module::name(args)` uses `::` for module qualification and may refer to any callable exported by a
+module, while `provider:action(args)` keeps `:` as the explicit capability-dispatch form.
 
 ### D3: Tail-Expression Return in fn, Explicit `ret` in Workflows
 
@@ -233,17 +234,16 @@ workflow cache_impl(store: cap Store) implements Cache {
 ## Open Questions (Status as of this revision)
 
 1. **Should `panic` be a keyword or a built-in function?** 
-   - **Status:** OPEN - Decision needed before TASK-A2 (lexer) and TASK-A6a (Expr::Panic).
-   - **Tradeoff:** Keyword preserves option of special compilation; built-in function is simpler.
-   - **Current lean:** Keyword `panic` (as documented in SPEC-027).
+   - **Status:** RESOLVED AND FROZEN FOR THIS PHASE - `panic` is keyword syntax, matching PLAN-023 and SPEC-027.
+   - **Rationale:** This keeps the fn surface aligned with the frozen parser/AST work (`TokenKind::Panic`, `Expr::Panic`) and preserves room for dedicated compilation/runtime treatment.
 
 2. **Should fn support recursion?**
    - **Status:** PARTIALLY RESOLVED - Recursion is allowed syntactically; termination checking for ensures proving is deferred.
    - **Implementation note:** Parser and type checker should accept recursive fn definitions. Termination analysis future work.
 
 3. **Interaction between fn generics and capability generics -- are they the same mechanism?**
-   - **Status:** RESOLVED - fn types are pure and carry no effect slot. They do not use Type::Fun's effect parameter. See SPEC-027 §3.2.
-   - **Implementation note:** Same generic mechanism for type parameters, but fn types are distinct from capability function types.
+   - **Status:** RESOLVED AND FROZEN - SPEC-003 and SPEC-027 now normatively require `Type::Fn(args, ret)` for pure function values and reserve `Type::Fun(args, ret, effect)` for effectful or capability-linked callable values.
+   - **Implementation note:** Same generic mechanism for type parameters, but fn types are distinct from capability function types and MUST NOT be encoded as `Type::Fun(..., effect)` by choosing a low effect grade.
 
 ## References
 

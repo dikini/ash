@@ -4,9 +4,11 @@
 
 ## 1. Overview
 
-Define `fn` as a first-class construct for pure computation in Ash. Functions are total
-(modulo panic), deterministic, effect-free transformations from inputs to outputs. They bypass
-the capability system, the effect lattice, and the workflow lifecycle machinery.
+Define `fn` as a first-class construct for pure computation in Ash. Functions are deterministic,
+effect-free transformations from inputs to outputs. They bypass the capability system, do not
+contribute an effect grade of their own, and do not participate in the workflow lifecycle
+machinery. Recursive definitions are permitted; termination analysis is deferred and is not part of
+the core `fn` validity criterion in this spec.
 
 ## 2. Syntax
 
@@ -82,9 +84,10 @@ IfExpr ::= if Expr then { Body } else { Body }
          | if Expr then { Body }
 ```
 
-When `else` is omitted, the type is `()` (unit). Both branches must produce values of the same
-type. Nested `else if` is syntactic sugar for nested `IfExpr`. When `else` is omitted, both
-branches conceptually produce `Unit`. See SPEC-003 for the Unit type definition.
+When `else` is omitted, the expression has type `Type::Null`, with surface value `null` on the
+implicit else path. Nested `else if` is syntactic sugar for nested `IfExpr`. Normatively,
+`if cond then { body }` is typed as `if cond then { body } else { null }`; therefore the explicit
+then branch of a one-armed `if` must also type-check as `Type::Null`.
 
 ### 2.5 Panic
 
@@ -101,7 +104,10 @@ FunctionCall ::= name(args)
               | module::name(args)
 ```
 
-Module-qualified fn calls use `::` (double colon), matching the existing module path convention in SPEC-009 and SPEC-012. This is distinct from capability calls, which use `:` (single colon) for `provider:action(args)`.
+`::` is the standard module-qualification operator, matching the existing module path convention in
+SPEC-009 and SPEC-012. In a call expression, `module::name(args)` means “call the callable value or
+function named `name` exported by `module`”. This is distinct from capability dispatch, which uses
+`:` (single colon) for `provider:action(args)`.
 
 ## 3. Type System
 
@@ -111,10 +117,9 @@ Module-qualified fn calls use `::` (double colon), matching the existing module 
 FnType ::= Fn(<param_types>) -> <return_type>
 ```
 
-With generics:
-```
-FnType ::= Fn<T, U>(<param_types>) -> <return_type>
-```
+The surface function-type form is intentionally non-generic: generic binders live on `fn`
+definitions and are instantiated at use sites, while the type node itself remains
+`Type::Fn(Vec<Type>, Box<Type>)`.
 
 The `Fun(T) -> U` surface syntax from the std/ files is revised to use the standard Ash form:
 `Fn(T) -> U`.
@@ -124,51 +129,46 @@ The `Fun(T) -> U` surface syntax from the std/ files is revised to use the stand
 pub enum Type {
     // ... existing variants ...
     /// Function type: Fn(T, U) -> V
-    Fn {
-        /// Type parameters for generic functions (optional)
-        type_params: Vec<Name>,
-        /// Parameter types
-        params: Vec<Type>,
-        /// Return type
-        return_type: Box<Type>,
-    },
+    Fn(Vec<Type>, Box<Type>),
 }
 ```
+
+This matches the frozen SPEC-003 baseline: generic parameters belong to `fn` definitions and
+instantiation sites, not to the `Type::Fn` enum shape itself.
 
 **Parser Work:** Implement `parse_fn_type` to handle:
 - `Fn(Int) -> Int` - simple function type
 - `Fn(Int, String) -> Bool` - multiple parameters
-- `Fn<T>(T) -> T` - generic function type
-- Function types as parameter types: `fn map(f: Fn(T) -> U) -> List<U>`
+- Function types whose parameter/return positions mention generic type variables already in scope:
+  `fn map<T, U>(f: Fn(T) -> U, xs: List<T>) -> List<U>`
+- Function types as parameter types: `fn map<T, U>(f: Fn(T) -> U) -> List<U>`
 - Function types in type constructors: `Option<Fn(Int) -> Int>`
 
-**Relationship to SPEC-003 Type::Fun:**
-SPEC-003 currently defines `Type::Fun(args, ret, eff)` for effectful functions. For fn support, SPEC-003 needs to either:
-- Option A: Add `Type::Fn` as a separate pure variant (what this spec assumes)
-- Option B: Use `Type::Fun` with `Effect::Pure` sentinel value
-
-**Recommendation:** Option A (separate `Type::Fn`) because:
-- Prevents accidental mixing of effectful and pure function types
-- Makes purity explicit in the type system
-- Aligns with the three-vertex model (fn vs capability are distinct)
+**Relationship to SPEC-003 Type Model:**
+SPEC-003 normatively distinguishes pure and effectful callable types as follows:
+- `Type::Fn(args, ret)` is the canonical representation for pure function values.
+- `Type::Fun(args, ret, effect)` is reserved for effectful or capability-linked callable values
+  whose contract carries an explicit effect classification.
+- Pure functions MUST NOT be encoded as `Type::Fun(..., effect)` by choosing a low effect grade.
 
 **Type System Work:** The type checker must:
-- Distinguish `Type::Fn` (pure fn type) from `Type::Fun` (effectful functions)
+- Distinguish `Type::Fn` (pure fn type) from `Type::Fun` (effectful/capability-linked callable values)
 - Support unification of function types at generic instantiation sites
 - Check that fn values assigned to fn type annotations match in parameter count and type
-- Update SPEC-003 to include `Type::Fn` in the Type enum definition
+- Preserve the frozen SPEC-003 `Type::Fn(Vec<Type>, Box<Type>)` enum shape
 
 ### 3.2 Function Type and Effect Neutrality
 
-The fn type does not carry an effect slot. fn types are pure by construction:
+The fn type does not carry an effect slot. fn types are pure by construction and continue to use
+the canonical surface syntax defined above: `Fn(<param_types>) -> <return_type>`.
 
-```
-FnType ::= (Type*) -> Type
-```
+This is distinct from the existing `Type::Fun` which may carry an effect annotation. A fn type
+never has an effect slot; calling a fn does not add an effect grade beyond the effects already
+required to evaluate its arguments and surrounding context.
 
-This is distinct from the existing `Type::Fun` which may carry an effect annotation. A fn type never has an effect; fn calls are effect-neutral in all contexts.
-
-When a workflow calls a fn, the call contributes no effect level -- it is equivalent to an `Orient` (epistemic) step. Under the current four-grade lattice (Epistemic..Operational), fn calls within a workflow body are classified as Epistemic.
+When a workflow calls a fn, the call is effect-neutral with respect to the workflow lattice. It is
+not reclassified as a workflow form such as `Observe`, `Orient`, `Propose`, or `Act`; only the
+enclosing workflow constructs contribute effect grades.
 
 ### 3.3 Type Inference
 
@@ -181,7 +181,9 @@ must be explicitly annotated (no Hindley-Milner inference on parameters).
 fn map<T, U>(opt: Option<T>, f: Fn(T) -> U) -> Option<U> { ... }
 ```
 
-Type parameters are instantiated at call sites by unification with argument types. Recursion is allowed. fn definitions may reference themselves or other fn definitions. Termination analysis for fn contracts (`ensures`) proving is deferred.
+Type parameters are instantiated at call sites by unification with argument types. Recursion is
+allowed. fn definitions may reference themselves or other fn definitions. Termination analysis for
+fn contracts (`ensures`) and related proof obligations is deferred.
 
 ### 3.5 Purity Checking
 
@@ -248,6 +250,17 @@ fn evaluation is standard call-by-value with tail-expression return:
   ──────────────────────────────
   E ⊢ if cond then then_body else else_body : v
 
+(IF-NO-ELSE-TRUE)
+  E ⊢ cond : true
+  E ⊢ then_body : null
+  ──────────────────────────────
+  E ⊢ if cond then then_body : null
+
+(IF-NO-ELSE-FALSE)
+  E ⊢ cond : false
+  ──────────────────────────────
+  E ⊢ if cond then then_body : null
+
 (CALL)
   fn f(x₁: τ₁, ..., xₙ: τₙ) -> τ { body }
   E ⊢ a₁ : τ₁ ... E ⊢ aₙ : τₙ
@@ -273,6 +286,10 @@ Contrast with workflow:
 WorkflowOutcome ::= Return(Value, Effect, Trace, ObligationState, Provenance)
                   | Reject(Error, Effect, Trace, ObligationState, Provenance)
 ```
+
+For omitted-else conditionals, the implicit else branch evaluates to `null`. Therefore
+`if cond then { body }` is semantically equivalent to `if cond then { body } else { null }`, and
+the then-branch of that form must evaluate to `null` when taken.
 
 ### 4.3 Fn Panic in Workflow Context
 

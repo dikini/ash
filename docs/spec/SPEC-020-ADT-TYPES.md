@@ -393,6 +393,11 @@ impl Substitution {
                     .collect();
                 Type::Record(new_fields)
             }
+            Type::Fn(args, ret) => {
+                let new_args: Vec<_> = args.iter().map(|a| self.apply(a)).collect();
+                let new_ret = Box::new(self.apply(ret));
+                Type::Fn(new_args, new_ret)
+            }
             Type::Fun(args, ret, eff) => {
                 let new_args: Vec<_> = args.iter().map(|a| self.apply(a)).collect();
                 let new_ret = Box::new(self.apply(ret));
@@ -738,7 +743,7 @@ pub fn unwrap<T>(opt: Option<T>) -> T;  -- Panics if None
 pub fn unwrap_or<T>(opt: Option<T>, default: T) -> T;
 
 -- Transformation
-pub fn map<T, U>(opt: Option<T>, f: Fun(T) -> U) -> Option<U>;
+pub fn map<T, U>(opt: Option<T>, f: Fn(T) -> U) -> Option<U>;
 
 -- Boolean operations
 pub fn and<T>(opt: Option<T>, other: Option<T>) -> Option<T>;
@@ -768,18 +773,20 @@ pub fn unwrap_or<T, E>(res: Result<T, E>, default: T) -> T;
 pub fn unwrap_err<T, E>(res: Result<T, E>) -> E;  -- Panics if Ok
 
 -- Transformation
-pub fn map<T, E, U>(res: Result<T, E>, f: Fun(T) -> U) -> Result<U, E>;
-pub fn map_err<T, E, F>(res: Result<T, E>, f: Fun(E) -> F) -> Result<T, F>;
-pub fn and_then<T, E, U>(res: Result<T, E>, f: Fun(T) -> Result<U, E>) -> Result<U, E>;
+pub fn map<T, E, U>(res: Result<T, E>, f: Fn(T) -> U) -> Result<U, E>;
+pub fn map_err<T, E, F>(res: Result<T, E>, f: Fn(E) -> F) -> Result<T, F>;
+pub fn and_then<T, E, U>(res: Result<T, E>, f: Fn(T) -> Result<U, E>) -> Result<U, E>;
 
 -- Conversion
 pub fn ok<T, E>(res: Result<T, E>) -> Option<T>;
 pub fn err<T, E>(res: Result<T, E>) -> Option<E>;
 ```
 
-The functions listed above are the required helper surface. Prelude re-exports and
-additional convenience helpers such as `unwrap_or_else`, `map_or`, `filter`, `xor`, or
-`or_else` are optional and not required by this specification.
+The functions listed above are the required helper surface. Pure higher-order helper parameters use
+canonical `Fn(...) -> ...` syntax, matching SPEC-003's `Type::Fn` representation for pure
+functions; `Type::Fun(..., effect)` remains reserved for effectful or capability-linked callable
+contracts. Prelude re-exports and additional convenience helpers such as `unwrap_or_else`,
+`map_or`, `filter`, `xor`, or `or_else` are optional and not required by this specification.
 
 ## 10. Property Tests
 

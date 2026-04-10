@@ -80,7 +80,8 @@ pub enum Type {
     List(Box<Type>),
     Record(Vec<(Box<str>, Type)>),
     Cap(Box<str>, Effect),  // Usage-site capability witness type with implementation-carried effect metadata
-    Fun(Vec<Type>, Box<Type>, Effect),  // Function type
+    Fn(Vec<Type>, Box<Type>),           // Pure function type
+    Fun(Vec<Type>, Box<Type>, Effect),  // Effectful/capability-linked function type
     Var(TypeVar),           // Type variable (for inference)
     Constructor {
         name: QualifiedName,
@@ -91,6 +92,21 @@ pub enum Type {
 
 pub struct TypeVar(pub u32);
 ```
+
+Function types are split normatively as follows:
+
+- `Type::Fn(args, ret)` is the canonical type representation for pure functions. It carries only
+  argument and result types because pure functions do not contribute an effect grade of their own
+  to the function type.
+- `Type::Fun(args, ret, effect)` is reserved for effectful or capability-linked function values
+  whose callable contract must retain an explicit effect classification.
+- Specs and implementations MUST NOT encode pure functions as `Type::Fun(..., effect)` merely by
+  choosing a low effect grade. Pure functions use `Type::Fn`; effect-annotated callable values use
+  `Type::Fun`.
+
+`Type::Null` is the canonical no-value result type in this spec. Any construct that yields “no
+meaningful value”, including omitted-else `if`, uses `Type::Null` rather than an implicit `Unit` or
+another unnamed bottom/result placeholder.
 
 The `Type::Constructor` variant represents user-defined ADT instances and generic type
 applications. It carries a qualified name (potentially with module path), type arguments
@@ -281,12 +297,10 @@ as parser or lowering ambiguities.
   ─────────────────────────────────────────────────────────────
   Γ, Σ, Ω ⊢ SEQ w1 w2 : τ2 / ε1⊔ε2 ⊣ Ω2
 
-(PAR-T)
-  ∀i. Γ, Σ, Ω ⊢ wi : τi / εi ⊣ Ωi
-  ε_par = ⊔ εi
-  Ω_out = ∩ Ωi  (obligations that survive all branches)
-  ─────────────────────────────────────────────────────────────
-  Γ, Σ, Ω ⊢ PAR [w1..wn] : (τ1,..,τn) / ε_par ⊣ Ω_out
+(PAR-HISTORICAL)
+  Historical note only: earlier drafts modeled `PAR [w1..wn]` here.
+  `PAR` is not part of the current sequential workflow contract, so this
+  spec defines no active typing rule for it.
 
 (IF-T)
   Γ ⊢ cond : bool / ε_cond
@@ -295,6 +309,19 @@ as parser or lowering ambiguities.
   ─────────────────────────────────────────────────────────────
   Γ, Σ, Ω ⊢ IF cond then else : τ / ε_cond⊔ε_then⊔ε_else ⊣ Ω_then∩Ω_else
 
+(IF-NO-ELSE-T)
+  Γ ⊢ cond : bool / ε_cond
+  Γ, Σ, Ω ⊢ then : Null / ε_then ⊣ Ω_then
+  ─────────────────────────────────────────────────────────────
+  Γ, Σ, Ω ⊢ IF cond then : Null / ε_cond⊔ε_then ⊣ Ω_then∩Ω
+```
+
+An omitted-else `if` is typed as the canonical no-value form. Normatively, `if cond { then }`
+uses result type `Type::Null` and is equivalent for typing purposes to `if cond { then } else {
+null }`. This does not introduce a new effect grade: its effect is still the join of the condition
+and branch effects under the existing lattice.
+
+```
 (LET-T)
   Γ ⊢ expr : τ_expr / ε_expr
   bind(pat, τ_expr) = Γ'
@@ -372,9 +399,9 @@ Current workflow-form classification summary:
 | `Orient` | `Deliberative` base effect, joined with continuation |
 | `Propose` | `Deliberative` base effect, joined with continuation |
 | `Decide` | `Evaluative` base effect, joined with continuation |
-|| `Check` | `Evaluative` base effect, joined with continuation |
-|| `Act` | `Operational` |
-|| `Let` / `If` / `Seq` / `ForEach` | join-based composition over constituent effects; no extra grade of their own |
+| `Check` | `Evaluative` base effect, joined with continuation |
+| `Act` | `Operational` |
+| `Let` / `If` / `Seq` / `ForEach` | join-based composition over constituent effects; no extra grade of their own |
 | `Ret` / `Done` | no extra grade of their own |
 | `With` / `Maybe` / `Must` | no extra grade of their own beyond enclosed workflows |
 | `Oblig` | governance/obligation form; no separate coarse grade beyond enclosed workflow unless later revised |
@@ -513,10 +540,34 @@ fn unify(c1: Type, c2: Type) -> Result<Substitution, TypeError> {
             unify_records(fs1, fs2)
         }
         
-        // Function type unification (contravariant in args, covariant in ret)
-        (Type::Fun(args1, ret1, _), Type::Fun(args2, ret2, _)) => {
+        // Pure function type unification (contravariant in args, covariant in ret)
+        (Type::Fn(args1, ret1), Type::Fn(args2, ret2)) => {
             if args1.len() != args2.len() {
                 return Err(TypeError::ArityMismatch(args1.len(), args2.len()));
+            }
+            let mut subst = Substitution::empty();
+            // Unify arguments contravariantly
+            for (a1, a2) in args1.iter().zip(args2.iter()) {
+                let s = unify(a2.clone(), a1.clone())?;
+                subst = subst.compose(s);
+            }
+            // Unify return type covariantly
+            let s = unify(*ret1, *ret2)?;
+            subst = subst.compose(s);
+            Ok(subst)
+        }
+
+        // Effectful/capability-linked function type unification
+        // (contravariant in args, covariant in ret, invariant in explicit effect contract)
+        (Type::Fun(args1, ret1, eff1), Type::Fun(args2, ret2, eff2)) => {
+            if args1.len() != args2.len() {
+                return Err(TypeError::ArityMismatch(args1.len(), args2.len()));
+            }
+            if eff1 != eff2 {
+                return Err(TypeError::EffectMismatch {
+                    expected: eff1,
+                    found: eff2,
+                });
             }
             let mut subst = Substitution::empty();
             // Unify arguments contravariantly
@@ -572,6 +623,9 @@ fn occurs_in(var: TypeVar, ty: &Type) -> bool {
         Type::Var(v) => v == &var,
         Type::List(inner) => occurs_in(var, inner),
         Type::Record(fields) => fields.iter().any(|(_, t)| occurs_in(var, t)),
+        Type::Fn(args, ret) => {
+            args.iter().any(|t| occurs_in(var, t)) || occurs_in(var, ret)
+        }
         Type::Fun(args, ret, _) => {
             args.iter().any(|t| occurs_in(var, t)) || occurs_in(var, ret)
         }
@@ -580,6 +634,11 @@ fn occurs_in(var: TypeVar, ty: &Type) -> bool {
     }
 }
 ```
+
+For `Type::Fun`, the effect slot is part of the callable contract rather than incidental metadata.
+Unification therefore MUST compare that slot explicitly. Two effectful function values with the
+same argument and return types but different workflow effects do not unify silently; they produce
+an effect mismatch that the checker reports separately from ordinary argument/return mismatches.
 
 ## 8. Property Testing
 
@@ -718,6 +777,8 @@ pub enum TypeDiff {
     FunctionArg { position: usize, diff: Box<TypeDiff> },
     /// Function return differs
     FunctionReturn { diff: Box<TypeDiff> },
+    /// Effectful function contract differs in explicit effect slot
+    FunctionEffect { expected: Effect, found: Effect },
 }
 
 impl TypeDiff {
@@ -742,7 +803,7 @@ impl TypeDiff {
                     found: found.clone(),
                 }
             }
-            (Type::Fun(args1, ret1, _), Type::Fun(args2, ret2, _)) => {
+            (Type::Fn(args1, ret1), Type::Fn(args2, ret2)) => {
                 // Check return type first (more important)
                 if ret1 != ret2 {
                     return TypeDiff::FunctionReturn {
@@ -763,6 +824,33 @@ impl TypeDiff {
                     found: found.clone(),
                 }
             }
+            (Type::Fun(args1, ret1, eff1), Type::Fun(args2, ret2, eff2)) => {
+                // Check return type first (more important)
+                if ret1 != ret2 {
+                    return TypeDiff::FunctionReturn {
+                        diff: Box::new(TypeDiff::compute(ret1, ret2)),
+                    };
+                }
+                // Check arguments
+                for (i, (a1, a2)) in args1.iter().zip(args2.iter()).enumerate() {
+                    if a1 != a2 {
+                        return TypeDiff::FunctionArg {
+                            position: i,
+                            diff: Box::new(TypeDiff::compute(a2, a1)), // Contravariant
+                        };
+                    }
+                }
+                if eff1 != eff2 {
+                    return TypeDiff::FunctionEffect {
+                        expected: eff1.clone(),
+                        found: eff2.clone(),
+                    };
+                }
+                TypeDiff::Mismatch {
+                    expected: expected.clone(),
+                    found: found.clone(),
+                }
+            }
             _ => TypeDiff::Mismatch {
                 expected: expected.clone(),
                 found: found.clone(),
@@ -771,6 +859,10 @@ impl TypeDiff {
     }
 }
 ```
+
+`TypeDiff::compute` treats `Type::Fun` effects as first-class diagnostic data. An effect mismatch
+between otherwise-identical callable signatures must surface as `TypeDiff::FunctionEffect` rather
+than falling through as if the effect slot were absent.
 
 Example error with structural difference highlighting:
 
@@ -830,6 +922,12 @@ pub enum TypeError {
     PatternMismatch { 
         expected: Box<Type>, 
         actual: Box<Type> 
+    },
+
+    #[error("Function effect mismatch: expected {expected:?}, found {found:?}")]
+    EffectMismatch {
+        expected: Effect,
+        found: Effect,
     },
     
     // Small types don't need boxing

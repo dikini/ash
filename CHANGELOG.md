@@ -8,6 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Fixed
 
 - Fixed `let <name> = <cap-call>` sugar boundary check consuming newlines and line comments (Phase 73 regression). Added `skip_horizontal_ws_and_comments` that preserves newlines as statement delimiters. Fixed `lower_stmts_to_nested` rfold overwriting explicit `act ... then` continuation bodies — existing continuations now compose with the outer tail via `Seq`. Updated TASK-486 through TASK-492 status from Planned to Done.
+- Fixed `ash-parser` capability definition property generators to validate identifiers through the parser's real `identifier` acceptance path instead of a stale duplicated keyword list. This removes false proptest failures on reserved words such as `do`.
 
 ### Added
 

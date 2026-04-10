@@ -16,7 +16,8 @@
 //! ```
 
 use ash_parser::{
-    CapabilityDef, Definition, EffectType, Expr, Literal, Type, new_input, parse_module_decl,
+    CapabilityDef, Definition, EffectType, Expr, Literal, Type, identifier, new_input,
+    parse_module_decl,
 };
 use proptest::prelude::*;
 use winnow::prelude::*;
@@ -60,61 +61,22 @@ fn parse_capabilities(source: &str) -> Result<Vec<CapabilityDef>, String> {
         .collect()
 }
 
-/// Generate a valid identifier string.
+fn parses_as_identifier(candidate: &str) -> bool {
+    let mut input = new_input(candidate);
+    identifier(&mut input).is_ok() && input.input.is_empty()
+}
+
+/// Generate a valid identifier string accepted by the parser.
 fn valid_identifier() -> impl Strategy<Value = String> {
-    // Identifiers start with letter or underscore, followed by alphanumeric or underscore
-    // Using a simpler regex-like approach to avoid hyphens in property tests for simplicity
-    "[a-zA-Z_][a-zA-Z0-9_]{0,30}".prop_filter("non-keyword", |s| !is_keyword(s))
+    // Identifiers start with letter or underscore, followed by alphanumeric or underscore.
+    // Filter through the parser's real identifier acceptance to avoid duplicating keyword logic.
+    "[a-zA-Z_][a-zA-Z0-9_]{0,30}"
+        .prop_filter("parser-valid identifier", |s| parses_as_identifier(s))
 }
 
-/// Generate a valid type name.
+/// Generate a valid type name accepted by the parser's identifier rules.
 fn valid_type_name() -> impl Strategy<Value = String> {
-    "[A-Z][a-zA-Z0-9_]{0,30}".prop_filter("non-keyword", |s| !is_keyword(s))
-}
-
-/// Check if a string is a keyword that can't be used as an identifier.
-fn is_keyword(s: &str) -> bool {
-    matches!(
-        s,
-        // Core language keywords
-        "let"
-            | "if"
-            | "else"
-            | "match"
-            | "workflow"
-            | "role"
-            | "capability"
-            | "observe"
-            | "act"
-            | "done"
-            | "ret"
-            | "yield"
-            | "plays"
-            | "capabilities"
-            // Effect types
-            | "read"
-            | "analyze"
-            | "decide"
-            | "write"
-            | "external"
-            | "epistemic"
-            | "deliberative"
-            | "evaluative"
-            | "operational"
-            // Other reserved words
-            | "policy"
-            | "returns"
-            | "where"
-            | "authority"
-            | "obligations"
-            | "true"
-            | "false"
-            | "null"
-            | "in"
-            | "not"
-            | "and"
-            | "or"
-    )
+    "[A-Z][a-zA-Z0-9_]{0,30}".prop_filter("parser-valid type name", |s| parses_as_identifier(s))
 }
 
 /// All basic effect types (surface syntax).
@@ -562,6 +524,14 @@ fn test_capability_with_multiple_params() {
     assert_eq!(cap.params[0].name.as_ref(), "from");
     assert_eq!(cap.params[1].name.as_ref(), "to");
     assert_eq!(cap.params[2].name.as_ref(), "amount");
+}
+
+#[test]
+fn test_identifier_filter_rejects_reserved_do() {
+    assert!(
+        !parses_as_identifier("do"),
+        "generator filter must reject parser-reserved identifiers"
+    );
 }
 
 #[test]

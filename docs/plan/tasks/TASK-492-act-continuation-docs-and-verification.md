@@ -1,6 +1,6 @@
 # TASK-492: Final Docs, Examples, and Verification for Act Continuation
 
-## Status: Planned
+## Status: Done
 
 ## Description
 

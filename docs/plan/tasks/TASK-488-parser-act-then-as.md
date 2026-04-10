@@ -1,6 +1,6 @@
 # TASK-488: Parser Support for `act ... then`, `act ... as`, and `let = cap-call` Sugar
 
-## Status: Planned
+## Status: Done
 
 ## Description
 

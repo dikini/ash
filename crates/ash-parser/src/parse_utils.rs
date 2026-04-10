@@ -101,6 +101,43 @@ pub fn skip_whitespace_and_comments(input: &mut ParseInput) {
     }
 }
 
+/// Skip horizontal whitespace (spaces/tabs), line comments, and block comments,
+/// but NOT newlines. Used before statement boundary checks where the newline
+/// itself is the delimiter.
+pub fn skip_horizontal_ws_and_comments(input: &mut ParseInput) {
+    loop {
+        // Skip horizontal whitespace only (spaces and tabs, not newlines)
+        let _: ModalResult<&str> =
+            take_while(0.., |c: char| c == ' ' || c == '\t').parse_next(input);
+
+        // Check for line comment: consume up to (but not including) the newline
+        if input.input.starts_with("--") {
+            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            continue;
+        }
+
+        // Check for block comment (skip it, may span multiple lines)
+        if input.input.starts_with("/*") {
+            let _ = input.input.next_slice(2);
+            let mut depth = 1;
+            while depth > 0 && !input.input.is_empty() {
+                if input.input.starts_with("/*") {
+                    let _ = input.input.next_slice(2);
+                    depth += 1;
+                } else if input.input.starts_with("*/") {
+                    let _ = input.input.next_slice(2);
+                    depth -= 1;
+                } else {
+                    let _ = input.input.next_token();
+                }
+            }
+            continue;
+        }
+
+        break;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

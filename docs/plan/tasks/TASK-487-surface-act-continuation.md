@@ -1,6 +1,6 @@
 # TASK-487: Extend Surface AST and Lowering for Act Continuation
 
-## Status: Planned
+## Status: Done
 
 ## Description
 

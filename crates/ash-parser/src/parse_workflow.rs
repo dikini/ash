@@ -791,15 +791,28 @@ fn lower_stmts_to_nested(stmts: &[Workflow], start_pos: Position, input: &ParseI
                         action,
                         guard,
                         result_name,
+                        continuation: existing_cont,
                         span,
-                        ..
-                    } => Workflow::Act {
-                        action,
-                        guard,
-                        result_name,
-                        continuation: Some(Box::new(cont)),
-                        span,
-                    },
+                    } => {
+                        // Compose existing `then` continuation with the outer tail.
+                        // If act already has a `then <body>`, that body runs first,
+                        // then the remaining statements follow.
+                        let composed = match existing_cont {
+                            Some(inner) => Workflow::Seq {
+                                first: Box::new(*inner),
+                                second: Box::new(cont),
+                                span: span.clone(),
+                            },
+                            None => cont,
+                        };
+                        Workflow::Act {
+                            action,
+                            guard,
+                            result_name,
+                            continuation: Some(Box::new(composed)),
+                            span,
+                        }
+                    }
                     _ => {
                         unreachable!("is_binding_stmt should only return true for binding variants")
                     }
@@ -1107,21 +1120,40 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
     // Try action_ref() first (backtracking) for cap-call sugar:
     //   let name = provider:action(args)  =>  act provider:action(args) as name
+    //
+    // Only accept action_ref if what follows is a statement boundary (newline,
+    // EOF, semicolon, or a keyword). Otherwise it could be a normal expression
+    // like `items[0]` where action_ref would incorrectly consume just `items`.
     skip_whitespace_and_comments(input);
     let checkpoint = *input;
     if let Ok(action) = action_ref(input) {
         if let crate::surface::Pattern::Variable(ref name) = pat {
-            let span = span_from(&start_pos, &input.state);
-            return Ok(Workflow::Act {
-                action,
-                guard: None,
-                result_name: Some(name.clone()),
-                continuation: None,
-                span,
-            });
+            // Verify what follows is a statement boundary, not an expression continuation.
+            // Use skip_horizontal_ws_and_comments to preserve newlines as delimiters.
+            crate::parse_utils::skip_horizontal_ws_and_comments(input);
+            let next_is_boundary = input.input.is_empty()
+                || input.input.starts_with('\n')
+                || input.input.starts_with(';')
+                || input.input.starts_with('}')
+                || starts_with_keyword(input, "then")
+                || starts_with_keyword(input, "else");
+
+            if next_is_boundary {
+                let span = span_from(&start_pos, &input.state);
+                return Ok(Workflow::Act {
+                    action,
+                    guard: None,
+                    result_name: Some(name.clone()),
+                    continuation: None,
+                    span,
+                });
+            }
+            // Not a boundary — backtrack and parse as normal expr
+            *input = checkpoint;
+        } else {
+            // Pattern is not a simple name; fall through to expr parsing
+            *input = checkpoint;
         }
-        // Pattern is not a simple name; fall through to expr parsing
-        *input = checkpoint;
     } else {
         *input = checkpoint;
     }

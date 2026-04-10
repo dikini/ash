@@ -1,6 +1,6 @@
 # TASK-491: Update Specs for Act Continuation Semantics
 
-## Status: Planned
+## Status: Done
 
 ## Description
 

@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Fixed
+
+- Fixed `let <name> = <cap-call>` sugar boundary check consuming newlines and line comments (Phase 73 regression). Added `skip_horizontal_ws_and_comments` that preserves newlines as statement delimiters. Fixed `lower_stmts_to_nested` rfold overwriting explicit `act ... then` continuation bodies — existing continuations now compose with the outer tail via `Seq`. Updated TASK-486 through TASK-492 status from Planned to Done.
 
 ### Added
 

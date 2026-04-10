@@ -1,6 +1,6 @@
 # TASK-486: Update Core `Workflow::Act` with Result Binding and Continuation
 
-## Status: Planned
+## Status: Done
 
 ## Description
 

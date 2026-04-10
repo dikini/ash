@@ -59,9 +59,9 @@ Expr ::= Literal
 - `Block` → `Expr::Block { statements, tail_expr, span }` (NEW - required for fn)
 
 **Implementation Requirement:** These three AST variants (`Expr::If`, `Expr::Panic`, `Expr::Block`) must be added to the `Expr` enum in surface.rs. They are distinct from:
-- `Workflow::If` (produces workflow steps, not values)
-- `Expr::IfLet` (pattern matching if, already exists)
-- `Workflow::Block` (workflow block statement)
+- `Workflow::If` (produces workflow steps, not values) - already exists for workflow conditionals
+- `Expr::IfLet` (pattern matching if, already exists) - if with pattern bind
+- Workflow sequence/block constructs (e.g., `Workflow::Seq`, braced workflow bodies) - these produce workflow traces, not pure values
 
 ### 2.3 Match Expression
 
@@ -142,10 +142,21 @@ pub enum Type {
 - Function types as parameter types: `fn map(f: Fn(T) -> U) -> List<U>`
 - Function types in type constructors: `Option<Fn(Int) -> Int>`
 
+**Relationship to SPEC-003 Type::Fun:**
+SPEC-003 currently defines `Type::Fun(args, ret, eff)` for effectful functions. For fn support, SPEC-003 needs to either:
+- Option A: Add `Type::Fn` as a separate pure variant (what this spec assumes)
+- Option B: Use `Type::Fun` with `Effect::Pure` sentinel value
+
+**Recommendation:** Option A (separate `Type::Fn`) because:
+- Prevents accidental mixing of effectful and pure function types
+- Makes purity explicit in the type system
+- Aligns with the three-vertex model (fn vs capability are distinct)
+
 **Type System Work:** The type checker must:
-- Distinguish `Type::Fn` (pure fn type) from any existing `Type::Fun` (which may carry effects)
+- Distinguish `Type::Fn` (pure fn type) from `Type::Fun` (effectful functions)
 - Support unification of function types at generic instantiation sites
 - Check that fn values assigned to fn type annotations match in parameter count and type
+- Update SPEC-003 to include `Type::Fn` in the Type enum definition
 
 ### 3.2 Function Type and Effect Neutrality
 

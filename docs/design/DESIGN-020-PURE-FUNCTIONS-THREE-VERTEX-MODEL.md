@@ -230,15 +230,20 @@ workflow cache_impl(store: cap Store) implements Cache {
 | New SPEC-027 | Pure Functions -- normative spec for fn construct | All components |
 | New SPEC-028 | Fn Contract System -- constraint vocabulary for fn | Type checker, Constraint system |
 
-## Open Questions
+## Open Questions (Status as of this revision)
 
-1. Should `panic` be a keyword or a built-in function? (Keyword preserves the option of special
-   compilation; built-in function is simpler)
-2. Should fn support recursion? (Yes, but needs termination checking for ensures proving --
-   deferred)
-3. Interaction between fn generics and capability generics -- are they the same mechanism?
-   (Likely yes, but needs spec work)
-   Resolution: fn types are pure and carry no effect slot. They do not use Type::Fun's effect parameter. See SPEC-027 §3.2.
+1. **Should `panic` be a keyword or a built-in function?** 
+   - **Status:** OPEN - Decision needed before TASK-A2 (lexer) and TASK-A6a (Expr::Panic).
+   - **Tradeoff:** Keyword preserves option of special compilation; built-in function is simpler.
+   - **Current lean:** Keyword `panic` (as documented in SPEC-027).
+
+2. **Should fn support recursion?**
+   - **Status:** PARTIALLY RESOLVED - Recursion is allowed syntactically; termination checking for ensures proving is deferred.
+   - **Implementation note:** Parser and type checker should accept recursive fn definitions. Termination analysis future work.
+
+3. **Interaction between fn generics and capability generics -- are they the same mechanism?**
+   - **Status:** RESOLVED - fn types are pure and carry no effect slot. They do not use Type::Fun's effect parameter. See SPEC-027 §3.2.
+   - **Implementation note:** Same generic mechanism for type parameters, but fn types are distinct from capability function types.
 
 ## References
 

@@ -44,12 +44,13 @@ Before implementation begins, the following spec changes must be drafted. These 
 
 ### Track 0: Prerequisites (Spec Clarifications)
 
-| Task | Description | Spec | Est. Hours | Dependencies |
+|| Task | Description | Spec | Est. Hours | Dependencies |
 |------|-------------|------|------------|--------------|
-| TASK-P0 | Update SPEC-009 grammar: add `fn_def` to `definition` production | SPEC-009 | 1 | None |
-| TASK-P1 | Update SPEC-002: lexical grammar (fn keyword, panic keyword), expression grammar (match, if-as-expr, fn call) | SPEC-002 | 2 | None |
-| TASK-P2 | Update SPEC-003: fn typing judgment, FnType, generic fn instantiation, purity judgment, fn call in workflow typing | SPEC-003 | 3 | P0, P1 |
-| TASK-P3 | Update SPEC-004: fn evaluation rules, no effect tracking, fn panic propagation | SPEC-004 | 2 | P0, P1 |
+|| TASK-P0 | Update SPEC-009 grammar: add `fn_def` to `definition` production | SPEC-009 | 1 | None |
+|| TASK-P0a | **PARSER MODEL:** Draft parser model update: define `ModuleFile` AST (definition collection, optional workflow) alongside `Program` | surface.rs | 2 | P0 |
+|| TASK-P1 | Update SPEC-002: lexical grammar (fn keyword, panic keyword), expression grammar (match, if-as-expr, fn call) | SPEC-002 | 2 | None |
+|| TASK-P2 | Update SPEC-003: fn typing judgment, FnType, generic fn instantiation, purity judgment, fn call in workflow typing | SPEC-003 | 3 | P0, P0a, P1 |
+|| TASK-P3 | Update SPEC-004: fn evaluation rules, no effect tracking, fn panic propagation | SPEC-004 | 2 | P0, P1 |
 
 ### Track 1: AST and Parser Foundation
 
@@ -255,7 +256,9 @@ Track 6 (Docs):
   All → F1 → F2, F3 → F4
 ```
 
-**Critical path:** A0 → A0a → A0b → A1 → A3 → A4 → B1 → B1a → B1b → C7 → C7a → C8 → C8a → D3 → D2 → D1 → E1 → E4 → F4
+**Critical path:** A0 → A0a → A0b → A1 → A3 → A4 → B1 → B1a → B1b → C7 → C7a → C8 → C8a → D2 → D3 → E1 → E4 → F4
+
+**Note:** D1 (fn evaluation rules) runs in parallel to D2/D3 but is not on the critical path for the std/ library work.
 
 **Key Dependency Changes:**
 - Parser model (A0-A0b) is now foundational; all file-parsing depends on it
@@ -296,7 +299,10 @@ The following changes to existing specs are required (enumerated per the review 
 - Add `module::name` resolution in expression context
 
 ### SPEC-012 (Imports)
-- No structural change needed; fn follows existing import/export conventions
+- **Update required:** Document `use path::fn_name` for importing functions
+- **Update required:** Document `pub fn` export visibility for functions
+- **Update required:** Clarify that `use` can import any definition kind including fn
+- Note: The resolver changes (TASK-B1b, B4) implement the binding behavior; SPEC-012 documents the user-facing rules
 
 ### SPEC-022 (Workflow Typing)
 - Add fn contract subset rule: fn contracts exclude HasCapability, HasRole, obligations

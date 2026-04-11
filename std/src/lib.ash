@@ -8,6 +8,17 @@ pub use result::{Result, Ok, Err};
 pub use runtime::{RuntimeError, Args};
 pub use runtime::supervisor::{system_supervisor};
 
+-- Test library (Phase 76)
+pub use test::{
+    assert_true,
+    assert_false,
+    assert_eq_int,
+    assert_ne_int,
+    assert_eq_string,
+    assert_eq_bool,
+    fail,
+};
+
 -- IO types
 pub use io::{Error, ErrorKind, Result};
 pub use io::path::{PathBuf, from_string, join, parent, file_name, extension, is_absolute};

@@ -1,0 +1,208 @@
+//! Test metadata: parse file-level `@test` blocks from Ash test files.
+//!
+//! TASK-512: Authored test metadata and execution model.
+
+use std::path::Path;
+
+/// Parsed test metadata from a file-level comment block.
+#[derive(Debug, Clone, Default)]
+pub struct TestMetadata {
+    /// Test name (defaults to file stem).
+    pub name: Option<String>,
+    /// Test kind (unit, integration, e2e, property, smallworld).
+    pub kind: Option<String>,
+    /// Tags for filtering.
+    pub tags: Vec<String>,
+    /// Timeout in milliseconds (0 = no timeout).
+    pub timeout_ms: u64,
+    /// Capabilities needed for this test.
+    pub capabilities: Vec<String>,
+    /// Seed for property tests.
+    pub seed: Option<u64>,
+    /// Max cases for property tests.
+    pub max_cases: Option<usize>,
+    /// Max worlds for small-world tests.
+    pub max_worlds: Option<usize>,
+    /// Whether this test is expected to fail.
+    pub xfail: bool,
+}
+
+impl TestMetadata {
+    /// Parse test metadata from the first comment block of an Ash source file.
+    ///
+    /// Looks for lines matching `// @test key: value` or `// @test key` patterns.
+    /// Returns default metadata if no `@test` annotations are found.
+    pub fn parse_from_source(source: &str) -> Self {
+        let mut meta = Self::default();
+        let mut in_test_block = false;
+
+        for line in source.lines() {
+            let trimmed = line.trim();
+
+            // Detect start of @test block
+            if trimmed.starts_with("//") {
+                if let Some(rest) = trimmed.strip_prefix("//").map(str::trim) {
+                    if rest.starts_with("@test") {
+                        in_test_block = true;
+                        let directive = rest.strip_prefix("@test").unwrap().trim();
+                        if !directive.is_empty() {
+                            parse_directive(directive, &mut meta);
+                        }
+                        continue;
+                    }
+                    if in_test_block {
+                        if rest.starts_with('@') {
+                            // New directive block, end @test block
+                            in_test_block = false;
+                            continue;
+                        }
+                        // Still in @test block - might be continuation lines
+                        // with @test directives
+                        if rest.starts_with("@test") {
+                            let directive = rest.strip_prefix("@test").unwrap().trim();
+                            if !directive.is_empty() {
+                                parse_directive(directive, &mut meta);
+                            }
+                            continue;
+                        }
+                        // Regular comment line within test block - skip
+                        continue;
+                    }
+                }
+            } else if !trimmed.is_empty() {
+                // Non-comment, non-empty line: we've left the header
+                break;
+            }
+        }
+
+        meta
+    }
+
+    /// Parse metadata from a file.
+    pub fn parse_from_file(path: &Path) -> std::io::Result<Self> {
+        let source = std::fs::read_to_string(path)?;
+        Ok(Self::parse_from_source(&source))
+    }
+
+    /// Get the effective test name, falling back to file stem.
+    pub fn effective_name(&self, path: &Path) -> String {
+        self.name.clone().unwrap_or_else(|| {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string()
+        })
+    }
+}
+
+fn parse_directive(directive: &str, meta: &mut TestMetadata) {
+    let parts: Vec<&str> = directive.splitn(2, ':').collect();
+    let key = parts[0].trim();
+    let value = parts.get(1).map(|v| v.trim()).unwrap_or("");
+
+    match key {
+        "name" => {
+            if !value.is_empty() {
+                meta.name = Some(value.to_string());
+            }
+        }
+        "kind" => {
+            if !value.is_empty() {
+                meta.kind = Some(value.to_string());
+            }
+        }
+        "tags" => {
+            if !value.is_empty() {
+                meta.tags = value
+                    .split(',')
+                    .map(|t| t.trim().to_string())
+                    .filter(|t| !t.is_empty())
+                    .collect();
+            }
+        }
+        "timeout_ms" => {
+            if let Ok(ms) = value.parse() {
+                meta.timeout_ms = ms;
+            }
+        }
+        "capabilities" => {
+            if !value.is_empty() {
+                meta.capabilities = value
+                    .split(',')
+                    .map(|c| c.trim().to_string())
+                    .filter(|c| !c.is_empty())
+                    .collect();
+            }
+        }
+        "seed" => {
+            if let Ok(seed) = value.parse() {
+                meta.seed = Some(seed);
+            }
+        }
+        "max_cases" => {
+            if let Ok(n) = value.parse() {
+                meta.max_cases = Some(n);
+            }
+        }
+        "max_worlds" => {
+            if let Ok(n) = value.parse() {
+                meta.max_worlds = Some(n);
+            }
+        }
+        "xfail" => {
+            meta.xfail = true;
+        }
+        _ => {} // Unknown directive, ignore
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_empty_source() {
+        let meta = TestMetadata::parse_from_source("fn main() { 1 }");
+        assert!(meta.name.is_none());
+        assert!(meta.tags.is_empty());
+    }
+
+    #[test]
+    fn parse_name_directive() {
+        let source = "// @test name: my_test\n// rest\nfn main() {}";
+        let meta = TestMetadata::parse_from_source(source);
+        assert_eq!(meta.name.as_deref(), Some("my_test"));
+    }
+
+    #[test]
+    fn parse_multiple_directives() {
+        let source = "// @test name: foo\n// @test kind: integration\n// @test tags: slow, io\n// @test timeout_ms: 5000\n";
+        let meta = TestMetadata::parse_from_source(source);
+        assert_eq!(meta.name.as_deref(), Some("foo"));
+        assert_eq!(meta.kind.as_deref(), Some("integration"));
+        assert_eq!(meta.tags, vec!["slow", "io"]);
+        assert_eq!(meta.timeout_ms, 5000);
+    }
+
+    #[test]
+    fn parse_xfail() {
+        let source = "// @test xfail\n";
+        let meta = TestMetadata::parse_from_source(source);
+        assert!(meta.xfail);
+    }
+
+    #[test]
+    fn parse_seed_and_max_cases() {
+        let source = "// @test seed: 42\n// @test max_cases: 100\n";
+        let meta = TestMetadata::parse_from_source(source);
+        assert_eq!(meta.seed, Some(42));
+        assert_eq!(meta.max_cases, Some(100));
+    }
+
+    #[test]
+    fn effective_name_fallback() {
+        let meta = TestMetadata::default();
+        let path = Path::new("tests/ash/unit/my_test.ash");
+        assert_eq!(meta.effective_name(path), "my_test");
+    }
+}

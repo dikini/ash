@@ -172,6 +172,41 @@ fn runtime_stdlib_surface_is_exposed() {
 }
 
 #[test]
+fn test_stdlib_exposes_minimal_test_surface() {
+    let test_module = read_stdlib_file("test.ash");
+    let lib = read_stdlib_file("lib.ash");
+
+    assert!(
+        test_module.contains("literal panic messages inside function bodies"),
+        "test.ash should document why the v1 surface uses fixed panic strings"
+    );
+    assert!(
+        test_module.contains("pub fn assert_true(value: Bool) -> Bool"),
+        "test.ash should expose the parseable assert_true signature"
+    );
+    assert!(
+        test_module.contains("pub fn fail() -> Bool"),
+        "test.ash should expose the minimal zero-argument fail helper"
+    );
+    assert!(
+        !test_module.contains("panic(message)"),
+        "test.ash should not use unsupported panic call syntax"
+    );
+    assert!(
+        !test_module.contains("++"),
+        "test.ash should not use unsupported string concatenation syntax"
+    );
+    assert!(
+        lib.contains("pub use test::{"),
+        "lib.ash should re-export the std::test surface"
+    );
+    assert!(
+        lib.contains("assert_true"),
+        "lib.ash should export std::test helpers"
+    );
+}
+
+#[test]
 fn runtime_module_tree_resolves_as_real_file_modules() {
     let resolver = ModuleResolver::new();
     let graph = resolver

@@ -134,6 +134,12 @@ fn test_lib_file_exists() {
 }
 
 #[test]
+fn test_test_file_exists() {
+    let path = stdlib_src_path().join("test.ash");
+    assert!(path.exists(), "test.ash should exist");
+}
+
+#[test]
 fn test_runtime_mod_file_exists() {
     let path = stdlib_src_path().join("runtime/mod.ash");
     assert!(path.exists(), "runtime/mod.ash should exist");
@@ -424,6 +430,49 @@ fn test_runtime_import_examples_parse_with_canonical_syntax() {
         let result = parse_use(&mut input);
 
         assert!(result.is_ok(), "runtime import should parse: {source}");
+    }
+}
+
+#[test]
+fn test_test_import_examples_parse_with_canonical_syntax() {
+    for source in [
+        "use test::assert_true;",
+        "use test::{assert_true, assert_false, fail};",
+        "pub use test::{assert_eq_int, assert_eq_string, assert_eq_bool};",
+    ] {
+        let mut input = new_input(source);
+        let result = parse_use(&mut input);
+
+        assert!(result.is_ok(), "std::test import should parse: {source}");
+    }
+}
+
+#[test]
+fn test_test_public_functions_parse_as_real_fn_definitions() {
+    let functions = parse_public_functions("test.ash");
+    let names = functions
+        .iter()
+        .map(|function| function.name.as_ref())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        names,
+        vec![
+            "assert_true",
+            "assert_false",
+            "assert_eq_int",
+            "assert_ne_int",
+            "assert_eq_string",
+            "assert_eq_bool",
+            "fail",
+        ]
+    );
+
+    for function in functions {
+        assert!(
+            matches!(function.body, Expr::Block { .. }),
+            "std::test helper bodies should parse as function blocks"
+        );
     }
 }
 

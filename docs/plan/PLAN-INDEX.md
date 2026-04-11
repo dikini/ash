@@ -2228,11 +2228,11 @@ metadata/discovery, and opt-in synthesized tests sourced from contracts, policie
 | [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and bounded small-world execution with reproducible failure reporting and runner controls | PLAN-024, DESIGN-021 | 8-12 | 🟡 In Progress ||
 | [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate for the Ash test runner phase | PLAN-024, DESIGN-021 | 4-6 | 🟡 In Progress |
 
-**Current status note:** The repo contains a substantial Phase 76 implementation slice, but the phase
-cannot be truthfully marked complete until the verification gate passes and the remaining closeout gaps
-are resolved. Current review evidence still shows at least: best-effort rather than enforced timeouts
-in the runner, an Ash test-library/authored-test path that is not yet verified as fully usable from
-real Ash test files, and no verified TASK-515 closeout run proving the end-to-end gate.
+**Current status note:** The repo now has a verified runner substrate, real timeout containment,
+documented `-- @test` metadata parsing, and a minimal usable `std::test` surface for authored tests.
+Phase 76 remains open because synthesized tests from contracts, policies, and obligations are still
+planning-level labeled results rather than executable end-to-end cases, and property/small-world
+execution is bounded and reproducible but not yet backed by true generated input/world exploration.
 
 **Deliverable target:** A CLI-integrated Ash test runner v1 with panic-contained suite execution, a
 dedicated Ash test library surface, authored unit/integration/e2e test support, bounded

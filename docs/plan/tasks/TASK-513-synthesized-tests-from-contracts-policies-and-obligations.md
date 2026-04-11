@@ -1,6 +1,6 @@
 # TASK-513: Synthesized Tests from Contracts, Policies, and Obligations
 
-## Status: ✅ Complete
+## Status: 🟡 In Progress
 
 ## Description
 
@@ -41,10 +41,17 @@ Add explicit, opt-in synthesized test planning and execution for contracts, poli
 
 - Implement explicit, opt-in synthesized planning/execution and labeled reporting for contracts, policies, and obligations.
 
+## Implementation Reality Check
+
+The runner now supports explicit source-scoped synthesized selection and clearly labels synthesized
+results in JSON/human output. However, current contract/policy/obligation synthesis still produces
+planning-level labeled records rather than executable end-to-end cases. In particular, policy and
+obligation synthesis should not be treated as passing execution when nothing was actually run.
+
 ## Completion Checklist
 
-- [x] contract-derived synthesized tests implemented and verified end-to-end
-- [x] policy-derived synthesized tests implemented and verified end-to-end
-- [x] obligation-derived synthesized tests implemented and verified end-to-end
+- [ ] contract-derived synthesized tests implemented and verified end-to-end
+- [ ] policy-derived synthesized tests implemented and verified end-to-end
+- [ ] obligation-derived synthesized tests implemented and verified end-to-end
 - [x] explicit CLI opt-in implemented
 - [x] output preserves authored vs synthesized distinction under verified smoke coverage

@@ -127,11 +127,14 @@ pub fn synthesize_policy_tests(path: &Path, source: &str) -> Vec<TestResult> {
                         format!("synthesized/policy/{}/allow-case", policy_name),
                         path.to_path_buf(),
                     )
-                    .with_outcome(Outcome::Pass)
+                    .with_outcome(Outcome::Skip)
                     .with_source(TestSource::Policy)
                     .with_kind(TestKind::Unit)
                     .with_duration(Duration::from_millis(0))
-                    .with_message("Synthesized policy test: allow case".to_string()),
+                    .with_message(
+                        "Synthesized policy case planned but not yet executable end-to-end"
+                            .to_string(),
+                    ),
                 );
 
                 // Synthesize deny case test
@@ -140,11 +143,14 @@ pub fn synthesize_policy_tests(path: &Path, source: &str) -> Vec<TestResult> {
                         format!("synthesized/policy/{}/deny-case", policy_name),
                         path.to_path_buf(),
                     )
-                    .with_outcome(Outcome::Pass)
+                    .with_outcome(Outcome::Skip)
                     .with_source(TestSource::Policy)
                     .with_kind(TestKind::Unit)
                     .with_duration(Duration::from_millis(0))
-                    .with_message("Synthesized policy test: deny case".to_string()),
+                    .with_message(
+                        "Synthesized policy case planned but not yet executable end-to-end"
+                            .to_string(),
+                    ),
                 );
             }
         }
@@ -197,12 +203,12 @@ pub fn synthesize_obligation_tests(path: &Path, source: &str) -> Vec<TestResult>
                 ),
                 path.to_path_buf(),
             )
-            .with_outcome(Outcome::Pass)
+            .with_outcome(Outcome::Skip)
             .with_source(TestSource::Obligation)
             .with_kind(TestKind::Unit)
             .with_duration(Duration::from_millis(0))
             .with_message(format!(
-                "Synthesized obligation test: {} oblige, {} check patterns detected",
+                "Synthesized obligation cases planned from {} oblige / {} check patterns, but not yet executable end-to-end",
                 oblige_count, check_count
             )),
         );
@@ -216,11 +222,13 @@ pub fn synthesize_obligation_tests(path: &Path, source: &str) -> Vec<TestResult>
                 ),
                 path.to_path_buf(),
             )
-            .with_outcome(Outcome::Pass)
+            .with_outcome(Outcome::Skip)
             .with_source(TestSource::Obligation)
             .with_kind(TestKind::Unit)
             .with_duration(Duration::from_millis(0))
-            .with_message("Synthesized obligation test: discharge lifecycle".to_string()),
+            .with_message(
+                "Synthesized obligation case planned but not yet executable end-to-end".to_string(),
+            ),
         );
 
         // Double-discharge detection test
@@ -232,11 +240,13 @@ pub fn synthesize_obligation_tests(path: &Path, source: &str) -> Vec<TestResult>
                 ),
                 path.to_path_buf(),
             )
-            .with_outcome(Outcome::Pass)
+            .with_outcome(Outcome::Skip)
             .with_source(TestSource::Obligation)
             .with_kind(TestKind::Unit)
             .with_duration(Duration::from_millis(0))
-            .with_message("Synthesized obligation test: double-discharge detection".to_string()),
+            .with_message(
+                "Synthesized obligation case planned but not yet executable end-to-end".to_string(),
+            ),
         );
     } else {
         // No obligations detected - add a skip test to show synthesis ran

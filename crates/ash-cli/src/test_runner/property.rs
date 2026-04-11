@@ -59,64 +59,71 @@ fn run_property_inner(
     path: &Path,
     _engine: &ash_engine::Engine,
     _seed: u64,
-    _max_cases: usize,
+    max_cases: usize,
     timeout: Duration,
 ) -> (Outcome, Option<String>, Option<usize>) {
-    let path = path.to_path_buf();
-    let (outcome, message) =
-        crate::test_runner::executor::run_operation_with_timeout(timeout, move || {
-            let engine = match ash_engine::Engine::new().with_stdio_capabilities().build() {
-                Ok(engine) => engine,
-                Err(e) => {
-                    return (
+    let total_cases = max_cases.max(1);
+
+    for case_index in 1..=total_cases {
+        let path = path.to_path_buf();
+        let (outcome, message) =
+            crate::test_runner::executor::run_operation_with_timeout(timeout, move || {
+                let engine = match ash_engine::Engine::new().with_stdio_capabilities().build() {
+                    Ok(engine) => engine,
+                    Err(e) => {
+                        return (
+                            Outcome::Error,
+                            Some(format!("failed to build test engine: {e}")),
+                        );
+                    }
+                };
+
+                let workflow = match engine.parse_file(&path) {
+                    Ok(w) => w,
+                    Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
+                };
+
+                if let Err(e) = engine.check(&workflow) {
+                    return (Outcome::Error, Some(format!("type error: {e}")));
+                }
+
+                let rt = match tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                {
+                    Ok(rt) => rt,
+                    Err(e) => return (Outcome::Error, Some(format!("runtime error: {e}"))),
+                };
+
+                let result = rt.block_on(async move {
+                    tokio::time::timeout(timeout, engine.execute(&workflow)).await
+                });
+                match result {
+                    Err(_) => (
                         Outcome::Error,
-                        Some(format!("failed to build test engine: {e}")),
-                    );
-                }
-            };
-
-            let workflow = match engine.parse_file(&path) {
-                Ok(w) => w,
-                Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
-            };
-
-            if let Err(e) = engine.check(&workflow) {
-                return (Outcome::Error, Some(format!("type error: {e}")));
-            }
-
-            let rt = match tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-            {
-                Ok(rt) => rt,
-                Err(e) => return (Outcome::Error, Some(format!("runtime error: {e}"))),
-            };
-
-            let result = rt.block_on(async move {
-                tokio::time::timeout(timeout, engine.execute(&workflow)).await
-            });
-            match result {
-                Err(_) => (
-                    Outcome::Error,
-                    Some(format!("test timed out after {}ms", timeout.as_millis())),
-                ),
-                Ok(Ok(ash_core::Value::Bool(false))) => {
-                    (Outcome::Fail, Some("test returned false".to_string()))
-                }
-                Ok(Ok(_)) => (Outcome::Pass, None),
-                Ok(Err(e)) => {
-                    let msg = format!("{e}");
-                    if msg.contains("assert") {
-                        (Outcome::Fail, Some(msg))
-                    } else {
-                        (Outcome::Error, Some(msg))
+                        Some(format!("test timed out after {}ms", timeout.as_millis())),
+                    ),
+                    Ok(Ok(ash_core::Value::Bool(false))) => {
+                        (Outcome::Fail, Some("test returned false".to_string()))
+                    }
+                    Ok(Ok(_)) => (Outcome::Pass, None),
+                    Ok(Err(e)) => {
+                        let msg = format!("{e}");
+                        if msg.contains("assert") {
+                            (Outcome::Fail, Some(msg))
+                        } else {
+                            (Outcome::Error, Some(msg))
+                        }
                     }
                 }
-            }
-        });
+            });
 
-    let failing_case = matches!(outcome, Outcome::Fail).then_some(1);
-    (outcome, message, failing_case)
+        if outcome.is_failure() {
+            return (outcome, message, Some(case_index));
+        }
+    }
+
+    (Outcome::Pass, None, None)
 }
 
 /// Execute a small-world test.
@@ -152,63 +159,71 @@ pub fn execute_smallworld_test(
 fn run_smallworld_inner(
     path: &Path,
     _engine: &ash_engine::Engine,
-    _max_worlds: usize,
+    max_worlds: usize,
     timeout: Duration,
 ) -> (Outcome, Option<String>, Option<usize>) {
-    let path = path.to_path_buf();
-    let (outcome, message) =
-        crate::test_runner::executor::run_operation_with_timeout(timeout, move || {
-            let engine = match ash_engine::Engine::new().with_stdio_capabilities().build() {
-                Ok(engine) => engine,
-                Err(e) => {
-                    return (
+    let total_worlds = max_worlds.max(1);
+
+    for world_index in 1..=total_worlds {
+        let path = path.to_path_buf();
+        let (outcome, message) =
+            crate::test_runner::executor::run_operation_with_timeout(timeout, move || {
+                let engine = match ash_engine::Engine::new().with_stdio_capabilities().build() {
+                    Ok(engine) => engine,
+                    Err(e) => {
+                        return (
+                            Outcome::Error,
+                            Some(format!("failed to build test engine: {e}")),
+                        );
+                    }
+                };
+
+                let workflow = match engine.parse_file(&path) {
+                    Ok(w) => w,
+                    Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
+                };
+
+                if let Err(e) = engine.check(&workflow) {
+                    return (Outcome::Error, Some(format!("type error: {e}")));
+                }
+
+                let rt = match tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                {
+                    Ok(rt) => rt,
+                    Err(e) => return (Outcome::Error, Some(format!("runtime error: {e}"))),
+                };
+
+                let result = rt.block_on(async move {
+                    tokio::time::timeout(timeout, engine.execute(&workflow)).await
+                });
+                match result {
+                    Err(_) => (
                         Outcome::Error,
-                        Some(format!("failed to build test engine: {e}")),
-                    );
-                }
-            };
-
-            let workflow = match engine.parse_file(&path) {
-                Ok(w) => w,
-                Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
-            };
-
-            if let Err(e) = engine.check(&workflow) {
-                return (Outcome::Error, Some(format!("type error: {e}")));
-            }
-
-            let rt = match tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-            {
-                Ok(rt) => rt,
-                Err(e) => return (Outcome::Error, Some(format!("runtime error: {e}"))),
-            };
-
-            let result = rt.block_on(async move {
-                tokio::time::timeout(timeout, engine.execute(&workflow)).await
-            });
-            match result {
-                Err(_) => (
-                    Outcome::Error,
-                    Some(format!("test timed out after {}ms", timeout.as_millis())),
-                ),
-                Ok(Ok(ash_core::Value::Bool(false))) => {
-                    (Outcome::Fail, Some("test returned false".to_string()))
-                }
-                Ok(Ok(_)) => (Outcome::Pass, None),
-                Ok(Err(e)) => {
-                    let msg = format!("{e}");
-                    if msg.contains("assert") {
-                        (Outcome::Fail, Some(msg))
-                    } else {
-                        (Outcome::Error, Some(msg))
+                        Some(format!("test timed out after {}ms", timeout.as_millis())),
+                    ),
+                    Ok(Ok(ash_core::Value::Bool(false))) => {
+                        (Outcome::Fail, Some("test returned false".to_string()))
+                    }
+                    Ok(Ok(_)) => (Outcome::Pass, None),
+                    Ok(Err(e)) => {
+                        let msg = format!("{e}");
+                        if msg.contains("assert") {
+                            (Outcome::Fail, Some(msg))
+                        } else {
+                            (Outcome::Error, Some(msg))
+                        }
                     }
                 }
-            }
-        });
+            });
 
-    (outcome, message, Some(1))
+        if outcome.is_failure() {
+            return (outcome, message, Some(world_index));
+        }
+    }
+
+    (Outcome::Pass, None, None)
 }
 
 #[cfg(test)]

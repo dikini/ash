@@ -33,8 +33,8 @@ pub fn execute_test(
     engine: &ash_engine::Engine,
     source: TestSource,
     seed: Option<u64>,
-    max_cases: Option<usize>,
-    max_worlds: Option<usize>,
+    _max_cases: Option<usize>,
+    _max_worlds: Option<usize>,
     timeout_ms: u64,
 ) -> TestResult {
     let kind = meta
@@ -71,12 +71,6 @@ pub fn execute_test(
     }
     if let Some(s) = seed {
         result = result.with_seed(s);
-    }
-    if let Some(mc) = max_cases {
-        result = result.with_failing_case(mc);
-    }
-    if let Some(mw) = max_worlds {
-        result.world_index = Some(mw);
     }
     result.tags = meta.tags.clone();
 

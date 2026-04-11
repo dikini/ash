@@ -1,6 +1,6 @@
 # TASK-515: Ash Test Runner Docs and Phase Verification
 
-## Status: ✅ Complete
+## Status: 🟡 In Progress
 
 ## Description
 
@@ -53,3 +53,4 @@ Finalize planning/bookkeeping/docs for the Ash test runner phase and run the fin
 - [x] authored `ash test` smoke cases run successfully against the current implementation
 - [x] synthesized test smoke cases run successfully against the current implementation
 - [x] residual limitations recorded honestly if any remain
+- [ ] phase-level bookkeeping only marks complete behavior that is truly closed for v1

@@ -1,6 +1,6 @@
 # TASK-514: Property and Small-World Execution
 
-## Status: ✅ Complete
+## Status: 🟡 In Progress
 
 ## Description
 
@@ -41,9 +41,16 @@ Add bounded seeded property-test execution and bounded small-world execution to 
 
 - Implement bounded seeded property and small-world execution with stable reproduction metadata and runner controls.
 
+## Implementation Reality Check
+
+The runner now routes property and small-world kinds through dedicated bounded execution paths, uses
+seed/case/world controls honestly in runner output, and avoids leaking generative metadata onto ordinary
+unit/integration/e2e tests. However, the current v1 implementation still reruns the same authored test
+body in bounded loops rather than exploring true generated inputs or true small-world state spaces.
+
 ## Completion Checklist
 
-- [x] seeded property execution implemented and verified
-- [x] bounded small-world execution implemented and verified
+- [x] seeded property execution implemented and verified at the bounded runner level
+- [x] bounded small-world execution implemented and verified at the bounded runner level
 - [x] `--seed` / `--max-cases` / `--max-worlds` controls implemented
-- [x] reproducible failure output implemented and verified
+- [x] reproducible failure output implemented and verified at the bounded runner level

@@ -226,15 +226,34 @@ fn test_include_synthesized_contracts_only() {
 #[test]
 fn test_include_synthesized_policies_only() {
     let dir = make_test_dir();
-    ash()
+    write_authored_test(
+        &dir,
+        "unit",
+        "policy_target",
+        "policy MyPolicy { allow => true }\n",
+    );
+    let assert = ash()
         .arg("test")
         .arg(dir.path())
-        .arg("--include-synthesized")
+        .arg("--only-synthesized")
         .arg("policies")
         .arg("--format")
         .arg("json")
         .assert()
         .success();
+    let output = parse_json_output(&assert);
+    let tests = output["tests"].as_array().unwrap();
+    assert!(
+        tests
+            .iter()
+            .any(|test| test["source"] == "synthesized:policy")
+    );
+    assert!(
+        tests
+            .iter()
+            .filter(|test| test["source"] == "synthesized:policy")
+            .all(|test| test["outcome"] == "skip")
+    );
 }
 
 #[test]
@@ -398,7 +417,29 @@ fn smallworld_kind_file_executes_successfully() {
         output["tests"][0]["outcome"],
         Value::String("pass".to_string())
     );
-    assert_eq!(output["tests"][0]["world_index"], Value::from(1_u64));
+    assert_eq!(output["tests"][0]["world_index"], Value::Null);
+}
+
+#[test]
+fn unit_tests_do_not_emit_property_or_smallworld_metadata() {
+    let dir = make_test_dir();
+    write_authored_test(&dir, "unit", "unit_pass", "workflow main { ret 0 }\n");
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--max-cases")
+        .arg("50")
+        .arg("--max-worlds")
+        .arg("7")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let test = &output["tests"][0];
+    assert_eq!(test["kind"], Value::String("unit".to_string()));
+    assert_eq!(test["failing_case"], Value::Null);
+    assert_eq!(test["world_index"], Value::Null);
 }
 
 #[test]

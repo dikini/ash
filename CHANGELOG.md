@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Drafted [DESIGN-024: Property Generation Substrate](docs/design/DESIGN-024-PROPERTY-GENERATION-SUBSTRATE.md), defining the canonical generated-case model, bounded value-domain substrate, deterministic seed-driven generation pipeline, and staged implementation order needed to move Ash property testing beyond bounded reruns into true generated-input execution.
+- Drafted [DESIGN-022: Synthesized Contract / Policy / Obligation Cases](docs/design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md), defining the stable introspection, executable case model, oracle model, and staged implementation order needed to turn Phase 76 synthesized test planning into real executable synthesized cases.
+- Drafted [DESIGN-023: Small-World Exploration Substrate](docs/design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md), defining the canonical world model, finite-domain enumeration substrate, oracle model, and staged implementation order needed to move small-world testing beyond bounded reruns into true world exploration.
 - **Phase 76: Ash Test Runner V1 (substantial landing, phase still open)** — Added a CLI-integrated Ash test runner with:
   - `ash test` command surface, human/JSON output, and source-scoped synthesized selection (`contracts`, `policies`, `obligations`)
   - per-test panic capture, isolated execution, and timeout containment without aborting the suite

@@ -48,6 +48,14 @@ results in JSON/human output. However, current contract/policy/obligation synthe
 planning-level labeled records rather than executable end-to-end cases. In particular, policy and
 obligation synthesis should not be treated as passing execution when nothing was actually run.
 
+## Explicit Deferred Follow-Up Items
+
+Deferred until after spec work improvement:
+- stable runner-facing introspection APIs for lowered contracts, policies, and obligations
+- executable synthesized contract cases instead of planning-level scans
+- executable synthesized policy cases instead of labeled allow/deny placeholders
+- executable synthesized obligation lifecycle cases instead of labeled planning records
+
 ## Completion Checklist
 
 - [ ] contract-derived synthesized tests implemented and verified end-to-end

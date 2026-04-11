@@ -1,6 +1,6 @@
 # TASK-513: Synthesized Tests from Contracts, Policies, and Obligations
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -43,8 +43,8 @@ Add explicit, opt-in synthesized test planning and execution for contracts, poli
 
 ## Completion Checklist
 
-- [ ] contract-derived synthesized tests implemented
-- [ ] policy-derived synthesized tests implemented
-- [ ] obligation-derived synthesized tests implemented
-- [ ] explicit CLI opt-in implemented
-- [ ] output preserves authored vs synthesized distinction
+- [x] contract-derived synthesized tests implemented and verified end-to-end
+- [x] policy-derived synthesized tests implemented and verified end-to-end
+- [x] obligation-derived synthesized tests implemented and verified end-to-end
+- [x] explicit CLI opt-in implemented
+- [x] output preserves authored vs synthesized distinction under verified smoke coverage

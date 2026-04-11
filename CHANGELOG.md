@@ -6,8 +6,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Phase 76: Ash Test Runner V1** — Added a CLI-integrated Ash test runner with:
+  - `ash test` command surface, human/JSON output, and source-scoped synthesized selection (`contracts`, `policies`, `obligations`)
+  - per-test panic capture, isolated execution, and timeout containment without aborting the suite
+  - authored test discovery from conventional roots plus direct kind-directory/file execution
+  - `-- @test` file-header metadata parsing for names, tags, timeout, xfail, seed, max_cases, and max_worlds
+  - a minimal exported `std::test` assertion surface usable from authored Ash tests
+  - property and small-world execution routing with seed/case/world reporting
+  - opt-in synthesized tests from contracts, policies, and obligations with explicit authored-vs-synthesized labeling
+
 ### Fixed
 
+- **Phase 76 remediation**: closed the earlier runner gaps by implementing explicit synthesized-source selection, fixing `--only-synthesized` to exclude authored tests, enabling direct kind-directory discovery, aligning authored metadata parsing with documented `-- @test` syntax, making the minimal `std::test` surface usable from authored tests, and wiring property/small-world execution into the suite path.
 - Pure-functions closeout verification gaps: `ash check` now rejects undefined pure-function calls with an unknown-function diagnostic, rejects capability targets used with `module::name(...)` pure-call syntax with a wrong-target capability diagnostic, uses explicit capability-symbol registration instead of the previous name-shape heuristic for qualified pure-call wrong-target detection, and the engine check path consistently runs workflow-definition validation instead of the older shallow workflow-only check for ordinary files.
 - Pure-functions phase bookkeeping is now aligned with the verified repository state: PLAN-023 is marked complete, Phase 75 in PLAN-INDEX is marked complete, and the remaining pure-functions task records no longer show stale planned status.
 

@@ -1,6 +1,6 @@
 # TASK-515: Ash Test Runner Docs and Phase Verification
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -47,9 +47,9 @@ Finalize planning/bookkeeping/docs for the Ash test runner phase and run the fin
 
 ## Completion Checklist
 
-- [ ] PLAN-INDEX updated
-- [ ] CHANGELOG updated
-- [ ] final verification commands run
-- [ ] authored `ash test` smoke cases run
-- [ ] synthesized test smoke cases run
-- [ ] residual limitations recorded honestly if any remain
+- [x] PLAN-INDEX updated
+- [x] CHANGELOG updated
+- [x] final verification commands run successfully against the current implementation
+- [x] authored `ash test` smoke cases run successfully against the current implementation
+- [x] synthesized test smoke cases run successfully against the current implementation
+- [x] residual limitations recorded honestly if any remain

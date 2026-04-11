@@ -1,6 +1,6 @@
 # TASK-510: Test Execution Isolation and Panic Capture
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -30,8 +30,8 @@ Add per-test execution isolation, panic capture, timeout handling, and sealed re
 
 ## Completion Checklist
 
-- [ ] per-test isolation implemented
-- [ ] panic capture implemented
-- [ ] timeout classification implemented
-- [ ] result statuses sealed per test
-- [ ] suite continues after panic/failure by default
+- [x] per-test isolation implemented
+- [x] panic capture implemented
+- [x] timeout enforcement implemented at the execution boundary
+- [x] result statuses sealed per test
+- [x] suite continues after panic/failure by default

@@ -145,11 +145,20 @@ fn test_metadata_parsing_via_discovery() {
     let test_file = dir.path().join("tests/ash/unit/meta_test.ash");
     fs::write(
         &test_file,
-        "// @test name: my_special_test\n// @test tags: smoke\nworkflow test { done }",
+        "-- @test name: my_special_test\n-- @test tags: smoke\nworkflow main { done; }",
     )
     .unwrap();
 
-    ash().arg("test").arg(dir.path()).assert().code(1); // Will fail because workflow has no entry point, but runner discovers it
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--format")
+        .arg("json")
+        .assert()
+        .success();
+    let json = parse_json_output(&assert);
+    let tests = json["tests"].as_array().unwrap();
+    assert!(tests.iter().any(|test| test["name"] == "my_special_test"));
 }
 
 // ---------------------------------------------------------------------------
@@ -280,6 +289,56 @@ fn test_max_worlds_flag_is_accepted() {
         .arg("10")
         .assert()
         .success();
+}
+
+#[test]
+fn test_direct_property_directory_runs_tests() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("tests/ash/property")).unwrap();
+    fs::write(
+        dir.path().join("tests/ash/property/prop.ash"),
+        "-- @test name: prop_custom\n-- @test kind: property\nworkflow main() -> Bool { ret false }",
+    )
+    .unwrap();
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path().join("tests/ash/property"))
+        .arg("--seed")
+        .arg("42")
+        .arg("--max-cases")
+        .arg("7")
+        .arg("--format")
+        .arg("json")
+        .assert()
+        .code(1);
+    let json = parse_json_output(&assert);
+    let tests = json["tests"].as_array().unwrap();
+    assert_eq!(tests.len(), 1);
+    assert_eq!(tests[0]["name"], "prop_custom");
+    assert_eq!(tests[0]["kind"], "property");
+    assert_eq!(tests[0]["seed"], 42);
+    assert_eq!(tests[0]["failing_case"], 1);
+}
+
+#[test]
+fn test_authored_test_can_use_minimal_test_library() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("tests/ash/unit")).unwrap();
+    fs::write(
+        dir.path().join("tests/ash/unit/use_test_lib.ash"),
+        "use test::assert_true\nworkflow main() -> Bool { ret assert_true(true) }",
+    )
+    .unwrap();
+
+    ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--format")
+        .arg("json")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("use_test_lib"));
 }
 
 #[test]

@@ -2216,18 +2216,25 @@ metadata/discovery, and opt-in synthesized tests sourced from contracts, policie
 **Plan Reference:** [PLAN-024: Ash Test Runner V1](PLAN-024-ASH-TEST-RUNNER-V1.md)
 **Design Reference:** [DESIGN-021: Ash Test Runner V1](../design/DESIGN-021-ASH-TEST-RUNNER-V1.md)
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** 🟡 In Progress
 
-| Task | Description | Spec | Est. Hours | Status |
-|------|-------------|------|------------|--------|
-| [TASK-509](tasks/TASK-509-ash-test-runner-substrate.md) | Add `ash test` CLI surface, authored discovery roots, canonical suite/result reporting, and the runner substrate entry point | PLAN-024, DESIGN-021 | 6-8 | 📝 Planned |
-| [TASK-510](tasks/TASK-510-test-execution-isolation-and-panic-capture.md) | Add per-test isolation, panic capture, timeout handling, and sealed result classification | PLAN-024, DESIGN-021 | 8-12 | 📝 Planned |
-| [TASK-511](tasks/TASK-511-ash-test-library-surface.md) | Introduce the minimal Ash test library surface for assertions, panic-aware helpers, and runtime-facing test helpers | PLAN-024, DESIGN-021 | 8-12 | 📝 Planned |
-| [TASK-512](tasks/TASK-512-authored-test-metadata-and-execution-model.md) | Freeze authored test metadata/discovery and wire authored unit/integration/e2e execution to the Ash test library surface | PLAN-024, DESIGN-021 | 10-14 | 📝 Planned |
-| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-021 | 10-14 | 📝 Planned |
-| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and bounded small-world execution with reproducible failure reporting and runner controls | PLAN-024, DESIGN-021 | 8-12 | 📝 Planned |
-| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate for the Ash test runner phase | PLAN-024, DESIGN-021 | 4-6 | 📝 Planned |
+|| Task | Description | Spec | Est. Hours | Status ||
+|------|-------------|------|------------|--------||
+| [TASK-509](tasks/TASK-509-ash-test-runner-substrate.md) | Add `ash test` CLI surface, authored discovery roots, canonical suite/result reporting, and the runner substrate entry point | PLAN-024, DESIGN-021 | 6-8 | ✅ Complete ||
+| [TASK-510](tasks/TASK-510-test-execution-isolation-and-panic-capture.md) | Add per-test isolation, panic capture, timeout handling, and sealed result classification | PLAN-024, DESIGN-021 | 8-12 | 🟡 In Progress ||
+| [TASK-511](tasks/TASK-511-ash-test-library-surface.md) | Introduce the minimal Ash test library surface for assertions, panic-aware helpers, and runtime-facing test helpers | PLAN-024, DESIGN-021 | 8-12 | 🟡 In Progress ||
+| [TASK-512](tasks/TASK-512-authored-test-metadata-and-execution-model.md) | Freeze authored test metadata/discovery and wire authored unit/integration/e2e execution to the Ash test library surface | PLAN-024, DESIGN-021 | 10-14 | 🟡 In Progress ||
+| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-021 | 10-14 | 🟡 In Progress ||
+| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and bounded small-world execution with reproducible failure reporting and runner controls | PLAN-024, DESIGN-021 | 8-12 | 🟡 In Progress ||
+| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate for the Ash test runner phase | PLAN-024, DESIGN-021 | 4-6 | 🟡 In Progress |
 
-**Deliverable:** A CLI-integrated Ash test runner v1 with panic-contained suite execution, a dedicated
-Ash test library surface, authored unit/integration/e2e test support, bounded property/small-world
-execution, and explicit opt-in synthesized tests from contracts, policies, and obligations.
+**Current status note:** The repo contains a substantial Phase 76 implementation slice, but the phase
+cannot be truthfully marked complete until the verification gate passes and the remaining closeout gaps
+are resolved. Current review evidence still shows at least: best-effort rather than enforced timeouts
+in the runner, an Ash test-library/authored-test path that is not yet verified as fully usable from
+real Ash test files, and no verified TASK-515 closeout run proving the end-to-end gate.
+
+**Deliverable target:** A CLI-integrated Ash test runner v1 with panic-contained suite execution, a
+dedicated Ash test library surface, authored unit/integration/e2e test support, bounded
+property/small-world execution, and explicit opt-in synthesized tests from contracts, policies, and
+obligations.

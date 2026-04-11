@@ -177,8 +177,9 @@ fn test_stdlib_exposes_minimal_test_surface() {
     let lib = read_stdlib_file("lib.ash");
 
     assert!(
-        test_module.contains("literal panic messages inside function bodies"),
-        "test.ash should document why the v1 surface uses fixed panic strings"
+        test_module.contains("helpers return Bool so authored tests can fail by returning")
+            || test_module.contains("helpers return Bool so authored tests can fail"),
+        "test.ash should document the minimal bool-return v1 contract"
     );
     assert!(
         test_module.contains("pub fn assert_true(value: Bool) -> Bool"),

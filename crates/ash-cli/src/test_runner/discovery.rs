@@ -36,6 +36,7 @@ pub fn infer_kind_from_path(path: &Path) -> crate::test_runner::types::TestKind 
 ///
 /// If `root` points to a single `.ash` file, returns just that file.
 /// If `root` points to a directory, walks the conventional test roots.
+#[allow(clippy::collapsible_if)]
 pub fn discover_tests(root: &Path) -> Vec<PathBuf> {
     if root.is_file() && root.extension().is_some_and(|e| e == "ash") {
         return vec![root.to_path_buf()];
@@ -43,26 +44,34 @@ pub fn discover_tests(root: &Path) -> Vec<PathBuf> {
 
     let mut files = Vec::new();
 
-    // If root is a directory, look for test files
     if root.is_dir() {
-        // First check conventional test roots
-        for test_root in TEST_ROOTS {
-            let test_dir = root.join(test_root);
-            if test_dir.is_dir() {
-                collect_ash_files(&test_dir, &mut files);
-            }
-        }
+        let root_name = root
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
 
-        // Also check for .ash files directly in tests/ash/
-        let tests_ash = root.join("tests/ash");
-        if tests_ash.is_dir() {
-            // Only collect files directly in tests/ash/ (not in subdirs, which are
-            // already covered by the conventional roots above)
-            if let Ok(entries) = std::fs::read_dir(&tests_ash) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.is_file() && path.extension().is_some_and(|e| e == "ash") {
-                        files.push(path);
+        if matches!(
+            root_name,
+            "unit" | "integration" | "e2e" | "property" | "smallworld"
+        ) || root.ends_with("tests/ash")
+        {
+            collect_ash_files(root, &mut files);
+        } else {
+            for test_root in TEST_ROOTS {
+                let test_dir = root.join(test_root);
+                if test_dir.is_dir() {
+                    collect_ash_files(&test_dir, &mut files);
+                }
+            }
+
+            let tests_ash = root.join("tests/ash");
+            if tests_ash.is_dir() {
+                if let Ok(entries) = std::fs::read_dir(&tests_ash) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_file() && path.extension().is_some_and(|e| e == "ash") {
+                            files.push(path);
+                        }
                     }
                 }
             }
@@ -70,10 +79,10 @@ pub fn discover_tests(root: &Path) -> Vec<PathBuf> {
     }
 
     files.sort();
+    files.dedup();
     files
 }
 
-/// Recursively collect `.ash` files from a directory.
 fn collect_ash_files(dir: &Path, files: &mut Vec<PathBuf>) {
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -123,6 +132,18 @@ mod tests {
         assert_eq!(found.len(), 2);
         assert!(found.contains(&f1));
         assert!(found.contains(&f2));
+    }
+
+    #[test]
+    fn discover_from_direct_kind_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let property_dir = dir.path().join("tests/ash/property");
+        fs::create_dir_all(&property_dir).unwrap();
+        let file = property_dir.join("prop.ash");
+        fs::write(&file, "// test").unwrap();
+
+        let found = discover_tests(&property_dir);
+        assert_eq!(found, vec![file]);
     }
 
     #[test]

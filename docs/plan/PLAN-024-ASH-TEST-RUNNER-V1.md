@@ -214,6 +214,11 @@ Before phase closeout:
 - targeted `ash test` smoke runs for authored tests
 - targeted synthesized test smoke runs for contracts/policies/obligations
 
+Current bookkeeping note: the current implementation now supports explicit synthesized-source
+selection, direct kind-directory discovery, real per-test timeout containment via isolated execution,
+`-- @test` metadata parsing, minimal `std::test` authored usage, and targeted verification/smoke
+coverage consistent with the v1 phase contract.
+
 ## Deliverable
 
 A practical Ash test runner v1: CLI-integrated, panic-contained, assertion-backed by a dedicated Ash test library surface, capable of executing authored unit/integration/e2e tests plus bounded property/small-world tests, and able to run synthesized tests from contracts, policies, and obligations only when explicitly requested.

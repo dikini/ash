@@ -100,6 +100,9 @@ fn run_property_inner(
                     Outcome::Error,
                     Some(format!("test timed out after {}ms", timeout.as_millis())),
                 ),
+                Ok(Ok(ash_core::Value::Bool(false))) => {
+                    (Outcome::Fail, Some("test returned false".to_string()))
+                }
                 Ok(Ok(_)) => (Outcome::Pass, None),
                 Ok(Err(e)) => {
                     let msg = format!("{e}");
@@ -190,6 +193,9 @@ fn run_smallworld_inner(
                     Outcome::Error,
                     Some(format!("test timed out after {}ms", timeout.as_millis())),
                 ),
+                Ok(Ok(ash_core::Value::Bool(false))) => {
+                    (Outcome::Fail, Some("test returned false".to_string()))
+                }
                 Ok(Ok(_)) => (Outcome::Pass, None),
                 Ok(Err(e)) => {
                     let msg = format!("{e}");

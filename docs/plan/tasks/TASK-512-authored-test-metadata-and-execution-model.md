@@ -1,6 +1,6 @@
 # TASK-512: Authored Test Metadata and Execution Model
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -32,8 +32,8 @@ Define and implement how authored Ash tests are structured, discovered, and exec
 
 ## Completion Checklist
 
-- [ ] authored test roots frozen
-- [ ] file-level metadata parsed
-- [ ] explicit authored test declaration/discovery path implemented
-- [ ] unit/integration/e2e authored execution supported
-- [ ] authored tests use Ash test library surface
+- [x] authored test roots frozen
+- [x] file-level metadata parsed according to the documented Ash comment syntax
+- [x] explicit authored test declaration/discovery path implemented
+- [x] unit/integration/e2e authored execution supported and verified
+- [x] authored tests use Ash test library surface

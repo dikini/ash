@@ -39,38 +39,35 @@ impl TestMetadata {
         for line in source.lines() {
             let trimmed = line.trim();
 
-            // Detect start of @test block
-            if trimmed.starts_with("//") {
-                if let Some(rest) = trimmed.strip_prefix("//").map(str::trim) {
+            let comment_body = trimmed
+                .strip_prefix("//")
+                .or_else(|| trimmed.strip_prefix("--"))
+                .map(str::trim);
+
+            if let Some(rest) = comment_body {
+                if rest.starts_with("@test") {
+                    in_test_block = true;
+                    let directive = rest.strip_prefix("@test").unwrap().trim();
+                    if !directive.is_empty() {
+                        parse_directive(directive, &mut meta);
+                    }
+                    continue;
+                }
+                if in_test_block {
+                    if rest.starts_with('@') {
+                        in_test_block = false;
+                        continue;
+                    }
                     if rest.starts_with("@test") {
-                        in_test_block = true;
                         let directive = rest.strip_prefix("@test").unwrap().trim();
                         if !directive.is_empty() {
                             parse_directive(directive, &mut meta);
                         }
                         continue;
                     }
-                    if in_test_block {
-                        if rest.starts_with('@') {
-                            // New directive block, end @test block
-                            in_test_block = false;
-                            continue;
-                        }
-                        // Still in @test block - might be continuation lines
-                        // with @test directives
-                        if rest.starts_with("@test") {
-                            let directive = rest.strip_prefix("@test").unwrap().trim();
-                            if !directive.is_empty() {
-                                parse_directive(directive, &mut meta);
-                            }
-                            continue;
-                        }
-                        // Regular comment line within test block - skip
-                        continue;
-                    }
+                    continue;
                 }
             } else if !trimmed.is_empty() {
-                // Non-comment, non-empty line: we've left the header
                 break;
             }
         }
@@ -170,6 +167,13 @@ mod tests {
     #[test]
     fn parse_name_directive() {
         let source = "// @test name: my_test\n// rest\nfn main() {}";
+        let meta = TestMetadata::parse_from_source(source);
+        assert_eq!(meta.name.as_deref(), Some("my_test"));
+    }
+
+    #[test]
+    fn parse_name_directive_from_ash_comments() {
+        let source = "-- @test name: my_test\n-- rest\nfn main() {}";
         let meta = TestMetadata::parse_from_source(source);
         assert_eq!(meta.name.as_deref(), Some("my_test"));
     }

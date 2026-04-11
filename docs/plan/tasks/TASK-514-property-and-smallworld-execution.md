@@ -1,6 +1,6 @@
 # TASK-514: Property and Small-World Execution
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -43,7 +43,7 @@ Add bounded seeded property-test execution and bounded small-world execution to 
 
 ## Completion Checklist
 
-- [ ] seeded property execution implemented
-- [ ] bounded small-world execution implemented
-- [ ] `--seed` / `--max-cases` / `--max-worlds` controls implemented
-- [ ] reproducible failure output implemented
+- [x] seeded property execution implemented and verified
+- [x] bounded small-world execution implemented and verified
+- [x] `--seed` / `--max-cases` / `--max-worlds` controls implemented
+- [x] reproducible failure output implemented and verified

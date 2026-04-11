@@ -199,6 +199,9 @@ fn run_test_inner(path: &Path, timeout: Duration) -> (Outcome, Option<String>) {
             Some(format!("test timed out after {}ms", timeout.as_millis())),
         ),
         Ok(result) => match result {
+            Ok(ash_core::Value::Bool(false)) => {
+                (Outcome::Fail, Some("test returned false".to_string()))
+            }
             Ok(_) => (Outcome::Pass, None),
             Err(e) => {
                 let msg = format!("{e}");

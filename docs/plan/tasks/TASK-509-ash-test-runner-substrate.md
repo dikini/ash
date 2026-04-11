@@ -1,6 +1,6 @@
 # TASK-509: Ash Test Runner Substrate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -36,9 +36,9 @@ Add the first `ash test` runner substrate to the CLI: command surface, authored 
 
 ## Completion Checklist
 
-- [ ] `ash test` command exists
-- [ ] authored test discovery roots implemented
-- [ ] human output implemented
-- [ ] JSON output implemented
-- [ ] canonical suite/result model exists
-- [ ] default run excludes synthesized tests
+- [x] `ash test` command exists
+- [x] authored test discovery roots implemented
+- [x] human output implemented
+- [x] JSON output implemented
+- [x] canonical suite/result model exists
+- [x] default run excludes synthesized tests

@@ -3048,4 +3048,122 @@ mod tests {
             Some(("io".to_string(), "fs_write".to_string()))
         );
     }
+
+    // =========================================================================
+    // TASK-503: Fn export/import tests
+    // =========================================================================
+
+    #[test]
+    fn test_fn_export_via_add_module_exports() {
+        // pub fn definitions are exported via add_module_exports just like other items
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+        let lib = graph.add_node(ModuleNode::new(
+            "lib".to_string(),
+            ash_core::module_graph::ModuleSource::File("lib.ash".to_string()),
+        ));
+        graph.add_edge(root, lib);
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Export a fn from lib module
+        resolver.add_module_exports(lib, vec![("compute".to_string(), Visibility::Public)]);
+
+        // Root imports compute from lib
+        let use_path = UsePath::Simple(simple_path(&["crate", "lib", "compute"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        let root_bindings = bindings.get(&root).unwrap();
+
+        let compute_binding = root_bindings.get("compute").unwrap();
+        assert_eq!(compute_binding.item_name, "compute");
+        assert_eq!(compute_binding.target_module, lib);
+        assert_eq!(compute_binding.kind, BindingKind::Direct);
+        // Fn imports should NOT have capability_target
+        assert!(compute_binding.capability_target.is_none());
+    }
+
+    #[test]
+    fn test_private_fn_not_importable() {
+        // Private fn (Inherited visibility) should not be importable
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+        let lib = graph.add_node(ModuleNode::new(
+            "lib".to_string(),
+            ash_core::module_graph::ModuleSource::File("lib.ash".to_string()),
+        ));
+        graph.add_edge(root, lib);
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Export a private fn from lib module
+        resolver.add_module_exports(
+            lib,
+            vec![("internal_fn".to_string(), Visibility::Inherited)],
+        );
+
+        // Root tries to import internal_fn from lib
+        let use_path = UsePath::Simple(simple_path(&["crate", "lib", "internal_fn"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        let result = resolver.resolve_all();
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ImportError::PrivateItem { item, .. } => {
+                assert_eq!(item, "internal_fn");
+            }
+            other => panic!("Expected PrivateItem error, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_fn_glob_import() {
+        // Glob import should import pub fn definitions
+        let mut graph = ModuleGraph::new();
+        let root = graph.add_node(ModuleNode::new(
+            "crate".to_string(),
+            ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
+        ));
+        graph.set_root(root);
+        let lib = graph.add_node(ModuleNode::new(
+            "lib".to_string(),
+            ash_core::module_graph::ModuleSource::File("lib.ash".to_string()),
+        ));
+        graph.add_edge(root, lib);
+
+        let mut resolver = ImportResolver::new(&graph);
+
+        // Export fns from lib module
+        resolver.add_module_exports(
+            lib,
+            vec![
+                ("helper1".to_string(), Visibility::Public),
+                ("helper2".to_string(), Visibility::Public),
+            ],
+        );
+
+        // Root glob-imports from lib
+        let use_path = UsePath::Glob(simple_path(&["crate", "lib"]));
+        resolver.add_module_uses(root, vec![use_stmt(use_path)]);
+
+        let bindings = resolver.resolve_all().unwrap();
+        let root_bindings = bindings.get(&root).unwrap();
+
+        let h1 = root_bindings.get("helper1").unwrap();
+        assert_eq!(h1.kind, BindingKind::Glob);
+        assert_eq!(h1.target_module, lib);
+        assert!(h1.capability_target.is_none());
+
+        let h2 = root_bindings.get("helper2").unwrap();
+        assert_eq!(h2.kind, BindingKind::Glob);
+    }
 }

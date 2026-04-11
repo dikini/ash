@@ -443,7 +443,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "Debug test for workflow structure"]
     async fn debug_workflow_structure() {
         use crate::Engine;
         let engine = Engine::new().build().unwrap();
@@ -463,6 +462,77 @@ mod tests {
         println!(
             "Test 3 - let x = 10; let y = 20; ret x + y: {:#?}",
             workflow.core
+        );
+    }
+
+    #[tokio::test]
+    async fn pure_function_recursion_executes_without_workflow_effects() {
+        let engine = Engine::new().build().unwrap();
+        let result = engine
+            .run(
+                r"fn factorial(n: Int) -> Int {
+    if n <= 1 then 1 else n * factorial(n - 1)
+}
+workflow main -> Int {
+    ret factorial(5)
+}",
+            )
+            .await
+            .unwrap();
+        assert_eq!(result, Value::Int(120));
+    }
+
+    #[tokio::test]
+    async fn pure_function_panic_propagates_as_runtime_failure() {
+        let engine = Engine::new().build().unwrap();
+        let error = engine
+            .run(
+                r#"fn explode() -> Int {
+    panic "boom"
+}
+workflow main -> Int {
+    ret explode()
+}"#,
+            )
+            .await
+            .expect_err("panic should fail the workflow");
+        assert!(format!("{error}").contains("panic: boom"));
+    }
+
+    #[tokio::test]
+    async fn pure_function_ensures_is_checked_at_runtime() {
+        let engine = Engine::new().build().unwrap();
+        let error = engine
+            .run(
+                r"fn bad(n: Int) -> Int
+    ensures: result == n
+{
+    n + 1
+}
+workflow main -> Int {
+    ret bad(1)
+}",
+            )
+            .await
+            .expect_err("ensures failure should fail the workflow");
+        assert!(format!("{error}").contains("fn ensures failed"));
+    }
+
+    #[tokio::test]
+    async fn pure_function_calls_report_unknown_function_clearly() {
+        let engine = Engine::new().build().unwrap();
+        let error = engine
+            .run(
+                r"workflow main -> Int {
+    ret missing(1)
+}",
+            )
+            .await
+            .expect_err("undefined function should fail clearly");
+        assert!(
+            format!("{error}").contains("unknown function")
+                || format!("{error}").contains("call to unknown function"),
+            "unexpected error: {error}"
         );
     }
 }

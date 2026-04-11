@@ -165,6 +165,53 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            let mut out = String::from("If {\n");
+            push_field(&mut out, 2, "condition", &render_expr(condition));
+            push_field(&mut out, 2, "then_branch", &render_expr(then_branch));
+            if let Some(e) = else_branch {
+                push_field(&mut out, 2, "else_branch", &render_expr(e));
+            }
+            out.push('}');
+            out
+        }
+        Expr::Panic { message, .. } => {
+            let mut out = String::from("Panic {\n");
+            push_field(&mut out, 2, "message", &format!("{message:?}"));
+            out.push('}');
+            out
+        }
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            let mut out = String::from("Block {\n");
+            push_field(
+                &mut out,
+                2,
+                "statements",
+                &render_list(statements.iter().map(|stmt| match stmt {
+                    ash_parser::surface::BlockStmt::Let { pattern, expr, .. } => {
+                        let mut s = String::from("Let {\n");
+                        push_field(&mut s, 2, "pattern", &format!("{pattern:?}"));
+                        push_field(&mut s, 2, "expr", &render_expr(expr));
+                        s.push('}');
+                        s
+                    }
+                })),
+            );
+            if let Some(e) = tail_expr {
+                push_field(&mut out, 2, "tail_expr", &render_expr(e));
+            }
+            out.push('}');
+            out
+        }
     }
 }
 

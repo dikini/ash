@@ -128,6 +128,7 @@ fn test_loop_expression_not_fresh_var() {
     // They should either be unsupported or return a proper type
     let expr = Expr::Call {
         func: "loop".into(),
+        module: None,
         args: vec![Expr::Literal(Literal::Null)],
         span: test_span(),
     };
@@ -276,6 +277,7 @@ fn test_all_expressions_checked_not_silently_accepted() {
             "Call",
             Expr::Call {
                 func: "unknown_func".into(),
+                module: None,
                 args: vec![],
                 span: test_span(),
             },

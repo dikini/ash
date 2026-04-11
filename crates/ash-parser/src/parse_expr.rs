@@ -142,7 +142,7 @@ fn parse_block_or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse logical OR expressions: left || right
-fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+pub(crate) fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let mut left = and_expr(input)?;
 
@@ -267,7 +267,7 @@ fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     Ok(left)
 }
 
-/// Parse multiplicative expressions: *, /
+/// Parse multiplicative expressions: *, /, %
 fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
     let mut left = unary_expr(input)?;
@@ -276,6 +276,7 @@ fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         let op = alt((
             literal_str("*").map(|_| BinaryOp::Mul),
             literal_str("/").map(|_| BinaryOp::Div),
+            literal_str("%").map(|_| BinaryOp::Mod),
         ))
         .parse_next(input);
 
@@ -377,16 +378,36 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let name_str: Name = name.into();
 
     if opt(literal_str("::")).parse_next(input)?.is_some() {
-        let method = identifier(input)?;
-        let _ = literal_str("(").parse_next(input)?;
-        let argument = expr(input)?;
+        let second = identifier(input)?;
+        let second_name: Name = second.into();
         skip_whitespace_and_comments(input);
-        let _ = literal_str(")").parse_next(input)?;
+
+        // Check for `(` to distinguish:
+        //   module::func(args...)  →  qualified fn call (Expr::Call with module)
+        //   no `(` → keep existing InterfaceMethodCall for single-arg form
+        if opt(literal_str("(")).parse_next(input)?.is_some() {
+            let args = if literal_str(")").parse_next(input).is_ok() {
+                vec![]
+            } else {
+                let args = parse_args(input)?;
+                let _ = literal_str(")").parse_next(input)?;
+                args
+            };
+            let span = span_from(&start_pos, &input.state);
+            return Ok(Expr::Call {
+                func: second_name,
+                module: Some(name_str),
+                args,
+                span,
+            });
+        }
+
+        // No `(` after name::name → InterfaceMethodCall (legacy single-arg form)
         let span = span_from(&start_pos, &input.state);
         return Ok(Expr::InterfaceMethodCall {
             interface: name_str,
-            method: method.into(),
-            argument: Box::new(argument),
+            method: second_name,
+            argument: Box::new(Expr::Literal(Literal::Null)),
             span,
         });
     }
@@ -471,6 +492,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                     Expr::Variable(n) => n.clone(),
                     _ => "call".into(),
                 },
+                module: None,
                 args,
                 span,
             };
@@ -759,6 +781,11 @@ fn is_keyword(s: &str) -> bool {
             | "true"
             | "false"
             | "null"
+            | "fn"
+            | "match"
+            | "panic"
+            | "requires"
+            | "ensures"
     )
 }
 
@@ -1344,6 +1371,74 @@ mod tests {
                 }
             }
             other => panic!("Expected Constructor expression, got {other:?}"),
+        }
+    }
+
+    // =========================================================================
+    // Qualified fn call parsing tests (TASK-503)
+    // =========================================================================
+
+    #[test]
+    fn test_qualified_fn_call_no_args() {
+        let mut input = test_input("math::pi()");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "pi");
+                assert_eq!(module.as_ref().map(|s| s.as_ref()), Some("math"));
+                assert!(args.is_empty());
+            }
+            other => panic!("Expected Call with module, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_qualified_fn_call_with_args() {
+        let mut input = test_input("math::add(1, 2)");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "add");
+                assert_eq!(module.as_ref().map(|s| s.as_ref()), Some("math"));
+                assert_eq!(args.len(), 2);
+            }
+            other => panic!("Expected Call with module, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_qualified_fn_call_single_arg() {
+        let mut input = test_input("utils::transform(x)");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "transform");
+                assert_eq!(module.as_ref().map(|s| s.as_ref()), Some("utils"));
+                assert_eq!(args.len(), 1);
+            }
+            other => panic!("Expected Call with module, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_unqualified_fn_call_still_works() {
+        let mut input = test_input("foo(1, 2)");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "foo");
+                assert!(module.is_none());
+                assert_eq!(args.len(), 2);
+            }
+            other => panic!("Expected Call without module, got {other:?}"),
         }
     }
 }

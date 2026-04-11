@@ -745,6 +745,37 @@ impl CapabilityChecker {
                 // Check obligation expressions don't involve capabilities
                 Ok(())
             }
+
+            Expr::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.verify_expr(condition)?;
+                self.verify_expr(then_branch)?;
+                if let Some(e) = else_branch {
+                    self.verify_expr(e)?;
+                }
+                Ok(())
+            }
+
+            Expr::Panic { .. } => Ok(()),
+
+            Expr::Block {
+                statements,
+                tail_expr,
+                ..
+            } => {
+                for stmt in statements {
+                    let ash_parser::surface::BlockStmt::Let { expr, .. } = stmt;
+                    self.verify_expr(expr)?;
+                }
+                if let Some(e) = tail_expr {
+                    self.verify_expr(e)?;
+                }
+                Ok(())
+            }
         }
     }
 

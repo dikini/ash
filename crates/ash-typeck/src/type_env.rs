@@ -10,8 +10,16 @@ use crate::types::{Substitution, Type, TypeVar, unify};
 use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
+use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{ImplDef, InterfaceDef, InterfaceMethodSig, Type as SurfaceType};
 use std::collections::{HashMap, HashSet};
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct StoredFnContract {
+    pub param_names: Vec<String>,
+    pub contract: WorkflowContract,
+    pub runtime_postconditions: RuntimePostconditionContract,
+}
 
 /// Type name (e.g., "Option", "Result")
 pub type TypeName = String;
@@ -189,6 +197,11 @@ fn surface_type_to_type(
                 "Null" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
+                "()" => Ok(Type::Constructor {
+                    name: QualifiedName::root("()"),
+                    args: vec![],
+                    kind: Kind::Type,
+                }),
                 _ => {
                     let (qualified, _) = type_env.resolve_type(name.as_ref())?;
                     Ok(Type::Constructor {
@@ -227,6 +240,14 @@ fn surface_type_to_type(
                 kind: Kind::Type,
             })
         }
+        SurfaceType::Fn(params, ret) => {
+            let params = params
+                .iter()
+                .map(|param| surface_type_to_type(param, param_mapping, type_env))
+                .collect::<Result<Vec<_>, _>>()?;
+            let ret = surface_type_to_type(ret, param_mapping, type_env)?;
+            Ok(Type::Fn(params, Box::new(ret)))
+        }
     }
 }
 
@@ -241,7 +262,11 @@ fn is_closed_world_nominal_impl_target(ty: &Type) -> bool {
         | Type::Instance { .. }
         | Type::InstanceAddr { .. }
         | Type::ControlLink { .. } => true,
-        Type::List(_) | Type::Record(_) | Type::Cap { .. } | Type::Fun(_, _, _) => false,
+        Type::List(_)
+        | Type::Record(_)
+        | Type::Cap { .. }
+        | Type::Fun(_, _, _)
+        | Type::Fn(_, _) => false,
         Type::Var(_) => false,
         Type::Constructor { args, .. } => args.iter().all(is_closed_world_nominal_impl_target),
     }
@@ -386,6 +411,10 @@ pub struct TypeEnv {
     type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
     /// Variable bindings: variable name -> type
     variables: HashMap<String, crate::types::Type>,
+    /// Lowered pure-function contracts kept at the type/runtime boundary.
+    fn_contracts: HashMap<String, StoredFnContract>,
+    /// Capability symbols known to be capability targets, not pure functions.
+    capability_symbols: HashSet<String>,
     /// Parent environment for nested scopes (None for root)
     parent: Option<Box<TypeEnv>>,
     /// Registered capability providers (e.g., "io", "http", "db")
@@ -436,6 +465,8 @@ impl TypeEnv {
             impls: HashMap::with_capacity(4),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
+            fn_contracts: HashMap::with_capacity(10),
+            capability_symbols: HashSet::with_capacity(8),
             parent: None,
             providers: HashSet::new(),
         }
@@ -664,6 +695,13 @@ impl TypeEnv {
     pub fn add_builtin_types(&mut self) {
         self.add_option_type();
         self.add_result_type();
+        self.add_builtin_capability_symbols();
+    }
+
+    fn add_builtin_capability_symbols(&mut self) {
+        for capability in ["Args", "Dir", "Fs", "Meta", "Stdio"] {
+            self.register_capability_symbol(capability);
+        }
     }
 
     /// Add the Option<T> type
@@ -740,6 +778,11 @@ impl TypeEnv {
         self.variables.insert(name.to_string(), ty);
     }
 
+    /// Store the lowered contract boundary for a pure function.
+    pub fn bind_fn_contract(&mut self, name: &str, contract: StoredFnContract) {
+        self.fn_contracts.insert(name.to_string(), contract);
+    }
+
     /// Record that a workflow type variable satisfies an interface bound.
     pub fn bind_type_var_interface_bound(&mut self, var: TypeVar, interface: &str) {
         self.type_var_interface_bounds
@@ -761,6 +804,54 @@ impl TypeEnv {
         None
     }
 
+    /// Look up a lowered pure-function contract boundary.
+    pub fn lookup_fn_contract(&self, name: &str) -> Option<StoredFnContract> {
+        if let Some(contract) = self.fn_contracts.get(name) {
+            return Some(contract.clone());
+        }
+        if let Some(ref parent) = self.parent {
+            return parent.lookup_fn_contract(name);
+        }
+        None
+    }
+
+    /// Snapshot all lowered pure-function contract boundaries in scope.
+    pub fn function_contracts(&self) -> HashMap<String, StoredFnContract> {
+        let mut contracts = self
+            .parent
+            .as_ref()
+            .map_or_else(HashMap::new, |parent| parent.function_contracts());
+        contracts.extend(self.fn_contracts.clone());
+        contracts
+    }
+
+    /// Resolve a function call target.
+    ///
+    /// Qualified calls must resolve to the exact qualified binding; they must not silently
+    /// fall back to an unrelated unqualified function with the same base name.
+    pub fn lookup_call_target(
+        &self,
+        module: Option<&str>,
+        name: &str,
+    ) -> Option<crate::types::Type> {
+        match module {
+            Some(module) => self.lookup_variable(&format!("{module}::{name}")),
+            None => self.lookup_variable(name),
+        }
+    }
+
+    pub fn register_capability_symbol(&mut self, name: impl Into<String>) {
+        self.capability_symbols.insert(name.into());
+    }
+
+    pub fn has_capability_symbol(&self, name: &str) -> bool {
+        self.capability_symbols.contains(name)
+            || self
+                .parent
+                .as_ref()
+                .is_some_and(|parent| parent.has_capability_symbol(name))
+    }
+
     /// Create a new child environment with this as parent
     ///
     /// Used for block scoping - variables bound in the child
@@ -775,6 +866,8 @@ impl TypeEnv {
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
+            fn_contracts: self.fn_contracts.clone(),
+            capability_symbols: self.capability_symbols.clone(),
             parent: Some(Box::new(self.clone())),
             providers: self.providers.clone(),
         }
@@ -819,26 +912,6 @@ impl TypeEnv {
             }
         })?;
 
-        match argument_ty {
-            Type::Var(var) if self.type_var_has_interface_bound(*var, interface) => {}
-            _ => {
-                let impl_info = self
-                    .impls
-                    .get(&(interface.to_string(), argument_ty.clone()))
-                    .ok_or_else(|| TypeEnvError::MissingImpl {
-                        interface: interface.to_string(),
-                        ty: argument_ty.to_string(),
-                    })?;
-
-                if !impl_info.methods.contains(method) {
-                    return Err(TypeEnvError::InvalidDefinition(format!(
-                        "impl for interface '{interface}' and type '{}' does not define method '{method}'",
-                        argument_ty
-                    )));
-                }
-            }
-        }
-
         if interface_info.type_params.len() != 1 || method_info.type_params.len() != 1 {
             return Err(TypeEnvError::InvalidDefinition(format!(
                 "closed-world interface MVP only supports single-parameter canonical methods for interface '{interface}'"
@@ -851,11 +924,29 @@ impl TypeEnv {
             )));
         }
 
-        let mut subst = Substitution::new();
-        subst.insert(method_info.type_params[0], argument_ty.clone());
-        let expected_arg_ty = subst.apply(&method_info.params[0]);
-        unify(&expected_arg_ty, argument_ty)
+        let subst = unify(&method_info.params[0], argument_ty)
             .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+        let impl_head_ty = subst.apply(&Type::Var(method_info.type_params[0]));
+
+        match &impl_head_ty {
+            Type::Var(var) if self.type_var_has_interface_bound(*var, interface) => {}
+            _ => {
+                let impl_info = self
+                    .impls
+                    .get(&(interface.to_string(), impl_head_ty.clone()))
+                    .ok_or_else(|| TypeEnvError::MissingImpl {
+                        interface: interface.to_string(),
+                        ty: impl_head_ty.to_string(),
+                    })?;
+
+                if !impl_info.methods.contains(method) {
+                    return Err(TypeEnvError::InvalidDefinition(format!(
+                        "impl for interface '{interface}' and type '{}' does not define method '{method}'",
+                        impl_head_ty
+                    )));
+                }
+            }
+        }
 
         Ok(subst.apply(&method_info.return_type))
     }
@@ -867,7 +958,7 @@ impl TypeEnv {
     ) -> Result<(QualifiedName, Option<&TypeInfo>), TypeError> {
         // Try as primitive first
         match name {
-            "Int" | "String" | "Bool" | "Null" | "Time" | "Ref" => {
+            "Int" | "String" | "Bool" | "Null" | "Time" | "Ref" | "()" => {
                 return Ok((QualifiedName::root(name), None));
             }
             _ => {}

@@ -24,8 +24,8 @@ pub use option::{
     unwrap as unwrap_opt,
     unwrap_or as unwrap_or_opt,
     map as map_opt,
-    and as and_opt,
-    or as or_opt,
+    and_opt,
+    or_opt,
     ok_or
 };
 

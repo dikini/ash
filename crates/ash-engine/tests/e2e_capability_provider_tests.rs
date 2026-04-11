@@ -866,8 +866,6 @@ async fn test_e2e_io_stdio_println() {
 /// This test verifies that the fs provider can write and read files
 #[tokio::test]
 async fn test_e2e_io_fs_write_and_read() {
-    use std::path::PathBuf;
-
     // Create a temp directory for our test
     let temp_dir = std::env::temp_dir().join("ash_engine_io_test");
     let _ = tokio::fs::create_dir_all(&temp_dir).await;

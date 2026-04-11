@@ -34,6 +34,8 @@ pub enum Type {
     Cap { name: Box<str>, effect: Effect },
     /// Function type: arguments, return type, effect
     Fun(Vec<Type>, Box<Type>, Effect),
+    /// Pure function type: arguments, return type, no effect
+    Fn(Vec<Type>, Box<Type>),
     /// Type variable
     Var(TypeVar),
 
@@ -144,6 +146,10 @@ impl Substitution {
                 Box::new(self.apply(ret)),
                 *effect,
             ),
+            Type::Fn(params, ret) => Type::Fn(
+                params.iter().map(|a| self.apply(a)).collect(),
+                Box::new(self.apply(ret)),
+            ),
             Type::Constructor { name, args, kind } => Type::Constructor {
                 name: name.clone(),
                 args: args.iter().map(|a| self.apply(a)).collect(),
@@ -249,6 +255,16 @@ impl std::fmt::Display for Type {
                 }
                 write!(f, ") -> {} [{:?}]", ret, effect)
             }
+            Type::Fn(params, ret) => {
+                write!(f, "Fn(")?;
+                for (i, arg) in params.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", arg)?;
+                }
+                write!(f, ") -> {}", ret)
+            }
             Type::Var(v) => write!(f, "Var<{}>", v.0),
             Type::Instance { workflow_type } => write!(f, "Instance<{}>", workflow_type),
             Type::InstanceAddr { workflow_type } => write!(f, "InstanceAddr<{}>", workflow_type),
@@ -310,6 +326,58 @@ impl Type {
                 actual: value.to_string(),
             })
         }
+    }
+
+    /// Returns true if this is a function type (either pure `Fn` or effectful `Fun`).
+    pub fn is_function_type(&self) -> bool {
+        matches!(self, Type::Fn(..) | Type::Fun(..))
+    }
+
+    /// If this is a pure function type `Type::Fn(params, ret)`, return `Some(&(params, ret))`.
+    pub fn as_pure_fn(&self) -> Option<(&[Type], &Type)> {
+        match self {
+            Type::Fn(params, ret) => Some((params, ret)),
+            _ => None,
+        }
+    }
+
+    /// If this is an effectful function type `Type::Fun(params, ret, effect)`,
+    /// return `Some(&(params, ret, effect))`.
+    pub fn as_effect_fn(&self) -> Option<(&[Type], &Type, &Effect)> {
+        match self {
+            Type::Fun(params, ret, effect) => Some((params, ret, effect)),
+            _ => None,
+        }
+    }
+
+    /// Instantiate a generic function type by unifying actual argument types with
+    /// the function's parameter types.
+    ///
+    /// Given a function type like `Type::Fn([T, T], T)` and actual args `[Int, Int]`,
+    /// this produces `Some(Int)` (the instantiated return type).
+    ///
+    /// Returns `None` if the function is not callable with the given argument count.
+    /// Returns `Err` if argument types don't unify.
+    pub fn instantiate_fn_call(&self, arg_types: &[Type]) -> Option<Result<Type, UnifyError>> {
+        let (params, ret) = match self {
+            Type::Fn(params, ret) => (params, ret),
+            Type::Fun(params, ret, _effect) => (params, ret),
+            _ => return None,
+        };
+
+        if params.len() != arg_types.len() {
+            return None;
+        }
+
+        let mut acc_sub = Substitution::new();
+        for (param_ty, arg_ty) in params.iter().zip(arg_types.iter()) {
+            match unify(&acc_sub.apply(param_ty), arg_ty) {
+                Ok(sub) => acc_sub = acc_sub.compose(&sub),
+                Err(e) => return Some(Err(e)),
+            }
+        }
+
+        Some(Ok(acc_sub.apply(ret)))
     }
 }
 
@@ -443,6 +511,32 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
             Ok(acc_sub)
         }
 
+        // Pure function unification: args and return must match
+        (Type::Fn(a1, r1), Type::Fn(a2, r2)) => {
+            if a1.len() != a2.len() {
+                return Err(UnifyError::Mismatch(t1.clone(), t2.clone()));
+            }
+
+            let mut acc_sub = Substitution::new();
+
+            // Unify argument types
+            for (arg1, arg2) in a1.iter().zip(a2.iter()) {
+                let sub = unify(&acc_sub.apply(arg1), &acc_sub.apply(arg2))?;
+                acc_sub = acc_sub.compose(&sub);
+            }
+
+            // Unify return type
+            let sub = unify(&acc_sub.apply(r1), &acc_sub.apply(r2))?;
+            acc_sub = acc_sub.compose(&sub);
+
+            Ok(acc_sub)
+        }
+
+        // Type::Fn and Type::Fun are distinct and cannot unify
+        (Type::Fn(..), Type::Fun(..)) | (Type::Fun(..), Type::Fn(..)) => {
+            Err(UnifyError::Mismatch(t1.clone(), t2.clone()))
+        }
+
         // Different constructors cannot unify
         _ => Err(UnifyError::Mismatch(t1.clone(), t2.clone())),
     }
@@ -473,6 +567,7 @@ pub fn occurs_in(var: TypeVar, ty: &Type) -> bool {
         Type::List(elem) => occurs_in(var, elem),
         Type::Record(fields) => fields.iter().any(|(_, ty)| occurs_in(var, ty)),
         Type::Fun(args, ret, _) => args.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),
+        Type::Fn(params, ret) => params.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),
         Type::Cap { .. }
         | Type::Int
         | Type::String

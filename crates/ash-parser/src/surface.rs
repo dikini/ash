@@ -45,6 +45,23 @@ pub struct Program {
     pub workflow: WorkflowDef,
 }
 
+/// The authoritative file-level parse result for a `.ash` source file.
+///
+/// Every `.ash` source file parses as a `ModuleFile` containing a collection
+/// of module items (definitions, module declarations, and an optional workflow).
+/// `Program` is reserved for entry-point loading/validation only.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModuleFile {
+    /// Top-level definitions in this file
+    pub definitions: Vec<Definition>,
+    /// Module declarations (`mod foo;`, `mod foo { ... }`)
+    pub module_decls: Vec<crate::module::ModuleDecl>,
+    /// Optional workflow (entry point)
+    pub workflow: Option<WorkflowDef>,
+    /// Source span covering the entire file
+    pub span: Span,
+}
+
 /// A top-level definition.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Definition {
@@ -60,6 +77,31 @@ pub enum Definition {
     Interface(InterfaceDef),
     /// Interface impl definition
     Impl(ImplDef),
+    /// Pure function definition
+    Function(FnDef),
+}
+
+/// A pure function definition.
+///
+/// Syntax: `[pub] fn <name>[<type_params>](<params>) [-> <return_type>] [contract*] { <body> }`
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnDef {
+    /// Visibility modifier (pub, pub(crate), etc.)
+    pub visibility: Visibility,
+    /// Function name
+    pub name: Name,
+    /// Generic type parameters (e.g., `<T, U>`)
+    pub type_params: Vec<Name>,
+    /// Function parameters with name and type
+    pub params: Vec<Param>,
+    /// Optional return type annotation
+    pub return_type: Option<Type>,
+    /// Optional contract (requires/ensures)
+    pub contract: Option<Contract>,
+    /// Function body (a block expression)
+    pub body: Expr,
+    /// Source span
+    pub span: Span,
 }
 
 /// A capability definition.
@@ -756,6 +798,8 @@ pub enum Expr {
     Call {
         /// Function name
         func: Name,
+        /// Optional module qualifier (e.g., `module` in `module::name(args)`)
+        module: Option<Name>,
         /// Arguments
         args: Vec<Expr>,
         /// Source span
@@ -815,6 +859,33 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
+    /// Value-producing if expression: if expr then { body } else { body }
+    If {
+        /// Condition expression
+        condition: Box<Expr>,
+        /// Then branch expression
+        then_branch: Box<Expr>,
+        /// Optional else branch expression (defaults to null if absent)
+        else_branch: Option<Box<Expr>>,
+        /// Source span
+        span: Span,
+    },
+    /// Panic expression: panic "message"
+    Panic {
+        /// Panic message
+        message: Box<str>,
+        /// Source span
+        span: Span,
+    },
+    /// Block expression: { stmt1; stmt2; tail_expr }
+    Block {
+        /// Statements (let-bindings)
+        statements: Vec<BlockStmt>,
+        /// Tail expression (return value)
+        tail_expr: Option<Box<Expr>>,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Preserved constructor payload shape at the parser surface.
@@ -837,6 +908,20 @@ pub struct MatchArm {
     pub body: Box<Expr>,
     /// Source span
     pub span: Span,
+}
+
+/// A statement inside a block expression.
+#[derive(Debug, Clone, PartialEq)]
+pub enum BlockStmt {
+    /// Let binding: `let pattern = expr;`
+    Let {
+        /// Pattern to bind
+        pattern: Pattern,
+        /// Expression to evaluate
+        expr: Expr,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Policy expression for combinators.
@@ -923,6 +1008,8 @@ pub enum BinaryOp {
     Mul,
     /// Division: /
     Div,
+    /// Modulo: %
+    Mod,
     /// Logical AND: &&
     And,
     /// Logical OR: ||
@@ -1118,6 +1205,8 @@ pub enum Type {
     Capability(Name),
     /// Generic type constructor: `List<Int>`, `Option<String>`
     Constructor { name: Name, args: Vec<Type> },
+    /// Function type: Fn(T, U) -> V
+    Fn(Vec<Type>, Box<Type>),
 }
 
 /// Guard expressions for actions.
@@ -1203,6 +1292,9 @@ impl Spanned for Expr {
             Expr::IfLet { span, .. } => *span,
             Expr::CheckObligation { span, .. } => *span,
             Expr::Constructor { span, .. } => *span,
+            Expr::If { span, .. } => *span,
+            Expr::Panic { span, .. } => *span,
+            Expr::Block { span, .. } => *span,
         }
     }
 }
@@ -2003,6 +2095,7 @@ mod tests {
     fn test_expr_call() {
         let expr = Expr::Call {
             func: "foo".into(),
+            module: None,
             args: vec![
                 Expr::Literal(Literal::Int(1)),
                 Expr::Literal(Literal::Int(2)),
@@ -2206,6 +2299,7 @@ mod tests {
             BinaryOp::Sub,
             BinaryOp::Mul,
             BinaryOp::Div,
+            BinaryOp::Mod,
             BinaryOp::And,
             BinaryOp::Or,
             BinaryOp::Eq,

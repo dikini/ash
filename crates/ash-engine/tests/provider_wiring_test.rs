@@ -207,7 +207,7 @@ fn test_io_fs_capability_registered() {
 }
 
 /// Test that dir capability (directory operations) is registered with fs capabilities
-/// Note: Dir capability is part of the FsProvider which handles all filesystem operations
+/// Note: Dir capability is part of the `FsProvider` which handles all filesystem operations.
 #[test]
 fn test_io_dir_capability_registered() {
     let engine = Engine::new()
@@ -226,7 +226,7 @@ fn test_io_dir_capability_registered() {
 }
 
 /// Test that meta capability (metadata operations) is registered with fs capabilities
-/// Note: Meta capability is part of the FsProvider which handles all filesystem operations
+/// Note: Meta capability is part of the `FsProvider` which handles all filesystem operations.
 #[test]
 fn test_io_meta_capability_registered() {
     let engine = Engine::new()

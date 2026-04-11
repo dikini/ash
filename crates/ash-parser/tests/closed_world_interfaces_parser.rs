@@ -169,28 +169,32 @@ fn parses_explicit_interface_method_calls() {
         .expect("interface method call should parse");
 
     match parsed {
-        Expr::InterfaceMethodCall {
-            interface,
-            method,
-            argument,
-            ..
+        Expr::Call {
+            func, module, args, ..
         } => {
-            assert_eq!(interface.as_ref(), "Explain");
-            assert_eq!(method.as_ref(), "explain");
-            assert!(matches!(&*argument, Expr::Variable(name) if name.as_ref() == "value"));
+            assert_eq!(module.as_ref().map(|s| s.as_ref()), Some("Explain"));
+            assert_eq!(func.as_ref(), "explain");
+            assert_eq!(args.len(), 1);
+            assert!(matches!(&args[0], Expr::Variable(name) if name.as_ref() == "value"));
         }
-        other => panic!("expected interface method call, got {other:?}"),
+        other => panic!("expected qualified call (module::func), got {other:?}"),
     }
 }
 
 #[test]
-fn rejects_interface_method_calls_without_single_value_argument() {
-    for source in ["Explain::explain()", "Explain::explain(a, b)"] {
-        let mut input = new_input(source);
-        assert!(
-            expr.parse_next(&mut input).is_err(),
-            "non-canonical interface method call form must be rejected: {source}"
-        );
+fn parses_interface_method_call_no_args() {
+    // Explain::explain() is now a valid qualified fn call with zero args
+    let mut input = new_input("Explain::explain()");
+    let parsed = expr.parse_next(&mut input).unwrap();
+    match parsed {
+        Expr::Call {
+            func, module, args, ..
+        } => {
+            assert_eq!(module.as_ref().map(|s| s.as_ref()), Some("Explain"));
+            assert_eq!(func.as_ref(), "explain");
+            assert!(args.is_empty());
+        }
+        other => panic!("expected qualified call (module::func), got {other:?}"),
     }
 }
 

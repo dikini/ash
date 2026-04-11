@@ -1,6 +1,6 @@
 # TASK-504: Pure Functions Type System and Purity
 
-## Status: 📝 Planned
+## Status: ✅ Passed
 
 ## Description
 
@@ -33,7 +33,7 @@ purity checking, omitted-else `if` / `Type::Null`, and fn/call typing.
 
 ## Completion Checklist
 
-- [ ] `Type::Fn` introduced and distinguished from `Type::Fun`
-- [ ] generic fn call typing works
-- [ ] one-armed `if` / `Type::Null` checks enforced
-- [ ] purity checking covers ordinary and interface method calls
+- [x] `Type::Fn` introduced and distinguished from `Type::Fun`
+- [x] generic fn call typing works
+- [x] one-armed `if` / `Type::Null` checks enforced
+- [x] purity checking covers ordinary and interface method calls

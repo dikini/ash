@@ -661,6 +661,38 @@ impl NameResolver {
             Expr::CheckObligation { .. } => {
                 // Nothing to resolve for obligation check expressions
             }
+
+            Expr::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.resolve_expr(condition);
+                self.resolve_expr(then_branch);
+                if let Some(e) = else_branch {
+                    self.resolve_expr(e);
+                }
+            }
+
+            Expr::Panic { .. } => {
+                // Nothing to resolve for panic
+            }
+
+            Expr::Block {
+                statements,
+                tail_expr,
+                ..
+            } => {
+                for stmt in statements {
+                    let ash_parser::surface::BlockStmt::Let { pattern, expr, .. } = stmt;
+                    self.resolve_expr(expr);
+                    self.bind_pattern(pattern);
+                }
+                if let Some(e) = tail_expr {
+                    self.resolve_expr(e);
+                }
+            }
         }
     }
 

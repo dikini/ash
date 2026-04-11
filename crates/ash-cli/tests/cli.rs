@@ -1,5 +1,7 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use std::fs;
+use tempfile::NamedTempFile;
 
 #[test]
 fn test_cli_help() {
@@ -67,4 +69,33 @@ fn test_dot_nonexistent_file() {
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("error"));
+}
+
+#[test]
+fn test_check_rejects_undefined_pure_function_calls() {
+    let file = NamedTempFile::new().unwrap();
+    fs::write(file.path(), "workflow main() -> Int { ret missing(1) }\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("ash").unwrap();
+    cmd.args(["check", file.path().to_str().unwrap()]);
+    cmd.assert().failure().stdout(
+        predicate::str::contains("unknown function")
+            .or(predicate::str::contains("call to unknown function")),
+    );
+}
+
+#[test]
+fn test_check_rejects_capability_as_pure_function_syntax() {
+    let file = NamedTempFile::new().unwrap();
+    fs::write(
+        file.path(),
+        "workflow main() -> String { ret Stdio::read_line() }\n",
+    )
+    .unwrap();
+
+    let mut cmd = Command::cargo_bin("ash").unwrap();
+    cmd.args(["check", file.path().to_str().unwrap()]);
+    cmd.assert().failure().stdout(
+        predicate::str::contains("capability").and(predicate::str::contains("not a function")),
+    );
 }

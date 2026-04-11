@@ -14,9 +14,9 @@ use crate::parse_expr::expr;
 use crate::parse_visibility::parse_visibility;
 use crate::parse_workflow::parse_capabilities_clause;
 use crate::surface::{
-    CapabilityDef, CapabilityRef, Constraint, Definition, EffectType, Expr, ImplDef, ImplMethodDef,
-    InterfaceDef, InterfaceMethodSig, Param, Predicate, ProxyDef, RoleDef, Type, Visibility,
-    Workflow, YieldArm,
+    BlockStmt, CapabilityDef, CapabilityRef, Constraint, Contract, Definition, EffectType, Expr,
+    FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Param, Predicate,
+    ProxyDef, RoleDef, Type, Visibility, Workflow, YieldArm,
 };
 
 /// Parse a module declaration.
@@ -130,6 +130,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
 
         if starts_with_visible_keyword(input, "impl") {
             definitions.push(parse_impl_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "fn") {
+            definitions.push(parse_fn_definition(input)?);
             continue;
         }
 
@@ -525,6 +530,30 @@ fn parse_optional_return_type(input: &mut ParseInput) -> ModalResult<Option<Type
 
 fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
+
+    // Parse Fn(T1, T2) -> T3 type syntax
+    if starts_with_keyword(input, "Fn") {
+        let _ = keyword("Fn").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("(").parse_next(input)?;
+        let mut params = Vec::new();
+        skip_whitespace_and_comments(input);
+        if !input.input.starts_with(")") {
+            params.push(parse_surface_type(input)?);
+            loop {
+                if !consume_comma_separator(input) {
+                    break;
+                }
+                params.push(parse_surface_type(input)?);
+            }
+        }
+        let _ = literal_str(")").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("->").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let ret = parse_surface_type(input)?;
+        return Ok(Type::Fn(params, Box::new(ret)));
+    }
 
     if starts_with_keyword(input, "capability") {
         let _ = keyword("capability").parse_next(input)?;
@@ -1037,6 +1066,486 @@ pub fn parse_resume(input: &mut ParseInput) -> ModalResult<Workflow> {
     Ok(Workflow::Resume { expr, ty, span })
 }
 
+// ---------------------------------------------------------------------------
+// Pure function definition parser
+// ---------------------------------------------------------------------------
+
+/// Parse a pure function definition.
+///
+/// Syntax: `[pub] fn <name>[<T, U>](<params>) [-> <return_type>] [requires: ...] [ensures: ...] { <body> }`
+pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state;
+
+    // Parse optional visibility modifier
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse "fn" keyword
+    let _ = keyword("fn").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse function name
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Optionally parse type parameters <T, U>
+    let type_params = parse_optional_type_parameter_names(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse parameter list (name: Type, ...)
+    let _ = literal_str("(").parse_next(input)?;
+    let params = parse_parameter_list(input)?;
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Optionally parse -> return type
+    let return_type = if input.input.starts_with("->") {
+        let _ = literal_str("->").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        Some(parse_surface_type(input)?)
+    } else {
+        None
+    };
+    skip_whitespace_and_comments(input);
+
+    // Optionally parse contract clauses: requires: ..., ensures: ...
+    let contract = parse_fn_contract(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse block body { ... }
+    let body = parse_fn_body(input)?;
+
+    let span = crate::input::span_from(&start_pos, &input.state);
+
+    Ok(Definition::Function(FnDef {
+        visibility,
+        name: name.into(),
+        type_params,
+        params,
+        return_type,
+        contract,
+        body,
+        span,
+    }))
+}
+
+/// Parse optional contract clauses on a function definition.
+fn parse_fn_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
+    let mut requires = Vec::new();
+    let mut ensures = Vec::new();
+
+    while starts_with_keyword(input, "requires") {
+        let _ = keyword("requires").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+
+        let clause_exprs = parse_fn_contract_clause_exprs(input)?;
+        requires.extend(
+            clause_exprs
+                .into_iter()
+                .map(|expr| crate::surface::Requirement::Arithmetic { expr }),
+        );
+        skip_whitespace_and_comments(input);
+    }
+
+    while starts_with_keyword(input, "ensures") {
+        let clause_start = input.state;
+        let _ = keyword("ensures").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+
+        let clause_exprs = parse_fn_contract_clause_exprs(input)?;
+        ensures.extend(
+            clause_exprs
+                .into_iter()
+                .map(|expr| crate::surface::EnsuresClause {
+                    expr,
+                    span: crate::input::span_from(&clause_start, &input.state),
+                }),
+        );
+        skip_whitespace_and_comments(input);
+    }
+
+    if requires.is_empty() && ensures.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(Contract { requires, ensures }))
+    }
+}
+
+fn parse_fn_contract_clause_exprs(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
+    let mut exprs = vec![parse_fn_expr(input)?];
+    skip_whitespace_and_comments(input);
+
+    while input.input.starts_with(",") {
+        let _ = literal_str(",").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        exprs.push(parse_fn_expr(input)?);
+        skip_whitespace_and_comments(input);
+    }
+
+    Ok(exprs)
+}
+
+/// Parse a fn body (block expression).
+///
+/// Syntax: `{ [let pat = expr;]* [tail_expr] }`
+pub fn parse_fn_body(input: &mut ParseInput) -> ModalResult<Expr> {
+    parse_fn_block_expr(input)
+}
+
+/// Parse a block expression: `{ [let pat = expr;]* [tail_expr] }`
+fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state;
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut statements = Vec::new();
+
+    // Parse let bindings and statements
+    loop {
+        skip_whitespace_and_comments(input);
+
+        // Check for closing brace
+        if input.input.starts_with("}") {
+            let _ = literal_str("}").parse_next(input)?;
+            let span = crate::input::span_from(&start_pos, &input.state);
+            return Ok(Expr::Block {
+                statements,
+                tail_expr: None,
+                span,
+            });
+        }
+
+        // Try to parse `let` binding
+        if starts_with_keyword(input, "let") {
+            let stmt_start = input.state;
+            let _ = keyword("let").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let pat = crate::parse_pattern::pattern(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("=").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let let_expr = parse_fn_expr(input)?;
+            skip_whitespace_and_comments(input);
+            // Optional semicolon
+            if input.input.starts_with(";") {
+                let _ = input.input.next_slice(1);
+                input.state.advance(';');
+            }
+            let stmt_span = crate::input::span_from(&stmt_start, &input.state);
+            statements.push(BlockStmt::Let {
+                pattern: pat,
+                expr: let_expr,
+                span: stmt_span,
+            });
+            continue;
+        }
+
+        // Must be a tail expression
+        break;
+    }
+
+    skip_whitespace_and_comments(input);
+
+    // Parse tail expression
+    if input.input.starts_with("}") {
+        let _ = literal_str("}").parse_next(input)?;
+        let span = crate::input::span_from(&start_pos, &input.state);
+        return Ok(Expr::Block {
+            statements,
+            tail_expr: None,
+            span,
+        });
+    }
+
+    let tail_expr = parse_fn_expr(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("}").parse_next(input)?;
+
+    let span = crate::input::span_from(&start_pos, &input.state);
+    Ok(Expr::Block {
+        statements,
+        tail_expr: Some(Box::new(tail_expr)),
+        span,
+    })
+}
+
+/// Parse an expression inside a fn body.
+///
+/// This is the entry point for fn-body expressions. It dispatches to
+/// if/match/panic/binary/unary/call/literal/variable as appropriate.
+fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    skip_whitespace_and_comments(input);
+
+    // Try if expression
+    if starts_with_keyword(input, "if") {
+        return parse_fn_if_expr(input);
+    }
+
+    // Try match expression
+    if starts_with_keyword(input, "match") {
+        return parse_fn_match_expr(input);
+    }
+
+    // Try panic expression
+    if starts_with_keyword(input, "panic") {
+        return parse_panic_expr(input);
+    }
+
+    // Fall back to the general expression parser
+    expr(input)
+}
+
+/// Parse a value-producing if expression: `if condition then then_branch [else else_branch]`
+fn parse_fn_if_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state;
+    let _ = keyword("if").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let condition = parse_fn_expr(input)?;
+    skip_whitespace_and_comments(input);
+
+    let _ = keyword("then").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let then_branch = parse_fn_block_or_expr(input)?;
+    skip_whitespace_and_comments(input);
+
+    let else_branch = if starts_with_keyword(input, "else") {
+        let _ = keyword("else").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        Some(Box::new(parse_fn_block_or_expr(input)?))
+    } else {
+        None
+    };
+
+    let span = crate::input::span_from(&start_pos, &input.state);
+    Ok(Expr::If {
+        condition: Box::new(condition),
+        then_branch: Box::new(then_branch),
+        else_branch,
+        span,
+    })
+}
+
+/// Parse an expression suitable for a match scrutinee.
+/// This is a restricted expression parser that does NOT try to parse `{`
+/// as a record constructor, which would conflict with the match body delimiter.
+fn parse_fn_scrutinee(input: &mut ParseInput) -> ModalResult<Expr> {
+    skip_whitespace_and_comments(input);
+
+    // Parenthesized expression
+    if input.input.starts_with("(") {
+        let _ = literal_str("(").parse_next(input)?;
+        let inner = parse_fn_scrutinee(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(")").parse_next(input)?;
+        return Ok(inner);
+    }
+
+    // Literal
+    if let Ok(lit) = crate::parse_expr::literal(input) {
+        return Ok(Expr::Literal(lit));
+    }
+
+    // Variable / identifier (may have binary ops after)
+    let name = crate::parse_expr::identifier(input)?;
+    let mut result = Expr::Variable(name.into());
+
+    // Handle binary operators (but NOT { which would be a constructor)
+    skip_whitespace_and_comments(input);
+    while let Some(op) = try_parse_bin_op(input) {
+        skip_whitespace_and_comments(input);
+        let right = parse_fn_scrutinee(input)?;
+        let span = crate::token::Span::default();
+        result = Expr::Binary {
+            op,
+            left: Box::new(result),
+            right: Box::new(right),
+            span,
+        };
+        skip_whitespace_and_comments(input);
+    }
+
+    Ok(result)
+}
+
+/// Try to parse a binary operator, returning None if not found.
+fn try_parse_bin_op(input: &mut ParseInput) -> Option<crate::surface::BinaryOp> {
+    use crate::surface::BinaryOp;
+    skip_whitespace_and_comments(input);
+    // Check two-char ops first
+    if input.input.starts_with("==") {
+        let _ = input.input.next_slice(2);
+        input.state.advance('=');
+        input.state.advance('=');
+        return Some(BinaryOp::Eq);
+    }
+    if input.input.starts_with("!=") {
+        let _ = input.input.next_slice(2);
+        input.state.advance('!');
+        input.state.advance('=');
+        return Some(BinaryOp::Neq);
+    }
+    if input.input.starts_with("<=") {
+        let _ = input.input.next_slice(2);
+        input.state.advance('<');
+        input.state.advance('=');
+        return Some(BinaryOp::Leq);
+    }
+    if input.input.starts_with(">=") {
+        let _ = input.input.next_slice(2);
+        input.state.advance('>');
+        input.state.advance('=');
+        return Some(BinaryOp::Geq);
+    }
+    if input.input.starts_with("&&") {
+        let _ = input.input.next_slice(2);
+        input.state.advance('&');
+        input.state.advance('&');
+        return Some(BinaryOp::And);
+    }
+    if input.input.starts_with("||") {
+        let _ = input.input.next_slice(2);
+        input.state.advance('|');
+        input.state.advance('|');
+        return Some(BinaryOp::Or);
+    }
+    // Single-char ops
+    if input.input.starts_with("+") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('+');
+        return Some(BinaryOp::Add);
+    }
+    if input.input.starts_with("-") && !input.input.starts_with("->") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('-');
+        return Some(BinaryOp::Sub);
+    }
+    if input.input.starts_with("*") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('*');
+        return Some(BinaryOp::Mul);
+    }
+    if input.input.starts_with("/") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('/');
+        return Some(BinaryOp::Div);
+    }
+    if input.input.starts_with("%") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('%');
+        return Some(BinaryOp::Mod);
+    }
+    if input.input.starts_with("<") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('<');
+        return Some(BinaryOp::Lt);
+    }
+    if input.input.starts_with(">") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('>');
+        return Some(BinaryOp::Gt);
+    }
+    None
+}
+
+/// Parse a match expression: `match scrutinee { pattern => expr [, ...] }`
+fn parse_fn_match_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state;
+    let _ = keyword("match").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Use or_expr for scrutinee to avoid consuming { as a record constructor.
+    // parse_fn_expr -> expr -> primary_expr would see "name {" and try to
+    // parse a record constructor, which would eat the match body delimiter.
+    // We use a simple atom parser that only handles variables, literals,
+    // parenthesized expressions, and binary ops — not constructors.
+    let scrutinee = parse_fn_scrutinee(input)?;
+    skip_whitespace_and_comments(input);
+
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut arms = Vec::new();
+    while !input.input.starts_with("}") {
+        let arm_start = input.state;
+        let pat = crate::parse_pattern::pattern(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("=>").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let body = parse_fn_block_or_expr(input)?;
+        let arm_span = crate::input::span_from(&arm_start, &input.state);
+        arms.push(MatchArm {
+            pattern: pat,
+            body: Box::new(body),
+            span: arm_span,
+        });
+        skip_whitespace_and_comments(input);
+        // Optional trailing comma
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+        }
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+    let span = crate::input::span_from(&start_pos, &input.state);
+    Ok(Expr::Match {
+        scrutinee: Box::new(scrutinee),
+        arms,
+        span,
+    })
+}
+
+/// Parse a panic expression: `panic "message"`
+fn parse_panic_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state;
+    let _ = keyword("panic").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse string literal for the message
+    let message = parse_panic_string(input)?;
+
+    let span = crate::input::span_from(&start_pos, &input.state);
+    Ok(Expr::Panic { message, span })
+}
+
+/// Parse a string literal, returning the content as a String.
+fn parse_panic_string(input: &mut ParseInput) -> ModalResult<Box<str>> {
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("\"").parse_next(input)?;
+
+    // Collect characters until closing quote
+    let mut content = String::new();
+    loop {
+        let Some(c) = input.input.next_token() else {
+            break;
+        };
+        input.state.advance(c);
+        if c == '"' {
+            break;
+        }
+        content.push(c);
+    }
+
+    Ok(content.into_boxed_str())
+}
+
+/// Parse either a block `{ ... }` or a single expression for fn body branches.
+fn parse_fn_block_or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with("{") {
+        parse_fn_block_expr(input)
+    } else {
+        parse_fn_expr(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1507,94 +2016,5 @@ mod tests {
 
         assert_eq!(capability.span.line, 3);
         assert_eq!(capability.span.column, 3);
-    }
-
-    // ========================================================================
-    // Error Cases
-    // ========================================================================
-
-    #[test]
-    fn test_parse_mod_missing_semicolon() {
-        // Test: `mod foo` without semicolon should fail
-        let mut input = test_input("mod foo");
-        let result = parse_module_decl(&mut input);
-
-        assert!(result.is_err(), "Expected parse to fail without semicolon");
-    }
-
-    #[test]
-    fn test_parse_mod_missing_name() {
-        // Test: `mod ;` should fail
-        let mut input = test_input("mod ;");
-        let result = parse_module_decl(&mut input);
-
-        assert!(
-            result.is_err(),
-            "Expected parse to fail without module name"
-        );
-    }
-
-    #[test]
-    fn test_parse_mod_unclosed_brace() {
-        // Test: `mod foo {` with unclosed brace should fail
-        let mut input = test_input("mod foo {");
-        let result = parse_module_decl(&mut input);
-
-        assert!(
-            result.is_err(),
-            "Expected parse to fail with unclosed brace"
-        );
-    }
-
-    #[test]
-    fn test_parse_inline_module_role_with_empty_capabilities_succeeds() {
-        // Roles can have empty capabilities - they just have no capabilities granted
-        let mut input =
-            test_input("mod governance { role reviewer { obligations: [check_tests] } }");
-
-        let result = parse_module_decl(&mut input);
-
-        assert!(
-            result.is_ok(),
-            "Expected parse to succeed with empty capabilities"
-        );
-
-        let decl = result.unwrap();
-        let definitions = decl.definitions().unwrap();
-        assert_eq!(definitions.len(), 1);
-
-        let Definition::Role(role) = &definitions[0] else {
-            panic!("expected role definition");
-        };
-        assert!(role.capabilities.is_empty());
-        assert_eq!(role.obligations.len(), 1);
-    }
-
-    #[test]
-    fn test_parse_inline_module_role_with_malformed_obligations_fails() {
-        let mut input = test_input(
-            "mod governance { role reviewer { capabilities: [approve], obligations: [check_tests, } }",
-        );
-
-        let result = parse_module_decl(&mut input);
-
-        assert!(
-            result.is_err(),
-            "Expected parse to fail for malformed role obligations"
-        );
-    }
-
-    #[test]
-    fn test_parse_inline_module_rejects_unsupported_canonical_policy_definition() {
-        let mut input = test_input(
-            "mod governance { policy approval: when true then permit role reviewer { capabilities: [approve] } }",
-        );
-
-        let result = parse_module_decl(&mut input);
-
-        assert!(
-            result.is_err(),
-            "Expected inline modules to reject unsupported canonical policy definitions explicitly"
-        );
     }
 }

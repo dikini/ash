@@ -1,6 +1,6 @@
 # TASK-505: Pure Functions Contract Lowering and Stage 1 Constraints
 
-## Status: 📝 Planned
+## Status: ✅ Passed
 
 ## Description
 
@@ -34,8 +34,8 @@ Implement fn contract validation and lowering for Stage 1 arithmetic constraints
 
 ## Completion Checklist
 
-- [ ] fn `requires` subset enforced
-- [ ] fn `ensures` subset enforced
-- [ ] repeated/comma-separated clause forms normalize consistently
-- [ ] `NotEq` and `Modulo` implemented
-- [ ] lowering/tests cover Stage 1 predicates
+- [x] fn `requires` subset enforced
+- [x] fn `ensures` subset enforced
+- [x] repeated/comma-separated clause forms normalize consistently
+- [x] `NotEq` and `Modulo` implemented
+- [x] lowering/tests cover Stage 1 predicates

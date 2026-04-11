@@ -98,6 +98,14 @@ pub enum TokenKind {
     /// `escalate` - Escalation action
     Escalate,
 
+    // Pure function keywords
+    /// `fn` - Function definition
+    Fn,
+    /// `panic` - Panic expression
+    Panic,
+    /// `match` - Match expression keyword
+    Match,
+
     // Operator keywords
     /// `in` - Membership test
     In,
@@ -167,6 +175,8 @@ pub enum TokenKind {
     Semicolon,
     /// `:` - Colon
     Colon,
+    /// `::` - Double colon (module path separator)
+    ColonColon,
     /// `.` - Dot
     Dot,
     /// `..` - Range
@@ -278,6 +288,9 @@ mod tests {
         let _deny = TokenKind::Deny;
         let _require_approval = TokenKind::RequireApproval;
         let _escalate = TokenKind::Escalate;
+        let _fn = TokenKind::Fn;
+        let _panic = TokenKind::Panic;
+        let _match = TokenKind::Match;
         let _in = TokenKind::In;
         let _not = TokenKind::Not;
         let _and = TokenKind::And;
@@ -418,6 +431,7 @@ mod tests {
             TokenKind::Comma,
             TokenKind::Semicolon,
             TokenKind::Colon,
+            TokenKind::ColonColon,
             TokenKind::Dot,
             TokenKind::DotDot,
         ];

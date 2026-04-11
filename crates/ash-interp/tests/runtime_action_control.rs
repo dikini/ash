@@ -166,7 +166,7 @@ impl CapabilityProvider for CountingActionProvider {
 
 fn blocking_child_action_workflow() -> Workflow {
     Workflow::Act {
-        provider_name: "test".to_string(),
+        provider_name: "block".to_string(),
         action_name: "block".to_string(),
         arguments: vec![],
         guard: Guard::Always,
@@ -180,7 +180,7 @@ fn child_two_step_action_workflow() -> Workflow {
     Workflow::Seq {
         first: Box::new(blocking_child_action_workflow()),
         second: Box::new(Workflow::Act {
-            provider_name: "test".to_string(),
+            provider_name: "mark".to_string(),
             action_name: "mark".to_string(),
             arguments: vec![],
             guard: Guard::Always,

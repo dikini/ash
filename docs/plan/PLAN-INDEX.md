@@ -2191,18 +2191,18 @@ freeze the function/capability/workflow split required by DESIGN-020 and the act
 **Plan Reference:** [PLAN-023: Pure Functions Phase](PLAN-023-PURE-FUNCTIONS-PHASE.md)
 **Design Reference:** [DESIGN-020: Pure Functions and the Three-Vertex Model](../design/DESIGN-020-PURE-FUNCTIONS-THREE-VERTEX-MODEL.md)
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-501](tasks/TASK-501-pure-functions-prerequisites-and-parser-model.md) | Freeze the pure-functions prerequisite spec/docs and reconcile `ModuleFile` vs entry-point `Program` before implementation starts | PLAN-023, SPEC-002/009/027 | 4-6 | 📝 Planned |
-| [TASK-502](tasks/TASK-502-pure-functions-parser-and-ast-foundation.md) | Add fn parser/AST support, function types, panic/match/if/block forms, and entry-point-aware file parsing | PLAN-023, SPEC-002/009/027 | 10-14 | 📝 Planned |
-| [TASK-503](tasks/TASK-503-pure-functions-name-resolution-and-call-forms.md) | Implement fn bindings, imports/exports, module-qualified fn calls, and wrong-target call diagnostics | PLAN-023, SPEC-009/012/027 | 8-12 | 📝 Planned |
-| [TASK-504](tasks/TASK-504-pure-functions-type-system-and-purity.md) | Add `Type::Fn`, fn inference, purity checking, omitted-else `if`/`Type::Null`, and generic fn call typing | PLAN-023, SPEC-003/027 | 10-14 | 📝 Planned |
-| [TASK-505](tasks/TASK-505-pure-functions-contract-lowering-and-stage1-constraints.md) | Implement fn contract validation/lowering, Stage 1 arithmetic constraints (`NotEq`, `Modulo`), and contract normalization/tests | PLAN-023, SPEC-028 | 10-14 | 📝 Planned |
-| [TASK-506](tasks/TASK-506-pure-functions-runtime-and-workflow-integration.md) | Implement fn runtime semantics, panic/ensures handling, and workflow-side precondition propagation | PLAN-023, SPEC-004/022/027/028 | 8-12 | 📝 Planned |
-| [TASK-507](tasks/TASK-507-pure-functions-stdlib-and-conformance-tests.md) | Rewrite pure stdlib modules around `fn` and add conformance/failure-mode coverage for the phase contract | PLAN-023, DESIGN-020, SPEC-027/028 | 6-10 | 📝 Planned |
-| [TASK-508](tasks/TASK-508-pure-functions-docs-and-phase-verification.md) | Finalize active specs/docs, update PLAN-INDEX/CHANGELOG, and run final verification for the pure-functions phase | PLAN-023 | 4-6 | 📝 Planned |
+| [TASK-501](tasks/TASK-501-pure-functions-prerequisites-and-parser-model.md) | Freeze the pure-functions prerequisite spec/docs and reconcile `ModuleFile` vs entry-point `Program` before implementation starts | PLAN-023, SPEC-002/009/027 | 4-6 | ✅ Passed |
+| [TASK-502](tasks/TASK-502-pure-functions-parser-and-ast-foundation.md) | Add fn parser/AST support, function types, panic/match/if/block forms, and entry-point-aware file parsing | PLAN-023, SPEC-002/009/027 | 10-14 | ✅ Passed |
+| [TASK-503](tasks/TASK-503-pure-functions-name-resolution-and-call-forms.md) | Implement fn bindings, imports/exports, module-qualified fn calls, and wrong-target call diagnostics | PLAN-023, SPEC-009/012/027 | 8-12 | ✅ Passed |
+| [TASK-504](tasks/TASK-504-pure-functions-type-system-and-purity.md) | Add `Type::Fn`, fn inference, purity checking, omitted-else `if`/`Type::Null`, and generic fn call typing | PLAN-023, SPEC-003/027 | 10-14 | ✅ Passed |
+| [TASK-505](tasks/TASK-505-pure-functions-contract-lowering-and-stage1-constraints.md) | Implement fn contract validation/lowering, Stage 1 arithmetic constraints (`NotEq`, `Modulo`), and contract normalization/tests | PLAN-023, SPEC-028 | 10-14 | ✅ Passed |
+| [TASK-506](tasks/TASK-506-pure-functions-runtime-and-workflow-integration.md) | Implement fn runtime semantics, panic/ensures handling, and workflow-side precondition propagation | PLAN-023, SPEC-004/022/027/028 | 8-12 | ✅ Passed |
+| [TASK-507](tasks/TASK-507-pure-functions-stdlib-and-conformance-tests.md) | Rewrite pure stdlib modules around `fn` and add conformance/failure-mode coverage for the phase contract | PLAN-023, DESIGN-020, SPEC-027/028 | 6-10 | ✅ Passed |
+| [TASK-508](tasks/TASK-508-pure-functions-docs-and-phase-verification.md) | Finalize active specs/docs, update PLAN-INDEX/CHANGELOG, and run final verification for the pure-functions phase | PLAN-023 | 4-6 | ✅ Passed |
 
 **Deliverable:** A coherent pure-function subsystem with `fn` syntax, parser/type/runtime support,
 contract-aware workflow integration, updated pure stdlib surfaces, and aligned active specs/docs.

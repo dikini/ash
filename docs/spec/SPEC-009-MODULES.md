@@ -105,7 +105,8 @@ Every Ash program has a root module (the entry point file). All other modules ar
 
 ### 4.1a File-Level Parse Model
 
-PLAN-023 freezes a split between generic file parsing and entry-point loading:
+PLAN-023 freezes a split between generic file parsing and entry-point loading (aligned with
+SPEC-002 §3.1):
 
 - `ModuleFile` is the normative file-level parse result for any `.ash` source file.
 - A `ModuleFile` contains top-level definitions, module declarations, and at most one top-level
@@ -113,9 +114,10 @@ PLAN-023 freezes a split between generic file parsing and entry-point loading:
 - `Program` is not the general file grammar. It is the entry-point view produced only when the
   loader validates a `ModuleFile` as an executable entry point.
 
-Normatively, a source file is parsed once as a `ModuleFile`. Entry-point loading may then promote
-that parsed file to `Program` if it satisfies the required entry-point workflow shape. Non-entry
-modules remain `ModuleFile`s and do not require a workflow.
+Normatively, a source file is parsed once as a `ModuleFile`. A file is not simultaneously both
+roots. Entry-point loading may then promote that parsed file to `Program` if it satisfies the
+required entry-point workflow shape. Non-entry modules remain `ModuleFile`s and do not require
+a workflow.
 
 ### 4.2 Module Paths
 
@@ -351,8 +353,9 @@ visibility      ::= "pub" ( "(" visibility_rest ")" )?
 visibility_rest ::= "crate" | "super" | "self" | "in" module_path
 ```
 
-`module_file` is the authoritative top-level grammar for ordinary files. `program` is a loader-level
-entry-point artifact layered on top of `module_file`, not a second independent parse grammar.
+`module_file` is the authoritative top-level grammar for ordinary files (see SPEC-002 §3.1 for the
+aligned surface grammar). `program` is a loader-level entry-point artifact layered on top of
+`module_file`, not a second independent parse grammar.
 
 ## 11. Implementation Notes
 

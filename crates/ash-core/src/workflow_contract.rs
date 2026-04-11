@@ -72,6 +72,8 @@ pub enum ArithConstraint {
     Gte(i64),
     Lte(i64),
     Eq(i64),
+    NotEq(i64),
+    Modulo { div: i64, rem: i64 },
     Range { min: i64, max: i64 },
 }
 
@@ -84,6 +86,17 @@ pub enum PostPredicate {
     ResultSatisfies(ArithConstraint),
     /// State assertion (for provenance tracking)
     StateAssertion(String),
+}
+
+/// Runtime postconditions produced by fn contract lowering.
+///
+/// This is the explicit lowering/evaluation boundary for fn `ensures`: lowering
+/// must reduce surface postconditions to this runtime-checkable predicate list,
+/// and runtime checking only evaluates these lowered predicates against the
+/// returned value.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct RuntimePostconditionContract {
+    pub predicates: Vec<PostPredicate>,
 }
 
 /// Linear obligation set for type checking
@@ -495,7 +508,9 @@ mod tests {
         let c3 = ArithConstraint::Gte(0);
         let c4 = ArithConstraint::Lte(255);
         let c5 = ArithConstraint::Eq(42);
-        let c6 = ArithConstraint::Range { min: 0, max: 100 };
+        let c6 = ArithConstraint::NotEq(7);
+        let c7 = ArithConstraint::Modulo { div: 2, rem: 1 };
+        let c8 = ArithConstraint::Range { min: 0, max: 100 };
 
         // Just verify they can be constructed
         let _ = c1;
@@ -504,6 +519,20 @@ mod tests {
         let _ = c4;
         let _ = c5;
         let _ = c6;
+        let _ = c7;
+        let _ = c8;
+    }
+
+    #[test]
+    fn runtime_postcondition_contract_accumulates_predicates() {
+        let contract = RuntimePostconditionContract {
+            predicates: vec![
+                PostPredicate::ResultSatisfies(ArithConstraint::NotEq(0)),
+                PostPredicate::ResultSatisfies(ArithConstraint::Modulo { div: 2, rem: 0 }),
+            ],
+        };
+
+        assert_eq!(contract.predicates.len(), 2);
     }
 
     #[test]

@@ -6,7 +6,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Pure-functions closeout verification gaps: `ash check` now rejects undefined pure-function calls with an unknown-function diagnostic, rejects capability targets used with `module::name(...)` pure-call syntax with a wrong-target capability diagnostic, uses explicit capability-symbol registration instead of the previous name-shape heuristic for qualified pure-call wrong-target detection, and the engine check path consistently runs workflow-definition validation instead of the older shallow workflow-only check for ordinary files.
+- Pure-functions phase bookkeeping is now aligned with the verified repository state: PLAN-023 is marked complete, Phase 75 in PLAN-INDEX is marked complete, and the remaining pure-functions task records no longer show stale planned status.
+
 ### Added
+
+- Phase pure-functions closeout progress: TASK-506 and TASK-507 are now marked passed in the plan/task tracker. The stdlib pure-function surface was aligned to `Fn(...) -> ...`, stdlib/parser/module-resolution conformance coverage was expanded for imported and qualified pure function calls, and engine/runtime integration now preserves pure-runtime routing for local fn programs without forcing unsupported lowering of pure-only fn bodies.
 
 - Pure-functions follow-up docs pass: updated [SPEC-002](docs/spec/SPEC-002-SURFACE.md), [SPEC-009](docs/spec/SPEC-009-MODULES.md), and [SPEC-012](docs/spec/SPEC-012-IMPORTS.md) to align on the explicit capability-call baseline (`provider:action(...)` is the capability invocation form; `module::symbol` remains module qualification / symbol resolution metadata and does not become an alternate call surface), updated [SPEC-022](docs/spec/SPEC-022-WORKFLOW-TYPING.md) examples to use that same baseline, updated [DESIGN-020](docs/design/DESIGN-020-PURE-FUNCTIONS-THREE-VERTEX-MODEL.md) to mark `panic` as resolved/frozen for this phase, aligned [SPEC-027](docs/spec/SPEC-027-PURE-FUNCTIONS.md) and [PLAN-023](docs/plan/PLAN-023-PURE-FUNCTIONS-PHASE.md) with the frozen [SPEC-003](docs/spec/SPEC-003-TYPE-SYSTEM.md) `Type::Fn(Vec<Type>, Box<Type>)` shape and effect-neutral fn-call wording, and refreshed this changelog entry to match the actual scope of the follow-up.
 

@@ -70,6 +70,8 @@ pub struct RequirementContext {
     roles: HashSet<String>,
     /// Known facts about variables: var_name -> value
     facts: HashMap<String, i64>,
+    /// Proven arithmetic assumptions about variables at the current call site.
+    assumptions: HashMap<String, Vec<ArithConstraint>>,
 }
 
 use std::collections::HashSet;
@@ -114,6 +116,19 @@ impl RequirementContext {
         self
     }
 
+    /// Add a proven arithmetic assumption about a variable.
+    pub fn with_arithmetic_assumption(
+        mut self,
+        var: impl Into<String>,
+        constraint: ArithConstraint,
+    ) -> Self {
+        self.assumptions
+            .entry(var.into())
+            .or_default()
+            .push(constraint);
+        self
+    }
+
     /// Check if the context has a capability with at least the required effect
     pub fn has_capability(&self, cap: &str, min_effect: Effect) -> bool {
         match self.capabilities.get(cap) {
@@ -150,6 +165,112 @@ impl RequirementContext {
     /// Get all facts
     pub fn facts(&self) -> &HashMap<String, i64> {
         &self.facts
+    }
+
+    /// Get all proven arithmetic assumptions.
+    pub fn arithmetic_assumptions(&self) -> &HashMap<String, Vec<ArithConstraint>> {
+        &self.assumptions
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct ArithmeticSummary {
+    lower: Option<(i64, bool)>,
+    upper: Option<(i64, bool)>,
+    eq: Option<i64>,
+    not_eq: HashSet<i64>,
+    modulo: Vec<(i64, i64)>,
+}
+
+impl ArithmeticSummary {
+    fn with_constraint(mut self, constraint: &ArithConstraint) -> Self {
+        match constraint {
+            ArithConstraint::Gt(value) => Self::tighten_lower(&mut self.lower, *value, false),
+            ArithConstraint::Gte(value) => Self::tighten_lower(&mut self.lower, *value, true),
+            ArithConstraint::Lt(value) => Self::tighten_upper(&mut self.upper, *value, false),
+            ArithConstraint::Lte(value) => Self::tighten_upper(&mut self.upper, *value, true),
+            ArithConstraint::Eq(value) => self.eq = Some(*value),
+            ArithConstraint::NotEq(value) => {
+                self.not_eq.insert(*value);
+            }
+            ArithConstraint::Modulo { div, rem } => self.modulo.push((*div, *rem)),
+            ArithConstraint::Range { min, max } => {
+                Self::tighten_lower(&mut self.lower, *min, true);
+                Self::tighten_upper(&mut self.upper, *max, true);
+            }
+        }
+        self
+    }
+
+    fn tighten_lower(slot: &mut Option<(i64, bool)>, value: i64, inclusive: bool) {
+        match slot {
+            Some((current, current_inclusive)) => {
+                if value > *current || (value == *current && !inclusive && *current_inclusive) {
+                    *slot = Some((value, inclusive));
+                }
+            }
+            None => *slot = Some((value, inclusive)),
+        }
+    }
+
+    fn tighten_upper(slot: &mut Option<(i64, bool)>, value: i64, inclusive: bool) {
+        match slot {
+            Some((current, current_inclusive)) => {
+                if value < *current || (value == *current && !inclusive && *current_inclusive) {
+                    *slot = Some((value, inclusive));
+                }
+            }
+            None => *slot = Some((value, inclusive)),
+        }
+    }
+
+    fn implies(&self, constraint: &ArithConstraint) -> bool {
+        if let Some(value) = self.eq {
+            return matches_constraint(value, constraint);
+        }
+
+        match constraint {
+            ArithConstraint::Gt(min) => self
+                .lower
+                .is_some_and(|(bound, inclusive)| bound > *min || (bound == *min && !inclusive)),
+            ArithConstraint::Gte(min) => self
+                .lower
+                .is_some_and(|(bound, inclusive)| bound > *min || (bound == *min && inclusive)),
+            ArithConstraint::Lt(max) => self
+                .upper
+                .is_some_and(|(bound, inclusive)| bound < *max || (bound == *max && !inclusive)),
+            ArithConstraint::Lte(max) => self
+                .upper
+                .is_some_and(|(bound, inclusive)| bound < *max || (bound == *max && inclusive)),
+            ArithConstraint::Eq(_) => false,
+            ArithConstraint::NotEq(value) => {
+                self.not_eq.contains(value)
+                    || self.lower.is_some_and(|(bound, inclusive)| {
+                        bound > *value || (bound == *value && !inclusive)
+                    })
+                    || self.upper.is_some_and(|(bound, inclusive)| {
+                        bound < *value || (bound == *value && !inclusive)
+                    })
+            }
+            ArithConstraint::Modulo { div, rem } => self.modulo.contains(&(*div, *rem)),
+            ArithConstraint::Range { min, max } => {
+                self.implies(&ArithConstraint::Gte(*min))
+                    && self.implies(&ArithConstraint::Lte(*max))
+            }
+        }
+    }
+}
+
+fn matches_constraint(value: i64, constraint: &ArithConstraint) -> bool {
+    match constraint {
+        ArithConstraint::Gt(min) => value > *min,
+        ArithConstraint::Lt(max) => value < *max,
+        ArithConstraint::Gte(min) => value >= *min,
+        ArithConstraint::Lte(max) => value <= *max,
+        ArithConstraint::Eq(expected) => value == *expected,
+        ArithConstraint::NotEq(expected) => value != *expected,
+        ArithConstraint::Modulo { div, rem } => *div != 0 && value % *div == *rem,
+        ArithConstraint::Range { min, max } => value >= *min && value <= *max,
     }
 }
 
@@ -263,31 +384,32 @@ fn check_arithmetic_constraint(
     constraint: &ArithConstraint,
     ctx: &RequirementContext,
 ) -> CheckResult {
-    let value = match ctx.get_fact(var) {
-        Some(v) => v,
-        None => {
-            return CheckResult::Failed(RequirementError::UnknownVariable { var: var.into() });
-        }
-    };
-
-    let satisfied = match constraint {
-        ArithConstraint::Gt(min) => value > *min,
-        ArithConstraint::Lt(max) => value < *max,
-        ArithConstraint::Gte(min) => value >= *min,
-        ArithConstraint::Lte(max) => value <= *max,
-        ArithConstraint::Eq(expected) => value == *expected,
-        ArithConstraint::Range { min, max } => value >= *min && value <= *max,
-    };
-
-    if satisfied {
-        CheckResult::Satisfied
-    } else {
-        CheckResult::Failed(RequirementError::ArithConstraintViolated {
-            var: var.into(),
-            constraint: constraint.clone(),
-            actual: Some(value),
-        })
+    if let Some(value) = ctx.get_fact(var) {
+        return if matches_constraint(value, constraint) {
+            CheckResult::Satisfied
+        } else {
+            CheckResult::Failed(RequirementError::ArithConstraintViolated {
+                var: var.into(),
+                constraint: constraint.clone(),
+                actual: Some(value),
+            })
+        };
     }
+
+    let summary = ctx
+        .arithmetic_assumptions()
+        .get(var)
+        .into_iter()
+        .flatten()
+        .fold(ArithmeticSummary::default(), |summary, assumption| {
+            summary.with_constraint(assumption)
+        });
+
+    if summary.implies(constraint) {
+        return CheckResult::Satisfied;
+    }
+
+    CheckResult::Failed(RequirementError::UnknownVariable { var: var.into() })
 }
 
 /// Result of checking a contract
@@ -464,6 +586,15 @@ pub mod smt_checker {
                 ArithConstraint::Eq(val) => {
                     let val_ast = Int::from_i64(&self.context, *val);
                     var._eq(&val_ast)
+                }
+                ArithConstraint::NotEq(val) => {
+                    let val_ast = Int::from_i64(&self.context, *val);
+                    var._eq(&val_ast).not()
+                }
+                ArithConstraint::Modulo { div, rem } => {
+                    let div_ast = Int::from_i64(&self.context, *div);
+                    let rem_ast = Int::from_i64(&self.context, *rem);
+                    var.modulo(&div_ast)._eq(&rem_ast)
                 }
                 ArithConstraint::Range { min, max } => {
                     let min_ast = Int::from_i64(&self.context, *min);
@@ -802,6 +933,32 @@ mod tests {
         let req = Requirement::Arithmetic {
             var: "status".into(),
             constraint: ArithConstraint::Eq(42),
+        };
+
+        let result = check_requirement(&req, &ctx);
+        assert!(result.is_satisfied());
+    }
+
+    #[test]
+    fn test_check_requirement_arithmetic_not_eq_satisfied() {
+        let ctx = RequirementContext::new().with_fact("denominator", 7);
+
+        let req = Requirement::Arithmetic {
+            var: "denominator".into(),
+            constraint: ArithConstraint::NotEq(0),
+        };
+
+        let result = check_requirement(&req, &ctx);
+        assert!(result.is_satisfied());
+    }
+
+    #[test]
+    fn test_check_requirement_arithmetic_modulo_satisfied() {
+        let ctx = RequirementContext::new().with_fact("value", 9);
+
+        let req = Requirement::Arithmetic {
+            var: "value".into(),
+            constraint: ArithConstraint::Modulo { div: 2, rem: 1 },
         };
 
         let result = check_requirement(&req, &ctx);

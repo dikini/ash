@@ -275,6 +275,15 @@ fn eval_binary_op(op: BinaryOp, left: Value, right: Value) -> EvalResult<Value> 
                 right: format!("{:?}", right),
             }),
         },
+        BinaryOp::Mod => match (&left, &right) {
+            (Value::Int(_), Value::Int(r)) if *r == 0 => Err(EvalError::DivisionByZero),
+            (Value::Int(l), Value::Int(r)) => Ok(Value::Int(l % r)),
+            _ => Err(EvalError::InvalidBinaryOp {
+                op: "mod".to_string(),
+                left: format!("{:?}", left),
+                right: format!("{:?}", right),
+            }),
+        },
 
         // Logical
         BinaryOp::And => match (&left, &right) {

@@ -154,11 +154,15 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 span: *span,
             })
         }
-        Expr::Call { func, args, span } => {
-            // Function calls are not yet fully implemented
-            // Type check all arguments
+        Expr::Call {
+            func,
+            module,
+            args,
+            span,
+        } => {
             let mut errors: Vec<ConstructorError> = Vec::new();
             let mut substitution = Substitution::new();
+            let mut arg_types: Vec<Type> = Vec::with_capacity(args.len());
 
             for arg in args {
                 let arg_result = check_expr(env, arg);
@@ -166,6 +170,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                     errors.extend(arg_result.errors);
                 }
                 substitution = substitution.compose(&arg_result.substitution);
+                arg_types.push(substitution.apply(&arg_result.ty));
             }
 
             if !errors.is_empty() {
@@ -176,10 +181,73 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 };
             }
 
-            CheckResult::error(ConstructorError::UnsupportedExpression {
-                kind: format!("Call ({func})"),
-                span: *span,
-            })
+            let qualified_name = module
+                .as_ref()
+                .map(|module| format!("{}::{}", module, func))
+                .unwrap_or_else(|| func.to_string());
+
+            match env.lookup_call_target(module.as_deref(), func.as_ref()) {
+                Some(func_ty) => {
+                    let func_ty = substitution.apply(&func_ty);
+                    match &func_ty {
+                        Type::Fn(_, _) | Type::Fun(_, _, _) => {
+                            match func_ty.instantiate_fn_call(&arg_types) {
+                                Some(Ok(ret_ty)) => CheckResult {
+                                    ty: ret_ty,
+                                    substitution,
+                                    errors: Vec::new(),
+                                },
+                                Some(Err(_unify_err)) => {
+                                    CheckResult::error(ConstructorError::UnsupportedExpression {
+                                        kind: format!(
+                                            "Call ({qualified_name}): argument type mismatch"
+                                        ),
+                                        span: *span,
+                                    })
+                                }
+                                None => {
+                                    CheckResult::error(ConstructorError::UnsupportedExpression {
+                                        kind: format!(
+                                            "Call ({qualified_name}): expected {} args, got {}",
+                                            match &func_ty {
+                                                Type::Fn(params, _) => params.len(),
+                                                Type::Fun(params, _, _) => params.len(),
+                                                _ => unreachable!("callable types handled above"),
+                                            },
+                                            args.len()
+                                        ),
+                                        span: *span,
+                                    })
+                                }
+                            }
+                        }
+                        _ => CheckResult::error(ConstructorError::UnsupportedExpression {
+                            kind: format!(
+                                "Call ({qualified_name}): value of type {func_ty} is not callable"
+                            ),
+                            span: *span,
+                        }),
+                    }
+                }
+                None => {
+                    match module.as_deref() {
+                        Some(module_name) if env.has_capability_symbol(module_name) => {
+                            return CheckResult::error(ConstructorError::UnsupportedExpression {
+                                kind: format!(
+                                    "'{qualified_name}' is a capability, not a function; use capability syntax instead of `module::name()`"
+                                ),
+                                span: *span,
+                            });
+                        }
+                        _ => {}
+                    }
+
+                    CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!("call to unknown function '{qualified_name}'"),
+                        span: *span,
+                    })
+                }
+            }
         }
         Expr::InterfaceMethodCall {
             interface,
@@ -220,6 +288,148 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             kind: format!("Policy expression ({policy_expr:?})"),
             span: Span::default(),
         }),
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            span,
+        } => {
+            let cond_result = check_expr(env, condition);
+            let then_result = check_expr(env, then_branch);
+            let mut errors = cond_result.errors.clone();
+            errors.extend(then_result.errors.clone());
+
+            let combined_sub = cond_result.substitution.compose(&then_result.substitution);
+            let cond_ty = combined_sub.apply(&cond_result.ty);
+            if cond_result.is_ok() && cond_ty != Type::Bool {
+                errors.push(ConstructorError::UnsupportedExpression {
+                    kind: format!("If expression: condition must be Bool, found {}", cond_ty),
+                    span: *span,
+                });
+            }
+
+            match else_branch {
+                Some(else_expr) => {
+                    let else_result = check_expr(env, else_expr);
+                    let combined_sub = combined_sub.compose(&else_result.substitution);
+                    errors.extend(else_result.errors.clone());
+
+                    if !errors.is_empty() {
+                        return CheckResult {
+                            ty: Type::Var(TypeVar::fresh()),
+                            substitution: combined_sub,
+                            errors,
+                        };
+                    }
+
+                    let then_ty = combined_sub.apply(&then_result.ty);
+                    let else_ty = combined_sub.apply(&else_result.ty);
+                    match unify(&then_ty, &else_ty) {
+                        Ok(sub) => CheckResult {
+                            ty: sub.apply(&then_ty),
+                            substitution: combined_sub.compose(&sub),
+                            errors: Vec::new(),
+                        },
+                        Err(_) => CheckResult::error(ConstructorError::UnsupportedExpression {
+                            kind: format!(
+                                "If expression: branch types differ ({} vs {})",
+                                then_ty, else_ty
+                            ),
+                            span: *span,
+                        }),
+                    }
+                }
+                None => {
+                    if !errors.is_empty() {
+                        return CheckResult {
+                            ty: Type::Null,
+                            substitution: combined_sub,
+                            errors,
+                        };
+                    }
+
+                    let then_ty = combined_sub.apply(&then_result.ty);
+                    match unify(&then_ty, &Type::Null) {
+                        Ok(sub) => CheckResult {
+                            ty: Type::Null,
+                            substitution: combined_sub.compose(&sub),
+                            errors: Vec::new(),
+                        },
+                        Err(_) => CheckResult::error(ConstructorError::UnsupportedExpression {
+                            kind: format!(
+                                "If expression without else requires then branch to have type Null, found {}",
+                                then_ty
+                            ),
+                            span: *span,
+                        }),
+                    }
+                }
+            }
+        }
+        Expr::Panic { .. } => {
+            // Panic diverges and therefore can type-check at any expected type.
+            // Represent it as a fresh type variable rather than forcing Null.
+            CheckResult::success(Type::Var(TypeVar::fresh()))
+        }
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            let mut block_env = env.clone();
+            let mut errors: Vec<ConstructorError> = Vec::new();
+            let mut substitution = Substitution::new();
+
+            // Process statements (let-bindings)
+            for stmt in statements {
+                match stmt {
+                    ash_parser::surface::BlockStmt::Let { pattern, expr, .. } => {
+                        let expr_result = check_expr(&block_env, expr);
+                        substitution = substitution.compose(&expr_result.substitution);
+                        if !expr_result.is_ok() {
+                            errors.extend(expr_result.errors);
+                            continue;
+                        }
+                        let expr_ty = substitution.apply(&expr_result.ty);
+                        // Bind pattern variables in the block environment
+                        crate::bind_pattern_variables(&mut block_env, pattern, &expr_ty);
+                    }
+                }
+            }
+
+            if !errors.is_empty() {
+                return CheckResult {
+                    ty: Type::Var(TypeVar::fresh()),
+                    substitution,
+                    errors,
+                };
+            }
+
+            // Evaluate tail expression or Null if absent
+            match tail_expr {
+                Some(tail) => {
+                    let tail_result = check_expr(&block_env, tail);
+                    let combined_sub = substitution.compose(&tail_result.substitution);
+                    if !tail_result.is_ok() {
+                        return CheckResult {
+                            ty: Type::Var(TypeVar::fresh()),
+                            substitution: combined_sub,
+                            errors: tail_result.errors,
+                        };
+                    }
+                    CheckResult {
+                        ty: combined_sub.apply(&tail_result.ty),
+                        substitution: combined_sub,
+                        errors: Vec::new(),
+                    }
+                }
+                None => CheckResult {
+                    ty: Type::Null,
+                    substitution,
+                    errors: Vec::new(),
+                },
+            }
+        }
     }
 }
 
@@ -239,6 +449,9 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::IfLet { span, .. } => *span,
         Expr::CheckObligation { span, .. } => *span,
         Expr::Constructor { span, .. } => *span,
+        Expr::If { span, .. } => *span,
+        Expr::Panic { span, .. } => *span,
+        Expr::Block { span, .. } => *span,
     }
 }
 
@@ -308,7 +521,7 @@ fn check_binary(env: &TypeEnv, op: BinaryOp, left: &Expr, right: &Expr) -> Check
     }
 
     let ty = match op {
-        BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div
+        BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod
             if left_result.ty == Type::Int && right_result.ty == Type::Int =>
         {
             Type::Int
@@ -1138,6 +1351,29 @@ mod tests {
     // ============================================================
     // CheckResult Tests
     // ============================================================
+
+    #[test]
+    fn test_qualified_call_to_registered_capability_reports_wrong_target() {
+        let mut env = TypeEnv::with_builtin_types();
+        env.register_capability_symbol("Sensor");
+
+        let expr = Expr::Call {
+            func: "read".into(),
+            module: Some("Sensor".into()),
+            args: vec![],
+            span: Span::default(),
+        };
+
+        let result = check_expr(&env, &expr);
+        assert!(!result.is_ok());
+        let error = result.errors[0].to_string();
+        assert!(error.contains("Sensor::read"), "unexpected error: {error}");
+        assert!(error.contains("capability"), "unexpected error: {error}");
+        assert!(
+            error.contains("not a function"),
+            "unexpected error: {error}"
+        );
+    }
 
     #[test]
     fn test_check_result_success() {

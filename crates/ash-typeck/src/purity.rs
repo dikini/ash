@@ -1,0 +1,442 @@
+//! Purity checking for Ash `fn` bodies.
+//!
+//! A pure function body may only contain value-level constructs. Policy expressions,
+//! obligation checks, capability-typed calls, and unresolved calls are rejected.
+
+use crate::check_expr::check_expr;
+use crate::type_env::TypeEnv;
+use crate::types::Type;
+use ash_parser::surface::{BlockStmt, Expr};
+use ash_parser::token::Span;
+use std::fmt;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PurityError {
+    pub kind: PurityViolation,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PurityViolation {
+    PolicyExpression,
+    CheckObligation,
+    UnresolvedCall { callee: String },
+    NonPureCall { callee: String, found: String },
+    InvalidInterfaceMethodCall { interface: String, method: String },
+}
+
+impl fmt::Display for PurityViolation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PurityViolation::PolicyExpression => {
+                write!(f, "policy expression not allowed in pure function")
+            }
+            PurityViolation::CheckObligation => {
+                write!(f, "obligation check not allowed in pure function")
+            }
+            PurityViolation::UnresolvedCall { callee } => {
+                write!(
+                    f,
+                    "call to unresolved function '{}' not allowed in pure function",
+                    callee
+                )
+            }
+            PurityViolation::NonPureCall { callee, found } => {
+                write!(f, "call to '{}' is not pure; found {}", callee, found)
+            }
+            PurityViolation::InvalidInterfaceMethodCall { interface, method } => {
+                write!(
+                    f,
+                    "interface method call {}::{} is not valid in a pure function body",
+                    interface, method
+                )
+            }
+        }
+    }
+}
+
+impl fmt::Display for PurityError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
+
+impl std::error::Error for PurityError {}
+
+pub fn check_purity(env: &TypeEnv, expr: &Expr) -> Result<(), Vec<PurityError>> {
+    let mut errors = Vec::new();
+    check_purity_recursive(env, expr, &mut errors);
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
+}
+
+fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityError>) {
+    match expr {
+        Expr::Policy(_) => {
+            errors.push(PurityError {
+                kind: PurityViolation::PolicyExpression,
+                span: Span::default(),
+            });
+        }
+        Expr::CheckObligation { span, .. } => {
+            errors.push(PurityError {
+                kind: PurityViolation::CheckObligation,
+                span: *span,
+            });
+        }
+        Expr::InterfaceMethodCall {
+            interface,
+            method,
+            argument,
+            span,
+        } => {
+            check_purity_recursive(env, argument, errors);
+
+            let argument_result = check_expr(env, argument);
+            if !argument_result.is_ok()
+                || env
+                    .resolve_interface_method_call(
+                        interface.as_ref(),
+                        method.as_ref(),
+                        &argument_result.substitution.apply(&argument_result.ty),
+                    )
+                    .is_err()
+            {
+                errors.push(PurityError {
+                    kind: PurityViolation::InvalidInterfaceMethodCall {
+                        interface: interface.to_string(),
+                        method: method.to_string(),
+                    },
+                    span: *span,
+                });
+            }
+        }
+        Expr::Literal(_) | Expr::Variable(_) | Expr::Panic { .. } => {}
+        Expr::FieldAccess { base, .. } => {
+            check_purity_recursive(env, base, errors);
+        }
+        Expr::IndexAccess { base, index, .. } => {
+            check_purity_recursive(env, base, errors);
+            check_purity_recursive(env, index, errors);
+        }
+        Expr::Unary { operand, .. } => {
+            check_purity_recursive(env, operand, errors);
+        }
+        Expr::Binary { left, right, .. } => {
+            check_purity_recursive(env, left, errors);
+            check_purity_recursive(env, right, errors);
+        }
+        Expr::Call {
+            func,
+            module,
+            args,
+            span,
+        } => {
+            for arg in args {
+                check_purity_recursive(env, arg, errors);
+            }
+
+            let callee = qualified_callee_name(module.as_deref(), func.as_ref());
+            let Some(callee_ty) = env.lookup_call_target(module.as_deref(), func.as_ref()) else {
+                errors.push(PurityError {
+                    kind: PurityViolation::UnresolvedCall { callee },
+                    span: *span,
+                });
+                return;
+            };
+
+            if !matches!(callee_ty, Type::Fn(..)) {
+                errors.push(PurityError {
+                    kind: PurityViolation::NonPureCall {
+                        callee,
+                        found: callee_ty.to_string(),
+                    },
+                    span: *span,
+                });
+            }
+        }
+        Expr::Match {
+            scrutinee, arms, ..
+        } => {
+            check_purity_recursive(env, scrutinee, errors);
+            for arm in arms {
+                let mut arm_env = env.clone();
+                let scrutinee_result = check_expr(env, scrutinee);
+                if scrutinee_result.is_ok() {
+                    crate::bind_pattern_variables(
+                        &mut arm_env,
+                        &arm.pattern,
+                        &scrutinee_result.substitution.apply(&scrutinee_result.ty),
+                    );
+                }
+                check_purity_recursive(&arm_env, arm.body.as_ref(), errors);
+            }
+        }
+        Expr::IfLet {
+            pattern,
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            check_purity_recursive(env, expr, errors);
+            let mut then_env = env.clone();
+            let matched = check_expr(env, expr);
+            if matched.is_ok() {
+                crate::bind_pattern_variables(
+                    &mut then_env,
+                    pattern,
+                    &matched.substitution.apply(&matched.ty),
+                );
+            }
+            check_purity_recursive(&then_env, then_branch, errors);
+            check_purity_recursive(env, else_branch, errors);
+        }
+        Expr::Constructor {
+            fields, payload, ..
+        } => {
+            for (_, field_expr) in fields {
+                check_purity_recursive(env, field_expr, errors);
+            }
+            match payload {
+                ash_parser::surface::ConstructorPayload::Unit => {}
+                ash_parser::surface::ConstructorPayload::Record(rec_fields) => {
+                    for (_, field_expr) in rec_fields {
+                        check_purity_recursive(env, field_expr, errors);
+                    }
+                }
+                ash_parser::surface::ConstructorPayload::Tuple(elems) => {
+                    for elem in elems {
+                        check_purity_recursive(env, elem, errors);
+                    }
+                }
+            }
+        }
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            check_purity_recursive(env, condition, errors);
+            check_purity_recursive(env, then_branch, errors);
+            if let Some(else_expr) = else_branch {
+                check_purity_recursive(env, else_expr, errors);
+            }
+        }
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            let mut block_env = env.extend();
+            for stmt in statements {
+                let BlockStmt::Let { pattern, expr, .. } = stmt;
+                check_purity_recursive(&block_env, expr, errors);
+                let expr_result = check_expr(&block_env, expr);
+                if expr_result.is_ok() {
+                    crate::bind_pattern_variables(
+                        &mut block_env,
+                        pattern,
+                        &expr_result.substitution.apply(&expr_result.ty),
+                    );
+                }
+            }
+            if let Some(tail) = tail_expr {
+                check_purity_recursive(&block_env, tail, errors);
+            }
+        }
+    }
+}
+
+fn qualified_callee_name(module: Option<&str>, func: &str) -> String {
+    match module {
+        Some(module) => format!("{module}::{func}"),
+        None => func.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ash_parser::surface::{BinaryOp, Literal, Name, Pattern};
+
+    fn box_name(s: &str) -> Name {
+        s.into()
+    }
+
+    fn var(name: &str) -> Box<Expr> {
+        Box::new(Expr::Variable(box_name(name)))
+    }
+
+    fn int_lit(n: i64) -> Box<Expr> {
+        Box::new(Expr::Literal(Literal::Int(n)))
+    }
+
+    #[test]
+    fn pure_literal_is_ok() {
+        let env = TypeEnv::new();
+        let expr = Expr::Literal(Literal::Int(42));
+        assert!(check_purity(&env, &expr).is_ok());
+    }
+
+    #[test]
+    fn pure_binary_expr_is_ok() {
+        let env = TypeEnv::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::Add,
+            left: int_lit(1),
+            right: int_lit(2),
+            span: Span::default(),
+        };
+        assert!(check_purity(&env, &expr).is_ok());
+    }
+
+    #[test]
+    fn pure_variable_is_ok() {
+        let env = TypeEnv::new();
+        let expr = Expr::Variable(box_name("x"));
+        assert!(check_purity(&env, &expr).is_ok());
+    }
+
+    #[test]
+    fn pure_call_is_ok() {
+        let mut env = TypeEnv::new();
+        env.bind_variable("f", Type::Fn(vec![Type::Int], Box::new(Type::Int)));
+        let expr = Expr::Call {
+            func: box_name("f"),
+            module: None,
+            args: vec![*int_lit(1)],
+            span: Span::default(),
+        };
+        assert!(check_purity(&env, &expr).is_ok());
+    }
+
+    #[test]
+    fn capability_typed_call_in_fn_body_is_impure() {
+        let mut env = TypeEnv::new();
+        env.bind_variable(
+            "f",
+            Type::Cap {
+                name: "Io".into(),
+                effect: ash_core::Effect::Operational,
+            },
+        );
+        let expr = Expr::Call {
+            func: box_name("f"),
+            module: None,
+            args: vec![*int_lit(1)],
+            span: Span::default(),
+        };
+        let result = check_purity(&env, &expr).unwrap_err();
+        assert!(matches!(
+            &result[0].kind,
+            PurityViolation::NonPureCall { callee, .. } if callee == "f"
+        ));
+    }
+
+    #[test]
+    fn policy_in_fn_body_is_impure() {
+        use ash_parser::surface::PolicyExpr;
+        let env = TypeEnv::new();
+        let expr = Expr::Policy(PolicyExpr::Var(box_name("deny")));
+        let result = check_purity(&env, &expr);
+        assert!(result.is_err());
+        let errors = result.unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].kind, PurityViolation::PolicyExpression);
+    }
+
+    #[test]
+    fn check_obligation_in_fn_body_is_impure() {
+        let env = TypeEnv::new();
+        let expr = Expr::CheckObligation {
+            obligation: box_name("auth"),
+            span: Span::default(),
+        };
+        let result = check_purity(&env, &expr);
+        assert!(result.is_err());
+        let errors = result.unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].kind, PurityViolation::CheckObligation);
+    }
+
+    #[test]
+    fn invalid_interface_method_call_in_fn_body_is_impure() {
+        let env = TypeEnv::new();
+        let expr = Expr::InterfaceMethodCall {
+            interface: box_name("Print"),
+            method: box_name("display"),
+            argument: int_lit(42),
+            span: Span::default(),
+        };
+        let result = check_purity(&env, &expr);
+        assert!(result.is_err());
+        let errors = result.unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert!(matches!(
+            &errors[0].kind,
+            PurityViolation::InvalidInterfaceMethodCall { interface, method }
+            if interface == "Print" && method == "display"
+        ));
+    }
+
+    #[test]
+    fn nested_violations_are_all_reported() {
+        use ash_parser::surface::PolicyExpr;
+        let env = TypeEnv::new();
+        let expr = Expr::If {
+            condition: int_lit(1),
+            then_branch: Box::new(Expr::Policy(PolicyExpr::Var(box_name("deny")))),
+            else_branch: Some(Box::new(Expr::CheckObligation {
+                obligation: box_name("auth"),
+                span: Span::default(),
+            })),
+            span: Span::default(),
+        };
+        let result = check_purity(&env, &expr);
+        assert!(result.is_err());
+        let errors = result.unwrap_err();
+        assert_eq!(errors.len(), 2);
+    }
+
+    #[test]
+    fn block_with_let_bindings_is_pure() {
+        let env = TypeEnv::new();
+        let expr = Expr::Block {
+            statements: vec![BlockStmt::Let {
+                pattern: Pattern::Variable(box_name("x")),
+                expr: *int_lit(1),
+                span: Span::default(),
+            }],
+            tail_expr: Some(var("x")),
+            span: Span::default(),
+        };
+        assert!(check_purity(&env, &expr).is_ok());
+    }
+
+    #[test]
+    fn panic_in_pure_fn_is_ok() {
+        let env = TypeEnv::new();
+        let expr = Expr::Panic {
+            message: box_name("oops"),
+            span: Span::default(),
+        };
+        assert!(check_purity(&env, &expr).is_ok());
+    }
+
+    #[test]
+    fn one_armed_if_in_pure_fn_is_ok() {
+        let env = TypeEnv::new();
+        let expr = Expr::If {
+            condition: Box::new(Expr::Literal(Literal::Bool(true))),
+            then_branch: int_lit(1),
+            else_branch: None,
+            span: Span::default(),
+        };
+        assert!(check_purity(&env, &expr).is_ok());
+    }
+}

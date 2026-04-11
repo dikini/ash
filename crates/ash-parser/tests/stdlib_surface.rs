@@ -38,7 +38,7 @@ fn prelude_exposes_the_canonical_adt_helper_surface() {
 
     assert!(
         content.contains(
-            "pub use option::{is_some, is_none, unwrap, unwrap_or, map, and, or, ok_or};",
+            "pub use option::{is_some, is_none, unwrap, unwrap_or, map, and_opt, or_opt, ok_or};",
         ),
         "prelude should expose the full canonical Option helper surface"
     );

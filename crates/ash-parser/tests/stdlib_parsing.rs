@@ -5,9 +5,11 @@
 use std::fs;
 use std::path::PathBuf;
 
+use ash_parser::surface::{Expr, FnDef, Type as SurfaceType};
 use ash_parser::{
-    Definition, Workflow, input::new_input, parse_module_decl, parse_type_def::parse_type_def,
-    parse_use, workflow, workflow_def,
+    Definition, Workflow, input::new_input, parse_module::parse_fn_definition, parse_module_decl,
+    parse_type_def::parse_type_def, parse_use, parse_utils::skip_whitespace_and_comments, workflow,
+    workflow_def,
 };
 use winnow::prelude::*;
 
@@ -48,6 +50,63 @@ fn parse_capability(source: &str) -> Result<ash_parser::CapabilityDef, String> {
         Definition::Capability(cap) => Ok(cap.clone()),
         _ => Err("first definition is not a capability".into()),
     }
+}
+
+fn extract_public_fn_sources(source: &str) -> Vec<String> {
+    let mut functions = Vec::new();
+    let mut current = Vec::new();
+    let mut capturing = false;
+    let mut brace_depth = 0usize;
+    let mut saw_open_brace = false;
+
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        if !capturing && trimmed.starts_with("pub fn ") {
+            capturing = true;
+            current.clear();
+            brace_depth = 0;
+            saw_open_brace = false;
+        }
+
+        if capturing {
+            current.push(line);
+            for ch in line.chars() {
+                match ch {
+                    '{' => {
+                        brace_depth += 1;
+                        saw_open_brace = true;
+                    }
+                    '}' => {
+                        brace_depth = brace_depth.saturating_sub(1);
+                    }
+                    _ => {}
+                }
+            }
+
+            if saw_open_brace && brace_depth == 0 {
+                functions.push(current.join("\n"));
+                current.clear();
+                capturing = false;
+            }
+        }
+    }
+
+    functions
+}
+
+fn parse_public_functions(filename: &str) -> Vec<FnDef> {
+    extract_public_fn_sources(&read_stdlib_file(filename))
+        .into_iter()
+        .map(|source| {
+            let mut input = new_input(&source);
+            skip_whitespace_and_comments(&mut input);
+            match parse_fn_definition.parse_next(&mut input) {
+                Ok(Definition::Function(function)) => function,
+                Ok(other) => panic!("expected function definition, got {other:?}"),
+                Err(error) => panic!("failed to parse function definition {source:?}: {error}"),
+            }
+        })
+        .collect()
 }
 
 #[test]
@@ -369,84 +428,77 @@ fn test_runtime_import_examples_parse_with_canonical_syntax() {
 }
 
 #[test]
-fn test_option_file_contains_is_some_function() {
-    let content = read_stdlib_file("option.ash");
-    assert!(
-        content.contains("pub fn is_some"),
-        "option.ash should contain is_some function"
+fn test_option_public_functions_parse_as_real_fn_definitions() {
+    let functions = parse_public_functions("option.ash");
+    let names = functions
+        .iter()
+        .map(|function| function.name.as_ref())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        names,
+        vec![
+            "is_some",
+            "is_none",
+            "unwrap",
+            "unwrap_or",
+            "map",
+            "and_opt",
+            "or_opt",
+            "ok_or"
+        ]
     );
+
+    let unwrap = functions
+        .iter()
+        .find(|function| function.name.as_ref() == "unwrap")
+        .expect("unwrap function should parse");
+    assert!(matches!(unwrap.body, Expr::Block { .. }));
+
+    let map = functions
+        .iter()
+        .find(|function| function.name.as_ref() == "map")
+        .expect("map function should parse");
+    assert!(matches!(
+        map.params[1].ty,
+        SurfaceType::Fn(ref params, ref ret)
+            if params.len() == 1
+                && matches!(params[0], SurfaceType::Name(ref name) if name.as_ref() == "T")
+                && matches!(ret.as_ref(), SurfaceType::Name(name) if name.as_ref() == "U")
+    ));
 }
 
 #[test]
-fn test_option_file_contains_is_none_function() {
-    let content = read_stdlib_file("option.ash");
-    assert!(
-        content.contains("pub fn is_none"),
-        "option.ash should contain is_none function"
-    );
-}
+fn test_result_public_functions_parse_as_real_fn_definitions() {
+    let functions = parse_public_functions("result.ash");
+    let names = functions
+        .iter()
+        .map(|function| function.name.as_ref())
+        .collect::<Vec<_>>();
 
-#[test]
-fn test_option_file_contains_unwrap_function() {
-    let content = read_stdlib_file("option.ash");
-    assert!(
-        content.contains("pub fn unwrap"),
-        "option.ash should contain unwrap function"
+    assert_eq!(
+        names,
+        vec![
+            "is_ok",
+            "is_err",
+            "unwrap",
+            "unwrap_err",
+            "unwrap_or",
+            "map",
+            "map_err",
+            "and_then",
+            "ok",
+            "err",
+        ]
     );
-}
 
-#[test]
-fn test_option_file_contains_unwrap_or_function() {
-    let content = read_stdlib_file("option.ash");
-    assert!(
-        content.contains("pub fn unwrap_or"),
-        "option.ash should contain unwrap_or function"
-    );
-}
-
-#[test]
-fn test_option_file_contains_map_function() {
-    let content = read_stdlib_file("option.ash");
-    assert!(
-        content.contains("pub fn map"),
-        "option.ash should contain map function"
-    );
-}
-
-#[test]
-fn test_result_file_contains_is_ok_function() {
-    let content = read_stdlib_file("result.ash");
-    assert!(
-        content.contains("pub fn is_ok"),
-        "result.ash should contain is_ok function"
-    );
-}
-
-#[test]
-fn test_result_file_contains_is_err_function() {
-    let content = read_stdlib_file("result.ash");
-    assert!(
-        content.contains("pub fn is_err"),
-        "result.ash should contain is_err function"
-    );
-}
-
-#[test]
-fn test_result_file_contains_map_err_function() {
-    let content = read_stdlib_file("result.ash");
-    assert!(
-        content.contains("pub fn map_err"),
-        "result.ash should contain map_err function"
-    );
-}
-
-#[test]
-fn test_result_file_contains_and_then_function() {
-    let content = read_stdlib_file("result.ash");
-    assert!(
-        content.contains("pub fn and_then"),
-        "result.ash should contain and_then function"
-    );
+    for function_name in ["map", "map_err", "and_then"] {
+        let function = functions
+            .iter()
+            .find(|function| function.name.as_ref() == function_name)
+            .unwrap_or_else(|| panic!("{function_name} function should parse"));
+        assert!(matches!(function.params[1].ty, SurfaceType::Fn(_, _)));
+    }
 }
 
 #[test]
@@ -530,8 +582,8 @@ fn test_option_has_all_required_functions() {
         "unwrap",
         "unwrap_or",
         "map",
-        "and",
-        "or",
+        "and_opt",
+        "or_opt",
         "ok_or",
     ];
 
@@ -683,64 +735,36 @@ fn test_io_error_type_definition_parses() {
 }
 
 #[test]
-fn test_io_path_from_string_function_parses() {
-    let content = read_stdlib_file("io/path.ash");
+fn test_io_path_public_functions_parse_as_real_fn_definitions() {
+    let functions = parse_public_functions("io/path.ash");
+    let names = functions
+        .iter()
+        .map(|function| function.name.as_ref())
+        .collect::<Vec<_>>();
 
-    // Check that from_string function exists and is public
-    assert!(
-        content.contains("pub fn from_string"),
-        "io/path.ash should contain from_string function"
+    assert_eq!(
+        names,
+        vec![
+            "from_string",
+            "join",
+            "parent",
+            "file_name",
+            "extension",
+            "is_absolute",
+        ]
     );
-}
 
-#[test]
-fn test_io_path_join_function_parses() {
-    let content = read_stdlib_file("io/path.ash");
+    let join = functions
+        .iter()
+        .find(|function| function.name.as_ref() == "join")
+        .expect("join function should parse");
+    assert!(matches!(join.body, Expr::Block { .. }));
 
-    assert!(
-        content.contains("pub fn join"),
-        "io/path.ash should contain join function"
-    );
-}
-
-#[test]
-fn test_io_path_parent_function_parses() {
-    let content = read_stdlib_file("io/path.ash");
-
-    assert!(
-        content.contains("pub fn parent"),
-        "io/path.ash should contain parent function"
-    );
-}
-
-#[test]
-fn test_io_path_file_name_function_parses() {
-    let content = read_stdlib_file("io/path.ash");
-
-    assert!(
-        content.contains("pub fn file_name"),
-        "io/path.ash should contain file_name function"
-    );
-}
-
-#[test]
-fn test_io_path_extension_function_parses() {
-    let content = read_stdlib_file("io/path.ash");
-
-    assert!(
-        content.contains("pub fn extension"),
-        "io/path.ash should contain extension function"
-    );
-}
-
-#[test]
-fn test_io_path_is_absolute_function_parses() {
-    let content = read_stdlib_file("io/path.ash");
-
-    assert!(
-        content.contains("pub fn is_absolute"),
-        "io/path.ash should contain is_absolute function"
-    );
+    let parent = functions
+        .iter()
+        .find(|function| function.name.as_ref() == "parent")
+        .expect("parent function should parse");
+    assert!(matches!(parent.body, Expr::Block { .. }));
 }
 
 #[test]
@@ -787,19 +811,18 @@ fn test_lib_exports_io() {
 
 #[test]
 fn test_io_path_usage_example_parses() {
-    // Verify io::path module can be imported and used
-    // Check that the path module has the expected structure
-    let path_content = read_stdlib_file("io/path.ash");
+    let path_functions = parse_public_functions("io/path.ash");
     let mod_content = read_stdlib_file("io/mod.ash");
 
-    // Verify path module exports the functions needed for typical usage
     assert!(
-        path_content.contains("pub fn from_string"),
-        "path module should export from_string for creating paths"
+        path_functions
+            .iter()
+            .any(|function| function.name.as_ref() == "from_string")
     );
     assert!(
-        path_content.contains("pub fn join"),
-        "path module should export join for combining paths"
+        path_functions
+            .iter()
+            .any(|function| function.name.as_ref() == "join")
     );
     assert!(
         mod_content.contains("pub use path::"),
@@ -809,8 +832,7 @@ fn test_io_path_usage_example_parses() {
 
 #[test]
 fn test_io_path_all_required_functions_exist() {
-    let content = read_stdlib_file("io/path.ash");
-
+    let functions = parse_public_functions("io/path.ash");
     let required_functions = [
         "from_string",
         "join",
@@ -822,9 +844,10 @@ fn test_io_path_all_required_functions_exist() {
 
     for func in &required_functions {
         assert!(
-            content.contains(&format!("pub fn {}", func)),
-            "io/path.ash should contain {} function",
-            func
+            functions
+                .iter()
+                .any(|function| function.name.as_ref() == *func),
+            "io/path.ash should contain {func} function"
         );
     }
 }

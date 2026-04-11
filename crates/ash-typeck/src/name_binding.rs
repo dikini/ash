@@ -12,6 +12,27 @@ use ash_parser::import_resolver::{Binding, BindingKind, BindingTable};
 use std::collections::HashMap;
 use thiserror::Error;
 
+/// Kind of definition that a name resolves to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DefinitionKind {
+    /// Unknown / not yet classified
+    Unknown,
+    /// A pure function definition
+    Function,
+    /// A capability definition
+    Capability,
+    /// A role definition
+    Role,
+    /// A policy definition
+    Policy,
+    /// An interface definition
+    Interface,
+    /// A proxy definition
+    Proxy,
+    /// An impl definition
+    Impl,
+}
+
 /// Type information for a resolved name
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedName {
@@ -23,6 +44,8 @@ pub struct ResolvedName {
     pub kind: ResolutionKind,
     /// The original binding if from an import
     pub binding: Option<Binding>,
+    /// What kind of definition this name refers to (if known)
+    pub definition_kind: Option<DefinitionKind>,
 }
 
 /// Kind of name resolution
@@ -49,6 +72,16 @@ pub enum NameError {
     /// Name is private and not accessible
     #[error("name '{name}' is private")]
     Private { name: String },
+    /// Used `::` (fn-call syntax) to call a capability — use `:` instead
+    #[error(
+        "'{name}' is a capability, not a function; use `provider:action()` syntax instead of `::`"
+    )]
+    WrongTargetCapabilityAsFn { name: String },
+    /// Used `:` (capability-call syntax) to call a function — use `::` instead
+    #[error(
+        "'{name}' is a function, not a capability; use `module::name()` syntax instead of `provider:action()`"
+    )]
+    WrongTargetFnAsCapability { name: String },
 }
 
 /// Local binding information
@@ -80,6 +113,10 @@ pub struct NameBinder<'a> {
     import_bindings: &'a HashMap<ModuleId, BindingTable>,
     /// Module definitions (name -> module that defines it)
     module_definitions: HashMap<ModuleId, HashMap<String, ModuleId>>,
+    /// Definition kind metadata per module (name -> what kind of definition)
+    definition_kinds: HashMap<ModuleId, HashMap<String, DefinitionKind>>,
+    /// Definition kind metadata for imported bindings
+    import_definition_kinds: HashMap<ModuleId, HashMap<String, DefinitionKind>>,
     /// Local scope stack (innermost last)
     local_scopes: Vec<LocalScope>,
 }
@@ -94,6 +131,8 @@ impl<'a> NameBinder<'a> {
             module_graph,
             import_bindings,
             module_definitions: HashMap::new(),
+            definition_kinds: HashMap::new(),
+            import_definition_kinds: HashMap::new(),
             local_scopes: vec![LocalScope::default()],
         }
     }
@@ -127,6 +166,35 @@ impl<'a> NameBinder<'a> {
         definitions.insert(name, module_id);
     }
 
+    /// Add a module definition with its definition kind metadata.
+    pub fn add_module_definition_with_kind(
+        &mut self,
+        module_id: ModuleId,
+        name: impl Into<String>,
+        kind: DefinitionKind,
+    ) {
+        let name = name.into();
+        let definitions = self.module_definitions.entry(module_id).or_default();
+        definitions.insert(name.clone(), module_id);
+        let kinds = self.definition_kinds.entry(module_id).or_default();
+        kinds.insert(name, kind);
+    }
+
+    /// Register definition kind metadata for an imported binding.
+    pub fn add_import_definition_kind(
+        &mut self,
+        importing_module: ModuleId,
+        name: impl Into<String>,
+        kind: DefinitionKind,
+    ) {
+        let name = name.into();
+        let kinds = self
+            .import_definition_kinds
+            .entry(importing_module)
+            .or_default();
+        kinds.insert(name, kind);
+    }
+
     /// Resolve a name in the given module context
     ///
     /// Resolution order:
@@ -144,6 +212,7 @@ impl<'a> NameBinder<'a> {
                     module_id: current_module,
                     kind: ResolutionKind::Local,
                     binding: None,
+                    definition_kind: None,
                 });
             }
         }
@@ -152,11 +221,17 @@ impl<'a> NameBinder<'a> {
         if let Some(definitions) = self.module_definitions.get(&current_module)
             && definitions.contains_key(name)
         {
+            let def_kind = self
+                .definition_kinds
+                .get(&current_module)
+                .and_then(|m| m.get(name))
+                .copied();
             return Ok(ResolvedName {
                 name: name.to_string(),
                 module_id: current_module,
                 kind: ResolutionKind::ModuleDefinition,
                 binding: None,
+                definition_kind: def_kind,
             });
         }
 
@@ -168,11 +243,17 @@ impl<'a> NameBinder<'a> {
                 BindingKind::Direct | BindingKind::Aliased { .. }
             )
         {
+            let def_kind = self
+                .import_definition_kinds
+                .get(&current_module)
+                .and_then(|m| m.get(name))
+                .copied();
             return Ok(ResolvedName {
                 name: name.to_string(),
                 module_id: binding.target_module,
                 kind: ResolutionKind::ExplicitImport,
                 binding: Some(binding.clone()),
+                definition_kind: def_kind,
             });
         }
 
@@ -181,11 +262,17 @@ impl<'a> NameBinder<'a> {
             && let Some(binding) = binding_table.get(name)
             && matches!(binding.kind, BindingKind::Glob)
         {
+            let def_kind = self
+                .import_definition_kinds
+                .get(&current_module)
+                .and_then(|m| m.get(name))
+                .copied();
             return Ok(ResolvedName {
                 name: name.to_string(),
                 module_id: binding.target_module,
                 kind: ResolutionKind::GlobImport,
                 binding: Some(binding.clone()),
+                definition_kind: def_kind,
             });
         }
 
@@ -194,11 +281,17 @@ impl<'a> NameBinder<'a> {
             && let Some(parent_defs) = self.module_definitions.get(&parent_id)
             && parent_defs.contains_key(name)
         {
+            let def_kind = self
+                .definition_kinds
+                .get(&parent_id)
+                .and_then(|m| m.get(name))
+                .copied();
             return Ok(ResolvedName {
                 name: name.to_string(),
                 module_id: parent_id,
                 kind: ResolutionKind::ParentModule,
                 binding: None,
+                definition_kind: def_kind,
             });
         }
 
@@ -222,6 +315,44 @@ impl<'a> NameBinder<'a> {
     /// Check if a name is resolvable (without actually resolving it)
     pub fn can_resolve(&self, name: &str, current_module: ModuleId) -> bool {
         self.resolve(name, current_module).is_ok()
+    }
+
+    /// Check that a qualified fn call (`module::name(args)`) targets a function, not a capability.
+    ///
+    /// Returns `Ok(())` if the target is a function (or unknown kind).
+    /// Returns `Err(NameError::WrongTargetCapabilityAsFn)` if the target is known to be a capability.
+    pub fn check_qualified_fn_call(
+        &self,
+        name: &str,
+        current_module: ModuleId,
+    ) -> Result<(), NameError> {
+        match self.resolve(name, current_module) {
+            Ok(resolved) if resolved.definition_kind == Some(DefinitionKind::Capability) => {
+                Err(NameError::WrongTargetCapabilityAsFn {
+                    name: name.to_string(),
+                })
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// Check that a capability call (`provider:action(args)`) targets a capability, not a function.
+    ///
+    /// Returns `Ok(())` if the target is a capability (or unknown kind).
+    /// Returns `Err(NameError::WrongTargetFnAsCapability)` if the target is known to be a function.
+    pub fn check_capability_call(
+        &self,
+        name: &str,
+        current_module: ModuleId,
+    ) -> Result<(), NameError> {
+        match self.resolve(name, current_module) {
+            Ok(resolved) if resolved.definition_kind == Some(DefinitionKind::Function) => {
+                Err(NameError::WrongTargetFnAsCapability {
+                    name: name.to_string(),
+                })
+            }
+            _ => Ok(()),
+        }
     }
 
     /// Get the current scope depth
@@ -583,5 +714,141 @@ mod tests {
         // Cannot go below 1
         binder.exit_scope();
         assert_eq!(binder.scope_depth(), 1);
+    }
+
+    // =========================================================================
+    // Fn Name Binding Tests (TASK-503)
+    // =========================================================================
+
+    #[test]
+    fn test_fn_definition_resolvable_in_module_scope() {
+        let (graph, root, _) = create_test_graph();
+        let import_bindings: HashMap<ModuleId, BindingTable> = HashMap::new();
+
+        let mut binder = NameBinder::new(&graph, &import_bindings);
+        binder.add_module_definition_with_kind(root, "my_fn", DefinitionKind::Function);
+
+        let result = binder.resolve("my_fn", root);
+        assert!(result.is_ok());
+
+        let resolved = result.unwrap();
+        assert_eq!(resolved.name, "my_fn");
+        assert_eq!(resolved.kind, ResolutionKind::ModuleDefinition);
+        assert_eq!(resolved.definition_kind, Some(DefinitionKind::Function));
+    }
+
+    #[test]
+    fn test_imported_fn_binding_works() {
+        let (graph, root, child) = create_test_graph();
+
+        // Create import bindings: root imports "helper" from child
+        let mut binding_table = BindingTable::new();
+        binding_table.insert(
+            "helper".to_string(),
+            Binding::new(child, "helper", Visibility::Public, BindingKind::Direct),
+        );
+        let mut import_bindings: HashMap<ModuleId, BindingTable> = HashMap::new();
+        import_bindings.insert(root, binding_table);
+
+        let mut binder = NameBinder::new(&graph, &import_bindings);
+        // Register the function definition in the child module
+        binder.add_module_definition_with_kind(child, "helper", DefinitionKind::Function);
+        // Register the definition kind for the import in the root module
+        binder.add_import_definition_kind(root, "helper", DefinitionKind::Function);
+
+        let result = binder.resolve("helper", root);
+        assert!(result.is_ok());
+
+        let resolved = result.unwrap();
+        assert_eq!(resolved.name, "helper");
+        assert_eq!(resolved.kind, ResolutionKind::ExplicitImport);
+        assert_eq!(resolved.definition_kind, Some(DefinitionKind::Function));
+    }
+
+    #[test]
+    fn test_capability_vs_function_definition_kind() {
+        let (graph, root, _) = create_test_graph();
+        let import_bindings: HashMap<ModuleId, BindingTable> = HashMap::new();
+
+        let mut binder = NameBinder::new(&graph, &import_bindings);
+        binder.add_module_definition_with_kind(root, "my_fn", DefinitionKind::Function);
+        binder.add_module_definition_with_kind(root, "my_cap", DefinitionKind::Capability);
+
+        let fn_resolved = binder.resolve("my_fn", root).unwrap();
+        assert_eq!(fn_resolved.definition_kind, Some(DefinitionKind::Function));
+
+        let cap_resolved = binder.resolve("my_cap", root).unwrap();
+        assert_eq!(
+            cap_resolved.definition_kind,
+            Some(DefinitionKind::Capability)
+        );
+    }
+
+    // =========================================================================
+    // Wrong-Target Diagnostics Tests (TASK-503)
+    // =========================================================================
+
+    #[test]
+    fn test_wrong_target_capability_called_with_fn_syntax() {
+        let (graph, root, _) = create_test_graph();
+        let import_bindings: HashMap<ModuleId, BindingTable> = HashMap::new();
+
+        let mut binder = NameBinder::new(&graph, &import_bindings);
+        binder.add_module_definition_with_kind(root, "read_file", DefinitionKind::Capability);
+
+        // Trying to use `module::read_file(args)` on a capability should error
+        let result = binder.check_qualified_fn_call("read_file", root);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            NameError::WrongTargetCapabilityAsFn { name } => {
+                assert_eq!(name, "read_file");
+            }
+            other => panic!("Expected WrongTargetCapabilityAsFn, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_wrong_target_fn_called_with_capability_syntax() {
+        let (graph, root, _) = create_test_graph();
+        let import_bindings: HashMap<ModuleId, BindingTable> = HashMap::new();
+
+        let mut binder = NameBinder::new(&graph, &import_bindings);
+        binder.add_module_definition_with_kind(root, "calculate", DefinitionKind::Function);
+
+        // Trying to use `provider:calculate(args)` on a function should error
+        let result = binder.check_capability_call("calculate", root);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            NameError::WrongTargetFnAsCapability { name } => {
+                assert_eq!(name, "calculate");
+            }
+            other => panic!("Expected WrongTargetFnAsCapability, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_correct_target_fn_with_fn_syntax() {
+        let (graph, root, _) = create_test_graph();
+        let import_bindings: HashMap<ModuleId, BindingTable> = HashMap::new();
+
+        let mut binder = NameBinder::new(&graph, &import_bindings);
+        binder.add_module_definition_with_kind(root, "compute", DefinitionKind::Function);
+
+        // Using `module::compute(args)` on a function should be fine
+        let result = binder.check_qualified_fn_call("compute", root);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_correct_target_capability_with_capability_syntax() {
+        let (graph, root, _) = create_test_graph();
+        let import_bindings: HashMap<ModuleId, BindingTable> = HashMap::new();
+
+        let mut binder = NameBinder::new(&graph, &import_bindings);
+        binder.add_module_definition_with_kind(root, "read_file", DefinitionKind::Capability);
+
+        // Using `provider:read_file(args)` on a capability should be fine
+        let result = binder.check_capability_call("read_file", root);
+        assert!(result.is_ok());
     }
 }

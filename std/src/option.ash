@@ -37,7 +37,7 @@ pub fn unwrap_or<T>(opt: Option<T>, default: T) -> T {
 }
 
 -- Maps Option<T> to Option<U> by applying a function
-pub fn map<T, U>(opt: Option<T>, f: Fun(T) -> U) -> Option<U> {
+pub fn map<T, U>(opt: Option<T>, f: Fn(T) -> U) -> Option<U> {
     match opt {
         Some { value: v } => Some { value: f(v) },
         None => None
@@ -45,7 +45,7 @@ pub fn map<T, U>(opt: Option<T>, f: Fun(T) -> U) -> Option<U> {
 }
 
 -- Returns None if the option is None, otherwise returns optb
-pub fn and<T>(opt: Option<T>, optb: Option<T>) -> Option<T> {
+pub fn and_opt<T>(opt: Option<T>, optb: Option<T>) -> Option<T> {
     match opt {
         Some { value: _ } => optb,
         None => None
@@ -53,7 +53,7 @@ pub fn and<T>(opt: Option<T>, optb: Option<T>) -> Option<T> {
 }
 
 -- Returns the option if it contains a value, otherwise returns optb
-pub fn or<T>(opt: Option<T>, optb: Option<T>) -> Option<T> {
+pub fn or_opt<T>(opt: Option<T>, optb: Option<T>) -> Option<T> {
     match opt {
         Some { value: _ } => opt,
         None => optb

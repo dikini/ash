@@ -216,7 +216,7 @@ fn test_meta_capability_defined() {
 // Engine Builder Integration Tests
 // ============================================================
 
-/// Test that engine builder with_stdio_capabilities works with io imports
+/// Test that engine builder `with_stdio_capabilities` works with io imports.
 #[test]
 fn test_engine_builder_with_stdio_for_io_imports() {
     let engine = Engine::new()
@@ -232,7 +232,7 @@ fn test_engine_builder_with_stdio_for_io_imports() {
     assert_eq!(result.unwrap(), ash_core::Value::Int(42));
 }
 
-/// Test that engine builder with_fs_capabilities works with io imports
+/// Test that engine builder `with_fs_capabilities` works with io imports.
 #[test]
 fn test_engine_builder_with_fs_for_io_imports() {
     let engine = Engine::new()
@@ -278,7 +278,7 @@ fn test_custom_provider_can_override_stdio() {
 
     #[async_trait]
     impl CapabilityProvider for TestStdioProvider {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "stdio"
         }
 

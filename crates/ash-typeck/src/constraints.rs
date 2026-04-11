@@ -266,7 +266,8 @@ pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Ty
                 ash_parser::surface::BinaryOp::Add
                 | ash_parser::surface::BinaryOp::Sub
                 | ash_parser::surface::BinaryOp::Mul
-                | ash_parser::surface::BinaryOp::Div => {
+                | ash_parser::surface::BinaryOp::Div
+                | ash_parser::surface::BinaryOp::Mod => {
                     // Arithmetic: both operands must be numeric (Int for simplicity)
                     ctx.add_equal(left_ty.clone(), Type::Int);
                     ctx.add_equal(right_ty, Type::Int);

@@ -274,8 +274,8 @@ fn test_json_output_success_true_when_no_errors() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
-            act print("hello");
+        workflow test -> Int {
+            ret 1;
         }
     "#;
 

@@ -601,7 +601,7 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
                     continuation: Box::new(Workflow::Done),
                 }),
                 second: Box::new(Workflow::Act {
-                    provider_name: "test".to_string(),
+                    provider_name: "deploy".to_string(),
                     action_name: "deploy".to_string(),
                     arguments: vec![],
                     guard: ash_core::Guard::Always,
@@ -655,7 +655,7 @@ async fn conservative_effect_summary_can_overapproximate_untaken_higher_effect_p
                     expr: Expr::Variable("missing_before_operational".to_string()),
                 }),
                 second: Box::new(Workflow::Act {
-                    provider_name: "test".to_string(),
+                    provider_name: "deploy".to_string(),
                     action_name: "deploy".to_string(),
                     arguments: vec![],
                     guard: ash_core::Guard::Always,

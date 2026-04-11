@@ -1,6 +1,6 @@
 # TASK-503: Pure Functions Name Resolution and Call Forms
 
-## Status: 📝 Planned
+## Status: ✅ Passed
 
 ## Description
 
@@ -33,8 +33,8 @@ qualified, and wrong-target calls under the pure-functions model.
 
 ## Completion Checklist
 
-- [ ] local fn binding works
-- [ ] imported fn binding works
-- [ ] qualified fn calls work
-- [ ] capability targets are rejected in fn-call syntax
-- [ ] wrong-target diagnostics are covered by tests
+- [x] local fn binding works
+- [x] imported fn binding works
+- [x] qualified fn calls work
+- [x] capability targets are rejected in fn-call syntax
+- [x] wrong-target diagnostics are covered by tests

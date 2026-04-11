@@ -102,7 +102,12 @@ impl<'a> Lexer<'a> {
             }
             ':' => {
                 self.advance();
-                TokenKind::Colon
+                if self.peek_char() == Some(':') {
+                    self.advance();
+                    TokenKind::ColonColon
+                } else {
+                    TokenKind::Colon
+                }
             }
 
             // Two-character operators and delimiters
@@ -422,6 +427,11 @@ fn lookup_keyword(ident: &str) -> TokenKind {
         "deny" => TokenKind::Deny,
         "require_approval" => TokenKind::RequireApproval,
         "escalate" => TokenKind::Escalate,
+
+        // Pure function keywords
+        "fn" => TokenKind::Fn,
+        "panic" => TokenKind::Panic,
+        "match" => TokenKind::Match,
 
         // Operator keywords
         "in" => TokenKind::In,

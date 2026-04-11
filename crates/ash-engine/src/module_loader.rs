@@ -13,16 +13,14 @@ use ash_core::ast::{
     Visibility as CoreVisibility,
 };
 use ash_parser::input::new_input;
-use ash_parser::parse_expr::expr as parse_surface_expr;
-use ash_parser::parse_pattern::pattern as parse_surface_pattern;
+use ash_parser::parse_module::parse_fn_definition;
 use ash_parser::parse_type_def::{
     TypeBody as ParsedTypeBody, TypeDef as ParsedTypeDef, TypeExpr as ParsedTypeExpr,
     VariantPayload as ParsedVariantPayload, Visibility as ParsedVisibility, parse_type_def,
 };
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{Expr, MatchArm as SurfaceMatchArm, Workflow, WorkflowDef};
-use ash_parser::token::Span;
+use ash_parser::surface::{Definition, Expr, MatchArm as SurfaceMatchArm, Workflow, WorkflowDef};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
@@ -144,6 +142,16 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
         imported_type_defs,
         imported_callables,
     })
+}
+
+pub(crate) fn collect_public_type_defs_from_source(
+    source: &str,
+) -> Result<Vec<CoreTypeDef>, EngineError> {
+    let mut type_defs = Vec::new();
+    for snippet in extract_semicolon_snippets(source, |trimmed| trimmed.starts_with("pub type ")) {
+        type_defs.extend(parse_public_type_defs(&snippet)?);
+    }
+    Ok(type_defs)
 }
 
 fn is_skippable_prelude_line(line: &str) -> bool {
@@ -529,17 +537,67 @@ fn parse_workflow_callable(snippet: &str) -> Result<Option<ImportedCallableExpor
 }
 
 fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>, EngineError> {
-    let (name, params, body) = parse_pub_fn_signature_and_body(snippet.trim())?;
-    let body = parse_pub_fn_body(&body)?;
+    let mut input = new_input(snippet.trim());
+    let parsed = parse_fn_definition
+        .parse_next(&mut input)
+        .map_err(|error| EngineError::Parse(format!("{error}")))?;
+
+    let Definition::Function(function) = parsed else {
+        return Err(EngineError::Parse(
+            "expected pub fn to parse as a function definition".to_string(),
+        ));
+    };
+
+    let name = function.name.to_string();
+    let params = function
+        .params
+        .iter()
+        .map(|param| param.name.to_string())
+        .collect::<Vec<_>>();
 
     Ok(Some(ImportedCallableExport {
         name: name.clone(),
         callable: InlineCallable {
             exported_name: name,
             params,
-            body,
+            body: normalize_imported_callable_expr(&function.body),
         },
     }))
+}
+
+fn normalize_imported_callable_expr(expr: &Expr) -> Expr {
+    match expr {
+        Expr::Block {
+            statements,
+            tail_expr,
+            span,
+        } => {
+            let mut normalized = tail_expr.as_deref().map_or_else(
+                || Expr::Literal(ash_parser::surface::Literal::Null),
+                normalize_imported_callable_expr,
+            );
+
+            for statement in statements.iter().rev() {
+                let ash_parser::surface::BlockStmt::Let {
+                    pattern,
+                    expr,
+                    span: stmt_span,
+                } = statement;
+                normalized = Expr::Match {
+                    scrutinee: Box::new(normalize_imported_callable_expr(expr)),
+                    arms: vec![SurfaceMatchArm {
+                        pattern: pattern.clone(),
+                        body: Box::new(normalized),
+                        span: *stmt_span,
+                    }],
+                    span: *span,
+                };
+            }
+
+            normalized
+        }
+        _ => expr.clone(),
+    }
 }
 
 fn parse_supported_pub_fn_callable(snippet: &str) -> Option<ImportedCallableExport> {
@@ -576,179 +634,6 @@ fn extract_callable_from_workflow(
             body: expr,
         },
     }))
-}
-
-fn parse_pub_fn_signature_and_body(
-    snippet: &str,
-) -> Result<(String, Vec<String>, String), EngineError> {
-    let src = snippet.trim();
-    let src = src
-        .strip_prefix("pub fn")
-        .or_else(|| src.strip_prefix("pub\tfn"))
-        .ok_or_else(|| EngineError::Parse("expected pub fn".to_string()))?
-        .trim_start();
-
-    let open_paren = src.find('(').ok_or_else(|| {
-        EngineError::Parse("pub fn snippet is missing parameter list".to_string())
-    })?;
-    let name = src[..open_paren]
-        .trim()
-        .split('<')
-        .next()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| EngineError::Parse("pub fn snippet is missing a name".to_string()))?
-        .to_string();
-
-    let close_paren = find_matching_delimiter(src, open_paren, '(', ')').ok_or_else(|| {
-        EngineError::Parse("pub fn snippet has an unterminated parameter list".to_string())
-    })?;
-    let params_src = &src[open_paren + 1..close_paren];
-    let params = split_top_level(params_src, ',')
-        .into_iter()
-        .filter_map(|param| {
-            let param = param.trim();
-            if param.is_empty() {
-                None
-            } else {
-                param
-                    .split_once(':')
-                    .map(|(name, _)| name.trim().to_string())
-                    .or_else(|| Some(param.to_string()))
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let body_start = src[close_paren + 1..]
-        .find('{')
-        .map(|offset| close_paren + 1 + offset)
-        .ok_or_else(|| EngineError::Parse("pub fn snippet is missing a body".to_string()))?;
-    let body_end = find_matching_delimiter(src, body_start, '{', '}')
-        .ok_or_else(|| EngineError::Parse("pub fn snippet has an unterminated body".to_string()))?;
-    let body = src[body_start + 1..body_end]
-        .trim()
-        .trim_end_matches(';')
-        .trim()
-        .to_string();
-
-    Ok((name, params, body))
-}
-
-fn parse_pub_fn_body(body: &str) -> Result<Expr, EngineError> {
-    let body = body.trim();
-    if let Some(match_body) = body.strip_prefix("match ") {
-        return parse_match_expr(match_body);
-    }
-
-    let mut input = new_input(body);
-    parse_surface_expr
-        .parse_next(&mut input)
-        .map_err(|error| EngineError::Parse(format!("{error}")))
-}
-
-fn parse_match_expr(body: &str) -> Result<Expr, EngineError> {
-    let open_brace = body
-        .find('{')
-        .ok_or_else(|| EngineError::Parse("match expression is missing a body".to_string()))?;
-    let close_brace = find_matching_delimiter(body, open_brace, '{', '}').ok_or_else(|| {
-        EngineError::Parse("match expression has an unterminated body".to_string())
-    })?;
-
-    let scrutinee_src = body[..open_brace].trim();
-    let arms_src = body[open_brace + 1..close_brace].trim();
-
-    let mut scrutinee_input = new_input(scrutinee_src);
-    let scrutinee = parse_surface_expr
-        .parse_next(&mut scrutinee_input)
-        .map_err(|error| EngineError::Parse(format!("{error}")))?;
-
-    let mut arms = Vec::new();
-    for arm_text in split_top_level(arms_src, ',') {
-        let arm_text = arm_text.trim();
-        if arm_text.is_empty() {
-            continue;
-        }
-
-        let (pattern_src, expr_src) = arm_text
-            .split_once("=>")
-            .ok_or_else(|| EngineError::Parse(format!("invalid match arm '{arm_text}'")))?;
-
-        let mut pattern_input = new_input(pattern_src.trim());
-        let pattern = parse_surface_pattern
-            .parse_next(&mut pattern_input)
-            .map_err(|error| EngineError::Parse(format!("{error}")))?;
-
-        let mut expr_input = new_input(expr_src.trim());
-        let expr = parse_surface_expr
-            .parse_next(&mut expr_input)
-            .map_err(|error| EngineError::Parse(format!("{error}")))?;
-
-        arms.push(SurfaceMatchArm {
-            pattern,
-            body: Box::new(expr),
-            span: Span::default(),
-        });
-    }
-
-    Ok(Expr::Match {
-        scrutinee: Box::new(scrutinee),
-        arms,
-        span: Span::default(),
-    })
-}
-
-fn find_matching_delimiter(
-    text: &str,
-    open_index: usize,
-    open: char,
-    close: char,
-) -> Option<usize> {
-    let mut depth = 0usize;
-    for (offset, ch) in text[open_index..].char_indices() {
-        if ch == open {
-            depth += 1;
-        } else if ch == close {
-            depth = depth.checked_sub(1)?;
-            if depth == 0 {
-                return Some(open_index + offset);
-            }
-        }
-    }
-
-    None
-}
-
-fn split_top_level(text: &str, separator: char) -> Vec<String> {
-    let mut parts = Vec::new();
-    let mut start = 0usize;
-    let mut paren = 0usize;
-    let mut brace = 0usize;
-    let mut bracket = 0usize;
-    let mut angle = 0usize;
-
-    for (offset, ch) in text.char_indices() {
-        match ch {
-            '(' => paren += 1,
-            ')' => paren = paren.saturating_sub(1),
-            '{' => brace += 1,
-            '}' => brace = brace.saturating_sub(1),
-            '[' => bracket += 1,
-            ']' => bracket = bracket.saturating_sub(1),
-            '<' => angle += 1,
-            '>' if angle > 0 => angle -= 1,
-            c if c == separator && paren == 0 && brace == 0 && bracket == 0 && angle == 0 => {
-                parts.push(text[start..offset].to_string());
-                start = offset + ch.len_utf8();
-            }
-            _ => {}
-        }
-    }
-
-    if start <= text.len() {
-        parts.push(text[start..].to_string());
-    }
-
-    parts
 }
 
 fn extract_semicolon_snippets<F>(source: &str, predicate: F) -> Vec<String>

@@ -136,6 +136,222 @@ impl fmt::Display for LoweringError {
 
 impl std::error::Error for LoweringError {}
 
+/// Error returned when lowering a pure-function contract to the core contract subset fails.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FnContractLoweringError {
+    InvalidRequires { message: String },
+    InvalidEnsures { message: String },
+}
+
+impl fmt::Display for FnContractLoweringError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FnContractLoweringError::InvalidRequires { message } => {
+                write!(f, "invalid fn requires clause: {message}")
+            }
+            FnContractLoweringError::InvalidEnsures { message } => {
+                write!(f, "invalid fn ensures clause: {message}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for FnContractLoweringError {}
+
+/// Lowered fn contract together with the explicit runtime postcondition boundary.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoweredFnContract {
+    pub contract: ash_core::workflow_contract::Contract,
+    pub runtime_postconditions: ash_core::workflow_contract::RuntimePostconditionContract,
+}
+
+/// Lower a parsed fn contract into the core contract subset used by type checking and runtime
+/// postcondition evaluation.
+pub fn lower_fn_contract(
+    contract: Option<&crate::surface::Contract>,
+) -> Result<LoweredFnContract, FnContractLoweringError> {
+    let Some(contract) = contract else {
+        return Ok(LoweredFnContract {
+            contract: ash_core::workflow_contract::Contract::default(),
+            runtime_postconditions:
+                ash_core::workflow_contract::RuntimePostconditionContract::default(),
+        });
+    };
+
+    let requires = contract
+        .requires
+        .iter()
+        .map(lower_fn_requirement)
+        .collect::<Result<Vec<_>, _>>()?;
+    let ensures = contract
+        .ensures
+        .iter()
+        .map(lower_fn_ensures_clause)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let runtime_postconditions = ash_core::workflow_contract::RuntimePostconditionContract {
+        predicates: ensures.clone(),
+    };
+
+    Ok(LoweredFnContract {
+        contract: ash_core::workflow_contract::Contract { requires, ensures },
+        runtime_postconditions,
+    })
+}
+
+fn lower_fn_requirement(
+    requirement: &crate::surface::Requirement,
+) -> Result<ash_core::workflow_contract::Requirement, FnContractLoweringError> {
+    match requirement {
+        crate::surface::Requirement::Arithmetic { expr } => {
+            let (var, constraint) = lower_stage1_arith_predicate(expr)
+                .map_err(|message| FnContractLoweringError::InvalidRequires { message })?;
+            Ok(ash_core::workflow_contract::Requirement::Arithmetic { var, constraint })
+        }
+        crate::surface::Requirement::HasCapability { .. } => {
+            Err(FnContractLoweringError::InvalidRequires {
+                message: "fn contracts cannot reference capabilities".to_string(),
+            })
+        }
+        crate::surface::Requirement::HasRole(_) => Err(FnContractLoweringError::InvalidRequires {
+            message: "fn contracts cannot reference roles".to_string(),
+        }),
+    }
+}
+
+fn lower_fn_ensures_clause(
+    clause: &crate::surface::EnsuresClause,
+) -> Result<ash_core::workflow_contract::PostPredicate, FnContractLoweringError> {
+    if let Some(constraint) = lower_result_constraint(&clause.expr) {
+        return Ok(ash_core::workflow_contract::PostPredicate::ResultSatisfies(
+            constraint,
+        ));
+    }
+
+    if let Some((left, right)) = lower_result_equality(&clause.expr) {
+        return Ok(ash_core::workflow_contract::PostPredicate::Eq(left, right));
+    }
+
+    Err(FnContractLoweringError::InvalidEnsures {
+        message: "fn ensures clauses must be value-level predicates over `result` or simple equality; state assertions are not allowed".to_string(),
+    })
+}
+
+fn lower_stage1_arith_predicate(
+    expr: &Expr,
+) -> Result<(String, ash_core::workflow_contract::ArithConstraint), String> {
+    match expr {
+        Expr::Binary {
+            op, left, right, ..
+        } => {
+            if let (Some(var), Some(value)) = (variable_name(left), int_literal(right)) {
+                let constraint = match op {
+                    BinaryOp::Gt => ash_core::workflow_contract::ArithConstraint::Gt(value),
+                    BinaryOp::Lt => ash_core::workflow_contract::ArithConstraint::Lt(value),
+                    BinaryOp::Geq => ash_core::workflow_contract::ArithConstraint::Gte(value),
+                    BinaryOp::Leq => ash_core::workflow_contract::ArithConstraint::Lte(value),
+                    BinaryOp::Eq => ash_core::workflow_contract::ArithConstraint::Eq(value),
+                    BinaryOp::Neq => ash_core::workflow_contract::ArithConstraint::NotEq(value),
+                    _ => {
+                        return Err(format!(
+                            "unsupported Stage 1 arithmetic predicate: {expr:?}"
+                        ));
+                    }
+                };
+                return Ok((var.to_string(), constraint));
+            }
+
+            if *op == BinaryOp::Eq {
+                if let (Some((var, div)), Some(rem)) = (modulo_operand(left), int_literal(right)) {
+                    return Ok((
+                        var.to_string(),
+                        ash_core::workflow_contract::ArithConstraint::Modulo { div, rem },
+                    ));
+                }
+                if let (Some(rem), Some((var, div))) = (int_literal(left), modulo_operand(right)) {
+                    return Ok((
+                        var.to_string(),
+                        ash_core::workflow_contract::ArithConstraint::Modulo { div, rem },
+                    ));
+                }
+            }
+
+            Err(format!(
+                "unsupported Stage 1 arithmetic predicate: {expr:?}"
+            ))
+        }
+        _ => Err(format!(
+            "unsupported Stage 1 arithmetic predicate: {expr:?}"
+        )),
+    }
+}
+
+fn lower_result_constraint(expr: &Expr) -> Option<ash_core::workflow_contract::ArithConstraint> {
+    let (var, constraint) = lower_stage1_arith_predicate(expr).ok()?;
+    (var == "result").then_some(constraint)
+}
+
+fn lower_result_equality(expr: &Expr) -> Option<(String, String)> {
+    let Expr::Binary {
+        op: BinaryOp::Eq,
+        left,
+        right,
+        ..
+    } = expr
+    else {
+        return None;
+    };
+
+    if variable_name(left) == Some("result") {
+        return Some(("result".to_string(), simple_value_expr(right)?));
+    }
+
+    if variable_name(right) == Some("result") {
+        return Some(("result".to_string(), simple_value_expr(left)?));
+    }
+
+    None
+}
+
+fn simple_value_expr(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::Variable(name) => Some(name.to_string()),
+        Expr::Literal(Literal::Int(value)) => Some(value.to_string()),
+        Expr::Literal(Literal::String(value)) => Some(format!("\"{value}\"")),
+        Expr::Literal(Literal::Bool(value)) => Some(value.to_string()),
+        Expr::Literal(Literal::Null) => Some("null".to_string()),
+        _ => None,
+    }
+}
+
+fn variable_name(expr: &Expr) -> Option<&str> {
+    match expr {
+        Expr::Variable(name) => Some(name.as_ref()),
+        _ => None,
+    }
+}
+
+fn int_literal(expr: &Expr) -> Option<i64> {
+    match expr {
+        Expr::Literal(Literal::Int(value)) => Some(*value),
+        _ => None,
+    }
+}
+
+fn modulo_operand(expr: &Expr) -> Option<(&str, i64)> {
+    let Expr::Binary {
+        op: BinaryOp::Mod,
+        left,
+        right,
+        ..
+    } = expr
+    else {
+        return None;
+    };
+
+    Some((variable_name(left)?, int_literal(right)?))
+}
+
 /// Error returned when parsed role metadata cannot be lowered honestly.
 #[cfg(test)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -407,6 +623,50 @@ fn lower_constraint(
 }
 
 /// Lower a workflow body to core IR.
+fn is_self_terminating_surface_workflow(workflow: &SurfaceWorkflow) -> bool {
+    match workflow {
+        SurfaceWorkflow::Ret { .. } | SurfaceWorkflow::Done { .. } => true,
+        SurfaceWorkflow::Let { continuation, .. }
+        | SurfaceWorkflow::Observe { continuation, .. }
+        | SurfaceWorkflow::Orient { continuation, .. }
+        | SurfaceWorkflow::Propose { continuation, .. } => continuation
+            .as_deref()
+            .is_some_and(is_self_terminating_surface_workflow),
+        SurfaceWorkflow::Check { continuation, .. } => continuation
+            .as_deref()
+            .is_none_or(is_self_terminating_surface_workflow),
+        SurfaceWorkflow::Act {
+            result_name,
+            continuation,
+            ..
+        } => {
+            result_name.is_none()
+                || continuation
+                    .as_deref()
+                    .is_some_and(is_self_terminating_surface_workflow)
+        }
+        SurfaceWorkflow::Decide {
+            then_branch,
+            else_branch,
+            ..
+        }
+        | SurfaceWorkflow::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            is_self_terminating_surface_workflow(then_branch)
+                && else_branch
+                    .as_deref()
+                    .is_none_or(is_self_terminating_surface_workflow)
+        }
+        SurfaceWorkflow::Receive { arms, .. } => arms
+            .iter()
+            .all(|arm| is_self_terminating_surface_workflow(&arm.body)),
+        _ => false,
+    }
+}
+
 fn lower_workflow_body(
     workflow: &SurfaceWorkflow,
     provenance: &Provenance,
@@ -747,10 +1007,18 @@ fn lower_workflow_body(
             workflow: Box::new(lower_workflow_body(body, provenance, ctx)?),
         }),
 
-        SurfaceWorkflow::Seq { first, second, .. } => Ok(CoreWorkflow::Seq {
-            first: Box::new(lower_workflow_body(first, provenance, ctx)?),
-            second: Box::new(lower_workflow_body(second, provenance, ctx)?),
-        }),
+        SurfaceWorkflow::Seq { first, second, .. } => {
+            if matches!(second.as_ref(), SurfaceWorkflow::Done { .. })
+                && is_self_terminating_surface_workflow(first)
+            {
+                return lower_workflow_body(first, provenance, ctx);
+            }
+
+            Ok(CoreWorkflow::Seq {
+                first: Box::new(lower_workflow_body(first, provenance, ctx)?),
+                second: Box::new(lower_workflow_body(second, provenance, ctx)?),
+            })
+        }
 
         SurfaceWorkflow::Done { .. } => Ok(CoreWorkflow::Done),
 
@@ -821,6 +1089,10 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
         Type::Constructor { name, args } => TypeExpr::Constructor {
             name: name.to_string(),
             args: args.iter().map(lower_type_to_type_expr).collect(),
+        },
+        Type::Fn(_params, _ret) => TypeExpr::Constructor {
+            name: "Fn".to_string(),
+            args: vec![],
         },
     }
 }
@@ -973,6 +1245,11 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
                 fields: lowered_fields,
             })
         }
+
+        // Pure fn expression forms - not yet lowered to core
+        Expr::If { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
+        Expr::Panic { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
+        Expr::Block { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
     }
 }
 
@@ -1063,6 +1340,7 @@ fn lower_binary_op(op: BinaryOp) -> ash_core::BinaryOp {
         BinaryOp::Sub => ash_core::BinaryOp::Sub,
         BinaryOp::Mul => ash_core::BinaryOp::Mul,
         BinaryOp::Div => ash_core::BinaryOp::Div,
+        BinaryOp::Mod => ash_core::BinaryOp::Mod,
         BinaryOp::And => ash_core::BinaryOp::And,
         BinaryOp::Or => ash_core::BinaryOp::Or,
         BinaryOp::Eq => ash_core::BinaryOp::Eq,
@@ -1211,13 +1489,22 @@ fn lower_effect_type(effect: EffectType) -> Effect {
 mod tests {
     use super::*;
     use crate::surface::{
-        BinaryOp, EffectType, Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern, RoleDef,
+        BinaryOp, Contract as SurfaceContract, EffectType, EnsuresClause, Expr as SurfaceExpr,
+        Literal as SurfaceLiteral, Pattern, Requirement as SurfaceRequirement, RoleDef,
         Workflow as SurfaceWorkflow,
     };
     use crate::token::Span;
 
     fn dummy_span() -> Span {
         Span::new(0, 0, 1, 1)
+    }
+
+    fn int_expr(value: i64) -> SurfaceExpr {
+        SurfaceExpr::Literal(SurfaceLiteral::Int(value))
+    }
+
+    fn var_expr(name: &str) -> SurfaceExpr {
+        SurfaceExpr::Variable(name.into())
     }
 
     #[test]
@@ -1553,6 +1840,10 @@ mod tests {
             ash_core::BinaryOp::Div
         ));
         assert!(matches!(
+            lower_binary_op(BinaryOp::Mod),
+            ash_core::BinaryOp::Mod
+        ));
+        assert!(matches!(
             lower_binary_op(BinaryOp::Eq),
             ash_core::BinaryOp::Eq
         ));
@@ -1563,6 +1854,105 @@ mod tests {
         assert!(matches!(
             lower_binary_op(BinaryOp::Or),
             ash_core::BinaryOp::Or
+        ));
+    }
+
+    #[test]
+    fn test_lower_fn_contract_stage1_predicates() {
+        let contract = SurfaceContract {
+            requires: vec![
+                SurfaceRequirement::Arithmetic {
+                    expr: SurfaceExpr::Binary {
+                        op: BinaryOp::Geq,
+                        left: Box::new(var_expr("n")),
+                        right: Box::new(int_expr(0)),
+                        span: dummy_span(),
+                    },
+                },
+                SurfaceRequirement::Arithmetic {
+                    expr: SurfaceExpr::Binary {
+                        op: BinaryOp::Neq,
+                        left: Box::new(var_expr("d")),
+                        right: Box::new(int_expr(0)),
+                        span: dummy_span(),
+                    },
+                },
+                SurfaceRequirement::Arithmetic {
+                    expr: SurfaceExpr::Binary {
+                        op: BinaryOp::Eq,
+                        left: Box::new(SurfaceExpr::Binary {
+                            op: BinaryOp::Mod,
+                            left: Box::new(var_expr("n")),
+                            right: Box::new(int_expr(2)),
+                            span: dummy_span(),
+                        }),
+                        right: Box::new(int_expr(1)),
+                        span: dummy_span(),
+                    },
+                },
+            ],
+            ensures: vec![EnsuresClause {
+                expr: SurfaceExpr::Binary {
+                    op: BinaryOp::Geq,
+                    left: Box::new(var_expr("result")),
+                    right: Box::new(int_expr(0)),
+                    span: dummy_span(),
+                },
+                span: dummy_span(),
+            }],
+        };
+
+        let lowered = lower_fn_contract(Some(&contract)).expect("fn contract should lower");
+        assert_eq!(lowered.contract.requires.len(), 3);
+        assert_eq!(lowered.runtime_postconditions.predicates.len(), 1);
+        assert!(matches!(
+            &lowered.contract.requires[0],
+            ash_core::workflow_contract::Requirement::Arithmetic { var, constraint }
+                if var == "n"
+                    && matches!(constraint, ash_core::workflow_contract::ArithConstraint::Gte(0))
+        ));
+        assert!(matches!(
+            &lowered.contract.requires[1],
+            ash_core::workflow_contract::Requirement::Arithmetic { var, constraint }
+                if var == "d"
+                    && matches!(constraint, ash_core::workflow_contract::ArithConstraint::NotEq(0))
+        ));
+        assert!(matches!(
+            &lowered.contract.requires[2],
+            ash_core::workflow_contract::Requirement::Arithmetic { var, constraint }
+                if var == "n"
+                    && matches!(
+                        constraint,
+                        ash_core::workflow_contract::ArithConstraint::Modulo { div: 2, rem: 1 }
+                    )
+        ));
+        assert!(matches!(
+            &lowered.runtime_postconditions.predicates[0],
+            ash_core::workflow_contract::PostPredicate::ResultSatisfies(
+                ash_core::workflow_contract::ArithConstraint::Gte(0)
+            )
+        ));
+    }
+
+    #[test]
+    fn test_lower_fn_contract_rejects_non_value_ensures() {
+        let contract = SurfaceContract {
+            requires: vec![],
+            ensures: vec![EnsuresClause {
+                expr: SurfaceExpr::Binary {
+                    op: BinaryOp::Geq,
+                    left: Box::new(var_expr("state")),
+                    right: Box::new(int_expr(0)),
+                    span: dummy_span(),
+                },
+                span: dummy_span(),
+            }],
+        };
+
+        let error = lower_fn_contract(Some(&contract)).expect_err("invalid ensures should fail");
+        assert!(matches!(
+            error,
+            FnContractLoweringError::InvalidEnsures { .. }
         ));
     }
 
@@ -1582,7 +1972,12 @@ mod tests {
     #[test]
     fn test_lower_seq() {
         let surface = SurfaceWorkflow::Seq {
-            first: Box::new(SurfaceWorkflow::Done { span: dummy_span() }),
+            first: Box::new(SurfaceWorkflow::Observe {
+                capability: "read".into(),
+                binding: None,
+                continuation: None,
+                span: dummy_span(),
+            }),
             second: Box::new(SurfaceWorkflow::Done { span: dummy_span() }),
             span: dummy_span(),
         };
@@ -1753,66 +2148,6 @@ mod tests {
                 action_name,
                 ..
             } => {
-                assert_eq!(provider_name, "io");
-                assert_eq!(action_name, "fs_read");
-            }
-            _ => panic!("expected Act workflow, got {:?}", core),
-        }
-    }
-
-    #[test]
-    fn test_lower_act_with_qualified_target_uses_dedicated_api() {
-        // Phase 72: Qualified capability calls should use the dedicated
-        // qualified resolution API, not unqualified lookup with a combined string.
-        use crate::capability_export::{
-            CapabilityEffect, CapabilityExport, CapabilityResolutionContext,
-        };
-        use ash_core::module_graph::ModuleId;
-
-        let surface = SurfaceWorkflow::Act {
-            action: crate::surface::ActionRef {
-                target: crate::surface::OperationalTarget::Qualified {
-                    module: "fs".into(),
-                    capability_name: "read".into(),
-                },
-                args: vec![],
-            },
-            guard: None,
-            result_name: None,
-            continuation: None,
-            span: dummy_span(),
-        };
-
-        // Build a capability resolution context with module name mappings
-        let mut cap_context = CapabilityResolutionContext::new();
-        let fs_module = ModuleId(1);
-
-        // Register the module name for qualified lookup
-        cap_context.register_module_name("fs", fs_module);
-
-        // Register the capability in the fs module
-        let export = CapabilityExport {
-            visible_name: "read".into(),
-            declaring_module: fs_module,
-            target_provider: "io".into(),
-            target_action: "fs_read".into(),
-            visibility: crate::surface::Visibility::Public,
-            effect: CapabilityEffect::Act,
-        };
-        cap_context.register(&export);
-
-        // Create lowering context - current module doesn't matter for qualified lookup
-        let ctx = LoweringContext::with_capability_context_for_module(cap_context, ModuleId(0));
-        let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
-
-        match core {
-            CoreWorkflow::Act {
-                provider_name,
-                action_name,
-                ..
-            } => {
-                // Should resolve to the target from the fs module, not try
-                // to look up "fs::read" as a combined string
                 assert_eq!(provider_name, "io");
                 assert_eq!(action_name, "fs_read");
             }

@@ -112,10 +112,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     if args.dry_run {
         let workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
             .map_err(classify_engine_error)?;
-        engine.check(&workflow).map_err(classify_engine_error)?;
         engine
             .verify_entry_workflow(&workflow)
             .map_err(classify_entry_verification_error)?;
+        engine.check(&workflow).map_err(classify_engine_error)?;
 
         println!("Dry run successful");
         return Ok(RunOutcome::completed());

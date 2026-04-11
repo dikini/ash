@@ -315,12 +315,17 @@ synchronous computation.
 
 ### 5.1 Definition Kind
 
-`fn` is a top-level module definition alongside `workflow`, `capability`, `type`, `use`, `mod`:
+`fn` is a top-level module definition alongside `workflow`, `capability`, `type`. (`use` and `mod` are separate module items; see SPEC-009 §10.1.):
 
 ```
 Definition ::= ...
              | FnDef(FnDef)
 ```
+
+`fn` definitions live inside `ModuleFile`, the authoritative file-level parse result (see SPEC-009
+§4.1a and SPEC-002 §3.1). Every `.ash` source file parses as a `ModuleFile` containing a collection
+of module items (definitions, module declarations, and an optional workflow). `Program` is reserved
+for entry-point loading/validation only and is not the general file-level parse target.
 
 ### 5.2 Visibility
 

@@ -713,12 +713,37 @@ fn is_binding_stmt(stmt: &Workflow) -> bool {
     }
 }
 
-/// Check if a workflow is a terminal statement
-/// Terminal statements are Ret, Done, or Act without result_name (fire-and-forget)
+/// Check if a workflow is a terminal statement.
+/// Terminal statements are `Ret`, `Done`, `Act` without `result_name`, or
+/// conditionals whose branches are themselves terminal.
 fn is_terminal_stmt(stmt: &Workflow) -> bool {
     match stmt {
         Workflow::Ret { .. } | Workflow::Done { .. } => true,
-        Workflow::Act { result_name, .. } => result_name.is_none(),
+        Workflow::Let { continuation, .. }
+        | Workflow::Observe { continuation, .. }
+        | Workflow::Orient { continuation, .. }
+        | Workflow::Propose { continuation, .. } => {
+            continuation.as_deref().is_some_and(is_terminal_stmt)
+        }
+        Workflow::Act {
+            result_name,
+            continuation,
+            ..
+        } => result_name.is_none() || continuation.as_deref().is_some_and(is_terminal_stmt),
+        Workflow::Decide {
+            then_branch,
+            else_branch,
+            ..
+        }
+        | Workflow::If {
+            then_branch,
+            else_branch,
+            ..
+        } => is_terminal_stmt(then_branch) && else_branch.as_deref().is_none_or(is_terminal_stmt),
+        Workflow::Check { continuation, .. } => {
+            continuation.as_deref().is_none_or(is_terminal_stmt)
+        }
+        Workflow::Receive { arms, .. } => arms.iter().all(|arm| is_terminal_stmt(&arm.body)),
         _ => false,
     }
 }

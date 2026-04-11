@@ -22,7 +22,7 @@ KEYWORD     ::= "workflow" | "capability" | "policy" | "role"
               | "wait" | "control"
               | "exposes"
               | "timeout" | "done"
-              | "fn" | "panic"
+              | "fn" | "panic" | "match"
               | "epistemic" | "deliberative" | "evaluative" | "operational"
               | "authority" | "obligations"
               | "when" | "returns" | "where"
@@ -39,7 +39,7 @@ NULL        ::= "null"
 OPERATOR    ::= "+" | "-" | "*" | "/" | "=" | "!=" | "<" | ">" | "<=" | ">="
               | "and" | "or" | "not" | "in"
 
-DELIMITER   ::= "(" | ")" | "{" | "}" | "[" | "]" | "," | ";" | ":" | "." | ".."
+DELIMITER   ::= "(" | ")" | "{" | "}" | "[" | "]" | "," | ";" | ":" | "::" | "." | ".."
 ```
 
 ### 2.2 Comments
@@ -52,26 +52,40 @@ DOC_COMMENT     ::= "-- |" [^\n]*  (Documentation)
 
 ## 3. Grammar
 
-### 3.1 Program Structure
+### 3.1 File-Level Grammar (ModuleFile)
 
 ```
-module_file ::= definition* workflow_def?
+module_file ::= module_item*
 
-program     ::= module_file
+program     ::= module_file    -- entry-point artifact only, produced by entry-point validation
+
+module_item ::= visibility? definition
+              | visibility? module_decl
 
 definition  ::= capability_def | policy_def | role_def 
-              | memory_def | datatype_def | fn_def
+              | memory_def | datatype_def | fn_def | workflow_def
+
+module_decl ::= "mod" IDENTIFIER ";"                    -- File-based
+              | "mod" IDENTIFIER "{" module_item* "}"   -- Inline
+
+visibility  ::= "pub" ( "(" visibility_rest ")" )?
+visibility_rest ::= "crate" | "super" | "self" | "in" module_path
 
 -- Note: datatype_def is expanded in Section 3.6 Type Definitions
 -- Note: fn_def surface details are introduced in Section 3.7 and elaborated in SPEC-027
+-- Note: module_path, module_decl, and visibility are specified in SPEC-009
 ```
 
-Normative file/root model:
+Normative file/root model (aligned with PLAN-023 Critical Issue #1 and SPEC-009 §4.1a):
 
-- `module_file` is the authoritative file-level surface grammar for a `.ash` source file.
-- A `module_file` may contain definitions only, or definitions plus one top-level `workflow_def`.
-- `program` is reserved for the executable entry-point view over that parsed file; this section does
-  not further specify entry-point loading or validation.
+- `module_file` is the authoritative file-level surface grammar for any `.ash` source file.
+- A `module_file` contains zero or more `module_item`s: top-level definitions (including an optional
+  `workflow_def`), module declarations, each optionally preceded by a visibility modifier.
+- `Program` is not the general file grammar. It is reserved for the executable entry-point view
+  produced only when the loader validates a `ModuleFile` as having the required entry-point workflow
+  shape. Non-entry-point modules remain `ModuleFile`s and do not require a workflow.
+- A file is parsed once as a `ModuleFile`; it is not simultaneously both roots. Entry-point loading
+  may then promote the parsed file to `Program` if it satisfies entry-point validation rules.
 
 ### 3.2 Capability Definition
 

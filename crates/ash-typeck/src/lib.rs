@@ -28,6 +28,7 @@ pub mod names;
 pub mod obligation_checker;
 pub mod obligations;
 pub mod policy_check;
+pub mod purity;
 pub mod qualified_name;
 pub mod requirements;
 pub mod role_checking;
@@ -72,9 +73,11 @@ pub use runtime_verification::{
     StaticPolicyValidator, VerificationError, VerificationResult, VerificationWarning,
 };
 pub use solver::{Solver, TypeError};
-pub use type_env::TypeEnv;
+pub use type_env::{StoredFnContract, TypeEnv};
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
+
+use std::collections::HashSet;
 
 fn workflow_surface_type_to_type(
     env: &TypeEnv,
@@ -138,10 +141,23 @@ fn workflow_surface_type_to_type(
                 kind: Kind::Type,
             })
         }
+        ash_parser::surface::Type::Fn(params, ret) => {
+            // Pure function type: Fn(T, U) -> V => Type::Fn(params, ret)
+            let param_types: Result<Vec<_>, _> = params
+                .iter()
+                .map(|p| workflow_surface_type_to_type(env, p, type_params))
+                .collect();
+            let ret_type = workflow_surface_type_to_type(env, ret, type_params)?;
+            Ok(Type::Fn(param_types?, Box::new(ret_type)))
+        }
     }
 }
 
-fn bind_pattern_variables(env: &mut TypeEnv, pattern: &ash_parser::surface::Pattern, ty: &Type) {
+pub(crate) fn bind_pattern_variables(
+    env: &mut TypeEnv,
+    pattern: &ash_parser::surface::Pattern,
+    ty: &Type,
+) {
     match pattern {
         ash_parser::surface::Pattern::Variable(name) => {
             env.bind_variable(name.as_ref(), ty.clone());
@@ -478,13 +494,20 @@ fn validate_interface_calls_in_expr(
         ash_parser::surface::Expr::Policy(_)
         | ash_parser::surface::Expr::CheckObligation { .. } => Ok(()),
         ash_parser::surface::Expr::IfLet {
+            pattern,
             expr,
             then_branch,
             else_branch,
             ..
         } => {
             validate_interface_calls_in_expr(env, expr)?;
-            validate_interface_calls_in_expr(env, then_branch)?;
+
+            let matched_ty =
+                infer_checked_expr_type(env, expr, "failed to typecheck if-let scrutinee")?;
+            let mut then_env = env.clone();
+            bind_pattern_variables(&mut then_env, pattern, &matched_ty);
+
+            validate_interface_calls_in_expr(&then_env, then_branch)?;
             validate_interface_calls_in_expr(env, else_branch)
         }
         ash_parser::surface::Expr::Constructor {
@@ -509,6 +532,45 @@ fn validate_interface_calls_in_expr(
                     Ok(())
                 }
             }
+        }
+        ash_parser::surface::Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            validate_interface_calls_in_expr(env, condition)?;
+            validate_interface_calls_in_expr(env, then_branch)?;
+            if let Some(e) = else_branch {
+                validate_interface_calls_in_expr(env, e)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::Panic { .. } => Ok(()),
+        ash_parser::surface::Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            let mut block_env = env.clone();
+
+            for stmt in statements {
+                match stmt {
+                    ash_parser::surface::BlockStmt::Let { pattern, expr, .. } => {
+                        validate_interface_calls_in_expr(&block_env, expr)?;
+                        let binding_ty = infer_checked_expr_type(
+                            &block_env,
+                            expr,
+                            "failed to typecheck block let binding",
+                        )?;
+                        bind_pattern_variables(&mut block_env, pattern, &binding_ty);
+                    }
+                }
+            }
+            if let Some(e) = tail_expr {
+                validate_interface_calls_in_expr(&block_env, e)?;
+            }
+            Ok(())
         }
     }
 }
@@ -542,14 +604,33 @@ fn validate_interface_calls_in_action(
 
     // Validate the operational target
     match &action.target {
-        OperationalTarget::Symbolic { capability_name: _ } => {
+        OperationalTarget::Symbolic { capability_name } => {
+            if matches!(
+                env.lookup_variable(capability_name.as_ref()),
+                Some(Type::Fn(_, _) | Type::Fun(_, _, _))
+            ) {
+                return Err(TypeCheckError::TypeError(format!(
+                    "'{}' is a function, not a capability; use `module::name()` syntax instead of `provider:action()`",
+                    capability_name.as_ref()
+                )));
+            }
             // For symbolic targets, resolution happens during lowering.
             // The resolver maps symbolic names to (provider, action) via explicit metadata.
         }
         OperationalTarget::Qualified {
-            module: _,
-            capability_name: _,
+            module,
+            capability_name,
         } => {
+            if matches!(
+                env.lookup_call_target(Some(module.as_ref()), capability_name.as_ref()),
+                Some(Type::Fn(_, _) | Type::Fun(_, _, _))
+            ) {
+                return Err(TypeCheckError::TypeError(format!(
+                    "'{}::{}' is a function, not a capability; use `module::name()` syntax instead of `provider:action()`",
+                    module.as_ref(),
+                    capability_name.as_ref()
+                )));
+            }
             // For module-qualified targets (e.g., io::fs_read), resolution happens
             // during lowering. The resolver looks up the qualified name in its mappings.
         }
@@ -557,6 +638,15 @@ fn validate_interface_calls_in_action(
             provider,
             action: action_name,
         } => {
+            if matches!(
+                env.lookup_variable(action_name.as_ref()),
+                Some(Type::Fn(_, _) | Type::Fun(_, _, _))
+            ) {
+                return Err(TypeCheckError::TypeError(format!(
+                    "'{}' is a function, not a capability; use `module::name()` syntax instead of `provider:action()`",
+                    action_name.as_ref()
+                )));
+            }
             // For explicit targets, validate that the provider exists
             if !env.has_provider(provider.as_ref()) {
                 return Err(TypeCheckError::ResolutionError(format!(
@@ -798,10 +888,7 @@ fn infer_workflow_return_type(
     workflow: &ash_parser::surface::Workflow,
 ) -> Result<Type, TypeCheckError> {
     match workflow {
-        ash_parser::surface::Workflow::Ret { expr, .. } => infer_surface_expr_type(env, expr)
-            .map_err(|_| {
-                TypeCheckError::TypeError("failed to typecheck return expression".to_string())
-            }),
+        ash_parser::surface::Workflow::Ret { expr, .. } => infer_surface_expr_type(env, expr),
         ash_parser::surface::Workflow::Done { .. }
         | ash_parser::surface::Workflow::Act { .. }
         | ash_parser::surface::Workflow::Oblige { .. } => Ok(Type::Null),
@@ -1051,6 +1138,666 @@ fn reject_unsupported_mvp_workflow_features(
     }
 }
 
+fn fn_signature_type(
+    env: &TypeEnv,
+    function: &ash_parser::surface::FnDef,
+) -> Result<Type, TypeCheckError> {
+    let type_param_bindings: std::collections::HashMap<String, Type> = function
+        .type_params
+        .iter()
+        .map(|param| (param.to_string(), Type::Var(TypeVar::fresh())))
+        .collect();
+
+    let params = function
+        .params
+        .iter()
+        .map(|param| workflow_surface_type_to_type(env, &param.ty, &type_param_bindings))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let ret = match &function.return_type {
+        Some(ret) => workflow_surface_type_to_type(env, ret, &type_param_bindings)?,
+        None => Type::Var(TypeVar::fresh()),
+    };
+
+    Ok(Type::Fn(params, Box::new(ret)))
+}
+
+fn register_function_signatures(
+    env: &mut TypeEnv,
+    definitions: &[ash_parser::surface::Definition],
+) -> Result<(), TypeCheckError> {
+    for definition in definitions {
+        match definition {
+            ash_parser::surface::Definition::Function(function) => {
+                let signature = fn_signature_type(env, function)?;
+                env.bind_variable(function.name.as_ref(), signature);
+            }
+            ash_parser::surface::Definition::Capability(capability) => {
+                env.register_capability_symbol(capability.name.as_ref());
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn collect_type_vars(ty: &Type, vars: &mut HashSet<TypeVar>) {
+    match ty {
+        Type::Var(var) => {
+            vars.insert(*var);
+        }
+        Type::List(item) => collect_type_vars(item, vars),
+        Type::Record(fields) => {
+            for (_, field_ty) in fields {
+                collect_type_vars(field_ty, vars);
+            }
+        }
+        Type::Fun(args, ret, _) => {
+            for arg_ty in args {
+                collect_type_vars(arg_ty, vars);
+            }
+            collect_type_vars(ret, vars);
+        }
+        Type::Fn(params, ret) => {
+            for param_ty in params {
+                collect_type_vars(param_ty, vars);
+            }
+            collect_type_vars(ret, vars);
+        }
+        Type::Constructor { args, .. } => {
+            for arg_ty in args {
+                collect_type_vars(arg_ty, vars);
+            }
+        }
+        Type::Int
+        | Type::String
+        | Type::Bool
+        | Type::Null
+        | Type::Time
+        | Type::Ref
+        | Type::Cap { .. }
+        | Type::Instance { .. }
+        | Type::InstanceAddr { .. }
+        | Type::ControlLink { .. } => {}
+    }
+}
+
+fn validate_inferred_function_return(
+    function: &ash_parser::surface::FnDef,
+    param_types: &[Type],
+    return_ty: &Type,
+) -> Result<(), TypeCheckError> {
+    if function.return_type.is_some() {
+        return Ok(());
+    }
+
+    let mut allowed_vars = HashSet::new();
+    for param_ty in param_types {
+        collect_type_vars(param_ty, &mut allowed_vars);
+    }
+
+    let mut return_vars = HashSet::new();
+    collect_type_vars(return_ty, &mut return_vars);
+
+    if return_vars.iter().any(|var| !allowed_vars.contains(var)) {
+        return Err(TypeCheckError::TypeError(format!(
+            "fn '{}' omitted return type could not be inferred; add an explicit return type",
+            function.name
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_fn_contract_namespace(
+    function: &ash_parser::surface::FnDef,
+    lowered: &ash_parser::LoweredFnContract,
+) -> Result<(), TypeCheckError> {
+    let param_names: HashSet<&str> = function
+        .params
+        .iter()
+        .map(|param| param.name.as_ref())
+        .collect();
+
+    for requirement in &lowered.contract.requires {
+        let ash_core::workflow_contract::Requirement::Arithmetic { var, .. } = requirement else {
+            continue;
+        };
+
+        if !param_names.contains(var.as_str()) {
+            return Err(TypeCheckError::TypeError(format!(
+                "fn contract references unknown variable '{}' in requires for fn '{}'",
+                var, function.name
+            )));
+        }
+    }
+
+    for predicate in &lowered.runtime_postconditions.predicates {
+        match predicate {
+            ash_core::workflow_contract::PostPredicate::ResultSatisfies(_) => {}
+            ash_core::workflow_contract::PostPredicate::Eq(left, right) => {
+                for variable in [left, right] {
+                    if variable == "result" {
+                        continue;
+                    }
+
+                    let is_literal = matches!(variable.as_str(), "true" | "false" | "null")
+                        || variable.parse::<i64>().is_ok()
+                        || (variable.starts_with('"') && variable.ends_with('"'));
+
+                    if !is_literal && !param_names.contains(variable.as_str()) {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "fn contract references unknown variable '{}' in ensures for fn '{}'",
+                            variable, function.name
+                        )));
+                    }
+                }
+            }
+            ash_core::workflow_contract::PostPredicate::StateAssertion(_) => {
+                return Err(TypeCheckError::TypeError(format!(
+                    "fn '{}' lowered an unsupported stateful ensures predicate",
+                    function.name
+                )));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn refine_function_signatures(
+    env: &mut TypeEnv,
+    definitions: &[ash_parser::surface::Definition],
+) -> Result<(), TypeCheckError> {
+    let function_count = definitions
+        .iter()
+        .filter(|definition| matches!(definition, ash_parser::surface::Definition::Function(_)))
+        .count();
+
+    for _ in 0..function_count {
+        let mut changed = false;
+
+        for definition in definitions {
+            let ash_parser::surface::Definition::Function(function) = definition else {
+                continue;
+            };
+
+            let (inferred_return_ty, lowered_contract) = check_function_def_in_env(env, function)?;
+            let signature = env.lookup_variable(function.name.as_ref()).ok_or_else(|| {
+                TypeCheckError::TypeError(format!("missing signature for fn '{}'", function.name))
+            })?;
+            let Type::Fn(params, current_return_ty) = signature else {
+                return Err(TypeCheckError::TypeError(format!(
+                    "fn '{}' did not register as a pure function",
+                    function.name
+                )));
+            };
+
+            let stabilized_return_ty = if *current_return_ty == inferred_return_ty {
+                *current_return_ty
+            } else {
+                changed = true;
+                inferred_return_ty
+            };
+
+            env.bind_variable(
+                function.name.as_ref(),
+                Type::Fn(params, Box::new(stabilized_return_ty)),
+            );
+            env.bind_fn_contract(
+                function.name.as_ref(),
+                StoredFnContract {
+                    param_names: function
+                        .params
+                        .iter()
+                        .map(|param| param.name.to_string())
+                        .collect(),
+                    contract: lowered_contract.contract,
+                    runtime_postconditions: lowered_contract.runtime_postconditions,
+                },
+            );
+        }
+
+        if !changed {
+            break;
+        }
+    }
+
+    for definition in definitions {
+        let ash_parser::surface::Definition::Function(function) = definition else {
+            continue;
+        };
+
+        let (inferred_return_ty, _) = check_function_def_in_env(env, function)?;
+        let signature = env.lookup_variable(function.name.as_ref()).ok_or_else(|| {
+            TypeCheckError::TypeError(format!("missing signature for fn '{}'", function.name))
+        })?;
+        let Type::Fn(params, current_return_ty) = signature else {
+            return Err(TypeCheckError::TypeError(format!(
+                "fn '{}' did not register as a pure function",
+                function.name
+            )));
+        };
+
+        if *current_return_ty != inferred_return_ty {
+            return Err(TypeCheckError::TypeError(format!(
+                "fn '{}' omitted return type could not be stabilized; add an explicit return type",
+                function.name
+            )));
+        }
+
+        validate_inferred_function_return(function, &params, &current_return_ty)?;
+    }
+
+    Ok(())
+}
+
+fn int_fact_from_expr(
+    facts: &std::collections::HashMap<String, i64>,
+    expr: &ash_parser::surface::Expr,
+) -> Option<i64> {
+    match expr {
+        ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(value)) => {
+            Some(*value)
+        }
+        ash_parser::surface::Expr::Variable(name) => facts.get(name.as_ref()).copied(),
+        ash_parser::surface::Expr::Unary {
+            op: ash_parser::surface::UnaryOp::Neg,
+            operand,
+            ..
+        } => int_fact_from_expr(facts, operand).map(|value| -value),
+        ash_parser::surface::Expr::Binary {
+            op, left, right, ..
+        } => {
+            let left = int_fact_from_expr(facts, left)?;
+            let right = int_fact_from_expr(facts, right)?;
+            match op {
+                ash_parser::surface::BinaryOp::Add => Some(left + right),
+                ash_parser::surface::BinaryOp::Sub => Some(left - right),
+                ash_parser::surface::BinaryOp::Mul => Some(left * right),
+                ash_parser::surface::BinaryOp::Div => (right != 0).then_some(left / right),
+                ash_parser::surface::BinaryOp::Mod => (right != 0).then_some(left % right),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+fn assumption_from_condition(
+    condition: &ash_parser::surface::Expr,
+    truthy: bool,
+) -> Option<(String, ash_core::workflow_contract::ArithConstraint)> {
+    use ash_core::workflow_contract::ArithConstraint;
+    use ash_parser::surface::BinaryOp;
+
+    let ash_parser::surface::Expr::Binary {
+        op, left, right, ..
+    } = condition
+    else {
+        return None;
+    };
+
+    let (var, value, normalized_op) = match (&**left, &**right) {
+        (
+            ash_parser::surface::Expr::Variable(name),
+            ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(value)),
+        ) => (name.to_string(), *value, *op),
+        (
+            ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(value)),
+            ash_parser::surface::Expr::Variable(name),
+        ) => {
+            let swapped = match op {
+                BinaryOp::Lt => BinaryOp::Gt,
+                BinaryOp::Leq => BinaryOp::Geq,
+                BinaryOp::Gt => BinaryOp::Lt,
+                BinaryOp::Geq => BinaryOp::Leq,
+                other => *other,
+            };
+            (name.to_string(), *value, swapped)
+        }
+        _ => return None,
+    };
+
+    let constraint = match (truthy, normalized_op) {
+        (true, BinaryOp::Lt) => ArithConstraint::Lt(value),
+        (true, BinaryOp::Leq) => ArithConstraint::Lte(value),
+        (true, BinaryOp::Gt) => ArithConstraint::Gt(value),
+        (true, BinaryOp::Geq) => ArithConstraint::Gte(value),
+        (true, BinaryOp::Eq) => ArithConstraint::Eq(value),
+        (true, BinaryOp::Neq) => ArithConstraint::NotEq(value),
+        (false, BinaryOp::Lt) => ArithConstraint::Gte(value),
+        (false, BinaryOp::Leq) => ArithConstraint::Gt(value),
+        (false, BinaryOp::Gt) => ArithConstraint::Lte(value),
+        (false, BinaryOp::Geq) => ArithConstraint::Lt(value),
+        (false, BinaryOp::Eq) => ArithConstraint::NotEq(value),
+        (false, BinaryOp::Neq) => ArithConstraint::Eq(value),
+        _ => return None,
+    };
+
+    Some((var, constraint))
+}
+
+fn build_requirement_context(
+    facts: &std::collections::HashMap<String, i64>,
+    assumptions: &std::collections::HashMap<
+        String,
+        Vec<ash_core::workflow_contract::ArithConstraint>,
+    >,
+    param_names: &[String],
+    args: &[ash_parser::surface::Expr],
+) -> RequirementContext {
+    let mut ctx = RequirementContext::new();
+    for (param_name, arg) in param_names.iter().zip(args.iter()) {
+        if let Some(value) = int_fact_from_expr(facts, arg) {
+            ctx = ctx.with_fact(param_name.clone(), value);
+            continue;
+        }
+
+        if let ash_parser::surface::Expr::Variable(name) = arg {
+            let Some(constraints) = assumptions.get(name.as_ref()) else {
+                continue;
+            };
+            for constraint in constraints {
+                ctx = ctx.with_arithmetic_assumption(param_name.clone(), constraint.clone());
+            }
+        }
+    }
+    ctx
+}
+
+fn validate_fn_call_preconditions_expr(
+    env: &TypeEnv,
+    expr: &ash_parser::surface::Expr,
+    facts: &std::collections::HashMap<String, i64>,
+    assumptions: &std::collections::HashMap<
+        String,
+        Vec<ash_core::workflow_contract::ArithConstraint>,
+    >,
+) -> Result<(), TypeCheckError> {
+    match expr {
+        ash_parser::surface::Expr::Unary { operand, .. }
+        | ash_parser::surface::Expr::FieldAccess { base: operand, .. } => {
+            validate_fn_call_preconditions_expr(env, operand, facts, assumptions)
+        }
+        ash_parser::surface::Expr::IndexAccess { base, index, .. } => {
+            validate_fn_call_preconditions_expr(env, base, facts, assumptions)?;
+            validate_fn_call_preconditions_expr(env, index, facts, assumptions)
+        }
+        ash_parser::surface::Expr::Binary { left, right, .. } => {
+            validate_fn_call_preconditions_expr(env, left, facts, assumptions)?;
+            validate_fn_call_preconditions_expr(env, right, facts, assumptions)
+        }
+        ash_parser::surface::Expr::Call {
+            func, module, args, ..
+        } => {
+            for arg in args {
+                validate_fn_call_preconditions_expr(env, arg, facts, assumptions)?;
+            }
+
+            let contract_name = module
+                .as_ref()
+                .map(|module| format!("{module}::{func}"))
+                .unwrap_or_else(|| func.to_string());
+            if let Some(boundary) = env.lookup_fn_contract(&contract_name) {
+                let ctx =
+                    build_requirement_context(facts, assumptions, &boundary.param_names, args);
+
+                let contract_result = check_contract(&boundary.contract, &ctx);
+                if !contract_result.is_success() {
+                    let details = contract_result
+                        .errors()
+                        .into_iter()
+                        .map(std::string::ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    return Err(TypeCheckError::TypeError(format!(
+                        "fn precondition may not hold for call '{}': {details}",
+                        contract_name
+                    )));
+                }
+            }
+
+            Ok(())
+        }
+        ash_parser::surface::Expr::InterfaceMethodCall { argument, .. } => {
+            validate_fn_call_preconditions_expr(env, argument, facts, assumptions)
+        }
+        ash_parser::surface::Expr::Match {
+            scrutinee, arms, ..
+        } => {
+            validate_fn_call_preconditions_expr(env, scrutinee, facts, assumptions)?;
+            for arm in arms {
+                validate_fn_call_preconditions_expr(env, &arm.body, facts, assumptions)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            validate_fn_call_preconditions_expr(env, expr, facts, assumptions)?;
+            validate_fn_call_preconditions_expr(env, then_branch, facts, assumptions)?;
+            validate_fn_call_preconditions_expr(env, else_branch, facts, assumptions)
+        }
+        ash_parser::surface::Expr::Constructor {
+            fields, payload, ..
+        } => {
+            for (_, value) in fields {
+                validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
+            }
+            match payload {
+                ash_parser::surface::ConstructorPayload::Unit => {}
+                ash_parser::surface::ConstructorPayload::Record(fields) => {
+                    for (_, value) in fields {
+                        validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
+                    }
+                }
+                ash_parser::surface::ConstructorPayload::Tuple(items) => {
+                    for value in items {
+                        validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
+                    }
+                }
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            validate_fn_call_preconditions_expr(env, condition, facts, assumptions)?;
+            let mut then_assumptions = assumptions.clone();
+            if let Some((var, constraint)) = assumption_from_condition(condition, true) {
+                then_assumptions.entry(var).or_default().push(constraint);
+            }
+            validate_fn_call_preconditions_expr(env, then_branch, facts, &then_assumptions)?;
+            if let Some(else_branch) = else_branch {
+                let mut else_assumptions = assumptions.clone();
+                if let Some((var, constraint)) = assumption_from_condition(condition, false) {
+                    else_assumptions.entry(var).or_default().push(constraint);
+                }
+                validate_fn_call_preconditions_expr(env, else_branch, facts, &else_assumptions)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            let mut nested_facts = facts.clone();
+            let nested_assumptions = assumptions.clone();
+            for statement in statements {
+                let ash_parser::surface::BlockStmt::Let { pattern, expr, .. } = statement;
+                validate_fn_call_preconditions_expr(env, expr, &nested_facts, &nested_assumptions)?;
+                if let (ash_parser::surface::Pattern::Variable(name), Some(value)) =
+                    (pattern, int_fact_from_expr(&nested_facts, expr))
+                {
+                    nested_facts.insert(name.to_string(), value);
+                }
+            }
+            if let Some(tail_expr) = tail_expr {
+                validate_fn_call_preconditions_expr(
+                    env,
+                    tail_expr,
+                    &nested_facts,
+                    &nested_assumptions,
+                )?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::Literal(_)
+        | ash_parser::surface::Expr::Variable(_)
+        | ash_parser::surface::Expr::Policy(_)
+        | ash_parser::surface::Expr::CheckObligation { .. }
+        | ash_parser::surface::Expr::Panic { .. } => Ok(()),
+    }
+}
+
+fn validate_fn_call_preconditions_workflow(
+    env: &TypeEnv,
+    workflow: &ash_parser::surface::Workflow,
+    facts: &mut std::collections::HashMap<String, i64>,
+    assumptions: &mut std::collections::HashMap<
+        String,
+        Vec<ash_core::workflow_contract::ArithConstraint>,
+    >,
+) -> Result<(), TypeCheckError> {
+    match workflow {
+        ash_parser::surface::Workflow::Orient {
+            expr, continuation, ..
+        } => {
+            validate_fn_call_preconditions_expr(env, expr, facts, assumptions)?;
+            if let Some(continuation) = continuation {
+                validate_fn_call_preconditions_workflow(env, continuation, facts, assumptions)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Ret { expr, .. } => {
+            validate_fn_call_preconditions_expr(env, expr, facts, assumptions)
+        }
+        ash_parser::surface::Workflow::Let {
+            pattern,
+            expr,
+            continuation,
+            ..
+        } => {
+            validate_fn_call_preconditions_expr(env, expr, facts, assumptions)?;
+            if let (ash_parser::surface::Pattern::Variable(name), Some(value)) =
+                (pattern, int_fact_from_expr(facts, expr))
+            {
+                facts.insert(name.to_string(), value);
+            }
+            if let Some(continuation) = continuation {
+                validate_fn_call_preconditions_workflow(env, continuation, facts, assumptions)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            validate_fn_call_preconditions_expr(env, condition, facts, assumptions)?;
+            let mut then_facts = facts.clone();
+            let mut then_assumptions = assumptions.clone();
+            if let Some((var, constraint)) = assumption_from_condition(condition, true) {
+                then_assumptions.entry(var).or_default().push(constraint);
+            }
+            validate_fn_call_preconditions_workflow(
+                env,
+                then_branch,
+                &mut then_facts,
+                &mut then_assumptions,
+            )?;
+            if let Some(else_branch) = else_branch {
+                let mut else_facts = facts.clone();
+                let mut else_assumptions = assumptions.clone();
+                if let Some((var, constraint)) = assumption_from_condition(condition, false) {
+                    else_assumptions.entry(var).or_default().push(constraint);
+                }
+                validate_fn_call_preconditions_workflow(
+                    env,
+                    else_branch,
+                    &mut else_facts,
+                    &mut else_assumptions,
+                )?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Seq { first, second, .. } => {
+            validate_fn_call_preconditions_workflow(env, first, facts, assumptions)?;
+            validate_fn_call_preconditions_workflow(env, second, facts, assumptions)
+        }
+        ash_parser::surface::Workflow::Done { .. }
+        | ash_parser::surface::Workflow::Oblige { .. } => Ok(()),
+        _ => Ok(()),
+    }
+}
+
+fn check_function_def_in_env(
+    env: &TypeEnv,
+    function: &ash_parser::surface::FnDef,
+) -> Result<(Type, ash_parser::LoweredFnContract), TypeCheckError> {
+    let signature = env.lookup_variable(function.name.as_ref()).ok_or_else(|| {
+        TypeCheckError::TypeError(format!("missing signature for fn '{}'", function.name))
+    })?;
+
+    let (param_types, declared_return_ty) = match signature {
+        Type::Fn(params, ret) => (params, *ret),
+        other => {
+            return Err(TypeCheckError::TypeError(format!(
+                "fn '{}' did not register as a pure function, found {}",
+                function.name, other
+            )));
+        }
+    };
+
+    let mut fn_env = env.extend();
+    fn_env.bind_variable(
+        function.name.as_ref(),
+        Type::Fn(param_types.clone(), Box::new(declared_return_ty.clone())),
+    );
+    for (param, ty) in function.params.iter().zip(param_types.iter()) {
+        if matches!(ty, Type::Cap { .. }) {
+            return Err(TypeCheckError::TypeError(format!(
+                "fn '{}' parameter '{}' cannot have capability type {}",
+                function.name, param.name, ty
+            )));
+        }
+        fn_env.bind_variable(param.name.as_ref(), ty.clone());
+    }
+
+    let lowered_contract = ash_parser::lower_fn_contract(function.contract.as_ref())
+        .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+    validate_fn_contract_namespace(function, &lowered_contract)?;
+
+    crate::purity::check_purity(&fn_env, &function.body).map_err(|errors| {
+        TypeCheckError::TypeError(
+            errors
+                .into_iter()
+                .map(|error| error.to_string())
+                .collect::<Vec<_>>()
+                .join("; "),
+        )
+    })?;
+
+    let body_ty = infer_surface_expr_type(&fn_env, &function.body)?;
+    crate::types::unify(&declared_return_ty, &body_ty)
+        .map(|subst| (subst.apply(&declared_return_ty), lowered_contract))
+        .map_err(|_| {
+            TypeCheckError::TypeError(format!(
+                "fn '{}' declared return type {} but body returns {}",
+                function.name, declared_return_ty, body_ty
+            ))
+        })
+}
+
 /// Type-check a workflow definition against an explicitly prepared type environment.
 pub fn type_check_workflow_def_in_env(
     env: &TypeEnv,
@@ -1099,6 +1846,12 @@ pub fn type_check_workflow_def_in_env(
 
     reject_unsupported_mvp_workflow_features(&workflow.body)?;
     validate_interface_calls_in_workflow(&mut workflow_env, &workflow.body)?;
+    validate_fn_call_preconditions_workflow(
+        &workflow_env,
+        &workflow.body,
+        &mut std::collections::HashMap::new(),
+        &mut std::collections::HashMap::new(),
+    )?;
 
     if let Some(expected_return_ty) = declared_return_ty {
         let actual_return_ty = infer_workflow_return_type(&workflow_env, &workflow.body)?;
@@ -1110,7 +1863,9 @@ pub fn type_check_workflow_def_in_env(
         })?;
     }
 
-    type_check_workflow(&workflow.body, Some(&param_bindings))
+    let mut result = type_check_workflow(&workflow.body, Some(&param_bindings))?;
+    result.function_contracts = env.function_contracts();
+    Ok(result)
 }
 
 pub fn type_check_workflow_def(
@@ -1137,6 +1892,9 @@ pub fn type_check_program(
                 .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
         }
     }
+
+    register_function_signatures(&mut env, &program.definitions)?;
+    refine_function_signatures(&mut env, &program.definitions)?;
 
     type_check_workflow_def_in_env(&env, &program.workflow)
 }
@@ -1226,6 +1984,7 @@ pub fn type_check_workflow(
         inferred_types: std::collections::HashMap::new(),
         effect: inferred_effect,
         obligation_status: obligation_result,
+        function_contracts: std::collections::HashMap::new(),
     })
 }
 
@@ -1259,6 +2018,8 @@ pub struct TypeCheckResult {
     pub effect: ash_core::Effect,
     /// Obligation check status
     pub obligation_status: ObligationCheckResult,
+    /// Lowered pure-function contract boundaries available to runtime consumers.
+    pub function_contracts: std::collections::HashMap<String, StoredFnContract>,
 }
 
 impl TypeCheckResult {
@@ -1411,10 +2172,7 @@ mod tests {
     fn test_module_exports() {
         // Test that all modules are accessible via crate root
         let _ = ConstraintContext::new();
-        let _ = Solver::new();
-        let _ = EffectContext::new();
-        let _ = NameResolver::new();
-        let _ = ObligationTracker::new();
-        let _ = Substitution::new();
+        let _ = TypeEnv::with_builtin_types();
+        let _ = Type::Int;
     }
 }

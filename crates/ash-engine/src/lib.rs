@@ -21,6 +21,7 @@ pub mod harness;
 pub mod module_loader;
 pub mod parse;
 pub mod providers;
+mod pure_runtime;
 
 pub use entry::{
     EntryBootstrapError, EntryVerificationError, RuntimeEntryStdlibSource,
@@ -69,6 +70,9 @@ pub struct Engine {
     /// Imported ADT/type definitions keyed by parsed workflow ID.
     imported_type_defs:
         std::sync::Mutex<std::collections::HashMap<u64, Vec<ash_core::ast::TypeDef>>>,
+    /// Parsed program metadata for workflows loaded with local pure-function definitions.
+    surface_programs:
+        std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::Program>>,
     /// Narrow engine-owned registry of runtime stdlib module sources keyed by
     /// canonical module path.
     runtime_stdlib_modules: std::sync::Mutex<std::collections::HashMap<String, String>>,
@@ -152,9 +156,21 @@ impl Engine {
         }
     }
 
+    fn store_surface_program(&self, workflow_id: u64, program: ash_parser::surface::Program) {
+        if let Ok(mut map) = self.surface_programs.lock() {
+            map.insert(workflow_id, program);
+        }
+    }
+
     /// Retrieve a surface workflow definition by its ID
     fn get_surface_workflow_def(&self, id: u64) -> Option<ash_parser::surface::WorkflowDef> {
         self.surface_workflow_defs
+            .lock()
+            .map_or(None, |map| map.get(&id).cloned())
+    }
+
+    fn get_surface_program(&self, id: u64) -> Option<ash_parser::surface::Program> {
+        self.surface_programs
             .lock()
             .map_or(None, |map| map.get(&id).cloned())
     }
@@ -205,6 +221,24 @@ impl Engine {
         self.runtime_stdlib_modules
             .lock()
             .is_ok_and(|registry| registry.contains_key(module_path))
+    }
+
+    fn runtime_stdlib_type_defs(&self) -> Result<Vec<ash_core::ast::TypeDef>, EngineError> {
+        let sources = self
+            .runtime_stdlib_modules
+            .lock()
+            .map_err(|_| {
+                EngineError::Configuration("runtime stdlib registry lock poisoned".to_string())
+            })?
+            .values()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let mut type_defs = Vec::new();
+        for source in &sources {
+            type_defs.extend(module_loader::collect_public_type_defs_from_source(source)?);
+        }
+        Ok(type_defs)
     }
 
     /// Parse source code into a Workflow
@@ -295,7 +329,38 @@ impl Engine {
                 self.store_imported_type_defs(id, imported_type_defs);
                 Ok(Workflow { core, id })
             }
-            Err(e) => Err(EngineError::Parse(format!("{e}"))),
+            Err(parse_error) => {
+                let mut program = pure_runtime::parse_program_with_functions(source)
+                    .map_err(|_| EngineError::Parse(format!("{parse_error}")))?;
+                if !imported_callables.is_empty() {
+                    inline_imported_calls_in_workflow_def(
+                        &mut program.workflow,
+                        imported_callables,
+                    )?;
+                }
+
+                let should_use_pure_runtime = should_execute_via_pure_runtime(&program);
+                let core_source = if should_use_pure_runtime {
+                    program.workflow.clone()
+                } else {
+                    let mut lowered_workflow = program.workflow.clone();
+                    let local_callables = collect_local_inline_callables(&program);
+                    if !local_callables.is_empty() {
+                        inline_imported_calls_in_workflow_def(
+                            &mut lowered_workflow,
+                            &local_callables,
+                        )?;
+                    }
+                    lowered_workflow
+                };
+
+                let core = lower_workflow(&core_source)
+                    .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
+                let id = self.store_surface_workflow_def(program.workflow.clone());
+                self.store_surface_program(id, program);
+                self.store_imported_type_defs(id, imported_type_defs);
+                Ok(Workflow { core, id })
+            }
         }
     }
 
@@ -335,8 +400,21 @@ impl Engine {
             .get_surface_workflow_def(workflow.id)
             .ok_or_else(|| EngineError::Type("workflow not found in cache".to_string()))?;
 
-        let imported_type_defs = self.get_imported_type_defs(workflow.id);
-        if imported_type_defs.is_empty() {
+        if let Some(program) = self.get_surface_program(workflow.id) {
+            match ash_typeck::type_check_program(&program) {
+                Ok(result) => {
+                    if result.is_ok() {
+                        return Ok(());
+                    }
+                    let errors: Vec<String> =
+                        result.errors.iter().map(|e| format!("{e:?}")).collect();
+                    return Err(EngineError::Type(errors.join("; ")));
+                }
+                Err(e) => return Err(EngineError::Type(format!("{e}"))),
+            }
+        }
+
+        if verify_entry_workflow_def(&def).is_ok() {
             let param_refs = def
                 .params
                 .iter()
@@ -360,6 +438,9 @@ impl Engine {
                 Err(e) => return Err(EngineError::Type(format!("{e}"))),
             }
         }
+
+        let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
+        imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
 
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
         for imported_type in imported_type_defs {
@@ -408,6 +489,12 @@ impl Engine {
     ///
     /// Returns execution errors from the interpreter.
     pub async fn execute(&self, workflow: &Workflow) -> ExecResult<Value> {
+        if let Some(program) = self
+            .get_surface_program(workflow.id)
+            .filter(should_execute_via_pure_runtime)
+        {
+            return pure_runtime::execute_program(&program, HashMap::new()).await;
+        }
         interpret_in_state(&workflow.core, &self.runtime_state).await
     }
 
@@ -444,6 +531,12 @@ impl Engine {
         workflow: &Workflow,
         input_bindings: std::collections::HashMap<String, Value>,
     ) -> ExecResult<Value> {
+        if let Some(program) = self
+            .get_surface_program(workflow.id)
+            .filter(should_execute_via_pure_runtime)
+        {
+            return pure_runtime::execute_program(&program, input_bindings).await;
+        }
         ash_interp::execute_with_bindings_in_state(
             &workflow.core,
             &self.runtime_state,
@@ -517,8 +610,8 @@ impl Engine {
     pub async fn bootstrap_entry_source(&self, source: &str) -> Result<u8, EntryBootstrapError> {
         self.load_runtime_stdlib()?;
         let workflow = self.parse_entry_source(source)?;
-        self.check(&workflow)?;
         self.verify_entry_workflow(&workflow)?;
+        self.check(&workflow)?;
 
         let def = self
             .get_surface_workflow_def(workflow.id)
@@ -560,6 +653,417 @@ fn inline_imported_calls_in_workflow_def(
     inline_imported_calls_in_workflow(&mut def.body, imported_callables)
 }
 
+fn should_execute_via_pure_runtime(program: &ash_parser::surface::Program) -> bool {
+    let function_names = program
+        .definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            ash_parser::surface::Definition::Function(function) => Some(function.name.to_string()),
+            _ => None,
+        })
+        .collect::<HashSet<_>>();
+
+    !function_names.is_empty()
+        && workflow_is_supported_by_pure_runtime(&program.workflow.body)
+        && workflow_contains_user_fn_call(&program.workflow.body, &function_names)
+}
+
+fn collect_local_inline_callables(
+    program: &ash_parser::surface::Program,
+) -> HashMap<String, module_loader::InlineCallable> {
+    program
+        .definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            ash_parser::surface::Definition::Function(function) => Some((
+                function.name.to_string(),
+                module_loader::InlineCallable {
+                    exported_name: function.name.to_string(),
+                    params: function
+                        .params
+                        .iter()
+                        .map(|param| param.name.to_string())
+                        .collect(),
+                    body: normalize_local_callable_expr(&function.body),
+                },
+            )),
+            _ => None,
+        })
+        .collect()
+}
+
+fn normalize_local_callable_expr(expr: &SurfaceExpr) -> SurfaceExpr {
+    match expr {
+        SurfaceExpr::Block {
+            statements,
+            tail_expr,
+            span,
+        } => {
+            let mut normalized = tail_expr.as_deref().map_or_else(
+                || SurfaceExpr::Literal(ash_parser::surface::Literal::Null),
+                normalize_local_callable_expr,
+            );
+
+            for statement in statements.iter().rev() {
+                let ash_parser::surface::BlockStmt::Let {
+                    pattern,
+                    expr,
+                    span: stmt_span,
+                } = statement;
+                normalized = SurfaceExpr::Match {
+                    scrutinee: Box::new(normalize_local_callable_expr(expr)),
+                    arms: vec![SurfaceMatchArm {
+                        pattern: pattern.clone(),
+                        body: Box::new(normalized),
+                        span: *stmt_span,
+                    }],
+                    span: *span,
+                };
+            }
+
+            normalized
+        }
+        _ => expr.clone(),
+    }
+}
+
+fn workflow_is_supported_by_pure_runtime(workflow: &SurfaceWorkflow) -> bool {
+    match workflow {
+        SurfaceWorkflow::Done { .. } => true,
+        SurfaceWorkflow::Ret { expr, .. } | SurfaceWorkflow::Resume { expr, .. } => {
+            expr_is_supported_by_pure_runtime(expr)
+        }
+        SurfaceWorkflow::Let {
+            expr, continuation, ..
+        }
+        | SurfaceWorkflow::Orient {
+            expr, continuation, ..
+        } => {
+            expr_is_supported_by_pure_runtime(expr)
+                && continuation
+                    .as_deref()
+                    .is_none_or(workflow_is_supported_by_pure_runtime)
+        }
+        SurfaceWorkflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expr_is_supported_by_pure_runtime(condition)
+                && workflow_is_supported_by_pure_runtime(then_branch)
+                && else_branch
+                    .as_deref()
+                    .is_none_or(workflow_is_supported_by_pure_runtime)
+        }
+        SurfaceWorkflow::Seq { first, second, .. } => {
+            workflow_is_supported_by_pure_runtime(first)
+                && workflow_is_supported_by_pure_runtime(second)
+        }
+        SurfaceWorkflow::Observe { .. }
+        | SurfaceWorkflow::Receive { .. }
+        | SurfaceWorkflow::Propose { .. }
+        | SurfaceWorkflow::Decide { .. }
+        | SurfaceWorkflow::Check { .. }
+        | SurfaceWorkflow::Act { .. }
+        | SurfaceWorkflow::Set { .. }
+        | SurfaceWorkflow::Send { .. }
+        | SurfaceWorkflow::For { .. }
+        | SurfaceWorkflow::With { .. }
+        | SurfaceWorkflow::Must { .. }
+        | SurfaceWorkflow::Maybe { .. }
+        | SurfaceWorkflow::Yield { .. }
+        | SurfaceWorkflow::Oblige { .. } => false,
+    }
+}
+
+fn expr_is_supported_by_pure_runtime(expr: &SurfaceExpr) -> bool {
+    match expr {
+        SurfaceExpr::Literal(_)
+        | SurfaceExpr::Variable(_)
+        | SurfaceExpr::Panic { .. }
+        | SurfaceExpr::CheckObligation { .. } => true,
+        SurfaceExpr::FieldAccess { base, .. } | SurfaceExpr::Unary { operand: base, .. } => {
+            expr_is_supported_by_pure_runtime(base)
+        }
+        SurfaceExpr::IndexAccess { base, index, .. }
+        | SurfaceExpr::Binary {
+            left: base,
+            right: index,
+            ..
+        } => expr_is_supported_by_pure_runtime(base) && expr_is_supported_by_pure_runtime(index),
+        SurfaceExpr::Call { args, .. } => args.iter().all(expr_is_supported_by_pure_runtime),
+        SurfaceExpr::Match {
+            scrutinee, arms, ..
+        } => {
+            expr_is_supported_by_pure_runtime(scrutinee)
+                && arms
+                    .iter()
+                    .all(|arm| expr_is_supported_by_pure_runtime(&arm.body))
+        }
+        SurfaceExpr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expr_is_supported_by_pure_runtime(expr)
+                && expr_is_supported_by_pure_runtime(then_branch)
+                && expr_is_supported_by_pure_runtime(else_branch)
+        }
+        SurfaceExpr::Constructor {
+            fields, payload, ..
+        } => {
+            fields
+                .iter()
+                .all(|(_, value)| expr_is_supported_by_pure_runtime(value))
+                && match payload {
+                    SurfaceConstructorPayload::Unit => true,
+                    SurfaceConstructorPayload::Record(fields) => fields
+                        .iter()
+                        .all(|(_, value)| expr_is_supported_by_pure_runtime(value)),
+                    SurfaceConstructorPayload::Tuple(items) => {
+                        items.iter().all(expr_is_supported_by_pure_runtime)
+                    }
+                }
+        }
+        SurfaceExpr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expr_is_supported_by_pure_runtime(condition)
+                && expr_is_supported_by_pure_runtime(then_branch)
+                && else_branch
+                    .as_deref()
+                    .is_none_or(expr_is_supported_by_pure_runtime)
+        }
+        SurfaceExpr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            statements.iter().all(|statement| match statement {
+                ash_parser::surface::BlockStmt::Let { expr, .. } => {
+                    expr_is_supported_by_pure_runtime(expr)
+                }
+            }) && tail_expr
+                .as_deref()
+                .is_none_or(expr_is_supported_by_pure_runtime)
+        }
+        SurfaceExpr::InterfaceMethodCall { .. } | SurfaceExpr::Policy(_) => false,
+    }
+}
+
+fn workflow_contains_user_fn_call(
+    workflow: &SurfaceWorkflow,
+    function_names: &HashSet<String>,
+) -> bool {
+    match workflow {
+        SurfaceWorkflow::Observe { continuation, .. }
+        | SurfaceWorkflow::Propose { continuation, .. }
+        | SurfaceWorkflow::Check { continuation, .. }
+        | SurfaceWorkflow::Set { continuation, .. }
+        | SurfaceWorkflow::Send { continuation, .. } => {
+            continuation.as_deref().is_some_and(|continuation| {
+                workflow_contains_user_fn_call(continuation, function_names)
+            })
+        }
+        SurfaceWorkflow::Orient {
+            expr, continuation, ..
+        }
+        | SurfaceWorkflow::Let {
+            expr, continuation, ..
+        } => {
+            expr_contains_user_fn_call(expr, function_names)
+                || continuation.as_deref().is_some_and(|continuation| {
+                    workflow_contains_user_fn_call(continuation, function_names)
+                })
+        }
+        SurfaceWorkflow::Decide {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expr_contains_user_fn_call(expr, function_names)
+                || workflow_contains_user_fn_call(then_branch, function_names)
+                || else_branch.as_deref().is_some_and(|else_branch| {
+                    workflow_contains_user_fn_call(else_branch, function_names)
+                })
+        }
+        SurfaceWorkflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expr_contains_user_fn_call(condition, function_names)
+                || workflow_contains_user_fn_call(then_branch, function_names)
+                || else_branch.as_deref().is_some_and(|else_branch| {
+                    workflow_contains_user_fn_call(else_branch, function_names)
+                })
+        }
+        SurfaceWorkflow::For {
+            collection, body, ..
+        } => {
+            expr_contains_user_fn_call(collection, function_names)
+                || workflow_contains_user_fn_call(body, function_names)
+        }
+        SurfaceWorkflow::With { body, .. } | SurfaceWorkflow::Must { body, .. } => {
+            workflow_contains_user_fn_call(body, function_names)
+        }
+        SurfaceWorkflow::Maybe {
+            primary, fallback, ..
+        }
+        | SurfaceWorkflow::Seq {
+            first: primary,
+            second: fallback,
+            ..
+        } => {
+            workflow_contains_user_fn_call(primary, function_names)
+                || workflow_contains_user_fn_call(fallback, function_names)
+        }
+        SurfaceWorkflow::Ret { expr, .. } | SurfaceWorkflow::Resume { expr, .. } => {
+            expr_contains_user_fn_call(expr, function_names)
+        }
+        SurfaceWorkflow::Act { guard, .. } => guard
+            .as_ref()
+            .is_some_and(|guard| guard_contains_user_fn_call(guard, function_names)),
+        SurfaceWorkflow::Receive { arms, .. } => arms.iter().any(|arm| {
+            arm.guard
+                .as_ref()
+                .is_some_and(|guard| expr_contains_user_fn_call(guard, function_names))
+                || workflow_contains_user_fn_call(&arm.body, function_names)
+        }),
+        SurfaceWorkflow::Yield { expr, arms, .. } => {
+            expr_contains_user_fn_call(expr, function_names)
+                || arms
+                    .iter()
+                    .any(|arm| workflow_contains_user_fn_call(&arm.body, function_names))
+        }
+        SurfaceWorkflow::Done { .. } | SurfaceWorkflow::Oblige { .. } => false,
+    }
+}
+
+fn guard_contains_user_fn_call(
+    guard: &ash_parser::surface::Guard,
+    function_names: &HashSet<String>,
+) -> bool {
+    match guard {
+        ash_parser::surface::Guard::Always | ash_parser::surface::Guard::Never => false,
+        ash_parser::surface::Guard::Pred(predicate) => predicate
+            .args
+            .iter()
+            .any(|arg| expr_contains_user_fn_call(arg, function_names)),
+        ash_parser::surface::Guard::And(left, right)
+        | ash_parser::surface::Guard::Or(left, right) => {
+            guard_contains_user_fn_call(left, function_names)
+                || guard_contains_user_fn_call(right, function_names)
+        }
+        ash_parser::surface::Guard::Not(inner) => {
+            guard_contains_user_fn_call(inner, function_names)
+        }
+    }
+}
+
+fn expr_contains_user_fn_call(expr: &SurfaceExpr, function_names: &HashSet<String>) -> bool {
+    match expr {
+        SurfaceExpr::Call {
+            func, module, args, ..
+        } => {
+            let call_name = module
+                .as_ref()
+                .map_or_else(|| func.to_string(), |module| format!("{module}::{func}"));
+            function_names.contains(&call_name)
+                || function_names.contains(func.as_ref())
+                || args
+                    .iter()
+                    .any(|arg| expr_contains_user_fn_call(arg, function_names))
+        }
+        SurfaceExpr::Unary { operand, .. } | SurfaceExpr::FieldAccess { base: operand, .. } => {
+            expr_contains_user_fn_call(operand, function_names)
+        }
+        SurfaceExpr::IndexAccess { base, index, .. }
+        | SurfaceExpr::Binary {
+            left: base,
+            right: index,
+            ..
+        } => {
+            expr_contains_user_fn_call(base, function_names)
+                || expr_contains_user_fn_call(index, function_names)
+        }
+        SurfaceExpr::InterfaceMethodCall { argument, .. } => {
+            expr_contains_user_fn_call(argument, function_names)
+        }
+        SurfaceExpr::Match {
+            scrutinee, arms, ..
+        } => {
+            expr_contains_user_fn_call(scrutinee, function_names)
+                || arms
+                    .iter()
+                    .any(|arm| expr_contains_user_fn_call(&arm.body, function_names))
+        }
+        SurfaceExpr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expr_contains_user_fn_call(expr, function_names)
+                || expr_contains_user_fn_call(then_branch, function_names)
+                || expr_contains_user_fn_call(else_branch, function_names)
+        }
+        SurfaceExpr::Constructor {
+            fields, payload, ..
+        } => {
+            fields
+                .iter()
+                .any(|(_, value)| expr_contains_user_fn_call(value, function_names))
+                || match payload {
+                    SurfaceConstructorPayload::Unit => false,
+                    SurfaceConstructorPayload::Record(fields) => fields
+                        .iter()
+                        .any(|(_, value)| expr_contains_user_fn_call(value, function_names)),
+                    SurfaceConstructorPayload::Tuple(items) => items
+                        .iter()
+                        .any(|item| expr_contains_user_fn_call(item, function_names)),
+                }
+        }
+        SurfaceExpr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expr_contains_user_fn_call(condition, function_names)
+                || expr_contains_user_fn_call(then_branch, function_names)
+                || else_branch.as_deref().is_some_and(|else_branch| {
+                    expr_contains_user_fn_call(else_branch, function_names)
+                })
+        }
+        SurfaceExpr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            statements.iter().any(|statement| match statement {
+                ash_parser::surface::BlockStmt::Let { expr, .. } => {
+                    expr_contains_user_fn_call(expr, function_names)
+                }
+            }) || tail_expr
+                .as_deref()
+                .is_some_and(|tail_expr| expr_contains_user_fn_call(tail_expr, function_names))
+        }
+        SurfaceExpr::Literal(_)
+        | SurfaceExpr::Variable(_)
+        | SurfaceExpr::Policy(_)
+        | SurfaceExpr::CheckObligation { .. }
+        | SurfaceExpr::Panic { .. } => false,
+    }
+}
+
 fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> {
     match ty {
         SurfaceType::Name(name) => match name.as_ref() {
@@ -569,6 +1073,11 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
             "Null" => Ok(ash_typeck::Type::Null),
             "Time" => Ok(ash_typeck::Type::Time),
             "Ref" => Ok(ash_typeck::Type::Ref),
+            "()" => Ok(ash_typeck::Type::Constructor {
+                name: ash_typeck::QualifiedName::root("()"),
+                args: vec![],
+                kind: ash_typeck::Kind::Type,
+            }),
             other => Ok(ash_typeck::Type::Constructor {
                 name: ash_typeck::QualifiedName::root(other.to_string()),
                 args: vec![],
@@ -601,6 +1110,14 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
                 args,
                 kind: ash_typeck::Kind::Type,
             })
+        }
+        SurfaceType::Fn(params, ret) => {
+            let params = params
+                .iter()
+                .map(surface_type_to_typeck)
+                .collect::<Result<Vec<_>, _>>()?;
+            let ret = surface_type_to_typeck(ret)?;
+            Ok(ash_typeck::Type::Fn(params, Box::new(ret)))
         }
     }
 }
@@ -710,7 +1227,8 @@ fn inline_imported_calls_in_expr(
     match expr {
         SurfaceExpr::Literal(_)
         | SurfaceExpr::Variable(_)
-        | SurfaceExpr::CheckObligation { .. } => {}
+        | SurfaceExpr::CheckObligation { .. }
+        | SurfaceExpr::Panic { .. } => {}
         SurfaceExpr::FieldAccess { base, .. } | SurfaceExpr::Unary { operand: base, .. } => {
             inline_imported_calls_in_expr(base, imported_callables)?;
         }
@@ -774,6 +1292,31 @@ fn inline_imported_calls_in_expr(
                         inline_imported_calls_in_expr(item, imported_callables)?;
                     }
                 }
+            }
+        }
+        SurfaceExpr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            inline_imported_calls_in_expr(condition, imported_callables)?;
+            inline_imported_calls_in_expr(then_branch, imported_callables)?;
+            if let Some(e) = else_branch {
+                inline_imported_calls_in_expr(e, imported_callables)?;
+            }
+        }
+        SurfaceExpr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            for stmt in statements {
+                let ash_parser::surface::BlockStmt::Let { expr, .. } = stmt;
+                inline_imported_calls_in_expr(expr, imported_callables)?;
+            }
+            if let Some(e) = tail_expr {
+                inline_imported_calls_in_expr(e, imported_callables)?;
             }
         }
     }
@@ -892,8 +1435,14 @@ fn substitute_expr(
             right: Box::new(substitute_expr(right, substitutions, bound_names)),
             span: *span,
         },
-        SurfaceExpr::Call { func, args, span } => SurfaceExpr::Call {
+        SurfaceExpr::Call {
+            func,
+            module,
+            args,
+            span,
+        } => SurfaceExpr::Call {
             func: func.clone(),
+            module: module.clone(),
             args: args
                 .iter()
                 .map(|arg| substitute_expr(arg, substitutions, bound_names))
@@ -987,6 +1536,47 @@ fn substitute_expr(
                     )
                 }
             },
+            span: *span,
+        },
+        SurfaceExpr::If {
+            condition,
+            then_branch,
+            else_branch,
+            span,
+        } => SurfaceExpr::If {
+            condition: Box::new(substitute_expr(condition, substitutions, bound_names)),
+            then_branch: Box::new(substitute_expr(then_branch, substitutions, bound_names)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|e| Box::new(substitute_expr(e, substitutions, bound_names))),
+            span: *span,
+        },
+        SurfaceExpr::Panic { message, span } => SurfaceExpr::Panic {
+            message: message.clone(),
+            span: *span,
+        },
+        SurfaceExpr::Block {
+            statements,
+            tail_expr,
+            span,
+        } => SurfaceExpr::Block {
+            statements: statements
+                .iter()
+                .map(|stmt| match stmt {
+                    ash_parser::surface::BlockStmt::Let {
+                        pattern,
+                        expr,
+                        span,
+                    } => ash_parser::surface::BlockStmt::Let {
+                        pattern: pattern.clone(),
+                        expr: substitute_expr(expr, substitutions, bound_names),
+                        span: *span,
+                    },
+                })
+                .collect(),
+            tail_expr: tail_expr
+                .as_ref()
+                .map(|e| Box::new(substitute_expr(e, substitutions, bound_names))),
             span: *span,
         },
     }
@@ -1176,6 +1766,7 @@ impl EngineBuilder {
         Ok(Engine {
             surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_type_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
+            surface_programs: std::sync::Mutex::new(std::collections::HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state,
@@ -1236,7 +1827,7 @@ impl EngineBuilder {
     ///
     /// ```
     /// use ash_engine::Engine;
-    /// use ash_core::{Action, Constraint, Effect, Value};
+    /// use ash_core::{Constraint, Effect, Value};
     /// use ash_core::capability::{CapabilityError, CapabilityProvider};
     /// use async_trait::async_trait;
     /// use std::sync::Arc;
@@ -1251,7 +1842,11 @@ impl EngineBuilder {
     ///     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
     ///         Ok(Value::Null)
     ///     }
-    ///     async fn execute(&self, _action: &Action) -> Result<Value, CapabilityError> {
+    ///     async fn execute(
+    ///         &self,
+    ///         _action_name: &str,
+    ///         _args: &[Value],
+    ///     ) -> Result<Value, CapabilityError> {
     ///         Ok(Value::Null)
     ///     }
     /// }

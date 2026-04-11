@@ -64,7 +64,7 @@ async fn variables_example_if_scope() {
         .parse(
             r"
             workflow main(flag: Bool) {
-                if flag {
+                if flag then {
                     let x = 1
                     ret x
                 } else {

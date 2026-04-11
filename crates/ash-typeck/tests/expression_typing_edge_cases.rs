@@ -968,7 +968,13 @@ fn test_well_typed_expressions_never_produce_unexpected_types() {
 fn test_arithmetic_operations_preserve_int_type() {
     let env = TypeEnv::with_builtin_types();
 
-    let ops = vec![BinaryOp::Add, BinaryOp::Sub, BinaryOp::Mul, BinaryOp::Div];
+    let ops = vec![
+        BinaryOp::Add,
+        BinaryOp::Sub,
+        BinaryOp::Mul,
+        BinaryOp::Div,
+        BinaryOp::Mod,
+    ];
 
     for op in ops {
         let expr = Expr::Binary {

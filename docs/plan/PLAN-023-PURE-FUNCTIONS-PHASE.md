@@ -1,11 +1,16 @@
 # PLAN-023: Pure Functions Phase
 
-## Status: Draft
+## Status: Complete
 
 ## Overview
 
 Implement the `fn` construct and three-vertex model as defined in DESIGN-020, SPEC-027, and
 SPEC-028. This phase makes the std/ pure library modules parseable and correct.
+
+Closeout status: implemented and re-verified. The repository now rejects undefined pure-function
+calls during static checking, rejects capability targets used with pure-call syntax, and passes the
+full workspace verification gate (`cargo fmt --check`, `cargo clippy --all-targets --all-features
+-- -D warnings`, `cargo test`).
 
 ## Prerequisite
 

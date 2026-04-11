@@ -85,6 +85,37 @@ async fn ordinary_file_execution_calls_imported_local_helper_workflows() {
 }
 
 #[tokio::test]
+async fn ordinary_file_execution_calls_imported_local_pure_functions() {
+    let temp = tempdir().expect("tempdir");
+    let app_root = temp.path().join("app");
+    let entry = app_root.join("main.ash");
+    let helper = app_root.join("helpers/math.ash");
+
+    write(
+        &helper,
+        r"
+        pub fn seven() -> Int { 7 }
+        ",
+    );
+    write(
+        &entry,
+        r"
+        use helpers::math::{seven}
+
+        workflow main() -> Int { ret seven(); }
+        ",
+    );
+
+    let engine = Engine::new().build().expect("engine builds");
+    let result = engine
+        .run_file(&entry)
+        .await
+        .expect("ordinary file execution should call imported local pure functions");
+
+    assert_eq!(result, Value::Int(7));
+}
+
+#[tokio::test]
 async fn ordinary_file_execution_executes_stdlib_imports_from_ordinary_files() {
     let temp = tempdir().expect("tempdir");
     let entry = temp.path().join("main.ash");

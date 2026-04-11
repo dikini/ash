@@ -1,6 +1,6 @@
 # TASK-507: Pure Functions Stdlib and Conformance Tests
 
-## Status: 📝 Planned
+## Status: ✅ Passed
 
 ## Description
 
@@ -31,7 +31,7 @@ prove the pure-functions phase contract end-to-end.
 
 ## Completion Checklist
 
-- [ ] pure stdlib modules rewritten to `fn`
-- [ ] parser/semantic tests updated to real conformance coverage
-- [ ] failure-mode tests added and passing
-- [ ] imported/qualified/wrong-target call coverage present
+- [x] pure stdlib modules rewritten to `fn`
+- [x] parser/semantic tests updated to real conformance coverage
+- [x] failure-mode tests added and passing
+- [x] imported/qualified/wrong-target call coverage present

@@ -74,3 +74,37 @@ async fn engine_execute_preserves_control_authority_across_top_level_runs() {
             if message.contains("control link") || message.contains("not found")
     ));
 }
+
+#[tokio::test]
+async fn local_fn_defs_do_not_force_restricted_runtime_when_workflow_uses_regular_effects() {
+    let engine = Engine::new().build().expect("engine builds");
+    let workflow = engine
+        .parse(
+            "fn helper() -> Int { 1 }\nworkflow main { observe read_db as reading; ret helper() }",
+        )
+        .expect("workflow with local fn definitions should parse");
+
+    let error = engine
+        .execute(&workflow)
+        .await
+        .expect_err("missing observe provider should still come from the normal workflow runtime");
+
+    assert!(matches!(error, ExecError::CapabilityNotAvailable(name) if name == "read_db"));
+}
+
+#[tokio::test]
+async fn local_fn_calls_in_act_workflows_still_use_normal_runtime_failures() {
+    let engine = Engine::new().build().expect("engine builds");
+    let workflow = engine
+        .parse(
+            "fn answer() -> Int { 42 }\nworkflow main { act deploy:noop() as ignored; ret answer() }",
+        )
+        .expect("workflow with local fn call and explicit act should parse");
+
+    let error = engine
+        .execute(&workflow)
+        .await
+        .expect_err("missing act provider should still be reported by the normal workflow runtime");
+
+    assert!(matches!(error, ExecError::CapabilityNotAvailable(name) if name == "deploy"));
+}

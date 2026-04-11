@@ -219,6 +219,43 @@ selection, direct kind-directory discovery, real per-test timeout containment vi
 `-- @test` metadata parsing, minimal `std::test` authored usage, and targeted verification/smoke
 coverage consistent with the v1 phase contract.
 
+## Explicit Deferred Follow-Up Items
+
+The following items are intentionally deferred until after the next round of spec work improvement and should not be treated as part of the current closed Phase 76 surface:
+
+1. True synthesized contract/policy/obligation execution
+   - stable runner-facing introspection APIs for lowered contracts, policies, and obligations
+   - executable synthesized cases rather than planning-level labeled records
+2. Rich generative property testing
+   - generated inputs from type/contract metadata rather than bounded reruns of the same authored body
+3. True small-world exploration
+   - bounded world/state enumeration rather than bounded reruns of the same authored body
+4. Richer `std::test` surface
+   - panic-aware helpers and runtime-facing helpers that depend on stronger stable runtime/spec support
+
+## Summary of Reasoning for Deferral
+
+These items are deferred intentionally, not forgotten. The current Phase 76 landing establishes the
+runner substrate, authored test metadata/discovery path, minimal `std::test` surface, bounded
+property/small-world execution hooks, and explicit synthesized-source selection. That is the smallest
+coherent v1 slice that can be verified honestly today.
+
+The deferred items all depend on upstream spec and metadata-shape improvement rather than mere local
+implementation effort:
+- synthesized contract/policy/obligation execution needs stable runner-facing introspection APIs for
+  lowered contracts, policies, and obligation lifecycle semantics; without that, the runner can only
+  produce planning-level labeled cases rather than truthful executable synthesized tests
+- richer property generation needs a stable contract/type-driven input-generation story; bounded reruns
+  of authored bodies are acceptable for v1, but not a substitute for true generated cases
+- richer small-world execution needs a spec-backed state/world enumeration model instead of ad hoc
+  bounded repetition
+- a broader `std::test` surface should wait until panic semantics, runtime-facing assertions, and
+  related helper contracts are stable enough to avoid committing to the wrong long-term API
+
+In short: Phase 76 closes the execution substrate and explicit extension points, while the richer
+synthesized/generative/test-library layers are deferred until the next round of spec work can define
+those surfaces cleanly and prevent design debt.
+
 ## Deliverable
 
-A practical Ash test runner v1: CLI-integrated, panic-contained, assertion-backed by a dedicated Ash test library surface, capable of executing authored unit/integration/e2e tests plus bounded property/small-world tests, and able to run synthesized tests from contracts, policies, and obligations only when explicitly requested.
+A practical Ash test runner v1: CLI-integrated, panic-contained, assertion-backed by a dedicated Ash test library surface, capable of executing authored unit/integration/e2e tests plus bounded property/small-world tests, and able to plan/source synthesized tests from contracts, policies, and obligations only when explicitly requested.

@@ -16,6 +16,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - a minimal exported `std::test` assertion surface usable from authored Ash tests
   - bounded property and small-world execution routing with seed/case/world reporting
   - opt-in synthesized test planning from contracts, policies, and obligations with explicit authored-vs-synthesized labeling
+  - explicit deferred follow-up items recording that true synthesized execution and true generative/small-world exploration will be developed after spec work improvement
 
 ### Fixed
 

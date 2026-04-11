@@ -48,6 +48,13 @@ seed/case/world controls honestly in runner output, and avoids leaking generativ
 unit/integration/e2e tests. However, the current v1 implementation still reruns the same authored test
 body in bounded loops rather than exploring true generated inputs or true small-world state spaces.
 
+## Explicit Deferred Follow-Up Items
+
+Deferred until after spec work improvement:
+- true generated property inputs derived from stable type/contract metadata
+- true small-world state/world exploration rather than bounded reruns
+- richer repro artifacts tied to generated inputs/world states rather than only runner-level counters
+
 ## Completion Checklist
 
 - [x] seeded property execution implemented and verified at the bounded runner level

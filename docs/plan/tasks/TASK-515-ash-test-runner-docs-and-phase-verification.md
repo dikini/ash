@@ -45,6 +45,13 @@ Finalize planning/bookkeeping/docs for the Ash test runner phase and run the fin
 
 - Update docs/bookkeeping and run the verification/smoke gate until the recorded closeout state matches the actual repository state.
 
+## Explicit Deferred Follow-Up Items
+
+Deferred until after spec work improvement:
+- re-close TASK-513 only when synthesized contract/policy/obligation cases are truly executable end-to-end
+- re-close TASK-514 only when property/small-world execution moves beyond bounded reruns into true generated/explored cases
+- update Phase 76 phase-level bookkeeping from in-progress to complete only after those deferred items are either implemented or explicitly re-scoped by plan/spec work
+
 ## Completion Checklist
 
 - [x] PLAN-INDEX updated
@@ -53,4 +60,4 @@ Finalize planning/bookkeeping/docs for the Ash test runner phase and run the fin
 - [x] authored `ash test` smoke cases run successfully against the current implementation
 - [x] synthesized test smoke cases run successfully against the current implementation
 - [x] residual limitations recorded honestly if any remain
-- [ ] phase-level bookkeeping only marks complete behavior that is truly closed for v1
+- [x] phase-level bookkeeping only marks complete behavior that is truly closed for v1

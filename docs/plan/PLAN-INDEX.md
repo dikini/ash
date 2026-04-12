@@ -2302,3 +2302,26 @@ and prompt functions, OpenAI capability with dispatch workflows, and agent orche
 
 **Deliverable:** LLM stdlib with async-openai Rust provider, pure types and prompt functions,
 OpenAI capability with dispatch workflows, agent orchestration patterns, and integration tests.
+
+## Phase 78: Module Type Resolution Remediation
+
+Fix three bugs preventing stdlib module files from being parsed, type-checked, and imported:
+intra-module type cross-references fail, `ash check` rejects non-workflow module files, and
+`pub mod` declarations are silently ignored.
+
+**Plan Reference:** [PLAN-026: Module Type Resolution Remediation](PLAN-026-MODULE-TYPE-RESOLUTION.md)
+**Design Reference:** [DESIGN-026: Module Type Resolution Remediation](../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md)
+**Spec Reference:** SPEC-030-MODULE-TYPE-RESOLUTION.md
+**Priority:** High
+**Status:** 📝 Planned
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| TASK-539 | Two-pass type collection in module loader | SPEC-030 §3 | 3 | Planned |
+| TASK-540 | Transitive `pub mod` loading | SPEC-030 §4 | 2 | Planned |
+| TASK-541 | `ash check` module-file support | SPEC-030 §5 | 2 | Planned |
+| TASK-542 | Validate LLM stdlib end-to-end | SPEC-030 §3-5 | 1 | Planned |
+| TASK-543 | Update CHANGELOG and task statuses | — | 0.5 | Planned |
+
+**Deliverable:** `ash check` works on stdlib module files, intra-module type cross-references
+resolve correctly, `pub mod` loads submodules transitively.

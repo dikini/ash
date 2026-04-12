@@ -1,152 +1,162 @@
 # SPEC-030: Module Type Resolution
 
-## Status: Draft
+## Status: Draft (v2 -- revised after independent review)
 
 ## 1. Overview
 
-This spec normatively defines the behavior of module-level type resolution within a single source file, `pub mod` transitive export loading, and the `ash check` command's handling of non-workflow module files. It amends SPEC-009 (Module System) and SPEC-012 (Import System) with concrete implementation requirements.
+This spec defines normative behavior for three fixes: sibling type cross-reference resolution during engine type checking, `pub mod` child module loading for qualified path resolution, and module-file checking aligned with the SPEC-009 `ModuleFile` model. It does not change baseline module/import semantics.
 
 ## 2. Definitions
 
-**Module file**: An `.ash` source file containing `pub type`, `pub fn`, `pub use`, `pub mod`, and/or `workflow` declarations. A file need not contain a `workflow` to be a valid module.
+**Sibling types**: Two or more `pub type` definitions imported from the same module file.
 
-**Type snippet**: A semicolon-terminated `pub type` declaration extractable from source by the module loader.
+**Pre-declaration**: Inserting a type name into the `TypeEnv`'s `ast_types` map without full conversion/validation, so that subsequent registrations can resolve the name.
 
-**Type collection**: The process of parsing all type snippets from a module file and accumulating their names into a type environment before validating cross-references.
+**Module file**: An `.ash` source file parsed as a `ModuleFile` per SPEC-009 §4.1a. May contain `pub type`, `pub fn`, `pub use`, `pub mod`, and optionally a `workflow` declaration.
 
-## 3. Intra-Module Type Resolution
+## 3. Sibling Type Cross-Reference Resolution
 
-### 3.1 Two-Pass Collection
+### 3.1 Pre-declaration Before Registration
 
-When a module file contains multiple `pub type` declarations, the module loader MUST process them in two passes:
+When `Engine::check()` registers imported type definitions into `TypeEnv`, it MUST:
 
-1. **Registration pass**: Parse each `pub type` snippet into a `CoreTypeDef`. Record each type's name in a module-local type name set. Do NOT validate that field type expressions reference known types.
-
-2. **Validation pass**: For each registered type definition, validate that all type expressions in fields and variant payloads reference either:
-   - A builtin type (`Int`, `String`, `Bool`, `Float`, `Null`)
-   - A type in the module-local name set (registered in pass 1)
-   - A fully-qualified imported type (via `use`)
-   - A standard-library type (`List`, `Option`, `Map`, `Result`)
+1. **Pre-declare**: For each imported type definition, insert its name into `TypeEnv::ast_types` (via `declare_type_name`) without calling `register_type`.
+2. **Register**: For each imported type definition, call `register_type` which performs full conversion and validation.
+3. Pre-declaration MUST happen before any registration.
 
 ### 3.2 Ordering Independence
 
-After two-pass collection, the order of `pub type` declarations in a source file MUST NOT affect whether the file parses successfully. Given:
+After pre-declaration, the order of full `register_type` calls MUST NOT affect whether sibling type resolution succeeds. Given imported types `Role` and `Message` where `Message` references `Role`:
 
 ```ash
-pub type Message = Message { role: Role, content: String };
 pub type Role = System | User | Assistant | Tool { tool_call_id: String };
+pub type Message = Message { role: Role, content: String, ... };
 ```
 
-Both definitions MUST resolve regardless of declaration order.
+Both MUST register successfully regardless of which is processed first.
 
 ### 3.3 Error Reporting
 
-If a type expression references an unbound name after both passes complete, the error MUST include:
+If a type expression references a name not present in the environment after pre-declaration, the error MUST include:
 
-- The referencing type name
+- The type being registered when the error occurred
 - The unbound name
-- The file and (approximate) line number
+- The file (or "imported types") context
 
-### 3.4 Conformance Tests
+### 3.4 Scope
+
+This section applies to the `Engine::check()` type registration path (`lib.rs:442-451`). It does NOT change the module loader's type parsing, which already works correctly.
+
+### 3.5 Conformance Tests
 
 | ID | Test | Requirement |
 |----|------|-------------|
-| ST-1 | `pub type A = A { x: B }; pub type B = B { y: Int };` parses | §3.2 |
-| ST-2 | `pub type A = A { x: NoSuchType };` reports unbound | §3.3 |
-| ST-3 | All 11 SPEC-029 types in `std/src/llm/types.ash` parse as a module | §3.1 |
+| ST-1 | Two imported types with forward reference register without error | §3.2 |
+| ST-2 | All 11 SPEC-029 types imported from `llm/types.ash` register without error | §3.2 |
+| ST-3 | Reference to truly unbound type produces descriptive error | §3.3 |
+| ST-4 | Self-referential type (`pub type Tree = Tree { children: List<Tree> }`) registers | §3.2 |
+| ST-5 | Generic reference (`List<Role>`, `Option<Message>`) resolves with builtin+imported types | §3.2 |
 
-## 4. Transitive Submodule Export
+## 4. `pub mod` Child Module Loading
 
-### 4.1 `pub mod` Processing
+### 4.1 Behavior
 
 When `collect_module_exports` encounters a line matching `pub mod <name>;`, it MUST:
 
-1. Resolve `<name>` to a file path using the existing resolution rules (SPEC-009 §2.1):
-   - `<name>.ash` in the current directory
-   - `<name>/mod.ash` in the current directory
+1. Resolve `<name>` to a file path using SPEC-009 §2.1 resolution rules.
 2. Recursively call `collect_module_exports` on the resolved path.
-3. Merge all `pub` items from the submodule into the parent module's export table.
+3. Store the submodule's exports under the child module name for qualified path resolution.
 
-### 4.2 Visibility Filtering
+### 4.2 No Implicit Parent Export
 
-Only items declared `pub` in the submodule are merged. Items with `pub(crate)` or no visibility modifier are excluded from the parent's exports.
+`pub mod <name>;` does NOT merge the child module's exports into the parent's export table. To re-export a child item at the parent level, explicit `pub use` is required per SPEC-012.
 
-### 4.3 Cycle Detection
+This preserves baseline semantics:
+- `llm::types::Role` resolves (child module loaded via `pub mod types;`)
+- `llm::Role` requires `pub use types::Role;` in `mod.ash` (explicit re-export)
 
-If a `pub mod` resolution leads to a file already being processed (cycle), the loader MUST report an error. Cycles are detected by maintaining a visited-path set during recursive resolution.
+### 4.3 Unknown Module
+
+If the resolved path does not exist, the loader MUST report an error with the module name and the searched paths.
 
 ### 4.4 Conformance Tests
 
 | ID | Test | Requirement |
 |----|------|-------------|
-| ST-4 | `mod.ash` with `pub mod types;` makes `types.ash` exports available | §4.1 |
-| ST-5 | `use llm::Role` resolves through `llm/mod.ash` → `llm/types.ash` | §4.1 |
-| ST-6 | Circular `pub mod` reports error, does not stack overflow | §4.3 |
+| ST-6 | `pub mod types;` makes `types.ash` items available for qualified import | §4.1 |
+| ST-7 | `use llm::types::Role` resolves via `pub mod types;` in `llm/mod.ash` | §4.1, §4.2 |
+| ST-8 | `use llm::Role` fails unless `pub use types::Role;` exists | §4.2 |
+| ST-9 | `pub mod nonexistent;` reports module-not-found error | §4.3 |
 
-## 5. Module File Checking
+## 5. Module-File Checking
 
-### 5.1 `ash check` Module Detection
+### 5.1 Check Model
 
-When `ash check <path>` is invoked on a file, the command MUST:
+`ash check` MUST follow the SPEC-009 §4.1a `ModuleFile` model:
 
-1. Attempt to parse the file as a workflow module (existing behavior).
-2. If step 1 fails with a parse error, attempt to parse the file as a module file.
-3. If step 2 also fails, report the parse error from step 1 (original behavior).
-4. If step 2 succeeds, validate the module file's contents.
+1. Parse the file as a `ModuleFile` containing type/fn/mod/use declarations and optionally a workflow.
+2. If the file contains a workflow, type-check it (existing behavior).
+3. If the file does not contain a workflow, validate module-level declarations:
+   - All `pub type` snippets parse without error.
+   - All `pub fn` snippets parse without error.
+   - All `pub use` snippets parse and resolve.
+   - All `pub mod` targets resolve to existing files.
+   - Sibling type cross-references resolve (per §3).
+4. If both workflow checking and module-level validation are applicable, report all errors from both.
 
-### 5.2 Module File Validation
+### 5.2 Output Format
 
-Module file validation checks:
-
-1. All `pub type` snippets parse without error (via `parse_type_def`).
-2. All `pub fn` snippets parse without error (via `parse_fn_definition`).
-3. All `pub use` snippets parse and their targets resolve.
-4. All `pub mod` targets resolve to existing files.
-5. No duplicate type definitions.
-6. No duplicate callable definitions.
-
-### 5.3 Output Format
-
-For module files, `ash check` outputs:
+For module files without a workflow:
 
 ```
 [OK] path/to/module.ash: OK (module: 11 types, 4 functions, 2 re-exports)
 ```
 
-or on failure:
+On failure:
 
 ```
 [FAIL] path/to/module.ash: FAILED
-  Error: type definition 'Message': unbound type 'NoSuchType'
+  Error: type 'Message': unbound type 'NoSuchType'
   Error: pub fn 'broken': parse error at line 42
 ```
+
+### 5.3 pub fn Parse Failure Diagnostics
+
+When a `pub fn` snippet fails to parse or is unsupported, `parse_supported_pub_fn_callable` MUST produce a diagnostic warning instead of silently returning `None`. The warning MUST include the function name (if extractable) and the reason.
 
 ### 5.4 Conformance Tests
 
 | ID | Test | Requirement |
 |----|------|-------------|
-| ST-7 | `ash check std/src/llm/types.ash` succeeds | §5.1 |
-| ST-8 | `ash check std/src/llm/mod.ash` succeeds | §5.1 |
-| ST-9 | File with only `pub type X = X { a: Int };` passes `ash check` | §5.2 |
-| ST-10 | File with invalid type reports specific error | §5.3 |
+| ST-10 | `ash check std/src/llm/types.ash` succeeds with type count | §5.1 |
+| ST-11 | `ash check` on file with only `pub type X = X { a: Int };` succeeds | §5.1 |
+| ST-12 | `ash check` on file with invalid type reports specific error | §5.2 |
+| ST-13 | `pub fn` parse failure produces warning, not silent drop | §5.3 |
 
-## 6. Compatibility Requirements
+## 6. Compatibility
 
 ### 6.1 Backward Compatibility
 
-- Existing workflow files MUST continue to parse and check without changes.
-- Existing `use` import paths MUST continue to resolve.
-- The `pub mod` processing is additive: files without `pub mod` are unaffected.
+- Existing workflow files and import paths continue to work unchanged.
+- `pub mod` loading is additive: files without `pub mod` are unaffected.
+- `TypeEnv::declare_type_name` is a new method; existing `register_type` is unchanged.
 
-### 6.2 Forward Compatibility
+### 6.2 Baseline Semantics Preserved
 
-- This spec does not define `pub(crate)` or `pub(super)` visibility enforcement.
-- This spec does not define type inference for `pub fn` bodies.
-- This spec does not define incremental or cached module loading.
+- SPEC-009 module-tree resolution: unchanged.
+- SPEC-012 explicit re-export for parent-level access: unchanged.
+- `pub mod` loads child for qualified access only; no implicit flattening.
+
+### 6.3 Out of Scope (Deferred)
+
+- Cycle detection in module graph (SPEC-009 §6.2 specifies; this phase does not implement)
+- Ordinary `use` inside module files (loader only handles `pub use` for exports)
+- `pub(crate)` / `pub(super)` visibility enforcement
+- Type inference for `pub fn` bodies
 
 ## 7. Reference
 
-- SPEC-009: Module System (file-based modules, resolution rules)
-- SPEC-012: Import System (use statements, path resolution)
-- SPEC-027: Pure Functions (fn syntax and body grammar)
-- DESIGN-026: Module Type Resolution Remediation (implementation design)
+- SPEC-009 §4.1a: ModuleFile parse model
+- SPEC-009 §2.1: File-based module resolution
+- SPEC-012 §2.1-2.5: Import syntax and re-export
+- DESIGN-026: Implementation design (D1-D4)

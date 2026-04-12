@@ -1,31 +1,26 @@
-# TASK-542: Validate LLM stdlib end-to-end
+# TASK-542: pub fn parse failure diagnostics
 
-## Status: Draft
+## Status: Draft (v2)
 
 ## Description
 
-End-to-end verification that all LLM stdlib module files parse, resolve, and check correctly through the full `ash check` and module-loader paths.
+Change `parse_supported_pub_fn_callable` from silent `Option` return to `Result`, producing a diagnostic warning when a `pub fn` snippet fails to parse. Prevents silent export dropping.
 
 ## Spec Reference
 
-- [SPEC-030: Module Type Resolution](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §3.4, §4.4, §5.4
-
-## Dependencies
-
-- [TASK-540](TASK-540-transitive-pub-mod-loading.md)
-- [TASK-541](TASK-541-ash-check-module-files.md)
+- [SPEC-030](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §5.3
+- [DESIGN-026](../../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md) D4
 
 ## Requirements
 
-1. `ash check std/src/llm/types.ash` succeeds.
-2. `ash check std/src/llm/mod.ash` succeeds.
-3. `use llm::types::Role` from a workflow resolves.
-4. `use llm::Role` via mod.ash re-export resolves.
-5. Existing stdlib tests updated to use module-loader API.
+1. Malformed `pub fn` produces warning diagnostic, not silent None.
+2. Valid `pub fn` still exports correctly.
+3. Warning includes function name (if extractable) and reason.
 
 ## Completion Checklist
 
-- [ ] All stdlib files pass `ash check`
-- [ ] Import paths resolve correctly
-- [ ] Tests updated from string-matching to structural checks
+- [ ] Return type changed to Result with diagnostic
+- [ ] Warning produced on parse failure
+- [ ] Valid pub fn exports unaffected
+- [ ] Existing tests pass
 

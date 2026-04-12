@@ -1,15 +1,15 @@
 # TASK-541: `ash check` module-file support
 
-## Status: Draft
+## Status: Draft (v2)
 
 ## Description
 
-Add a fallback path in `ash check` that detects non-workflow module files and validates their `pub type`, `pub fn`, and `pub use` declarations.
+Add a module-file check path in `ash check` following the SPEC-009 §4.1a `ModuleFile` model. Non-workflow files are validated for type/fn/use parse correctness with sibling type cross-reference resolution via pre-declaration.
 
 ## Spec Reference
 
-- [SPEC-030: Module Type Resolution](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §5
-- [DESIGN-026](../../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md) D2
+- [SPEC-030](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §5
+- [DESIGN-026](../../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md) D3
 
 ## Dependencies
 
@@ -17,15 +17,15 @@ Add a fallback path in `ash check` that detects non-workflow module files and va
 
 ## Requirements
 
-1. `ash check <path>` falls back to module-file validation when workflow parse fails.
-2. Module-file validation checks type/fn/use parse correctness.
-3. Output format matches SPEC-030 §5.3.
-4. `ash check std/src/llm/types.ash` succeeds.
+1. `ash check` follows SPEC-009 ModuleFile model (not fallback).
+2. Non-workflow files validated for type/fn/use correctness.
+3. Sibling type cross-references resolve via pre-declaration.
+4. Output format per SPEC-030 §5.2.
 
 ## Completion Checklist
 
-- [ ] Module-file detection implemented
-- [ ] Validation for types, fns, uses
-- [ ] Output format correct
-- [ ] `ash check std/src/llm/types.ash` passes
+- [ ] Module-file validation implemented
+- [ ] `ash check std/src/llm/types.ash` succeeds
+- [ ] Output shows type/function counts
+- [ ] Invalid types report specific errors
 

@@ -2305,9 +2305,10 @@ OpenAI capability with dispatch workflows, agent orchestration patterns, and int
 
 ## Phase 78: Module Type Resolution Remediation
 
-Fix three bugs preventing stdlib module files from being parsed, type-checked, and imported:
-intra-module type cross-references fail, `ash check` rejects non-workflow module files, and
-`pub mod` declarations are silently ignored.
+Fix four bugs preventing stdlib module files from being type-checked and imported:
+sibling type cross-references fail in `TypeEnv::register_type`, `ash check` rejects
+non-workflow module files, `pub mod` declarations are silently ignored, and `pub fn`
+parse failures are silently dropped.
 
 **Plan Reference:** [PLAN-026: Module Type Resolution Remediation](PLAN-026-MODULE-TYPE-RESOLUTION.md)
 **Design Reference:** [DESIGN-026: Module Type Resolution Remediation](../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md)
@@ -2317,11 +2318,13 @@ intra-module type cross-references fail, `ash check` rejects non-workflow module
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-539 | Two-pass type collection in module loader | SPEC-030 §3 | 3 | Planned |
-| TASK-540 | Transitive `pub mod` loading | SPEC-030 §4 | 2 | Planned |
+| TASK-539 | Pre-declare type names in TypeEnv | SPEC-030 §3 | 2 | Planned |
+| TASK-540 | Load child modules on `pub mod` | SPEC-030 §4 | 2 | Planned |
 | TASK-541 | `ash check` module-file support | SPEC-030 §5 | 2 | Planned |
-| TASK-542 | Validate LLM stdlib end-to-end | SPEC-030 §3-5 | 1 | Planned |
-| TASK-543 | Update CHANGELOG and task statuses | — | 0.5 | Planned |
+| TASK-542 | pub fn parse failure diagnostics | SPEC-030 §5.3 | 1 | Planned |
+| TASK-543 | LLM stdlib end-to-end validation | SPEC-030 | 1 | Planned |
+| TASK-544 | Update CHANGELOG and task statuses | — | 0.5 | Planned |
 
-**Deliverable:** `ash check` works on stdlib module files, intra-module type cross-references
-resolve correctly, `pub mod` loads submodules transitively.
+**Deliverable:** Sibling type cross-references resolve, `pub mod` loads child modules for
+qualified access (no implicit flattening), `ash check` validates non-workflow module files,
+`pub fn` parse failures produce diagnostics.

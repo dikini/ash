@@ -1,15 +1,15 @@
-# TASK-540: Transitive `pub mod` loading
+# TASK-540: Load child modules on `pub mod`
 
-## Status: Draft
+## Status: Draft (v2)
 
 ## Description
 
-Extend `collect_module_exports` to process `pub mod <name>;` declarations by resolving the submodule path, recursively loading its exports, and merging them into the parent module.
+Extend `collect_module_exports` to process `pub mod <name>;` lines by resolving the child module path, recursively loading its exports, and storing them under the child module name. Does NOT merge into parent exports (baseline SPEC-009/SPEC-012 semantics preserved).
 
 ## Spec Reference
 
-- [SPEC-030: Module Type Resolution](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §4
-- [DESIGN-026](../../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md) D3
+- [SPEC-030](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §4
+- [DESIGN-026](../../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md) D2
 
 ## Dependencies
 
@@ -17,15 +17,15 @@ Extend `collect_module_exports` to process `pub mod <name>;` declarations by res
 
 ## Requirements
 
-1. `pub mod <name>;` triggers recursive loading of the submodule.
-2. Only `pub` items from the submodule are merged into parent exports.
-3. Circular `pub mod` references are detected and reported as errors.
-4. `use llm::Role` resolves through `llm/mod.ash` → `llm/types.ash`.
+1. `pub mod <name>;` resolves and loads child module exports.
+2. Child exports available for qualified access (`llm::types::Role`).
+3. Parent-level access (`llm::Role`) still requires explicit `pub use`.
+4. Unknown module path reports error.
 
 ## Completion Checklist
 
 - [ ] `pub mod` processing implemented
-- [ ] Cycle detection works
-- [ ] Visibility filtering (pub only) works
-- [ ] `use llm::Role` resolves
+- [ ] Qualified path resolution works
+- [ ] Explicit re-export still required for parent-level access
+- [ ] Unknown module error reported
 

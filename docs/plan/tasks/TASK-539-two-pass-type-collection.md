@@ -1,42 +1,34 @@
-# TASK-539: Two-pass type collection in module loader
+# TASK-539: Pre-declare type names in TypeEnv
 
-## Status: Draft
+## Status: Draft (v2)
 
 ## Description
 
-Refactor the module loader's type collection to register all type names in a first pass, then validate type expressions in a second pass. This allows `pub type` definitions within a single file to reference each other regardless of declaration order.
+Add `TypeEnv::declare_type_name()` and modify `Engine::check()` to pre-declare all imported type names before the full registration loop. This fixes sibling type cross-references at the actual failing layer: `TypeEnv::register_type()` → `convert_type_def()` → `resolve_type()`.
 
 ## Spec Reference
 
-- [SPEC-030: Module Type Resolution](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §3
+- [SPEC-030](../../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md) §3
 - [DESIGN-026](../../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md) D1
 
-## Dependencies
+## Root Cause
 
-None (this is the root task).
+The failure occurs in `Engine::check()` (lib.rs:442-451) where imported types are registered one-by-one into `TypeEnv`. When `Message { role: Role }` is registered before `Role`, `resolve_type("Role")` fails because `Role` hasn't been inserted into `ast_types` yet.
+
+The module loader parses types correctly. The fix targets the registration path.
 
 ## Requirements
 
-1. `collect_public_type_defs_from_source` performs two passes: register names, then validate.
-2. Type definitions can reference sibling types regardless of declaration order.
-3. All 11 SPEC-029 types in `std/src/llm/types.ash` collect without error.
-4. Unbound type references produce clear error messages.
-
-## TDD Steps
-
-### Red
-1. Test: forward reference (`pub type A = A { x: B }; pub type B = B { y: Int };`) parses.
-2. Test: `std/src/llm/types.ash` collects 11 types.
-
-### Green
-3. Add name-registration pass.
-4. Add validation pass with accumulated name set.
-5. Wire into `collect_module_exports`.
+1. `TypeEnv::declare_type_name(name)` inserts into `ast_types` without full conversion.
+2. `Engine::check()` pre-declares all imported type names before the register loop.
+3. Sibling types register in any order.
+4. All 11 SPEC-029 types register without error.
 
 ## Completion Checklist
 
-- [ ] Two-pass collection implemented
-- [ ] Forward type references work
-- [ ] `types.ash` collects all 11 types
+- [ ] `declare_type_name` added to TypeEnv
+- [ ] Engine::check pre-declares before register loop
+- [ ] Forward reference test passes
+- [ ] All 11 SPEC-029 types import without error
 - [ ] Existing tests pass
 

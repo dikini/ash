@@ -4,7 +4,7 @@
 
 ## Description
 
-Create the `conversation` orchestration workflow in `std/src/llm/openai/agent.ash` that manages a multi-turn conversation loop and returns the accumulated message history.
+Create the `conversation` orchestration workflow in `std/src/llm/conversation.ash` that manages a multi-turn conversation loop and returns the accumulated message history.
 
 ## Specification Reference
 
@@ -31,7 +31,7 @@ This is an Ash workflow using the orchestration vocabulary. Per SPEC-029 SS8.1, 
 
 ## Likely Files
 
-- Create: `std/src/llm/openai/agent.ash` (initial version)
+- Create: `std/src/llm/conversation.ash` (initial version)
 
 ## TDD Steps
 

@@ -33,7 +33,7 @@ These are thin wrappers. Each dispatches to the corresponding LLM provider actio
 
 ## Likely Files
 
-- Modify: `std/src/llm/openai/mod.ash` (add dispatch workflows)
+- Modify: `std/src/llm/openai.ash` (add dispatch workflows)
 
 ## TDD Steps
 

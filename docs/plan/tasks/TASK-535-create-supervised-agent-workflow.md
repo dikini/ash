@@ -34,7 +34,7 @@ This follows Erlang/OTP supervisor patterns. The supervisor monitors the child a
 
 ## Likely Files
 
-- Modify: `std/src/llm/openai/agent.ash` (add supervised_agent)
+- Modify: `std/src/llm/supervised.ash` (add supervised_agent)
 
 ## TDD Steps
 

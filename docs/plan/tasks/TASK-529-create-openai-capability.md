@@ -1,4 +1,4 @@
-# TASK-529: Create std/src/llm/openai/ module and capability declaration
+# TASK-529: Create std/src/llm/openai.ash capability and dispatch module
 
 ## Status: Draft
 
@@ -18,7 +18,7 @@ Create the OpenAI-specific module with the `Llm` capability declaration and five
 
 ## Requirements
 
-1. Create `std/src/llm/openai/mod.ash` with `capability Llm` declaration.
+1. Create `std/src/llm/openai.ash` with `capability Llm` declaration.
 2. Actions: `execute chat(...)`, `execute chat_with_tools(...)` (with separate `tools: List<ToolDef>` parameter), `execute chat_stream(...)`, `execute embed(...)`, `execute list_models(...)`.
 3. Each action has typed parameters per SPEC-029 SS5.
 4. The `chat_with_tools` action carries tools as a first-class parameter, not embedded in CompletionParams.
@@ -30,7 +30,7 @@ Follow the capability declaration pattern from `std/src/io/stdio.ash` or `std/sr
 
 ## Likely Files
 
-- Create: `std/src/llm/openai/mod.ash`
+- Create: `std/src/llm/openai.ash`
 
 ## TDD Steps
 
@@ -45,7 +45,7 @@ Create the capability declaration.
 
 ## Completion Checklist
 
-- [ ] `std/src/llm/openai/mod.ash` created
+- [ ] `std/src/llm/openai.ash` created
 - [ ] `Llm` capability with five actions declared (chat, chat_with_tools, chat_stream, embed, list_models)
 - [ ] `chat_with_tools` has `tools: List<ToolDef>` as separate parameter
 - [ ] File parses without errors

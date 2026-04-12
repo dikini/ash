@@ -33,7 +33,7 @@ Create the loading workflows that read prompts from file, cache, or environment:
 
 ## Likely Files
 
-- Modify: `std/src/llm/openai/mod.ash` (add loading workflows)
+- Modify: `std/src/llm/openai.ash` (add loading workflows)
 
 ## TDD Steps
 

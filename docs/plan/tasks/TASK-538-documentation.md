@@ -19,7 +19,7 @@ Add module-level documentation for the LLM stdlib: doc comments in .ash files, R
 ## Requirements
 
 1. Rust doc comments on all public items in `crates/ash-engine/src/providers/llm/`.
-2. Ash doc comments in `std/src/llm/types.ash`, `std/src/llm/prompt.ash`, `std/src/llm/openai/mod.ash`, `std/src/llm/openai/agent.ash`.
+2. Ash doc comments in `std/src/llm/types.ash`, `std/src/llm/prompt.ash`, `std/src/llm/openai.ash`, `std/src/llm/conversation.ash, std/src/llm/tool_agent.ash, std/src/llm/router.ash, std/src/llm/supervised.ash`.
 3. README in `std/src/llm/` explaining the module structure and usage.
 4. `cargo doc` builds without warnings for the llm provider module.
 

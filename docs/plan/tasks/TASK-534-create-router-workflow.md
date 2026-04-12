@@ -33,7 +33,7 @@ moderate=gpt-4o, complex=o1.
 
 ## Likely Files
 
-- Modify: `std/src/llm/openai/agent.ash` (add router)
+- Modify: `std/src/llm/router.ash` (add router)
 
 ## TDD Steps
 

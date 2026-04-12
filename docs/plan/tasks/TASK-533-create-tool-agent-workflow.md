@@ -34,7 +34,7 @@ On tool execution failure inside a matched branch, append a tool result with an 
 
 ## Likely Files
 
-- Modify: `std/src/llm/openai/agent.ash` (add tool_agent)
+- Modify: `std/src/llm/tool_agent.ash` (add tool_agent)
 
 ## TDD Steps
 

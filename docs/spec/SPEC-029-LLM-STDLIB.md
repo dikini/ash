@@ -931,6 +931,13 @@ Error handling: if classification fails, default to a moderate-complexity model.
 
 ### 8.4 supervised_agent
 
+> **Note (Phase 77 status)**: The `spawn`, `kill`, `check_health`, and `receive` primitives
+> used in this section are **not yet available** in the live Ash runtime or the current
+> `std/src/llm/supervised.ash` implementation. The supervised workflow in the repository
+> uses a synchronous loop-based approach instead of process-based supervision. This section
+> describes the **target normative semantics** and is **deferred** until the runtime provides
+> process-spawn and mailbox primitives. See SPEC-029 §10 (Known Limitations).
+
 ```ash
 workflow supervised_agent(config: AgentConfig) -> Result<ChatResponse, AgentError>
 ```
@@ -1105,6 +1112,16 @@ The `env:VAR` and `cache:key` source forms in `load_prompt` (section 7.1) and th
 (`std::env`, `std::cache`, `std::config`) that are not yet available. Phase 77 loading.ash
 supports file-based and literal-string loading only. Environment variable and cache integration
 is deferred to a future phase.
+
+### 10.3 Agent Orchestration Primitives
+
+The `spawn`, `kill`, `check_health`, and `receive` primitives described in section 8
+(Agent Orchestration) are not yet available in the Ash runtime. The current
+`std/src/llm/supervised.ash` uses a synchronous loop-based approach. The process-based
+supervision model described in §8.4 is target normative semantics, deferred until the
+runtime provides process-spawn and mailbox primitives. Tier classification for agent
+workflows (§4) remains valid; the tier indicates the *intended* effect level once the
+primitives are available.
 
 ---
 

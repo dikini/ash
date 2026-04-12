@@ -2260,20 +2260,20 @@ and prompt functions, OpenAI capability with dispatch workflows, and agent orche
 | TASK-517 | Create LlmConfig struct | SPEC-029, DESIGN-025 | 3 | Done |
 | TASK-518 | Create LlmProvider skeleton + list_models | SPEC-029, DESIGN-025 | 5 | Done |
 | TASK-519 | Implement chat completion | SPEC-029 | 8 | Done |
-| TASK-520 | Implement streaming adapter | SPEC-029 | 6 | Planned |
-| TASK-521 | Implement tool dispatch helpers | SPEC-029 | 4 | Planned |
-| TASK-522 | Implement embeddings | SPEC-029 | 4 | Planned |
-| TASK-523 | Wire up engine builder | SPEC-029 | 3 | Planned |
+| TASK-520 | Implement streaming adapter | SPEC-029 | 6 | Done |
+| TASK-521 | Implement tool dispatch helpers | SPEC-029 | 4 | Done |
+| TASK-522 | Implement embeddings | SPEC-029 | 4 | Done |
+| TASK-523 | Wire up engine builder | SPEC-029 | 3 | Done |
 
 ### Track 2: Ash Pure Types/Functions (TASK-524 to TASK-528)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-524 | Create llm module structure | SPEC-029 | 2 | Planned |
-| TASK-525 | Create types.ash | SPEC-029 | 3 | Planned |
-| TASK-526 | Create prompt.ash constructors | SPEC-029 | 3 | Planned |
-| TASK-527 | Create prompt.ash inspectors | SPEC-029 | 4 | Planned |
-| TASK-528 | Create prompt.ash renderers | SPEC-029 | 3 | Planned |
+| TASK-524 | Create llm module structure | SPEC-029 | 2 | Done |
+| TASK-525 | Create types.ash | SPEC-029 | 3 | Done |
+| TASK-526 | Create prompt.ash constructors | SPEC-029 | 3 | Done |
+| TASK-527 | Create prompt.ash inspectors | SPEC-029 | 4 | Done |
+| TASK-528 | Create prompt.ash renderers | SPEC-029 | 3 | Done |
 
 ### Track 3: Capability/Dispatch Workflows (TASK-529 to TASK-531)
 

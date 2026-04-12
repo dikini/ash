@@ -37,9 +37,12 @@ This spec defines **what is correct**, not how to implement it.
 |--------|------|-----------|-----------|
 | `llm/types.ash` | 1 (fn) | `fn` definitions | Pure data types and constructors |
 | `llm/prompt.ash` | 1 (fn) | `fn` definitions | Pure message construction, formatting, rendering |
-| `llm/openai/mod.ash` (load_*) | 2 (workflow) | `workflow` | IO: file reads, cache checks, env vars |
-| `llm/openai/mod.ash` (complete/stream/embed/...) | 3 (workflow) | `workflow` | Uses `act` on Llm capability |
-| `llm/openai/agent.ash` | 3 (workflow) | `workflow` | Uses `act`, `spawn`, `kill`, `receive` |
+| `llm/loading.ash` | 2 (workflow) | `workflow` | IO: file reads, cache checks, env vars |
+| `llm/dispatch.ash` | 3 (workflow) | `workflow` | Uses `act` on Llm capability |
+| `llm/conversation.ash` | 3 (workflow) | `workflow` | Uses `act`, `receive` |
+| `llm/tool_agent.ash` | 3 (workflow) | `workflow` | Uses `act`, tool dispatch |
+| `llm/router.ash` | 3 (workflow) | `workflow` | Uses `act` for classification and routing |
+| `llm/supervised.ash` | 3 (workflow) | `workflow` | Uses `act`, `spawn`, `kill`, `receive` |
 | Rust `providers/llm/*.rs` | N/A | Rust | CapabilityProvider implementation |
 
 ### 1.3 Composition Rules
@@ -64,9 +67,13 @@ std/src/
     mod.ash               -- module root, re-exports from types and prompt
     types.ash             -- pure fn: data type definitions
     prompt.ash            -- pure fn: constructors, inspectors, renderers
-    openai/               -- provider-specific implementation
-      mod.ash               -- capability declaration + dispatch/loading workflows
-      agent.ash             -- orchestration workflows
+    openai.ash            -- capability declaration (Llm)
+    dispatch.ash          -- dispatch workflows (complete, stream, embed, etc.)
+    loading.ash           -- loading workflows (load_prompt, load_system_prompt)
+    conversation.ash      -- orchestration: multi-turn conversation
+    tool_agent.ash        -- orchestration: tool-use agent loop
+    router.ash            -- orchestration: multi-model routing
+    supervised.ash        -- orchestration: supervised agent
 ```
 
 ### 2.2 Module Grammar
@@ -76,8 +83,13 @@ llm-module       ::= llm-root | types-module | prompt-module
 llm-root         ::= "mod" "{" use-stmt* re-export* "}"
 types-module      ::= fn-def*
 prompt-module     ::= fn-def*
-openai-module     ::= capability-def workflow-def*
-openai-agent      ::= workflow-def*
+openai-module     ::= capability-def
+dispatch-module   ::= workflow-def*
+loading-module    ::= workflow-def*
+conversation-module ::= workflow-def*
+tool-agent-module ::= workflow-def*
+router-module     ::= workflow-def*
+supervised-module ::= workflow-def*
 ```
 
 ### 2.3 Re-exports
@@ -90,19 +102,25 @@ openai-agent      ::= workflow-def*
 The namespace is designed to accommodate future growth without restructuring:
 
 ```
-std/src/llm/           -- shared vocab usable by any LLM provider
-std/src/llm/openai/    -- OpenAI-specific capability + dispatch + agent loops
-std/src/llm/anthropic/ -- future: Anthropic-specific capability + dispatch
-std/src/llm/google/    -- future: Google-specific capability + dispatch
-std/src/mcp/           -- peer: MCP protocol
-std/src/a2a/           -- peer: A2A protocol
-std/src/agent/         -- composes across protocols
+std/src/llm/              -- shared vocab usable by any LLM provider
+std/src/llm/openai.ash    -- OpenAI-specific capability declaration
+std/src/llm/dispatch.ash  -- dispatch workflows wrapping act calls
+std/src/llm/loading.ash   -- loading workflows for prompt sources
+std/src/llm/conversation.ash -- orchestration: multi-turn conversation
+std/src/llm/tool_agent.ash   -- orchestration: tool-use agent loop
+std/src/llm/router.ash       -- orchestration: multi-model routing
+std/src/llm/supervised.ash   -- orchestration: supervised agent
+std/src/mcp/               -- peer: MCP protocol
+std/src/a2a/               -- peer: A2A protocol
+std/src/agent/             -- composes across protocols
 ```
 
 Invariants:
 
 - `llm/` types and prompt functions are provider-agnostic.
-- `llm/openai/` declares its own `Llm` capability. Future providers declare their own.
+- `llm/openai.ash` declares the `Llm` capability. Future provider-specific files (e.g.,
+  `llm/anthropic.ash`) would declare their own capabilities.
+- Agent orchestration patterns are each in their own file for modularity.
 - `agent/` sits above all protocols and composes across them.
 
 ---
@@ -555,6 +573,19 @@ pub capability Llm: execute
     list_models(provider: String) -> List<String>;
 ```
 
+**Internal action:** In addition to the public capability actions above, the Rust-side
+`LlmProvider` exposes an internal `pull_stream_chunk` action used by the streaming
+adapter to consume individual SSE events from the `async-openai` stream. This action
+is not part of the public `Llm` capability surface; it is an implementation detail of
+the `stream_adapter` module. The `chat_stream` execute action returns a `Stream<ChatChunk>`
+that internally delegates to `pull_stream_chunk`.
+
+**Final-chunk rule:** Per section 3.7, the `stream_adapter` drops `delta_content` and
+`delta_tool_calls` on the final chunk (the one with `finish_reason` set). The final
+chunk carries only the `finish_reason` field. This ensures consumers do not double-count
+the terminal delta, which may be empty or a duplicate of the penultimate chunk in some
+provider implementations.
+
 ### 5.2 Actions
 
 #### 5.2.1 chat
@@ -562,7 +593,7 @@ pub capability Llm: execute
 | Property | Value |
 |----------|-------|
 | Role | `execute` |
-| Effect level | Deliberative |
+| Effect level | Operational |
 | Parameters | `provider: String`, `model: String`, `messages: List<Message>`, `params: Option<CompletionParams>` |
 | Return | `ChatResponse` |
 
@@ -582,7 +613,7 @@ Error conditions:
 | Property | Value |
 |----------|-------|
 | Role | `execute` |
-| Effect level | Deliberative |
+| Effect level | Operational |
 | Parameters | `provider: String`, `model: String`, `messages: List<Message>`, `tools: List<ToolDef>`, `params: Option<CompletionParams>` |
 | Return | `ChatResponse` |
 
@@ -600,7 +631,7 @@ Postcondition: if the response contains tool calls, `has_tool_calls(response) ==
 | Property | Value |
 |----------|-------|
 | Role | `execute` |
-| Effect level | Deliberative |
+| Effect level | Operational |
 | Parameters | `provider: String`, `model: String`, `messages: List<Message>`, `params: Option<CompletionParams>` |
 | Return | `Stream<ChatChunk>` |
 
@@ -621,7 +652,7 @@ Streaming contract:
 | Property | Value |
 |----------|-------|
 | Role | `execute` |
-| Effect level | Deliberative |
+| Effect level | Operational |
 | Parameters | `provider: String`, `model: String`, `texts: List<String>` |
 | Return | `List<Embedding>` |
 
@@ -639,7 +670,7 @@ Postcondition:
 | Property | Value |
 |----------|-------|
 | Role | `execute` |
-| Effect level | Deliberative |
+| Effect level | Operational |
 | Parameters | `provider: String` |
 | Return | `List<String>` |
 
@@ -653,7 +684,7 @@ Error conditions:
 
 ## 6. Dispatch Workflows
 
-All dispatch workflows are defined in `llm/openai/mod.ash` as `workflow` definitions (Tier 3).
+All dispatch workflows are defined in `llm/dispatch.ash` as `workflow` definitions (Tier 3).
 Each is a thin wrapper around a statically named `act llm:action(...)` target. Phase 77 does not
 require or assume runtime capability/action lookup from arbitrary strings.
 
@@ -752,9 +783,14 @@ Semantics: list available models. Delegates directly to `llm:list_models`.
 
 ## 7. Loading Workflows
 
-Loading workflows are defined in `llm/openai/mod.ash` as `workflow` definitions (Tier 2).
+Loading workflows are defined in `llm/loading.ash` as `workflow` definitions (Tier 2).
 They perform IO (file reads, cache checks, environment variable lookups) but do not dispatch
 to the LLM capability.
+
+**Note:** The `env:VAR` and `cache:key` source forms require stdlib modules (`std::env`,
+`std::cache`) that are not yet available. In Phase 77, loading.ash supports file-based and
+literal-string loading only. Environment variable and cache integration is deferred to a
+future phase. See `std/src/llm/loading.ash` for the current implementation.
 
 ### 7.1 load_prompt
 
@@ -798,8 +834,15 @@ Error conditions:
 
 ## 8. Agent Workflows
 
-Agent workflows are defined in `llm/openai/agent.ash` as `workflow` definitions (Tier 3).
+Agent workflows are defined in separate files under `llm/` as `workflow` definitions (Tier 3).
 They use `act` (via dispatch workflows), `spawn`, `kill`, `check_health`, and `receive`.
+
+| Workflow | File |
+|----------|------|
+| `conversation` | `llm/conversation.ash` |
+| `tool_agent` | `llm/tool_agent.ash` |
+| `router` | `llm/router.ash` |
+| `supervised_agent` | `llm/supervised.ash` |
 
 ### 8.1 conversation
 
@@ -1042,9 +1085,32 @@ workflows, not the provider.
 
 ---
 
-## 10. Conformance
+## 10. Known Limitations
 
-### 10.1 Conforming Implementation
+### 10.1 Config Fields Not Yet Wired
+
+The following `LlmConfig` fields are defined in section 9.3 but **not yet wired through** to the
+`async-openai` client in Phase 77:
+
+- `default_model` -- the model parameter must always be provided explicitly in dispatch
+  workflows; the config-level default is not applied as a fallback.
+- `timeout_ms` -- the request timeout uses `async-openai`'s default, not the configured value.
+- `max_retries` -- retry on transient failures is not implemented; the provider fails immediately
+  on 5xx or connection errors.
+
+### 10.2 Loading Workflow Dependencies
+
+The `env:VAR` and `cache:key` source forms in `load_prompt` (section 7.1) and the
+`config::get_string` call in `load_system_prompt` (section 7.2) depend on stdlib modules
+(`std::env`, `std::cache`, `std::config`) that are not yet available. Phase 77 loading.ash
+supports file-based and literal-string loading only. Environment variable and cache integration
+is deferred to a future phase.
+
+---
+
+## 11. Conformance
+
+### 11.1 Conforming Implementation
 
 A conforming implementation of the LLM standard library must:
 
@@ -1074,16 +1140,16 @@ A conforming implementation of the LLM standard library must:
    `CapabilityProvider` that satisfies the action contract, provider routing, error mapping,
    and streaming contract.
 
-### 10.2 Composition Conformance
+### 11.2 Composition Conformance
 
 A conforming implementation must respect the three-vertex composition rules:
 
 - No `fn` definition in `types.ash` or `prompt.ash` contains `act`, `ret`, `spawn`, `kill`,
   `receive`, `send`, `check_health`, or any workflow construct.
-- All `workflow` definitions in `llm/openai/` that use `act` are classified as Tier 3.
+- All `workflow` definitions in `llm/` that use `act` are classified as Tier 3.
 - No `fn` invokes a `workflow` or uses a capability.
 
-### 10.3 Optional Extensions
+### 11.3 Optional Extensions
 
 A conforming implementation may additionally provide:
 

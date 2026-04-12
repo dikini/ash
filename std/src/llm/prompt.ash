@@ -68,7 +68,7 @@ pub fn assistant_with_tools(content: String, tool_calls: List<ToolCall>) -> Mess
 --   let msg = tool_result("call_1", "4");
 pub fn tool_result(call_id: String, content: String) -> Message {
     Message {
-        role: Tool { tool_call_id: call_id },
+        role: Tool,
         content: content,
         tool_calls: None,
         tool_call_id: Some { value: call_id }
@@ -119,7 +119,7 @@ pub fn is_assistant(msg: Message) -> Bool {
 -- Check if message is a tool result
 pub fn is_tool(msg: Message) -> Bool {
     match msg {
-        Message { role: Tool { tool_call_id: _ }, content: _, tool_calls: _, tool_call_id: _ } => true,
+        Message { role: Tool, content: _, tool_calls: _, tool_call_id: _ } => true,
         _ => false
     }
 }
@@ -171,7 +171,7 @@ fn role_name(role: Role) -> String {
         System => "system",
         User => "user",
         Assistant => "assistant",
-        Tool { tool_call_id: _ } => "tool"
+        Tool => "tool"
     }
 }
 
@@ -205,7 +205,7 @@ fn format_message_md(msg: Message) -> String {
                 System => "**System**",
                 User => "**User**",
                 Assistant => "**Assistant**",
-                Tool { tool_call_id: id } => string::concat("**Tool** (", id, ")")
+                Tool => string::concat("**Tool** (", id, ")")
             };
             let body = match calls {
                 Some { value: tool_calls } => {

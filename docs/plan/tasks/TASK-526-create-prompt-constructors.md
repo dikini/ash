@@ -1,6 +1,6 @@
 # TASK-526: Create std/src/llm/prompt.ash -- Constructors
 
-## Status: Draft
+## Status: ✅ Complete
 
 ## Description
 

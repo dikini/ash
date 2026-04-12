@@ -1,6 +1,6 @@
 # TASK-516: Add async-openai dependency to ash-engine
 
-## Status: Draft
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-528: Create std/src/llm/prompt.ash -- Renderers
 
-## Status: Draft
+## Status: ✅ Complete
 
 ## Description
 

@@ -8,7 +8,7 @@
 -- User: User input messages
 -- Assistant: Model response messages
 -- Tool: Tool result messages with associated tool call ID
-pub type Role = System | User | Assistant | Tool { tool_call_id: String };
+pub type Role = System | User | Assistant | Tool;
 
 -- ToolCall represents a tool invocation from the model
 -- id: Unique identifier for this tool call
@@ -98,24 +98,28 @@ pub type ChatChunk = ChatChunk {
     finish_reason: Option<String>
 };
 
--- ChatOptions configures chat completion requests
--- model: Model to use
+-- CompletionParams configures chat completion requests (SPEC-029 §3.11)
 -- temperature: Sampling temperature (0.0 to 2.0)
+-- top_p: Nucleus sampling probability
 -- max_tokens: Maximum tokens to generate
--- tools: Optional list of available tools
--- stream: Whether to stream the response
-pub type ChatOptions = ChatOptions {
-    model: String,
+-- stop: Stop sequences
+-- seed: Deterministic sampling seed
+pub type CompletionParams = CompletionParams {
     temperature: Option<Float>,
+    top_p: Option<Float>,
     max_tokens: Option<Int>,
-    tools: Option<List<ToolDef>>,
-    stream: Bool
+    stop: Option<List<String>>,
+    seed: Option<Int>
 };
 
--- EmbeddingOptions configures embedding requests
--- model: Model to use
--- encoding_format: Format for embedding values
-pub type EmbeddingOptions = EmbeddingOptions {
-    model: String,
-    encoding_format: Option<String>
+-- ProviderConfig defines a named LLM provider endpoint (SPEC-029 §3.10)
+-- name: Provider name used as routing key
+-- api_base: Base URL for the OpenAI-compatible API
+-- api_key: Authentication key (may be placeholder for local providers)
+-- default_model: Model used when none specified
+pub type ProviderConfig = ProviderConfig {
+    name: String,
+    api_base: String,
+    api_key: String,
+    default_model: String
 };

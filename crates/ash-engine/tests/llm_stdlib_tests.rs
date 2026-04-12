@@ -37,8 +37,8 @@ fn test_types_dot_ash_contains_all_required_type_defs() {
         "ChatResponse",
         "ChatChunk",
         "Embedding",
-        "ChatOptions",
-        "EmbeddingOptions",
+        "CompletionParams",
+        "ProviderConfig",
     ];
 
     for type_name in &required_types {
@@ -59,8 +59,7 @@ fn test_types_dot_ash_role_definition_correct() {
     assert!(source.contains("System"), "Role must have System variant");
     assert!(source.contains("User"), "Role must have User variant");
     assert!(source.contains("Assistant"), "Role must have Assistant variant");
-    assert!(source.contains("Tool"), "Role must have Tool variant (with tool_call_id field)");
-    assert!(source.contains("tool_call_id"), "Tool variant must have tool_call_id field");
+    assert!(source.contains("Tool"), "Role must have Tool variant (payload-free)");
 }
 
 #[test]

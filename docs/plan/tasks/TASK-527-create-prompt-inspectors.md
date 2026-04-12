@@ -1,6 +1,6 @@
 # TASK-527: Create std/src/llm/prompt.ash -- Inspectors
 
-## Status: Draft
+## Status: ✅ Complete
 
 ## Description
 

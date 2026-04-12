@@ -1,6 +1,6 @@
 # TASK-518: Create LlmProvider skeleton and list_models implementation
 
-## Status: Draft
+## Status: ✅ Complete
 
 ## Description
 

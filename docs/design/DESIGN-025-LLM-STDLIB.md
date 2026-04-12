@@ -38,12 +38,12 @@ What is missing:
 ## Goals
 
 1. Define a provider-agnostic vocabulary of pure types and prompt functions in `std/src/llm/`.
-2. Implement an OpenAI-specific capability and dispatch layer in `std/src/llm/openai/`.
+2. Implement an OpenAI-specific capability and dispatch layer in `std/src/llm/` (flat layout).
 3. Provide a Rust-side `LlmProvider` using `async-openai` that plugs into the existing engine
    registration system.
 4. Support multi-provider routing (different `api_base` per provider) for ollama, vLLM,
    together.ai, fireworks, litellm, and any OpenAI-compatible endpoint.
-5. Lay out agent orchestration patterns as first-class workflows in `std/src/llm/openai/agent.ash`.
+5. Lay out agent orchestration patterns as first-class workflows in separate files under `std/src/llm/`.
 6. Structure namespaces so future providers (`llm/anthropic/`) and peer protocols (`mcp/`, `a2a/`)
    coexist naturally, with `agent/` composing across all of them.
 
@@ -67,11 +67,15 @@ std/src/
   llm/              -- protocol module: LLM shared vocabulary
     mod.ash           -- module root, re-exports
     types.ash         -- pure: Message, Role, ChatResponse, ToolCall, ToolDef, Usage, ChatChunk,
-                       --        Embedding, ProviderConfig
+                       --        Embedding, ProviderConfig, CompletionParams
     prompt.ash        -- pure fn: constructors, formatters, filters, renderers
-    openai/           -- provider-specific implementation
-      mod.ash         -- capability declaration + dispatch/loading workflows
-      agent.ash       -- orchestration workflows (conversation, tool_agent, router, supervised)
+    openai.ash        -- capability declaration (Llm)
+    dispatch.ash      -- dispatch workflows (complete, stream, embed, list_models, etc.)
+    loading.ash       -- loading workflows (load_prompt, load_system_prompt)
+    conversation.ash  -- orchestration: multi-turn conversation
+    tool_agent.ash    -- orchestration: tool-use agent loop
+    router.ash        -- orchestration: multi-model routing
+    supervised.ash    -- orchestration: spawn/kill/restart supervised agent
   mcp/              -- peer protocol module (Model Context Protocol)
   a2a/              -- peer protocol module (Agent-to-Agent)
   agent/            -- composes across all protocols (patterns, skills, types)
@@ -79,11 +83,13 @@ std/src/
 
 Principle: **protocol modules declare capabilities, agent modules compose them.**
 
-`llm/` owns the shared vocabulary that any LLM provider can use. `llm/openai/` owns the
-OpenAI-specific capability declaration and its dispatch/loading workflows. `mcp/` and `a2a/` are
-peers at the same level. `agent/` sits above all protocols and composes them into higher-order
-patterns. Agent loops that use LLM + MCP + A2A are general agent patterns, not tied to any single
-protocol.
+`llm/` owns the shared vocabulary that any LLM provider can use. `llm/openai.ash` owns the
+OpenAI-specific capability declaration. `llm/dispatch.ash` provides thin dispatch workflows
+wrapping `act` calls. `llm/loading.ash` provides prompt-loading workflows. Agent orchestration
+patterns are each in their own file (`conversation.ash`, `tool_agent.ash`, `router.ash`,
+`supervised.ash`). `mcp/` and `a2a/` are peers at the same level. `agent/` sits above all
+protocols and composes them into higher-order patterns. Agent loops that use LLM + MCP + A2A
+are general agent patterns, not tied to any single protocol.
 
 ### D2: Three-Tier Layering
 
@@ -102,7 +108,7 @@ These contain only `fn` definitions. No `act`, no `ret`, no workflow constructs.
 
 These functions compose freely with each other and with any other pure fn in the stdlib.
 
-**Tier 2: workflow (effectful loading)** -- loading workflows in `llm/openai/mod.ash`
+**Tier 2: workflow (effectful loading)** -- loading workflows in `llm/loading.ash`
 
 These are workflows because they perform IO (read files, check caches, read environment variables)
 but do not dispatch to the LLM capability itself.
@@ -110,7 +116,7 @@ but do not dispatch to the LLM capability itself.
 - `load_prompt(source)`: load a prompt from file, cache, or environment variable.
 - `load_system_prompt(name)`: load a named system prompt from a configured directory.
 
-**Tier 3: workflow (LLM dispatch)** -- dispatch workflows in `llm/openai/mod.ash`
+**Tier 3: workflow (LLM dispatch)** -- dispatch workflows in `llm/dispatch.ash`
 
 These are thin workflows that wrap `act` calls to the LLM capability.
 
@@ -137,7 +143,7 @@ Composition follows the rules from DESIGN-020:
 
 ### D3: Capability Contract
 
-The LLM capability is declared in `llm/openai/mod.ash`:
+The LLM capability is declared in `llm/openai.ash`:
 
 ```ash
 pub capability Llm: execute chat(provider: String, model: String, messages: List<Message>,
@@ -210,9 +216,11 @@ OpenAI-compatible `/v1/chat/completions` endpoint works without code changes:
 - fireworks (`https://api.fireworks.ai/inference/v1`)
 - litellm proxy (`http://localhost:4000/v1`)
 
-**Effect level: Deliberative.** LLM inference is a read-only analysis operation. The model does not
-mutate external state. This aligns with the existing `McpProvider`, which also declares
-`Effect::Deliberative`.
+**Effect level: Operational.** LLM inference involves external HTTP calls with side effects (API
+usage billing, potential state changes on remote services). Although the model itself does not
+mutate local state, the provider's effect classification is Operational because it performs
+network IO and interacts with external systems. This supersedes an earlier Deliberative
+classification.
 
 **Streaming:** The `async-openai` crate returns a stream of `ChatChunk` objects from its streaming
 API. `stream_adapter.rs` adapts this into Ash's `Stream<ChatChunk>` type. Each chunk contains a
@@ -246,9 +254,13 @@ The namespace layout is designed to accommodate future growth without restructur
 
 ```
 std/src/llm/           -- shared vocab (types + prompt) usable by any LLM provider
-std/src/llm/openai/    -- OpenAI-specific capability + dispatch + agent loops
-std/src/llm/anthropic/ -- future: Anthropic-specific capability + dispatch
-std/src/llm/google/    -- future: Google-specific capability + dispatch
+std/src/llm/openai.ash -- OpenAI-specific capability declaration
+std/src/llm/dispatch.ash -- dispatch workflows wrapping act calls
+std/src/llm/loading.ash  -- loading workflows for prompt sources
+std/src/llm/conversation.ash -- orchestration: multi-turn conversation
+std/src/llm/tool_agent.ash   -- orchestration: tool-use agent loop
+std/src/llm/router.ash       -- orchestration: multi-model routing
+std/src/llm/supervised.ash   -- orchestration: supervised agent
 std/src/mcp/           -- peer: MCP protocol
 std/src/a2a/           -- peer: A2A protocol
 std/src/agent/         -- composes across protocols (patterns, skills, types)
@@ -258,18 +270,20 @@ Key invariants:
 
 - `llm/` types and prompt functions are **provider-agnostic**. They define `Message`, `Role`,
   `ChatResponse`, etc. -- concepts universal to all LLM providers.
-- `llm/openai/` declares its own `Llm` capability. Future `llm/anthropic/` would declare its own
-  `AnthropicLlm` capability with provider-specific actions.
-- Agent orchestration in `llm/openai/agent.ash` is OpenAI-specific because it uses the OpenAI
-  `Llm` capability. When Anthropic support is added, analogous `llm/anthropic/agent.ash` would
-  use the Anthropic capability.
+- `llm/openai.ash` declares the `Llm` capability. Future provider-specific files (e.g.,
+  `llm/anthropic.ash`) would declare their own capabilities with provider-specific actions.
+- Agent orchestration workflows (`conversation.ash`, `tool_agent.ash`, `router.ash`,
+  `supervised.ash`) use the `Llm` capability declared in `openai.ash`. Each pattern is its own
+  file for modularity.
 - `agent/` (at the top level, not under any protocol) composes across protocols. A multi-protocol
   agent that uses LLM + MCP + A2A lives here, not under `llm/`.
 
 ### D6: Agent Orchestration
 
-Agent loops in `llm/openai/agent.ash` are **first-class workflows**, not callbacks. They use Ash's
+Agent loops are **first-class workflows**, not callbacks. They use Ash's
 full orchestration vocabulary: `receive`, `spawn`, `send`, `kill`, `check_health`.
+Each agent pattern is its own file under `llm/`: `conversation.ash`, `tool_agent.ash`,
+`router.ash`, `supervised.ash`.
 
 **Tool-use agent loop** -- the orient-decide-act cycle:
 
@@ -351,10 +365,8 @@ std/src/llm/
                         -- Renderers
                         render_conversation(messages) -> String
                         render_template(template, vars) -> String
-
-std/src/llm/openai/
-  mod.ash             -- capability Llm declaration
-                        -- Dispatch workflows (Tier 3):
+  openai.ash          -- capability Llm declaration
+  dispatch.ash        -- Dispatch workflows (Tier 3):
                         complete(provider, model, messages, params) -> ChatResponse
                         complete_with_tools(provider, model, messages, tools, params) -> ChatResponse
                         complete_tuned(provider, model, messages, params) -> ChatResponse
@@ -362,14 +374,13 @@ std/src/llm/openai/
                         stream(provider, model, messages, params) -> Stream<ChatChunk>
                         embed(provider, model, texts) -> List<Embedding>
                         list_models(provider) -> List<String>
-                        -- Loading workflows (Tier 2):
+  loading.ash         -- Loading workflows (Tier 2):
                         load_prompt(source) -> Message
                         load_system_prompt(name) -> Message
-  agent.ash           -- Orchestration workflows:
-                        conversation(provider, model, system_prompt, max_turns) -> List<Message>
-                        tool_agent(provider, model, messages, tools, max_rounds) -> ChatResponse
-                        router(provider, messages) -> ChatResponse
-                        supervised_agent(config) -> Result<ChatResponse, AgentError>
+  conversation.ash    -- Orchestration: multi-turn conversation
+  tool_agent.ash      -- Orchestration: tool-use agent loop
+  router.ash          -- Orchestration: multi-model routing
+  supervised.ash      -- Orchestration: supervised agent
 
 crates/ash-engine/src/providers/llm/
   mod.rs              -- LlmProvider struct implementing CapabilityProvider
@@ -398,9 +409,12 @@ crates/ash-engine/src/providers/llm/
 |--------|------|-----------|-----------|
 | `llm/types.ash` | 1 (fn) | `fn` definitions | Pure data types and constructors |
 | `llm/prompt.ash` | 1 (fn) | `fn` definitions | Pure message construction, formatting, rendering |
-| `llm/openai/mod.ash` (load_*) | 2 (workflow) | `workflow` | IO: file reads, cache checks, env vars |
-| `llm/openai/mod.ash` (complete/stream/embed/...) | 3 (workflow) | `workflow` | Uses `act` on Llm capability |
-| `llm/openai/agent.ash` | 3 (workflow) | `workflow` | Uses `act`, `spawn`, `kill`, `receive` |
+| `llm/loading.ash` | 2 (workflow) | `workflow` | IO: file reads, cache checks, env vars |
+| `llm/dispatch.ash` | 3 (workflow) | `workflow` | Uses `act` on Llm capability |
+| `llm/conversation.ash` | 3 (workflow) | `workflow` | Uses `act`, `receive` |
+| `llm/tool_agent.ash` | 3 (workflow) | `workflow` | Uses `act`, tool dispatch |
+| `llm/router.ash` | 3 (workflow) | `workflow` | Uses `act` for classification and routing |
+| `llm/supervised.ash` | 3 (workflow) | `workflow` | Uses `act`, `spawn`, `kill`, `receive` |
 | `providers/llm/*.rs` | N/A | Rust | CapabilityProvider implementation |
 
 ## Impact on Existing Specs
@@ -412,7 +426,7 @@ crates/ash-engine/src/providers/llm/
 | PLAN-015 (Provider Migration) | Adds another provider to the unified system | Engine |
 | SPEC-024 (Capability Role Reduction) | Llm capability follows the role reduction pattern | Language |
 | SPEC-002 (Surface) | New capability declaration syntax in .ash files | Parser |
-| SPEC-009 (Module System) | New module hierarchy: `llm/`, `llm/openai/` | Resolver |
+| SPEC-009 (Module System) | New module hierarchy: `llm/` with flat file layout | Stdlib |
 | Cargo.toml | New dependency: `async-openai` crate | Build |
 
 ## Open Questions
@@ -443,6 +457,19 @@ crates/ash-engine/src/providers/llm/
 4. **Should `ProviderConfig` be in `types.ash` or a separate config module?**
    - **Status:** RESOLVED -- `ProviderConfig` in `types.ash`
    - It's a pure data type used across providers. `types.ash` is the right home.
+
+## Known Limitations
+
+The following `LlmConfig` fields are defined but **not yet wired through** to the
+`async-openai` client in Phase 77:
+
+- `default_model` -- the model parameter must always be provided explicitly in dispatch
+  workflows; the config-level default is not applied as a fallback.
+- `timeout_ms` -- the request timeout uses `async-openai`'s default, not the configured value.
+- `max_retries` -- retry on transient failures is not implemented; the provider fails immediately
+  on 5xx or connection errors.
+
+These will be addressed in a future phase when the provider wiring is enhanced.
 
 ## References
 

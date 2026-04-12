@@ -1,6 +1,6 @@
 # TASK-525: Create std/src/llm/types.ash
 
-## Status: Draft
+## Status: ✅ Complete
 
 ## Description
 

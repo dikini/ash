@@ -132,7 +132,7 @@ pub struct LlmProvider {
 - `name() -> "llm"` (engine registration key; the capability declared in Ash is `Llm`)
 - Routing names such as `"openai"` or `"ollama"` stay inside the provider config map and are passed
   as action arguments, not as alternate registration keys.
-- `effect() -> Effect::Deliberative` (read-only analysis, same as McpProvider)
+- `effect() -> Effect::Operational` (read-only analysis, same as McpProvider)
 - `observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError>`:
   remains unused for the LLM action surface in Phase 77; returns `NotAvailable`.
 - `execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError>`:
@@ -164,7 +164,7 @@ impl EngineBuilder {
 1. Test `LlmProvider::new()` with valid config map succeeds.
 2. Test `LlmProvider::new()` with invalid config returns error.
 3. Test `CapabilityProvider::name()` returns `"llm"`.
-4. Test `CapabilityProvider::effect()` returns `Deliberative`.
+4. Test `CapabilityProvider::effect()` returns `Operational`.
 5. Test `execute()` with unknown action returns `NotAvailable`.
 6. Test `observe()` returns `NotAvailable` for the unused observe entry point.
 7. Test engine builder: `Engine::new().with_llm_capabilities(configs).build()` succeeds.
@@ -568,13 +568,13 @@ prompt loading.
 
 ---
 
-#### TASK-529: Create std/src/llm/openai/ module structure and capability declaration
+#### TASK-529: Create std/src/llm/openai.ash capability declaration
 
-**Objective:** Create the OpenAI-specific module with the `Llm` capability declaration and the
-five actions defined in SPEC-029 §5.
+**Objective:** Create the OpenAI-specific capability declaration with the `Llm` capability and
+the five actions defined in SPEC-029 §5.
 
 **Files to create:**
-- `std/src/llm/openai/mod.ash`
+- `std/src/llm/openai.ash`
 
 **Capability declaration (from SPEC-029 §5.1):**
 
@@ -608,7 +608,7 @@ cargo test -p ash-engine --lib tests::stdlib_llm_openai_capability
 SPEC-029 §6.
 
 **Files to modify:**
-- `std/src/llm/openai/mod.ash`
+- `std/src/llm/dispatch.ash`
 
 **Workflows (from SPEC-029 §6.1--6.7):**
 
@@ -643,7 +643,7 @@ cargo test -p ash-engine --lib tests::stdlib_llm_openai_dispatch
 **Objective:** Implement the two loading workflows for prompt sources, per SPEC-029 §7.
 
 **Files to modify:**
-- `std/src/llm/openai/mod.ash`
+- `std/src/llm/loading.ash`
 
 **Workflows (from SPEC-029 §7.1--7.2):**
 
@@ -678,7 +678,7 @@ cargo test -p ash-engine --lib tests::stdlib_llm_openai_loading
 ### Track 4: Agent Orchestration Workflows
 
 Agent loops that use `act` (via dispatch workflows), `spawn`, `kill`, `check_health`, and
-`receive`. All are Tier 3 workflows defined in `std/src/llm/openai/agent.ash`.
+`receive`. All are Tier 3 workflows defined in separate files under `std/src/llm/`.
 
 ---
 
@@ -688,16 +688,7 @@ Agent loops that use `act` (via dispatch workflows), `spawn`, `kill`, `check_hea
 SPEC-029 §8.1.
 
 **Files to create:**
-- `std/src/llm/openai/agent.ash`
-
-**Signature:**
-
-```ash
-workflow conversation(provider: String, model: String,
-                      system_prompt: String,
-                      max_turns: Int) -> List<Message>
-    requires: max_turns > 0
-```
+- `std/src/llm/conversation.ash`
 
 **Loop behavior (from SPEC-029 §8.1):**
 1. Initialize `messages = [system(system_prompt)]`.
@@ -723,7 +714,7 @@ cargo test -p ash-engine --lib tests::stdlib_llm_agent_conversation
 **Objective:** Implement the orient-decide-act tool-use loop, per SPEC-029 §8.2.
 
 **Files to modify:**
-- `std/src/llm/openai/agent.ash`
+- `std/src/llm/tool_agent.ash`
 
 **Signature:**
 
@@ -764,7 +755,7 @@ cargo test -p ash-engine --lib tests::stdlib_llm_agent_tool_agent
 SPEC-029 §8.3.
 
 **Files to modify:**
-- `std/src/llm/openai/agent.ash`
+- `std/src/llm/router.ash`
 
 **Signature:**
 
@@ -797,7 +788,7 @@ cargo test -p ash-engine --lib tests::stdlib_llm_agent_router
 **Objective:** Implement the spawn/kill/restart supervised agent pattern, per SPEC-029 §8.4.
 
 **Files to modify:**
-- `std/src/llm/openai/agent.ash`
+- `std/src/llm/supervised.ash`
 
 **Signature:**
 
@@ -902,8 +893,13 @@ grep "PLAN-025\|LLM Standard Library\|LlmProvider" CHANGELOG.md
 - `std/src/llm/mod.ash` -- module-level comments
 - `std/src/llm/types.ash` -- doc comments on each type
 - `std/src/llm/prompt.ash` -- doc comments on each function
-- `std/src/llm/openai/mod.ash` -- capability and workflow docs
-- `std/src/llm/openai/agent.ash` -- agent workflow docs
+- `std/src/llm/openai.ash` -- capability declaration docs
+- `std/src/llm/dispatch.ash` -- dispatch workflow docs
+- `std/src/llm/loading.ash` -- loading workflow docs
+- `std/src/llm/conversation.ash` -- conversation workflow docs
+- `std/src/llm/tool_agent.ash` -- tool agent docs
+- `std/src/llm/router.ash` -- router workflow docs
+- `std/src/llm/supervised.ash` -- supervised agent docs
 
 **README content:**
 - Overview of the LLM stdlib architecture (three-tier model).
@@ -970,7 +966,7 @@ Track 5 (Integration/Docs):
 ### Rust Provider (Track 1)
 1. `async-openai` compiles as a dependency of `ash-engine`.
 2. `LlmConfig` validates correctly: valid URLs accepted, invalid rejected.
-3. `LlmProvider` implements `CapabilityProvider` with `name() = "llm"`, `effect() = Deliberative`.
+3. `LlmProvider` implements `CapabilityProvider` with `name() = "llm"`, `effect() = Operational`.
 4. **AC:** `chat` action sends correct request to mock endpoint and returns `ChatResponse` Value.
 5. **AC:** `chat_stream` action returns chunks satisfying SC1--SC5 from SPEC-029 §9.5.
 6. **AC:** `embed` action returns `List<Embedding>` satisfying E1--E2 from SPEC-029 §5.2.3.
@@ -1010,7 +1006,7 @@ Track 5 (Integration/Docs):
 ## Normative Delta vs Existing Specs
 
 ### SPEC-009 (Module System)
-- New module hierarchy: `llm/`, `llm/openai/` under `std/src/`.
+- New module hierarchy: `llm/` with flat file layout under `std/src/`.
 
 ### SPEC-013 (Streams)
 - `Stream<ChatChunk>` returned by `chat_stream` action.

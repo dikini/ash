@@ -45,13 +45,15 @@ workflow load_prompt(source: String) -> Message {
     -- Check for env: prefix
     else if string::starts_with(source, "env:") then {
         let var_name = string::slice(source, 4, string::length(source));
-        let content = env::var(var_name);
+        -- TODO: env::var not yet available in stdlib; requires std::env module
+        let content = source;
         system(content)
     }
     -- Check for cache: prefix
     else if string::starts_with(source, "cache:") then {
         let key = string::slice(source, 6, string::length(source));
-        let content = cache::get(key);
+        -- TODO: cache::get not yet available in stdlib; requires std::cache module
+        let content = source;
         system(content)
     }
     -- Treat as literal string
@@ -82,7 +84,9 @@ workflow load_prompt(source: String) -> Message {
 --   -- This might load from /etc/ash/prompts/code_review.txt
 workflow load_system_prompt(name: String) -> Message {
     -- Get the prompt directory from engine configuration
-    let prompt_dir = config::get_string("llm.prompt_dir");
+    -- TODO: config::get_string not yet available; requires std::config module
+    -- For now, use a hardcoded default path
+    let prompt_dir = "/etc/ash/prompts";
 
     -- Construct the full path to the prompt file
     let filename = string::concat(name, ".txt");

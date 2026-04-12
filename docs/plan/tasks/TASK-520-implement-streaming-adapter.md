@@ -1,6 +1,6 @@
 # TASK-520: Implement streaming adapter
 
-## Status: Draft
+## Status: ✅ Complete
 
 ## Description
 

@@ -1,6 +1,6 @@
 # TASK-529: Create std/src/llm/openai.ash capability and dispatch module
 
-## Status: Draft
+## Status: Done
 
 ## Description
 

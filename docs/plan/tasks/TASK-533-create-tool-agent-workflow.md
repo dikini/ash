@@ -1,6 +1,6 @@
 # TASK-533: Create tool_agent workflow
 
-## Status: Draft
+## Status: Done
 
 ## Description
 

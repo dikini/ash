@@ -1,6 +1,6 @@
 # TASK-530: Create dispatch workflows
 
-## Status: Draft
+## Status: Done
 
 ## Description
 

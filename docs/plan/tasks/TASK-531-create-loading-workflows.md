@@ -1,6 +1,6 @@
 # TASK-531: Create loading workflows
 
-## Status: Draft
+## Status: Done
 
 ## Description
 

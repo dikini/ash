@@ -1,6 +1,6 @@
 # TASK-534: Create router workflow
 
-## Status: Draft
+## Status: Done
 
 ## Description
 

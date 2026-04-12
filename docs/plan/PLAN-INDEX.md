@@ -2279,18 +2279,18 @@ and prompt functions, OpenAI capability with dispatch workflows, and agent orche
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-529 | Create openai module + capability | SPEC-029 | 3 | Planned |
-| TASK-530 | Create dispatch workflows | SPEC-029 | 5 | Planned |
-| TASK-531 | Create loading workflows | SPEC-029 | 3 | Planned |
+| TASK-529 | Create openai module + capability | SPEC-029 | 3 | Done |
+| TASK-530 | Create dispatch workflows | SPEC-029 | 5 | Done |
+| TASK-531 | Create loading workflows | SPEC-029 | 3 | Done |
 
 ### Track 4: Agent Orchestration (TASK-532 to TASK-535)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-532 | Create conversation workflow | SPEC-029 | 4 | Planned |
-| TASK-533 | Create tool_agent workflow | SPEC-029 | 6 | Planned |
-| TASK-534 | Create router workflow | SPEC-029 | 3 | Planned |
-| TASK-535 | Create supervised_agent workflow | SPEC-029 | 4 | Planned |
+| TASK-532 | Create conversation workflow | SPEC-029 | 4 | Done |
+| TASK-533 | Create tool_agent workflow | SPEC-029 | 6 | Done |
+| TASK-534 | Create router workflow | SPEC-029 | 3 | Done |
+| TASK-535 | Create supervised_agent workflow | SPEC-029 | 4 | Done |
 
 ### Track 5: Integration/Docs (TASK-536 to TASK-538)
 

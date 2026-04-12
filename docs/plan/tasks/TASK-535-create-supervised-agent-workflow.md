@@ -1,6 +1,6 @@
 # TASK-535: Create supervised_agent workflow
 
-## Status: Draft
+## Status: Done
 
 ## Description
 

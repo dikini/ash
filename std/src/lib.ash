@@ -19,6 +19,20 @@ pub use test::{
     fail,
 };
 
+-- LLM types
+pub mod llm;
+pub use llm::{
+    Role, System, User, Assistant, Tool,
+    Message, ToolCall, ToolCallDelta, ToolDef,
+    Usage, ChatResponse, Embedding, ChatChunk,
+    ChatOptions, EmbeddingOptions,
+    system, user, assistant, assistant_with_tools, tool_result, message,
+    is_system, is_user, is_assistant, is_tool, role, content,
+    get_tool_calls, has_tool_calls, get_tool_call_id,
+    render_plaintext, render_markdown,
+    count, last, filter_user, filter_assistant, append, prepend
+};
+
 -- IO types
 pub use io::{Error, ErrorKind, Result};
 pub use io::path::{PathBuf, from_string, join, parent, file_name, extension, is_absolute};

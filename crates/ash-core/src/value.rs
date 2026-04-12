@@ -32,6 +32,8 @@ pub struct Instance {
 pub enum Value {
     /// Integer
     Int(i64),
+    /// Float (64-bit floating point)
+    Float(f64),
     /// String
     String(String),
     /// Boolean
@@ -63,6 +65,33 @@ pub enum Value {
     InstanceAddr(InstanceAddr),
     /// Control link value for controlling spawned instances
     ControlLink(ControlLink),
+    /// Stream handle for consuming streaming data
+    /// 
+    /// Streams are used for incremental data sources like chat completions
+    /// where data arrives in chunks over time.
+    Stream(StreamHandle),
+}
+
+/// Handle to a stream that can be consumed incrementally
+/// 
+/// Stream handles are created by providers (like LLM chat_stream) and
+/// consumed by the runtime through the receive construct.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StreamHandle {
+    /// Unique identifier for this stream
+    pub id: String,
+    /// Type of items in the stream (for type checking)
+    pub item_type: String,
+}
+
+impl StreamHandle {
+    /// Create a new stream handle
+    pub fn new(id: impl Into<String>, item_type: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            item_type: item_type.into(),
+        }
+    }
 }
 
 impl Value {
@@ -83,6 +112,20 @@ impl Value {
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Value::Bool(b) => Some(*b),
+            _ => None,
+        }
+    }
+
+    pub fn as_float(&self) -> Option<f64> {
+        match self {
+            Value::Float(f) => Some(*f),
+            _ => None,
+        }
+    }
+
+    pub fn as_stream(&self) -> Option<&StreamHandle> {
+        match self {
+            Value::Stream(handle) => Some(handle),
             _ => None,
         }
     }
@@ -144,6 +187,7 @@ impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Int(i) => write!(f, "{}", i),
+            Value::Float(fl) => write!(f, "{}", fl),
             Value::String(s) => write!(f, "\"{}\"", s),
             Value::Bool(b) => write!(f, "{}", b),
             Value::Null => write!(f, "null"),
@@ -198,6 +242,7 @@ impl std::fmt::Display for Value {
             Value::Instance(instance) => write!(f, "{}", instance),
             Value::InstanceAddr(addr) => write!(f, "{}", addr),
             Value::ControlLink(link) => write!(f, "{}", link),
+            Value::Stream(handle) => write!(f, "stream({}: {})", handle.id, handle.item_type),
         }
     }
 }

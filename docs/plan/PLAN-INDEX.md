@@ -273,6 +273,7 @@ Update this section as tasks complete:
 | 69 | 12 | 12 | ✅ Complete |
 | 70 | 8 | 0 | Planned |
 | 74 | 8 | 0 | Planned |
+| 77 | 23 | 0 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -366,6 +367,7 @@ Update this section as tasks complete:
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
 | 74 | 8 | 0 | 📝 Planned |
+| 77 | 23 | 0 | 📝 Planned |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -2238,3 +2240,65 @@ execution is bounded and reproducible but not yet backed by true generated input
 dedicated Ash test library surface, authored unit/integration/e2e test support, bounded
 property/small-world execution, and explicit opt-in synthesized tests from contracts, policies, and
 obligations.
+
+## Phase 77: LLM Standard Library
+
+Build a first-class LLM standard library with an async-openai Rust provider, pure Ash types
+and prompt functions, OpenAI capability with dispatch workflows, and agent orchestration patterns.
+
+**Plan Reference:** [PLAN-025: LLM Standard Library](PLAN-025-LLM-STDLIB.md)
+**Design Reference:** [DESIGN-025: LLM Standard Library](../design/DESIGN-025-LLM-STDLIB.md)
+**Spec Reference:** SPEC-029-LLM-STDLIB.md
+**Priority:** High
+**Status:** 📝 Planned
+
+### Track 1: Rust Provider Foundation (TASK-516 to TASK-523)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| TASK-516 | Add async-openai dependency | DESIGN-025 | 1 | Done |
+| TASK-517 | Create LlmConfig struct | SPEC-029, DESIGN-025 | 3 | Done |
+| TASK-518 | Create LlmProvider skeleton + list_models | SPEC-029, DESIGN-025 | 5 | Done |
+| TASK-519 | Implement chat completion | SPEC-029 | 8 | Done |
+| TASK-520 | Implement streaming adapter | SPEC-029 | 6 | Planned |
+| TASK-521 | Implement tool dispatch helpers | SPEC-029 | 4 | Planned |
+| TASK-522 | Implement embeddings | SPEC-029 | 4 | Planned |
+| TASK-523 | Wire up engine builder | SPEC-029 | 3 | Planned |
+
+### Track 2: Ash Pure Types/Functions (TASK-524 to TASK-528)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| TASK-524 | Create llm module structure | SPEC-029 | 2 | Planned |
+| TASK-525 | Create types.ash | SPEC-029 | 3 | Planned |
+| TASK-526 | Create prompt.ash constructors | SPEC-029 | 3 | Planned |
+| TASK-527 | Create prompt.ash inspectors | SPEC-029 | 4 | Planned |
+| TASK-528 | Create prompt.ash renderers | SPEC-029 | 3 | Planned |
+
+### Track 3: Capability/Dispatch Workflows (TASK-529 to TASK-531)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| TASK-529 | Create openai module + capability | SPEC-029 | 3 | Planned |
+| TASK-530 | Create dispatch workflows | SPEC-029 | 5 | Planned |
+| TASK-531 | Create loading workflows | SPEC-029 | 3 | Planned |
+
+### Track 4: Agent Orchestration (TASK-532 to TASK-535)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| TASK-532 | Create conversation workflow | SPEC-029 | 4 | Planned |
+| TASK-533 | Create tool_agent workflow | SPEC-029 | 6 | Planned |
+| TASK-534 | Create router workflow | SPEC-029 | 3 | Planned |
+| TASK-535 | Create supervised_agent workflow | SPEC-029 | 4 | Planned |
+
+### Track 5: Integration/Docs (TASK-536 to TASK-538)
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| TASK-536 | Integration tests | SPEC-029 | 6 | ✅ Complete |
+| TASK-537 | Update CHANGELOG.md | Common Changelog | 1 | ✅ Complete |
+| TASK-538 | Documentation | AGENTS.md | 3 | ✅ Complete |
+
+**Deliverable:** LLM stdlib with async-openai Rust provider, pure types and prompt functions,
+OpenAI capability with dispatch workflows, agent orchestration patterns, and integration tests.

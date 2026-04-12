@@ -8,6 +8,29 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
+  - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.
+  - `LlmConfig` struct for per-provider connection settings with validation, defaults, and API key redaction (TASK-517).
+  - `LlmProvider` capability provider with multi-provider routing, lazy client creation, and list_models action (TASK-518).
+  - Chat completion actions (`chat`, `chat_with_tools`) with message conversion, tool definition support, parameter validation, and error mapping (TASK-519).
+  - Integration tests with wiremock for LLM provider error mapping (TASK-519).
+  - Streaming adapter for chat responses with SSE chunk parsing (TASK-520). Implements `ChatChunk` and `ToolCallDelta` types per SPEC-029 §3.
+  - Stream error propagation tests verifying `pull_stream_chunk` returns `ExecutionFailed` on upstream failures per SPEC-029 §9.4 SC4 (TASK-520).
+  - Tool dispatch helpers for converting between Ash Values and OpenAI tool formats (TASK-521). Includes `ToolCall` extraction and tool result formatting.
+  - Embeddings action with postcondition verification (TASK-522). Supports `text-embedding-3-small` and similar models with `Embedding` return type.
+  - Ash stdlib types in `std/src/llm/types.ash`: `Role`, `Message`, `ToolCall`, `ToolCallDelta`, `ToolDef`, `ChatResponse`, `Embedding`, `ChatChunk`, `Usage`, `ChatOptions` (TASK-524-525).
+  - Prompt constructors in `std/src/llm/prompt.ash`: `system`, `user`, `assistant`, `assistant_with_tools`, `tool_result` (TASK-526).
+  - Prompt inspectors in `std/src/llm/prompt.ash`: `is_system`, `is_user`, `is_assistant`, `is_tool`, `role`, `content`, `get_tool_calls`, `has_tool_calls` (TASK-527).
+  - Prompt renderers in `std/src/llm/prompt.ash`: `render_plaintext`, `render_markdown` for conversation formatting (TASK-528).
+  - OpenAI capability declaration in `std/src/llm/openai.ash` with `Llm` capability and action signatures per SPEC-029 §5 (TASK-529).
+  - Dispatch workflows in `std/src/llm/dispatch.ash`: `complete`, `complete_with_tools`, `complete_tuned`, `ask`, `stream`, `embed`, `list_models` (TASK-530).
+  - Loading workflows in `std/src/llm/loading.ash`: `load_prompt`, `load_system_prompt` for prompt file loading (TASK-531).
+  - Agent orchestration workflows: `conversation` (TASK-532), `tool_agent` (TASK-533), `router` (TASK-534), `supervised_agent` (TASK-535).
+  - Comprehensive integration tests in `crates/ash-engine/tests/llm_integration_tests.rs` with mock backends covering chat, tools, streaming, embeddings, error handling, and multi-provider routing (TASK-536).
+  - Engine-level integration tests using `with_llm_capabilities()` builder and `execute_core_workflow()` to verify engine → LLM provider dispatch for chat, list_models, embed, and result binding (TASK-523).
+  - Corrected `LlmProvider` effect from `Deliberative` to `Operational` so Act dispatch through `CapabilityContext` succeeds (TASK-523).
+  - `Engine::execute_core_workflow()` test helper for executing hand-constructed core IR through the engine's registered capability providers (TASK-523).
+  - Module-level documentation in `std/src/llm/mod.ash` with overview, quick start example, and architecture documentation (TASK-538).
 - Drafted [DESIGN-024: Property Generation Substrate](docs/design/DESIGN-024-PROPERTY-GENERATION-SUBSTRATE.md), defining the canonical generated-case model, bounded value-domain substrate, deterministic seed-driven generation pipeline, and staged implementation order needed to move Ash property testing beyond bounded reruns into true generated-input execution.
 - Drafted [DESIGN-022: Synthesized Contract / Policy / Obligation Cases](docs/design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md), defining the stable introspection, executable case model, oracle model, and staged implementation order needed to turn Phase 76 synthesized test planning into real executable synthesized cases.
 - Drafted [DESIGN-023: Small-World Exploration Substrate](docs/design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md), defining the canonical world model, finite-domain enumeration substrate, oracle model, and staged implementation order needed to move small-world testing beyond bounded reruns into true world exploration.

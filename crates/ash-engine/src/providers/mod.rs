@@ -17,6 +17,9 @@ use std::sync::{Arc, Mutex};
 pub mod mcp;
 pub use mcp::{McpCapabilities, McpConfig, McpProvider};
 
+pub mod llm;
+pub use llm::{LlmConfig, LlmProvider};
+
 /// Standard I/O capability provider
 ///
 /// Provides console input/output capabilities:

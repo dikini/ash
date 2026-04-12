@@ -498,6 +498,35 @@ impl Engine {
         interpret_in_state(&workflow.core, &self.runtime_state).await
     }
 
+    /// Execute a core `ash_core::Workflow` directly through the engine's runtime state.
+    ///
+    /// This bypasses surface-program lookup and type checking, executing the
+    /// workflow against the engine's registered capability providers (including
+    /// those set up via `with_llm_capabilities`). Intended for integration tests
+    /// that need to exercise the engine → capability dispatch path with a
+    /// hand-constructed core IR.
+    ///
+    /// # Errors
+    ///
+    /// Returns execution errors from the interpreter.
+    #[doc(hidden)]
+    pub async fn execute_core_workflow(&self, workflow: &ash_core::Workflow) -> ExecResult<Value> {
+        use ash_interp::{BehaviourContext, PolicyEvaluator, Context};
+        let ctx = Context::new();
+        let cap_ctx = self.runtime_state.create_capability_context().await;
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+        ash_interp::execute_workflow_with_behaviour_in_state(
+            workflow,
+            ctx,
+            &cap_ctx,
+            &policy_eval,
+            &behaviour_ctx,
+            &self.runtime_state,
+        )
+        .await
+    }
+
     /// Register a runtime-owned spawned-child workflow entry.
     ///
     /// This exposes the interpreter runtime state's narrow `workflow_type` → child-workflow registry
@@ -1865,6 +1894,47 @@ impl EngineBuilder {
         self.custom_providers.insert(name.to_string(), provider);
         self
     }
+
+    /// Configure LLM capabilities with the given provider configurations
+    ///
+    /// Registers an `LlmProvider` that supports multi-provider routing for OpenAI-compatible APIs.
+    ///
+    /// # Arguments
+    /// * `configs` - Map of provider name to `LlmConfig` (e.g., "openai" -> config, "ollama" -> config)
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ash_engine::Engine;
+    /// use ash_engine::providers::llm::LlmConfig;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut configs = HashMap::new();
+    /// configs.insert("openai".to_string(), LlmConfig::openai("sk-xxx"));
+    /// configs.insert("ollama".to_string(), LlmConfig::ollama());
+    ///
+    /// let engine = Engine::new()
+    ///     .with_llm_capabilities(configs)
+    ///     .build()
+    ///     .expect("engine builds");
+    /// ```
+    #[must_use]
+    pub fn with_llm_capabilities(
+        mut self,
+        configs: std::collections::HashMap<String, crate::providers::llm::LlmConfig>,
+    ) -> Self {
+        match crate::providers::llm::LlmProvider::new(configs) {
+            Ok(provider) => {
+                self.custom_providers
+                    .insert("llm".to_string(), std::sync::Arc::new(provider));
+            }
+            Err(e) => {
+                // Log warning and skip registration
+                eprintln!("Warning: Failed to create LLM provider: {e}");
+            }
+        }
+        self
+    }
 }
 
 #[cfg(test)]
@@ -2365,5 +2435,60 @@ mod tests {
         assert_eq!(config.timeout_seconds, 0); // Default for u64
         assert_eq!(config.max_redirects, 0); // Default for u32
         assert!(!config.verify_ssl); // Default for bool
+    }
+
+    // ============================================================
+    // LLM Provider Builder Tests
+    // ============================================================
+
+    #[test]
+    fn test_builder_with_llm_capabilities_succeeds() {
+        use crate::providers::llm::LlmConfig;
+        use std::collections::HashMap;
+
+        let mut configs = HashMap::new();
+        configs.insert("openai".to_string(), LlmConfig::openai("sk-test123"));
+
+        let result = Engine::new().with_llm_capabilities(configs).build();
+        assert!(result.is_ok(), "Engine with LLM capabilities should build");
+    }
+
+    #[test]
+    fn test_builder_with_llm_capabilities_multi_provider() {
+        use crate::providers::llm::LlmConfig;
+        use std::collections::HashMap;
+
+        let mut configs = HashMap::new();
+        configs.insert("openai".to_string(), LlmConfig::openai("sk-test123"));
+        configs.insert("ollama".to_string(), LlmConfig::ollama());
+
+        let result = Engine::new().with_llm_capabilities(configs).build();
+        assert!(
+            result.is_ok(),
+            "Engine with multiple LLM providers should build"
+        );
+    }
+
+    #[test]
+    fn test_builder_with_llm_capabilities_invalid_config() {
+        use crate::providers::llm::LlmConfig;
+        use std::collections::HashMap;
+
+        let mut configs = HashMap::new();
+        configs.insert(
+            "invalid".to_string(),
+            LlmConfig {
+                api_base: "not-a-url".to_string(),
+                api_key: "key".to_string(),
+                ..LlmConfig::default()
+            },
+        );
+
+        // Should NOT fail - just prints warning and skips registration
+        let result = Engine::new().with_llm_capabilities(configs).build();
+        assert!(
+            result.is_ok(),
+            "Engine should build even with invalid LLM config (skips registration)"
+        );
     }
 }

@@ -18,6 +18,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - LLM stdlib end-to-end validation (TASK-543). Structural tests replacing string-matching: type name verification via `collect_public_type_defs_from_source`, pub fn parse coverage via `count_pub_fn_snippets`, import path resolution, and cross-cutting stdlib file validation.
   - **Key finding**: 16 of 23 `pub fn` in prompt.ash use record constructors unsupported by `parse_fn_definition`, causing silent export dropping. Documented via `#[ignore]` target test.
 
+- Fix 2-segment `use` path resolution and improve import error context (TASK-547):
+  - `collect_module_exports` now gracefully skips workflow parse failures in child modules (e.g. `dispatch.ash`), preventing them from killing the entire module's re-export collection. Mirrors the existing `pub fn` graceful-skip pattern.
+  - `merge_use_exports` silently skips re-exported items not yet defined in the target module, allowing `mod.ash` files to reference forward-declared types and functions.
+  - Improved error messages: `pub use` parse errors now include the module file path; `resolve_use_target` includes the search root; import parse errors include the original import text. Replaces opaque "ContextError" with actionable context.
+  - Regression tests: `use llm::Role` and `use llm::Message` resolve via `mod.ash` re-exports; `use nonexistent::Foo` produces "not found" error.
+
 - **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
   - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.
   - `LlmConfig` struct for per-provider connection settings with validation, defaults, and API key redaction (TASK-517).

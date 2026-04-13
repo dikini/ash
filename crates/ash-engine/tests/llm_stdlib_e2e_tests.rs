@@ -195,12 +195,75 @@ fn test_llm_types_import_resolves() {
 // ---------------------------------------------------------------------------
 // Requirement 2b: re-export import path (use llm::Role via mod.ash pub use)
 //
-// NOTE: `use llm::Role` from outside std/src/ does NOT currently resolve
-// because the import resolver requires multi-segment paths for directory-style
-// modules. This is a known limitation -- re-exports work within the module
-// hierarchy (`use types::Role` from llm/_test.ash) but not across the
-// directory boundary. Tracked as a future improvement.
+// TASK-547: `use llm::Role` now resolves from within std/src/ because
+// collect_module_exports gracefully skips workflow parse failures in
+// child modules (dispatch.ash etc.), so re-exports from mod.ash survive.
 // ---------------------------------------------------------------------------
+
+#[test]
+fn test_llm_reexport_role_resolves() {
+    let consumer = stdlib_path("_e2e_reexport_role_test.ash");
+    std::fs::write(
+        &consumer,
+        "use llm::Role;\nworkflow main { done }\n",
+    )
+    .expect("write consumer");
+
+    let engine = make_engine();
+    let result = engine.parse_file(&consumer);
+    let _ = std::fs::remove_file(&consumer);
+
+    assert!(
+        result.is_ok(),
+        "use llm::Role should resolve via mod.ash re-export: {:?}",
+        result,
+    );
+}
+
+#[test]
+fn test_llm_reexport_message_resolves() {
+    let consumer = stdlib_path("_e2e_reexport_message_test.ash");
+    std::fs::write(
+        &consumer,
+        "use llm::Message;\nworkflow main { done }\n",
+    )
+    .expect("write consumer");
+
+    let engine = make_engine();
+    let result = engine.parse_file(&consumer);
+    let _ = std::fs::remove_file(&consumer);
+
+    assert!(
+        result.is_ok(),
+        "use llm::Message should resolve via mod.ash re-export: {:?}",
+        result,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// TASK-547: bad import gives a clear error (not opaque "ContextError")
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_bad_import_gives_clear_error() {
+    let consumer = stdlib_path("_e2e_bad_import_test.ash");
+    std::fs::write(
+        &consumer,
+        "use nonexistent::Foo;\nworkflow main { done }\n",
+    )
+    .expect("write consumer");
+
+    let engine = make_engine();
+    let result = engine.parse_file(&consumer);
+    let _ = std::fs::remove_file(&consumer);
+
+    assert!(result.is_err(), "use nonexistent::Foo should fail");
+    let err_msg = format!("{:?}", result.unwrap_err());
+    assert!(
+        err_msg.contains("not found"),
+        "error should mention 'not found', got: {err_msg}",
+    );
+}
 
 // ---------------------------------------------------------------------------
 // Requirement 4: mod.ash pub mod loading

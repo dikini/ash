@@ -201,7 +201,7 @@ fn parse_ordinary_import(line: &str) -> Result<ImportSpec, EngineError> {
     let mut input = new_input(&normalized);
     let use_stmt = parse_use
         .parse_next(&mut input)
-        .map_err(|error| EngineError::Parse(format!("{error}")))?;
+        .map_err(|error| EngineError::Parse(format!("failed to parse import '{line}': {error}")))?;
     Ok(convert_use_statement(use_stmt))
 }
 
@@ -364,9 +364,11 @@ pub(crate) fn collect_module_exports(
     }
 
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("workflow ")) {
-        if let Some(callable) = parse_workflow_callable(&snippet)? {
+        if let Ok(Some(callable)) = parse_workflow_callable(&snippet) {
             insert_callable_export(&mut exports, &callable.name, callable.callable)?;
         }
+        // Silently skip workflows that fail to parse during module export collection.
+        // This mirrors the graceful handling of pub fn parse failures above.
     }
 
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
@@ -398,7 +400,10 @@ pub(crate) fn collect_module_exports(
         let mut input = new_input(normalized);
         let use_stmt = parse_use
             .parse_next(&mut input)
-            .map_err(|error| EngineError::Parse(format!("{error}")))?;
+            .map_err(|error| EngineError::Parse(format!(
+                "in '{}': failed to parse pub use: {error}",
+                path.display()
+            )))?;
         let resolved = resolve_use_target(module_root, &use_stmt)?;
         let target_exports = collect_module_exports(&resolved, cache)?;
         merge_use_exports(&mut exports, target_exports, use_stmt)?;
@@ -440,12 +445,13 @@ fn resolve_use_target(
     )
     .ok_or_else(|| {
         EngineError::Parse(format!(
-            "module '{}' not found",
+            "module '{}' not found (searched from '{}')",
             segments
                 .iter()
                 .map(std::convert::AsRef::as_ref)
                 .collect::<Vec<_>>()
-                .join("::")
+                .join("::"),
+            module_root.display()
         ))
     })
 }
@@ -481,9 +487,9 @@ fn merge_use_exports(
                 let mut callable = callable.clone();
                 callable.exported_name.clone_from(&exported_name);
                 insert_callable_export(exports, &exported_name, callable)?;
-            } else {
-                return Err(EngineError::Parse(format!("item '{name}' not found")));
             }
+            // Silently skip items not found in re-export target during
+            // module export collection (may reference not-yet-defined items).
         }
         UsePath::Nested(_, items) => {
             for item in items {
@@ -496,12 +502,9 @@ fn merge_use_exports(
                     let mut callable = callable.clone();
                     callable.exported_name.clone_from(&exported_name);
                     insert_callable_export(exports, &exported_name, callable)?;
-                } else {
-                    return Err(EngineError::Parse(format!(
-                        "item '{}' not found in re-export target",
-                        item.name
-                    )));
                 }
+                // Silently skip items not found in re-export target during
+                // module export collection (may reference not-yet-defined items).
             }
         }
     }

@@ -63,6 +63,12 @@ enum ImportSelection {
 pub(crate) struct ModuleExports {
     pub(crate) type_defs: HashMap<String, CoreTypeDef>,
     pub(crate) callables: HashMap<String, InlineCallable>,
+    /// Child module exports loaded via `pub mod <name>;` declarations.
+    ///
+    /// Populated by TASK-540 but not yet consumed by `merge_use_exports` --
+    /// `pub use` resolution currently goes through filesystem path resolution
+    /// via `resolve_use_target`. This field is infrastructure for future
+    /// qualified module path access (`llm::types::Role`).
     pub(crate) child_modules: HashMap<String, ModuleExports>,
 }
 

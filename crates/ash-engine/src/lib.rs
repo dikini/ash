@@ -512,11 +512,21 @@ impl Engine {
     /// fresh `TypeEnv`, and counts parseable `pub fn` snippets.  Returns a
     /// `ModuleFileCheckResult` with type/fn counts and any warnings or errors.
     ///
+    /// # Error model
+    ///
+    /// This method uses a **dual error path**:
+    /// - **Hard errors** (file I/O failure, `pub type` parse failure) propagate
+    ///   via `Result::Err` and abort early.
+    /// - **Soft errors** (type registration failures due to unbound references)
+    ///   accumulate in `result.errors` so the caller can report all issues at
+    ///   once rather than stopping at the first.
+    /// - **Warnings** (unparseable `pub fn` snippets) accumulate in
+    ///   `result.warnings`.
+    ///
     /// # Errors
     ///
     /// Returns `EngineError::Io` if the file cannot be read, or
-    /// `EngineError::Parse`/`EngineError::Type` if type definitions fail to
-    /// parse or register.
+    /// `EngineError::Parse` if type definitions fail to parse.
     pub fn check_module_file(
         &self,
         path: &std::path::Path,

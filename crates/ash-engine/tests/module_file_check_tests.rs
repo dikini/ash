@@ -211,3 +211,77 @@ pub fn also_good(y: Text) -> Text {
         diagnostics[0].name,
     );
 }
+
+/// ST-8 (SPEC-030 §4.4): Child exports are NOT available via unqualified import
+/// unless explicitly re-exported via `pub use`.  Verifies that `use parent::Beta`
+/// fails when `Beta` exists only in a child module (not re-exported).
+#[test]
+fn test_st8_child_export_not_available_without_pub_use() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let base = dir.path();
+
+    // child.ash: defines two public types
+    std::fs::write(
+        base.join("child.ash"),
+        "pub type Alpha = A | B;\npub type Beta = C | D;",
+    )
+    .expect("write child");
+
+    // parent.ash: declares pub mod child; but only re-exports Alpha
+    std::fs::write(
+        base.join("parent.ash"),
+        "pub mod child;\npub use child::{Alpha};",
+    )
+    .expect("write parent");
+
+    // consumer.ash: tries to use Beta from parent -- should FAIL
+    // because Beta is not re-exported, only in child_modules.
+    std::fs::write(
+        base.join("consumer.ash"),
+        "use parent::{Beta};\nworkflow main { done }",
+    )
+    .expect("write consumer");
+
+    let engine = make_engine();
+    let result = engine.parse_file(&base.join("consumer.ash"));
+
+    assert!(
+        result.is_err(),
+        "importing Beta from parent should fail -- it's not re-exported: {:?}",
+        result,
+    );
+    let err_msg = format!("{}", result.unwrap_err());
+    assert!(
+        err_msg.contains("Beta") && err_msg.contains("not found"),
+        "error should mention Beta and 'not found': {err_msg}",
+    );
+}
+
+/// ST-11 (SPEC-030 §5.5): A file with a single self-referential struct type
+/// succeeds with type_count == 1.
+#[test]
+fn test_st11_self_referential_struct_succeeds() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let file_path = dir.path().join("selfref.ash");
+    std::fs::write(
+        &file_path,
+        "pub type Tree = Tree { children: List<Tree>, value: Int };\n",
+    )
+    .expect("write temp file");
+
+    let engine = make_engine();
+    let result = engine
+        .check_module_file(&file_path)
+        .expect("self-referential struct should succeed");
+
+    assert_eq!(
+        result.type_count, 1,
+        "should have 1 type, got {}",
+        result.type_count,
+    );
+    assert!(
+        result.errors.is_empty(),
+        "self-referential Tree should register without errors: {:?}",
+        result.errors,
+    );
+}

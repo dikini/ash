@@ -1,6 +1,6 @@
 # TASK-542: pub fn parse failure diagnostics
 
-## Status: Draft (v2)
+## Status: Complete
 
 ## Description
 
@@ -19,8 +19,16 @@ Change `parse_supported_pub_fn_callable` from silent `Option` return to `Result`
 
 ## Completion Checklist
 
-- [ ] Return type changed to Result with diagnostic
-- [ ] Warning produced on parse failure
-- [ ] Valid pub fn exports unaffected
-- [ ] Existing tests pass
+- [x] Return type changed to Result with diagnostic
+- [x] Warning produced on parse failure
+- [x] Valid pub fn exports unaffected
+- [x] Existing tests pass
+
+## Design Decision
+
+`collect_module_exports` (module loading path) intentionally silences diagnostics
+because it's the internal import path -- the file is already loaded and types are
+being extracted. Diagnostics are surfaced only through `check_module_file`, which
+is the user-facing validation path. This is a deliberate tradeoff: the loading path
+must not fail on a single broken `pub fn` when other definitions are valid.
 

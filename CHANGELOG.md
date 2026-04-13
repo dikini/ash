@@ -8,6 +8,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Phase 78: Module Type Resolution (SPEC-030)** — Two-pass type collection, module-file checking, and pub fn diagnostics:
+  - Two-pass type registration with pre-declaration in `TypeEnv` for forward references (TASK-539). Extracted `is_placeholder` helper for deduplicated placeholder detection.
+  - `pub mod <name>;` child module loading in `collect_module_exports` (TASK-540). Recursively loads child exports into `child_modules` field without flattening into parent.
+  - `Engine::check_module_file()` API for validating non-workflow module files (TASK-541). CLI `ash check` detects module files and reports type/fn counts.
+  - `PubFnDiagnostic` warning type for unparseable `pub fn` snippets (TASK-542). `parse_supported_pub_fn_callable` returns `Result` instead of silent `Option`. Diagnostics surfaced via `check_module_file`.
+  - `ModuleFileCheckResult` public struct with type count, fn count, warnings, and errors.
+  - Conformance tests ST-6 through ST-13 for SPEC-030 §4-5.
+
 - **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
   - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.
   - `LlmConfig` struct for per-provider connection settings with validation, defaults, and API key redaction (TASK-517).

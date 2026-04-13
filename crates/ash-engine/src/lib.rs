@@ -539,11 +539,9 @@ impl Engine {
 
         let warnings: Vec<String> = fn_diagnostics
             .iter()
-            .map(|d| {
-                match &d.name {
-                    Some(name) => format!("pub fn '{}': {}", name, d.reason),
-                    None => format!("pub fn: {}", d.reason),
-                }
+            .map(|d| match &d.name {
+                Some(name) => format!("pub fn '{}': {}", name, d.reason),
+                None => format!("pub fn: {}", d.reason),
             })
             .collect();
         let mut errors = Vec::new();

@@ -69,7 +69,7 @@ pub(crate) struct ModuleExports {
     /// `pub use` resolution currently goes through filesystem path resolution
     /// via `resolve_use_target`. This field is infrastructure for future
     /// qualified module path access (`llm::types::Role`).
-    pub(crate) child_modules: HashMap<String, ModuleExports>,
+    pub(crate) child_modules: HashMap<String, Self>,
 }
 
 /// Load an ordinary workflow file together with its imported metadata.
@@ -169,6 +169,7 @@ pub fn collect_public_type_defs_from_source(source: &str) -> Result<Vec<CoreType
 
 /// Count the number of `pub fn` snippets in source text that parse successfully,
 /// returning the count and any diagnostics for snippets that failed to parse.
+#[must_use]
 pub fn count_pub_fn_snippets(source: &str) -> (usize, Vec<PubFnDiagnostic>) {
     let snippets = extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn "));
     let mut count = 0;
@@ -659,7 +660,7 @@ fn extract_fn_name_from_snippet(snippet: &str) -> Option<String> {
     trimmed
         .strip_prefix("pub fn ")
         .and_then(|rest| rest.split(|c: char| c.is_whitespace() || c == '(').next())
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
 }
 
 fn parse_supported_pub_fn_callable(

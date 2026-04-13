@@ -443,8 +443,15 @@ impl Engine {
         imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
 
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
-        for imported_type in imported_type_defs {
+        // Pre-declare all imported type names so sibling cross-references resolve
+        for imported_type in &imported_type_defs {
             if !type_env.has_type(&imported_type.name) {
+                type_env.declare_type_name(&imported_type.name);
+            }
+        }
+        // Now register all types (upgrades placeholders to full definitions)
+        for imported_type in imported_type_defs {
+            if !type_env.has_full_type(&imported_type.name) {
                 type_env
                     .register_type(&imported_type)
                     .map_err(|error| EngineError::Type(error.to_string()))?;

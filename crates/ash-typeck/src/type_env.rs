@@ -480,12 +480,31 @@ impl TypeEnv {
         env
     }
 
+    /// Pre-declare a type name by inserting a placeholder into `ast_types`.
+    /// This allows `resolve_type` to find the name during sibling type registration.
+    /// The placeholder will be upgraded by a subsequent `register_type` call.
+    pub fn declare_type_name(&mut self, name: &str) {
+        let placeholder = TypeDef {
+            name: name.to_owned(),
+            params: vec![],
+            body: TypeBody::Struct(vec![]), // minimal placeholder: empty struct
+            visibility: ash_core::ast::Visibility::Public,
+        };
+        self.ast_types.entry(name.to_owned()).or_insert(placeholder);
+    }
+
     /// Register a type definition and its constructors from AST TypeDef
     pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         let type_name = def.name.clone();
 
-        if self.ast_types.contains_key(&type_name) {
-            return Err(TypeEnvError::DuplicateType(type_name));
+        if let Some(existing) = self.ast_types.get(&type_name) {
+            // Allow upgrading a placeholder (empty struct with same name and no params)
+            let is_placeholder = existing.params.is_empty()
+                && matches!(&existing.body, TypeBody::Struct(fields) if fields.is_empty());
+            if !is_placeholder {
+                return Err(TypeEnvError::DuplicateType(type_name));
+            }
+            // Placeholder will be replaced below
         }
 
         // Convert to internal TypeInfo for type checking
@@ -691,10 +710,11 @@ impl TypeEnv {
         }
     }
 
-    /// Add builtin types (Option and Result)
+    /// Add builtin types (Option, Result, and List)
     pub fn add_builtin_types(&mut self) {
         self.add_option_type();
         self.add_result_type();
+        self.add_list_type();
         self.add_builtin_capability_symbols();
     }
 
@@ -763,9 +783,37 @@ impl TypeEnv {
             .expect("Failed to register Result type");
     }
 
+    /// Add the List<T> type
+    fn add_list_type(&mut self) {
+        // List<T> is a generic builtin type represented as a struct with a type parameter
+        let list_type = TypeDef {
+            name: "List".to_string(),
+            params: vec!["T".to_string()],
+            body: TypeBody::Struct(vec![]), // opaque builtin; no fields needed for type checking
+            visibility: ash_core::ast::Visibility::Public,
+        };
+
+        self.register_type(&list_type)
+            .expect("Failed to register List type");
+    }
+
     /// Check if a type is registered
     pub fn has_type(&self, name: &str) -> bool {
         self.ast_types.contains_key(name)
+    }
+
+    /// Check if a type is registered with a full (non-placeholder) definition.
+    /// Returns `false` for unregistered names and for placeholder entries.
+    pub fn has_full_type(&self, name: &str) -> bool {
+        match self.ast_types.get(name) {
+            None => false,
+            Some(existing) => {
+                // A placeholder has empty params and an empty struct body
+                let is_placeholder = existing.params.is_empty()
+                    && matches!(&existing.body, TypeBody::Struct(fields) if fields.is_empty());
+                !is_placeholder
+            }
+        }
     }
 
     /// Check if a constructor is registered

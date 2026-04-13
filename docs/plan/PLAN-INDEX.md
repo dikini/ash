@@ -245,7 +245,7 @@ Update this section as tasks complete:
 | 15 | 6 | 6 | ✅ Complete |
 | 16 | 6 | 6 | ✅ Complete |
 | 17 | 12 | 12 | ✅ Complete |
-| 18 | 7 | 4 | 🟡 In Progress |
+| 18 | 7 | 7 | ✅ Complete |
 | 19 | 7 | 7 | ✅ Complete |
 | 20 | 5 | 5 | ✅ Complete |
 | 21 | 3 | 3 | ✅ Complete |
@@ -273,7 +273,8 @@ Update this section as tasks complete:
 | 69 | 12 | 12 | ✅ Complete |
 | 70 | 8 | 0 | Planned |
 | 74 | 8 | 0 | Planned |
-| 77 | 23 | 0 | 📝 Planned |
+| 77 | 23 | 23 | ✅ Complete |
+| 78 | 5 | 5 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -367,7 +368,8 @@ Update this section as tasks complete:
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
 | 74 | 8 | 0 | 📝 Planned |
-| 77 | 23 | 0 | 📝 Planned |
+| 77 | 23 | 23 | ✅ Complete |
+| 78 | 5 | 5 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -2250,47 +2252,47 @@ and prompt functions, OpenAI capability with dispatch workflows, and agent orche
 **Design Reference:** [DESIGN-025: LLM Standard Library](../design/DESIGN-025-LLM-STDLIB.md)
 **Spec Reference:** SPEC-029-LLM-STDLIB.md
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 
 ### Track 1: Rust Provider Foundation (TASK-516 to TASK-523)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-516 | Add async-openai dependency | DESIGN-025 | 1 | Done |
-| TASK-517 | Create LlmConfig struct | SPEC-029, DESIGN-025 | 3 | Done |
-| TASK-518 | Create LlmProvider skeleton + list_models | SPEC-029, DESIGN-025 | 5 | Done |
-| TASK-519 | Implement chat completion | SPEC-029 | 8 | Done |
-| TASK-520 | Implement streaming adapter | SPEC-029 | 6 | Done |
-| TASK-521 | Implement tool dispatch helpers | SPEC-029 | 4 | Done |
-| TASK-522 | Implement embeddings | SPEC-029 | 4 | Done |
-| TASK-523 | Wire up engine builder | SPEC-029 | 3 | Done |
+| TASK-516 | Add async-openai dependency | DESIGN-025 | 1 | ✅ Complete |
+| TASK-517 | Create LlmConfig struct | SPEC-029, DESIGN-025 | 3 | ✅ Complete |
+| TASK-518 | Create LlmProvider skeleton + list_models | SPEC-029, DESIGN-025 | 5 | ✅ Complete |
+| TASK-519 | Implement chat completion | SPEC-029 | 8 | ✅ Complete |
+| TASK-520 | Implement streaming adapter | SPEC-029 | 6 | ✅ Complete |
+| TASK-521 | Implement tool dispatch helpers | SPEC-029 | 4 | ✅ Complete |
+| TASK-522 | Implement embeddings | SPEC-029 | 4 | ✅ Complete |
+| TASK-523 | Wire up engine builder | SPEC-029 | 3 | ✅ Complete |
 
 ### Track 2: Ash Pure Types/Functions (TASK-524 to TASK-528)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-524 | Create llm module structure | SPEC-029 | 2 | Done |
-| TASK-525 | Create types.ash | SPEC-029 | 3 | Done |
-| TASK-526 | Create prompt.ash constructors | SPEC-029 | 3 | Done |
-| TASK-527 | Create prompt.ash inspectors | SPEC-029 | 4 | Done |
-| TASK-528 | Create prompt.ash renderers | SPEC-029 | 3 | Done |
+| TASK-524 | Create llm module structure | SPEC-029 | 2 | ✅ Complete |
+| TASK-525 | Create types.ash | SPEC-029 | 3 | ✅ Complete |
+| TASK-526 | Create prompt.ash constructors | SPEC-029 | 3 | ✅ Complete |
+| TASK-527 | Create prompt.ash inspectors | SPEC-029 | 4 | ✅ Complete |
+| TASK-528 | Create prompt.ash renderers | SPEC-029 | 3 | ✅ Complete |
 
 ### Track 3: Capability/Dispatch Workflows (TASK-529 to TASK-531)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-529 | Create openai module + capability | SPEC-029 | 3 | Done |
-| TASK-530 | Create dispatch workflows | SPEC-029 | 5 | Done |
-| TASK-531 | Create loading workflows | SPEC-029 | 3 | Done |
+| TASK-529 | Create openai module + capability | SPEC-029 | 3 | ✅ Complete |
+| TASK-530 | Create dispatch workflows | SPEC-029 | 5 | ✅ Complete |
+| TASK-531 | Create loading workflows | SPEC-029 | 3 | ✅ Complete |
 
 ### Track 4: Agent Orchestration (TASK-532 to TASK-535)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-532 | Create conversation workflow | SPEC-029 | 4 | Done |
-| TASK-533 | Create tool_agent workflow | SPEC-029 | 6 | Done |
-| TASK-534 | Create router workflow | SPEC-029 | 3 | Done |
-| TASK-535 | Create supervised_agent workflow | SPEC-029 | 4 | Done |
+| TASK-532 | Create conversation workflow | SPEC-029 | 4 | ✅ Complete |
+| TASK-533 | Create tool_agent workflow | SPEC-029 | 6 | ✅ Complete |
+| TASK-534 | Create router workflow | SPEC-029 | 3 | ✅ Complete |
+| TASK-535 | Create supervised_agent workflow | SPEC-029 | 4 | ✅ Complete |
 
 ### Track 5: Integration/Docs (TASK-536 to TASK-538)
 
@@ -2314,17 +2316,19 @@ parse failures are silently dropped.
 **Design Reference:** [DESIGN-026: Module Type Resolution Remediation](../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md)
 **Spec Reference:** SPEC-030-MODULE-TYPE-RESOLUTION.md
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-539 | Pre-declare type names in TypeEnv | SPEC-030 §3 | 2 | Planned |
-| TASK-540 | Load child modules on `pub mod` | SPEC-030 §4 | 2 | Planned |
-| TASK-541 | `ash check` module-file support | SPEC-030 §5 | 2 | Planned |
-| TASK-542 | pub fn parse failure diagnostics | SPEC-030 §5.3 | 1 | Planned |
-| TASK-543 | LLM stdlib end-to-end validation | SPEC-030 | 1 | Planned |
-| TASK-544 | Update CHANGELOG and task statuses | — | 0.5 | Planned |
+| TASK-539 | Pre-declare type names in TypeEnv | SPEC-030 §3 | 2 | ✅ Complete |
+| TASK-540 | Load child modules on `pub mod` | SPEC-030 §4 | 2 | ✅ Complete |
+| TASK-541 | `ash check` module-file support | SPEC-030 §5 | 2 | ✅ Complete |
+| TASK-542 | pub fn parse failure diagnostics | SPEC-030 §5.3 | 1 | ✅ Complete |
+| TASK-543 | LLM stdlib end-to-end validation | SPEC-030 | 1 | ✅ Complete |
 
 **Deliverable:** Sibling type cross-references resolve, `pub mod` loads child modules for
 qualified access (no implicit flattening), `ash check` validates non-workflow module files,
-`pub fn` parse failures produce diagnostics.
+`pub fn` parse failures produce diagnostics, stdlib validated end-to-end with structural tests.
+
+**Note:** TASK-544 (CHANGELOG/task status updates) was folded into the individual task commits
+and the cross-task review fix commit (dfb56ec).

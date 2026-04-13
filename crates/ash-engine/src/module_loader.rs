@@ -161,12 +161,20 @@ pub fn collect_public_type_defs_from_source(source: &str) -> Result<Vec<CoreType
     Ok(type_defs)
 }
 
-/// Count the number of `pub fn` snippets in source text that parse successfully.
-pub fn count_pub_fn_snippets(source: &str) -> usize {
-    extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn "))
-        .iter()
-        .filter(|snippet| parse_supported_pub_fn_callable(snippet).is_some())
-        .count()
+/// Count the number of `pub fn` snippets in source text that parse successfully,
+/// returning the count and any diagnostics for snippets that failed to parse.
+pub fn count_pub_fn_snippets(source: &str) -> (usize, Vec<PubFnDiagnostic>) {
+    let snippets = extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn "));
+    let mut count = 0;
+    let mut diagnostics = Vec::new();
+    for snippet in &snippets {
+        match parse_supported_pub_fn_callable(snippet) {
+            Ok(Some(_)) => count += 1,
+            Ok(None) => {} // parsed but no callable -- shouldn't happen
+            Err(diag) => diagnostics.push(diag),
+        }
+    }
+    (count, diagnostics)
 }
 
 fn is_skippable_prelude_line(line: &str) -> bool {
@@ -355,8 +363,15 @@ pub(crate) fn collect_module_exports(
     }
 
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
-        if let Some(callable) = parse_supported_pub_fn_callable(&snippet) {
-            insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+        match parse_supported_pub_fn_callable(&snippet) {
+            Ok(Some(callable)) => {
+                insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+            }
+            Ok(None) => {}
+            Err(_diag) => {
+                // Silently skip unsupported pub fn during module loading.
+                // Diagnostics are surfaced via check_module_file.
+            }
         }
     }
 
@@ -623,8 +638,31 @@ fn normalize_imported_callable_expr(expr: &Expr) -> Expr {
     }
 }
 
-fn parse_supported_pub_fn_callable(snippet: &str) -> Option<ImportedCallableExport> {
-    parse_pub_fn_callable(snippet).ok().flatten()
+/// Diagnostic produced when a `pub fn` snippet fails to parse.
+#[derive(Debug, Clone)]
+pub struct PubFnDiagnostic {
+    /// Function name extracted from the snippet, if possible.
+    pub name: Option<String>,
+    /// Human-readable reason for the failure.
+    pub reason: String,
+}
+
+/// Attempt to extract the function name from a `pub fn` snippet.
+fn extract_fn_name_from_snippet(snippet: &str) -> Option<String> {
+    let trimmed = snippet.trim();
+    trimmed
+        .strip_prefix("pub fn ")
+        .and_then(|rest| rest.split(|c: char| c.is_whitespace() || c == '(').next())
+        .map(|s| s.to_string())
+}
+
+fn parse_supported_pub_fn_callable(
+    snippet: &str,
+) -> Result<Option<ImportedCallableExport>, PubFnDiagnostic> {
+    parse_pub_fn_callable(snippet).map_err(|e| PubFnDiagnostic {
+        name: extract_fn_name_from_snippet(snippet),
+        reason: format!("{e}"),
+    })
 }
 
 #[derive(Debug, Clone)]

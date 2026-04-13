@@ -105,3 +105,109 @@ fn test_check_module_file_empty() {
         result.warnings,
     );
 }
+
+/// Test 4: A `pub fn` with invalid syntax should produce a warning.
+#[test]
+fn test_pub_fn_parse_failure_produces_warning() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let file_path = dir.path().join("broken_fn.ash");
+    std::fs::write(
+        &file_path,
+        "pub type Role = System | User;\n\npub fn broken( {\n    -- missing closing paren, invalid syntax\n}\n",
+    )
+    .expect("write temp file");
+
+    let engine = make_engine();
+    let result = engine
+        .check_module_file(&file_path)
+        .expect("check_module_file should succeed even with broken pub fn");
+
+    assert_eq!(
+        result.type_count, 1,
+        "should have 1 pub type, got {}",
+        result.type_count,
+    );
+    assert_eq!(
+        result.fn_count, 0,
+        "should have 0 parseable pub fn, got {}",
+        result.fn_count,
+    );
+    assert!(
+        !result.warnings.is_empty(),
+        "expected at least one warning for broken pub fn, got {:?}",
+        result.warnings,
+    );
+    assert!(
+        result.warnings.iter().any(|w| w.contains("broken")),
+        "warning should mention the function name 'broken', got {:?}",
+        result.warnings,
+    );
+}
+
+/// Test 5: A valid `pub fn` should produce no warnings.
+#[test]
+fn test_valid_pub_fn_no_warning() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let file_path = dir.path().join("good_fn.ash");
+    std::fs::write(
+        &file_path,
+        "pub fn greet(name: Text) -> Text {\n    \"hello\"\n}\n",
+    )
+    .expect("write temp file");
+
+    let engine = make_engine();
+    let result = engine
+        .check_module_file(&file_path)
+        .expect("check_module_file should succeed");
+
+    assert_eq!(
+        result.fn_count, 1,
+        "should have 1 parseable pub fn, got {}",
+        result.fn_count,
+    );
+    assert!(
+        result.warnings.is_empty(),
+        "valid pub fn should produce zero warnings, got {:?}",
+        result.warnings,
+    );
+}
+
+/// Test 6: `count_pub_fn_snippets` returns correct count and diagnostics for mixed source.
+#[test]
+fn test_count_pub_fn_snippets_with_diagnostics() {
+    use ash_engine::module_loader::count_pub_fn_snippets;
+
+    let source = r#"
+pub fn good(x: Int) -> Int {
+    x
+}
+
+pub fn bad( {
+    -- broken syntax
+}
+
+pub fn also_good(y: Text) -> Text {
+    y
+}
+"#;
+
+    let (count, diagnostics) = count_pub_fn_snippets(source);
+
+    assert_eq!(
+        count, 2,
+        "should count 2 valid pub fn snippets, got {}",
+        count,
+    );
+    assert_eq!(
+        diagnostics.len(),
+        1,
+        "should have 1 diagnostic for the broken snippet, got {:?}",
+        diagnostics,
+    );
+    assert_eq!(
+        diagnostics[0].name.as_deref(),
+        Some("bad"),
+        "diagnostic should identify function name 'bad', got {:?}",
+        diagnostics[0].name,
+    );
+}

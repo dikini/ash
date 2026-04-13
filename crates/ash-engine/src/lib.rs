@@ -525,9 +525,17 @@ impl Engine {
 
         let type_defs = module_loader::collect_public_type_defs_from_source(&source)?;
         let type_count = type_defs.len();
-        let fn_count = module_loader::count_pub_fn_snippets(&source);
+        let (fn_count, fn_diagnostics) = module_loader::count_pub_fn_snippets(&source);
 
-        let warnings = Vec::new();
+        let warnings: Vec<String> = fn_diagnostics
+            .iter()
+            .map(|d| {
+                match &d.name {
+                    Some(name) => format!("pub fn '{}': {}", name, d.reason),
+                    None => format!("pub fn: {}", d.reason),
+                }
+            })
+            .collect();
         let mut errors = Vec::new();
 
         // Build a TypeEnv and register all discovered types so cross-references resolve.

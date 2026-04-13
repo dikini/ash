@@ -10,9 +10,8 @@ fn make_engine() -> Engine {
 
 /// Test 1: Check the real stdlib LLM types file.
 ///
-/// `std/src/llm/types.ash` contains 11 `pub type` definitions.  Two of them
-/// reference `Float`, which is not a builtin type in the default `TypeEnv`,
-/// so we expect exactly 2 registration errors for those types.
+/// `std/src/llm/types.ash` contains 11 `pub type` definitions.  Float is
+/// now a builtin type (TASK-545), so all types should register cleanly.
 #[test]
 fn test_check_module_file_types_ash() {
     let engine = make_engine();
@@ -36,11 +35,11 @@ fn test_check_module_file_types_ash() {
         "types.ash should have 0 pub fn definitions, got {}",
         result.fn_count,
     );
-    // Float is not a builtin type, so Embedding and CompletionParams fail to register.
+    // Float is now a builtin type (TASK-545) -- all types register cleanly.
     assert_eq!(
         result.errors.len(),
-        2,
-        "expected 2 registration errors for Float-using types, got {:?}",
+        0,
+        "types.ash should have 0 errors, got {:?}",
         result.errors,
     );
     assert!(

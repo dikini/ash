@@ -20,6 +20,8 @@ pub enum Type {
     String,
     /// Boolean type
     Bool,
+    /// Float type (f64)
+    Float,
     /// Null type
     Null,
     /// Time type
@@ -230,6 +232,7 @@ impl std::fmt::Display for Type {
             Type::Int => write!(f, "Int"),
             Type::String => write!(f, "String"),
             Type::Bool => write!(f, "Bool"),
+            Type::Float => write!(f, "Float"),
             Type::Null => write!(f, "Null"),
             Type::Time => write!(f, "Time"),
             Type::Ref => write!(f, "Ref"),
@@ -572,6 +575,7 @@ pub fn occurs_in(var: TypeVar, ty: &Type) -> bool {
         | Type::Int
         | Type::String
         | Type::Bool
+        | Type::Float
         | Type::Null
         | Type::Time
         | Type::Ref

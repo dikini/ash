@@ -1212,6 +1212,7 @@ fn collect_type_vars(ty: &Type, vars: &mut HashSet<TypeVar>) {
         Type::Int
         | Type::String
         | Type::Bool
+        | Type::Float
         | Type::Null
         | Type::Time
         | Type::Ref

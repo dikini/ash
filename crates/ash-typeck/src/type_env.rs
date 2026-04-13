@@ -54,6 +54,7 @@ pub fn type_expr_to_type(
                 "Int" => Ok(Type::Int),
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
+                "Float" => Ok(Type::Float),
                 "Null" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
@@ -194,6 +195,7 @@ fn surface_type_to_type(
                 "Int" => Ok(Type::Int),
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
+                "Float" => Ok(Type::Float),
                 "Null" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
@@ -256,6 +258,7 @@ fn is_closed_world_nominal_impl_target(ty: &Type) -> bool {
         Type::Int
         | Type::String
         | Type::Bool
+        | Type::Float
         | Type::Null
         | Type::Time
         | Type::Ref
@@ -1006,7 +1009,7 @@ impl TypeEnv {
     ) -> Result<(QualifiedName, Option<&TypeInfo>), TypeError> {
         // Try as primitive first
         match name {
-            "Int" | "String" | "Bool" | "Null" | "Time" | "Ref" | "()" => {
+            "Int" | "String" | "Bool" | "Float" | "Null" | "Time" | "Ref" | "()" => {
                 return Ok((QualifiedName::root(name), None));
             }
             _ => {}

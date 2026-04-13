@@ -50,11 +50,11 @@ fn test_types_ash_check_module_file() {
         "types.ash should have 0 pub fn definitions, got {}",
         result.fn_count,
     );
-    // Float is not a builtin type -- Embedding and CompletionParams reference it
+    // Float is now a builtin type (TASK-545) -- Embedding and CompletionParams resolve cleanly
     assert_eq!(
         result.errors.len(),
-        2,
-        "expected 2 registration errors for Float-using types, got {:?}",
+        0,
+        "types.ash should have 0 errors, got {:?}",
         result.errors,
     );
     assert!(
@@ -272,12 +272,12 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
                 .check_module_file(&path)
                 .unwrap_or_else(|e| panic!("check_module_file failed for {file_name}: {e}"));
 
-            // types.ash has 2 expected Float-related errors
+            // types.ash: Float is now builtin (TASK-545), expect 0 errors
             if file_name == "types.ash" {
                 assert_eq!(
                     result.errors.len(),
-                    2,
-                    "types.ash: expected 2 Float errors, got {:?}",
+                    0,
+                    "types.ash: expected 0 errors, got {:?}",
                     result.errors,
                 );
             } else {

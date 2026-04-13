@@ -236,7 +236,7 @@ pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Ty
     match expr {
         Expr::Literal(lit) => match lit {
             ash_parser::surface::Literal::Int(_) => Type::Int,
-            ash_parser::surface::Literal::Float(_) => Type::Var(ctx.fresh_var()), // Float not in core types
+            ash_parser::surface::Literal::Float(_) => Type::Float,
             ash_parser::surface::Literal::String(_) => Type::String,
             ash_parser::surface::Literal::Bool(_) => Type::Bool,
             ash_parser::surface::Literal::Null => Type::Null,

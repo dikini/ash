@@ -211,7 +211,7 @@ fn check_pattern_inner(
 fn literal_to_type(lit: &Literal) -> Type {
     match lit {
         Literal::Int(_) => Type::Int,
-        Literal::Float(_) => Type::Var(TypeVar::fresh()), // Float not in core types
+        Literal::Float(_) => Type::Float,
         Literal::String(_) => Type::String,
         Literal::Bool(_) => Type::Bool,
         Literal::Null => Type::Null,

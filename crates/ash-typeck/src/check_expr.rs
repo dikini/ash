@@ -462,10 +462,7 @@ fn check_literal(lit: &Literal) -> CheckResult {
         Literal::String(_) => Type::String,
         Literal::Bool(_) => Type::Bool,
         Literal::Null => Type::Null,
-        Literal::Float(_) => {
-            // Floats not yet supported in core types, use fresh variable
-            Type::Var(TypeVar::fresh())
-        }
+        Literal::Float(_) => Type::Float,
         Literal::List(items) => infer_list_literal_type(items),
     };
     CheckResult::success(ty)

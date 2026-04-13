@@ -1,10 +1,10 @@
 # DESIGN-026: Module Type Resolution Remediation
 
-## Status: Draft (v2 -- revised after independent review)
+## Status: Draft (v3 -- revised after independent review)
 
 ## Overview
 
-Remediate three concrete bugs in module type resolution and module-file checking, without changing baseline module/import semantics (SPEC-009, SPEC-012).
+Remediate four concrete bugs in module type resolution and module-file checking, without changing baseline module/import semantics (SPEC-009, SPEC-012).
 
 ## Problem Statement
 
@@ -12,7 +12,7 @@ Remediate three concrete bugs in module type resolution and module-file checking
 
 When a module file defines multiple `pub type` declarations that reference each other, `ash check` reports "Unbound variable" for types defined in the same file.
 
-**Failing code path** (the real path, confirmed by source inspection):
+**Failing code path** (confirmed by source inspection):
 
 ```
 Engine::check()                            -- lib.rs:442-451
@@ -33,46 +33,89 @@ TypeEnv::resolve_type()                    -- type_env.rs:960-975
 
 The module loader (`module_loader.rs:523-529`) parses and converts each `pub type` snippet correctly into a `CoreTypeDef`. The failure occurs later, during `Engine::check()`, when `TypeEnv::register_type` validates field types against an environment that doesn't yet contain sibling types.
 
-**Key observation**: `resolve_type` already has an `ast_types` fallback (line 973): if a type name exists in `ast_types` (even without full `TypeInfo`), resolution succeeds with `None` info. This means pre-declaring type names before full registration would fix the cross-reference issue.
-
 ### Bug 2: `ash check` rejects non-workflow module files
 
 `ash check` calls `engine.parse_file()` which requires a `workflow ... { }` declaration. Files containing only `pub type`, `pub fn`, and `pub use` fail at the workflow parse step.
 
 SPEC-009 §4.1a already defines that non-entry modules are valid `ModuleFile`s and do not require a workflow. The `ash check` command should support this model.
 
-### Bug 3: `pub fn` export parsing silently drops failures
+The current CLI path is:
+
+```
+check.rs:check_file()
+  engine.parse_file(path)       -- always expects a workflow
+  engine.check(&workflow)        -- type-checks the workflow
+```
+
+There is no `ModuleFile` parse/check API exposed by the engine. TASK-541 must add one.
+
+### Bug 3: `pub mod` declarations are silently ignored
+
+`collect_module_exports` does not process `pub mod <name>;` lines. However, the import resolution picture is more nuanced than originally described:
+
+**How `use llm::types::Role` resolves today**: `resolve_in_root` (module_loader.rs:751-762) walks filesystem segments directly: `root/llm/types.ash` or `root/llm/types/mod.ash`. It does NOT consult parent module exports. So `use llm::types::Role` already works without `pub mod` processing.
+
+**What `pub mod` loading actually fixes**: When `collect_module_exports` is called on `llm/mod.ash` to get `llm`'s exports, it currently ignores `pub mod types;`. This means:
+- Child module exports are not available for `pub use` re-export merging (the `merge_use_exports` path can't re-export what was never collected).
+- `collect_module_exports("llm/mod.ash")` produces incomplete exports when child modules contain items referenced by `pub use` in the parent.
+
+So the fix is: `collect_module_exports` must recurse into `pub mod` children so that `pub use types::Role;` in `mod.ash` can find `Role` from the child. The qualified path resolution (`llm::types::Role`) already works via filesystem.
+
+### Bug 4: `pub fn` export parsing silently drops failures
 
 `parse_supported_pub_fn_callable(snippet)` (module_loader.rs:603-604) returns `Option`, swallowing both parse errors and unsupported constructs. When a `pub fn` in a stdlib file fails to parse, it is silently omitted from exports with no diagnostic.
 
-This is a separate bug from the three originally identified, discovered during independent review. It affects TASK-542 (end-to-end stdlib validation) because `prompt.ash` exports may be silently dropped.
-
 ## Design Decisions
 
-### D1: Pre-declare type names in TypeEnv before full registration
+### D1: Pre-declare type names, then register with upgrade semantics
 
-Add `TypeEnv::declare_type_name(name: &str)` that inserts a placeholder into `ast_types` without converting or validating. Then in `Engine::check()`, call `declare_type_name` for all imported types before the full `register_type` loop.
+Add `TypeEnv::declare_type_name(name: &str)` that inserts a placeholder into `ast_types` without converting or validating. Then modify `register_type()` to allow upgrading a placeholder entry (instead of rejecting duplicates outright).
 
-**Why this layer**: The failure occurs in `TypeEnv::register_type` → `convert_type_def` → `resolve_type`. The module loader already parses types correctly; only the registration ordering is wrong. Fixing the registration path is the minimal correct fix.
+**Required change to `register_type`**: Current code at type_env.rs:487-489 rejects any duplicate in `ast_types`:
 
-**Why not two-pass in the module loader**: The module loader doesn't validate type expressions. `parse_public_type_defs` calls `parse_type_def` (syntax only) then `convert_type_def` (no-op for the module loader's CoreTypeDef path). The loader's `convert_type_def` is a different function from typeck's `convert_type_def` -- it doesn't call `resolve_type` at all.
+```rust
+if self.ast_types.contains_key(&type_name) {
+    return Err(TypeEnvError::DuplicateType(type_name));
+}
+```
 
-### D2: `pub mod` loading preserves baseline semantics
+This must be changed to allow replacement when the existing entry is a placeholder (a minimal `TypeDef` inserted by `declare_type_name`). Two implementation options:
 
-`pub mod <name>;` should make the child module's public items available for qualified access (`llm::types::Role`). It should NOT implicitly flatten exports into the parent. Explicit `pub use types::Role;` in `mod.ash` is still required for `llm::Role` to work.
+**Option A (recommended)**: Add a `placeholder: bool` flag to `TypeDef` (or use a sentinel body like `TypeBody::Struct(vec![])` with a naming convention). `register_type` checks if the existing entry is a placeholder and replaces it. Non-placeholder duplicates still error.
 
-This preserves SPEC-009 module-tree resolution and SPEC-012 explicit re-export semantics. The change is purely about making `pub mod` actually load the child module for qualified path resolution, instead of being silently ignored.
+**Option B**: Use a separate `declared_names: HashSet<TypeName>` alongside `ast_types`. `register_type` checks `ast_types` for duplicates but not `declared_names`. `resolve_type` checks `declared_names` as a third fallback.
 
-### D3: Module-file check aligned with SPEC-009 ModuleFile model
+Option A is simpler because it reuses the existing `resolve_type` fallback path (line 973: `ast_types.contains_key(name)`) without adding a new store.
 
-SPEC-009 §4.1a defines the `ModuleFile` parse model: all `.ash` files parse as `ModuleFile`; entry-point loading then promotes to `Program` if a workflow is present. `ash check` should follow this model:
+**Flow**:
+1. `Engine::check()`: call `declare_type_name(name)` for each imported type (inserts placeholder into `ast_types`).
+2. `Engine::check()`: call `register_type(def)` for each imported type (replaces placeholder with full definition).
 
-1. Parse file as `ModuleFile` (types, fns, mod declarations, optionally a workflow).
-2. If a workflow is present, type-check it (existing behavior).
-3. If no workflow, validate module-level declarations (parse correctness, type cross-references).
-4. Report per-declaration errors.
+**Why this layer**: The failure occurs in `TypeEnv::register_type` → `convert_type_def` → `resolve_type`. The module loader already parses types correctly; only the registration ordering is wrong.
 
-This is not a fallback model. It is the canonical SPEC-009 file-level parse model.
+### D2: `pub mod` loading enables re-export completeness
+
+`pub mod <name>;` causes `collect_module_exports` to recursively load the child and store its exports. This enables `pub use` re-exports in the parent to find items from the child.
+
+**Impact on import resolution**: Qualified path resolution (`llm::types::Role`) is handled by `resolve_in_root` walking filesystem segments -- it already works. `pub mod` loading fixes the export-collection path so that `pub use types::Role;` in `mod.ash` can find `Role` from the child module's exports.
+
+It does NOT implicitly flatten child exports into the parent. Explicit `pub use` is still required for parent-level access (SPEC-012 semantics preserved).
+
+### D3: Engine exposes ModuleFile check API for CLI
+
+The CLI cannot implement module-file checking using the current engine API. Required changes:
+
+1. **Engine**: Add `Engine::check_module_file(path: &Path)` that:
+   - Reads the file source
+   - Extracts `pub type` definitions via `collect_public_type_defs_from_source`
+   - Pre-declares all type names into a `TypeEnv`
+   - Registers all type definitions
+   - Validates `pub fn` parse success (with diagnostic warnings)
+   - Returns `ModuleFileCheckResult` (type count, fn count, warnings, errors)
+
+2. **Engine**: Promote `collect_public_type_defs_from_source` from `pub(crate)` to `pub` (or expose via a public wrapper), so the CLI can use it.
+
+3. **CLI**: `check_file()` detects whether the file is a workflow file or a module file. For module files, calls `engine.check_module_file(path)`. For workflow files, uses existing `parse_file` + `check` path.
 
 ### D4: Error reporting for silently-dropped pub fn exports
 
@@ -82,10 +125,10 @@ Change `parse_supported_pub_fn_callable` from silent `Option` return to `Result`
 
 | Component | Change | Risk |
 |-----------|--------|------|
-| `ash-typeck/type_env.rs` | Add `declare_type_name()` | Low -- additive API |
-| `ash-engine/lib.rs` | Pre-declare before register loop | Low -- reorders existing registration |
-| `ash-engine/module_loader.rs` | Load child modules on `pub mod`, warn on fn parse failures | Medium -- changes collect_module_exports |
-| `ash-cli/commands/check.rs` | ModuleFile-based check path | Low -- new path, existing untouched |
+| `ash-typeck/type_env.rs` | Add `declare_type_name()`, modify `register_type()` for placeholder upgrade | Medium -- changes existing rejection behavior |
+| `ash-engine/lib.rs` | Pre-declare before register loop, add `check_module_file()` | Low -- additive API + reordered registration |
+| `ash-engine/module_loader.rs` | `pub mod` recursive loading, `pub fn` diagnostics, expose `collect_public_type_defs_from_source` as `pub` | Medium -- changes collect_module_exports |
+| `ash-cli/commands/check.rs` | ModuleFile detection and check path via engine API | Low -- new path, existing untouched |
 
 ## Out of Scope
 
@@ -94,3 +137,4 @@ Change `parse_supported_pub_fn_callable` from silent `Option` return to `Result`
 - Cycle detection in module graph (deferred: SPEC-009 §6.2 specifies the requirement but this phase does not implement it)
 - Binary module compilation, package registry integration
 - Ordinary `use` inside module files (current loader only handles `pub use` for export merging; `use` in non-workflow files is a separate concern)
+- Changes to `resolve_in_root` / `resolve_module_path` (filesystem path resolution already works correctly)

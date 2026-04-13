@@ -3,10 +3,11 @@
 //! Uses structural engine APIs (check_module_file, collect_public_type_defs_from_source,
 //! count_pub_fn_snippets) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
 //!
-//! Key finding: prompt.ash has 23 `pub fn` declarations but only 7 parse through
-//! `parse_fn_definition` (the rest use record constructors/match expressions unsupported
-//! by the current parser). These 16 are silently dropped during module loading -- this
-//! test documents the known gap.
+//! Key finding: prompt.ash has 23 `pub fn` declarations. After TASK-546 fix
+//! (keywords allowed as constructor field names), 12 parse through
+//! `parse_fn_definition`. The remaining 11 still use features unsupported by
+//! the parser. These are silently dropped during module loading -- this test
+//! documents the known gap.
 
 use ash_engine::Engine;
 use ash_engine::module_loader::{collect_public_type_defs_from_source, count_pub_fn_snippets};
@@ -118,12 +119,12 @@ fn test_prompt_ash_pub_fn_partial_parse_coverage() {
     let source = read_stdlib_file("llm/prompt.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);
 
-    // Currently 7 of 23 pub fns parse successfully through parse_fn_definition.
-    // The remaining 16 produce diagnostics because they use record constructors
-    // (e.g., Message { role: System, ... }) not supported by the parser.
+    // TASK-546 fix: constructor field names now allow keywords (e.g., `role`).
+    // Previously 7 of 23 parsed; now 12 parse because `role:` in Message
+    // constructors no longer fails the identifier() keyword check.
     assert_eq!(
-        count, 7,
-        "expected exactly 7 parseable pub fns from prompt.ash (regression?), got {}",
+        count, 12,
+        "expected exactly 12 parseable pub fns from prompt.ash (regression?), got {}",
         count,
     );
     assert_eq!(
@@ -149,7 +150,7 @@ fn test_prompt_ash_pub_fn_partial_parse_coverage() {
 /// match expressions, all 23 pub fns in prompt.ash should parse cleanly.
 /// Remove #[ignore] once the parser is extended.
 #[test]
-#[ignore = "waiting for record-constructor parser support (16 of 23 pub fns)"]
+#[ignore = "waiting for parser support for remaining 11 of 23 pub fns (match expressions, etc)"]
 fn test_prompt_ash_all_23_pub_fns_parse() {
     let source = read_stdlib_file("llm/prompt.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);

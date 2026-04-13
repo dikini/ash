@@ -527,9 +527,15 @@ fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Ex
     Ok(fields)
 }
 
+/// Parse a field name in a constructor expression.
+/// Unlike `identifier`, this allows keywords as field names (e.g. `role: User`).
+fn parse_field_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)
+}
+
 fn parse_constructor_field(input: &mut ParseInput) -> ModalResult<(Name, Expr)> {
     skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
+    let name = parse_field_name(input)?;
     skip_whitespace_and_comments(input);
     let _ = literal_str(":").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1371,6 +1377,23 @@ mod tests {
                 }
             }
             other => panic!("Expected Constructor expression, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_multi_field_constructor_expression() {
+        // "role" is an Ash keyword but should be allowed as constructor field name
+        let mut input = test_input("Msg { role: x, text: y }");
+        let result = expr(&mut input);
+        match result {
+            Ok(Expr::Constructor { name, fields, .. }) => {
+                assert_eq!(name.as_ref(), "Msg");
+                assert_eq!(fields.len(), 2);
+                assert_eq!(fields[0].0.as_ref(), "role");
+                assert_eq!(fields[1].0.as_ref(), "text");
+            }
+            Ok(other) => panic!("Expected Constructor, got {other:?}"),
+            Err(e) => panic!("Parse failed: {e:?}"),
         }
     }
 

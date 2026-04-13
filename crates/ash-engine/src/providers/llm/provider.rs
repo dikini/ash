@@ -14,7 +14,7 @@ use crate::providers::llm::embeddings::{
 use crate::providers::llm::error;
 use crate::providers::llm::models::{extract_list_models_arg, list_models};
 use crate::providers::llm::stream_adapter::extract_chat_stream_args;
-use crate::providers::llm::stream_storage::{spawn_stream_forwarder, StreamStorage};
+use crate::providers::llm::stream_storage::{StreamStorage, spawn_stream_forwarder};
 use ash_core::capability::{CapabilityError, CapabilityProvider};
 use ash_core::{Constraint, Effect, Value};
 use async_openai::Client;
@@ -250,7 +250,7 @@ impl CapabilityProvider for LlmProvider {
                 // Return Stream handle per SPEC-013/SPEC-029 contract
                 Ok(Value::Stream(ash_core::StreamHandle::new(
                     stream_id,
-                    "ChatChunk"
+                    "ChatChunk",
                 )))
             }
             "pull_stream_chunk" => {
@@ -259,13 +259,12 @@ impl CapabilityProvider for LlmProvider {
                 // Extract stream_id from args
                 if args.is_empty() {
                     return Err(CapabilityError::InvalidArgument(
-                        "pull_stream_chunk requires stream_id argument".to_string()
+                        "pull_stream_chunk requires stream_id argument".to_string(),
                     ));
                 }
-                let stream_id = args[0].as_string()
-                    .ok_or_else(|| CapabilityError::InvalidArgument(
-                        "stream_id must be a string".to_string()
-                    ))?;
+                let stream_id = args[0].as_string().ok_or_else(|| {
+                    CapabilityError::InvalidArgument("stream_id must be a string".to_string())
+                })?;
 
                 // Pull chunk from stream storage
                 match self.stream_storage.pull_chunk(stream_id) {

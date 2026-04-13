@@ -120,10 +120,11 @@ pub enum StreamChunk {
 /// This bridges the async-openai stream to a channel that can be
 /// consumed synchronously. Properly filters empty chunks and propagates errors.
 pub fn spawn_stream_forwarder(
-    mut stream: impl StreamExt<Item = Result<CreateChatCompletionStreamResponse, async_openai::error::OpenAIError>>
-        + Send
-        + Unpin
-        + 'static,
+    mut stream: impl StreamExt<
+        Item = Result<CreateChatCompletionStreamResponse, async_openai::error::OpenAIError>,
+    > + Send
+    + Unpin
+    + 'static,
     sender: mpsc::Sender<StreamChunk>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {

@@ -60,9 +60,10 @@ enum ImportSelection {
 }
 
 #[derive(Debug, Clone, Default)]
-struct ModuleExports {
-    type_defs: HashMap<String, CoreTypeDef>,
-    callables: HashMap<String, InlineCallable>,
+pub(crate) struct ModuleExports {
+    pub(crate) type_defs: HashMap<String, CoreTypeDef>,
+    pub(crate) callables: HashMap<String, InlineCallable>,
+    pub(crate) child_modules: HashMap<String, ModuleExports>,
 }
 
 /// Load an ordinary workflow file together with its imported metadata.
@@ -315,7 +316,7 @@ fn convert_use_statement(use_stmt: ash_parser::use_tree::Use) -> ImportSpec {
     }
 }
 
-fn collect_module_exports(
+pub(crate) fn collect_module_exports(
     path: &Path,
     cache: &mut HashMap<PathBuf, ModuleExports>,
 ) -> Result<ModuleExports, EngineError> {
@@ -345,9 +346,17 @@ fn collect_module_exports(
         }
     }
 
+    // Process pub mod <name>; declarations -- load child module exports
     let module_root = path.parent().ok_or_else(|| {
         EngineError::Configuration(format!("module path '{}' has no parent", path.display()))
     })?;
+    for name in extract_pub_mod_declarations(&source) {
+        let child_path = resolve_child_module(module_root, &name)?;
+        let child_exports = collect_module_exports(&child_path, cache)?;
+        // Store child exports under the child module name (for qualified access)
+        exports.child_modules.insert(name, child_exports);
+    }
+
     for snippet in extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub use ")) {
         let normalized = snippet.trim();
         let mut input = new_input(normalized);
@@ -636,6 +645,36 @@ fn extract_callable_from_workflow(
     }))
 }
 
+fn extract_pub_mod_declarations(source: &str) -> Vec<String> {
+    extract_semicolon_snippets(source, |trimmed| trimmed.starts_with("pub mod "))
+        .iter()
+        .filter_map(|snippet| {
+            let trimmed = snippet.trim();
+            trimmed
+                .strip_prefix("pub mod ")
+                .map(|rest| rest.trim().trim_end_matches(';').trim().to_string())
+        })
+        .filter(|name| !name.is_empty())
+        .collect()
+}
+
+fn resolve_child_module(module_root: &Path, name: &str) -> Result<PathBuf, EngineError> {
+    // Try name.ash first, then name/mod.ash
+    let file_candidate = module_root.join(format!("{name}.ash"));
+    if file_candidate.is_file() {
+        return Ok(file_candidate);
+    }
+    let mod_candidate = module_root.join(name).join("mod.ash");
+    if mod_candidate.is_file() {
+        return Ok(mod_candidate);
+    }
+    Err(EngineError::Parse(format!(
+        "pub mod '{name}': module not found (searched {} and {})",
+        file_candidate.display(),
+        mod_candidate.display()
+    )))
+}
+
 fn extract_semicolon_snippets<F>(source: &str, predicate: F) -> Vec<String>
 where
     F: Fn(&str) -> bool,
@@ -831,5 +870,144 @@ fn convert_type_expr(parsed: &ParsedTypeExpr) -> CoreTypeExpr {
                 .map(|(name, ty)| (name.clone(), convert_type_expr(ty)))
                 .collect(),
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test 1: `pub mod child;` loads the child module's exports and stores
+    /// them in `child_modules` under the child name.
+    #[test]
+    fn test_pub_mod_types_loads_child_exports() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        // child.ash: defines a public type
+        std::fs::write(
+            dir.join("child.ash"),
+            "pub type Role = System | User | Assistant;",
+        )
+        .expect("write child");
+
+        // parent.ash: declares pub mod child;
+        std::fs::write(dir.join("parent.ash"), "pub mod child;").expect("write parent");
+
+        let mut cache = HashMap::new();
+        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache)
+            .expect("collecting parent exports should succeed");
+
+        let child = exports
+            .child_modules
+            .get("child")
+            .expect("child_modules should contain 'child'");
+        assert!(
+            child.type_defs.contains_key("Role"),
+            "child module should export Role"
+        );
+    }
+
+    /// Test 2: `pub use child::{Role}` re-exports still work alongside
+    /// `pub mod child;` -- the parent's `type_defs` contains Role.
+    #[test]
+    fn test_pub_use_resolves_via_child_module() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        std::fs::write(dir.join("child.ash"), "pub type Role = System | User;")
+            .expect("write child");
+
+        // parent.ash: both pub mod child; and pub use child::{Role};
+        std::fs::write(
+            dir.join("parent.ash"),
+            "pub mod child;\npub use child::{Role};",
+        )
+        .expect("write parent");
+
+        let mut cache = HashMap::new();
+        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache)
+            .expect("collecting parent exports should succeed");
+
+        // Role is re-exported via pub use
+        assert!(
+            exports.type_defs.contains_key("Role"),
+            "parent should re-export Role via pub use"
+        );
+        // Also present in child_modules
+        assert!(
+            exports.child_modules.contains_key("child"),
+            "child_modules should contain 'child'"
+        );
+    }
+
+    /// Test 3: Child exports are NOT flattened into the parent -- only
+    /// explicitly `pub use`d items appear at the parent's top level.
+    #[test]
+    fn test_child_exports_not_flattened() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        // child.ash: defines two public types
+        std::fs::write(
+            dir.join("child.ash"),
+            "pub type Alpha = A | B;\npub type Beta = C | D;",
+        )
+        .expect("write child");
+
+        // parent.ash: declares pub mod child; but only re-exports Alpha
+        std::fs::write(
+            dir.join("parent.ash"),
+            "pub mod child;\npub use child::{Alpha};",
+        )
+        .expect("write parent");
+
+        let mut cache = HashMap::new();
+        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache)
+            .expect("collecting parent exports should succeed");
+
+        // Alpha should be re-exported
+        assert!(
+            exports.type_defs.contains_key("Alpha"),
+            "parent should re-export Alpha"
+        );
+        // Beta should NOT appear in parent's type_defs (not re-exported)
+        assert!(
+            !exports.type_defs.contains_key("Beta"),
+            "Beta should not be flattened into parent -- only pub use items appear"
+        );
+        // Both Alpha and Beta should exist in the child module
+        let child = exports
+            .child_modules
+            .get("child")
+            .expect("child_modules should contain 'child'");
+        assert!(
+            child.type_defs.contains_key("Alpha"),
+            "child should have Alpha"
+        );
+        assert!(
+            child.type_defs.contains_key("Beta"),
+            "child should have Beta"
+        );
+    }
+
+    /// Test 4: A file with `pub mod nonexistent;` should produce an error
+    /// because the child module file does not exist.
+    #[test]
+    fn test_nonexistent_pub_mod_errors() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+        std::fs::write(dir.join("parent.ash"), "pub mod nonexistent;").expect("write parent");
+
+        let mut cache = HashMap::new();
+        let result = collect_module_exports(&dir.join("parent.ash"), &mut cache);
+
+        let err =
+            result.expect_err("collecting exports from file with nonexistent pub mod should fail");
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("pub mod 'nonexistent'") || msg.contains("module not found"),
+            "error message should reference the missing module: {msg}",
+        );
     }
 }

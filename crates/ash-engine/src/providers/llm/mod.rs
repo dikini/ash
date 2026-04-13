@@ -15,6 +15,8 @@ pub mod tool_dispatch;
 
 pub use config::LlmConfig;
 pub use provider::LlmProvider;
-pub use stream_adapter::{extract_chat_stream_args, stream_chunk_to_value, ChatStream};
+pub use stream_adapter::{ChatStream, extract_chat_stream_args, stream_chunk_to_value};
 pub use stream_storage::StreamStorage;
-pub use tool_dispatch::{extract_tool_calls, format_tool_result_message, tool_defs_to_openai_tools, ToolCallValue};
+pub use tool_dispatch::{
+    ToolCallValue, extract_tool_calls, format_tool_result_message, tool_defs_to_openai_tools,
+};

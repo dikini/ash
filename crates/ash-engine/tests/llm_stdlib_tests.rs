@@ -18,7 +18,11 @@ fn stdlib_root() -> &'static Path {
 #[test]
 fn test_types_dot_ash_file_exists() {
     let types_path = stdlib_root().join("llm/types.ash");
-    assert!(types_path.exists(), "types.ash must exist at {:?}", types_path);
+    assert!(
+        types_path.exists(),
+        "types.ash must exist at {:?}",
+        types_path
+    );
 }
 
 #[test]
@@ -58,8 +62,14 @@ fn test_types_dot_ash_role_definition_correct() {
     // SPEC-029 SS3.1: Role must have System | User | Assistant | Tool variants
     assert!(source.contains("System"), "Role must have System variant");
     assert!(source.contains("User"), "Role must have User variant");
-    assert!(source.contains("Assistant"), "Role must have Assistant variant");
-    assert!(source.contains("Tool"), "Role must have Tool variant (payload-free)");
+    assert!(
+        source.contains("Assistant"),
+        "Role must have Assistant variant"
+    );
+    assert!(
+        source.contains("Tool"),
+        "Role must have Tool variant (payload-free)"
+    );
 }
 
 #[test]
@@ -69,9 +79,18 @@ fn test_types_dot_ash_message_definition_correct() {
 
     // SPEC-029 SS3.2: Message must have role, content, tool_calls, tool_call_id
     assert!(source.contains("role:"), "Message must have role field");
-    assert!(source.contains("content:"), "Message must have content field");
-    assert!(source.contains("tool_calls:"), "Message must have tool_calls field");
-    assert!(source.contains("tool_call_id:"), "Message must have tool_call_id field");
+    assert!(
+        source.contains("content:"),
+        "Message must have content field"
+    );
+    assert!(
+        source.contains("tool_calls:"),
+        "Message must have tool_calls field"
+    );
+    assert!(
+        source.contains("tool_call_id:"),
+        "Message must have tool_call_id field"
+    );
 }
 
 #[test]
@@ -80,7 +99,10 @@ fn test_types_dot_ash_chat_response_definition_correct() {
     let source = std::fs::read_to_string(&types_path).expect("types.ash should be readable");
 
     // SPEC-029 SS3.3: ChatResponse fields
-    assert!(source.contains("finish_reason"), "ChatResponse must have finish_reason");
+    assert!(
+        source.contains("finish_reason"),
+        "ChatResponse must have finish_reason"
+    );
     assert!(source.contains("usage"), "ChatResponse must have usage");
     assert!(source.contains("model"), "ChatResponse must have model");
 }
@@ -90,7 +112,10 @@ fn test_types_dot_ash_has_11_types() {
     let types_path = stdlib_root().join("llm/types.ash");
     let source = std::fs::read_to_string(&types_path).expect("types.ash should be readable");
 
-    let count = source.lines().filter(|l| l.starts_with("pub type ")).count();
+    let count = source
+        .lines()
+        .filter(|l| l.starts_with("pub type "))
+        .count();
     assert_eq!(
         count, 11,
         "types.ash must have exactly 11 pub type definitions (SPEC-029 SS3), found {}",
@@ -126,7 +151,11 @@ fn test_mod_dot_ash_references_submodules() {
 #[test]
 fn test_prompt_dot_ash_file_exists() {
     let prompt_path = stdlib_root().join("llm/prompt.ash");
-    assert!(prompt_path.exists(), "prompt.ash must exist at {:?}", prompt_path);
+    assert!(
+        prompt_path.exists(),
+        "prompt.ash must exist at {:?}",
+        prompt_path
+    );
 }
 
 #[test]
@@ -268,5 +297,9 @@ fn test_all_llm_stdlib_files_readable() {
             count += 1;
         }
     }
-    assert!(count >= 10, "Expected at least 10 .ash files in llm/, found {}", count);
+    assert!(
+        count >= 10,
+        "Expected at least 10 .ash files in llm/, found {}",
+        count
+    );
 }

@@ -518,7 +518,7 @@ impl Engine {
     /// Returns execution errors from the interpreter.
     #[doc(hidden)]
     pub async fn execute_core_workflow(&self, workflow: &ash_core::Workflow) -> ExecResult<Value> {
-        use ash_interp::{BehaviourContext, PolicyEvaluator, Context};
+        use ash_interp::{BehaviourContext, Context, PolicyEvaluator};
         let ctx = Context::new();
         let cap_ctx = self.runtime_state.create_capability_context().await;
         let policy_eval = PolicyEvaluator::new();

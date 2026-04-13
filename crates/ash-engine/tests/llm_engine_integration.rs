@@ -10,8 +10,8 @@
 
 use ash_core::ast::{Guard, Workflow};
 use ash_core::{Expr, Provenance, Value};
-use ash_engine::providers::LlmConfig;
 use ash_engine::Engine;
+use ash_engine::providers::LlmConfig;
 use std::collections::HashMap;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -100,9 +100,7 @@ async fn test_engine_with_llm_capabilities_builds() {
     let server = MockServer::start().await;
     let configs = make_configs(&server);
 
-    let engine_result = Engine::new()
-        .with_llm_capabilities(configs)
-        .build();
+    let engine_result = Engine::new().with_llm_capabilities(configs).build();
 
     assert!(
         engine_result.is_ok(),
@@ -336,10 +334,7 @@ async fn test_engine_llm_multi_provider_via_builder() {
         "test".to_string(),
         LlmConfig::custom(format!("{}/v1", server.uri()), "test-key"),
     );
-    configs.insert(
-        "ollama".to_string(),
-        LlmConfig::ollama(),
-    );
+    configs.insert("ollama".to_string(), LlmConfig::ollama());
 
     let engine = Engine::new()
         .with_llm_capabilities(configs)
@@ -372,9 +367,7 @@ async fn test_engine_llm_invalid_config_skips_gracefully() {
     );
 
     // Should NOT fail - builder logs warning and skips registration
-    let result = Engine::new()
-        .with_llm_capabilities(configs)
-        .build();
+    let result = Engine::new().with_llm_capabilities(configs).build();
 
     assert!(
         result.is_ok(),

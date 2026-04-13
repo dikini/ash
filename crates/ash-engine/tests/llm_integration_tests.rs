@@ -912,18 +912,26 @@ async fn test_stream_error_propagation() {
     // This simulates an upstream stream failure (e.g., connection reset, API error mid-stream)
     let (tx, rx) = tokio::sync::mpsc::channel(10);
     let stream_id = "llm_stream_test_error_123".to_string();
-    provider.stream_storage().store_stream(stream_id.clone(), rx);
+    provider
+        .stream_storage()
+        .store_stream(stream_id.clone(), rx);
 
     // Send an error chunk to simulate upstream failure
-    tx.try_send(StreamChunk::Error("upstream connection reset: HTTP 502".to_string()))
-        .expect("should send error chunk");
+    tx.try_send(StreamChunk::Error(
+        "upstream connection reset: HTTP 502".to_string(),
+    ))
+    .expect("should send error chunk");
 
     // Now pull the chunk through the provider's action interface
     let pull_args = vec![Value::String(stream_id)];
     let result = provider.execute("pull_stream_chunk", &pull_args).await;
 
     // The error chunk must surface as ExecutionFailed, not silently succeed
-    assert!(result.is_err(), "pull_stream_chunk should return error for stream error: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "pull_stream_chunk should return error for stream error: {:?}",
+        result.ok()
+    );
     match result.unwrap_err() {
         CapabilityError::ExecutionFailed(msg) => {
             assert!(
@@ -958,21 +966,35 @@ async fn test_stream_error_cleanup_after_consumption() {
 
     let (tx, rx) = tokio::sync::mpsc::channel(10);
     let stream_id = "llm_stream_test_cleanup_456".to_string();
-    provider.stream_storage().store_stream(stream_id.clone(), rx);
+    provider
+        .stream_storage()
+        .store_stream(stream_id.clone(), rx);
 
     // Send error chunk
-    tx.try_send(StreamChunk::Error("test error".to_string())).unwrap();
+    tx.try_send(StreamChunk::Error("test error".to_string()))
+        .unwrap();
 
     // First pull should return the error
-    let result = provider.execute("pull_stream_chunk", &[Value::String(stream_id.clone())]).await;
+    let result = provider
+        .execute("pull_stream_chunk", &[Value::String(stream_id.clone())])
+        .await;
     assert!(result.is_err());
 
     // Second pull should get not-found (stream was removed after error was consumed)
-    let result2 = provider.execute("pull_stream_chunk", &[Value::String(stream_id)]).await;
-    assert!(result2.is_err(), "Stream should be cleaned up after error: {:?}", result2.ok());
+    let result2 = provider
+        .execute("pull_stream_chunk", &[Value::String(stream_id)])
+        .await;
+    assert!(
+        result2.is_err(),
+        "Stream should be cleaned up after error: {:?}",
+        result2.ok()
+    );
     match result2.unwrap_err() {
         CapabilityError::ExecutionFailed(msg) => {
-            assert!(msg.contains("not found"), "Should report stream not found: {msg}");
+            assert!(
+                msg.contains("not found"),
+                "Should report stream not found: {msg}"
+            );
         }
         other => panic!("Expected ExecutionFailed for missing stream, got: {other:?}"),
     }

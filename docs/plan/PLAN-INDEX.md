@@ -275,6 +275,7 @@ Update this section as tasks complete:
 | 74 | 8 | 0 | Planned |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
+| 79 | 6 | 0 | Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -370,6 +371,7 @@ Update this section as tasks complete:
 | 74 | 8 | 0 | 📝 Planned |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
+| 79 | 6 | 0 | Planned |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -2252,7 +2254,7 @@ and prompt functions, OpenAI capability with dispatch workflows, and agent orche
 **Design Reference:** [DESIGN-025: LLM Standard Library](../design/DESIGN-025-LLM-STDLIB.md)
 **Spec Reference:** SPEC-029-LLM-STDLIB.md
 **Priority:** High
-**Status:** ✅ Complete
+**Status:** 📝 Planned
 
 ### Track 1: Rust Provider Foundation (TASK-516 to TASK-523)
 
@@ -2316,7 +2318,7 @@ parse failures are silently dropped.
 **Design Reference:** [DESIGN-026: Module Type Resolution Remediation](../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md)
 **Spec Reference:** SPEC-030-MODULE-TYPE-RESOLUTION.md
 **Priority:** High
-**Status:** ✅ Complete
+**Status:** 📝 Planned
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2330,5 +2332,28 @@ parse failures are silently dropped.
 qualified access (no implicit flattening), `ash check` validates non-workflow module files,
 `pub fn` parse failures produce diagnostics, stdlib validated end-to-end with structural tests.
 
-**Note:** TASK-544 (CHANGELOG/task status updates) was folded into the individual task commits
-and the cross-task review fix commit (dfb56ec).
+**Note:** TASK-544 (CHANGELOG/task status updates) was folded into the individual task commits.
+
+## Phase 79: LLM Stdlb Usability Remediation
+
+Resolve the three blockers and two architectural gaps preventing real users from building
+end-to-end LLM-powered Ash workflows: enum variant disambiguation in fn bodies (16/23
+prompt.ash fns silently dropped), Float as a builtin type, 2-segment use path resolution,
+missing SPEC-029 prompt functions, and three-vertex violations in orchestration modules.
+
+**Plan Reference:** [PLAN-027: LLM Stdlb Usability Remediation](PLAN-027-LLM-STDLIB-USABILITY-REMEDIATION.md)
+**Priority:** High
+**Status:** Planned
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| TASK-545 | Add Float as a builtin type | SPEC-029 | 1 | Planned |
+| TASK-546 | Fix enum variant disambiguation in fn expression parser | SPEC-029 | 4 | Planned |
+| TASK-547 | Fix 2-segment use path and improve import error context | SPEC-012 | 2 | Planned |
+| TASK-548 | Add missing SPEC-029 prompt functions | SPEC-029 | 3 | Planned |
+| TASK-549 | Fix three-vertex violations in orchestration modules | SPEC-029 | 2 | Planned |
+| TASK-550 | End-to-end validation and CHANGELOG update | SPEC-029 | 2 | Planned |
+
+**Deliverable:** All 23+ prompt.ash pub fns parse, Float type registered, use llm::Role
+resolves from application code, missing SPEC-029 functions implemented, three-vertex
+compliance in orchestration modules, end-to-end LLM workflow executes from pure .ash code.

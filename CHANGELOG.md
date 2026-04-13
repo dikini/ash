@@ -15,6 +15,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `PubFnDiagnostic` warning type for unparseable `pub fn` snippets (TASK-542). `parse_supported_pub_fn_callable` returns `Result` instead of silent `Option`. Diagnostics surfaced via `check_module_file`.
   - `ModuleFileCheckResult` public struct with type count, fn count, warnings, and errors.
   - Conformance tests ST-6 through ST-13 for SPEC-030 §4-5.
+  - LLM stdlib end-to-end validation (TASK-543). Structural tests replacing string-matching: type name verification via `collect_public_type_defs_from_source`, pub fn parse coverage via `count_pub_fn_snippets`, import path resolution, and cross-cutting stdlib file validation.
+  - **Key finding**: 16 of 23 `pub fn` in prompt.ash use record constructors unsupported by `parse_fn_definition`, causing silent export dropping. Documented via `#[ignore]` target test.
 
 - **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
   - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.

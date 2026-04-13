@@ -66,14 +66,14 @@ pub enum Value {
     /// Control link value for controlling spawned instances
     ControlLink(ControlLink),
     /// Stream handle for consuming streaming data
-    /// 
+    ///
     /// Streams are used for incremental data sources like chat completions
     /// where data arrives in chunks over time.
     Stream(StreamHandle),
 }
 
 /// Handle to a stream that can be consumed incrementally
-/// 
+///
 /// Stream handles are created by providers (like LLM chat_stream) and
 /// consumed by the runtime through the receive construct.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

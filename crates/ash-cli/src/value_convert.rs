@@ -101,9 +101,9 @@ pub fn value_to_json(value: &Value) -> serde_json::Value {
         Value::ControlLink(link) => {
             serde_json::Value::String(format!("ControlLink<{:?}>", link.instance_id))
         }
-        Value::Float(f) => {
-            serde_json::Value::Number(serde_json::Number::from_f64(*f).unwrap_or_else(|| serde_json::Number::from(0)))
-        }
+        Value::Float(f) => serde_json::Value::Number(
+            serde_json::Number::from_f64(*f).unwrap_or_else(|| serde_json::Number::from(0)),
+        ),
         Value::Stream(handle) => serde_json::Value::String(format!("Stream<{}>", handle.id)),
     }
 }

@@ -82,33 +82,120 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
                 source: None,
             })
         }
-        Err(e) => {
-            let err_msg = format!("{e}");
-            // Check if this is an I/O error (e.g., file not found)
-            if err_msg.contains("io error") || err_msg.contains("No such file") {
-                Err(CliError::IoError {
-                    message: err_msg,
-                    path: Some(path.to_path_buf()),
-                    source: None,
-                })
+        Err(parse_err) => {
+            // If the file exists, has .ash extension, and does NOT contain a
+            // `workflow` keyword, treat it as a pure module file.
+            let ext = path.extension().map(|e| e == "ash").unwrap_or(false);
+            if path.is_file() && ext {
+                let source = std::fs::read_to_string(path).unwrap_or_default();
+                let looks_like_workflow = source.contains("workflow ");
+                if !looks_like_workflow {
+                    match engine.check_module_file(path) {
+                        Ok(result) if result.errors.is_empty() => {
+                            let tc_time = tc_start.elapsed();
+                            let total_time = total_start.elapsed();
+                            let file_name = path.display().to_string().cyan();
+                            match args.format {
+                                CheckOutputFormat::Json => {
+                                    return output_json_module(
+                                        path, &result, args, parse_time, tc_time, total_time,
+                                    );
+                                }
+                                CheckOutputFormat::Human => {
+                                    println!(
+                                        "[OK] {file_name}: {} (module file: {} type(s), {} fn(s))",
+                                        "OK".green(),
+                                        result.type_count,
+                                        result.fn_count,
+                                    );
+                                    for w in &result.warnings {
+                                        println!("  {} {w}", "Warning:".yellow());
+                                    }
+                                    return Ok(());
+                                }
+                            }
+                        }
+                        Ok(result) => {
+                            // Module file had registration errors
+                            let msg = result.errors.join("; ");
+                            // fall through to report via normal output path
+                            Err(CliError::TypeError {
+                                message: msg,
+                                source: None,
+                            })
+                        }
+                        Err(_) => {
+                            // check_module_file also failed -- report original parse error
+                            report_parse_error(parse_err, path)
+                        }
+                    }
+                } else {
+                    report_parse_error(parse_err, path)
+                }
             } else {
-                Err(CliError::ParseError {
-                    message: err_msg,
-                    source: None,
-                })
+                report_parse_error(parse_err, path)
             }
         }
     };
     let tc_time = tc_start.elapsed();
     let total_time = total_start.elapsed();
 
-    // Output results
+    // Output results for workflow or error paths.
+    // Module-file success returns early above.
     match args.format {
         CheckOutputFormat::Json => {
             output_json(path, &check_result, args, parse_time, tc_time, total_time)
         }
         CheckOutputFormat::Human => output_human(path, &check_result, args),
     }
+}
+
+/// Report a parse error from `parse_file`.
+fn report_parse_error(parse_err: ash_engine::EngineError, path: &Path) -> CliResult<()> {
+    let err_msg = format!("{parse_err}");
+    if err_msg.contains("io error") || err_msg.contains("No such file") {
+        Err(CliError::IoError {
+            message: err_msg,
+            path: Some(path.to_path_buf()),
+            source: None,
+        })
+    } else {
+        Err(CliError::ParseError {
+            message: err_msg,
+            source: None,
+        })
+    }
+}
+
+/// Output JSON results for a successful module-file check.
+fn output_json_module(
+    path: &Path,
+    result: &ash_engine::ModuleFileCheckResult,
+    args: &CheckArgs,
+    parse_time: std::time::Duration,
+    tc_time: std::time::Duration,
+    total_time: std::time::Duration,
+) -> CliResult<()> {
+    let mut output = JsonOutput::new(path)
+        .with_strict(args.strict)
+        .with_exit_code(0)
+        .with_timing(parse_time, tc_time, total_time);
+
+    for w in &result.warnings {
+        output = output.with_error(
+            w,
+            "W0001",
+            Some(JsonLocation::new(path.display().to_string(), 0, 0)),
+        );
+    }
+
+    println!(
+        "{}",
+        output
+            .to_json()
+            .map_err(|e| CliError::general(format!("{e}")))?
+    );
+    Ok(())
 }
 
 /// Check all workflow files in a directory

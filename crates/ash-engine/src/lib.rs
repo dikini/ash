@@ -115,6 +115,22 @@ impl std::ops::DerefMut for Workflow {
     }
 }
 
+/// Result of checking a non-workflow module file.
+///
+/// Contains counts of validated type definitions and pub fn snippets,
+/// along with any warnings or errors encountered during validation.
+#[derive(Debug)]
+pub struct ModuleFileCheckResult {
+    /// Number of `pub type` definitions that parsed and registered successfully.
+    pub type_count: usize,
+    /// Number of `pub fn` snippets that parsed successfully.
+    pub fn_count: usize,
+    /// Non-fatal warnings collected during checking.
+    pub warnings: Vec<String>,
+    /// Fatal errors collected during checking.
+    pub errors: Vec<String>,
+}
+
 impl Engine {
     /// Create a new engine builder with default configuration
     ///
@@ -488,6 +504,53 @@ impl Engine {
             .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
 
         verify_entry_workflow_def(&def)
+    }
+
+    /// Check a non-workflow module file for validity.
+    ///
+    /// Reads the file, collects public type definitions, validates them in a
+    /// fresh `TypeEnv`, and counts parseable `pub fn` snippets.  Returns a
+    /// `ModuleFileCheckResult` with type/fn counts and any warnings or errors.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Io` if the file cannot be read, or
+    /// `EngineError::Parse`/`EngineError::Type` if type definitions fail to
+    /// parse or register.
+    pub fn check_module_file(
+        &self,
+        path: &std::path::Path,
+    ) -> Result<ModuleFileCheckResult, EngineError> {
+        let source = std::fs::read_to_string(path)?;
+
+        let type_defs = module_loader::collect_public_type_defs_from_source(&source)?;
+        let type_count = type_defs.len();
+        let fn_count = module_loader::count_pub_fn_snippets(&source);
+
+        let warnings = Vec::new();
+        let mut errors = Vec::new();
+
+        // Build a TypeEnv and register all discovered types so cross-references resolve.
+        let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+        for td in &type_defs {
+            if !type_env.has_type(&td.name) {
+                type_env.declare_type_name(&td.name);
+            }
+        }
+        for td in type_defs {
+            if !type_env.has_full_type(&td.name) {
+                if let Err(e) = type_env.register_type(&td) {
+                    errors.push(format!("{e}"));
+                }
+            }
+        }
+
+        Ok(ModuleFileCheckResult {
+            type_count,
+            fn_count,
+            warnings,
+            errors,
+        })
     }
 
     /// Execute a workflow asynchronously

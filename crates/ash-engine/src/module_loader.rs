@@ -145,14 +145,28 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
     })
 }
 
-pub(crate) fn collect_public_type_defs_from_source(
-    source: &str,
-) -> Result<Vec<CoreTypeDef>, EngineError> {
+/// Extract all `pub type` definitions from source text.
+///
+/// Parses each `pub type` snippet found via [`extract_semicolon_snippets`] and
+/// converts them to AST [`CoreTypeDef`] instances ready for type-checking.
+///
+/// # Errors
+///
+/// Returns [`EngineError::Parse`] if any type snippet contains invalid syntax.
+pub fn collect_public_type_defs_from_source(source: &str) -> Result<Vec<CoreTypeDef>, EngineError> {
     let mut type_defs = Vec::new();
     for snippet in extract_semicolon_snippets(source, |trimmed| trimmed.starts_with("pub type ")) {
         type_defs.extend(parse_public_type_defs(&snippet)?);
     }
     Ok(type_defs)
+}
+
+/// Count the number of `pub fn` snippets in source text that parse successfully.
+pub fn count_pub_fn_snippets(source: &str) -> usize {
+    extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn "))
+        .iter()
+        .filter(|snippet| parse_supported_pub_fn_callable(snippet).is_some())
+        .count()
 }
 
 fn is_skippable_prelude_line(line: &str) -> bool {

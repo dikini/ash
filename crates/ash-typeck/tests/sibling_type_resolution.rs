@@ -4,9 +4,7 @@
 //! sibling types by inserting a placeholder that resolve_type can find, and that
 //! register_type() upgrades placeholders to full definitions.
 
-use ash_core::ast::{
-    Name, TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload, Visibility,
-};
+use ash_core::ast::{Name, TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload, Visibility};
 use ash_typeck::TypeEnv;
 
 /// Helper: create a unit-enum TypeDef (e.g., `pub type Role = A | B | C;`)
@@ -74,12 +72,17 @@ fn test_forward_reference_succeeds_with_predeclare() {
     env.declare_type_name("Message");
 
     // Register Message first (references Role which is only pre-declared)
-    env.register_type(&msg_def).expect("Message should register with Role pre-declared");
-    env.register_type(&role_def).expect("Role should register (upgrade placeholder)");
+    env.register_type(&msg_def)
+        .expect("Message should register with Role pre-declared");
+    env.register_type(&role_def)
+        .expect("Role should register (upgrade placeholder)");
 
     // Verify both resolved
     assert!(env.resolve_type("Role").is_ok(), "Role should resolve");
-    assert!(env.resolve_type("Message").is_ok(), "Message should resolve");
+    assert!(
+        env.resolve_type("Message").is_ok(),
+        "Message should resolve"
+    );
 }
 
 /// ST-2: All 11 SPEC-029 types register without error when pre-declared.
@@ -87,16 +90,92 @@ fn test_forward_reference_succeeds_with_predeclare() {
 fn test_all_spec029_types_register() {
     let type_defs: Vec<TypeDef> = vec![
         unit_enum_def("Role", &["System", "User", "Assistant", "Tool"]),
-        struct_def("ToolCall", vec![("id", "String"), ("function_name", "String"), ("arguments", "String")]),
-        struct_def("ToolCallDelta", vec![("index", "Int"), ("id", "String"), ("function_name", "String"), ("arguments", "String")]),
-        struct_def("Message", vec![("role", "Role"), ("content", "String"), ("tool_calls", "ToolCall"), ("tool_call_id", "String")]),
-        struct_def("ToolDef", vec![("name", "String"), ("description", "String"), ("parameters", "String")]),
-        struct_def("Usage", vec![("prompt_tokens", "Int"), ("completion_tokens", "Int"), ("total_tokens", "Int")]),
-        struct_def("ChatResponse", vec![("content", "String"), ("finish_reason", "String"), ("usage", "Usage"), ("model", "String")]),
-        struct_def("ChatChunk", vec![("delta_content", "String"), ("delta_tool_calls", "ToolCallDelta"), ("finish_reason", "String")]),
-        struct_def("Embedding", vec![("embedding", "String"), ("index", "Int"), ("model", "String")]),
-        struct_def("CompletionParams", vec![("temperature", "Int"), ("top_p", "Int"), ("max_tokens", "Int"), ("stop", "String"), ("seed", "Int")]),
-        struct_def("ProviderConfig", vec![("name", "String"), ("api_base", "String"), ("api_key", "String"), ("default_model", "String")]),
+        struct_def(
+            "ToolCall",
+            vec![
+                ("id", "String"),
+                ("function_name", "String"),
+                ("arguments", "String"),
+            ],
+        ),
+        struct_def(
+            "ToolCallDelta",
+            vec![
+                ("index", "Int"),
+                ("id", "String"),
+                ("function_name", "String"),
+                ("arguments", "String"),
+            ],
+        ),
+        struct_def(
+            "Message",
+            vec![
+                ("role", "Role"),
+                ("content", "String"),
+                ("tool_calls", "ToolCall"),
+                ("tool_call_id", "String"),
+            ],
+        ),
+        struct_def(
+            "ToolDef",
+            vec![
+                ("name", "String"),
+                ("description", "String"),
+                ("parameters", "String"),
+            ],
+        ),
+        struct_def(
+            "Usage",
+            vec![
+                ("prompt_tokens", "Int"),
+                ("completion_tokens", "Int"),
+                ("total_tokens", "Int"),
+            ],
+        ),
+        struct_def(
+            "ChatResponse",
+            vec![
+                ("content", "String"),
+                ("finish_reason", "String"),
+                ("usage", "Usage"),
+                ("model", "String"),
+            ],
+        ),
+        struct_def(
+            "ChatChunk",
+            vec![
+                ("delta_content", "String"),
+                ("delta_tool_calls", "ToolCallDelta"),
+                ("finish_reason", "String"),
+            ],
+        ),
+        struct_def(
+            "Embedding",
+            vec![
+                ("embedding", "String"),
+                ("index", "Int"),
+                ("model", "String"),
+            ],
+        ),
+        struct_def(
+            "CompletionParams",
+            vec![
+                ("temperature", "Int"),
+                ("top_p", "Int"),
+                ("max_tokens", "Int"),
+                ("stop", "String"),
+                ("seed", "Int"),
+            ],
+        ),
+        struct_def(
+            "ProviderConfig",
+            vec![
+                ("name", "String"),
+                ("api_base", "String"),
+                ("api_key", "String"),
+                ("default_model", "String"),
+            ],
+        ),
     ];
 
     let mut env = TypeEnv::with_builtin_types();
@@ -115,7 +194,11 @@ fn test_all_spec029_types_register() {
 
     // All should resolve
     for def in &type_defs {
-        assert!(env.resolve_type(&def.name).is_ok(), "{} should resolve", def.name);
+        assert!(
+            env.resolve_type(&def.name).is_ok(),
+            "{} should resolve",
+            def.name
+        );
     }
 }
 
@@ -136,6 +219,11 @@ fn test_unbound_type_still_errors() {
         err_msg.contains("Unbound") || err_msg.contains("unbound") || err_msg.contains("not found"),
         "Error should mention unbound type: {err_msg}"
     );
+    // SPEC-030 §3.3: error must include the type being registered
+    assert!(
+        err_msg.contains("BadType"),
+        "Error should include the type being registered: {err_msg}"
+    );
 }
 
 /// ST-4: Self-referential type (Tree { children: List<Tree> }) registers.
@@ -155,7 +243,8 @@ fn test_self_referential_type_registers() {
     let mut env = TypeEnv::with_builtin_types();
     env.declare_type_name("Tree");
 
-    env.register_type(&tree_def).expect("Self-referential Tree should register");
+    env.register_type(&tree_def)
+        .expect("Self-referential Tree should register");
     assert!(env.resolve_type("Tree").is_ok(), "Tree should resolve");
 }
 
@@ -197,10 +286,15 @@ fn test_generic_reference_resolves() {
 
     // Register
     env.register_type(&role_def).expect("Role should register");
-    env.register_type(&msg_def).expect("Message should register");
-    env.register_type(&container_def).expect("Container with generics should register");
+    env.register_type(&msg_def)
+        .expect("Message should register");
+    env.register_type(&container_def)
+        .expect("Container with generics should register");
 
-    assert!(env.resolve_type("Container").is_ok(), "Container should resolve");
+    assert!(
+        env.resolve_type("Container").is_ok(),
+        "Container should resolve"
+    );
 }
 
 /// Non-placeholder duplicate still errors.
@@ -212,7 +306,8 @@ fn test_non_placeholder_duplicate_still_errors() {
     let mut env = TypeEnv::with_builtin_types();
 
     // Register normally (not via declare+upgrade)
-    env.register_type(&def1).expect("First registration should succeed");
+    env.register_type(&def1)
+        .expect("First registration should succeed");
 
     // Try to register again without pre-declaration
     let result = env.register_type(&def2);

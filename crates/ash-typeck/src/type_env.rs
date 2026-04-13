@@ -493,15 +493,20 @@ impl TypeEnv {
         self.ast_types.entry(name.to_owned()).or_insert(placeholder);
     }
 
+    /// Check whether a `TypeDef` is a placeholder inserted by `declare_type_name`.
+    ///
+    /// Placeholders are identified by having no type parameters and an empty struct body.
+    fn is_placeholder(def: &TypeDef) -> bool {
+        def.params.is_empty() && matches!(&def.body, TypeBody::Struct(fields) if fields.is_empty())
+    }
+
     /// Register a type definition and its constructors from AST TypeDef
     pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         let type_name = def.name.clone();
 
         if let Some(existing) = self.ast_types.get(&type_name) {
             // Allow upgrading a placeholder (empty struct with same name and no params)
-            let is_placeholder = existing.params.is_empty()
-                && matches!(&existing.body, TypeBody::Struct(fields) if fields.is_empty());
-            if !is_placeholder {
+            if !Self::is_placeholder(existing) {
                 return Err(TypeEnvError::DuplicateType(type_name));
             }
             // Placeholder will be replaced below
@@ -509,7 +514,7 @@ impl TypeEnv {
 
         // Convert to internal TypeInfo for type checking
         let type_info = convert_type_def(def, self)
-            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+            .map_err(|e| TypeEnvError::InvalidDefinition(format!("type '{}': {e}", def.name)))?;
 
         // Register constructors for enum variants
         if let TypeInfo::Enum { variants, .. } = &type_info {
@@ -807,12 +812,7 @@ impl TypeEnv {
     pub fn has_full_type(&self, name: &str) -> bool {
         match self.ast_types.get(name) {
             None => false,
-            Some(existing) => {
-                // A placeholder has empty params and an empty struct body
-                let is_placeholder = existing.params.is_empty()
-                    && matches!(&existing.body, TypeBody::Struct(fields) if fields.is_empty());
-                !is_placeholder
-            }
+            Some(existing) => !Self::is_placeholder(existing),
         }
     }
 

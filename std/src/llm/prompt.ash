@@ -3,7 +3,7 @@
 -- Pure functions for constructing, inspecting, and rendering chat messages.
 -- All functions are side-effect free data transformations.
 
-use types::{Role, Message, ToolCall};
+use types::{Role, Message, ToolCall, ChatResponse};
 
 -- ============================================================================
 -- Constructors
@@ -146,10 +146,10 @@ pub fn get_tool_calls(msg: Message) -> List<ToolCall> {
     }
 }
 
--- Check if message has tool calls
-pub fn has_tool_calls(msg: Message) -> Bool {
-    match msg {
-        Message { role: _, content: _, tool_calls: Some { value: _ }, tool_call_id: _ } => true,
+-- Check if a chat response has tool calls
+pub fn has_tool_calls(response: ChatResponse) -> Bool {
+    match response {
+        ChatResponse { content: _, tool_calls: Some { value: _ }, finish_reason: _, usage: _, model: _, id: _ } => true,
         _ => false
     }
 }
@@ -161,9 +161,57 @@ pub fn get_tool_call_id(msg: Message) -> Option<String> {
     }
 }
 
+-- Append assistant message from a ChatResponse to conversation history
+pub fn append_response(messages: List<Message>, response: ChatResponse) -> List<Message> {
+    match response {
+        ChatResponse { content: Some { value: text }, tool_calls: calls, finish_reason: _, usage: _, model: _, id: _ } => {
+            let msg = Message {
+                role: Assistant,
+                content: text,
+                tool_calls: calls,
+                tool_call_id: None
+            };
+            list::append(messages, [msg])
+        },
+        ChatResponse { content: None, tool_calls: Some { value: tool_calls }, finish_reason: _, usage: _, model: _, id: _ } => {
+            let msg = Message {
+                role: Assistant,
+                content: "",
+                tool_calls: Some { value: tool_calls },
+                tool_call_id: None
+            };
+            list::append(messages, [msg])
+        }
+    }
+}
+
+-- Append a tool result message to conversation history
+pub fn append_tool_result(messages: List<Message>, call_id: String, content: String) -> List<Message> {
+    list::append(messages, [tool_result(call_id, content)])
+}
+
+-- Check if a chat response indicates the conversation is finished
+-- (finish_reason is "stop" or "length", not "tool_calls")
+pub fn is_final(response: ChatResponse) -> Bool {
+    match response {
+        ChatResponse { content: _, tool_calls: _, finish_reason: Some { value: reason }, usage: _, model: _, id: _ } => {
+            reason == "stop" || reason == "length"
+        },
+        _ => false
+    }
+}
+
 -- ============================================================================
 -- Renderers
 -- ============================================================================
+
+-- Render a template by substituting {{key}} placeholders with values
+-- vars: key-value pairs as Map<String, String> (alias for List<(String, String)>)
+-- NOTE: Full template substitution requires runtime string::replace support.
+-- This stub returns template unchanged; signature matches SPEC-029 §4.3.2.
+pub fn render_template(template: String, vars: Map<String, String>) -> String {
+    template
+}
 
 -- Helper: Get role name as string
 fn role_name(role: Role) -> String {

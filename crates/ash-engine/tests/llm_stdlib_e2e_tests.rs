@@ -3,11 +3,12 @@
 //! Uses structural engine APIs (check_module_file, collect_public_type_defs_from_source,
 //! count_pub_fn_snippets) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
 //!
-//! Key finding: prompt.ash has 23 `pub fn` declarations. After TASK-546 fix
+//! Key finding: prompt.ash has 27 `pub fn` declarations. After TASK-546 fix
 //! (keywords allowed as constructor field names), 12 parse through
-//! `parse_fn_definition`. The remaining 11 still use features unsupported by
-//! the parser. These are silently dropped during module loading -- this test
-//! documents the known gap.
+//! `parse_fn_definition`. TASK-548 adds 4 more fns (15 of 27 now parse).
+//! The remaining 12 still use features unsupported by the parser.
+//! These are silently dropped during module loading -- this test documents
+//! the known gap.
 
 use ash_engine::Engine;
 use ash_engine::module_loader::{collect_public_type_defs_from_source, count_pub_fn_snippets};
@@ -110,7 +111,7 @@ fn test_types_ash_structural_type_names() {
 // Requirement 3: pub fn export coverage from prompt.ash
 //
 // NOTE: parse_fn_definition only handles a subset of Ash function syntax.
-// 16 of 23 pub fns in prompt.ash use record constructors or match expressions
+// 11 of 27 pub fns in prompt.ash use record constructors or match expressions
 // that the parser cannot handle. This test documents the gap.
 // ---------------------------------------------------------------------------
 
@@ -122,16 +123,18 @@ fn test_prompt_ash_pub_fn_partial_parse_coverage() {
     // TASK-546 fix: constructor field names now allow keywords (e.g., `role`).
     // Previously 7 of 23 parsed; now 12 parse because `role:` in Message
     // constructors no longer fails the identifier() keyword check.
+    // TASK-548: added 4 new functions (append_response, append_tool_result,
+    // is_final, render_template); now 15 of 27 pub fns parse.
     assert_eq!(
-        count, 12,
-        "expected exactly 12 parseable pub fns from prompt.ash (regression?), got {}",
+        count, 15,
+        "expected exactly 15 parseable pub fns from prompt.ash (regression?), got {}",
         count,
     );
     assert_eq!(
         diagnostics.len(),
-        23 - count,
+        27 - count,
         "expected {} diagnostics for unparseable pub fns, got {}",
-        23 - count,
+        27 - count,
         diagnostics.len(),
     );
 
@@ -147,17 +150,17 @@ fn test_prompt_ash_pub_fn_partial_parse_coverage() {
 }
 
 /// Target-state test: when parse_fn_definition supports record constructors and
-/// match expressions, all 23 pub fns in prompt.ash should parse cleanly.
+/// match expressions, all 27 pub fns in prompt.ash should parse cleanly.
 /// Remove #[ignore] once the parser is extended.
 #[test]
-#[ignore = "waiting for parser support for remaining 11 of 23 pub fns (match expressions, etc)"]
-fn test_prompt_ash_all_23_pub_fns_parse() {
+#[ignore = "waiting for parser support for remaining 11 of 27 pub fns (match expressions, etc)"]
+fn test_prompt_ash_all_27_pub_fns_parse() {
     let source = read_stdlib_file("llm/prompt.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);
 
     assert_eq!(
-        count, 23,
-        "all 23 pub fns should parse once parser supports record constructors, got {}",
+        count, 27,
+        "all 27 pub fns should parse once parser supports record constructors, got {}",
         count,
     );
     assert!(

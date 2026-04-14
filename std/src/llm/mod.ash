@@ -79,13 +79,17 @@ pub use prompt::{
     content,
     get_tool_calls,
     has_tool_calls,
-    get_tool_call_id
+    get_tool_call_id,
+    append_response,
+    append_tool_result,
+    is_final
 };
 
 -- Re-export prompt renderers
 pub use prompt::{
     render_plaintext,
-    render_markdown
+    render_markdown,
+    render_template
 };
 
 -- Re-export prompt utilities

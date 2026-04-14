@@ -24,6 +24,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Improved error messages: `pub use` parse errors now include the module file path; `resolve_use_target` includes the search root; import parse errors include the original import text. Replaces opaque "ContextError" with actionable context.
   - Regression tests: `use llm::Role` and `use llm::Message` resolve via `mod.ash` re-exports; `use nonexistent::Foo` produces "not found" error.
 
+- Add missing SPEC-029 prompt functions and fix `has_tool_calls` signature (TASK-548):
+  - `append_response(messages, response)`: appends assistant message from `ChatResponse` to conversation history.
+  - `append_tool_result(messages, call_id, content)`: appends tool result message to history.
+  - `is_final(response)`: checks if `finish_reason` is `"stop"` or `"length"`.
+  - `render_template(template, vars)`: stub for template variable substitution (awaiting runtime `string::replace`; `vars` is `Map<String, String>` alias for `List<(String, String)>`).
+  - New stdlib type `Map<K, V>` in `std/src/map.ash` -- generic alias for `List<(K, V)>`.
+  - `has_tool_calls` signature fixed from `(msg: Message)` to `(response: ChatResponse)` per SPEC-029 §4.2.3.
+  - `mod.ash` re-exports updated for all four new functions.
+  - Total `pub fn` count in `prompt.ash`: 23 → 27; parseable count: 12 → 15.
+
 - **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
   - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.
   - `LlmConfig` struct for per-provider connection settings with validation, defaults, and API key redaction (TASK-517).

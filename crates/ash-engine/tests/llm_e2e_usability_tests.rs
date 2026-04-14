@@ -6,7 +6,7 @@
 //! 3. All PLAN-027 success criteria are met
 
 use ash_engine::Engine;
-use ash_engine::module_loader::{collect_public_type_defs_from_source, count_pub_fn_snippets};
+use ash_engine::module_loader::count_pub_fn_snippets;
 use std::path::{Path, PathBuf};
 
 fn stdlib_root() -> &'static Path {
@@ -42,8 +42,7 @@ fn test_all_prompt_pub_fns_parse() {
     );
     assert!(
         diagnostics.is_empty(),
-        "expected 0 diagnostics, got {:?}",
-        diagnostics
+        "expected 0 diagnostics, got {diagnostics:?}"
     );
 }
 
@@ -60,7 +59,7 @@ fn test_all_llm_files_check_clean() {
     for entry in std::fs::read_dir(&llm_dir).expect("llm dir should exist") {
         let entry = entry.expect("dir entry");
         let path = entry.path();
-        if path.extension().map_or(true, |e| e != "ash") {
+        if path.extension().is_none_or(|e| e != "ash") {
             continue;
         }
         let result = engine
@@ -99,7 +98,7 @@ fn test_use_llm_role_resolves() {
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
     let _ = std::fs::remove_file(&consumer);
-    assert!(result.is_ok(), "use llm::Role should resolve: {:?}", result);
+    assert!(result.is_ok(), "use llm::Role should resolve: {result:?}");
 }
 
 #[test]
@@ -111,8 +110,7 @@ fn test_use_llm_message_resolves() {
     let _ = std::fs::remove_file(&consumer);
     assert!(
         result.is_ok(),
-        "use llm::Message should resolve: {:?}",
-        result
+        "use llm::Message should resolve: {result:?}"
     );
 }
 
@@ -170,9 +168,7 @@ fn test_three_vertex_compliance() {
                     match ch {
                         '{' => brace_depth += 1,
                         '}' => {
-                            if brace_depth > 0 {
-                                brace_depth -= 1;
-                            }
+                            brace_depth = brace_depth.saturating_sub(1);
                             if brace_depth == 0 {
                                 in_fn = false;
                             }
@@ -235,8 +231,7 @@ workflow chat_demo {
 
     assert!(
         result.is_ok(),
-        "e2e workflow with llm types should parse: {:?}",
-        result,
+        "e2e workflow with llm types should parse: {result:?}",
     );
 }
 

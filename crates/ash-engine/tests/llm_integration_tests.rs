@@ -1,14 +1,14 @@
 //! Integration tests for LLM stdlib functionality.
 //!
 //! These tests verify the full integration path from Ash workflows through
-//! the LlmProvider to mock OpenAI-compatible HTTP endpoints.
+//! the `LlmProvider` to mock OpenAI-compatible HTTP endpoints.
 //!
 //! Test categories:
 //! - Mock provider tests for chat, streaming, embeddings, and tool use
 //! - Error handling tests for HTTP status codes (401, 404, 429, 500)
 //! - Multi-provider routing verification
 //!
-//! All tests use wiremock to mock the OpenAI API, ensuring no external
+//! All tests use wiremock to mock the `OpenAI` API, ensuring no external
 //! network calls are made during test execution.
 
 use ash_core::Value;
@@ -102,7 +102,7 @@ fn tool_def(name: &str, description: &str, parameters: &str) -> Value {
 
 /// Build the `args` slice for `embed` action:
 /// `[provider, model, texts]`
-fn embed_args(texts: Vec<&str>) -> Vec<Value> {
+fn embed_args(texts: &[&str]) -> Vec<Value> {
     vec![
         Value::String("test".to_string()),
         Value::String("text-embedding-3-small".to_string()),
@@ -194,6 +194,7 @@ async fn test_chat_completion_mock() {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn test_chat_with_tools_mock() {
     let server = MockServer::start().await;
 
@@ -384,11 +385,8 @@ async fn test_streaming_mock() {
                         panic!("Expected Some(Record), got: {chunk:?}");
                     }
                 }
-                "None" => {
-                    // No chunk available yet - this is OK for non-blocking
-                }
-                "End" => {
-                    // Stream ended - this can happen if stream completes quickly
+                "None" | "End" => {
+                    // No chunk available yet, or stream ended quickly - both OK
                 }
                 _ => panic!("Unexpected variant: {name}"),
             }
@@ -431,7 +429,7 @@ async fn test_embeddings_mock() {
         .await;
 
     let provider = make_provider(&server);
-    let args = embed_args(vec!["Hello world", "Goodbye world"]);
+    let args = embed_args(&["Hello world", "Goodbye world"]);
 
     let result = provider.execute("embed", &args).await;
     assert!(result.is_ok(), "embed should succeed: {:?}", result.err());
@@ -833,7 +831,7 @@ async fn test_embed_empty_texts_rejected() {
     let server = MockServer::start().await;
 
     let provider = make_provider(&server);
-    let args = embed_args(vec![]);
+    let args = embed_args(&[]);
 
     let result = provider.execute("embed", &args).await;
     assert!(result.is_err(), "Empty texts list should be rejected");
@@ -864,7 +862,7 @@ async fn test_embed_single_text() {
         .await;
 
     let provider = make_provider(&server);
-    let args = embed_args(vec!["Hello"]);
+    let args = embed_args(&["Hello"]);
 
     let result = provider.execute("embed", &args).await;
     assert!(
@@ -886,7 +884,7 @@ async fn test_embed_single_text() {
 // Stream Error Propagation Tests (TASK-520)
 // ---------------------------------------------------------------------------
 
-/// Test that stream errors from upstream are propagated as ExecutionFailed
+/// Test that stream errors from upstream are propagated as `ExecutionFailed`
 /// when pulling chunks via `pull_stream_chunk`.
 ///
 /// This verifies the error-handling contract per SPEC-029 §9.4 SC4:

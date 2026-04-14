@@ -34,7 +34,7 @@ pub struct LlmProvider {
     configs: HashMap<String, LlmConfig>,
     /// Lazily-created async-openai clients keyed by provider name
     clients: Mutex<HashMap<String, Client<OpenAIConfig>>>,
-    /// Storage for active streams (for chat_stream action)
+    /// Storage for active streams (for `chat_stream` action)
     stream_storage: StreamStorage,
 }
 
@@ -138,6 +138,7 @@ impl LlmProvider {
 }
 
 #[async_trait]
+#[allow(clippy::too_many_lines)]
 impl CapabilityProvider for LlmProvider {
     fn name(&self) -> &'static str {
         "llm"

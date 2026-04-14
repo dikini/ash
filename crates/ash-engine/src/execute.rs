@@ -470,7 +470,7 @@ mod tests {
     // which require Expr-level If/panic/contract support not yet in the main
     // interpreter. Re-enable when TASK-556 (fn expressions) lands.
     #[tokio::test]
-    #[ignore]
+    #[ignore = "pure_runtime deleted in TASK-555; re-enable when if/else and panic support lands"]
     async fn pure_function_recursion_executes_without_workflow_effects() {
         let engine = Engine::new().build().unwrap();
         let result = engine
@@ -488,7 +488,7 @@ workflow main -> Int {
     }
 
     #[tokio::test]
-    #[ignore]
+    #[ignore = "pure_runtime deleted in TASK-555; re-enable when if/else and panic support lands"]
     async fn pure_function_panic_propagates_as_runtime_failure() {
         let engine = Engine::new().build().unwrap();
         let error = engine
@@ -506,7 +506,7 @@ workflow main -> Int {
     }
 
     #[tokio::test]
-    #[ignore]
+    #[ignore = "pure_runtime deleted in TASK-555; re-enable when ensures support lands"]
     async fn pure_function_ensures_is_checked_at_runtime() {
         let engine = Engine::new().build().unwrap();
         let error = engine

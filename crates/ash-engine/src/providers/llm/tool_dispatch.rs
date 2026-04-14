@@ -1,9 +1,9 @@
 //! Tool dispatch helpers for LLM provider
 //!
 //! Provides utilities for:
-//! - Extracting tool calls from ChatResponse values
+//! - Extracting tool calls from `ChatResponse` values
 //! - Formatting tool results as messages for follow-up requests
-//! - Converting Ash ToolDef values to OpenAI ChatCompletionTool format
+//! - Converting Ash `ToolDef` values to `OpenAI` `ChatCompletionTool` format
 
 use ash_core::Value;
 use ash_core::capability::CapabilityError;
@@ -11,7 +11,7 @@ use async_openai::types::{ChatCompletionTool, ChatCompletionToolType, FunctionOb
 use std::collections::HashMap;
 
 /// Structured representation of a tool call extracted from a response
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolCallValue {
     /// The unique identifier for this tool call
     pub id: String,
@@ -21,14 +21,14 @@ pub struct ToolCallValue {
     pub arguments: String,
 }
 
-/// Extract tool calls from a ChatResponse Value
+/// Extract tool calls from a `ChatResponse` Value
 ///
-/// Input: ChatResponse Value with tool_calls field
-/// Output: Vec<ToolCallValue> or CapabilityError
+/// Input: `ChatResponse` Value with `tool_calls` field
+/// Output: Vec<ToolCallValue> or `CapabilityError`
 ///
 /// # Errors
 /// Returns `CapabilityError::InvalidArgument` if the response is not a Record,
-/// lacks the tool_calls field, or contains malformed tool call data.
+/// lacks the `tool_calls` field, or contains malformed tool call data.
 pub fn extract_tool_calls(response: &Value) -> Result<Vec<ToolCallValue>, CapabilityError> {
     let Value::Record(fields) = response else {
         return Err(CapabilityError::InvalidArgument(
@@ -96,8 +96,8 @@ fn parse_tool_call_value(value: &Value) -> Result<ToolCallValue, CapabilityError
 
 /// Format tool result as Message Value for follow-up
 ///
-/// Input: call_id, content
-/// Output: Message Value with role=Tool, tool_call_id set
+/// Input: `call_id`, content
+/// Output: Message Value with role=Tool, `tool_call_id` set
 ///
 /// The output shape is:
 /// ```text
@@ -108,6 +108,7 @@ fn parse_tool_call_value(value: &Value) -> Result<ToolCallValue, CapabilityError
 ///   tool_calls: None
 /// }
 /// ```
+#[must_use]
 pub fn format_tool_result_message(call_id: &str, content: &str) -> Value {
     let mut fields = HashMap::new();
 
@@ -129,12 +130,12 @@ pub fn format_tool_result_message(call_id: &str, content: &str) -> Value {
     Value::Record(Box::new(fields))
 }
 
-/// Convert Ash ToolDef values to OpenAI ChatCompletionTool format
+/// Convert Ash `ToolDef` values to `OpenAI` `ChatCompletionTool` format
 ///
-/// Input: List of ToolDef Values
+/// Input: List of `ToolDef` Values
 /// Output: Vec<ChatCompletionTool>
 ///
-/// Expected ToolDef shape:
+/// Expected `ToolDef` shape:
 /// ```text
 /// {
 ///   name: String,
@@ -144,7 +145,7 @@ pub fn format_tool_result_message(call_id: &str, content: &str) -> Value {
 /// ```
 ///
 /// # Errors
-/// Returns `CapabilityError::InvalidArgument` if a ToolDef is not a Record,
+/// Returns `CapabilityError::InvalidArgument` if a `ToolDef` is not a Record,
 /// lacks required fields, or has invalid JSON in parameters.
 pub fn tool_defs_to_openai_tools(
     tools: &[Value],
@@ -152,7 +153,7 @@ pub fn tool_defs_to_openai_tools(
     tools.iter().map(tool_def_to_openai_tool).collect()
 }
 
-/// Convert a single ToolDef Value to ChatCompletionTool
+/// Convert a single `ToolDef` Value to `ChatCompletionTool`
 fn tool_def_to_openai_tool(value: &Value) -> Result<ChatCompletionTool, CapabilityError> {
     let Value::Record(fields) = value else {
         return Err(CapabilityError::InvalidArgument(
@@ -530,6 +531,6 @@ mod tests {
         let result = tool_defs_to_openai_tools(&tools).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].function.name, "no_desc_tool");
-        assert_eq!(result[0].function.description, Some("".to_string()));
+        assert_eq!(result[0].function.description, Some(String::new()));
     }
 }

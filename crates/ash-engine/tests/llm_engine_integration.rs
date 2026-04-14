@@ -5,8 +5,8 @@
 //!
 //! Key verifications:
 //! 1. Engine built with `with_llm_capabilities(configs)` correctly registers the LLM provider
-//! 2. A core `Workflow::Act` targeting provider "llm" dispatches through the engine to LlmProvider
-//! 3. The full chain engine → RuntimeState → CapabilityContext → LlmProvider → mock HTTP works
+//! 2. A core `Workflow::Act` targeting provider "llm" dispatches through the engine to `LlmProvider`
+//! 3. The full chain engine → `RuntimeState` → `CapabilityContext` → `LlmProvider` → mock HTTP works
 
 use ash_core::ast::{Guard, Workflow};
 use ash_core::{Expr, Provenance, Value};
@@ -138,7 +138,7 @@ async fn test_engine_llm_provider_registered_via_builder() {
 /// executes through the engine built with `with_llm_capabilities()`.
 ///
 /// This is the primary TASK-523 verification: the engine dispatches the action
-/// through its RuntimeState → CapabilityContext → registered LlmProvider → mock HTTP.
+/// through its `RuntimeState` → `CapabilityContext` → registered `LlmProvider` → mock HTTP.
 #[tokio::test]
 async fn test_engine_executes_llm_chat_via_capability_dispatch() {
     let server = MockServer::start().await;
@@ -193,8 +193,8 @@ async fn test_engine_executes_llm_list_models() {
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "object": "list",
             "data": [
-                {"id": "gpt-4o", "object": "model", "created": 1234567890, "owned_by": "openai"},
-                {"id": "gpt-4", "object": "model", "created": 1234567890, "owned_by": "openai"}
+                {"id": "gpt-4o", "object": "model", "created": 1_234_567_890, "owned_by": "openai"},
+                {"id": "gpt-4", "object": "model", "created": 1_234_567_890, "owned_by": "openai"}
             ]
         })))
         .mount(&server)

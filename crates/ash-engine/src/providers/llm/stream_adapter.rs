@@ -13,7 +13,7 @@
 //!
 //! # Value Contract
 //!
-//! ## ChatChunk Output Shape
+//! ## `ChatChunk` Output Shape
 //! ```text
 //! {
 //!   delta_content: Option<String>,        // Uses Some/None variants
@@ -22,7 +22,7 @@
 //! }
 //! ```
 //!
-//! ## ToolCallDelta Shape
+//! ## `ToolCallDelta` Shape
 //! ```text
 //! {
 //!   index: Int,
@@ -93,9 +93,10 @@ fn parse_option_field(value: &Value) -> Result<Option<&Value>, CapabilityError> 
 /// * `chunk` - The stream response chunk from async-openai
 ///
 /// # Returns
-/// * `Some(Value)` - A ChatChunk record with delta_content, delta_tool_calls, and finish_reason
+/// * `Some(Value)` - A `ChatChunk` record with `delta_content`, `delta_tool_calls`, and `finish_reason`
 /// * `None` - If the chunk is empty (no delta content and no tool calls)
-pub fn stream_chunk_to_value(chunk: CreateChatCompletionStreamResponse) -> Option<Value> {
+#[must_use]
+pub fn stream_chunk_to_value(chunk: &CreateChatCompletionStreamResponse) -> Option<Value> {
     // Get the first choice (there should typically be one)
     let choice = chunk.choices.first()?;
     let delta = &choice.delta;
@@ -109,7 +110,7 @@ pub fn stream_chunk_to_value(chunk: CreateChatCompletionStreamResponse) -> Optio
     // Check if this is an empty chunk (SC2: drop keep-alive pings)
     let has_content = delta_content.is_some();
     // Fix: Check if tool_calls is Some AND non-empty
-    let has_tool_calls = delta_tool_calls.as_ref().map_or(false, |v| !v.is_empty());
+    let has_tool_calls = delta_tool_calls.as_ref().is_some_and(|v| !v.is_empty());
 
     // Extract finish_reason if present (SC3)
     let finish_reason = choice.finish_reason.as_ref().map(|fr| match fr {
@@ -162,13 +163,13 @@ pub fn stream_chunk_to_value(chunk: CreateChatCompletionStreamResponse) -> Optio
     Some(Value::Record(Box::new(fields)))
 }
 
-/// Convert a `ChatCompletionMessageToolCallChunk` to a ToolCallDelta Value
+/// Convert a `ChatCompletionMessageToolCallChunk` to a `ToolCallDelta` Value
 ///
 /// # Arguments
 /// * `chunk` - The tool call chunk from the stream
 ///
 /// # Returns
-/// A Value::Record representing the ToolCallDelta
+/// A `Value::Record` representing the `ToolCallDelta`
 fn tool_call_chunk_to_value(chunk: ChatCompletionMessageToolCallChunk) -> Value {
     let mut fields = HashMap::new();
 
@@ -216,7 +217,7 @@ pub struct ChatStream {
 }
 
 impl ChatStream {
-    /// Create a new ChatStream
+    /// Create a new `ChatStream`
     ///
     /// # Arguments
     /// * `id` - Unique identifier for this stream
@@ -239,7 +240,7 @@ impl ChatStream {
 type ChatStreamArgsResult<'a> =
     Result<(&'a str, &'a str, &'a [Value], Option<&'a Value>), CapabilityError>;
 
-/// Extract chat_stream action arguments
+/// Extract `chat_stream` action arguments
 ///
 /// Expected args: [provider, model, messages, params]
 /// Returns: (provider, model, messages, params)
@@ -256,7 +257,7 @@ type ChatStreamArgsResult<'a> =
 /// let args = vec![
 ///     Value::String("openai".to_string()),
 ///     Value::String("gpt-4o".to_string()),
-///     Value::List(Box::new(vec![])),
+///     Value::List(Box::default()),
 /// ];
 /// let result = extract_chat_stream_args(&args);
 /// assert!(result.is_ok());
@@ -325,7 +326,7 @@ mod tests {
             usage: None,
         };
 
-        let result = stream_chunk_to_value(chunk);
+        let result = stream_chunk_to_value(&chunk);
         assert!(result.is_some());
 
         let Value::Record(fields) = result.unwrap() else {
@@ -392,7 +393,7 @@ mod tests {
             usage: None,
         };
 
-        let result = stream_chunk_to_value(chunk);
+        let result = stream_chunk_to_value(&chunk);
         assert!(result.is_some());
 
         let Value::Record(fields) = result.unwrap() else {
@@ -480,7 +481,7 @@ mod tests {
             usage: None,
         };
 
-        let result = stream_chunk_to_value(chunk);
+        let result = stream_chunk_to_value(&chunk);
         assert!(result.is_some());
 
         let Value::Record(fields) = result.unwrap() else {
@@ -523,7 +524,7 @@ mod tests {
             usage: None,
         };
 
-        let result = stream_chunk_to_value(chunk);
+        let result = stream_chunk_to_value(&chunk);
         assert!(result.is_none(), "Empty chunk should be dropped (SC2)");
     }
 
@@ -553,7 +554,7 @@ mod tests {
             usage: None,
         };
 
-        let result = stream_chunk_to_value(chunk).unwrap();
+        let result = stream_chunk_to_value(&chunk).unwrap();
         let Value::Record(fields) = result else {
             panic!("Expected Record");
         };
@@ -598,7 +599,7 @@ mod tests {
             usage: None,
         };
 
-        let result = stream_chunk_to_value(chunk);
+        let result = stream_chunk_to_value(&chunk);
         assert!(
             result.is_some(),
             "Chunk with finish_reason should not be dropped"
@@ -651,7 +652,7 @@ mod tests {
                 usage: None,
             };
 
-            let result = stream_chunk_to_value(chunk).unwrap();
+            let result = stream_chunk_to_value(&chunk).unwrap();
             let Value::Record(fields) = result else {
                 panic!("Expected Record");
             };
@@ -683,7 +684,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::List(Box::default()),
         ];
         let result = extract_chat_stream_args(&args);
         assert!(result.is_ok());
@@ -697,11 +698,11 @@ mod tests {
 
     #[test]
     fn test_extract_chat_stream_args_with_params() {
-        let params = Value::variant("Some", vec![("0", Value::Record(Box::new(HashMap::new())))]);
+        let params = Value::variant("Some", vec![("0", Value::Record(Box::default()))]);
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::List(Box::default()),
             params,
         ];
         let result = extract_chat_stream_args(&args);
@@ -743,7 +744,7 @@ mod tests {
         let args = vec![
             Value::Int(42),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::List(Box::default()),
         ];
         let result = extract_chat_stream_args(&args);
         assert!(result.is_err());
@@ -760,7 +761,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::Int(42),
-            Value::List(Box::new(vec![])),
+            Value::List(Box::default()),
         ];
         let result = extract_chat_stream_args(&args);
         assert!(result.is_err());
@@ -792,9 +793,9 @@ mod tests {
     #[test]
     fn test_extract_chat_stream_args_empty_provider() {
         let args = vec![
-            Value::String("".to_string()),
+            Value::String(String::new()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::List(Box::default()),
         ];
         // Empty string is still a valid string, so this should succeed
         let result = extract_chat_stream_args(&args);
@@ -806,8 +807,8 @@ mod tests {
     fn test_extract_chat_stream_args_empty_model() {
         let args = vec![
             Value::String("openai".to_string()),
-            Value::String("".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::String(String::new()),
+            Value::List(Box::default()),
         ];
         // Empty string is still a valid string, so this should succeed
         let result = extract_chat_stream_args(&args);

@@ -89,7 +89,7 @@ pub struct Workflow {
     /// The internal ID for looking up the surface workflow
     id: u64,
     /// Imported callable closures, bound into context before execution.
-    /// Populated from module_loader::InlineCallable during parse.
+    /// Populated from `module_loader::InlineCallable` during parse.
     pub imported_closures: std::collections::HashMap<String, ash_core::Value>,
     /// Param counts for imported callables, used to register type signatures.
     pub imported_param_counts: std::collections::HashMap<String, usize>,
@@ -323,7 +323,7 @@ impl Engine {
         &self,
         source: &str,
         imported_type_defs: Vec<ash_core::ast::TypeDef>,
-        _imported_callables: &HashMap<String, module_loader::InlineCallable>,
+        imported_callables: &HashMap<String, module_loader::InlineCallable>,
     ) -> Result<Workflow, EngineError> {
         use ash_parser::{
             lower_workflow, new_input, parse_utils::skip_whitespace_and_comments, workflow_def,
@@ -332,7 +332,7 @@ impl Engine {
 
         // Convert imported callables to closure values for runtime binding
         let (imported_closures, imported_param_counts) =
-            build_imported_closures(_imported_callables);
+            build_imported_closures(imported_callables);
 
         let mut input = new_input(source);
         skip_whitespace_and_comments(&mut input);
@@ -363,26 +363,26 @@ impl Engine {
                 let (mut local_closures, mut local_param_counts) =
                     (imported_closures, imported_param_counts);
                 for def in &program.definitions {
-                    if let ash_parser::surface::Definition::Function(fn_def) = def {
-                        if let Ok(body_expr) = ash_parser::lower_expr(&fn_def.body) {
-                            // Use Late binding so recursive calls resolve to the closure itself
-                            let mut env_frame = ash_core::env_frame::EnvFrame::new();
-                            let slot = env_frame.insert_late(fn_def.name.to_string());
-                            let params: Vec<(String, Option<String>)> = fn_def
-                                .params
-                                .iter()
-                                .map(|p| (p.name.to_string(), None))
-                                .collect();
-                            local_param_counts.insert(fn_def.name.to_string(), params.len());
-                            let env_frame = std::sync::Arc::new(env_frame);
-                            let closure = Value::Closure {
-                                params,
-                                body: Box::new(body_expr),
-                                env: env_frame.clone(),
-                            };
-                            slot.set_late(closure.clone());
-                            local_closures.insert(fn_def.name.to_string(), closure);
-                        }
+                    if let ash_parser::surface::Definition::Function(fn_def) = def
+                        && let Ok(body_expr) = ash_parser::lower_expr(&fn_def.body)
+                    {
+                        // Use Late binding so recursive calls resolve to the closure itself
+                        let mut env_frame = ash_core::env_frame::EnvFrame::new();
+                        let slot = env_frame.insert_late(fn_def.name.to_string());
+                        let params: Vec<(String, Option<String>)> = fn_def
+                            .params
+                            .iter()
+                            .map(|p| (p.name.to_string(), None))
+                            .collect();
+                        local_param_counts.insert(fn_def.name.to_string(), params.len());
+                        let env_frame = std::sync::Arc::new(env_frame);
+                        let closure = Value::Closure {
+                            params,
+                            body: Box::new(body_expr),
+                            env: env_frame.clone(),
+                        };
+                        slot.set_late(closure.clone());
+                        local_closures.insert(fn_def.name.to_string(), closure);
                         // Functions with bodies that can't be lowered (e.g., containing
                         // if/then/else) are silently skipped -- they need pure_runtime
                         // support which is no longer available.
@@ -596,9 +596,10 @@ impl Engine {
 
         let warnings: Vec<String> = fn_diagnostics
             .iter()
-            .map(|d| match &d.name {
-                Some(name) => format!("pub fn '{}': {}", name, d.reason),
-                None => format!("pub fn: {}", d.reason),
+            .map(|d| {
+                d.name
+                    .as_ref()
+                    .map_or_else(|| format!("pub fn: {}", d.reason), |name| format!("pub fn '{name}': {}", d.reason))
             })
             .collect();
         let mut errors = Vec::new();
@@ -611,10 +612,10 @@ impl Engine {
             }
         }
         for td in type_defs {
-            if !type_env.has_full_type(&td.name) {
-                if let Err(e) = type_env.register_type(&td) {
-                    errors.push(format!("{e}"));
-                }
+            if !type_env.has_full_type(&td.name)
+                && let Err(e) = type_env.register_type(&td)
+            {
+                errors.push(format!("{e}"));
             }
         }
 
@@ -1129,7 +1130,7 @@ impl EngineBuilder {
     }
 }
 
-/// Convert imported callables to Value::Closure for runtime binding.
+/// Convert imported callables to `Value::Closure` for runtime binding.
 /// Each callable body is lowered from surface to core Expr, then wrapped in a closure.
 fn build_imported_closures(
     imported_callables: &HashMap<String, module_loader::InlineCallable>,
@@ -1142,8 +1143,7 @@ fn build_imported_closures(
             Ok(expr) => expr,
             Err(e) => {
                 eprintln!(
-                    "warning: failed to lower imported callable '{}': {}",
-                    name, e
+                    "warning: failed to lower imported callable '{name}': {e}"
                 );
                 continue;
             }

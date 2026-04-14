@@ -1,6 +1,6 @@
 //! Stream Storage for LLM Streaming
 //!
-//! Provides storage and retrieval of active streams for the chat_stream action.
+//! Provides storage and retrieval of active streams for the `chat_stream` action.
 //! This enables the runtime to pull chunks from a stream after it has been initiated.
 
 use ash_core::Value;
@@ -24,6 +24,7 @@ pub struct StreamStorage {
 
 impl StreamStorage {
     /// Create a new empty stream storage
+    #[must_use]
     pub fn new() -> Self {
         Self {
             streams: Mutex::new(HashMap::new()),
@@ -35,6 +36,9 @@ impl StreamStorage {
     /// # Arguments
     /// * `stream_id` - Unique identifier for this stream
     /// * `receiver` - Channel receiver for stream chunks
+    ///
+    /// # Panics
+    /// Panics if the internal lock is poisoned.
     pub fn store_stream(&self, stream_id: String, receiver: StreamReceiver) {
         let mut streams = self.streams.lock().unwrap();
         streams.insert(stream_id, Arc::new(Mutex::new(receiver)));
@@ -46,16 +50,22 @@ impl StreamStorage {
     /// * `stream_id` - ID of the stream to pull from
     ///
     /// # Returns
-    /// * `Ok(Some(StreamChunk::Data(Value)))` - Next chunk as a ChatChunk value
+    /// * `Ok(Some(StreamChunk::Data(Value)))` - Next chunk as a `ChatChunk` value
     /// * `Ok(Some(StreamChunk::End))` - Stream has ended normally
     /// * `Ok(Some(StreamChunk::Error(msg)))` - Stream error occurred
     /// * `Ok(None)` - No chunk available yet, try again later
     /// * `Err(...)` - Stream not found or other error
+    ///
+    /// # Panics
+    /// Panics if the internal lock is poisoned.
+    ///
+    /// # Errors
+    /// Returns `Err(String)` if the stream ID is not found in storage.
     pub fn pull_chunk(&self, stream_id: &str) -> Result<Option<StreamChunk>, String> {
         let streams = self.streams.lock().unwrap();
         let receiver = streams
             .get(stream_id)
-            .ok_or_else(|| format!("Stream '{}' not found", stream_id))?
+            .ok_or_else(|| format!("Stream '{stream_id}' not found"))?
             .clone();
         drop(streams); // Release lock before potentially blocking
 
@@ -78,20 +88,26 @@ impl StreamStorage {
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 // Channel disconnected - stream ended unexpectedly
                 drop(receiver);
-                let mut streams = self.streams.lock().unwrap();
-                streams.remove(stream_id);
+                self.streams.lock().unwrap().remove(stream_id);
                 Ok(Some(StreamChunk::End))
             }
         }
     }
 
     /// Remove a stream from storage
+    ///
+    /// # Panics
+    /// Panics if the internal lock is poisoned.
     pub fn remove_stream(&self, stream_id: &str) {
         let mut streams = self.streams.lock().unwrap();
         streams.remove(stream_id);
     }
 
     /// Check if a stream exists
+    ///
+    /// # Panics
+    /// Panics if the internal lock is poisoned.
+    #[must_use]
     pub fn has_stream(&self, stream_id: &str) -> bool {
         let streams = self.streams.lock().unwrap();
         streams.contains_key(stream_id)
@@ -132,18 +148,13 @@ pub fn spawn_stream_forwarder(
             match chunk_result {
                 Ok(chunk) => {
                     use crate::providers::llm::stream_adapter::stream_chunk_to_value;
-                    match stream_chunk_to_value(chunk) {
-                        Some(value) => {
-                            // Valid chunk - send to consumer
-                            if sender.send(StreamChunk::Data(value)).await.is_err() {
-                                break; // Receiver dropped
-                            }
-                        }
-                        None => {
-                            // Empty chunk filtered (keep-alive) - don't send anything
-                            // Just continue to next chunk
+                    if let Some(value) = stream_chunk_to_value(&chunk) {
+                        // Valid chunk - send to consumer
+                        if sender.send(StreamChunk::Data(value)).await.is_err() {
+                            break; // Receiver dropped
                         }
                     }
+                    // else: empty chunk filtered (keep-alive) - don't send anything
                 }
                 Err(e) => {
                     // Stream error - propagate to consumer

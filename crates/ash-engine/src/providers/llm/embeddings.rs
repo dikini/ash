@@ -145,10 +145,10 @@ pub fn embed_response_to_value(
 
     // Verify postcondition E2: indices should be 0, 1, 2, ...
     for (i, embedding) in embeddings.iter().enumerate() {
-        if embedding.index != i as u32 {
+        if embedding.index != u32::try_from(i).unwrap_or(u32::MAX) {
             return Err(CapabilityError::ExecutionFailed(format!(
-                "Embedding index mismatch: expected {}, got {}",
-                i, embedding.index
+                "Embedding index mismatch: expected {i}, got {}",
+                embedding.index
             )));
         }
     }
@@ -279,7 +279,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("model".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::List(Box::default()),
         ];
 
         let result = extract_embed_args(&args);
@@ -379,9 +379,9 @@ mod tests {
                                 // Use approximate comparison for float values (f32 -> f64 conversion)
                                 match (&values[0], &values[1], &values[2]) {
                                     (Value::Float(a), Value::Float(b), Value::Float(c)) => {
-                                        assert!((a - 0.1).abs() < 1e-6, "Expected ~0.1, got {}", a);
-                                        assert!((b - 0.2).abs() < 1e-6, "Expected ~0.2, got {}", b);
-                                        assert!((c - 0.3).abs() < 1e-6, "Expected ~0.3, got {}", c);
+                                        assert!((a - 0.1).abs() < 1e-6, "Expected ~0.1, got {a}");
+                                        assert!((b - 0.2).abs() < 1e-6, "Expected ~0.2, got {b}");
+                                        assert!((c - 0.3).abs() < 1e-6, "Expected ~0.3, got {c}");
                                     }
                                     _ => panic!("Expected Float values in embedding list"),
                                 }
@@ -571,9 +571,9 @@ mod tests {
                             match index_val {
                                 Value::Int(idx) => {
                                     assert_eq!(
-                                        *idx, i as i64,
-                                        "E2 violated: index {} doesn't match position {}",
-                                        idx, i
+                                        *idx,
+                                        i64::try_from(i).expect("usize fits in i64"),
+                                        "E2 violated: index {idx} doesn't match position {i}"
                                     );
                                 }
                                 _ => panic!("index field should be Int"),

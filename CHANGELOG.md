@@ -6,6 +6,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Resolved all build errors and clippy warnings introduced in commit 09143dd (TASK-556 parser work) and pre-existing in ash-engine. Fixes include: unused import in `llm_e2e_usability_tests.rs`, needless borrow in `ash-interp/src/eval.rs`, `#[ignore]` without reason in `execute.rs`, clone-on-copy and single-match-else in `module_loader.rs`, collapsible-if and collapsible-match in `chat.rs`, casting and doc-markdown issues in `embeddings.rs`, too-many-lines in `provider.rs`, needless-pass-by-value/map-or/box-default/manual-string-new/doc-markdown in `stream_adapter.rs` and `stream_storage.rs`, PartialEq-without-Eq and doc-markdown in `tool_dispatch.rs`, used-underscore-binding/collapsible-if/option-if-let-else/doc-markdown in `lib.rs`, and test-code cleanups in `llm_integration_tests.rs`, `llm_engine_integration.rs`, and `ast.rs`.
+
 ### Added
 
 - **SPEC-031: First-Class Functions and Closure Values** — Plan for Phase 80:

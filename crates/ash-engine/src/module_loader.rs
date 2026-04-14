@@ -93,16 +93,13 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
 
     let mut definitions = Vec::new();
     loop {
-        let snapshot = input.clone();
-        match parse_fn_definition.parse_next(&mut input) {
-            Ok(definition) => {
-                definitions.push(definition);
-                skip_whitespace_and_comments(&mut input);
-            }
-            Err(_) => {
-                input = snapshot;
-                break;
-            }
+        let snapshot = input;
+        if let Ok(definition) = parse_fn_definition.parse_next(&mut input) {
+            definitions.push(definition);
+            skip_whitespace_and_comments(&mut input);
+        } else {
+            input = snapshot;
+            break;
         }
     }
 

@@ -141,7 +141,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                                 call_env.insert(name.clone(), val);
                             }
                             let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
-                            eval_expr(&body, &call_ctx)
+                            eval_expr(body, &call_ctx)
                         }
                         Some(other) => Err(EvalError::TypeMismatch {
                             expected: "callable".to_string(),

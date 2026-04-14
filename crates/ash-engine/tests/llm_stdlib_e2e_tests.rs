@@ -1,7 +1,7 @@
 //! End-to-end validation of LLM stdlib module files (TASK-543).
 //!
-//! Uses structural engine APIs (check_module_file, collect_public_type_defs_from_source,
-//! count_pub_fn_snippets) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
+//! Uses structural engine APIs (`check_module_file`, `collect_public_type_defs_from_source`,
+//! `count_pub_fn_snippets`) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
 //!
 //! Key finding: prompt.ash has 27 `pub fn` declarations. After TASK-546 fix
 //! (keywords allowed as constructor field names), 12 parse through
@@ -131,13 +131,11 @@ fn test_prompt_ash_pub_fn_partial_parse_coverage() {
     // append_response. Now 27 of 27 pub fns parse.
     assert_eq!(
         count, 27,
-        "expected exactly 27 parseable pub fns from prompt.ash (regression?), got {}",
-        count,
+        "expected exactly 27 parseable pub fns from prompt.ash (regression?), got {count}",
     );
     assert!(
         diagnostics.is_empty(),
-        "expected 0 diagnostics (all 27 pub fns parse), got {:?}",
-        diagnostics,
+        "expected 0 diagnostics (all 27 pub fns parse), got {diagnostics:?}",
     );
 }
 
@@ -150,13 +148,11 @@ fn test_prompt_ash_all_27_pub_fns_parse() {
 
     assert_eq!(
         count, 27,
-        "all 27 pub fns should parse once parser supports record constructors, got {}",
-        count,
+        "all 27 pub fns should parse once parser supports record constructors, got {count}",
     );
     assert!(
         diagnostics.is_empty(),
-        "no diagnostics expected: {:?}",
-        diagnostics,
+        "no diagnostics expected: {diagnostics:?}",
     );
 }
 
@@ -180,8 +176,7 @@ fn test_llm_types_import_resolves() {
 
     assert!(
         result.is_ok(),
-        "use llm::types::Role should resolve: {:?}",
-        result,
+        "use llm::types::Role should resolve: {result:?}",
     );
 }
 
@@ -204,8 +199,7 @@ fn test_llm_reexport_role_resolves() {
 
     assert!(
         result.is_ok(),
-        "use llm::Role should resolve via mod.ash re-export: {:?}",
-        result,
+        "use llm::Role should resolve via mod.ash re-export: {result:?}",
     );
 }
 
@@ -221,8 +215,7 @@ fn test_llm_reexport_message_resolves() {
 
     assert!(
         result.is_ok(),
-        "use llm::Message should resolve via mod.ash re-export: {:?}",
-        result,
+        "use llm::Message should resolve via mod.ash re-export: {result:?}",
     );
 }
 
@@ -284,13 +277,11 @@ fn test_dispatch_ash_has_no_pub_fns() {
     // dispatch.ash uses `workflow` declarations, not `pub fn`
     assert_eq!(
         count, 0,
-        "dispatch.ash should have 0 pub fn definitions (uses workflow), got {}",
-        count,
+        "dispatch.ash should have 0 pub fn definitions (uses workflow), got {count}",
     );
     assert!(
         diagnostics.is_empty(),
-        "dispatch.ash should have zero pub fn diagnostics: {:?}",
-        diagnostics,
+        "dispatch.ash should have zero pub fn diagnostics: {diagnostics:?}",
     );
 }
 
@@ -307,7 +298,7 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
     let mut checked = 0;
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().map_or(false, |e| e == "ash") {
+        if path.extension().is_some_and(|e| e == "ash") {
             let file_name = path.file_name().unwrap().to_string_lossy();
 
             // Skip temp test files

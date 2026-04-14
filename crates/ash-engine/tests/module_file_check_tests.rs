@@ -1,4 +1,4 @@
-//! Integration tests for Engine::check_module_file (TASK-541).
+//! Integration tests for `Engine::check_module_file` (TASK-541).
 
 use ash_engine::Engine;
 use std::path::PathBuf;
@@ -66,8 +66,7 @@ fn test_check_module_file_invalid_type() {
     // collect_public_type_defs_from_source should fail to parse the broken type.
     assert!(
         result.is_err(),
-        "expected error for invalid type definition, got {:?}",
-        result,
+        "expected error for invalid type definition, got {result:?}",
     );
 }
 
@@ -176,7 +175,7 @@ fn test_valid_pub_fn_no_warning() {
 fn test_count_pub_fn_snippets_with_diagnostics() {
     use ash_engine::module_loader::count_pub_fn_snippets;
 
-    let source = r#"
+    let source = r"
 pub fn good(x: Int) -> Int {
     x
 }
@@ -188,20 +187,18 @@ pub fn bad( {
 pub fn also_good(y: Text) -> Text {
     y
 }
-"#;
+";
 
     let (count, diagnostics) = count_pub_fn_snippets(source);
 
     assert_eq!(
         count, 2,
-        "should count 2 valid pub fn snippets, got {}",
-        count,
+        "should count 2 valid pub fn snippets, got {count}",
     );
     assert_eq!(
         diagnostics.len(),
         1,
-        "should have 1 diagnostic for the broken snippet, got {:?}",
-        diagnostics,
+        "should have 1 diagnostic for the broken snippet, got {diagnostics:?}",
     );
     assert_eq!(
         diagnostics[0].name.as_deref(),
@@ -242,12 +239,11 @@ fn test_st8_child_export_not_available_without_pub_use() {
     .expect("write consumer");
 
     let engine = make_engine();
-    let result = engine.parse_file(&base.join("consumer.ash"));
+    let result = engine.parse_file(base.join("consumer.ash"));
 
     assert!(
         result.is_err(),
-        "importing Beta from parent should fail -- it's not re-exported: {:?}",
-        result,
+        "importing Beta from parent should fail -- it's not re-exported: {result:?}",
     );
     let err_msg = format!("{}", result.unwrap_err());
     assert!(
@@ -257,7 +253,7 @@ fn test_st8_child_export_not_available_without_pub_use() {
 }
 
 /// ST-11 (SPEC-030 §5.5): A file with a single self-referential struct type
-/// succeeds with type_count == 1.
+/// succeeds with `type_count` == 1.
 #[test]
 fn test_st11_self_referential_struct_succeeds() {
     let dir = tempfile::tempdir().expect("tempdir");

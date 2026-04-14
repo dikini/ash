@@ -389,30 +389,30 @@ fn validate_params(params: &HashMap<String, Value>) -> Result<(), CapabilityErro
     for (key, value) in params {
         match key.as_str() {
             "temperature" => {
-                if let Some(t) = value_to_f32(value) {
-                    if !(0.0..=2.0).contains(&t) {
-                        return Err(CapabilityError::InvalidArgument(format!(
-                            "temperature must be between 0.0 and 2.0, got {t}"
-                        )));
-                    }
+                if let Some(t) = value_to_f32(value)
+                    && !(0.0..=2.0).contains(&t)
+                {
+                    return Err(CapabilityError::InvalidArgument(format!(
+                        "temperature must be between 0.0 and 2.0, got {t}"
+                    )));
                 }
             }
             "top_p" => {
-                if let Some(t) = value_to_f32(value) {
-                    if t <= 0.0 || t > 1.0 {
-                        return Err(CapabilityError::InvalidArgument(format!(
-                            "top_p must be in range (0.0, 1.0], got {t}"
-                        )));
-                    }
+                if let Some(t) = value_to_f32(value)
+                    && (t <= 0.0 || t > 1.0)
+                {
+                    return Err(CapabilityError::InvalidArgument(format!(
+                        "top_p must be in range (0.0, 1.0], got {t}"
+                    )));
                 }
             }
             "max_tokens" => {
-                if let Some(m) = value_to_i64(value) {
-                    if m <= 0 {
-                        return Err(CapabilityError::InvalidArgument(format!(
-                            "max_tokens must be positive, got {m}"
-                        )));
-                    }
+                if let Some(m) = value_to_i64(value)
+                    && m <= 0
+                {
+                    return Err(CapabilityError::InvalidArgument(format!(
+                        "max_tokens must be positive, got {m}"
+                    )));
                 }
             }
             "stop" => {
@@ -479,58 +479,58 @@ pub fn build_chat_request(
     // Apply params if provided
     if let Some(p) = params {
         let params_opt = parse_option_field(p)?;
-        if let Some(param_value) = params_opt {
-            if let Value::Record(fields) = param_value {
-                // Validate parameters first
-                validate_params(fields)?;
+        if let Some(param_value) = params_opt
+            && let Value::Record(fields) = param_value
+        {
+            // Validate parameters first
+            validate_params(fields)?;
 
-                for (key, value) in fields.iter() {
-                    match key.as_str() {
-                        "temperature" => {
-                            if let Some(t) = value_to_f32(value) {
-                                request.temperature = Some(t);
-                            }
+            for (key, value) in fields.iter() {
+                match key.as_str() {
+                    "temperature" => {
+                        if let Some(t) = value_to_f32(value) {
+                            request.temperature = Some(t);
                         }
-                        "top_p" => {
-                            if let Some(t) = value_to_f32(value) {
-                                request.top_p = Some(t);
-                            }
-                        }
-                        "max_tokens" => {
-                            if let Some(m) = value.as_int() {
-                                let Ok(m) = u32::try_from(m) else {
-                                    return Err(CapabilityError::InvalidArgument(format!(
-                                        "max_tokens must be in range 1..={}",
-                                        u32::MAX
-                                    )));
-                                };
-                                request.max_completion_tokens = Some(m);
-                            }
-                        }
-                        "stop" => {
-                            if let Some(s) = value.as_string() {
-                                request.stop =
-                                    Some(async_openai::types::Stop::String(s.to_string()));
-                            } else if let Value::List(stops) = value {
-                                let stop_strings: Vec<String> = stops
-                                    .iter()
-                                    .filter_map(|v| {
-                                        v.as_string().map(std::string::ToString::to_string)
-                                    })
-                                    .collect();
-                                if !stop_strings.is_empty() {
-                                    request.stop =
-                                        Some(async_openai::types::Stop::StringArray(stop_strings));
-                                }
-                            }
-                        }
-                        "seed" => {
-                            if let Some(s) = value.as_int() {
-                                request.seed = Some(s);
-                            }
-                        }
-                        _ => {} // Ignore unknown params
                     }
+                    "top_p" => {
+                        if let Some(t) = value_to_f32(value) {
+                            request.top_p = Some(t);
+                        }
+                    }
+                    "max_tokens" => {
+                        if let Some(m) = value.as_int() {
+                            let Ok(m) = u32::try_from(m) else {
+                                return Err(CapabilityError::InvalidArgument(format!(
+                                    "max_tokens must be in range 1..={}",
+                                    u32::MAX
+                                )));
+                            };
+                            request.max_completion_tokens = Some(m);
+                        }
+                    }
+                    "stop" => {
+                        if let Some(s) = value.as_string() {
+                            request.stop =
+                                Some(async_openai::types::Stop::String(s.to_string()));
+                        } else if let Value::List(stops) = value {
+                            let stop_strings: Vec<String> = stops
+                                .iter()
+                                .filter_map(|v| {
+                                    v.as_string().map(std::string::ToString::to_string)
+                                })
+                                .collect();
+                            if !stop_strings.is_empty() {
+                                request.stop =
+                                    Some(async_openai::types::Stop::StringArray(stop_strings));
+                            }
+                        }
+                    }
+                    "seed" => {
+                        if let Some(s) = value.as_int() {
+                            request.seed = Some(s);
+                        }
+                    }
+                    _ => {} // Ignore unknown params
                 }
             }
         }

@@ -20,8 +20,7 @@ fn test_types_dot_ash_file_exists() {
     let types_path = stdlib_root().join("llm/types.ash");
     assert!(
         types_path.exists(),
-        "types.ash must exist at {:?}",
-        types_path
+        "types.ash must exist at {types_path:?}"
     );
 }
 
@@ -47,9 +46,8 @@ fn test_types_dot_ash_contains_all_required_type_defs() {
 
     for type_name in &required_types {
         assert!(
-            source.contains(&format!("pub type {} =", type_name)),
-            "types.ash must define pub type {}",
-            type_name
+            source.contains(&format!("pub type {type_name} =")),
+            "types.ash must define pub type {type_name}"
         );
     }
 }
@@ -118,8 +116,7 @@ fn test_types_dot_ash_has_11_types() {
         .count();
     assert_eq!(
         count, 11,
-        "types.ash must have exactly 11 pub type definitions (SPEC-029 SS3), found {}",
-        count
+        "types.ash must have exactly 11 pub type definitions (SPEC-029 SS3), found {count}"
     );
 }
 
@@ -130,7 +127,7 @@ fn test_types_dot_ash_has_11_types() {
 #[test]
 fn test_mod_dot_ash_file_exists() {
     let mod_path = stdlib_root().join("llm/mod.ash");
-    assert!(mod_path.exists(), "mod.ash must exist at {:?}", mod_path);
+    assert!(mod_path.exists(), "mod.ash must exist at {mod_path:?}");
 }
 
 #[test]
@@ -153,8 +150,7 @@ fn test_prompt_dot_ash_file_exists() {
     let prompt_path = stdlib_root().join("llm/prompt.ash");
     assert!(
         prompt_path.exists(),
-        "prompt.ash must exist at {:?}",
-        prompt_path
+        "prompt.ash must exist at {prompt_path:?}"
     );
 }
 
@@ -167,9 +163,8 @@ fn test_prompt_dot_ash_constructors() {
     let constructors = ["system", "user", "assistant", "tool_result"];
     for name in &constructors {
         assert!(
-            source.contains(&format!("pub fn {}(", name)),
-            "prompt.ash must define pub fn {}",
-            name
+            source.contains(&format!("pub fn {name}(")),
+            "prompt.ash must define pub fn {name}"
         );
     }
 }
@@ -219,9 +214,8 @@ fn test_prompt_dot_ash_inspectors() {
     ];
     for name in &inspectors {
         assert!(
-            source.contains(&format!("pub fn {}(", name)),
-            "prompt.ash must define pub fn {}",
-            name
+            source.contains(&format!("pub fn {name}(")),
+            "prompt.ash must define pub fn {name}"
         );
     }
 }
@@ -261,8 +255,7 @@ fn test_prompt_dot_ash_renderers() {
 
     assert!(
         render_fn_count >= 2,
-        "prompt.ash must have at least 2 render functions, found {}",
-        render_fn_count
+        "prompt.ash must have at least 2 render functions, found {render_fn_count}"
     );
 }
 
@@ -290,17 +283,16 @@ fn test_all_llm_stdlib_files_readable() {
     let mut count = 0;
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().map_or(false, |e| e == "ash") {
+        if path.extension().is_some_and(|e| e == "ash") {
             let source = std::fs::read_to_string(&path)
-                .unwrap_or_else(|e| panic!("Failed to read {:?}: {}", path, e));
-            assert!(!source.is_empty(), "{:?} must not be empty", path);
+                .unwrap_or_else(|e| panic!("Failed to read {path:?}: {e}"));
+            assert!(!source.is_empty(), "{path:?} must not be empty");
             count += 1;
         }
     }
     assert!(
         count >= 10,
-        "Expected at least 10 .ash files in llm/, found {}",
-        count
+        "Expected at least 10 .ash files in llm/, found {count}"
     );
 }
 
@@ -352,9 +344,7 @@ fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
                 match ch {
                     '{' => brace_depth += 1,
                     '}' => {
-                        if brace_depth > 0 {
-                            brace_depth -= 1;
-                        }
+                        brace_depth = brace_depth.saturating_sub(1);
                         if brace_depth == 0 {
                             in_fn = false;
                         }
@@ -365,12 +355,9 @@ fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
 
             if brace_depth > 0 && !trimmed.starts_with("--") {
                 for forbidden in &forbidden_calls {
-                    if trimmed.contains(forbidden) {
-                        panic!(
-                            "{}: three-vertex violation -- fn '{}' calls workflow via '{}'",
-                            filename, fn_name, forbidden
-                        );
-                    }
+                    assert!(!trimmed.contains(forbidden), 
+                        "{filename}: three-vertex violation -- fn '{fn_name}' calls workflow via '{forbidden}'"
+                    );
                 }
             }
         }

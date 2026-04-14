@@ -232,7 +232,7 @@ fn render_expr(expr: &Expr) -> String {
                 &mut out,
                 2,
                 "args",
-                &render_list(args.iter().map(|a| render_expr(a))),
+                &render_list(args.iter().map(render_expr)),
             );
             out.push('}');
             out

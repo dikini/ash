@@ -46,6 +46,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `mod.ash` re-export updated: `role` -> `sender`.
   - Parseable pub fn count: 15 -> 24 of 27 (9 functions unblocked by removing keyword collision).
 
+- End-to-end validation of LLM stdlib usability (TASK-550):
+  - All 27/27 `pub fn` in prompt.ash parse cleanly through the engine.
+  - `use llm::Role`, `use llm::Message`, `use llm::ChatResponse` all resolve from application code.
+  - `ash check` reports 0 errors/warnings on all llm/ files.
+  - Three-vertex compliance: no `fn` in router.ash or supervised.ash calls dispatch workflows.
+  - SPEC-029 section coverage audit: all 11 types, constructors, inspectors, renderers, and agent workflows verified.
+  - End-to-end workflow parsing test: `.ash` file constructing `Message` values with `sender`/`content` fields parses through the full engine pipeline.
+  - PLAN-027 complete.
+
 - **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
   - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.
   - `LlmConfig` struct for per-provider connection settings with validation, defaults, and API key redaction (TASK-517).

@@ -2352,7 +2352,7 @@ missing SPEC-029 prompt functions, and three-vertex violations in orchestration 
 | TASK-547 | Fix 2-segment use path and improve import error context | SPEC-012 | 2 | Done |
 | TASK-548 | Add missing SPEC-029 prompt functions | SPEC-029 | 3 | Done |
 | TASK-549 | Fix three-vertex violations in orchestration modules | SPEC-029 | 2 | Done |
-| TASK-550 | End-to-end validation and CHANGELOG update | SPEC-029 | 2 | Planned |
+| TASK-550 | End-to-end validation and CHANGELOG update | SPEC-029 | 2 | Done |
 
 **Deliverable:** All 23+ prompt.ash pub fns parse, Float type registered, use llm::Role
 resolves from application code, missing SPEC-029 functions implemented, three-vertex

@@ -23,22 +23,13 @@ use dispatch::complete;
 -- Indicates which target model should handle the request
 type RouteTarget = Coding | General | Complex | Simple | Creative | Factual;
 
--- Classify the user message to determine routing
+-- Build the classification prompt message (pure)
 --
 -- Parameters:
---   provider: Provider name for the classifier model
---   classifier_model: Model to use for classification
---   history: Conversation history
 --   user_message: The message to classify
 --
--- Returns: RouteTarget indicating which model type to use
-fn classify_route(
-    provider: String,
-    classifier_model: String,
-    history: List<Message>,
-    user_message: String
-) -> RouteTarget {
-    -- Build classification prompt
+-- Returns: User Message containing the classification prompt
+fn build_classify_message(user_message: String) -> Message {
     let classify_prompt = string::concat(
         "Classify the following user request into one category: "
         "CODING (code generation/debugging), "
@@ -52,11 +43,16 @@ fn classify_route(
         user_message
     );
 
-    let classify_msg = user(classify_prompt);
-    let classify_history = append(history, classify_msg);
+    user(classify_prompt)
+}
 
-    let response = complete(provider, classifier_model, classify_history, None);
-
+-- Parse the classifier model response into a RouteTarget (pure)
+--
+-- Parameters:
+--   response: ChatResponse from the classifier model
+--
+-- Returns: RouteTarget indicating which model type to use
+fn parse_route(response: ChatResponse) -> RouteTarget {
     match response.content {
         None => General,
         Some { value: text } => {
@@ -140,10 +136,17 @@ workflow router(
     history: List<Message>,
     user_message: String
 ) -> ChatResponse {
-    -- Classify the request
-    let route = classify_route(provider, classifier_model, history, user_message);
+    -- Build classification prompt (pure)
+    let classify_msg = build_classify_message(user_message);
+    let classify_history = append(history, classify_msg);
 
-    -- Select the appropriate model
+    -- Dispatch to classifier model (workflow -> workflow)
+    let classify_response = complete(provider, classifier_model, classify_history, None);
+
+    -- Parse route from response (pure)
+    let route = parse_route(classify_response);
+
+    -- Select the appropriate model (pure)
     let target_model = select_model(target_models, route);
 
     -- Dispatch to the selected model

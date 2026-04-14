@@ -24,22 +24,14 @@ use dispatch::complete_with_tools;
 -- Reject: Tool calls are rejected with feedback
 type SupervisorDecision = Approve | Reject { feedback: String };
 
--- Request supervisor approval for tool calls
+-- Build the supervisor approval request message (pure)
 --
 -- Parameters:
---   provider: Provider name for the supervisor model
---   supervisor_model: Model to use for supervision
 --   messages: Current conversation context
 --   tool_calls: The tool calls awaiting approval
 --
--- Returns: SupervisorDecision indicating approval or rejection
-fn request_approval(
-    provider: String,
-    supervisor_model: String,
-    messages: List<Message>,
-    tool_calls: List<ToolCall>
-) -> SupervisorDecision {
-    -- Build approval request prompt
+-- Returns: User Message containing the approval request prompt
+fn build_approval_message(messages: List<Message>, tool_calls: List<ToolCall>) -> Message {
     let tool_desc = format_tool_calls_for_review(tool_calls);
     let approval_prompt = string::concat(
         "You are a supervisor reviewing tool calls for safety and appropriateness.\n\n"
@@ -50,11 +42,16 @@ fn request_approval(
         tool_desc
     );
 
-    let approval_msg = user(approval_prompt);
-    let approval_history = append(messages, approval_msg);
+    user(approval_prompt)
+}
 
-    let response = complete(provider, supervisor_model, approval_history, None);
-
+-- Parse the supervisor model response into a SupervisorDecision (pure)
+--
+-- Parameters:
+--   response: ChatResponse from the supervisor model
+--
+-- Returns: SupervisorDecision indicating approval or rejection
+fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
     match response.content {
         None => Reject { feedback: "No response from supervisor" },
         Some { value: text } => {
@@ -166,7 +163,10 @@ workflow supervised_agent(
             },
             Some { value: calls } => {
                 -- Model requested tool calls - get supervisor approval
-                let decision = request_approval(provider, supervisor_model, messages, calls);
+                let approval_msg = build_approval_message(messages, calls);
+                let approval_history = append(messages, approval_msg);
+                let approval_response = complete(provider, supervisor_model, approval_history, None);
+                let decision = parse_supervisor_response(approval_response);
 
                 match decision {
                     Approve -> {

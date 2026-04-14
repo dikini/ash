@@ -303,3 +303,70 @@ fn test_all_llm_stdlib_files_readable() {
         count
     );
 }
+
+// ---------------------------------------------------------------------------
+// TASK-549: Three-vertex compliance -- no fn in router.ash or supervised.ash
+// references dispatch workflows (complete, complete_with_tools, stream, embed)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_router_no_fn_calls_workflow() {
+    let source = std::fs::read_to_string(stdlib_root().join("llm/router.ash"))
+        .expect("router.ash should be readable");
+    assert_no_fn_workflow_calls(&source, "router.ash");
+}
+
+#[test]
+fn test_supervised_no_fn_calls_workflow() {
+    let source = std::fs::read_to_string(stdlib_root().join("llm/supervised.ash"))
+        .expect("supervised.ash should be readable");
+    assert_no_fn_workflow_calls(&source, "supervised.ash");
+}
+
+fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
+    let forbidden_calls = ["complete(", "complete_with_tools(", "stream(", "embed(", "act "];
+
+    let mut in_fn = false;
+    let mut brace_depth = 0usize;
+    let mut fn_name = String::new();
+
+    for line in source.lines() {
+        let trimmed = line.trim();
+
+        if trimmed.starts_with("fn ") {
+            in_fn = true;
+            fn_name = trimmed.split('(').next().unwrap_or("").to_string();
+            brace_depth = 0;
+        } else if trimmed.starts_with("workflow ") {
+            in_fn = false;
+        }
+
+        if in_fn {
+            for ch in trimmed.chars() {
+                match ch {
+                    '{' => brace_depth += 1,
+                    '}' => {
+                        if brace_depth > 0 {
+                            brace_depth -= 1;
+                        }
+                        if brace_depth == 0 {
+                            in_fn = false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            if brace_depth > 0 && !trimmed.starts_with("--") {
+                for forbidden in &forbidden_calls {
+                    if trimmed.contains(forbidden) {
+                        panic!(
+                            "{}: three-vertex violation -- fn '{}' calls workflow via '{}'",
+                            filename, fn_name, forbidden
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

@@ -34,6 +34,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `mod.ash` re-exports updated for all four new functions.
   - Total `pub fn` count in `prompt.ash`: 23 → 27; parseable count: 12 → 15.
 
+- Fix three-vertex violations in orchestration modules (TASK-549):
+  - `router.ash`: split `fn classify_route` into pure `fn build_classify_message` + `fn parse_route`; moved `complete()` call into `workflow router` body.
+  - `supervised.ash`: split `fn request_approval` into pure `fn build_approval_message` + `fn parse_supervisor_response`; moved `complete()` call into `workflow supervised_agent` body.
+  - No `fn` in either file now references a dispatch workflow. Three-vertex compliance tests added.
+
 - **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
   - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.
   - `LlmConfig` struct for per-provider connection settings with validation, defaults, and API key redaction (TASK-517).

@@ -276,6 +276,7 @@ Update this section as tasks complete:
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 0 | Planned |
+| 80 | 9 | 0 | Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -371,7 +372,8 @@ Update this section as tasks complete:
 | 74 | 8 | 0 | 📝 Planned |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
-| 79 | 6 | 0 | Planned |
+| 79 | 6 | 0 | 📝 Planned |
+| 80 | 9 | 0 | Planned |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -2357,3 +2359,31 @@ missing SPEC-029 prompt functions, and three-vertex violations in orchestration 
 **Deliverable:** All 23+ prompt.ash pub fns parse, Float type registered, use llm::Role
 resolves from application code, missing SPEC-029 functions implemented, three-vertex
 compliance in orchestration modules, end-to-end LLM workflow executes from pure .ash code.
+
+## Phase 80: First-Class Functions and Closure Values
+
+Add first-class function values to Ash. Local function definitions become expressions
+producing closure values. Eliminate the `pure_runtime.rs` duplicate interpreter (476 lines).
+Closures capture lexical environment via `Arc<EnvFrame>`, support recursion via `BindingSlot::Late`,
+higher-order functions, and three-vertex enforcement via `Type::Fn`/`Type::Fun`.
+
+**Plan Reference:** [PLAN-028: First-Class Functions](PLAN-028-FIRST-CLASS-FUNCTIONS.md)
+**Spec Reference:** SPEC-031-FIRST-CLASS-FUNCTIONS.md
+**Priority:** High
+**Status:** Planned
+
+|| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------||
+|| TASK-551 | Core IR: FnDef, FnApply, EnvFrame, Closure value, interpreter eval | SPEC-031 §5,§10 | 6 | Planned ||
+|| TASK-552 | Lowering: built-in registry, FnApply, FnDef lowering | SPEC-031 §9 | 4 | Planned ||
+|| TASK-553 | Type checker: FnDef/FnApply typing with Type::Fn/Type::Fun | SPEC-031 §6 | 4 | Planned ||
+|| TASK-554 | Engine: inline imported callables into FnApply | SPEC-031 §9.3 | 3 | Planned ||
+|| TASK-555 | Delete pure_runtime.rs and all dispatch/inlining | SPEC-031 §11 | 3 | Planned ||
+|| TASK-556 | Parse fn expressions and named local functions | SPEC-031 §8 | 5 | Planned ||
+|| TASK-557 | Closure syntax \|params\| => body | SPEC-031 §8.3 | 2 | Planned ||
+|| TASK-558 | Three-vertex enforcement via Type::Fn vs Type::Fun | SPEC-031 §4.8,§6.3 | 4 | Planned ||
+|| TASK-559 | End-to-end validation and CHANGELOG | SPEC-031 §13 | 3 | Planned ||
+
+**Deliverable:** `fn(params) { body }` produces `Value::Closure`, closures capture environment,
+recursion works, higher-order functions supported, `pure_runtime.rs` deleted, three-vertex
+boundary enforced, all existing tests pass through single interpreter path.

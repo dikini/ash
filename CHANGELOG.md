@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **SPEC-031: First-Class Functions and Closure Values** — Plan for Phase 80:
+  - SPEC-031 v0.4 (approved): `fn(params) { body }` as expression producing `Value::Closure`, named local fn desugars to `let name = fn(...)`, `|x| => body` closure syntax, `Arc<EnvFrame>` shared scope capture, `BindingSlot::Late` for recursion, `Expr::FnApply` for user calls, `Type::Fn`/`Type::Fun` three-vertex enforcement.
+  - PLAN-028: 9 tasks (TASK-551 through TASK-559), 5 migration phases (A-E), deletes 476 lines of `pure_runtime.rs`.
+  - Phase 80 registered in PLAN-INDEX.
+
+### Added
+
 - **Phase 78: Module Type Resolution (SPEC-030)** — Two-pass type collection, module-file checking, and pub fn diagnostics:
   - Two-pass type registration with pre-declaration in `TypeEnv` for forward references (TASK-539). Extracted `is_placeholder` helper for deduplicated placeholder detection.
   - `pub mod <name>;` child module loading in `collect_module_exports` (TASK-540). Recursively loads child exports into `child_modules` field without flattening into parent.

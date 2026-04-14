@@ -35,7 +35,8 @@ fn test_all_prompt_pub_fns_parse() {
     let source = read_stdlib_file("llm/prompt.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);
     assert_eq!(
-        count, 27,
+        count,
+        27,
         "expected 27 parseable pub fns, got {count} ({})",
         diagnostics.len()
     );
@@ -81,7 +82,10 @@ fn test_all_llm_files_check_clean() {
         checked += 1;
     }
 
-    assert!(checked >= 6, "expected at least 6 llm/ files, checked {checked}");
+    assert!(
+        checked >= 6,
+        "expected at least 6 llm/ files, checked {checked}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -105,7 +109,11 @@ fn test_use_llm_message_resolves() {
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
     let _ = std::fs::remove_file(&consumer);
-    assert!(result.is_ok(), "use llm::Message should resolve: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "use llm::Message should resolve: {:?}",
+        result
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +144,13 @@ fn test_new_functions_present_in_prompt_ash() {
 fn test_three_vertex_compliance() {
     for filename in &["router.ash", "supervised.ash"] {
         let source = read_stdlib_file(&format!("llm/{filename}"));
-        let forbidden = ["complete(", "complete_with_tools(", "stream(", "embed(", "act "];
+        let forbidden = [
+            "complete(",
+            "complete_with_tools(",
+            "stream(",
+            "embed(",
+            "act ",
+        ];
 
         let mut in_fn = false;
         let mut brace_depth = 0usize;
@@ -233,7 +247,12 @@ workflow chat_demo {
 #[test]
 fn test_spec_029_section_coverage() {
     // §2 Module Structure: namespace layout verified by file existence
-    for file in &["llm/mod.ash", "llm/types.ash", "llm/prompt.ash", "llm/dispatch.ash"] {
+    for file in &[
+        "llm/mod.ash",
+        "llm/types.ash",
+        "llm/prompt.ash",
+        "llm/dispatch.ash",
+    ] {
         assert!(
             stdlib_path(file).exists(),
             "SPEC-029 §2: {file} should exist",
@@ -243,9 +262,17 @@ fn test_spec_029_section_coverage() {
     // §3 Types: all 11 types declared
     let types_source = read_stdlib_file("llm/types.ash");
     for type_name in &[
-        "Role", "Message", "ChatResponse", "ToolCall", "ToolDef",
-        "Usage", "ChatChunk", "ToolCallDelta", "Embedding",
-        "ProviderConfig", "CompletionParams",
+        "Role",
+        "Message",
+        "ChatResponse",
+        "ToolCall",
+        "ToolDef",
+        "Usage",
+        "ChatChunk",
+        "ToolCallDelta",
+        "Embedding",
+        "ProviderConfig",
+        "CompletionParams",
     ] {
         assert!(
             types_source.contains(&format!("pub type {type_name}")),
@@ -264,8 +291,11 @@ fn test_spec_029_section_coverage() {
     }
     // §4.2 Inspectors + new functions
     for name in &[
-        "has_tool_calls", "is_final", "get_tool_calls",
-        "append_response", "append_tool_result",
+        "has_tool_calls",
+        "is_final",
+        "get_tool_calls",
+        "append_response",
+        "append_tool_result",
     ] {
         assert!(
             prompt_source.contains(&format!("pub fn {name}(")),

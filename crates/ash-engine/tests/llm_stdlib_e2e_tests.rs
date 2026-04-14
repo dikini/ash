@@ -196,11 +196,7 @@ fn test_llm_types_import_resolves() {
 #[test]
 fn test_llm_reexport_role_resolves() {
     let consumer = stdlib_path("_e2e_reexport_role_test.ash");
-    std::fs::write(
-        &consumer,
-        "use llm::Role;\nworkflow main { done }\n",
-    )
-    .expect("write consumer");
+    std::fs::write(&consumer, "use llm::Role;\nworkflow main { done }\n").expect("write consumer");
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
@@ -216,11 +212,8 @@ fn test_llm_reexport_role_resolves() {
 #[test]
 fn test_llm_reexport_message_resolves() {
     let consumer = stdlib_path("_e2e_reexport_message_test.ash");
-    std::fs::write(
-        &consumer,
-        "use llm::Message;\nworkflow main { done }\n",
-    )
-    .expect("write consumer");
+    std::fs::write(&consumer, "use llm::Message;\nworkflow main { done }\n")
+        .expect("write consumer");
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
@@ -240,11 +233,8 @@ fn test_llm_reexport_message_resolves() {
 #[test]
 fn test_bad_import_gives_clear_error() {
     let consumer = stdlib_path("_e2e_bad_import_test.ash");
-    std::fs::write(
-        &consumer,
-        "use nonexistent::Foo;\nworkflow main { done }\n",
-    )
-    .expect("write consumer");
+    std::fs::write(&consumer, "use nonexistent::Foo;\nworkflow main { done }\n")
+        .expect("write consumer");
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);

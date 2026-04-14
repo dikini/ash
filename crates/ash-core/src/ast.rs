@@ -500,6 +500,19 @@ pub enum Expr {
         /// Source span for error reporting
         span: Span,
     },
+
+    /// Anonymous function definition (closure creation). SPEC-031 §5.1
+    FnDef {
+        params: Vec<(String, Option<String>)>, // (name, optional type annotation)
+        return_type: Option<String>,
+        body: Box<Expr>,
+    },
+
+    /// Function application. SPEC-031 §5.4
+    FnApply {
+        func: Box<Expr>,
+        args: Vec<Expr>,
+    },
 }
 
 /// Unary operators

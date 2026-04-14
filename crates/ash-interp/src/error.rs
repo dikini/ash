@@ -51,6 +51,12 @@ pub enum EvalError {
 
     #[error("non-exhaustive match: no arm matched value {value}")]
     NonExhaustiveMatch { value: String },
+
+    #[error("value is not callable: {value}")]
+    NotCallable { value: Value },
+
+    #[error("closure crossed three-vertex boundary: {context}")]
+    BoundaryViolation { value: Value, context: String },
 }
 
 /// Errors that can occur during workflow execution

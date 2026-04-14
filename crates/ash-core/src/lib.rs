@@ -8,6 +8,7 @@ pub mod ast;
 pub mod capabilities;
 pub mod capability;
 pub mod effect;
+pub mod env_frame;
 pub mod module_graph;
 pub mod provenance;
 pub mod stream;
@@ -32,3 +33,9 @@ pub use stream::{
 };
 pub use value::*;
 pub use visualize::*;
+
+// Compile-time verification that key types are Send + Sync
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<Value>();
+};

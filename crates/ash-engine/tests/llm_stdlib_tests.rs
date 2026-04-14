@@ -324,7 +324,13 @@ fn test_supervised_no_fn_calls_workflow() {
 }
 
 fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
-    let forbidden_calls = ["complete(", "complete_with_tools(", "stream(", "embed(", "act "];
+    let forbidden_calls = [
+        "complete(",
+        "complete_with_tools(",
+        "stream(",
+        "embed(",
+        "act ",
+    ];
 
     let mut in_fn = false;
     let mut brace_depth = 0usize;

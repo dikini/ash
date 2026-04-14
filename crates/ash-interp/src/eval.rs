@@ -172,6 +172,46 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             let discharged = ctx.discharge_obligation(obligation);
             Ok(Value::Bool(discharged))
         }
+
+        Expr::FnDef {
+            params,
+            return_type: _,
+            body,
+        } => {
+            let env = ctx.to_env_frame();
+            Ok(Value::Closure {
+                params: params.clone(),
+                body: body.clone(),
+                env,
+            })
+        }
+
+        Expr::FnApply { func, args } => {
+            let callee = eval_expr(func, ctx)?;
+            match callee {
+                Value::Closure { params, body, env } => {
+                    let arg_vals: Vec<Value> = args
+                        .iter()
+                        .map(|arg| eval_expr(arg, ctx))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    if arg_vals.len() != params.len() {
+                        return Err(EvalError::WrongArity {
+                            expected: params.len(),
+                            actual: arg_vals.len(),
+                        });
+                    }
+                    // Build a child EnvFrame with param bindings
+                    let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env);
+                    for ((name, _ty), val) in params.iter().zip(arg_vals) {
+                        call_env.insert(name.clone(), val);
+                    }
+                    // Create a Context from the EnvFrame and evaluate the body
+                    let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+                    eval_expr(&body, &call_ctx)
+                }
+                _ => Err(EvalError::NotCallable { value: callee }),
+            }
+        }
     }
 }
 

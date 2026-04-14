@@ -28,7 +28,7 @@ pub struct Instance {
 }
 
 /// Runtime values in Ash
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     /// Integer
     Int(i64),
@@ -70,6 +70,13 @@ pub enum Value {
     /// Streams are used for incremental data sources like chat completions
     /// where data arrives in chunks over time.
     Stream(StreamHandle),
+    /// Runtime closure value. SPEC-031 §5.2
+    /// NOT serializable -- manual serde implementation will error on this variant.
+    Closure {
+        params: Vec<(String, Option<String>)>,
+        body: Box<crate::ast::Expr>,
+        env: std::sync::Arc<crate::env_frame::EnvFrame>,
+    },
 }
 
 /// Handle to a stream that can be consumed incrementally
@@ -243,7 +250,132 @@ impl std::fmt::Display for Value {
             Value::InstanceAddr(addr) => write!(f, "{}", addr),
             Value::ControlLink(link) => write!(f, "{}", link),
             Value::Stream(handle) => write!(f, "stream({}: {})", handle.id, handle.item_type),
+            Value::Closure { params, .. } => {
+                write!(f, "<closure({})>", params.len())
+            }
         }
+    }
+}
+
+// Manual Serialize/Deserialize because Value::Closure cannot be serialized.
+// All other variants delegate to the derived implementations via a helper enum.
+
+impl Serialize for Value {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Value::Closure { .. } => Err(serde::ser::Error::custom(
+                "Value::Closure cannot be serialized",
+            )),
+            Value::Int(v) => {
+                serde::Serialize::serialize(&serde_helper::SerializableValue::Int(*v), serializer)
+            }
+            Value::Float(v) => {
+                serde::Serialize::serialize(&serde_helper::SerializableValue::Float(*v), serializer)
+            }
+            Value::String(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::String(v.clone()),
+                serializer,
+            ),
+            Value::Bool(v) => {
+                serde::Serialize::serialize(&serde_helper::SerializableValue::Bool(*v), serializer)
+            }
+            Value::Null => {
+                serde::Serialize::serialize(&serde_helper::SerializableValue::Null, serializer)
+            }
+            Value::Time(v) => {
+                serde::Serialize::serialize(&serde_helper::SerializableValue::Time(*v), serializer)
+            }
+            Value::Ref(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::Ref(v.clone()),
+                serializer,
+            ),
+            Value::List(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::List(v.clone()),
+                serializer,
+            ),
+            Value::Record(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::Record(v.clone()),
+                serializer,
+            ),
+            Value::Cap(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::Cap(v.clone()),
+                serializer,
+            ),
+            Value::Variant { name, fields } => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::Variant {
+                    name: name.clone(),
+                    fields: fields.clone(),
+                },
+                serializer,
+            ),
+            Value::Instance(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::Instance(v.clone()),
+                serializer,
+            ),
+            Value::InstanceAddr(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::InstanceAddr(v.clone()),
+                serializer,
+            ),
+            Value::ControlLink(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::ControlLink(v.clone()),
+                serializer,
+            ),
+            Value::Stream(v) => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::Stream(v.clone()),
+                serializer,
+            ),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Value {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let sv = serde_helper::SerializableValue::deserialize(deserializer)?;
+        Ok(match sv {
+            serde_helper::SerializableValue::Int(v) => Value::Int(v),
+            serde_helper::SerializableValue::Float(v) => Value::Float(v),
+            serde_helper::SerializableValue::String(v) => Value::String(v),
+            serde_helper::SerializableValue::Bool(v) => Value::Bool(v),
+            serde_helper::SerializableValue::Null => Value::Null,
+            serde_helper::SerializableValue::Time(v) => Value::Time(v),
+            serde_helper::SerializableValue::Ref(v) => Value::Ref(v),
+            serde_helper::SerializableValue::List(v) => Value::List(v),
+            serde_helper::SerializableValue::Record(v) => Value::Record(v),
+            serde_helper::SerializableValue::Cap(v) => Value::Cap(v),
+            serde_helper::SerializableValue::Variant { name, fields } => {
+                Value::Variant { name, fields }
+            }
+            serde_helper::SerializableValue::Instance(v) => Value::Instance(v),
+            serde_helper::SerializableValue::InstanceAddr(v) => Value::InstanceAddr(v),
+            serde_helper::SerializableValue::ControlLink(v) => Value::ControlLink(v),
+            serde_helper::SerializableValue::Stream(v) => Value::Stream(v),
+        })
+    }
+}
+
+mod serde_helper {
+    use super::*;
+    #[allow(clippy::box_collection)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub enum SerializableValue {
+        Int(i64),
+        Float(f64),
+        String(String),
+        Bool(bool),
+        Null,
+        Time(chrono::DateTime<chrono::Utc>),
+        Ref(String),
+        List(Box<Vec<Value>>),
+        Record(Box<HashMap<String, Value>>),
+        Cap(String),
+        Variant {
+            name: String,
+            fields: Box<Vec<(String, Value)>>,
+        },
+        Instance(Box<Instance>),
+        InstanceAddr(InstanceAddr),
+        ControlLink(ControlLink),
+        Stream(StreamHandle),
     }
 }
 

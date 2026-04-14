@@ -155,6 +155,40 @@ impl Context {
     pub fn contains(&self, name: &str) -> bool {
         self.get(name).is_some()
     }
+
+    /// Snapshot current scope chain as an EnvFrame (shared via Arc).
+    ///
+    /// Walks up the context chain, building an EnvFrame chain.
+    /// Each scope level becomes an EnvFrame with a parent link.
+    pub fn to_env_frame(&self) -> std::sync::Arc<ash_core::env_frame::EnvFrame> {
+        use ash_core::env_frame::EnvFrame;
+        let parent = self.parent.as_ref().map(|p| p.to_env_frame());
+        let mut frame = match parent {
+            Some(p) => EnvFrame::with_parent(p),
+            None => EnvFrame::new(),
+        };
+        for (name, value) in &self.bindings {
+            frame.insert(name.clone(), value.clone());
+        }
+        std::sync::Arc::new(frame)
+    }
+
+    /// Create a Context from a captured EnvFrame.
+    ///
+    /// Builds a Context that mirrors the EnvFrame chain by walking
+    /// the parent links and populating bindings at each level.
+    pub fn from_env_frame(frame: &std::sync::Arc<ash_core::env_frame::EnvFrame>) -> Self {
+        fn build(frame: &std::sync::Arc<ash_core::env_frame::EnvFrame>) -> Context {
+            let parent = frame.parent().map(|p| Box::new(build(p)));
+            let mut ctx = Context::new();
+            ctx.parent = parent;
+            for (name, value) in frame.iter_bindings() {
+                ctx.bindings.insert(name, value);
+            }
+            ctx
+        }
+        build(frame)
+    }
 }
 
 #[cfg(test)]

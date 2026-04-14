@@ -398,12 +398,12 @@ pub(crate) fn collect_module_exports(
     for snippet in extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub use ")) {
         let normalized = snippet.trim();
         let mut input = new_input(normalized);
-        let use_stmt = parse_use
-            .parse_next(&mut input)
-            .map_err(|error| EngineError::Parse(format!(
+        let use_stmt = parse_use.parse_next(&mut input).map_err(|error| {
+            EngineError::Parse(format!(
                 "in '{}': failed to parse pub use: {error}",
                 path.display()
-            )))?;
+            ))
+        })?;
         let resolved = resolve_use_target(module_root, &use_stmt)?;
         let target_exports = collect_module_exports(&resolved, cache)?;
         merge_use_exports(&mut exports, target_exports, use_stmt)?;

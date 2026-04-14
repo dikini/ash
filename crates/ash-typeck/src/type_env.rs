@@ -829,6 +829,11 @@ impl TypeEnv {
         self.variables.insert(name.to_string(), ty);
     }
 
+    /// Return the names of all bound variables (used for name resolution of imported callables).
+    pub fn variable_names(&self) -> impl Iterator<Item = String> + '_ {
+        self.variables.keys().cloned()
+    }
+
     /// Store the lowered contract boundary for a pure function.
     pub fn bind_fn_contract(&mut self, name: &str, contract: StoredFnContract) {
         self.fn_contracts.insert(name.to_string(), contract);

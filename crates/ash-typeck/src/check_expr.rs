@@ -432,7 +432,10 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         }
 
         Expr::FnDef {
-            params, body, span: _, ..
+            params,
+            body,
+            span: _,
+            ..
         } => {
             // Anonymous function definition: check the body with params in scope
             let mut fn_env = env.clone();

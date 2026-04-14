@@ -72,6 +72,54 @@ pub(crate) struct ModuleExports {
     pub(crate) child_modules: HashMap<String, Self>,
 }
 
+/// Parse source containing zero or more function definitions followed by a
+/// workflow definition.
+///
+/// This handles the extended syntax where `fn` definitions precede the
+/// `workflow` block.
+///
+/// # Errors
+///
+/// Returns a string describing the parse error if the source is invalid.
+pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface::Program, String> {
+    use ash_parser::input::new_input;
+    use ash_parser::parse_module::parse_fn_definition;
+    use ash_parser::parse_utils::skip_whitespace_and_comments;
+    use ash_parser::parse_workflow::workflow_def;
+    use winnow::Parser;
+
+    let mut input = new_input(source);
+    skip_whitespace_and_comments(&mut input);
+
+    let mut definitions = Vec::new();
+    loop {
+        let snapshot = input.clone();
+        match parse_fn_definition.parse_next(&mut input) {
+            Ok(definition) => {
+                definitions.push(definition);
+                skip_whitespace_and_comments(&mut input);
+            }
+            Err(_) => {
+                input = snapshot;
+                break;
+            }
+        }
+    }
+
+    let workflow = workflow_def
+        .parse_next(&mut input)
+        .map_err(|error| error.to_string())?;
+    skip_whitespace_and_comments(&mut input);
+    if !input.input.is_empty() {
+        return Err("unexpected trailing input after workflow definition".to_string());
+    }
+
+    Ok(ash_parser::surface::Program {
+        definitions,
+        workflow,
+    })
+}
+
 /// Load an ordinary workflow file together with its imported metadata.
 ///
 /// # Errors

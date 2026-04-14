@@ -126,14 +126,9 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 Ok(value) => Ok(value),
                 Err(EvalError::UnknownFunction(_)) => {
                     // Not a built-in: try looking up a closure in the context
-                    // (transition-period fallback until lowering consistently
-                    // produces FnApply for all user-defined calls)
+                    // This handles imported functions that are bound as closures
                     match ctx.get(func) {
-                        Some(Value::Closure {
-                            params,
-                            body,
-                            env,
-                        }) => {
+                        Some(Value::Closure { params, body, env }) => {
                             if args.len() != params.len() {
                                 return Err(EvalError::WrongArity {
                                     expected: params.len(),
@@ -146,12 +141,13 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                                 call_env.insert(name.clone(), val);
                             }
                             let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
-                            eval_expr(body, &call_ctx)
+                            eval_expr(&body, &call_ctx)
                         }
-                        Some(other) => Err(EvalError::NotCallable {
-                            value: other.clone(),
+                        Some(other) => Err(EvalError::TypeMismatch {
+                            expected: "callable".to_string(),
+                            actual: format!("{other:?}"),
                         }),
-                        None => Err(EvalError::UndefinedVariable(func.clone())),
+                        None => Err(EvalError::UnknownFunction(func.clone())),
                     }
                 }
                 Err(e) => Err(e),

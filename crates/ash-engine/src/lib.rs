@@ -21,7 +21,6 @@ pub mod harness;
 pub mod module_loader;
 pub mod parse;
 pub mod providers;
-mod pure_runtime;
 
 pub use entry::{
     EntryBootstrapError, EntryVerificationError, RuntimeEntryStdlibSource,
@@ -33,12 +32,8 @@ pub use ash_core::capability::CapabilityProvider;
 
 use ash_core::Value;
 use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
-use ash_parser::surface::{
-    ConstructorPayload as SurfaceConstructorPayload, Expr as SurfaceExpr,
-    MatchArm as SurfaceMatchArm, Pattern as SurfacePattern, PolicyExpr as SurfacePolicyExpr,
-    Type as SurfaceType, Workflow as SurfaceWorkflow, WorkflowDef as SurfaceWorkflowDef,
-};
-use std::collections::{HashMap, HashSet};
+use ash_parser::surface::Type as SurfaceType;
+use std::collections::HashMap;
 
 /// The central engine for all Ash operations
 ///
@@ -93,6 +88,11 @@ pub struct Workflow {
     pub core: ash_core::Workflow,
     /// The internal ID for looking up the surface workflow
     id: u64,
+    /// Imported callable closures, bound into context before execution.
+    /// Populated from module_loader::InlineCallable during parse.
+    pub imported_closures: std::collections::HashMap<String, ash_core::Value>,
+    /// Param counts for imported callables, used to register type signatures.
+    pub imported_param_counts: std::collections::HashMap<String, usize>,
 }
 
 impl PartialEq for Workflow {
@@ -319,67 +319,87 @@ impl Engine {
             &loaded.imported_callables,
         )
     }
-
     fn parse_workflow_source_with_imports(
         &self,
         source: &str,
         imported_type_defs: Vec<ash_core::ast::TypeDef>,
-        imported_callables: &HashMap<String, module_loader::InlineCallable>,
+        _imported_callables: &HashMap<String, module_loader::InlineCallable>,
     ) -> Result<Workflow, EngineError> {
         use ash_parser::{
             lower_workflow, new_input, parse_utils::skip_whitespace_and_comments, workflow_def,
         };
         use winnow::prelude::*;
 
+        // Convert imported callables to closure values for runtime binding
+        let (imported_closures, imported_param_counts) =
+            build_imported_closures(_imported_callables);
+
         let mut input = new_input(source);
         skip_whitespace_and_comments(&mut input);
 
         match workflow_def.parse_next(&mut input) {
-            Ok(mut def) => {
-                if !imported_callables.is_empty() {
-                    inline_imported_calls_in_workflow_def(&mut def, imported_callables)?;
-                }
+            Ok(def) => {
                 let core = lower_workflow(&def)
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(def);
                 self.store_imported_type_defs(id, imported_type_defs);
-                Ok(Workflow { core, id })
+                Ok(Workflow {
+                    core,
+                    id,
+                    imported_closures,
+                    imported_param_counts,
+                })
             }
             Err(parse_error) => {
-                let mut program = pure_runtime::parse_program_with_functions(source)
+                // Try parsing as a program with function definitions
+                let program = module_loader::parse_program_with_functions(source)
                     .map_err(|_| EngineError::Parse(format!("{parse_error}")))?;
-                if !imported_callables.is_empty() {
-                    inline_imported_calls_in_workflow_def(
-                        &mut program.workflow,
-                        imported_callables,
-                    )?;
-                }
 
-                let should_use_pure_runtime = should_execute_via_pure_runtime(&program);
-                let core_source = if should_use_pure_runtime {
-                    program.workflow.clone()
-                } else {
-                    let mut lowered_workflow = program.workflow.clone();
-                    let local_callables = collect_local_inline_callables(&program);
-                    if !local_callables.is_empty() {
-                        inline_imported_calls_in_workflow_def(
-                            &mut lowered_workflow,
-                            &local_callables,
-                        )?;
-                    }
-                    lowered_workflow
-                };
-
-                let core = lower_workflow(&core_source)
+                let core = lower_workflow(&program.workflow)
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(program.workflow.clone());
+
+                // Extract local function definitions as closures for execution
+                let (mut local_closures, mut local_param_counts) =
+                    (imported_closures, imported_param_counts);
+                for def in &program.definitions {
+                    if let ash_parser::surface::Definition::Function(fn_def) = def {
+                        if let Ok(body_expr) = ash_parser::lower_expr(&fn_def.body) {
+                            // Use Late binding so recursive calls resolve to the closure itself
+                            let mut env_frame = ash_core::env_frame::EnvFrame::new();
+                            let slot = env_frame.insert_late(fn_def.name.to_string());
+                            let params: Vec<(String, Option<String>)> = fn_def
+                                .params
+                                .iter()
+                                .map(|p| (p.name.to_string(), None))
+                                .collect();
+                            local_param_counts.insert(fn_def.name.to_string(), params.len());
+                            let env_frame = std::sync::Arc::new(env_frame);
+                            let closure = Value::Closure {
+                                params,
+                                body: Box::new(body_expr),
+                                env: env_frame.clone(),
+                            };
+                            slot.set_late(closure.clone());
+                            local_closures.insert(fn_def.name.to_string(), closure);
+                        }
+                        // Functions with bodies that can't be lowered (e.g., containing
+                        // if/then/else) are silently skipped -- they need pure_runtime
+                        // support which is no longer available.
+                    }
+                }
+
                 self.store_surface_program(id, program);
                 self.store_imported_type_defs(id, imported_type_defs);
-                Ok(Workflow { core, id })
+                Ok(Workflow {
+                    core,
+                    id,
+                    imported_closures: local_closures,
+                    imported_param_counts: local_param_counts,
+                })
             }
         }
     }
-
     /// Infer the canonical Ash type name for an expression.
     ///
     /// # Errors
@@ -417,7 +437,17 @@ impl Engine {
             .ok_or_else(|| EngineError::Type("workflow not found in cache".to_string()))?;
 
         if let Some(program) = self.get_surface_program(workflow.id) {
-            match ash_typeck::type_check_program(&program) {
+            // Build type environment with imported callable signatures
+            let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
+            for (name, &param_count) in &workflow.imported_param_counts {
+                let param_types: Vec<ash_typeck::Type> = (0..param_count)
+                    .map(|_| ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh()))
+                    .collect();
+                let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
+                type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
+            }
+
+            match ash_typeck::type_check_program_in_env(&type_env, &program) {
                 Ok(result) => {
                     if result.is_ok() {
                         return Ok(());
@@ -441,7 +471,26 @@ impl Engine {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            match ash_typeck::type_check_workflow(&def.body, Some(&param_refs)) {
+            // Build type environment with imported callable signatures
+            let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
+            for (name, &param_count) in &workflow.imported_param_counts {
+                let param_types: Vec<ash_typeck::Type> = (0..param_count)
+                    .map(|_| ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh()))
+                    .collect();
+                let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
+                type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
+            }
+            if let Some(_refs) = param_refs.first() {
+                for (name, ty) in &param_refs {
+                    type_env.bind_variable(name, ty.clone());
+                }
+            }
+
+            match ash_typeck::type_check_workflow_in_env(
+                Some(&type_env),
+                &def.body,
+                Some(&param_refs),
+            ) {
                 Ok(result) => {
                     if result.is_ok() {
                         return Ok(());
@@ -472,6 +521,14 @@ impl Engine {
                     .register_type(&imported_type)
                     .map_err(|error| EngineError::Type(error.to_string()))?;
             }
+        }
+        // Register imported callable signatures
+        for (name, &param_count) in &workflow.imported_param_counts {
+            let param_types: Vec<ash_typeck::Type> = (0..param_count)
+                .map(|_| ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh()))
+                .collect();
+            let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
+            type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
         }
 
         match ash_typeck::type_check_workflow_def_in_env(&type_env, &def) {
@@ -568,22 +625,23 @@ impl Engine {
             errors,
         })
     }
-
     /// Execute a workflow asynchronously
     ///
     /// # Errors
     ///
     /// Returns execution errors from the interpreter.
     pub async fn execute(&self, workflow: &Workflow) -> ExecResult<Value> {
-        if let Some(program) = self
-            .get_surface_program(workflow.id)
-            .filter(should_execute_via_pure_runtime)
-        {
-            return pure_runtime::execute_program(&program, HashMap::new()).await;
+        if workflow.imported_closures.is_empty() {
+            interpret_in_state(&workflow.core, &self.runtime_state).await
+        } else {
+            ash_interp::execute_with_bindings_in_state(
+                &workflow.core,
+                &self.runtime_state,
+                workflow.imported_closures.clone(),
+            )
+            .await
         }
-        interpret_in_state(&workflow.core, &self.runtime_state).await
     }
-
     /// Execute a core `ash_core::Workflow` directly through the engine's runtime state.
     ///
     /// This bypasses surface-program lookup and type checking, executing the
@@ -627,7 +685,6 @@ impl Engine {
             .register_child_workflow(workflow_type, workflow)
             .await;
     }
-
     /// Execute a workflow asynchronously with input bindings
     ///
     /// The input bindings are injected into the workflow's execution context
@@ -646,20 +703,12 @@ impl Engine {
         workflow: &Workflow,
         input_bindings: std::collections::HashMap<String, Value>,
     ) -> ExecResult<Value> {
-        if let Some(program) = self
-            .get_surface_program(workflow.id)
-            .filter(should_execute_via_pure_runtime)
-        {
-            return pure_runtime::execute_program(&program, input_bindings).await;
-        }
-        ash_interp::execute_with_bindings_in_state(
-            &workflow.core,
-            &self.runtime_state,
-            input_bindings,
-        )
-        .await
+        // Merge imported closures with input bindings (input takes precedence)
+        let mut bindings = workflow.imported_closures.clone();
+        bindings.extend(input_bindings);
+        ash_interp::execute_with_bindings_in_state(&workflow.core, &self.runtime_state, bindings)
+            .await
     }
-
     /// Parse, check, and execute in one call
     ///
     /// Convenience method that chains parse → check → execute.
@@ -760,428 +809,6 @@ impl Engine {
         self.bootstrap_entry_source(&source).await
     }
 }
-
-fn inline_imported_calls_in_workflow_def(
-    def: &mut SurfaceWorkflowDef,
-    imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> Result<(), EngineError> {
-    inline_imported_calls_in_workflow(&mut def.body, imported_callables)
-}
-
-fn should_execute_via_pure_runtime(program: &ash_parser::surface::Program) -> bool {
-    let function_names = program
-        .definitions
-        .iter()
-        .filter_map(|definition| match definition {
-            ash_parser::surface::Definition::Function(function) => Some(function.name.to_string()),
-            _ => None,
-        })
-        .collect::<HashSet<_>>();
-
-    !function_names.is_empty()
-        && workflow_is_supported_by_pure_runtime(&program.workflow.body)
-        && workflow_contains_user_fn_call(&program.workflow.body, &function_names)
-}
-
-fn collect_local_inline_callables(
-    program: &ash_parser::surface::Program,
-) -> HashMap<String, module_loader::InlineCallable> {
-    program
-        .definitions
-        .iter()
-        .filter_map(|definition| match definition {
-            ash_parser::surface::Definition::Function(function) => Some((
-                function.name.to_string(),
-                module_loader::InlineCallable {
-                    exported_name: function.name.to_string(),
-                    params: function
-                        .params
-                        .iter()
-                        .map(|param| param.name.to_string())
-                        .collect(),
-                    body: normalize_local_callable_expr(&function.body),
-                },
-            )),
-            _ => None,
-        })
-        .collect()
-}
-
-fn normalize_local_callable_expr(expr: &SurfaceExpr) -> SurfaceExpr {
-    match expr {
-        SurfaceExpr::Block {
-            statements,
-            tail_expr,
-            span,
-        } => {
-            let mut normalized = tail_expr.as_deref().map_or_else(
-                || SurfaceExpr::Literal(ash_parser::surface::Literal::Null),
-                normalize_local_callable_expr,
-            );
-
-            for statement in statements.iter().rev() {
-                let ash_parser::surface::BlockStmt::Let {
-                    pattern,
-                    expr,
-                    span: stmt_span,
-                } = statement;
-                normalized = SurfaceExpr::Match {
-                    scrutinee: Box::new(normalize_local_callable_expr(expr)),
-                    arms: vec![SurfaceMatchArm {
-                        pattern: pattern.clone(),
-                        body: Box::new(normalized),
-                        span: *stmt_span,
-                    }],
-                    span: *span,
-                };
-            }
-
-            normalized
-        }
-        _ => expr.clone(),
-    }
-}
-
-fn workflow_is_supported_by_pure_runtime(workflow: &SurfaceWorkflow) -> bool {
-    match workflow {
-        SurfaceWorkflow::Done { .. } => true,
-        SurfaceWorkflow::Ret { expr, .. } | SurfaceWorkflow::Resume { expr, .. } => {
-            expr_is_supported_by_pure_runtime(expr)
-        }
-        SurfaceWorkflow::Let {
-            expr, continuation, ..
-        }
-        | SurfaceWorkflow::Orient {
-            expr, continuation, ..
-        } => {
-            expr_is_supported_by_pure_runtime(expr)
-                && continuation
-                    .as_deref()
-                    .is_none_or(workflow_is_supported_by_pure_runtime)
-        }
-        SurfaceWorkflow::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expr_is_supported_by_pure_runtime(condition)
-                && workflow_is_supported_by_pure_runtime(then_branch)
-                && else_branch
-                    .as_deref()
-                    .is_none_or(workflow_is_supported_by_pure_runtime)
-        }
-        SurfaceWorkflow::Seq { first, second, .. } => {
-            workflow_is_supported_by_pure_runtime(first)
-                && workflow_is_supported_by_pure_runtime(second)
-        }
-        SurfaceWorkflow::Observe { .. }
-        | SurfaceWorkflow::Receive { .. }
-        | SurfaceWorkflow::Propose { .. }
-        | SurfaceWorkflow::Decide { .. }
-        | SurfaceWorkflow::Check { .. }
-        | SurfaceWorkflow::Act { .. }
-        | SurfaceWorkflow::Set { .. }
-        | SurfaceWorkflow::Send { .. }
-        | SurfaceWorkflow::For { .. }
-        | SurfaceWorkflow::With { .. }
-        | SurfaceWorkflow::Must { .. }
-        | SurfaceWorkflow::Maybe { .. }
-        | SurfaceWorkflow::Yield { .. }
-        | SurfaceWorkflow::Oblige { .. } => false,
-    }
-}
-
-fn expr_is_supported_by_pure_runtime(expr: &SurfaceExpr) -> bool {
-    match expr {
-        SurfaceExpr::Literal(_)
-        | SurfaceExpr::Variable(_)
-        | SurfaceExpr::Panic { .. }
-        | SurfaceExpr::FnDef { .. }
-        | SurfaceExpr::FnApply { .. }
-        | SurfaceExpr::CheckObligation { .. } => true,
-        SurfaceExpr::FieldAccess { base, .. } | SurfaceExpr::Unary { operand: base, .. } => {
-            expr_is_supported_by_pure_runtime(base)
-        }
-        SurfaceExpr::IndexAccess { base, index, .. }
-        | SurfaceExpr::Binary {
-            left: base,
-            right: index,
-            ..
-        } => expr_is_supported_by_pure_runtime(base) && expr_is_supported_by_pure_runtime(index),
-        SurfaceExpr::Call { args, .. } => args.iter().all(expr_is_supported_by_pure_runtime),
-        SurfaceExpr::Match {
-            scrutinee, arms, ..
-        } => {
-            expr_is_supported_by_pure_runtime(scrutinee)
-                && arms
-                    .iter()
-                    .all(|arm| expr_is_supported_by_pure_runtime(&arm.body))
-        }
-        SurfaceExpr::IfLet {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expr_is_supported_by_pure_runtime(expr)
-                && expr_is_supported_by_pure_runtime(then_branch)
-                && expr_is_supported_by_pure_runtime(else_branch)
-        }
-        SurfaceExpr::Constructor {
-            fields, payload, ..
-        } => {
-            fields
-                .iter()
-                .all(|(_, value)| expr_is_supported_by_pure_runtime(value))
-                && match payload {
-                    SurfaceConstructorPayload::Unit => true,
-                    SurfaceConstructorPayload::Record(fields) => fields
-                        .iter()
-                        .all(|(_, value)| expr_is_supported_by_pure_runtime(value)),
-                    SurfaceConstructorPayload::Tuple(items) => {
-                        items.iter().all(expr_is_supported_by_pure_runtime)
-                    }
-                }
-        }
-        SurfaceExpr::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expr_is_supported_by_pure_runtime(condition)
-                && expr_is_supported_by_pure_runtime(then_branch)
-                && else_branch
-                    .as_deref()
-                    .is_none_or(expr_is_supported_by_pure_runtime)
-        }
-        SurfaceExpr::Block {
-            statements,
-            tail_expr,
-            ..
-        } => {
-            statements.iter().all(|statement| match statement {
-                ash_parser::surface::BlockStmt::Let { expr, .. } => {
-                    expr_is_supported_by_pure_runtime(expr)
-                }
-            }) && tail_expr
-                .as_deref()
-                .is_none_or(expr_is_supported_by_pure_runtime)
-        }
-        SurfaceExpr::InterfaceMethodCall { .. } | SurfaceExpr::Policy(_) => false,
-    }
-}
-
-fn workflow_contains_user_fn_call(
-    workflow: &SurfaceWorkflow,
-    function_names: &HashSet<String>,
-) -> bool {
-    match workflow {
-        SurfaceWorkflow::Observe { continuation, .. }
-        | SurfaceWorkflow::Propose { continuation, .. }
-        | SurfaceWorkflow::Check { continuation, .. }
-        | SurfaceWorkflow::Set { continuation, .. }
-        | SurfaceWorkflow::Send { continuation, .. } => {
-            continuation.as_deref().is_some_and(|continuation| {
-                workflow_contains_user_fn_call(continuation, function_names)
-            })
-        }
-        SurfaceWorkflow::Orient {
-            expr, continuation, ..
-        }
-        | SurfaceWorkflow::Let {
-            expr, continuation, ..
-        } => {
-            expr_contains_user_fn_call(expr, function_names)
-                || continuation.as_deref().is_some_and(|continuation| {
-                    workflow_contains_user_fn_call(continuation, function_names)
-                })
-        }
-        SurfaceWorkflow::Decide {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expr_contains_user_fn_call(expr, function_names)
-                || workflow_contains_user_fn_call(then_branch, function_names)
-                || else_branch.as_deref().is_some_and(|else_branch| {
-                    workflow_contains_user_fn_call(else_branch, function_names)
-                })
-        }
-        SurfaceWorkflow::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expr_contains_user_fn_call(condition, function_names)
-                || workflow_contains_user_fn_call(then_branch, function_names)
-                || else_branch.as_deref().is_some_and(|else_branch| {
-                    workflow_contains_user_fn_call(else_branch, function_names)
-                })
-        }
-        SurfaceWorkflow::For {
-            collection, body, ..
-        } => {
-            expr_contains_user_fn_call(collection, function_names)
-                || workflow_contains_user_fn_call(body, function_names)
-        }
-        SurfaceWorkflow::With { body, .. } | SurfaceWorkflow::Must { body, .. } => {
-            workflow_contains_user_fn_call(body, function_names)
-        }
-        SurfaceWorkflow::Maybe {
-            primary, fallback, ..
-        }
-        | SurfaceWorkflow::Seq {
-            first: primary,
-            second: fallback,
-            ..
-        } => {
-            workflow_contains_user_fn_call(primary, function_names)
-                || workflow_contains_user_fn_call(fallback, function_names)
-        }
-        SurfaceWorkflow::Ret { expr, .. } | SurfaceWorkflow::Resume { expr, .. } => {
-            expr_contains_user_fn_call(expr, function_names)
-        }
-        SurfaceWorkflow::Act { guard, .. } => guard
-            .as_ref()
-            .is_some_and(|guard| guard_contains_user_fn_call(guard, function_names)),
-        SurfaceWorkflow::Receive { arms, .. } => arms.iter().any(|arm| {
-            arm.guard
-                .as_ref()
-                .is_some_and(|guard| expr_contains_user_fn_call(guard, function_names))
-                || workflow_contains_user_fn_call(&arm.body, function_names)
-        }),
-        SurfaceWorkflow::Yield { expr, arms, .. } => {
-            expr_contains_user_fn_call(expr, function_names)
-                || arms
-                    .iter()
-                    .any(|arm| workflow_contains_user_fn_call(&arm.body, function_names))
-        }
-        SurfaceWorkflow::Done { .. } | SurfaceWorkflow::Oblige { .. } => false,
-    }
-}
-
-fn guard_contains_user_fn_call(
-    guard: &ash_parser::surface::Guard,
-    function_names: &HashSet<String>,
-) -> bool {
-    match guard {
-        ash_parser::surface::Guard::Always | ash_parser::surface::Guard::Never => false,
-        ash_parser::surface::Guard::Pred(predicate) => predicate
-            .args
-            .iter()
-            .any(|arg| expr_contains_user_fn_call(arg, function_names)),
-        ash_parser::surface::Guard::And(left, right)
-        | ash_parser::surface::Guard::Or(left, right) => {
-            guard_contains_user_fn_call(left, function_names)
-                || guard_contains_user_fn_call(right, function_names)
-        }
-        ash_parser::surface::Guard::Not(inner) => {
-            guard_contains_user_fn_call(inner, function_names)
-        }
-    }
-}
-
-fn expr_contains_user_fn_call(expr: &SurfaceExpr, function_names: &HashSet<String>) -> bool {
-    match expr {
-        SurfaceExpr::Call {
-            func, module, args, ..
-        } => {
-            let call_name = module
-                .as_ref()
-                .map_or_else(|| func.to_string(), |module| format!("{module}::{func}"));
-            function_names.contains(&call_name)
-                || function_names.contains(func.as_ref())
-                || args
-                    .iter()
-                    .any(|arg| expr_contains_user_fn_call(arg, function_names))
-        }
-        SurfaceExpr::Unary { operand, .. } | SurfaceExpr::FieldAccess { base: operand, .. } => {
-            expr_contains_user_fn_call(operand, function_names)
-        }
-        SurfaceExpr::IndexAccess { base, index, .. }
-        | SurfaceExpr::Binary {
-            left: base,
-            right: index,
-            ..
-        } => {
-            expr_contains_user_fn_call(base, function_names)
-                || expr_contains_user_fn_call(index, function_names)
-        }
-        SurfaceExpr::InterfaceMethodCall { argument, .. } => {
-            expr_contains_user_fn_call(argument, function_names)
-        }
-        SurfaceExpr::Match {
-            scrutinee, arms, ..
-        } => {
-            expr_contains_user_fn_call(scrutinee, function_names)
-                || arms
-                    .iter()
-                    .any(|arm| expr_contains_user_fn_call(&arm.body, function_names))
-        }
-        SurfaceExpr::IfLet {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expr_contains_user_fn_call(expr, function_names)
-                || expr_contains_user_fn_call(then_branch, function_names)
-                || expr_contains_user_fn_call(else_branch, function_names)
-        }
-        SurfaceExpr::Constructor {
-            fields, payload, ..
-        } => {
-            fields
-                .iter()
-                .any(|(_, value)| expr_contains_user_fn_call(value, function_names))
-                || match payload {
-                    SurfaceConstructorPayload::Unit => false,
-                    SurfaceConstructorPayload::Record(fields) => fields
-                        .iter()
-                        .any(|(_, value)| expr_contains_user_fn_call(value, function_names)),
-                    SurfaceConstructorPayload::Tuple(items) => items
-                        .iter()
-                        .any(|item| expr_contains_user_fn_call(item, function_names)),
-                }
-        }
-        SurfaceExpr::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expr_contains_user_fn_call(condition, function_names)
-                || expr_contains_user_fn_call(then_branch, function_names)
-                || else_branch.as_deref().is_some_and(|else_branch| {
-                    expr_contains_user_fn_call(else_branch, function_names)
-                })
-        }
-        SurfaceExpr::Block {
-            statements,
-            tail_expr,
-            ..
-        } => {
-            statements.iter().any(|statement| match statement {
-                ash_parser::surface::BlockStmt::Let { expr, .. } => {
-                    expr_contains_user_fn_call(expr, function_names)
-                }
-            }) || tail_expr
-                .as_deref()
-                .is_some_and(|tail_expr| expr_contains_user_fn_call(tail_expr, function_names))
-        }
-        SurfaceExpr::Literal(_)
-        | SurfaceExpr::Variable(_)
-        | SurfaceExpr::Policy(_)
-        | SurfaceExpr::CheckObligation { .. }
-        | SurfaceExpr::Panic { .. } => false,
-        | SurfaceExpr::FnDef { .. } | SurfaceExpr::FnApply { .. } => false,
-    }
-}
-
 fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> {
     match ty {
         SurfaceType::Name(name) => match name.as_ref() {
@@ -1239,551 +866,6 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
         }
     }
 }
-
-fn inline_imported_calls_in_workflow(
-    workflow: &mut SurfaceWorkflow,
-    imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> Result<(), EngineError> {
-    match workflow {
-        SurfaceWorkflow::Observe { continuation, .. }
-        | SurfaceWorkflow::Propose { continuation, .. }
-        | SurfaceWorkflow::Check { continuation, .. }
-        | SurfaceWorkflow::Set { continuation, .. }
-        | SurfaceWorkflow::Send { continuation, .. } => {
-            if let Some(continuation) = continuation {
-                inline_imported_calls_in_workflow(continuation, imported_callables)?;
-            }
-        }
-        SurfaceWorkflow::Orient {
-            expr, continuation, ..
-        }
-        | SurfaceWorkflow::Let {
-            expr, continuation, ..
-        } => {
-            inline_imported_calls_in_expr(expr, imported_callables)?;
-            if let Some(continuation) = continuation {
-                inline_imported_calls_in_workflow(continuation, imported_callables)?;
-            }
-        }
-        SurfaceWorkflow::Decide {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            inline_imported_calls_in_expr(expr, imported_callables)?;
-            inline_imported_calls_in_workflow(then_branch, imported_callables)?;
-            if let Some(else_branch) = else_branch {
-                inline_imported_calls_in_workflow(else_branch, imported_callables)?;
-            }
-        }
-        SurfaceWorkflow::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            inline_imported_calls_in_expr(condition, imported_callables)?;
-            inline_imported_calls_in_workflow(then_branch, imported_callables)?;
-            if let Some(else_branch) = else_branch {
-                inline_imported_calls_in_workflow(else_branch, imported_callables)?;
-            }
-        }
-        SurfaceWorkflow::For {
-            collection, body, ..
-        } => {
-            inline_imported_calls_in_expr(collection, imported_callables)?;
-            inline_imported_calls_in_workflow(body, imported_callables)?;
-        }
-        SurfaceWorkflow::With { body, .. } | SurfaceWorkflow::Must { body, .. } => {
-            inline_imported_calls_in_workflow(body, imported_callables)?;
-        }
-        SurfaceWorkflow::Maybe {
-            primary, fallback, ..
-        } => {
-            inline_imported_calls_in_workflow(primary, imported_callables)?;
-            inline_imported_calls_in_workflow(fallback, imported_callables)?;
-        }
-        SurfaceWorkflow::Seq { first, second, .. } => {
-            inline_imported_calls_in_workflow(first, imported_callables)?;
-            inline_imported_calls_in_workflow(second, imported_callables)?;
-        }
-        SurfaceWorkflow::Ret { expr, .. } | SurfaceWorkflow::Resume { expr, .. } => {
-            inline_imported_calls_in_expr(expr, imported_callables)?;
-        }
-        SurfaceWorkflow::Act { guard, .. } => {
-            if let Some(ash_parser::surface::Guard::Pred(predicate)) = guard {
-                for arg in &mut predicate.args {
-                    inline_imported_calls_in_expr(arg, imported_callables)?;
-                }
-            }
-        }
-        SurfaceWorkflow::Receive { arms, .. } => {
-            for arm in arms {
-                if let Some(guard) = &mut arm.guard {
-                    inline_imported_calls_in_expr(guard, imported_callables)?;
-                }
-                inline_imported_calls_in_workflow(&mut arm.body, imported_callables)?;
-            }
-        }
-        SurfaceWorkflow::Yield { expr, arms, .. } => {
-            inline_imported_calls_in_expr(expr, imported_callables)?;
-            for arm in arms {
-                inline_imported_calls_in_workflow(&mut arm.body, imported_callables)?;
-            }
-        }
-        SurfaceWorkflow::Done { .. } | SurfaceWorkflow::Oblige { .. } => {}
-    }
-
-    Ok(())
-}
-
-fn inline_imported_calls_in_expr(
-    expr: &mut SurfaceExpr,
-    imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> Result<(), EngineError> {
-    match expr {
-        SurfaceExpr::Literal(_)
-        | SurfaceExpr::Variable(_)
-        | SurfaceExpr::CheckObligation { .. }
-        | SurfaceExpr::Panic { .. }
-        | SurfaceExpr::FnDef { .. }
-        | SurfaceExpr::FnApply { .. } => {}
-        SurfaceExpr::FieldAccess { base, .. } | SurfaceExpr::Unary { operand: base, .. } => {
-            inline_imported_calls_in_expr(base, imported_callables)?;
-        }
-        SurfaceExpr::IndexAccess { base, index, .. } => {
-            inline_imported_calls_in_expr(base, imported_callables)?;
-            inline_imported_calls_in_expr(index, imported_callables)?;
-        }
-        SurfaceExpr::Binary { left, right, .. } => {
-            inline_imported_calls_in_expr(left, imported_callables)?;
-            inline_imported_calls_in_expr(right, imported_callables)?;
-        }
-        SurfaceExpr::Call { func, args, .. } => {
-            for arg in args.iter_mut() {
-                inline_imported_calls_in_expr(arg, imported_callables)?;
-            }
-            if let Some(callable) = imported_callables.get(func.as_ref()) {
-                let mut replacement = instantiate_inline_callable(callable, args)?;
-                inline_imported_calls_in_expr(&mut replacement, imported_callables)?;
-                *expr = replacement;
-            }
-        }
-        SurfaceExpr::InterfaceMethodCall { argument, .. } => {
-            inline_imported_calls_in_expr(argument, imported_callables)?;
-        }
-        SurfaceExpr::Match {
-            scrutinee, arms, ..
-        } => {
-            inline_imported_calls_in_expr(scrutinee, imported_callables)?;
-            for arm in arms {
-                inline_imported_calls_in_expr(&mut arm.body, imported_callables)?;
-            }
-        }
-        SurfaceExpr::Policy(policy) => {
-            inline_imported_calls_in_policy_expr(policy, imported_callables)?;
-        }
-        SurfaceExpr::IfLet {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            inline_imported_calls_in_expr(expr, imported_callables)?;
-            inline_imported_calls_in_expr(then_branch, imported_callables)?;
-            inline_imported_calls_in_expr(else_branch, imported_callables)?;
-        }
-        SurfaceExpr::Constructor {
-            fields, payload, ..
-        } => {
-            for (_, field_expr) in fields {
-                inline_imported_calls_in_expr(field_expr, imported_callables)?;
-            }
-            match payload {
-                SurfaceConstructorPayload::Unit => {}
-                SurfaceConstructorPayload::Record(fields) => {
-                    for (_, field_expr) in fields {
-                        inline_imported_calls_in_expr(field_expr, imported_callables)?;
-                    }
-                }
-                SurfaceConstructorPayload::Tuple(items) => {
-                    for item in items {
-                        inline_imported_calls_in_expr(item, imported_callables)?;
-                    }
-                }
-            }
-        }
-        SurfaceExpr::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            inline_imported_calls_in_expr(condition, imported_callables)?;
-            inline_imported_calls_in_expr(then_branch, imported_callables)?;
-            if let Some(e) = else_branch {
-                inline_imported_calls_in_expr(e, imported_callables)?;
-            }
-        }
-        SurfaceExpr::Block {
-            statements,
-            tail_expr,
-            ..
-        } => {
-            for stmt in statements {
-                let ash_parser::surface::BlockStmt::Let { expr, .. } = stmt;
-                inline_imported_calls_in_expr(expr, imported_callables)?;
-            }
-            if let Some(e) = tail_expr {
-                inline_imported_calls_in_expr(e, imported_callables)?;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn inline_imported_calls_in_policy_expr(
-    policy: &mut SurfacePolicyExpr,
-    imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> Result<(), EngineError> {
-    match policy {
-        SurfacePolicyExpr::Var(_) => {}
-        SurfacePolicyExpr::And(items)
-        | SurfacePolicyExpr::Or(items)
-        | SurfacePolicyExpr::Sequential(items)
-        | SurfacePolicyExpr::Concurrent(items) => {
-            for item in items {
-                inline_imported_calls_in_policy_expr(item, imported_callables)?;
-            }
-        }
-        SurfacePolicyExpr::Not(item) => {
-            inline_imported_calls_in_policy_expr(item, imported_callables)?;
-        }
-        SurfacePolicyExpr::Implies(left, right) => {
-            inline_imported_calls_in_policy_expr(left, imported_callables)?;
-            inline_imported_calls_in_policy_expr(right, imported_callables)?;
-        }
-        SurfacePolicyExpr::ForAll { items, body, .. }
-        | SurfacePolicyExpr::Exists { items, body, .. } => {
-            inline_imported_calls_in_expr(items, imported_callables)?;
-            inline_imported_calls_in_policy_expr(body, imported_callables)?;
-        }
-        SurfacePolicyExpr::MethodCall { receiver, args, .. } => {
-            inline_imported_calls_in_policy_expr(receiver, imported_callables)?;
-            for arg in args {
-                inline_imported_calls_in_expr(arg, imported_callables)?;
-            }
-        }
-        SurfacePolicyExpr::Call { args, .. } => {
-            for arg in args {
-                inline_imported_calls_in_expr(arg, imported_callables)?;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn instantiate_inline_callable(
-    callable: &module_loader::InlineCallable,
-    args: &[SurfaceExpr],
-) -> Result<SurfaceExpr, EngineError> {
-    if callable.params.len() != args.len() {
-        return Err(EngineError::Parse(format!(
-            "imported callable expected {} arguments, got {}",
-            callable.params.len(),
-            args.len()
-        )));
-    }
-
-    let substitutions = callable
-        .params
-        .iter()
-        .cloned()
-        .zip(args.iter().cloned())
-        .collect::<HashMap<_, _>>();
-    Ok(substitute_expr(
-        &callable.body,
-        &substitutions,
-        &HashSet::new(),
-    ))
-}
-
-#[allow(clippy::too_many_lines)]
-fn substitute_expr(
-    expr: &SurfaceExpr,
-    substitutions: &HashMap<String, SurfaceExpr>,
-    bound_names: &HashSet<String>,
-) -> SurfaceExpr {
-    match expr {
-        SurfaceExpr::Literal(literal) => SurfaceExpr::Literal(literal.clone()),
-        SurfaceExpr::Variable(name) => {
-            if bound_names.contains(name.as_ref()) {
-                SurfaceExpr::Variable(name.clone())
-            } else {
-                substitutions
-                    .get(name.as_ref())
-                    .cloned()
-                    .unwrap_or_else(|| SurfaceExpr::Variable(name.clone()))
-            }
-        }
-        SurfaceExpr::FieldAccess { base, field, span } => SurfaceExpr::FieldAccess {
-            base: Box::new(substitute_expr(base, substitutions, bound_names)),
-            field: field.clone(),
-            span: *span,
-        },
-        SurfaceExpr::IndexAccess { base, index, span } => SurfaceExpr::IndexAccess {
-            base: Box::new(substitute_expr(base, substitutions, bound_names)),
-            index: Box::new(substitute_expr(index, substitutions, bound_names)),
-            span: *span,
-        },
-        SurfaceExpr::Unary { op, operand, span } => SurfaceExpr::Unary {
-            op: *op,
-            operand: Box::new(substitute_expr(operand, substitutions, bound_names)),
-            span: *span,
-        },
-        SurfaceExpr::Binary {
-            op,
-            left,
-            right,
-            span,
-        } => SurfaceExpr::Binary {
-            op: *op,
-            left: Box::new(substitute_expr(left, substitutions, bound_names)),
-            right: Box::new(substitute_expr(right, substitutions, bound_names)),
-            span: *span,
-        },
-        SurfaceExpr::Call {
-            func,
-            module,
-            args,
-            span,
-        } => SurfaceExpr::Call {
-            func: func.clone(),
-            module: module.clone(),
-            args: args
-                .iter()
-                .map(|arg| substitute_expr(arg, substitutions, bound_names))
-                .collect(),
-            span: *span,
-        },
-        SurfaceExpr::InterfaceMethodCall {
-            interface,
-            method,
-            argument,
-            span,
-        } => SurfaceExpr::InterfaceMethodCall {
-            interface: interface.clone(),
-            method: method.clone(),
-            argument: Box::new(substitute_expr(argument, substitutions, bound_names)),
-            span: *span,
-        },
-        SurfaceExpr::Match {
-            scrutinee,
-            arms,
-            span,
-        } => SurfaceExpr::Match {
-            scrutinee: Box::new(substitute_expr(scrutinee, substitutions, bound_names)),
-            arms: arms
-                .iter()
-                .map(|arm| substitute_match_arm(arm, substitutions, bound_names))
-                .collect(),
-            span: *span,
-        },
-        SurfaceExpr::Policy(policy) => SurfaceExpr::Policy(policy.clone()),
-        SurfaceExpr::IfLet {
-            pattern,
-            expr,
-            then_branch,
-            else_branch,
-            span,
-        } => {
-            let mut then_bound = bound_names.clone();
-            collect_pattern_bindings(pattern, &mut then_bound);
-            SurfaceExpr::IfLet {
-                pattern: pattern.clone(),
-                expr: Box::new(substitute_expr(expr, substitutions, bound_names)),
-                then_branch: Box::new(substitute_expr(then_branch, substitutions, &then_bound)),
-                else_branch: Box::new(substitute_expr(else_branch, substitutions, bound_names)),
-                span: *span,
-            }
-        }
-        SurfaceExpr::CheckObligation { obligation, span } => SurfaceExpr::CheckObligation {
-            obligation: obligation.clone(),
-            span: *span,
-        },
-        SurfaceExpr::Constructor {
-            name,
-            fields,
-            payload,
-            span,
-        } => SurfaceExpr::Constructor {
-            name: name.clone(),
-            fields: fields
-                .iter()
-                .map(|(field, field_expr)| {
-                    (
-                        field.clone(),
-                        substitute_expr(field_expr, substitutions, bound_names),
-                    )
-                })
-                .collect(),
-            payload: match payload {
-                ash_parser::surface::ConstructorPayload::Unit => {
-                    ash_parser::surface::ConstructorPayload::Unit
-                }
-                ash_parser::surface::ConstructorPayload::Record(fields) => {
-                    ash_parser::surface::ConstructorPayload::Record(
-                        fields
-                            .iter()
-                            .map(|(field, field_expr)| {
-                                (
-                                    field.clone(),
-                                    substitute_expr(field_expr, substitutions, bound_names),
-                                )
-                            })
-                            .collect(),
-                    )
-                }
-                ash_parser::surface::ConstructorPayload::Tuple(items) => {
-                    ash_parser::surface::ConstructorPayload::Tuple(
-                        items
-                            .iter()
-                            .map(|item| substitute_expr(item, substitutions, bound_names))
-                            .collect(),
-                    )
-                }
-            },
-            span: *span,
-        },
-        SurfaceExpr::If {
-            condition,
-            then_branch,
-            else_branch,
-            span,
-        } => SurfaceExpr::If {
-            condition: Box::new(substitute_expr(condition, substitutions, bound_names)),
-            then_branch: Box::new(substitute_expr(then_branch, substitutions, bound_names)),
-            else_branch: else_branch
-                .as_ref()
-                .map(|e| Box::new(substitute_expr(e, substitutions, bound_names))),
-            span: *span,
-        },
-        SurfaceExpr::Panic { message, span } => SurfaceExpr::Panic {
-            message: message.clone(),
-            span: *span,
-        },
-        SurfaceExpr::Block {
-            statements,
-            tail_expr,
-            span,
-        } => SurfaceExpr::Block {
-            statements: statements
-                .iter()
-                .map(|stmt| match stmt {
-                    ash_parser::surface::BlockStmt::Let {
-                        pattern,
-                        expr,
-                        span,
-                    } => ash_parser::surface::BlockStmt::Let {
-                        pattern: pattern.clone(),
-                        expr: substitute_expr(expr, substitutions, bound_names),
-                        span: *span,
-                    },
-                })
-                .collect(),
-            tail_expr: tail_expr
-                .as_ref()
-                .map(|e| Box::new(substitute_expr(e, substitutions, bound_names))),
-            span: *span,
-        },
-        SurfaceExpr::FnDef {
-            params,
-            return_type,
-            body,
-            span,
-        } => SurfaceExpr::FnDef {
-            params: params.clone(),
-            return_type: return_type.clone(),
-            body: Box::new(substitute_expr(body, substitutions, bound_names)),
-            span: *span,
-        },
-        SurfaceExpr::FnApply { func, args, span } => SurfaceExpr::FnApply {
-            func: Box::new(substitute_expr(func, substitutions, bound_names)),
-            args: args
-                .iter()
-                .map(|e| substitute_expr(e, substitutions, bound_names))
-                .collect(),
-            span: *span,
-        },
-    }
-}
-
-fn substitute_match_arm(
-    arm: &SurfaceMatchArm,
-    substitutions: &HashMap<String, SurfaceExpr>,
-    bound_names: &HashSet<String>,
-) -> SurfaceMatchArm {
-    let mut arm_bound = bound_names.clone();
-    collect_pattern_bindings(&arm.pattern, &mut arm_bound);
-    SurfaceMatchArm {
-        pattern: arm.pattern.clone(),
-        body: Box::new(substitute_expr(&arm.body, substitutions, &arm_bound)),
-        span: arm.span,
-    }
-}
-
-fn collect_pattern_bindings(pattern: &SurfacePattern, bound_names: &mut HashSet<String>) {
-    match pattern {
-        SurfacePattern::Variable(name) => {
-            bound_names.insert(name.to_string());
-        }
-        SurfacePattern::Wildcard | SurfacePattern::Literal(_) => {}
-        SurfacePattern::Tuple(items) => {
-            for item in items {
-                collect_pattern_bindings(item, bound_names);
-            }
-        }
-        SurfacePattern::Record(fields) => {
-            for (_, pattern) in fields {
-                collect_pattern_bindings(pattern, bound_names);
-            }
-        }
-        SurfacePattern::List { elements, rest } => {
-            for element in elements {
-                collect_pattern_bindings(element, bound_names);
-            }
-            if let Some(rest) = rest {
-                bound_names.insert(rest.to_string());
-            }
-        }
-        SurfacePattern::Variant {
-            fields, payload, ..
-        } => {
-            if let Some(fields) = fields {
-                for (_, pattern) in fields {
-                    collect_pattern_bindings(pattern, bound_names);
-                }
-            }
-            match payload {
-                ash_parser::surface::VariantPatternPayload::Unit => {}
-                ash_parser::surface::VariantPatternPayload::Record(fields) => {
-                    for (_, pattern) in fields {
-                        collect_pattern_bindings(pattern, bound_names);
-                    }
-                }
-                ash_parser::surface::VariantPatternPayload::Tuple(items) => {
-                    for item in items {
-                        collect_pattern_bindings(item, bound_names);
-                    }
-                }
-            }
-        }
-    }
-}
-
 impl Default for Engine {
     /// Creates a default engine with standard configuration.
     ///
@@ -2045,6 +1127,41 @@ impl EngineBuilder {
         }
         self
     }
+}
+
+/// Convert imported callables to Value::Closure for runtime binding.
+/// Each callable body is lowered from surface to core Expr, then wrapped in a closure.
+fn build_imported_closures(
+    imported_callables: &HashMap<String, module_loader::InlineCallable>,
+) -> (HashMap<String, Value>, HashMap<String, usize>) {
+    let mut closures = HashMap::new();
+    let mut param_counts = HashMap::new();
+    for (name, callable) in imported_callables {
+        // Lower surface body to core Expr
+        let body_expr = match ash_parser::lower_expr(&callable.body) {
+            Ok(expr) => expr,
+            Err(e) => {
+                eprintln!(
+                    "warning: failed to lower imported callable '{}': {}",
+                    name, e
+                );
+                continue;
+            }
+        };
+        let env_frame = std::sync::Arc::new(ash_core::env_frame::EnvFrame::new());
+        let params: Vec<(String, Option<String>)> =
+            callable.params.iter().map(|p| (p.clone(), None)).collect();
+        param_counts.insert(name.clone(), params.len());
+        closures.insert(
+            name.clone(),
+            Value::Closure {
+                params,
+                body: Box::new(body_expr),
+                env: env_frame,
+            },
+        );
+    }
+    (closures, param_counts)
 }
 
 #[cfg(test)]

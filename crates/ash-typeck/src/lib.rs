@@ -1906,7 +1906,17 @@ pub fn type_check_workflow_def(
 pub fn type_check_program(
     program: &ash_parser::surface::Program,
 ) -> Result<TypeCheckResult, TypeCheckError> {
-    let mut env = TypeEnv::with_builtin_types();
+    let env = TypeEnv::with_builtin_types();
+    type_check_program_in_env(&env, program)
+}
+
+/// Type check a program with a pre-populated type environment.
+/// Used when imported callable signatures need to be available during checking.
+pub fn type_check_program_in_env(
+    initial_env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+) -> Result<TypeCheckResult, TypeCheckError> {
+    let mut env = initial_env.clone();
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::Interface(interface) = definition {
@@ -1963,6 +1973,17 @@ pub fn type_check_workflow(
     workflow: &ash_parser::surface::Workflow,
     param_bindings: Option<&[(String, Type)]>,
 ) -> Result<TypeCheckResult, TypeCheckError> {
+    type_check_workflow_in_env(None, workflow, param_bindings)
+}
+
+/// Type check a workflow with optional pre-populated type environment.
+/// When `type_env` is provided, imported callable bindings are used for
+/// both name resolution and constraint generation.
+pub fn type_check_workflow_in_env(
+    type_env: Option<&TypeEnv>,
+    workflow: &ash_parser::surface::Workflow,
+    param_bindings: Option<&[(String, Type)]>,
+) -> Result<TypeCheckResult, TypeCheckError> {
     reject_unsupported_mvp_workflow_features(workflow)?;
 
     // Step 1: Name resolution
@@ -1972,6 +1993,13 @@ pub fn type_check_workflow(
     if let Some(params) = param_bindings {
         for (name, _ty) in params {
             resolver.bind(name.clone());
+        }
+    }
+
+    // Inject imported callable names into the resolver
+    if let Some(env) = type_env {
+        for name in env.variable_names() {
+            resolver.bind(name);
         }
     }
 

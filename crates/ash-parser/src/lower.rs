@@ -1191,15 +1191,9 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         }),
 
         Expr::Call {
-            func,
-            module,
-            args,
-            ..
+            func, module, args, ..
         } => {
-            let lowered_args = args
-                .iter()
-                .map(lower_expr)
-                .collect::<Result<Vec<_>, _>>()?;
+            let lowered_args = args.iter().map(lower_expr).collect::<Result<Vec<_>, _>>()?;
 
             if module.is_none() && !BUILTIN_FUNCTIONS.contains(&func.as_ref()) {
                 // User-defined function call: emit FnApply
@@ -1289,7 +1283,12 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         Expr::Panic { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
         Expr::Block { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
 
-        Expr::FnDef { params, return_type, body, .. } => {
+        Expr::FnDef {
+            params,
+            return_type,
+            body,
+            ..
+        } => {
             let core_params: Vec<(String, Option<String>)> = params
                 .iter()
                 .map(|(name, ty)| (name.to_string(), ty.as_ref().map(|t| t.to_string())))
@@ -1303,10 +1302,7 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         }
 
         Expr::FnApply { func, args, .. } => {
-            let lowered_args = args
-                .iter()
-                .map(lower_expr)
-                .collect::<Result<Vec<_>, _>>()?;
+            let lowered_args = args.iter().map(lower_expr).collect::<Result<Vec<_>, _>>()?;
             Ok(CoreExpr::FnApply {
                 func: Box::new(lower_expr(func)?),
                 args: lowered_args,

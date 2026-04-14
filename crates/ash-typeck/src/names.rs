@@ -693,6 +693,22 @@ impl NameResolver {
                     self.resolve_expr(e);
                 }
             }
+
+            Expr::FnDef { params, body, .. } => {
+                self.push_scope();
+                for (name, _ty) in params {
+                    self.bind(name.as_ref());
+                }
+                self.resolve_expr(body);
+                self.pop_scope();
+            }
+
+            Expr::FnApply { func, args, .. } => {
+                self.resolve_expr(func);
+                for arg in args {
+                    self.resolve_expr(arg);
+                }
+            }
         }
     }
 

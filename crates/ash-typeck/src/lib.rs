@@ -572,6 +572,20 @@ fn validate_interface_calls_in_expr(
             }
             Ok(())
         }
+        ash_parser::surface::Expr::FnDef { body, params, .. } => {
+            let mut fn_env = env.clone();
+            for (name, _ty) in params {
+                fn_env.bind_variable(name.as_ref(), Type::Var(TypeVar::fresh()));
+            }
+            validate_interface_calls_in_expr(&fn_env, body)
+        }
+        ash_parser::surface::Expr::FnApply { func, args, .. } => {
+            validate_interface_calls_in_expr(env, func)?;
+            for arg in args {
+                validate_interface_calls_in_expr(env, arg)?;
+            }
+            Ok(())
+        }
     }
 }
 
@@ -1656,6 +1670,20 @@ fn validate_fn_call_preconditions_expr(
         | ash_parser::surface::Expr::Policy(_)
         | ash_parser::surface::Expr::CheckObligation { .. }
         | ash_parser::surface::Expr::Panic { .. } => Ok(()),
+        ash_parser::surface::Expr::FnDef { body, params, .. } => {
+            let mut fn_env = env.clone();
+            for (name, _ty) in params {
+                fn_env.bind_variable(name.as_ref(), Type::Var(TypeVar::fresh()));
+            }
+            validate_fn_call_preconditions_expr(&fn_env, body, facts, assumptions)
+        }
+        ash_parser::surface::Expr::FnApply { func, args, .. } => {
+            validate_fn_call_preconditions_expr(env, func, facts, assumptions)?;
+            for arg in args {
+                validate_fn_call_preconditions_expr(env, arg, facts, assumptions)?;
+            }
+            Ok(())
+        }
     }
 }
 

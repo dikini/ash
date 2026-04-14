@@ -249,6 +249,19 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
                 check_purity_recursive(&block_env, tail, errors);
             }
         }
+        Expr::FnDef { params, body, .. } => {
+            let mut fn_env = env.extend();
+            for (name, _ty) in params {
+                fn_env.bind_variable(name.as_ref(), Type::Var(crate::types::TypeVar::fresh()));
+            }
+            check_purity_recursive(&fn_env, body, errors);
+        }
+        Expr::FnApply { func, args, .. } => {
+            check_purity_recursive(env, func, errors);
+            for arg in args {
+                check_purity_recursive(env, arg, errors);
+            }
+        }
     }
 }
 

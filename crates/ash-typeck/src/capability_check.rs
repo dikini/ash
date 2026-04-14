@@ -776,6 +776,19 @@ impl CapabilityChecker {
                 }
                 Ok(())
             }
+
+            Expr::FnDef { params, body, .. } => {
+                let _ = params; // params don't involve capabilities
+                self.verify_expr(body)
+            }
+
+            Expr::FnApply { func, args, .. } => {
+                self.verify_expr(func)?;
+                for arg in args {
+                    self.verify_expr(arg)?;
+                }
+                Ok(())
+            }
         }
     }
 

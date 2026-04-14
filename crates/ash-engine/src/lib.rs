@@ -897,6 +897,8 @@ fn expr_is_supported_by_pure_runtime(expr: &SurfaceExpr) -> bool {
         SurfaceExpr::Literal(_)
         | SurfaceExpr::Variable(_)
         | SurfaceExpr::Panic { .. }
+        | SurfaceExpr::FnDef { .. }
+        | SurfaceExpr::FnApply { .. }
         | SurfaceExpr::CheckObligation { .. } => true,
         SurfaceExpr::FieldAccess { base, .. } | SurfaceExpr::Unary { operand: base, .. } => {
             expr_is_supported_by_pure_runtime(base)
@@ -1176,6 +1178,7 @@ fn expr_contains_user_fn_call(expr: &SurfaceExpr, function_names: &HashSet<Strin
         | SurfaceExpr::Policy(_)
         | SurfaceExpr::CheckObligation { .. }
         | SurfaceExpr::Panic { .. } => false,
+        | SurfaceExpr::FnDef { .. } | SurfaceExpr::FnApply { .. } => false,
     }
 }
 
@@ -1343,7 +1346,9 @@ fn inline_imported_calls_in_expr(
         SurfaceExpr::Literal(_)
         | SurfaceExpr::Variable(_)
         | SurfaceExpr::CheckObligation { .. }
-        | SurfaceExpr::Panic { .. } => {}
+        | SurfaceExpr::Panic { .. }
+        | SurfaceExpr::FnDef { .. }
+        | SurfaceExpr::FnApply { .. } => {}
         SurfaceExpr::FieldAccess { base, .. } | SurfaceExpr::Unary { operand: base, .. } => {
             inline_imported_calls_in_expr(base, imported_callables)?;
         }
@@ -1692,6 +1697,25 @@ fn substitute_expr(
             tail_expr: tail_expr
                 .as_ref()
                 .map(|e| Box::new(substitute_expr(e, substitutions, bound_names))),
+            span: *span,
+        },
+        SurfaceExpr::FnDef {
+            params,
+            return_type,
+            body,
+            span,
+        } => SurfaceExpr::FnDef {
+            params: params.clone(),
+            return_type: return_type.clone(),
+            body: Box::new(substitute_expr(body, substitutions, bound_names)),
+            span: *span,
+        },
+        SurfaceExpr::FnApply { func, args, span } => SurfaceExpr::FnApply {
+            func: Box::new(substitute_expr(func, substitutions, bound_names)),
+            args: args
+                .iter()
+                .map(|e| substitute_expr(e, substitutions, bound_names))
+                .collect(),
             span: *span,
         },
     }

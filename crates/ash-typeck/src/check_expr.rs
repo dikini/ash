@@ -430,6 +430,62 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 },
             }
         }
+
+        Expr::FnDef {
+            params, body, span: _, ..
+        } => {
+            // Anonymous function definition: check the body with params in scope
+            let mut fn_env = env.clone();
+            let mut param_types: Vec<Type> = Vec::new();
+            for (name, _ty_ann) in params {
+                let param_ty = Type::Var(TypeVar::fresh());
+                param_types.push(param_ty.clone());
+                fn_env.bind_variable(name.as_ref(), param_ty);
+            }
+            let body_result = check_expr(&fn_env, body);
+            let ret_ty = body_result.substitution.apply(&body_result.ty);
+            // Closures are pure, so use Type::Fn
+            let fn_ty = Type::Fn(param_types, Box::new(ret_ty));
+            CheckResult {
+                ty: fn_ty,
+                substitution: body_result.substitution,
+                errors: body_result.errors,
+            }
+        }
+
+        Expr::FnApply { func, args, span } => {
+            let func_result = check_expr(env, func);
+            let mut errors = func_result.errors.clone();
+            let mut substitution = func_result.substitution.clone();
+            let mut arg_types: Vec<Type> = Vec::new();
+            for arg in args {
+                let arg_result = check_expr(env, arg);
+                substitution = substitution.compose(&arg_result.substitution);
+                errors.extend(arg_result.errors.clone());
+                arg_types.push(substitution.apply(&arg_result.ty));
+            }
+
+            if !errors.is_empty() {
+                return CheckResult {
+                    ty: Type::Var(TypeVar::fresh()),
+                    substitution,
+                    errors,
+                };
+            }
+
+            let func_ty = substitution.apply(&func_result.ty);
+            match func_ty.instantiate_fn_call(&arg_types) {
+                Some(Ok(ret_ty)) => CheckResult {
+                    ty: ret_ty,
+                    substitution,
+                    errors: Vec::new(),
+                },
+                _ => CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: format!("FnApply: cannot apply args to type {func_ty}"),
+                    span: *span,
+                }),
+            }
+        }
     }
 }
 
@@ -452,6 +508,8 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::If { span, .. } => *span,
         Expr::Panic { span, .. } => *span,
         Expr::Block { span, .. } => *span,
+        Expr::FnDef { span, .. } => *span,
+        Expr::FnApply { span, .. } => *span,
     }
 }
 

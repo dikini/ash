@@ -212,6 +212,31 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::FnDef {
+            params,
+            return_type,
+            body,
+            ..
+        } => {
+            let mut out = String::from("FnDef {\n");
+            push_field(&mut out, 2, "params", &format!("{params:?}"));
+            push_optional_debug_field(&mut out, 2, "return_type", return_type.as_ref());
+            push_field(&mut out, 2, "body", &render_expr(body));
+            out.push('}');
+            out
+        }
+        Expr::FnApply { func, args, .. } => {
+            let mut out = String::from("FnApply {\n");
+            push_field(&mut out, 2, "func", &render_expr(func));
+            push_field(
+                &mut out,
+                2,
+                "args",
+                &render_list(args.iter().map(|a| render_expr(a))),
+            );
+            out.push('}');
+            out
+        }
     }
 }
 

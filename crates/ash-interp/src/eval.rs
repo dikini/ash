@@ -120,7 +120,42 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 .iter()
                 .map(|arg| eval_expr(arg, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
-            eval_function_call(func, &args)
+
+            // First try built-in function dispatch
+            match eval_function_call(func, &args) {
+                Ok(value) => Ok(value),
+                Err(EvalError::UnknownFunction(_)) => {
+                    // Not a built-in: try looking up a closure in the context
+                    // (transition-period fallback until lowering consistently
+                    // produces FnApply for all user-defined calls)
+                    match ctx.get(func) {
+                        Some(Value::Closure {
+                            params,
+                            body,
+                            env,
+                        }) => {
+                            if args.len() != params.len() {
+                                return Err(EvalError::WrongArity {
+                                    expected: params.len(),
+                                    actual: args.len(),
+                                });
+                            }
+                            let mut call_env =
+                                ash_core::env_frame::EnvFrame::with_parent(env.clone());
+                            for ((name, _ty), val) in params.iter().zip(args) {
+                                call_env.insert(name.clone(), val);
+                            }
+                            let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+                            eval_expr(body, &call_ctx)
+                        }
+                        Some(other) => Err(EvalError::NotCallable {
+                            value: other.clone(),
+                        }),
+                        None => Err(EvalError::UndefinedVariable(func.clone())),
+                    }
+                }
+                Err(e) => Err(e),
+            }
         }
 
         Expr::InterfaceMethodCall {

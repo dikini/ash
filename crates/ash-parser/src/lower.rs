@@ -1143,6 +1143,23 @@ fn lower_yield_arms(
     }
 }
 
+/// Built-in function names that the interpreter handles via string dispatch in eval_function_call.
+/// Calls to these names emit `Expr::Call`; all other calls emit `Expr::FnApply`.
+pub const BUILTIN_FUNCTIONS: &[&str] = &[
+    "len",
+    "append",
+    "concat",
+    "keys",
+    "values",
+    "is_int",
+    "is_string",
+    "is_bool",
+    "is_list",
+    "is_record",
+    "is_null",
+    "record",
+];
+
 /// Lower a surface expression to core IR.
 pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
     match expr {
@@ -1173,10 +1190,31 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             right: Box::new(lower_expr(right)?),
         }),
 
-        Expr::Call { func, args, .. } => Ok(CoreExpr::Call {
-            func: func.to_string(),
-            arguments: args.iter().map(lower_expr).collect::<Result<Vec<_>, _>>()?,
-        }),
+        Expr::Call {
+            func,
+            module,
+            args,
+            ..
+        } => {
+            let lowered_args = args
+                .iter()
+                .map(lower_expr)
+                .collect::<Result<Vec<_>, _>>()?;
+
+            if module.is_none() && !BUILTIN_FUNCTIONS.contains(&func.as_ref()) {
+                // User-defined function call: emit FnApply
+                Ok(CoreExpr::FnApply {
+                    func: Box::new(CoreExpr::Variable(func.to_string())),
+                    args: lowered_args,
+                })
+            } else {
+                // Built-in or module-qualified call: keep existing Call behaviour
+                Ok(CoreExpr::Call {
+                    func: func.to_string(),
+                    arguments: lowered_args,
+                })
+            }
+        }
 
         Expr::InterfaceMethodCall { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
 
@@ -1250,7 +1288,53 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         Expr::If { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
         Expr::Panic { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
         Expr::Block { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
+
+        Expr::FnDef { params, return_type, body, .. } => {
+            let core_params: Vec<(String, Option<String>)> = params
+                .iter()
+                .map(|(name, ty)| (name.to_string(), ty.as_ref().map(|t| t.to_string())))
+                .collect();
+            let core_return_type = return_type.as_ref().map(|t| t.to_string());
+            Ok(CoreExpr::FnDef {
+                params: core_params,
+                return_type: core_return_type,
+                body: Box::new(lower_expr(body)?),
+            })
+        }
+
+        Expr::FnApply { func, args, .. } => {
+            let lowered_args = args
+                .iter()
+                .map(lower_expr)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(CoreExpr::FnApply {
+                func: Box::new(lower_expr(func)?),
+                args: lowered_args,
+            })
+        }
     }
+}
+
+/// Lower a surface FnDef expression to core FnDef.
+///
+/// Surface FnDef is introduced by the parser (TASK-556). This placeholder handles
+/// the core `Expr::FnDef` variant added in TASK-551 so that when the parser starts
+/// producing FnDef nodes the lowering path is already wired up.
+///
+/// # Parameters
+/// - `params`: Parameter list as `(name, optional_type_annotation)` pairs.
+/// - `return_type`: Optional return type annotation string.
+/// - `body`: The function body expression.
+pub fn lower_fn_def(
+    params: &[(String, Option<String>)],
+    return_type: &Option<String>,
+    body: &Expr,
+) -> Result<CoreExpr, LoweringError> {
+    Ok(CoreExpr::FnDef {
+        params: params.to_vec(),
+        return_type: return_type.clone(),
+        body: Box::new(lower_expr(body)?),
+    })
 }
 
 /// Lower a policy expression to core IR.

@@ -886,6 +886,28 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
+
+    /// Anonymous function definition (closure). SPEC-031 §5.1
+    FnDef {
+        /// Parameters as (name, optional type annotation) pairs
+        params: Vec<(Name, Option<Name>)>,
+        /// Optional return type annotation
+        return_type: Option<Name>,
+        /// Function body
+        body: Box<Expr>,
+        /// Source span
+        span: Span,
+    },
+
+    /// Function application. SPEC-031 §5.4
+    FnApply {
+        /// Expression evaluating to a function value
+        func: Box<Expr>,
+        /// Arguments to apply
+        args: Vec<Expr>,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Preserved constructor payload shape at the parser surface.
@@ -1295,6 +1317,8 @@ impl Spanned for Expr {
             Expr::If { span, .. } => *span,
             Expr::Panic { span, .. } => *span,
             Expr::Block { span, .. } => *span,
+            Expr::FnDef { span, .. } => *span,
+            Expr::FnApply { span, .. } => *span,
         }
     }
 }

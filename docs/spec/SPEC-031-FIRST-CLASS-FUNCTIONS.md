@@ -128,7 +128,9 @@ Closures respect the three-vertex model:
 | 4 | Passing `Type::Fun` closure through a container (e.g., `List`, record field) into pure context | **typecheck-time** | Container type inference propagates the `Type::Fun` element type. If a pure function expects `List<Type::Fn(...)>` and receives `List<Type::Fun(...)>`, unification fails. |
 | 5 | Sending a `Value::Closure` across process boundaries | **runtime error** | Serialization of `Value::Closure` panics (see §7). No static check for this case since process boundaries are dynamic. |
 
-If a case cannot be rejected statically (e.g., dynamic dispatch where types are unknown), the runtime raises `EvalError::NotCallable` or a new `EvalError::BoundaryViolation` when a `Type::Fun` closure is applied in a pure context.
+If a case cannot be rejected statically (e.g., dynamic dispatch where types are unknown), the runtime raises an error when a `Type::Fun` closure is applied in a pure context.
+
+**Implementation decision required at Phase E:** whether to use a single `EvalError::NotCallable` for both "non-closure value applied" and "closure applied across boundary", or to add a distinct `EvalError::BoundaryViolation` for the boundary case. The distinct variant provides clearer diagnostics and lets callers distinguish "wrong type of callable" from "callable crossed a forbidden boundary". Recommend `BoundaryViolation` as a separate variant.
 
 ## 5. IR Changes
 

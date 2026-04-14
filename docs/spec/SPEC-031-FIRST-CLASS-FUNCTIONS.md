@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Date:** 2026-04-14
-**Version:** 0.3
+**Version:** 0.4
 
 ## 1. Overview
 
@@ -77,10 +77,15 @@ When `add` resolves to a closure value, the application extends the closure's ca
 
 ### 4.5 Higher-Order Functions
 
+Local closures can be passed as arguments and returned from calls. All function values here are local let-bindings (not module-level functions, which are never reified as closures per §3.1):
+
 ```
-fn apply(f, x) { f(x) }
-fn double(n) { n * 2 }
-apply(double, 5)   -- evaluates to 10
+workflow demo {
+    let double = fn(n) { n * 2 };
+    let apply = fn(f, x) { f(x) };
+    let result = apply(double, 5);   -- evaluates to 10
+    ret result
+}
 ```
 
 ### 4.6 Recursion via Late Binding
@@ -112,6 +117,18 @@ Closures respect the three-vertex model:
 - **Closures defined inside `fn` context** have type `Type::Fn(params, ret)` (pure). They can only capture pure values.
 - **Closures defined inside `workflow` context** have type `Type::Fun(params, ret, effect)` where `effect >= Epistemic`. The type checker prevents passing these into pure `fn` parameters that expect `Type::Fn`.
 - This uses the **existing** `Type::Fn` / `Type::Fun` split in `ash_typeck` (see §6).
+
+**Prohibited escape cases and enforcement points:**
+
+| # | Escape case | Rejected at | Mechanism |
+|---|-------------|-------------|-----------|
+| 1 | Returning a `Type::Fun` closure from a workflow | **typecheck-time** | Workflow return type must not contain `Type::Fun`. The type checker rejects `Workflow::Ret { expr }` where `typeof(expr)` is or contains `Type::Fun`. |
+| 2 | Storing a `Type::Fun` closure in instance state | **typecheck-time** | Instance state fields typed `Type::Fn(...)` reject `Type::Fun(...)` values. Unification failure. |
+| 3 | Passing `Type::Fun` closure into pure `fn` parameter | **typecheck-time** | Parameter typed `Type::Fn(params, ret)` refuses `Type::Fun(params, ret, effect)` argument. Unification failure. |
+| 4 | Passing `Type::Fun` closure through a container (e.g., `List`, record field) into pure context | **typecheck-time** | Container type inference propagates the `Type::Fun` element type. If a pure function expects `List<Type::Fn(...)>` and receives `List<Type::Fun(...)>`, unification fails. |
+| 5 | Sending a `Value::Closure` across process boundaries | **runtime error** | Serialization of `Value::Closure` panics (see §7). No static check for this case since process boundaries are dynamic. |
+
+If a case cannot be rejected statically (e.g., dynamic dispatch where types are unknown), the runtime raises `EvalError::NotCallable` or a new `EvalError::BoundaryViolation` when a `Type::Fun` closure is applied in a pure context.
 
 ## 5. IR Changes
 
@@ -147,9 +164,9 @@ FnApply {
 ///
 /// ## Serialization
 ///
-/// NOT serializable. Closures are local-only values. Module-level functions
-/// are never reified as Value::Closure (see §3.1 reification rule).
-/// Serde implementation: use #[serde(skip)] or manual impl that panics.
+/// NOT serializable. Attempting to serialize produces a runtime error.
+/// No serialized form exists, not even a diagnostic stub.
+/// Module-level functions are never reified as Value::Closure (see §3.1).
 ///
 /// ## Send + Sync
 ///
@@ -320,13 +337,20 @@ The existing `Expr::Call` handler (`check_expr.rs:157-230`) is unchanged for bui
 
 ## 7. Serialization Policy
 
-**Rule: `Value::Closure` is never serialized.**
+**Rule: `Value::Closure` is not serializable.** Attempting to serialize a closure is a runtime error. There is no serialized form, not even a diagnostic stub.
 
-Implementation:
-- `Value` currently derives `Serialize, Deserialize`. After adding `Closure`, implement custom serde that:
-  - Serializes `Closure` variant as `{ "_type": "closure", "_note": "non-serializable" }` (stub for diagnostics)
-  - Deserialization of the stub produces an error at runtime
-- Module-level functions are never `Value::Closure` (reification rule §3.1), so they are unaffected.
+**Rationale:**
+- The body is an `Expr` AST node -- brittle across compiler versions
+- Captured values may include `Cap`, `Stream`, `InstanceAddr`, `ControlLink` -- runtime-local references
+- Closures sent across process boundaries would carry invalid references
+- Module-level functions are never `Value::Closure` (reification rule §3.1), so this only affects local closures
+
+**Implementation:**
+- `Value` currently derives `Serialize, Deserialize`. After adding `Closure`, replace the derive with a manual implementation that:
+  - Serializes all variants except `Closure` as before
+  - For `Closure`, calls `panic!("attempted to serialize Value::Closure; closures cannot cross process boundaries")` or returns `serde::ser::Error::custom(...)`
+  - Deserialization never produces `Closure` since no serialized form exists
+- This is consistent with the reification rule: module-level functions (the only functions that cross module boundaries) are referenced by name, not by value
 
 ## 8. Parser Design for Local-Only fn Expressions
 
@@ -359,6 +383,31 @@ Rather than threading context through the parser (which would require changing `
 ### 8.3 Closure Syntax
 
 `|params| => expr` is parsed as a new expression form in `parse_expr.rs`. It immediately desugars to `Expr::FnDef { params, body }` during parsing (no new surface AST node needed).
+
+### 8.4 Named Local Functions: Parse and Desugar Path
+
+Named local functions (`fn name(params) { body }`) appear in two positions: workflow bodies and block statements. The surface AST and lowering handle each as follows.
+
+**Inside workflow bodies** (e.g., `workflow foo { fn helper(x) { x + 1 }; ... }`):
+
+1. **Parse:** The workflow body parser (`crates/ash-parser/src/parse_workflow.rs`) currently recognizes `let`, `act`, `if`, `for`, etc. Extend it to recognize `fn name(params) { body }` as a new workflow statement form.
+2. **Surface AST:** No new `Workflow` variant needed. The parser produces `Workflow::Let { pattern: Pattern::Name("helper"), expr: Expr::FnDef { params, body }, continuation, span }`. The desugaring from `fn name(...)` to `let name = fn(...)` happens during parsing, identical to how the surface AST already handles desugaring for other constructs.
+3. **Lowering:** `lower_workflow` already handles `Workflow::Let`. It calls `lower_expr` on the `Expr::FnDef`, producing `CoreExpr::FnDef`. No new lowering logic needed.
+
+**Inside block expressions** (e.g., `{ fn helper(x) { x + 1 }; helper(5) }`):
+
+1. **Parse:** The block parser currently only produces `BlockStmt::Let`. Extend it to recognize `fn name(params) { body }` and desugar to `BlockStmt::Let { pattern: Pattern::Name("helper"), expr: Expr::FnDef { ... }, span }`.
+2. **Surface AST:** No new `BlockStmt` variant. Reuses `BlockStmt::Let` with the `expr` field containing `Expr::FnDef`.
+3. **Lowering:** `lower_expr` already handles `Expr::Block { statements, tail_expr }`. Each `BlockStmt::Let` is lowered as a let-binding. No new lowering logic needed.
+
+**Summary of changes:**
+
+| File | Change |
+|------|--------|
+| `crates/ash-parser/src/parse_workflow.rs` | Add `fn name(...)` recognition in workflow body, desugar to `Workflow::Let { expr: Expr::FnDef }` |
+| `crates/ash-parser/src/parse_expr.rs` | Add `fn name(...)` recognition in block statements, desugar to `BlockStmt::Let { expr: Expr::FnDef }` |
+| `crates/ash-parser/src/surface.rs` | No changes (no new variants) |
+| `crates/ash-parser/src/lower.rs` | No changes (existing `Let` and `FnDef` lowering handles it) |
 
 ## 9. Lowering Changes
 
@@ -400,11 +449,18 @@ pub const BUILTIN_FUNCTIONS: &[&str] = &[
 
 ### 10.1 eval_expr Additions
 
+All types and methods below are **new additions** required by this spec. They do not exist in the current codebase.
+
 ```rust
 // ash-interp/src/eval.rs
+//
+// [NEW] Expr::FnDef and Expr::FnApply arms added to eval_expr match.
+// These do not exist in the current eval.rs.
 
 Expr::FnDef { params, body, .. } => {
+    // [NEW] ctx.to_env_frame() -- see §10.2
     let env_frame = ctx.to_env_frame();
+    // [NEW] Value::Closure -- see §5.2
     Ok(Value::Closure {
         params: params.iter()
             .map(|(n, t)| (n.clone(), t.as_ref().map(|s| s.to_string())))
@@ -422,21 +478,44 @@ Expr::FnApply { func, args } => {
                 .map(|a| eval_expr(a, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
             if arg_values.len() != params.len() {
+                // [EXISTING] EvalError::WrongArity already exists at error.rs:44
                 return Err(EvalError::WrongArity {
                     expected: params.len(),
                     actual: arg_values.len(),
                 });
             }
+            // [NEW] Context::from_env_frame -- see §10.2
             let call_env = Context::from_env_frame(&env);
             for ((name, _), value) in params.iter().zip(arg_values.into_iter()) {
                 call_env.set(name.clone(), value);
             }
             eval_expr(&body, &call_env)
         }
+        // [NEW] EvalError::NotCallable -- does not exist in current error.rs
         _ => Err(EvalError::NotCallable { value: callee }),
     }
 }
 ```
+
+**New types/methods required (do not exist yet):**
+
+| Item | Location | Status |
+|------|----------|--------|
+| `Value::Closure` | `ash-core/src/value.rs` | [NEW] |
+| `Expr::FnDef` | `ash-core/src/ast.rs` | [NEW] |
+| `Expr::FnApply` | `ash-core/src/ast.rs` | [NEW] |
+| `EnvFrame`, `BindingSlot` | `ash-core/src/env_frame.rs` | [NEW] file |
+| `Context::to_env_frame()` | `ash-interp/src/context.rs` | [NEW] method |
+| `Context::from_env_frame()` | `ash-interp/src/context.rs` | [NEW] method |
+| `EvalError::NotCallable` | `ash-interp/src/error.rs` | [NEW] variant |
+
+**Existing types used (no changes needed):**
+
+| Item | Location | Status |
+|------|----------|--------|
+| `EvalError::WrongArity` | `ash-interp/src/error.rs:44` | [EXISTING] |
+| `EvalError::UnknownFunction` | `ash-interp/src/error.rs:41` | [EXISTING] |
+| `Context::set()` | `ash-interp/src/context.rs` | [EXISTING] |
 
 ### 10.2 Context Extensions
 
@@ -517,12 +596,13 @@ An implementation must:
 - Evaluate `Value::Closure` from `Expr::FnDef` with shared `Arc<EnvFrame>` capture
 - Apply closures via `Expr::FnApply` with correct parameter binding
 - Support recursion via `BindingSlot::Late`
-- Support higher-order functions
+- Support higher-order functions (passing/returning closures as local let-bindings)
 - Use existing `Type::Fn` / `Type::Fun` for closure typing
 - Distinguish `Expr::Call` (built-ins) from `Expr::FnApply` (user functions)
 - Ensure `Value::Closure` is `Send + Sync` without `unsafe`
-- NOT serialize `Value::Closure`
+- Reject serialization of `Value::Closure` at runtime (panic or error, no serialized form)
 - Module-level functions are never `Value::Closure`
+- Enforce all five prohibited escape cases from §4.8
 - Pass all existing tests
 
 ### 13.2 Full Conformance
@@ -544,10 +624,11 @@ Additionally supports:
 | `crates/ash-core/src/lib.rs` | Export `env_frame` module |
 | `crates/ash-interp/src/context.rs` | Add `to_env_frame`, `from_env_frame` |
 | `crates/ash-interp/src/eval.rs` | Add `FnDef`/`FnApply` eval cases |
-| `crates/ash-interp/src/error.rs` | Add `NotCallable` variant |
+| `crates/ash-interp/src/error.rs` | Add `NotCallable` variant [NEW]; `BoundaryViolation` [NEW] |
 | `crates/ash-typeck/src/check_expr.rs` | Add `FnDef`/`FnApply` arms using existing types |
 | `crates/ash-typeck/src/types.rs` | No changes (use existing `Fn`/`Fun`) |
 | `crates/ash-parser/src/lower.rs` | Add built-in registry, `lower_fn_def`, `FnApply` lowering |
 | `crates/ash-parser/src/parse_expr.rs` | Add fn expression, closure syntax (Phase D) |
+| `crates/ash-parser/src/parse_workflow.rs` | Add `fn name(...)` recognition in workflow body -> `Workflow::Let` (Phase D) |
 | `crates/ash-engine/src/lib.rs` | Remove pure_runtime dispatch (Phase C) |
 | `crates/ash-engine/src/pure_runtime.rs` | DELETE (Phase C) |

@@ -15,7 +15,7 @@ use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
-    Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter,
+    Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter, Pattern,
     Requirement, RoleRef, Spanned, Type, TypeParam, Workflow, WorkflowDef,
 };
 use crate::token::Span;
@@ -899,6 +899,7 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         oblige_stmt,
         check_stmt,
         act_stmt,
+        fn_let_stmt,
         let_stmt,
         if_stmt,
         for_stmt,
@@ -911,6 +912,113 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         done_stmt,
     ))
     .parse_next(input)
+}
+
+/// Parse a named local fn statement: `fn name(params) [-> type] { body }`.
+///
+/// Desugars to `Workflow::Let { pattern: Pattern::Variable("name"), expr: Expr::FnDef { ... } }`.
+fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
+    let start_pos = input.state;
+
+    let _ = keyword("fn").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Must have a name (this distinguishes it from anonymous fn expressions)
+    let name: Name = identifier(input)?.into();
+    skip_whitespace_and_comments(input);
+
+    // Parameter list
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let params = parse_fn_expr_params_wf(input)?;
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Optional return type
+    let return_type = if input.input.starts_with("->") {
+        let _ = literal_str("->").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let ty_name = parse_simple_type_name_wf(input)?;
+        Some(ty_name)
+    } else {
+        None
+    };
+    skip_whitespace_and_comments(input);
+
+    // Body block
+    let body = crate::parse_expr::parse_fn_expr_body_pub(input)?;
+
+    let span = span_from(&start_pos, &input.state);
+    let fn_def_span = span;
+
+    Ok(Workflow::Let {
+        pattern: Pattern::Variable(name),
+        expr: Expr::FnDef {
+            params,
+            return_type,
+            body: Box::new(body),
+            span: fn_def_span,
+        },
+        continuation: None,
+        span,
+    })
+}
+
+/// Parse fn-expr params in workflow context (same logic, local copy to avoid cross-crate issues).
+fn parse_fn_expr_params_wf(input: &mut ParseInput) -> ModalResult<Vec<(Name, Option<Name>)>> {
+    let mut params = Vec::new();
+
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with(")") {
+        return Ok(params);
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+        let name: Name = identifier(input)?.into();
+        skip_whitespace_and_comments(input);
+
+        let ty = if input.input.starts_with(":") {
+            let _ = literal_str(":").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let ty_name = parse_simple_type_name_wf(input)?;
+            Some(ty_name)
+        } else {
+            None
+        };
+
+        params.push((name, ty));
+
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(",") {
+            let _ = literal_str(",").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with(")") {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    Ok(params)
+}
+
+/// Parse a simple type name in workflow context.
+fn parse_simple_type_name_wf(input: &mut ParseInput) -> ModalResult<Name> {
+    let name: &str =
+        take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)?;
+    if name.is_empty()
+        || !name
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+    {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    Ok(name.into())
 }
 
 /// Parse an observe statement: `observe <capability> [as <pattern>]`

@@ -15,8 +15,8 @@ use crate::parse_visibility::parse_visibility;
 use crate::parse_workflow::parse_capabilities_clause;
 use crate::surface::{
     BlockStmt, CapabilityDef, CapabilityRef, Constraint, Contract, Definition, EffectType, Expr,
-    FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Param, Predicate,
-    ProxyDef, RoleDef, Type, Visibility, Workflow, YieldArm,
+    FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param,
+    Pattern, Predicate, ProxyDef, RoleDef, Type, Visibility, Workflow, YieldArm,
 };
 
 /// Parse a module declaration.
@@ -1196,6 +1196,66 @@ pub fn parse_fn_body(input: &mut ParseInput) -> ModalResult<Expr> {
     parse_fn_block_expr(input)
 }
 
+/// Parse fn-expr params for use inside a fn body block.
+///
+/// Each parameter is `name` or `name: Type` (type is optional).
+fn parse_fn_expr_params_local(input: &mut ParseInput) -> ModalResult<Vec<(Name, Option<Name>)>> {
+    let mut params = Vec::new();
+
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with(")") {
+        return Ok(params);
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+        let name: Name = identifier(input)?.into();
+        skip_whitespace_and_comments(input);
+
+        let ty = if input.input.starts_with(":") {
+            let _ = literal_str(":").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let ty_name = parse_simple_type_name_local(input)?;
+            Some(ty_name)
+        } else {
+            None
+        };
+
+        params.push((name, ty));
+
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(",") {
+            let _ = literal_str(",").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with(")") {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    Ok(params)
+}
+
+/// Parse a simple type name for local fn parameter/return annotations.
+fn parse_simple_type_name_local(input: &mut ParseInput) -> ModalResult<Name> {
+    use winnow::token::take_while;
+    let name: &str =
+        take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)?;
+    if name.is_empty()
+        || !name
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+    {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    Ok(name.into())
+}
+
 /// Parse a block expression: `{ [let pat = expr;]* [tail_expr] }`
 fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state;
@@ -1239,6 +1299,48 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             statements.push(BlockStmt::Let {
                 pattern: pat,
                 expr: let_expr,
+                span: stmt_span,
+            });
+            continue;
+        }
+
+        // Try to parse a named local fn: `fn name(params) [-> type] { body }`
+        // This desugars to BlockStmt::Let { pattern: Variable("name"), expr: FnDef { ... } }
+        if starts_with_keyword(input, "fn") {
+            let stmt_start = input.state;
+            let _ = keyword("fn").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let fn_name: Name = identifier(input)?.into();
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("(").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let params = parse_fn_expr_params_local(input)?;
+            let _ = literal_str(")").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let return_type = if input.input.starts_with("->") {
+                let _ = literal_str("->").parse_next(input)?;
+                skip_whitespace_and_comments(input);
+                let ty_name = parse_simple_type_name_local(input)?;
+                Some(ty_name)
+            } else {
+                None
+            };
+            skip_whitespace_and_comments(input);
+            let fn_body = crate::parse_expr::parse_fn_expr_body_pub(input)?;
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with(";") {
+                let _ = input.input.next_slice(1);
+                input.state.advance(';');
+            }
+            let stmt_span = crate::input::span_from(&stmt_start, &input.state);
+            statements.push(BlockStmt::Let {
+                pattern: Pattern::Variable(fn_name),
+                expr: Expr::FnDef {
+                    params,
+                    return_type,
+                    body: Box::new(fn_body),
+                    span: stmt_span,
+                },
                 span: stmt_span,
             });
             continue;

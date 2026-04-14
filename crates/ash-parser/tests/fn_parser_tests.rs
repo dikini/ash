@@ -1,8 +1,9 @@
 //! Tests for fn definition, fn type, and fn body expression parsing.
 
 use ash_parser::input::new_input;
+use ash_parser::lower::lower_expr;
 use ash_parser::parse_module::parse_fn_definition;
-use ash_parser::surface::{Definition, Expr, Type};
+use ash_parser::surface::{BlockStmt, Definition, Expr, Type};
 
 // ---------------------------------------------------------------------------
 // Helper: parse a fn definition from source text
@@ -247,18 +248,61 @@ fn parse_pub_fn() {
 }
 
 // ---------------------------------------------------------------------------
-// 10. fn rejects nested fn
+// 10. fn accepts nested fn at parse time; lowering rejects Expr::Block
 // ---------------------------------------------------------------------------
 #[test]
 fn parse_fn_rejects_nested_fn() {
+    // After TASK-556, nested `fn` inside a fn body is parsed successfully as a
+    // BlockStmt::Let { expr: Expr::FnDef { ... } }.  The parse stage no longer
+    // rejects it.  Rejection of Expr::Block / nested-fn usage happens during
+    // lowering, not during parsing.
     let mut input = new_input(r#"fn outer() -> Int { fn inner() -> Int { 1 } inner() }"#);
     let result = parse_fn_definition(&mut input);
-    // The nested "fn" keyword should cause a parse error because "fn" is now
-    // a keyword and cannot be parsed as an identifier or expression.
+    let def = result.expect("nested fn should parse successfully after TASK-556");
+
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+
+    // The body should be an Expr::Block with a BlockStmt::Let containing Expr::FnDef
+    let Expr::Block {
+        ref statements,
+        ref tail_expr,
+        ..
+    } = f.body
+    else {
+        panic!("expected Block body, got: {:?}", f.body);
+    };
+
+    assert_eq!(
+        statements.len(),
+        1,
+        "expected one BlockStmt (the inner fn let-binding)"
+    );
+    let BlockStmt::Let {
+        ref expr,
+        ref pattern,
+        ..
+    } = statements[0];
     assert!(
-        result.is_err(),
-        "nested fn should be rejected, but got: {:?}",
-        result
+        matches!(expr, Expr::FnDef { .. }),
+        "expected FnDef expression in let-binding, got: {:?}",
+        expr
+    );
+    assert!(
+        matches!(pattern, ash_parser::surface::Pattern::Variable(name) if name.as_ref() == "inner"),
+        "expected pattern Variable(\"inner\"), got: {:?}",
+        pattern
+    );
+    assert!(tail_expr.is_some(), "expected tail expression (inner())");
+
+    // Lowering the body should fail because Expr::Block lowering is not yet
+    // supported in core IR (blocks are fn-body-only constructs).
+    let lower_result = lower_expr(&f.body);
+    assert!(
+        lower_result.is_err(),
+        "lowering of Expr::Block (containing nested fn) should fail, but got: {:?}",
+        lower_result
     );
 }
 
@@ -296,4 +340,158 @@ fn parse_fn_with_type_params() {
     assert_eq!(f.name.as_ref(), "identity");
     assert_eq!(f.type_params.len(), 1);
     assert_eq!(f.type_params[0].as_ref(), "T");
+}
+
+// ===========================================================================
+// TASK-556: Anonymous fn expression and named local fn parsing
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// TASK-556.1: Anonymous fn(x) { x + 1 } parses as Expr::FnDef
+// ---------------------------------------------------------------------------
+#[test]
+fn task556_anon_fn_expr_parses_as_fn_def() {
+    use ash_parser::parse_expr::expr;
+    let mut input = new_input(r#"fn(x) { x + 1 }"#);
+    let result = expr(&mut input).expect("anonymous fn expression should parse");
+    assert!(
+        matches!(result, Expr::FnDef { ref params, .. } if params.len() == 1),
+        "expected FnDef with one param, got: {:?}",
+        result
+    );
+    if let Expr::FnDef {
+        params,
+        return_type,
+        ..
+    } = result
+    {
+        assert_eq!(params[0].0.as_ref(), "x");
+        assert!(params[0].1.is_none(), "expected no type annotation on x");
+        assert!(return_type.is_none(), "expected no return type");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TASK-556.2: fn(x: Int) -> Int { x + 1 } parses with type annotations
+// ---------------------------------------------------------------------------
+#[test]
+fn task556_anon_fn_expr_with_types() {
+    use ash_parser::parse_expr::expr;
+    let mut input = new_input(r#"fn(x: Int) -> Int { x + 1 }"#);
+    let result = expr(&mut input).expect("typed anonymous fn expression should parse");
+    if let Expr::FnDef {
+        params,
+        return_type,
+        ..
+    } = result
+    {
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].0.as_ref(), "x");
+        assert_eq!(params[0].1.as_deref(), Some("Int"));
+        assert_eq!(return_type.as_deref(), Some("Int"));
+    } else {
+        panic!("expected FnDef, got: {:?}", result);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TASK-556.3: fn helper(x) { x + 1 } in workflow body -> Workflow::Let { expr: FnDef }
+// ---------------------------------------------------------------------------
+#[test]
+fn task556_named_fn_in_workflow_desugars_to_let() {
+    use ash_parser::parse_workflow::workflow;
+    let src = r#"fn helper(x) { x + 1 }
+done"#;
+    let mut input = new_input(src);
+    let result = workflow(&mut input).expect("workflow with named local fn should parse");
+    // The workflow should be a Let wrapping a Done
+    if let ash_parser::surface::Workflow::Let {
+        ref pattern,
+        ref expr,
+        ..
+    } = result
+    {
+        assert!(
+            matches!(pattern, ash_parser::surface::Pattern::Variable(name) if name.as_ref() == "helper"),
+            "expected Variable(\"helper\"), got: {:?}",
+            pattern
+        );
+        assert!(
+            matches!(expr, Expr::FnDef { params, .. } if params.len() == 1),
+            "expected FnDef with one param, got: {:?}",
+            expr
+        );
+    } else {
+        panic!("expected Workflow::Let, got: {:?}", result);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TASK-556.4: fn helper(x) { x + 1 } in block -> BlockStmt::Let { expr: FnDef }
+// ---------------------------------------------------------------------------
+#[test]
+fn task556_named_fn_in_block_desugars_to_let() {
+    // A module-level fn whose body contains a named local fn as a block statement
+    let src = r#"fn outer() -> Int {
+    fn helper(x) { x + 1 }
+    helper(0)
+}"#;
+    let mut input = new_input(src);
+    let def = parse_fn_definition(&mut input).expect("fn with local fn in body should parse");
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+    let Expr::Block {
+        ref statements,
+        ref tail_expr,
+        ..
+    } = f.body
+    else {
+        panic!("expected Block body, got: {:?}", f.body);
+    };
+    assert_eq!(
+        statements.len(),
+        1,
+        "expected one block statement (the local fn)"
+    );
+    let BlockStmt::Let {
+        ref pattern,
+        ref expr,
+        ..
+    } = statements[0];
+    assert!(
+        matches!(pattern, ash_parser::surface::Pattern::Variable(name) if name.as_ref() == "helper"),
+        "expected Variable(\"helper\"), got: {:?}",
+        pattern
+    );
+    assert!(
+        matches!(expr, Expr::FnDef { params, .. } if params.len() == 1),
+        "expected FnDef with one param, got: {:?}",
+        expr
+    );
+    assert!(tail_expr.is_some(), "expected tail expression (helper(0))");
+}
+
+// ---------------------------------------------------------------------------
+// TASK-556.5: fn(x) { x } at module scope -> lowering error
+// ---------------------------------------------------------------------------
+#[test]
+fn task556_anon_fn_at_module_scope_lower_error() {
+    // An anonymous fn(x){x} used as a top-level fn body expression
+    // causes lowering to fail because Expr::Block cannot yet be lowered.
+    use ash_parser::parse_expr::expr;
+    let mut input = new_input(r#"fn(x) { x }"#);
+    let parsed = expr(&mut input).expect("anonymous fn should parse");
+    assert!(
+        matches!(parsed, Expr::FnDef { .. }),
+        "expected FnDef, got: {:?}",
+        parsed
+    );
+    // Lower the expression - the body is an Expr::Block which lowering rejects.
+    let lower_result = lower_expr(&parsed);
+    assert!(
+        lower_result.is_err(),
+        "lowering FnDef with Block body should fail (Expr::Block not yet lowerable), but got: {:?}",
+        lower_result
+    );
 }

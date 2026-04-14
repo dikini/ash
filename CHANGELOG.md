@@ -39,6 +39,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `supervised.ash`: split `fn request_approval` into pure `fn build_approval_message` + `fn parse_supervisor_response`; moved `complete()` call into `workflow supervised_agent` body.
   - No `fn` in either file now references a dispatch workflow. Three-vertex compliance tests added.
 
+- Rename `Message` field `role` to `sender` to avoid Ash keyword collision (TASK-549 follow-up):
+  - `role` is a reserved keyword in Ash's governance model; using it as a struct field name, parameter name, or function name caused the parser to reject 12 of 27 `pub fn` in prompt.ash.
+  - Field renamed across `types.ash`, `prompt.ash`, `mod.ash`, and Rust provider code (`chat.rs`, `tool_dispatch.rs`).
+  - Function `role(msg)` renamed to `sender(msg)`, helper `role_name` renamed to `sender_name`.
+  - `mod.ash` re-export updated: `role` -> `sender`.
+  - Parseable pub fn count: 15 -> 24 of 27 (9 functions unblocked by removing keyword collision).
+
 - **Phase 77: LLM Standard Library** — Complete LLM capability implementation for the Ash language:
   - LLM provider module with async-openai integration (TASK-516). Adds `async-openai` dependency for OpenAI-compatible HTTP communication.
   - `LlmConfig` struct for per-provider connection settings with validation, defaults, and API key redaction (TASK-517).

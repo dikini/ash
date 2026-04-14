@@ -112,7 +112,7 @@ pub fn format_tool_result_message(call_id: &str, content: &str) -> Value {
     let mut fields = HashMap::new();
 
     // role: Tool variant
-    fields.insert("role".to_string(), Value::unit_variant("Tool"));
+    fields.insert("sender".to_string(), Value::unit_variant("Tool"));
 
     // content: String
     fields.insert("content".to_string(), Value::String(content.to_string()));
@@ -391,12 +391,12 @@ mod tests {
         };
 
         // Check role is Tool variant
-        match fields.get("role").unwrap() {
+        match fields.get("sender").unwrap() {
             Value::Variant { name, fields } => {
                 assert_eq!(name, "Tool");
                 assert!(fields.is_empty());
             }
-            _ => panic!("Expected Tool variant for role"),
+            _ => panic!("Expected Tool variant for sender"),
         }
 
         // Check content

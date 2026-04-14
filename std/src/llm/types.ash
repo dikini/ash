@@ -33,12 +33,12 @@ pub type ToolCallDelta = ToolCallDelta {
 };
 
 -- Message represents a chat message in a conversation
--- role: The role of the message sender
+-- sender: The role of the message sender
 -- content: The text content (may be empty for tool calls)
 -- tool_calls: Optional list of tool calls (for assistant messages)
 -- tool_call_id: Optional tool call ID (for tool messages)
 pub type Message = Message {
-    role: Role,
+    sender: Role,
     content: String,
     tool_calls: Option<List<ToolCall>>,
     tool_call_id: Option<String>

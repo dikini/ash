@@ -78,7 +78,7 @@ fn test_types_dot_ash_message_definition_correct() {
     let source = std::fs::read_to_string(&types_path).expect("types.ash should be readable");
 
     // SPEC-029 SS3.2: Message must have role, content, tool_calls, tool_call_id
-    assert!(source.contains("role:"), "Message must have role field");
+    assert!(source.contains("sender:"), "Message must have sender field");
     assert!(
         source.contains("content:"),
         "Message must have content field"
@@ -181,20 +181,20 @@ fn test_prompt_dot_ash_constructor_bodies() {
 
     // Verify constructors produce correct Message values
     assert!(
-        source.contains("role: System") || source.contains("role: System,"),
-        "system() must set role to System"
+        source.contains("sender: System") || source.contains("sender: System,"),
+        "system() must set sender to System"
     );
     assert!(
-        source.contains("role: User") || source.contains("role: User,"),
-        "user() must set role to User"
+        source.contains("sender: User") || source.contains("sender: User,"),
+        "user() must set sender to User"
     );
     assert!(
-        source.contains("role: Assistant") || source.contains("role: Assistant,"),
-        "assistant() must set role to Assistant"
+        source.contains("sender: Assistant") || source.contains("sender: Assistant,"),
+        "assistant() must set sender to Assistant"
     );
     assert!(
-        source.contains("role: Tool") || source.contains("role: Tool {"),
-        "tool_result() must set role to Tool"
+        source.contains("sender: Tool") || source.contains("sender: Tool {"),
+        "tool_result() must set sender to Tool"
     );
 }
 
@@ -237,8 +237,8 @@ fn test_prompt_dot_ash_inspector_bodies() {
         "Inspectors should use match on msg"
     );
     assert!(
-        source.contains("role: System") || source.contains("System => true"),
-        "is_system should match System role"
+        source.contains("sender: System") || source.contains("System => true"),
+        "is_system should match System sender"
     );
 }
 

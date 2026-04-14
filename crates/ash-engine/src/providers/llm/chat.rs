@@ -168,8 +168,8 @@ pub fn value_to_chat_message(
         ));
     };
 
-    let role_value = get_field(value, "role").ok_or_else(|| {
-        CapabilityError::InvalidArgument("Message missing 'role' field".to_string())
+    let role_value = get_field(value, "sender").ok_or_else(|| {
+        CapabilityError::InvalidArgument("Message missing 'sender' field".to_string())
     })?;
 
     let role = parse_role(role_value)?;
@@ -759,7 +759,7 @@ mod tests {
 
     fn create_test_message_with_role_variant(role: &str, content: &str) -> Value {
         let mut fields = HashMap::new();
-        fields.insert("role".to_string(), role_variant(role));
+        fields.insert("sender".to_string(), role_variant(role));
         fields.insert("content".to_string(), Value::String(content.to_string()));
         Value::Record(Box::new(fields))
     }
@@ -903,7 +903,7 @@ mod tests {
     #[test]
     fn test_value_to_chat_message_tool() {
         let mut fields = HashMap::new();
-        fields.insert("role".to_string(), role_variant("Tool"));
+        fields.insert("sender".to_string(), role_variant("Tool"));
         fields.insert(
             "content".to_string(),
             Value::String("Tool result".to_string()),
@@ -921,7 +921,7 @@ mod tests {
     #[test]
     fn test_value_to_chat_message_rejects_string_role() {
         let mut fields = HashMap::new();
-        fields.insert("role".to_string(), Value::String("system".to_string()));
+        fields.insert("sender".to_string(), Value::String("system".to_string()));
         fields.insert("content".to_string(), Value::String("test".to_string()));
         let msg = Value::Record(Box::new(fields));
 
@@ -942,7 +942,7 @@ mod tests {
 
         let result = value_to_chat_message(&msg);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("role"));
+        assert!(result.unwrap_err().to_string().contains("sender"));
     }
 
     #[test]

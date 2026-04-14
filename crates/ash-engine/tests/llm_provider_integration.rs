@@ -28,7 +28,7 @@ fn make_provider(server: &MockServer) -> LlmProvider {
 /// Build a user message Value (ADT-variant role style matching the chat module).
 fn user_message(content: &str) -> Value {
     let mut fields = HashMap::new();
-    fields.insert("role".to_string(), Value::unit_variant("User"));
+    fields.insert("sender".to_string(), Value::unit_variant("User"));
     fields.insert("content".to_string(), Value::String(content.to_string()));
     Value::Record(Box::new(fields))
 }

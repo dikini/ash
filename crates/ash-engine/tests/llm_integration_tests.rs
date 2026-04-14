@@ -49,7 +49,7 @@ fn make_multi_provider(primary_server: &MockServer, secondary_server: &MockServe
 /// Build a user message Value (ADT-variant role style matching the chat module).
 fn user_message(content: &str) -> Value {
     let mut fields = HashMap::new();
-    fields.insert("role".to_string(), Value::unit_variant("User"));
+    fields.insert("sender".to_string(), Value::unit_variant("User"));
     fields.insert("content".to_string(), Value::String(content.to_string()));
     Value::Record(Box::new(fields))
 }
@@ -57,7 +57,7 @@ fn user_message(content: &str) -> Value {
 /// Build a system message Value.
 fn system_message(content: &str) -> Value {
     let mut fields = HashMap::new();
-    fields.insert("role".to_string(), Value::unit_variant("System"));
+    fields.insert("sender".to_string(), Value::unit_variant("System"));
     fields.insert("content".to_string(), Value::String(content.to_string()));
     Value::Record(Box::new(fields))
 }

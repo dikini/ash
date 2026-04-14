@@ -15,7 +15,7 @@ use types::{Role, Message, ToolCall, ChatResponse};
 --   let msg = system("You are a helpful assistant");
 pub fn system(content: String) -> Message {
     Message {
-        role: System,
+        sender: System,
         content: content,
         tool_calls: None,
         tool_call_id: None
@@ -28,7 +28,7 @@ pub fn system(content: String) -> Message {
 --   let msg = user("What is 2 + 2?");
 pub fn user(content: String) -> Message {
     Message {
-        role: User,
+        sender: User,
         content: content,
         tool_calls: None,
         tool_call_id: None
@@ -41,7 +41,7 @@ pub fn user(content: String) -> Message {
 --   let msg = assistant("The answer is 4.");
 pub fn assistant(content: String) -> Message {
     Message {
-        role: Assistant,
+        sender: Assistant,
         content: content,
         tool_calls: None,
         tool_call_id: None
@@ -55,7 +55,7 @@ pub fn assistant(content: String) -> Message {
 --   let msg = assistant_with_tools("", [tool_call]);
 pub fn assistant_with_tools(content: String, tool_calls: List<ToolCall>) -> Message {
     Message {
-        role: Assistant,
+        sender: Assistant,
         content: content,
         tool_calls: Some { value: tool_calls },
         tool_call_id: None
@@ -68,7 +68,7 @@ pub fn assistant_with_tools(content: String, tool_calls: List<ToolCall>) -> Mess
 --   let msg = tool_result("call_1", "4");
 pub fn tool_result(call_id: String, content: String) -> Message {
     Message {
-        role: Tool,
+        sender: Tool,
         content: content,
         tool_calls: None,
         tool_call_id: Some { value: call_id }
@@ -79,9 +79,9 @@ pub fn tool_result(call_id: String, content: String) -> Message {
 --
 -- Example:
 --   let msg = message(User, "Hello");
-pub fn message(role: Role, content: String) -> Message {
+pub fn message(sender: Role, content: String) -> Message {
     Message {
-        role: role,
+        sender: sender,
         content: content,
         tool_calls: None,
         tool_call_id: None
@@ -95,7 +95,7 @@ pub fn message(role: Role, content: String) -> Message {
 -- Check if message is from the system
 pub fn is_system(msg: Message) -> Bool {
     match msg {
-        Message { role: System, content: _, tool_calls: _, tool_call_id: _ } => true,
+        Message { sender: System, content: _, tool_calls: _, tool_call_id: _ } => true,
         _ => false
     }
 }
@@ -103,7 +103,7 @@ pub fn is_system(msg: Message) -> Bool {
 -- Check if message is from the user
 pub fn is_user(msg: Message) -> Bool {
     match msg {
-        Message { role: User, content: _, tool_calls: _, tool_call_id: _ } => true,
+        Message { sender: User, content: _, tool_calls: _, tool_call_id: _ } => true,
         _ => false
     }
 }
@@ -111,7 +111,7 @@ pub fn is_user(msg: Message) -> Bool {
 -- Check if message is from the assistant
 pub fn is_assistant(msg: Message) -> Bool {
     match msg {
-        Message { role: Assistant, content: _, tool_calls: _, tool_call_id: _ } => true,
+        Message { sender: Assistant, content: _, tool_calls: _, tool_call_id: _ } => true,
         _ => false
     }
 }
@@ -119,29 +119,29 @@ pub fn is_assistant(msg: Message) -> Bool {
 -- Check if message is a tool result
 pub fn is_tool(msg: Message) -> Bool {
     match msg {
-        Message { role: Tool, content: _, tool_calls: _, tool_call_id: _ } => true,
+        Message { sender: Tool, content: _, tool_calls: _, tool_call_id: _ } => true,
         _ => false
     }
 }
 
 -- Get the role of a message
-pub fn role(msg: Message) -> Role {
+pub fn sender(msg: Message) -> Role {
     match msg {
-        Message { role: r, content: _, tool_calls: _, tool_call_id: _ } => r
+        Message { sender: r, content: _, tool_calls: _, tool_call_id: _ } => r
     }
 }
 
 -- Get the content of a message
 pub fn content(msg: Message) -> String {
     match msg {
-        Message { role: _, content: c, tool_calls: _, tool_call_id: _ } => c
+        Message { sender: _, content: c, tool_calls: _, tool_call_id: _ } => c
     }
 }
 
 -- Get tool calls from an assistant message (returns empty list if none)
 pub fn get_tool_calls(msg: Message) -> List<ToolCall> {
     match msg {
-        Message { role: _, content: _, tool_calls: Some { value: calls }, tool_call_id: _ } => calls,
+        Message { sender: _, content: _, tool_calls: Some { value: calls }, tool_call_id: _ } => calls,
         _ => []
     }
 }
@@ -157,7 +157,7 @@ pub fn has_tool_calls(response: ChatResponse) -> Bool {
 -- Get the tool call ID from a tool message
 pub fn get_tool_call_id(msg: Message) -> Option<String> {
     match msg {
-        Message { role: _, content: _, tool_calls: _, tool_call_id: id } => id
+        Message { sender: _, content: _, tool_calls: _, tool_call_id: id } => id
     }
 }
 
@@ -166,28 +166,28 @@ pub fn append_response(messages: List<Message>, response: ChatResponse) -> List<
     match response {
         ChatResponse { content: Some { value: text }, tool_calls: calls, finish_reason: _, usage: _, model: _, id: _ } => {
             let msg = Message {
-                role: Assistant,
+                sender: Assistant,
                 content: text,
                 tool_calls: calls,
                 tool_call_id: None
             };
-            list::append(messages, [msg])
+            list::append(messages, msg)
         },
         ChatResponse { content: None, tool_calls: Some { value: tool_calls }, finish_reason: _, usage: _, model: _, id: _ } => {
             let msg = Message {
-                role: Assistant,
+                sender: Assistant,
                 content: "",
                 tool_calls: Some { value: tool_calls },
                 tool_call_id: None
             };
-            list::append(messages, [msg])
+            list::append(messages, msg)
         }
     }
 }
 
 -- Append a tool result message to conversation history
 pub fn append_tool_result(messages: List<Message>, call_id: String, content: String) -> List<Message> {
-    list::append(messages, [tool_result(call_id, content)])
+    list::append(messages, tool_result(call_id, content))
 }
 
 -- Check if a chat response indicates the conversation is finished
@@ -214,8 +214,8 @@ pub fn render_template(template: String, vars: Map<String, String>) -> String {
 }
 
 -- Helper: Get role name as string
-fn role_name(role: Role) -> String {
-    match role {
+fn sender_name(sender: Role) -> String {
+    match sender {
         System => "system",
         User => "user",
         Assistant => "assistant",
@@ -226,8 +226,8 @@ fn role_name(role: Role) -> String {
 -- Helper: Format a single message as plaintext
 fn format_message_plain(msg: Message) -> String {
     match msg {
-        Message { role: r, content: c, tool_calls: _, tool_call_id: _ } => {
-            let prefix = string::concat(role_name(r), ": ");
+        Message { sender: r, content: c, tool_calls: _, tool_call_id: _ } => {
+            let prefix = string::concat(sender_name(r), ": ");
             string::concat(prefix, c)
         }
     }
@@ -248,7 +248,7 @@ pub fn render_plaintext(messages: List<Message>) -> String {
 -- Helper: Format a single message as markdown
 fn format_message_md(msg: Message) -> String {
     match msg {
-        Message { role: r, content: c, tool_calls: calls, tool_call_id: _ } => {
+        Message { sender: r, content: c, tool_calls: calls, tool_call_id: _ } => {
             let header = match r {
                 System => "**System**",
                 User => "**User**",
@@ -328,7 +328,7 @@ pub fn filter_assistant(messages: List<Message>) -> List<Message> {
 
 -- Append a message to the conversation
 pub fn append(messages: List<Message>, msg: Message) -> List<Message> {
-    list::append(messages, [msg])
+    list::append(messages, msg)
 }
 
 -- Prepend a message to the conversation

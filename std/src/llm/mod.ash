@@ -75,7 +75,7 @@ pub use prompt::{
     is_user,
     is_assistant,
     is_tool,
-    role,
+    sender,
     content,
     get_tool_calls,
     has_tool_calls,

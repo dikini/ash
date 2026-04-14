@@ -33,7 +33,7 @@ fn make_configs(server: &MockServer) -> HashMap<String, LlmConfig> {
 /// Build a user message Value matching the chat module's expected shape.
 fn user_message(content: &str) -> Value {
     let mut fields = HashMap::new();
-    fields.insert("role".to_string(), Value::unit_variant("User"));
+    fields.insert("sender".to_string(), Value::unit_variant("User"));
     fields.insert("content".to_string(), Value::String(content.to_string()));
     Value::Record(Box::new(fields))
 }

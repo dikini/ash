@@ -6,7 +6,9 @@
 //! Key finding: prompt.ash has 27 `pub fn` declarations. After TASK-546 fix
 //! (keywords allowed as constructor field names), 12 parse through
 //! `parse_fn_definition`. TASK-548 adds 4 more fns (15 of 27 now parse).
-//! The remaining 12 still use features unsupported by the parser.
+//! TASK-549 renames Message field `role` -> `sender`, unblocking keyword
+//! collision in match patterns and parameter names (24 of 27 now parse).
+//! Removing unnecessary list literal wrappers brings us to 27 of 27.
 //! These are silently dropped during module loading -- this test documents
 //! the known gap.
 
@@ -120,40 +122,28 @@ fn test_prompt_ash_pub_fn_partial_parse_coverage() {
     let source = read_stdlib_file("llm/prompt.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);
 
-    // TASK-546 fix: constructor field names now allow keywords (e.g., `role`).
-    // Previously 7 of 23 parsed; now 12 parse because `role:` in Message
-    // constructors no longer fails the identifier() keyword check.
+    // TASK-546: constructor field names now allow keywords.
     // TASK-548: added 4 new functions (append_response, append_tool_result,
-    // is_final, render_template); now 15 of 27 pub fns parse.
+    // is_final, render_template).
+    // TASK-549: renamed Message field `role` -> `sender` to avoid keyword
+    // collision, unblocking match patterns and parameter names.
+    // Removed unnecessary list literal wrappers from append/append_tool_result/
+    // append_response. Now 27 of 27 pub fns parse.
     assert_eq!(
-        count, 15,
-        "expected exactly 15 parseable pub fns from prompt.ash (regression?), got {}",
+        count, 27,
+        "expected exactly 27 parseable pub fns from prompt.ash (regression?), got {}",
         count,
     );
-    assert_eq!(
-        diagnostics.len(),
-        27 - count,
-        "expected {} diagnostics for unparseable pub fns, got {}",
-        27 - count,
-        diagnostics.len(),
-    );
-
-    // Verify diagnostics include function names (SPEC-030 §5.3)
-    let diag_names: Vec<&str> = diagnostics
-        .iter()
-        .filter_map(|d| d.name.as_deref())
-        .collect();
     assert!(
-        !diag_names.is_empty(),
-        "diagnostics should include function names",
+        diagnostics.is_empty(),
+        "expected 0 diagnostics (all 27 pub fns parse), got {:?}",
+        diagnostics,
     );
 }
 
-/// Target-state test: when parse_fn_definition supports record constructors and
-/// match expressions, all 27 pub fns in prompt.ash should parse cleanly.
-/// Remove #[ignore] once the parser is extended.
+/// All 27 pub fns in prompt.ash now parse after role->sender rename and
+/// removal of list literal wrappers. Previously #[ignore] target test.
 #[test]
-#[ignore = "waiting for parser support for remaining 11 of 27 pub fns (match expressions, etc)"]
 fn test_prompt_ash_all_27_pub_fns_parse() {
     let source = read_stdlib_file("llm/prompt.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);
@@ -356,20 +346,13 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
                 );
             }
 
-            // prompt.ash has known pub fn parse limitations -- warnings expected
-            if file_name == "prompt.ash" {
-                assert!(
-                    !result.warnings.is_empty(),
-                    "prompt.ash: expected pub fn parse warnings, got none",
-                );
-            } else {
-                assert!(
-                    result.warnings.is_empty(),
-                    "{}: unexpected warnings: {:?}",
-                    file_name,
-                    result.warnings,
-                );
-            }
+            // prompt.ash: all 27 pub fns now parse cleanly -- no warnings expected
+            assert!(
+                result.warnings.is_empty(),
+                "{}: unexpected warnings: {:?}",
+                file_name,
+                result.warnings,
+            );
 
             checked += 1;
         }

@@ -2,11 +2,11 @@
 
 **Status:** Draft
 **Date:** 2026-04-14
-**Version:** 0.2
+**Version:** 0.3
 
 ## 1. Overview
 
-Add first-class function values to Ash. Function definitions become expressions that produce closure values. Named local functions desugar to let-bindings. The interpreter (`ash-interp`) handles function definition and application natively, eliminating the `pure_runtime` workaround.
+Add first-class function values to Ash. Local function definitions become expressions that produce closure values. Named local functions desugar to let-bindings. The interpreter (`ash-interp`) handles function definition and application natively, eliminating the `pure_runtime` workaround.
 
 ## 2. Motivation
 
@@ -23,15 +23,17 @@ The fix: treat functions as first-class values in the core IR and interpreter.
 
 ### 3.1 Two Kinds of Function Definitions
 
-Ash has two distinct contexts for function definitions, with different semantics:
+Ash has two distinct contexts for function definitions with different semantics:
 
-**Module-level functions** (`pub fn`): appear at file top-level in stdlib modules (`std/src/llm/prompt.ash`, etc.). These are module items, not expressions. They remain as `Definition::Function` in the module's symbol table. They are collected by `collect_module_exports` for cross-module import. This spec does NOT change their representation.
+**Module-level functions** (`pub fn`): file top-level in stdlib modules. These are module items (`Definition::Function`). They are collected by `collect_module_exports` for cross-module import. They are **never** reified as `Value::Closure` at runtime. When imported and called, they are inlined into the caller's IR during loading (current behavior). This spec does not change their representation or execution model.
 
-**Local functions** (inside workflows and blocks): appear inside `workflow { ... }` or inside other function bodies. These are expressions. This spec defines their semantics: they desugar to `let name = fn(params) { body }` and produce closure values at runtime.
+**Local functions** (inside workflows and blocks): appear inside `workflow { ... }` or other function bodies. These are expressions. They produce `Value::Closure` at runtime. This spec defines their semantics.
+
+**Reification rule:** Only local functions produce closure values. Module-level functions remain as module exports. There is no mechanism to convert a module-level function into a `Value::Closure`. This keeps the serialization story simple: `Value::Closure` is always local and non-serializable.
 
 ### 3.2 Partial Application: Excluded
 
-An implementation conforming to SPEC-031 does **not** support partial application. `f(1)` where `f` takes two arguments is an arity error, not a closure. This keeps the evaluation model simple. Partial application may be addressed in a future spec.
+An implementation conforming to SPEC-031 does **not** support partial application. `f(1)` where `f` takes two arguments is an arity error. Partial application may be addressed in a future spec.
 
 ## 4. Semantics
 
@@ -41,7 +43,7 @@ An implementation conforming to SPEC-031 does **not** support partial applicatio
 fn(a, b) { a + b }
 ```
 
-This is an expression that evaluates to a closure value capturing its lexical environment. Only valid inside workflow bodies and other function bodies (local context), not at module top-level.
+An expression that evaluates to a closure value capturing its lexical environment. Only valid inside workflow bodies and other function bodies (local context), not at module top-level.
 
 ### 4.2 Named Local Function Desugaring
 
@@ -55,7 +57,7 @@ Inside a workflow or block, desugars to:
 let add = fn(a: Int, b: Int) -> Int { a + b }
 ```
 
-The name is in lexical scope for all subsequent expressions in the same block. This is a local binding only -- it does not create a module-level export.
+The name is in lexical scope for subsequent expressions in the same block.
 
 ### 4.3 Closure Syntax (Sugar)
 
@@ -63,11 +65,7 @@ The name is in lexical scope for all subsequent expressions in the same block. T
 |x, y| => x + y
 ```
 
-Desugars to:
-
-```
-fn(x, y) { x + y }
-```
+Desugars to `fn(x, y) { x + y }`.
 
 ### 4.4 Function Application
 
@@ -79,8 +77,6 @@ When `add` resolves to a closure value, the application extends the closure's ca
 
 ### 4.5 Higher-Order Functions
 
-Functions can be passed as arguments and returned from calls:
-
 ```
 fn apply(f, x) { f(x) }
 fn double(n) { n * 2 }
@@ -89,28 +85,15 @@ apply(double, 5)   -- evaluates to 10
 
 ### 4.6 Recursion via Late Binding
 
-Named functions can call themselves. The mechanism is **late binding** through the call environment, not static capture:
-
 ```
 fn factorial(n) {
     if n <= 1 then 1 else n * factorial(n - 1)
 }
 ```
 
-This desugars to `let factorial = fn(n) { ... }`. When the closure is applied, the call environment includes the `factorial` binding itself. The interpreter resolves `factorial` dynamically from the call environment at each application, not from a static snapshot taken at definition time.
-
-This avoids infinite nesting in the closure value: the environment does not contain a copy of itself. Instead, the `let` binding is a mutable slot that the closure resolves by name at call time.
-
-**Implementation**: The interpreter evaluates `let factorial = fn(n) { ... }` by:
-1. Creating a `Context` with a placeholder binding for `factorial`
-2. Constructing the closure, which captures a reference to this context (not a flat copy)
-3. Updating the `factorial` binding to point to the constructed closure
-
-Because closures share the environment via `Arc` (see §5.2), updating the slot after construction makes the binding visible to all subsequent lookups, including recursive calls.
+Desugars to `let factorial = fn(n) { ... }`. Recursion works through late binding: the closure does not statically capture its own value. Instead, the environment uses a `BindingSlot` that is filled after construction (see §5.3). At call time, the closure resolves `factorial` from the shared environment, finding its own binding.
 
 ### 4.7 Scope and Capture
-
-Closures capture their lexical environment at definition time:
 
 ```
 fn make_adder(n) {
@@ -120,17 +103,15 @@ let add5 = make_adder(5);
 add5(3)   -- evaluates to 8
 ```
 
-The inner closure captures `n` from the outer function's scope.
+The inner closure captures `n` from the outer function's scope via shared environment frame.
 
 ### 4.8 Three-Vertex Boundary
 
-Closures respect the three-vertex model (DESIGN-020):
+Closures respect the three-vertex model:
 
-- **Closures defined inside `fn` context** can only capture pure values (ints, strings, records, lists, other closures). They cannot capture or reference capability contexts, workflow bindings, or `act` results.
-- **Closures defined inside `workflow` context** may capture workflow-local bindings, but they are **not first-class** -- they cannot be returned from the workflow, stored in instance state, or passed across process boundaries. If a workflow-local closure escapes, it is a runtime error.
-- **The type system** (see §6) enforces this: `fn` closures have type `Fn(T) -> U`, while workflow-captured closures carry an effect marker that prevents them from being used in pure context.
-
-This mirrors the existing `fn -X-> workflow` rule. A closure is tagged with its definition context, and the type checker prevents crossing the boundary.
+- **Closures defined inside `fn` context** have type `Type::Fn(params, ret)` (pure). They can only capture pure values.
+- **Closures defined inside `workflow` context** have type `Type::Fun(params, ret, effect)` where `effect >= Epistemic`. The type checker prevents passing these into pure `fn` parameters that expect `Type::Fn`.
+- This uses the **existing** `Type::Fn` / `Type::Fun` split in `ash_typeck` (see §6).
 
 ## 5. IR Changes
 
@@ -140,20 +121,19 @@ This mirrors the existing `fn -X-> workflow` rule. A closure is tagged with its 
 /// ash-core/src/ast.rs -- Expr enum additions
 
 /// Anonymous function definition (closure creation).
-/// Only valid in local (workflow/block) context, not module top-level.
-/// Evaluating this expression produces a Value::Closure.
+/// Only valid in local context, not module top-level.
 FnDef {
-    params: Vec<(Name, Option<Type>)>,   -- parameter names and optional types
-    return_type: Option<Type>,            -- optional return type annotation
-    body: Box<Expr>,                      -- function body expression
+    params: Vec<(Name, Option<Type>)>,
+    return_type: Option<Type>,
+    body: Box<Expr>,
 },
 
 /// Function application.
-/// Evaluates `func` to obtain a closure value, binds parameters, evaluates body.
+/// `func` evaluates to a closure; args are bound; body is evaluated.
 /// Distinct from Expr::Call which handles built-in functions by name.
 FnApply {
-    func: Box<Expr>,                      -- expression producing a closure value
-    args: Vec<Expr>,                      -- argument expressions
+    func: Box<Expr>,
+    args: Vec<Expr>,
 },
 ```
 
@@ -162,245 +142,273 @@ FnApply {
 ```rust
 /// ash-core/src/value.rs -- Value enum addition
 ///
-/// Runtime closure value. Captures a shared reference to the lexical environment
-/// at definition time (Arc<EnvFrame>), not a flat copy.
+/// Runtime closure value. Captures a shared reference to the lexical
+/// environment at definition time.
 ///
 /// ## Serialization
 ///
-/// Value::Closure does NOT implement Serialize/Deserialize. Closures cannot
-/// cross process boundaries. If a closure must be referenced across processes,
-/// it must be a module-level function referenced by name (not a captured closure).
+/// NOT serializable. Closures are local-only values. Module-level functions
+/// are never reified as Value::Closure (see §3.1 reification rule).
+/// Serde implementation: use #[serde(skip)] or manual impl that panics.
 ///
 /// ## Send + Sync
 ///
-/// EnvFrame is Arc<EnvFrameData> where EnvFrameData: Send + Sync.
-/// This ensures Value::Closure can be held across await points in async workflows.
+/// Naturally Send + Sync because all fields are Send + Sync:
+/// - Vec<(String, Option<String>)>: Send + Sync
+/// - Box<Expr>: Send + Sync (all Expr variants contain only Send+Sync data)
+/// - Arc<EnvFrame>: Send + Sync (EnvFrame contains only Arc, String, Value)
+/// No unsafe impl needed.
 Closure {
-    /// Parameter names (and optional type annotations, for display/debugging)
     params: Vec<(String, Option<String>)>,
-    /// The function body expression (boxed to reduce enum size)
     body: Box<ash_core::ast::Expr>,
-    /// Shared reference to the captured lexical environment frame.
-    /// Uses Arc for O(1) capture and shared parent chains.
     env: std::sync::Arc<EnvFrame>,
 },
 ```
 
-### 5.3 Environment Frame (ash-core)
+### 5.3 Environment Frame and Binding Slot (ash-core)
 
 ```rust
 /// ash-core/src/env_frame.rs -- new file
 ///
-/// Shared, immutable environment frame for closure capture.
-/// Forms a chain: each frame has an optional parent, enabling O(1) capture
-/// and shared scope chains without flattening.
+/// Shared environment frame for closure capture.
+/// Forms a parent chain via Arc -- O(1) capture, no flattening.
+/// All fields are Send + Sync by construction. No unsafe needed.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
+/// A slot in the environment. Supports late binding for recursive closures.
+///
+/// Normal bindings: `BindingSlot::Bound(value)` -- immutable after creation.
+/// Recursive bindings: `BindingSlot::Late(cell)` -- filled after closure construction.
+///
+/// This is the single representation for all bindings. No separate `Value` vs
+/// `LateBinding` ambiguity -- every binding is a `BindingSlot`.
+#[derive(Debug, Clone)]
+pub enum BindingSlot {
+    /// Normal immutable binding.
+    Bound(Value),
+    /// Late binding for recursive let. The Mutex<Option<Value>> is filled
+    /// exactly once after the closure is constructed. Naturally Send+Sync
+    /// because Mutex<T> is Send+Sync when T: Send.
+    Late(Arc<Mutex<Option<Value>>>),
+}
+
+impl BindingSlot {
+    pub fn new_late() -> Self {
+        Self::Late(Arc::new(Mutex::new(None)))
+    }
+
+    pub fn resolve(&self) -> Option<Value> {
+        match self {
+            BindingSlot::Bound(v) => Some(v.clone()),
+            BindingSlot::Late(cell) => cell.lock().unwrap().clone(),
+        }
+    }
+
+    pub fn set_late(&self, value: Value) {
+        if let BindingSlot::Late(cell) = self {
+            *cell.lock().unwrap() = Some(value);
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct EnvFrame {
-    /// Bindings in this scope level
-    bindings: HashMap<String, Value>,
-    /// Parent scope (shared via Arc)
+    /// Bindings in this scope level. Every binding is a BindingSlot.
+    bindings: HashMap<String, BindingSlot>,
+    /// Parent scope (shared via Arc). None for the root frame.
     parent: Option<Arc<EnvFrame>>,
 }
-
-// EnvFrame is immutable after construction, so Send + Sync is safe.
-// Mutation for recursive let-bindings uses the LateBinding mechanism (§5.4).
-
-unsafe impl Send for EnvFrame {}
-unsafe impl Sync for EnvFrame {}
 ```
 
-### 5.4 Recursive Binding via LateBinding Cell
+**Why this fixes blocker 1:** There is one representation (`BindingSlot`) that handles both normal and recursive bindings. No sum-type mismatch, no `Value::LateBinding`, no inconsistency.
 
-For recursive functions (`let f = fn(...) { ... f ... }`), the closure needs to see its own binding. Rather than flattening or mutating the EnvFrame, use a late-binding cell:
+**Why this fixes blocker 5:** All types are naturally `Send + Sync`:
+- `BindingSlot::Bound(Value)` -- `Value: Send + Sync`
+- `BindingSlot::Late(Arc<Mutex<Option<Value>>>)` -- `Mutex<T>: Send+Sync` when `T: Send`
+- `EnvFrame` contains only `HashMap<String, BindingSlot>` and `Option<Arc<EnvFrame>>` -- all `Send + Sync`
+- No `unsafe impl` needed.
 
-```rust
-/// A mutable cell inside an otherwise-immutable EnvFrame.
-/// Used for recursive let-bindings: the slot starts as a placeholder,
-/// then gets filled with the closure value after construction.
-#[derive(Debug, Clone)]
-pub struct LateBinding {
-    /// OnceCell-like semantics: can be set exactly once.
-    value: std::sync::Arc<std::sync::Mutex<Option<Value>>>,
-}
+### 5.4 Call vs FnApply: Unambiguous Lowering
 
-impl LateBinding {
-    pub fn new() -> Self { ... }
-    pub fn set(&self, value: Value) { ... }
-    pub fn get(&self) -> Option<Value> { ... }
-}
-```
+**Current state:** `Expr::Call { func: Name, module, args }` is used for all calls. The typechecker's `lookup_call_target` resolves it. The interpreter's `eval_function_call` handles built-ins by string dispatch.
 
-EnvFrame bindings can be either `Value` (normal) or `LateBinding` (recursive). Lookup checks both.
+**After this spec:**
 
-### 5.5 Call vs FnApply: Unambiguous Lowering
+The lowering step (`crates/ash-parser/src/lower.rs`) produces:
+- `CoreExpr::Call { func, arguments }` for built-in functions (string dispatch in interpreter)
+- `CoreExpr::FnApply { func, args }` for user-defined functions and closures
 
-The lowering step resolves the ambiguity at compile time:
+**Blast radius for this change:**
 
-- Surface calls to **known built-in functions** (`len`, `append`, `concat`, `string::*`, etc.) -> `Expr::Call { func, arguments }`
-- Surface calls to **user-defined functions** (local `fn`, imported functions) -> `Expr::FnApply { func: Variable(name), args }`
-- If a variable shadows a built-in name, the user-defined function wins: lowering uses `FnApply`
+| Component | Current contract | Required change |
+|-----------|-----------------|-----------------|
+| `ash-parser/src/lower.rs` | All calls -> `Expr::Call` | Add `lower_fn_apply`, built-in registry |
+| `ash-core/src/ast.rs` | `Expr::Call` only | Add `Expr::FnApply` variant |
+| `ash-interp/src/eval.rs` | `Expr::Call` handles everything | Add `Expr::FnApply` handler; `Expr::Call` stays for built-ins only |
+| `ash-interp/src/error.rs` | `UnknownFunction` for missing built-ins | Add `NotCallable` for FnApply on non-closure |
+| `ash-typeck/src/check_expr.rs` | `Expr::Call` typed via `lookup_call_target` | Add `Expr::FnApply` typing; existing `lookup_call_target` handles `Type::Fn`/`Type::Fun` already |
+| `ash-engine/src/lib.rs` | Inlines imported callables into Call nodes | Inlines into FnApply nodes instead |
 
-The built-in function registry is available during lowering. The interpreter does NOT need a fallback path from `Call` to closure lookup.
-
-### 5.6 Expr::Call Transition (Backward Compatibility)
-
-During migration (Phase B), existing code that produces `Expr::Call` for user functions will coexist with `FnApply`. The interpreter's `Expr::Call` handler gains a closure-lookup fallback:
-
-1. Check built-in dispatch (`eval_function_call`)
-2. If not a built-in, check context for `Value::Closure` -> apply
-3. If neither, error: unknown function
-
-After Phase C, all lowering produces `FnApply` for user functions, and the fallback is removed.
+The typechecker already handles `Type::Fn` and `Type::Fun` in `check_expr.rs:193`. Adding `Expr::FnApply` typing reuses this path: evaluate `func` type, check it's `Type::Fn` or `Type::Fun`, unify arg types.
 
 ## 6. Type System Integration
 
-### 6.1 Function Type Syntax
+### 6.1 Use Existing Types
 
-```
-Fn(Int, Int) -> Int
-```
-
-This is a first-class type constructor. It appears in:
-
-- Parameter types: `fn apply(f: Fn(Int) -> Int, x: Int) -> Int { f(x) }`
-- Return types: `fn make_adder(n: Int) -> Fn(Int) -> Int { fn(x) { n + x } }`
-- Type annotations: `let f: Fn(String) -> Bool = |s| => s == "yes"`
-
-### 6.2 Type Representation
+The typechecker already has the split we need:
 
 ```rust
-/// In ash_typeck or ash-core type system
-Type::Fn {
-    params: Vec<Type>,
-    return_type: Box<Type>,
+// crates/ash-typeck/src/types.rs (existing)
+pub enum Type {
+    /// Pure function type: arguments, return type, no effect
+    Fn(Vec<Type>, Box<Type>),
+    /// Effectful function type: arguments, return type, effect
+    Fun(Vec<Type>, Box<Type>, Effect),
+    ...
 }
 ```
 
-### 6.3 Type Checking Rules
-
-- `Expr::FnDef { params, body }` has type `Fn(T1, ..., Tn) -> R` where `Ti` are the parameter types and `R` is the return type (inferred or annotated).
-- `Expr::FnApply { func, args }` type-checks: `func` must have type `Fn(A1, ..., An) -> R`, and each `arg` must have type `Ai`. Result type is `R`.
-- Higher-order: `Fn(Fn(T) -> U, T) -> U` is well-formed.
-
-### 6.4 Capture Effect Marker
-
-For three-vertex enforcement (§4.8), closures defined in workflow context carry an effect marker:
+The surface parser already parses `Fn(T, U) -> V` syntax:
 
 ```rust
-Type::Fn {
-    params: Vec<Type>,
-    return_type: Box<Type>,
-    effects: EffectSet,   -- empty for pure fn, non-empty for workflow-defined
+// crates/ash-parser/src/surface.rs (existing)
+pub enum Type {
+    Fn(Vec<Type>, Box<Type>),  // Fn(Int, Int) -> Int
+    ...
 }
 ```
 
-The type checker rejects passing an effect-annotated closure into a pure `fn` parameter.
+**SPEC-031 uses these existing types. No new type variants.**
 
-This is a **minimal** type system extension. Full effect typing is deferred to a future spec.
+### 6.2 Typing Rules
+
+| Expression | Type |
+|-----------|------|
+| `fn(x: Int) -> Int { x + 1 }` (in fn context) | `Type::Fn([Int], Int)` |
+| `fn(x: Int) -> Int { act ... }` (in workflow context) | `Type::Fun([Int], Int, Operational)` |
+| `f(args)` where `f: Type::Fn` or `Type::Fun` | Return type of `f` |
+| `Expr::FnApply { func, args }` | Type the func, unify args, return ret type |
+
+### 6.3 Three-Vertex Enforcement
+
+Existing `Type::Fn` (pure) vs `Type::Fun` (effectful) split enforces the boundary:
+
+- A pure function parameter typed `Type::Fn(...)` rejects a `Type::Fun(...)` closure
+- This is already how the type system distinguishes pure vs effectful callables
+- No new effect marker or third type shape needed
+
+### 6.4 Type Checker Changes
+
+`crates/ash-typeck/src/check_expr.rs` needs a new arm:
+
+```rust
+Expr::FnDef { params, return_type, body } => {
+    // Type-check body in extended environment
+    // Result type: Type::Fn(param_types, ret_type) or Type::Fun(...) if in workflow context
+}
+
+Expr::FnApply { func, args } => {
+    // Type func, check it's Type::Fn or Type::Fun
+    // Unify arg types with param types
+    // Return ret type
+}
+```
+
+The existing `Expr::Call` handler (`check_expr.rs:157-230`) is unchanged for built-ins.
 
 ## 7. Serialization Policy
 
-`Value::Closure` does **not** implement `Serialize`/`Deserialize`.
+**Rule: `Value::Closure` is never serialized.**
 
-Rationale:
-- The body is an `Expr` AST node -- serialized AST is brittle across compiler versions
-- Captured values may include `Cap`, `Stream`, `InstanceAddr`, `ControlLink` -- runtime-local references
-- Closures sent across process boundaries would carry invalid references
+Implementation:
+- `Value` currently derives `Serialize, Deserialize`. After adding `Closure`, implement custom serde that:
+  - Serializes `Closure` variant as `{ "_type": "closure", "_note": "non-serializable" }` (stub for diagnostics)
+  - Deserialization of the stub produces an error at runtime
+- Module-level functions are never `Value::Closure` (reification rule §3.1), so they are unaffected.
 
-Implementation: `Value` currently derives `Serialize, Deserialize` uniformly. After adding `Closure`, use `#[serde(skip_deserializing)]` or implement custom serialization that writes closures as a stub (name + module path) for module-level functions, and errors for captured closures.
+## 8. Parser Design for Local-Only fn Expressions
 
-If closures need to cross process boundaries in the future, the solution is to reference module-level functions by qualified name (`"llm::prompt::system"`) rather than serializing the closure itself.
+### 8.1 Current State
 
-## 8. Send + Sync Verification
+- `parse_fn_definition` in `parse_module.rs:1073-1129` parses top-level `fn` / `pub fn`
+- Nested `fn` is rejected: `parse_fn_rejects_nested_fn` test at `fn_parser_tests.rs:253-262`
+- The expression parser (`parse_expr.rs:18`) has no context parameter -- `ParseInput` is `Stateful<LocatingSlice<&str>, Position>` with no parse-state field
 
-The interpreter executes workflows asynchronously. `Value::Closure` must be `Send` to move across await points.
+### 8.2 Strategy: Post-Parse Validation (Not Context-Threading)
 
-Requirements:
-- `EnvFrame` uses `Arc<EnvFrameData>` where `EnvFrameData: Send + Sync` (all fields are `String`, `Value`, `Arc`)
-- `Expr` must be `Send + Sync`. Current `Expr` variants contain only `String`, `Vec`, `Box`, and `f64` -- all `Send + Sync`. The new `FnDef` and `FnApply` variants follow the same pattern.
-- `LateBinding` uses `Arc<Mutex<Option<Value>>>` which is `Send + Sync`.
+Rather than threading context through the parser (which would require changing `ParseInput` and every parser function), use a two-phase approach:
 
-Verify with a compile-time assertion after implementation:
-```rust
-const _: () = {
-    fn assert_send_sync<T: Send + Sync>() {}
-    assert_send_sync::<Value>();
-    assert_send_sync::<Expr>();
-};
-```
+**Phase 1: Parse permissively**
+- Extend `parse_expr` to recognize `fn(params) [-> type] { body }` as an expression
+- This produces `Expr::FnDef { ... }` in the surface AST regardless of context
+- The parser does NOT reject nested fn during parsing
 
-## 9. Parser Changes
+**Phase 2: Validate during lowering/type-checking**
+- During `lower_expr`, when encountering `Expr::FnDef`, check that it appears in a valid context (inside a workflow body or another FnDef body)
+- If at module top-level, emit a lowering error: "fn expressions are not valid at module scope; use `pub fn` instead"
+- The type checker performs the same validation as a second pass
 
-### 9.1 Anonymous Function Expression
+**Why this approach:**
+- Does not require changing `ParseInput` or adding context to `expr()`
+- Reuses the existing parser infrastructure
+- The test `parse_fn_rejects_nested_fn` changes to expect success at parse time, with rejection happening at lower/typeck time
+- Matches the existing pattern where structural validation happens in lowering (e.g., `InterfaceMethodCall` is parsed but rejected during lowering at `lower.rs:1181`)
 
-Parse `fn(params) [-> type] { body }` as an expression in `parse_expr`:
+### 8.3 Closure Syntax
 
-```
-fn_expr = "fn" "(" params ")" ["->" type] "{" expr "}"
-```
+`|params| => expr` is parsed as a new expression form in `parse_expr.rs`. It immediately desugars to `Expr::FnDef { params, body }` during parsing (no new surface AST node needed).
 
-Priority: after record constructor detection, before variable fallback.
+## 9. Lowering Changes
 
-Only valid in local context (inside workflow bodies, function bodies, blocks). Parser enforces this by only trying `fn_expr` when inside a workflow or function body.
-
-### 9.2 Closure Syntax
-
-Parse `|params| => expr` as an expression:
-
-```
-closure_expr = "|" params "=>" expr
-```
-
-### 9.3 Named Local Function Desugaring
-
-In the parser or lowering step, `fn name(params) { body }` inside a workflow/block becomes:
-
-```
-let name = fn(params) { body }
-```
-
-No new IR node needed -- it's syntactic sugar. This desugaring applies only in local context, not at module top-level where `pub fn` remains a `Definition::Function`.
-
-## 10. Lowering Changes
-
-### 10.1 Surface FnDef to Core
+### 9.1 Surface to Core
 
 The lowering step (`crates/ash-parser/src/lower.rs`) translates:
 
-- Surface anonymous function expression -> `CoreExpr::FnDef { params, return_type, body }`
-- Surface named local function definition -> `CoreWorkflow::Let { pattern: name, expr: FnDef { ... }, continuation }`
-- Surface function call to user-defined name -> `CoreExpr::FnApply { func: Variable(name), args }`
-- Surface function call to known built-in -> `CoreExpr::Call { func, arguments }` (unchanged)
+- Surface `Expr::FnDef` -> `CoreExpr::FnDef { params, return_type, body: lower_expr(body) }`
+- Surface `Expr::Call` to user-defined name -> `CoreExpr::FnApply { func: Variable(name), args }`
+- Surface `Expr::Call` to known built-in -> `CoreExpr::Call { func, arguments }` (unchanged)
 
-### 10.2 Built-in Detection
-
-The lowering step consults a built-in function registry to decide `Call` vs `FnApply`:
+### 9.2 Built-in Registry
 
 ```rust
-/// Registry of built-in function names known to the interpreter.
-/// Used during lowering to disambiguate Expr::Call vs Expr::FnApply.
+/// crates/ash-parser/src/lower.rs
+///
+/// Built-in function names that the interpreter handles via string dispatch.
+/// Calls to these names emit Expr::Call; all other calls emit Expr::FnApply.
 pub const BUILTIN_FUNCTIONS: &[&str] = &[
     "len", "append", "concat", "prepend",
-    "string::length", "string::trim", "string::to_uppercase", ...
+    "string::length", "string::trim", "string::to_uppercase",
+    "string::contains", "string::starts_with", "string::ends_with",
+    "string::find", "string::slice", "string::replace",
+    // ... complete list from eval_function_call in eval.rs
 ];
 ```
 
-If `func_name` is in `BUILTIN_FUNCTIONS` and is NOT shadowed by a local binding, emit `Expr::Call`. Otherwise emit `Expr::FnApply`.
+### 9.3 Cross-Crate Contract Changes
 
-## 11. Interpreter Changes
+| Crate | Change |
+|-------|--------|
+| `ash-parser` | `lower_expr` produces `FnApply` for user calls; `lower_fn_def` for FnDef bodies |
+| `ash-core` | `Expr::FnDef`, `Expr::FnApply` added to `ast.rs`; `EnvFrame`, `BindingSlot` in new `env_frame.rs` |
+| `ash-typeck` | `check_expr` gains `FnDef` and `FnApply` arms using existing `Type::Fn`/`Type::Fun` |
+| `ash-interp` | `eval_expr` gains `FnDef` and `FnApply` eval cases |
+| `ash-engine` | `inline_imported_calls_in_workflow_def` produces `FnApply` nodes; `pure_runtime` deleted |
 
-### 11.1 eval_expr Additions (ash-interp/src/eval.rs)
+## 10. Interpreter Changes
+
+### 10.1 eval_expr Additions
 
 ```rust
+// ash-interp/src/eval.rs
+
 Expr::FnDef { params, body, .. } => {
-    // Capture current environment as a shared frame
     let env_frame = ctx.to_env_frame();
     Ok(Value::Closure {
-        params: params.iter().map(|(n, t)| (n.clone(), t.as_ref().map(|s| s.to_string()))).collect(),
+        params: params.iter()
+            .map(|(n, t)| (n.clone(), t.as_ref().map(|s| s.to_string())))
+            .collect(),
         body: Box::new(body.as_ref().clone()),
         env: env_frame,
     })
@@ -419,7 +427,6 @@ Expr::FnApply { func, args } => {
                     actual: arg_values.len(),
                 });
             }
-            // Build call environment: captured frame + parameter bindings
             let call_env = Context::from_env_frame(&env);
             for ((name, _), value) in params.iter().zip(arg_values.into_iter()) {
                 call_env.set(name.clone(), value);
@@ -431,129 +438,116 @@ Expr::FnApply { func, args } => {
 }
 ```
 
-### 11.2 Context Extensions (ash-interp/src/context.rs)
+### 10.2 Context Extensions
 
 ```rust
 impl Context {
-    /// Create an EnvFrame snapshot of this context for closure capture.
-    /// The frame chain is shared via Arc -- O(1) capture, no flattening.
+    /// Snapshot current scope chain as an EnvFrame (shared via Arc).
     pub fn to_env_frame(&self) -> Arc<EnvFrame> { ... }
 
     /// Create a Context from a captured EnvFrame.
-    /// The context inherits the frame chain as its scope.
     pub fn from_env_frame(frame: &Arc<EnvFrame>) -> Self { ... }
 }
 ```
 
-### 11.3 Expr::Call Fallback (Migration Only)
+### 10.3 Recursive Let Evaluation
 
-During Phase B, `Expr::Call` gains a closure-lookup fallback:
+When the interpreter evaluates `Let { pattern: "factorial", expr: FnDef { ... } }`:
 
-```rust
-Expr::Call { func, arguments } => {
-    // 1. Try built-in dispatch
-    if let Ok(result) = eval_function_call(func, &args) {
-        return Ok(result);
-    }
-    // 2. Try closure lookup in context (migration fallback)
-    if let Some(Value::Closure { .. }) = ctx.get(func) {
-        // Re-dispatch as FnApply
-        ...
-    }
-    // 3. Error
-    Err(EvalError::UnknownFunction { name: func.clone() })
-}
-```
+1. Create a `BindingSlot::Late(cell)` for "factorial" in the current scope
+2. Evaluate the `FnDef` expression, producing `Value::Closure { env: frame_with_late_binding, ... }`
+3. Fill the late binding: `cell.set(closure.clone())`
+4. The closure now sees "factorial" in its captured environment
 
-After Phase C, this fallback is removed.
+### 10.4 Expr::Call: No Closure Fallback
 
-## 12. Removal of pure_runtime.rs
+After migration, `Expr::Call` handles built-in functions only. No closure lookup fallback. If a user shadow a built-in name, the lowering step produces `FnApply` (user-defined name wins over built-in registry).
 
-After the interpreter supports FnDef/FnApply natively:
+During migration (Phase B), a temporary fallback in `Expr::Call` handles the transition.
+
+## 11. Removal of pure_runtime.rs
 
 1. Delete `crates/ash-engine/src/pure_runtime.rs` (476 lines)
-2. Remove `should_execute_via_pure_runtime` and related dispatch logic from `crates/ash-engine/src/lib.rs`
-3. Remove `inline_imported_calls_in_workflow_def` (inlining hack)
+2. Remove `should_execute_via_pure_runtime` from `crates/ash-engine/src/lib.rs`
+3. Remove `inline_imported_calls_in_workflow_def`
 4. Remove `collect_local_inline_callables`
 5. All execution goes through `interpret_in_state`
-6. `parse_program_with_functions` is no longer needed -- `parse_file` produces core IR with FnDef/FnApply directly
+6. `parse_program_with_functions` removed
 
-## 13. Migration Path
+## 12. Migration Path
 
-### Phase A: Add FnDef/FnApply to core IR and interpreter (non-breaking)
+### Phase A: Core IR + Interpreter (non-breaking)
 1. Add `Expr::FnDef`, `Expr::FnApply` to `ash-core/src/ast.rs`
-2. Add `Value::Closure` to `ash-core/src/value.rs`
-3. Add `EnvFrame` to `ash-core/src/env_frame.rs`
-4. Add `LateBinding` cell for recursive let-bindings
+2. Add `Value::Closure` to `ash-core/src/value.rs` (custom serde: skip)
+3. Add `EnvFrame`, `BindingSlot` to `ash-core/src/env_frame.rs`
+4. Add `Send + Sync` compile-time assertions
 5. Add eval cases to `ash-interp/src/eval.rs`
-6. Add `Context::to_env_frame` and `Context::from_env_frame`
-7. Add compile-time `Send + Sync` assertions
-8. All existing tests pass -- new variants are just not produced yet
+6. Add `Context::to_env_frame`, `Context::from_env_frame`
+7. Existing tests pass -- new variants not produced yet
 
-### Phase B: Lower surface functions to core IR (non-breaking)
-1. Add `lower_fn_def` to `crates/ash-parser/src/lower.rs`
-2. Add built-in function registry (`BUILTIN_FUNCTIONS`)
-3. Named local `fn` in workflow context -> `Let { name, FnDef { ... } }`
-4. Function calls to user-defined names -> `FnApply { Variable(name), args }`
-5. Add closure-lookup fallback to `Expr::Call` handler
-6. Keep pure_runtime active during transition
+### Phase B: Lowering + Type Checker (non-breaking)
+1. Add built-in registry to `crates/ash-parser/src/lower.rs`
+2. Add `lower_fn_def`, update `lower_expr` for `FnApply`
+3. Add `FnDef`/`FnApply` arms to `ash-typeck/src/check_expr.rs` using existing `Type::Fn`/`Type::Fun`
+4. Temporary `Expr::Call` closure fallback in interpreter
+5. Keep `pure_runtime` active during transition
 
 ### Phase C: Delete pure_runtime (breaking cleanup)
 1. Delete `pure_runtime.rs`
-2. Remove dispatch logic from `lib.rs`
-3. Remove inlining code
-4. Remove `Expr::Call` closure fallback (all user calls now use `FnApply`)
-5. Verify all tests pass through the single interpreter path
+2. Remove dispatch/inlining from `lib.rs`
+3. Remove `Expr::Call` closure fallback
+4. Verify all tests through single interpreter path
 
-### Phase D: Parser additions (enhancement)
-1. Parse anonymous `fn(params) { body }` expressions in local context
+### Phase D: Parser Expression Forms
+1. Parse `fn(params) { body }` as expression in `parse_expr`
 2. Parse `|params| => body` closure syntax
-3. Add `Fn(T) -> U` type syntax to the parser
-4. These enable inline closures in workflow and function bodies
+3. Post-parse validation: reject `FnDef` at module scope during lowering
+4. Update `parse_fn_rejects_nested_fn` test to expect parse-success + lower-reject
 
-### Phase E: Type checker integration
-1. Add `Type::Fn` variant to type system
-2. Type-check `FnDef` and `FnApply` expressions
-3. Enforce three-vertex boundary via effect markers on closure types
+### Phase E: Effect Typing for Workflow Closures
+1. Type-check FnDef in workflow context as `Type::Fun(..., effect)` 
+2. Reject `Type::Fun` where `Type::Fn` expected (three-vertex enforcement)
+3. This uses existing `Type::Fun` and `Effect` -- no new types
 
-## 14. Conformance
+## 13. Conformance
 
-### 14.1 Minimal Conformance
+### 13.1 Minimal Conformance
 
-An implementation conforming to SPEC-031 must:
-- Evaluate `Value::Closure` from `Expr::FnDef` with shared environment capture (Arc<EnvFrame>)
-- Apply closures via `Expr::FnApply` with correct environment extension
-- Support recursion in named local functions via late binding
-- Support higher-order functions (passing/returning closures)
-- Execute all programs previously handled by `pure_runtime`
-- Distinguish `Expr::Call` (built-ins) from `Expr::FnApply` (user functions) in lowering
-- Ensure `Value::Closure` is `Send + Sync`
-- NOT serialize `Value::Closure` across process boundaries
-- Enforce three-vertex boundary for closures
+An implementation must:
+- Evaluate `Value::Closure` from `Expr::FnDef` with shared `Arc<EnvFrame>` capture
+- Apply closures via `Expr::FnApply` with correct parameter binding
+- Support recursion via `BindingSlot::Late`
+- Support higher-order functions
+- Use existing `Type::Fn` / `Type::Fun` for closure typing
+- Distinguish `Expr::Call` (built-ins) from `Expr::FnApply` (user functions)
+- Ensure `Value::Closure` is `Send + Sync` without `unsafe`
+- NOT serialize `Value::Closure`
+- Module-level functions are never `Value::Closure`
 - Pass all existing tests
 
-### 14.2 Full Conformance
+### 13.2 Full Conformance
 
 Additionally supports:
-- Anonymous function expressions in the parser
+- Anonymous function expressions in parser
 - Closure syntax `|x| => ...`
-- `Fn(T1, T2) -> U` type syntax and type checking
-- Effect markers on closure types for three-vertex enforcement
-- Proper tail-call optimization for recursive closures (future)
+- Post-parse validation of fn-in-local-context
+- Three-vertex enforcement via `Type::Fn` vs `Type::Fun`
+- Tail-call optimization (future)
 
-## 15. Files Affected
+## 14. Files Affected
 
 | File | Change |
 |------|--------|
 | `crates/ash-core/src/ast.rs` | Add `Expr::FnDef`, `Expr::FnApply` |
-| `crates/ash-core/src/value.rs` | Add `Value::Closure` (no Serialize/Deserialize) |
-| `crates/ash-core/src/env_frame.rs` | NEW: `EnvFrame`, `LateBinding` |
+| `crates/ash-core/src/value.rs` | Add `Value::Closure` (custom serde) |
+| `crates/ash-core/src/env_frame.rs` | NEW: `EnvFrame`, `BindingSlot` |
 | `crates/ash-core/src/lib.rs` | Export `env_frame` module |
 | `crates/ash-interp/src/context.rs` | Add `to_env_frame`, `from_env_frame` |
-| `crates/ash-interp/src/eval.rs` | Add eval cases for FnDef, FnApply, closure Call fallback |
-| `crates/ash-interp/src/error.rs` | Add `NotCallable`, `UnknownFunction` error variants |
-| `crates/ash-parser/src/lower.rs` | Add `lower_fn_def`, built-in registry, update `lower_expr` |
-| `crates/ash-parser/src/parse_expr.rs` | Add anonymous fn expression, closure syntax (Phase D) |
-| `crates/ash-engine/src/lib.rs` | Remove pure_runtime dispatch, inlining (Phase C) |
+| `crates/ash-interp/src/eval.rs` | Add `FnDef`/`FnApply` eval cases |
+| `crates/ash-interp/src/error.rs` | Add `NotCallable` variant |
+| `crates/ash-typeck/src/check_expr.rs` | Add `FnDef`/`FnApply` arms using existing types |
+| `crates/ash-typeck/src/types.rs` | No changes (use existing `Fn`/`Fun`) |
+| `crates/ash-parser/src/lower.rs` | Add built-in registry, `lower_fn_def`, `FnApply` lowering |
+| `crates/ash-parser/src/parse_expr.rs` | Add fn expression, closure syntax (Phase D) |
+| `crates/ash-engine/src/lib.rs` | Remove pure_runtime dispatch (Phase C) |
 | `crates/ash-engine/src/pure_runtime.rs` | DELETE (Phase C) |
-| `crates/ash-typeck/src/` | Add `Type::Fn`, effect markers (Phase E) |

@@ -102,9 +102,12 @@ impl EnvFrame {
     }
 }
 
+/// Closures compare by identity (reference equality on captured EnvFrame).
+/// Two non-empty frames always compare as not-equal regardless of content.
+/// Two empty frames compare as equal only if they share the same parent Arc
+/// or both have no parent.
 impl PartialEq for EnvFrame {
     fn eq(&self, other: &Self) -> bool {
-        // Two frames are equal if they point to the same Arc (reference equality)
         self.bindings.is_empty()
             && other.bindings.is_empty()
             && match (&self.parent, &other.parent) {

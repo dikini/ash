@@ -38,4 +38,5 @@ pub use visualize::*;
 const _: () = {
     const fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<Value>();
+    assert_send_sync::<Expr>();
 };

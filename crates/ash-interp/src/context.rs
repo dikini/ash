@@ -160,6 +160,9 @@ impl Context {
     ///
     /// Walks up the context chain, building an EnvFrame chain.
     /// Each scope level becomes an EnvFrame with a parent link.
+    /// NOTE: obligation and role state is not captured in EnvFrame.
+    /// Closure bodies that need obligation/role context will not have it
+    /// when invoked through the captured environment.
     pub fn to_env_frame(&self) -> std::sync::Arc<ash_core::env_frame::EnvFrame> {
         use ash_core::env_frame::EnvFrame;
         let parent = self.parent.as_ref().map(|p| p.to_env_frame());

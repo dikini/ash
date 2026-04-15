@@ -454,39 +454,39 @@ fn validate_interface_calls_in_expr(
             if let Some(module_name) = module.as_deref()
                 && env.has_interface(module_name)
             {
-                    let mut arg_types = Vec::new();
-                    let mut subst = crate::types::Substitution::new();
-                    for arg in args {
-                        let arg_result = crate::check_expr::check_expr(env, arg);
-                        if !arg_result.is_ok() {
-                            let reason = arg_result
-                                .errors
-                                .into_iter()
-                                .next()
-                                .map(|error| error.to_string())
-                                .unwrap_or_else(|| {
-                                    format!(
-                                        "failed to typecheck argument to {}::{}",
-                                        module_name,
-                                        func.as_ref()
-                                    )
-                                });
+                let mut arg_types = Vec::new();
+                let mut subst = crate::types::Substitution::new();
+                for arg in args {
+                    let arg_result = crate::check_expr::check_expr(env, arg);
+                    if !arg_result.is_ok() {
+                        let reason = arg_result
+                            .errors
+                            .into_iter()
+                            .next()
+                            .map(|error| error.to_string())
+                            .unwrap_or_else(|| {
+                                format!(
+                                    "failed to typecheck argument to {}::{}",
+                                    module_name,
+                                    func.as_ref()
+                                )
+                            });
 
-                            return Err(TypeCheckError::TypeError(format!(
-                                "invalid interface method call {}::{}: {}",
-                                module_name,
-                                func.as_ref(),
-                                reason
-                            )));
-                        }
-                        subst = subst.compose(&arg_result.substitution);
-                        arg_types.push(subst.apply(&arg_result.ty));
+                        return Err(TypeCheckError::TypeError(format!(
+                            "invalid interface method call {}::{}: {}",
+                            module_name,
+                            func.as_ref(),
+                            reason
+                        )));
                     }
-
-                    env.resolve_interface_method_call(module_name, func.as_ref(), &arg_types)
-                        .map(|_| ())
-                        .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                    subst = subst.compose(&arg_result.substitution);
+                    arg_types.push(subst.apply(&arg_result.ty));
                 }
+
+                env.resolve_interface_method_call(module_name, func.as_ref(), &arg_types)
+                    .map(|_| ())
+                    .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+            }
 
             Ok(())
         }

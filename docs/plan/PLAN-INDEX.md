@@ -2424,3 +2424,21 @@ Remove the single type-parameter restriction on interfaces, enable generic `impl
 | [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | 📝 Planned |
 
 **Deliverable:** Interfaces accept any number of type parameters; generic impls with `where` bounds compile and resolve recursively; overlapping impl schemes rejected at registration; associated types (`S::Ok`) normalize to concrete types; `Type::Associated` never appears at runtime.
+
+## Phase 84: Language Server Protocol (LSP) & MCP Interface
+
+Implement a production-quality LSP server for Ash with an embedded MCP bridge.
+This enables IDE support (VSCode, Neovim) and gives AI coding agents programmatic
+access to diagnostics, hover, definitions, completions, and references.
+
+**Spec Reference:** [SPEC-038: Ash Language Server Protocol (LSP) & MCP Interface](../spec/SPEC-038-LANGUAGE-SERVER.md)
+**Priority:** Medium
+**Status:** 📝 Planned
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 160 | 📝 Planned |
+
+**Deliverable:** `ash-lsp` server provides real-time diagnostics, hover, go-to-definition,
+completions, and document symbols. `ash-mcp` exposes the same intelligence as MCP tools
+for AI agents. VSCode extension skeleton and Neovim config documentation provided.

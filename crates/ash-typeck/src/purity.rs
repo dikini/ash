@@ -116,30 +116,30 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             if let Some(module_name) = module.as_deref()
                 && env.has_interface(module_name)
             {
-                    let mut arg_types = Vec::new();
-                    let mut subst = crate::types::Substitution::new();
-                    for arg in args {
-                        let arg_result = check_expr(env, arg);
-                        if arg_result.is_ok() {
-                            subst = subst.compose(&arg_result.substitution);
-                            arg_types.push(subst.apply(&arg_result.ty));
-                        }
+                let mut arg_types = Vec::new();
+                let mut subst = crate::types::Substitution::new();
+                for arg in args {
+                    let arg_result = check_expr(env, arg);
+                    if arg_result.is_ok() {
+                        subst = subst.compose(&arg_result.substitution);
+                        arg_types.push(subst.apply(&arg_result.ty));
                     }
-
-                    if env
-                        .resolve_interface_method_call(module_name, func.as_ref(), &arg_types)
-                        .is_err()
-                    {
-                        errors.push(PurityError {
-                            kind: PurityViolation::InvalidInterfaceMethodCall {
-                                interface: module_name.to_string(),
-                                method: func.to_string(),
-                            },
-                            span: *span,
-                        });
-                    }
-                    return;
                 }
+
+                if env
+                    .resolve_interface_method_call(module_name, func.as_ref(), &arg_types)
+                    .is_err()
+                {
+                    errors.push(PurityError {
+                        kind: PurityViolation::InvalidInterfaceMethodCall {
+                            interface: module_name.to_string(),
+                            method: func.to_string(),
+                        },
+                        span: *span,
+                    });
+                }
+                return;
+            }
 
             let callee = qualified_callee_name(module.as_deref(), func.as_ref());
             let Some(callee_ty) = env.lookup_call_target(module.as_deref(), func.as_ref()) else {

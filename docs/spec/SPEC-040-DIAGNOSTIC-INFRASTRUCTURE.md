@@ -10,10 +10,10 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 
 This spec covers:
 1. Adding `span: ash_parser::token::Span` to every variant of `TypeEnvError` and `NameError`.
-2. Adding `span` to `ConstructorError::UnknownConstructor` and `ConstructorError::NonExhaustiveMatch`.
+2. Adding `span` to **all** spanless variants of `ConstructorError` (`UnknownConstructor`, `MissingField`, `UnknownField`, `FieldTypeMismatch`, `TupleFieldTypeMismatch`, `TupleArityMismatch`, `NonExhaustiveMatch`) and to `TypeError::NotAConstructor`.
 3. Adding `span` to `ResolutionError` and `PurityError` variants that lack it.
 4. Adding `span` to `TypeError` variants that lack it.
-5. Defining a new `AshLspError` trait with `span()`, `severity()`, `code()`, and `message()` methods.
+5. Defining a new `AshLspError` trait, a `Severity` enum, and a `DiagnosticCode` newtype in a new `crates/ash-diagnostic` crate.
 
 ## 3. Current State
 
@@ -34,18 +34,24 @@ pub enum TypeEnvError {
 
 ### 3.2 `ConstructorError`
 
-Most variants already carry `span`, but two do not:
+The following variants currently lack a `span`:
 
 ```rust
 pub enum ConstructorError {
     UnknownConstructor(String),          // no span
-    // ... other variants with spans
+    MissingField { constructor: String, field: String }, // no span
+    UnknownField { constructor: String, field: String }, // no span
+    FieldTypeMismatch { constructor: String, field: String, expected: String, actual: String }, // no span
+    TupleFieldTypeMismatch { constructor: String, position: usize, expected: String, actual: String }, // no span
+    TupleArityMismatch { constructor: String, expected: usize, actual: usize }, // no span
     NonExhaustiveMatch {
         scrutinee_type: String,
         missing: String,
     },   // no span
 }
 ```
+
+> **Note:** `TypeError::NotAConstructor(String)` also lacks a span and is treated as part of the constructor-error scope for this spec.
 
 > **Note:** The codebase also contains an unused `ExhaustivenessError` enum in `error.rs`. It is **not** emitted by the active type-checking pipeline and is **not** part of the `AshLspError` trait.
 
@@ -90,7 +96,7 @@ pub struct PurityError {
 }
 ```
 
-`PurityError` already carries a `span`, but it is not listed in the original `AshLspError` spec.
+`PurityError` already carries a `span`, but it does **not** currently implement `std::error::Error`. It must be updated to do so (e.g., by deriving `thiserror::Error` or a manual impl) before it can satisfy the `AshLspError` trait bounds.
 
 ### 3.6 `TypeError`
 
@@ -110,11 +116,14 @@ pub enum TypeError {
     UndischargedObligations { obligations: Vec<String> },
     UnknownObligation { name: String, span: Span },
     ObligationAlreadySatisfied { name: String, span: Span },
+    UnknownCapability { name: String, span: Span },          // already has span
+    InvalidConstraintField { capability: String, field: String, span: Span }, // already has span
+    NotAConstructor(String),                                 // no span
     // ...
 }
 ```
 
-Most variants lack `span`.
+Most variants lack `span`. `UnknownCapability` and `InvalidConstraintField` already carry spans and must be verified at all construction sites.
 
 ## 4. Required Changes
 
@@ -145,7 +154,7 @@ Full list of variants to update:
 
 ### 4.2 `ConstructorError`
 
-Update both spanless variants:
+Update **all** spanless variants:
 
 ```rust
 UnknownConstructor {
@@ -153,9 +162,53 @@ UnknownConstructor {
     span: ash_parser::token::Span,
 }
 
+MissingField {
+    constructor: String,
+    field: String,
+    span: ash_parser::token::Span,
+}
+
+UnknownField {
+    constructor: String,
+    field: String,
+    span: ash_parser::token::Span,
+}
+
+FieldTypeMismatch {
+    constructor: String,
+    field: String,
+    expected: String,
+    actual: String,
+    span: ash_parser::token::Span,
+}
+
+TupleFieldTypeMismatch {
+    constructor: String,
+    position: usize,
+    expected: String,
+    actual: String,
+    span: ash_parser::token::Span,
+}
+
+TupleArityMismatch {
+    constructor: String,
+    expected: usize,
+    actual: usize,
+    span: ash_parser::token::Span,
+}
+
 NonExhaustiveMatch {
     scrutinee_type: String,
     missing: String,
+    span: ash_parser::token::Span,
+}
+```
+
+Also update `TypeError::NotAConstructor`:
+
+```rust
+NotAConstructor {
+    name: String,
     span: ash_parser::token::Span,
 }
 ```
@@ -180,19 +233,23 @@ All variants updated to include `span`:
 
 ### 4.5 `TypeError`
 
-All variants updated to include `span`. For variants that already carry `span` (`UnknownObligation`, `ObligationAlreadySatisfied`), verify that every construction site passes a real span.
+All variants updated to include `span`. For variants that already carry `span` (`UnknownObligation`, `ObligationAlreadySatisfied`, `UnknownCapability`, `InvalidConstraintField`), verify that every construction site passes a real span.
 
 ## 5. The `AshLspError` Trait
 
-Define the trait in `ash-typeck` (e.g., `ash_typeck::diagnostic::AshLspError`) because `ash-lsp-core` does not exist yet. It can be moved to `ash-lsp-core` once that crate is created in SPEC-038.
+Define the trait, `Severity`, and a `DiagnosticCode` newtype in a **new crate** `crates/ash-diagnostic` (e.g., `ash_diagnostic::AshLspError`) to break the circular dependency between `ash-typeck` and future `ash-lsp-core`.
 
 ```rust
 use ash_parser::token::Span;
 
+/// Lightweight newtype for diagnostic codes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticCode(pub String);
+
 pub trait AshLspError: std::fmt::Display + std::error::Error {
     fn span(&self) -> Option<Span>;
     fn severity(&self) -> Severity;
-    fn code(&self) -> Option<String>;
+    fn code(&self) -> Option<DiagnosticCode>;
     fn message(&self) -> String { self.to_string() }
 }
 
@@ -207,7 +264,7 @@ pub enum Severity {
 
 ### 5.1 Error Codes
 
-The `code()` method returns an `Option<String>` using a lightweight taxonomy:
+The `code()` method returns an `Option<DiagnosticCode>` using a lightweight taxonomy:
 
 | Prefix | Meaning |
 |--------|---------|
@@ -240,18 +297,20 @@ Each implementation maps the error's internal severity logic:
 
 > **Not included:** `ExhaustivenessError` is unused in the active pipeline and does not receive an implementation.
 
+> **Prerequisite:** `PurityError` must implement `std::error::Error` before it can satisfy the `AshLspError` super-trait bounds.
+
 ### 5.3 Diagnostic Conversion
 
-With the trait in place, converting any error to an LSP `Diagnostic` becomes mechanical:
+With the trait in place, converting any error to an LSP `Diagnostic` becomes mechanical. `span_to_lsp_range` is defined in SPEC-038; the helper below assumes it is available:
 
 ```rust
 fn ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagnostic> {
     let span = err.span()?;
-    let range = span_to_lsp_range(span, source);
+    let range = span_to_lsp_range(span, source); // see SPEC-038
     Some(Diagnostic {
         range,
         severity: Some(err.severity().into()),
-        code: err.code().map(NumberOrString::String),
+        code: err.code().map(|c| NumberOrString::String(c.0)),
         source: Some("ash".into()),
         message: err.message(),
         ..Default::default()
@@ -264,11 +323,11 @@ fn ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagno
 Every location that constructs these errors must be updated to pass a `Span`:
 
 - `crates/ash-typeck/src/type_env.rs` — all `TypeEnvError` construction sites
-- `crates/ash-typeck/src/check_expr.rs` — `ConstructorError::UnknownConstructor`, `ConstructorError::NonExhaustiveMatch`
+- `crates/ash-typeck/src/check_expr.rs` — all spanless `ConstructorError` construction sites
 - `crates/ash-typeck/src/name_binding.rs` — all `NameError` construction sites
 - `crates/ash-typeck/src/names.rs` — all `ResolutionError` construction sites
-- `crates/ash-typeck/src/solver.rs` — all `TypeError` construction sites
-- `crates/ash-typeck/src/purity.rs` — `PurityError` already has `span`; verify all construction sites populate it correctly
+- `crates/ash-typeck/src/solver.rs` — all `TypeError` construction sites (including `NotAConstructor`)
+- `crates/ash-typeck/src/purity.rs` — `PurityError` already has `span`; verify all construction sites populate it correctly and add `std::error::Error` implementation
 - All test files that construct these errors directly
 
 ## 7. Migration Strategy
@@ -278,15 +337,15 @@ Because the changes are mechanical but widespread, the migration should be done 
 2. `NameError` + all call sites
 3. `ResolutionError` + all call sites
 4. `TypeError` + all call sites
-5. `ConstructorError::UnknownConstructor` + `ConstructorError::NonExhaustiveMatch` + all call sites
-6. Define `AshLspError` trait and implement it for all error types.
+5. All spanless `ConstructorError` variants + `TypeError::NotAConstructor` + all call sites
+6. Create `crates/ash-diagnostic`, define `AshLspError`, `Severity`, and `DiagnosticCode`, and implement for all error types.
 
 ## 8. Testing Strategy
 
 1. **Unit tests:** Assert that every error variant carries a span equal to the input location.
 2. **Integration tests:** Parse/type-check invalid programs and verify that every emitted diagnostic has a non-zero span.
 3. **LSP bridge tests:** Verify that `ash_error_to_diagnostic` produces valid LSP ranges for a sample of each error type.
-4. **Proptest:** Generate random invalid programs and assert that every produced diagnostic satisfies `span.line > 0 && span.column > 0`.
+4. **Proptest:** Generate random invalid programs and assert that the span of every produced diagnostic is **not** `Span::default()` (i.e., a real span was attached).
 
 ## 9. Relationship to Other Specs
 

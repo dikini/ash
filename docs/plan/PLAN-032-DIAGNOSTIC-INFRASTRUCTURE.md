@@ -14,13 +14,14 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
-| [TASK-572](../tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError`, and `ConstructorError::UnknownConstructor` | 12h | 📝 Planned |
-| [TASK-573](../tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | 6h | 📝 Planned |
+| [TASK-572](../tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `NameError`, `ResolutionError`, `TypeError`, and all spanless `ConstructorError` variants | 12h | 📝 Planned |
+| [TASK-573](../tasks/TASK-573-ash-lsp-error-trait.md) | Create `crates/ash-diagnostic`, define `AshLspError` trait, `Severity`, and `DiagnosticCode`, and implement for all error types | 6h | 📝 Planned |
 
 ## Deliverable
 
-- Every `TypeEnvError`, `ConstructorError`, `NameError`, `ResolutionError`, and `TypeError` variant carries a `span`
-- `AshLspError` trait provides `span()`, `severity()`, `code()`, `message()`
+- Every `TypeEnvError`, `NameError`, `ResolutionError`, and `TypeError` variant carries a `span`
+- All spanless `ConstructorError` variants (`UnknownConstructor`, `MissingField`, `UnknownField`, `FieldTypeMismatch`, `TupleFieldTypeMismatch`, `TupleArityMismatch`, `NonExhaustiveMatch`) and `TypeError::NotAConstructor` carry a `span`
+- New `crates/ash-diagnostic` crate provides `AshLspError` trait, `Severity`, and `DiagnosticCode` newtype
 - Mechanical diagnostic conversion from any Ash error to LSP `Diagnostic`
 
 ## Timeline

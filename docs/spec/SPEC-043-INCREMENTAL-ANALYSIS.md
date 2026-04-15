@@ -41,51 +41,59 @@ pub struct WorkspaceRoot {
     #[return_ref]
     pub path: String,
 }
+
+#[salsa::input]
+pub struct WorkspaceManifest {
+    #[return_ref]
+    pub contents: String,
+}
 ```
 
 ### 4.2 Queries
 
+Queries accept `SourceFile` inputs directly by identity; they no longer look up files via `(root, path)` string tuples.
+
 ```rust
 #[salsa::tracked]
-pub fn parse_file(db: &dyn AshDb, root: WorkspaceRoot, path: String)
+pub fn parse_file(db: &dyn AshDb, file: SourceFile)
     -> (ModuleFile, Vec<ParseError>)
 {
-    let source = db.source_file(root, path);
-    // parse text
+    // parse file.text(db)
 }
 
 #[salsa::tracked]
-pub fn module_graph(db: &dyn AshDb, root: WorkspaceRoot) -> ModuleGraph {
-    // load crate roots from root path and build graph
+pub fn module_graph(db: &dyn AshDb, manifest: WorkspaceManifest) -> ModuleGraph {
+    // load crate roots from manifest contents and build graph
 }
 
 #[salsa::tracked]
 pub fn type_check_file(
     db: &dyn AshDb,
-    root: WorkspaceRoot,
-    path: String,
+    file: SourceFile,
+    manifest: WorkspaceManifest,
 ) -> (TypeCheckResult, Vec<ConstructorError>) {
-    let module = parse_file(db, root.clone(), path.clone()).0;
-    let graph = module_graph(db, root);
+    let module = parse_file(db, file).0;
+    let graph = module_graph(db, manifest);
     // run ash-typeck via type_check_module_file(module, graph)
 }
 
 #[salsa::tracked]
-pub fn symbol_index(db: &dyn AshDb, root: WorkspaceRoot, path: String) -> SymbolIndex {
-    let module = parse_file(db, root, path).0;
+pub fn symbol_index(db: &dyn AshDb, file: SourceFile) -> SymbolIndex {
+    let module = parse_file(db, file).0;
     // build document symbols and reference index
 }
 ```
 
-> **Prerequisite:** `ash-typeck` must expose a `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph) -> (TypeCheckResult, Vec<ConstructorError>)` API before this query can be implemented. This should be delivered as part of SPEC-038 Phase 2.
+> **Prerequisites:**
+> - `ash-parser` must expose `parse_surface_file(text: &str) -> (ModuleFile, Vec<ParseError>)` before this query can be implemented. See SPEC-038.
+> - `ash-typeck` must expose a `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph) -> (TypeCheckResult, Vec<ConstructorError>)` API before this query can be implemented. This should be delivered as part of SPEC-038 Phase 2.
+> - `ConstructorError` is the error type produced by `ash-typeck` during environment construction (see SPEC-038 §12).
 
 ### 4.3 Database Trait
 
 ```rust
 #[salsa::db]
-pub trait AshDb: salsa::Database {
-    fn source_file(&self, root: WorkspaceRoot, path: String) -> SourceFile;
-}
+pub trait AshDb: salsa::Database {}
 
 #[salsa::db]
 #[derive(Default)]
@@ -103,15 +111,19 @@ pub struct SalsaVfs {
     db: parking_lot::RwLock<AshDatabase>,
     file_inputs: DashMap<Url, SourceFile>,
     root_input: WorkspaceRoot,
+    manifest_input: WorkspaceManifest,
 }
 ```
 
 - **Read requests** (hover, completion) acquire a read lock on the database.
-- **Write requests** (`didChange`) acquire a write lock, call `source_file.set_text(...)`, then drop the lock.
+- **Write requests** (`didChange`, `didChangeWatchedFiles`) acquire a write lock, mutate the relevant salsa input, then drop the lock.
+- **`didOpen`:** Use `DashMap::entry(uri).or_insert_with(...)` to atomically create the `SourceFile` input once, avoiding a TOCTOU race between the `DashMap` check and the `RwLock` write.
+- **`didClose`:** If the file belongs to the workspace, revert the `SourceFile` input to the current on-disk content (so that closed files still participate in cross-file analysis with disk state). If the file is ephemeral, remove it from `file_inputs` and stop passing it to salsa queries.
+- **`didChangeWatchedFiles`:** When the workspace `ash.toml` changes on disk, acquire a write lock and call `manifest_input.set_contents(&mut db, new_contents)`.
 
 When the LSP layer receives `textDocument/didChange`:
 
-1. Look up the `SourceFile` salsa input for that URI (create it once on `didOpen`, store in `file_inputs`).
+1. Look up the `SourceFile` salsa input for that URI (created once on `didOpen`, stored in `file_inputs`).
 2. Acquire a write lock on `db`.
 3. Call `source_file.set_text(&mut db, new_text)` to mutate the existing input.
 4. Drop the lock.
@@ -128,14 +140,13 @@ fn on_did_change(&self, uri: Url, changes: &[TextDocumentContentChangeEvent]) {
 
 > **Important:** Creating a *new* salsa input on every `didChange` would change the input identity and invalidate all queries keyed by that path. Inputs must be created once and mutated via setters.
 
+> **Memory budget:** `SalsaVfs` holds every open workspace file as a salsa input. For very large workspaces (>10k files), consider a LRU eviction policy for unopened files or shard the database per crate. This is out of scope for the initial migration.
+
 ## 6. Error Handling
 
 ### 6.1 Salsa Cycles
 
-If a query cycle is detected (e.g., `type_check_file(A)` depends on `type_check_file(B)` which depends on `A`), salsa will panic by default. The server must:
-1. Wrap salsa calls in `std::panic::catch_unwind` (see SPEC-038 §16).
-2. On cycle panic, return an LSP `InternalError` with message "cyclic module dependency detected".
-3. Clear the cache entry for the affected file.
+If a query cycle is detected (e.g., `type_check_file(A)` depends on `type_check_file(B)` which depends on `A`), the server must recover gracefully. **Preferred:** Use salsa's cycle-recovery API (`#[salsa::tracked(cycle_fn = recover_cycle, cycle_initial = init_cycle)]`) to return a recovered value rather than panicking. **Fallback:** If cycle recovery cannot be used, drop and recreate the `AshDatabase`, re-register all `SourceFile`, `WorkspaceRoot`, and `WorkspaceManifest` inputs, and return an LSP `InternalError` with message "cyclic module dependency detected".
 
 ### 6.2 I/O Failures During `module_graph`
 
@@ -161,6 +172,8 @@ The spike should:
 4. Record every missing `Eq` / `Hash` / `Clone` derive.
 5. Report findings. Use this to revise this spec and TASK-576 before implementation begins.
 
+> **Tracked prerequisite:** Adding `Eq + Hash` to `TypeCheckResult`, `Substitution`, `Type`, and all error types (`ConstructorError`, `TypeEnvError`, `NameError`, `ResolutionError`, `TypeError`, `ParseError`) is a non-trivial prerequisite that may require refactoring interned types or replacing `f32`/`f64` fields with ordered wrappers. Track this as a separate sub-task in TASK-576.
+
 ## 8. Migration Strategy
 
 The migration from simple cache to salsa should be **transparent** to `ash-lsp` handlers:
@@ -169,20 +182,22 @@ The migration from simple cache to salsa should be **transparent** to `ash-lsp` 
 2. **Phase B:** Swap the cache for salsa behind the same `ash-lsp-core` public API.
 3. **Phase C:** Delete the old cache code.
 
-> **Alternative:** If the spike in £7 shows that Salsa integration is straightforward, consider making Salsa the default cache from the start rather than building an LRU cache that is immediately thrown away.
+> **Alternative:** If the spike in §7 shows that Salsa integration is straightforward, consider making Salsa the default cache from the start rather than building an LRU cache that is immediately thrown away.
 
 ## 9. Testing Strategy
 
 1. **Correctness tests:** For a sample workspace, assert that salsa and the old cache produce identical diagnostics/symbols for every file.
 2. **Invalidation tests:** Edit file `A.ash`; assert that `parse_file(A)` is recomputed but `parse_file(B)` is cached.
-3. **Proptest invalidation:** Generate random sequences of `didChange` events across a 3-file workspace and assert that the number of recomputed queries never exceeds the number of files actually edited.
+3. **Proptest invalidation:** Generate random sequences of `didChange` events across a 3-file workspace and assert that the exact set of recomputed queries equals the transitive dependency closure of the edited files (i.e., no over-invalidation and no under-invalidation).
 4. **Performance tests:** Measure type-check time for a 10-file workspace before and after the migration.
+5. **Memory tests:** Assert that the salsa database resident set size does not exceed 2× the old cache RSS for the same workspace under steady state.
 
 ## 10. Relationship to Other Specs
 
 - **Blocked by:**
   - SPEC-038 LSP MVP (must exist first; `ash-lsp-core` must be stable)
+  - `ash-parser` must expose `parse_surface_file(text: &str) -> (ModuleFile, Vec<ParseError>)`
   - `ash-typeck` must expose `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)`
-  - `ash-typeck` and `ash-parser` types must derive `Eq + Hash`
+  - `ash-typeck` and `ash-parser` types must derive `Eq + Hash` (see §7 prerequisite task)
 - **Follows:** SPEC-039, SPEC-040, SPEC-041 (all stable)
 - **Enables:** Large-workspace LSP performance

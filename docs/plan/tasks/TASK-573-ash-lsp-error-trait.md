@@ -8,35 +8,39 @@
 
 ## Description
 
-Define a uniform `AshLspError` trait that `ash-lsp-core` can use to convert any Ash error into an LSP `Diagnostic`.
+Define a uniform `AshLspError` trait that `ash-lsp-core` can use to convert any Ash error into an LSP `Diagnostic`. To break the circular dependency between `ash-typeck` and `ash-lsp-core`, the trait lives in a new `crates/ash-diagnostic` crate.
 
 ## Requirements
 
-1. Define `AshLspError` trait with:
+1. Create new crate `crates/ash-diagnostic`.
+2. Define a `DiagnosticCode` newtype (`pub struct DiagnosticCode(pub String);`).
+3. Define a `Severity` enum mapping to LSP severities.
+4. Define `AshLspError` trait with:
    - `fn span(&self) -> Option<Span>`
    - `fn severity(&self) -> Severity`
-   - `fn code(&self) -> Option<String>`
+   - `fn code(&self) -> Option<DiagnosticCode>`
    - `fn message(&self) -> String`
-2. Define `Severity` enum mapping to LSP severities.
-3. Implement `AshLspError` for:
+5. Implement `AshLspError` for:
    - `ParseError`
    - `ConstructorError`
    - `TypeEnvError`
    - `TypeError`
    - `NameError`
    - `ResolutionError`
-   - `PurityError`
-4. Provide `ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagnostic>` helper.
+   - `PurityError` (requires `PurityError` to implement `std::error::Error` first)
+6. Provide `ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagnostic>` helper.
 
 > **Note:** `ExhaustivenessError` is unused in the active type-checking pipeline and does **not** receive an implementation.
 
 ## Location
 
-Place the trait in `crates/ash-typeck/src/diagnostic.rs` (new file) because `ash-lsp-core` does not exist yet. Migrate it to `ash-lsp-core` during SPEC-038.
+Place the trait, `Severity`, and `DiagnosticCode` in `crates/ash-diagnostic/src/lib.rs` (new crate).
 
 ## Completion Checklist
 
+- [ ] `crates/ash-diagnostic` created
 - [ ] `AshLspError` trait defined
+- [ ] `DiagnosticCode` and `Severity` defined
 - [ ] Implementations for all required error types
 - [ ] Conversion helper tested with sample errors
 - [ ] `cargo test --all` passing

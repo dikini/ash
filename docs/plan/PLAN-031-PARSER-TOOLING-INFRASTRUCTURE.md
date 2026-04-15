@@ -20,9 +20,13 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 ## Deliverable
 
 - `Expr::Variable { name: Name, span: Span }` and `Pattern::Variable { name: Name, span: Span }` in both surface and core AST
+- `ast::Span` derives `Hash` and `Eq` (prerequisite for CommentTable portability)
+- `Literal` span work explicitly deferred
 - `Comment` capture during whitespace skipping (side-table approach, no token-stream changes)
-- `CommentTable` attached to `ModuleFile`
-- `parse_surface_file(source: &str)` top-level API
+- Nine copies of `skip_whitespace_and_comments` consolidated into `parse_utils.rs` with dedicated test suite
+- `CommentTable` attached to `ModuleFile`, including `last_seen_token_span` for EOF comments
+- Backtracking-safe comment collection (snapshotting or speculative buffering)
+- `parse_surface_file(source: &str)` top-level API per SPEC-039 §4.6
 - All parser/type-checker/interpreter match sites updated
 
 ## Timeline
@@ -32,7 +36,9 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 ## Risks
 
 - Widespread `Expr::Variable` / `Pattern::Variable` pattern matches across crates require careful mechanical refactoring.
-- Comment-table population must correctly handle edge cases (comments at EOF, multiple consecutive comments).
+- Consolidating nine copies of `skip_whitespace_and_comments` may expose subtle behavioral differences that must be reconciled.
+- Comment-table population must correctly handle edge cases (comments at EOF, multiple consecutive comments, blank-line separation).
+- Mutable side-table + combinator backtracking requires an explicit rollback strategy; failure to snapshot correctly will produce phantom comments.
 
 ## Parallelization
 

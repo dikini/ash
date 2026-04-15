@@ -29,6 +29,14 @@ path = "src/lib.rs"
 [[bin]]
 name = "ash-lint"
 path = "src/main.rs"
+
+[dependencies]
+ash-parser = { path = "../ash-parser" }
+walkdir = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[features]
+serde = ["dep:serde"]
 ```
 
 ## 4. Library API
@@ -41,6 +49,7 @@ use std::collections::HashMap;
 
 /// A single lint diagnostic.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LintDiagnostic {
     pub span: Span,
     pub code: LintCode,
@@ -48,19 +57,32 @@ pub struct LintDiagnostic {
     pub severity: LintSeverity,
     pub category: LintCategory,
     pub fixes: Vec<LintFix>,
+    /// Reserved for future LSP-style related locations.
+    pub related_information: Vec<LintRelatedInformation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LintCode(pub &'static str);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct LintFix {
     pub span: Span,
     pub replacement: String,
     pub description: String,
 }
 
+/// Reserved for future LSP-style related diagnostic locations.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct LintRelatedInformation {
+    pub span: Span,
+    pub message: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum LintSeverity {
     Error,
     Warning,
@@ -69,15 +91,17 @@ pub enum LintSeverity {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum LintCategory {
     Ooda,        // OODA loop violations
-    Provenance,  // Missing provenance annotations
+    Provenance,  // Placeholder: missing provenance annotations (syntax TBD)
     Policy,      // Policy-related lints
-    Style,       // General style nits
+    Style,       // Placeholder: general style nits
 }
 
 /// Per-rule enforcement level.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum RuleLevel {
     Allow,
     Warn,
@@ -125,20 +149,52 @@ pub fn lint_module(module: &ash_parser::surface::ModuleFile, config: &LintConfig
     }
     diagnostics
 }
+
+/// Lints a single definition, appending diagnostics to the provided vector.
+pub fn lint_definition(
+    def: &ash_parser::surface::Definition,
+    config: &LintConfig,
+    diagnostics: &mut Vec<LintDiagnostic>,
+) {
+    match def {
+        ash_parser::surface::Definition::Workflow(wf) => lint_workflow(wf, config, diagnostics),
+        ash_parser::surface::Definition::Function(_) => {
+            // Function-level lints are out of scope for the MVP.
+        }
+        _ => {}
+    }
+}
 ```
 
 ### 4.2 Lint Rules
 
 The existing CLI lints must be reimplemented as AST visitors instead of string searches:
 
-| Rule ID | Description | Category | Implementation |
-|---------|-------------|----------|----------------|
-| `L001` | Workflow lacks `observe` or `act` call | Ooda | Walk `ModuleFile` definitions; flag workflows with no effectful operation |
-| `L002` | `act` without preceding `orient` | Ooda | Track statement sequence within workflow bodies |
-| `L003` | Missing `provenance` block | Provenance | **Deferred.** The `Definition` enum has no provenance construct; syntax must be defined in a future spec before this rule can be implemented. |
-| `L004` | Policy conflict not checked | Policy | In any block, after a `Decide` expression or `PolicyExpr` statement, there must be a `CheckObligation` or `CheckContract` expression before the block ends or before a terminal/return expression. |
+| Rule ID | Legacy Alias | Description | Category | Implementation |
+|---------|--------------|-------------|----------|----------------|
+| `L001` | `ooda-missing-decide` | Workflow lacks `observe` or `act` call | Ooda | Walk `ModuleFile` definitions; flag workflows with no effectful operation |
+| `L002` | `ooda-missing-orient` | `act` without preceding `orient` | Ooda | Track statement sequence within workflow bodies |
+| `L003` | — | Missing `provenance` block | Provenance | **Deferred.** The `Definition` enum has no provenance construct; syntax must be defined in a future spec before this rule can be implemented. |
+| `L004` | — | Policy conflict not checked | Policy | After any `Workflow::Decide` or `Expr::Policy`, every control-flow path must contain a `Workflow::Check { target: CheckTarget, .. }` before a terminal node. |
 
-> **L004 formal condition:** For each block `B`, let `decides(B)` be the set of `Decide` / `PolicyExpr` nodes in `B`. For each such node `d`, there must exist a `CheckObligation` or `CheckContract` node `c` in the same block such that `c` appears after `d` in statement order and before the end of `B`.
+> **Compatibility:** The CLI binary must accept the legacy rule IDs `ooda-missing-decide` and `ooda-missing-orient` as aliases for `L001` and `L002` respectively when parsing `--allow` / `--deny` arguments.
+
+> **L004 formal condition (recursive CPS):** Define `Safe(w, pending)` where `w` is a `Workflow` and `pending ∈ {true, false}` indicates whether an unmatched `Workflow::Decide` or `Expr::Policy` precedes `w`:
+>
+> 1. `Safe(Workflow::Done {..}, pending) = ¬pending`
+> 2. `Safe(Workflow::Ret {..}, pending) = ¬pending`
+> 3. `Safe(Workflow::Check { continuation: Some(c), .. }, _) = Safe(c, false)` — a `Check` satisfies any pending requirement; the path continues through its continuation with `pending` reset.
+> 4. `Safe(Workflow::Check { continuation: None, .. }, pending) = ¬pending`
+> 5. `Safe(Workflow::Decide { then_branch, else_branch, .. }, pending) = Safe(then_branch, true) ∧ Safe(else_branch, true)` — both branches inherit `pending = true`.
+> 6. `Safe(Workflow::If { then_branch, else_branch, .. }, pending) = Safe(then_branch, pending) ∧ Safe(else_branch, pending)` — `If` propagates the pending state.
+> 7. For any other CPS-chain node `n` with `continuation: Some(c)`:
+>    - If `n` transitively contains an `Expr::Policy`, `Safe(n, pending) = Safe(c, true)`.
+>    - Otherwise, `Safe(n, pending) = Safe(c, pending)`.
+> 8. For any other CPS-chain node `n` with `continuation: None`:
+>    - If `n` transitively contains an `Expr::Policy`, `Safe(n, pending) = false`.
+>    - Otherwise, `Safe(n, pending) = ¬pending`.
+>
+> A workflow definition satisfies L004 iff `Safe(body, false)` holds for its body.
 
 ### 4.3 CLI Binary Refactor
 
@@ -151,7 +207,12 @@ fn main() {
 
     // Map legacy CLI flags to LintConfig rules
     for rule in &args.allow {
-        config.rules.insert(LintCode(rule), RuleLevel::Allow);
+        let code = match rule.as_str() {
+            "ooda-missing-decide" => "L001",
+            "ooda-missing-orient" => "L002",
+            other => other,
+        };
+        config.rules.insert(LintCode(code), RuleLevel::Allow);
     }
     if args.deny_warnings {
         for (_, level) in config.rules.iter_mut() {
@@ -185,10 +246,10 @@ And convert each `LintDiagnostic` to an LSP `Diagnostic` using the same `AshLspE
    - Every emitted `LintDiagnostic` has a non-default span (`line > 0`).
 3. **Integration tests:** Run `ash-lint` binary on `examples/` and assert expected diagnostics.
 4. **LSP integration tests:** Verify that `ash-lsp-core` correctly aggregates lint diagnostics with parser and type-checker diagnostics.
-5. **CLI regression tests:** Verify that `--allow L001`, `--deny-warnings`, and `--format` continue to work after the refactor.
+5. **CLI regression tests:** Verify that `--allow L001`, `--allow ooda-missing-decide`, `--deny-warnings`, and `--format` continue to work after the refactor.
 
 ## 7. Relationship to Other Specs
 
 - **Blocks:** SPEC-038 LSP MVP (lint diagnostics in the pipeline)
-- **Blocked by:** SPEC-039 (must provide `parse_surface_file()` and `ModuleFile` with stable AST)
+- **Blocked by:** SPEC-039 must deliver `parse_surface_file()` and a stable `ModuleFile` AST as an explicit, gated deliverable (see SPEC-039 §4.6).
 - **Parallelizable with:** SPEC-040 (Diagnostic Infrastructure) after `TASK-570` binding-span changes are complete

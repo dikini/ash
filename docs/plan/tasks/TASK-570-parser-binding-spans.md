@@ -8,7 +8,7 @@
 
 ## Description
 
-Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in both the surface AST and core AST, then fix all downstream match sites.
+Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in both the surface AST and core AST, then fix all downstream match sites. `Literal` span work is explicitly deferred per SPEC-039 §3.5.
 
 ## Requirements
 
@@ -17,7 +17,8 @@ Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in bot
 3. `PolicyExpr::Var(Name)` becomes `PolicyExpr::Var { name: Name, span: Span }` in `surface.rs` and `ast.rs`.
 4. Parser captures `current_span()` when parsing identifiers into variable expressions/patterns/policy vars.
 5. Lowering threads the span through from surface to core.
-6. All match sites updated in:
+6. `ast::Span` derives `Hash` and `Eq` (prerequisite for TASK-571 / CommentTable usage in core AST).
+7. All match sites updated in:
    - `ash-typeck/src/check_expr.rs`
    - `ash-typeck/src/check_pattern.rs`
    - `ash-typeck/src/lib.rs`
@@ -43,6 +44,7 @@ Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in bot
 - [ ] `Expr::Variable { name, span }` in surface and core AST
 - [ ] `Pattern::Variable { name, span }` in surface and core AST
 - [ ] `PolicyExpr::Var { name, span }` in surface and core AST
+- [ ] `ast::Span` derives `Hash` and `Eq`
 - [ ] Parser and lowering updated
 - [ ] All downstream match sites fixed
 - [ ] All tests updated and passing

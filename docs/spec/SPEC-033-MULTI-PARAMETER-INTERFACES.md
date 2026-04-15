@@ -134,6 +134,8 @@ self.impls.insert((interface_name, impl_head), impl_info);
 
 This replaces the old model where the key was `(interface_name, bare_concrete_type)`.
 
+> **Implementation note:** The internal `Type` enum in `ash-typeck/src/types.rs` already derives `Hash` and `Eq` (`#[derive(Debug, Clone, PartialEq, Eq, Hash)]`), so `HashMap<(String, Type), ImplInfo>` keys using `Type::Constructor` are supported without additional changes.
+
 **Error model update:** `TypeEnvError::DuplicateImpl` and `TypeEnvError::MissingImpl` currently say "Concrete nominal type" in their messages. They must be updated to report the full interface application (e.g., `Map<String, Int>`) rather than a single bare type.
 
 ### 5.3 Method Resolution

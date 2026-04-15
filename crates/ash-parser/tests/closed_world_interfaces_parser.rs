@@ -7,7 +7,7 @@ use winnow::Parser;
 
 #[test]
 fn parses_interface_declaration_in_inline_module() {
-    let mut input = new_input("mod interfaces { interface Explain<T> { explain: T -> String } }");
+    let mut input = new_input("mod interfaces { interface Explain<T> { explain(T) -> String } }");
 
     let decl = parse_module_decl
         .parse_next(&mut input)
@@ -53,7 +53,8 @@ fn parses_impl_declaration_in_inline_module() {
             ));
             assert_eq!(implementation.methods.len(), 1);
             assert_eq!(implementation.methods[0].name.as_ref(), "explain");
-            assert_eq!(implementation.methods[0].param.as_ref(), "decision");
+            assert_eq!(implementation.methods[0].params.len(), 1);
+            assert_eq!(implementation.methods[0].params[0].as_ref(), "decision");
             assert!(matches!(
                 implementation.methods[0].body,
                 Expr::Literal(ash_parser::surface::Literal::String(ref value)) if value.as_ref() == "policy"
@@ -66,7 +67,7 @@ fn parses_impl_declaration_in_inline_module() {
 #[test]
 fn parses_visibility_qualified_interface_and_impl_declarations() {
     let mut interface_input =
-        new_input("mod interfaces { pub interface Explain<T> { explain: T -> String } }");
+        new_input("mod interfaces { pub interface Explain<T> { explain(T) -> String } }");
     let interface_decl = parse_module_decl
         .parse_next(&mut interface_input)
         .expect("public interface declaration should parse");
@@ -107,7 +108,7 @@ fn parses_visibility_qualified_interface_and_impl_declarations() {
 #[test]
 fn parses_zero_arity_interface_and_impl_declarations() {
     let mut interface_input =
-        new_input("mod interfaces { interface Explain { explain: PolicyDecision -> String } }");
+        new_input("mod interfaces { interface Explain { explain(PolicyDecision) -> String } }");
     let interface_decl = parse_module_decl
         .parse_next(&mut interface_input)
         .expect("zero-arity interface declaration should parse");
@@ -200,7 +201,7 @@ fn parses_interface_method_call_no_args() {
 
 #[test]
 fn rejects_malformed_interface_declarations() {
-    let mut input = new_input("mod interfaces { interface Explain<T> { explain: -> String } }");
+    let mut input = new_input("mod interfaces { interface Explain<T> { explain(T -> String } }");
 
     assert!(
         parse_module_decl.parse_next(&mut input).is_err(),

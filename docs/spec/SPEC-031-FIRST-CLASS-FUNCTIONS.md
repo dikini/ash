@@ -98,6 +98,8 @@ fn factorial(n) {
 
 Desugars to `let factorial = fn(n) { ... }`. Recursion works through late binding: the closure does not statically capture its own value. Instead, the environment uses a `BindingSlot` that is filled after construction (see §5.3). At call time, the closure resolves `factorial` from the shared environment, finding its own binding.
 
+> **Memory leak note:** Because `BindingSlot::Late` holds a `Value::Closure` that itself references the same `EnvFrame` via `Arc`, recursive closures form a reference cycle. This memory is not reclaimed until the enclosing process/workflow is dropped. Acceptable for short-lived CLI usage or bounded integration tests, but not for a long-running engine.
+
 ### 4.7 Scope and Capture
 
 ```

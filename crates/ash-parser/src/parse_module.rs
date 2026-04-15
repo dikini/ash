@@ -268,9 +268,21 @@ fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<Inter
     let start = input.state;
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
-    let _ = literal_str(":").parse_next(input)?;
+    let _ = literal_str("(").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let param_type = parse_surface_type(input)?;
+
+    let mut params = Vec::new();
+    if literal_str(")").parse_next(input).is_err() {
+        params.push(parse_surface_type(input)?);
+        skip_whitespace_and_comments(input);
+        while literal_str(",").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            params.push(parse_surface_type(input)?);
+            skip_whitespace_and_comments(input);
+        }
+        let _ = literal_str(")").parse_next(input)?;
+    }
+
     skip_whitespace_and_comments(input);
     let _ = literal_str("->").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -278,7 +290,7 @@ fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<Inter
 
     Ok(InterfaceMethodSig {
         name: name.into(),
-        params: vec![param_type],
+        params,
         return_type,
         span: crate::input::span_from(&start, &input.state),
     })
@@ -322,9 +334,19 @@ fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMetho
     skip_whitespace_and_comments(input);
     let _ = literal_str("(").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let param = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str(")").parse_next(input)?;
+
+    let mut params = Vec::new();
+    if literal_str(")").parse_next(input).is_err() {
+        params.push(identifier(input)?.into());
+        skip_whitespace_and_comments(input);
+        while literal_str(",").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            params.push(identifier(input)?.into());
+            skip_whitespace_and_comments(input);
+        }
+        let _ = literal_str(")").parse_next(input)?;
+    }
+
     skip_whitespace_and_comments(input);
     let _ = literal_str("=").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -332,7 +354,7 @@ fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMetho
 
     Ok(ImplMethodDef {
         name: name.into(),
-        param: param.into(),
+        params,
         body,
         span: crate::input::span_from(&start, &input.state),
     })

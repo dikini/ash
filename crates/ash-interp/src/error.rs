@@ -348,6 +348,15 @@ impl From<ValidationError> for ExecError {
 /// Result type for evaluation operations
 pub type EvalResult<T> = Result<T, EvalError>;
 
+/// Result type for execution operations
+pub type ExecResult<T> = Result<T, ExecError>;
+
+/// Result type for pattern matching operations
+pub type PatternResult<T> = Result<T, PatternError>;
+
+/// Result type for validation operations
+pub type ValidationResult<T> = Result<T, ValidationError>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,12 +380,3 @@ mod tests {
         );
     }
 }
-
-/// Result type for execution operations
-pub type ExecResult<T> = Result<T, ExecError>;
-
-/// Result type for pattern matching operations
-pub type PatternResult<T> = Result<T, PatternError>;
-
-/// Result type for validation operations
-pub type ValidationResult<T> = Result<T, ValidationError>;

@@ -63,7 +63,7 @@ fn explain_string_impl() -> ImplDef {
         type_args: vec![SurfaceType::Name("String".into())],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
-            param: "value".into(),
+            params: vec!["value".into()],
             body: Expr::Variable("value".into()),
             span: span(),
         }],
@@ -96,7 +96,7 @@ fn option_explain_string_impl() -> ImplDef {
         type_args: vec![SurfaceType::Name("String".into())],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
-            param: "value".into(),
+            params: vec!["value".into()],
             body: Expr::Literal(Literal::String("string option".into())),
             span: span(),
         }],
@@ -224,10 +224,10 @@ fn interface_method_call_is_allowed_in_pure_fn_when_impl_exists() {
         }],
         return_type: Some(SurfaceType::Name("String".into())),
         contract: None,
-        body: Expr::InterfaceMethodCall {
-            interface: "Explain".into(),
-            method: "explain".into(),
-            argument: Box::new(Expr::Variable("value".into())),
+        body: Expr::Call {
+            func: "explain".into(),
+            module: Some("Explain".into()),
+            args: vec![Expr::Variable("value".into())],
             span: span(),
         },
         span: span(),
@@ -273,10 +273,10 @@ fn if_let_pattern_binding_is_in_scope_for_interface_call_validation() {
         body: Expr::IfLet {
             pattern: Pattern::Variable("bound".into()),
             expr: Box::new(Expr::Variable("value".into())),
-            then_branch: Box::new(Expr::InterfaceMethodCall {
-                interface: "Explain".into(),
-                method: "explain".into(),
-                argument: Box::new(Expr::Variable("bound".into())),
+            then_branch: Box::new(Expr::Call {
+                func: "explain".into(),
+                module: Some("Explain".into()),
+                args: vec![Expr::Variable("bound".into())],
                 span: span(),
             }),
             else_branch: Box::new(Expr::Literal(Literal::String("fallback".into()))),
@@ -324,10 +324,10 @@ fn block_let_binding_is_in_scope_for_later_interface_call_validation() {
                 expr: Expr::Literal(Literal::String("hello".into())),
                 span: span(),
             }],
-            tail_expr: Some(Box::new(Expr::InterfaceMethodCall {
-                interface: "Explain".into(),
-                method: "explain".into(),
-                argument: Box::new(Expr::Variable("bound".into())),
+            tail_expr: Some(Box::new(Expr::Call {
+                func: "explain".into(),
+                module: Some("Explain".into()),
+                args: vec![Expr::Variable("bound".into())],
                 span: span(),
             })),
             span: span(),
@@ -447,10 +447,10 @@ fn interface_method_resolution_unifies_nested_generic_argument_types() {
         }],
         return_type: Some(SurfaceType::Name("String".into())),
         contract: None,
-        body: Expr::InterfaceMethodCall {
-            interface: "OptionExplain".into(),
-            method: "explain".into(),
-            argument: Box::new(Expr::Variable("value".into())),
+        body: Expr::Call {
+            func: "explain".into(),
+            module: Some("OptionExplain".into()),
+            args: vec![Expr::Variable("value".into())],
             span: span(),
         },
         span: span(),

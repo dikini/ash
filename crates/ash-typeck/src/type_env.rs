@@ -644,21 +644,26 @@ impl TypeEnv {
                 )));
             }
 
-            if method_info.params.len() != 1 {
+            if method_info.params.len() != method.params.len() {
                 return Err(TypeEnvError::InvalidDefinition(format!(
-                    "canonical interface method '{}::{}' must take exactly one argument",
-                    interface.name, method_name
+                    "impl method '{}::{}' signature expects {} parameters, found {}",
+                    interface.name,
+                    method_name,
+                    method_info.params.len(),
+                    method.params.len()
                 )));
             }
 
             let mut subst = Substitution::new();
             subst.insert(method_info.type_params[0], concrete_type.clone());
 
-            let param_ty = subst.apply(&method_info.params[0]);
-            let expected_return_ty = subst.apply(&method_info.return_type);
-
             let mut method_env = self.clone();
-            method_env.bind_variable(method.param.as_ref(), param_ty);
+            for (param_name, param_type) in method.params.iter().zip(method_info.params.iter()) {
+                let param_ty = subst.apply(param_type);
+                method_env.bind_variable(param_name.as_ref(), param_ty);
+            }
+
+            let expected_return_ty = subst.apply(&method_info.return_type);
 
             let body_result = crate::check_expr::check_expr(&method_env, &method.body);
             if !body_result.is_ok() {
@@ -982,7 +987,7 @@ impl TypeEnv {
         &self,
         interface: &str,
         method: &str,
-        argument_ty: &Type,
+        arg_types: &[Type],
     ) -> Result<Type, TypeEnvError> {
         let interface_info = self
             .interfaces
@@ -1002,14 +1007,21 @@ impl TypeEnv {
             )));
         }
 
-        if method_info.params.len() != 1 {
+        if method_info.params.len() != arg_types.len() {
             return Err(TypeEnvError::InvalidDefinition(format!(
-                "canonical interface method '{interface}::{method}' must take exactly one argument"
+                "interface method '{}::{}' expects {} arguments, found {}",
+                interface,
+                method,
+                method_info.params.len(),
+                arg_types.len()
             )));
         }
 
-        let subst = unify(&method_info.params[0], argument_ty)
-            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+        let mut subst = Substitution::new();
+        for (expected, actual) in method_info.params.iter().zip(arg_types.iter()) {
+            subst = unify(expected, actual)
+                .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+        }
         let impl_head_ty = subst.apply(&Type::Var(method_info.type_params[0]));
 
         match &impl_head_ty {

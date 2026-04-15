@@ -709,7 +709,6 @@ impl CapabilityChecker {
                 }
                 Ok(())
             }
-            Expr::InterfaceMethodCall { argument, .. } => self.verify_expr(argument),
             Expr::Policy(_) => {
                 // Policy expressions don't involve capability operations
                 Ok(())

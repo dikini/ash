@@ -510,14 +510,11 @@ pub fn build_chat_request(
                     }
                     "stop" => {
                         if let Some(s) = value.as_string() {
-                            request.stop =
-                                Some(async_openai::types::Stop::String(s.to_string()));
+                            request.stop = Some(async_openai::types::Stop::String(s.to_string()));
                         } else if let Value::List(stops) = value {
                             let stop_strings: Vec<String> = stops
                                 .iter()
-                                .filter_map(|v| {
-                                    v.as_string().map(std::string::ToString::to_string)
-                                })
+                                .filter_map(|v| v.as_string().map(std::string::ToString::to_string))
                                 .collect();
                             if !stop_strings.is_empty() {
                                 request.stop =

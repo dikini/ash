@@ -355,7 +355,8 @@ fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
 
             if brace_depth > 0 && !trimmed.starts_with("--") {
                 for forbidden in &forbidden_calls {
-                    assert!(!trimmed.contains(forbidden), 
+                    assert!(
+                        !trimmed.contains(forbidden),
                         "{filename}: three-vertex violation -- fn '{fn_name}' calls workflow via '{forbidden}'"
                     );
                 }

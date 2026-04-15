@@ -106,6 +106,23 @@ Map<K, V>::Entry
 
 At the type-system level, this is a **type projection** that must be **normalized** (resolved to a concrete type) using the selected `impl` block.
 
+**Parsing type projections:**
+
+The surface type parser (`parse_surface_type` in `parse_module.rs`) is extended to recognize the `::` operator after any type that can serve as a base:
+
+```
+associated-type = type "::" identifier
+```
+
+Implementation strategy:
+1. Parse the left-hand side as a normal surface `Type` (`Name`, `Constructor`, or a type variable).
+2. If the next tokens are `::` followed by an identifier, produce `Type::Associated { base, name }`.
+3. The parser does **not** resolve which interface defines the associated type — that is the type checker's job.
+
+Examples of parsed forms:
+- `S::Ok` → `Type::Associated { base: Type::Name("S"), name: "Ok" }`
+- `Map<K, V>::Entry` → `Type::Associated { base: Type::Constructor { name: "Map", args: [Name("K"), Name("V")] }, name: "Entry" }`
+
 **Ambiguity rule:** If a type variable `T` has multiple interface bounds and two or more of those interfaces declare an associated type with the same name (e.g., both `A` and `B` define `Ok`), then writing `T::Ok` is **ambiguous** and must be rejected with a [NEW] `TypeEnvError::AmbiguousAssociatedType` error. The programmer must instead use the fully explicit form `Interface::Assoc<T>` (or similar explicit syntax) to disambiguate. If exactly one bound in scope defines the name, `T::Ok` resolves to that interface's associated type.
 
 ## 4. IR Changes

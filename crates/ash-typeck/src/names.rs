@@ -621,10 +621,6 @@ impl NameResolver {
                 }
             }
 
-            Expr::InterfaceMethodCall { argument, .. } => {
-                self.resolve_expr(argument);
-            }
-
             Expr::Policy(policy_expr) => {
                 self.resolve_policy_expr(policy_expr);
             }

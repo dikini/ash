@@ -8,6 +8,24 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- **Phase 82: Multi-Parameter Interface Methods (SPEC-032)** — Complete implementation across
+  parser, AST, type checker, and interpreter (TASK-561 and TASK-562):
+
+  **Parser/AST (TASK-561)**
+  - `ImplMethodDef.param: Name` changed to `params: Vec<Name>` in both surface and core AST
+  - Interface method signatures now parse `name(Type1, Type2, ...) -> ReturnType`
+  - Impl method definitions now parse `name(p1, p2, ...) = expr`
+  - `Expr::InterfaceMethodCall` removed from `surface.rs`, `ast.rs`, and `repl/ast.rs`
+  - Lowering no longer rejects interface method calls (they lower as ordinary `Expr::Call`)
+
+  **Type Checker / Interpreter (TASK-562)**
+  - `resolve_interface_method_call` signature changed from `&Type` to `&[Type]` with zip-unification
+  - `register_impl` validates param count and binds each parameter to its declared type
+  - `Expr::Call { module: Some(interface_name) }` detects interfaces and routes to multi-param resolution
+  - `InterfaceMethodCall` removed from `check_expr.rs`, `lib.rs`, `purity.rs`, `names.rs`,
+    `capability_check.rs`, and `eval.rs`
+  - All interface calls now route through `Expr::Call`
+
 - **Phase 80: First-Class Functions and Closure Values (SPEC-031)** — Complete implementation
   of first-class functions across all nine tasks (TASK-551 through TASK-559):
 
@@ -66,6 +84,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `cargo test --all`: 0 failures across all crates
 
 ### Fixed
+
+- Phase 80 code review follow-up: fixed `String` vs `Box<str>` compilation errors in three `check_expr.rs` test functions (`task558_fndef_annotated_param_constrains_inference`, `task558_fndef_annotated_return_type_verified` matching and conflicting cases). `Name` is `Box<str>`; tests were using `.to_string()` instead of `.into()`.
+- Added escape case 2 test: `task558_escape_case_2_store_fun_in_state_rejected` verifies `Type::Fun` does not unify with `Type::Fn`, preventing storing effectful closures in pure state fields.
+- Added `task559_boundary_violation_on_context_boundary_crossing` test demonstrating `EvalError::BoundaryViolation` construction and message.
+- Added `task559_module_level_fndef_never_produces_closure` test: module-level functions return their result directly (never `Value::Closure`), contrasted with expression-level `FnDef` which does produce closures.
+- Tracked follow-up TASK-560: `annotation_name_to_type` silently falls back to fresh type variables for unknown type names (user-defined types).
+- **TASK-560:** Replaced `annotation_name_to_type` with TypeEnv-aware `annotation_to_type` resolver. Unknown type annotations in `Expr::FnDef` parameters and return types now produce `ConstructorError::UnknownTypeAnnotation` errors instead of silently falling back to fresh type variables. User-defined types registered in `TypeEnv` resolve to `Type::Constructor`. Three new conformance tests.
+- Added memory-leak note to SPEC-031 §4.6: recursive closures via `BindingSlot::Late` form reference cycles through `Arc<EnvFrame>` and are not reclaimed until the enclosing workflow is dropped. Acceptable for short-lived CLI usage or bounded tests, but not for long-running engines.
+- **PLAN-029 / Phase 82:** Multi-Parameter Interface Methods — planned from SPEC-032. Tasks TASK-561 and TASK-562.
+- **PLAN-030 / Phase 83:** Multi-Parameter Interfaces, Generic Implementations, and Associated Types — planned from SPEC-033, SPEC-034, and SPEC-035. Tasks TASK-563 through TASK-568.
 
 - Resolved all build errors and clippy warnings introduced in commit 09143dd (TASK-556 parser work) and pre-existing in ash-engine. Fixes include: unused import in `llm_e2e_usability_tests.rs`, needless borrow in `ash-interp/src/eval.rs`, `#[ignore]` without reason in `execute.rs`, clone-on-copy and single-match-else in `module_loader.rs`, collapsible-if and collapsible-match in `chat.rs`, casting and doc-markdown issues in `embeddings.rs`, too-many-lines in `provider.rs`, needless-pass-by-value/map-or/box-default/manual-string-new/doc-markdown in `stream_adapter.rs` and `stream_storage.rs`, PartialEq-without-Eq and doc-markdown in `tool_dispatch.rs`, used-underscore-binding/collapsible-if/option-if-let-else/doc-markdown in `lib.rs`, and test-code cleanups in `llm_integration_tests.rs`, `llm_engine_integration.rs`, and `ast.rs`.
 

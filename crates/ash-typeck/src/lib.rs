@@ -443,50 +443,52 @@ fn validate_interface_calls_in_expr(
             validate_interface_calls_in_expr(env, left)?;
             validate_interface_calls_in_expr(env, right)
         }
-        ash_parser::surface::Expr::Call { args, .. } => {
+        ash_parser::surface::Expr::Call {
+            module, func, args, ..
+        } => {
             for arg in args {
                 validate_interface_calls_in_expr(env, arg)?;
             }
+
+            // If this is a qualified call to an interface method, validate it
+            if let Some(module_name) = module.as_deref()
+                && env.has_interface(module_name)
+            {
+                    let mut arg_types = Vec::new();
+                    let mut subst = crate::types::Substitution::new();
+                    for arg in args {
+                        let arg_result = crate::check_expr::check_expr(env, arg);
+                        if !arg_result.is_ok() {
+                            let reason = arg_result
+                                .errors
+                                .into_iter()
+                                .next()
+                                .map(|error| error.to_string())
+                                .unwrap_or_else(|| {
+                                    format!(
+                                        "failed to typecheck argument to {}::{}",
+                                        module_name,
+                                        func.as_ref()
+                                    )
+                                });
+
+                            return Err(TypeCheckError::TypeError(format!(
+                                "invalid interface method call {}::{}: {}",
+                                module_name,
+                                func.as_ref(),
+                                reason
+                            )));
+                        }
+                        subst = subst.compose(&arg_result.substitution);
+                        arg_types.push(subst.apply(&arg_result.ty));
+                    }
+
+                    env.resolve_interface_method_call(module_name, func.as_ref(), &arg_types)
+                        .map(|_| ())
+                        .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                }
+
             Ok(())
-        }
-        ash_parser::surface::Expr::InterfaceMethodCall {
-            interface,
-            method,
-            argument,
-            ..
-        } => {
-            validate_interface_calls_in_expr(env, argument)?;
-
-            let argument_result = crate::check_expr::check_expr(env, argument);
-            if !argument_result.is_ok() {
-                let reason = argument_result
-                    .errors
-                    .into_iter()
-                    .next()
-                    .map(|error| error.to_string())
-                    .unwrap_or_else(|| {
-                        format!(
-                            "failed to typecheck argument to {}::{}",
-                            interface.as_ref(),
-                            method.as_ref()
-                        )
-                    });
-
-                return Err(TypeCheckError::TypeError(format!(
-                    "invalid interface method call {}::{}: {}",
-                    interface.as_ref(),
-                    method.as_ref(),
-                    reason
-                )));
-            }
-
-            env.resolve_interface_method_call(
-                interface.as_ref(),
-                method.as_ref(),
-                &argument_result.ty,
-            )
-            .map(|_| ())
-            .map_err(|error| TypeCheckError::TypeError(error.to_string()))
         }
         ash_parser::surface::Expr::Match {
             scrutinee, arms, ..
@@ -1574,9 +1576,6 @@ fn validate_fn_call_preconditions_expr(
             }
 
             Ok(())
-        }
-        ash_parser::surface::Expr::InterfaceMethodCall { argument, .. } => {
-            validate_fn_call_preconditions_expr(env, argument, facts, assumptions)
         }
         ash_parser::surface::Expr::Match {
             scrutinee, arms, ..

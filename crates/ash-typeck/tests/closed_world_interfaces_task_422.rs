@@ -57,7 +57,7 @@ fn explain_impl_for(type_name: &str) -> ImplDef {
         type_args: vec![SurfaceType::Name(type_name.into())],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
-            param: "decision".into(),
+            params: vec!["decision".into()],
             body: Expr::Literal(Literal::String("policy".into())),
             span: test_span(),
         }],
@@ -80,7 +80,7 @@ fn explain_string_impl_with_int_body() -> ImplDef {
         type_args: vec![SurfaceType::Name("String".into())],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
-            param: "value".into(),
+            params: vec!["value".into()],
             body: Expr::Literal(Literal::Int(42)),
             span: test_span(),
         }],
@@ -97,7 +97,7 @@ fn explain_list_string_impl() -> ImplDef {
         )))],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
-            param: "items".into(),
+            params: vec!["items".into()],
             body: Expr::Literal(Literal::String("list".into())),
             span: test_span(),
         }],
@@ -161,10 +161,10 @@ fn interface_method_call_workflow(type_name: &str) -> WorkflowDef {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Ret {
-            expr: Expr::InterfaceMethodCall {
-                interface: "Explain".into(),
-                method: "explain".into(),
-                argument: Box::new(Expr::Variable("value".into())),
+            expr: Expr::Call {
+                func: "explain".into(),
+                module: Some("Explain".into()),
+                args: vec![Expr::Variable("value".into())],
                 span: test_span(),
             },
             span: test_span(),
@@ -206,10 +206,10 @@ fn match_bound_interface_method_call_workflow() -> WorkflowDef {
                                 Pattern::Variable("x".into()),
                             )]),
                         },
-                        body: Box::new(Expr::InterfaceMethodCall {
-                            interface: "Explain".into(),
-                            method: "explain".into(),
-                            argument: Box::new(Expr::Variable("x".into())),
+                        body: Box::new(Expr::Call {
+                            func: "explain".into(),
+                            module: Some("Explain".into()),
+                            args: vec![Expr::Variable("x".into())],
                             span: test_span(),
                         }),
                         span: test_span(),
@@ -331,10 +331,10 @@ fn interface_method_call_typechecks_via_registered_impl_and_returns_method_type(
         .expect("impl should register");
     env.bind_variable("decision", nominal_type("PolicyDecision"));
 
-    let expr = Expr::InterfaceMethodCall {
-        interface: "Explain".into(),
-        method: "explain".into(),
-        argument: Box::new(Expr::Variable("decision".into())),
+    let expr = Expr::Call {
+        func: "explain".into(),
+        module: Some("Explain".into()),
+        args: vec![Expr::Variable("decision".into())],
         span: test_span(),
     };
 

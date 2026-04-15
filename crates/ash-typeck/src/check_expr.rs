@@ -239,6 +239,28 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                                 span: *span,
                             });
                         }
+                        Some(module_name) if env.has_interface(module_name) => {
+                            // Interface method call: Interface::method(args...)
+                            return match env.resolve_interface_method_call(
+                                module_name,
+                                func.as_ref(),
+                                &arg_types,
+                            ) {
+                                Ok(return_type) => CheckResult {
+                                    ty: return_type,
+                                    substitution,
+                                    errors: Vec::new(),
+                                },
+                                Err(err) => CheckResult::error(
+                                    ConstructorError::InvalidInterfaceMethodCall {
+                                        interface: module_name.to_string(),
+                                        method: func.to_string(),
+                                        reason: err.to_string(),
+                                        span: *span,
+                                    },
+                                ),
+                            };
+                        }
                         _ => {}
                     }
 
@@ -247,35 +269,6 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                         span: *span,
                     })
                 }
-            }
-        }
-        Expr::InterfaceMethodCall {
-            interface,
-            method,
-            argument,
-            span,
-        } => {
-            let argument_result = check_expr(env, argument);
-            if !argument_result.is_ok() {
-                return argument_result;
-            }
-
-            match env.resolve_interface_method_call(
-                interface.as_ref(),
-                method.as_ref(),
-                &argument_result.ty,
-            ) {
-                Ok(return_type) => CheckResult {
-                    ty: return_type,
-                    substitution: argument_result.substitution,
-                    errors: argument_result.errors,
-                },
-                Err(err) => CheckResult::error(ConstructorError::InvalidInterfaceMethodCall {
-                    interface: interface.to_string(),
-                    method: method.to_string(),
-                    reason: err.to_string(),
-                    span: *span,
-                }),
             }
         }
         Expr::CheckObligation { obligation, span } => {
@@ -433,9 +426,9 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
 
         Expr::FnDef {
             params,
+            return_type,
             body,
-            span: _,
-            ..
+            span,
         } => {
             // Anonymous function definition: check the body with params in scope.
             //
@@ -445,23 +438,68 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             //
             // The workflow effect level is carried on the TypeEnv so it propagates
             // automatically through nested scopes without threading an extra parameter.
+            //
+            // Parameter and return type annotations (SPEC-031 §5.1):
+            //   Written type annotations constrain inference. `fn(x: Int) { ... }` gives
+            //   `x` type `Int`, not a fresh type variable. Unknown annotation names fall
+            //   back to a fresh variable so user-defined types remain inferrable.
             let mut fn_env = env.clone();
             let mut param_types: Vec<Type> = Vec::new();
-            for (name, _ty_ann) in params {
-                let param_ty = Type::Var(TypeVar::fresh());
+            let mut errors: Vec<ConstructorError> = Vec::new();
+            for (name, ty_ann) in params {
+                let param_ty = match ty_ann.as_deref() {
+                    Some(ann) => {
+                        match annotation_to_type(ann, env, *span, &format!("parameter `{name}`")) {
+                            Ok(ty) => ty,
+                            Err(e) => {
+                                errors.push(e);
+                                Type::Var(TypeVar::fresh()) // fallback for error recovery
+                            }
+                        }
+                    }
+                    None => Type::Var(TypeVar::fresh()),
+                };
                 param_types.push(param_ty.clone());
                 fn_env.bind_variable(name.as_ref(), param_ty);
             }
             let body_result = check_expr(&fn_env, body);
-            let ret_ty = body_result.substitution.apply(&body_result.ty);
+            let body_ty = body_result.substitution.apply(&body_result.ty);
+            errors.extend(body_result.errors);
+            let mut substitution = body_result.substitution;
+
+            let ret_ty = match return_type.as_deref() {
+                Some(ann) => match annotation_to_type(ann, env, *span, "return type") {
+                    Ok(ann_ty) => match unify(&ann_ty, &body_ty) {
+                        Ok(sub) => {
+                            substitution = substitution.compose(&sub);
+                            ann_ty
+                        }
+                        Err(_) => {
+                            errors.push(ConstructorError::UnsupportedExpression {
+                                        kind: format!(
+                                            "FnDef: return type annotation `{ann}` conflicts with inferred body type `{body_ty}`"
+                                        ),
+                                        span: *span,
+                                    });
+                            body_ty
+                        }
+                    },
+                    Err(e) => {
+                        errors.push(e);
+                        body_ty
+                    }
+                },
+                None => body_ty,
+            };
+
             let fn_ty = match env.workflow_effect() {
                 Some(effect) => Type::Fun(param_types, Box::new(ret_ty), effect),
                 None => Type::Fn(param_types, Box::new(ret_ty)),
             };
             CheckResult {
                 ty: fn_ty,
-                substitution: body_result.substitution,
-                errors: body_result.errors,
+                substitution,
+                errors,
             }
         }
 
@@ -511,7 +549,6 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Unary { span, .. } => *span,
         Expr::Binary { span, .. } => *span,
         Expr::Call { span, .. } => *span,
-        Expr::InterfaceMethodCall { span, .. } => *span,
         Expr::Match { span, .. } => *span,
         Expr::Policy(_) => Span::default(),
         Expr::IfLet { span, .. } => *span,
@@ -1012,6 +1049,43 @@ pub fn infer_type(env: &TypeEnv, expr: &Expr) -> Type {
     result.substitution.apply(&result.ty)
 }
 
+/// Resolve a type annotation name to a `Type`.
+///
+/// Primitives map directly. Registered user-defined types map to
+/// `Type::Constructor`. Unknown names produce an error rather than
+/// silently falling back to inference (TASK-560).
+fn annotation_to_type(
+    name: &str,
+    env: &TypeEnv,
+    span: Span,
+    context: &str,
+) -> Result<Type, ConstructorError> {
+    // Fast path: primitives
+    match name {
+        "Int" => return Ok(Type::Int),
+        "Bool" => return Ok(Type::Bool),
+        "String" => return Ok(Type::String),
+        "Float" => return Ok(Type::Float),
+        "Null" => return Ok(Type::Null),
+        "Time" => return Ok(Type::Time),
+        "Ref" => return Ok(Type::Ref),
+        _ => {}
+    }
+    // Lookup in TypeEnv for user-defined types
+    match env.resolve_type(name) {
+        Ok((qualified, _info)) => Ok(Type::Constructor {
+            name: qualified,
+            args: vec![],
+            kind: crate::Kind::Type,
+        }),
+        Err(_) => Err(ConstructorError::UnknownTypeAnnotation {
+            name: name.to_string(),
+            context: context.to_string(),
+            span,
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1490,7 +1564,10 @@ mod tests {
     #[test]
     fn task558_fnapp_in_pure_context_yields_type_fn() {
         let env = TypeEnv::with_builtin_types();
-        assert!(env.workflow_effect().is_none(), "pure env should have no workflow effect");
+        assert!(
+            env.workflow_effect().is_none(),
+            "pure env should have no workflow effect"
+        );
 
         let expr = make_fn_def_expr("x");
         let result = check_expr(&env, &expr);
@@ -1547,8 +1624,11 @@ mod tests {
     fn task558_fn_fun_unification_rejected() {
         use crate::types::unify;
         let pure_fn = Type::Fn(vec![Type::Int], Box::new(Type::Int));
-        let effect_fn =
-            Type::Fun(vec![Type::Int], Box::new(Type::Int), ash_core::Effect::Operational);
+        let effect_fn = Type::Fun(
+            vec![Type::Int],
+            Box::new(Type::Int),
+            ash_core::Effect::Operational,
+        );
         assert!(
             unify(&pure_fn, &effect_fn).is_err(),
             "unifying Type::Fn with Type::Fun must fail"
@@ -1598,7 +1678,245 @@ mod tests {
         let mut env = TypeEnv::with_builtin_types();
         env.set_workflow_effect(ash_core::Effect::Deliberative);
         let child = env.extend();
-        assert_eq!(child.workflow_effect(), Some(ash_core::Effect::Deliberative));
+        assert_eq!(
+            child.workflow_effect(),
+            Some(ash_core::Effect::Deliberative)
+        );
     }
 
+    /// Escape case 1 (TASK-558): A FnDef in workflow context produces Type::Fun, which
+    /// must NOT unify with Type::Fn — enforcing that Fun cannot be returned where Fn is expected.
+    #[test]
+    fn task558_return_fun_where_fn_expected_is_rejected() {
+        // In a workflow context, fn(x) { x } types as Type::Fun([Var], Var, Operational).
+        // Unifying that with Type::Fn([Int], Int) must fail — this is escape case 1:
+        // "return Fun from workflow where Fn is expected".
+        let mut env = TypeEnv::with_builtin_types();
+        env.set_workflow_effect(ash_core::Effect::Operational);
+
+        let expr = make_fn_def_expr("x");
+        let result = check_expr(&env, &expr);
+
+        // Verify the closure typed as Fun in workflow context
+        assert!(
+            matches!(&result.ty, Type::Fun(..)),
+            "FnDef in workflow context must produce Type::Fun, got {:?}",
+            result.ty
+        );
+
+        // Now attempt to unify with a pure Fn type — must fail (escape case 1)
+        let pure_fn = Type::Fn(
+            vec![Type::Var(TypeVar::fresh())],
+            Box::new(Type::Var(TypeVar::fresh())),
+        );
+        let unify_result = unify(&result.ty, &pure_fn);
+        assert!(
+            unify_result.is_err(),
+            "Type::Fun must not unify with Type::Fn (escape case 1: return Fun where Fn expected)"
+        );
+    }
+
+    /// Escape case 4 (TASK-558): List<Fun> must not unify with List<Fn>.
+    /// Container-level type propagation enforces the boundary across collections.
+    #[test]
+    fn task558_list_fun_where_list_fn_expected_is_rejected() {
+        let list_of_fn = Type::List(Box::new(Type::Fn(vec![Type::Int], Box::new(Type::Int))));
+        let list_of_fun = Type::List(Box::new(Type::Fun(
+            vec![Type::Int],
+            Box::new(Type::Int),
+            ash_core::Effect::Operational,
+        )));
+        let result = unify(&list_of_fn, &list_of_fun);
+        assert!(
+            result.is_err(),
+            "List<Fun> must not unify with List<Fn> (escape case 4: Fun through container)"
+        );
+    }
+
+    /// Fix: FnDef param type annotation constrains inference (SPEC-031 §5.1).
+    /// `fn(x: Int) { x }` must give param type Int, not a fresh type variable.
+    #[test]
+    fn task558_fndef_annotated_param_constrains_inference() {
+        let env = TypeEnv::with_builtin_types();
+        let expr = Expr::FnDef {
+            params: vec![("x".into(), Some("Int".into()))],
+            return_type: None,
+            body: Box::new(Expr::Variable("x".into())),
+            span: Span::default(),
+        };
+        let result = check_expr(&env, &expr);
+        assert!(
+            result.is_ok(),
+            "annotated fn should typecheck: {:?}",
+            result.errors
+        );
+        // The function type should have Int as the param type (not a type variable)
+        match &result.ty {
+            Type::Fn(params, _) => {
+                assert_eq!(params.len(), 1);
+                assert_eq!(params[0], Type::Int, "annotated param must resolve to Int");
+            }
+            other => panic!("expected Type::Fn, got {other:?}"),
+        }
+    }
+
+    /// Fix: FnDef return type annotation is verified against inferred body type (SPEC-031 §5.1).
+    /// `fn(x: Int) -> Int { x }` must succeed; `fn(x: Int) -> Bool { x }` must fail.
+    #[test]
+    fn task558_fndef_annotated_return_type_verified() {
+        let env = TypeEnv::with_builtin_types();
+
+        // Matching annotation: fn(x: Int) -> Int { x }  — should pass
+        let matching = Expr::FnDef {
+            params: vec![("x".into(), Some("Int".into()))],
+            return_type: Some("Int".into()),
+            body: Box::new(Expr::Variable("x".into())),
+            span: Span::default(),
+        };
+        let ok_result = check_expr(&env, &matching);
+        assert!(
+            ok_result.is_ok(),
+            "fn(x: Int) -> Int {{ x }} should typecheck, errors: {:?}",
+            ok_result.errors
+        );
+
+        // Conflicting annotation: fn(x: Int) -> Bool { x }  — should fail
+        let conflicting = Expr::FnDef {
+            params: vec![("x".into(), Some("Int".into()))],
+            return_type: Some("Bool".into()),
+            body: Box::new(Expr::Variable("x".into())),
+            span: Span::default(),
+        };
+        let err_result = check_expr(&env, &conflicting);
+        assert!(
+            !err_result.is_ok(),
+            "fn(x: Int) -> Bool {{ x }} should fail: return type annotation conflicts with body"
+        );
+    }
+
+    /// Escape case 2 (TASK-558): Storing a Fun in instance state typed as Fn must be rejected.
+    /// The unify(Type::Fun, Type::Fn) failure is the mechanism that prevents
+    /// a closure (Fun) from being assigned to an Fn-typed state field.
+    #[test]
+    fn task558_escape_case_2_store_fun_in_state_rejected() {
+        let fun_ty = Type::Fun(
+            vec![Type::Int],
+            Box::new(Type::Int),
+            ash_core::Effect::Operational,
+        );
+        let fn_ty = Type::Fn(vec![Type::Int], Box::new(Type::Int));
+        let result = unify(&fun_ty, &fn_ty);
+        assert!(
+            result.is_err(),
+            "Type::Fun must not unify with Type::Fn (escape case 2: storing Fun in Fn-typed state)"
+        );
+    }
+
+    // ============================================================
+    // TASK-560: Unknown type annotation errors
+    // ============================================================
+
+    /// Unknown param annotation should produce an error, not silently
+    /// fall back to a fresh type variable.
+    #[test]
+    fn task560_unknown_param_annotation_produces_error() {
+        let env = TypeEnv::with_builtin_types();
+        // fn(x: BogusType) { x }
+        let expr = Expr::FnDef {
+            params: vec![("x".into(), Some("BogusType".into()))],
+            return_type: None,
+            body: Box::new(Expr::Variable("x".into())),
+            span: Span::default(),
+        };
+        let result = check_expr(&env, &expr);
+        assert!(
+            !result.is_ok(),
+            "fn(x: BogusType) should produce an error for unknown annotation, got: {:?}",
+            result.errors
+        );
+        let found = result.errors.iter().any(|e| {
+            matches!(
+                e,
+                ConstructorError::UnknownTypeAnnotation { name, context, .. }
+                if name == "BogusType" && context.contains("parameter")
+            )
+        });
+        assert!(
+            found,
+            "expected UnknownTypeAnnotation error for parameter, got: {:?}",
+            result.errors
+        );
+    }
+
+    /// Unknown return type annotation should produce an error.
+    #[test]
+    fn task560_unknown_return_annotation_produces_error() {
+        let env = TypeEnv::with_builtin_types();
+        // fn(x) -> BogusRet { x }
+        let expr = Expr::FnDef {
+            params: vec![("x".into(), None)],
+            return_type: Some("BogusRet".into()),
+            body: Box::new(Expr::Variable("x".into())),
+            span: Span::default(),
+        };
+        let result = check_expr(&env, &expr);
+        assert!(
+            !result.is_ok(),
+            "fn(x) -> BogusRet should produce an error for unknown return annotation, got: {:?}",
+            result.errors
+        );
+        let found = result.errors.iter().any(|e| {
+            matches!(
+                e,
+                ConstructorError::UnknownTypeAnnotation { name, context, .. }
+                if name == "BogusRet" && context.contains("return type")
+            )
+        });
+        assert!(
+            found,
+            "expected UnknownTypeAnnotation error for return type, got: {:?}",
+            result.errors
+        );
+    }
+
+    /// A user-defined type registered in TypeEnv should resolve as a Constructor.
+    #[test]
+    fn task560_user_defined_type_annotation_resolves() {
+        use ash_core::ast::{TypeBody, TypeDef, Visibility};
+        let mut env = TypeEnv::with_builtin_types();
+        // Register a custom enum type "Color" with no variants for testing
+        let color_def = TypeDef {
+            name: "Color".into(),
+            params: vec![],
+            body: TypeBody::Enum(vec![]),
+            visibility: Visibility::Public,
+        };
+        env.register_type(&color_def).expect("register Color type");
+        // fn(x: Color) { x }
+        let expr = Expr::FnDef {
+            params: vec![("x".into(), Some("Color".into()))],
+            return_type: None,
+            body: Box::new(Expr::Variable("x".into())),
+            span: Span::default(),
+        };
+        let result = check_expr(&env, &expr);
+        assert!(
+            result.is_ok(),
+            "fn(x: Color) should typecheck with registered type, errors: {:?}",
+            result.errors
+        );
+        match &result.ty {
+            Type::Fn(params, _ret) => {
+                assert_eq!(params.len(), 1);
+                match &params[0] {
+                    Type::Constructor { name, args, .. } => {
+                        assert_eq!(name.name.as_str(), "Color");
+                        assert!(args.is_empty(), "Color has no type params");
+                    }
+                    other => panic!("expected Constructor type for param, got {other:?}"),
+                }
+            }
+            other => panic!("expected Type::Fn, got {other:?}"),
+        }
+    }
 }

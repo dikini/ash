@@ -597,9 +597,10 @@ impl Engine {
         let warnings: Vec<String> = fn_diagnostics
             .iter()
             .map(|d| {
-                d.name
-                    .as_ref()
-                    .map_or_else(|| format!("pub fn: {}", d.reason), |name| format!("pub fn '{name}': {}", d.reason))
+                d.name.as_ref().map_or_else(
+                    || format!("pub fn: {}", d.reason),
+                    |name| format!("pub fn '{name}': {}", d.reason),
+                )
             })
             .collect();
         let mut errors = Vec::new();
@@ -1142,9 +1143,7 @@ fn build_imported_closures(
         let body_expr = match ash_parser::lower_expr(&callable.body) {
             Ok(expr) => expr,
             Err(e) => {
-                eprintln!(
-                    "warning: failed to lower imported callable '{name}': {e}"
-                );
+                eprintln!("warning: failed to lower imported callable '{name}': {e}");
                 continue;
             }
         };

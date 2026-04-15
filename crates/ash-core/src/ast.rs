@@ -438,12 +438,6 @@ pub enum Expr {
         func: Name,
         arguments: Vec<Expr>,
     },
-    /// Explicit interface method call preserved before TASK-422 lowering/type resolution.
-    InterfaceMethodCall {
-        interface: Name,
-        method: Name,
-        argument: Box<Expr>,
-    },
 
     /// Constructor expression: Some { value: 42 }
     Constructor {
@@ -770,7 +764,7 @@ pub struct ImplDef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImplMethodDef {
     pub name: Name,
-    pub param: Name,
+    pub params: Vec<Name>,
     pub body: Expr,
 }
 
@@ -810,10 +804,9 @@ mod tests {
             control: false,
         };
 
-        let _interface_call = Expr::InterfaceMethodCall {
-            interface: "Explain".to_string(),
-            method: "explain".to_string(),
-            argument: Box::new(Expr::Variable("value".to_string())),
+        let _interface_call = Expr::Call {
+            func: "explain".to_string(),
+            arguments: vec![Expr::Variable("value".to_string())],
         };
 
         let _module_interface = ModuleItem::Interface(InterfaceDef {
@@ -833,7 +826,7 @@ mod tests {
             type_args: vec![TypeExpr::Named("PolicyDecision".to_string())],
             methods: vec![ImplMethodDef {
                 name: "explain".to_string(),
-                param: "value".to_string(),
+                params: vec!["value".to_string()],
                 body: Expr::Literal(Value::String("policy".to_string())),
             }],
         });

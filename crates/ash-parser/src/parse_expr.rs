@@ -738,7 +738,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
         // Check for `(` to distinguish:
         //   module::func(args...)  →  qualified fn call (Expr::Call with module)
-        //   no `(` → keep existing InterfaceMethodCall for single-arg form
+        //   no `(` → this is just a qualified name without arguments, not valid here
         if opt(literal_str("(")).parse_next(input)?.is_some() {
             let args = if literal_str(")").parse_next(input).is_ok() {
                 vec![]
@@ -756,12 +756,12 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             });
         }
 
-        // No `(` after name::name → InterfaceMethodCall (legacy single-arg form)
+        // No `(` after name::name — not a valid call expression
         let span = span_from(&start_pos, &input.state);
-        return Ok(Expr::InterfaceMethodCall {
-            interface: name_str,
-            method: second_name,
-            argument: Box::new(Expr::Literal(Literal::Null)),
+        return Ok(Expr::Call {
+            func: second_name,
+            module: Some(name_str),
+            args: vec![],
             span,
         });
     }

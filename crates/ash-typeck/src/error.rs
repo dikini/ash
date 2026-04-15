@@ -109,6 +109,17 @@ pub enum ConstructorError {
         span: ash_parser::token::Span,
     },
 
+    /// Unknown type annotation in FnDef parameter or return type
+    #[error("unknown type annotation `{name}` in {context}")]
+    UnknownTypeAnnotation {
+        /// The unresolvable type name
+        name: String,
+        /// Where the annotation appeared, e.g. "parameter `x`" or "return type"
+        context: String,
+        /// Source span
+        span: ash_parser::token::Span,
+    },
+
     /// Invalid canonical interface method call
     #[error("invalid interface method call {interface}::{method}: {reason}")]
     InvalidInterfaceMethodCall {

@@ -517,7 +517,10 @@ fn task557_closure_single_param() {
             assert_eq!(params.len(), 1, "expected 1 param");
             assert_eq!(params[0].0.as_ref(), "x");
             assert!(params[0].1.is_none(), "expected no type annotation");
-            assert!(return_type.is_none(), "closure shorthand has no return type");
+            assert!(
+                return_type.is_none(),
+                "closure shorthand has no return type"
+            );
         }
         other => panic!("expected FnDef, got: {:?}", other),
     }

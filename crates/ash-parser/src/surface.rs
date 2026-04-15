@@ -270,8 +270,8 @@ pub struct ImplDef {
 pub struct ImplMethodDef {
     /// Method name
     pub name: Name,
-    /// Single canonical value parameter name
-    pub param: Name,
+    /// Parameter names (multi-parameter per SPEC-032)
+    pub params: Vec<Name>,
     /// Method body expression preserved at the parser surface
     pub body: Expr,
     /// Source span
@@ -805,17 +805,7 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
-    /// Explicit interface method call: `Interface::method(value)`
-    InterfaceMethodCall {
-        /// Interface namespace
-        interface: Name,
-        /// Method name
-        method: Name,
-        /// Canonical single value argument
-        argument: Box<Expr>,
-        /// Source span
-        span: Span,
-    },
+
     /// Match expression: match scrutinee { arms... }
     Match {
         /// Expression to match on
@@ -1308,7 +1298,6 @@ impl Spanned for Expr {
             Expr::Unary { span, .. } => *span,
             Expr::Binary { span, .. } => *span,
             Expr::Call { span, .. } => *span,
-            Expr::InterfaceMethodCall { span, .. } => *span,
             Expr::Match { span, .. } => *span,
             Expr::Policy(policy_expr) => policy_expr.span(),
             Expr::IfLet { span, .. } => *span,

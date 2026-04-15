@@ -276,7 +276,7 @@ Update this section as tasks complete:
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 0 | Planned |
-| 80 | 9 | 0 | Planned |
+| 80 | 9 | 9 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -373,7 +373,7 @@ Update this section as tasks complete:
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 0 | 📝 Planned |
-| 80 | 9 | 0 | Planned |
+| 80 | 9 | 9 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -2383,7 +2383,44 @@ higher-order functions, and three-vertex enforcement via `Type::Fn`/`Type::Fun`.
 || TASK-557 | Closure syntax \|params\| => body | SPEC-031 §8.3 | 2 | ✅ Complete ||
 || TASK-558 | Three-vertex enforcement via Type::Fn vs Type::Fun | SPEC-031 §4.8,§6.3 | 4 | ✅ Complete ||
 || TASK-559 | End-to-end validation and CHANGELOG | SPEC-031 §13 | 3 | ✅ Complete ||
+|| [TASK-560](tasks/TASK-560-fndef-type-annotation-tracking.md) | Track: resolve FnDef type annotations via TypeEnv | SPEC-031 §5.1 | 4 | ✅ Complete ||
 
-**Deliverable:** `fn(params) { body }` produces `Value::Closure`, closures capture environment,
+|**Deliverable:** `fn(params) { body }` produces `Value::Closure`, closures capture environment,
 recursion works, higher-order functions supported, `pure_runtime.rs` deleted, three-vertex
 boundary enforced, all existing tests pass through single interpreter path.
+
+## Phase 82: Multi-Parameter Interface Methods
+
+Remove the single-parameter restriction on interface method signatures and their call sites. Interface methods may declare any number of parameters, and call sites may pass any number of arguments. `InterfaceMethodCall` is removed from the AST.
+
+**Plan Reference:** [PLAN-029: Multi-Parameter Interface Methods](PLAN-029-MULTI-PARAMETER-INTERFACES.md)
+**Spec:** SPEC-032
+**Priority:** High
+**Status:** ✅ Complete
+
+|||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-561](tasks/TASK-561-parser-multi-param-methods.md) | Parser/AST: multi-parameter method signatures and impl definitions | SPEC-032 §4 | 4 | ✅ Complete |
+|| [TASK-562](tasks/TASK-562-typeck-multi-param-calls.md) | Type checker/Interpreter: multi-parameter interface call resolution | SPEC-032 §5-6 | 5 | ✅ Complete |
+
+**Deliverable:** Interface methods accept any number of parameters; `InterfaceMethodCall` AST node removed; all interface calls route through `Expr::Call`; interface declarations still limited to one type parameter.
+
+## Phase 83: Multi-Parameter Interfaces, Generic Implementations, and Associated Types
+
+Remove the single type-parameter restriction on interfaces, enable generic `impl` blocks with `where` bounds, and add associated types on interfaces. Redesign the impl registry and add an engine monomorphization pass.
+
+**Plan Reference:** [PLAN-030: Generic Implementations and Associated Types](PLAN-030-GENERIC-IMPLS-AND-ASSOCIATED-TYPES.md)
+**Specs:** SPEC-033, SPEC-034, SPEC-035
+**Priority:** High
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+|------|-------------|------|------------|--------|
+| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | 📝 Planned |
+| [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-034 §4, SPEC-035 §4 | 5 | 📝 Planned |
+| [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-034 §5 | 6 | 📝 Planned |
+| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | 📝 Planned |
+| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | 📝 Planned |
+| [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | 📝 Planned |
+
+**Deliverable:** Interfaces accept any number of type parameters; generic impls with `where` bounds compile and resolve recursively; overlapping impl schemes rejected at registration; associated types (`S::Ok`) normalize to concrete types; `Type::Associated` never appears at runtime.

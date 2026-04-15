@@ -87,33 +87,6 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
                 span: *span,
             });
         }
-        Expr::InterfaceMethodCall {
-            interface,
-            method,
-            argument,
-            span,
-        } => {
-            check_purity_recursive(env, argument, errors);
-
-            let argument_result = check_expr(env, argument);
-            if !argument_result.is_ok()
-                || env
-                    .resolve_interface_method_call(
-                        interface.as_ref(),
-                        method.as_ref(),
-                        &argument_result.substitution.apply(&argument_result.ty),
-                    )
-                    .is_err()
-            {
-                errors.push(PurityError {
-                    kind: PurityViolation::InvalidInterfaceMethodCall {
-                        interface: interface.to_string(),
-                        method: method.to_string(),
-                    },
-                    span: *span,
-                });
-            }
-        }
         Expr::Literal(_) | Expr::Variable(_) | Expr::Panic { .. } => {}
         Expr::FieldAccess { base, .. } => {
             check_purity_recursive(env, base, errors);
@@ -138,6 +111,35 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             for arg in args {
                 check_purity_recursive(env, arg, errors);
             }
+
+            // Check if this is an interface method call
+            if let Some(module_name) = module.as_deref()
+                && env.has_interface(module_name)
+            {
+                    let mut arg_types = Vec::new();
+                    let mut subst = crate::types::Substitution::new();
+                    for arg in args {
+                        let arg_result = check_expr(env, arg);
+                        if arg_result.is_ok() {
+                            subst = subst.compose(&arg_result.substitution);
+                            arg_types.push(subst.apply(&arg_result.ty));
+                        }
+                    }
+
+                    if env
+                        .resolve_interface_method_call(module_name, func.as_ref(), &arg_types)
+                        .is_err()
+                    {
+                        errors.push(PurityError {
+                            kind: PurityViolation::InvalidInterfaceMethodCall {
+                                interface: module_name.to_string(),
+                                method: func.to_string(),
+                            },
+                            span: *span,
+                        });
+                    }
+                    return;
+                }
 
             let callee = qualified_callee_name(module.as_deref(), func.as_ref());
             let Some(callee_ty) = env.lookup_call_target(module.as_deref(), func.as_ref()) else {
@@ -378,12 +380,14 @@ mod tests {
     }
 
     #[test]
-    fn invalid_interface_method_call_in_fn_body_is_impure() {
+    fn unresolved_qualified_call_in_fn_body_is_impure() {
         let env = TypeEnv::new();
-        let expr = Expr::InterfaceMethodCall {
-            interface: box_name("Print"),
-            method: box_name("display"),
-            argument: int_lit(42),
+        // After TASK-561, interface method calls use Expr::Call with module qualifier.
+        // Without a registered interface, this is an unresolved call (which is impure).
+        let expr = Expr::Call {
+            func: box_name("display"),
+            module: Some(box_name("Print")),
+            args: vec![*int_lit(42)],
             span: Span::default(),
         };
         let result = check_purity(&env, &expr);
@@ -392,8 +396,8 @@ mod tests {
         assert_eq!(errors.len(), 1);
         assert!(matches!(
             &errors[0].kind,
-            PurityViolation::InvalidInterfaceMethodCall { interface, method }
-            if interface == "Print" && method == "display"
+            PurityViolation::UnresolvedCall { callee }
+            if callee == "Print::display"
         ));
     }
 

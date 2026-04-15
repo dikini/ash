@@ -35,6 +35,8 @@ Without multi-parameter methods, interfaces are limited to unary type-class patt
 
 ### 3.1 Method Declaration Syntax
 
+Multi-parameter interface methods use parenthesized parameter lists:
+
 ```ash
 interface Eq<T> {
     eq(T, T) -> Bool
@@ -49,9 +51,16 @@ interface Serialize<T> {
 }
 ```
 
+**Grammar:**
+```
+interface-method-sig = identifier "(" [ type ("," type)* ] ")" "->" type
+```
+
+This replaces the MVP grammar `identifier ":" type "->" type`.
+
 An interface method signature consists of:
 - A method name
-- A parenthesized, comma-separated list of parameter types
+- A parenthesized, comma-separated list of parameter types (zero or more)
 - An arrow `->` and a return type
 
 ### 3.2 Concrete Implementation Syntax
@@ -189,9 +198,11 @@ Since interface method calls lower to `Expr::Call` with module qualification, an
 2. Update parsers for interface method signatures and impl method definitions.
 3. Replace `InterfaceMethodCall` with `Call` in the expression parser.
 4. Update type checker to zip-unify over multiple method parameters.
-5. Remove all `InterfaceMethodCall` references from type checker (`lib.rs`, `purity.rs`, `names.rs`) and interpreter (`eval.rs`).
+5. Remove all `InterfaceMethodCall` references from type checker (`lib.rs`, `purity.rs`, `names.rs`, `capability_check.rs`) and interpreter (`eval.rs`).
 6. Remove `InterfaceMethodCall` lowering rejection (`lower.rs:1219`).
 7. Verify all existing single-parameter interface tests still pass.
+
+> **Scope warning:** Step 5 touches 9+ files across parser, type checker, purity checker, capability checker, and interpreter. This is the highest-risk step in SPEC-032.
 
 ## 8. Conformance
 

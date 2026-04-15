@@ -108,8 +108,6 @@ use crate::surface::{Definition, RoleDef};
 pub enum LoweringError {
     /// Float literals are not supported in the core IR.
     FloatNotSupported,
-    /// Interface method calls are parser/AST-only until TASK-422.
-    InterfaceMethodCallNotSupported,
     /// Symbolic capability name could not be resolved to a (provider, action) pair.
     UnresolvedCapability { name: String },
     /// Expression form is not valid at this position.
@@ -121,9 +119,6 @@ impl fmt::Display for LoweringError {
         match self {
             LoweringError::FloatNotSupported => {
                 write!(f, "float literals are not supported")
-            }
-            LoweringError::InterfaceMethodCallNotSupported => {
-                write!(f, "interface method calls are not lowered until TASK-422")
             }
             LoweringError::UnresolvedCapability { name } => {
                 write!(
@@ -1215,8 +1210,6 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             }
         }
 
-        Expr::InterfaceMethodCall { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
-
         Expr::Match {
             scrutinee, arms, ..
         } => Ok(CoreExpr::Match {
@@ -1646,19 +1639,25 @@ mod tests {
     }
 
     #[test]
-    fn test_interface_method_calls_are_parser_only_until_task_422() {
-        let surface = SurfaceExpr::InterfaceMethodCall {
-            interface: "Explain".into(),
-            method: "explain".into(),
-            argument: Box::new(SurfaceExpr::Variable("value".into())),
+    fn test_interface_method_call_lowers_as_call() {
+        // After TASK-561, interface method calls use Expr::Call with module qualifier
+        let surface = SurfaceExpr::Call {
+            func: "explain".into(),
+            module: Some("Explain".into()),
+            args: vec![SurfaceExpr::Variable("value".into())],
             span: crate::token::Span::new(0, 22, 1, 1),
         };
 
         let result = lower_expr(&surface);
-        assert!(matches!(
-            result,
-            Err(LoweringError::InterfaceMethodCallNotSupported)
-        ));
+        assert!(result.is_ok());
+        let core = result.unwrap();
+        match &core {
+            CoreExpr::Call { func, arguments } => {
+                assert_eq!(func, "explain");
+                assert_eq!(arguments.len(), 1);
+            }
+            other => panic!("expected CoreExpr::Call, got {other:?}"),
+        }
     }
 
     #[test]

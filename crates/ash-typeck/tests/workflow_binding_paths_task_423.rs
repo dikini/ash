@@ -31,7 +31,7 @@ fn explain_string_impl() -> ImplDef {
         type_args: vec![SurfaceType::Name("String".into())],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
-            param: "value".into(),
+            params: vec!["value".into()],
             body: Expr::Literal(Literal::String("policy".into())),
             span: test_span(),
         }],
@@ -55,10 +55,10 @@ fn for_bound_interface_method_call_workflow() -> WorkflowDef {
             pattern: Pattern::Variable("item".into()),
             collection: Expr::Variable("items".into()),
             body: Box::new(Workflow::Ret {
-                expr: Expr::InterfaceMethodCall {
-                    interface: "Explain".into(),
-                    method: "explain".into(),
-                    argument: Box::new(Expr::Variable("item".into())),
+                expr: Expr::Call {
+                    func: "explain".into(),
+                    module: Some("Explain".into()),
+                    args: vec![Expr::Variable("item".into())],
                     span: test_span(),
                 },
                 span: test_span(),

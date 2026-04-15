@@ -336,6 +336,14 @@ impl Type {
         matches!(self, Type::Fn(..) | Type::Fun(..))
     }
 
+    /// Return the parameter count if this is a function type, else None.
+    pub fn fn_arity(&self) -> Option<usize> {
+        match self {
+            Type::Fn(params, _) | Type::Fun(params, _, _) => Some(params.len()),
+            _ => None,
+        }
+    }
+
     /// If this is a pure function type `Type::Fn(params, ret)`, return `Some(&(params, ret))`.
     pub fn as_pure_fn(&self) -> Option<(&[Type], &Type)> {
         match self {
@@ -572,6 +580,40 @@ pub fn occurs_in(var: TypeVar, ty: &Type) -> bool {
         Type::Fun(args, ret, _) => args.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),
         Type::Fn(params, ret) => params.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),
         Type::Cap { .. }
+        | Type::Int
+        | Type::String
+        | Type::Bool
+        | Type::Float
+        | Type::Null
+        | Type::Time
+        | Type::Ref
+        | Type::Instance { .. }
+        | Type::InstanceAddr { .. }
+        | Type::ControlLink { .. } => false,
+    }
+}
+
+/// Check if a type contains `Type::Fun` anywhere in its structure.
+///
+/// Used for SPEC-031 §4.8 escape-case enforcement: workflow return types
+/// must not contain `Fun` (impure closures must not escape the workflow boundary).
+///
+/// # Invariant
+///
+/// The input type must be **fully substituted** — i.e., all `Type::Var` nodes
+/// must have been resolved via a substitution pass before calling this function.
+/// A `Type::Var` that later unifies with `Type::Fun` will not be detected.
+/// The caller (e.g. `infer_workflow_return_type`) is responsible for applying
+/// the substitution before passing the type here.
+pub fn type_contains_fun(ty: &Type) -> bool {
+    match ty {
+        Type::Fun(..) => true,
+        Type::Constructor { args, .. } => args.iter().any(type_contains_fun),
+        Type::List(elem) => type_contains_fun(elem),
+        Type::Record(fields) => fields.iter().any(|(_, t)| type_contains_fun(t)),
+        Type::Fn(params, ret) => params.iter().any(type_contains_fun) || type_contains_fun(ret),
+        Type::Var(_)
+        | Type::Cap { .. }
         | Type::Int
         | Type::String
         | Type::Bool
@@ -1380,5 +1422,52 @@ mod tests {
             unify(&t, &list_t),
             Err(UnifyError::InfiniteType(TypeVar(0), _))
         ));
+    }
+
+    // ============================================================
+    // type_contains_fun tests
+    // ============================================================
+
+    #[test]
+    fn test_type_contains_fun_direct() {
+        let fun_ty = Type::Fun(vec![Type::Int], Box::new(Type::Int), Effect::Operational);
+        assert!(type_contains_fun(&fun_ty));
+    }
+
+    #[test]
+    fn test_type_contains_fun_nested_in_list() {
+        let inner = Type::Fun(vec![Type::Int], Box::new(Type::Int), Effect::Epistemic);
+        let list = Type::List(Box::new(inner));
+        assert!(type_contains_fun(&list));
+    }
+
+    #[test]
+    fn test_type_contains_fun_nested_in_record() {
+        let inner = Type::Fun(vec![], Box::new(Type::Null), Effect::Deliberative);
+        let record = Type::Record(vec![("f".into(), inner)]);
+        assert!(type_contains_fun(&record));
+    }
+
+    #[test]
+    fn test_type_contains_fun_in_fn_param() {
+        let fun_param = Type::Fun(vec![Type::Int], Box::new(Type::Int), Effect::Operational);
+        let fn_ty = Type::Fn(vec![fun_param], Box::new(Type::Bool));
+        assert!(type_contains_fun(&fn_ty));
+    }
+
+    #[test]
+    fn test_type_contains_fun_pure_int_is_false() {
+        assert!(!type_contains_fun(&Type::Int));
+    }
+
+    #[test]
+    fn test_type_contains_fun_pure_fn_is_false() {
+        let fn_ty = Type::Fn(vec![Type::Int], Box::new(Type::Int));
+        assert!(!type_contains_fun(&fn_ty));
+    }
+
+    #[test]
+    fn test_type_contains_fun_var_is_false() {
+        assert!(!type_contains_fun(&Type::Var(TypeVar::fresh())));
     }
 }

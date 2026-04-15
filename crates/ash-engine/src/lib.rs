@@ -384,8 +384,8 @@ impl Engine {
                         slot.set_late(closure.clone());
                         local_closures.insert(fn_def.name.to_string(), closure);
                         // Functions with bodies that can't be lowered (e.g., containing
-                        // if/then/else) are silently skipped -- they need pure_runtime
-                        // support which is no longer available.
+                        // if/then/else) are silently skipped -- they require
+                        // Expr-level support not yet in the interpreter.
                     }
                 }
 
@@ -1143,6 +1143,7 @@ fn build_imported_closures(
         let body_expr = match ash_parser::lower_expr(&callable.body) {
             Ok(expr) => expr,
             Err(e) => {
+                // TODO: replace with tracing::warn! when tracing is integrated
                 eprintln!("warning: failed to lower imported callable '{name}': {e}");
                 continue;
             }

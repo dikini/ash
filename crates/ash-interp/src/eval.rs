@@ -197,12 +197,21 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             return_type: _,
             body,
         } => {
-            let env = ctx.to_env_frame();
-            Ok(Value::Closure {
+            let closure = Value::Closure {
                 params: params.clone(),
                 body: body.clone(),
-                env,
-            })
+                env: ctx.to_env_frame(),
+            };
+            // SPEC-031 §4.8 — runtime safety net: closures must not be created
+            // inside a pure context.  The type checker is the primary enforcer;
+            // this catches any values that slip through.
+            if ctx.is_pure() {
+                return Err(EvalError::BoundaryViolation {
+                    value: closure,
+                    context: "closure created inside pure-function boundary".into(),
+                });
+            }
+            Ok(closure)
         }
 
         Expr::FnApply { func, args } => {
@@ -1851,9 +1860,12 @@ mod tests {
     /// SPEC-031 §4.8 / §10 – BoundaryViolation can be constructed with a
     /// Value::Closure and a descriptive context string.
     ///
-    /// Full runtime enforcement requires context tagging (tracked for future).
-    /// This test documents that the error variant is usable from eval code and
-    /// produces the expected display message.
+    /// The `is_pure()` guard exists in `eval_expr` and is exercised by
+    /// `task559_boundary_violation_in_pure_context` using the test-only
+    /// `Context::enter_pure()` method.  In production, the type checker is
+    /// the primary enforcement mechanism; the runtime safety net will
+    /// activate once the interpreter propagates purity context through
+    /// closure application.
     #[test]
     fn task559_boundary_violation_on_context_boundary_crossing() {
         use ash_core::env_frame::EnvFrame;
@@ -1883,6 +1895,30 @@ mod tests {
         assert!(
             msg.contains("closure escaped pure vertex boundary"),
             "BoundaryViolation message should contain context string, got: {msg}"
+        );
+    }
+
+    /// SPEC-031 §4.8 – Runtime enforcement: Expr::FnDef inside a pure context
+    /// raises BoundaryViolation.
+    #[test]
+    fn task559_boundary_violation_in_pure_context() {
+        use crate::context::Context;
+
+        // Create a pure context
+        let base = Context::new();
+        let pure_ctx = base.enter_pure();
+
+        // FnDef inside a pure context should be rejected
+        let expr = Expr::FnDef {
+            params: vec![("x".into(), None)],
+            return_type: None,
+            body: Box::new(Expr::Variable("x".into())),
+        };
+
+        let result = eval_expr(&expr, &pure_ctx);
+        assert!(
+            matches!(result, Err(EvalError::BoundaryViolation { .. })),
+            "expected BoundaryViolation in pure context, got {result:?}"
         );
     }
 

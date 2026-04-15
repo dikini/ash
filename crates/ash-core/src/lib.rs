@@ -34,9 +34,13 @@ pub use stream::{
 pub use value::*;
 pub use visualize::*;
 
+pub use env_frame::{BindingSlot, EnvFrame};
+
 // Compile-time verification that key types are Send + Sync
 const _: () = {
     const fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<Value>();
     assert_send_sync::<Expr>();
+    assert_send_sync::<EnvFrame>();
+    assert_send_sync::<BindingSlot>();
 };

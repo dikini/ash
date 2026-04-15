@@ -530,10 +530,28 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                     substitution,
                     errors: Vec::new(),
                 },
-                _ => CheckResult::error(ConstructorError::UnsupportedExpression {
-                    kind: format!("FnApply: cannot apply args to type {func_ty}"),
+                Some(Err(e)) => CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: format!("FnApply: type mismatch applying args to {func_ty}: {e}"),
                     span: *span,
                 }),
+                None => {
+                    let kind = if func_ty.is_function_type() {
+                        format!(
+                            "FnApply: arity mismatch — expected {} args, got {} for type {func_ty}",
+                            func_ty.fn_arity().unwrap_or(0),
+                            arg_types.len()
+                        )
+                    } else {
+                        format!(
+                            "FnApply: cannot apply {} args to non-function type {func_ty}",
+                            arg_types.len()
+                        )
+                    };
+                    CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind,
+                        span: *span,
+                    })
+                }
             }
         }
     }

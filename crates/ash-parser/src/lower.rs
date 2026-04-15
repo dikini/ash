@@ -112,6 +112,8 @@ pub enum LoweringError {
     UnresolvedCapability { name: String },
     /// Expression form is not valid at this position.
     ExprNotLowerable { kind: &'static str },
+    /// fn expression appeared at module scope where only named `pub fn` is allowed.
+    FnDefNotAllowedAtModuleScope,
 }
 
 impl fmt::Display for LoweringError {
@@ -129,6 +131,12 @@ impl fmt::Display for LoweringError {
             }
             LoweringError::ExprNotLowerable { kind } => {
                 write!(f, "expression form `{kind}` is not valid at this position")
+            }
+            LoweringError::FnDefNotAllowedAtModuleScope => {
+                write!(
+                    f,
+                    "fn expressions are not valid at module scope; use `pub fn` instead"
+                )
             }
         }
     }
@@ -1296,6 +1304,26 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             })
         }
     }
+}
+
+/// Lower a surface expression that appears at module scope (top-level).
+///
+/// This is the same as [`lower_expr`] except that `Expr::FnDef` is rejected
+/// because anonymous fn expressions are not valid at module scope;
+/// users should write `pub fn` instead.
+///
+/// Note: this only rejects FnDef at the *top level* of the module expression.
+/// FnDef nested inside blocks, let-bindings, or function arguments are valid
+/// and are handled by `lower_expr` (which does not impose this restriction).
+///
+/// TODO: Currently only called from tests.  The engine still uses `lower_expr`
+/// in module-scope contexts.  Wire this into the engine's module-lowering path
+/// to activate the guard in production.
+pub fn lower_module_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
+    if matches!(expr, Expr::FnDef { .. }) {
+        return Err(LoweringError::FnDefNotAllowedAtModuleScope);
+    }
+    lower_expr(expr)
 }
 
 /// Lower a surface FnDef expression to core FnDef.

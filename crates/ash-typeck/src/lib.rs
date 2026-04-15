@@ -575,6 +575,10 @@ fn validate_interface_calls_in_expr(
             Ok(())
         }
         ash_parser::surface::Expr::FnDef { body, params, .. } => {
+            // Note: param type annotations (_ty) are intentionally ignored here.
+            // Fresh type variables are sufficient for interface-call validation
+            // because we only need to resolve which interface method is being called,
+            // not enforce full type correctness (that's check_expr's job).
             let mut fn_env = env.clone();
             for (name, _ty) in params {
                 fn_env.bind_variable(name.as_ref(), Type::Var(TypeVar::fresh()));
@@ -1873,6 +1877,21 @@ pub fn type_check_workflow_def_in_env(
     }
 
     reject_unsupported_mvp_workflow_features(&workflow.body)?;
+
+    // SPEC-031 §4.8: Mark this as a workflow context so that Expr::FnDef
+    // inside the body is typed as Type::Fun (impure) rather than Type::Fn (pure).
+    // Without this, closures in workflows would incorrectly get the pure type,
+    // defeating the three-vertex boundary.
+    //
+    // Note: set_workflow_effect fires unconditionally for all workflows (the body
+    // must know its context), but the Fun-escape return-type check below only
+    // fires when a declared return type is present.  Workflows without declared
+    // return types skip the escape check because infer_workflow_return_type may
+    // traverse unsupported expression types (e.g. IndexAccess).  The type checker's
+    // Fn≠Fun unification already prevents Fun from flowing where Fn is expected,
+    // so the explicit escape check is a defense-in-depth for the declared case.
+    workflow_env.set_workflow_effect(ash_core::Effect::Operational);
+
     validate_interface_calls_in_workflow(&mut workflow_env, &workflow.body)?;
     validate_fn_call_preconditions_workflow(
         &workflow_env,
@@ -1883,6 +1902,17 @@ pub fn type_check_workflow_def_in_env(
 
     if let Some(expected_return_ty) = declared_return_ty {
         let actual_return_ty = infer_workflow_return_type(&workflow_env, &workflow.body)?;
+
+        // SPEC-031 §4.8 / TASK-558: workflow return types must not contain Type::Fun.
+        // Closures (Fun) are impure and must not escape the workflow boundary.
+        if crate::types::type_contains_fun(&actual_return_ty) {
+            return Err(TypeCheckError::TypeError(format!(
+                "workflow '{}' return type {} contains Fun (impure closure) — \
+                 closures cannot escape the workflow boundary",
+                workflow.name, actual_return_ty
+            )));
+        }
+
         crate::types::unify(&expected_return_ty, &actual_return_ty).map_err(|_| {
             TypeCheckError::TypeError(format!(
                 "workflow '{}' declared return type {} but body returns {}",
@@ -2230,5 +2260,60 @@ mod tests {
         let _ = ConstraintContext::new();
         let _ = TypeEnv::with_builtin_types();
         let _ = Type::Int;
+    }
+
+    /// SPEC-031 §4.8 / TASK-558: Positive-case test — a workflow with a declared
+    /// return type of `Fn(Int) -> Int` where the body produces a `Fun` (closure)
+    /// must be caught by the Fun-escape check.  The Fn≠Fun unification rejection
+    /// is tested separately in check_expr.rs; this test verifies the explicit
+    /// escape gate in type_check_workflow_def_in_env.
+    #[test]
+    fn task558_workflow_return_fun_escape_rejected() {
+        use ash_parser::surface::{Type as SurfaceType, Workflow, WorkflowDef};
+        use ash_parser::token::Span;
+
+        fn test_span() -> Span {
+            Span::new(0, 0, 1, 1)
+        }
+
+        // Construct a workflow whose body is a FnDef expression.
+        // With set_workflow_effect active, the body type will be Type::Fun.
+        // The declared return type is Fn(Int) -> Int (a pure function type).
+        // The escape check should catch the Fun before unification even runs.
+        let workflow = WorkflowDef {
+            name: "escape_test".into(),
+            type_params: vec![],
+            params: vec![],
+            declared_return_type: Some(SurfaceType::Fn(
+                vec![SurfaceType::Name("Int".into())],
+                Box::new(SurfaceType::Name("Int".into())),
+            )),
+            plays_roles: vec![],
+            capabilities: vec![],
+            body: Workflow::Ret {
+                expr: ash_parser::surface::Expr::FnDef {
+                    params: vec![("x".into(), Some("Int".into()))],
+                    return_type: None,
+                    body: Box::new(ash_parser::surface::Expr::Variable("x".into())),
+                    span: test_span(),
+                },
+                span: test_span(),
+            },
+            contract: None,
+            span: test_span(),
+        };
+
+        let result = type_check_workflow_def_in_env(&TypeEnv::with_builtin_types(), &workflow);
+        // The error message should mention "Fun" or "closure" in the context
+        let err_msg = match result {
+            Err(e) => format!("{e}"),
+            Ok(_) => panic!("expected error for workflow returning Fun, but got Ok"),
+        };
+        // Pin to the Fun-escape gate specifically — if the type_contains_fun check
+        // were accidentally removed, this would fail even though unify also rejects.
+        assert!(
+            err_msg.contains("Fun") && err_msg.contains("closure"),
+            "expected Fun-escape error mentioning Fun and closure, got: {err_msg}"
+        );
     }
 }

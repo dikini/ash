@@ -19,6 +19,12 @@ pub struct Context {
     obligations: RefCell<HashSet<Name>>,
     /// Optional role context for authority and obligation tracking
     role_context: Option<crate::role_context::RoleContext>,
+    /// Pure-context nesting depth for SPEC-031 three-vertex boundary enforcement.
+    ///
+    /// 0 = not in a pure context.  >0 = inside `pure_depth` layers of pure-fn calls.
+    /// When `pure_depth > 0`, `Expr::FnDef` is rejected at runtime (the type checker
+    /// is the primary enforcer; this is a defense-in-depth safety net).
+    pure_depth: u32,
 }
 
 impl Default for Context {
@@ -35,6 +41,7 @@ impl Context {
             parent: None,
             obligations: RefCell::new(HashSet::new()),
             role_context: None,
+            pure_depth: 0,
         }
     }
 
@@ -85,6 +92,7 @@ impl Context {
             parent: Some(Box::new(self.clone())),
             obligations: RefCell::new(HashSet::new()),
             role_context: self.role_context.clone(),
+            pure_depth: self.pure_depth,
         }
     }
 
@@ -95,7 +103,27 @@ impl Context {
             parent: None,
             obligations: RefCell::new(HashSet::new()),
             role_context: None,
+            pure_depth: 0,
         }
+    }
+
+    /// Enter a pure-function context (SPEC-031 three-vertex boundary).
+    ///
+    /// Returns a child context with `pure_depth` incremented by one.
+    /// Inside a pure context, `Expr::FnDef` raises `BoundaryViolation`.
+    ///
+    /// TODO: Currently only used in tests.  Activate in production by
+    /// propagating purity context through closure application in eval.rs
+    /// (e.g., when calling a `Value::Closure` that was typed as `Type::Fn`).
+    pub fn enter_pure(&self) -> Self {
+        let mut child = self.extend();
+        child.pure_depth = self.pure_depth + 1;
+        child
+    }
+
+    /// Returns `true` when we are inside at least one pure-fn call.
+    pub fn is_pure(&self) -> bool {
+        self.pure_depth > 0
     }
 
     /// Set the role context for this context

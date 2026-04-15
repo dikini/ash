@@ -2,6 +2,20 @@
 //!
 //! Provides shared, immutable environment snapshots used by closure values.
 //! Forms a parent chain via `Arc` for O(1) capture without flattening.
+//!
+//! # Usage
+//!
+//! [`EnvFrame`] is the runtime representation of a captured lexical scope.
+//! When a closure (`Value::Closure`) is created, the current variable bindings
+//! are snapshot into an `EnvFrame` tree.  Lookup walks the parent chain.
+//!
+//! [`BindingSlot`] supports two modes:
+//! - `Bound`: normal immutable value binding
+//! - `Late`: a fill-later slot used for recursive closures — created empty
+//!   via [`BindingSlot::new_late()`], then filled via [`BindingSlot::set_late()`]
+//!   after the closure is constructed.
+//!
+//! Both types are `Send + Sync` (verified by compile-time assertions in `lib.rs`).
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -27,14 +41,14 @@ impl BindingSlot {
     pub fn resolve(&self) -> Option<Value> {
         match self {
             BindingSlot::Bound(v) => Some(v.clone()),
-            BindingSlot::Late(cell) => cell.lock().unwrap().clone(),
+            BindingSlot::Late(cell) => cell.lock().unwrap_or_else(|e| e.into_inner()).clone(),
         }
     }
 
     /// Fill a late-binding slot with a value.
     pub fn set_late(&self, value: Value) {
         if let BindingSlot::Late(cell) = self {
-            *cell.lock().unwrap() = Some(value);
+            *cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(value);
         }
     }
 }
@@ -121,5 +135,129 @@ impl PartialEq for EnvFrame {
 impl Default for EnvFrame {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    /// insert + get basic operations
+    #[test]
+    fn insert_and_get() {
+        let mut frame = EnvFrame::new();
+        assert!(frame.get("x").is_none());
+        frame.insert("x".into(), Value::Int(42));
+        assert_eq!(frame.get("x"), Some(Value::Int(42)));
+        // Overwrite
+        frame.insert("x".into(), Value::Int(7));
+        assert_eq!(frame.get("x"), Some(Value::Int(7)));
+    }
+
+    /// Parent chain walking: child can see parent bindings.
+    #[test]
+    fn parent_chain_walking() {
+        let mut parent = EnvFrame::new();
+        parent.insert("a".into(), Value::Int(1));
+        let parent_arc = Arc::new(parent);
+
+        let mut child = EnvFrame::with_parent(parent_arc);
+        child.insert("b".into(), Value::Int(2));
+
+        // Child sees its own binding
+        assert_eq!(child.get("b"), Some(Value::Int(2)));
+        // Child sees parent binding
+        assert_eq!(child.get("a"), Some(Value::Int(1)));
+        // Missing key returns None
+        assert!(child.get("c").is_none());
+    }
+
+    /// iter_bindings() filters out unfilled Late slots.
+    #[test]
+    fn iter_bindings_filters_unfilled_late() {
+        let mut frame = EnvFrame::new();
+        frame.insert("bound".into(), Value::Int(10));
+        frame.insert_late("late_unfilled".into());
+
+        let bindings: Vec<_> = frame.iter_bindings().collect();
+        assert_eq!(bindings.len(), 1);
+        assert_eq!(bindings[0].0, "bound");
+        assert_eq!(bindings[0].1, Value::Int(10));
+    }
+
+    /// PartialEq identity semantics: two distinct EnvFrames with content
+    /// EnvFrame PartialEq uses identity semantics: two non-empty frames
+    /// are never equal (even clones with identical content), because closure
+    /// capture correctness depends on reference identity, not structural
+    /// equality.  This is a design contract, not an implementation artifact.
+    #[test]
+    fn partial_eq_identity_semantics() {
+        // Two empty frames with no parent are equal
+        let a = EnvFrame::new();
+        let b = EnvFrame::new();
+        assert_eq!(a, b);
+
+        // Two empty frames sharing the same parent Arc are equal
+        let shared_parent = Arc::new(EnvFrame::new());
+        let c = EnvFrame::with_parent(shared_parent.clone());
+        let d = EnvFrame::with_parent(shared_parent.clone());
+        assert_eq!(c, d);
+
+        // Two empty frames with different parent Arcs are not equal
+        let p1 = Arc::new(EnvFrame::new());
+        let p2 = Arc::new(EnvFrame::new());
+        let e = EnvFrame::with_parent(p1);
+        let f = EnvFrame::with_parent(p2);
+        assert_ne!(e, f);
+
+        // Non-empty frames are never equal to anything (including themselves)
+        let mut g = EnvFrame::new();
+        g.insert("x".into(), Value::Int(1));
+        assert_ne!(g, EnvFrame::new());
+        // Reflexivity violation: non-empty frames use identity-based equality
+        assert_ne!(
+            g,
+            g.clone(),
+            "non-empty frame should not equal its own clone (identity-based)"
+        );
+    }
+
+    /// new_late() / set_late() lifecycle: resolve returns None before fill,
+    /// returns Some after fill.
+    #[test]
+    fn late_lifecycle() {
+        let mut frame = EnvFrame::new();
+        let slot = frame.insert_late("rec".into());
+
+        // Before fill, resolve returns None
+        assert!(slot.resolve().is_none());
+        assert!(frame.get("rec").is_none());
+
+        // Fill the late binding
+        slot.set_late(Value::Int(99));
+
+        // Now resolve returns Some
+        assert_eq!(slot.resolve(), Some(Value::Int(99)));
+        assert_eq!(frame.get("rec"), Some(Value::Int(99)));
+    }
+
+    /// Late binding shared via clone: two clones of the same Late slot,
+    /// set on one, both resolve.
+    #[test]
+    fn late_shared_via_clone() {
+        let slot_a = BindingSlot::new_late();
+        let slot_b = slot_a.clone();
+
+        // Neither resolves yet
+        assert!(slot_a.resolve().is_none());
+        assert!(slot_b.resolve().is_none());
+
+        // Set via one clone
+        slot_a.set_late(Value::Int(55));
+
+        // Both resolve
+        assert_eq!(slot_a.resolve(), Some(Value::Int(55)));
+        assert_eq!(slot_b.resolve(), Some(Value::Int(55)));
     }
 }

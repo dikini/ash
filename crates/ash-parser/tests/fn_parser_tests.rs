@@ -477,8 +477,10 @@ fn task556_named_fn_in_block_desugars_to_let() {
 // ---------------------------------------------------------------------------
 #[test]
 fn task556_anon_fn_at_module_scope_lower_error() {
-    // An anonymous fn(x){x} used as a top-level fn body expression
-    // causes lowering to fail because Expr::Block cannot yet be lowered.
+    // An anonymous fn(x){x} used at module scope must be rejected.
+    // FnDef is valid inside function bodies / let bindings, but NOT at
+    // module scope where only named `pub fn` definitions are allowed.
+    use ash_parser::lower::{LoweringError, lower_module_expr};
     use ash_parser::parse_expr::expr;
     let mut input = new_input(r#"fn(x) { x }"#);
     let parsed = expr(&mut input).expect("anonymous fn should parse");
@@ -487,11 +489,13 @@ fn task556_anon_fn_at_module_scope_lower_error() {
         "expected FnDef, got: {:?}",
         parsed
     );
-    // Lower the expression - the body is an Expr::Block which lowering rejects.
-    let lower_result = lower_expr(&parsed);
+    let lower_result = lower_module_expr(&parsed);
     assert!(
-        lower_result.is_err(),
-        "lowering FnDef with Block body should fail (Expr::Block not yet lowerable), but got: {:?}",
+        matches!(
+            lower_result,
+            Err(LoweringError::FnDefNotAllowedAtModuleScope)
+        ),
+        "lowering FnDef at module scope should produce FnDefNotAllowedAtModuleScope, got: {:?}",
         lower_result
     );
 }

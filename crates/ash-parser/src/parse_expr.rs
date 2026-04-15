@@ -18,7 +18,11 @@ use crate::token::Span;
 ///
 /// This handles the full expression grammar with proper precedence.
 pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    // Try anonymous fn expression first: fn(params) [-> type] { body }
+    // Try closure syntax first: |params| => body  (TASK-557)
+    if let Ok(closure) = parse_closure_expr(input) {
+        return Ok(closure);
+    }
+    // Try anonymous fn expression: fn(params) [-> type] { body }
     if let Ok(fn_def) = parse_fn_expr(input) {
         return Ok(fn_def);
     }
@@ -84,6 +88,108 @@ pub fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         body: Box::new(body),
         span,
     })
+}
+
+/// Parse a closure expression: `|params| => body`. SPEC-031 §4.3, §8.3
+///
+/// Desugars immediately to `Expr::FnDef { params, return_type: None, body }`.
+/// `|x| => x + 1`  =>  `fn(x) { x + 1 }`
+/// `|x, y| => x + y`  =>  `fn(x, y) { x + y }`
+///
+/// No return-type annotation in the closure shorthand — use `fn(x: T) -> R { }` for that.
+pub(crate) fn parse_closure_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state;
+    let saved = *input;
+
+    // Must start with `|`
+    skip_whitespace_and_comments(input);
+    if !input.input.starts_with('|') {
+        *input = saved;
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    let _ = literal_str("|").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse param list terminated by `|`
+    let params = parse_closure_params(input)?;
+
+    // Closing `|`
+    skip_whitespace_and_comments(input);
+    if !input.input.starts_with('|') {
+        *input = saved;
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    let _ = literal_str("|").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Mandatory `=>`
+    if !input.input.starts_with("=>") {
+        *input = saved;
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    let _ = literal_str("=>").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Body: a single expression (not a block — that's what makes this a shorthand)
+    let body = expr(input)?;
+    let span = span_from(&start_pos, &input.state);
+
+    Ok(Expr::FnDef {
+        params,
+        return_type: None,
+        body: Box::new(body),
+        span,
+    })
+}
+
+/// Parse the parameter list inside `|...|` closure syntax.
+///
+/// Parameters are `name` or `name: Type`, separated by commas.
+/// An empty list `||` is allowed (zero-param closure).
+fn parse_closure_params(input: &mut ParseInput) -> ModalResult<Vec<(Name, Option<Name>)>> {
+    let mut params = Vec::new();
+
+    skip_whitespace_and_comments(input);
+    // Empty param list: `||`
+    if input.input.starts_with('|') {
+        return Ok(params);
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+        let name: Name = identifier(input)?.into();
+        skip_whitespace_and_comments(input);
+
+        let ty = if input.input.starts_with(':') {
+            let _ = literal_str(":").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            Some(parse_simple_type_name(input)?)
+        } else {
+            None
+        };
+
+        params.push((name, ty));
+
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(',') {
+            let _ = literal_str(",").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            // Trailing comma before `|` allowed
+            if input.input.starts_with('|') {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    Ok(params)
 }
 
 /// Parse the parameter list of an anonymous fn expression.

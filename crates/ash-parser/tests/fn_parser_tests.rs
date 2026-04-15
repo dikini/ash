@@ -495,3 +495,106 @@ fn task556_anon_fn_at_module_scope_lower_error() {
         lower_result
     );
 }
+
+// ===========================================================================
+// TASK-557: Closure syntax |params| => body
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// TASK-557.1: |x| => x + 1 parses as Expr::FnDef with one param
+// ---------------------------------------------------------------------------
+#[test]
+fn task557_closure_single_param() {
+    use ash_parser::parse_expr::expr;
+    let mut input = new_input(r#"|x| => x + 1"#);
+    let result = expr(&mut input).expect("|x| => x + 1 should parse");
+    match result {
+        Expr::FnDef {
+            ref params,
+            ref return_type,
+            ..
+        } => {
+            assert_eq!(params.len(), 1, "expected 1 param");
+            assert_eq!(params[0].0.as_ref(), "x");
+            assert!(params[0].1.is_none(), "expected no type annotation");
+            assert!(return_type.is_none(), "closure shorthand has no return type");
+        }
+        other => panic!("expected FnDef, got: {:?}", other),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TASK-557.2: |x, y| => x + y parses with two params
+// ---------------------------------------------------------------------------
+#[test]
+fn task557_closure_two_params() {
+    use ash_parser::parse_expr::expr;
+    let mut input = new_input(r#"|x, y| => x + y"#);
+    let result = expr(&mut input).expect("|x, y| => x + y should parse");
+    match result {
+        Expr::FnDef { ref params, .. } => {
+            assert_eq!(params.len(), 2, "expected 2 params");
+            assert_eq!(params[0].0.as_ref(), "x");
+            assert_eq!(params[1].0.as_ref(), "y");
+        }
+        other => panic!("expected FnDef, got: {:?}", other),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TASK-557.3: closure in call position parses: apply(|x| => x * 2, 5)
+// ---------------------------------------------------------------------------
+#[test]
+fn task557_closure_in_call_position() {
+    use ash_parser::parse_expr::expr;
+    let mut input = new_input(r#"apply(|x| => x * 2, 5)"#);
+    let result = expr(&mut input).expect("call with closure arg should parse");
+    // The outer expression is a function call; the first argument should be FnDef
+    match result {
+        Expr::Call { ref args, .. } | Expr::FnApply { ref args, .. } => {
+            assert!(
+                !args.is_empty(),
+                "expected at least one argument (the closure)"
+            );
+            assert!(
+                matches!(args[0], Expr::FnDef { .. }),
+                "first arg should be FnDef (desugared closure), got: {:?}",
+                args[0]
+            );
+        }
+        other => panic!("expected Call or FnApply, got: {:?}", other),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TASK-557.4: closure in let binding: let f = |x| => x + 1;
+// ---------------------------------------------------------------------------
+#[test]
+fn task557_closure_in_let_binding() {
+    // Parse a fn body that contains `let f = |x| => x + 1;`
+    let src = r#"fn wrap() -> Int {
+    let f = |x| => x + 1;
+    f(0)
+}"#;
+    let mut input = new_input(src);
+    let def = parse_fn_definition(&mut input).expect("fn with closure let should parse");
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+    let Expr::Block {
+        ref statements,
+        ref tail_expr,
+        ..
+    } = f.body
+    else {
+        panic!("expected Block body, got: {:?}", f.body);
+    };
+    assert_eq!(statements.len(), 1, "expected one let statement");
+    let BlockStmt::Let { ref expr, .. } = statements[0];
+    assert!(
+        matches!(expr, Expr::FnDef { params, .. } if params.len() == 1),
+        "expected FnDef with one param in let binding, got: {:?}",
+        expr
+    );
+    assert!(tail_expr.is_some(), "expected tail expr (f(0))");
+}

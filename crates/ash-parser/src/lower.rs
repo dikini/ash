@@ -112,6 +112,8 @@ pub enum LoweringError {
     InterfaceMethodCallNotSupported,
     /// Symbolic capability name could not be resolved to a (provider, action) pair.
     UnresolvedCapability { name: String },
+    /// Expression form is not valid at this position.
+    ExprNotLowerable { kind: &'static str },
 }
 
 impl fmt::Display for LoweringError {
@@ -129,6 +131,9 @@ impl fmt::Display for LoweringError {
                     "unresolved symbolic capability '{}': no (provider, action) mapping found",
                     name
                 )
+            }
+            LoweringError::ExprNotLowerable { kind } => {
+                write!(f, "expression form `{kind}` is not valid at this position")
             }
         }
     }
@@ -1279,27 +1284,16 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         }
 
         // Pure fn expression forms - not yet lowered to core
-        Expr::If { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
-        Expr::Panic { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
-        Expr::Block { .. } => Err(LoweringError::InterfaceMethodCallNotSupported),
+        Expr::If { .. } => Err(LoweringError::ExprNotLowerable { kind: "if" }),
+        Expr::Panic { .. } => Err(LoweringError::ExprNotLowerable { kind: "panic" }),
+        Expr::Block { .. } => Err(LoweringError::ExprNotLowerable { kind: "block" }),
 
         Expr::FnDef {
             params,
             return_type,
             body,
             ..
-        } => {
-            let core_params: Vec<(String, Option<String>)> = params
-                .iter()
-                .map(|(name, ty)| (name.to_string(), ty.as_ref().map(|t| t.to_string())))
-                .collect();
-            let core_return_type = return_type.as_ref().map(|t| t.to_string());
-            Ok(CoreExpr::FnDef {
-                params: core_params,
-                return_type: core_return_type,
-                body: Box::new(lower_expr(body)?),
-            })
-        }
+        } => lower_fn_def(params, return_type, body),
 
         Expr::FnApply { func, args, .. } => {
             let lowered_args = args.iter().map(lower_expr).collect::<Result<Vec<_>, _>>()?;
@@ -1321,14 +1315,17 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
 /// - `params`: Parameter list as `(name, optional_type_annotation)` pairs.
 /// - `return_type`: Optional return type annotation string.
 /// - `body`: The function body expression.
-pub fn lower_fn_def(
-    params: &[(String, Option<String>)],
-    return_type: &Option<String>,
+pub(crate) fn lower_fn_def(
+    params: &[(Box<str>, Option<Box<str>>)],
+    return_type: &Option<Box<str>>,
     body: &Expr,
 ) -> Result<CoreExpr, LoweringError> {
     Ok(CoreExpr::FnDef {
-        params: params.to_vec(),
-        return_type: return_type.clone(),
+        params: params
+            .iter()
+            .map(|(n, t)| (n.to_string(), t.as_deref().map(str::to_string)))
+            .collect(),
+        return_type: return_type.as_deref().map(str::to_string),
         body: Box::new(lower_expr(body)?),
     })
 }

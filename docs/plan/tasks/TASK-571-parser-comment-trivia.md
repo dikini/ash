@@ -8,7 +8,7 @@
 
 ## Description
 
-Preserve comments during parsing and store them in a side-table attached to `ModuleFile`, without changing the token stream architecture. Before adding `&mut CommentTable`, consolidate the nine copies of `skip_whitespace_and_comments` into a single shared helper with a dedicated test suite.
+Preserve comments during parsing and store them in a side-table attached to `ModuleFile`, without changing the token stream architecture. Before adding `&mut CommentTable`, consolidate the 8 definitions of `skip_whitespace_and_comments` (7 duplicates + 1 shared in `parse_utils.rs`) into a single shared helper with a dedicated test suite.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ Preserve comments during parsing and store them in a side-table attached to `Mod
    - `CommentTable` must include a `last_seen_token_span: Option<Span>` field for EOF trailing comments.
    - Provide a write API: `push_leading(span, comment)`, `push_trailing(span, comment)`, and `set_last_token(span)`. Each method must enforce the `Span::default()` skip policy internally.
    - `Span::default()` must never be used as a lookup key; the skip policy is enforced inside the write API.
-2. **Consolidation:** Merge all nine copies of `skip_whitespace_and_comments` into `crates/ash-parser/src/parse_utils.rs` (or equivalent). The shared helper must be declared `pub(crate)` and have a unit-test suite covering whitespace-only, comment-only, mixed, and edge-case inputs.
+2. **Consolidation:** Merge all 8 definitions of `skip_whitespace_and_comments` (7 duplicates + 1 shared in `parse_utils.rs`) into `crates/ash-parser/src/parse_utils.rs` (or equivalent). The shared helper must be declared `pub(crate)` and have a unit-test suite covering whitespace-only, comment-only, mixed, and edge-case inputs.
 3. Update the shared `skip_whitespace_and_comments` to accept `&mut CommentTable` and record comments instead of discarding them.
 4. Apply the leading/trailing classification heuristic from SPEC-039 §4.4.
 5. Handle backtracking: implement state snapshotting or speculative buffering so that failed parser branches do not leak comments into the final table. Selection criterion: prefer speculative buffer if winnow provides a clean mechanism; fall back to snapshotting.

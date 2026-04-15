@@ -122,7 +122,7 @@ pub struct PurityError {
 }
 ```
 
-`PurityError` already carries a `span`, but it does **not** currently implement `std::error::Error`. It must be updated to do so (e.g., by deriving `thiserror::Error` or a manual impl) before it can satisfy the `AshLspError` trait bounds.
+`PurityError` already carries a `span` and implements `std::error::Error`.
 
 ### 3.6 `TypeError`
 
@@ -165,6 +165,17 @@ The following variants wrap aggregate or forwarded errors and therefore **cannot
 - `UnsatisfiedObligations { obligations: Vec<String> }` — aggregates multiple unsatisfied obligations
 
 > **Note:** `UndischargedObligations` and `UnsatisfiedObligations` appear to be functionally overlapping in `solver.rs`. When implementing span support, verify whether one of them is duplicate or dead code and can be removed.
+
+### 3.7 AST Span Gaps (Prerequisite)
+
+Several AST nodes and APIs in `ash_core::ast` currently lack `Span` fields, which blocks accurate span attachment for the errors above. These gaps must be resolved (primarily in SPEC-039) before or alongside this spec:
+
+- `TypeDef`, `InterfaceDef`, and `ImplDef` have no `Span` fields.
+- `Expr::Variable` and `Expr::Literal` have no spans (blocked by SPEC-039).
+- `Pattern` variants (e.g., `Pattern::Variable`, `Pattern::Constructor`, `Pattern::Record`, `Pattern::Tuple`, `Pattern::Literal`) have no spans.
+- `NameBinder` APIs in `ash-typeck` take `&str` without a corresponding `Span`; their signatures must change to accept both (e.g., `name: &str, span: Span`) so that `NameError` and `ResolutionError` can be emitted with accurate locations.
+
+> **Note:** Until these AST changes land, construction sites for the affected errors may need to pass `Span::default()` or an approximate parent span, with a follow-up task to tighten them once the AST carries full span information.
 
 ## 4. Required Changes
 
@@ -337,8 +348,8 @@ Each implementation maps the error's internal severity logic:
 - Future lint diagnostics → `Severity::Warning`
 
 > **Not included:** `ExhaustivenessError` is unused in the active pipeline and does not receive an implementation.
-
-> **Prerequisite:** `PurityError` must implement `std::error::Error` before it can satisfy the `AshLspError` super-trait bounds.
+>
+> **Lexer errors:** If the lexer defines a `LexError` type, it is out of scope for `AshLspError` and should be handled separately by the parser or LSP front-end (e.g., converted to `ParseError` diagnostics at the parser boundary).
 
 ### 5.3 Diagnostic Conversion
 
@@ -416,7 +427,7 @@ Every location that constructs these errors must be updated to pass a `Span`:
 - `crates/ash-typeck/src/name_binding.rs` — all `NameError` construction sites
 - `crates/ash-typeck/src/names.rs` — all `ResolutionError` construction sites
 - `crates/ash-typeck/src/solver.rs` — all `TypeError` construction sites (including `NotAConstructor`)
-- `crates/ash-typeck/src/purity.rs` — `PurityError` already has `span`; verify all construction sites populate it correctly and add `std::error::Error` implementation
+- `crates/ash-typeck/src/purity.rs` — `PurityError` already has `span` and implements `std::error::Error`; verify all construction sites populate it correctly
 - All test files that construct these errors directly
 
 ## 7. Migration Strategy
@@ -434,10 +445,10 @@ Because the changes are mechanical but widespread, the migration should be done 
 1. **Unit tests:** Assert that every error variant carries a span equal to the input location.
 2. **Integration tests:** Parse/type-check invalid programs and verify that every emitted diagnostic has a non-zero span.
 3. **LSP bridge tests:** Verify that `ash_error_to_diagnostic` produces valid LSP ranges for a sample of each error type.
-4. **Proptest:** Generate random invalid programs and assert that the span of every produced diagnostic is **not** `Span::default()` (i.e., a real span was attached).
+4. **Proptest:** Generate random invalid programs and assert that for every produced diagnostic, either its span is **not** `Span::default()` (i.e., a real span was attached), or the error variant is documented as span-impossible (e.g., aggregate variants like `Obligation` or `UndischargedObligations`).
 
 ## 9. Relationship to Other Specs
 
 - **Blocks:** SPEC-038 LSP MVP (unified diagnostics)
-- **Blocked by:** SPEC-039 `TASK-570` (binding-span changes must land first so that `TypeError::UnboundVariable` and similar errors can capture accurate spans)
+- **Blocked by:** SPEC-039 `TASK-570` (binding-span changes must land first so that `TypeError::UnboundVariable` and similar errors can capture accurate spans, and AST span gaps for `TypeDef`/`InterfaceDef`/`ImplDef`, `Expr::Variable`/`Literal`, and `Pattern` variants must be resolved)
 - **Parallelizable with:** SPEC-039 `TASK-571` (comment trivia) and SPEC-041 (Lint Library) after `TASK-570` is complete

@@ -10,6 +10,10 @@
 
 Add spans to all type-checker error variants that lack them.
 
+## Prerequisites
+
+- SPEC-039 AST span gaps must be resolved or explicitly worked around: `TypeDef`/`InterfaceDef`/`ImplDef` lack `Span` fields, `Expr::Variable`/`Literal` lack spans, `Pattern` variants lack spans, and `NameBinder` APIs take `&str` without `Span`. Until resolved, some construction sites may pass `Span::default()` or approximate parent spans.
+
 ## Requirements
 
 1. Every `TypeEnvError` variant includes a `span` field.

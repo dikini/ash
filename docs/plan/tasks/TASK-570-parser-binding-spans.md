@@ -14,22 +14,33 @@ Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in bot
 
 1. `Expr::Variable(Name)` becomes `Expr::Variable { name: Name, span: Span }` in `surface.rs` and `ast.rs`.
 2. `Pattern::Variable(Name)` becomes `Pattern::Variable { name: Name, span: Span }` in `surface.rs` and `ast.rs`.
-3. `PolicyExpr::Var(Name)` becomes `PolicyExpr::Var { name: Name, span: Span }` in `surface.rs` and `ast.rs`.
+3. `PolicyExpr::Var(Name)` becomes `PolicyExpr::Var { name: Name, span: Span }` in `surface.rs` only (`PolicyExpr` is surface-only).
 4. Parser captures `current_span()` when parsing identifiers into variable expressions/patterns/policy vars.
 5. Lowering threads the span through from surface to core.
-6. `ast::Span` derives `Hash` and `Eq` (prerequisite for TASK-571 / CommentTable usage in core AST).
-7. All match sites updated in:
-   - `ash-typeck/src/check_expr.rs`
-   - `ash-typeck/src/check_pattern.rs`
-   - `ash-typeck/src/lib.rs`
-   - `ash-typeck/src/names.rs`
-   - `ash-typeck/src/purity.rs`
-   - `ash-interp/src/eval.rs`
-   - `ash-repl/src/ast.rs`
-   - `ash-core/src/proptest_helpers.rs`
-   - `ash-fuzz/fuzz_targets/typeck.rs`
-   - All tests constructing these variants
-8. Parser identifier capture must leave a clear hook for TASK-571: after parsing a token that yields a span, the site should be structured so that `set_last_token(span)` can be inserted without re-refactoring the same code.
+6. Update `impl Spanned for Expr` and `impl Spanned for PolicyExpr` in `crates/ash-parser/src/surface.rs` to return the new `span` fields instead of `Span::default()`.
+7. `ast::Span` derives `Hash` and `Eq` (required for downstream Salsa usage in SPEC-043; not strictly required for SPEC-039/TASK-570 itself).
+8. All match sites updated (~400+ call sites across the workspace), including:
+   - `ash-parser/src/desugar.rs`
+   - `ash-parser/src/parse_workflow.rs`
+   - `ash-typeck/src/constraints.rs`
+   - `ash-typeck/src/capability_check.rs`
+   - `ash-typeck/src/policy_check.rs`
+   - `ash-typeck/src/effect.rs`
+   - `ash-typeck/src/solver.rs`
+   - `ash-interp/src/execute.rs`
+   - `ash-interp/src/execute_observe.rs`
+   - `ash-interp/src/execute_stream.rs`
+   - `ash-interp/src/policy.rs`
+   - `ash-interp/src/pattern.rs`
+   - `ash-interp/src/guard.rs`
+   - `ash-interp/src/lib.rs`
+   - `ash-core/src/visualize.rs`
+   - `ash-core/src/stream.rs`
+   - `ash-core/src/test_helpers.rs`
+   - `ash-bench/benches/core.rs`
+   - `ash-bench/benches/interp.rs`
+   - plus `check_expr.rs`, `check_pattern.rs`, `lib.rs`, `names.rs`, `purity.rs`, `eval.rs`, `repl/ast.rs`, `proptest_helpers.rs`, `fuzz_targets/typeck.rs`, and all tests constructing these variants
+9. Parser identifier capture must leave a clear hook for TASK-571: after parsing a token that yields a span, the site should be structured so that `set_last_token(span)` can be inserted without re-refactoring the same code.
 
 ## TDD Steps
 
@@ -44,10 +55,11 @@ Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in bot
 
 - [ ] `Expr::Variable { name, span }` in surface and core AST
 - [ ] `Pattern::Variable { name, span }` in surface and core AST
-- [ ] `PolicyExpr::Var { name, span }` in surface and core AST
+- [ ] `PolicyExpr::Var { name, span }` in surface AST only
+- [ ] `impl Spanned for Expr` and `impl Spanned for PolicyExpr` updated in `surface.rs`
 - [ ] `ast::Span` derives `Hash` and `Eq`
 - [ ] Parser and lowering updated
-- [ ] All downstream match sites fixed
+- [ ] All downstream match sites fixed (~400+ call sites)
 - [ ] Parser span-capture sites structured to accommodate `set_last_token(span)` protocol from TASK-571
 - [ ] All tests updated and passing
 - [ ] `cargo clippy --all-targets --all-features` clean

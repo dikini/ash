@@ -19,10 +19,11 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 
 ## Deliverable
 
-- Every `TypeEnvError`, `NameError`, `ResolutionError`, and `TypeError` variant carries a `span`
+- Every `TypeEnvError`, `NameError`, `ResolutionError`, and `TypeError` variant carries a `span` (some may be approximate `Span::default()` until AST span gaps are resolved)
 - All spanless `ConstructorError` variants (`UnknownConstructor`, `MissingField`, `UnknownField`, `FieldTypeMismatch`, `TupleFieldTypeMismatch`, `TupleArityMismatch`, `NonExhaustiveMatch`) and `TypeError::NotAConstructor` carry a `span`
 - New `crates/ash-diagnostic` crate provides `AshLspError` trait, `Severity`, and `DiagnosticCode` newtype, with explicit dependency constraints (may depend on `ash-parser`, must not depend on `ash-typeck`)
 - Mechanical diagnostic conversion from any Ash error to LSP `Diagnostic`
+- Lexer errors (if any) are handled separately by the parser/LSP front-end and do not implement `AshLspError`
 
 ## Timeline
 
@@ -32,6 +33,7 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 
 - `TypeEnvError` is constructed in many call sites; missing one will cause compilation failures.
 - Some errors originate deep in helper functions where span propagation requires threading an extra argument.
+- AST span gaps (`TypeDef`/`InterfaceDef`/`ImplDef`, `Expr::Variable`/`Literal`, `Pattern` variants, and `NameBinder` APIs taking `&str` without `Span`) may force temporary use of `Span::default()` or parent spans until SPEC-039 lands.
 
 ## Parallelization
 

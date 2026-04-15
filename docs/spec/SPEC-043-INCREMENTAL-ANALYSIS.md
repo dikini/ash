@@ -6,6 +6,8 @@
 
 Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine so that editing one file does not invalidate the analysis of unchanged files.
 
+> **Prerequisite:** `crates/ash-lsp-core` does not yet exist. It must be created and stabilized as part of SPEC-038 Phase 2 (Diagnostics & Symbols) before this spec can be implemented.
+
 ## 2. Scope
 
 This spec covers:
@@ -15,7 +17,7 @@ This spec covers:
 
 ## 3. Why Salsa
 
-`ash-lsp-core` MVP uses an LRU cache keyed by `(Url, version)`. This means:
+`ash-lsp-core` (once created) will use an LRU cache keyed by `(Url, version)`. This means:
 - Every `didChange` invalidates the edited file's cache entry.
 - Cross-file dependencies are not tracked; changing `A.ash` invalidates nothing in `B.ash` even if `B` imports `A`.
 - For large workspaces, this leads to excessive re-parsing and re-type-checking.
@@ -74,7 +76,7 @@ pub fn type_check_file(
 ) -> (TypeCheckResult, Vec<ConstructorError>) {
     let module = parse_file(db, file).0;
     let graph = module_graph(db, manifest);
-    // run ash-typeck via type_check_module_file(module, graph)
+    // run ash-typeck via a module-level entry point
 }
 
 #[salsa::tracked]
@@ -84,12 +86,54 @@ pub fn symbol_index(db: &dyn AshDb, file: SourceFile) -> SymbolIndex {
 }
 ```
 
+> **Over-invalidation risk:** `type_check_file` is keyed on both `file` and `manifest`. Any edit to the workspace manifest (e.g., `ash.toml`) will therefore invalidate `type_check_file` for **every** file in the workspace. This is acceptable for the MVP because manifest edits are rare; a finer-grained crate-root query can be introduced later.
+
 > **Prerequisites:**
-> - `ash-parser` must expose `parse_surface_file(text: &str) -> (ModuleFile, Vec<ParseError>)` before this query can be implemented. See SPEC-038.
-> - `ash-typeck` must expose a `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph) -> (TypeCheckResult, Vec<ConstructorError>)` API before this query can be implemented. This should be delivered as part of SPEC-038 Phase 2.
+> - `ash-parser` must expose `parse_surface_file(text: &str) -> (ModuleFile, Vec<ParseError>)` before this query can be implemented. See SPEC-039 §4.6.
+> - `ash-typeck` currently has **no** `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)` API. This function (or an equivalent module-level entry point) must be created before this query can be implemented. The review recommends delivering it as part of SPEC-038 Phase 2.
 > - `ConstructorError` is the error type produced by `ash-typeck` during environment construction (see SPEC-038 §12).
 
-### 4.3 Database Trait
+### 4.3 SymbolIndex Definition
+
+`SymbolIndex` does not yet exist in the codebase. It is a salsa-compatible aggregate designed to power LSP document symbols, hover, and (eventually) cross-file "Find References."
+
+```rust
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct SymbolIndex {
+    /// Hierarchical document symbols for `textDocument/documentSymbol`.
+    pub document_symbols: Vec<DocumentSymbol>,
+
+    /// Map from a symbol's canonical name/identifier to every source location
+    /// where it is defined or declared in this file.
+    pub reference_locations: HashMap<SymbolKey, Vec<Location>>,
+
+    /// Cross-file usage index: for each exported name, record which external
+    /// modules reference it. Populated incrementally as other files are analyzed.
+    pub cross_file_usage: HashMap<SymbolKey, Vec<Location>>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct DocumentSymbol {
+    pub name: String,
+    pub kind: SymbolKind,      // e.g., Function, Type, Variable
+    pub span: Span,
+    pub children: Vec<DocumentSymbol>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Location {
+    pub file: Url,
+    pub span: Span,
+}
+
+/// Opaque key used to look up symbols. MVP can use `(Name, SymbolKind)`;
+/// later iterations may switch to a resolved `DefId`.
+pub type SymbolKey = (String, SymbolKind);
+```
+
+For the MVP, `symbol_index` only needs to produce `document_symbols` and `reference_locations` accurate to the current file. `cross_file_usage` may be left empty or populated by a separate whole-workspace query later.
+
+### 4.4 Database Trait
 
 ```rust
 #[salsa::db]
@@ -157,22 +201,26 @@ If `module_graph` encounters a missing `ash.toml` or unreadable file:
 
 ## 7. Salsa Compatibility Spike
 
-Before committing to the full Salsa migration, run an 8–12 hour spike to verify that all relevant types can satisfy Salsa's trait requirements (`'static + Clone + Eq + Hash + Debug`):
+Before committing to the full Salsa migration, run an 8–12 hour spike to verify that all relevant types can satisfy Salsa's trait requirements (`'static + Clone + Eq + Hash + Debug`). **This spike is essential** — if any core type cannot derive `Eq + Hash`, the entire spec is blocked.
 
-- `TypeCheckResult` (contains `Substitution`, `TypeError`, `ObligationCheckResult`)
-- `ModuleGraph` (contains `HashMap<ModuleId, ModuleNode>`)
-- `ConstructorError`, `TypeEnvError`, `NameError`, `ResolutionError`, `TypeError`
-- `Type`, `Substitution`, `Effect`
-- **Parser types:** `ModuleFile`, `ParseError`, and all `surface.rs` types that cross salsa boundaries
+Types that must be audited (this list is not exhaustive):
+
+| Category | Types |
+|----------|-------|
+| **Parser / AST** | `ParseError`, `ModuleFile`, and **every** type in `surface.rs` that crosses a salsa boundary (`Expr`, `Pattern`, `Literal`, `Definition`, `ModuleDecl`, `ImportDecl`, `TypeDef`, `WorkflowDef`, `PolicyExpr`, `EffectExpr`, `HandlerArm`, `MatchArm`, `RecordField`, `Constructor`, `Name`, `Span`) |
+| **Type-checker results** | `TypeCheckResult`, `Substitution`, `Type`, `Effect` |
+| **Type-checker errors** | `TypeError`, `ConstructorError`, `TypeEnvError`, `NameError`, `ResolutionError`, `ExhaustivenessError`, `ObligationCheckResult` |
+| **Module graph** | `ModuleGraph`, `ModuleId`, `ModuleNode` |
 
 The spike should:
 1. Create a scratch crate with `salsa = "0.26"`.
 2. Attempt to define `#[salsa::tracked] fn type_check_file(...) -> TypeCheckResult`.
 3. Attempt to define `#[salsa::tracked] fn parse_file(...) -> (ModuleFile, Vec<ParseError>)`.
-4. Record every missing `Eq` / `Hash` / `Clone` derive.
-5. Report findings. Use this to revise this spec and TASK-576 before implementation begins.
+4. Attempt to define `#[salsa::tracked] fn symbol_index(...) -> SymbolIndex`.
+5. Record every missing `Eq` / `Hash` / `Clone` derive.
+6. Report findings. Use this to revise this spec and TASK-576 before implementation begins.
 
-> **Tracked prerequisite:** Adding `Eq + Hash` to `TypeCheckResult`, `Substitution`, `Type`, and all error types (`ConstructorError`, `TypeEnvError`, `NameError`, `ResolutionError`, `TypeError`, `ParseError`) is a non-trivial prerequisite that may require refactoring interned types or replacing `f32`/`f64` fields with ordered wrappers. Track this as a separate sub-task in TASK-576.
+> **Tracked prerequisite:** Adding `Eq + Hash` to the ~15+ types listed above is a non-trivial prerequisite that may require refactoring interned types, replacing `f32`/`f64` fields with ordered wrappers, or introducing salsa-compatible newtypes. Track this as a separate sub-task in TASK-576.
 
 ## 8. Migration Strategy
 
@@ -195,9 +243,9 @@ The migration from simple cache to salsa should be **transparent** to `ash-lsp` 
 ## 10. Relationship to Other Specs
 
 - **Blocked by:**
-  - SPEC-038 LSP MVP (must exist first; `ash-lsp-core` must be stable)
-  - `ash-parser` must expose `parse_surface_file(text: &str) -> (ModuleFile, Vec<ParseError>)`
-  - `ash-typeck` must expose `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)`
-  - `ash-typeck` and `ash-parser` types must derive `Eq + Hash` (see §7 prerequisite task)
+  - SPEC-038 LSP MVP (must create `ash-lsp-core` and stabilize its API first)
+  - `ash-parser` must expose `parse_surface_file(text: &str) -> (ModuleFile, Vec<ParseError>)` (delivered by SPEC-039)
+  - `ash-typeck` must expose a module-level entry point such as `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)`; this API does not yet exist
+  - `ash-typeck`, `ash-parser`, and `ash-core` types must derive `Eq + Hash` (see §7 prerequisite task)
 - **Follows:** SPEC-039, SPEC-040, SPEC-041 (all stable)
 - **Enables:** Large-workspace LSP performance

@@ -42,6 +42,8 @@ The formatter **requires** the `CommentTable` introduced in SPEC-039. It cannot 
 
 > **Explicit precondition:** `Expr::Variable` must carry a `span` field so that comments can be stably attached to variable references. The same requirement applies to `Pattern::Variable`.
 
+> **MVP limitation — literal comment loss:** Because SPEC-039 defers spans on `Expr::Literal` and `Pattern::Literal`, comments adjacent to literals will be silently dropped. This is an accepted MVP limitation and must be documented in the formatter test suite.
+
 ## 5. Core Design
 
 ### 5.1 Formatter Configuration
@@ -76,7 +78,7 @@ impl<'a> Formatter<'a> {
 }
 ```
 
-### 5.3 Entry Point
+### 5.3 Entry Points
 
 `format_module` is a **free function** taking `&ModuleFile` and `&FormatConfig`:
 
@@ -98,7 +100,38 @@ pub fn format_module(module: &ModuleFile, config: &FormatConfig) -> String {
     }
     render(&fmt.cmds, config)
 }
+```
 
+`format_range` formats only the AST nodes whose spans intersect the given `range`:
+
+```rust
+pub fn format_range(module: &ModuleFile, range: Span, config: &FormatConfig) -> String {
+    let mut fmt = Formatter::new(&module.comments, config);
+    for decl in &module.module_decls {
+        if spans_intersect(decl.span, range) {
+            fmt.write_module_decl(decl);
+            fmt.write_newline();
+        }
+    }
+    for def in &module.definitions {
+        if spans_intersect(def_span(def), range) {
+            fmt.write_definition(def);
+            fmt.write_newline();
+        }
+    }
+    if let Some(workflow) = &module.workflow {
+        if spans_intersect(workflow.span, range) {
+            fmt.write_workflow_def(workflow);
+            fmt.write_newline();
+        }
+    }
+    render(&fmt.cmds, config)
+}
+```
+
+> **Note:** `format_range` does not attempt to preserve outer indentation; the caller (e.g., LSP) is responsible for adjusting the returned text to the starting column of the selected range.
+
+```rust
 impl<'a> Formatter<'a> {
     fn write_workflow_def(&mut self, workflow: &WorkflowDef) {
         self.write_keyword("workflow");
@@ -157,11 +190,39 @@ pub fn render(cmds: &[FormatCmd], config: &FormatConfig) -> String {
 }
 ```
 
-### 5.4 Formatting Algorithm
+### 5.4 Width-Aware Layout (Two-Pass Mechanism)
 
-The formatter uses a **direct recursive walk** over the AST with a small formatting IR (not a full pretty-printing library). The IR consists of tokens, explicit line breaks, and indent/dedent commands. The walk generates the IR, which is then rendered to a `String` by `render`. This avoids the complexity and dependency cost of an external pretty-printing crate while still giving explicit control over comment placement and line breaks.
+The formatter uses a **direct recursive walk** over the AST with a small formatting IR. The IR consists of tokens, explicit line breaks, and indent/dedent commands. The walk generates the IR, which is then rendered to a `String` by `render`.
 
-Nodes decide layout by first rendering into a temporary buffer with a single-line target. If any line exceeds `max_width`, the formatter falls back to multi-line layout.
+For nodes whose layout depends on width (e.g., parameter lists, record literals, constraint blocks, type constructor arguments), the formatter implements an **exact two-pass mechanism**:
+
+1. **Speculative single-line pass:** Create a temporary `Formatter` instance (or a dedicated single-line accumulator). Emit the node using compact single-line rules: commas emit only `Space`, braces do not force `Newline`, and indentation commands are suppressed. Render the accumulated commands to a string using `render`.
+2. **Width check:** If `max_width` is `Some(limit)` and the speculative string contains no forced newlines (e.g., from nested multi-line comments) and its length is ≤ `limit`, append the speculative command buffer to the primary formatter and return.
+3. **Fallback multi-line pass:** If the speculative line exceeds `limit` or contains forced breaks, **discard** the speculative buffer and emit the node again using multi-line rules: each field/argument goes on its own line, braces open and close on dedicated lines, and the body is indented by one additional level.
+
+This must be exposed as a helper on `Formatter`:
+
+```rust
+impl<'a> Formatter<'a> {
+    /// Try to emit `f` in a single line. If the rendered result fits within
+    /// `max_width`, returns `Some(cmds)` to be appended to the primary buffer.
+    /// Otherwise returns `None`, and the caller must re-emit with multi-line rules.
+    fn try_single_line<F>(&self, f: F) -> Option<Vec<FormatCmd>>
+    where
+        F: FnOnce(&mut Formatter),
+    {
+        let mut probe = Formatter::new(self.comments, self.config);
+        f(&mut probe);
+        let text = render(&probe.cmds, self.config);
+        if let Some(limit) = self.config.max_width {
+            if text.len() <= limit && !text.contains('\n') {
+                return Some(probe.cmds);
+            }
+        }
+        None
+    }
+}
+```
 
 ### 5.5 Blank-Line Preservation Rules
 
@@ -183,6 +244,8 @@ Before emitting any AST node with span `s`:
 Blank line normalization (see 5.5) is applied after comment insertion.
 
 > **Intra-expression comments** (comments inside expressions) are **out of scope** for MVP. They are explicitly deferred to a future formatter spec.
+
+> **Literal comment loss:** Because `Expr::Literal` and `Pattern::Literal` do not carry spans in the MVP AST, any comment that was originally attached to a literal node cannot be re-attached after formatting. The formatter will silently drop such comments. This is an accepted MVP limitation.
 
 ### 5.7 Expression Formatting
 
@@ -270,9 +333,167 @@ All `surface::Workflow` variants are formatted with a keyword on the same line a
 
 Ash statements are separated by newlines. The formatter **never emits semicolons** in the MVP because the surface syntax does not use them. If a future syntax introduces optional semicolons, the formatter will preserve them; until then, statements are terminated by `\n` only.
 
+### 5.12 Type Formatting
+
+All `surface::Type` variants must be formatted as follows:
+
+| Variant | Formatting Rule |
+|---|---|
+| `Name(n)` | `n` |
+| `List(t)` | `[t]` (no space inside brackets) |
+| `Record(fields)` | `{ field1: t1, field2: t2 }` (multi-line via §5.4 if too long) |
+| `Capability(n)` | `cap n` |
+| `Constructor { name, args }` | `name<a1, a2>` (args comma+space separated; `<>` omitted if empty) |
+| `Fn(params, ret)` | `Fn(p1, p2) -> ret` (params comma+space separated) |
+| `Associated { base, name }` | `base::name` |
+
+### 5.13 Pattern Formatting
+
+All `surface::Pattern` variants must be formatted as follows:
+
+| Variant | Formatting Rule |
+|---|---|
+| `Variable(name)` | `name` |
+| `Wildcard` | `_` |
+| `Tuple(pats)` | `(a, b, c)` (comma+space separated) |
+| `Record(fields)` | `{ field: pat, ... }` (multi-line via §5.4 if too long) |
+| `List { elements, rest }` | `[a, b, ..rest]` (comma+space separated; `..rest` only if present) |
+| `Literal(lit)` | formatted via literal rules |
+| `Variant { name, fields, payload }` | `name` followed by payload shape:
+  - `Unit` → `name`
+  - `Record(fields)` → `name { field: pat, ... }`
+  - `Tuple(pats)` → `name(a, b, c)` |
+
+### 5.14 Guard Formatting
+
+All `surface::Guard` variants must be formatted as follows:
+
+| Variant | Formatting Rule |
+|---|---|
+| `Always` | `always` |
+| `Never` | `never` |
+| `Pred(p)` | `name(args)` (predicate formatted like a function call) |
+| `And(l, r)` | `l and r` (spaces around `and`) |
+| `Or(l, r)` | `l or r` (spaces around `or`) |
+| `Not(g)` | `not g` (space after `not`) |
+
+### 5.15 Definition Subtypes Formatting
+
+Each `Definition` subtype must be formatted as follows:
+
+**`CapabilityDef`**
+```
+[visibility] capability name: effect(params) [-> ret] [where constraints] [=> provider action]
+```
+- Visibility omitted if `Inherited`.
+- Constraints formatted comma-separated after `where`.
+- Target (`=> provider action`) emitted only if both `target_provider` and `target_action` are `Some`.
+
+**`PolicyDef`**
+```
+policy name [type_params] {
+    field1: ty1 [= default1],
+    ...
+} [where expr]
+```
+- Fields are comma-separated, one per line if multi-line.
+- Default values preceded by ` = ` when present.
+
+**`RoleDef`**
+```
+role name {
+    capabilities cap1, cap2,
+    obligations ob1, ob2,
+}
+```
+- Both clauses indented +1 if the block is multi-line.
+
+**`ProxyDef`**
+```
+[visibility] proxy name for role {
+    observes cap1, cap2,
+    receives cap1:channel1, cap2,
+} -> body
+```
+- Body formatted as a nested workflow.
+
+**`InterfaceDef`**
+```
+[visibility] interface name [type_params] {
+    method1(params) -> ret,
+    method2(params) -> ret,
+    type Assoc1;
+    type Assoc2;
+}
+```
+- Methods and associated types separated by newlines, indented +1 inside braces.
+
+**`ImplDef`**
+```
+[visibility] impl [type_params] Interface<type_args> for Type [where bounds] {
+    type Assoc = Type;
+    method1(params) = body,
+    ...
+}
+```
+- Associated type bindings and methods each on their own line, indented +1.
+
+**`FnDef`**
+```
+[visibility] fn name[type_params](params) [-> ret] [contract] { body }
+```
+- Body is an `Expr` block (see §5.7).
+
+### 5.16 ModuleDecl and Import Formatting
+
+**`ModuleDecl`** (from `crate::module`)
+- File-based: `[visibility] mod name;`
+- Inline: `[visibility] mod name {\n    definitions...\n}` (definitions indented +1, blank lines collapsed to 0 inside)
+
+**`Use` (Import)**
+- `Use` statement: `[visibility] use path [as alias];`
+- `UsePath::Simple(path)` → segments joined by `::`
+- `UsePath::Glob(path)` → `path::*`
+- `UsePath::Nested(path, items)` → `path::{item1, item2 as alias2}` (items comma+space separated; nested multi-line via §5.4 if too long)
+
+**`DependencyDecl`**
+- `dependency alias from "path";`
+
+### 5.17 MatchArm and BlockStmt Formatting
+
+**`MatchArm`**
+- Formatted as `pattern => expr`
+- Arms are comma-separated inside the match braces.
+- Multi-line match blocks place each arm on its own line indented +1.
+
+**`BlockStmt`**
+- `Let { pattern, expr, .. }` → `let pattern = expr;` (terminated by newline, no semicolon emitted per §5.11)
+
+### 5.18 Visibility Formatting
+
+`Visibility` is formatted as a prefix with a trailing space when non-inherited:
+
+| Variant | Output |
+|---|---|
+| `Inherited` | *(nothing)* |
+| `Public` | `pub ` |
+| `Crate` | `pub(crate) ` |
+| `Super { levels }` | `pub(super) ` if `levels == 1`, otherwise `pub(super::super) ` repeated |
+| `Self_` | `pub(self) ` |
+| `Restricted { path }` | `pub(in path) ` |
+
+### 5.19 Constraint and Predicate Formatting
+
+**`Predicate`**
+- Formatted as a function-style call: `name(arg1, arg2, ...)` (comma+space separated).
+
+**`Constraint`**
+- Wraps a single `Predicate`; formatted identically to the predicate: `name(arg1, arg2, ...)`.
+- Inside a `CapabilityDef`, multiple constraints appear after `where ` separated by commas.
+
 ## 6. LSP Integration
 
-Once the formatter exists, `textDocument/formatting` and `textDocument/rangeFormatting` become trivial handlers in `ash-lsp`:
+Once the formatter exists, `textDocument/formatting` and `textDocument/rangeFormatting` become handlers in `ash-lsp`:
 
 ```rust
 async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>, Error> {
@@ -280,6 +501,16 @@ async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Ve
     let formatted = ash_formatter::format_module(&module, &FormatConfig { indent_width: 4, max_width: None });
     Ok(Some(vec![TextEdit {
         range: full_document_range,
+        new_text: formatted,
+    }]))
+}
+
+async fn range_formatting(&self, params: DocumentRangeFormattingParams) -> Result<Option<Vec<TextEdit>>, Error> {
+    let module = self.vfs.parse(uri)?;
+    let span = lsp_range_to_span(params.range);
+    let formatted = ash_formatter::format_range(&module, span, &FormatConfig { indent_width: 4, max_width: None });
+    Ok(Some(vec![TextEdit {
+        range: params.range,
         new_text: formatted,
     }]))
 }
@@ -313,9 +544,15 @@ If the input cannot be parsed:
 
 ## 9. Testing Strategy
 
-1. **Round-trip parsing:** For every example file, `parse_surface_file(format(parse_surface_file(src))) == parse_surface_file(src)` (AST equality **ignoring spans**, since formatting changes spans).
-2. **Comment preservation:** Format a file with comments; verify all comment text appears in the output.
-3. **Idempotency:** `format(format(source)) == format(source)`. This property depends on **comment re-attachment stability**. The formatter must use a **two-pass or span-independent algorithm** so that reformatting already-formatted code does not shift spans in a way that changes comment placement. Comments must be re-attached using a stable key (e.g., node identity or original span) that is invariant across passes.
+1. **Round-trip parsing:** For every example file, `parse_surface_file(format(parse_surface_file(src)))` must produce an AST that is structurally equal to `parse_surface_file(src)` (equality **ignoring spans**, since formatting changes spans).
+2. **Comment preservation:** Format a file with comments; verify all comment text appears in the output. Exclude literal-adjacent comments per the accepted MVP limitation (§4, §5.6).
+3. **Round-trip stability (idempotency replacement):**
+   - Let `m0 = parse_surface_file(src)`.
+   - Let `m1 = parse_surface_file(format_module(m0))`.
+   - Assert `m0` and `m1` are structurally identical ASTs (ignoring spans).
+   - Let `text1 = format_module(m0)` and `text2 = format_module(m1)`.
+   - Assert `text1 == text2`.
+   This property depends on **comment re-attachment stability**. The formatter must use a **span-independent or two-pass algorithm** so that reformatting already-formatted code does not shift spans in a way that changes comment placement. Comments must be re-attached using a stable key (e.g., node identity or original span) that is invariant across passes.
 4. **Proptest:** Generate random valid ASTs (via `ash-core` proptest helpers), format them, and assert round-trip parse equality modulo spans.
 
 ## 10. Relationship to Other Specs

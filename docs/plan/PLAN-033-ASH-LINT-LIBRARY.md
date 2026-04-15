@@ -18,7 +18,7 @@ Convert `crates/ash-lint` from a CLI-only binary into a reusable library crate w
 
 ## Deliverable
 
-- `crates/ash-lint/Cargo.toml` has `[lib]`, `[[bin]]`, and `walkdir` scoped to `[bin.dependencies]` (binary-only)
+- `crates/ash-lint/Cargo.toml` has `[lib]`, `[[bin]]`, and `walkdir` declared in `[dependencies]` (acceptable because the library may later expose `lint_directory`)
 - `src/lib.rs` exports `LintDiagnostic`, `LintConfig`, `lint_source`, `lint_module`, `lint_definition`
 - Optional `serde` feature enables `Serialize` on lint types
 - `src/main.rs` is a thin CLI wrapper supporting legacy rule ID aliases

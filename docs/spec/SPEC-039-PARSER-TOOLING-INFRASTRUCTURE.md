@@ -64,28 +64,60 @@ pub enum PolicyExpr {
 }
 ```
 
-> **Prerequisite (cross-reference):** `ash_core::ast::Span` must derive `Hash` and `Eq` before `CommentTable` can be used in the core AST. This is tracked as a prerequisite for TASK-571. See §4.2 for details.
+> **Prerequisite (cross-reference):** `ash_core::ast::Span` must derive `Hash` and `Eq` for downstream Salsa usage (SPEC-043). It is **not** required for SPEC-039 itself. See §4.2 for details.
+
+> **Spanned implementations:** `impl Spanned for Expr` and `impl Spanned for PolicyExpr` in `crates/ash-parser/src/surface.rs` must be updated to return the new `span` fields instead of `Span::default()`.
 
 ### 3.3 Call Sites to Update
 
-- `crates/ash-parser/src/surface.rs` — enum definitions
-- `crates/ash-core/src/ast.rs` — enum definitions
+> **Scope note:** The mechanical scope is larger than initially estimated (~400+ call sites across the workspace).
+
+**Parser / Surface / Core AST:**
+- `crates/ash-parser/src/surface.rs` — enum definitions; update `impl Spanned for Expr` and `impl Spanned for PolicyExpr`
+- `crates/ash-core/src/ast.rs` — enum definitions (`Expr::Variable`, `Pattern::Variable`; `PolicyExpr` is surface-only)
 - `crates/ash-parser/src/parse_expr.rs` — variable expression parsing
 - `crates/ash-parser/src/parse_pattern.rs` — pattern parsing
 - `crates/ash-parser/src/parse_policy.rs` — policy variable parsing
 - `crates/ash-parser/src/parse_module.rs` — `Expr::Variable` construction
+- `crates/ash-parser/src/parse_workflow.rs` — `Expr::Variable` matches/construction
 - `crates/ash-parser/src/parse_send.rs` — `Expr::Variable` matches
 - `crates/ash-parser/src/lower.rs` — lower `Expr::Variable`, `Pattern::Variable`, `PolicyExpr::Var`
+- `crates/ash-parser/src/desugar.rs` — `Expr::Variable` / `Pattern::Variable` matches
+
+**Type checker:**
 - `crates/ash-typeck/src/check_expr.rs` — match arms for `Expr::Variable`
 - `crates/ash-typeck/src/check_pattern.rs` — match arms for `Pattern::Variable`
 - `crates/ash-typeck/src/lib.rs` — multiple match sites
 - `crates/ash-typeck/src/names.rs` — any `Expr::Variable` destructuring
 - `crates/ash-typeck/src/purity.rs` — any `Expr::Variable` destructuring
+- `crates/ash-typeck/src/constraints.rs` — `Expr::Variable` / `Pattern::Variable` matches
+- `crates/ash-typeck/src/capability_check.rs` — `Expr::Variable` matches
+- `crates/ash-typeck/src/policy_check.rs` — `PolicyExpr::Var` matches
+- `crates/ash-typeck/src/effect.rs` — `Expr::Variable` / `PolicyExpr::Var` matches
+- `crates/ash-typeck/src/solver.rs` — `Expr::Variable` matches
+
+**Interpreter / Runtime:**
 - `crates/ash-interp/src/eval.rs` — evaluation of `Expr::Variable` and `Pattern::Variable`
+- `crates/ash-interp/src/execute.rs` — `Expr::Variable` / `Pattern::Variable` matches
+- `crates/ash-interp/src/execute_observe.rs` — `Expr::Variable` matches
+- `crates/ash-interp/src/execute_stream.rs` — `Expr::Variable` matches
+- `crates/ash-interp/src/policy.rs` — `PolicyExpr::Var` matches
+- `crates/ash-interp/src/pattern.rs` — `Pattern::Variable` matches
+- `crates/ash-interp/src/guard.rs` — `Expr::Variable` matches
+- `crates/ash-interp/src/lib.rs` — `Expr::Variable` / `Pattern::Variable` matches
+
+**Core / REPL / Fuzz / Helpers:**
 - `crates/ash-repl/src/ast.rs` — display/rendering of `Expr::Variable`
+- `crates/ash-core/src/visualize.rs` — `Expr::Variable` / `Pattern::Variable` matches
+- `crates/ash-core/src/stream.rs` — `Expr::Variable` / `Pattern::Variable` matches
 - `crates/ash-core/src/proptest_helpers.rs` — `Pattern::Variable` generation
+- `crates/ash-core/src/test_helpers.rs` — `Expr::Variable` / `Pattern::Variable` construction
 - `crates/ash-fuzz/fuzz_targets/typeck.rs` — `Pattern::Variable` construction
-- All test files that construct `Expr::Variable`, `Pattern::Variable`, or `PolicyExpr::Var`
+
+**Benches, integration tests, and all test files:**
+- `crates/ash-bench/benches/core.rs`
+- `crates/ash-bench/benches/interp.rs`
+- All parser tests, type-checker tests, interpreter tests, engine tests, and core tests that construct `Expr::Variable`, `Pattern::Variable`, or `PolicyExpr::Var`
 
 ### 3.4 Migration Strategy
 
@@ -175,7 +207,7 @@ impl CommentTable {
 }
 ```
 
-> **Span type:** `CommentTable` uses `ash_parser::token::Span` because it derives `Hash` and `Eq`. `ash_core::ast::Span` does **not** currently derive `Hash`; if the core AST ever needs to own a `CommentTable`, `Hash` (and `Eq`) must be added to `ast::Span` first. This is a **hard prerequisite** for TASK-571 and is cross-referenced in §3.2.
+> **Span type:** `CommentTable` uses `ash_parser::token::Span` because it derives `Hash` and `Eq`. `ash_core::ast::Span` does **not** currently derive `Hash`; adding `Hash` (and `Eq`) to `ast::Span` is only required for downstream Salsa usage (SPEC-043), not for SPEC-039 itself.
 
 > **Span::default() policy:** `Span::default()` (the zero/empty span) must **never** be used as a key in `CommentTable`. If a comment would otherwise be attached to `Span::default()`, it must be skipped (dropped) rather than inserted. The skip policy is enforced inside `push_leading`, `push_trailing`, and `set_last_token`. Alternatively, a private sentinel span may be used internally for EOF handling, but it must not leak into the public query API.
 >
@@ -198,7 +230,7 @@ pub(crate) fn skip_whitespace_and_comments(
 }
 ```
 
-> **Consolidation requirement (C2):** There are currently **nine copies** of `skip_whitespace_and_comments` scattered across parser sub-modules (`parse_expr.rs`, `parse_pattern.rs`, `parse_policy.rs`, `parse_set.rs`, `parse_send.rs`, etc.). Before adding `&mut CommentTable`, these must be **consolidated into a single shared helper** in `crates/ash-parser/src/parse_utils.rs` (or an equivalent shared module). The shared helper must have its own unit-test suite covering whitespace-only, comment-only, mixed, and edge-case inputs.
+> **Consolidation requirement (C2):** There are currently **8 definitions** of `skip_whitespace_and_comments` (7 duplicates + 1 shared in `parse_utils.rs`). Before adding `&mut CommentTable`, these must be **consolidated into a single shared helper** in `crates/ash-parser/src/parse_utils.rs` (or an equivalent shared module). The shared helper must have its own unit-test suite covering whitespace-only, comment-only, mixed, and edge-case inputs.
 
 > **Backtracking and rollback (I5):** The Ash parser uses combinator-based backtracking. A mutable `CommentTable` side-table is not automatically rolled back when a parser branch fails. Therefore, either:
 > 1. `CommentTable` must support state snapshotting (`save`/`restore` around backtracking points), or
@@ -333,24 +365,54 @@ None beyond the existing parser crate.
 
 The binding-span change (`Variable { name, span }` / `Var { name, span }`) affects:
 
-- `crates/ash-parser/src/surface.rs` — enum definitions
-- `crates/ash-core/src/ast.rs` — enum definitions
+> **Scope note:** The mechanical scope is larger than initially estimated (~400+ call sites).
+
+**Parser / Surface / Core AST:**
+- `crates/ash-parser/src/surface.rs` — enum definitions; update `impl Spanned for Expr` and `impl Spanned for PolicyExpr`
+- `crates/ash-core/src/ast.rs` — enum definitions (`Expr::Variable`, `Pattern::Variable`; `PolicyExpr` is surface-only)
 - `crates/ash-parser/src/parse_expr.rs` — variable expression parsing
 - `crates/ash-parser/src/parse_pattern.rs` — pattern parsing
 - `crates/ash-parser/src/parse_policy.rs` — policy variable parsing
 - `crates/ash-parser/src/parse_module.rs` — `Expr::Variable` construction
+- `crates/ash-parser/src/parse_workflow.rs` — `Expr::Variable` matches/construction
 - `crates/ash-parser/src/parse_send.rs` — `Expr::Variable` matches
 - `crates/ash-parser/src/lower.rs` — lowering
+- `crates/ash-parser/src/desugar.rs` — `Expr::Variable` / `Pattern::Variable` matches
+
+**Type checker:**
 - `crates/ash-typeck/src/check_expr.rs` — match arms
 - `crates/ash-typeck/src/check_pattern.rs` — match arms
 - `crates/ash-typeck/src/lib.rs` — multiple match sites
 - `crates/ash-typeck/src/names.rs` — `resolve_expr` match
 - `crates/ash-typeck/src/purity.rs` — match arms
+- `crates/ash-typeck/src/constraints.rs` — `Expr::Variable` / `Pattern::Variable` matches
+- `crates/ash-typeck/src/capability_check.rs` — `Expr::Variable` matches
+- `crates/ash-typeck/src/policy_check.rs` — `PolicyExpr::Var` matches
+- `crates/ash-typeck/src/effect.rs` — `Expr::Variable` / `PolicyExpr::Var` matches
+- `crates/ash-typeck/src/solver.rs` — `Expr::Variable` matches
+
+**Interpreter / Runtime:**
 - `crates/ash-interp/src/eval.rs` — evaluation and pattern destructuring
+- `crates/ash-interp/src/execute.rs` — `Expr::Variable` / `Pattern::Variable` matches
+- `crates/ash-interp/src/execute_observe.rs` — `Expr::Variable` matches
+- `crates/ash-interp/src/execute_stream.rs` — `Expr::Variable` matches
+- `crates/ash-interp/src/policy.rs` — `PolicyExpr::Var` matches
+- `crates/ash-interp/src/pattern.rs` — `Pattern::Variable` matches
+- `crates/ash-interp/src/guard.rs` — `Expr::Variable` matches
+- `crates/ash-interp/src/lib.rs` — `Expr::Variable` / `Pattern::Variable` matches
+
+**Core / REPL / Fuzz / Helpers:**
 - `crates/ash-repl/src/ast.rs` — display/rendering
+- `crates/ash-core/src/visualize.rs` — `Expr::Variable` / `Pattern::Variable` matches
+- `crates/ash-core/src/stream.rs` — `Expr::Variable` / `Pattern::Variable` matches
 - `crates/ash-core/src/proptest_helpers.rs` — `Pattern::Variable` generation
+- `crates/ash-core/src/test_helpers.rs` — `Expr::Variable` / `Pattern::Variable` construction
 - `crates/ash-fuzz/fuzz_targets/typeck.rs` — `Pattern::Variable` construction
-- All test files that construct `Expr::Variable`, `Pattern::Variable`, or `PolicyExpr::Var`
+
+**Benches, integration tests, and all test files:**
+- `crates/ash-bench/benches/core.rs`
+- `crates/ash-bench/benches/interp.rs`
+- All parser tests, type-checker tests, interpreter tests, engine tests, and core tests that construct `Expr::Variable`, `Pattern::Variable`, or `PolicyExpr::Var`
 
 The comment-trivia change affects:
 

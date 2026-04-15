@@ -27,11 +27,13 @@ Define a uniform `AshLspError` trait that `ash-lsp-core` can use to convert any 
    - `TypeError`
    - `NameError`
    - `ResolutionError`
-   - `PurityError` (requires `PurityError` to implement `std::error::Error` first)
+   - `PurityError`
 6. Provide `ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagnostic>` helper.
 7. Enforce the dependency constraint: `ash-diagnostic` may depend on `ash-parser` (for `Span`), but must **not** depend on `ash-typeck`.
 
 > **Note:** `ExhaustivenessError` is unused in the active type-checking pipeline and does **not** receive an implementation.
+>
+> **Lexer errors:** If the lexer defines a `LexError` type, it is out of scope for `AshLspError` and should be handled separately by the parser or LSP front-end.
 
 ## Location
 

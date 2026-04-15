@@ -12,7 +12,7 @@ Convert `crates/ash-lint` from a CLI-only binary into a dual crate (library + bi
 
 ## Requirements
 
-1. Add `[lib]` section to `crates/ash-lint/Cargo.toml`. Add `walkdir` under `[bin.dependencies]` so it is a binary-only dependency (keeps the library dependency graph lean).
+1. Add `[lib]` section to `crates/ash-lint/Cargo.toml`. Add `walkdir` under `[dependencies]` (Cargo does not support `[bin.dependencies]`; keeping it in `[dependencies]` is acceptable because the library may later expose a `lint_directory` helper).
 2. Create `src/lib.rs` exporting:
    - `LintDiagnostic`, `LintCode`, `LintFix`, `LintSeverity`, `LintCategory`, `RuleLevel`
    - `LintConfig` (with per-rule `HashMap<LintCode, RuleLevel>`)
@@ -35,7 +35,7 @@ Convert `crates/ash-lint` from a CLI-only binary into a dual crate (library + bi
 
 ## Completion Checklist
 
-- [ ] `[lib]` and `[[bin]]` both present in Cargo.toml; `walkdir` scoped to `[bin.dependencies]` (binary-only)
+- [ ] `[lib]` and `[[bin]]` both present in Cargo.toml; `walkdir` declared in `[dependencies]` (acceptable because the library may later expose `lint_directory`)
 - [ ] `src/lib.rs` exports public API including `lint_definition`
 - [ ] Optional `serde` feature present and lint types derive `Serialize` when enabled
 - [ ] Lint rules are AST visitors, not string searches

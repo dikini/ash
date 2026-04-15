@@ -34,9 +34,10 @@ path = "src/main.rs"
 ash-parser = { path = "../ash-parser" }
 serde = { workspace = true, optional = true }
 
-# `walkdir` is used only by the CLI binary for directory traversal.
-# Keeping it in [bin.dependencies] ensures the library dependency graph stays lean.
-[bin.dependencies]
+# `walkdir` is primarily used by the CLI binary for directory traversal.
+# It lives in [dependencies] (not [bin.dependencies]) because Cargo does not
+# support [bin.dependencies], and the library may later expose a
+# `lint_directory` helper that also needs it.
 walkdir = { workspace = true }
 
 [features]
@@ -67,7 +68,7 @@ pub struct LintDiagnostic {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct LintCode(pub &'static str);
+pub struct LintCode(pub String);
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -115,7 +116,6 @@ pub enum RuleLevel {
 /// Configuration for linting.
 #[derive(Debug, Clone)]
 pub struct LintConfig {
-    pub max_lines_per_workflow: Option<usize>,
     pub require_provenance: bool,
     pub enable_policy_lints: bool,
     pub rules: HashMap<LintCode, RuleLevel>,
@@ -124,11 +124,10 @@ pub struct LintConfig {
 impl Default for LintConfig {
     fn default() -> Self {
         let mut rules = HashMap::new();
-        rules.insert(LintCode("L001"), RuleLevel::Warn);
-        rules.insert(LintCode("L002"), RuleLevel::Warn);
-        rules.insert(LintCode("L004"), RuleLevel::Warn);
+        rules.insert(LintCode("L001".to_string()), RuleLevel::Warn);
+        rules.insert(LintCode("L002".to_string()), RuleLevel::Warn);
+        rules.insert(LintCode("L004".to_string()), RuleLevel::Warn);
         Self {
-            max_lines_per_workflow: None,
             require_provenance: false,
             enable_policy_lints: true,
             rules,
@@ -201,6 +200,8 @@ The existing CLI lints must be reimplemented as AST visitors instead of string s
 | `L004` | — | Policy conflict not checked | Policy | After any `Workflow::Decide` or `Expr::Policy`, every control-flow path must contain a `Workflow::Check { target: CheckTarget, .. }` before a terminal node. |
 
 > **Compatibility:** The CLI binary must accept the legacy rule IDs `ooda-missing-decide` and `ooda-missing-orient` as aliases for `L001` and `L002` respectively when parsing `--allow` / `--deny` arguments.
+>
+> **Legacy alias semantic drift:** The aliases are **name-only** mappings. The original CLI performed primitive string searches, whereas the library rules operate on the AST, so behaviour may differ slightly (e.g., span precision and exact matching). These legacy IDs are **deprecated**; new code should use `L001` and `L002`.
 
 > **L004 helper predicate:** Define `ContainsPolicy(expr)` recursively over all `Expr` variants. It returns `true` iff the expression tree rooted at `expr` contains any `Expr::Policy` node.
 >
@@ -248,19 +249,18 @@ The existing CLI lints must be reimplemented as AST visitors instead of string s
 > **L004 formal condition (recursive CPS):** Define `Safe(w, pending)` where `w` is a `Workflow` and `pending ∈ {true, false}` indicates whether an unmatched `Workflow::Decide` or `Expr::Policy` precedes `w`:
 >
 > 1. `Safe(Workflow::Done {..}, pending) = ¬pending`
-> 2. `Safe(Workflow::Ret {..}, pending) = ¬pending`
+> 2. `Safe(Workflow::Ret { expr, .. }, pending) = ¬pending ∧ ¬ContainsPolicy(expr)` — a `Ret` carrying a policy expression is also unsafe.
 > 3. `Safe(Workflow::Check { continuation: Some(c), .. }, _) = Safe(c, false)` — a `Check` satisfies any pending requirement; the path continues through its continuation with `pending` reset.
 > 4. `Safe(Workflow::Check { continuation: None, .. }, pending) = ¬pending`
 > 5. `Safe(Workflow::Decide { then_branch, else_branch: Some(else_branch), .. }, pending) = Safe(then_branch, true) ∧ Safe(else_branch, true)` — both branches inherit `pending = true`.
 > 5a. `Safe(Workflow::Decide { then_branch, else_branch: None, .. }, pending) = Safe(then_branch, true)` — with no else branch, the then-branch alone must satisfy the condition.
 > 6. `Safe(Workflow::If { then_branch, else_branch: Some(else_branch), .. }, pending) = Safe(then_branch, pending) ∧ Safe(else_branch, pending)` — `If` propagates the pending state.
 > 6a. `Safe(Workflow::If { then_branch, else_branch: None, .. }, pending) = Safe(then_branch, pending)` — with no else branch, the then-branch alone must satisfy the condition.
-> 7. For any other CPS-chain node `n` with `continuation: Some(c)`:
->    - If `ContainsPolicy(expr)` for any expression `expr` appearing in `n`, `Safe(n, pending) = Safe(c, true)`.
->    - Otherwise, `Safe(n, pending) = Safe(c, pending)`.
-> 8. For any other CPS-chain node `n` with `continuation: None`:
->    - If `ContainsPolicy(expr)` for any expression `expr` appearing in `n`, `Safe(n, pending) = false`.
->    - Otherwise, `Safe(n, pending) = ¬pending`.
+> 7. `Safe(Workflow::Seq { left, right, .. }, pending) = Safe(left, pending) ∧ Safe(right, pending)` — both branches inherit `pending`.
+> 8. For any other Workflow variant `w` (including but not limited to `Oblige`, `For`, `With`, `Maybe`, `Must`, `Receive`, `Yield`, `Resume`) that can contain expressions:
+>    - Let `has_policy = true` iff `ContainsPolicy(expr)` for any expression `expr` appearing in `w`.
+>    - If `w` has a continuation field `continuation: Some(c)`, then `Safe(w, pending) = Safe(c, pending ∨ has_policy)`.
+>    - Otherwise, `Safe(w, pending) = ¬(pending ∨ has_policy)`.
 >
 > A workflow definition satisfies L004 iff `Safe(body, false)` holds for its body.
 
@@ -280,7 +280,7 @@ fn main() {
             "ooda-missing-orient" => "L002",
             other => other,
         };
-        config.rules.insert(LintCode(code), RuleLevel::Allow);
+        config.rules.insert(LintCode(code.to_string()), RuleLevel::Allow);
     }
     if args.deny_warnings {
         for (_, level) in config.rules.iter_mut() {
@@ -304,7 +304,34 @@ fn main() {
 let lint_diagnostics = ash_lint::lint_module(module_file, &LintConfig::default());
 ```
 
-And convert each `LintDiagnostic` to an LSP `Diagnostic` using the same `AshLspError` conversion pipeline defined in SPEC-040.
+`LintDiagnostic` implements `AshLspError` so it feeds directly into the SPEC-040 diagnostic pipeline:
+
+```rust
+use ash_lsp_core::diagnostics::AshLspError;
+
+impl AshLspError for LintDiagnostic {
+    fn message(&self) -> String {
+        format!("[{}] {}", self.code.0, self.message)
+    }
+
+    fn severity(&self) -> lsp_types::DiagnosticSeverity {
+        match self.severity {
+            LintSeverity::Error => lsp_types::DiagnosticSeverity::ERROR,
+            LintSeverity::Warning => lsp_types::DiagnosticSeverity::WARNING,
+            LintSeverity::Information => lsp_types::DiagnosticSeverity::INFORMATION,
+            LintSeverity::Hint => lsp_types::DiagnosticSeverity::HINT,
+        }
+    }
+
+    fn span(&self) -> &ash_parser::token::Span {
+        &self.span
+    }
+
+    fn code(&self) -> Option<String> {
+        Some(self.code.0.clone())
+    }
+}
+```
 
 ## 6. Testing Strategy
 

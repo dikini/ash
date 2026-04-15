@@ -22,18 +22,22 @@ Define a uniform `AshLspError` trait that `ash-lsp-core` can use to convert any 
    - `ParseError`
    - `ConstructorError`
    - `TypeEnvError`
-   - `ExhaustivenessError`
+   - `TypeError`
    - `NameError`
+   - `ResolutionError`
+   - `PurityError`
 4. Provide `ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagnostic>` helper.
+
+> **Note:** `ExhaustivenessError` is unused in the active type-checking pipeline and does **not** receive an implementation.
 
 ## Location
 
-Best placed in `crates/ash-lsp-core/src/diagnostic.rs` (new file).
+Place the trait in `crates/ash-typeck/src/diagnostic.rs` (new file) because `ash-lsp-core` does not exist yet. Migrate it to `ash-lsp-core` during SPEC-038.
 
 ## Completion Checklist
 
 - [ ] `AshLspError` trait defined
-- [ ] Implementations for all error types
+- [ ] Implementations for all required error types
 - [ ] Conversion helper tested with sample errors
 - [ ] `cargo test --all` passing
 - [ ] Clippy and fmt clean

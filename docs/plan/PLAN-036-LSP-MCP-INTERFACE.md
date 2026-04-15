@@ -21,10 +21,11 @@ Implement a production-quality Language Server Protocol (LSP) server for Ash wit
 
 These blockers are defined in SPEC-038 §18:
 
-1. **Local variable spans** — `Expr::Variable(Name, Span)` and `Pattern::Variable(Name, Span)` (Phase 84, TASK-570)
-2. **Type-checker error spans** — all `TypeEnvError`, `ConstructorError`, `NameError`, `ResolutionError` variants carry `span` (Phase 85, TASK-572)
+1. **Local variable spans** — `Expr::Variable { name: Name, span: Span }` and `Pattern::Variable { name: Name, span: Span }` (Phase 84, TASK-570)
+2. **Type-checker error spans** — all `TypeEnvError`, `ConstructorError`, `NameError`, `ResolutionError`, and `TypeError` variants carry `span` (Phase 85, TASK-572)
 3. **Unified error trait** — `AshLspError` trait implemented for all error types (Phase 85, TASK-573)
 4. **`ash-lint` library extraction** — `lint_module` API available (Phase 86, TASK-574)
+5. **`parse_surface_file` API** — top-level parser entry point returning `ModuleFile` with `CommentTable` (Phase 84, TASK-571)
 
 ## Deliverable
 
@@ -54,6 +55,6 @@ These blockers are defined in SPEC-038 §18:
 
 ## Parallelization
 
-- Phase 87 cannot start until all four hard prerequisites are resolved.
+- Phase 87 cannot start until all five hard prerequisites are resolved.
 - Phase 88 (Formatter core crate) can begin in parallel with Weeks 4–5 of Phase 87 because it only needs `CommentTable` from Phase 84.
 - Phase 89 (Salsa) should wait until `ash-lsp-core` VFS and diagnostic pipeline are stable (Week 3+ of Phase 87).

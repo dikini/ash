@@ -10,21 +10,25 @@
 
 Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine.
 
-> **Prerequisite spike:** Before implementation, run an 8–12 hour spike to verify `ash-typeck` types satisfy Salsa's `'static + Clone + Eq + Hash + Debug` requirements. See SPEC-043 §7 for details.
+> **Prerequisite spike:** Before implementation, run an 8–12 hour spike to verify `ash-typeck` and `ash-parser` types satisfy Salsa's `'static + Clone + Eq + Hash + Debug` requirements. See SPEC-043 §7 for details.
 
 ## Requirements
 
 1. Add `salsa = "0.26"` dependency to `ash-lsp-core`.
-2. Define `SourceFile` and `FilePath` salsa inputs.
+2. Define `SourceFile` and `WorkspaceRoot` salsa inputs.
 3. Define tracked queries:
-   - `parse_file(db, path) -> (ModuleFile, Vec<ParseError>)`
+   - `parse_file(db, root, path) -> (ModuleFile, Vec<ParseError>)`
    - `module_graph(db, root) -> ModuleGraph`
-   - `type_check_file(db, path) -> (TypeCheckResult, Vec<ConstructorError>)`
-   - `symbol_index(db, path) -> SymbolIndex`
-4. Wire VFS updates into salsa input changes (mutate existing inputs, never recreate).
-5. Keep the public `ash-lsp-core` API stable during the migration.
+   - `type_check_file(db, root, path) -> (TypeCheckResult, Vec<ConstructorError>)`
+   - `symbol_index(db, root, path) -> SymbolIndex`
+4. Wrap the salsa database in `parking_lot::RwLock` for thread-safe VFS integration.
+5. Wire VFS updates into salsa input changes (mutate existing inputs, never recreate).
+6. Handle salsa cycle panics and I/O failures gracefully.
+7. Keep the public `ash-lsp-core` API stable during the migration.
 
-> **Hard prerequisite:** `ash-typeck` must expose `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)` before this task can begin.
+> **Hard prerequisites:**
+> - `ash-typeck` must expose `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)`.
+> - `ash-typeck` and `ash-parser` types must derive `Eq + Hash`.
 
 ## Testing
 

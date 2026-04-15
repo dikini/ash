@@ -19,7 +19,7 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 
 ## Deliverable
 
-- Every `TypeEnvError`, `ExhaustivenessError`, `NameError`, and `ConstructorError` variant carries a `span`
+- Every `TypeEnvError`, `ConstructorError`, `NameError`, `ResolutionError`, and `TypeError` variant carries a `span`
 - `AshLspError` trait provides `span()`, `severity()`, `code()`, `message()`
 - Mechanical diagnostic conversion from any Ash error to LSP `Diagnostic`
 

@@ -8,23 +8,24 @@
 
 ## Description
 
-Add `span: ash_parser::token::Span` to every variant of `TypeEnvError`, `ExhaustivenessError`, `NameError`, and `ConstructorError::UnknownConstructor`.
+Add spans to all type-checker error variants that lack them.
 
 ## Requirements
 
 1. Every `TypeEnvError` variant includes a `span` field.
-2. `ExhaustivenessError::NonExhaustiveMatch` includes a `span` field.
+2. `ConstructorError::UnknownConstructor` and `ConstructorError::NonExhaustiveMatch` include a `span` field.
 3. Every `NameError` variant includes a `span` field.
-4. `ConstructorError::UnknownConstructor` becomes a struct variant with `span`.
-5. All construction sites updated to pass the relevant span.
+4. Every `ResolutionError` variant includes a `span` field.
+5. Every `TypeError` variant includes a `span` field (verify existing `UnknownObligation` and `ObligationAlreadySatisfied` already have spans at all call sites).
 
 ## Affected Files
 
 - `crates/ash-typeck/src/error.rs` — enum definitions
 - `crates/ash-typeck/src/type_env.rs` — all `TypeEnvError` construction
-- `crates/ash-typeck/src/check_expr.rs` — `ExhaustivenessError`, `UnknownConstructor`
-- `crates/ash-typeck/src/check_pattern.rs` — `ExhaustivenessError`
+- `crates/ash-typeck/src/check_expr.rs` — `ConstructorError` construction
 - `crates/ash-typeck/src/name_binding.rs` — all `NameError` construction
+- `crates/ash-typeck/src/names.rs` — all `ResolutionError` construction
+- `crates/ash-typeck/src/solver.rs` — all `TypeError` construction
 - All tests constructing these errors
 
 ## Completion Checklist

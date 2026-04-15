@@ -8,22 +8,26 @@
 
 ## Description
 
-Add `span: ash_parser::token::Span` to `Expr::Variable` and `Pattern::Variable` in both the surface AST and core AST, then fix all downstream match sites.
+Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in both the surface AST and core AST, then fix all downstream match sites.
 
 ## Requirements
 
-1. `Expr::Variable(Name)` becomes `Expr::Variable(Name, Span)` in `surface.rs` and `ast.rs`.
-2. `Pattern::Variable(Name)` becomes `Pattern::Variable(Name, Span)` in `surface.rs` and `ast.rs`.
-3. Parser captures `current_span()` when parsing identifiers into variable expressions/patterns.
-4. Lowering threads the span through from surface to core.
-5. All match sites updated in:
+1. `Expr::Variable(Name)` becomes `Expr::Variable { name: Name, span: Span }` in `surface.rs` and `ast.rs`.
+2. `Pattern::Variable(Name)` becomes `Pattern::Variable { name: Name, span: Span }` in `surface.rs` and `ast.rs`.
+3. `PolicyExpr::Var(Name)` becomes `PolicyExpr::Var { name: Name, span: Span }` in `surface.rs` and `ast.rs`.
+4. Parser captures `current_span()` when parsing identifiers into variable expressions/patterns/policy vars.
+5. Lowering threads the span through from surface to core.
+6. All match sites updated in:
    - `ash-typeck/src/check_expr.rs`
    - `ash-typeck/src/check_pattern.rs`
+   - `ash-typeck/src/lib.rs`
    - `ash-typeck/src/names.rs`
    - `ash-typeck/src/purity.rs`
    - `ash-interp/src/eval.rs`
    - `ash-repl/src/ast.rs`
-   - All tests constructing `Expr::Variable` or `Pattern::Variable`
+   - `ash-core/src/proptest_helpers.rs`
+   - `ash-fuzz/fuzz_targets/typeck.rs`
+   - All tests constructing these variants
 
 ## TDD Steps
 
@@ -36,8 +40,9 @@ Add `span: ash_parser::token::Span` to `Expr::Variable` and `Pattern::Variable` 
 
 ## Completion Checklist
 
-- [ ] `Expr::Variable(Name, Span)` in surface and core AST
-- [ ] `Pattern::Variable(Name, Span)` in surface and core AST
+- [ ] `Expr::Variable { name, span }` in surface and core AST
+- [ ] `Pattern::Variable { name, span }` in surface and core AST
+- [ ] `PolicyExpr::Var { name, span }` in surface and core AST
 - [ ] Parser and lowering updated
 - [ ] All downstream match sites fixed
 - [ ] All tests updated and passing

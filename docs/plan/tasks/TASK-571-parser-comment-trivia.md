@@ -8,30 +8,31 @@
 
 ## Description
 
-Preserve comments during lexing and store them in a side-table attached to `ModuleFile`.
+Preserve comments during parsing and store them in a side-table attached to `ModuleFile`, without changing the token stream architecture.
 
 ## Requirements
 
-1. Add `Comment` token kind to `ash_parser::token::TokenKind`.
-2. Lexer emits `Comment` tokens instead of discarding comments.
-3. Define `CommentTable` with `leading_comments(span)` and `trailing_comments(span)` lookups.
+1. Define `Comment`, `CommentKind`, and `CommentTable` in `ash-parser`.
+2. Update `skip_whitespace_and_comments` (and all copies in parser sub-modules) to accept `&mut CommentTable` and record comments instead of discarding them.
+3. Apply the leading/trailing classification heuristic from SPEC-039 §4.4.
 4. Add `comments: CommentTable` field to `ModuleFile`.
-5. Build a post-lex pass that assigns each `Comment` token to the nearest non-comment token's span.
+5. Implement `parse_surface_file(source: &str) -> Result<ModuleFile, Vec<ParseError>>` that builds and attaches the `CommentTable`.
 
 ## TDD Steps
 
 ### Red
-- Tests for lexing commented source produce `Comment` tokens.
+- Tests for parsing commented source produce a non-empty `CommentTable`.
 
 ### Green
-- Implement `CommentTable` and populate it during parsing.
+- Implement side-table population during whitespace skipping.
 
 ## Completion Checklist
 
-- [ ] `Comment` token kind exists
-- [ ] Lexer emits comment tokens
-- [ ] `CommentTable` defined and stored on `ModuleFile`
+- [ ] `CommentTable` defined using `ash_parser::token::Span`
+- [ ] All `skip_whitespace_and_comments` call sites updated
+- [ ] `CommentTable` stored on `ModuleFile`
+- [ ] `parse_surface_file` entry point implemented
 - [ ] Correct leading/trailing assignment for typical cases
-- [ ] Edge cases handled (EOF comments, consecutive comments)
+- [ ] Edge cases handled (comments at EOF, consecutive comments)
 - [ ] Tests passing
 - [ ] Clippy and fmt clean

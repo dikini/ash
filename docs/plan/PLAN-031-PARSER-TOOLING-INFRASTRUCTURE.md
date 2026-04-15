@@ -19,9 +19,10 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 
 ## Deliverable
 
-- `Expr::Variable(Name, Span)` and `Pattern::Variable(Name, Span)` in both surface and core AST
-- `Comment` token kind in the lexer
-- `CommentTable` stored on `ModuleFile`
+- `Expr::Variable { name: Name, span: Span }` and `Pattern::Variable { name: Name, span: Span }` in both surface and core AST
+- `Comment` capture during whitespace skipping (side-table approach, no token-stream changes)
+- `CommentTable` attached to `ModuleFile`
+- `parse_surface_file(source: &str)` top-level API
 - All parser/type-checker/interpreter match sites updated
 
 ## Timeline

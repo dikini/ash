@@ -37,6 +37,7 @@ path = "src/main.rs"
 
 ```rust
 use ash_parser::token::Span;
+use std::collections::HashMap;
 
 /// A single lint diagnostic.
 #[derive(Debug, Clone, PartialEq)]
@@ -49,7 +50,7 @@ pub struct LintDiagnostic {
     pub fixes: Vec<LintFix>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LintCode(pub &'static str);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -75,17 +76,41 @@ pub enum LintCategory {
     Style,       // General style nits
 }
 
+/// Per-rule enforcement level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuleLevel {
+    Allow,
+    Warn,
+    Deny,
+}
+
 /// Configuration for linting.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct LintConfig {
     pub max_lines_per_workflow: Option<usize>,
     pub require_provenance: bool,
     pub enable_policy_lints: bool,
+    pub rules: HashMap<LintCode, RuleLevel>,
+}
+
+impl Default for LintConfig {
+    fn default() -> Self {
+        let mut rules = HashMap::new();
+        rules.insert(LintCode("L001"), RuleLevel::Warn);
+        rules.insert(LintCode("L002"), RuleLevel::Warn);
+        rules.insert(LintCode("L004"), RuleLevel::Warn);
+        Self {
+            max_lines_per_workflow: None,
+            require_provenance: false,
+            enable_policy_lints: true,
+            rules,
+        }
+    }
 }
 
 /// Lints a single source file (raw string).
 pub fn lint_source(source: &str, config: &LintConfig) -> Vec<LintDiagnostic> {
-    let module = match ash_parser::parse_module(source) {
+    let module = match ash_parser::parse_surface_file(source) {
         Ok(m) => m,
         Err(_) => return Vec::new(), // parse errors are handled by the parser
     };
@@ -110,22 +135,35 @@ The existing CLI lints must be reimplemented as AST visitors instead of string s
 |---------|-------------|----------|----------------|
 | `L001` | Workflow lacks `observe` or `act` call | Ooda | Walk `ModuleFile` definitions; flag workflows with no effectful operation |
 | `L002` | `act` without preceding `orient` | Ooda | Track statement sequence within workflow bodies |
-| `L003` | Missing `provenance` block | Provenance | Check for `Provenance` metadata in module-level definitions |
-| `L004` | Policy conflict not checked | Policy | Check for `check` calls after `decide` |
+| `L003` | Missing `provenance` block | Provenance | **Deferred.** The `Definition` enum has no provenance construct; syntax must be defined in a future spec before this rule can be implemented. |
+| `L004` | Policy conflict not checked | Policy | In any block, after a `Decide` expression or `PolicyExpr` statement, there must be a `CheckObligation` or `CheckContract` expression before the block ends or before a terminal/return expression. |
+
+> **L004 formal condition:** For each block `B`, let `decides(B)` be the set of `Decide` / `PolicyExpr` nodes in `B`. For each such node `d`, there must exist a `CheckObligation` or `CheckContract` node `c` in the same block such that `c` appears after `d` in statement order and before the end of `B`.
 
 ### 4.3 CLI Binary Refactor
 
-`src/main.rs` becomes a thin CLI wrapper:
+`src/main.rs` becomes a CLI wrapper that preserves existing flags (`--allow`, `--deny-warnings`, `--format`) by mapping them to `LintConfig`:
 
 ```rust
 fn main() {
     let args = parse_args();
-    let source = std::fs::read_to_string(&args.file).expect("read file");
-    let config = LintConfig::default();
-    let diagnostics = ash_lint::lint_source(&source, &config);
-    for d in diagnostics {
-        println!("{}:{}:{}: {}: {}", args.file, d.span.line, d.span.column, d.code, d.message);
+    let mut config = LintConfig::default();
+
+    // Map legacy CLI flags to LintConfig rules
+    for rule in &args.allow {
+        config.rules.insert(LintCode(rule), RuleLevel::Allow);
     }
+    if args.deny_warnings {
+        for (_, level) in config.rules.iter_mut() {
+            if *level == RuleLevel::Warn {
+                *level = RuleLevel::Deny;
+            }
+        }
+    }
+
+    let source = std::fs::read_to_string(&args.file).expect("read file");
+    let diagnostics = ash_lint::lint_source(&source, &config);
+    emit_diagnostics(&diagnostics, args.format);
 }
 ```
 
@@ -142,11 +180,15 @@ And convert each `LintDiagnostic` to an LSP `Diagnostic` using the same `AshLspE
 ## 6. Testing Strategy
 
 1. **Unit tests:** Each lint rule tested against minimal source inputs.
-2. **Integration tests:** Run `ash-lint` binary on `examples/` and assert expected diagnostics.
-3. **LSP integration tests:** Verify that `ash-lsp-core` correctly aggregates lint diagnostics with parser and type-checker diagnostics.
+2. **Property tests:**
+   - `lint_module(parse_surface_file(src), &cfg)` is idempotent when run twice.
+   - Every emitted `LintDiagnostic` has a non-default span (`line > 0`).
+3. **Integration tests:** Run `ash-lint` binary on `examples/` and assert expected diagnostics.
+4. **LSP integration tests:** Verify that `ash-lsp-core` correctly aggregates lint diagnostics with parser and type-checker diagnostics.
+5. **CLI regression tests:** Verify that `--allow L001`, `--deny-warnings`, and `--format` continue to work after the refactor.
 
 ## 7. Relationship to Other Specs
 
 - **Blocks:** SPEC-038 LSP MVP (lint diagnostics in the pipeline)
-- **Blocked by:** SPEC-039 (must provide `parse_module()` and `ModuleFile` with stable AST)
+- **Blocked by:** SPEC-039 (must provide `parse_surface_file()` and `ModuleFile` with stable AST)
 - **Parallelizable with:** SPEC-040 (Diagnostic Infrastructure) after `TASK-570` binding-span changes are complete

@@ -17,10 +17,11 @@ This task implements the MVP defined in SPEC-038. Source formatting and Salsa-ba
 
 These blockers are defined in SPEC-038 §18. Engineering must not begin until they are resolved.
 
-1. **Local variable spans** — Add `span: ash_parser::token::Span` to `Expr::Variable` and `Pattern::Variable` in `surface.rs` and `ast.rs`.
-2. **Type-checker error spans** — Add `span: ash_parser::token::Span` to every variant of `TypeEnvError`, `ExhaustivenessError`, and `NameError`.
-3. **Unified error trait** — Define an `AshLspError` trait (or wrapper enum) with `span()`, `severity()`, `code()`, and `message()` methods.
-4. **`ash-lint` library extraction** — Convert `crates/ash-lint` from a CLI-only binary into a library crate with a public `lint_module(source: &str) -> Vec<LintDiagnostic>` API.
+1. **Local variable spans** — `Expr::Variable { name: Name, span: Span }` and `Pattern::Variable { name: Name, span: Span }` (Phase 84, TASK-570)
+2. **Type-checker error spans** — all `TypeEnvError`, `ConstructorError`, `NameError`, `ResolutionError`, and `TypeError` variants carry `span` (Phase 85, TASK-572)
+3. **Unified error trait** — `AshLspError` trait implemented for all error types (Phase 85, TASK-573)
+4. **`ash-lint` library extraction** — `lint_module` API available (Phase 86, TASK-574)
+5. **`parse_surface_file` API** — top-level parser entry point returning `ModuleFile` with `CommentTable` (Phase 84, TASK-571)
 
 ## Requirements
 
@@ -147,10 +148,11 @@ These blockers are defined in SPEC-038 §18. Engineering must not begin until th
 
 ## Blocked By
 
-- Span addition to `Expr::Variable` and `Pattern::Variable`
-- Span addition to `TypeEnvError`, `ExhaustivenessError`, and `NameError`
-- Creation of `AshLspError` trait/uniform diagnostic wrapper
-- `ash-lint` library extraction
+- TASK-570 (binding spans)
+- TASK-571 (`parse_surface_file` and `CommentTable`)
+- TASK-572 (error spans)
+- TASK-573 (`AshLspError` trait)
+- TASK-574 (`ash-lint` library extraction)
 
 ## Blocks
 

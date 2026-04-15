@@ -37,7 +37,7 @@ pub struct SourceFile {
 }
 
 #[salsa::input]
-pub struct FilePath {
+pub struct WorkspaceRoot {
     #[return_ref]
     pub path: String,
 }
@@ -47,25 +47,32 @@ pub struct FilePath {
 
 ```rust
 #[salsa::tracked]
-pub fn parse_file(db: &dyn AshDb, path: FilePath) -> (ModuleFile, Vec<ParseError>) {
-    // parse text from the corresponding SourceFile input
+pub fn parse_file(db: &dyn AshDb, root: WorkspaceRoot, path: String)
+    -> (ModuleFile, Vec<ParseError>)
+{
+    let source = db.source_file(root, path);
+    // parse text
 }
 
 #[salsa::tracked]
-pub fn module_graph(db: &dyn AshDb, root: FilePath) -> ModuleGraph {
-    // load crate roots and build graph
+pub fn module_graph(db: &dyn AshDb, root: WorkspaceRoot) -> ModuleGraph {
+    // load crate roots from root path and build graph
 }
 
 #[salsa::tracked]
-pub fn type_check_file(db: &dyn AshDb, path: FilePath) -> (TypeCheckResult, Vec<ConstructorError>) {
-    let module = parse_file(db, path).0;
-    let graph = module_graph(db, workspace_root(path));
+pub fn type_check_file(
+    db: &dyn AshDb,
+    root: WorkspaceRoot,
+    path: String,
+) -> (TypeCheckResult, Vec<ConstructorError>) {
+    let module = parse_file(db, root.clone(), path.clone()).0;
+    let graph = module_graph(db, root);
     // run ash-typeck via type_check_module_file(module, graph)
 }
 
 #[salsa::tracked]
-pub fn symbol_index(db: &dyn AshDb, path: FilePath) -> SymbolIndex {
-    let module = parse_file(db, path).0;
+pub fn symbol_index(db: &dyn AshDb, root: WorkspaceRoot, path: String) -> SymbolIndex {
+    let module = parse_file(db, root, path).0;
     // build document symbols and reference index
 }
 ```
@@ -77,7 +84,7 @@ pub fn symbol_index(db: &dyn AshDb, path: FilePath) -> SymbolIndex {
 ```rust
 #[salsa::db]
 pub trait AshDb: salsa::Database {
-    fn source_file(&self, path: FilePath) -> SourceFile;
+    fn source_file(&self, root: WorkspaceRoot, path: String) -> SourceFile;
 }
 
 #[salsa::db]
@@ -87,36 +94,72 @@ pub struct AshDatabase {
 }
 ```
 
-## 6. VFS Integration
+## 5. VFS Integration and Concurrency
 
-When the LSP layer receives `textDocument/didChange`:
-
-1. Look up the `FilePath` salsa input for that URI (create it once on `didOpen`, store in a `HashMap<Url, FilePath>`).
-2. Call `source_file.set_text(&mut self.db, new_text)` to mutate the existing input.
-3. Salsa automatically invalidates any tracked query that depended on that file.
-4. The next LSP request (hover, diagnostics, etc.) triggers recomputation only for invalidated queries.
+The LSP server is multi-threaded (`tokio`), but a `salsa::Database` is typically `!Send`. Therefore the database must be wrapped in a synchronization primitive:
 
 ```rust
-fn on_did_change(&mut self, uri: Url, changes: &[TextDocumentContentChangeEvent]) {
-    let path = self.path_for_uri(&uri);
-    let new_text = apply_changes(&self.vfs.snapshot(&uri).source, changes);
-    let source_file = self.db.source_file(path);
-    source_file.set_text(&mut self.db, new_text);
+pub struct SalsaVfs {
+    db: parking_lot::RwLock<AshDatabase>,
+    file_inputs: DashMap<Url, SourceFile>,
+    root_input: WorkspaceRoot,
 }
 ```
 
-> **Important:** Creating a *new* `FilePath` input on every `didChange` would change the input identity and invalidate all queries keyed by that path. Inputs must be created once and mutated via setters.
+- **Read requests** (hover, completion) acquire a read lock on the database.
+- **Write requests** (`didChange`) acquire a write lock, call `source_file.set_text(...)`, then drop the lock.
+
+When the LSP layer receives `textDocument/didChange`:
+
+1. Look up the `SourceFile` salsa input for that URI (create it once on `didOpen`, store in `file_inputs`).
+2. Acquire a write lock on `db`.
+3. Call `source_file.set_text(&mut db, new_text)` to mutate the existing input.
+4. Drop the lock.
+5. Salsa automatically invalidates any tracked query that depended on that file.
+
+```rust
+fn on_did_change(&self, uri: Url, changes: &[TextDocumentContentChangeEvent]) {
+    let new_text = apply_changes(&self.vfs.snapshot(&uri).source, changes);
+    let source_file = self.file_inputs.get(&uri).expect("file not opened").clone();
+    let mut db = self.db.write();
+    source_file.set_text(&mut *db, new_text);
+}
+```
+
+> **Important:** Creating a *new* salsa input on every `didChange` would change the input identity and invalidate all queries keyed by that path. Inputs must be created once and mutated via setters.
+
+## 6. Error Handling
+
+### 6.1 Salsa Cycles
+
+If a query cycle is detected (e.g., `type_check_file(A)` depends on `type_check_file(B)` which depends on `A`), salsa will panic by default. The server must:
+1. Wrap salsa calls in `std::panic::catch_unwind` (see SPEC-038 §16).
+2. On cycle panic, return an LSP `InternalError` with message "cyclic module dependency detected".
+3. Clear the cache entry for the affected file.
+
+### 6.2 I/O Failures During `module_graph`
+
+If `module_graph` encounters a missing `ash.toml` or unreadable file:
+1. Return an empty graph (graceful degradation).
+2. Emit a single workspace-level diagnostic: "Could not load crate graph: {reason}".
+3. Log the full error at `WARN` level via `tracing`.
 
 ## 7. Salsa Compatibility Spike
 
-Before committing to the full Salsa migration, run an 8–12 hour spike to verify that `ash-typeck` types can satisfy Salsa's trait requirements (`'static + Clone + Eq + Hash + Debug`):
+Before committing to the full Salsa migration, run an 8–12 hour spike to verify that all relevant types can satisfy Salsa's trait requirements (`'static + Clone + Eq + Hash + Debug`):
 
 - `TypeCheckResult` (contains `Substitution`, `TypeError`, `ObligationCheckResult`)
 - `ModuleGraph` (contains `HashMap<ModuleId, ModuleNode>`)
-- `ConstructorError`, `TypeEnvError`, `NameError`, `ResolutionError`
+- `ConstructorError`, `TypeEnvError`, `NameError`, `ResolutionError`, `TypeError`
 - `Type`, `Substitution`, `Effect`
+- **Parser types:** `ModuleFile`, `ParseError`, and all `surface.rs` types that cross salsa boundaries
 
-The spike should attempt to define a single `#[salsa::tracked] fn type_check_file(...) -> TypeCheckResult` in a scratch crate and record every missing derive. Use the findings to revise this spec and TASK-576 before implementation begins.
+The spike should:
+1. Create a scratch crate with `salsa = "0.26"`.
+2. Attempt to define `#[salsa::tracked] fn type_check_file(...) -> TypeCheckResult`.
+3. Attempt to define `#[salsa::tracked] fn parse_file(...) -> (ModuleFile, Vec<ParseError>)`.
+4. Record every missing `Eq` / `Hash` / `Clone` derive.
+5. Report findings. Use this to revise this spec and TASK-576 before implementation begins.
 
 ## 8. Migration Strategy
 
@@ -126,14 +169,20 @@ The migration from simple cache to salsa should be **transparent** to `ash-lsp` 
 2. **Phase B:** Swap the cache for salsa behind the same `ash-lsp-core` public API.
 3. **Phase C:** Delete the old cache code.
 
+> **Alternative:** If the spike in £7 shows that Salsa integration is straightforward, consider making Salsa the default cache from the start rather than building an LRU cache that is immediately thrown away.
+
 ## 9. Testing Strategy
 
 1. **Correctness tests:** For a sample workspace, assert that salsa and the old cache produce identical diagnostics/symbols for every file.
 2. **Invalidation tests:** Edit file `A.ash`; assert that `parse_file(A)` is recomputed but `parse_file(B)` is cached.
-3. **Performance tests:** Measure type-check time for a 10-file workspace before and after the migration.
+3. **Proptest invalidation:** Generate random sequences of `didChange` events across a 3-file workspace and assert that the number of recomputed queries never exceeds the number of files actually edited.
+4. **Performance tests:** Measure type-check time for a 10-file workspace before and after the migration.
 
 ## 10. Relationship to Other Specs
 
-- **Blocked by:** SPEC-038 LSP MVP (must exist first; `ash-lsp-core` must be stable)
+- **Blocked by:**
+  - SPEC-038 LSP MVP (must exist first; `ash-lsp-core` must be stable)
+  - `ash-typeck` must expose `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)`
+  - `ash-typeck` and `ash-parser` types must derive `Eq + Hash`
 - **Follows:** SPEC-039, SPEC-040, SPEC-041 (all stable)
 - **Enables:** Large-workspace LSP performance

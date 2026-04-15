@@ -12,7 +12,8 @@ This spec covers:
 1. Adding `span: ash_parser::token::Span` to every variant of `TypeEnvError` and `NameError`.
 2. Adding `span` to `ConstructorError::UnknownConstructor` and `ConstructorError::NonExhaustiveMatch`.
 3. Adding `span` to `ResolutionError` and `PurityError` variants that lack it.
-4. Defining a new `AshLspError` trait (or wrapper enum) with `span()`, `severity()`, `code()`, and `message()` methods.
+4. Adding `span` to `TypeError` variants that lack it.
+5. Defining a new `AshLspError` trait with `span()`, `severity()`, `code()`, and `message()` methods.
 
 ## 3. Current State
 
@@ -46,7 +47,7 @@ pub enum ConstructorError {
 }
 ```
 
-> **Note:** The codebase also contains an unused `ExhaustivenessError` enum in `error.rs`. It is **not** emitted by the active type-checking pipeline. Do not add spans to it; instead, add a span to `ConstructorError::NonExhaustiveMatch`, which is what `check_expr.rs` actually emits.
+> **Note:** The codebase also contains an unused `ExhaustivenessError` enum in `error.rs`. It is **not** emitted by the active type-checking pipeline and is **not** part of the `AshLspError` trait.
 
 ### 3.3 `NameError`
 
@@ -70,7 +71,7 @@ pub enum ResolutionError {
     UnboundVariable(String),
     DuplicateBinding(String),
     UndefinedCapability(String),
-    UnresolvedSymbolicCapability(String),
+    UnresolvedSymbolicCapability { capability: String },
     UndefinedPolicy(String),
     UndefinedRole(String),
 }
@@ -90,6 +91,30 @@ pub struct PurityError {
 ```
 
 `PurityError` already carries a `span`, but it is not listed in the original `AshLspError` spec.
+
+### 3.6 `TypeError`
+
+Defined in `crates/ash-typeck/src/solver.rs`:
+
+```rust
+pub enum TypeError {
+    Mismatch { expected: Box<Type>, found: Box<Type> },
+    InfiniteType { var: TypeVar, typ: Box<Type> },
+    ConstructorNameMismatch { expected: String, found: String },
+    ConstructorArityMismatch { name: String, expected_arity: usize, found_arity: usize },
+    UnboundVariable(String),
+    EffectViolation { required: Effect, actual: Effect },
+    MissingCapability(String),
+    UnsatisfiedObligation(String),
+    Obligation(ash_core::workflow_contract::ObligationError),
+    UndischargedObligations { obligations: Vec<String> },
+    UnknownObligation { name: String, span: Span },
+    ObligationAlreadySatisfied { name: String, span: Span },
+    // ...
+}
+```
+
+Most variants lack `span`.
 
 ## 4. Required Changes
 
@@ -149,13 +174,17 @@ All variants updated to include `span`:
 - `UnboundVariable { name: String, span: Span }`
 - `DuplicateBinding { name: String, span: Span }`
 - `UndefinedCapability { name: String, span: Span }`
-- `UnresolvedSymbolicCapability { name: String, span: Span }`
+- `UnresolvedSymbolicCapability { capability: String, span: Span }`
 - `UndefinedPolicy { name: String, span: Span }`
 - `UndefinedRole { name: String, span: Span }`
 
+### 4.5 `TypeError`
+
+All variants updated to include `span`. For variants that already carry `span` (`UnknownObligation`, `ObligationAlreadySatisfied`), verify that every construction site passes a real span.
+
 ## 5. The `AshLspError` Trait
 
-Define a new trait in `ash-lsp-core` (or `ash-typeck` if preferred) that abstracts over all diagnostic-producing error types:
+Define the trait in `ash-typeck` (e.g., `ash_typeck::diagnostic::AshLspError`) because `ash-lsp-core` does not exist yet. It can be moved to `ash-lsp-core` once that crate is created in SPEC-038.
 
 ```rust
 use ash_parser::token::Span;
@@ -176,12 +205,27 @@ pub enum Severity {
 }
 ```
 
-### 5.1 Implementations
+### 5.1 Error Codes
+
+The `code()` method returns an `Option<String>` using a lightweight taxonomy:
+
+| Prefix | Meaning |
+|--------|---------|
+| `E001` – `E099` | Parser errors |
+| `E100` – `E199` | Type-checker errors (`TypeError`, `TypeEnvError`, `ConstructorError`) |
+| `E200` – `E299` | Name / resolution errors (`NameError`, `ResolutionError`) |
+| `E300` – `E399` | Purity / effect errors (`PurityError`) |
+| `W001` – `W099` | Lint diagnostics (future) |
+
+> **Note:** This taxonomy can start sparse; codes are assigned on an as-needed basis during implementation.
+
+### 5.2 Implementations
 
 Implement `AshLspError` for:
 - `ash_parser::error::ParseError`
 - `ash_typeck::error::ConstructorError`
 - `ash_typeck::error::TypeEnvError`
+- `ash_typeck::solver::TypeError`
 - `ash_typeck::name_binding::NameError`
 - `ash_typeck::names::ResolutionError`
 - `ash_typeck::purity::PurityError`
@@ -194,7 +238,9 @@ Each implementation maps the error's internal severity logic:
 - Purity errors → `Severity::Error`
 - Future lint diagnostics → `Severity::Warning`
 
-### 5.2 Diagnostic Conversion
+> **Not included:** `ExhaustivenessError` is unused in the active pipeline and does not receive an implementation.
+
+### 5.3 Diagnostic Conversion
 
 With the trait in place, converting any error to an LSP `Diagnostic` becomes mechanical:
 
@@ -221,6 +267,7 @@ Every location that constructs these errors must be updated to pass a `Span`:
 - `crates/ash-typeck/src/check_expr.rs` — `ConstructorError::UnknownConstructor`, `ConstructorError::NonExhaustiveMatch`
 - `crates/ash-typeck/src/name_binding.rs` — all `NameError` construction sites
 - `crates/ash-typeck/src/names.rs` — all `ResolutionError` construction sites
+- `crates/ash-typeck/src/solver.rs` — all `TypeError` construction sites
 - `crates/ash-typeck/src/purity.rs` — `PurityError` already has `span`; verify all construction sites populate it correctly
 - All test files that construct these errors directly
 
@@ -230,17 +277,19 @@ Because the changes are mechanical but widespread, the migration should be done 
 1. `TypeEnvError` + all call sites
 2. `NameError` + all call sites
 3. `ResolutionError` + all call sites
-4. `ConstructorError::UnknownConstructor` + `ConstructorError::NonExhaustiveMatch` + all call sites
-5. Define `AshLspError` trait and implement it for all error types.
+4. `TypeError` + all call sites
+5. `ConstructorError::UnknownConstructor` + `ConstructorError::NonExhaustiveMatch` + all call sites
+6. Define `AshLspError` trait and implement it for all error types.
 
 ## 8. Testing Strategy
 
 1. **Unit tests:** Assert that every error variant carries a span equal to the input location.
 2. **Integration tests:** Parse/type-check invalid programs and verify that every emitted diagnostic has a non-zero span.
 3. **LSP bridge tests:** Verify that `ash_error_to_diagnostic` produces valid LSP ranges for a sample of each error type.
+4. **Proptest:** Generate random invalid programs and assert that every produced diagnostic satisfies `span.line > 0 && span.column > 0`.
 
 ## 9. Relationship to Other Specs
 
 - **Blocks:** SPEC-038 LSP MVP (unified diagnostics)
-- **Blocked by:** None (can proceed in parallel with SPEC-039 after `TASK-570` binding-span changes land)
+- **Blocked by:** SPEC-039 `TASK-570` (binding-span changes must land first so that `TypeError::UnboundVariable` and similar errors can capture accurate spans)
 - **Parallelizable with:** SPEC-039 `TASK-571` (comment trivia) and SPEC-041 (Lint Library) after `TASK-570` is complete

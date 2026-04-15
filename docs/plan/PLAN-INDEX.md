@@ -2415,30 +2415,104 @@ Remove the single type-parameter restriction on interfaces, enable generic `impl
 **Status:** 📝 Planned
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-|------|-------------|------|------------|--------|
-| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | 📝 Planned |
-| [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-034 §4, SPEC-035 §4 | 5 | 📝 Planned |
-| [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-034 §5 | 6 | 📝 Planned |
-| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | 📝 Planned |
-| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | 📝 Planned |
-| [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | 📝 Planned |
+||------|-------------|------|------------|--------|
+|| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | ✅ Done |
+|| [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-034 §4, SPEC-035 §4 | 5 | 📝 Planned |
+|| [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-034 §5 | 6 | 📝 Planned |
+|| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | 📝 Planned |
+|| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | 📝 Planned |
+|| [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | 📝 Planned |
 
 **Deliverable:** Interfaces accept any number of type parameters; generic impls with `where` bounds compile and resolve recursively; overlapping impl schemes rejected at registration; associated types (`S::Ok`) normalize to concrete types; `Type::Associated` never appears at runtime.
 
-## Phase 84: Language Server Protocol (LSP) & MCP Interface
+## Phase 84: Parser Tooling Infrastructure
+
+Add binding spans and comment-trivia preservation to the Ash parser so that downstream tools (LSP, formatter, linter) can operate on precise locations and preserve user comments.
+
+**Plan Reference:** [PLAN-031: Parser Tooling Infrastructure](PLAN-031-PARSER-TOOLING-INFRASTRUCTURE.md)
+**Spec:** SPEC-039
+**Priority:** High
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-570](tasks/TASK-570-parser-binding-spans.md) | Add spans to `Expr::Variable` and `Pattern::Variable` | SPEC-039 §3 | 6 | 📝 Planned |
+|| [TASK-571](tasks/TASK-571-parser-comment-trivia.md) | Preserve comments in lexer and build `CommentTable` side-table | SPEC-039 §4 | 10 | 📝 Planned |
+
+**Deliverable:** Variable bindings carry spans; `Comment` tokens emitted by lexer; `CommentTable` attached to `ModuleFile`.
+
+## Phase 85: Diagnostic Infrastructure
+
+Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to every error variant and defining a uniform error trait.
+
+**Plan Reference:** [PLAN-032: Diagnostic Infrastructure](PLAN-032-DIAGNOSTIC-INFRASTRUCTURE.md)
+**Spec:** SPEC-040
+**Priority:** High
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-572](tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError` | SPEC-040 §4 | 12 | 📝 Planned |
+|| [TASK-573](tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | SPEC-040 §5 | 6 | 📝 Planned |
+
+**Deliverable:** All type-checker and name-resolution errors carry spans; `AshLspError` trait enables mechanical LSP diagnostic conversion.
+
+## Phase 86: Ash Lint Library Extraction
+
+Convert `crates/ash-lint` from a CLI-only binary into a reusable library crate that `ash-lsp-core` can depend on for lint diagnostics.
+
+**Plan Reference:** [PLAN-033: Ash Lint Library](PLAN-033-ASH-LINT-LIBRARY.md)
+**Spec:** SPEC-041
+**Priority:** High
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-574](tasks/TASK-574-ash-lint-library.md) | Extract `ash-lint` CLI into a library + binary wrapper | SPEC-041 | 12 | 📝 Planned |
+
+**Deliverable:** `ash-lint` exports `lint_module` API; CLI is a thin wrapper; lint rules are AST visitors.
+
+## Phase 87: LSP & MCP Interface
 
 Implement a production-quality LSP server for Ash with an embedded MCP bridge.
-This enables IDE support (VSCode, Neovim) and gives AI coding agents programmatic
-access to diagnostics, hover, definitions, completions, and references.
 
-**Spec Reference:** [SPEC-038: Ash Language Server Protocol (LSP) & MCP Interface](../spec/SPEC-038-LANGUAGE-SERVER.md)
+**Plan Reference:** [PLAN-036: LSP & MCP Interface](PLAN-036-LSP-MCP-INTERFACE.md)
+**Spec:** SPEC-038
 **Priority:** Medium
 **Status:** 📝 Planned
 
-| Task | Description | Spec | Est. Hours | Status |
-|------|-------------|------|------------|--------|
-| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 160 | 📝 Planned |
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 180 | 📝 Planned |
 
-**Deliverable:** `ash-lsp` server provides real-time diagnostics, hover, go-to-definition,
-completions, and document symbols. `ash-mcp` exposes the same intelligence as MCP tools
-for AI agents. VSCode extension skeleton and Neovim config documentation provided.
+**Deliverable:** `ash-lsp` and `ash-mcp` crates; diagnostics, hover, goto-definition, completion, references; VSCode extension skeleton.
+
+## Phase 88: Ash Source Formatter
+
+Provide a source formatter for Ash that pretty-prints any valid `ModuleFile` while preserving user comments and blank lines.
+
+**Plan Reference:** [PLAN-034: Ash Source Formatter](PLAN-034-ASH-SOURCE-FORMATTER.md)
+**Spec:** SPEC-042
+**Priority:** Low
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | SPEC-042 | 48 | 📝 Planned |
+
+**Deliverable:** `crates/ash-formatter` crate; `ash fmt` CLI subcommand; LSP `textDocument/formatting` handler.
+
+## Phase 89: Incremental Analysis Engine
+
+Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine.
+
+**Plan Reference:** [PLAN-035: Incremental Analysis Engine](PLAN-035-INCREMENTAL-ANALYSIS.md)
+**Spec:** SPEC-043
+**Priority:** Low
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | 📝 Planned |
+
+**Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working.

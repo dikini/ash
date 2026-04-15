@@ -26,6 +26,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
     `capability_check.rs`, and `eval.rs`
   - All interface calls now route through `Expr::Call`
 
+- **Multi-Parameter Interfaces and Impl Registry Redesign (TASK-563, SPEC-033 §5)** —
+  Removed the single type-parameter restriction on interfaces and concrete impl blocks.
+  `register_interface` now accepts any number of type parameters; `register_impl` validates
+  arity and stores impls keyed by the full interface application (`Pair<Int, String>`)
+  rather than a single bare type. `resolve_interface_method_call` constructs the impl head
+  from all interface type parameters after unification and reports an error when parameters
+  remain underdetermined.
+
 - **Phase 80: First-Class Functions and Closure Values (SPEC-031)** — Complete implementation
   of first-class functions across all nine tasks (TASK-551 through TASK-559):
 

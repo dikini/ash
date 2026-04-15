@@ -438,3 +438,182 @@ fn program_typecheck_rejects_declared_workflow_return_type_mismatch() {
         "program typechecking should reject a workflow whose body type does not match the declared return type"
     );
 }
+
+// ---------------------------------------------------------------------------
+// TASK-563: Multi-parameter interfaces and impl registry redesign
+// ---------------------------------------------------------------------------
+
+fn pair_interface_def() -> InterfaceDef {
+    InterfaceDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "Pair".into(),
+        type_params: vec!["A".into(), "B".into()],
+        methods: vec![InterfaceMethodSig {
+            name: "first".into(),
+            params: vec![SurfaceType::Constructor {
+                name: "Pair".into(),
+                args: vec![SurfaceType::Name("A".into()), SurfaceType::Name("B".into())],
+            }],
+            return_type: SurfaceType::Name("A".into()),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+#[test]
+fn task563_pair_two_param_interface_registers() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_type(&CoreTypeDef {
+        name: "Pair".to_string(),
+        params: vec![],
+        body: TypeBody::Struct(vec![]),
+        visibility: CoreVisibility::Public,
+    })
+    .unwrap();
+    env.register_interface(&pair_interface_def())
+        .expect("register Pair");
+    assert!(env.lookup_interface("Pair").is_some());
+}
+
+#[test]
+fn task563_concrete_multi_param_impl_resolves() {
+    let mut env = TypeEnv::with_builtin_types();
+    // Register the type Pair
+    env.register_type(&CoreTypeDef {
+        name: "Pair".to_string(),
+        params: vec![],
+        body: TypeBody::Struct(vec![]),
+        visibility: CoreVisibility::Public,
+    })
+    .unwrap();
+    // Register Pair<A,B> interface
+    env.register_interface(&pair_interface_def()).unwrap();
+    // Register impl Pair<Int, String>
+    let impl_def = ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Pair".into(),
+        type_args: vec![
+            SurfaceType::Name("Int".into()),
+            SurfaceType::Name("String".into()),
+        ],
+        methods: vec![ImplMethodDef {
+            name: "first".into(),
+            params: vec!["p".into()],
+            body: Expr::Literal(Literal::Int(42)),
+            span: test_span(),
+        }],
+        span: test_span(),
+    };
+    env.register_impl(&impl_def)
+        .expect("register impl Pair<Int,String>");
+
+    // Call Pair::first(my_pair) where my_pair: Pair<Int, String>
+    let return_ty = env
+        .resolve_interface_method_call(
+            "Pair",
+            "first",
+            &[Type::Constructor {
+                name: QualifiedName::root("Pair"),
+                args: vec![Type::Int, Type::String],
+                kind: Kind::Type,
+            }],
+        )
+        .expect("resolve Pair::first");
+    assert_eq!(return_ty, Type::Int);
+}
+
+#[test]
+fn task563_wrong_arity_impl_rejected() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_type(&CoreTypeDef {
+        name: "Pair".to_string(),
+        params: vec![],
+        body: TypeBody::Struct(vec![]),
+        visibility: CoreVisibility::Public,
+    })
+    .unwrap();
+    env.register_interface(&pair_interface_def()).unwrap();
+    // Wrong: 1 type arg for 2-param interface
+    let bad_impl = ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Pair".into(),
+        type_args: vec![SurfaceType::Name("Int".into())],
+        methods: vec![ImplMethodDef {
+            name: "first".into(),
+            params: vec!["p".into()],
+            body: Expr::Literal(Literal::Int(42)),
+            span: test_span(),
+        }],
+        span: test_span(),
+    };
+    let err = env.register_impl(&bad_impl).unwrap_err();
+    assert!(err.to_string().contains("type parameters"));
+}
+
+#[test]
+fn task563_from_underdetermined_param_errors() {
+    let mut env = TypeEnv::with_builtin_types();
+    // From<A,B> { from(A) -> B }
+    let from_iface = InterfaceDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "From".into(),
+        type_params: vec!["A".into(), "B".into()],
+        methods: vec![InterfaceMethodSig {
+            name: "from".into(),
+            params: vec![SurfaceType::Name("A".into())],
+            return_type: SurfaceType::Name("B".into()),
+            span: test_span(),
+        }],
+        span: test_span(),
+    };
+    env.register_interface(&from_iface).unwrap();
+    // From::from("hello") only determines A=String, B is underdetermined
+    let result = env.resolve_interface_method_call("From", "from", &[Type::String]);
+    assert!(result.is_err(), "underdetermined type params should error");
+}
+
+#[test]
+fn task563_duplicate_multi_param_impl_rejected_with_full_application() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_type(&CoreTypeDef {
+        name: "Pair".to_string(),
+        params: vec![],
+        body: TypeBody::Struct(vec![]),
+        visibility: CoreVisibility::Public,
+    })
+    .unwrap();
+    env.register_interface(&pair_interface_def()).unwrap();
+
+    let impl_def = ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Pair".into(),
+        type_args: vec![
+            SurfaceType::Name("Int".into()),
+            SurfaceType::Name("String".into()),
+        ],
+        methods: vec![ImplMethodDef {
+            name: "first".into(),
+            params: vec!["p".into()],
+            body: Expr::Literal(Literal::Int(42)),
+            span: test_span(),
+        }],
+        span: test_span(),
+    };
+    env.register_impl(&impl_def).expect("first impl");
+
+    let duplicate = env.register_impl(&impl_def);
+    assert!(
+        duplicate.is_err(),
+        "duplicate multi-param impl must be rejected"
+    );
+    let msg = duplicate.unwrap_err().to_string();
+    assert!(
+        msg.contains("Pair"),
+        "error must mention interface name: got '{msg}'"
+    );
+    assert!(
+        msg.contains("Int") && msg.contains("String"),
+        "error must contain full application types: got '{msg}'"
+    );
+}

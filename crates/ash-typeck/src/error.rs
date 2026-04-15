@@ -157,12 +157,12 @@ pub enum TypeEnvError {
     #[error("Interface '{0}' not found")]
     MissingInterface(String),
 
-    /// Duplicate impl for the same interface and concrete nominal type
+    /// Duplicate impl for the same interface and full interface application
     #[error("Impl for interface '{interface}' and type '{ty}' is already defined")]
     DuplicateImpl {
         /// Interface name
         interface: String,
-        /// Concrete nominal type
+        /// Full interface application
         ty: String,
     },
 
@@ -171,7 +171,7 @@ pub enum TypeEnvError {
     MissingImpl {
         /// Interface name
         interface: String,
-        /// Concrete nominal type
+        /// Full interface application
         ty: String,
     },
 

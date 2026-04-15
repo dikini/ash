@@ -34,10 +34,11 @@ pub enum TypeEnvError {
 
 ### 3.2 `ConstructorError`
 
-The following variants currently lack a `span`:
+`ConstructorError` contains both spanless and span-bearing variants. The following variants currently lack a `span`:
 
 ```rust
 pub enum ConstructorError {
+    // Spanless variants
     UnknownConstructor(String),          // no span
     MissingField { constructor: String, field: String }, // no span
     UnknownField { constructor: String, field: String }, // no span
@@ -48,6 +49,31 @@ pub enum ConstructorError {
         scrutinee_type: String,
         missing: String,
     },   // no span
+
+    // Span-bearing variants (already present in the codebase)
+    UnboundVariable {
+        name: String,
+        span: ash_parser::token::Span,
+    },
+    NotIterable {
+        ty: crate::types::Type,
+        span: ash_parser::token::Span,
+    },
+    UnsupportedExpression {
+        kind: String,
+        span: ash_parser::token::Span,
+    },
+    UnknownTypeAnnotation {
+        name: String,
+        context: String,
+        span: ash_parser::token::Span,
+    },
+    InvalidInterfaceMethodCall {
+        interface: String,
+        method: String,
+        reason: String,
+        span: ash_parser::token::Span,
+    },
 }
 ```
 
@@ -112,18 +138,33 @@ pub enum TypeError {
     EffectViolation { required: Effect, actual: Effect },
     MissingCapability(String),
     UnsatisfiedObligation(String),
-    Obligation(ash_core::workflow_contract::ObligationError),
+    Obligation(#[from] ash_core::workflow_contract::ObligationError),
     UndischargedObligations { obligations: Vec<String> },
     UnknownObligation { name: String, span: Span },
     ObligationAlreadySatisfied { name: String, span: Span },
+    UnsatisfiedObligations { obligations: Vec<String> },
+    PatternMismatch { expected: Box<Type>, actual: Box<Type> },
+    UnknownVariant(String),
+    PatternArityMismatch { expected: usize, actual: usize },
+    InvalidPattern { message: String },
+    NotAConstructor(String),                                 // no span
     UnknownCapability { name: String, span: Span },          // already has span
     InvalidConstraintField { capability: String, field: String, span: Span }, // already has span
-    NotAConstructor(String),                                 // no span
-    // ...
+    ConstraintTypeMismatch { field: String, expected: String, found: String },
 }
 ```
 
 Most variants lack `span`. `UnknownCapability` and `InvalidConstraintField` already carry spans and must be verified at all construction sites.
+
+#### TypeError variants that cannot structurally receive a span
+
+The following variants wrap aggregate or forwarded errors and therefore **cannot** mechanically carry a single `span` field in their structure:
+
+- `Obligation(#[from] ObligationError)` — delegates to an external error type
+- `UndischargedObligations { obligations: Vec<String> }` — aggregates multiple outstanding obligations
+- `UnsatisfiedObligations { obligations: Vec<String> }` — aggregates multiple unsatisfied obligations
+
+> **Note:** `UndischargedObligations` and `UnsatisfiedObligations` appear to be functionally overlapping in `solver.rs`. When implementing span support, verify whether one of them is duplicate or dead code and can be removed.
 
 ## 4. Required Changes
 
@@ -317,6 +358,54 @@ fn ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagno
     })
 }
 ```
+
+### 5.4 ash-diagnostic Crate Scaffolding
+
+Create a new crate at `crates/ash-diagnostic` with the following layout.
+
+**`crates/ash-diagnostic/Cargo.toml`**
+
+```toml
+[package]
+name = "ash-diagnostic"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ash-parser = { path = "../ash-parser" }
+# Explicit constraint: must NOT depend on ash-typeck
+```
+
+**`crates/ash-diagnostic/src/lib.rs`**
+
+```rust
+pub use ash_parser::token::Span;
+
+/// Lightweight newtype for diagnostic codes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticCode(pub String);
+
+/// Diagnostic severity levels aligned with LSP.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Severity {
+    Error,
+    Warning,
+    Information,
+    Hint,
+}
+
+/// Uniform trait for all Ash compiler errors that can be surfaced as LSP diagnostics.
+pub trait AshLspError: std::fmt::Display + std::error::Error {
+    fn span(&self) -> Option<Span>;
+    fn severity(&self) -> Severity;
+    fn code(&self) -> Option<DiagnosticCode>;
+    fn message(&self) -> String { self.to_string() }
+}
+```
+
+**Dependency constraints:**
+- `ash-diagnostic` **may** depend on `ash-parser` (to use `Span`).
+- `ash-diagnostic` **must NOT** depend on `ash-typeck` (to avoid a circular dependency; `ash-typeck` will depend on `ash-diagnostic` to implement `AshLspError` for its error types).
 
 ## 6. Call Sites to Update
 

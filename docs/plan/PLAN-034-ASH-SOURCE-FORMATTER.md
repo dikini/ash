@@ -20,10 +20,13 @@ Provide a source formatter for Ash that pretty-prints any valid `ModuleFile` whi
 
 - `crates/ash-formatter` crate
 - `FormatConfig { indent_width, max_width }`
+- `FormatCmd { Token, Space, Newline, Indent, Dedent }`
 - `format_module(&ModuleFile, &FormatConfig) -> String`
+- `render(cmds: &[FormatCmd], config: &FormatConfig) -> String`
 - Preserves comments via `CommentTable`
 - Normalizes blank lines (top-level max 1, nested 0)
 - Formats all `surface::Workflow` variants with keyword + indentation rules
+- `write_workflow_def` emits header (name, params, roles, capabilities, contract) before body
 - Formats all `PolicyExpr` variants and `ConstraintBlock`
 - Round-trip parse equality for all example files
 - `ash fmt` CLI subcommand

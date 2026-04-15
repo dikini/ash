@@ -14,17 +14,19 @@ Preserve comments during parsing and store them in a side-table attached to `Mod
 
 1. Define `Comment`, `CommentKind`, and `CommentTable` in `ash-parser`.
    - `CommentTable` must include a `last_seen_token_span: Option<Span>` field for EOF trailing comments.
-   - `Span::default()` must never be used as a lookup key; such comments are skipped.
-2. **Consolidation:** Merge all nine copies of `skip_whitespace_and_comments` into `crates/ash-parser/src/parse_utils.rs` (or equivalent). The shared helper must have a unit-test suite covering whitespace-only, comment-only, mixed, and edge-case inputs.
+   - Provide a write API: `push_leading(span, comment)`, `push_trailing(span, comment)`, and `set_last_token(span)`. Each method must enforce the `Span::default()` skip policy internally.
+   - `Span::default()` must never be used as a lookup key; the skip policy is enforced inside the write API.
+2. **Consolidation:** Merge all nine copies of `skip_whitespace_and_comments` into `crates/ash-parser/src/parse_utils.rs` (or equivalent). The shared helper must be declared `pub(crate)` and have a unit-test suite covering whitespace-only, comment-only, mixed, and edge-case inputs.
 3. Update the shared `skip_whitespace_and_comments` to accept `&mut CommentTable` and record comments instead of discarding them.
 4. Apply the leading/trailing classification heuristic from SPEC-039 §4.4.
-5. Handle backtracking: implement state snapshotting or speculative buffering so that failed parser branches do not leak comments into the final table.
+5. Handle backtracking: implement state snapshotting or speculative buffering so that failed parser branches do not leak comments into the final table. Selection criterion: prefer speculative buffer if winnow provides a clean mechanism; fall back to snapshotting.
 6. Add `comments: CommentTable` field to `ModuleFile`.
-7. Implement `parse_surface_file(source: &str) -> Result<ModuleFile, Vec<ParseError>>` that:
+7. Create a new `module_file` combinator and implement `parse_surface_file(source: &str) -> Result<ModuleFile, Vec<ParseError>>` that:
    - Bootstraps an empty `CommentTable`,
-   - Delegates to the existing module combinator,
+   - Delegates to the new `module_file` combinator,
    - Flushes EOF trailing comments via `last_seen_token_span`,
    - Attaches the table on success and returns errors on failure.
+   - **Gate:** `parse_surface_file` is accepted when it returns a `ModuleFile` with a populated `CommentTable` for all example files. Passing this gate unblocks SPEC-041.
 
 ## TDD Steps
 
@@ -41,13 +43,17 @@ Preserve comments during parsing and store them in a side-table attached to `Mod
 ## Completion Checklist
 
 - [ ] `CommentTable` defined using `ash_parser::token::Span` with `last_seen_token_span`
+- [ ] CommentTable write API (`push_leading`, `push_trailing`, `set_last_token`) implemented with `Span::default()` guard
 - [ ] `Span::default()` policy documented and enforced
-- [ ] All `skip_whitespace_and_comments` copies consolidated into `parse_utils.rs`
+- [ ] All `skip_whitespace_and_comments` copies consolidated into `parse_utils.rs` as `pub(crate)`
 - [ ] Shared helper has standalone unit-test suite
-- [ ] Backtracking/rollback strategy chosen and implemented
+- [ ] Backtracking/rollback strategy chosen and implemented per selection criterion
 - [ ] `CommentTable` stored on `ModuleFile`
+- [ ] New `module_file` combinator created
 - [ ] `parse_surface_file` entry point implemented per SPEC-039 §4.6
+- [ ] SPEC-041 gate criteria met (populated `CommentTable` on all example files)
 - [ ] Correct leading/trailing assignment for typical cases
 - [ ] Edge cases handled (comments at EOF, consecutive comments)
+- [ ] `set_last_token(span)` called after every successful token parse
 - [ ] Tests passing
 - [ ] Clippy and fmt clean

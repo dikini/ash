@@ -13,7 +13,7 @@ Build a source formatter for Ash that pretty-prints `ModuleFile` while preservin
 ## Requirements
 
 1. Create `crates/ash-formatter` crate.
-2. Implement `Formatter` state machine that walks `ModuleFile`.
+2. Implement `Formatter` state machine that walks `ModuleFile` and accumulates `Vec<FormatCmd>`.
 3. Query `CommentTable` for leading/trailing comments before/after every span.
 4. Emit consistently formatted output for all Ash surface syntax.
 5. Normalize blank lines numerically:
@@ -24,8 +24,10 @@ Build a source formatter for Ash that pretty-prints `ModuleFile` while preservin
 8. Semicolons are **not emitted** (Ash surface syntax does not use them).
 9. Apply keyword + indentation rules for all `surface::Workflow` variants.
 10. Apply formatting rules for all `PolicyExpr` variants and `ConstraintBlock`.
-11. Use a direct recursive walk with a small formatting IR (no full pretty-printing library).
-12. Ensure idempotency via a two-pass or span-independent comment re-attachment algorithm.
+11. Use a direct recursive walk with a small formatting IR (no full pretty-printing library); define `FormatCmd { Token, Space, Newline, Indent, Dedent }`.
+12. Provide `render(cmds: &[FormatCmd], config: &FormatConfig) -> String` to convert the IR to output text.
+13. Ensure idempotency via a two-pass or span-independent comment re-attachment algorithm.
+14. `write_workflow_def` must emit the `WorkflowDef` header (name, params, roles, capabilities, contract) before delegating to `write_workflow` for the body.
 
 ## LSP/CLI Integration
 
@@ -43,7 +45,10 @@ Build a source formatter for Ash that pretty-prints `ModuleFile` while preservin
 
 - [ ] `crates/ash-formatter` crate created
 - [ ] `FormatConfig` defined and used by `format_module(&ModuleFile, &FormatConfig) -> String`
+- [ ] `FormatCmd` enum defined (Token, Space, Newline, Indent, Dedent)
+- [ ] `render(cmds: &[FormatCmd], config: &FormatConfig) -> String` implemented
 - [ ] Formatter handles all surface syntax (definitions, module_decls, workflow)
+- [ ] `write_workflow_def` emits header before body
 - [ ] Comments preserved via `CommentTable`
 - [ ] Blank-line normalization implemented (top-level max 1, nested 0)
 - [ ] Workflow variant formatting rules implemented

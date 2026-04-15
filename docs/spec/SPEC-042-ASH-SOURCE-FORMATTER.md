@@ -56,8 +56,16 @@ pub struct FormatConfig {
 ### 5.2 Formatter State
 
 ```rust
+pub enum FormatCmd {
+    Token(String),
+    Space,
+    Newline,
+    Indent,
+    Dedent,
+}
+
 pub struct Formatter<'a> {
-    output: String,
+    cmds: Vec<FormatCmd>,
     indent_level: usize,
     config: &'a FormatConfig,
     comments: &'a CommentTable,
@@ -85,16 +93,75 @@ pub fn format_module(module: &ModuleFile, config: &FormatConfig) -> String {
         fmt.write_newline();
     }
     if let Some(workflow) = &module.workflow {
-        fmt.write_workflow(workflow);
+        fmt.write_workflow_def(workflow);
         fmt.write_newline();
     }
-    fmt.output
+    render(&fmt.cmds, config)
+}
+
+impl<'a> Formatter<'a> {
+    fn write_workflow_def(&mut self, workflow: &WorkflowDef) {
+        self.write_keyword("workflow");
+        self.write_space();
+        self.write_ident(&workflow.name);
+        if !workflow.type_params.is_empty() {
+            self.write_type_params(&workflow.type_params);
+        }
+        self.write_param_list(&workflow.params);
+        if let Some(ret) = &workflow.declared_return_type {
+            self.write_space();
+            self.write_punct("->");
+            self.write_space();
+            self.write_type(ret);
+        }
+        if !workflow.plays_roles.is_empty() {
+            self.write_space();
+            self.write_keyword("plays");
+            self.write_space();
+            self.write_role_refs(&workflow.plays_roles);
+        }
+        if !workflow.capabilities.is_empty() {
+            self.write_space();
+            self.write_keyword("capabilities");
+            self.write_punct(":");
+            self.write_space();
+            self.write_capability_decls(&workflow.capabilities);
+        }
+        if let Some(contract) = &workflow.contract {
+            self.write_space();
+            self.write_contract(contract);
+        }
+        self.write_space();
+        self.write_workflow(&workflow.body);
+    }
+}
+
+pub fn render(cmds: &[FormatCmd], config: &FormatConfig) -> String {
+    let mut output = String::new();
+    let mut indent_level = 0;
+    for cmd in cmds {
+        match cmd {
+            FormatCmd::Token(s) => output.push_str(s),
+            FormatCmd::Space => output.push(' '),
+            FormatCmd::Newline => {
+                output.push('\n');
+                for _ in 0..(indent_level * config.indent_width) {
+                    output.push(' ');
+                }
+            }
+            FormatCmd::Indent => indent_level += 1,
+            FormatCmd::Dedent => indent_level = indent_level.saturating_sub(1),
+        }
+    }
+    output
 }
 ```
 
 ### 5.4 Formatting Algorithm
 
-The formatter uses a **direct recursive walk** over the AST with a small formatting IR (not a full pretty-printing library). The IR consists of tokens, explicit line breaks, and indent/dedent commands. The walk generates the IR, which is then rendered to a `String`. This avoids the complexity and dependency cost of an external pretty-printing crate while still giving explicit control over comment placement and line breaks.
+The formatter uses a **direct recursive walk** over the AST with a small formatting IR (not a full pretty-printing library). The IR consists of tokens, explicit line breaks, and indent/dedent commands. The walk generates the IR, which is then rendered to a `String` by `render`. This avoids the complexity and dependency cost of an external pretty-printing crate while still giving explicit control over comment placement and line breaks.
+
+Nodes decide layout by first rendering into a temporary buffer with a single-line target. If any line exceeds `max_width`, the formatter falls back to multi-line layout.
 
 ### 5.5 Blank-Line Preservation Rules
 
@@ -149,13 +216,28 @@ All `surface::Workflow` variants are formatted with a keyword on the same line a
 | `Ret { expr, span }` | `return` | `return expr` |
 | `Set { capability, channel, value, continuation, span }` | `set` | `set capability:channel = value [-> continuation]` |
 | `Send { capability, channel, value, continuation, span }` | `send` | `send capability:channel = value [-> continuation]` |
-| `Receive { mode, arms, is_control, span }` | `receive` | `receive { arms }`; each arm indented +1 |
+| `Receive { mode, arms, is_control, span }` | `receive` / `control receive` | `is_control` → prefix `control`; `NonBlocking` or `Blocking(None)` → `receive { arms }`; `Blocking(Some(d))` → `receive wait <duration> { arms }`; each arm indented +1 |
 | `Yield { role, expr, resume_var, resume_type, arms, span }` | `yield` | `yield expr to role resume resume_var: resume_type { arms }`; arms indented +1 |
 | `Resume { expr, ty, span }` | `resume` | `resume expr` |
 
 > **Note:** The surface `Workflow` enum does not currently contain a `Spawn` variant. If one is added in the future, it shall follow the same pattern: keyword on the same line, any nested body indented +1.
 
-### 5.9 PolicyExpr and ConstraintBlock Formatting
+### 5.9 YieldArm and ReceiveArm Formatting
+
+`YieldArm` and `ReceiveArm` are formatted as comma-separated items inside brace-delimited blocks.
+
+**`YieldArm`** is formatted as `pattern => body`, where `pattern` is formatted using standard `Pattern` rules and `body` is formatted as a nested workflow (indented +1 if multi-line). An optional trailing comma is allowed on the last arm; the formatter preserves a trailing comma only when the block is multi-line.
+
+**`ReceiveArm`** is formatted as `pattern [if guard] => body`:
+- `pattern` is a `StreamPattern`:
+  - `StreamPattern::Wildcard` → `_`
+  - `StreamPattern::Literal(s)` → `"s"`
+  - `StreamPattern::Binding { capability, channel, pattern }` → `capability:channel as pattern`
+- `guard` (if present) is prefixed by `if ` and formatted as an expression.
+- `body` is formatted as a nested workflow (indented +1 if multi-line).
+- Arms are separated by `, `. The formatter preserves a trailing comma only when the block is multi-line.
+
+### 5.10 PolicyExpr and ConstraintBlock Formatting
 
 `PolicyExpr` variants are formatted using the operators defined by the surface grammar:
 
@@ -184,7 +266,7 @@ All `surface::Workflow` variants are formatted with a keyword on the same line a
 
 `ConstraintField` is formatted as `name: value`. `ConstraintValue` variants (`Bool`, `Int`, `String`, `Array`, `Object`) are formatted like their corresponding expression literals.
 
-### 5.10 Semicolon Emission Rules
+### 5.11 Semicolon Emission Rules
 
 Ash statements are separated by newlines. The formatter **never emits semicolons** in the MVP because the surface syntax does not use them. If a future syntax introduces optional semicolons, the formatter will preserve them; until then, statements are terminated by `\n` only.
 

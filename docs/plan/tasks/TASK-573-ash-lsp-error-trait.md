@@ -12,7 +12,7 @@ Define a uniform `AshLspError` trait that `ash-lsp-core` can use to convert any 
 
 ## Requirements
 
-1. Create new crate `crates/ash-diagnostic`.
+1. Create new crate `crates/ash-diagnostic` per SPEC-040 §5.4.
 2. Define a `DiagnosticCode` newtype (`pub struct DiagnosticCode(pub String);`).
 3. Define a `Severity` enum mapping to LSP severities.
 4. Define `AshLspError` trait with:
@@ -29,6 +29,7 @@ Define a uniform `AshLspError` trait that `ash-lsp-core` can use to convert any 
    - `ResolutionError`
    - `PurityError` (requires `PurityError` to implement `std::error::Error` first)
 6. Provide `ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Option<Diagnostic>` helper.
+7. Enforce the dependency constraint: `ash-diagnostic` may depend on `ash-parser` (for `Span`), but must **not** depend on `ash-typeck`.
 
 > **Note:** `ExhaustivenessError` is unused in the active type-checking pipeline and does **not** receive an implementation.
 

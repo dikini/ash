@@ -29,6 +29,7 @@ Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in bot
    - `ash-core/src/proptest_helpers.rs`
    - `ash-fuzz/fuzz_targets/typeck.rs`
    - All tests constructing these variants
+8. Parser identifier capture must leave a clear hook for TASK-571: after parsing a token that yields a span, the site should be structured so that `set_last_token(span)` can be inserted without re-refactoring the same code.
 
 ## TDD Steps
 
@@ -47,6 +48,7 @@ Add spans to `Expr::Variable`, `Pattern::Variable`, and `PolicyExpr::Var` in bot
 - [ ] `ast::Span` derives `Hash` and `Eq`
 - [ ] Parser and lowering updated
 - [ ] All downstream match sites fixed
+- [ ] Parser span-capture sites structured to accommodate `set_last_token(span)` protocol from TASK-571
 - [ ] All tests updated and passing
 - [ ] `cargo clippy --all-targets --all-features` clean
 - [ ] `cargo fmt --check` clean

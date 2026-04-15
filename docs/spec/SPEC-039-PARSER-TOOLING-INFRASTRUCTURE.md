@@ -156,19 +156,37 @@ pub struct CommentTable {
 impl CommentTable {
     pub fn leading_comments(&self, span: Span) -> &[Comment] { ... }
     pub fn trailing_comments(&self, span: Span) -> &[Comment] { ... }
+
+    // Write API — enforces Span::default() skip policy internally
+    pub fn push_leading(&mut self, span: Span, comment: Comment) {
+        if span == Span::default() { return; }
+        self.leading.entry(span).or_default().push(comment);
+    }
+
+    pub fn push_trailing(&mut self, span: Span, comment: Comment) {
+        if span == Span::default() { return; }
+        self.trailing.entry(span).or_default().push(comment);
+    }
+
+    pub fn set_last_token(&mut self, span: Span) {
+        if span == Span::default() { return; }
+        self.last_seen_token_span = Some(span);
+    }
 }
 ```
 
 > **Span type:** `CommentTable` uses `ash_parser::token::Span` because it derives `Hash` and `Eq`. `ash_core::ast::Span` does **not** currently derive `Hash`; if the core AST ever needs to own a `CommentTable`, `Hash` (and `Eq`) must be added to `ast::Span` first. This is a **hard prerequisite** for TASK-571 and is cross-referenced in §3.2.
 
-> **Span::default() policy:** `Span::default()` (the zero/empty span) must **never** be used as a key in `CommentTable`. If a comment would otherwise be attached to `Span::default()`, it must be skipped (dropped) rather than inserted. Alternatively, a private sentinel span may be used internally for EOF handling, but it must not leak into the public query API.
+> **Span::default() policy:** `Span::default()` (the zero/empty span) must **never** be used as a key in `CommentTable`. If a comment would otherwise be attached to `Span::default()`, it must be skipped (dropped) rather than inserted. The skip policy is enforced inside `push_leading`, `push_trailing`, and `set_last_token`. Alternatively, a private sentinel span may be used internally for EOF handling, but it must not leak into the public query API.
+>
+> **`last_seen_token_span` update protocol:** The parser must call `set_last_token(span)` immediately after every successfully parsed token. This keeps `last_seen_token_span` accurate for trailing-comment classification and EOF attribution.
 
 ### 4.3 Whitespace-Skipping Changes
 
 Instead of discarding comments, a single consolidated `skip_whitespace_and_comments` helper appends discovered comments to a mutable `CommentTable` that is threaded through parsing:
 
 ```rust
-pub fn skip_whitespace_and_comments(
+pub(crate) fn skip_whitespace_and_comments(
     input: &mut Input,
     comments: &mut CommentTable,
 ) {
@@ -185,7 +203,7 @@ pub fn skip_whitespace_and_comments(
 > **Backtracking and rollback (I5):** The Ash parser uses combinator-based backtracking. A mutable `CommentTable` side-table is not automatically rolled back when a parser branch fails. Therefore, either:
 > 1. `CommentTable` must support state snapshotting (`save`/`restore` around backtracking points), or
 > 2. Comments must be collected speculatively into a temporary buffer and only committed when a parser succeeds.
-> The implementation must pick one strategy and document it in the module-level comments of `parse_utils.rs`.
+> **Selection criterion:** prefer speculative buffer if winnow provides a clean mechanism; fall back to snapshotting. The chosen strategy must be documented in the module-level comments of `parse_utils.rs`.
 
 > **Scope note:** After consolidation, every parser sub-module calls the shared helper. This is a parser-wide but mechanical cleanup.
 
@@ -257,7 +275,7 @@ pub fn parse_surface_file(source: &str)
 
 #### 4.6.2 Delegated Combinator
 
-`parse_surface_file` does **not** reimplement parsing logic. It delegates to a combinator (or thin wrapper) that mirrors the current internal module-file parser. The wrapper's only additional responsibility is to:
+A new `module_file` combinator must be created as part of this task. `parse_surface_file` does **not** reimplement parsing logic; it delegates to this new combinator (or a thin wrapper around it). The wrapper's only additional responsibility is to:
 - Thread `&mut CommentTable` into `skip_whitespace_and_comments`.
 - Finalize EOF trailing comments by flushing any queued comments to `last_seen_token_span` after the module parser succeeds.
 
@@ -269,6 +287,10 @@ Error handling follows the existing parser convention:
 - Comment-table population is **best-effort** on the error path; do not attempt to return a partial `CommentTable` alongside errors in the MVP.
 
 > **Naming:** The existing `parse_module` in `parse_module.rs` parses a single `Definition` from a module context. The new top-level entry point is named `parse_surface_file` to avoid collision.
+
+#### 4.6.4 Gate Criteria
+
+`parse_surface_file` is accepted when it returns a `ModuleFile` with a populated `CommentTable` for all example files (including leading, trailing, and EOF comments). Passing this gate unblocks SPEC-041, which consumes the `parse_surface_file` API.
 
 ### 4.7 Formatter Integration
 
@@ -303,7 +325,7 @@ None beyond the existing parser crate.
 
 ## 7. Relationship to Other Specs
 
-- **Blocks:** SPEC-038 LSP MVP (via binding spans), SPEC-041 (via `parse_surface_file` API), SPEC-042 (via comment trivia), SPEC-043 (via `parse_surface_file` API)
+- **Blocks:** SPEC-038 LSP MVP (via binding spans), SPEC-041 (via `parse_surface_file` API — SPEC-039 §4.6 gate criteria must be satisfied before SPEC-041 work begins), SPEC-042 (via comment trivia), SPEC-043 (via `parse_surface_file` API)
 - **Blocked by:** None
 - **Parallelizable with:** SPEC-040 (Diagnostic Infrastructure) after `TASK-570` binding-span changes are complete
 

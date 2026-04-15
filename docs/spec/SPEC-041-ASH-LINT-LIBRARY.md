@@ -32,8 +32,12 @@ path = "src/main.rs"
 
 [dependencies]
 ash-parser = { path = "../ash-parser" }
-walkdir = { workspace = true }
 serde = { workspace = true, optional = true }
+
+# `walkdir` is used only by the CLI binary for directory traversal.
+# Keeping it in [bin.dependencies] ensures the library dependency graph stays lean.
+[bin.dependencies]
+walkdir = { workspace = true }
 
 [features]
 serde = ["dep:serde"]
@@ -144,6 +148,9 @@ pub fn lint_source(source: &str, config: &LintConfig) -> Vec<LintDiagnostic> {
 /// Lints a parsed module.
 pub fn lint_module(module: &ash_parser::surface::ModuleFile, config: &LintConfig) -> Vec<LintDiagnostic> {
     let mut diagnostics = Vec::new();
+    if let Some(wf) = &module.workflow {
+        lint_workflow(wf, config, &mut diagnostics);
+    }
     for def in &module.definitions {
         lint_definition(def, config, &mut diagnostics);
     }
@@ -157,11 +164,27 @@ pub fn lint_definition(
     diagnostics: &mut Vec<LintDiagnostic>,
 ) {
     match def {
-        ash_parser::surface::Definition::Workflow(wf) => lint_workflow(wf, config, diagnostics),
+        ash_parser::surface::Definition::Capability(_) => {
+            // no lint
+        }
+        ash_parser::surface::Definition::Policy(_) => {
+            // no lint
+        }
+        ash_parser::surface::Definition::Role(_) => {
+            // no lint
+        }
+        ash_parser::surface::Definition::Proxy(_) => {
+            // no lint
+        }
+        ash_parser::surface::Definition::Interface(_) => {
+            // no lint
+        }
+        ash_parser::surface::Definition::Impl(_) => {
+            // no lint
+        }
         ash_parser::surface::Definition::Function(_) => {
             // Function-level lints are out of scope for the MVP.
         }
-        _ => {}
     }
 }
 ```
@@ -179,19 +202,64 @@ The existing CLI lints must be reimplemented as AST visitors instead of string s
 
 > **Compatibility:** The CLI binary must accept the legacy rule IDs `ooda-missing-decide` and `ooda-missing-orient` as aliases for `L001` and `L002` respectively when parsing `--allow` / `--deny` arguments.
 
+> **L004 helper predicate:** Define `ContainsPolicy(expr)` recursively over all `Expr` variants. It returns `true` iff the expression tree rooted at `expr` contains any `Expr::Policy` node.
+>
+> ```rust
+> fn ContainsPolicy(expr: &Expr) -> bool {
+>     match expr {
+>         Expr::Policy(_) => true,
+>         Expr::FieldAccess { base, .. } => ContainsPolicy(base),
+>         Expr::IndexAccess { base, index } => ContainsPolicy(base) || ContainsPolicy(index),
+>         Expr::Unary { operand, .. } => ContainsPolicy(operand),
+>         Expr::Binary { left, right, .. } => ContainsPolicy(left) || ContainsPolicy(right),
+>         Expr::Call { args, .. } => args.iter().any(ContainsPolicy),
+>         Expr::Match { scrutinee, arms, .. } => {
+>             ContainsPolicy(scrutinee) || arms.iter().any(|a| ContainsPolicy(&a.body))
+>         }
+>         Expr::IfLet { expr, then_branch, else_branch, .. } => {
+>             ContainsPolicy(expr) || ContainsPolicy(then_branch) || ContainsPolicy(else_branch)
+>         }
+>         Expr::Constructor { fields, payload, .. } => {
+>             fields.iter().any(|(_, e)| ContainsPolicy(e))
+>                 || match payload {
+>                     ConstructorPayload::Unit => false,
+>                     ConstructorPayload::Record(fs) => fs.iter().any(|(_, e)| ContainsPolicy(e)),
+>                     ConstructorPayload::Tuple(es) => es.iter().any(ContainsPolicy),
+>                 }
+>         }
+>         Expr::If { condition, then_branch, else_branch, .. } => {
+>             let else_has = else_branch.as_ref().map_or(false, |e| ContainsPolicy(e));
+>             ContainsPolicy(condition) || ContainsPolicy(then_branch) || else_has
+>         }
+>         Expr::Block { statements, tail_expr, .. } => {
+>             statements.iter().any(|s| match s {
+>                 BlockStmt::Let { expr, .. } => ContainsPolicy(expr),
+>             }) || tail_expr.as_ref().map_or(false, |e| ContainsPolicy(e))
+>         }
+>         Expr::FnDef { body, .. } => ContainsPolicy(body),
+>         Expr::FnApply { func, args, .. } => {
+>             ContainsPolicy(func) || args.iter().any(ContainsPolicy)
+>         }
+>         Expr::Literal(_) | Expr::Variable(_) | Expr::CheckObligation { .. } | Expr::Panic { .. } => false,
+>     }
+> }
+> ```
+>
 > **L004 formal condition (recursive CPS):** Define `Safe(w, pending)` where `w` is a `Workflow` and `pending ∈ {true, false}` indicates whether an unmatched `Workflow::Decide` or `Expr::Policy` precedes `w`:
 >
 > 1. `Safe(Workflow::Done {..}, pending) = ¬pending`
 > 2. `Safe(Workflow::Ret {..}, pending) = ¬pending`
 > 3. `Safe(Workflow::Check { continuation: Some(c), .. }, _) = Safe(c, false)` — a `Check` satisfies any pending requirement; the path continues through its continuation with `pending` reset.
 > 4. `Safe(Workflow::Check { continuation: None, .. }, pending) = ¬pending`
-> 5. `Safe(Workflow::Decide { then_branch, else_branch, .. }, pending) = Safe(then_branch, true) ∧ Safe(else_branch, true)` — both branches inherit `pending = true`.
-> 6. `Safe(Workflow::If { then_branch, else_branch, .. }, pending) = Safe(then_branch, pending) ∧ Safe(else_branch, pending)` — `If` propagates the pending state.
+> 5. `Safe(Workflow::Decide { then_branch, else_branch: Some(else_branch), .. }, pending) = Safe(then_branch, true) ∧ Safe(else_branch, true)` — both branches inherit `pending = true`.
+> 5a. `Safe(Workflow::Decide { then_branch, else_branch: None, .. }, pending) = Safe(then_branch, true)` — with no else branch, the then-branch alone must satisfy the condition.
+> 6. `Safe(Workflow::If { then_branch, else_branch: Some(else_branch), .. }, pending) = Safe(then_branch, pending) ∧ Safe(else_branch, pending)` — `If` propagates the pending state.
+> 6a. `Safe(Workflow::If { then_branch, else_branch: None, .. }, pending) = Safe(then_branch, pending)` — with no else branch, the then-branch alone must satisfy the condition.
 > 7. For any other CPS-chain node `n` with `continuation: Some(c)`:
->    - If `n` transitively contains an `Expr::Policy`, `Safe(n, pending) = Safe(c, true)`.
+>    - If `ContainsPolicy(expr)` for any expression `expr` appearing in `n`, `Safe(n, pending) = Safe(c, true)`.
 >    - Otherwise, `Safe(n, pending) = Safe(c, pending)`.
 > 8. For any other CPS-chain node `n` with `continuation: None`:
->    - If `n` transitively contains an `Expr::Policy`, `Safe(n, pending) = false`.
+>    - If `ContainsPolicy(expr)` for any expression `expr` appearing in `n`, `Safe(n, pending) = false`.
 >    - Otherwise, `Safe(n, pending) = ¬pending`.
 >
 > A workflow definition satisfies L004 iff `Safe(body, false)` holds for its body.
@@ -251,5 +319,5 @@ And convert each `LintDiagnostic` to an LSP `Diagnostic` using the same `AshLspE
 ## 7. Relationship to Other Specs
 
 - **Blocks:** SPEC-038 LSP MVP (lint diagnostics in the pipeline)
-- **Blocked by:** SPEC-039 must deliver `parse_surface_file()` and a stable `ModuleFile` AST as an explicit, gated deliverable (see SPEC-039 §4.6).
+- **Blocked by:** SPEC-039 must deliver `parse_surface_file()` and a stable `ModuleFile` AST as an explicit, gated deliverable. This spec **cannot proceed to implementation** until SPEC-039 §4.6 acceptance criteria are met: the `ModuleFile` AST is frozen, all parser tests pass, and `parse_surface_file()` is published as a public, documented API.
 - **Parallelizable with:** SPEC-040 (Diagnostic Infrastructure) after `TASK-570` binding-span changes are complete

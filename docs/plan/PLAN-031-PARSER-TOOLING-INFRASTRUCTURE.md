@@ -23,10 +23,11 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 - `ast::Span` derives `Hash` and `Eq` (prerequisite for CommentTable portability)
 - `Literal` span work explicitly deferred
 - `Comment` capture during whitespace skipping (side-table approach, no token-stream changes)
-- Nine copies of `skip_whitespace_and_comments` consolidated into `parse_utils.rs` with dedicated test suite
-- `CommentTable` attached to `ModuleFile`, including `last_seen_token_span` for EOF comments
-- Backtracking-safe comment collection (snapshotting or speculative buffering)
-- `parse_surface_file(source: &str)` top-level API per SPEC-039 §4.6
+- Nine copies of `skip_whitespace_and_comments` consolidated into `parse_utils.rs` as a `pub(crate)` helper with dedicated test suite
+- `CommentTable` attached to `ModuleFile`, including `last_seen_token_span` for EOF comments and a write API (`push_leading`, `push_trailing`, `set_last_token`) that enforces the `Span::default()` skip policy
+- Backtracking-safe comment collection (snapshotting or speculative buffering; prefer speculative buffer if winnow provides a clean mechanism, else snapshotting)
+- New `module_file` combinator created as part of the `parse_surface_file` implementation
+- `parse_surface_file(source: &str)` top-level API per SPEC-039 §4.6, with gate criteria (populated `CommentTable` on all example files) that unblock SPEC-041
 - All parser/type-checker/interpreter match sites updated
 
 ## Timeline
@@ -38,7 +39,8 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 - Widespread `Expr::Variable` / `Pattern::Variable` pattern matches across crates require careful mechanical refactoring.
 - Consolidating nine copies of `skip_whitespace_and_comments` may expose subtle behavioral differences that must be reconciled.
 - Comment-table population must correctly handle edge cases (comments at EOF, multiple consecutive comments, blank-line separation).
-- Mutable side-table + combinator backtracking requires an explicit rollback strategy; failure to snapshot correctly will produce phantom comments.
+- Mutable side-table + combinator backtracking requires an explicit rollback strategy (prefer speculative buffer if winnow provides a clean mechanism; fall back to snapshotting); failure to snapshot correctly will produce phantom comments.
+- `parse_surface_file` gate criteria must be met before SPEC-041 can proceed; delays in comment-table edge-case handling will block downstream work.
 
 ## Parallelization
 

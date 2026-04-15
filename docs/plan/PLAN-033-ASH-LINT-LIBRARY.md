@@ -18,7 +18,7 @@ Convert `crates/ash-lint` from a CLI-only binary into a reusable library crate w
 
 ## Deliverable
 
-- `crates/ash-lint/Cargo.toml` has `[lib]`, `[[bin]]`, and `walkdir` in dependencies
+- `crates/ash-lint/Cargo.toml` has `[lib]`, `[[bin]]`, and `walkdir` scoped to `[bin.dependencies]` (binary-only)
 - `src/lib.rs` exports `LintDiagnostic`, `LintConfig`, `lint_source`, `lint_module`, `lint_definition`
 - Optional `serde` feature enables `Serialize` on lint types
 - `src/main.rs` is a thin CLI wrapper supporting legacy rule ID aliases
@@ -38,4 +38,4 @@ Convert `crates/ash-lint` from a CLI-only binary into a reusable library crate w
 
 - Phase 86 can run in parallel with Phase 85 (Diagnostic Infrastructure) and with `TASK-571` (comment trivia) from Phase 84.
 - Phase 86 is **blocked by `TASK-570`** (binding spans) because lint visitors will pattern-match on `Expr::Variable`.
-- Phase 86 is **also blocked by SPEC-039** (specifically the `parse_surface_file` API and stable `ModuleFile` AST).
+- Phase 86 is **also blocked by SPEC-039** (specifically the `parse_surface_file` API and stable `ModuleFile` AST). Implementation cannot begin until SPEC-039 §4.6 acceptance criteria are satisfied: the AST is frozen, parser tests pass, and the API is public and documented.

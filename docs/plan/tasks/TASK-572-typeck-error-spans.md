@@ -17,6 +17,7 @@ Add spans to all type-checker error variants that lack them.
 3. Every `NameError` variant includes a `span` field.
 4. Every `ResolutionError` variant includes a `span` field.
 5. Every `TypeError` variant includes a `span` field (verify existing `UnknownObligation`, `ObligationAlreadySatisfied`, `UnknownCapability`, and `InvalidConstraintField` already have spans at all call sites).
+6. Ensure all updated error types are ready for `AshLspError` trait implementations in `crates/ash-diagnostic` (see SPEC-040 §5.4).
 
 ## Affected Files
 

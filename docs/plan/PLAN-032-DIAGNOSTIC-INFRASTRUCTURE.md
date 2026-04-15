@@ -15,13 +15,13 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
 | [TASK-572](../tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `NameError`, `ResolutionError`, `TypeError`, and all spanless `ConstructorError` variants | 12h | 📝 Planned |
-| [TASK-573](../tasks/TASK-573-ash-lsp-error-trait.md) | Create `crates/ash-diagnostic`, define `AshLspError` trait, `Severity`, and `DiagnosticCode`, and implement for all error types | 6h | 📝 Planned |
+| [TASK-573](../tasks/TASK-573-ash-lsp-error-trait.md) | Create `crates/ash-diagnostic` per SPEC-040 §5.4, define `AshLspError` trait, `Severity`, and `DiagnosticCode`, and implement for all error types | 6h | 📝 Planned |
 
 ## Deliverable
 
 - Every `TypeEnvError`, `NameError`, `ResolutionError`, and `TypeError` variant carries a `span`
 - All spanless `ConstructorError` variants (`UnknownConstructor`, `MissingField`, `UnknownField`, `FieldTypeMismatch`, `TupleFieldTypeMismatch`, `TupleArityMismatch`, `NonExhaustiveMatch`) and `TypeError::NotAConstructor` carry a `span`
-- New `crates/ash-diagnostic` crate provides `AshLspError` trait, `Severity`, and `DiagnosticCode` newtype
+- New `crates/ash-diagnostic` crate provides `AshLspError` trait, `Severity`, and `DiagnosticCode` newtype, with explicit dependency constraints (may depend on `ash-parser`, must not depend on `ash-typeck`)
 - Mechanical diagnostic conversion from any Ash error to LSP `Diagnostic`
 
 ## Timeline

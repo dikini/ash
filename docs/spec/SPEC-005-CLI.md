@@ -449,4 +449,4 @@ ash completions fish > ~/.config/fish/completions/ash.fish
 - Use `tracing` for logging
 - Use `color-eyre` for error reporting
 - Use `completest` for shell completions
-- Use `tower-lsp` for LSP implementation
+- Use `tower-lsp-server` for LSP implementation

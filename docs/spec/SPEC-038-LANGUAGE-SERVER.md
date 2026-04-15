@@ -1,18 +1,22 @@
 # SPEC-038: Ash Language Server Protocol (LSP) & MCP Interface
 
-## Status: Draft
+## Status: Draft (Implementation-Grade)
 
 ## 1. Goal
 
-Define a production-quality Language Server Protocol (LSP) implementation for the Ash workflow language, plus an embedded Model Context Protocol (MCP) interface that exposes the same semantic intelligence to AI coding agents (Hermes, Codex, Claude, Open Code, OpenClaw, etc.).
+Define a production-quality Language Server Protocol (LSP) implementation for the Ash workflow language, plus an embedded Model Context Protocol (MCP) interface that exposes the same semantic intelligence to AI coding agents (Hermes, Codex, Claude, etc.).
 
 The server must work out-of-the-box with VSCode and Neovim, and it must be agent-first: every LSP capability should be queryable programmatically so that AI assistants can reason about Ash code with the same precision as a human IDE user.
+
+**Scope:** MVP covers diagnostics, hover, go-to-definition, document symbols, completion, find references, and the MCP tool bridge. Source formatting and Salsa-based incremental caching are explicitly deferred to follow-up work.
 
 ## 2. Non-Goals
 
 - **Not** a generic IDE or GUI.
 - **Not** a replacement for `ash check` / `ash run` CLI commands.
 - **Not** a remote build system (the server is local-only).
+- **Not** a source formatter. Ash has no comment-trivia preservation or pretty-printer. Formatting is deferred to a future spec.
+- **Not** a Salsa-based incremental analysis engine. The MVP uses a simple per-file cache; migrating to `salsa` is deferred.
 
 ## 3. Architecture
 
@@ -27,17 +31,17 @@ The server must work out-of-the-box with VSCode and Neovim, and it must be agent
 │   ├─ workspace/* handlers                                           │
 │   └─ notification dispatch                                          │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Analysis Layer (ash-lsp-core)                                      │
+│  ash-lsp-core                                                       │
 │   ├─ VFS: virtual file system (in-memory overlays + fs watcher)     │
-│   ├─ Salsa-like query cache (parse → surface AST → check → symbols) │
-│   ├─ Diagnostic aggregator (parse + type + lint + custom rules)     │
-│   └─ Index: symbols, references, scopes                             │
+│   ├─ Analysis cache: parse → surface AST → diagnostics              │
+│   ├─ Diagnostic aggregator (parse + type + lint)                    │
+│   └─ Symbol index: document symbols, references                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Compiler Front-End (existing crates)                               │
 │   ├─ ash-parser  (lexer → surface AST, spans, errors)               │
 │   ├─ ash-typeck  (types, effects, names, obligations)               │
-│   ├─ ash-lint    (custom Ash lints: OODA, provenance, policy)       │
-│   └─ ash-engine  (module loading, crate graphs)                     │
+│   ├─ ash-lint    (custom Ash lints — must become a library first)   │
+│   └─ ash-engine  (crate graphs, module loader)                      │
 ├─────────────────────────────────────────────────────────────────────┤
 │  MCP Bridge (ash-lsp-mcp)                                           │
 │   ├─ mcp/tools/ash_hover                                            │
@@ -45,8 +49,7 @@ The server must work out-of-the-box with VSCode and Neovim, and it must be agent
 │   ├─ mcp/tools/ash_diagnostics                                      │
 │   ├─ mcp/tools/ash_goto_definition                                  │
 │   ├─ mcp/tools/ash_find_references                                  │
-│   ├─ mcp/tools/ash_symbol_search                                    │
-│   └─ mcp/tools/ash_apply_edit (code actions)                        │
+│   └─ mcp/tools/ash_symbol_search                                    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -56,9 +59,9 @@ The server must work out-of-the-box with VSCode and Neovim, and it must be agent
 |-------|---------|-----------------|
 | `crates/ash-lsp` | Binary + LSP wire protocol | **New** |
 | `crates/ash-lsp-core` | VFS, analysis cache, index, diagnostic aggregation | **New** |
-| `crates/ash-parser` | Lexer, surface AST, spans, error recovery | Existing |
+| `crates/ash-parser` | Lexer, surface AST (`ModuleFile`), spans, error recovery | Existing |
 | `crates/ash-typeck` | Type checker, name resolution, effect inference | Existing |
-| `crates/ash-lint` | Custom lints (currently CLI-only; needs lib extraction) | Existing, refactor |
+| `crates/ash-lint` | Custom lints (currently CLI-only; must be converted to lib) | Existing, **blocker** |
 | `crates/ash-engine` | Crate graph, module loader, entry verification | Existing |
 | `crates/ash-mcp` | MCP server wrapper over `ash-lsp-core` (optional binary) | **New** |
 
@@ -70,11 +73,15 @@ The server must work out-of-the-box with VSCode and Neovim, and it must be agent
 
 Ash parsers today read from `&str` or files on disk. LSP clients send `textDocument/didChange` with unsaved buffer contents. Completion requests arrive **before** the file is ever written to disk. Therefore the server must maintain an in-memory overlay.
 
-### 4.2 VFS Design (Minimal but Correct)
+### 4.2 VFS Design
 
 ```rust
+use dashmap::DashMap;
+use lsp_types::Url;
+use std::time::Instant;
+
 pub struct Vfs {
-    files: DashMap<VfsPath, FileSnapshot>,
+    files: DashMap<Url, FileSnapshot>,
 }
 
 pub struct FileSnapshot {
@@ -82,12 +89,11 @@ pub struct FileSnapshot {
     pub version: i32,
     pub changed_at: Instant,
 }
-
-pub type VfsPath = String; // URI as received from LSP client
 ```
 
+- **Keys:** `lsp_types::Url` (not raw `String`) to avoid `file://` normalization and percent-encoding bugs.
 - **Concurrency:** `DashMap` gives lock-free reads so multiple LSP requests can query the same file simultaneously.
-- **Incremental sync:** Support `TextDocumentSyncKind::INCREMENTAL`. Clients like VSCode default to incremental. A helper `apply_text_edits(source, &[TextDocumentContentChangeEvent]) -> String` normalizes changes into a new snapshot.
+- **Incremental sync:** Support `TextDocumentSyncKind::INCREMENTAL`. A helper `apply_text_edits(source, &[TextDocumentContentChangeEvent]) -> String` normalizes changes into a new snapshot.
 - **File watching:** On `workspace/didChangeWatchedFiles`, update disk-backed entries so that modifying `foo.ash` in a terminal refreshes the index without restarting the server.
 
 ### 4.3 Change Application
@@ -95,96 +101,104 @@ pub type VfsPath = String; // URI as received from LSP client
 ```rust
 pub fn apply_changes(text: &str, changes: &[TextDocumentContentChangeEvent]) -> String {
     let mut result = text.to_string();
-    // If any change lacks a range, treat as full replacement
     if changes.iter().any(|c| c.range.is_none()) {
         return changes.last().unwrap().text.clone();
     }
     // Apply incremental edits in reverse order by start position
     // to keep earlier indices stable.
-    ...
+    // ...
 }
 ```
 
-## 5. Analysis Cache & Query Engine
+## 5. Analysis Engine
 
-### 5.1 Query Granularity
+### 5.1 Query API
 
-The analysis engine exposes these pure functions over the VFS:
+`ash-typeck` does **not** expose a high-level query API today. `ash-lsp-core` must build its own orchestration layer:
 
 ```rust
-// parse
-pub fn parse_file(vfs: &Vfs, path: VfsPath) -> (SurfaceAST, Vec<ParseError>)
+// Parse a single file from the VFS.
+pub fn parse_file(vfs: &Vfs, uri: &Url) -> (ash_parser::surface::ModuleFile, Vec<ash_parser::error::ParseError>)
 
-// type-check (requires module graph)
-pub fn check_file(vfs: &Vfs, path: VfsPath, graph: &ModuleGraph)
-    -> (TypedSurface, Vec<TypeError>)
+// Check a single file. Requires a module graph for cross-file resolution.
+pub fn check_file(vfs: &Vfs, uri: &Url, graph: &ash_core::module_graph::ModuleGraph)
+    -> (ash_typeck::TypeCheckResult, Vec<ash_typeck::error::ConstructorError>)
 
-// symbols
-pub fn document_symbols(vfs: &Vfs, path: VfsPath) -> Vec<Symbol>
+// Document symbols.
+pub fn document_symbols(file: &ash_parser::surface::ModuleFile) -> Vec<Symbol>
 
-// index
-pub fn goto_definition(vfs: &Vfs, path: VfsPath, pos: Position) -> Option<Location>
-pub fn find_references(vfs: &Vfs, path: VfsPath, pos: Position) -> Vec<Location>
+// Index queries.
+pub fn goto_definition(env: &ash_typeck::type_env::TypeEnv, uri: &Url, pos: Position) -> Option<Location>
+pub fn find_references(index: &ReferenceIndex, uri: &Url, pos: Position) -> Vec<Location>
 ```
 
-### 5.2 Caching Strategy (Phase 1: Simple; Phase 2: Salsa)
+> **Note:** `ash_parser::surface::ModuleFile` is the real parser output. The spec does not invent `SurfaceAST` or `TypedSurface`.
 
-**Phase 1 (MVP):** Per-request recomputation with a short-lived LRU cache keyed by `(path, version)`.
+### 5.2 Caching Strategy
 
-**Phase 2 (Polish):** Introduce `salsa` or a hand-rolled query system so that:
-- Parsing a file is cached.
-- If file `A.ash` changes but `B.ash` does not, `B.ash`'s AST remains valid.
-- Name-resolution and type-checking are incremental across the module graph.
+**MVP:** Per-request recomputation with a short-lived LRU cache keyed by `(Url, version)`.
 
-> **Reference:** rust-analyzer uses `salsa` for this exact purpose. For Ash, which has no macros and a simpler module system, a lightweight custom cache may be sufficient. Start simple, measure, then upgrade.
+- Parse results are cached per file version.
+- Type-check results are cached per file version **and** module graph hash.
+- No cross-file incremental invalidation in the MVP.
+
+**Future:** A follow-up spec will evaluate `salsa = "0.26"` for true incremental analysis.
 
 ## 6. LSP Capabilities
 
-Capabilities are grouped by **priority**. The MVP must ship Priority 1; everything else is stretch.
+Capabilities are grouped by **priority**. The MVP must ship Priority 1 and 2; Priority 3 is stretch.
 
-### 6.1 Priority 1 — MVP (Week 1–2)
+### 6.1 Priority 1 — MVP Foundation (Week 1)
 
 | Capability | LSP Method | Ash Implementation Notes |
 |------------|------------|--------------------------|
-| **Diagnostics** | `textDocument/publishDiagnostics` | Aggregate `ParseError` (ash-parser), `TypeError` (ash-typeck), and lint diagnostics. Run on every `didChange` / `didOpen` / `didSave`. Debounce 200 ms. |
-| **Hover** | `textDocument/hover` | Keyword docs + type info from `ash-typeck`. If the cursor is on a capability name, show its signature. |
-| **Go to Definition** | `textDocument/definition` | Use `ash-parser` name bindings and `ash-typeck` `NameEnv`. Surface AST already has spans for every binding site. |
+| **Diagnostics** | `textDocument/publishDiagnostics` | Aggregate `ParseError`, `ConstructorError`, and lint diagnostics. Run on every `didChange` / `didOpen` / `didSave`. Debounce 200 ms. |
 | **Document Sync** | `textDocument/didOpen/Change/Close` | Incremental sync. VFS overlay. |
-| **Document Symbols** | `textDocument/documentSymbol` | Walk surface AST; emit `SymbolKind::Function` for workflows, `SymbolKind::Interface` for capabilities, etc. |
+| **Document Symbols** | `textDocument/documentSymbol` | Walk `ModuleFile`; emit `SymbolKind::Function` for workflows, `SymbolKind::Interface` for interfaces, etc. |
 
-### 6.2 Priority 2 — Agent Power-Ups (Week 3–4)
+### 6.2 Priority 2 — Core Intelligence (Week 2–3)
 
 | Capability | LSP Method | Notes |
 |------------|------------|-------|
-| **Completion** | `textDocument/completion` | Trigger chars: `.`, `:`, `(`, `{`. Suggest: keywords, in-scope variables, capability names, policy names, record fields. |
-| **Find References** | `textDocument/references` | Requires a cross-file reference index. Build it by scanning the surface AST for `Name` usages and matching against the binding table. |
-| **Formatting** | `textDocument/formatting` | Ash has **no formatter yet**. This requires building one. See §9. |
-| **Code Actions** | `textDocument/codeAction` | Quick fixes: "Import missing capability", "Add missing match arm" (from exhaustiveness checker). |
+| **Hover** | `textDocument/hover` | Keyword docs + type info from `TypeEnv`. |
+| **Go to Definition** | `textDocument/definition` | Use `NameBinder` and `TypeEnv`. **Prerequisite:** spans must be added to local variable bindings (see §17). |
+| **Completion** | `textDocument/completion` | Trigger chars: `.`, `:`, `(`, `{`. Suggest: keywords, in-scope variables, interface names, policy names, record fields. |
+| **Find References** | `textDocument/references` | Requires a cross-file reference index built by scanning `ModuleFile` for name usages. |
 
-### 6.3 Priority 3 — Polish (Week 5+)
+### 6.3 Priority 3 — Polish (Week 4–5)
 
 | Capability | LSP Method | Notes |
 |------------|------------|-------|
 | **Workspace Symbols** | `workspace/symbol` | Search across all `.ash` files in the workspace. |
-| **Semantic Tokens** | `textDocument/semanticTokens/full` | Full semantic highlighting (capabilities, policies, workflow keywords, types). |
-| **Signature Help** | `textDocument/signatureHelp` | Show parameter names when typing inside a capability call. |
-| **Rename** | `textDocument/rename` | Safe rename across the module graph using the reference index. |
+| **Code Actions** | `textDocument/codeAction` | Quick fixes: "Import missing module", "Add missing match arm". |
+| **Semantic Tokens** | `textDocument/semanticTokens/full` | Full semantic highlighting. |
+| **Signature Help** | `textDocument/signatureHelp` | Show parameter names when typing inside a call. |
+| **Rename** | `textDocument/rename` | Safe rename across the module graph using the reference index. Deferred if time runs short. |
 
 ## 7. Diagnostic Pipeline
 
 ### 7.1 Sources
 
-1. **Parser** (`ash-parser`) — syntax errors, unexpected tokens.
-2. **Type Checker** (`ash-typeck`) — type mismatches, unbound variables, effect errors.
-3. **Linter** (`ash-lint`) — OODA loop violations, missing provenance, policy conflicts.
-4. **Custom Rules** (future) — deprecation warnings, style nits.
+1. **Parser** (`ash-parser`) — syntax errors, unexpected tokens. `ParseError` carries `ash_parser::token::Span`.
+2. **Type Checker** (`ash-typeck`) — type mismatches, unbound variables, effect errors. **Only** `ConstructorError` carries spans today; `TypeEnvError` and `ExhaustivenessError` do not.
+3. **Linter** (`ash-lint`) — OODA loop violations, missing provenance, policy conflicts. (Blocked until `ash-lint` becomes a library.)
 
-### 7.2 Conversion to LSP Diagnostics
+### 7.2 Span Requirements
 
-All Ash error types already carry `Span { start, end, line, column }`. Conversion is mechanical:
+Not all Ash error types are LSP-ready:
+
+| Error Type | Has Span? | Action Required |
+|------------|-----------|-----------------|
+| `ParseError` | ✅ Yes | Directly convertible. |
+| `ConstructorError` | ⚠️ Partial | Most variants have `span`, but `UnknownConstructor` does not. Add `span` to all variants. |
+| `TypeEnvError` | ❌ No | **Blocker.** Must add `span: ash_parser::token::Span` to every variant. |
+| `ExhaustivenessError` | ❌ No | **Blocker.** Must add `span` to the variant. |
+| `NameError` | ❌ No | **Blocker.** Must add `span` to every variant. |
+
+### 7.3 Conversion to LSP Diagnostics
 
 ```rust
-fn ash_error_to_diagnostic(err: &AshError, source: &str) -> Diagnostic {
+fn ash_error_to_diagnostic(err: &dyn AshLspError, source: &str) -> Diagnostic {
     let range = span_to_lsp_range(err.span(), source);
     Diagnostic {
         range,
@@ -197,19 +211,25 @@ fn ash_error_to_diagnostic(err: &AshError, source: &str) -> Diagnostic {
 }
 ```
 
-### 7.3 Debouncing
+> **Blocker:** A new `AshLspError` trait (or enum) must be defined that provides `span()`, `severity()`, `code()`, and `message()` uniformly across `ParseError`, `ConstructorError`, `TypeEnvError`, `ExhaustivenessError`, and `NameError`.
 
-Typing generates a flood of `didChange` notifications. Diagnostics must be **debounced** (200 ms) so that the server doesn't re-parse the world on every keystroke. Use `tokio::time::sleep` in a cancellable task.
+### 7.4 Debouncing
+
+Typing generates a flood of `didChange` notifications. Diagnostics must be **debounced** (200 ms) so that the server doesn't re-parse the world on every keystroke.
+
+Use a `tokio::sync::mpsc` channel with `tokio::select!` and a `tokio::time::sleep` reset pattern, or `tokio_util::sync::CancellationToken`:
 
 ```rust
 async fn schedule_validation(&self, uri: Url) {
-    // Cancel any in-flight validation for this URI
-    if let Some(old) = self.pending_validations.insert(uri.clone(), token) {
-        old.cancel();
-    }
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    if !token.is_cancelled() {
-        self.validate_and_publish(uri).await;
+    let token = CancellationToken::new();
+    self.pending_validations.insert(uri.clone(), token.clone());
+    tokio::select! {
+        _ = tokio::time::sleep(Duration::from_millis(200)) => {
+            if !token.is_cancelled() {
+                self.validate_and_publish(uri).await;
+            }
+        }
+        _ = token.cancelled() => {}
     }
 }
 ```
@@ -218,12 +238,13 @@ async fn schedule_validation(&self, uri: Url) {
 
 ### 8.1 Design Principle
 
-The MCP bridge is **not** a separate language server. It is a thin wrapper over `ash-lsp-core` that speaks the Model Context Protocol. This guarantees that human IDE users and AI agents see the *exact same* analysis.
+The MCP bridge is a thin wrapper over `ash-lsp-core` that speaks the Model Context Protocol. This guarantees that human IDE users and AI agents see the *exact same* analysis.
 
 ### 8.2 Transport
 
 - **Default:** `stdio` (standard MCP transport).
-- **Optional:** TCP or HTTP for remote agent orchestration.
+- **Optional:** TCP for remote agent orchestration.
+- **Launch mode:** `ash lsp --mcp` (see §10).
 
 ### 8.3 Exposed Tools
 
@@ -239,7 +260,8 @@ Each tool maps 1:1 to an `ash-lsp-core` query.
 | `ash_document_symbols` | `{"file": "..."}` | Symbol[] JSON | `textDocument/documentSymbol` |
 | `ash_workspace_symbols` | `{"query": "temperature_alert"}` | Symbol[] JSON | `workspace/symbol` |
 | `ash_code_action` | `{"file": "...", "startLine": ..., "endLine": ...}` | CodeAction[] JSON | `textDocument/codeAction` |
-| `ash_apply_edit` | `{"file": "...", "edits": [...]}` | success boolean | `workspace/applyEdit` |
+
+> **Removed:** `ash_apply_edit` is **not** an MCP tool. MCP servers should not write files directly. Edits are returned as structured `CodeAction` responses; it is the client's responsibility to apply them.
 
 ### 8.4 Agent-Friendly Response Format
 
@@ -262,38 +284,15 @@ MCP clients are LLMs. Responses should be **token-efficient** and **structured**
 
 - Always include a one-line `summary` field.
 - Use line/column numbers (1-indexed) because most LLM prompts are trained on human-readable coordinates.
-- Include `suggestion` when the underlying error type provides an expected value (e.g., typo correction from the parser).
+- Include `suggestion` when the underlying error type provides an expected value.
 
 ### 8.5 Context-Aware File Opening
 
-MCP tools should **not** require the caller to manually open files first. The bridge internally calls `vfs.open(file_path)` before querying, and keeps the file in memory for the lifetime of the MCP session. This matches how `lsp-mcp` and `cclsp` behave.
+MCP tools should **not** require the caller to manually open files first. The bridge internally calls `vfs.open(file_path)` before querying, and keeps the file in memory for the lifetime of the MCP session.
 
-## 9. Formatter
+## 9. Editor Integration
 
-Ash currently has **no source formatter**. This is the largest greenfield work item.
-
-### 9.1 Formatter Strategy
-
-Because Ash's surface syntax is relatively small (no macros, no complex precedence), a **naive pretty-printer** over the surface AST is sufficient for MVP.
-
-```rust
-pub fn format_surface_ast(ast: &ModuleFile, indent: usize) -> String {
-    // Walk the AST and emit formatted text.
-    // Use the original spans only for preserving comments.
-}
-```
-
-### 9.2 Comment Preservation
-
-The `ash-parser` lexer already tokenizes comments. The formatter must thread comment trivia through the surface AST nodes. If comment trivia is not currently stored, add a `leading_comments: Vec<Comment>` and `trailing_comments: Vec<Comment>` field to key AST nodes (or store them in a side-table keyed by `Span`).
-
-### 9.3 Long-Term
-
-Once the formatter exists, `textDocument/formatting` and `textDocument/rangeFormatting` become trivial one-line handlers.
-
-## 10. Editor Integration
-
-### 10.1 VSCode
+### 9.1 VSCode
 
 - Extension name: `ash-vscode`
 - Location: `editors/vscode/`
@@ -306,9 +305,9 @@ Once the formatter exists, `textDocument/formatting` and `textDocument/rangeForm
 "main": "./out/extension.js"
 ```
 
-### 10.2 Neovim
+### 9.2 Neovim
 
-- No plugin required; native `vim.lsp.config` (Neovim 0.11+) or `lspconfig`.
+No plugin required; native `vim.lsp.config` (Neovim 0.11+) or `lspconfig`.
 
 ```lua
 -- minimal init.lua
@@ -320,44 +319,66 @@ vim.lsp.config['ash-lsp'] = {
 vim.lsp.enable('ash-lsp')
 ```
 
-### 10.3 TextMate Grammar (Bonus)
+### 9.3 TextMate Grammar (Bonus)
 
 VSCode requires a basic TextMate grammar for syntax highlighting before semantic tokens kick in. Provide `syntaxes/ash.tmLanguage.json` with scopes for:
 - `comment.line.double-dash`
 - `keyword.control.ash` (`workflow`, `observe`, `act`, `decide`, `if`, `let`, etc.)
 - `storage.type.ash` (`capability`, `policy`, `role`)
-- `entity.name.function.ash` (capability calls)
+- `entity.name.function.ash` (function calls)
+
+## 10. CLI Interface
+
+Per **SPEC-005**, the LSP server is launched via the `ash` CLI:
+
+```bash
+ash lsp [options]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--stdio` | Use stdio for LSP communication (default) |
+| `--port <n>` | Use TCP port for LSP communication |
+| `--mcp` | Run in MCP mode instead of LSP mode |
+
+- When `--mcp` is provided, the process speaks MCP over stdio (or TCP if `--port` is also given).
+- The canonical binary `ash-lsp` may exist as an internal detail, but the user-facing entry point is always `ash lsp`.
 
 ## 11. Implementation Phases
 
-### Phase 1 — LSP Skeleton (Week 1)
+**Realistic MVP timeline: 5 weeks, ~180 hours.**
+
+### Phase 1 — Skeleton & VFS (Week 1, ~32h)
 - Create `crates/ash-lsp` and `crates/ash-lsp-core`.
 - Implement `initialize`, `shutdown`, `didOpen/Change/Close`.
-- VFS with incremental sync.
+- VFS with incremental sync and `Url`-based keys.
 - Wire up `ash-parser` for syntax validation + diagnostic publishing.
+- Add `tracing` integration and basic request logging.
 
-### Phase 2 — Core Intelligence (Week 2)
-- Hover with keyword + type info.
-- Go to definition using existing name binding data.
-- Document symbols from surface AST.
+### Phase 2 — Diagnostics & Symbols (Week 2, ~36h)
+- Build the `AshLspError` trait and add missing spans to `TypeEnvError`, `ExhaustivenessError`, and `NameError`.
 - Integrate `ash-typeck` errors into diagnostics.
+- Hover with keyword + type info.
+- Document symbols from `ModuleFile`.
 
-### Phase 3 — Agent Interface (Week 3)
-- Create `crates/ash-mcp` MCP bridge.
-- Implement tools: `ash_diagnostics`, `ash_hover`, `ash_goto_definition`, `ash_find_references`, `ash_complete`.
-- Test with Claude Code / Codex CLI.
+### Phase 3 — Navigation & Completion (Week 3, ~40h)
+- Go to definition using `NameBinder` + `TypeEnv`.
+- Completion: keywords, in-scope variables, interface/policy names, record fields.
+- Find references via a cross-file reference index.
 
-### Phase 4 — Advanced Features (Week 4)
-- Formatter (see §9).
-- Code actions (quick fixes).
-- Workspace symbols.
+### Phase 4 — MCP Bridge & Agent Integration (Week 4, ~40h)
+- Create `crates/ash-mcp` with `rmcp = "1.4"`.
+- Implement all 8 MCP tools.
+- End-to-end tests with simulated agent requests.
 - VSCode extension skeleton.
 
-### Phase 5 — Polish (Week 5+)
-- Semantic tokens.
-- Reference index caching.
-- Salsa-based incremental analysis.
-- Rename symbol support.
+### Phase 5 — Polish & Delivery (Week 5, ~32h)
+- Workspace symbols.
+- Code actions (imports, match arms).
+- Semantic tokens (if time permits; otherwise defer).
+- Neovim docs, integration tests, CHANGELOG.
 
 ## 12. Dependencies
 
@@ -365,9 +386,10 @@ VSCode requires a basic TextMate grammar for syntax highlighting before semantic
 [dependencies]
 # LSP framework (actively maintained fork of tower-lsp)
 tower-lsp-server = "0.23"
+ls-types = "0.2"      # URI-stable fork used by tower-lsp-server
 
 # Async runtime
-tokio = { version = "1.42", features = ["rt-multi-thread", "io-std", "time"] }
+tokio = { version = "1.52", features = ["rt-multi-thread", "io-std", "time"] }
 
 # Concurrency
 parking_lot = "0.12"
@@ -377,42 +399,81 @@ dashmap = "6.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# MCP SDK (Rust implementation)
-rmcp = "0.1"          # or equivalent community crate
-# If no mature Rust MCP crate exists, hand-roll JSON-RPC 2.0 over stdio.
+# MCP SDK (official Anthropic Rust SDK)
+rmcp = "1.4"
+
+# Observability
+tracing = "0.1"
 
 # Ash internal crates
 ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }
 ash-typeck = { path = "../ash-typeck" }
-ash-lint = { path = "../ash-lint" }
 ash-engine = { path = "../ash-engine" }
 ```
 
+> **Note:** `ash-lint` is omitted from the dependency list because it is a **hard prerequisite** (must be converted to a library before `ash-lsp-core` can depend on it).
+
 ## 13. Testing Strategy
 
-1. **Unit tests** for VFS change application.
+1. **Unit tests** for VFS change application and `Url` normalization.
 2. **LSP conformance tests** using `lsp-types` + manual JSON-RPC request/response pairs.
 3. **Integration tests** that open real `.ash` files from `examples/` and assert on diagnostics, hover text, and symbol counts.
-4. **MCP end-to-end tests** that spawn `ash-mcp`, send tool calls, and verify JSON output.
+4. **MCP end-to-end tests** that spawn `ash lsp --mcp`, send tool calls, and verify JSON output.
 
 ## 14. Security & Sandboxing
 
 - The MCP bridge must validate all file paths to prevent path traversal outside the workspace root.
-- `ash_apply_edit` should only write to `.ash` files within the opened workspace.
+- No file-write operations through the LSP or MCP interface. All edits are returned as `TextEdit` arrays.
 - No arbitrary code execution through the LSP or MCP interface.
 
-## 15. Relationship to Existing Tasks
+## 15. Configuration & Observability
 
-- **TASK-059** (`cli-lsp`): The MVP LSP skeleton. This spec supersedes and expands TASK-059.
-- **TASK-270** / **TASK-457** (`mcp-provider`): Those tasks define an *outgoing* MCP client inside `ash-engine` (Ash workflows calling external MCP servers). This spec defines an *incoming* MCP server that exposes Ash language intelligence to external agents. The two directions are complementary.
+### 15.1 Configuration
 
-## 16. Open Questions
+- **Workspace root discovery:** `ash.toml` or `.ash.toml` in the workspace root. Fall back to `.git` directory.
+- **LSP initialization options:** `ash.lsp.debounce_ms` (default 200), `ash.lsp.max_diagnostics` (default 100).
+- **Configuration source:** `initialize` params > workspace `.ash.toml` > defaults.
 
-1. Should the LSP server support multi-crate workspaces (like Cargo workspaces) or single-crate roots only?
-2. Does `ash-parser` already preserve comment trivia, or do we need to add it for the formatter?
-3. Should the MCP bridge be a separate binary (`ash-mcp`) or a subcommand (`ash lsp --mcp`)?
+### 15.2 Logging
 
----
+- Use `tracing` for structured logging.
+- Log levels: `INFO` for initialization and workspace discovery, `DEBUG` for cache hits/misses, `TRACE` for individual LSP messages.
+- MCP tool calls are logged at `DEBUG` with tool name and duration.
 
-**Next Step:** Create `docs/plan/tasks/TASK-XXX-lsp-mcp-implementation.md` and begin Phase 1 (skeleton + VFS) using subagent-driven development.
+## 16. Crash Recovery & Panic Isolation
+
+- **Request isolation:** Every LSP request handler must be wrapped in `std::panic::catch_unwind` (or a Tower middleware equivalent) so that a panic in the parser or type checker does not crash the server.
+- **Recovery strategy:** On panic, return an LSP `InternalError` and clear the cache entry for the affected file. Do not restart the server.
+- **Malformed input:** The parser must use `ash_parser::error_recovery::parse_with_recovery` to return a partial AST on error. Hover and completion should fall back to the last known good AST if the current parse fails.
+
+## 17. Multi-Crate Workspace Support
+
+- The server must support multi-crate workspaces because `ash-engine` already manages crate graphs.
+- **Discovery:** On `initialize`, scan the workspace root for `ash.toml` files. Load each crate root with `ash_engine::parse_crate_root`.
+- **Module graph:** Build a unified `ModuleGraph` across all discovered crates. Use it for cross-crate goto-definition and workspace symbols.
+- **File-to-crate mapping:** Map each `Url` to its containing crate via parent-directory search for `ash.toml`.
+
+## 18. Known Blockers & Prerequisites
+
+These items must be completed **before** engineering work on SPEC-038 begins.
+
+| # | Blocker | Action Required | Estimated Effort |
+|---|---------|-----------------|------------------|
+| 1 | **Local variable spans** | Add `span: ash_parser::token::Span` to `Expr::Variable` and `Pattern::Variable` in `surface.rs` and `ast.rs`. | 4–6h |
+| 2 | **Type-checker error spans** | Add `span: ash_parser::token::Span` to every variant of `TypeEnvError`, `ExhaustivenessError`, and `NameError`. | 8–12h |
+| 3 | **Unified error trait** | Define an `AshLspError` trait (or wrapper enum) with `span()`, `severity()`, `code()`, and `message()` methods. | 4–6h |
+| 4 | **`ash-lint` library extraction** | Convert `crates/ash-lint` from a CLI-only binary into a library crate with a public `lint_module(source: &str) -> Vec<LintDiagnostic>` API. | 8–12h |
+| 5 | **Comment trivia (optional)** | If formatter work is ever resumed, the lexer must preserve comments. For the LSP MVP, this is **not** required. | — |
+
+## 19. Relationship to Existing Tasks
+
+- **TASK-059** (`cli-lsp`): The original MVP LSP design doc. SPEC-038 supersedes TASK-059 and expands it into a full implementation spec.
+- **TASK-569** (`lsp-mcp-implementation`): The implementation task for SPEC-038. See `docs/plan/tasks/TASK-569-lsp-mcp-implementation.md`.
+- **TASK-270** / **TASK-457** (`mcp-provider`): Those tasks define an *outgoing* MCP client inside `ash-engine` (Ash workflows calling external MCP servers). SPEC-038 defines an *incoming* MCP server that exposes Ash language intelligence to external agents. The two directions are complementary.
+
+## 20. Next Steps
+
+1. Resolve the 5 blockers listed in §18.
+2. Update `TASK-569` with the revised scope, timeline, and blocker checklist.
+3. Begin Phase 1 (skeleton + VFS) using subagent-driven development.

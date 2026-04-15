@@ -437,7 +437,14 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             span: _,
             ..
         } => {
-            // Anonymous function definition: check the body with params in scope
+            // Anonymous function definition: check the body with params in scope.
+            //
+            // Three-vertex boundary (SPEC-031 §4.8):
+            //   - Pure `fn` context  → Type::Fn(params, ret)
+            //   - Workflow context   → Type::Fun(params, ret, effect)
+            //
+            // The workflow effect level is carried on the TypeEnv so it propagates
+            // automatically through nested scopes without threading an extra parameter.
             let mut fn_env = env.clone();
             let mut param_types: Vec<Type> = Vec::new();
             for (name, _ty_ann) in params {
@@ -447,8 +454,10 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             }
             let body_result = check_expr(&fn_env, body);
             let ret_ty = body_result.substitution.apply(&body_result.ty);
-            // Closures are pure, so use Type::Fn
-            let fn_ty = Type::Fn(param_types, Box::new(ret_ty));
+            let fn_ty = match env.workflow_effect() {
+                Some(effect) => Type::Fun(param_types, Box::new(ret_ty), effect),
+                None => Type::Fn(param_types, Box::new(ret_ty)),
+            };
             CheckResult {
                 ty: fn_ty,
                 substitution: body_result.substitution,
@@ -1462,4 +1471,134 @@ mod tests {
 
         assert_eq!(rendered, "RuntimeError(_, _)");
     }
+
+    // ============================================================
+    // TASK-558: Three-vertex boundary – FnDef typing (SPEC-031 §4.8)
+    // ============================================================
+
+    /// Helper: build a simple one-param FnDef whose body is the param itself.
+    fn make_fn_def_expr(param: &str) -> Expr {
+        Expr::FnDef {
+            params: vec![(Box::from(param), None)],
+            return_type: None,
+            body: Box::new(Expr::Variable(Box::from(param))),
+            span: Span::default(),
+        }
+    }
+
+    /// Test 1 (TASK-558): FnDef in a pure (no-workflow) context → Type::Fn
+    #[test]
+    fn task558_fnapp_in_pure_context_yields_type_fn() {
+        let env = TypeEnv::with_builtin_types();
+        assert!(env.workflow_effect().is_none(), "pure env should have no workflow effect");
+
+        let expr = make_fn_def_expr("x");
+        let result = check_expr(&env, &expr);
+
+        assert!(result.is_ok(), "expected success, got {:?}", result.errors);
+        match result.ty {
+            Type::Fn(params, _ret) => {
+                assert_eq!(params.len(), 1, "expected 1 param");
+            }
+            other => panic!("expected Type::Fn, got {other:?}"),
+        }
+    }
+
+    /// Test 2 (TASK-558): FnDef in a workflow context → Type::Fun with the workflow's effect
+    #[test]
+    fn task558_fndef_in_workflow_context_yields_type_fun() {
+        let mut env = TypeEnv::with_builtin_types();
+        env.set_workflow_effect(ash_core::Effect::Operational);
+
+        let expr = make_fn_def_expr("x");
+        let result = check_expr(&env, &expr);
+
+        assert!(result.is_ok(), "expected success, got {:?}", result.errors);
+        match result.ty {
+            Type::Fun(params, _ret, effect) => {
+                assert_eq!(params.len(), 1);
+                assert_eq!(effect, ash_core::Effect::Operational);
+            }
+            other => panic!("expected Type::Fun, got {other:?}"),
+        }
+    }
+
+    /// Test 2b (TASK-558): workflow context at Epistemic level → Type::Fun(_, _, Epistemic)
+    #[test]
+    fn task558_fndef_in_epistemic_workflow_yields_epistemic_fun() {
+        let mut env = TypeEnv::with_builtin_types();
+        env.set_workflow_effect(ash_core::Effect::Epistemic);
+
+        let expr = make_fn_def_expr("x");
+        let result = check_expr(&env, &expr);
+
+        assert!(result.is_ok(), "expected success, got {:?}", result.errors);
+        match result.ty {
+            Type::Fun(_, _, effect) => {
+                assert_eq!(effect, ash_core::Effect::Epistemic);
+            }
+            other => panic!("expected Type::Fun, got {other:?}"),
+        }
+    }
+
+    /// Test 3 (TASK-558): Fn/Fun unification is already rejected by the unifier.
+    /// Verify that unifying Type::Fn with Type::Fun returns an error.
+    #[test]
+    fn task558_fn_fun_unification_rejected() {
+        use crate::types::unify;
+        let pure_fn = Type::Fn(vec![Type::Int], Box::new(Type::Int));
+        let effect_fn =
+            Type::Fun(vec![Type::Int], Box::new(Type::Int), ash_core::Effect::Operational);
+        assert!(
+            unify(&pure_fn, &effect_fn).is_err(),
+            "unifying Type::Fn with Type::Fun must fail"
+        );
+        assert!(
+            unify(&effect_fn, &pure_fn).is_err(),
+            "unifying Type::Fun with Type::Fn must fail"
+        );
+    }
+
+    /// Test 4 (TASK-558): FnApply where the function expects a pure Fn parameter but receives
+    /// a workflow Fun value triggers a type error via the unifier.
+    #[test]
+    fn task558_pass_fun_to_fn_parameter_is_rejected() {
+        // Build env where `apply` is bound as  Fn([Fn([Int], Int)], Int)
+        // i.e. apply : (Int -> Int) -> Int
+        let mut env = TypeEnv::with_builtin_types();
+        let apply_ty = Type::Fn(
+            vec![Type::Fn(vec![Type::Int], Box::new(Type::Int))],
+            Box::new(Type::Int),
+        );
+        env.bind_variable("apply", apply_ty);
+
+        // In workflow context, `fn(x) { x }` gets type Fun([Int], Int, Operational)
+        env.set_workflow_effect(ash_core::Effect::Operational);
+        let closure_expr = make_fn_def_expr("x");
+
+        // Build the call: apply(fn(x) { x })
+        let call_expr = Expr::FnApply {
+            func: Box::new(Expr::Variable(Box::from("apply"))),
+            args: vec![closure_expr],
+            span: Span::default(),
+        };
+
+        let result = check_expr(&env, &call_expr);
+        // The unifier must reject Fun where Fn is expected
+        assert!(
+            !result.is_ok(),
+            "passing Type::Fun where Type::Fn expected must fail, but got type {:?}",
+            result.ty
+        );
+    }
+
+    /// Test 5 (TASK-558): workflow_effect propagates into child scopes (extend()).
+    #[test]
+    fn task558_workflow_effect_propagates_to_child_env() {
+        let mut env = TypeEnv::with_builtin_types();
+        env.set_workflow_effect(ash_core::Effect::Deliberative);
+        let child = env.extend();
+        assert_eq!(child.workflow_effect(), Some(ash_core::Effect::Deliberative));
+    }
+
 }

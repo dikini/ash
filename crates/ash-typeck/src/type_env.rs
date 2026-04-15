@@ -422,6 +422,13 @@ pub struct TypeEnv {
     parent: Option<Box<TypeEnv>>,
     /// Registered capability providers (e.g., "io", "http", "db")
     providers: HashSet<String>,
+    /// Workflow effect context for the three-vertex boundary (SPEC-031 §4.8).
+    ///
+    /// `Some(effect)` means we are type-checking inside a workflow body at the
+    /// given effect level; closures (`Expr::FnDef`) are therefore typed as
+    /// `Type::Fun(params, ret, effect)` rather than the pure `Type::Fn(params, ret)`.
+    /// `None` means we are in a pure-fn or module-level context.
+    workflow_effect: Option<ash_core::Effect>,
 }
 
 impl TypeEnv {
@@ -472,7 +479,26 @@ impl TypeEnv {
             capability_symbols: HashSet::with_capacity(8),
             parent: None,
             providers: HashSet::new(),
+            workflow_effect: None,
         }
+    }
+
+    /// Return the workflow effect level currently in scope, if any.
+    ///
+    /// `Some(effect)` ⟹ we are inside a workflow body; closures get `Type::Fun`.
+    /// `None`         ⟹ pure-fn or module-level context; closures get `Type::Fn`.
+    #[must_use]
+    pub fn workflow_effect(&self) -> Option<ash_core::Effect> {
+        self.workflow_effect
+    }
+
+    /// Enter a workflow context at the given effect level.
+    ///
+    /// All `Expr::FnDef` nodes type-checked in this environment (or any child
+    /// derived from it via `extend()`) will be assigned `Type::Fun(…, effect)`
+    /// instead of the pure `Type::Fn(…)`.
+    pub fn set_workflow_effect(&mut self, effect: ash_core::Effect) {
+        self.workflow_effect = Some(effect);
     }
 
     /// Create a new type environment with builtin types registered
@@ -911,7 +937,8 @@ impl TypeEnv {
     /// Create a new child environment with this as parent
     ///
     /// Used for block scoping - variables bound in the child
-    /// are not visible in the parent
+    /// are not visible in the parent. The workflow effect context is inherited
+    /// so that closures nested inside a workflow body still get `Type::Fun`.
     #[must_use]
     pub fn extend(&self) -> Self {
         Self {
@@ -926,6 +953,7 @@ impl TypeEnv {
             capability_symbols: self.capability_symbols.clone(),
             parent: Some(Box::new(self.clone())),
             providers: self.providers.clone(),
+            workflow_effect: self.workflow_effect,
         }
     }
 

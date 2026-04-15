@@ -348,6 +348,30 @@ impl From<ValidationError> for ExecError {
 /// Result type for evaluation operations
 pub type EvalResult<T> = Result<T, EvalError>;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// TASK-558 §4 – BoundaryViolation exists as a named variant and displays
+    /// a message mentioning the three-vertex boundary.
+    #[test]
+    fn task558_boundary_violation_displays_correctly() {
+        let err = EvalError::BoundaryViolation {
+            value: ash_core::Value::Int(0),
+            context: "workflow closure escaped into pure context".to_string(),
+        };
+        let msg = err.to_string();
+        assert!(
+            msg.contains("three-vertex boundary"),
+            "BoundaryViolation message should mention the three-vertex boundary, got: {msg}"
+        );
+        assert!(
+            msg.contains("workflow closure escaped into pure context"),
+            "context string should appear in message, got: {msg}"
+        );
+    }
+}
+
 /// Result type for execution operations
 pub type ExecResult<T> = Result<T, ExecError>;
 

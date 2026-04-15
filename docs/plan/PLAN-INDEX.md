@@ -2370,19 +2370,19 @@ higher-order functions, and three-vertex enforcement via `Type::Fn`/`Type::Fun`.
 **Plan Reference:** [PLAN-028: First-Class Functions](PLAN-028-FIRST-CLASS-FUNCTIONS.md)
 **Spec Reference:** SPEC-031-FIRST-CLASS-FUNCTIONS.md
 **Priority:** High
-**Status:** Planned
+**Status:** ✅ Complete
 
 || Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------||
-|| TASK-551 | Core IR: FnDef, FnApply, EnvFrame, Closure value, interpreter eval | SPEC-031 §5,§10 | 6 | Planned ||
-|| TASK-552 | Lowering: built-in registry, FnApply, FnDef lowering | SPEC-031 §9 | 4 | Planned ||
-|| TASK-553 | Type checker: FnDef/FnApply typing with Type::Fn/Type::Fun | SPEC-031 §6 | 4 | Planned ||
-|| TASK-554 | Engine: inline imported callables into FnApply | SPEC-031 §9.3 | 3 | Planned ||
-|| TASK-555 | Delete pure_runtime.rs and all dispatch/inlining | SPEC-031 §11 | 3 | Planned ||
-|| TASK-556 | Parse fn expressions and named local functions | SPEC-031 §8 | 5 | Planned ||
-|| TASK-557 | Closure syntax \|params\| => body | SPEC-031 §8.3 | 2 | Planned ||
-|| TASK-558 | Three-vertex enforcement via Type::Fn vs Type::Fun | SPEC-031 §4.8,§6.3 | 4 | Planned ||
-|| TASK-559 | End-to-end validation and CHANGELOG | SPEC-031 §13 | 3 | Planned ||
+|| TASK-551 | Core IR: FnDef, FnApply, EnvFrame, Closure value, interpreter eval | SPEC-031 §5,§10 | 6 | ✅ Complete ||
+|| TASK-552 | Lowering: built-in registry, FnApply, FnDef lowering | SPEC-031 §9 | 4 | ✅ Complete ||
+|| TASK-553 | Type checker: FnDef/FnApply typing with Type::Fn/Type::Fun | SPEC-031 §6 | 4 | ✅ Complete ||
+|| TASK-554 | Engine: inline imported callables into FnApply | SPEC-031 §9.3 | 3 | ✅ Complete ||
+|| TASK-555 | Delete pure_runtime.rs and all dispatch/inlining | SPEC-031 §11 | 3 | ✅ Complete ||
+|| TASK-556 | Parse fn expressions and named local functions | SPEC-031 §8 | 5 | ✅ Complete ||
+|| TASK-557 | Closure syntax \|params\| => body | SPEC-031 §8.3 | 2 | ✅ Complete ||
+|| TASK-558 | Three-vertex enforcement via Type::Fn vs Type::Fun | SPEC-031 §4.8,§6.3 | 4 | ✅ Complete ||
+|| TASK-559 | End-to-end validation and CHANGELOG | SPEC-031 §13 | 3 | ✅ Complete ||
 
 **Deliverable:** `fn(params) { body }` produces `Value::Closure`, closures capture environment,
 recursion works, higher-order functions supported, `pure_runtime.rs` deleted, three-vertex

@@ -6,6 +6,65 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Phase 80: First-Class Functions and Closure Values (SPEC-031)** — Complete implementation
+  of first-class functions across all nine tasks (TASK-551 through TASK-559):
+
+  **Core IR and Runtime (TASK-551)**
+  - `Expr::FnDef { params, return_type, body }` — anonymous function expression in Core IR
+  - `Expr::FnApply { func, args }` — user-defined function application (distinct from `Expr::Call`)
+  - `Value::Closure { params, body, env }` — closure value capturing `Arc<EnvFrame>` environment
+  - `ash_core::env_frame::EnvFrame` — shared environment frame with parent chain for O(1) capture
+  - `BindingSlot::Late` — mutex-protected late-binding slot enabling recursive closures
+  - `eval_expr` updated: `FnDef` captures current context as `Arc<EnvFrame>`; `FnApply` dispatches to `Value::Closure`
+  - `Value::Closure` is `Send + Sync`; serialization intentionally returns an error
+
+  **Lowering (TASK-552)**
+  - Built-in function registry distinguishing built-ins (`Expr::Call`) from user closures (`Expr::FnApply`)
+  - `lower_fn_def` lowering surface `Expr::FnDef` → Core `CoreExpr::FnDef`
+  - Surface `Expr::FnApply` lowered to Core `CoreExpr::FnApply`
+
+  **Type Checker (TASK-553)**
+  - `check_expr` handles `Expr::FnDef` → `Type::Fn(params, ret)`
+  - `check_expr` handles `Expr::FnApply` → instantiates function type via unifier
+  - `Type::Fn(params, ret)` and `Type::Fun(params, ret, effect)` unification rules
+  - `Type::Fn` / `Type::Fun` cross-unification explicitly rejected (SPEC-031 §4.8)
+
+  **Engine / Imported Callables (TASK-554)**
+  - Imported module-level callables inlined as `Value::Closure` bindings in interpreter context
+
+  **pure_runtime.rs Deletion (TASK-555)**
+  - Deleted 476-line `pure_runtime.rs` duplicate interpreter path
+  - All previously `pure_runtime`-handled programs now run through single `eval_expr` path
+  - Imported callable wiring migrated to closure bindings in `Context`
+
+  **Parser: fn Expressions and Named Local Functions (TASK-556)**
+  - `fn(params) [-> Type] { body }` anonymous function expression syntax
+  - `fn name(params) [-> Type] { body }` named local function desugars to `let name = fn(...) { ... }`
+  - `lower_fn_def` type mismatch fix (`Box<str>` vs `String` in surface AST)
+
+  **Parser: Closure Syntax (TASK-557)**
+  - `|params| => expr` sugar for `fn(params) { expr }` — no new AST node, desugars immediately
+  - Supports typed params (`|x: Int, y| => x + y`) and empty params (`|| => expr`)
+  - `parse_closure_expr` tried first in `expr()` entry point
+
+  **Three-Vertex Boundary Enforcement (TASK-558)**
+  - `TypeEnv::workflow_effect: Option<Effect>` — workflow context flag propagated to child scopes
+  - `set_workflow_effect(effect)` / `workflow_effect()` API on `TypeEnv`
+  - `Expr::FnDef` in pure context → `Type::Fn`; in workflow context → `Type::Fun(…, effect)`
+  - `EvalError::BoundaryViolation { value, context }` — runtime variant for escaped closures
+  - Fn/Fun unification rejection already enforced in `unify()` (pre-existing, now tested)
+
+  **End-to-End Validation (TASK-559)**
+  - SPEC-031 §13.1 conformance integration tests in `ash-interp/src/eval.rs`:
+    `task559_fndef_produces_value_closure`, `task559_fnapply_calls_closure`,
+    `task559_closure_captures_enclosing_scope`, `task559_higher_order_function_apply`,
+    `task559_recursive_closure_via_late_binding`, `task559_closure_is_send_sync`,
+    `task559_closure_serialization_returns_error`, `task559_fnapply_non_callable_returns_error`,
+    `task559_fnapply_wrong_arity_returns_error`
+  - `cargo test --all`: 0 failures across all crates
+
 ### Fixed
 
 - Resolved all build errors and clippy warnings introduced in commit 09143dd (TASK-556 parser work) and pre-existing in ash-engine. Fixes include: unused import in `llm_e2e_usability_tests.rs`, needless borrow in `ash-interp/src/eval.rs`, `#[ignore]` without reason in `execute.rs`, clone-on-copy and single-match-else in `module_loader.rs`, collapsible-if and collapsible-match in `chat.rs`, casting and doc-markdown issues in `embeddings.rs`, too-many-lines in `provider.rs`, needless-pass-by-value/map-or/box-default/manual-string-new/doc-markdown in `stream_adapter.rs` and `stream_storage.rs`, PartialEq-without-Eq and doc-markdown in `tool_dispatch.rs`, used-underscore-binding/collapsible-if/option-if-let-else/doc-markdown in `lib.rs`, and test-code cleanups in `llm_integration_tests.rs`, `llm_engine_integration.rs`, and `ast.rs`.

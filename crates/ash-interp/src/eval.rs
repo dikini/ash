@@ -1603,4 +1603,258 @@ mod tests {
         let display = format!("{}", instance);
         assert!(display.contains("control: None"));
     }
+
+    // ============================================================
+    // TASK-559: SPEC-031 End-to-End Conformance Tests
+    // ============================================================
+
+    /// SPEC-031 §5.1 – FnDef evaluates to Value::Closure capturing the current env.
+    #[test]
+    fn task559_fndef_produces_value_closure() {
+        let mut ctx = Context::new();
+        ctx.set("offset".to_string(), Value::Int(10));
+
+        let expr = Expr::FnDef {
+            params: vec![("x".to_string(), None)],
+            return_type: None,
+            body: Box::new(Expr::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(Expr::Variable("x".to_string())),
+                right: Box::new(Expr::Variable("offset".to_string())),
+            }),
+        };
+
+        let result = eval_expr(&expr, &ctx).unwrap();
+        match &result {
+            Value::Closure { params, .. } => assert_eq!(params.len(), 1),
+            other => panic!("expected Value::Closure, got {other:?}"),
+        }
+    }
+
+    /// SPEC-031 §5.4 – FnApply calls a closure and binds params correctly.
+    #[test]
+    fn task559_fnapply_calls_closure() {
+        let ctx = Context::new();
+
+        // (fn(x) { x + 1 })(5)  =>  6
+        let expr = Expr::FnApply {
+            func: Box::new(Expr::FnDef {
+                params: vec![("x".to_string(), None)],
+                return_type: None,
+                body: Box::new(Expr::Binary {
+                    op: BinaryOp::Add,
+                    left: Box::new(Expr::Variable("x".to_string())),
+                    right: Box::new(Expr::Literal(Value::Int(1))),
+                }),
+            }),
+            args: vec![Expr::Literal(Value::Int(5))],
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(6));
+    }
+
+    /// SPEC-031 §5.3 – Closure captures the enclosing scope (make_adder pattern).
+    #[test]
+    fn task559_closure_captures_enclosing_scope() {
+        // Build make_adder closure: fn(n) { fn(x) { x + n } }
+        let mut ctx = Context::new();
+        let make_adder = Expr::FnDef {
+            params: vec![("n".to_string(), None)],
+            return_type: None,
+            body: Box::new(Expr::FnDef {
+                params: vec![("x".to_string(), None)],
+                return_type: None,
+                body: Box::new(Expr::Binary {
+                    op: BinaryOp::Add,
+                    left: Box::new(Expr::Variable("x".to_string())),
+                    right: Box::new(Expr::Variable("n".to_string())),
+                }),
+            }),
+        };
+
+        // adder5 = make_adder(5)
+        let adder_closure = eval_expr(&Expr::FnApply {
+            func: Box::new(make_adder),
+            args: vec![Expr::Literal(Value::Int(5))],
+        }, &ctx).unwrap();
+
+        ctx.set("add5".to_string(), adder_closure);
+
+        // add5(3) => 8
+        let result = eval_expr(&Expr::FnApply {
+            func: Box::new(Expr::Variable("add5".to_string())),
+            args: vec![Expr::Literal(Value::Int(3))],
+        }, &ctx).unwrap();
+
+        assert_eq!(result, Value::Int(8));
+    }
+
+    /// SPEC-031 §5.2 – Higher-order function: apply(f, x) = f(x).
+    #[test]
+    fn task559_higher_order_function_apply() {
+        let ctx = Context::new();
+
+        // apply = fn(f, x) { f(x) }  -- wait, Core FnApply needs Expr::FnApply
+        // Use: (fn(f) { f(10) })(fn(x) { x * 2 }) => 20
+        let double_fn = Expr::FnDef {
+            params: vec![("x".to_string(), None)],
+            return_type: None,
+            body: Box::new(Expr::Binary {
+                op: BinaryOp::Mul,
+                left: Box::new(Expr::Variable("x".to_string())),
+                right: Box::new(Expr::Literal(Value::Int(2))),
+            }),
+        };
+
+        let apply_fn = Expr::FnDef {
+            params: vec![("f".to_string(), None)],
+            return_type: None,
+            body: Box::new(Expr::FnApply {
+                func: Box::new(Expr::Variable("f".to_string())),
+                args: vec![Expr::Literal(Value::Int(10))],
+            }),
+        };
+
+        let result = eval_expr(&Expr::FnApply {
+            func: Box::new(apply_fn),
+            args: vec![double_fn],
+        }, &ctx).unwrap();
+
+        assert_eq!(result, Value::Int(20));
+    }
+
+    /// SPEC-031 §5.5 – Recursion via BindingSlot::Late: factorial(5) = 120.
+    #[test]
+    fn task559_recursive_closure_via_late_binding() {
+        use ash_core::env_frame::EnvFrame;
+        use std::sync::Arc;
+
+        // 1. Create env frame with a late slot for `fact`
+        let mut frame = EnvFrame::new();
+        let late_slot = frame.insert_late("fact".to_string());
+        let env = Arc::new(frame);
+
+        // 2. Build the factorial body:
+        //    match n { 0 => 1, _ => n * fact(n-1) }
+        let body = Expr::Match {
+            scrutinee: Box::new(Expr::Variable("n".to_string())),
+            arms: vec![
+                MatchArm {
+                    pattern: Pattern::Literal(Value::Int(0)),
+                    body: Expr::Literal(Value::Int(1)),
+                },
+                MatchArm {
+                    pattern: Pattern::Wildcard,
+                    body: Expr::Binary {
+                        op: BinaryOp::Mul,
+                        left: Box::new(Expr::Variable("n".to_string())),
+                        right: Box::new(Expr::FnApply {
+                            func: Box::new(Expr::Variable("fact".to_string())),
+                            args: vec![Expr::Binary {
+                                op: BinaryOp::Sub,
+                                left: Box::new(Expr::Variable("n".to_string())),
+                                right: Box::new(Expr::Literal(Value::Int(1))),
+                            }],
+                        }),
+                    },
+                },
+            ],
+        };
+
+        // 3. Construct the closure manually with the env that has the late slot
+        let fact_closure = Value::Closure {
+            params: vec![("n".to_string(), None)],
+            body: Box::new(body),
+            env: env.clone(),
+        };
+
+        // 4. Fill the late slot so recursive calls resolve
+        late_slot.set_late(fact_closure.clone());
+
+        // 5. Call fact(5) from a context that has fact bound
+        let mut ctx = Context::new();
+        ctx.set("fact".to_string(), fact_closure);
+
+        let result = eval_expr(
+            &Expr::FnApply {
+                func: Box::new(Expr::Variable("fact".to_string())),
+                args: vec![Expr::Literal(Value::Int(5))],
+            },
+            &ctx,
+        ).unwrap();
+
+        assert_eq!(result, Value::Int(120), "fact(5) must equal 120");
+    }
+
+    /// SPEC-031 §10.2 – Value::Closure is Send + Sync (compile-time assertion).
+    ///
+    /// This test doesn't run code — the fact it compiles proves the constraint.
+    #[test]
+    fn task559_closure_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<Value>();
+    }
+
+    /// SPEC-031 §10.3 – Serializing a Value::Closure returns an error.
+    #[test]
+    fn task559_closure_serialization_returns_error() {
+        use ash_core::env_frame::EnvFrame;
+        use std::sync::Arc;
+
+        let closure = Value::Closure {
+            params: vec![("x".to_string(), None)],
+            body: Box::new(Expr::Variable("x".to_string())),
+            env: Arc::new(EnvFrame::new()),
+        };
+
+        let result = serde_json::to_string(&closure);
+        assert!(
+            result.is_err(),
+            "serializing Value::Closure must return an error, got Ok"
+        );
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("cannot be serialized"),
+            "error message should explain why: {err_msg}"
+        );
+    }
+
+    /// SPEC-031 §5.6 – Calling a non-closure value via FnApply returns NotCallable.
+    #[test]
+    fn task559_fnapply_non_callable_returns_error() {
+        let mut ctx = Context::new();
+        ctx.set("not_a_fn".to_string(), Value::Int(42));
+
+        let expr = Expr::FnApply {
+            func: Box::new(Expr::Variable("not_a_fn".to_string())),
+            args: vec![Expr::Literal(Value::Int(1))],
+        };
+
+        let err = eval_expr(&expr, &ctx).unwrap_err();
+        assert!(
+            matches!(err, EvalError::NotCallable { .. }),
+            "expected NotCallable, got {err:?}"
+        );
+    }
+
+    /// SPEC-031 §5.7 – FnApply with wrong arity returns WrongArity error.
+    #[test]
+    fn task559_fnapply_wrong_arity_returns_error() {
+        let ctx = Context::new();
+
+        let expr = Expr::FnApply {
+            func: Box::new(Expr::FnDef {
+                params: vec![("x".to_string(), None), ("y".to_string(), None)],
+                return_type: None,
+                body: Box::new(Expr::Variable("x".to_string())),
+            }),
+            args: vec![Expr::Literal(Value::Int(1))], // only 1 arg, need 2
+        };
+
+        let err = eval_expr(&expr, &ctx).unwrap_err();
+        assert!(
+            matches!(err, EvalError::WrongArity { expected: 2, actual: 1 }),
+            "expected WrongArity{{2,1}}, got {err:?}"
+        );
+    }
 }

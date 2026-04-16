@@ -9,6 +9,7 @@ description = "Type checker for the Ash workflow language"
 [dependencies]
 ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }
+ash-diagnostic = { path = "../ash-diagnostic" }
 thiserror.workspace = true
 im = "15.1"  # Immutable data structures for substitutions
 z3 = "0.12"

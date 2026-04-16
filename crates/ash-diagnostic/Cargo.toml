@@ -1,0 +1,11 @@
+[package]
+name = "ash-diagnostic"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "LSP diagnostic trait and types for the Ash compiler"
+
+[dependencies]
+thiserror.workspace = true

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/ash-core",
+    "crates/ash-diagnostic",
     "crates/ash-parser",
     "crates/ash-typeck",
     "crates/ash-interp",

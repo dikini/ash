@@ -8,6 +8,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- LSP diagnostic crate `ash-diagnostic` with `AshLspError` trait, `Severity`,
+  `DiagnosticCode`, and `ash_error_to_diagnostic` conversion (TASK-573).
+  Implemented `AshLspError` for `ParseError` (E001), `ConstructorError` (E100),
+  `TypeEnvError` (E101), `TypeError` (E102), `NameError` (E200),
+  `ResolutionError` (E201), and `PurityError` (E300).
+
 - Binding spans for variable references (TASK-570): `Expr::Variable`, `Pattern::Variable`,
   and `PolicyExpr::Var` now carry `{ name, span }` struct variants across surface and core
   ASTs. `ast::Span` derives `Hash` and `Eq` for downstream Salsa usage. All ~400+

@@ -100,6 +100,26 @@ impl fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
+impl ash_diagnostic::AshLspError for ParseError {
+    fn span(&self) -> Option<ash_diagnostic::Span> {
+        Some(ash_diagnostic::Span::new(
+            self.span.start,
+            self.span.end,
+            self.span.line,
+            self.span.column,
+        ))
+    }
+    fn severity(&self) -> ash_diagnostic::Severity {
+        ash_diagnostic::Severity::Error
+    }
+    fn code(&self) -> Option<ash_diagnostic::DiagnosticCode> {
+        Some(ash_diagnostic::DiagnosticCode("E001".into()))
+    }
+    fn message(&self) -> String {
+        self.message.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +222,25 @@ mod tests {
 
         // Test description (via Display)
         assert!(format!("{}", error).contains("test error"));
+    }
+
+    #[test]
+    fn test_parse_error_ash_lsp_error() {
+        use ash_diagnostic::AshLspError;
+
+        let span = Span::new(10, 20, 3, 4);
+        let error = ParseError::new(span, "unexpected token");
+
+        let diag_span = error.span().unwrap();
+        assert_eq!(diag_span.start, span.start);
+        assert_eq!(diag_span.end, span.end);
+        assert_eq!(diag_span.line, span.line);
+        assert_eq!(diag_span.column, span.column);
+        assert_eq!(error.severity(), ash_diagnostic::Severity::Error);
+        assert_eq!(
+            error.code(),
+            Some(ash_diagnostic::DiagnosticCode("E001".into()))
+        );
+        assert_eq!(error.message(), "unexpected token");
     }
 }

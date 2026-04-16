@@ -401,6 +401,9 @@ fn format_type(ty: &Type) -> String {
                 .join(", ");
             format!("Fn({params}) -> {}", format_type(ret))
         }
+        Type::Associated { base, name } => {
+            format!("{}::{name}", format_type(base))
+        }
     }
 }
 

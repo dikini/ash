@@ -222,6 +222,37 @@ pub struct ProxyDef {
     pub span: Span,
 }
 
+/// An associated type declaration inside an interface.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssociatedTypeDecl {
+    /// Associated type name
+    pub name: Name,
+    /// Source span
+    pub span: Span,
+}
+
+/// An associated type binding inside an impl block.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssociatedTypeBinding {
+    /// Associated type name
+    pub name: Name,
+    /// Bound type expression
+    pub ty: Type,
+    /// Source span
+    pub span: Span,
+}
+
+/// A where-bound clause `T: Interface`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhereBound {
+    /// Type parameter name
+    pub param: Name,
+    /// Interface bound name
+    pub bound: Name,
+    /// Source span
+    pub span: Span,
+}
+
 /// An interface definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceDef {
@@ -231,6 +262,8 @@ pub struct InterfaceDef {
     pub name: Name,
     /// Interface type parameters
     pub type_params: Vec<Name>,
+    /// Associated type declarations
+    pub associated_types: Vec<AssociatedTypeDecl>,
     /// Declared method signatures
     pub methods: Vec<InterfaceMethodSig>,
     /// Source span
@@ -257,8 +290,14 @@ pub struct ImplDef {
     pub visibility: Visibility,
     /// Implemented interface name
     pub interface: Name,
+    /// Generic type parameters (e.g., `<T>`)
+    pub type_params: Vec<Name>,
     /// Concrete type arguments for the interface head
     pub type_args: Vec<Type>,
+    /// Where bounds
+    pub where_bounds: Vec<WhereBound>,
+    /// Associated type bindings
+    pub associated_type_bindings: Vec<AssociatedTypeBinding>,
     /// Implemented methods
     pub methods: Vec<ImplMethodDef>,
     /// Source span
@@ -1217,6 +1256,8 @@ pub enum Type {
     Capability(Name),
     /// Generic type constructor: `List<Int>`, `Option<String>`
     Constructor { name: Name, args: Vec<Type> },
+    /// Associated type projection: `S::Ok`, `Map<K,V>::Entry`
+    Associated { base: Box<Type>, name: Name },
     /// Function type: Fn(T, U) -> V
     Fn(Vec<Type>, Box<Type>),
 }

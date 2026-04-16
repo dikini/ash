@@ -109,6 +109,9 @@ pub fn type_expr_to_type(
                 .collect();
             Ok(Type::Record(field_types?))
         }
+        TypeExpr::Associated { .. } => {
+            todo!("associated types not yet supported in type_expr_to_type")
+        }
     }
 }
 
@@ -249,6 +252,9 @@ fn surface_type_to_type(
                 .collect::<Result<Vec<_>, _>>()?;
             let ret = surface_type_to_type(ret, param_mapping, type_env)?;
             Ok(Type::Fn(params, Box::new(ret)))
+        }
+        SurfaceType::Associated { .. } => {
+            todo!("associated types not yet supported in surface_type_to_type")
         }
     }
 }

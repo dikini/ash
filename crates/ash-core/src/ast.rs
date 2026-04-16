@@ -732,6 +732,28 @@ pub enum TypeExpr {
     Tuple(Vec<TypeExpr>),
     /// Record type (e.g., { x: Int, y: String })
     Record(Vec<(Name, TypeExpr)>),
+    /// Associated type projection (e.g., `S::Ok`, `Map<K,V>::Entry`)
+    Associated { base: Box<TypeExpr>, name: Name },
+}
+
+/// Associated type declaration in an interface.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AssociatedType {
+    pub name: Name,
+}
+
+/// Associated type binding in an impl block.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AssociatedTypeBinding {
+    pub name: Name,
+    pub ty: TypeExpr,
+}
+
+/// Canonical core where bound `T: Interface`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WhereBound {
+    pub param: Name,
+    pub bound: Name,
 }
 
 /// Interface definition in source/core metadata.
@@ -739,6 +761,7 @@ pub enum TypeExpr {
 pub struct InterfaceDef {
     pub name: Name,
     pub type_params: Vec<TypeVar>,
+    pub associated_types: Vec<AssociatedType>,
     pub methods: Vec<InterfaceMethodSig>,
     pub visibility: Visibility,
 }
@@ -756,7 +779,10 @@ pub struct InterfaceMethodSig {
 pub struct ImplDef {
     pub visibility: Visibility,
     pub interface: Name,
+    pub type_params: Vec<TypeVar>,
     pub type_args: Vec<TypeExpr>,
+    pub where_bounds: Vec<WhereBound>,
+    pub associated_type_bindings: Vec<AssociatedTypeBinding>,
     pub methods: Vec<ImplMethodDef>,
 }
 

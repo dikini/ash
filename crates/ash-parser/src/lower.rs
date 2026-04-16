@@ -1102,7 +1102,125 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
             name: "Fn".to_string(),
             args: vec![],
         },
+        Type::Associated { base, name } => TypeExpr::Constructor {
+            name: name.to_string(),
+            args: vec![lower_type_to_type_expr(base)],
+        },
     }
+}
+
+/// Convert a surface Type to a core AST TypeExpr.
+pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
+    use ash_core::ast::TypeExpr;
+    match ty {
+        Type::Name(name) => TypeExpr::Named(name.to_string()),
+        Type::List(inner) => TypeExpr::Constructor {
+            name: "List".to_string(),
+            args: vec![lower_surface_type(inner)],
+        },
+        Type::Record(fields) => TypeExpr::Record(
+            fields
+                .iter()
+                .map(|(n, t)| (n.to_string(), lower_surface_type(t)))
+                .collect(),
+        ),
+        Type::Capability(name) => TypeExpr::Constructor {
+            name: "Capability".to_string(),
+            args: vec![TypeExpr::Named(name.to_string())],
+        },
+        Type::Constructor { name, args } => TypeExpr::Constructor {
+            name: name.to_string(),
+            args: args.iter().map(lower_surface_type).collect(),
+        },
+        Type::Associated { base, name } => TypeExpr::Associated {
+            base: Box::new(lower_surface_type(base)),
+            name: name.to_string(),
+        },
+        Type::Fn(params, ret) => {
+            let mut args: Vec<_> = params.iter().map(lower_surface_type).collect();
+            args.push(lower_surface_type(ret));
+            TypeExpr::Constructor {
+                name: "Fn".to_string(),
+                args,
+            }
+        }
+    }
+}
+
+/// Lower a surface interface definition to core AST.
+pub fn lower_interface_def(
+    iface: &crate::surface::InterfaceDef,
+) -> Result<ash_core::ast::InterfaceDef, LoweringError> {
+    use ash_core::ast::{AssociatedType, InterfaceDef, InterfaceMethodSig, Visibility};
+    Ok(InterfaceDef {
+        name: iface.name.to_string(),
+        type_params: iface.type_params.iter().map(|n| n.to_string()).collect(),
+        associated_types: iface
+            .associated_types
+            .iter()
+            .map(|d| AssociatedType {
+                name: d.name.to_string(),
+            })
+            .collect(),
+        methods: iface
+            .methods
+            .iter()
+            .map(|m| InterfaceMethodSig {
+                name: m.name.to_string(),
+                params: m.params.iter().map(lower_surface_type).collect(),
+                return_type: lower_surface_type(&m.return_type),
+            })
+            .collect(),
+        visibility: match iface.visibility {
+            crate::surface::Visibility::Public => Visibility::Public,
+            crate::surface::Visibility::Crate => Visibility::Crate,
+            _ => Visibility::Private,
+        },
+    })
+}
+
+/// Lower a surface impl definition to core AST.
+pub fn lower_impl_def(
+    impl_def: &crate::surface::ImplDef,
+) -> Result<ash_core::ast::ImplDef, LoweringError> {
+    use ash_core::ast::{AssociatedTypeBinding, ImplDef, Visibility, WhereBound};
+    Ok(ImplDef {
+        visibility: match impl_def.visibility {
+            crate::surface::Visibility::Public => Visibility::Public,
+            crate::surface::Visibility::Crate => Visibility::Crate,
+            _ => Visibility::Private,
+        },
+        interface: impl_def.interface.to_string(),
+        type_params: impl_def.type_params.iter().map(|n| n.to_string()).collect(),
+        type_args: impl_def.type_args.iter().map(lower_surface_type).collect(),
+        where_bounds: impl_def
+            .where_bounds
+            .iter()
+            .map(|b| WhereBound {
+                param: b.param.to_string(),
+                bound: b.bound.to_string(),
+            })
+            .collect(),
+        associated_type_bindings: impl_def
+            .associated_type_bindings
+            .iter()
+            .map(|b| AssociatedTypeBinding {
+                name: b.name.to_string(),
+                ty: lower_surface_type(&b.ty),
+            })
+            .collect(),
+        methods: impl_def
+            .methods
+            .iter()
+            .map(|m| {
+                Ok(ash_core::ast::ImplMethodDef {
+                    name: m.name.to_string(),
+                    params: m.params.iter().map(|p| p.to_string()).collect(),
+                    body: lower_expr(&m.body)?,
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    })
 }
 
 /// Lower yield arms into a continuation workflow.

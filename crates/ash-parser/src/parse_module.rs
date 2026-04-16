@@ -14,9 +14,10 @@ use crate::parse_expr::expr;
 use crate::parse_visibility::parse_visibility;
 use crate::parse_workflow::parse_capabilities_clause;
 use crate::surface::{
-    BlockStmt, CapabilityDef, CapabilityRef, Constraint, Contract, Definition, EffectType, Expr,
-    FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param,
-    Pattern, Predicate, ProxyDef, RoleDef, Type, Visibility, Workflow, YieldArm,
+    AssociatedTypeBinding, AssociatedTypeDecl, BlockStmt, CapabilityDef, CapabilityRef, Constraint,
+    Contract, Definition, EffectType, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
+    InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate, ProxyDef, RoleDef, Type,
+    Visibility, WhereBound, Workflow, YieldArm,
 };
 
 /// Parse a module declaration.
@@ -245,9 +246,14 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
+    let mut associated_types = Vec::new();
     let mut methods = Vec::new();
     while !input.input.starts_with("}") {
-        methods.push(parse_interface_method_signature(input)?);
+        if starts_with_keyword(input, "type") {
+            associated_types.push(parse_associated_type_decl(input)?);
+        } else {
+            methods.push(parse_interface_method_signature(input)?);
+        }
         skip_whitespace_and_comments(input);
         consume_optional_comma(input);
         skip_whitespace_and_comments(input);
@@ -259,9 +265,23 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
         visibility,
         name: name.into(),
         type_params,
+        associated_types,
         methods,
         span: crate::input::span_from(&start_pos, &input.state),
     }))
+}
+
+fn parse_associated_type_decl(input: &mut ParseInput) -> ModalResult<AssociatedTypeDecl> {
+    let start = input.state;
+    let _ = keyword("type").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+    Ok(AssociatedTypeDecl {
+        name: name.into(),
+        span: crate::input::span_from(&start, &input.state),
+    })
 }
 
 fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<InterfaceMethodSig> {
@@ -302,16 +322,29 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     skip_whitespace(input);
     let _ = keyword("impl").parse_next(input)?;
     skip_whitespace(input);
+    let type_params = parse_optional_type_parameter_names(input)?;
+    skip_whitespace_and_comments(input);
     let interface = identifier(input)?;
     skip_whitespace_and_comments(input);
     let type_args = parse_optional_type_arguments(input)?;
     skip_whitespace_and_comments(input);
+    let where_bounds = if starts_with_keyword(input, "where") {
+        parse_where_bounds(input)?
+    } else {
+        Vec::new()
+    };
+    skip_whitespace_and_comments(input);
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
+    let mut associated_type_bindings = Vec::new();
     let mut methods = Vec::new();
     while !input.input.starts_with("}") {
-        methods.push(parse_impl_method_definition(input)?);
+        if starts_with_keyword(input, "type") {
+            associated_type_bindings.push(parse_associated_type_binding(input)?);
+        } else {
+            methods.push(parse_impl_method_definition(input)?);
+        }
         skip_whitespace_and_comments(input);
         consume_optional_comma(input);
         skip_whitespace_and_comments(input);
@@ -322,10 +355,57 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     Ok(Definition::Impl(ImplDef {
         visibility,
         interface: interface.into(),
+        type_params,
         type_args,
+        where_bounds,
+        associated_type_bindings,
         methods,
         span: crate::input::span_from(&start_pos, &input.state),
     }))
+}
+
+fn parse_where_bounds(input: &mut ParseInput) -> ModalResult<Vec<WhereBound>> {
+    let _ = keyword("where").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut bounds = Vec::new();
+    loop {
+        let start = input.state;
+        let param = identifier(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let bound = identifier(input)?;
+        bounds.push(WhereBound {
+            param: param.into(),
+            bound: bound.into(),
+            span: crate::input::span_from(&start, &input.state),
+        });
+        skip_whitespace_and_comments(input);
+        if consume_comma_separator(input) {
+            continue;
+        }
+        break;
+    }
+    Ok(bounds)
+}
+
+fn parse_associated_type_binding(input: &mut ParseInput) -> ModalResult<AssociatedTypeBinding> {
+    let start = input.state;
+    let _ = keyword("type").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ty = parse_surface_type(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+    Ok(AssociatedTypeBinding {
+        name: name.into(),
+        ty,
+        span: crate::input::span_from(&start, &input.state),
+    })
 }
 
 fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMethodDef> {
@@ -625,15 +705,27 @@ fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
 
-    if input.input.starts_with("<") {
+    let mut base = if input.input.starts_with("<") {
         let args = parse_required_type_arguments(input)?;
-        return Ok(Type::Constructor {
+        Type::Constructor {
             name: name.into(),
             args,
-        });
+        }
+    } else {
+        Type::Name(name.into())
+    };
+
+    while input.input.starts_with("::") {
+        let _ = literal_str("::").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let assoc_name = identifier(input)?;
+        base = Type::Associated {
+            base: Box::new(base),
+            name: assoc_name.into(),
+        };
     }
 
-    Ok(Type::Name(name.into()))
+    Ok(base)
 }
 
 fn parse_obligations_clause(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {

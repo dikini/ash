@@ -69,6 +69,10 @@ impl InstantiateSubst {
                     .map(|(field_name, ty)| (field_name.clone(), self.apply_expr(ty)))
                     .collect(),
             ),
+            TypeExpr::Associated { base, name } => TypeExpr::Associated {
+                base: Box::new(self.apply_expr(base)),
+                name: name.clone(),
+            },
         }
     }
 

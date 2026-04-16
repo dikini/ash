@@ -150,6 +150,9 @@ fn workflow_surface_type_to_type(
             let ret_type = workflow_surface_type_to_type(env, ret, type_params)?;
             Ok(Type::Fn(param_types?, Box::new(ret_type)))
         }
+        ash_parser::surface::Type::Associated { .. } => {
+            todo!("associated types not yet supported in workflow_surface_type_to_type")
+        }
     }
 }
 

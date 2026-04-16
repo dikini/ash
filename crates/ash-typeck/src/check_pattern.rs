@@ -328,6 +328,9 @@ fn simple_type_expr_to_type(expr: &ash_core::ast::TypeExpr) -> Type {
                 .collect();
             Type::Record(field_types)
         }
+        ash_core::ast::TypeExpr::Associated { .. } => {
+            todo!("associated types not yet supported in pattern checking")
+        }
     }
 }
 

@@ -866,6 +866,9 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
             let ret = surface_type_to_typeck(ret)?;
             Ok(ash_typeck::Type::Fn(params, Box::new(ret)))
         }
+        SurfaceType::Associated { .. } => {
+            Err("associated types not yet supported in engine type conversion".to_string())
+        }
     }
 }
 impl Default for Engine {

@@ -14,6 +14,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Parser/AST support for generic impls, `where` bounds, and associated types (TASK-564):
+  - `surface.rs`: `ImplDef` now has `type_params`, `where_bounds`, `associated_type_bindings`
+  - `surface.rs`: `InterfaceDef` now has `associated_types`
+  - `surface.rs`: `Type::Associated { base, name }` for projections like `S::Ok`
+  - `ast.rs`: corresponding core IR fields and `TypeExpr::Associated`
+  - Parser: `impl<T> I<T> where T: Bound { type X = Y; ... }` and `interface I { type X; ... }`
+  - Lowering: `lower_impl_def`, `lower_interface_def`, `lower_surface_type`
+
 - **Phase 82: Multi-Parameter Interface Methods (SPEC-032)** — Complete implementation across
   parser, AST, type checker, and interpreter (TASK-561 and TASK-562):
 

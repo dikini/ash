@@ -14,6 +14,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Engine: post-typecheck monomorphization pass for generic impls (TASK-566):
+  - Added `module: Option<Name>` to core `Expr::Call` to preserve interface method calls
+  - Added `crates/ash-engine/src/monomorphize.rs` with `monomorphize_workflow`
+  - `ImplMethodInfo` now stores lowered core AST method bodies
+  - Added `TypeEnv::select_impl_scheme` for public scheme selection
+  - Interface method calls in core AST are replaced with concrete impl bodies
+  - Fixed `List<T>` lowering inconsistency in `surface_type_to_type`
+
 - Type checker: generic impl schemes, overlap checking, and recursive `where` bound
   resolution (TASK-565):
   - Replaced `HashMap<(String, Type), ImplInfo>` with `Vec<ImplScheme>`

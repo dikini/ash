@@ -115,7 +115,16 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             eval_binary_op(*op, left_val, right_val)
         }
 
-        Expr::Call { func, arguments } => {
+        Expr::Call {
+            func,
+            module,
+            arguments,
+        } => {
+            if module.is_some() {
+                return Err(EvalError::UnknownFunction(format!(
+                    "un-monomorphized interface call {module:?}::{func}"
+                )));
+            }
             let args: Vec<Value> = arguments
                 .iter()
                 .map(|arg| eval_expr(arg, ctx))
@@ -906,6 +915,7 @@ mod tests {
         let ctx = Context::new();
         let expr = Expr::Call {
             func: "len".to_string(),
+            module: None,
             arguments: vec![Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
@@ -919,6 +929,7 @@ mod tests {
         let ctx = Context::new();
         let expr = Expr::Call {
             func: "append".to_string(),
+            module: None,
             arguments: vec![
                 Expr::Literal(Value::List(Box::new(vec![Value::Int(1)]))),
                 Expr::Literal(Value::Int(2)),
@@ -935,6 +946,7 @@ mod tests {
         let ctx = Context::new();
         let expr = Expr::Call {
             func: "concat".to_string(),
+            module: None,
             arguments: vec![
                 Expr::Literal(Value::List(Box::new(vec![Value::Int(1)]))),
                 Expr::Literal(Value::List(Box::new(vec![Value::Int(2)]))),
@@ -951,6 +963,7 @@ mod tests {
         let ctx = Context::new();
         let expr = Expr::Call {
             func: "unknown".to_string(),
+            module: None,
             arguments: vec![],
         };
         assert!(eval_expr(&expr, &ctx).is_err());
@@ -961,6 +974,7 @@ mod tests {
         let ctx = Context::new();
         let expr = Expr::Call {
             func: "len".to_string(),
+            module: None,
             arguments: vec![],
         };
         assert!(eval_expr(&expr, &ctx).is_err());
@@ -1004,12 +1018,14 @@ mod tests {
 
         let expr = Expr::Call {
             func: "is_int".to_string(),
+            module: None,
             arguments: vec![Expr::Literal(Value::Int(42))],
         };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(true));
 
         let expr = Expr::Call {
             func: "is_string".to_string(),
+            module: None,
             arguments: vec![Expr::Literal(Value::Int(42))],
         };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(false));

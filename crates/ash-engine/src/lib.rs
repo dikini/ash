@@ -19,6 +19,7 @@ pub mod error;
 pub mod execute;
 pub mod harness;
 pub mod module_loader;
+pub mod monomorphize;
 pub mod parse;
 pub mod providers;
 

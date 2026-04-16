@@ -6,9 +6,9 @@
 
 use crate::error::TypeEnvError;
 use crate::solver::TypeError;
-use crate::types::{unify, Substitution, Type, TypeVar};
+use crate::types::{Substitution, Type, TypeVar, unify};
 use crate::{Kind, QualifiedName};
-use ash_core::adt::{tuple_field_name, VariantPayloadShape};
+use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{ImplDef, InterfaceDef, InterfaceMethodSig, Type as SurfaceType};
@@ -182,9 +182,11 @@ pub struct WhereBound {
 /// Internal representation of an impl method signature.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImplMethodInfo {
+    pub name: String,
     pub type_params: Vec<TypeVar>,
     pub params: Vec<Type>,
     pub return_type: Type,
+    pub body: ash_core::ast::Expr,
 }
 
 /// Internal representation of a generic impl scheme.
@@ -252,16 +254,21 @@ fn surface_type_to_type(
             effect: ash_core::Effect::Operational,
         }),
         SurfaceType::Constructor { name, args } => {
-            let (qualified, _) = type_env.resolve_type(name.as_ref())?;
-            let args = args
-                .iter()
-                .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(Type::Constructor {
-                name: qualified,
-                args,
-                kind: Kind::Type,
-            })
+            if name.as_ref() == "List" && args.len() == 1 {
+                surface_type_to_type(&args[0], param_mapping, type_env)
+                    .map(|item| Type::List(Box::new(item)))
+            } else {
+                let (qualified, _) = type_env.resolve_type(name.as_ref())?;
+                let args = args
+                    .iter()
+                    .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Type::Constructor {
+                    name: qualified,
+                    args,
+                    kind: Kind::Type,
+                })
+            }
         }
         SurfaceType::Fn(params, ret) => {
             let params = params
@@ -708,6 +715,7 @@ impl TypeEnv {
             .collect::<Result<Vec<_>, _>>()?;
 
         let mut method_names = HashSet::new();
+        let mut method_infos = Vec::new();
         for method in &def.methods {
             let method_name = method.name.to_string();
             let Some(method_info) = interface.methods.get(&method_name) else {
@@ -774,6 +782,17 @@ impl TypeEnv {
                     interface.name, method_name, expected_return_ty, actual_return_ty
                 ))
             })?;
+
+            let core_body = ash_parser::lower_expr(&method.body)
+                .map_err(|e| TypeEnvError::InvalidDefinition(format!("lowering error: {e}")))?;
+
+            method_infos.push(ImplMethodInfo {
+                name: method_name,
+                type_params: method_info.type_params.clone(),
+                params: method_info.params.iter().map(|t| subst.apply(t)).collect(),
+                return_type: expected_return_ty,
+                body: core_body,
+            });
         }
 
         for required_method in interface.methods.keys() {
@@ -790,7 +809,7 @@ impl TypeEnv {
             type_params: param_mapping.values().copied().collect(),
             head: impl_head,
             where_bounds,
-            methods: Vec::new(),
+            methods: method_infos,
         });
 
         Ok(())
@@ -1075,6 +1094,24 @@ impl TypeEnv {
         method: &str,
         arg_types: &[Type],
     ) -> Result<Type, TypeEnvError> {
+        let (selected, scheme) = self.select_impl_scheme(interface, method, arg_types)?;
+        let method_info = scheme
+            .methods
+            .iter()
+            .find(|m| m.name == method)
+            .ok_or_else(|| TypeEnvError::MissingInterfaceMethod {
+                interface: interface.to_string(),
+                method: method.to_string(),
+            })?;
+        Ok(selected.substitution.apply(&method_info.return_type))
+    }
+
+    pub fn select_impl_scheme(
+        &self,
+        interface: &str,
+        method: &str,
+        arg_types: &[Type],
+    ) -> Result<(SelectedScheme, &ImplScheme), TypeEnvError> {
         let interface_info = self
             .interfaces
             .get(interface)
@@ -1103,14 +1140,12 @@ impl TypeEnv {
                 .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
         }
 
-        // Construct the full interface application from ALL type params
         let head_args: Vec<Type> = method_info
             .type_params
             .iter()
             .map(|tp| subst.apply(&Type::Var(*tp)))
             .collect();
 
-        // Check for underdetermined params (vars that are neither resolved nor interface-bounded)
         if head_args.iter().any(|t| {
             if let Type::Var(var) = t {
                 !self.type_var_has_interface_bound(*var, interface)
@@ -1126,14 +1161,20 @@ impl TypeEnv {
 
         let target_head = Type::Constructor {
             name: QualifiedName::root(interface.to_string()),
-            args: head_args.clone(),
+            args: head_args,
             kind: Kind::Type,
         };
 
-        let selected = self.find_matching_impl_scheme(interface, &target_head, 0)?;
-        Ok(selected
-            .substitution
-            .apply(&subst.apply(&method_info.return_type)))
+        let (selected, scheme) = self.find_matching_impl_scheme(interface, &target_head, 0)?;
+
+        if !scheme.methods.iter().any(|m| m.name == method) {
+            return Err(TypeEnvError::MissingInterfaceMethod {
+                interface: interface.to_string(),
+                method: method.to_string(),
+            });
+        }
+
+        Ok((selected, scheme))
     }
 
     fn find_matching_impl_scheme(
@@ -1141,7 +1182,7 @@ impl TypeEnv {
         interface: &str,
         target_head: &Type,
         depth: usize,
-    ) -> Result<SelectedScheme, TypeEnvError> {
+    ) -> Result<(SelectedScheme, &ImplScheme), TypeEnvError> {
         if depth > 32 {
             return Err(TypeEnvError::RecursiveBound {
                 message: "depth limit".into(),
@@ -1171,9 +1212,12 @@ impl TypeEnv {
                     }
                 }
                 if bounds_ok {
-                    return Ok(SelectedScheme {
-                        substitution: scheme_subst,
-                    });
+                    return Ok((
+                        SelectedScheme {
+                            substitution: scheme_subst,
+                        },
+                        scheme,
+                    ));
                 }
             }
         }

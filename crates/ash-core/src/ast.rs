@@ -436,6 +436,7 @@ pub enum Expr {
     },
     Call {
         func: Name,
+        module: Option<Name>,
         arguments: Vec<Expr>,
     },
 
@@ -832,12 +833,14 @@ mod tests {
 
         let _interface_call = Expr::Call {
             func: "explain".to_string(),
+            module: None,
             arguments: vec![Expr::Variable("value".to_string())],
         };
 
         let _module_interface = ModuleItem::Interface(InterfaceDef {
             name: "Explain".to_string(),
             type_params: vec!["T".to_string()],
+            associated_types: vec![],
             methods: vec![InterfaceMethodSig {
                 name: "explain".to_string(),
                 params: vec![TypeExpr::Named("T".to_string())],
@@ -849,7 +852,10 @@ mod tests {
         let _module_impl = ModuleItem::Impl(ImplDef {
             visibility: Visibility::Private,
             interface: "Explain".to_string(),
+            type_params: vec![],
             type_args: vec![TypeExpr::Named("PolicyDecision".to_string())],
+            where_bounds: vec![],
+            associated_type_bindings: vec![],
             methods: vec![ImplMethodDef {
                 name: "explain".to_string(),
                 params: vec!["value".to_string()],
@@ -1114,6 +1120,7 @@ mod tests {
             ]),
             expr: Expr::Call {
                 func: "get_data".to_string(),
+                module: None,
                 arguments: vec![
                     Expr::Literal(Value::String("test".to_string())),
                     Expr::Binary {

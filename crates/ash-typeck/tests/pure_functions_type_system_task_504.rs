@@ -5,7 +5,7 @@ use ash_parser::surface::{
 use ash_parser::token::Span;
 use ash_typeck::check_expr::check_expr;
 use ash_typeck::type_env::TypeEnv;
-use ash_typeck::{type_check_program, Type};
+use ash_typeck::{Type, type_check_program};
 
 fn span() -> Span {
     Span::default()

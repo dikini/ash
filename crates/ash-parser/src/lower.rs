@@ -1331,6 +1331,7 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
                 // Built-in or module-qualified call: keep existing Call behaviour
                 Ok(CoreExpr::Call {
                     func: func.to_string(),
+                    module: module.as_ref().map(|m| m.to_string()),
                     arguments: lowered_args,
                 })
             }
@@ -1798,8 +1799,13 @@ mod tests {
         assert!(result.is_ok());
         let core = result.unwrap();
         match &core {
-            CoreExpr::Call { func, arguments } => {
+            CoreExpr::Call {
+                func,
+                module,
+                arguments,
+            } => {
                 assert_eq!(func, "explain");
+                assert_eq!(module.as_deref(), Some("Explain"));
                 assert_eq!(arguments.len(), 1);
             }
             other => panic!("expected CoreExpr::Call, got {other:?}"),

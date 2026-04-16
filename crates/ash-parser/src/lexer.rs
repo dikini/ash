@@ -619,9 +619,11 @@ mod tests {
         let keyword_tokens: Vec<_> = tokens.iter().filter(|t| t.kind != TokenKind::Eof).collect();
 
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Workflow));
-        assert!(keyword_tokens
-            .iter()
-            .any(|t| t.kind == TokenKind::Capability));
+        assert!(
+            keyword_tokens
+                .iter()
+                .any(|t| t.kind == TokenKind::Capability)
+        );
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Policy));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Role));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Observe));

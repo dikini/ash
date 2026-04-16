@@ -1071,100 +1071,14 @@ fn parse_list(input: &mut ParseInput) -> ModalResult<Literal> {
 
 /// Parse an identifier.
 pub fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
-    identifier_with_span(input).map(|(s, _)| s)
+    crate::parse_utils::identifier_with_span(input).map(|(s, _)| s)
 }
 
 /// Parse an identifier and return it with its source span.
+///
+/// Delegates to the canonical implementation in `parse_utils`.
 pub fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
-    let start = input.state.source.len() - input.input.len();
-
-    // Use take_while to match the entire identifier at once
-    // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
-    let result: &str = take_while(1.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-'
-    })
-    .parse_next(input)?;
-
-    // Check that first character is a letter or underscore (not a digit)
-    if result.is_empty()
-        || !result
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_alphabetic())
-            && !result.starts_with('_')
-    {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    // Check that it's not a keyword
-    if is_keyword(result) {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    let end = start + result.len();
-    let span = crate::input::offset_to_span(input.state.source, start, end);
-    input.state.comments.set_last_token(span);
-    Ok((result, span))
-}
-
-/// Check if a string is a keyword.
-fn is_keyword(s: &str) -> bool {
-    matches!(
-        s,
-        "workflow"
-            | "capability"
-            | "policy"
-            | "role"
-            | "observe"
-            | "orient"
-            | "propose"
-            | "decide"
-            | "act"
-            | "oblige"
-            | "check"
-            | "let"
-            | "if"
-            | "then"
-            | "else"
-            | "for"
-            | "do"
-            | "with"
-            | "maybe"
-            | "must"
-            | "attempt"
-            | "retry"
-            | "timeout"
-            | "done"
-            | "epistemic"
-            | "deliberative"
-            | "evaluative"
-            | "operational"
-            | "authority"
-            | "obligations"
-            | "when"
-            | "returns"
-            | "where"
-            | "permit"
-            | "deny"
-            | "require_approval"
-            | "escalate"
-            | "in"
-            | "not"
-            | "and"
-            | "or"
-            | "true"
-            | "false"
-            | "null"
-            | "fn"
-            | "match"
-            | "panic"
-            | "requires"
-            | "ensures"
-    )
+    crate::parse_utils::identifier_with_span(input)
 }
 
 /// Parse a keyword (ensures word boundary).

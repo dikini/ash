@@ -10,9 +10,127 @@ use winnow::prelude::*;
 use winnow::stream::Stream;
 use winnow::token::take_while;
 
-use crate::input::ParseInput;
-use crate::parse_expr::identifier;
+use crate::input::{ParseInput, offset_to_span};
 use crate::token::Span;
+
+/// Check if a string is a reserved keyword.
+///
+/// This is the canonical keyword list for the Ash language, synchronized with
+/// the lexer's `lookup_keyword`. All parser modules must use this function
+/// (or delegate through `identifier_with_span`) rather than maintaining
+/// their own copies.
+pub(crate) fn is_keyword(s: &str) -> bool {
+    matches!(
+        s,
+        // Workflow
+        "workflow"
+        | "capability"
+        | "policy"
+        | "role"
+        // OODA loop
+        | "observe"
+        | "orient"
+        | "propose"
+        | "decide"
+        | "act"
+        // Control flow
+        | "oblige"
+        | "check"
+        | "let"
+        | "if"
+        | "then"
+        | "else"
+        | "for"
+        | "do"
+        | "with"
+        // Effect
+        | "maybe"
+        | "must"
+        | "attempt"
+        | "retry"
+        | "timeout"
+        | "done"
+        | "ret"
+        // Effect levels
+        | "epistemic"
+        | "deliberative"
+        | "evaluative"
+        | "operational"
+        // Capability
+        | "authority"
+        | "obligations"
+        // Type
+        | "when"
+        | "returns"
+        | "where"
+        // Policy
+        | "permit"
+        | "deny"
+        | "require_approval"
+        | "escalate"
+        // Pure function
+        | "fn"
+        | "panic"
+        | "match"
+        // Contract
+        | "requires"
+        | "ensures"
+        // Workflow statements (contextual, but reserved)
+        | "set"
+        | "send"
+        // Operator
+        | "in"
+        | "not"
+        | "and"
+        | "or"
+        // Literals
+        | "true"
+        | "false"
+        | "null"
+    )
+}
+
+/// Parse an identifier and return it with its source span.
+///
+/// Canonical implementation: all parser modules delegate here rather than
+/// maintaining their own copies. First character must be a letter or
+/// underscore; subsequent characters may be alphanumeric, underscore, or
+/// hyphen. Keywords are rejected.
+pub(crate) fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
+    let start = input.state.source.len() - input.input.len();
+
+    let result: &str = take_while(1.., |c: char| {
+        c.is_ascii_alphanumeric() || c == '_' || c == '-'
+    })
+    .parse_next(input)?;
+
+    // First character must be a letter or underscore (not a digit)
+    let first = result.chars().next();
+    if result.is_empty()
+        || !first.is_some_and(|c| c.is_ascii_alphabetic()) && !result.starts_with('_')
+    {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    // Reject keywords
+    if is_keyword(result) {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    let end = start + result.len();
+    let span = offset_to_span(input.state.source, start, end);
+    input.state.comments.set_last_token(span);
+    Ok((result, span))
+}
+
+/// Parse an identifier (without span).
+pub(crate) fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    identifier_with_span(input).map(|(s, _)| s)
+}
 
 /// The kind of a comment.
 #[derive(Debug, Clone, PartialEq)]
@@ -137,11 +255,11 @@ impl CommentTable {
 /// - `kafka:orders`
 /// - `config:timeout`
 pub fn parse_capability_ref<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, &'a str)> {
-    let capability = identifier(input)?;
+    let capability = identifier_with_span(input)?.0;
     skip_whitespace_and_comments(input);
     literal_str(":").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let channel = identifier(input)?;
+    let channel = identifier_with_span(input)?.0;
     Ok((capability, channel))
 }
 

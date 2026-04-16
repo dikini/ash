@@ -33,6 +33,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Consolidated duplicate `identifier_with_span` and `is_keyword`
+  implementations into `crates/ash-parser/src/parse_utils.rs`.
+  All parser modules (`parse_expr`, `parse_pattern`, `parse_policy`,
+  `parse_workflow`, `parse_module`) now delegate to the canonical
+  implementation, eliminating drift between keyword lists.
+
 - Wired `monomorphize_workflow` into the engine pipeline after type checking
   (`Engine::check` now takes `&mut Workflow`) and addressed Phase 83 review
   findings (TASK-564..TASK-568). Fixed missing match arms in

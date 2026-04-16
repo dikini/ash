@@ -3,9 +3,6 @@
 //! This module provides parsers for Ash patterns used in let bindings,
 //! for loops, and match expressions.
 
-use std::collections::HashSet;
-use std::sync::OnceLock;
-
 use winnow::combinator::alt;
 use winnow::prelude::*;
 use winnow::stream::Stream;
@@ -15,62 +12,6 @@ use crate::input::ParseInput;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{Literal, Name, Pattern, VariantPatternPayload};
 use crate::token::Span;
-
-/// Static set of Ash keywords for O(1) lookup.
-static KEYWORDS: OnceLock<HashSet<&'static str>> = OnceLock::new();
-
-/// Get the set of Ash keywords.
-fn get_keywords() -> &'static HashSet<&'static str> {
-    KEYWORDS.get_or_init(|| {
-        let mut set = HashSet::new();
-        set.insert("workflow");
-        set.insert("capability");
-        set.insert("policy");
-        set.insert("role");
-        set.insert("observe");
-        set.insert("orient");
-        set.insert("propose");
-        set.insert("decide");
-        set.insert("act");
-        set.insert("oblige");
-        set.insert("check");
-        set.insert("let");
-        set.insert("if");
-        set.insert("then");
-        set.insert("else");
-        set.insert("for");
-        set.insert("do");
-        set.insert("with");
-        set.insert("maybe");
-        set.insert("must");
-        set.insert("match");
-        set.insert("attempt");
-        set.insert("retry");
-        set.insert("timeout");
-        set.insert("done");
-        set.insert("epistemic");
-        set.insert("deliberative");
-        set.insert("evaluative");
-        set.insert("operational");
-        set.insert("authority");
-        set.insert("obligations");
-        set.insert("when");
-        set.insert("returns");
-        set.insert("where");
-        set.insert("permit");
-        set.insert("deny");
-        set.insert("require_approval");
-        set.insert("escalate");
-        set.insert("in");
-        set.insert("not");
-        set.insert("and");
-        set.insert("or");
-        set.insert("true");
-        set.insert("false");
-        set.insert("null");
-        set
-    })
-}
 
 /// Parse a pattern (entry point).
 ///
@@ -246,7 +187,7 @@ fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
 
 /// Parse a variable pattern: just an identifier
 fn parse_variable_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    let (name, span) = identifier_with_span(input)?;
+    let (name, span) = crate::parse_utils::identifier_with_span(input)?;
     Ok(Pattern::Variable {
         name: name.into(),
         span,
@@ -496,49 +437,7 @@ fn parse_null_literal(input: &mut ParseInput) -> ModalResult<Literal> {
 
 /// Parse an identifier.
 fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
-    identifier_with_span(input).map(|(s, _)| s)
-}
-
-/// Parse an identifier and return it with its source span.
-fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
-    let start = input.state.source.len() - input.input.len();
-
-    // Use take_while to match the entire identifier at once
-    // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
-    let result: &str = take_while(1.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-'
-    })
-    .parse_next(input)?;
-
-    // Check that first character is a letter or underscore (not a digit)
-    if result.is_empty()
-        || !result
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_alphabetic())
-            && !result.starts_with('_')
-    {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    // Check that it's not a keyword
-    if is_keyword(result) {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    let end = start + result.len();
-    let span = crate::input::offset_to_span(input.state.source, start, end);
-    input.state.comments.set_last_token(span);
-    Ok((result, span))
-}
-
-/// Check if a string is a keyword.
-fn is_keyword(s: &str) -> bool {
-    get_keywords().contains(s)
+    crate::parse_utils::identifier_with_span(input).map(|(s, _)| s)
 }
 
 /// Parse a keyword (ensures word boundary).

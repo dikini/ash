@@ -925,7 +925,7 @@ fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
 
     // Must have a name (this distinguishes it from anonymous fn expressions)
-    let (name_str, name_span) = identifier_with_span(input)?;
+    let (name_str, name_span) = crate::parse_utils::identifier_with_span(input)?;
     let name: Name = name_str.into();
     skip_whitespace_and_comments(input);
 
@@ -1590,47 +1590,15 @@ pub fn capability_ref(input: &mut ParseInput) -> ModalResult<Name> {
 
 /// Parse an identifier.
 fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
-    identifier_with_span(input).map(|(s, _)| s)
+    crate::parse_utils::identifier_with_span(input).map(|(s, _)| s)
 }
 
-/// Parse an identifier and return it with its source span.
-fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
-    let start = input.state.source.len() - input.input.len();
-
-    // Use take_while to match the entire identifier at once
-    // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
-    let result: &str = take_while(1.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-'
-    })
-    .parse_next(input)?;
-
-    // Check that first character is a letter or underscore (not a digit)
-    let starts_with_identifier_head = result
-        .chars()
-        .next()
-        .is_some_and(|ch| ch.is_ascii_alphabetic())
-        || result.starts_with('_');
-
-    if result.is_empty() || !starts_with_identifier_head {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    // Check that it's not a keyword
-    if is_keyword(result) {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    let end = start + result.len();
-    let span = crate::input::offset_to_span(input.state.source, start, end);
-    input.state.comments.set_last_token(span);
-    Ok((result, span))
+/// Check if a string is a keyword.
+fn is_keyword(s: &str) -> bool {
+    crate::parse_utils::is_keyword(s)
 }
 
-/// Parse a keyword (ensures word boundary).
+/// Create a span from start position to current position.
 fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::error::ContextError> {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
@@ -1689,59 +1657,6 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
             ))
         }
     }
-}
-
-/// Check if a string is a keyword.
-fn is_keyword(s: &str) -> bool {
-    matches!(
-        s,
-        "workflow"
-            | "capability"
-            | "policy"
-            | "role"
-            | "observe"
-            | "orient"
-            | "propose"
-            | "decide"
-            | "act"
-            | "oblige"
-            | "check"
-            | "let"
-            | "if"
-            | "then"
-            | "else"
-            | "for"
-            | "do"
-            | "with"
-            | "maybe"
-            | "must"
-            | "set"
-            | "send"
-            | "attempt"
-            | "retry"
-            | "timeout"
-            | "done"
-            | "epistemic"
-            | "deliberative"
-            | "evaluative"
-            | "operational"
-            | "authority"
-            | "obligations"
-            | "when"
-            | "returns"
-            | "where"
-            | "permit"
-            | "deny"
-            | "require_approval"
-            | "escalate"
-            | "in"
-            | "not"
-            | "and"
-            | "or"
-            | "true"
-            | "false"
-            | "null"
-    )
 }
 
 /// Create a span from start position to current position.

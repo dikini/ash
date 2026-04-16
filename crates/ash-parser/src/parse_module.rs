@@ -76,12 +76,12 @@ pub fn parse_module_decl(input: &mut ParseInput) -> ModalResult<ModuleDecl> {
 
 /// Parse an identifier.
 fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
-    crate::parse_expr::identifier(input)
+    crate::parse_utils::identifier(input)
 }
 
 /// Parse an identifier and return it with its source span.
 fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
-    crate::parse_expr::identifier_with_span(input)
+    crate::parse_utils::identifier_with_span(input)
 }
 
 /// Parse a string literal token.

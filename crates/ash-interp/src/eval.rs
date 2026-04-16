@@ -131,7 +131,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 .collect::<Result<Vec<_>, _>>()?;
 
             // First try built-in function dispatch
-            match eval_function_call(func, &args) {
+            match eval_function_call(func, &args, ctx) {
                 Ok(value) => Ok(value),
                 Err(EvalError::UnknownFunction(_)) => {
                     // Not a built-in: try looking up a closure in the context
@@ -495,7 +495,7 @@ fn compare_values(left: &Value, right: &Value) -> EvalResult<std::cmp::Ordering>
 }
 
 /// Evaluate a built-in function call
-fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
+fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<Value> {
     match func {
         // List operations
         "len" => {
@@ -510,6 +510,50 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
                 Value::String(s) => Ok(Value::Int(s.len() as i64)),
                 _ => Err(EvalError::TypeMismatch {
                     expected: "list or string".to_string(),
+                    actual: format!("{:?}", args[0]),
+                }),
+            }
+        }
+
+        "head" => {
+            if args.len() != 1 {
+                return Err(EvalError::WrongArity {
+                    expected: 1,
+                    actual: args.len(),
+                });
+            }
+            match &args[0] {
+                Value::List(list) => {
+                    if list.is_empty() {
+                        Err(EvalError::ExecutionFailed("head on empty list".to_string()))
+                    } else {
+                        Ok(list[0].clone())
+                    }
+                }
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "list".to_string(),
+                    actual: format!("{:?}", args[0]),
+                }),
+            }
+        }
+
+        "tail" => {
+            if args.len() != 1 {
+                return Err(EvalError::WrongArity {
+                    expected: 1,
+                    actual: args.len(),
+                });
+            }
+            match &args[0] {
+                Value::List(list) => {
+                    if list.is_empty() {
+                        Err(EvalError::ExecutionFailed("tail on empty list".to_string()))
+                    } else {
+                        Ok(Value::List(Box::new(list[1..].to_vec())))
+                    }
+                }
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "list".to_string(),
                     actual: format!("{:?}", args[0]),
                 }),
             }
@@ -550,6 +594,109 @@ fn eval_function_call(func: &str, args: &[Value]) -> EvalResult<Value> {
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "list, list".to_string(),
+                    actual: format!("{:?}, {:?}", args[0], args[1]),
+                }),
+            }
+        }
+
+        "filter" => {
+            if args.len() != 2 {
+                return Err(EvalError::WrongArity {
+                    expected: 2,
+                    actual: args.len(),
+                });
+            }
+            match (&args[0], &args[1]) {
+                (Value::List(list), Value::Closure { params, body, env }) => {
+                    if params.len() != 1 {
+                        return Err(EvalError::WrongArity {
+                            expected: params.len(),
+                            actual: 1,
+                        });
+                    }
+                    let mut result = Vec::new();
+                    for item in list.iter() {
+                        let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+                        call_env.insert(params[0].0.clone(), item.clone());
+                        let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+                        match eval_expr(body, &call_ctx)? {
+                            Value::Bool(true) => result.push(item.clone()),
+                            Value::Bool(false) => {}
+                            other => {
+                                return Err(EvalError::TypeMismatch {
+                                    expected: "bool".to_string(),
+                                    actual: format!("{other:?}"),
+                                });
+                            }
+                        }
+                    }
+                    Ok(Value::List(Box::new(result)))
+                }
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "list, function".to_string(),
+                    actual: format!("{:?}, {:?}", args[0], args[1]),
+                }),
+            }
+        }
+
+        "map" => {
+            if args.len() != 2 {
+                return Err(EvalError::WrongArity {
+                    expected: 2,
+                    actual: args.len(),
+                });
+            }
+            match (&args[0], &args[1]) {
+                (Value::List(list), Value::Closure { params, body, env }) => {
+                    if params.len() != 1 {
+                        return Err(EvalError::WrongArity {
+                            expected: params.len(),
+                            actual: 1,
+                        });
+                    }
+                    let mut result = Vec::new();
+                    for item in list.iter() {
+                        let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+                        call_env.insert(params[0].0.clone(), item.clone());
+                        let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+                        result.push(eval_expr(body, &call_ctx)?);
+                    }
+                    Ok(Value::List(Box::new(result)))
+                }
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "list, function".to_string(),
+                    actual: format!("{:?}, {:?}", args[0], args[1]),
+                }),
+            }
+        }
+
+        "starts_with" => {
+            if args.len() != 2 {
+                return Err(EvalError::WrongArity {
+                    expected: 2,
+                    actual: args.len(),
+                });
+            }
+            match (&args[0], &args[1]) {
+                (Value::String(s), Value::String(prefix)) => Ok(Value::Bool(s.starts_with(prefix))),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string, string".to_string(),
+                    actual: format!("{:?}, {:?}", args[0], args[1]),
+                }),
+            }
+        }
+
+        "ends_with" => {
+            if args.len() != 2 {
+                return Err(EvalError::WrongArity {
+                    expected: 2,
+                    actual: args.len(),
+                });
+            }
+            match (&args[0], &args[1]) {
+                (Value::String(s), Value::String(suffix)) => Ok(Value::Bool(s.ends_with(suffix))),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string, string".to_string(),
                     actual: format!("{:?}, {:?}", args[0], args[1]),
                 }),
             }

@@ -6,6 +6,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Interpreter builtins: `head`, `tail`, `filter`, `map`, `starts_with`, `ends_with`
+  (`ash-interp` and `ash-parser`) to support the spec-processor app.
+
+- New `apps/spec_processor` workspace member with initial `.ash` source files
+  (`collect.ash`, `types.ash`).
+
+- Design doc: `docs/design/visual-programming/DESIGN-VP-001-MODALITY-ONTOLOGY.md`.
+
+- Parser debug tests for multiline record constructors and closures
+  (`fn_parser_tests.rs`) with TODO(TASK-590) annotations on known failures.
+
 ### Fixed
 
 - Wired `monomorphize_workflow` into the engine pipeline after type checking

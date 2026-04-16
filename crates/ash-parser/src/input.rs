@@ -45,14 +45,16 @@ impl Position {
 
 /// Full parser state including position tracking and comment table.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct ParseState {
+pub struct ParseState<'a> {
     /// Source position tracking.
     pub pos: Position,
     /// Captured comment trivia.
     pub comments: crate::parse_utils::CommentTable,
+    /// Original source text for accurate span-to-line/column mapping.
+    pub source: &'a str,
 }
 
-impl Deref for ParseState {
+impl<'a> Deref for ParseState<'a> {
     type Target = Position;
 
     fn deref(&self) -> &Self::Target {
@@ -60,7 +62,7 @@ impl Deref for ParseState {
     }
 }
 
-impl DerefMut for ParseState {
+impl<'a> DerefMut for ParseState<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.pos
     }
@@ -70,7 +72,7 @@ impl DerefMut for ParseState {
 ///
 /// `ParseInput` wraps a string slice with location tracking and maintains
 /// metadata about the current position in the source.
-pub type ParseInput<'a> = Stateful<LocatingSlice<&'a str>, ParseState>;
+pub type ParseInput<'a> = Stateful<LocatingSlice<&'a str>, ParseState<'a>>;
 
 /// Creates a new `ParseInput` from a string slice.
 ///
@@ -89,7 +91,26 @@ pub fn new_input(input: &str) -> ParseInput<'_> {
         state: ParseState {
             pos: Position::new(),
             comments: crate::parse_utils::CommentTable::default(),
+            source: input,
         },
+    }
+}
+
+/// Convert a byte offset range into a `Span` using the original source.
+pub fn offset_to_span(source: &str, start: usize, end: usize) -> Span {
+    let line = source[..start.min(source.len())]
+        .chars()
+        .filter(|&c| c == '\n')
+        .count()
+        + 1;
+    let column = source[..start.min(source.len())]
+        .rfind('\n')
+        .map_or(start + 1, |nl| start - nl);
+    Span {
+        start,
+        end,
+        line,
+        column,
     }
 }
 

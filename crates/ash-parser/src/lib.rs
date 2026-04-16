@@ -65,6 +65,14 @@ pub use use_tree::*;
 /// Parse a complete `.ash` source file, returning a `ModuleFile` with a
 /// populated `CommentTable`.
 pub fn parse_surface_file(source: &str) -> Result<surface::ModuleFile, Vec<error::ParseError>> {
+    parse_surface_file_with_path(source, None)
+}
+
+/// Parse a complete `.ash` source file with an optional filesystem path.
+pub fn parse_surface_file_with_path(
+    source: &str,
+    path: Option<&std::path::Path>,
+) -> Result<surface::ModuleFile, Vec<error::ParseError>> {
     let mut input = input::new_input(source);
     match parse_module::module_file.parse_next(&mut input) {
         Ok(mut module) => {
@@ -73,13 +81,14 @@ pub fn parse_surface_file(source: &str) -> Result<surface::ModuleFile, Vec<error
                 input.state.comments.flush_pending_leading_to_trailing(last);
             }
             module.comments = input.state.comments;
+            module.path = path.map(|p| p.to_string_lossy().into_owned().into());
             Ok(module)
         }
         Err(e) => {
             let span = input::current_span(&input);
             Err(vec![error::ParseError::new(
                 span,
-                &format!("parse error: {e}"),
+                format!("parse error: {e}"),
             )])
         }
     }
@@ -294,16 +303,63 @@ mod lib_tests {
 
     #[test]
     fn test_parse_surface_file_backtracking_does_not_leak_comments() {
-        // This test verifies that speculative parser branches that consume
-        // comments but ultimately fail do not pollute the final CommentTable.
-        let source = r#"
-            capability sensor: epistemic();
-            -- this comment should be attached
-        "#;
-        let result = parse_surface_file(source);
-        assert!(result.is_ok());
-        let module = result.unwrap();
-        // The comment should be present exactly once
-        assert_eq!(module.comments.total_count(), 1);
+        // Verify that checkpoint/restore rolls back the CommentTable state.
+        let mut input = new_input("-- comment\nx");
+        let checkpoint = input.clone();
+        crate::parse_utils::skip_whitespace_and_comments(&mut input);
+        assert_eq!(input.state.comments.total_count(), 1);
+        input = checkpoint;
+        assert_eq!(input.state.comments.total_count(), 0);
+    }
+
+    #[test]
+    fn test_variable_expr_span_accuracy() {
+        let source = "  my_var  ";
+        let mut input = new_input(source);
+        let expr = crate::parse_expr::expr(&mut input).unwrap();
+        match expr {
+            crate::surface::Expr::Variable { name, span } => {
+                assert_eq!(name.as_ref(), "my_var");
+                assert_eq!(span.start, 2);
+                assert_eq!(span.end, 8);
+                assert_eq!(span.line, 1);
+                assert_eq!(span.column, 3);
+            }
+            other => panic!("expected Expr::Variable, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_variable_pattern_span_accuracy() {
+        let source = "  my_pat  ";
+        let mut input = new_input(source);
+        let pat = crate::parse_pattern::pattern(&mut input).unwrap();
+        match pat {
+            crate::surface::Pattern::Variable { name, span } => {
+                assert_eq!(name.as_ref(), "my_pat");
+                assert_eq!(span.start, 2);
+                assert_eq!(span.end, 8);
+                assert_eq!(span.line, 1);
+                assert_eq!(span.column, 3);
+            }
+            other => panic!("expected Pattern::Variable, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_policy_var_span_accuracy() {
+        let source = "  my_policy  ";
+        let mut input = new_input(source);
+        let pexpr = crate::parse_policy::policy_expr(&mut input).unwrap();
+        match pexpr {
+            crate::surface::PolicyExpr::Var { name, span } => {
+                assert_eq!(name.as_ref(), "my_policy");
+                assert_eq!(span.start, 2);
+                assert_eq!(span.end, 11);
+                assert_eq!(span.line, 1);
+                assert_eq!(span.column, 3);
+            }
+            other => panic!("expected PolicyExpr::Var, got {other:?}"),
+        }
     }
 }

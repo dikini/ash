@@ -83,15 +83,11 @@ impl CommentTable {
         self.had_newline_since_last_token = true;
     }
 
-    /// Returns true if there has been a newline since the last token.
-    pub(crate) fn had_newline_since_last_token(&self) -> bool {
-        self.had_newline_since_last_token
-    }
-
     /// Push a comment that was encountered while skipping whitespace.
     /// Uses the heuristic from SPEC-039 §4.4:
     /// - If on the same line as the preceding token, attach as trailing.
     /// - Otherwise, queue as leading for the next token.
+    #[allow(clippy::collapsible_if)]
     pub(crate) fn push_skipped_comment(&mut self, comment: Comment) {
         if let Some(last) = self.last_seen_token_span {
             if !self.had_newline_since_last_token {
@@ -286,30 +282,74 @@ pub fn skip_whitespace_and_comments(input: &mut ParseInput) {
 pub fn skip_horizontal_ws_and_comments(input: &mut ParseInput) {
     loop {
         // Skip horizontal whitespace only (spaces and tabs, not newlines)
-        let _: ModalResult<&str> =
+        let ws: ModalResult<&str> =
             take_while(0.., |c: char| c == ' ' || c == '\t').parse_next(input);
+        if let Ok(ws_text) = ws {
+            for c in ws_text.chars() {
+                input.state.pos.advance(c);
+            }
+        }
 
         // Check for line comment: consume up to (but not including) the newline
         if input.input.starts_with("--") {
-            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            let start = crate::input::current_span(input);
+            let mut text = String::new();
+            text.push_str("--");
+            input.state.pos.advance('-');
+            input.state.pos.advance('-');
+            let _ = input.input.next_slice(2);
+            let rest: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            if let Ok(r) = rest {
+                text.push_str(r);
+                for c in r.chars() {
+                    input.state.pos.advance(c);
+                }
+            }
+            let end = crate::input::current_span(input);
+            let span = Span::new(start.start, end.start, start.line, start.column);
+            input.state.comments.push_skipped_comment(Comment {
+                text,
+                kind: CommentKind::Line,
+                span,
+            });
             continue;
         }
 
         // Check for block comment (skip it, may span multiple lines)
         if input.input.starts_with("/*") {
+            let start = crate::input::current_span(input);
+            let mut text = String::new();
+            text.push_str("/*");
+            input.state.pos.advance('/');
+            input.state.pos.advance('*');
             let _ = input.input.next_slice(2);
             let mut depth = 1;
             while depth > 0 && !input.input.is_empty() {
                 if input.input.starts_with("/*") {
+                    text.push_str("/*");
                     let _ = input.input.next_slice(2);
+                    input.state.pos.advance('/');
+                    input.state.pos.advance('*');
                     depth += 1;
                 } else if input.input.starts_with("*/") {
+                    text.push_str("*/");
                     let _ = input.input.next_slice(2);
+                    input.state.pos.advance('*');
+                    input.state.pos.advance('/');
                     depth -= 1;
                 } else {
-                    let _ = input.input.next_token();
+                    let c = input.input.next_token().unwrap_or('\0');
+                    text.push(c);
+                    input.state.pos.advance(c);
                 }
             }
+            let end = crate::input::current_span(input);
+            let span = Span::new(start.start, end.start, start.line, start.column);
+            input.state.comments.push_skipped_comment(Comment {
+                text,
+                kind: CommentKind::Block,
+                span,
+            });
             continue;
         }
 
@@ -372,16 +412,6 @@ mod tests {
     }
 
     // Classification matrix from SPEC-039 §4.4.1
-
-    fn first_span(comments: &CommentTable) -> Span {
-        comments
-            .leading
-            .keys()
-            .chain(comments.trailing.keys())
-            .copied()
-            .next()
-            .unwrap_or_default()
-    }
 
     #[test]
     fn test_comment_table_simple_trailing() {

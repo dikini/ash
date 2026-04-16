@@ -925,7 +925,8 @@ fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
 
     // Must have a name (this distinguishes it from anonymous fn expressions)
-    let name: Name = identifier(input)?.into();
+    let (name_str, name_span) = identifier_with_span(input)?;
+    let name: Name = name_str.into();
     skip_whitespace_and_comments(input);
 
     // Parameter list
@@ -954,8 +955,8 @@ fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
     Ok(Workflow::Let {
         pattern: Pattern::Variable {
-            name: name,
-            span: crate::token::Span::default(),
+            name,
+            span: name_span,
         },
         expr: Expr::FnDef {
             params,
@@ -1589,6 +1590,13 @@ pub fn capability_ref(input: &mut ParseInput) -> ModalResult<Name> {
 
 /// Parse an identifier.
 fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    identifier_with_span(input).map(|(s, _)| s)
+}
+
+/// Parse an identifier and return it with its source span.
+fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
+    let start = input.state.source.len() - input.input.len();
+
     // Use take_while to match the entire identifier at once
     // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
     let result: &str = take_while(1.., |c: char| {
@@ -1616,7 +1624,10 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         ));
     }
 
-    Ok(result)
+    let end = start + result.len();
+    let span = crate::input::offset_to_span(input.state.source, start, end);
+    input.state.comments.set_last_token(span);
+    Ok((result, span))
 }
 
 /// Parse a keyword (ensures word boundary).

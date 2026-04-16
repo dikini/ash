@@ -8,11 +8,11 @@ use winnow::prelude::*;
 use winnow::stream::Stream;
 
 use crate::combinators::keyword;
-use crate::input::{ParseInput, update_position};
+use crate::input::ParseInput;
 use crate::module::{ModuleDecl, ModuleSource};
 use crate::parse_expr::expr;
 use crate::parse_utils::skip_whitespace_and_comments;
-use crate::parse_visibility::parse_visibility;
+use crate::parse_visibility;
 use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
 use crate::surface::{
     AssociatedTypeBinding, AssociatedTypeDecl, BlockStmt, CapabilityDef, CapabilityRef, Constraint,
@@ -20,6 +20,7 @@ use crate::surface::{
     InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate, ProxyDef, RoleDef, Type,
     Visibility, WhereBound, Workflow, YieldArm,
 };
+use crate::token::Span;
 
 /// Parse a module declaration.
 ///
@@ -76,6 +77,11 @@ pub fn parse_module_decl(input: &mut ParseInput) -> ModalResult<ModuleDecl> {
 /// Parse an identifier.
 fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     crate::parse_expr::identifier(input)
+}
+
+/// Parse an identifier and return it with its source span.
+fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
+    crate::parse_expr::identifier_with_span(input)
 }
 
 /// Parse a string literal token.
@@ -1381,7 +1387,8 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             let stmt_start = input.state.pos;
             let _ = keyword("fn").parse_next(input)?;
             skip_whitespace_and_comments(input);
-            let fn_name: Name = identifier(input)?.into();
+            let (fn_name_str, fn_name_span) = identifier_with_span(input)?;
+            let fn_name: Name = Box::<str>::from(fn_name_str);
             skip_whitespace_and_comments(input);
             let _ = literal_str("(").parse_next(input)?;
             skip_whitespace_and_comments(input);
@@ -1407,7 +1414,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             statements.push(BlockStmt::Let {
                 pattern: Pattern::Variable {
                     name: fn_name,
-                    span: crate::token::Span::default(),
+                    span: fn_name_span,
                 },
                 expr: Expr::FnDef {
                     params,
@@ -1528,10 +1535,10 @@ fn parse_fn_scrutinee(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     // Variable / identifier (may have binary ops after)
-    let name = crate::parse_expr::identifier(input)?;
+    let (name, name_span) = crate::parse_expr::identifier_with_span(input)?;
     let mut result = Expr::Variable {
         name: name.into(),
-        span: crate::token::Span::default(),
+        span: name_span,
     };
 
     // Handle binary operators (but NOT { which would be a constructor)
@@ -1798,6 +1805,7 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
         workflow,
         span,
         comments: crate::parse_utils::CommentTable::default(),
+        path: None,
     })
 }
 

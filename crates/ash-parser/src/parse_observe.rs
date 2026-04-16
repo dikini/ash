@@ -5,7 +5,6 @@
 
 use winnow::prelude::*;
 use winnow::stream::Stream;
-use winnow::token::take_while;
 
 use crate::input::ParseInput;
 use crate::parse_expr::{expr, identifier};

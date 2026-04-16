@@ -62,6 +62,8 @@ pub struct ModuleFile {
     pub span: Span,
     /// Captured comment trivia.
     pub comments: crate::parse_utils::CommentTable,
+    /// Optional filesystem path of the source file.
+    pub path: Option<Box<str>>,
 }
 
 /// A top-level definition.

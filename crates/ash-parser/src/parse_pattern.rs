@@ -246,10 +246,10 @@ fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
 
 /// Parse a variable pattern: just an identifier
 fn parse_variable_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    let name = identifier(input)?;
+    let (name, span) = identifier_with_span(input)?;
     Ok(Pattern::Variable {
         name: name.into(),
-        span: crate::token::Span::default(),
+        span,
     })
 }
 
@@ -496,6 +496,13 @@ fn parse_null_literal(input: &mut ParseInput) -> ModalResult<Literal> {
 
 /// Parse an identifier.
 fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    identifier_with_span(input).map(|(s, _)| s)
+}
+
+/// Parse an identifier and return it with its source span.
+fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
+    let start = input.state.source.len() - input.input.len();
+
     // Use take_while to match the entire identifier at once
     // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
     let result: &str = take_while(1.., |c: char| {
@@ -523,7 +530,10 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         ));
     }
 
-    Ok(result)
+    let end = start + result.len();
+    let span = crate::input::offset_to_span(input.state.source, start, end);
+    input.state.comments.set_last_token(span);
+    Ok((result, span))
 }
 
 /// Check if a string is a keyword.

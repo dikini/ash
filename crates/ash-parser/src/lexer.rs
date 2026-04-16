@@ -305,6 +305,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Reads a number literal (integer or float).
+    #[allow(clippy::collapsible_if)]
     fn read_number(&mut self) -> Result<TokenKind, LexError> {
         let start_pos = self.position;
 
@@ -322,25 +323,25 @@ impl<'a> Lexer<'a> {
             // Lookahead to check if this is a float
             let mut chars_clone = self.chars.clone();
             chars_clone.next(); // Skip the '.'
-            if let Some(next_ch) = chars_clone.next()
-                && next_ch.is_ascii_digit()
-            {
-                // It's a float
-                self.advance(); // Consume '.'
+            if let Some(next_ch) = chars_clone.next() {
+                if next_ch.is_ascii_digit() {
+                    // It's a float
+                    self.advance(); // Consume '.'
 
-                // Read fractional part
-                while let Some(ch) = self.peek_char() {
-                    if ch.is_ascii_digit() {
-                        self.advance();
-                    } else {
-                        break;
+                    // Read fractional part
+                    while let Some(ch) = self.peek_char() {
+                        if ch.is_ascii_digit() {
+                            self.advance();
+                        } else {
+                            break;
+                        }
                     }
-                }
 
-                let num_str = &self.input[start_pos..self.position];
-                match num_str.parse::<f64>() {
-                    Ok(f) => return Ok(TokenKind::Float(f)),
-                    Err(_) => return Err(LexError::InvalidNumber(self.line, self.column)),
+                    let num_str = &self.input[start_pos..self.position];
+                    match num_str.parse::<f64>() {
+                        Ok(f) => return Ok(TokenKind::Float(f)),
+                        Err(_) => return Err(LexError::InvalidNumber(self.line, self.column)),
+                    }
                 }
             }
         }
@@ -618,11 +619,9 @@ mod tests {
         let keyword_tokens: Vec<_> = tokens.iter().filter(|t| t.kind != TokenKind::Eof).collect();
 
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Workflow));
-        assert!(
-            keyword_tokens
-                .iter()
-                .any(|t| t.kind == TokenKind::Capability)
-        );
+        assert!(keyword_tokens
+            .iter()
+            .any(|t| t.kind == TokenKind::Capability));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Policy));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Role));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Observe));

@@ -92,7 +92,7 @@ impl ConstraintContext {
         self.var_types.insert(name.clone(), ty.clone());
         self.add(Constraint::VarBinding(
             Pattern::Variable {
-                name: name,
+                name,
                 span: ash_parser::token::Span::default(),
             },
             ty,

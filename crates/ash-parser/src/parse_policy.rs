@@ -179,7 +179,7 @@ fn policy_primary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     }
 
     // Parse identifier
-    let name = identifier(input)?;
+    let (name, name_span) = identifier_with_span(input)?;
     let name_str: Name = name.into();
 
     // Check for function call
@@ -206,7 +206,7 @@ fn policy_primary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     // It's a variable reference - check for method chain
     let mut expr = PolicyExpr::Var {
         name: name_str,
-        span: crate::token::Span::default(),
+        span: name_span,
     };
     expr = parse_method_chain(input, expr, &start_pos)?;
     Ok(expr)
@@ -338,6 +338,13 @@ fn span_from(start: &Position, end: &Position) -> Span {
 
 /// Parse an identifier.
 fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    identifier_with_span(input).map(|(s, _)| s)
+}
+
+/// Parse an identifier and return it with its source span.
+fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
+    let start = input.state.source.len() - input.input.len();
+
     // Use take_while to match the entire identifier at once
     // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
     let result: &str = take_while(1.., |c: char| {
@@ -361,7 +368,10 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         ));
     }
 
-    Ok(result)
+    let end = start + result.len();
+    let span = crate::input::offset_to_span(input.state.source, start, end);
+    input.state.comments.set_last_token(span);
+    Ok((result, span))
 }
 
 /// Check if a string is a keyword.

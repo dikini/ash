@@ -150,8 +150,38 @@ fn workflow_surface_type_to_type(
             let ret_type = workflow_surface_type_to_type(env, ret, type_params)?;
             Ok(Type::Fn(param_types?, Box::new(ret_type)))
         }
-        ash_parser::surface::Type::Associated { .. } => {
-            todo!("associated types not yet supported in workflow_surface_type_to_type")
+        ash_parser::surface::Type::Associated { base, name } => {
+            let base_ty = workflow_surface_type_to_type(env, base, type_params)?;
+            let interface = if let Type::Var(v) = &base_ty {
+                if let Some(bounds) = env.type_var_interface_bounds.get(v) {
+                    let mut candidates = Vec::new();
+                    for bound_iface in bounds {
+                        if let Some(iface_info) = env.interfaces.get(bound_iface)
+                            && iface_info.associated_types.contains(&name.to_string())
+                        {
+                            candidates.push(bound_iface.clone());
+                        }
+                    }
+                    if candidates.len() == 1 {
+                        candidates.into_iter().next().unwrap()
+                    } else if candidates.len() > 1 {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "ambiguous associated type '{name}'"
+                        )));
+                    } else {
+                        String::new()
+                    }
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+            Ok(Type::Associated {
+                interface,
+                base: Box::new(base_ty),
+                name: name.to_string(),
+            })
         }
     }
 }
@@ -1232,6 +1262,9 @@ fn collect_type_vars(ty: &Type, vars: &mut HashSet<TypeVar>) {
                 collect_type_vars(arg_ty, vars);
             }
         }
+        Type::Associated { base, .. } => {
+            collect_type_vars(base, vars);
+        }
         Type::Int
         | Type::String
         | Type::Bool
@@ -1838,16 +1871,9 @@ pub fn type_check_workflow_def_in_env(
     env: &TypeEnv,
     workflow: &ash_parser::surface::WorkflowDef,
 ) -> Result<TypeCheckResult, TypeCheckError> {
-    for type_param in &workflow.type_params {
-        for bound in &type_param.bounds {
-            if !env.has_interface(bound.interface.as_ref()) {
-                return Err(TypeCheckError::TypeError(format!(
-                    "Unknown interface bound '{}' on type parameter '{}'",
-                    bound.interface, type_param.name
-                )));
-            }
-        }
-    }
+    // NOTE: Previously we validated bounds here, but now we need workflow_env
+    // set up first so that associated type resolution has access to interface bounds.
+    // Bounds are validated below after workflow_env is created.
 
     let type_param_bindings: std::collections::HashMap<String, Type> = workflow
         .type_params
@@ -1855,26 +1881,38 @@ pub fn type_check_workflow_def_in_env(
         .map(|param| (param.name.to_string(), Type::Var(TypeVar::fresh())))
         .collect();
 
+    // Create workflow_env first so we can bind interface bounds before
+    // resolving associated types in parameter and return types.
+    let mut workflow_env = env.clone();
+    for type_param in &workflow.type_params {
+        if let Some(Type::Var(var)) = type_param_bindings.get(type_param.name.as_ref()) {
+            for bound in &type_param.bounds {
+                // Validate that the interface exists before binding
+                if !workflow_env.has_interface(bound.interface.as_ref()) {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "Unknown interface bound '{}' on type parameter '{}'",
+                        bound.interface, type_param.name
+                    )));
+                }
+                workflow_env.bind_type_var_interface_bound(*var, bound.interface.as_ref());
+            }
+        }
+    }
+
     let mut param_bindings = Vec::with_capacity(workflow.params.len());
     for param in &workflow.params {
-        let ty = workflow_surface_type_to_type(env, &param.ty, &type_param_bindings)?;
+        let ty = workflow_surface_type_to_type(&workflow_env, &param.ty, &type_param_bindings)?;
         param_bindings.push((param.name.to_string(), ty));
     }
 
     let declared_return_ty = workflow
         .declared_return_type
         .as_ref()
-        .map(|return_ty| workflow_surface_type_to_type(env, return_ty, &type_param_bindings))
+        .map(|return_ty| {
+            workflow_surface_type_to_type(&workflow_env, return_ty, &type_param_bindings)
+        })
         .transpose()?;
 
-    let mut workflow_env = env.clone();
-    for type_param in &workflow.type_params {
-        if let Some(Type::Var(var)) = type_param_bindings.get(type_param.name.as_ref()) {
-            for bound in &type_param.bounds {
-                workflow_env.bind_type_var_interface_bound(*var, bound.interface.as_ref());
-            }
-        }
-    }
     for (name, ty) in &param_bindings {
         workflow_env.bind_variable(name, ty.clone());
     }

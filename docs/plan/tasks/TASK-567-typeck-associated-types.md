@@ -4,11 +4,13 @@
 **Spec:** SPEC-035 §5
 **Related:** TASK-564 (parser/AST), TASK-565 (scheme registry)
 **Estimate:** 6 hours
-**Status:** 📝 Planned (blocked: requires TASK-565)
+**Status:** ✅ Complete
 
 ## Description
 
 Add associated type projections to the internal type representation, implement normalization after impl selection, and enforce the rigid-projection rule for unresolved associated types inside generic functions.
+
+> **Spec signature divergence note:** SPEC-035 §5.3 shows `normalize_associated_types(&self, ty, scheme)` (with `subst` drawn from `scheme.substitution`). The implementation adds an explicit `subst: &Substitution` parameter because the call site in `resolve_interface_method_call` uses `selected.substitution`, which is produced by impl selection and is not stored on the `ImplScheme` itself. This is a deliberate, minor divergence from the spec.
 
 ## Requirements
 
@@ -35,7 +37,7 @@ Add associated type projections to the internal type representation, implement n
 #[test]
 fn task567_associated_type_normalizes_in_return_type() {
     // Register Serializer<S> { type Ok; serialize_bool(S, Bool) -> S::Ok }
-    // Register impl Serializer<JsonWriter> { type Ok = String; ... }
+    // Register impl Serializer<String> { type Ok = String; ... }
     // Call Serializer::serialize_bool(writer, true)
     // Assert return type is String (normalized from S::Ok)
 }
@@ -54,7 +56,7 @@ fn task567_rigid_projection_rejects_concrete_match() {
 
 #[test]
 fn task567_missing_associated_type_in_impl_errors() {
-    // impl Serializer<JsonWriter> { /* missing type Ok = ... */ serialize_bool(...) = ... }
+    // impl Serializer<String> { /* missing type Ok = ... */ serialize_bool(...) = ... }
     // Assert MissingAssociatedType at registration
 }
 ```
@@ -173,5 +175,6 @@ For now, the simplest implementation is to let `Type::Associated` fail unificati
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-typeck task567` passes
-- [ ] `cargo clippy -p ash-typeck --all-targets --all-features` clean
+- [x] `cargo test -p ash-typeck task567` passes
+- [x] `cargo clippy -p ash-typeck --all-targets --all-features` clean
+- [x] `cargo fmt --check -p ash-typeck` clean

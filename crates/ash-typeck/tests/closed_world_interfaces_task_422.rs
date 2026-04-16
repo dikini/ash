@@ -2,9 +2,10 @@ use ash_core::ast::{
     TypeBody, TypeDef as CoreTypeDef, VariantDef, VariantPayload, Visibility as CoreVisibility,
 };
 use ash_parser::surface::{
-    Definition, Expr, ImplDef, ImplMethodDef, InterfaceBound, InterfaceDef, InterfaceMethodSig,
-    Literal, MatchArm, Parameter, Pattern, Program, Type as SurfaceType, TypeParam,
-    VariantPatternPayload, Visibility as SurfaceVisibility, WhereBound, Workflow, WorkflowDef,
+    AssociatedTypeBinding, AssociatedTypeDecl, Definition, Expr, ImplDef, ImplMethodDef,
+    InterfaceBound, InterfaceDef, InterfaceMethodSig, Literal, MatchArm, Parameter, Pattern,
+    Program, Type as SurfaceType, TypeParam, VariantPatternPayload,
+    Visibility as SurfaceVisibility, WhereBound, Workflow, WorkflowDef,
 };
 use ash_parser::token::Span;
 use ash_typeck::check_expr::check_expr;
@@ -805,6 +806,235 @@ fn task565_recursive_bound_depth_limit_errors() {
     assert!(
         matches!(result, Err(TypeEnvError::RecursiveBound { .. })),
         "expected RecursiveBound error after depth 32, got {:?}",
+        result
+    );
+}
+
+// ---------------------------------------------------------------------------
+// TASK-567: Associated types, normalization, rigid projections
+// ---------------------------------------------------------------------------
+
+fn serializer_interface_def() -> InterfaceDef {
+    InterfaceDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "Serializer".into(),
+        type_params: vec!["S".into()],
+        associated_types: vec![AssociatedTypeDecl {
+            name: "Ok".into(),
+            span: test_span(),
+        }],
+        methods: vec![InterfaceMethodSig {
+            name: "serialize_bool".into(),
+            params: vec![
+                SurfaceType::Name("S".into()),
+                SurfaceType::Name("Bool".into()),
+            ],
+            return_type: SurfaceType::Associated {
+                base: Box::new(SurfaceType::Name("S".into())),
+                name: "Ok".into(),
+            },
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+fn serializer_json_writer_impl() -> ImplDef {
+    ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Serializer".into(),
+        type_params: vec![],
+        type_args: vec![SurfaceType::Name("String".into())],
+        where_bounds: vec![],
+        associated_type_bindings: vec![AssociatedTypeBinding {
+            name: "Ok".into(),
+            ty: SurfaceType::Name("String".into()),
+            span: test_span(),
+        }],
+        methods: vec![ImplMethodDef {
+            name: "serialize_bool".into(),
+            params: vec!["writer".into(), "value".into()],
+            body: Expr::Literal(Literal::String("serialized".into())),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+fn serializer_impl_missing_associated_type() -> ImplDef {
+    ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Serializer".into(),
+        type_params: vec![],
+        type_args: vec![SurfaceType::Name("String".into())],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
+        methods: vec![ImplMethodDef {
+            name: "serialize_bool".into(),
+            params: vec!["writer".into(), "value".into()],
+            body: Expr::Literal(Literal::String("serialized".into())),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+fn rigid_projection_workflow() -> WorkflowDef {
+    WorkflowDef {
+        name: "test_rigid".into(),
+        type_params: vec![TypeParam {
+            name: "T".into(),
+            bounds: vec![InterfaceBound {
+                interface: "Serializer".into(),
+                span: test_span(),
+            }],
+            span: test_span(),
+        }],
+        params: vec![
+            Parameter {
+                name: "a".into(),
+                ty: SurfaceType::Associated {
+                    base: Box::new(SurfaceType::Name("T".into())),
+                    name: "Ok".into(),
+                },
+                span: test_span(),
+            },
+            Parameter {
+                name: "b".into(),
+                ty: SurfaceType::Associated {
+                    base: Box::new(SurfaceType::Name("T".into())),
+                    name: "Ok".into(),
+                },
+                span: test_span(),
+            },
+        ],
+        declared_return_type: Some(SurfaceType::Associated {
+            base: Box::new(SurfaceType::Name("T".into())),
+            name: "Ok".into(),
+        }),
+        plays_roles: vec![],
+        capabilities: vec![],
+        body: Workflow::Ret {
+            expr: Expr::Variable("a".into()),
+            span: test_span(),
+        },
+        contract: None,
+        span: test_span(),
+    }
+}
+
+fn rigid_projection_concrete_mismatch_workflow() -> WorkflowDef {
+    WorkflowDef {
+        name: "test_rigid_mismatch".into(),
+        type_params: vec![TypeParam {
+            name: "T".into(),
+            bounds: vec![InterfaceBound {
+                interface: "Serializer".into(),
+                span: test_span(),
+            }],
+            span: test_span(),
+        }],
+        params: vec![Parameter {
+            name: "a".into(),
+            ty: SurfaceType::Associated {
+                base: Box::new(SurfaceType::Name("T".into())),
+                name: "Ok".into(),
+            },
+            span: test_span(),
+        }],
+        declared_return_type: Some(SurfaceType::Name("String".into())),
+        plays_roles: vec![],
+        capabilities: vec![],
+        body: Workflow::Ret {
+            expr: Expr::Variable("a".into()),
+            span: test_span(),
+        },
+        contract: None,
+        span: test_span(),
+    }
+}
+
+#[test]
+fn task567_associated_type_normalizes_in_return_type() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&serializer_interface_def())
+        .expect("register Serializer");
+    env.register_impl(&serializer_json_writer_impl())
+        .expect("register Serializer<String>");
+    env.bind_variable("writer", Type::String);
+
+    let expr = Expr::Call {
+        func: "serialize_bool".into(),
+        module: Some("Serializer".into()),
+        args: vec![
+            Expr::Variable("writer".into()),
+            Expr::Literal(Literal::Bool(true)),
+        ],
+        span: test_span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        result.is_ok(),
+        "expected Serializer::serialize_bool(writer, true) to typecheck, got errors: {:?}",
+        result.errors
+    );
+    assert_eq!(
+        result.ty,
+        Type::String,
+        "expected return type to normalize to String, got {:?}",
+        result.ty
+    );
+}
+
+#[test]
+fn task567_rigid_projection_unifies_with_itself() {
+    let workflow = rigid_projection_workflow();
+
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&serializer_interface_def())
+        .expect("register Serializer");
+
+    let result = ash_typeck::type_check_workflow_def_in_env(&env, &workflow);
+
+    assert!(
+        result.is_ok(),
+        "rigid projection T::Ok should unify with itself, got: {:?}",
+        result
+    );
+}
+
+#[test]
+fn task567_rigid_projection_rejects_concrete_match() {
+    let workflow = rigid_projection_concrete_mismatch_workflow();
+
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&serializer_interface_def())
+        .expect("register Serializer");
+
+    let result = ash_typeck::type_check_workflow_def_in_env(&env, &workflow);
+
+    assert!(
+        result.is_err(),
+        "rigid projection T::Ok should not unify with concrete String"
+    );
+}
+
+#[test]
+fn task567_missing_associated_type_in_impl_errors() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&serializer_interface_def())
+        .expect("register Serializer");
+
+    let result = env.register_impl(&serializer_impl_missing_associated_type());
+
+    assert!(
+        matches!(
+            result,
+            Err(TypeEnvError::MissingAssociatedType { ref interface, ref name })
+            if interface == "Serializer" && name == "Ok"
+        ),
+        "expected MissingAssociatedType error for Ok in Serializer, got {:?}",
         result
     );
 }

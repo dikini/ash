@@ -2441,7 +2441,7 @@ Remove the single type-parameter restriction on interfaces, enable generic `impl
 || [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-034 §4, SPEC-035 §4 | 5 | ✅ Done |
 || [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-034 §5 | 6 | ✅ Done |
 || [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | ✅ Done |
-|| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | 📝 Planned |
+|| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | ✅ Done |
 || [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | 📝 Planned |
 
 **Deliverable:** Interfaces accept any number of type parameters; generic impls with `where` bounds compile and resolve recursively; overlapping impl schemes rejected at registration; associated types (`S::Ok`) normalize to concrete types; `Type::Associated` never appears at runtime.

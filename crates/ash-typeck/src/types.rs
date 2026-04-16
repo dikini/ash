@@ -59,6 +59,16 @@ pub enum Type {
         /// Kind of the fully applied constructor (always * for now)
         kind: Kind,
     },
+
+    /// Associated type projection: `T::Ok`
+    Associated {
+        /// Interface that declares the associated type
+        interface: String,
+        /// Base type (usually a type variable)
+        base: Box<Type>,
+        /// Associated type name
+        name: String,
+    },
 }
 
 /// Type variable identifier
@@ -156,6 +166,15 @@ impl Substitution {
                 name: name.clone(),
                 args: args.iter().map(|a| self.apply(a)).collect(),
                 kind: kind.clone(),
+            },
+            Type::Associated {
+                interface,
+                base,
+                name,
+            } => Type::Associated {
+                interface: interface.clone(),
+                base: Box::new(self.apply(base)),
+                name: name.clone(),
             },
             // Primitives have no variables to substitute
             _ => ty.clone(),
@@ -285,6 +304,9 @@ impl std::fmt::Display for Type {
                     }
                     write!(f, ">")
                 }
+            }
+            Type::Associated { base, name, .. } => {
+                write!(f, "{}::{}", base, name)
             }
         }
     }
@@ -548,6 +570,29 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
             Err(UnifyError::Mismatch(t1.clone(), t2.clone()))
         }
 
+        // Rigid projection rule: Associated types only unify with themselves
+        (
+            Associated {
+                interface: i1,
+                base: b1,
+                name: n1,
+            },
+            Associated {
+                interface: i2,
+                base: b2,
+                name: n2,
+            },
+        ) => {
+            if i1 == i2 && b1 == b2 && n1 == n2 {
+                Ok(Substitution::new())
+            } else {
+                Err(UnifyError::Mismatch(t1.clone(), t2.clone()))
+            }
+        }
+        (Associated { .. }, _) | (_, Associated { .. }) => {
+            Err(UnifyError::Mismatch(t1.clone(), t2.clone()))
+        }
+
         // Different constructors cannot unify
         _ => Err(UnifyError::Mismatch(t1.clone(), t2.clone())),
     }
@@ -579,6 +624,7 @@ pub fn occurs_in(var: TypeVar, ty: &Type) -> bool {
         Type::Record(fields) => fields.iter().any(|(_, ty)| occurs_in(var, ty)),
         Type::Fun(args, ret, _) => args.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),
         Type::Fn(params, ret) => params.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),
+        Type::Associated { base, .. } => occurs_in(var, base),
         Type::Cap { .. }
         | Type::Int
         | Type::String
@@ -612,6 +658,7 @@ pub fn type_contains_fun(ty: &Type) -> bool {
         Type::List(elem) => type_contains_fun(elem),
         Type::Record(fields) => fields.iter().any(|(_, t)| type_contains_fun(t)),
         Type::Fn(params, ret) => params.iter().any(type_contains_fun) || type_contains_fun(ret),
+        Type::Associated { base, .. } => type_contains_fun(base),
         Type::Var(_)
         | Type::Cap { .. }
         | Type::Int

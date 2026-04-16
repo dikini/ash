@@ -109,8 +109,13 @@ pub fn type_expr_to_type(
                 .collect();
             Ok(Type::Record(field_types?))
         }
-        TypeExpr::Associated { .. } => {
-            todo!("associated types not yet supported in type_expr_to_type")
+        TypeExpr::Associated { base, name } => {
+            let base_ty = type_expr_to_type(base, param_mapping, type_env)?;
+            Ok(Type::Associated {
+                interface: String::new(), // unresolved at this level
+                base: Box::new(base_ty),
+                name: name.clone(),
+            })
         }
     }
 }
@@ -168,6 +173,8 @@ pub struct InterfaceInfo {
     pub name: String,
     /// Interface-level type parameter names.
     pub type_params: Vec<String>,
+    /// Associated types declared by the interface.
+    pub associated_types: Vec<String>,
     /// Methods declared by the interface.
     pub methods: HashMap<String, InterfaceMethodInfo>,
 }
@@ -196,6 +203,7 @@ pub struct ImplScheme {
     pub type_params: Vec<TypeVar>,
     pub head: Type,
     pub where_bounds: Vec<WhereBound>,
+    pub associated_type_bindings: HashMap<String, Type>,
     pub methods: Vec<ImplMethodInfo>,
 }
 
@@ -207,7 +215,7 @@ fn surface_type_to_type(
     ty: &SurfaceType,
     param_mapping: &HashMap<String, TypeVar>,
     type_env: &TypeEnv,
-) -> Result<Type, TypeError> {
+) -> Result<Type, TypeEnvError> {
     match ty {
         SurfaceType::Name(name) => {
             if let Some(var) = param_mapping.get(name.as_ref()) {
@@ -228,7 +236,9 @@ fn surface_type_to_type(
                     kind: Kind::Type,
                 }),
                 _ => {
-                    let (qualified, _) = type_env.resolve_type(name.as_ref())?;
+                    let (qualified, _) = type_env
+                        .resolve_type(name.as_ref())
+                        .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
                     Ok(Type::Constructor {
                         name: qualified,
                         args: vec![],
@@ -258,7 +268,9 @@ fn surface_type_to_type(
                 surface_type_to_type(&args[0], param_mapping, type_env)
                     .map(|item| Type::List(Box::new(item)))
             } else {
-                let (qualified, _) = type_env.resolve_type(name.as_ref())?;
+                let (qualified, _) = type_env
+                    .resolve_type(name.as_ref())
+                    .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
                 let args = args
                     .iter()
                     .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
@@ -278,9 +290,89 @@ fn surface_type_to_type(
             let ret = surface_type_to_type(ret, param_mapping, type_env)?;
             Ok(Type::Fn(params, Box::new(ret)))
         }
-        SurfaceType::Associated { .. } => {
-            todo!("associated types not yet supported in surface_type_to_type")
+        SurfaceType::Associated { base, name } => {
+            let base_ty = surface_type_to_type(base, param_mapping, type_env)?;
+
+            // Try to resolve the interface from type variable bounds
+            let interface = if let Type::Var(v) = &base_ty {
+                if let Some(bounds) = type_env.type_var_interface_bounds.get(v) {
+                    let mut candidates = Vec::new();
+                    for bound_iface in bounds {
+                        if let Some(iface_info) = type_env.interfaces.get(bound_iface)
+                            && iface_info.associated_types.contains(&name.to_string())
+                        {
+                            candidates.push(bound_iface.clone());
+                        }
+                    }
+                    if candidates.len() == 1 {
+                        candidates.into_iter().next().unwrap()
+                    } else if candidates.len() > 1 {
+                        return Err(TypeEnvError::AmbiguousAssociatedType {
+                            name: name.to_string(),
+                        });
+                    } else {
+                        String::new() // unresolved for now
+                    }
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+
+            Ok(Type::Associated {
+                interface,
+                base: Box::new(base_ty),
+                name: name.to_string(),
+            })
         }
+    }
+}
+
+fn resolve_associated_types_for_interface(
+    ty: &mut Type,
+    interface: &str,
+    interface_type_params: &[TypeVar],
+) {
+    match ty {
+        Type::Associated {
+            interface: iface,
+            base,
+            ..
+        } => {
+            if iface.is_empty()
+                && let Type::Var(v) = base.as_ref()
+                && interface_type_params.contains(v)
+            {
+                *iface = interface.to_string();
+            }
+        }
+        Type::Constructor { args, .. } => {
+            for arg in args {
+                resolve_associated_types_for_interface(arg, interface, interface_type_params);
+            }
+        }
+        Type::List(inner) => {
+            resolve_associated_types_for_interface(inner, interface, interface_type_params);
+        }
+        Type::Record(fields) => {
+            for (_, field_ty) in fields {
+                resolve_associated_types_for_interface(field_ty, interface, interface_type_params);
+            }
+        }
+        Type::Fn(params, ret) => {
+            for param in params {
+                resolve_associated_types_for_interface(param, interface, interface_type_params);
+            }
+            resolve_associated_types_for_interface(ret, interface, interface_type_params);
+        }
+        Type::Fun(params, ret, _) => {
+            for param in params {
+                resolve_associated_types_for_interface(param, interface, interface_type_params);
+            }
+            resolve_associated_types_for_interface(ret, interface, interface_type_params);
+        }
+        _ => {}
     }
 }
 
@@ -303,6 +395,7 @@ fn is_closed_world_nominal_impl_target(ty: &Type) -> bool {
         | Type::Fn(_, _) => false,
         Type::Var(_) => false,
         Type::Constructor { args, .. } => args.iter().all(is_closed_world_nominal_impl_target),
+        Type::Associated { .. } => false,
     }
 }
 
@@ -438,11 +531,11 @@ pub struct TypeEnv {
     /// Constructor mappings: constructor name -> (type name, variant index)
     constructors: HashMap<String, (TypeName, VariantIndex)>,
     /// Registered interfaces by name.
-    interfaces: HashMap<String, InterfaceInfo>,
+    pub(crate) interfaces: HashMap<String, InterfaceInfo>,
     /// Registered closed-world impls.
     impls: Vec<ImplScheme>,
     /// Interface bounds attached to workflow type variables.
-    type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
+    pub(crate) type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
     /// Variable bindings: variable name -> type
     variables: HashMap<String, crate::types::Type>,
     /// Lowered pure-function contracts kept at the type/runtime boundary.
@@ -468,23 +561,35 @@ impl TypeEnv {
         method: &InterfaceMethodSig,
         param_mapping: &HashMap<String, TypeVar>,
         ordered_param_names: &[String],
+        interface_name: &str,
     ) -> Result<(String, InterfaceMethodInfo), TypeEnvError> {
-        if method.params.len() != 1 {
-            return Err(TypeEnvError::InvalidDefinition(format!(
-                "canonical interface method '{}' must take exactly one parameter in the MVP",
-                method.name
-            )));
-        }
-
-        let params = method
+        // Allow multi-parameter interface methods for associated-type support (TASK-567)
+        let mut params: Vec<Type> = method
             .params
             .iter()
             .map(|ty| surface_type_to_type(ty, param_mapping, self))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let return_type = surface_type_to_type(&method.return_type, param_mapping, self)
-            .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+        for param in &mut params {
+            resolve_associated_types_for_interface(
+                param,
+                interface_name,
+                &ordered_param_names
+                    .iter()
+                    .map(|n| param_mapping[n])
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        let mut return_type = surface_type_to_type(&method.return_type, param_mapping, self)?;
+        resolve_associated_types_for_interface(
+            &mut return_type,
+            interface_name,
+            &ordered_param_names
+                .iter()
+                .map(|n| param_mapping[n])
+                .collect::<Vec<_>>(),
+        );
 
         let type_params: Vec<TypeVar> = ordered_param_names
             .iter()
@@ -615,7 +720,12 @@ impl TypeEnv {
             .methods
             .iter()
             .map(|method| {
-                self.convert_interface_method(method, &param_mapping, &ordered_param_names)
+                self.convert_interface_method(
+                    method,
+                    &param_mapping,
+                    &ordered_param_names,
+                    &interface_name,
+                )
             })
             .collect::<Result<HashMap<_, _>, _>>()?;
 
@@ -624,6 +734,11 @@ impl TypeEnv {
             InterfaceInfo {
                 name: interface_name,
                 type_params: def.type_params.iter().map(ToString::to_string).collect(),
+                associated_types: def
+                    .associated_types
+                    .iter()
+                    .map(|a| a.name.to_string())
+                    .collect(),
                 methods,
             },
         );
@@ -657,10 +772,7 @@ impl TypeEnv {
         let lowered_type_args: Vec<Type> = def
             .type_args
             .iter()
-            .map(|ta| {
-                surface_type_to_type(ta, &param_mapping, self)
-                    .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))
-            })
+            .map(|ta| surface_type_to_type(ta, &param_mapping, self))
             .collect::<Result<Vec<_>, _>>()?;
 
         if def.type_params.is_empty()
@@ -714,6 +826,40 @@ impl TypeEnv {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        let associated_type_bindings: HashMap<String, Type> = def
+            .associated_type_bindings
+            .iter()
+            .map(|binding| {
+                let ty = surface_type_to_type(&binding.ty, &param_mapping, self)?;
+                Ok((binding.name.to_string(), ty))
+            })
+            .collect::<Result<HashMap<_, _>, _>>()?;
+
+        for assoc_name in &interface.associated_types {
+            if !associated_type_bindings.contains_key(assoc_name) {
+                return Err(TypeEnvError::MissingAssociatedType {
+                    interface: interface_name.clone(),
+                    name: assoc_name.clone(),
+                });
+            }
+        }
+        for bound_name in associated_type_bindings.keys() {
+            if !interface.associated_types.contains(bound_name) {
+                return Err(TypeEnvError::InvalidDefinition(format!(
+                    "extraneous associated type binding '{bound_name}' in impl for interface '{interface_name}'"
+                )));
+            }
+        }
+
+        let temp_scheme = ImplScheme {
+            interface: interface.name.clone(),
+            type_params: param_mapping.values().copied().collect(),
+            head: impl_head.clone(),
+            where_bounds: where_bounds.clone(),
+            associated_type_bindings: associated_type_bindings.clone(),
+            methods: vec![],
+        };
+
         let mut method_names = HashSet::new();
         let mut method_infos = Vec::new();
         for method in &def.methods {
@@ -753,7 +899,11 @@ impl TypeEnv {
                 method_env.bind_variable(param_name.as_ref(), param_ty);
             }
 
-            let expected_return_ty = subst.apply(&method_info.return_type);
+            let expected_return_ty = self.normalize_associated_types(
+                &subst.apply(&method_info.return_type),
+                &temp_scheme,
+                &subst,
+            )?;
 
             let body_result = crate::check_expr::check_expr(&method_env, &method.body);
             if !body_result.is_ok() {
@@ -809,6 +959,7 @@ impl TypeEnv {
             type_params: param_mapping.values().copied().collect(),
             head: impl_head,
             where_bounds,
+            associated_type_bindings,
             methods: method_infos,
         });
 
@@ -1087,6 +1238,79 @@ impl TypeEnv {
                 .is_some_and(|parent| parent.type_var_has_interface_bound(var, interface))
     }
 
+    pub fn normalize_associated_types(
+        &self,
+        ty: &Type,
+        scheme: &ImplScheme,
+        subst: &Substitution,
+    ) -> Result<Type, TypeEnvError> {
+        match ty {
+            Type::Associated {
+                interface,
+                base: _,
+                name,
+            } => {
+                if scheme.interface != *interface {
+                    return Err(TypeEnvError::MismatchedProjectionInterface {
+                        expected: scheme.interface.clone(),
+                        found: interface.clone(),
+                    });
+                }
+                let binding = scheme.associated_type_bindings.get(name).ok_or_else(|| {
+                    TypeEnvError::MissingAssociatedType {
+                        interface: interface.clone(),
+                        name: name.clone(),
+                    }
+                })?;
+                let normalized = subst.apply(binding);
+                self.normalize_associated_types(&normalized, scheme, subst)
+            }
+            Type::Constructor { name, args, kind } => {
+                let norm_args = args
+                    .iter()
+                    .map(|a| self.normalize_associated_types(a, scheme, subst))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Type::Constructor {
+                    name: name.clone(),
+                    args: norm_args,
+                    kind: kind.clone(),
+                })
+            }
+            Type::Fun(params, ret, effect) => {
+                let norm_params = params
+                    .iter()
+                    .map(|p| self.normalize_associated_types(p, scheme, subst))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let norm_ret = self.normalize_associated_types(ret, scheme, subst)?;
+                Ok(Type::Fun(norm_params, Box::new(norm_ret), *effect))
+            }
+            Type::Fn(params, ret) => {
+                let norm_params = params
+                    .iter()
+                    .map(|p| self.normalize_associated_types(p, scheme, subst))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let norm_ret = self.normalize_associated_types(ret, scheme, subst)?;
+                Ok(Type::Fn(norm_params, Box::new(norm_ret)))
+            }
+            Type::List(inner) => Ok(Type::List(Box::new(
+                self.normalize_associated_types(inner, scheme, subst)?,
+            ))),
+            Type::Record(fields) => {
+                let norm_fields = fields
+                    .iter()
+                    .map(|(n, t)| {
+                        Ok((
+                            n.clone(),
+                            self.normalize_associated_types(t, scheme, subst)?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Type::Record(norm_fields))
+            }
+            other => Ok(other.clone()),
+        }
+    }
+
     /// Resolve a canonical `Interface::method(value)` call.
     pub fn resolve_interface_method_call(
         &self,
@@ -1103,7 +1327,8 @@ impl TypeEnv {
                 interface: interface.to_string(),
                 method: method.to_string(),
             })?;
-        Ok(selected.substitution.apply(&method_info.return_type))
+        let raw_return = selected.substitution.apply(&method_info.return_type);
+        self.normalize_associated_types(&raw_return, scheme, &selected.substitution)
     }
 
     pub fn select_impl_scheme(
@@ -1136,8 +1361,9 @@ impl TypeEnv {
 
         let mut subst = Substitution::new();
         for (expected, actual) in method_info.params.iter().zip(arg_types.iter()) {
-            subst = unify(expected, actual)
+            let sub = unify(&subst.apply(expected), actual)
                 .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+            subst = subst.compose(&sub);
         }
 
         let head_args: Vec<Type> = method_info

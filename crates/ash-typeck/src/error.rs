@@ -191,6 +191,18 @@ pub enum TypeEnvError {
     /// Recursive interface bound exceeded depth limit
     #[error("recursive interface bound exceeded depth limit")]
     RecursiveBound { message: String },
+
+    /// Missing associated type in impl
+    #[error("missing associated type '{name}' in impl for interface '{interface}'")]
+    MissingAssociatedType { interface: String, name: String },
+
+    /// Mismatched projection interface
+    #[error("mismatched projection interface: expected '{expected}', found '{found}'")]
+    MismatchedProjectionInterface { expected: String, found: String },
+
+    /// Ambiguous associated type
+    #[error("ambiguous associated type '{name}'")]
+    AmbiguousAssociatedType { name: String },
 }
 
 /// Error type for exhaustiveness checking

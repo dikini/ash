@@ -14,6 +14,17 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Type checker: associated types, normalization, and rigid projections (TASK-567):
+  - Added `Type::Associated { interface, base, name }` to internal type representation
+  - Added `MissingAssociatedType`, `MismatchedProjectionInterface`, and
+    `AmbiguousAssociatedType` error variants
+  - `register_interface` resolves associated-type projections on interface type params
+  - `register_impl` validates associated-type binding completeness and normalizes
+    expected return types before body checking
+  - `resolve_interface_method_call` normalizes return types after scheme selection
+  - Rigid projection rule: identical `Type::Associated` projections unify with empty
+    substitution; projections do not unify with arbitrary concrete types
+
 - Engine: post-typecheck monomorphization pass for generic impls (TASK-566):
   - Added `module: Option<Name>` to core `Expr::Call` to preserve interface method calls
   - Added `crates/ash-engine/src/monomorphize.rs` with `monomorphize_workflow`

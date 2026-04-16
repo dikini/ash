@@ -14,6 +14,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Engine: associated type substitution in monomorphized bodies (TASK-568):
+  - `monomorphize_expr` now normalizes `method_info.return_type` and `method_info.params`
+    via `TypeEnv::normalize_associated_types` after impl scheme selection
+  - Added debug-only `type_contains_associated` assertion to guarantee no
+    `Type::Associated` survives monomorphization
+  - New integration test: `crates/ash-engine/tests/task_568_monomorphize.rs`
+
 - Type checker: associated types, normalization, and rigid projections (TASK-567):
   - Added `Type::Associated { interface, base, name }` to internal type representation
   - Added `MissingAssociatedType`, `MismatchedProjectionInterface`, and

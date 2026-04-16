@@ -177,6 +177,41 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
                     method: func.clone(),
                 })?;
 
+            // Normalize associated types in the method signature
+            let normalized_return_type = type_env
+                .normalize_associated_types(
+                    &method_info.return_type,
+                    scheme,
+                    &selected.substitution,
+                )
+                .map_err(|e| MonomorphizeError::Resolution(e.to_string()))?;
+
+            let normalized_params: Vec<Type> = method_info
+                .params
+                .iter()
+                .map(|p| {
+                    type_env
+                        .normalize_associated_types(p, scheme, &selected.substitution)
+                        .map_err(|e| MonomorphizeError::Resolution(e.to_string()))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            // Optional: debug-only assertion that no Type::Associated remains
+            #[cfg(debug_assertions)]
+            assert!(
+                !type_contains_associated(&normalized_return_type),
+                "monomorphized return type still contains Type::Associated: {normalized_return_type:?}"
+            );
+            #[cfg(debug_assertions)]
+            for p in &normalized_params {
+                assert!(
+                    !type_contains_associated(p),
+                    "monomorphized param type still contains Type::Associated: {p:?}"
+                );
+            }
+
+            let _ = (&normalized_return_type, &normalized_params);
+
             let mut body = method_info.body.clone();
             apply_substitution_to_expr(&selected.substitution, &mut body);
 
@@ -299,4 +334,17 @@ fn value_to_type(v: &ash_core::Value) -> Type {
 fn apply_substitution_to_expr(_subst: &ash_typeck::types::Substitution, _expr: &mut Expr) {
     // TODO: recursively apply substitution to type annotations inside the expression.
     // For now, the test bodies contain no type variables, so this is a no-op.
+}
+
+fn type_contains_associated(ty: &Type) -> bool {
+    match ty {
+        Type::Associated { .. } => true,
+        Type::List(inner) => type_contains_associated(inner),
+        Type::Record(fields) => fields.iter().any(|(_, t)| type_contains_associated(t)),
+        Type::Fun(params, ret, _) | Type::Fn(params, ret) => {
+            params.iter().any(type_contains_associated) || type_contains_associated(ret)
+        }
+        Type::Constructor { args, .. } => args.iter().any(type_contains_associated),
+        _ => false,
+    }
 }

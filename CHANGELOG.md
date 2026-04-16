@@ -6,6 +6,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrected PLAN-INDEX metadata drift: Phase 70, 78, and 79 marked `Complete`;
+  Phase 76 split into `76A` (Complete — runner substrate) and `76B` (Planned —
+  synthesis/small-world exploration); TASK-563 status updated to `Complete`.
+
 ### Added
 
 - **Phase 82: Multi-Parameter Interface Methods (SPEC-032)** — Complete implementation across

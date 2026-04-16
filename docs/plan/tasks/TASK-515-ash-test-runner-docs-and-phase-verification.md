@@ -1,6 +1,6 @@
 # TASK-515: Ash Test Runner Docs and Phase Verification
 
-## Status: 🟡 In Progress
+## Status: Planned (Phase 76B)
 
 ## Description
 

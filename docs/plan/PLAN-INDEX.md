@@ -271,11 +271,13 @@ Update this section as tasks complete:
 | 41-42 | 2 | 2 | ✅ Complete |
 | 68 | 6 | 6 | ✅ Complete |
 | 69 | 12 | 12 | ✅ Complete |
-| 70 | 8 | 0 | Planned |
+| 70 | 8 | 8 | ✅ Complete |
+| 76A | 4 | 4 | ✅ Complete |
+| 76B | 3 | 0 | Planned |
 | 74 | 8 | 0 | Planned |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
-| 79 | 6 | 0 | Planned |
+| 79 | 6 | 6 | ✅ Complete |
 | 80 | 9 | 9 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
@@ -370,9 +372,11 @@ Update this section as tasks complete:
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
 | 74 | 8 | 0 | 📝 Planned |
+| 76A | 4 | 4 | ✅ Complete |
+| 76B | 3 | 0 | 📝 Planned |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
-| 79 | 6 | 0 | 📝 Planned |
+| 79 | 6 | 6 | ✅ Complete |
 | 80 | 9 | 9 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
@@ -2076,7 +2080,7 @@ interpreter, engine, and specs around one canonical dispatch model.
 
 **Plan Reference:** [PLAN-016: Capability Call Dispatch Split and Operational Call Sugar](PLAN-016-CAPABILITY-CALL-DISPATCH.md)
 **Priority:** High
-**Status:** 📝 In Progress (Bridge Implementation)
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2215,37 +2219,54 @@ freeze the function/capability/workflow split required by DESIGN-020 and the act
 **Deliverable:** A coherent pure-function subsystem with `fn` syntax, parser/type/runtime support,
 contract-aware workflow integration, updated pure stdlib surfaces, and aligned active specs/docs.
 
-## Phase 76: Ash Test Runner V1
+## Phase 76A: Ash Test Runner V1 — Substrate
 
 Build a first-class Ash-native test runner integrated with the CLI, including the fail-contained
-runner substrate, a dedicated Ash test library surface for assertions/helpers, explicit authored test
-metadata/discovery, and opt-in synthesized tests sourced from contracts, policies, and obligations.
+runner substrate, a dedicated Ash test library surface for assertions/helpers, and explicit authored
+test metadata/discovery.
 
 **Plan Reference:** [PLAN-024: Ash Test Runner V1](PLAN-024-ASH-TEST-RUNNER-V1.md)
 **Design Reference:** [DESIGN-021: Ash Test Runner V1](../design/DESIGN-021-ASH-TEST-RUNNER-V1.md)
 **Priority:** High
-**Status:** 🟡 In Progress
+**Status:** ✅ Complete
 
-|| Task | Description | Spec | Est. Hours | Status ||
-|------|-------------|------|------------|--------||
-| [TASK-509](tasks/TASK-509-ash-test-runner-substrate.md) | Add `ash test` CLI surface, authored discovery roots, canonical suite/result reporting, and the runner substrate entry point | PLAN-024, DESIGN-021 | 6-8 | ✅ Complete ||
-| [TASK-510](tasks/TASK-510-test-execution-isolation-and-panic-capture.md) | Add per-test isolation, panic capture, timeout handling, and sealed result classification | PLAN-024, DESIGN-021 | 8-12 | 🟡 In Progress ||
-| [TASK-511](tasks/TASK-511-ash-test-library-surface.md) | Introduce the minimal Ash test library surface for assertions, panic-aware helpers, and runtime-facing test helpers | PLAN-024, DESIGN-021 | 8-12 | 🟡 In Progress ||
-| [TASK-512](tasks/TASK-512-authored-test-metadata-and-execution-model.md) | Freeze authored test metadata/discovery and wire authored unit/integration/e2e execution to the Ash test library surface | PLAN-024, DESIGN-021 | 10-14 | 🟡 In Progress ||
-| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-021 | 10-14 | 🟡 In Progress ||
-| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and bounded small-world execution with reproducible failure reporting and runner controls | PLAN-024, DESIGN-021 | 8-12 | 🟡 In Progress ||
-| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate for the Ash test runner phase | PLAN-024, DESIGN-021 | 4-6 | 🟡 In Progress |
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------||
+|| [TASK-509](tasks/TASK-509-ash-test-runner-substrate.md) | Add `ash test` CLI surface, authored discovery roots, canonical suite/result reporting, and the runner substrate entry point | PLAN-024, DESIGN-021 | 6-8 | ✅ Complete ||
+|| [TASK-510](tasks/TASK-510-test-execution-isolation-and-panic-capture.md) | Add per-test isolation, panic capture, timeout handling, and sealed result classification | PLAN-024, DESIGN-021 | 8-12 | ✅ Complete ||
+|| [TASK-511](tasks/TASK-511-ash-test-library-surface.md) | Introduce the minimal Ash test library surface for assertions, panic-aware helpers, and runtime-facing test helpers | PLAN-024, DESIGN-021 | 8-12 | ✅ Complete ||
+|| [TASK-512](tasks/TASK-512-authored-test-metadata-and-execution-model.md) | Freeze authored test metadata/discovery and wire authored unit/integration/e2e execution to the Ash test library surface | PLAN-024, DESIGN-021 | 10-14 | ✅ Complete ||
 
-**Current status note:** The repo now has a verified runner substrate, real timeout containment,
-documented `-- @test` metadata parsing, and a minimal usable `std::test` surface for authored tests.
-Phase 76 remains open because synthesized tests from contracts, policies, and obligations are still
-planning-level labeled results rather than executable end-to-end cases, and property/small-world
+**Deliverable:** A CLI-integrated `ash test` command with panic-contained suite execution,
+authored test discovery, a minimal `std::test` surface, and verified smoke coverage.
+
+## Phase 76B: Ash Test Runner — Synthesis and Small-World Exploration
+
+Complete the deferred synthesized-test and small-world exploration follow-ups from Phase 76A.
+Requires runner-facing introspection APIs for contracts, policies, and obligations, plus a true
+finite-world enumeration substrate.
+
+**Plan Reference:** [PLAN-024: Ash Test Runner V1](PLAN-024-ASH-TEST-RUNNER-V1.md)
+**Design References:**
+- [DESIGN-022: Synthesized Contract / Policy / Obligation Cases](../design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md)
+- [DESIGN-023: Small-World Exploration Substrate](../design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md)
+**Priority:** High
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------||
+|| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-022 | 10-14 | 📝 Planned ||
+|| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | PLAN-024, DESIGN-023 | 8-12 | 📝 Planned ||
+|| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | PLAN-024, DESIGN-022/023 | 4-6 | 📝 Planned |
+
+**Current status note:** Synthesized tests from contracts, policies, and obligations remain
+planning-level labeled results rather than executable end-to-end cases. Property/small-world
 execution is bounded and reproducible but not yet backed by true generated input/world exploration.
+Both gaps are blocked on a stable runner-facing metadata extraction layer and a finite-world
+enumeration substrate, documented in DESIGN-022 and DESIGN-023.
 
-**Deliverable target:** A CLI-integrated Ash test runner v1 with panic-contained suite execution, a
-dedicated Ash test library surface, authored unit/integration/e2e test support, bounded
-property/small-world execution, and explicit opt-in synthesized tests from contracts, policies, and
-obligations.
+**Deliverable target:** Executable synthesized tests from contracts, policies, and obligations;
+true small-world exploration with deterministic world enumeration; and final phase closeout.
 
 ## Phase 77: LLM Standard Library
 
@@ -2320,7 +2341,7 @@ parse failures are silently dropped.
 **Design Reference:** [DESIGN-026: Module Type Resolution Remediation](../design/DESIGN-026-MODULE-TYPE-RESOLUTION-REMEDIATION.md)
 **Spec Reference:** SPEC-030-MODULE-TYPE-RESOLUTION.md
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2416,7 +2437,7 @@ Remove the single type-parameter restriction on interfaces, enable generic `impl
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | ✅ Done |
+|| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | ✅ Complete |
 || [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-034 §4, SPEC-035 §4 | 5 | 📝 Planned |
 || [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-034 §5 | 6 | 📝 Planned |
 || [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | 📝 Planned |

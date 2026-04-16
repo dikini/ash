@@ -4,7 +4,7 @@
 **Spec:** SPEC-033 §5
 **Related:** TASK-562, TASK-565
 **Estimate:** 4 hours
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 
 ## Description
 
@@ -139,6 +139,6 @@ Add a check: if any `head_args` still contains an unresolved `Type::Var`, return
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-typeck task563` passes
-- [ ] All existing single-parameter interface tests still pass
-- [ ] `cargo clippy -p ash-typeck --all-targets --all-features` clean
+- [x] `cargo test -p ash-typeck task563` passes
+- [x] All existing single-parameter interface tests still pass
+- [x] `cargo clippy -p ash-typeck --all-targets --all-features` clean

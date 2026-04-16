@@ -2473,8 +2473,8 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-572](tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError` | SPEC-040 §4 | 12 | 📝 Planned |
-|| [TASK-573](tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | SPEC-040 §5 | 6 | 📝 Planned |
+|| [TASK-572](tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError` | SPEC-040 §4 | 12 | ✅ Complete |
+|| [TASK-573](tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | SPEC-040 §5 | 6 | ✅ Complete |
 
 **Deliverable:** All type-checker and name-resolution errors carry spans; `AshLspError` trait enables mechanical LSP diagnostic conversion.
 

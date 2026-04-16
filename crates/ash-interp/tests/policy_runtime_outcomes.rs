@@ -50,7 +50,10 @@ async fn observe_policy_transform_masks_selected_fields_before_binding() {
         capability: "sensor".into(),
         channel: "temp".into(),
         constraints: vec![],
-        pattern: Pattern::Variable("reading".into()),
+        pattern: Pattern::Variable {
+            name: "reading".into(),
+            span: ash_core::ast::Span::default(),
+        },
     };
 
     let result = execute_observe(

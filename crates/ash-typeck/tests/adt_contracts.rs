@@ -75,10 +75,19 @@ fn variant_patterns_bind_field_types_from_constructor_metadata() {
     let env = option_env();
     let pattern = ParserPattern::Variant {
         name: "Some".into(),
-        fields: Some(vec![("value".into(), ParserPattern::Variable("x".into()))]),
+        fields: Some(vec![(
+            "value".into(),
+            ParserPattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
+        )]),
         payload: VariantPatternPayload::Record(vec![(
             "value".into(),
-            ParserPattern::Variable("x".into()),
+            ParserPattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
         )]),
     };
 
@@ -94,11 +103,17 @@ fn variant_patterns_reject_unknown_fields_from_constructor_metadata() {
         name: "Some".into(),
         fields: Some(vec![(
             "missing".into(),
-            ParserPattern::Variable("x".into()),
+            ParserPattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
         )]),
         payload: VariantPatternPayload::Record(vec![(
             "missing".into(),
-            ParserPattern::Variable("x".into()),
+            ParserPattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
         )]),
     };
 
@@ -219,8 +234,14 @@ fn tuple_variant_patterns_bind_payload_by_position() {
         name: "RuntimeError".into(),
         fields: None,
         payload: VariantPatternPayload::Tuple(vec![
-            ParserPattern::Variable("code".into()),
-            ParserPattern::Variable("message".into()),
+            ParserPattern::Variable {
+                name: "code".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            ParserPattern::Variable {
+                name: "message".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]),
     };
 

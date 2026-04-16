@@ -58,7 +58,7 @@ impl PatternMatrix {
 /// Convert an AST pattern to a pattern cell
 pub fn pattern_to_cell(pattern: &Pattern) -> PatternCell {
     match pattern {
-        Pattern::Wildcard | Pattern::Variable(_) => PatternCell::Wildcard,
+        Pattern::Wildcard | Pattern::Variable { .. } => PatternCell::Wildcard,
         Pattern::Variant { name, fields } => {
             let field_cells = fields
                 .as_ref()
@@ -289,7 +289,10 @@ mod tests {
                 name: "Some".to_string(),
                 fields: None,
             },
-            Pattern::Variable("x".to_string()),
+            Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         ];
 
         assert_eq!(check_exhaustive(&patterns, &option_type), Coverage::Covered);
@@ -347,7 +350,10 @@ mod tests {
 
     #[test]
     fn test_pattern_to_cell_variable() {
-        let pattern = Pattern::Variable("x".to_string());
+        let pattern = Pattern::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        };
         assert!(matches!(pattern_to_cell(&pattern), PatternCell::Wildcard));
     }
 }

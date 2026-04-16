@@ -690,7 +690,7 @@ fn effect_color(effect: &Effect) -> &'static str {
 
 fn pattern_to_string(pattern: &Pattern) -> String {
     match pattern {
-        Pattern::Variable(name) => name.clone(),
+        Pattern::Variable { name, .. } => name.clone(),
         Pattern::Tuple(patterns) => {
             let inner: Vec<_> = patterns.iter().map(pattern_to_string).collect();
             format!("({})", inner.join(", "))
@@ -769,7 +769,10 @@ mod tests {
                 effect: Effect::Epistemic,
                 constraints: vec![],
             },
-            pattern: Pattern::Variable("data".to_string()),
+            pattern: Pattern::Variable {
+                name: "data".to_string(),
+                span: crate::ast::Span::default(),
+            },
             continuation: Box::new(Workflow::Done),
         };
         let dot = workflow.to_dot();

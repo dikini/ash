@@ -4,12 +4,134 @@
 //! parser modules for whitespace handling, keyword parsing, and
 //! capability reference parsing.
 
+use std::collections::HashMap;
+
 use winnow::prelude::*;
 use winnow::stream::Stream;
 use winnow::token::take_while;
 
 use crate::input::ParseInput;
 use crate::parse_expr::identifier;
+use crate::token::Span;
+
+/// The kind of a comment.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CommentKind {
+    /// `-- ...` or `// ...` style line comment.
+    Line,
+    /// `/* ... */` style block comment.
+    Block,
+}
+
+/// A captured comment with its source span.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Comment {
+    /// Raw comment text (including delimiters).
+    pub text: String,
+    /// Kind of comment.
+    pub kind: CommentKind,
+    /// Source span of the comment.
+    pub span: Span,
+}
+
+/// Side-table that maps token spans to their leading and trailing comments.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct CommentTable {
+    leading: HashMap<Span, Vec<Comment>>,
+    trailing: HashMap<Span, Vec<Comment>>,
+    /// The span of the most recently parsed non-comment token.
+    pub last_seen_token_span: Option<Span>,
+    /// Comments that are pending attachment as leading on the next token.
+    pending_leading: Vec<Comment>,
+    /// Track whether there has been a newline since `last_seen_token_span`.
+    had_newline_since_last_token: bool,
+}
+
+impl CommentTable {
+    /// Push a leading comment onto the given token span.
+    pub fn push_leading(&mut self, span: Span, comment: Comment) {
+        if span == Span::default() {
+            return;
+        }
+        self.leading.entry(span).or_default().push(comment);
+    }
+
+    /// Push a trailing comment onto the given token span.
+    pub fn push_trailing(&mut self, span: Span, comment: Comment) {
+        if span == Span::default() {
+            return;
+        }
+        self.trailing.entry(span).or_default().push(comment);
+    }
+
+    /// Record that a token with the given span has just been parsed.
+    /// Flushes any pending leading comments to this span.
+    pub fn set_last_token(&mut self, span: Span) {
+        if span == Span::default() {
+            return;
+        }
+        let pending: Vec<_> = self.pending_leading.drain(..).collect();
+        for comment in pending {
+            self.push_leading(span, comment);
+        }
+        self.last_seen_token_span = Some(span);
+        self.had_newline_since_last_token = false;
+    }
+
+    /// Mark that a newline has been seen while skipping whitespace.
+    pub(crate) fn mark_newline(&mut self) {
+        self.had_newline_since_last_token = true;
+    }
+
+    /// Returns true if there has been a newline since the last token.
+    pub(crate) fn had_newline_since_last_token(&self) -> bool {
+        self.had_newline_since_last_token
+    }
+
+    /// Push a comment that was encountered while skipping whitespace.
+    /// Uses the heuristic from SPEC-039 §4.4:
+    /// - If on the same line as the preceding token, attach as trailing.
+    /// - Otherwise, queue as leading for the next token.
+    pub(crate) fn push_skipped_comment(&mut self, comment: Comment) {
+        if let Some(last) = self.last_seen_token_span {
+            if !self.had_newline_since_last_token {
+                self.push_trailing(last, comment);
+                return;
+            }
+        }
+        self.pending_leading.push(comment);
+    }
+
+    /// Flush any pending leading comments as trailing on the given span.
+    /// Used for EOF comments.
+    pub fn flush_pending_leading_to_trailing(&mut self, span: Span) {
+        if span == Span::default() {
+            self.pending_leading.clear();
+            return;
+        }
+        let pending: Vec<_> = self.pending_leading.drain(..).collect();
+        for comment in pending {
+            self.push_trailing(span, comment);
+        }
+    }
+
+    /// Returns the leading comments for a given span.
+    pub fn leading(&self, span: Span) -> &[Comment] {
+        self.leading.get(&span).map_or(&[], |v| v.as_slice())
+    }
+
+    /// Returns the trailing comments for a given span.
+    pub fn trailing(&self, span: Span) -> &[Comment] {
+        self.trailing.get(&span).map_or(&[], |v| v.as_slice())
+    }
+
+    /// Total number of comments stored in the table.
+    pub fn total_count(&self) -> usize {
+        self.leading.values().map(|v| v.len()).sum::<usize>()
+            + self.trailing.values().map(|v| v.len()).sum::<usize>()
+            + self.pending_leading.len()
+    }
+}
 
 /// Parse a capability reference in the form `capability:channel`.
 ///
@@ -32,12 +154,16 @@ pub fn keyword<'a>(input: &mut ParseInput<'a>, word: &'a str) -> ModalResult<&'a
     if input.input.starts_with(word) {
         let after = &input.input[word.len()..];
         if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
+            let start = crate::input::current_span(input);
             // Update position state
             for c in word.chars() {
-                input.state.advance(c);
+                input.state.pos.advance(c);
             }
             // Advance the inner stream
             let _ = input.input.next_slice(word.len());
+            let end = crate::input::current_span(input);
+            let span = Span::new(start.start, end.start, start.line, start.column);
+            input.state.comments.set_last_token(span);
             return Ok(word);
         }
     }
@@ -51,12 +177,16 @@ pub fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalRe
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
         if input.input.starts_with(s) {
+            let start = crate::input::current_span(input);
             // Update position state
             for c in s.chars() {
-                input.state.advance(c);
+                input.state.pos.advance(c);
             }
             // Advance the inner stream
             let _ = input.input.next_slice(s.len());
+            let end = crate::input::current_span(input);
+            let span = Span::new(start.start, end.start, start.line, start.column);
+            input.state.comments.set_last_token(span);
             Ok(s)
         } else {
             Err(winnow::error::ErrMode::Backtrack(
@@ -66,34 +196,83 @@ pub fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalRe
     }
 }
 
-/// Skip whitespace and comments.
+/// Skip whitespace and comments, recording any comments into the input state's
+/// comment table.
 pub fn skip_whitespace_and_comments(input: &mut ParseInput) {
     loop {
         // Skip whitespace
-        let _: ModalResult<&str> =
+        let _ws_start = input.state.pos;
+        let ws: ModalResult<&str> =
             take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
+        if let Ok(ws_text) = ws {
+            for c in ws_text.chars() {
+                if c == '\n' {
+                    input.state.comments.mark_newline();
+                }
+                input.state.pos.advance(c);
+            }
+        }
 
         // Check for line comment
         if input.input.starts_with("--") {
-            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            let start = crate::input::current_span(input);
+            let mut text = String::new();
+            text.push_str("--");
+            input.state.pos.advance('-');
+            input.state.pos.advance('-');
+            let _ = input.input.next_slice(2);
+            let rest: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+            if let Ok(r) = rest {
+                text.push_str(r);
+                for c in r.chars() {
+                    input.state.pos.advance(c);
+                }
+            }
+            let end = crate::input::current_span(input);
+            let span = Span::new(start.start, end.start, start.line, start.column);
+            input.state.comments.push_skipped_comment(Comment {
+                text,
+                kind: CommentKind::Line,
+                span,
+            });
             continue;
         }
 
         // Check for block comment
         if input.input.starts_with("/*") {
+            let start = crate::input::current_span(input);
+            let mut text = String::new();
+            text.push_str("/*");
+            input.state.pos.advance('/');
+            input.state.pos.advance('*');
             let _ = input.input.next_slice(2);
             let mut depth = 1;
             while depth > 0 && !input.input.is_empty() {
                 if input.input.starts_with("/*") {
+                    text.push_str("/*");
                     let _ = input.input.next_slice(2);
+                    input.state.pos.advance('/');
+                    input.state.pos.advance('*');
                     depth += 1;
                 } else if input.input.starts_with("*/") {
+                    text.push_str("*/");
                     let _ = input.input.next_slice(2);
+                    input.state.pos.advance('*');
+                    input.state.pos.advance('/');
                     depth -= 1;
                 } else {
-                    let _ = input.input.next_token();
+                    let c = input.input.next_token().unwrap_or('\0');
+                    text.push(c);
+                    input.state.pos.advance(c);
                 }
             }
+            let end = crate::input::current_span(input);
+            let span = Span::new(start.start, end.start, start.line, start.column);
+            input.state.comments.push_skipped_comment(Comment {
+                text,
+                kind: CommentKind::Block,
+                span,
+            });
             continue;
         }
 
@@ -181,6 +360,7 @@ mod tests {
         let mut input = new_input("-- comment\nhello");
         skip_whitespace_and_comments(&mut input);
         assert!(input.input.starts_with("hello"));
+        assert_eq!(input.state.comments.total_count(), 1);
     }
 
     #[test]
@@ -188,5 +368,120 @@ mod tests {
         let mut input = new_input("/* block */hello");
         skip_whitespace_and_comments(&mut input);
         assert!(input.input.starts_with("hello"));
+        assert_eq!(input.state.comments.total_count(), 1);
+    }
+
+    // Classification matrix from SPEC-039 §4.4.1
+
+    fn first_span(comments: &CommentTable) -> Span {
+        comments
+            .leading
+            .keys()
+            .chain(comments.trailing.keys())
+            .copied()
+            .next()
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn test_comment_table_simple_trailing() {
+        // "1 -- trailing\n" - trailing on 1
+        let mut input = new_input("1 -- trailing\n");
+        // Simulate parsing token '1' at span (0,1,1,1)
+        let _: ModalResult<&str> =
+            take_while(1.., |c: char| c.is_ascii_digit()).parse_next(&mut input);
+        input.state.comments.set_last_token(Span::new(0, 1, 1, 1));
+        skip_whitespace_and_comments(&mut input);
+        let span = Span::new(0, 1, 1, 1);
+        assert_eq!(input.state.comments.trailing(span).len(), 1);
+        assert_eq!(input.state.comments.trailing(span)[0].text, "-- trailing");
+    }
+
+    #[test]
+    fn test_comment_table_simple_leading() {
+        // "-- leading\n1" - leading on 1
+        let mut input = new_input("-- leading\n1");
+        skip_whitespace_and_comments(&mut input);
+        // Now parse token '1'
+        let span = Span::new(11, 12, 2, 1);
+        input.state.comments.set_last_token(span);
+        assert_eq!(input.state.comments.leading(span).len(), 1);
+        assert_eq!(input.state.comments.leading(span)[0].text, "-- leading");
+    }
+
+    #[test]
+    fn test_comment_table_blank_line_separator() {
+        // "1\n\n-- leading\n2"
+        let mut input = new_input("1\n\n-- leading\n2");
+        let _: ModalResult<&str> =
+            take_while(1.., |c: char| c.is_ascii_digit()).parse_next(&mut input);
+        input.state.comments.set_last_token(Span::new(0, 1, 1, 1));
+        skip_whitespace_and_comments(&mut input);
+        let span = Span::new(14, 15, 4, 1);
+        input.state.comments.set_last_token(span);
+        assert_eq!(input.state.comments.leading(span).len(), 1);
+    }
+    #[test]
+    fn test_comment_table_consecutive_same_line() {
+        // "1 -- a -- b\n" - line comment runs to end of line, so this is one comment
+        let mut input = new_input("1 -- a -- b\n");
+        let _: ModalResult<&str> =
+            take_while(1.., |c: char| c.is_ascii_digit()).parse_next(&mut input);
+        input.state.comments.set_last_token(Span::new(0, 1, 1, 1));
+        skip_whitespace_and_comments(&mut input);
+        let span = Span::new(0, 1, 1, 1);
+        let trailing = input.state.comments.trailing(span);
+        assert_eq!(trailing.len(), 1);
+        assert_eq!(trailing[0].text, "-- a -- b");
+    }
+
+    #[test]
+    fn test_comment_table_consecutive_multiline() {
+        // "-- a\n-- b\n1"
+        let mut input = new_input("-- a\n-- b\n1");
+        skip_whitespace_and_comments(&mut input);
+        let span = Span::new(10, 11, 3, 1);
+        input.state.comments.set_last_token(span);
+        assert_eq!(input.state.comments.leading(span).len(), 2);
+    }
+
+    #[test]
+    fn test_comment_table_eof_trailing() {
+        // "1 -- eof"
+        let mut input = new_input("1 -- eof");
+        let _: ModalResult<&str> =
+            take_while(1.., |c: char| c.is_ascii_digit()).parse_next(&mut input);
+        input.state.comments.set_last_token(Span::new(0, 1, 1, 1));
+        skip_whitespace_and_comments(&mut input);
+        let span = Span::new(0, 1, 1, 1);
+        input.state.comments.flush_pending_leading_to_trailing(span);
+        assert_eq!(input.state.comments.trailing(span).len(), 1);
+        assert_eq!(input.state.comments.trailing(span)[0].text, "-- eof");
+    }
+
+    #[test]
+    fn test_comment_table_eof_leading_only_no_prior_token() {
+        // "-- eof\n"
+        let mut input = new_input("-- eof\n");
+        skip_whitespace_and_comments(&mut input);
+        // No token to attach to; pending should remain
+        assert_eq!(input.state.comments.pending_leading.len(), 1);
+        // flush with default span should drop
+        input
+            .state
+            .comments
+            .flush_pending_leading_to_trailing(Span::default());
+        assert_eq!(input.state.comments.total_count(), 0);
+    }
+
+    #[test]
+    fn test_comment_table_comment_before_first_token() {
+        // "-- header\nmodule M"
+        let mut input = new_input("-- header\nmodule M");
+        skip_whitespace_and_comments(&mut input);
+        let span = Span::new(10, 16, 2, 1);
+        input.state.comments.set_last_token(span);
+        assert_eq!(input.state.comments.leading(span).len(), 1);
+        assert_eq!(input.state.comments.leading(span)[0].text, "-- header");
     }
 }

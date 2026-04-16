@@ -2,6 +2,8 @@
 //!
 //! This crate provides the lexer and parser for the Ash workflow language.
 
+use winnow::prelude::*;
+
 pub mod capability_export;
 pub mod capability_pipeline;
 pub mod capability_resolver;
@@ -60,6 +62,29 @@ pub use surface::*;
 pub use token::*;
 pub use use_tree::*;
 
+/// Parse a complete `.ash` source file, returning a `ModuleFile` with a
+/// populated `CommentTable`.
+pub fn parse_surface_file(source: &str) -> Result<surface::ModuleFile, Vec<error::ParseError>> {
+    let mut input = input::new_input(source);
+    match parse_module::module_file.parse_next(&mut input) {
+        Ok(mut module) => {
+            // Flush EOF comments as trailing on the last seen token
+            if let Some(last) = input.state.comments.last_seen_token_span {
+                input.state.comments.flush_pending_leading_to_trailing(last);
+            }
+            module.comments = input.state.comments;
+            Ok(module)
+        }
+        Err(e) => {
+            let span = input::current_span(&input);
+            Err(vec![error::ParseError::new(
+                span,
+                &format!("parse error: {e}"),
+            )])
+        }
+    }
+}
+
 #[cfg(test)]
 mod lib_tests {
     // Integration tests for the parser modules
@@ -94,9 +119,9 @@ mod lib_tests {
         let input = new_input(input_str);
 
         // Verify input tracking
-        assert_eq!(input.state.offset, 0);
-        assert_eq!(input.state.line, 1);
-        assert_eq!(input.state.column, 1);
+        assert_eq!(input.state.pos.offset, 0);
+        assert_eq!(input.state.pos.line, 1);
+        assert_eq!(input.state.pos.column, 1);
 
         // Create a span
         let span = Span::new(0, 4, 1, 1);
@@ -249,5 +274,36 @@ mod lib_tests {
                         )
                 )
         ));
+    }
+
+    #[test]
+    fn test_parse_surface_file_populates_comment_table() {
+        let source = r#"
+            -- header comment
+            capability sensor: epistemic();
+            -- trailing comment
+        "#;
+        let result = parse_surface_file(source);
+        assert!(result.is_ok(), "parse_surface_file failed: {:?}", result);
+        let module = result.unwrap();
+        assert!(
+            module.comments.total_count() > 0,
+            "expected non-empty CommentTable"
+        );
+    }
+
+    #[test]
+    fn test_parse_surface_file_backtracking_does_not_leak_comments() {
+        // This test verifies that speculative parser branches that consume
+        // comments but ultimately fail do not pollute the final CommentTable.
+        let source = r#"
+            capability sensor: epistemic();
+            -- this comment should be attached
+        "#;
+        let result = parse_surface_file(source);
+        assert!(result.is_ok());
+        let module = result.unwrap();
+        // The comment should be present exactly once
+        assert_eq!(module.comments.total_count(), 1);
     }
 }

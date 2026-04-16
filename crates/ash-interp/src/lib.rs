@@ -150,16 +150,28 @@ mod tests {
     async fn test_interpret_complex() {
         // let x = 10 in let y = 20 in x + y
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(10)),
             continuation: Box::new(Workflow::Let {
-                pattern: Pattern::Variable("y".to_string()),
+                pattern: Pattern::Variable {
+                    name: "y".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 expr: Expr::Literal(Value::Int(20)),
                 continuation: Box::new(Workflow::Ret {
                     expr: Expr::Binary {
                         op: BinaryOp::Add,
-                        left: Box::new(Expr::Variable("x".to_string())),
-                        right: Box::new(Expr::Variable("y".to_string())),
+                        left: Box::new(Expr::Variable {
+                            name: "x".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
+                        right: Box::new(Expr::Variable {
+                            name: "y".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
                     },
                 }),
             }),

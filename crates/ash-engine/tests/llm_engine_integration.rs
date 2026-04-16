@@ -404,7 +404,10 @@ async fn test_engine_llm_chat_with_result_binding() {
         provenance: Provenance::default(),
         result_name: Some("result".into()),
         continuation: Box::new(Workflow::Ret {
-            expr: Expr::Variable("result".into()),
+            expr: Expr::Variable {
+                name: "result".into(),
+                span: ash_core::ast::Span::default(),
+            },
         }),
     };
 

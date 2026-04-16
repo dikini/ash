@@ -27,7 +27,7 @@ fn simple_let_binding_creates_nested_let_with_done_continuation() {
     // Should produce: LET x = 10 IN Done
     match parsed {
         Workflow::Let {
-            pattern: Pattern::Variable(name),
+            pattern: Pattern::Variable { name, .. },
             continuation: Some(cont),
             ..
         } => {
@@ -45,7 +45,9 @@ fn two_let_bindings_create_right_associative_nesting() {
     // Should produce: LET x = 10 IN (LET y = x + 1 IN Done)
     match parsed {
         Workflow::Let {
-            pattern: Pattern::Variable(outer_name),
+            pattern: Pattern::Variable {
+                name: outer_name, ..
+            },
             continuation: Some(outer_cont),
             ..
         } => {
@@ -53,7 +55,10 @@ fn two_let_bindings_create_right_associative_nesting() {
 
             match *outer_cont {
                 Workflow::Let {
-                    pattern: Pattern::Variable(inner_name),
+                    pattern:
+                        Pattern::Variable {
+                            name: inner_name, ..
+                        },
                     continuation: Some(inner_cont),
                     ..
                 } => {
@@ -79,7 +84,7 @@ fn let_then_ret_creates_nested_let_with_ret_continuation() {
     // because Seq would discard the return value (see SPEC-025 SEQ-ADVANCE rule)
     match parsed {
         Workflow::Let {
-            pattern: Pattern::Variable(name),
+            pattern: Pattern::Variable { name, .. },
             continuation: Some(cont),
             ..
         } => {
@@ -98,7 +103,7 @@ fn mixed_binding_and_non_binding_creates_correct_structure() {
     // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Let {
-            pattern: Pattern::Variable(name),
+            pattern: Pattern::Variable { name, .. },
             continuation: Some(cont),
             ..
         } => {
@@ -131,7 +136,7 @@ fn observe_with_binding_creates_nested_observe_with_continuation() {
     // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Observe {
-            binding: Some(Pattern::Variable(name)),
+            binding: Some(Pattern::Variable { name, .. }),
             continuation: Some(cont),
             ..
         } => {
@@ -153,7 +158,7 @@ fn orient_with_binding_creates_nested_orient_with_continuation() {
     // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Orient {
-            binding: Some(Pattern::Variable(name)),
+            binding: Some(Pattern::Variable { name, .. }),
             continuation: Some(cont),
             ..
         } => {
@@ -175,7 +180,7 @@ fn propose_with_binding_creates_nested_propose_with_continuation() {
     // Note: terminal statement optimization returns bare Ret instead of Seq(ret, Done)
     match parsed {
         Workflow::Propose {
-            binding: Some(Pattern::Variable(name)),
+            binding: Some(Pattern::Variable { name, .. }),
             continuation: Some(cont),
             ..
         } => {
@@ -211,7 +216,7 @@ fn three_bindings_create_deeply_nested_structure() {
     // Should produce: LET x = 1 IN (LET y = x + 1 IN (LET z = y + 1 IN Done))
     match parsed {
         Workflow::Let {
-            pattern: Pattern::Variable(name1),
+            pattern: Pattern::Variable { name: name1, .. },
             continuation: Some(cont1),
             ..
         } => {
@@ -219,7 +224,7 @@ fn three_bindings_create_deeply_nested_structure() {
 
             match *cont1 {
                 Workflow::Let {
-                    pattern: Pattern::Variable(name2),
+                    pattern: Pattern::Variable { name: name2, .. },
                     continuation: Some(cont2),
                     ..
                 } => {
@@ -227,7 +232,7 @@ fn three_bindings_create_deeply_nested_structure() {
 
                     match *cont2 {
                         Workflow::Let {
-                            pattern: Pattern::Variable(name3),
+                            pattern: Pattern::Variable { name: name3, .. },
                             continuation: Some(cont3),
                             ..
                         } => {

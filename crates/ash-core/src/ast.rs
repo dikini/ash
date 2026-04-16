@@ -203,7 +203,7 @@ pub enum Workflow {
 }
 
 /// Source span for AST nodes
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -316,7 +316,10 @@ pub enum ReceivePattern {
 /// Pattern for destructuring
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Pattern {
-    Variable(Name),
+    Variable {
+        name: Name,
+        span: Span,
+    },
     Tuple(Vec<Pattern>),
     Record(Vec<(Name, Pattern)>),
     List(Vec<Pattern>, Option<Name>), // [a, b, ..rest] - prefix patterns with optional rest
@@ -340,7 +343,7 @@ impl Pattern {
 
     fn collect_bindings(&self, result: &mut Vec<Name>) {
         match self {
-            Pattern::Variable(name) => {
+            Pattern::Variable { name, .. } => {
                 // Skip underscore bindings (wildcard pattern)
                 if name.as_str() != "_" {
                     result.push(name.clone());
@@ -384,7 +387,7 @@ impl Pattern {
     pub fn is_refutable(&self) -> bool {
         match self {
             // Variable and Wildcard are irrefutable - they match any value
-            Pattern::Variable(_) | Pattern::Wildcard => false,
+            Pattern::Variable { .. } | Pattern::Wildcard => false,
             // Everything else is refutable - can fail to match
             Pattern::Tuple(_) | Pattern::Record(_) | Pattern::List(_, _) | Pattern::Literal(_) => {
                 true
@@ -416,7 +419,10 @@ pub struct Predicate {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Expr {
     Literal(Value),
-    Variable(Name),
+    Variable {
+        name: Name,
+        span: Span,
+    },
     FieldAccess {
         expr: Box<Expr>,
         field: Name,
@@ -817,7 +823,10 @@ mod tests {
                 effect: Effect::Epistemic,
                 constraints: vec![],
             },
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default(),
+            },
             continuation: Box::new(Workflow::Done),
         };
 
@@ -834,7 +843,10 @@ mod tests {
         let _interface_call = Expr::Call {
             func: "explain".to_string(),
             module: None,
-            arguments: vec![Expr::Variable("value".to_string())],
+            arguments: vec![Expr::Variable {
+                name: "value".to_string(),
+                span: crate::ast::Span::default(),
+            }],
         };
 
         let _module_interface = ModuleItem::Interface(InterfaceDef {
@@ -886,8 +898,14 @@ mod tests {
         // Test Let
         let _let_wf = Workflow::Let {
             pattern: Pattern::Tuple(vec![
-                Pattern::Variable("a".to_string()),
-                Pattern::Variable("b".to_string()),
+                Pattern::Variable {
+                    name: "a".to_string(),
+                    span: crate::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "b".to_string(),
+                    span: crate::ast::Span::default(),
+                },
             ]),
             expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
             continuation: Box::new(Workflow::Done),
@@ -909,7 +927,10 @@ mod tests {
         // Test ForEach with List pattern
         let _foreach = Workflow::ForEach {
             pattern: Pattern::List(
-                vec![Pattern::Variable("head".to_string())],
+                vec![Pattern::Variable {
+                    name: "head".to_string(),
+                    span: crate::ast::Span::default(),
+                }],
                 Some("tail".to_string()),
             ),
             collection: Expr::Literal(Value::List(Box::default())),
@@ -955,9 +976,15 @@ mod tests {
                     pattern: ReceivePattern::Stream {
                         capability: "sensor".to_string(),
                         channel: "temp".to_string(),
-                        pattern: Pattern::Variable("reading".to_string()),
+                        pattern: Pattern::Variable {
+                            name: "reading".to_string(),
+                            span: crate::ast::Span::default(),
+                        },
                     },
-                    guard: Some(Expr::Variable("ready".to_string())),
+                    guard: Some(Expr::Variable {
+                        name: "ready".to_string(),
+                        span: crate::ast::Span::default(),
+                    }),
                     body: Workflow::Done,
                 },
                 ReceiveArm {
@@ -986,7 +1013,7 @@ mod tests {
                     ReceivePattern::Stream {
                         ref capability,
                         ref channel,
-                        pattern: Pattern::Variable(ref name),
+                        pattern: Pattern::Variable { ref name, .. },
                     } if capability == "sensor" && channel == "temp" && name == "reading"
                 ));
             }
@@ -1016,7 +1043,10 @@ mod tests {
     #[test]
     fn test_pattern_bindings() {
         // Variable binds one name
-        let p = Pattern::Variable("x".to_string());
+        let p = Pattern::Variable {
+            name: "x".to_string(),
+            span: crate::ast::Span::default(),
+        };
         assert_eq!(p.bindings(), vec!["x"]);
 
         // Wildcard binds nothing
@@ -1029,9 +1059,15 @@ mod tests {
 
         // Tuple binds all nested patterns
         let p = Pattern::Tuple(vec![
-            Pattern::Variable("a".to_string()),
+            Pattern::Variable {
+                name: "a".to_string(),
+                span: crate::ast::Span::default(),
+            },
             Pattern::Wildcard,
-            Pattern::Variable("b".to_string()),
+            Pattern::Variable {
+                name: "b".to_string(),
+                span: crate::ast::Span::default(),
+            },
         ]);
         let mut bindings = p.bindings();
         bindings.sort();
@@ -1039,9 +1075,21 @@ mod tests {
 
         // Record binds nested patterns (not field names)
         let p = Pattern::Record(vec![
-            ("field1".to_string(), Pattern::Variable("x".to_string())),
+            (
+                "field1".to_string(),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: crate::ast::Span::default(),
+                },
+            ),
             ("field2".to_string(), Pattern::Wildcard),
-            ("field3".to_string(), Pattern::Variable("y".to_string())),
+            (
+                "field3".to_string(),
+                Pattern::Variable {
+                    name: "y".to_string(),
+                    span: crate::ast::Span::default(),
+                },
+            ),
         ]);
         let mut bindings = p.bindings();
         bindings.sort();
@@ -1050,8 +1098,14 @@ mod tests {
         // List with prefix patterns and rest binding
         let p = Pattern::List(
             vec![
-                Pattern::Variable("first".to_string()),
-                Pattern::Variable("second".to_string()),
+                Pattern::Variable {
+                    name: "first".to_string(),
+                    span: crate::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "second".to_string(),
+                    span: crate::ast::Span::default(),
+                },
             ],
             Some("rest".to_string()),
         );
@@ -1060,16 +1114,28 @@ mod tests {
         assert_eq!(bindings, vec!["first", "rest", "second"]);
 
         // List without rest binding
-        let p = Pattern::List(vec![Pattern::Variable("head".to_string())], None);
+        let p = Pattern::List(
+            vec![Pattern::Variable {
+                name: "head".to_string(),
+                span: crate::ast::Span::default(),
+            }],
+            None,
+        );
         assert_eq!(p.bindings(), vec!["head"]);
 
         // Nested patterns
         let p = Pattern::Tuple(vec![
             Pattern::List(
-                vec![Pattern::Variable("a".to_string())],
+                vec![Pattern::Variable {
+                    name: "a".to_string(),
+                    span: crate::ast::Span::default(),
+                }],
                 Some("rest".to_string()),
             ),
-            Pattern::Variable("b".to_string()),
+            Pattern::Variable {
+                name: "b".to_string(),
+                span: crate::ast::Span::default(),
+            },
         ]);
         let mut bindings = p.bindings();
         bindings.sort();
@@ -1079,7 +1145,13 @@ mod tests {
     #[test]
     fn test_pattern_is_refutable() {
         // Variable is irrefutable (matches anything)
-        assert!(!Pattern::Variable("x".to_string()).is_refutable());
+        assert!(
+            !Pattern::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default()
+            }
+            .is_refutable()
+        );
 
         // Wildcard is irrefutable (matches anything)
         assert!(!Pattern::Wildcard.is_refutable());
@@ -1088,19 +1160,34 @@ mod tests {
         assert!(Pattern::Literal(Value::Int(42)).is_refutable());
 
         // Tuple is refutable (needs matching structure)
-        assert!(Pattern::Tuple(vec![Pattern::Variable("x".to_string())]).is_refutable());
+        assert!(
+            Pattern::Tuple(vec![Pattern::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default()
+            }])
+            .is_refutable()
+        );
 
         // Record is refutable (needs matching fields)
         assert!(
-            Pattern::Record(vec![("a".to_string(), Pattern::Variable("x".to_string()))])
-                .is_refutable()
+            Pattern::Record(vec![(
+                "a".to_string(),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: crate::ast::Span::default()
+                }
+            )])
+            .is_refutable()
         );
 
         // List is refutable (needs matching prefix)
         assert!(Pattern::List(vec![], None).is_refutable());
         assert!(
             Pattern::List(
-                vec![Pattern::Variable("x".to_string())],
+                vec![Pattern::Variable {
+                    name: "x".to_string(),
+                    span: crate::ast::Span::default()
+                }],
                 Some("rest".to_string())
             )
             .is_refutable()
@@ -1112,9 +1199,15 @@ mod tests {
         // Create a complex workflow for testing
         let workflow = Workflow::Let {
             pattern: Pattern::Tuple(vec![
-                Pattern::Variable("x".to_string()),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: crate::ast::Span::default(),
+                },
                 Pattern::List(
-                    vec![Pattern::Variable("head".to_string())],
+                    vec![Pattern::Variable {
+                        name: "head".to_string(),
+                        span: crate::ast::Span::default(),
+                    }],
                     Some("tail".to_string()),
                 ),
             ]),
@@ -1133,7 +1226,10 @@ mod tests {
             continuation: Box::new(Workflow::If {
                 condition: Expr::Unary {
                     op: UnaryOp::Not,
-                    expr: Box::new(Expr::Variable("x".to_string())),
+                    expr: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: crate::ast::Span::default(),
+                    }),
                 },
                 then_branch: Box::new(Workflow::Ret {
                     expr: Expr::Literal(Value::Null),
@@ -1205,8 +1301,20 @@ mod tests {
         let _variant_with_fields = Pattern::Variant {
             name: "Point".to_string(),
             fields: Some(vec![
-                ("x".to_string(), Pattern::Variable("x".to_string())),
-                ("y".to_string(), Pattern::Variable("y".to_string())),
+                (
+                    "x".to_string(),
+                    Pattern::Variable {
+                        name: "x".to_string(),
+                        span: crate::ast::Span::default(),
+                    },
+                ),
+                (
+                    "y".to_string(),
+                    Pattern::Variable {
+                        name: "y".to_string(),
+                        span: crate::ast::Span::default(),
+                    },
+                ),
             ]),
         };
     }
@@ -1237,7 +1345,10 @@ mod tests {
     fn test_match_arm_struct_exists() {
         // MatchArm struct should exist with pattern and body
         let _arm = MatchArm {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default(),
+            },
             body: Expr::Literal(Value::Int(42)),
         };
 
@@ -1246,10 +1357,16 @@ mod tests {
                 name: "Some".to_string(),
                 fields: Some(vec![(
                     "value".to_string(),
-                    Pattern::Variable("v".to_string()),
+                    Pattern::Variable {
+                        name: "v".to_string(),
+                        span: crate::ast::Span::default(),
+                    },
                 )]),
             },
-            body: Expr::Variable("v".to_string()),
+            body: Expr::Variable {
+                name: "v".to_string(),
+                span: crate::ast::Span::default(),
+            },
         };
     }
 
@@ -1257,17 +1374,26 @@ mod tests {
     fn test_expr_match_exists() {
         // Expr::Match should exist with scrutinee and arms
         let _match_expr = Expr::Match {
-            scrutinee: Box::new(Expr::Variable("opt".to_string())),
+            scrutinee: Box::new(Expr::Variable {
+                name: "opt".to_string(),
+                span: crate::ast::Span::default(),
+            }),
             arms: vec![
                 MatchArm {
                     pattern: Pattern::Variant {
                         name: "Some".to_string(),
                         fields: Some(vec![(
                             "value".to_string(),
-                            Pattern::Variable("v".to_string()),
+                            Pattern::Variable {
+                                name: "v".to_string(),
+                                span: crate::ast::Span::default(),
+                            },
                         )]),
                     },
-                    body: Expr::Variable("v".to_string()),
+                    body: Expr::Variable {
+                        name: "v".to_string(),
+                        span: crate::ast::Span::default(),
+                    },
                 },
                 MatchArm {
                     pattern: Pattern::Variant {
@@ -1335,24 +1461,48 @@ mod tests {
                 name: "Some".to_string(),
                 fields: Some(vec![(
                     "value".to_string(),
-                    Pattern::Variable("v".to_string()),
+                    Pattern::Variable {
+                        name: "v".to_string(),
+                        span: crate::ast::Span::default(),
+                    },
                 )]),
             },
-            expr: Box::new(Expr::Variable("opt".to_string())),
-            then_branch: Box::new(Expr::Variable("v".to_string())),
+            expr: Box::new(Expr::Variable {
+                name: "opt".to_string(),
+                span: crate::ast::Span::default(),
+            }),
+            then_branch: Box::new(Expr::Variable {
+                name: "v".to_string(),
+                span: crate::ast::Span::default(),
+            }),
             else_branch: Box::new(Expr::Literal(Value::Int(0))),
         };
 
         let _if_let_simple = Expr::IfLet {
             pattern: Pattern::Tuple(vec![
-                Pattern::Variable("a".to_string()),
-                Pattern::Variable("b".to_string()),
+                Pattern::Variable {
+                    name: "a".to_string(),
+                    span: crate::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "b".to_string(),
+                    span: crate::ast::Span::default(),
+                },
             ]),
-            expr: Box::new(Expr::Variable("pair".to_string())),
+            expr: Box::new(Expr::Variable {
+                name: "pair".to_string(),
+                span: crate::ast::Span::default(),
+            }),
             then_branch: Box::new(Expr::Binary {
                 op: BinaryOp::Add,
-                left: Box::new(Expr::Variable("a".to_string())),
-                right: Box::new(Expr::Variable("b".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "a".to_string(),
+                    span: crate::ast::Span::default(),
+                }),
+                right: Box::new(Expr::Variable {
+                    name: "b".to_string(),
+                    span: crate::ast::Span::default(),
+                }),
             }),
             else_branch: Box::new(Expr::Literal(Value::Int(0))),
         };
@@ -1364,8 +1514,20 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Point".to_string(),
             fields: Some(vec![
-                ("x".to_string(), Pattern::Variable("x_coord".to_string())),
-                ("y".to_string(), Pattern::Variable("y_coord".to_string())),
+                (
+                    "x".to_string(),
+                    Pattern::Variable {
+                        name: "x_coord".to_string(),
+                        span: crate::ast::Span::default(),
+                    },
+                ),
+                (
+                    "y".to_string(),
+                    Pattern::Variable {
+                        name: "y_coord".to_string(),
+                        span: crate::ast::Span::default(),
+                    },
+                ),
             ]),
         };
         let mut bindings = pattern.bindings();
@@ -1380,7 +1542,10 @@ mod tests {
             name: "Some".to_string(),
             fields: Some(vec![(
                 "value".to_string(),
-                Pattern::Variable("v".to_string()),
+                Pattern::Variable {
+                    name: "v".to_string(),
+                    span: crate::ast::Span::default(),
+                },
             )]),
         };
         assert!(pattern.is_refutable());
@@ -1402,15 +1567,27 @@ mod tests {
                 fields: Some(vec![(
                     "value".to_string(),
                     Pattern::Tuple(vec![
-                        Pattern::Variable("a".to_string()),
-                        Pattern::Variable("b".to_string()),
+                        Pattern::Variable {
+                            name: "a".to_string(),
+                            span: crate::ast::Span::default(),
+                        },
+                        Pattern::Variable {
+                            name: "b".to_string(),
+                            span: crate::ast::Span::default(),
+                        },
                     ]),
                 )]),
             },
             body: Expr::Binary {
                 op: BinaryOp::Add,
-                left: Box::new(Expr::Variable("a".to_string())),
-                right: Box::new(Expr::Variable("b".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "a".to_string(),
+                    span: crate::ast::Span::default(),
+                }),
+                right: Box::new(Expr::Variable {
+                    name: "b".to_string(),
+                    span: crate::ast::Span::default(),
+                }),
             },
         };
     }
@@ -1419,10 +1596,19 @@ mod tests {
     fn test_expr_match_serde_roundtrip() {
         // Expr::Match should be serializable and deserializable
         let match_expr = Expr::Match {
-            scrutinee: Box::new(Expr::Variable("x".to_string())),
+            scrutinee: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default(),
+            }),
             arms: vec![MatchArm {
-                pattern: Pattern::Variable("y".to_string()),
-                body: Expr::Variable("y".to_string()),
+                pattern: Pattern::Variable {
+                    name: "y".to_string(),
+                    span: crate::ast::Span::default(),
+                },
+                body: Expr::Variable {
+                    name: "y".to_string(),
+                    span: crate::ast::Span::default(),
+                },
             }],
         };
 
@@ -1436,9 +1622,15 @@ mod tests {
     fn test_expr_if_let_serde_roundtrip() {
         // Expr::IfLet should be serializable and deserializable
         let if_let = Expr::IfLet {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default(),
+            },
             expr: Box::new(Expr::Literal(Value::Int(42))),
-            then_branch: Box::new(Expr::Variable("x".to_string())),
+            then_branch: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default(),
+            }),
             else_branch: Box::new(Expr::Literal(Value::Int(0))),
         };
 

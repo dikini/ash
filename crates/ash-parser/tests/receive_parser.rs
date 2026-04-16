@@ -22,7 +22,7 @@ fn main_workflow_parser_accepts_canonical_receive() {
                 StreamPattern::Binding {
                     ref capability,
                     ref channel,
-                    pattern: Pattern::Variable(ref name),
+                    pattern: Pattern::Variable { name: ref name, .. },
                 } if capability.as_ref() == "sensor"
                     && channel.as_ref() == "temp"
                     && name.as_ref() == "reading"

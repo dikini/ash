@@ -198,7 +198,7 @@ fn bench_pattern_matching(c: &mut Criterion) {
     let mut group = c.benchmark_group("pattern_matching");
     
     // Variable pattern
-    let var_pattern = Pattern::Variable("x".to_string());
+    let var_pattern = Pattern::Variable { name: "x".to_string(), span: Span::default() };
     let int_value = Value::Int(42);
     
     group.bench_function("bindings_variable", |b| {
@@ -207,8 +207,8 @@ fn bench_pattern_matching(c: &mut Criterion) {
     
     // Tuple pattern
     let tuple_pattern = Pattern::Tuple(vec![
-        Pattern::Variable("a".to_string()),
-        Pattern::Variable("b".to_string()),
+        Pattern::Variable { name: "a".to_string(), span: Span::default() },
+        Pattern::Variable { name: "b".to_string(), span: Span::default() },
     ]);
     let tuple_value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
     
@@ -218,9 +218,9 @@ fn bench_pattern_matching(c: &mut Criterion) {
     
     // Complex pattern
     let complex_pattern = Pattern::Tuple(vec![
-        Pattern::Variable("x".to_string()),
+        Pattern::Variable { name: "x".to_string(), span: Span::default() },
         Pattern::List(vec![
-            Pattern::Variable("head".to_string()),
+            Pattern::Variable { name: "head".to_string(), span: Span::default() },
         ], Some("tail".to_string())),
     ]);
     
@@ -230,7 +230,7 @@ fn bench_pattern_matching(c: &mut Criterion) {
     
     // Is refutable checks
     group.bench_function("is_refutable_variable", |b| {
-        b.iter(|| black_box(Pattern::Variable("x".to_string()).is_refutable()));
+        b.iter(|| black_box(Pattern::Variable { name: "x".to_string(), span: Span::default() }.is_refutable()));
     });
     
     group.bench_function("is_refutable_tuple", |b| {

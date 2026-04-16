@@ -391,7 +391,10 @@ mod tests {
     #[test]
     fn test_infer_effect_let() {
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),

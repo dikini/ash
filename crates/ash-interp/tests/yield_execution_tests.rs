@@ -56,7 +56,10 @@ fn create_resumable_yield(role: &str, request: Expr) -> Workflow {
         request: Box::new(request),
         expected_response_type: TypeExpr::Named("Int".to_string()),
         continuation: Box::new(Workflow::Ret {
-            expr: Expr::Variable("response".to_string()),
+            expr: Expr::Variable {
+                name: "response".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         }),
         span: Span::default(),
         resume_var: "response".to_string(),
@@ -523,7 +526,10 @@ async fn test_yield_inside_let_preserves_proxy_state() {
     setup_proxy_role(&runtime, "nested_let").await;
 
     let workflow = Workflow::Let {
-        pattern: Pattern::Variable("ignored".to_string()),
+        pattern: Pattern::Variable {
+            name: "ignored".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         expr: Expr::Literal(Value::Int(7)),
         continuation: Box::new(create_resumable_yield(
             "nested_let",
@@ -569,10 +575,16 @@ async fn test_yield_inside_observe_preserves_proxy_state() {
             effect: Effect::Epistemic,
             constraints: vec![],
         },
-        pattern: Pattern::Variable("observed".to_string()),
+        pattern: Pattern::Variable {
+            name: "observed".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         continuation: Box::new(create_resumable_yield(
             "nested_observe",
-            Expr::Variable("observed".to_string()),
+            Expr::Variable {
+                name: "observed".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         )),
     };
 
@@ -590,10 +602,19 @@ async fn test_yield_inside_receive_preserves_proxy_state() {
             pattern: ReceivePattern::Stream {
                 capability: "sensor".to_string(),
                 channel: "temp".to_string(),
-                pattern: Pattern::Variable("reading".to_string()),
+                pattern: Pattern::Variable {
+                    name: "reading".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             },
             guard: None,
-            body: create_resumable_yield("nested_receive", Expr::Variable("reading".to_string())),
+            body: create_resumable_yield(
+                "nested_receive",
+                Expr::Variable {
+                    name: "reading".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+            ),
         }],
         control: false,
     };
@@ -750,9 +771,18 @@ async fn test_yield_inside_stream_receive_matching_arm_preserves_proxy_state() {
     let receive = StreamReceive {
         mode: StreamReceiveMode::NonBlocking,
         arms: vec![StreamReceiveArm {
-            pattern: Pattern::Variable("reading".to_string()),
+            pattern: Pattern::Variable {
+                name: "reading".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             guard: None,
-            body: create_resumable_yield("stream_match", Expr::Variable("reading".to_string())),
+            body: create_resumable_yield(
+                "stream_match",
+                Expr::Variable {
+                    name: "reading".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+            ),
         }],
         control_arms: None,
     };

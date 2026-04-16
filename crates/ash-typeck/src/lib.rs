@@ -192,7 +192,7 @@ pub(crate) fn bind_pattern_variables(
     ty: &Type,
 ) {
     match pattern {
-        ash_parser::surface::Pattern::Variable(name) => {
+        ash_parser::surface::Pattern::Variable { name, .. } => {
             env.bind_variable(name.as_ref(), ty.clone());
         }
         ash_parser::surface::Pattern::Tuple(items) => {
@@ -461,7 +461,9 @@ fn validate_interface_calls_in_expr(
     expr: &ash_parser::surface::Expr,
 ) -> Result<(), TypeCheckError> {
     match expr {
-        ash_parser::surface::Expr::Literal(_) | ash_parser::surface::Expr::Variable(_) => Ok(()),
+        ash_parser::surface::Expr::Literal(_) | ash_parser::surface::Expr::Variable { .. } => {
+            Ok(())
+        }
         ash_parser::surface::Expr::FieldAccess { base, .. } => {
             validate_interface_calls_in_expr(env, base)
         }
@@ -1457,7 +1459,7 @@ fn int_fact_from_expr(
         ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(value)) => {
             Some(*value)
         }
-        ash_parser::surface::Expr::Variable(name) => facts.get(name.as_ref()).copied(),
+        ash_parser::surface::Expr::Variable { name, .. } => facts.get(name.as_ref()).copied(),
         ash_parser::surface::Expr::Unary {
             op: ash_parser::surface::UnaryOp::Neg,
             operand,
@@ -1497,12 +1499,12 @@ fn assumption_from_condition(
 
     let (var, value, normalized_op) = match (&**left, &**right) {
         (
-            ash_parser::surface::Expr::Variable(name),
+            ash_parser::surface::Expr::Variable { name, .. },
             ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(value)),
         ) => (name.to_string(), *value, *op),
         (
             ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(value)),
-            ash_parser::surface::Expr::Variable(name),
+            ash_parser::surface::Expr::Variable { name, .. },
         ) => {
             let swapped = match op {
                 BinaryOp::Lt => BinaryOp::Gt,
@@ -1551,7 +1553,7 @@ fn build_requirement_context(
             continue;
         }
 
-        if let ash_parser::surface::Expr::Variable(name) = arg {
+        if let ash_parser::surface::Expr::Variable { name, .. } = arg {
             let Some(constraints) = assumptions.get(name.as_ref()) else {
                 continue;
             };
@@ -1688,7 +1690,7 @@ fn validate_fn_call_preconditions_expr(
             for statement in statements {
                 let ash_parser::surface::BlockStmt::Let { pattern, expr, .. } = statement;
                 validate_fn_call_preconditions_expr(env, expr, &nested_facts, &nested_assumptions)?;
-                if let (ash_parser::surface::Pattern::Variable(name), Some(value)) =
+                if let (ash_parser::surface::Pattern::Variable { name, .. }, Some(value)) =
                     (pattern, int_fact_from_expr(&nested_facts, expr))
                 {
                     nested_facts.insert(name.to_string(), value);
@@ -1705,7 +1707,7 @@ fn validate_fn_call_preconditions_expr(
             Ok(())
         }
         ash_parser::surface::Expr::Literal(_)
-        | ash_parser::surface::Expr::Variable(_)
+        | ash_parser::surface::Expr::Variable { .. }
         | ash_parser::surface::Expr::Policy(_)
         | ash_parser::surface::Expr::CheckObligation { .. }
         | ash_parser::surface::Expr::Panic { .. } => Ok(()),
@@ -1755,7 +1757,7 @@ fn validate_fn_call_preconditions_workflow(
             ..
         } => {
             validate_fn_call_preconditions_expr(env, expr, facts, assumptions)?;
-            if let (ash_parser::surface::Pattern::Variable(name), Some(value)) =
+            if let (ash_parser::surface::Pattern::Variable { name, .. }, Some(value)) =
                 (pattern, int_fact_from_expr(facts, expr))
             {
                 facts.insert(name.to_string(), value);
@@ -2202,7 +2204,10 @@ mod tests {
     #[test]
     fn test_type_check_workflow_let() {
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
@@ -2233,7 +2238,10 @@ mod tests {
             expr: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Add,
                 left: Box::new(Expr::Literal(Literal::String("Hello, ".into()))),
-                right: Box::new(Expr::Variable("name".into())),
+                right: Box::new(Expr::Variable {
+                    name: "name".into(),
+                    span: ash_parser::token::Span::default(),
+                }),
                 span: test_span(),
             },
             span: test_span(),
@@ -2255,8 +2263,14 @@ mod tests {
         let workflow = Workflow::Ret {
             expr: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Add,
-                left: Box::new(Expr::Variable("x".into())),
-                right: Box::new(Expr::Variable("y".into())),
+                left: Box::new(Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                }),
+                right: Box::new(Expr::Variable {
+                    name: "y".into(),
+                    span: ash_parser::token::Span::default(),
+                }),
                 span: test_span(),
             },
             span: test_span(),
@@ -2335,7 +2349,10 @@ mod tests {
                 expr: ash_parser::surface::Expr::FnDef {
                     params: vec![("x".into(), Some("Int".into()))],
                     return_type: None,
-                    body: Box::new(ash_parser::surface::Expr::Variable("x".into())),
+                    body: Box::new(ash_parser::surface::Expr::Variable {
+                        name: "x".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     span: test_span(),
                 },
                 span: test_span(),

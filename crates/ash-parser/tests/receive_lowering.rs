@@ -31,7 +31,7 @@ fn receive_lowering_preserves_mode_and_arm_structure() {
                 ReceivePattern::Stream {
                     ref capability,
                     ref channel,
-                    pattern: CorePattern::Variable(ref name),
+                    pattern: CorePattern::Variable { name: ref name, .. },
                 } if capability == "sensor" && channel == "temp" && name == "reading"
             ));
             assert!(arms[0].guard.is_some());

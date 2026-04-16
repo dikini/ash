@@ -120,15 +120,27 @@ fn spawn_and_return_control(init: Expr) -> Workflow {
     Workflow::Spawn {
         workflow_type: "worker".to_string(),
         init,
-        pattern: Pattern::Variable("worker".to_string()),
+        pattern: Pattern::Variable {
+            name: "worker".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         continuation: Box::new(Workflow::Split {
-            expr: Expr::Variable("worker".to_string()),
+            expr: Expr::Variable {
+                name: "worker".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             pattern: Pattern::Tuple(vec![
                 Pattern::Wildcard,
-                Pattern::Variable("ctrl".to_string()),
+                Pattern::Variable {
+                    name: "ctrl".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ]),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("ctrl".to_string()),
+                expr: Expr::Variable {
+                    name: "ctrl".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     }
@@ -145,15 +157,27 @@ async fn stateful_execution_preserves_control_link_authority_across_top_level_ru
     let spawn = Workflow::Spawn {
         workflow_type: "worker".to_string(),
         init: Expr::Literal(Value::Null),
-        pattern: Pattern::Variable("worker".to_string()),
+        pattern: Pattern::Variable {
+            name: "worker".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         continuation: Box::new(Workflow::Split {
-            expr: Expr::Variable("worker".to_string()),
+            expr: Expr::Variable {
+                name: "worker".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             pattern: Pattern::Tuple(vec![
                 Pattern::Wildcard,
-                Pattern::Variable("ctrl".to_string()),
+                Pattern::Variable {
+                    name: "ctrl".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ]),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("ctrl".to_string()),
+                expr: Expr::Variable {
+                    name: "ctrl".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };
@@ -204,15 +228,27 @@ async fn terminated_control_links_remain_observable_as_tombstones_across_runs() 
     let spawn = Workflow::Spawn {
         workflow_type: "worker".to_string(),
         init: Expr::Literal(Value::Null),
-        pattern: Pattern::Variable("worker".to_string()),
+        pattern: Pattern::Variable {
+            name: "worker".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         continuation: Box::new(Workflow::Split {
-            expr: Expr::Variable("worker".to_string()),
+            expr: Expr::Variable {
+                name: "worker".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             pattern: Pattern::Tuple(vec![
                 Pattern::Wildcard,
-                Pattern::Variable("ctrl".to_string()),
+                Pattern::Variable {
+                    name: "ctrl".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ]),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("ctrl".to_string()),
+                expr: Expr::Variable {
+                    name: "ctrl".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };
@@ -284,9 +320,15 @@ async fn spawn_without_registered_workflow_type_returns_honest_instance_without_
         &Workflow::Spawn {
             workflow_type: "worker".to_string(),
             init: Expr::Literal(Value::Int(7)),
-            pattern: Pattern::Variable("worker".to_string()),
+            pattern: Pattern::Variable {
+                name: "worker".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("worker".to_string()),
+                expr: Expr::Variable {
+                    name: "worker".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         },
         ctx,
@@ -313,7 +355,10 @@ async fn spawn_preserves_live_control_authority_before_any_retained_completion_i
         .register_child_workflow(
             "worker",
             Workflow::Ret {
-                expr: Expr::Variable("init".to_string()),
+                expr: Expr::Variable {
+                    name: "init".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             },
         )
         .await;
@@ -350,7 +395,10 @@ async fn retained_completion_is_automatically_sealed_from_real_spawned_child_lif
         .register_child_workflow(
             "worker",
             Workflow::Ret {
-                expr: Expr::Variable("init".to_string()),
+                expr: Expr::Variable {
+                    name: "init".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             },
         )
         .await;
@@ -392,7 +440,10 @@ async fn retained_completion_is_write_once_after_automatic_child_sealing() {
         .register_child_workflow(
             "worker",
             Workflow::Ret {
-                expr: Expr::Variable("init".to_string()),
+                expr: Expr::Variable {
+                    name: "init".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             },
         )
         .await;
@@ -455,7 +506,10 @@ async fn spawned_child_runtime_path_can_execute_failure_and_seal_it() {
         .register_child_workflow(
             "worker",
             Workflow::Ret {
-                expr: Expr::Variable("missing_child_value".to_string()),
+                expr: Expr::Variable {
+                    name: "missing_child_value".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             },
         )
         .await;
@@ -597,7 +651,10 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
                         effect: Effect::Epistemic,
                         constraints: vec![],
                     },
-                    pattern: Pattern::Variable("seen".to_string()),
+                    pattern: Pattern::Variable {
+                        name: "seen".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                     continuation: Box::new(Workflow::Done),
                 }),
                 second: Box::new(Workflow::Act {
@@ -652,7 +709,10 @@ async fn conservative_effect_summary_can_overapproximate_untaken_higher_effect_p
             "worker",
             Workflow::Seq {
                 first: Box::new(Workflow::Ret {
-                    expr: Expr::Variable("missing_before_operational".to_string()),
+                    expr: Expr::Variable {
+                        name: "missing_before_operational".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 }),
                 second: Box::new(Workflow::Act {
                     provider_name: "deploy".to_string(),
@@ -749,7 +809,10 @@ async fn completion_wait_returns_immediately_for_already_sealed_records() {
         .register_child_workflow(
             "worker",
             Workflow::Ret {
-                expr: Expr::Variable("init".to_string()),
+                expr: Expr::Variable {
+                    name: "init".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             },
         )
         .await;
@@ -847,9 +910,15 @@ async fn observe_missing_provider_reports_capability_not_available() {
             effect: Effect::Epistemic,
             constraints: vec![],
         },
-        pattern: Pattern::Variable("x".to_string()),
+        pattern: Pattern::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         continuation: Box::new(Workflow::Ret {
-            expr: Expr::Variable("x".to_string()),
+            expr: Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         }),
     };
 

@@ -352,7 +352,10 @@ fn test_obligation_with_let_binding() {
             span: test_span(),
         }),
         second: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Check {
                 target: CheckTarget::Obligation(ObligationRef {

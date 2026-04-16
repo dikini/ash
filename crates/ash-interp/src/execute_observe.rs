@@ -61,7 +61,7 @@ use crate::pattern::match_pattern;
 ///     capability: "sensor".into(),
 ///     channel: "temp".into(),
 ///     constraints: vec![],
-///     pattern: Pattern::Variable("t".into()),
+///     pattern: Pattern::Variable { name: "t".into(), span: ash_core::ast::Span::default() },
 /// };
 ///
 /// let ctx = Context::new();
@@ -209,7 +209,10 @@ mod tests {
             capability: "sensor".into(),
             channel: "temp".into(),
             constraints: vec![],
-            pattern: Pattern::Variable("t".into()),
+            pattern: Pattern::Variable {
+                name: "t".into(),
+                span: ash_core::ast::Span::default(),
+            },
         };
 
         let ctx = Context::new();
@@ -248,7 +251,10 @@ mod tests {
                     arguments: vec![ash_core::Expr::Literal(Value::String("AAPL".into()))],
                 },
             }],
-            pattern: Pattern::Variable("stock".into()),
+            pattern: Pattern::Variable {
+                name: "stock".into(),
+                span: ash_core::ast::Span::default(),
+            },
         };
 
         let ctx = Context::new();
@@ -284,8 +290,20 @@ mod tests {
             channel: "temp".into(),
             constraints: vec![],
             pattern: Pattern::Record(vec![
-                ("value".into(), Pattern::Variable("t".into())),
-                ("unit".into(), Pattern::Variable("u".into())),
+                (
+                    "value".into(),
+                    Pattern::Variable {
+                        name: "t".into(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                ),
+                (
+                    "unit".into(),
+                    Pattern::Variable {
+                        name: "u".into(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                ),
             ]),
         };
 
@@ -308,7 +326,10 @@ mod tests {
             capability: "sensor".into(),
             channel: "temp".into(),
             constraints: vec![],
-            pattern: Pattern::Variable("t".into()),
+            pattern: Pattern::Variable {
+                name: "t".into(),
+                span: ash_core::ast::Span::default(),
+            },
         };
 
         let ctx = Context::new();

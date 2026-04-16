@@ -41,8 +41,20 @@ fn tuple_variant_patterns_match_positionally() {
     let pattern = Pattern::Variant {
         name: "RuntimeError".into(),
         fields: Some(vec![
-            ("_0".into(), Pattern::Variable("code".into())),
-            ("_1".into(), Pattern::Variable("message".into())),
+            (
+                "_0".into(),
+                Pattern::Variable {
+                    name: "code".into(),
+                    span: ash_core::ast::Span::default(),
+                },
+            ),
+            (
+                "_1".into(),
+                Pattern::Variable {
+                    name: "message".into(),
+                    span: ash_core::ast::Span::default(),
+                },
+            ),
         ]),
     };
     let value = Value::Variant {
@@ -68,12 +80,24 @@ fn nested_tuple_variant_patterns_extract_payloads() {
             Pattern::Variant {
                 name: "RuntimeError".into(),
                 fields: Some(vec![
-                    ("_0".into(), Pattern::Variable("code".into())),
+                    (
+                        "_0".into(),
+                        Pattern::Variable {
+                            name: "code".into(),
+                            span: ash_core::ast::Span::default(),
+                        },
+                    ),
                     (
                         "_1".into(),
                         Pattern::Tuple(vec![
-                            Pattern::Variable("line".into()),
-                            Pattern::Variable("column".into()),
+                            Pattern::Variable {
+                                name: "line".into(),
+                                span: ash_core::ast::Span::default(),
+                            },
+                            Pattern::Variable {
+                                name: "column".into(),
+                                span: ash_core::ast::Span::default(),
+                            },
                         ]),
                     ),
                 ]),

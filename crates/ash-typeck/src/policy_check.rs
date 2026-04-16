@@ -18,8 +18,8 @@
 //! use ash_parser::surface::PolicyExpr;
 //!
 //! let expr = PolicyExpr::And(vec![
-//!     PolicyExpr::Var("p1".into()),
-//!     PolicyExpr::Var("p2".into()),
+//!     PolicyExpr::Var { name: "p1".into(), span: ash_parser::token::Span::default() },
+//!     PolicyExpr::Var { name: "p2".into(), span: ash_parser::token::Span::default() },
 //! ]);
 //!
 //! let result = infer_policy_expr(&expr, &|name| {
@@ -216,7 +216,7 @@ pub type TypeLookup<'a> = dyn Fn(&Name) -> Result<PolicyType, PolicyTypeError> +
 /// use ash_typeck::policy_check::{infer_policy_expr, PolicyType};
 /// use ash_parser::surface::PolicyExpr;
 ///
-/// let expr = PolicyExpr::Var("p".into());
+/// let expr = PolicyExpr::Var { name: "p".into(), span: ash_parser::token::Span::default() };
 /// let result = infer_policy_expr(&expr, &|_| Ok(PolicyType::Policy));
 ///
 /// assert!(result.is_ok());
@@ -238,7 +238,7 @@ pub fn infer_policy_expr_with_context(
     lookup: &TypeLookup<'_>,
 ) -> Result<PolicyType, PolicyTypeError> {
     match expr {
-        PolicyExpr::Var(name) => lookup(name).map_err(|e| match e {
+        PolicyExpr::Var { name, .. } => lookup(name).map_err(|e| match e {
             PolicyTypeError::UnknownVariable(s) => PolicyTypeError::UnknownVariable(s),
             _ => e,
         }),
@@ -643,7 +643,10 @@ mod tests {
 
     #[test]
     fn test_type_check_var() {
-        let expr = PolicyExpr::Var("p".into());
+        let expr = PolicyExpr::Var {
+            name: "p".into(),
+            span: ash_parser::token::Span::default(),
+        };
         let result = infer_policy_expr(&expr, &policy_lookup);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), PolicyType::Policy);
@@ -652,8 +655,14 @@ mod tests {
     #[test]
     fn test_type_check_and() {
         let expr = PolicyExpr::And(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
         let result = infer_policy_expr(&expr, &policy_lookup);
         assert!(result.is_ok());
@@ -662,8 +671,14 @@ mod tests {
     #[test]
     fn test_type_check_or() {
         let expr = PolicyExpr::Or(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
         let result = infer_policy_expr(&expr, &policy_lookup);
         assert!(result.is_ok());
@@ -671,7 +686,10 @@ mod tests {
 
     #[test]
     fn test_type_check_not() {
-        let expr = PolicyExpr::Not(Box::new(PolicyExpr::Var("p".into())));
+        let expr = PolicyExpr::Not(Box::new(PolicyExpr::Var {
+            name: "p".into(),
+            span: ash_parser::token::Span::default(),
+        }));
         let result = infer_policy_expr(&expr, &policy_lookup);
         assert!(result.is_ok());
     }
@@ -679,8 +697,14 @@ mod tests {
     #[test]
     fn test_type_check_implies() {
         let expr = PolicyExpr::Implies(
-            Box::new(PolicyExpr::Var("a".into())),
-            Box::new(PolicyExpr::Var("b".into())),
+            Box::new(PolicyExpr::Var {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            }),
+            Box::new(PolicyExpr::Var {
+                name: "b".into(),
+                span: ash_parser::token::Span::default(),
+            }),
         );
         let result = infer_policy_expr(&expr, &policy_lookup);
         assert!(result.is_ok());
@@ -690,8 +714,14 @@ mod tests {
     fn test_type_check_forall() {
         let expr = PolicyExpr::ForAll {
             var: "x".into(),
-            items: Box::new(Expr::Variable("items".into())),
-            body: Box::new(PolicyExpr::Var("p".into())),
+            items: Box::new(Expr::Variable {
+                name: "items".into(),
+                span: ash_parser::token::Span::default(),
+            }),
+            body: Box::new(PolicyExpr::Var {
+                name: "p".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: ash_parser::token::Span::default(),
         };
         let result = infer_policy_expr(&expr, &policy_lookup);
@@ -702,8 +732,14 @@ mod tests {
     fn test_type_check_exists() {
         let expr = PolicyExpr::Exists {
             var: "x".into(),
-            items: Box::new(Expr::Variable("items".into())),
-            body: Box::new(PolicyExpr::Var("p".into())),
+            items: Box::new(Expr::Variable {
+                name: "items".into(),
+                span: ash_parser::token::Span::default(),
+            }),
+            body: Box::new(PolicyExpr::Var {
+                name: "p".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: ash_parser::token::Span::default(),
         };
         let result = infer_policy_expr(&expr, &policy_lookup);
@@ -713,9 +749,15 @@ mod tests {
     #[test]
     fn test_type_check_method_call() {
         let expr = PolicyExpr::MethodCall {
-            receiver: Box::new(PolicyExpr::Var("base".into())),
+            receiver: Box::new(PolicyExpr::Var {
+                name: "base".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             method: "and".into(),
-            args: vec![Expr::Variable("other".into())],
+            args: vec![Expr::Variable {
+                name: "other".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             span: ash_parser::token::Span::default(),
         };
         let result = infer_policy_expr(&expr, &policy_lookup);
@@ -725,8 +767,14 @@ mod tests {
     #[test]
     fn test_type_check_sequential() {
         let expr = PolicyExpr::Sequential(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
         let result = infer_policy_expr(&expr, &policy_lookup);
         assert!(result.is_ok());
@@ -735,8 +783,14 @@ mod tests {
     #[test]
     fn test_type_check_concurrent() {
         let expr = PolicyExpr::Concurrent(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
         let result = infer_policy_expr(&expr, &policy_lookup);
         assert!(result.is_ok());
@@ -744,7 +798,10 @@ mod tests {
 
     #[test]
     fn test_unknown_variable() {
-        let expr = PolicyExpr::Var("unknown".into());
+        let expr = PolicyExpr::Var {
+            name: "unknown".into(),
+            span: ash_parser::token::Span::default(),
+        };
         let lookup = |name: &Name| {
             if name.as_ref() == "known" {
                 Ok(PolicyType::Policy)
@@ -760,10 +817,19 @@ mod tests {
     fn test_flatten_nested_and() {
         let expr = PolicyExpr::And(vec![
             PolicyExpr::And(vec![
-                PolicyExpr::Var("a".into()),
-                PolicyExpr::Var("b".into()),
+                PolicyExpr::Var {
+                    name: "a".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+                PolicyExpr::Var {
+                    name: "b".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             ]),
-            PolicyExpr::Var("c".into()),
+            PolicyExpr::Var {
+                name: "c".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
         let normalized = flatten_nested_and(expr);
         match normalized {
@@ -778,10 +844,19 @@ mod tests {
     fn test_flatten_nested_or() {
         let expr = PolicyExpr::Or(vec![
             PolicyExpr::Or(vec![
-                PolicyExpr::Var("a".into()),
-                PolicyExpr::Var("b".into()),
+                PolicyExpr::Var {
+                    name: "a".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+                PolicyExpr::Var {
+                    name: "b".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             ]),
-            PolicyExpr::Var("c".into()),
+            PolicyExpr::Var {
+                name: "c".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
         let normalized = flatten_nested_or(expr);
         match normalized {
@@ -794,18 +869,22 @@ mod tests {
 
     #[test]
     fn test_eliminate_double_negation() {
-        let expr = PolicyExpr::Not(Box::new(PolicyExpr::Not(Box::new(PolicyExpr::Var(
-            "p".into(),
-        )))));
+        let expr = PolicyExpr::Not(Box::new(PolicyExpr::Not(Box::new(PolicyExpr::Var {
+            name: "p".into(),
+            span: ash_parser::token::Span::default(),
+        }))));
         let normalized = eliminate_double_negation(expr);
-        assert!(matches!(normalized, PolicyExpr::Var(_)));
+        assert!(matches!(normalized, PolicyExpr::Var { .. }));
     }
 
     #[test]
     fn test_eliminate_triple_negation() {
         // !!!p = !p (three negations cancel to one)
         let expr = PolicyExpr::Not(Box::new(PolicyExpr::Not(Box::new(PolicyExpr::Not(
-            Box::new(PolicyExpr::Var("p".into())),
+            Box::new(PolicyExpr::Var {
+                name: "p".into(),
+                span: ash_parser::token::Span::default(),
+            }),
         )))));
         let normalized = eliminate_double_negation(expr);
         assert!(matches!(normalized, PolicyExpr::Not(_)));
@@ -814,17 +893,21 @@ mod tests {
     #[test]
     fn test_normalize_full() {
         let expr = PolicyExpr::And(vec![
-            PolicyExpr::And(vec![PolicyExpr::Var("a".into())]),
-            PolicyExpr::Not(Box::new(PolicyExpr::Not(Box::new(PolicyExpr::Var(
-                "b".into(),
-            ))))),
+            PolicyExpr::And(vec![PolicyExpr::Var {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            }]),
+            PolicyExpr::Not(Box::new(PolicyExpr::Not(Box::new(PolicyExpr::Var {
+                name: "b".into(),
+                span: ash_parser::token::Span::default(),
+            })))),
         ]);
         let normalized = normalize(expr);
         match normalized {
             PolicyExpr::And(exprs) => {
                 assert_eq!(exprs.len(), 2);
-                assert!(matches!(exprs[0], PolicyExpr::Var(_)));
-                assert!(matches!(exprs[1], PolicyExpr::Var(_)));
+                assert!(matches!(exprs[0], PolicyExpr::Var { .. }));
+                assert!(matches!(exprs[1], PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected And"),
         }
@@ -848,7 +931,10 @@ mod tests {
     #[test]
     fn test_unknown_method() {
         let expr = PolicyExpr::MethodCall {
-            receiver: Box::new(PolicyExpr::Var("base".into())),
+            receiver: Box::new(PolicyExpr::Var {
+                name: "base".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             method: "unknown_method".into(),
             args: vec![],
             span: ash_parser::token::Span::default(),
@@ -860,7 +946,10 @@ mod tests {
     #[test]
     fn test_argument_count_mismatch() {
         let expr = PolicyExpr::MethodCall {
-            receiver: Box::new(PolicyExpr::Var("base".into())),
+            receiver: Box::new(PolicyExpr::Var {
+                name: "base".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             method: "and".into(),
             args: vec![], // and expects 1 argument
             span: ash_parser::token::Span::default(),

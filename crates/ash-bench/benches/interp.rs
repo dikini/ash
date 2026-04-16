@@ -18,11 +18,11 @@ fn simple_ret_workflow() -> Workflow {
 fn nested_let_workflow(depth: usize) -> Workflow {
     if depth == 0 {
         Workflow::Ret {
-            expr: Expr::Variable(format!("x{}", depth)),
+            expr: Expr::Variable { name: format!("x{}", depth), span: Span::default() },
         }
     } else {
         Workflow::Let {
-            pattern: Pattern::Variable(format!("x{}", depth)),
+            pattern: Pattern::Variable { name: format!("x{}", depth), span: Span::default() },
             expr: Expr::Literal(Value::Int(depth as i64)),
             continuation: Box::new(nested_let_workflow(depth - 1)),
         }

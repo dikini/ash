@@ -56,13 +56,22 @@ fn for_bound_interface_method_call_workflow() -> WorkflowDef {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::For {
-            pattern: Pattern::Variable("item".into()),
-            collection: Expr::Variable("items".into()),
+            pattern: Pattern::Variable {
+                name: "item".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            collection: Expr::Variable {
+                name: "items".into(),
+                span: ash_parser::token::Span::default(),
+            },
             body: Box::new(Workflow::Ret {
                 expr: Expr::Call {
                     func: "explain".into(),
                     module: Some("Explain".into()),
-                    args: vec![Expr::Variable("item".into())],
+                    args: vec![Expr::Variable {
+                        name: "item".into(),
+                        span: ash_parser::token::Span::default(),
+                    }],
                     span: test_span(),
                 },
                 span: test_span(),
@@ -87,10 +96,19 @@ fn for_bound_declared_return_workflow() -> WorkflowDef {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::For {
-            pattern: Pattern::Variable("item".into()),
-            collection: Expr::Variable("items".into()),
+            pattern: Pattern::Variable {
+                name: "item".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            collection: Expr::Variable {
+                name: "items".into(),
+                span: ash_parser::token::Span::default(),
+            },
             body: Box::new(Workflow::Ret {
-                expr: Expr::Variable("item".into()),
+                expr: Expr::Variable {
+                    name: "item".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 span: test_span(),
             }),
             span: test_span(),
@@ -110,9 +128,15 @@ fn observe_bound_declared_return_workflow() -> WorkflowDef {
         capabilities: vec![],
         body: Workflow::Observe {
             capability: "read_policy".into(),
-            binding: Some(Pattern::Variable("observed".into())),
+            binding: Some(Pattern::Variable {
+                name: "observed".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Ret {
-                expr: Expr::Variable("observed".into()),
+                expr: Expr::Variable {
+                    name: "observed".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 span: test_span(),
             })),
             span: test_span(),
@@ -138,9 +162,15 @@ fn propose_binding_workflow() -> WorkflowDef {
                 },
                 args: vec![],
             },
-            binding: Some(Pattern::Variable("proposal".into())),
+            binding: Some(Pattern::Variable {
+                name: "proposal".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Ret {
-                expr: Expr::Variable("proposal".into()),
+                expr: Expr::Variable {
+                    name: "proposal".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 span: test_span(),
             })),
             span: test_span(),
@@ -228,10 +258,19 @@ fn workflow_typecheck_rejects_non_list_for_collection_honestly() {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::For {
-            pattern: Pattern::Variable("x".into()),
-            collection: Expr::Variable("item".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            collection: Expr::Variable {
+                name: "item".into(),
+                span: ash_parser::token::Span::default(),
+            },
             body: Box::new(Workflow::Ret {
-                expr: Expr::Variable("x".into()),
+                expr: Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 span: test_span(),
             }),
             span: test_span(),

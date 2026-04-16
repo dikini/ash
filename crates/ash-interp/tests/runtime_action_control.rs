@@ -52,12 +52,21 @@ fn spawn_with_control(continuation: Workflow) -> Workflow {
     Workflow::Spawn {
         workflow_type: "worker".to_string(),
         init: Expr::Literal(Value::Null),
-        pattern: Pattern::Variable("worker".to_string()),
+        pattern: Pattern::Variable {
+            name: "worker".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         continuation: Box::new(Workflow::Split {
-            expr: Expr::Variable("worker".to_string()),
+            expr: Expr::Variable {
+                name: "worker".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             pattern: Pattern::Tuple(vec![
                 Pattern::Wildcard,
-                Pattern::Variable("ctrl".to_string()),
+                Pattern::Variable {
+                    name: "ctrl".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ]),
             continuation: Box::new(continuation),
         }),
@@ -66,7 +75,10 @@ fn spawn_with_control(continuation: Workflow) -> Workflow {
 
 fn spawn_and_return_control() -> Workflow {
     spawn_with_control(Workflow::Ret {
-        expr: Expr::Variable("ctrl".to_string()),
+        expr: Expr::Variable {
+            name: "ctrl".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
     })
 }
 
@@ -703,7 +715,10 @@ async fn completion_wait_distinguishes_unregistered_targets() {
 #[tokio::test]
 async fn spawned_child_failure_retains_direct_error_payload() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Ret {
-        expr: Expr::Variable("missing_child_value".to_string()),
+        expr: Expr::Variable {
+            name: "missing_child_value".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
     })
     .await;
     let link = spawn_real_child_control(&runtime_state).await;

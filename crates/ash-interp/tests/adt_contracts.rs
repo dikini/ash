@@ -6,7 +6,13 @@ use ash_interp::pattern::match_pattern;
 fn variant_patterns_match_constructor_shaped_values() {
     let pattern = Pattern::Variant {
         name: "Some".into(),
-        fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+        fields: Some(vec![(
+            "value".into(),
+            Pattern::Variable {
+                name: "x".into(),
+                span: ash_core::ast::Span::default(),
+            },
+        )]),
     };
     let value = Value::variant("Some", vec![("value", Value::Int(42))]);
 
@@ -19,7 +25,13 @@ fn variant_patterns_match_constructor_shaped_values() {
 fn variant_patterns_do_not_accept_tagged_record_encodings() {
     let pattern = Pattern::Variant {
         name: "Some".into(),
-        fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+        fields: Some(vec![(
+            "value".into(),
+            Pattern::Variable {
+                name: "x".into(),
+                span: ash_core::ast::Span::default(),
+            },
+        )]),
     };
     let value = Value::Record(Box::new(std::collections::HashMap::from([
         ("__variant".to_string(), Value::String("Some".to_string())),
@@ -38,7 +50,13 @@ fn nested_variant_patterns_extract_runtime_error_exit_code() {
             Pattern::Variant {
                 name: "RuntimeError".into(),
                 fields: Some(vec![
-                    (tuple_field_name(0), Pattern::Variable("code".into())),
+                    (
+                        tuple_field_name(0),
+                        Pattern::Variable {
+                            name: "code".into(),
+                            span: ash_core::ast::Span::default(),
+                        },
+                    ),
                     (tuple_field_name(1), Pattern::Wildcard),
                 ]),
             },

@@ -586,7 +586,7 @@ impl NameResolver {
     /// Resolve names in an expression
     fn resolve_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Variable(name) => {
+            Expr::Variable { name, .. } => {
                 if !self.is_bound(name) {
                     self.errors
                         .push(ResolutionError::UnboundVariable(name.to_string()));
@@ -713,7 +713,7 @@ impl NameResolver {
         use ash_parser::surface::PolicyExpr;
 
         match expr {
-            PolicyExpr::Var(name) => {
+            PolicyExpr::Var { name, .. } => {
                 if !self.is_bound(name) {
                     self.errors
                         .push(ResolutionError::UnboundVariable(name.to_string()));
@@ -768,7 +768,7 @@ impl NameResolver {
     /// Recursively bind names from a pattern, checking for duplicates
     fn bind_pattern_recursive(&mut self, pattern: &Pattern) {
         match pattern {
-            Pattern::Variable(name) => {
+            Pattern::Variable { name, .. } => {
                 // Check if this name is already bound in the current pattern
                 if self.pattern_bindings.contains(name.as_ref()) {
                     self.errors
@@ -982,7 +982,10 @@ mod tests {
         let mut resolver = NameResolver::new();
         resolver.bind("x");
 
-        let expr = Expr::Variable("x".into());
+        let expr = Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        };
         resolver.resolve_expr(&expr);
 
         assert!(!resolver.has_errors());
@@ -992,7 +995,10 @@ mod tests {
     fn test_resolve_expr_variable_unbound() {
         let mut resolver = NameResolver::new();
 
-        let expr = Expr::Variable("x".into());
+        let expr = Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        };
         resolver.resolve_expr(&expr);
 
         assert!(resolver.has_errors());
@@ -1021,8 +1027,14 @@ mod tests {
 
         let expr = Expr::Binary {
             op: ash_parser::surface::BinaryOp::Add,
-            left: Box::new(Expr::Variable("x".into())),
-            right: Box::new(Expr::Variable("y".into())),
+            left: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
+            right: Box::new(Expr::Variable {
+                name: "y".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: test_span(),
         };
         resolver.resolve_expr(&expr);
@@ -1036,8 +1048,14 @@ mod tests {
 
         let expr = Expr::Binary {
             op: ash_parser::surface::BinaryOp::Add,
-            left: Box::new(Expr::Variable("x".into())),
-            right: Box::new(Expr::Variable("y".into())),
+            left: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
+            right: Box::new(Expr::Variable {
+                name: "y".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: test_span(),
         };
         resolver.resolve_expr(&expr);
@@ -1049,7 +1067,10 @@ mod tests {
     #[test]
     fn test_bind_pattern_variable() {
         let mut resolver = NameResolver::new();
-        let pattern = Pattern::Variable("x".into());
+        let pattern = Pattern::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        };
 
         resolver.bind_pattern(&pattern);
 
@@ -1060,8 +1081,14 @@ mod tests {
     fn test_bind_pattern_tuple() {
         let mut resolver = NameResolver::new();
         let pattern = Pattern::Tuple(vec![
-            Pattern::Variable("x".into()),
-            Pattern::Variable("y".into()),
+            Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            Pattern::Variable {
+                name: "y".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
 
         resolver.bind_pattern(&pattern);
@@ -1074,8 +1101,20 @@ mod tests {
     fn test_bind_pattern_record() {
         let mut resolver = NameResolver::new();
         let pattern = Pattern::Record(vec![
-            ("a".into(), Pattern::Variable("x".into())),
-            ("b".into(), Pattern::Variable("y".into())),
+            (
+                "a".into(),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            ),
+            (
+                "b".into(),
+                Pattern::Variable {
+                    name: "y".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            ),
         ]);
 
         resolver.bind_pattern(&pattern);
@@ -1088,7 +1127,10 @@ mod tests {
     fn test_bind_pattern_list() {
         let mut resolver = NameResolver::new();
         let pattern = Pattern::List {
-            elements: vec![Pattern::Variable("x".into())],
+            elements: vec![Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             rest: Some("xs".into()),
         };
 
@@ -1111,7 +1153,10 @@ mod tests {
     fn test_resolve_workflow_let() {
         let mut resolver = NameResolver::new();
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
@@ -1127,10 +1172,16 @@ mod tests {
     fn test_resolve_workflow_let_use_variable() {
         let mut resolver = NameResolver::new();
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Orient {
-                expr: Expr::Variable("x".into()),
+                expr: Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 binding: None,
                 continuation: None,
                 span: test_span(),
@@ -1148,7 +1199,10 @@ mod tests {
         resolver.bind("cond");
 
         let workflow = Workflow::If {
-            condition: Expr::Variable("cond".into()),
+            condition: Expr::Variable {
+                name: "cond".into(),
+                span: ash_parser::token::Span::default(),
+            },
             then_branch: Box::new(Workflow::Done { span: test_span() }),
             else_branch: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
@@ -1163,7 +1217,10 @@ mod tests {
         let mut resolver = NameResolver::new();
 
         let workflow = Workflow::If {
-            condition: Expr::Variable("cond".into()),
+            condition: Expr::Variable {
+                name: "cond".into(),
+                span: ash_parser::token::Span::default(),
+            },
             then_branch: Box::new(Workflow::Done { span: test_span() }),
             else_branch: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
@@ -1178,13 +1235,19 @@ mod tests {
         let mut resolver = NameResolver::new();
         let workflow = Workflow::Seq {
             first: Box::new(Workflow::Let {
-                pattern: Pattern::Variable("x".into()),
+                pattern: Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 expr: Expr::Literal(Literal::Int(42)),
                 continuation: None,
                 span: test_span(),
             }),
             second: Box::new(Workflow::Orient {
-                expr: Expr::Variable("x".into()),
+                expr: Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 binding: None,
                 continuation: None,
                 span: test_span(),
@@ -1202,10 +1265,19 @@ mod tests {
         resolver.bind("items");
 
         let workflow = Workflow::For {
-            pattern: Pattern::Variable("item".into()),
-            collection: Expr::Variable("items".into()),
+            pattern: Pattern::Variable {
+                name: "item".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            collection: Expr::Variable {
+                name: "items".into(),
+                span: ash_parser::token::Span::default(),
+            },
             body: Box::new(Workflow::Orient {
-                expr: Expr::Variable("item".into()),
+                expr: Expr::Variable {
+                    name: "item".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 binding: None,
                 continuation: None,
                 span: test_span(),
@@ -1228,7 +1300,10 @@ mod tests {
                     provider: "io".into(),
                     action: "write".into(),
                 },
-                args: vec![Expr::Variable("arg".into())],
+                args: vec![Expr::Variable {
+                    name: "arg".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
             },
             guard: None,
             result_name: None,
@@ -1312,7 +1387,10 @@ mod tests {
     #[test]
     fn test_resolver_clear_errors() {
         let mut resolver = NameResolver::new();
-        resolver.resolve_expr(&Expr::Variable("x".into()));
+        resolver.resolve_expr(&Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        });
         assert!(resolver.has_errors());
 
         resolver.clear_errors();

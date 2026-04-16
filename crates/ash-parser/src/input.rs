@@ -4,6 +4,8 @@
 //! that tracks source offsets, line numbers, and column positions for accurate
 //! error reporting and span generation.
 
+use std::ops::{Deref, DerefMut};
+
 use crate::token::Span;
 use winnow::stream::LocatingSlice;
 use winnow::stream::Stateful;
@@ -41,11 +43,34 @@ impl Position {
     }
 }
 
+/// Full parser state including position tracking and comment table.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ParseState {
+    /// Source position tracking.
+    pub pos: Position,
+    /// Captured comment trivia.
+    pub comments: crate::parse_utils::CommentTable,
+}
+
+impl Deref for ParseState {
+    type Target = Position;
+
+    fn deref(&self) -> &Self::Target {
+        &self.pos
+    }
+}
+
+impl DerefMut for ParseState {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.pos
+    }
+}
+
 /// A custom input type for winnow parsers that tracks source position.
 ///
 /// `ParseInput` wraps a string slice with location tracking and maintains
 /// metadata about the current position in the source.
-pub type ParseInput<'a> = Stateful<LocatingSlice<&'a str>, Position>;
+pub type ParseInput<'a> = Stateful<LocatingSlice<&'a str>, ParseState>;
 
 /// Creates a new `ParseInput` from a string slice.
 ///
@@ -55,13 +80,16 @@ pub type ParseInput<'a> = Stateful<LocatingSlice<&'a str>, Position>;
 /// use ash_parser::input::new_input;
 ///
 /// let input = new_input("workflow test {}");
-/// assert_eq!(input.state.line, 1);
-/// assert_eq!(input.state.column, 1);
+/// assert_eq!(input.state.pos.line, 1);
+/// assert_eq!(input.state.pos.column, 1);
 /// ```
 pub fn new_input(input: &str) -> ParseInput<'_> {
     Stateful {
         input: LocatingSlice::new(input),
-        state: Position::new(),
+        state: ParseState {
+            pos: Position::new(),
+            comments: crate::parse_utils::CommentTable::default(),
+        },
     }
 }
 
@@ -80,10 +108,10 @@ pub fn new_input(input: &str) -> ParseInput<'_> {
 /// ```
 pub fn current_span(input: &ParseInput) -> Span {
     Span {
-        start: input.state.offset,
-        end: input.state.offset,
-        line: input.state.line,
-        column: input.state.column,
+        start: input.state.pos.offset,
+        end: input.state.pos.offset,
+        line: input.state.pos.line,
+        column: input.state.pos.column,
     }
 }
 
@@ -112,9 +140,9 @@ mod tests {
     #[test]
     fn test_new_input() {
         let input = new_input("hello world");
-        assert_eq!(input.state.offset, 0);
-        assert_eq!(input.state.line, 1);
-        assert_eq!(input.state.column, 1);
+        assert_eq!(input.state.pos.offset, 0);
+        assert_eq!(input.state.pos.line, 1);
+        assert_eq!(input.state.pos.column, 1);
     }
 
     #[test]
@@ -178,6 +206,6 @@ mod tests {
         let mut input = new_input("abc");
         let c = input.next_token();
         assert_eq!(c, Some('a'));
-        assert_eq!(input.state.offset, 0); // Position is tracked separately
+        assert_eq!(input.state.pos.offset, 0); // Position is tracked separately
     }
 }

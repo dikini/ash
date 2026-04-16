@@ -565,8 +565,14 @@ fn test_error_recovery_with_variables() {
 
     let expr = Expr::Binary {
         op: BinaryOp::Add,
-        left: Box::new(Expr::Variable("x".into())), // Unbound
-        right: Box::new(Expr::Variable("y".into())), // Bound to Int
+        left: Box::new(Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        }), // Unbound
+        right: Box::new(Expr::Variable {
+            name: "y".into(),
+            span: ash_parser::token::Span::default(),
+        }), // Bound to Int
         span: test_span(),
     };
 
@@ -768,7 +774,10 @@ fn test_if_let_with_same_types() {
 
     // if let x = 1 then 2 else 3
     let expr = Expr::IfLet {
-        pattern: ash_parser::surface::Pattern::Variable("x".into()),
+        pattern: ash_parser::surface::Pattern::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        },
         expr: Box::new(Expr::Literal(Literal::Int(1))),
         then_branch: Box::new(Expr::Literal(Literal::Int(2))),
         else_branch: Box::new(Expr::Literal(Literal::Int(3))),
@@ -786,7 +795,10 @@ fn test_if_let_with_divergent_types() {
 
     // if let x = 1 then "hello" else 3
     let expr = Expr::IfLet {
-        pattern: ash_parser::surface::Pattern::Variable("x".into()),
+        pattern: ash_parser::surface::Pattern::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        },
         expr: Box::new(Expr::Literal(Literal::Int(1))),
         then_branch: Box::new(Expr::Literal(Literal::String("hello".into()))),
         else_branch: Box::new(Expr::Literal(Literal::Int(3))),

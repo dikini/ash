@@ -51,7 +51,10 @@ impl WorkflowBuilder {
     pub fn bind_val(self, name: &str, value: Value) -> Self {
         Self {
             workflow: Workflow::Let {
-                pattern: Pattern::Variable(name.into()),
+                pattern: Pattern::Variable {
+                    name: name.into(),
+                    span: crate::ast::Span::default(),
+                },
                 expr: Expr::Literal(value),
                 continuation: Box::new(self.workflow),
             },
@@ -112,7 +115,10 @@ pub fn test_capability(name: &str, effect: Effect) -> Capability {
 
 /// Create a variable pattern
 pub fn var(name: &str) -> Pattern {
-    Pattern::Variable(name.into())
+    Pattern::Variable {
+        name: name.into(),
+        span: crate::ast::Span::default(),
+    }
 }
 
 /// Create a literal expression
@@ -122,7 +128,10 @@ pub fn lit(value: Value) -> Expr {
 
 /// Create a variable expression
 pub fn var_expr(name: &str) -> Expr {
-    Expr::Variable(name.into())
+    Expr::Variable {
+        name: name.into(),
+        span: crate::ast::Span::default(),
+    }
 }
 
 #[cfg(test)]
@@ -175,7 +184,7 @@ mod tests {
     #[test]
     fn test_var_pattern() {
         let pat = var("x");
-        assert!(matches!(pat, Pattern::Variable(name) if name == "x"));
+        assert!(matches!(pat, Pattern::Variable { name, .. } if name == "x"));
     }
 
     #[test]
@@ -187,6 +196,6 @@ mod tests {
     #[test]
     fn test_var_expr() {
         let expr = var_expr("foo");
-        assert!(matches!(expr, Expr::Variable(name) if name == "foo"));
+        assert!(matches!(expr, Expr::Variable { name, .. } if name == "foo"));
     }
 }

@@ -49,7 +49,7 @@ pub fn display_workflow_def(def: &WorkflowDef) -> String {
 fn render_expr(expr: &Expr) -> String {
     match expr {
         Expr::Literal(literal) => format!("Literal({literal:?})"),
-        Expr::Variable(name) => format!("Variable({name:?})"),
+        Expr::Variable { name, .. } => format!("Variable({name:?})"),
         Expr::FieldAccess { base, field, .. } => {
             let mut out = String::from("FieldAccess {\n");
             push_field(&mut out, 2, "base", &render_expr(base));
@@ -529,7 +529,7 @@ fn render_match_arm(arm: &MatchArm) -> String {
 
 fn render_policy_expr(expr: &PolicyExpr) -> String {
     match expr {
-        PolicyExpr::Var(name) => format!("Var({name:?})"),
+        PolicyExpr::Var { name, .. } => format!("Var({name:?})"),
         PolicyExpr::And(exprs) => {
             format!("And({})", render_list(exprs.iter().map(render_policy_expr)))
         }

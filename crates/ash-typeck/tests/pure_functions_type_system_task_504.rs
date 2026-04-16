@@ -22,7 +22,10 @@ fn generic_identity_fn() -> FnDef {
         }],
         return_type: Some(SurfaceType::Name("T".into())),
         contract: None,
-        body: Expr::Variable("x".into()),
+        body: Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        },
         span: span(),
     }
 }
@@ -68,7 +71,10 @@ fn explain_string_impl() -> ImplDef {
         methods: vec![ImplMethodDef {
             name: "explain".into(),
             params: vec!["value".into()],
-            body: Expr::Variable("value".into()),
+            body: Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            },
             span: span(),
         }],
         span: span(),
@@ -235,7 +241,10 @@ fn interface_method_call_is_allowed_in_pure_fn_when_impl_exists() {
         body: Expr::Call {
             func: "explain".into(),
             module: Some("Explain".into()),
-            args: vec![Expr::Variable("value".into())],
+            args: vec![Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             span: span(),
         },
         span: span(),
@@ -279,12 +288,21 @@ fn if_let_pattern_binding_is_in_scope_for_interface_call_validation() {
         return_type: Some(SurfaceType::Name("String".into())),
         contract: None,
         body: Expr::IfLet {
-            pattern: Pattern::Variable("bound".into()),
-            expr: Box::new(Expr::Variable("value".into())),
+            pattern: Pattern::Variable {
+                name: "bound".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            expr: Box::new(Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             then_branch: Box::new(Expr::Call {
                 func: "explain".into(),
                 module: Some("Explain".into()),
-                args: vec![Expr::Variable("bound".into())],
+                args: vec![Expr::Variable {
+                    name: "bound".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
                 span: span(),
             }),
             else_branch: Box::new(Expr::Literal(Literal::String("fallback".into()))),
@@ -328,14 +346,20 @@ fn block_let_binding_is_in_scope_for_later_interface_call_validation() {
         contract: None,
         body: Expr::Block {
             statements: vec![BlockStmt::Let {
-                pattern: Pattern::Variable("bound".into()),
+                pattern: Pattern::Variable {
+                    name: "bound".into(),
+                    span: ash_parser::token::Span::default(),
+                },
                 expr: Expr::Literal(Literal::String("hello".into())),
                 span: span(),
             }],
             tail_expr: Some(Box::new(Expr::Call {
                 func: "explain".into(),
                 module: Some("Explain".into()),
-                args: vec![Expr::Variable("bound".into())],
+                args: vec![Expr::Variable {
+                    name: "bound".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
                 span: span(),
             })),
             span: span(),
@@ -458,7 +482,10 @@ fn interface_method_resolution_unifies_nested_generic_argument_types() {
         body: Expr::Call {
             func: "explain".into(),
             module: Some("OptionExplain".into()),
-            args: vec![Expr::Variable("value".into())],
+            args: vec![Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             span: span(),
         },
         span: span(),
@@ -511,7 +538,10 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
         contract: None,
-        body: Expr::Variable("x".into()),
+        body: Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        },
         span: span(),
     };
 
@@ -528,7 +558,10 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
         body: Expr::Call {
             func: "passthrough".into(),
             module: Some("math".into()),
-            args: vec![Expr::Variable("value".into())],
+            args: vec![Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             span: span(),
         },
         span: span(),
@@ -569,7 +602,10 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
         contract: None,
-        body: Expr::Variable("x".into()),
+        body: Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        },
         span: span(),
     };
 
@@ -586,7 +622,10 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
         body: Expr::Call {
             func: "passthrough".into(),
             module: Some("math".into()),
-            args: vec![Expr::Variable("value".into())],
+            args: vec![Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             span: span(),
         },
         span: span(),

@@ -40,7 +40,7 @@ use crate::surface::{CrateRootMetadata, DependencyDecl};
 /// assert!(result.is_ok());
 /// ```
 pub fn parse_crate_root_metadata(input: &mut ParseInput) -> ModalResult<CrateRootMetadata> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse the crate name declaration first (required)
     let crate_name = parse_crate_decl(input)?;
@@ -51,7 +51,7 @@ pub fn parse_crate_root_metadata(input: &mut ParseInput) -> ModalResult<CrateRoo
     // Parse zero or more dependency declarations
     let dependencies = parse_dependencies(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(CrateRootMetadata {
         crate_name: crate_name.into(),
@@ -111,7 +111,7 @@ fn parse_crate_decl<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
 
 /// Parse a dependency declaration: `dependency <alias> from "<path>";`
 fn parse_dependency_decl(input: &mut ParseInput) -> ModalResult<DependencyDecl> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Skip any leading whitespace/newlines
     let _ = parse_newlines_and_whitespace(input)?;
@@ -140,7 +140,7 @@ fn parse_dependency_decl(input: &mut ParseInput) -> ModalResult<DependencyDecl> 
     // Parse semicolon
     let _ = parse_semicolon(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(DependencyDecl {
         alias: alias.into(),

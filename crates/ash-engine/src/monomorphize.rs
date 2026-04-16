@@ -272,7 +272,7 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
         Expr::FnDef { body, .. } => {
             monomorphize_expr(body, type_env)?;
         }
-        Expr::Literal(_) | Expr::Variable(_) | Expr::CheckObligation { .. } => {}
+        Expr::Literal(_) | Expr::Variable { .. } | Expr::CheckObligation { .. } => {}
     }
     Ok(())
 }
@@ -280,7 +280,7 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
 fn infer_type_from_expr(expr: &Expr, type_env: &TypeEnv) -> Option<Type> {
     match expr {
         Expr::Literal(v) => Some(value_to_type(v)),
-        Expr::Variable(name) => type_env.lookup_variable(name),
+        Expr::Variable { name, .. } => type_env.lookup_variable(name),
         Expr::Constructor { name, .. } => Some(Type::Constructor {
             name: QualifiedName::root(name.clone()),
             args: vec![],

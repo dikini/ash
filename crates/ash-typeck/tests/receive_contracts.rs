@@ -11,7 +11,10 @@ fn stream_arm(capability: &str, channel: &str) -> ReceiveArm {
         pattern: StreamPattern::Binding {
             capability: capability.into(),
             channel: channel.into(),
-            pattern: Pattern::Variable("msg".into()),
+            pattern: Pattern::Variable {
+                name: "msg".into(),
+                span: ash_parser::token::Span::default(),
+            },
         },
         guard: None,
         body: Workflow::Done { span: span() },

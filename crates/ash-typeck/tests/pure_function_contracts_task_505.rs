@@ -52,7 +52,10 @@ fn fn_requires_rejects_capability_requirements() {
             }],
             ensures: vec![],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let program = Program {
@@ -76,14 +79,20 @@ fn fn_ensures_rejects_non_result_predicates() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Geq,
-                    left: Box::new(Expr::Variable("state".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "state".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
                 span: span(),
             }],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let program = Program {
@@ -103,14 +112,20 @@ fn fn_ensures_rejects_non_result_equalities() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Eq,
-                    left: Box::new(Expr::Variable("n".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(1))),
                     span: span(),
                 },
                 span: span(),
             }],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let program = Program {
@@ -129,14 +144,20 @@ fn fn_contract_rejects_unknown_variables() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Gt,
-                    left: Box::new(Expr::Variable("ghost".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "ghost".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
             }],
             ensures: vec![],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let program = Program {
@@ -155,7 +176,10 @@ fn fn_contract_boundary_is_stored_with_runtime_postconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Geq,
-                    left: Box::new(Expr::Variable("n".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
@@ -163,14 +187,23 @@ fn fn_contract_boundary_is_stored_with_runtime_postconditions() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Eq,
-                    left: Box::new(Expr::Variable("n".into())),
-                    right: Box::new(Expr::Variable("result".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
+                    right: Box::new(Expr::Variable {
+                        name: "result".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     span: span(),
                 },
                 span: span(),
             }],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let program = Program {
@@ -201,7 +234,10 @@ fn valid_stage1_fn_contract_typechecks() {
                 SurfaceRequirement::Arithmetic {
                     expr: Expr::Binary {
                         op: ash_parser::surface::BinaryOp::Neq,
-                        left: Box::new(Expr::Variable("n".into())),
+                        left: Box::new(Expr::Variable {
+                            name: "n".into(),
+                            span: ash_parser::token::Span::default(),
+                        }),
                         right: Box::new(Expr::Literal(Literal::Int(0))),
                         span: span(),
                     },
@@ -211,7 +247,10 @@ fn valid_stage1_fn_contract_typechecks() {
                         op: ash_parser::surface::BinaryOp::Eq,
                         left: Box::new(Expr::Binary {
                             op: ash_parser::surface::BinaryOp::Mod,
-                            left: Box::new(Expr::Variable("n".into())),
+                            left: Box::new(Expr::Variable {
+                                name: "n".into(),
+                                span: ash_parser::token::Span::default(),
+                            }),
                             right: Box::new(Expr::Literal(Literal::Int(2))),
                             span: span(),
                         }),
@@ -223,14 +262,20 @@ fn valid_stage1_fn_contract_typechecks() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Geq,
-                    left: Box::new(Expr::Variable("result".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "result".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
                 span: span(),
             }],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let program = Program {
@@ -252,14 +297,20 @@ fn workflow_call_site_must_prove_fn_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
-                    left: Box::new(Expr::Variable("n".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
             }],
             ensures: vec![],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let workflow = WorkflowDef {
@@ -270,13 +321,19 @@ fn workflow_call_site_must_prove_fn_preconditions() {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Let {
-            pattern: ash_parser::surface::Pattern::Variable("x".into()),
+            pattern: ash_parser::surface::Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(0)),
             continuation: Some(Box::new(Workflow::Ret {
                 expr: Expr::Call {
                     func: "checked".into(),
                     module: None,
-                    args: vec![Expr::Variable("x".into())],
+                    args: vec![Expr::Variable {
+                        name: "x".into(),
+                        span: ash_parser::token::Span::default(),
+                    }],
                     span: span(),
                 },
                 span: span(),
@@ -303,14 +360,20 @@ fn workflow_call_site_accepts_proven_fn_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
-                    left: Box::new(Expr::Variable("n".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
             }],
             ensures: vec![],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let workflow = WorkflowDef {
@@ -321,13 +384,19 @@ fn workflow_call_site_accepts_proven_fn_preconditions() {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Let {
-            pattern: ash_parser::surface::Pattern::Variable("x".into()),
+            pattern: ash_parser::surface::Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(1)),
             continuation: Some(Box::new(Workflow::Ret {
                 expr: Expr::Call {
                     func: "checked".into(),
                     module: None,
-                    args: vec![Expr::Variable("x".into())],
+                    args: vec![Expr::Variable {
+                        name: "x".into(),
+                        span: ash_parser::token::Span::default(),
+                    }],
                     span: span(),
                 },
                 span: span(),
@@ -355,14 +424,20 @@ fn qualified_workflow_call_site_must_prove_fn_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
-                    left: Box::new(Expr::Variable("n".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
             }],
             ensures: vec![],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
     function.name = "math::checked".into();
 
@@ -406,14 +481,20 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
-                    left: Box::new(Expr::Variable("n".into())),
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: ash_parser::token::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Literal::Int(0))),
                     span: span(),
                 },
             }],
             ensures: vec![],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let workflow = WorkflowDef {
@@ -430,7 +511,10 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
         body: Workflow::If {
             condition: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Gt,
-                left: Box::new(Expr::Variable("x".into())),
+                left: Box::new(Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                }),
                 right: Box::new(Expr::Literal(Literal::Int(0))),
                 span: span(),
             },
@@ -438,7 +522,10 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
                 expr: Expr::Call {
                     func: "checked".into(),
                     module: None,
-                    args: vec![Expr::Variable("x".into())],
+                    args: vec![Expr::Variable {
+                        name: "x".into(),
+                        span: ash_parser::token::Span::default(),
+                    }],
                     span: span(),
                 },
                 span: span(),
@@ -472,7 +559,10 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
                     op: ash_parser::surface::BinaryOp::Eq,
                     left: Box::new(Expr::Binary {
                         op: ash_parser::surface::BinaryOp::Mod,
-                        left: Box::new(Expr::Variable("n".into())),
+                        left: Box::new(Expr::Variable {
+                            name: "n".into(),
+                            span: ash_parser::token::Span::default(),
+                        }),
                         right: Box::new(Expr::Literal(Literal::Int(2))),
                         span: span(),
                     }),
@@ -482,7 +572,10 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
             }],
             ensures: vec![],
         },
-        Expr::Variable("n".into()),
+        Expr::Variable {
+            name: "n".into(),
+            span: ash_parser::token::Span::default(),
+        },
     );
 
     let workflow = WorkflowDef {
@@ -493,7 +586,10 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Let {
-            pattern: ash_parser::surface::Pattern::Variable("x".into()),
+            pattern: ash_parser::surface::Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Add,
                 left: Box::new(Expr::Literal(Literal::Int(1))),
@@ -504,7 +600,10 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
                 expr: Expr::Call {
                     func: "checked".into(),
                     module: None,
-                    args: vec![Expr::Variable("x".into())],
+                    args: vec![Expr::Variable {
+                        name: "x".into(),
+                        span: ash_parser::token::Span::default(),
+                    }],
                     span: span(),
                 },
                 span: span(),

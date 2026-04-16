@@ -10,6 +10,7 @@ use winnow::token::take_while;
 use crate::input::ParseInput;
 use crate::parse_expr::{expr, identifier};
 use crate::parse_pattern::pattern;
+use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{Expr, Name, Pattern};
 
 /// Parsed observe expression.
@@ -220,7 +221,7 @@ fn keyword<'a>(input: &mut ParseInput<'a>, word: &'a str) -> ModalResult<&'a str
 fn try_keyword<'a>(input: &mut ParseInput<'a>, word: &'a str) -> bool {
     // Save state for potential backtrack
     let saved_input = input.input;
-    let saved_state = input.state;
+    let saved_state = input.state.clone();
 
     match keyword(input, word) {
         Ok(_) => true,
@@ -250,41 +251,6 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
                 winnow::error::ContextError::new(),
             ))
         }
-    }
-}
-
-/// Skip whitespace and comments.
-fn skip_whitespace_and_comments(input: &mut ParseInput) {
-    loop {
-        // Skip whitespace
-        let _: ModalResult<&str> =
-            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
-
-        // Check for line comment
-        if input.input.starts_with("--") {
-            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
-            continue;
-        }
-
-        // Check for block comment
-        if input.input.starts_with("/*") {
-            let _ = input.input.next_slice(2);
-            let mut depth = 1;
-            while depth > 0 && !input.input.is_empty() {
-                if input.input.starts_with("/*") {
-                    let _ = input.input.next_slice(2);
-                    depth += 1;
-                } else if input.input.starts_with("*/") {
-                    let _ = input.input.next_slice(2);
-                    depth -= 1;
-                } else {
-                    let _ = input.input.next_token();
-                }
-            }
-            continue;
-        }
-
-        break;
     }
 }
 

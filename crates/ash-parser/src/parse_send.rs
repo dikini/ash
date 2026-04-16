@@ -77,7 +77,7 @@ mod tests {
         assert_eq!(send.channel, "orders".into());
         // Check value is a variable reference
         match send.value {
-            Expr::Variable(name) => assert_eq!(name, "order".into()),
+            Expr::Variable { name, .. } => assert_eq!(name, "order".into()),
             _ => panic!("Expected variable, got {:?}", send.value),
         }
     }

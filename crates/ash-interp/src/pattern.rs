@@ -24,7 +24,7 @@ use crate::error::PatternError;
 /// use ash_interp::pattern::match_pattern;
 /// use std::collections::HashMap;
 ///
-/// let pattern = Pattern::Variable("x".to_string());
+/// let pattern = Pattern::Variable { name: "x".to_string(), span: ash_core::ast::Span::default() };
 /// let value = Value::Int(42);
 /// let bindings = match_pattern(&pattern, &value).unwrap();
 /// assert_eq!(bindings.get("x"), Some(&Value::Int(42)));
@@ -60,7 +60,7 @@ fn match_pattern_recursive(
             Ok(())
         }
 
-        Pattern::Variable(name) => {
+        Pattern::Variable { name, .. } => {
             // Variable matches anything and binds the value
             bindings.insert(name.clone(), value.clone());
             Ok(())
@@ -239,7 +239,10 @@ mod tests {
 
     #[test]
     fn test_match_variable() {
-        let pattern = Pattern::Variable("x".to_string());
+        let pattern = Pattern::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        };
         let bindings = match_pattern(&pattern, &Value::Int(42)).unwrap();
         assert_eq!(bindings.get("x"), Some(&Value::Int(42)));
     }
@@ -260,8 +263,14 @@ mod tests {
     #[test]
     fn test_match_tuple() {
         let pattern = Pattern::Tuple(vec![
-            Pattern::Variable("x".to_string()),
-            Pattern::Variable("y".to_string()),
+            Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            Pattern::Variable {
+                name: "y".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         ]);
         let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
         let bindings = match_pattern(&pattern, &value).unwrap();
@@ -272,22 +281,40 @@ mod tests {
 
     #[test]
     fn test_match_tuple_wrong_length() {
-        let pattern = Pattern::Tuple(vec![Pattern::Variable("x".to_string())]);
+        let pattern = Pattern::Tuple(vec![Pattern::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        }]);
         let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
     #[test]
     fn test_match_tuple_not_list() {
-        let pattern = Pattern::Tuple(vec![Pattern::Variable("x".to_string())]);
+        let pattern = Pattern::Tuple(vec![Pattern::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        }]);
         assert!(match_pattern(&pattern, &Value::Int(42)).is_err());
     }
 
     #[test]
     fn test_match_record() {
         let pattern = Pattern::Record(vec![
-            ("name".to_string(), Pattern::Variable("n".to_string())),
-            ("age".to_string(), Pattern::Variable("a".to_string())),
+            (
+                "name".to_string(),
+                Pattern::Variable {
+                    name: "n".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+            ),
+            (
+                "age".to_string(),
+                Pattern::Variable {
+                    name: "a".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+            ),
         ]);
 
         let mut fields = HashMap::new();
@@ -304,7 +331,10 @@ mod tests {
     fn test_match_record_missing_field() {
         let pattern = Pattern::Record(vec![(
             "missing".to_string(),
-            Pattern::Variable("x".to_string()),
+            Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         )]);
 
         let mut fields = HashMap::new();
@@ -324,8 +354,14 @@ mod tests {
     fn test_match_list_exact() {
         let pattern = Pattern::List(
             vec![
-                Pattern::Variable("a".to_string()),
-                Pattern::Variable("b".to_string()),
+                Pattern::Variable {
+                    name: "a".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "b".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ],
             None,
         );
@@ -339,7 +375,10 @@ mod tests {
     #[test]
     fn test_match_list_with_rest() {
         let pattern = Pattern::List(
-            vec![Pattern::Variable("head".to_string())],
+            vec![Pattern::Variable {
+                name: "head".to_string(),
+                span: ash_core::ast::Span::default(),
+            }],
             Some("tail".to_string()),
         );
         let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
@@ -356,8 +395,14 @@ mod tests {
     fn test_match_list_too_short() {
         let pattern = Pattern::List(
             vec![
-                Pattern::Variable("a".to_string()),
-                Pattern::Variable("b".to_string()),
+                Pattern::Variable {
+                    name: "a".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "b".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ],
             None,
         );
@@ -376,7 +421,10 @@ mod tests {
         let pattern = Pattern::Tuple(vec![
             Pattern::Record(vec![(
                 "x".to_string(),
-                Pattern::Variable("inner".to_string()),
+                Pattern::Variable {
+                    name: "inner".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             )]),
             Pattern::Wildcard,
         ]);
@@ -442,7 +490,10 @@ mod tests {
             name: "Some".to_string(),
             fields: Some(vec![(
                 "value".to_string(),
-                Pattern::Variable("x".to_string()),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             )]),
         };
         let value = Value::Variant {
@@ -488,7 +539,10 @@ mod tests {
             name: "Point".to_string(),
             fields: Some(vec![(
                 "value".to_string(),
-                Pattern::Variable("x".to_string()),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             )]),
         };
         let value = Value::Variant {
@@ -516,8 +570,14 @@ mod tests {
             fields: Some(vec![(
                 "value".to_string(),
                 Pattern::Tuple(vec![
-                    Pattern::Variable("x".to_string()),
-                    Pattern::Variable("y".to_string()),
+                    Pattern::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                    Pattern::Variable {
+                        name: "y".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 ]),
             )]),
         };
@@ -539,8 +599,20 @@ mod tests {
         let pattern = Pattern::Variant {
             name: "Point".to_string(),
             fields: Some(vec![
-                ("x".to_string(), Pattern::Variable("a".to_string())),
-                ("y".to_string(), Pattern::Variable("b".to_string())),
+                (
+                    "x".to_string(),
+                    Pattern::Variable {
+                        name: "a".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                ),
+                (
+                    "y".to_string(),
+                    Pattern::Variable {
+                        name: "b".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                ),
             ]),
         };
         let value = Value::Variant {

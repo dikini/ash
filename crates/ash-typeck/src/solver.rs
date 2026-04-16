@@ -501,7 +501,10 @@ mod tests {
     fn test_var_binding_constraint() {
         let mut solver = Solver::new();
         let constraints = vec![Constraint::VarBinding(
-            Pattern::Variable("x".into()),
+            Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             Type::Int,
         )];
 
@@ -513,7 +516,10 @@ mod tests {
     fn test_pattern_match_constraint() {
         let mut solver = Solver::new();
         let constraints = vec![Constraint::PatternMatch(
-            Pattern::Variable("x".into()),
+            Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             Type::Int,
         )];
 

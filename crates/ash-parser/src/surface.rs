@@ -794,7 +794,7 @@ pub enum Expr {
     /// Literal value
     Literal(Literal),
     /// Variable reference
-    Variable(Name),
+    Variable { name: Name, span: Span },
     /// Field access: base.field
     FieldAccess {
         /// Base expression
@@ -982,7 +982,7 @@ pub enum BlockStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolicyExpr {
     /// Variable reference to a policy
-    Var(Name),
+    Var { name: Name, span: Span },
     /// Conjunction: all policies must hold
     And(Vec<PolicyExpr>),
     /// Disjunction: at least one policy must hold
@@ -1085,7 +1085,7 @@ pub enum BinaryOp {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     /// Variable binding
-    Variable(Name),
+    Variable { name: Name, span: Span },
     /// Wildcard pattern: _
     Wildcard,
     /// Tuple pattern: (a, b, c)
@@ -1333,7 +1333,7 @@ impl Spanned for Expr {
     fn span(&self) -> Span {
         match self {
             Expr::Literal(_) => Span::default(),
-            Expr::Variable(_) => Span::default(),
+            Expr::Variable { span, .. } => *span,
             Expr::FieldAccess { span, .. } => *span,
             Expr::IndexAccess { span, .. } => *span,
             Expr::Unary { span, .. } => *span,
@@ -1356,7 +1356,7 @@ impl Spanned for Expr {
 impl Spanned for PolicyExpr {
     fn span(&self) -> Span {
         match self {
-            PolicyExpr::Var(_) => Span::default(),
+            PolicyExpr::Var { span, .. } => *span,
             PolicyExpr::And(exprs) => {
                 // Return span of first expression, or default if empty
                 exprs.first().map(Spanned::span).unwrap_or_default()
@@ -1669,8 +1669,14 @@ mod tests {
             ],
             where_clause: Some(Expr::Binary {
                 op: BinaryOp::Leq,
-                left: Box::new(Expr::Variable("min".into())),
-                right: Box::new(Expr::Variable("max".into())),
+                left: Box::new(Expr::Variable {
+                    name: "min".into(),
+                    span: crate::token::Span::default(),
+                }),
+                right: Box::new(Expr::Variable {
+                    name: "max".into(),
+                    span: crate::token::Span::default(),
+                }),
                 span: Span::new(0, 10, 1, 1),
             }),
             span: Span::new(0, 30, 1, 1),
@@ -1761,7 +1767,10 @@ mod tests {
     fn test_workflow_observe() {
         let wf = Workflow::Observe {
             capability: "read_db".into(),
-            binding: Some(Pattern::Variable("data".into())),
+            binding: Some(Pattern::Variable {
+                name: "data".into(),
+                span: crate::token::Span::default(),
+            }),
             continuation: None,
             span: Span::new(0, 20, 1, 1),
         };
@@ -1777,15 +1786,21 @@ mod tests {
     #[test]
     fn test_workflow_orient() {
         let wf = Workflow::Orient {
-            expr: Expr::Variable("data".into()),
-            binding: Some(Pattern::Variable("result".into())),
+            expr: Expr::Variable {
+                name: "data".into(),
+                span: crate::token::Span::default(),
+            },
+            binding: Some(Pattern::Variable {
+                name: "result".into(),
+                span: crate::token::Span::default(),
+            }),
             continuation: None,
             span: Span::new(0, 15, 1, 1),
         };
 
         match wf {
             Workflow::Orient { expr, .. } => {
-                assert!(matches!(expr, Expr::Variable(_)));
+                assert!(matches!(expr, Expr::Variable { .. }));
             }
             _ => panic!("Expected Orient workflow"),
         }
@@ -1906,7 +1921,10 @@ mod tests {
     #[test]
     fn test_workflow_let() {
         let wf = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
@@ -1916,7 +1934,7 @@ mod tests {
 
         match wf {
             Workflow::Let { pattern, .. } => {
-                assert!(matches!(pattern, Pattern::Variable(_)));
+                assert!(matches!(pattern, Pattern::Variable { .. }));
             }
             _ => panic!("Expected Let workflow"),
         }
@@ -1946,8 +1964,14 @@ mod tests {
     #[test]
     fn test_workflow_for() {
         let wf = Workflow::For {
-            pattern: Pattern::Variable("item".into()),
-            collection: Expr::Variable("items".into()),
+            pattern: Pattern::Variable {
+                name: "item".into(),
+                span: crate::token::Span::default(),
+            },
+            collection: Expr::Variable {
+                name: "items".into(),
+                span: crate::token::Span::default(),
+            },
             body: Box::new(Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
             }),
@@ -1960,8 +1984,8 @@ mod tests {
                 collection,
                 ..
             } => {
-                assert!(matches!(pattern, Pattern::Variable(_)));
-                assert!(matches!(collection, Expr::Variable(_)));
+                assert!(matches!(pattern, Pattern::Variable { .. }));
+                assert!(matches!(collection, Expr::Variable { .. }));
             }
             _ => panic!("Expected For workflow"),
         }
@@ -2067,9 +2091,12 @@ mod tests {
 
     #[test]
     fn test_expr_variable() {
-        let expr = Expr::Variable("my_var".into());
-        assert!(matches!(expr, Expr::Variable(_)));
-        if let Expr::Variable(name) = expr {
+        let expr = Expr::Variable {
+            name: "my_var".into(),
+            span: crate::token::Span::default(),
+        };
+        assert!(matches!(expr, Expr::Variable { .. }));
+        if let Expr::Variable { name, .. } = expr {
             assert_eq!(name, "my_var".into());
         }
     }
@@ -2077,14 +2104,17 @@ mod tests {
     #[test]
     fn test_expr_field_access() {
         let expr = Expr::FieldAccess {
-            base: Box::new(Expr::Variable("obj".into())),
+            base: Box::new(Expr::Variable {
+                name: "obj".into(),
+                span: crate::token::Span::default(),
+            }),
             field: "field".into(),
             span: Span::new(0, 10, 1, 1),
         };
 
         match expr {
             Expr::FieldAccess { base, field, .. } => {
-                assert!(matches!(base.as_ref(), Expr::Variable(_)));
+                assert!(matches!(base.as_ref(), Expr::Variable { .. }));
                 assert_eq!(field, "field".into());
             }
             _ => panic!("Expected FieldAccess"),
@@ -2094,14 +2124,17 @@ mod tests {
     #[test]
     fn test_expr_index_access() {
         let expr = Expr::IndexAccess {
-            base: Box::new(Expr::Variable("arr".into())),
+            base: Box::new(Expr::Variable {
+                name: "arr".into(),
+                span: crate::token::Span::default(),
+            }),
             index: Box::new(Expr::Literal(Literal::Int(0))),
             span: Span::new(0, 8, 1, 1),
         };
 
         match expr {
             Expr::IndexAccess { base, index, .. } => {
-                assert!(matches!(base.as_ref(), Expr::Variable(_)));
+                assert!(matches!(base.as_ref(), Expr::Variable { .. }));
                 assert!(matches!(index.as_ref(), Expr::Literal(Literal::Int(0))));
             }
             _ => panic!("Expected IndexAccess"),
@@ -2172,15 +2205,24 @@ mod tests {
 
     #[test]
     fn test_policy_expr_var() {
-        let expr = PolicyExpr::Var("my_policy".into());
-        assert!(matches!(expr, PolicyExpr::Var(name) if name.as_ref() == "my_policy"));
+        let expr = PolicyExpr::Var {
+            name: "my_policy".into(),
+            span: crate::token::Span::default(),
+        };
+        assert!(matches!(expr, PolicyExpr::Var { name, .. } if name.as_ref() == "my_policy"));
     }
 
     #[test]
     fn test_policy_expr_and() {
         let expr = PolicyExpr::And(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: crate::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: crate::token::Span::default(),
+            },
         ]);
         match expr {
             PolicyExpr::And(exprs) => assert_eq!(exprs.len(), 2),
@@ -2191,8 +2233,14 @@ mod tests {
     #[test]
     fn test_policy_expr_or() {
         let expr = PolicyExpr::Or(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: crate::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: crate::token::Span::default(),
+            },
         ]);
         match expr {
             PolicyExpr::Or(exprs) => assert_eq!(exprs.len(), 2),
@@ -2202,10 +2250,13 @@ mod tests {
 
     #[test]
     fn test_policy_expr_not() {
-        let expr = PolicyExpr::Not(Box::new(PolicyExpr::Var("p".into())));
+        let expr = PolicyExpr::Not(Box::new(PolicyExpr::Var {
+            name: "p".into(),
+            span: crate::token::Span::default(),
+        }));
         match expr {
             PolicyExpr::Not(inner) => {
-                assert!(matches!(inner.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(inner.as_ref(), PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected Not"),
         }
@@ -2214,13 +2265,19 @@ mod tests {
     #[test]
     fn test_policy_expr_implies() {
         let expr = PolicyExpr::Implies(
-            Box::new(PolicyExpr::Var("a".into())),
-            Box::new(PolicyExpr::Var("b".into())),
+            Box::new(PolicyExpr::Var {
+                name: "a".into(),
+                span: crate::token::Span::default(),
+            }),
+            Box::new(PolicyExpr::Var {
+                name: "b".into(),
+                span: crate::token::Span::default(),
+            }),
         );
         match expr {
             PolicyExpr::Implies(left, right) => {
-                assert!(matches!(left.as_ref(), PolicyExpr::Var(_)));
-                assert!(matches!(right.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(left.as_ref(), PolicyExpr::Var { .. }));
+                assert!(matches!(right.as_ref(), PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected Implies"),
         }
@@ -2229,9 +2286,18 @@ mod tests {
     #[test]
     fn test_policy_expr_sequential() {
         let expr = PolicyExpr::Sequential(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
-            PolicyExpr::Var("p3".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: crate::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: crate::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p3".into(),
+                span: crate::token::Span::default(),
+            },
         ]);
         match expr {
             PolicyExpr::Sequential(exprs) => assert_eq!(exprs.len(), 3),
@@ -2242,8 +2308,14 @@ mod tests {
     #[test]
     fn test_policy_expr_concurrent() {
         let expr = PolicyExpr::Concurrent(vec![
-            PolicyExpr::Var("p1".into()),
-            PolicyExpr::Var("p2".into()),
+            PolicyExpr::Var {
+                name: "p1".into(),
+                span: crate::token::Span::default(),
+            },
+            PolicyExpr::Var {
+                name: "p2".into(),
+                span: crate::token::Span::default(),
+            },
         ]);
         match expr {
             PolicyExpr::Concurrent(exprs) => assert_eq!(exprs.len(), 2),
@@ -2255,14 +2327,20 @@ mod tests {
     fn test_policy_expr_forall() {
         let expr = PolicyExpr::ForAll {
             var: "x".into(),
-            items: Box::new(Expr::Variable("items".into())),
-            body: Box::new(PolicyExpr::Var("policy".into())),
+            items: Box::new(Expr::Variable {
+                name: "items".into(),
+                span: crate::token::Span::default(),
+            }),
+            body: Box::new(PolicyExpr::Var {
+                name: "policy".into(),
+                span: crate::token::Span::default(),
+            }),
             span: Span::new(0, 20, 1, 1),
         };
         match expr {
             PolicyExpr::ForAll { var, body, .. } => {
                 assert_eq!(var.as_ref(), "x");
-                assert!(matches!(body.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(body.as_ref(), PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected ForAll"),
         }
@@ -2272,14 +2350,20 @@ mod tests {
     fn test_policy_expr_exists() {
         let expr = PolicyExpr::Exists {
             var: "x".into(),
-            items: Box::new(Expr::Variable("items".into())),
-            body: Box::new(PolicyExpr::Var("policy".into())),
+            items: Box::new(Expr::Variable {
+                name: "items".into(),
+                span: crate::token::Span::default(),
+            }),
+            body: Box::new(PolicyExpr::Var {
+                name: "policy".into(),
+                span: crate::token::Span::default(),
+            }),
             span: Span::new(0, 20, 1, 1),
         };
         match expr {
             PolicyExpr::Exists { var, body, .. } => {
                 assert_eq!(var.as_ref(), "x");
-                assert!(matches!(body.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(body.as_ref(), PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected Exists"),
         }
@@ -2288,9 +2372,15 @@ mod tests {
     #[test]
     fn test_policy_expr_method_call() {
         let expr = PolicyExpr::MethodCall {
-            receiver: Box::new(PolicyExpr::Var("base".into())),
+            receiver: Box::new(PolicyExpr::Var {
+                name: "base".into(),
+                span: crate::token::Span::default(),
+            }),
             method: "and".into(),
-            args: vec![Expr::Variable("other".into())],
+            args: vec![Expr::Variable {
+                name: "other".into(),
+                span: crate::token::Span::default(),
+            }],
             span: Span::new(0, 15, 1, 1),
         };
         match expr {
@@ -2300,7 +2390,7 @@ mod tests {
                 args,
                 ..
             } => {
-                assert!(matches!(receiver.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(receiver.as_ref(), PolicyExpr::Var { .. }));
                 assert_eq!(method.as_ref(), "and");
                 assert_eq!(args.len(), 1);
             }
@@ -2381,9 +2471,12 @@ mod tests {
 
     #[test]
     fn test_pattern_variable() {
-        let pat = Pattern::Variable("x".into());
-        assert!(matches!(pat, Pattern::Variable(_)));
-        if let Pattern::Variable(name) = pat {
+        let pat = Pattern::Variable {
+            name: "x".into(),
+            span: crate::token::Span::default(),
+        };
+        assert!(matches!(pat, Pattern::Variable { .. }));
+        if let Pattern::Variable { name, .. } = pat {
             assert_eq!(name, "x".into());
         }
     }
@@ -2397,8 +2490,14 @@ mod tests {
     #[test]
     fn test_pattern_tuple() {
         let pat = Pattern::Tuple(vec![
-            Pattern::Variable("a".into()),
-            Pattern::Variable("b".into()),
+            Pattern::Variable {
+                name: "a".into(),
+                span: crate::token::Span::default(),
+            },
+            Pattern::Variable {
+                name: "b".into(),
+                span: crate::token::Span::default(),
+            },
         ]);
 
         match pat {
@@ -2412,8 +2511,20 @@ mod tests {
     #[test]
     fn test_pattern_record() {
         let pat = Pattern::Record(vec![
-            ("x".into(), Pattern::Variable("a".into())),
-            ("y".into(), Pattern::Variable("b".into())),
+            (
+                "x".into(),
+                Pattern::Variable {
+                    name: "a".into(),
+                    span: crate::token::Span::default(),
+                },
+            ),
+            (
+                "y".into(),
+                Pattern::Variable {
+                    name: "b".into(),
+                    span: crate::token::Span::default(),
+                },
+            ),
         ]);
 
         match pat {
@@ -2429,7 +2540,10 @@ mod tests {
     #[test]
     fn test_pattern_list() {
         let pat = Pattern::List {
-            elements: vec![Pattern::Variable("head".into())],
+            elements: vec![Pattern::Variable {
+                name: "head".into(),
+                span: crate::token::Span::default(),
+            }],
             rest: Some("tail".into()),
         };
 
@@ -2619,7 +2733,10 @@ mod tests {
     fn test_predicate() {
         let pred = Predicate {
             name: "is_admin".into(),
-            args: vec![Expr::Variable("user".into())],
+            args: vec![Expr::Variable {
+                name: "user".into(),
+                span: crate::token::Span::default(),
+            }],
         };
 
         assert_eq!(pred.name, "is_admin".into());
@@ -2658,7 +2775,10 @@ mod tests {
     fn test_expr_spanned() {
         let span = Span::new(5, 15, 1, 3);
         let expr = Expr::FieldAccess {
-            base: Box::new(Expr::Variable("obj".into())),
+            base: Box::new(Expr::Variable {
+                name: "obj".into(),
+                span: crate::token::Span::default(),
+            }),
             field: "field".into(),
             span,
         };
@@ -2669,7 +2789,10 @@ mod tests {
         let lit = Expr::Literal(Literal::Int(42));
         assert_eq!(lit.span(), Span::default());
 
-        let var = Expr::Variable("x".into());
+        let var = Expr::Variable {
+            name: "x".into(),
+            span: crate::token::Span::default(),
+        };
         assert_eq!(var.span(), Span::default());
     }
 
@@ -2887,7 +3010,10 @@ mod effect_tests {
     fn test_observe_effect() {
         let workflow = Workflow::Observe {
             capability: "sensor".into(),
-            binding: Some(Pattern::Variable("data".into())),
+            binding: Some(Pattern::Variable {
+                name: "data".into(),
+                span: crate::token::Span::default(),
+            }),
             continuation: None,
             span: dummy_span(),
         };
@@ -2898,7 +3024,10 @@ mod effect_tests {
     fn test_observe_with_continuation() {
         let workflow = Workflow::Observe {
             capability: "sensor".into(),
-            binding: Some(Pattern::Variable("data".into())),
+            binding: Some(Pattern::Variable {
+                name: "data".into(),
+                span: crate::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Act {
                 action: ActionRef {
                     target: OperationalTarget::Symbolic {
@@ -2921,7 +3050,10 @@ mod effect_tests {
     fn test_orient_effect() {
         let workflow = Workflow::Orient {
             expr: Expr::Literal(Literal::Int(42)),
-            binding: Some(Pattern::Variable("result".into())),
+            binding: Some(Pattern::Variable {
+                name: "result".into(),
+                span: crate::token::Span::default(),
+            }),
             continuation: None,
             span: dummy_span(),
         };
@@ -3121,8 +3253,14 @@ mod effect_tests {
             span: dummy_span(),
         };
         let for_workflow = Workflow::For {
-            pattern: Pattern::Variable("x".into()),
-            collection: Expr::Variable("items".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            },
+            collection: Expr::Variable {
+                name: "items".into(),
+                span: crate::token::Span::default(),
+            },
             body: Box::new(act),
             span: dummy_span(),
         };
@@ -3145,7 +3283,10 @@ mod effect_tests {
             span: dummy_span(),
         };
         let let_workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(act)),
             span: dummy_span(),
@@ -3157,7 +3298,10 @@ mod effect_tests {
     fn test_let_no_continuation() {
         // let x = 42 (no continuation) = Epistemic
         let let_workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: None,
             span: dummy_span(),

@@ -90,7 +90,13 @@ impl ConstraintContext {
     /// Bind a variable name to a type
     pub fn bind_var(&mut self, name: Box<str>, ty: Type) {
         self.var_types.insert(name.clone(), ty.clone());
-        self.add(Constraint::VarBinding(Pattern::Variable(name), ty));
+        self.add(Constraint::VarBinding(
+            Pattern::Variable {
+                name: name,
+                span: ash_parser::token::Span::default(),
+            },
+            ty,
+        ));
     }
 
     /// Lookup the type of a variable
@@ -245,7 +251,7 @@ pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Ty
             }
         },
 
-        Expr::Variable(name) => {
+        Expr::Variable { name, .. } => {
             // Look up variable type or create fresh variable
             if let Some(ty) = ctx.lookup_var(name) {
                 ty.clone()
@@ -330,7 +336,7 @@ pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Ty
 /// Add pattern bindings to the constraint context
 fn add_pattern_bindings(ctx: &mut ConstraintContext, pattern: &Pattern, ty: &Type) {
     match pattern {
-        Pattern::Variable(name) => {
+        Pattern::Variable { name, .. } => {
             ctx.bind_var(name.clone(), ty.clone());
         }
         Pattern::Tuple(patterns) => {
@@ -453,7 +459,10 @@ mod tests {
     #[test]
     fn test_generate_expr_variable_new() {
         let mut ctx = ConstraintContext::new();
-        let expr = Expr::Variable("x".into());
+        let expr = Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        };
         let ty = generate_expr_constraints(&mut ctx, &expr);
 
         // Should create a fresh type variable
@@ -466,7 +475,10 @@ mod tests {
         let mut ctx = ConstraintContext::new();
         ctx.bind_var("x".into(), Type::Int);
 
-        let expr = Expr::Variable("x".into());
+        let expr = Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        };
         let ty = generate_expr_constraints(&mut ctx, &expr);
 
         assert_eq!(ty, Type::Int);
@@ -556,7 +568,10 @@ mod tests {
         let mut ctx = ConstraintContext::new();
         let workflow = Workflow::Observe {
             capability: "read".into(),
-            binding: Some(Pattern::Variable("x".into())),
+            binding: Some(Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
         };
@@ -604,7 +619,10 @@ mod tests {
     fn test_generate_workflow_let() {
         let mut ctx = ConstraintContext::new();
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),

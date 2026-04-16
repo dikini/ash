@@ -1736,15 +1736,27 @@ mod tests {
         Workflow::Spawn {
             workflow_type: "worker".to_string(),
             init,
-            pattern: Pattern::Variable("worker".to_string()),
+            pattern: Pattern::Variable {
+                name: "worker".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             continuation: Box::new(Workflow::Split {
-                expr: Expr::Variable("worker".to_string()),
+                expr: Expr::Variable {
+                    name: "worker".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 pattern: Pattern::Tuple(vec![
                     Pattern::Wildcard,
-                    Pattern::Variable("ctrl".to_string()),
+                    Pattern::Variable {
+                        name: "ctrl".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 ]),
                 continuation: Box::new(Workflow::Ret {
-                    expr: Expr::Variable("ctrl".to_string()),
+                    expr: Expr::Variable {
+                        name: "ctrl".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 }),
             }),
         }
@@ -1814,7 +1826,10 @@ mod tests {
     async fn test_last_execution_record_projects_terminal_rejection() {
         let runtime_state = RuntimeState::new();
         let workflow = Workflow::Ret {
-            expr: Expr::Variable("missing".to_string()),
+            expr: Expr::Variable {
+                name: "missing".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         };
 
         let result = execute_simple_in_state(&workflow, &runtime_state).await;
@@ -2058,10 +2073,16 @@ mod tests {
         use ash_core::{Expr, Pattern};
 
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(42)),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("x".to_string()),
+                expr: Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         };
         let result = execute_simple(&workflow).await.unwrap();
@@ -2074,15 +2095,27 @@ mod tests {
 
         let workflow = Workflow::Let {
             pattern: Pattern::Tuple(vec![
-                Pattern::Variable("a".to_string()),
-                Pattern::Variable("b".to_string()),
+                Pattern::Variable {
+                    name: "a".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "b".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ]),
             expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
             continuation: Box::new(Workflow::Ret {
                 expr: Expr::Binary {
                     op: BinaryOp::Add,
-                    left: Box::new(Expr::Variable("a".to_string())),
-                    right: Box::new(Expr::Variable("b".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "a".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    right: Box::new(Expr::Variable {
+                        name: "b".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                 },
             }),
         };
@@ -2130,12 +2163,18 @@ mod tests {
 
         // Proper seq where first binds and second uses
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(10)),
             continuation: Box::new(Workflow::Seq {
                 first: Box::new(Workflow::Done),
                 second: Box::new(Workflow::Ret {
-                    expr: Expr::Variable("x".to_string()),
+                    expr: Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 }),
             }),
         };
@@ -2151,14 +2190,20 @@ mod tests {
         // ForEach iterates over a collection, executing body for each element
         // Each iteration gets its own context extended from the parent
         let workflow = Workflow::ForEach {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             collection: Expr::Literal(Value::List(Box::new(vec![
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
             ]))),
             body: Box::new(Workflow::Ret {
-                expr: Expr::Variable("x".to_string()),
+                expr: Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         };
 
@@ -2223,10 +2268,16 @@ mod tests {
 
         let workflow = Workflow::Maybe {
             primary: Box::new(Workflow::Let {
-                pattern: Pattern::Variable("x".to_string()),
+                pattern: Pattern::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 expr: Expr::Literal(Value::Int(1)),
                 continuation: Box::new(Workflow::Ret {
-                    expr: Expr::Variable("undefined_var".to_string()), // Will fail
+                    expr: Expr::Variable {
+                        name: "undefined_var".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }, // Will fail
                 }),
             }),
             fallback: Box::new(Workflow::Ret {
@@ -2256,7 +2307,10 @@ mod tests {
 
         let workflow = Workflow::Must {
             workflow: Box::new(Workflow::Ret {
-                expr: Expr::Variable("undefined".to_string()),
+                expr: Expr::Variable {
+                    name: "undefined".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         };
         let result = execute_simple(&workflow).await;
@@ -2307,21 +2361,39 @@ mod tests {
         //     0
         let workflow = Workflow::Let {
             pattern: Pattern::Tuple(vec![
-                Pattern::Variable("x".to_string()),
-                Pattern::Variable("y".to_string()),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "y".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ]),
             expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(10), Value::Int(20)]))),
             continuation: Box::new(Workflow::If {
                 condition: Expr::Binary {
                     op: BinaryOp::Lt,
-                    left: Box::new(Expr::Variable("x".to_string())),
-                    right: Box::new(Expr::Variable("y".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    right: Box::new(Expr::Variable {
+                        name: "y".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                 },
                 then_branch: Box::new(Workflow::Ret {
                     expr: Expr::Binary {
                         op: BinaryOp::Add,
-                        left: Box::new(Expr::Variable("x".to_string())),
-                        right: Box::new(Expr::Variable("y".to_string())),
+                        left: Box::new(Expr::Variable {
+                            name: "x".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
+                        right: Box::new(Expr::Variable {
+                            name: "y".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
                     },
                 }),
                 else_branch: Box::new(Workflow::Ret {
@@ -2395,7 +2467,10 @@ mod tests {
             provenance: Provenance::new(),
             result_name: Some("result".to_string()),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("result".to_string()),
+                expr: Expr::Variable {
+                    name: "result".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         };
 
@@ -2429,14 +2504,26 @@ mod tests {
             provenance: Provenance::new(),
             result_name: Some("result".to_string()),
             continuation: Box::new(Workflow::Let {
-                pattern: Pattern::Variable("doubled".to_string()),
+                pattern: Pattern::Variable {
+                    name: "doubled".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 expr: Expr::Binary {
                     op: BinaryOp::Add,
-                    left: Box::new(Expr::Variable("result".to_string())),
-                    right: Box::new(Expr::Variable("result".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "result".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    right: Box::new(Expr::Variable {
+                        name: "result".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                 },
                 continuation: Box::new(Workflow::Ret {
-                    expr: Expr::Variable("doubled".to_string()),
+                    expr: Expr::Variable {
+                        name: "doubled".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 }),
             }),
         };

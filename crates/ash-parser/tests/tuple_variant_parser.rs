@@ -80,8 +80,8 @@ fn parses_tuple_variant_pattern_shape() {
                 payload,
                 VariantPatternPayload::Tuple(items)
                     if matches!(items.as_slice(), [
-                        Pattern::Variable(code),
-                        Pattern::Variable(msg)
+                        Pattern::Variable { name: code, .. },
+                        Pattern::Variable { name: msg, .. }
                     ] if code.as_ref() == "code" && msg.as_ref() == "msg")
             ));
         }
@@ -101,12 +101,12 @@ fn parses_nested_tuple_variant_pattern_shape() {
                 payload,
                 VariantPatternPayload::Tuple(items)
                     if matches!(items.as_slice(), [
-                        Pattern::Variable(code),
+                        Pattern::Variable { name: code, .. },
                         Pattern::Tuple(nested)
                     ] if code.as_ref() == "code"
                         && matches!(nested.as_slice(), [
-                            Pattern::Variable(line),
-                            Pattern::Variable(column)
+                            Pattern::Variable { name: line, .. },
+                            Pattern::Variable { name: column, .. }
                         ] if line.as_ref() == "line" && column.as_ref() == "column"))
             ));
         }
@@ -178,8 +178,20 @@ fn lowers_tuple_variant_pattern_with_stable_positional_fields() {
         CorePattern::Variant {
             name: "RuntimeError".into(),
             fields: Some(vec![
-                ("_0".into(), CorePattern::Variable("code".into())),
-                ("_1".into(), CorePattern::Variable("msg".into())),
+                (
+                    "_0".into(),
+                    CorePattern::Variable {
+                        name: "code".into(),
+                        span: ash_core::Span::default()
+                    }
+                ),
+                (
+                    "_1".into(),
+                    CorePattern::Variable {
+                        name: "msg".into(),
+                        span: ash_core::Span::default()
+                    }
+                ),
             ]),
         }
     );

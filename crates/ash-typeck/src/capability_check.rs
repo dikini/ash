@@ -692,7 +692,7 @@ impl CapabilityChecker {
         // For now, we traverse expressions without capability checks.
         match expr {
             Expr::Literal(_) => Ok(()),
-            Expr::Variable(_) => Ok(()),
+            Expr::Variable { .. } => Ok(()),
             Expr::FieldAccess { base, .. } => self.verify_expr(base),
             Expr::IndexAccess { base, index, .. } => {
                 self.verify_expr(base)?;
@@ -854,7 +854,10 @@ mod tests {
     fn test_verify_let() {
         let checker = CapabilityChecker::new();
         let workflow = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
@@ -883,7 +886,10 @@ mod tests {
         let checker = CapabilityChecker::new().observe("sensor", "temp");
         let workflow = Workflow::Observe {
             capability: "sensor:temp".into(),
-            binding: Some(Pattern::Variable("data".into())),
+            binding: Some(Pattern::Variable {
+                name: "data".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
         };
@@ -897,7 +903,10 @@ mod tests {
         let checker = CapabilityChecker::new().observe("Args", "0");
         let workflow = Workflow::Observe {
             capability: "Args:0".into(),
-            binding: Some(Pattern::Variable("arg".into())),
+            binding: Some(Pattern::Variable {
+                name: "arg".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
         };
@@ -911,7 +920,10 @@ mod tests {
         let checker = CapabilityChecker::new();
         let workflow = Workflow::Observe {
             capability: "sensor:temp".into(),
-            binding: Some(Pattern::Variable("data".into())),
+            binding: Some(Pattern::Variable {
+                name: "data".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
         };
@@ -1225,7 +1237,10 @@ mod tests {
         let checker = CapabilityChecker::new();
         let workflow = Workflow::Observe {
             capability: "sensor:temp".into(),
-            binding: Some(Pattern::Variable("data".into())),
+            binding: Some(Pattern::Variable {
+                name: "data".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             continuation: Some(Box::new(Workflow::Done { span: test_span() })),
             span: test_span(),
         };

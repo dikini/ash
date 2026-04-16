@@ -87,7 +87,7 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
                 span: *span,
             });
         }
-        Expr::Literal(_) | Expr::Variable(_) | Expr::Panic { .. } => {}
+        Expr::Literal(_) | Expr::Variable { .. } | Expr::Panic { .. } => {}
         Expr::FieldAccess { base, .. } => {
             check_purity_recursive(env, base, errors);
         }
@@ -284,7 +284,10 @@ mod tests {
     }
 
     fn var(name: &str) -> Box<Expr> {
-        Box::new(Expr::Variable(box_name(name)))
+        Box::new(Expr::Variable {
+            name: box_name(name),
+            span: ash_parser::token::Span::default(),
+        })
     }
 
     fn int_lit(n: i64) -> Box<Expr> {
@@ -313,7 +316,10 @@ mod tests {
     #[test]
     fn pure_variable_is_ok() {
         let env = TypeEnv::new();
-        let expr = Expr::Variable(box_name("x"));
+        let expr = Expr::Variable {
+            name: box_name("x"),
+            span: ash_parser::token::Span::default(),
+        };
         assert!(check_purity(&env, &expr).is_ok());
     }
 
@@ -357,7 +363,10 @@ mod tests {
     fn policy_in_fn_body_is_impure() {
         use ash_parser::surface::PolicyExpr;
         let env = TypeEnv::new();
-        let expr = Expr::Policy(PolicyExpr::Var(box_name("deny")));
+        let expr = Expr::Policy(PolicyExpr::Var {
+            name: box_name("deny"),
+            span: ash_parser::token::Span::default(),
+        });
         let result = check_purity(&env, &expr);
         assert!(result.is_err());
         let errors = result.unwrap_err();
@@ -407,7 +416,10 @@ mod tests {
         let env = TypeEnv::new();
         let expr = Expr::If {
             condition: int_lit(1),
-            then_branch: Box::new(Expr::Policy(PolicyExpr::Var(box_name("deny")))),
+            then_branch: Box::new(Expr::Policy(PolicyExpr::Var {
+                name: box_name("deny"),
+                span: ash_parser::token::Span::default(),
+            })),
             else_branch: Some(Box::new(Expr::CheckObligation {
                 obligation: box_name("auth"),
                 span: Span::default(),
@@ -425,7 +437,10 @@ mod tests {
         let env = TypeEnv::new();
         let expr = Expr::Block {
             statements: vec![BlockStmt::Let {
-                pattern: Pattern::Variable(box_name("x")),
+                pattern: Pattern::Variable {
+                    name: box_name("x"),
+                    span: ash_parser::token::Span::default(),
+                },
                 expr: *int_lit(1),
                 span: Span::default(),
             }],

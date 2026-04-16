@@ -163,7 +163,10 @@ mod tests {
                 "allow large values",
                 Expr::Binary {
                     op: BinaryOp::Gt,
-                    left: Box::new(Expr::Variable("x".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Value::Int(10))),
                 },
                 Decision::Permit,
@@ -195,7 +198,10 @@ mod tests {
                 "deny negative",
                 Expr::Binary {
                     op: BinaryOp::Lt,
-                    left: Box::new(Expr::Variable("x".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Value::Int(0))),
                 },
                 Decision::Deny,
@@ -204,7 +210,10 @@ mod tests {
                 "escalate large",
                 Expr::Binary {
                     op: BinaryOp::Gt,
-                    left: Box::new(Expr::Variable("x".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Value::Int(100))),
                 },
                 Decision::Escalate,

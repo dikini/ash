@@ -45,7 +45,10 @@ async fn engine_execute_preserves_control_authority_across_top_level_runs() {
         .parse("workflow main { ret 0 }")
         .expect("workflow should parse");
     pause.core = Workflow::Let {
-        pattern: Pattern::Variable("ctrl".to_string()),
+        pattern: Pattern::Variable {
+            name: "ctrl".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         expr: Expr::Literal(Value::ControlLink(ash_core::ControlLink {
             instance_id: ash_core::WorkflowId::new(),
         })),

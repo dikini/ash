@@ -135,7 +135,7 @@ impl TypeEnv {
 /// use ash_parser::surface::Pattern;
 ///
 /// let env = TypeEnv::new();
-/// let pattern = Pattern::Variable("x".into());
+/// let pattern = Pattern::Variable { name: "x".into(), span: ash_core::ast::Span::default() };
 /// let expected = Type::Int;
 ///
 /// let bindings = check_pattern(&env, &pattern, &expected).unwrap();
@@ -163,7 +163,7 @@ fn check_pattern_inner(
         Pattern::Wildcard => Ok(()),
 
         // Variable binds to the expected type
-        Pattern::Variable(name) => {
+        Pattern::Variable { name, .. } => {
             bindings.insert(name.to_string(), expected.clone());
             Ok(())
         }
@@ -621,7 +621,10 @@ mod tests {
     #[test]
     fn test_variable_binds_to_expected_type() {
         let env = TypeEnv::new();
-        let pattern = Pattern::Variable("x".into());
+        let pattern = Pattern::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        };
 
         let bindings = check_pattern(&env, &pattern, &Type::Int).unwrap();
         assert_eq!(bindings.get("x"), Some(&Type::Int));
@@ -631,11 +634,17 @@ mod tests {
     fn test_variable_binds_different_types() {
         let env = TypeEnv::new();
 
-        let pattern = Pattern::Variable("s".into());
+        let pattern = Pattern::Variable {
+            name: "s".into(),
+            span: ash_parser::token::Span::default(),
+        };
         let bindings = check_pattern(&env, &pattern, &Type::String).unwrap();
         assert_eq!(bindings.get("s"), Some(&Type::String));
 
-        let pattern = Pattern::Variable("b".into());
+        let pattern = Pattern::Variable {
+            name: "b".into(),
+            span: ash_parser::token::Span::default(),
+        };
         let bindings = check_pattern(&env, &pattern, &Type::Bool).unwrap();
         assert_eq!(bindings.get("b"), Some(&Type::Bool));
     }
@@ -693,10 +702,19 @@ mod tests {
         let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
-            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            fields: Some(vec![(
+                "value".into(),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            )]),
             payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
-                Pattern::Variable("x".into()),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             )]),
         };
 
@@ -709,10 +727,19 @@ mod tests {
         let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
-            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            fields: Some(vec![(
+                "value".into(),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            )]),
             payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
-                Pattern::Variable("x".into()),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             )]),
         };
 
@@ -738,10 +765,19 @@ mod tests {
         let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
-            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            fields: Some(vec![(
+                "value".into(),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            )]),
             payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
-                Pattern::Variable("x".into()),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             )]),
         };
 
@@ -759,8 +795,14 @@ mod tests {
         let env = TypeEnv::new();
         // (a, b) pattern
         let pattern = Pattern::Tuple(vec![
-            Pattern::Variable("a".into()),
-            Pattern::Variable("b".into()),
+            Pattern::Variable {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            Pattern::Variable {
+                name: "b".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
 
         // Tuple represented as record with numeric fields
@@ -779,9 +821,18 @@ mod tests {
         let env = TypeEnv::new();
         // (a, b, c) pattern against 2-element tuple
         let pattern = Pattern::Tuple(vec![
-            Pattern::Variable("a".into()),
-            Pattern::Variable("b".into()),
-            Pattern::Variable("c".into()),
+            Pattern::Variable {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            Pattern::Variable {
+                name: "b".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            Pattern::Variable {
+                name: "c".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
 
         let tuple_type = Type::Record(vec![
@@ -804,8 +855,14 @@ mod tests {
     fn test_tuple_pattern_type_var() {
         let env = TypeEnv::new();
         let pattern = Pattern::Tuple(vec![
-            Pattern::Variable("a".into()),
-            Pattern::Variable("b".into()),
+            Pattern::Variable {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            },
+            Pattern::Variable {
+                name: "b".into(),
+                span: ash_parser::token::Span::default(),
+            },
         ]);
 
         // Against a type variable
@@ -824,8 +881,20 @@ mod tests {
         let env = TypeEnv::new();
         // { name: n, age: a } pattern
         let pattern = Pattern::Record(vec![
-            (Box::from("name"), Pattern::Variable("n".into())),
-            (Box::from("age"), Pattern::Variable("a".into())),
+            (
+                Box::from("name"),
+                Pattern::Variable {
+                    name: "n".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            ),
+            (
+                Box::from("age"),
+                Pattern::Variable {
+                    name: "a".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            ),
         ]);
 
         let record_type = Type::Record(vec![
@@ -842,7 +911,13 @@ mod tests {
     fn test_record_pattern_unknown_field() {
         let env = TypeEnv::new();
         // { unknown: x } pattern
-        let pattern = Pattern::Record(vec![(Box::from("unknown"), Pattern::Variable("x".into()))]);
+        let pattern = Pattern::Record(vec![(
+            Box::from("unknown"),
+            Pattern::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
+        )]);
 
         let record_type = Type::Record(vec![(Box::from("name"), Type::String)]);
 
@@ -863,7 +938,16 @@ mod tests {
         let env = TypeEnv::new();
         // [a, b] pattern
         let pattern = Pattern::List {
-            elements: vec![Pattern::Variable("a".into()), Pattern::Variable("b".into())],
+            elements: vec![
+                Pattern::Variable {
+                    name: "a".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "b".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            ],
             rest: None,
         };
 
@@ -879,7 +963,10 @@ mod tests {
         let env = TypeEnv::new();
         // [first, ..rest] pattern
         let pattern = Pattern::List {
-            elements: vec![Pattern::Variable("first".into())],
+            elements: vec![Pattern::Variable {
+                name: "first".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             rest: Some(Box::from("rest")),
         };
 
@@ -894,7 +981,10 @@ mod tests {
     fn test_list_pattern_mismatch() {
         let env = TypeEnv::new();
         let pattern = Pattern::List {
-            elements: vec![Pattern::Variable("a".into())],
+            elements: vec![Pattern::Variable {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             rest: None,
         };
 
@@ -915,10 +1005,19 @@ mod tests {
         let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
-            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            fields: Some(vec![(
+                "value".into(),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            )]),
             payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
-                Pattern::Variable("x".into()),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             )]),
         };
 
@@ -979,15 +1078,27 @@ mod tests {
             fields: Some(vec![(
                 "value".into(),
                 Pattern::Tuple(vec![
-                    Pattern::Variable("a".into()),
-                    Pattern::Variable("b".into()),
+                    Pattern::Variable {
+                        name: "a".into(),
+                        span: ash_parser::token::Span::default(),
+                    },
+                    Pattern::Variable {
+                        name: "b".into(),
+                        span: ash_parser::token::Span::default(),
+                    },
                 ]),
             )]),
             payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
                 Pattern::Tuple(vec![
-                    Pattern::Variable("a".into()),
-                    Pattern::Variable("b".into()),
+                    Pattern::Variable {
+                        name: "a".into(),
+                        span: ash_parser::token::Span::default(),
+                    },
+                    Pattern::Variable {
+                        name: "b".into(),
+                        span: ash_parser::token::Span::default(),
+                    },
                 ]),
             )]),
         };
@@ -1026,10 +1137,19 @@ mod tests {
 
         let pattern = Pattern::Variant {
             name: "Some".into(),
-            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            fields: Some(vec![(
+                "value".into(),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            )]),
             payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
-                Pattern::Variable("x".into()),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             )]),
         };
 
@@ -1042,10 +1162,19 @@ mod tests {
         let env = option_env();
         let pattern = Pattern::Variant {
             name: "Some".into(),
-            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+            fields: Some(vec![(
+                "value".into(),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+            )]),
             payload: VariantPatternPayload::Record(vec![(
                 "value".into(),
-                Pattern::Variable("x".into()),
+                Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
             )]),
         };
         let expected = Type::Constructor {

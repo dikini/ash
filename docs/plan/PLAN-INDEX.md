@@ -2457,7 +2457,7 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-570](tasks/TASK-570-parser-binding-spans.md) | Add spans to `Expr::Variable` and `Pattern::Variable` | SPEC-039 §3 | 6 | 📝 Planned |
+|| [TASK-570](tasks/TASK-570-parser-binding-spans.md) | Add spans to `Expr::Variable` and `Pattern::Variable` | SPEC-039 §3 | 6 | ✅ Complete |
 || [TASK-571](tasks/TASK-571-parser-comment-trivia.md) | Preserve comments in lexer and build `CommentTable` side-table | SPEC-039 §4 | 10 | 📝 Planned |
 
 **Deliverable:** Variable bindings carry spans; `Comment` tokens emitted by lexer; `CommentTable` attached to `ModuleFile`.

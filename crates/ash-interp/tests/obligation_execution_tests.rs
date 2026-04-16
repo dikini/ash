@@ -121,10 +121,16 @@ async fn test_oblige_then_check_sequence() {
         pattern: Pattern::Wildcard,
         expr: ash_core::Expr::Literal(Value::Null),
         continuation: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("result".to_string()),
+            pattern: Pattern::Variable {
+                name: "result".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: ash_core::Expr::Literal(Value::Null),
             continuation: Box::new(Workflow::Ret {
-                expr: ash_core::Expr::Variable("result".to_string()),
+                expr: ash_core::Expr::Variable {
+                    name: "result".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };
@@ -179,7 +185,10 @@ async fn test_oblige_preserves_context_bindings() {
         pattern: Pattern::Wildcard,
         expr: ash_core::Expr::Literal(Value::Null),
         continuation: Box::new(Workflow::Ret {
-            expr: ash_core::Expr::Variable("x".to_string()),
+            expr: ash_core::Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         }),
     };
 
@@ -329,12 +338,18 @@ async fn test_check_discharges_obligation() {
         first: Box::new(create_oblige_workflow("discharge_test")),
         second: Box::new(Workflow::Seq {
             first: Box::new(Workflow::Let {
-                pattern: Pattern::Variable("first_check".to_string()),
+                pattern: Pattern::Variable {
+                    name: "first_check".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 expr: ash_core::Expr::Literal(Value::Null),
                 continuation: Box::new(create_check_workflow("discharge_test")),
             }),
             second: Box::new(Workflow::Ret {
-                expr: ash_core::Expr::Variable("first_check".to_string()),
+                expr: ash_core::Expr::Variable {
+                    name: "first_check".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };

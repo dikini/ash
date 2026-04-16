@@ -323,7 +323,7 @@ fn lower_result_equality(expr: &Expr) -> Option<(String, String)> {
 
 fn simple_value_expr(expr: &Expr) -> Option<String> {
     match expr {
-        Expr::Variable(name) => Some(name.to_string()),
+        Expr::Variable { name, .. } => Some(name.to_string()),
         Expr::Literal(Literal::Int(value)) => Some(value.to_string()),
         Expr::Literal(Literal::String(value)) => Some(format!("\"{value}\"")),
         Expr::Literal(Literal::Bool(value)) => Some(value.to_string()),
@@ -334,7 +334,7 @@ fn simple_value_expr(expr: &Expr) -> Option<String> {
 
 fn variable_name(expr: &Expr) -> Option<&str> {
     match expr {
-        Expr::Variable(name) => Some(name.as_ref()),
+        Expr::Variable { name, .. } => Some(name.as_ref()),
         _ => None,
     }
 }
@@ -1247,7 +1247,10 @@ fn lower_yield_arms(
         let arm = &arms[0];
         Ok(CoreWorkflow::Let {
             pattern: lower_pattern(&arm.pattern)?,
-            expr: CoreExpr::Variable(resume_var.to_string()),
+            expr: CoreExpr::Variable {
+                name: resume_var.to_string(),
+                span: ash_core::Span::default(),
+            },
             continuation: Box::new(lower_workflow_body(&arm.body, provenance, ctx)?),
         })
     } else {
@@ -1263,7 +1266,10 @@ fn lower_yield_arms(
 
         Ok(CoreWorkflow::Let {
             pattern: lower_pattern(&first_arm.pattern)?,
-            expr: CoreExpr::Variable(resume_var.to_string()),
+            expr: CoreExpr::Variable {
+                name: resume_var.to_string(),
+                span: ash_core::Span::default(),
+            },
             continuation: Box::new(lower_workflow_body(&first_arm.body, provenance, ctx)?),
         })
     }
@@ -1297,7 +1303,10 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
     match expr {
         Expr::Literal(lit) => Ok(CoreExpr::Literal(lower_literal(lit)?)),
 
-        Expr::Variable(name) => Ok(CoreExpr::Variable(name.to_string())),
+        Expr::Variable { name, .. } => Ok(CoreExpr::Variable {
+            name: name.to_string(),
+            span: ash_core::Span::default(),
+        }),
 
         Expr::FieldAccess { base, field, .. } => Ok(CoreExpr::FieldAccess {
             expr: Box::new(lower_expr(base)?),
@@ -1330,7 +1339,10 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             if module.is_none() && !BUILTIN_FUNCTIONS.contains(&func.as_ref()) {
                 // User-defined function call: emit FnApply
                 Ok(CoreExpr::FnApply {
-                    func: Box::new(CoreExpr::Variable(func.to_string())),
+                    func: Box::new(CoreExpr::Variable {
+                        name: func.to_string(),
+                        span: ash_core::Span::default(),
+                    }),
                     args: lowered_args,
                 })
             } else {
@@ -1579,7 +1591,10 @@ fn lower_binary_op(op: BinaryOp) -> ash_core::BinaryOp {
 /// Lower a pattern to core IR.
 pub fn lower_pattern(pattern: &Pattern) -> Result<CorePattern, LoweringError> {
     match pattern {
-        Pattern::Variable(name) => Ok(CorePattern::Variable(name.to_string())),
+        Pattern::Variable { name, .. } => Ok(CorePattern::Variable {
+            name: name.to_string(),
+            span: ash_core::Span::default(),
+        }),
 
         Pattern::Wildcard => Ok(CorePattern::Wildcard),
 
@@ -1727,7 +1742,10 @@ mod tests {
     }
 
     fn var_expr(name: &str) -> SurfaceExpr {
-        SurfaceExpr::Variable(name.into())
+        SurfaceExpr::Variable {
+            name: name.into(),
+            span: crate::token::Span::default(),
+        }
     }
 
     #[test]
@@ -1741,7 +1759,10 @@ mod tests {
     #[test]
     fn test_lower_let() {
         let surface = SurfaceWorkflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            },
             expr: SurfaceExpr::Literal(SurfaceLiteral::Int(42)),
             continuation: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
             span: dummy_span(),
@@ -1760,9 +1781,12 @@ mod tests {
 
     #[test]
     fn test_lower_expr_variable() {
-        let surface = SurfaceExpr::Variable("my_var".into());
+        let surface = SurfaceExpr::Variable {
+            name: "my_var".into(),
+            span: crate::token::Span::default(),
+        };
         let core = lower_expr(&surface).unwrap();
-        assert!(matches!(core, CoreExpr::Variable(name) if name == "my_var"));
+        assert!(matches!(core, CoreExpr::Variable { name, .. } if name == "my_var"));
     }
 
     #[test]
@@ -1797,7 +1821,10 @@ mod tests {
         let surface = SurfaceExpr::Call {
             func: "explain".into(),
             module: Some("Explain".into()),
-            args: vec![SurfaceExpr::Variable("value".into())],
+            args: vec![SurfaceExpr::Variable {
+                name: "value".into(),
+                span: crate::token::Span::default(),
+            }],
             span: crate::token::Span::new(0, 22, 1, 1),
         };
 
@@ -1820,9 +1847,12 @@ mod tests {
 
     #[test]
     fn test_lower_pattern_variable() {
-        let surface = Pattern::Variable("x".into());
+        let surface = Pattern::Variable {
+            name: "x".into(),
+            span: crate::token::Span::default(),
+        };
         let core = lower_pattern(&surface).unwrap();
-        assert!(matches!(core, CorePattern::Variable(name) if name == "x"));
+        assert!(matches!(core, CorePattern::Variable { name, .. } if name == "x"));
     }
 
     #[test]
@@ -1835,8 +1865,14 @@ mod tests {
     #[test]
     fn test_lower_pattern_tuple() {
         let surface = Pattern::Tuple(vec![
-            Pattern::Variable("a".into()),
-            Pattern::Variable("b".into()),
+            Pattern::Variable {
+                name: "a".into(),
+                span: crate::token::Span::default(),
+            },
+            Pattern::Variable {
+                name: "b".into(),
+                span: crate::token::Span::default(),
+            },
         ]);
         let core = lower_pattern(&surface).unwrap();
         assert!(matches!(core, CorePattern::Tuple(pats) if pats.len() == 2));
@@ -1860,7 +1896,10 @@ mod tests {
     fn test_lower_obligation_uses_simplified_role_shape() {
         let surface = ObligationRef {
             role: "manager".into(),
-            condition: SurfaceExpr::Variable("approved".into()),
+            condition: SurfaceExpr::Variable {
+                name: "approved".into(),
+                span: crate::token::Span::default(),
+            },
         };
 
         let core = lower_obligation(&surface).unwrap();
@@ -1873,7 +1912,7 @@ mod tests {
                     authority,
                     obligations,
                 },
-                condition: CoreExpr::Variable(condition),
+                condition: CoreExpr::Variable { name: condition, .. },
             } if name == "manager"
                 && authority.is_empty()
                 && obligations.is_empty()
@@ -2224,7 +2263,10 @@ mod tests {
     fn test_lower_observe() {
         let surface = SurfaceWorkflow::Observe {
             capability: "read".into(),
-            binding: Some(Pattern::Variable("x".into())),
+            binding: Some(Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            }),
             continuation: None,
             span: dummy_span(),
         };

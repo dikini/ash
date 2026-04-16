@@ -203,7 +203,10 @@ fn policy_primary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     }
 
     // It's a variable reference - check for method chain
-    let mut expr = PolicyExpr::Var(name_str);
+    let mut expr = PolicyExpr::Var {
+        name: name_str,
+        span: crate::token::Span::default(),
+    };
     expr = parse_method_chain(input, expr, &start_pos)?;
     Ok(expr)
 }
@@ -463,7 +466,7 @@ mod tests {
     fn test_parse_policy_var() {
         let mut input = test_input("my_policy");
         let result = policy_expr(&mut input).unwrap();
-        assert!(matches!(result, PolicyExpr::Var(name) if name.as_ref() == "my_policy"));
+        assert!(matches!(result, PolicyExpr::Var { name, .. } if name.as_ref() == "my_policy"));
     }
 
     #[test]
@@ -496,7 +499,7 @@ mod tests {
         let result = policy_expr(&mut input).unwrap();
         match result {
             PolicyExpr::Not(inner) => {
-                assert!(matches!(inner.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(inner.as_ref(), PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected Not, got {:?}", result),
         }
@@ -522,7 +525,7 @@ mod tests {
         match result {
             PolicyExpr::ForAll { var, body, .. } => {
                 assert_eq!(var.as_ref(), "x");
-                assert!(matches!(body.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(body.as_ref(), PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected ForAll, got {:?}", result),
         }
@@ -536,7 +539,7 @@ mod tests {
         match result {
             PolicyExpr::Exists { var, body, .. } => {
                 assert_eq!(var.as_ref(), "x");
-                assert!(matches!(body.as_ref(), PolicyExpr::Var(_)));
+                assert!(matches!(body.as_ref(), PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected Exists, got {:?}", result),
         }
@@ -573,7 +576,7 @@ mod tests {
     fn test_parse_policy_variable_named_supervises() {
         let mut input = test_input("supervises");
         let result = policy_expr(&mut input).unwrap();
-        assert!(matches!(result, PolicyExpr::Var(name) if name.as_ref() == "supervises"));
+        assert!(matches!(result, PolicyExpr::Var { name, .. } if name.as_ref() == "supervises"));
     }
 
     #[test]
@@ -600,7 +603,7 @@ mod tests {
             PolicyExpr::Or(exprs) => {
                 assert_eq!(exprs.len(), 2);
                 assert!(matches!(exprs[0], PolicyExpr::And(_)));
-                assert!(matches!(exprs[1], PolicyExpr::Var(_)));
+                assert!(matches!(exprs[1], PolicyExpr::Var { .. }));
             }
             _ => panic!("Expected Or with And as first operand, got {:?}", result),
         }

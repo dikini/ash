@@ -157,7 +157,7 @@ fn fuzz_name_resolution(data: &[u8]) {
             }
             3 => {
                 // Try to resolve on a simple workflow
-                let wf = Workflow::Done { span: ash_parser::token::Span::default() };
+                let wf = Workflow::Done { span: ash_core::ast::Span::default() };
                 let _ = resolver.resolve_workflow(&wf);
             }
             _ => {}
@@ -277,7 +277,7 @@ fn generate_random_workflow(data: &[u8]) -> ash_core::Workflow {
             expr: Expr::Literal(Value::Int(data[0] as i64)),
         },
         2 => Workflow::Let {
-            pattern: Pattern::Variable(format!("x{}", data[0])),
+            pattern: Pattern::Variable { name: format!("x{}", data[0]), span: ash_core::ast::Span::default() },
             expr: Expr::Literal(Value::Int(data.get(1).copied().unwrap_or(0) as i64)),
             continuation: Box::new(if data.len() > 2 {
                 generate_random_workflow(&data[2..])

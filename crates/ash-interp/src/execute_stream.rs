@@ -1029,9 +1029,15 @@ mod tests {
             mode: ReceiveMode::NonBlocking,
             arms: vec![
                 create_arm(
-                    Pattern::Variable("reading".to_string()),
+                    Pattern::Variable {
+                        name: "reading".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                     Workflow::Ret {
-                        expr: Expr::Variable("reading".to_string()),
+                        expr: Expr::Variable {
+                            name: "reading".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        },
                     },
                 ),
                 create_arm(
@@ -1092,11 +1098,17 @@ mod tests {
                 pattern: ReceivePattern::Stream {
                     capability: "sensor".into(),
                     channel: "temp".into(),
-                    pattern: Pattern::Variable("reading".to_string()),
+                    pattern: Pattern::Variable {
+                        name: "reading".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 },
                 guard: None,
                 body: Workflow::Ret {
-                    expr: Expr::Variable("reading".to_string()),
+                    expr: Expr::Variable {
+                        name: "reading".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 },
             },
             CoreReceiveArm {
@@ -1246,9 +1258,15 @@ mod tests {
             mode: ReceiveMode::Blocking(Some(Duration::from_millis(10))),
             arms: vec![
                 create_arm(
-                    Pattern::Variable("reading".to_string()),
+                    Pattern::Variable {
+                        name: "reading".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                     Workflow::Ret {
-                        expr: Expr::Variable("reading".to_string()),
+                        expr: Expr::Variable {
+                            name: "reading".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        },
                     },
                 ),
                 create_arm(
@@ -1357,16 +1375,25 @@ mod tests {
         let policy_eval = PolicyEvaluator::new();
 
         // Create pattern that binds to the message
-        let pattern = Pattern::Variable("msg".to_string());
+        let pattern = Pattern::Variable {
+            name: "msg".to_string(),
+            span: ash_core::ast::Span::default(),
+        };
 
         // Guard: msg.value > threshold
         let guard = Expr::Binary {
             op: BinaryOp::Gt,
             left: Box::new(Expr::FieldAccess {
-                expr: Box::new(Expr::Variable("msg".to_string())),
+                expr: Box::new(Expr::Variable {
+                    name: "msg".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 field: "value".to_string(),
             }),
-            right: Box::new(Expr::Variable("threshold".to_string())),
+            right: Box::new(Expr::Variable {
+                name: "threshold".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
         };
 
         let receive = Receive {
@@ -1449,13 +1476,19 @@ mod tests {
         let cap_ctx = CapabilityContext::new();
         let policy_eval = PolicyEvaluator::new();
 
-        let pattern = Pattern::Variable("msg".to_string());
+        let pattern = Pattern::Variable {
+            name: "msg".to_string(),
+            span: ash_core::ast::Span::default(),
+        };
 
         // Guard: msg.value > 100 (will fail)
         let guard_high = Expr::Binary {
             op: BinaryOp::Gt,
             left: Box::new(Expr::FieldAccess {
-                expr: Box::new(Expr::Variable("msg".to_string())),
+                expr: Box::new(Expr::Variable {
+                    name: "msg".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 field: "value".to_string(),
             }),
             right: Box::new(Expr::Literal(Value::Int(100))),
@@ -1501,9 +1534,15 @@ mod tests {
         let receive = Receive {
             mode: ReceiveMode::NonBlocking,
             arms: vec![create_arm(
-                Pattern::Variable("x".to_string()),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 Workflow::Ret {
-                    expr: Expr::Variable("x".to_string()),
+                    expr: Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 },
             )],
             control_arms: None,
@@ -1533,14 +1572,26 @@ mod tests {
             mode: ReceiveMode::NonBlocking,
             arms: vec![create_arm(
                 Pattern::Tuple(vec![
-                    Pattern::Variable("a".to_string()),
-                    Pattern::Variable("b".to_string()),
+                    Pattern::Variable {
+                        name: "a".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                    Pattern::Variable {
+                        name: "b".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 ]),
                 Workflow::Ret {
                     expr: Expr::Binary {
                         op: BinaryOp::Add,
-                        left: Box::new(Expr::Variable("a".to_string())),
-                        right: Box::new(Expr::Variable("b".to_string())),
+                        left: Box::new(Expr::Variable {
+                            name: "a".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
+                        right: Box::new(Expr::Variable {
+                            name: "b".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
                     },
                 },
             )],
@@ -1577,11 +1628,17 @@ mod tests {
                     name: "Some".to_string(),
                     fields: Some(vec![(
                         "value".to_string(),
-                        Pattern::Variable("x".to_string()),
+                        Pattern::Variable {
+                            name: "x".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        },
                     )]),
                 },
                 Workflow::Ret {
-                    expr: Expr::Variable("x".to_string()),
+                    expr: Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 },
             )],
             control_arms: None,

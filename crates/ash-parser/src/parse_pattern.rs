@@ -246,7 +246,10 @@ fn parse_wildcard_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
 /// Parse a variable pattern: just an identifier
 fn parse_variable_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     let name = identifier(input)?;
-    Ok(Pattern::Variable(name.into()))
+    Ok(Pattern::Variable {
+        name: name.into(),
+        span: crate::token::Span::default(),
+    })
 }
 
 /// Parse a tuple pattern: `(pat1, pat2, ...)`
@@ -630,7 +633,7 @@ mod tests {
     fn test_parse_variable_pattern() {
         let mut input = test_input("x");
         let result = pattern(&mut input).unwrap();
-        assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "x"));
+        assert!(matches!(result, Pattern::Variable { name, .. } if name.as_ref() == "x"));
     }
 
     #[test]
@@ -697,7 +700,7 @@ mod tests {
     fn test_parse_variable_pattern_named_supervises() {
         let mut input = test_input("supervises");
         let result = pattern(&mut input).unwrap();
-        assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "supervises"));
+        assert!(matches!(result, Pattern::Variable { name, .. } if name.as_ref() == "supervises"));
     }
 
     #[test]
@@ -733,7 +736,9 @@ mod tests {
                 let fields = fields.unwrap();
                 assert_eq!(fields.len(), 1);
                 assert_eq!(fields[0].0.as_ref(), "value");
-                assert!(matches!(&fields[0].1, Pattern::Variable(v) if v.as_ref() == "x"));
+                assert!(
+                    matches!(&fields[0].1, Pattern::Variable { name: v, .. } if v.as_ref() == "x")
+                );
                 assert!(
                     matches!(payload, VariantPatternPayload::Record(items) if items.len() == 1)
                 );

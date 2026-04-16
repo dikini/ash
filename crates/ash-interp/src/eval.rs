@@ -34,7 +34,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
     match expr {
         Expr::Literal(value) => Ok(value.clone()),
 
-        Expr::Variable(name) => ctx
+        Expr::Variable { name, .. } => ctx
             .get(name)
             .cloned()
             .or_else(|| {
@@ -847,14 +847,20 @@ mod tests {
     fn test_eval_variable_found() {
         let mut ctx = Context::new();
         ctx.set("x".to_string(), Value::Int(42));
-        let expr = Expr::Variable("x".to_string());
+        let expr = Expr::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(42));
     }
 
     #[test]
     fn test_eval_variable_not_found() {
         let ctx = Context::new();
-        let expr = Expr::Variable("x".to_string());
+        let expr = Expr::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        };
         assert!(eval_expr(&expr, &ctx).is_err());
     }
 
@@ -866,7 +872,10 @@ mod tests {
         ctx.set("person".to_string(), Value::Record(Box::new(record)));
 
         let expr = Expr::FieldAccess {
-            expr: Box::new(Expr::Variable("person".to_string())),
+            expr: Box::new(Expr::Variable {
+                name: "person".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             field: "name".to_string(),
         };
         assert_eq!(
@@ -1137,7 +1146,10 @@ mod tests {
             op: BinaryOp::Mul,
             left: Box::new(Expr::Binary {
                 op: BinaryOp::Add,
-                left: Box::new(Expr::Variable("x".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 right: Box::new(Expr::Literal(Value::Int(3))),
             }),
             right: Box::new(Expr::Literal(Value::Int(2))),
@@ -1324,7 +1336,13 @@ mod tests {
 
         let expr = Expr::Constructor {
             name: "Some".to_string(),
-            fields: vec![("value".to_string(), Expr::Variable("x".to_string()))],
+            fields: vec![(
+                "value".to_string(),
+                Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+            )],
         };
         let result = eval_expr(&expr, &ctx).unwrap();
         assert_eq!(
@@ -1435,15 +1453,27 @@ mod tests {
             MatchArm {
                 pattern: Pattern::List(
                     vec![
-                        Pattern::Variable("a".to_string()),
-                        Pattern::Variable("b".to_string()),
+                        Pattern::Variable {
+                            name: "a".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        },
+                        Pattern::Variable {
+                            name: "b".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        },
                     ],
                     Some("_".to_string()),
                 ),
                 body: Expr::Binary {
                     op: BinaryOp::Add,
-                    left: Box::new(Expr::Variable("a".to_string())),
-                    right: Box::new(Expr::Variable("b".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "a".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    right: Box::new(Expr::Variable {
+                        name: "b".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                 },
             },
             MatchArm {
@@ -1471,13 +1501,25 @@ mod tests {
         // match (1, 2) { (x, y) => x + y } → 3
         let arms = vec![MatchArm {
             pattern: Pattern::Tuple(vec![
-                Pattern::Variable("x".to_string()),
-                Pattern::Variable("y".to_string()),
+                Pattern::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "y".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ]),
             body: Expr::Binary {
                 op: BinaryOp::Add,
-                left: Box::new(Expr::Variable("x".to_string())),
-                right: Box::new(Expr::Variable("y".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
+                right: Box::new(Expr::Variable {
+                    name: "y".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
             },
         }];
 
@@ -1504,19 +1546,28 @@ mod tests {
         );
 
         let expr = Expr::Match {
-            scrutinee: Box::new(Expr::Variable("opt".to_string())),
+            scrutinee: Box::new(Expr::Variable {
+                name: "opt".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             arms: vec![
                 MatchArm {
                     pattern: Pattern::Variant {
                         name: "Some".to_string(),
                         fields: Some(vec![(
                             "value".to_string(),
-                            Pattern::Variable("x".to_string()),
+                            Pattern::Variable {
+                                name: "x".to_string(),
+                                span: ash_core::ast::Span::default(),
+                            },
                         )]),
                     },
                     body: Expr::Binary {
                         op: BinaryOp::Mul,
-                        left: Box::new(Expr::Variable("x".to_string())),
+                        left: Box::new(Expr::Variable {
+                            name: "x".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
                         right: Box::new(Expr::Literal(Value::Int(2))),
                     },
                 },
@@ -1545,17 +1596,26 @@ mod tests {
         );
 
         let expr = Expr::Match {
-            scrutinee: Box::new(Expr::Variable("opt".to_string())),
+            scrutinee: Box::new(Expr::Variable {
+                name: "opt".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             arms: vec![
                 MatchArm {
                     pattern: Pattern::Variant {
                         name: "Some".to_string(),
                         fields: Some(vec![(
                             "value".to_string(),
-                            Pattern::Variable("x".to_string()),
+                            Pattern::Variable {
+                                name: "x".to_string(),
+                                span: ash_core::ast::Span::default(),
+                            },
                         )]),
                     },
-                    body: Expr::Variable("x".to_string()),
+                    body: Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 },
                 MatchArm {
                     pattern: Pattern::Variant {
@@ -1586,11 +1646,20 @@ mod tests {
                 name: "Some".to_string(),
                 fields: Some(vec![(
                     "value".to_string(),
-                    Pattern::Variable("x".to_string()),
+                    Pattern::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 )]),
             },
-            expr: Box::new(Expr::Variable("opt".to_string())),
-            then_branch: Box::new(Expr::Variable("x".to_string())),
+            expr: Box::new(Expr::Variable {
+                name: "opt".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            then_branch: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             else_branch: Box::new(Expr::Literal(Value::Int(0))),
         };
 
@@ -1762,8 +1831,14 @@ mod tests {
             return_type: None,
             body: Box::new(Expr::Binary {
                 op: BinaryOp::Add,
-                left: Box::new(Expr::Variable("x".to_string())),
-                right: Box::new(Expr::Variable("offset".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
+                right: Box::new(Expr::Variable {
+                    name: "offset".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
             }),
         };
 
@@ -1786,7 +1861,10 @@ mod tests {
                 return_type: None,
                 body: Box::new(Expr::Binary {
                     op: BinaryOp::Add,
-                    left: Box::new(Expr::Variable("x".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                     right: Box::new(Expr::Literal(Value::Int(1))),
                 }),
             }),
@@ -1809,8 +1887,14 @@ mod tests {
                 return_type: None,
                 body: Box::new(Expr::Binary {
                     op: BinaryOp::Add,
-                    left: Box::new(Expr::Variable("x".to_string())),
-                    right: Box::new(Expr::Variable("n".to_string())),
+                    left: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    right: Box::new(Expr::Variable {
+                        name: "n".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
                 }),
             }),
         };
@@ -1830,7 +1914,10 @@ mod tests {
         // add5(3) => 8
         let result = eval_expr(
             &Expr::FnApply {
-                func: Box::new(Expr::Variable("add5".to_string())),
+                func: Box::new(Expr::Variable {
+                    name: "add5".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 args: vec![Expr::Literal(Value::Int(3))],
             },
             &ctx,
@@ -1852,7 +1939,10 @@ mod tests {
             return_type: None,
             body: Box::new(Expr::Binary {
                 op: BinaryOp::Mul,
-                left: Box::new(Expr::Variable("x".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 right: Box::new(Expr::Literal(Value::Int(2))),
             }),
         };
@@ -1861,7 +1951,10 @@ mod tests {
             params: vec![("f".to_string(), None)],
             return_type: None,
             body: Box::new(Expr::FnApply {
-                func: Box::new(Expr::Variable("f".to_string())),
+                func: Box::new(Expr::Variable {
+                    name: "f".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 args: vec![Expr::Literal(Value::Int(10))],
             }),
         };
@@ -1892,7 +1985,10 @@ mod tests {
         // 2. Build the factorial body:
         //    match n { 0 => 1, _ => n * fact(n-1) }
         let body = Expr::Match {
-            scrutinee: Box::new(Expr::Variable("n".to_string())),
+            scrutinee: Box::new(Expr::Variable {
+                name: "n".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             arms: vec![
                 MatchArm {
                     pattern: Pattern::Literal(Value::Int(0)),
@@ -1902,12 +1998,21 @@ mod tests {
                     pattern: Pattern::Wildcard,
                     body: Expr::Binary {
                         op: BinaryOp::Mul,
-                        left: Box::new(Expr::Variable("n".to_string())),
+                        left: Box::new(Expr::Variable {
+                            name: "n".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
                         right: Box::new(Expr::FnApply {
-                            func: Box::new(Expr::Variable("fact".to_string())),
+                            func: Box::new(Expr::Variable {
+                                name: "fact".to_string(),
+                                span: ash_core::ast::Span::default(),
+                            }),
                             args: vec![Expr::Binary {
                                 op: BinaryOp::Sub,
-                                left: Box::new(Expr::Variable("n".to_string())),
+                                left: Box::new(Expr::Variable {
+                                    name: "n".to_string(),
+                                    span: ash_core::ast::Span::default(),
+                                }),
                                 right: Box::new(Expr::Literal(Value::Int(1))),
                             }],
                         }),
@@ -1932,7 +2037,10 @@ mod tests {
 
         let result = eval_expr(
             &Expr::FnApply {
-                func: Box::new(Expr::Variable("fact".to_string())),
+                func: Box::new(Expr::Variable {
+                    name: "fact".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 args: vec![Expr::Literal(Value::Int(5))],
             },
             &ctx,
@@ -1959,7 +2067,10 @@ mod tests {
 
         let closure = Value::Closure {
             params: vec![("x".to_string(), None)],
-            body: Box::new(Expr::Variable("x".to_string())),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             env: Arc::new(EnvFrame::new()),
         };
 
@@ -1982,7 +2093,10 @@ mod tests {
         ctx.set("not_a_fn".to_string(), Value::Int(42));
 
         let expr = Expr::FnApply {
-            func: Box::new(Expr::Variable("not_a_fn".to_string())),
+            func: Box::new(Expr::Variable {
+                name: "not_a_fn".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             args: vec![Expr::Literal(Value::Int(1))],
         };
 
@@ -2002,7 +2116,10 @@ mod tests {
             func: Box::new(Expr::FnDef {
                 params: vec![("x".to_string(), None), ("y".to_string(), None)],
                 return_type: None,
-                body: Box::new(Expr::Variable("x".to_string())),
+                body: Box::new(Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
             }),
             args: vec![Expr::Literal(Value::Int(1))], // only 1 arg, need 2
         };
@@ -2038,7 +2155,10 @@ mod tests {
         // boundary violation if it crossed into a pure context).
         let closure_value = Value::Closure {
             params: vec![("x".to_string(), None)],
-            body: Box::new(Expr::Variable("x".to_string())),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
             env: Arc::new(EnvFrame::new()),
         };
 
@@ -2075,7 +2195,10 @@ mod tests {
         let expr = Expr::FnDef {
             params: vec![("x".into(), None)],
             return_type: None,
-            body: Box::new(Expr::Variable("x".into())),
+            body: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_core::ast::Span::default(),
+            }),
         };
 
         let result = eval_expr(&expr, &pure_ctx);
@@ -2113,7 +2236,10 @@ mod tests {
         let fndef = Expr::FnDef {
             params: vec![("x".to_string(), None)],
             return_type: None,
-            body: Box::new(Expr::Variable("x".to_string())),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
         };
         let closure_result = eval_expr(&fndef, &ctx).unwrap();
         assert!(

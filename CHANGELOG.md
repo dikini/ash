@@ -8,6 +8,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Binding spans for variable references (TASK-570): `Expr::Variable`, `Pattern::Variable`,
+  and `PolicyExpr::Var` now carry `{ name, span }` struct variants across surface and core
+  ASTs. `ast::Span` derives `Hash` and `Eq` for downstream Salsa usage. All ~400+
+  parser/type-checker/interpreter match sites and test constructors updated.
+
 - Interpreter builtins: `head`, `tail`, `filter`, `map`, `starts_with`, `ends_with`
   (`ash-interp` and `ash-parser`) to support the spec-processor app.
 

@@ -145,7 +145,10 @@ fn workflow_with_bound(bound_interface: &str) -> WorkflowDef {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Ret {
-            expr: Expr::Variable("value".into()),
+            expr: Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            },
             span: test_span(),
         },
         contract: None,
@@ -176,7 +179,10 @@ fn interface_method_call_workflow(type_name: &str) -> WorkflowDef {
             expr: Expr::Call {
                 func: "explain".into(),
                 module: Some("Explain".into()),
-                args: vec![Expr::Variable("value".into())],
+                args: vec![Expr::Variable {
+                    name: "value".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
                 span: test_span(),
             },
             span: test_span(),
@@ -207,21 +213,36 @@ fn match_bound_interface_method_call_workflow() -> WorkflowDef {
         capabilities: vec![],
         body: Workflow::Ret {
             expr: Expr::Match {
-                scrutinee: Box::new(Expr::Variable("value".into())),
+                scrutinee: Box::new(Expr::Variable {
+                    name: "value".into(),
+                    span: ash_parser::token::Span::default(),
+                }),
                 arms: vec![
                     MatchArm {
                         pattern: Pattern::Variant {
                             name: "Some".into(),
-                            fields: Some(vec![("value".into(), Pattern::Variable("x".into()))]),
+                            fields: Some(vec![(
+                                "value".into(),
+                                Pattern::Variable {
+                                    name: "x".into(),
+                                    span: ash_parser::token::Span::default(),
+                                },
+                            )]),
                             payload: VariantPatternPayload::Record(vec![(
                                 "value".into(),
-                                Pattern::Variable("x".into()),
+                                Pattern::Variable {
+                                    name: "x".into(),
+                                    span: ash_parser::token::Span::default(),
+                                },
                             )]),
                         },
                         body: Box::new(Expr::Call {
                             func: "explain".into(),
                             module: Some("Explain".into()),
-                            args: vec![Expr::Variable("x".into())],
+                            args: vec![Expr::Variable {
+                                name: "x".into(),
+                                span: ash_parser::token::Span::default(),
+                            }],
                             span: test_span(),
                         }),
                         span: test_span(),
@@ -346,7 +367,10 @@ fn interface_method_call_typechecks_via_registered_impl_and_returns_method_type(
     let expr = Expr::Call {
         func: "explain".into(),
         module: Some("Explain".into()),
-        args: vec![Expr::Variable("decision".into())],
+        args: vec![Expr::Variable {
+            name: "decision".into(),
+            span: ash_parser::token::Span::default(),
+        }],
         span: test_span(),
     };
 
@@ -787,7 +811,10 @@ fn cyclic_impl() -> ImplDef {
         methods: vec![ImplMethodDef {
             name: "m".into(),
             params: vec!["x".into()],
-            body: Expr::Variable("x".into()),
+            body: Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            },
             span: test_span(),
         }],
         span: test_span(),
@@ -915,7 +942,10 @@ fn rigid_projection_workflow() -> WorkflowDef {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Ret {
-            expr: Expr::Variable("a".into()),
+            expr: Expr::Variable {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            },
             span: test_span(),
         },
         contract: None,
@@ -946,7 +976,10 @@ fn rigid_projection_concrete_mismatch_workflow() -> WorkflowDef {
         plays_roles: vec![],
         capabilities: vec![],
         body: Workflow::Ret {
-            expr: Expr::Variable("a".into()),
+            expr: Expr::Variable {
+                name: "a".into(),
+                span: ash_parser::token::Span::default(),
+            },
             span: test_span(),
         },
         contract: None,
@@ -967,7 +1000,10 @@ fn task567_associated_type_normalizes_in_return_type() {
         func: "serialize_bool".into(),
         module: Some("Serializer".into()),
         args: vec![
-            Expr::Variable("writer".into()),
+            Expr::Variable {
+                name: "writer".into(),
+                span: ash_parser::token::Span::default(),
+            },
             Expr::Literal(Literal::Bool(true)),
         ],
         span: test_span(),

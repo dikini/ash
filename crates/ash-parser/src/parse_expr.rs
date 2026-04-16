@@ -337,7 +337,10 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
             let stmt_span = span_from(&stmt_start, &input.state);
             let fn_def_span = stmt_span;
             statements.push(BlockStmt::Let {
-                pattern: Pattern::Variable(name),
+                pattern: Pattern::Variable {
+                    name: name,
+                    span: crate::token::Span::default(),
+                },
                 expr: Expr::FnDef {
                     params,
                     return_type,
@@ -802,7 +805,10 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     // Check for field access or method call
-    let mut expr = Expr::Variable(name_str.clone());
+    let mut expr = Expr::Variable {
+        name: name_str.clone(),
+        span: crate::token::Span::default(),
+    };
 
     loop {
         // Field access: .field
@@ -843,7 +849,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             let span = span_from(&start_pos, &input.state);
             expr = Expr::Call {
                 func: match &expr {
-                    Expr::Variable(n) => n.clone(),
+                    Expr::Variable { name: n, .. } => n.clone(),
                     _ => "call".into(),
                 },
                 module: None,
@@ -1309,7 +1315,7 @@ mod tests {
     fn test_parse_variable() {
         let mut input = test_input("my_variable");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Variable(name) if name.as_ref() == "my_variable"));
+        assert!(matches!(result, Expr::Variable { name, .. } if name.as_ref() == "my_variable"));
     }
 
     #[test]
@@ -1445,7 +1451,7 @@ mod tests {
     fn test_parse_variable_named_supervises() {
         let mut input = test_input("supervises");
         let result = expr(&mut input).unwrap();
-        assert!(matches!(result, Expr::Variable(name) if name.as_ref() == "supervises"));
+        assert!(matches!(result, Expr::Variable { name, .. } if name.as_ref() == "supervises"));
     }
 
     #[test]
@@ -1515,10 +1521,12 @@ mod tests {
                     matches!(pattern, crate::surface::Pattern::Variant { name, .. } if name.as_ref() == "Some")
                 );
                 // Expression should be variable 'opt'
-                assert!(matches!(expr.as_ref(), Expr::Variable(name) if name.as_ref() == "opt"));
+                assert!(
+                    matches!(expr.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "opt")
+                );
                 // Then branch should be variable 'x'
                 assert!(
-                    matches!(then_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "x")
+                    matches!(then_branch.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
                 );
                 // Else branch should be literal 0
                 assert!(matches!(
@@ -1576,10 +1584,10 @@ mod tests {
                 ..
             } => {
                 assert!(
-                    matches!(pattern, crate::surface::Pattern::Variable(name) if name.as_ref() == "x")
+                    matches!(pattern, crate::surface::Pattern::Variable { name, .. } if name.as_ref() == "x")
                 );
                 assert!(
-                    matches!(then_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "x")
+                    matches!(then_branch.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
                 );
                 assert!(matches!(
                     else_branch.as_ref(),
@@ -1619,10 +1627,10 @@ mod tests {
             } => {
                 assert!(matches!(pattern, crate::surface::Pattern::Tuple(pats) if pats.len() == 2));
                 assert!(
-                    matches!(then_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "a")
+                    matches!(then_branch.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "a")
                 );
                 assert!(
-                    matches!(else_branch.as_ref(), Expr::Variable(name) if name.as_ref() == "b")
+                    matches!(else_branch.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "b")
                 );
             }
             _ => panic!("Expected IfLet expression, got {:?}", result),

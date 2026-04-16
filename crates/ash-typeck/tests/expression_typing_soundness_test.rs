@@ -29,7 +29,10 @@ fn test_variable_lookup_from_env() {
     env.bind_variable("x", Type::Int);
 
     // Create variable expression
-    let expr = Expr::Variable("x".into());
+    let expr = Expr::Variable {
+        name: "x".into(),
+        span: ash_parser::token::Span::default(),
+    };
 
     // Check that we get Int, not a fresh type variable
     let result = check_expr(&env, &expr);
@@ -50,7 +53,10 @@ fn test_unbound_variable_error() {
     let env = TypeEnv::with_builtin_types();
 
     // Create variable expression for undefined variable
-    let expr = Expr::Variable("undefined_var".into());
+    let expr = Expr::Variable {
+        name: "undefined_var".into(),
+        span: ash_parser::token::Span::default(),
+    };
 
     // Should produce an error
     let result = check_expr(&env, &expr);
@@ -70,7 +76,10 @@ fn test_variable_lookup_string_type() {
     let mut env = TypeEnv::with_builtin_types();
     env.bind_variable("name", Type::String);
 
-    let expr = Expr::Variable("name".into());
+    let expr = Expr::Variable {
+        name: "name".into(),
+        span: ash_parser::token::Span::default(),
+    };
     let result = check_expr(&env, &expr);
 
     assert!(result.is_ok());
@@ -82,7 +91,10 @@ fn test_variable_lookup_bool_type() {
     let mut env = TypeEnv::with_builtin_types();
     env.bind_variable("flag", Type::Bool);
 
-    let expr = Expr::Variable("flag".into());
+    let expr = Expr::Variable {
+        name: "flag".into(),
+        span: ash_parser::token::Span::default(),
+    };
     let result = check_expr(&env, &expr);
 
     assert!(result.is_ok());
@@ -219,8 +231,14 @@ fn test_binary_op_with_env_variables() {
     // x + y should work when both are bound to Int
     let expr = Expr::Binary {
         op: ash_parser::surface::BinaryOp::Add,
-        left: Box::new(Expr::Variable("x".into())),
-        right: Box::new(Expr::Variable("y".into())),
+        left: Box::new(Expr::Variable {
+            name: "x".into(),
+            span: ash_parser::token::Span::default(),
+        }),
+        right: Box::new(Expr::Variable {
+            name: "y".into(),
+            span: ash_parser::token::Span::default(),
+        }),
         span: test_span(),
     };
 
@@ -240,7 +258,10 @@ fn test_type_soundness_no_fresh_vars_for_bound_variables() {
     let mut env = TypeEnv::with_builtin_types();
     env.bind_variable("x", Type::Int);
 
-    let expr = Expr::Variable("x".into());
+    let expr = Expr::Variable {
+        name: "x".into(),
+        span: ash_parser::token::Span::default(),
+    };
     let result = check_expr(&env, &expr);
 
     // Soundness property: Bound variables must not get fresh type variables

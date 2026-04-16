@@ -916,7 +916,7 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a named local fn statement: `fn name(params) [-> type] { body }`.
 ///
-/// Desugars to `Workflow::Let { pattern: Pattern::Variable("name"), expr: Expr::FnDef { ... } }`.
+/// Desugars to `Workflow::Let { pattern: Pattern::Variable { name: "name", span: ash_parser::token::Span::default() }, expr: Expr::FnDef { ... } }`.
 fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let start_pos = input.state;
 
@@ -952,7 +952,10 @@ fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let fn_def_span = span;
 
     Ok(Workflow::Let {
-        pattern: Pattern::Variable(name),
+        pattern: Pattern::Variable {
+            name: name,
+            span: crate::token::Span::default(),
+        },
         expr: Expr::FnDef {
             params,
             return_type,
@@ -1260,7 +1263,7 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
     let checkpoint = *input;
     if let Ok(action) = action_ref(input) {
-        if let crate::surface::Pattern::Variable(ref name) = pat {
+        if let crate::surface::Pattern::Variable { ref name, .. } = pat {
             // Verify what follows is a statement boundary, not an expression continuation.
             // Use skip_horizontal_ws_and_comments to preserve newlines as delimiters.
             crate::parse_utils::skip_horizontal_ws_and_comments(input);
@@ -1930,7 +1933,9 @@ mod tests {
                 ..
             } => {
                 assert_eq!(capability.as_ref(), "Args:0");
-                assert!(matches!(binding, Some(Pattern::Variable(name)) if name.as_ref() == "arg"));
+                assert!(
+                    matches!(binding, Some(Pattern::Variable { name, .. }) if name.as_ref() == "arg")
+                );
             }
             _ => panic!("Expected Observe"),
         }
@@ -2028,14 +2033,14 @@ mod tests {
     fn test_pattern_variable() {
         let mut input = test_input("my_var");
         let result = pattern(&mut input).unwrap();
-        assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "my_var"));
+        assert!(matches!(result, Pattern::Variable { name, .. } if name.as_ref() == "my_var"));
     }
 
     #[test]
     fn test_pattern_variable_named_supervises() {
         let mut input = test_input("supervises");
         let result = pattern(&mut input).unwrap();
-        assert!(matches!(result, Pattern::Variable(name) if name.as_ref() == "supervises"));
+        assert!(matches!(result, Pattern::Variable { name, .. } if name.as_ref() == "supervises"));
     }
 
     #[test]

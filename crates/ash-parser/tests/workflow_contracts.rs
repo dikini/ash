@@ -15,7 +15,7 @@ fn decide_requires_explicit_named_policy() {
             ..
         } => {
             assert!(
-                matches!(expr, ash_parser::surface::Expr::Variable(ref name) if name.as_ref() == "approved")
+                matches!(expr, ash_parser::surface::Expr::Variable { ref name, .. } if name.as_ref() == "approved")
             );
             assert!(matches!(policy, Some(ref name) if name.as_ref() == "policy_gate"));
             assert!(else_branch.is_none());

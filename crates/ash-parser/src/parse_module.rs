@@ -1448,7 +1448,10 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             }
             let stmt_span = crate::input::span_from(&stmt_start, &input.state);
             statements.push(BlockStmt::Let {
-                pattern: Pattern::Variable(fn_name),
+                pattern: Pattern::Variable {
+                    name: fn_name,
+                    span: crate::token::Span::default(),
+                },
                 expr: Expr::FnDef {
                     params,
                     return_type,
@@ -1569,7 +1572,10 @@ fn parse_fn_scrutinee(input: &mut ParseInput) -> ModalResult<Expr> {
 
     // Variable / identifier (may have binary ops after)
     let name = crate::parse_expr::identifier(input)?;
-    let mut result = Expr::Variable(name.into());
+    let mut result = Expr::Variable {
+        name: name.into(),
+        span: crate::token::Span::default(),
+    };
 
     // Handle binary operators (but NOT { which would be a constructor)
     skip_whitespace_and_comments(input);

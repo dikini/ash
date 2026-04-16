@@ -302,7 +302,10 @@ fn test_input_capability_equality() {
 fn test_yield_workflow_with_complex_continuation() {
     // Create a more complex continuation
     let continuation = Box::new(Workflow::Let {
-        pattern: Pattern::Variable("response".to_string()),
+        pattern: Pattern::Variable {
+            name: "response".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         expr: Expr::Literal(ash_core::Value::Int(42)),
         continuation: Box::new(Workflow::Done),
     });

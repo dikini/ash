@@ -596,7 +596,7 @@ fn test_capability_with_identifier_constraint_arg() {
     assert_eq!(cap.constraints.len(), 1);
     assert!(matches!(
         &cap.constraints[0].predicate.args[1],
-        Expr::Variable(name) if name.as_ref() == "min_threshold"
+        Expr::Variable { name, .. } if name.as_ref() == "min_threshold"
     ));
 }
 

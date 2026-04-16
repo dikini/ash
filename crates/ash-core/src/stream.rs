@@ -125,7 +125,7 @@ impl ReceiveMode {
 /// use ash_core::{Pattern, Workflow, Expr};
 ///
 /// let arm = ReceiveArm {
-///     pattern: Pattern::Variable("msg".to_string()),
+///     pattern: Pattern::Variable { name: "msg".to_string(), span: ash_core::ast::Span::default() },
 ///     guard: None,
 ///     body: Workflow::Done,
 /// };
@@ -475,7 +475,10 @@ mod tests {
     #[test]
     fn test_receive_arm_creation() {
         let arm = ReceiveArm {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: crate::ast::Span::default(),
+            },
             guard: Some(Expr::Literal(Value::Bool(true))),
             body: Workflow::Done,
         };
@@ -503,7 +506,10 @@ mod tests {
         let receive = Receive {
             mode: ReceiveMode::Blocking(None),
             arms: vec![ReceiveArm {
-                pattern: Pattern::Variable("x".to_string()),
+                pattern: Pattern::Variable {
+                    name: "x".to_string(),
+                    span: crate::ast::Span::default(),
+                },
                 guard: None,
                 body: Workflow::Done,
             }],
@@ -660,7 +666,10 @@ mod tests {
         let receive = Receive {
             mode: ReceiveMode::Blocking(None),
             arms: vec![ReceiveArm {
-                pattern: Pattern::Variable("msg".to_string()),
+                pattern: Pattern::Variable {
+                    name: "msg".to_string(),
+                    span: crate::ast::Span::default(),
+                },
                 guard: None,
                 body: Workflow::Done,
             }],

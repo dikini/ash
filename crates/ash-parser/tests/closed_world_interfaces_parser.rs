@@ -176,7 +176,7 @@ fn parses_explicit_interface_method_calls() {
             assert_eq!(module.as_ref().map(|s| s.as_ref()), Some("Explain"));
             assert_eq!(func.as_ref(), "explain");
             assert_eq!(args.len(), 1);
-            assert!(matches!(&args[0], Expr::Variable(name) if name.as_ref() == "value"));
+            assert!(matches!(&args[0], Expr::Variable { name, .. } if name.as_ref() == "value"));
         }
         other => panic!("expected qualified call (module::func), got {other:?}"),
     }

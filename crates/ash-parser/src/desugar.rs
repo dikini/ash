@@ -796,14 +796,19 @@ mod tests {
         // Observe with existing binding should keep it
         let wf = Workflow::Observe {
             capability: "test".into(),
-            binding: Some(Pattern::Variable("x".into())),
+            binding: Some(Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            }),
             continuation: None,
             span: dummy_span(),
         };
         let result = desugar_optional_bindings(&wf);
         match result {
             Workflow::Observe { binding, .. } => {
-                assert!(matches!(binding, Some(Pattern::Variable(name)) if name.as_ref() == "x"));
+                assert!(
+                    matches!(binding, Some(Pattern::Variable { name, .. }) if name.as_ref() == "x")
+                );
             }
             _ => panic!("Expected Observe"),
         }
@@ -905,7 +910,10 @@ mod tests {
     #[test]
     fn test_desugar_let() {
         let wf = Workflow::Let {
-            pattern: Pattern::Variable("x".into()),
+            pattern: Pattern::Variable {
+                name: "x".into(),
+                span: crate::token::Span::default(),
+            },
             expr: Expr::Literal(Literal::Int(42)),
             continuation: None,
             span: dummy_span(),
@@ -917,8 +925,14 @@ mod tests {
     #[test]
     fn test_desugar_for() {
         let wf = Workflow::For {
-            pattern: Pattern::Variable("item".into()),
-            collection: Expr::Variable("items".into()),
+            pattern: Pattern::Variable {
+                name: "item".into(),
+                span: crate::token::Span::default(),
+            },
+            collection: Expr::Variable {
+                name: "items".into(),
+                span: crate::token::Span::default(),
+            },
             body: Box::new(Workflow::Done { span: dummy_span() }),
             span: dummy_span(),
         };

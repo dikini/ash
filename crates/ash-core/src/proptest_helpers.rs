@@ -121,14 +121,20 @@ fn arb_pattern_with_context(
     if max_depth == 0 {
         // At max depth, only generate leaf patterns
         prop_oneof![
-            Just(ctx.clone()).prop_map(|c| Pattern::Variable(c.next_name())),
+            Just(ctx.clone()).prop_map(|c| Pattern::Variable {
+                name: c.next_name(),
+                span: crate::ast::Span::default()
+            }),
             Just(Pattern::Wildcard),
             arb_value().prop_map(Pattern::Literal),
         ]
         .boxed()
     } else {
         let leaf = prop_oneof![
-            Just(ctx.clone()).prop_map(|c| Pattern::Variable(c.next_name())),
+            Just(ctx.clone()).prop_map(|c| Pattern::Variable {
+                name: c.next_name(),
+                span: crate::ast::Span::default()
+            }),
             Just(Pattern::Wildcard),
             arb_value().prop_map(Pattern::Literal),
         ];
@@ -163,7 +169,10 @@ pub fn arb_expr() -> impl proptest::strategy::Strategy<Value = Expr> {
     use proptest::prelude::*;
     prop_oneof![
         arb_value().prop_map(Expr::Literal),
-        arb_name().prop_map(Expr::Variable),
+        arb_name().prop_map(|name| Expr::Variable {
+            name,
+            span: crate::ast::Span::default()
+        }),
     ]
 }
 

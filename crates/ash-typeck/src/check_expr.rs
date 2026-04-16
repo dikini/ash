@@ -57,7 +57,7 @@ impl CheckResult {
 pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
     match expr {
         Expr::Literal(lit) => check_literal(lit),
-        Expr::Variable(name) => {
+        Expr::Variable { name, .. } => {
             if name.as_ref() == "()" {
                 return CheckResult::success(Type::Constructor {
                     name: crate::QualifiedName::root("()"),
@@ -561,7 +561,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
 fn get_expr_span(expr: &Expr) -> Span {
     match expr {
         Expr::Literal(_) => Span::default(),
-        Expr::Variable(_) => Span::default(),
+        Expr::Variable { .. } => Span::default(),
         Expr::FieldAccess { span, .. } => *span,
         Expr::IndexAccess { span, .. } => *span,
         Expr::Unary { span, .. } => *span,
@@ -751,7 +751,7 @@ fn format_pattern_witness(pattern: &CorePattern) -> String {
             }
         },
         CorePattern::Wildcard => "_".to_string(),
-        CorePattern::Variable(name) => name.clone(),
+        CorePattern::Variable { name, .. } => name.clone(),
         CorePattern::Tuple(items) => format!(
             "({})",
             items
@@ -1361,14 +1361,23 @@ mod tests {
                     name: "Some".into(),
                     fields: Some(vec![(
                         "value".into(),
-                        ash_parser::surface::Pattern::Variable("x".into()),
+                        ash_parser::surface::Pattern::Variable {
+                            name: "x".into(),
+                            span: ash_parser::token::Span::default(),
+                        },
                     )]),
                     payload: ash_parser::surface::VariantPatternPayload::Record(vec![(
                         "value".into(),
-                        ash_parser::surface::Pattern::Variable("x".into()),
+                        ash_parser::surface::Pattern::Variable {
+                            name: "x".into(),
+                            span: ash_parser::token::Span::default(),
+                        },
                     )]),
                 },
-                body: Box::new(Expr::Variable("x".into())),
+                body: Box::new(Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                }),
                 span: Span::default(),
             }],
             span: Span::default(),
@@ -1573,7 +1582,10 @@ mod tests {
         Expr::FnDef {
             params: vec![(Box::from(param), None)],
             return_type: None,
-            body: Box::new(Expr::Variable(Box::from(param))),
+            body: Box::new(Expr::Variable {
+                name: Box::from(param),
+                span: ash_parser::token::Span::default(),
+            }),
             span: Span::default(),
         }
     }
@@ -1676,7 +1688,10 @@ mod tests {
 
         // Build the call: apply(fn(x) { x })
         let call_expr = Expr::FnApply {
-            func: Box::new(Expr::Variable(Box::from("apply"))),
+            func: Box::new(Expr::Variable {
+                name: Box::from("apply"),
+                span: ash_parser::token::Span::default(),
+            }),
             args: vec![closure_expr],
             span: Span::default(),
         };
@@ -1759,7 +1774,10 @@ mod tests {
         let expr = Expr::FnDef {
             params: vec![("x".into(), Some("Int".into()))],
             return_type: None,
-            body: Box::new(Expr::Variable("x".into())),
+            body: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: Span::default(),
         };
         let result = check_expr(&env, &expr);
@@ -1788,7 +1806,10 @@ mod tests {
         let matching = Expr::FnDef {
             params: vec![("x".into(), Some("Int".into()))],
             return_type: Some("Int".into()),
-            body: Box::new(Expr::Variable("x".into())),
+            body: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: Span::default(),
         };
         let ok_result = check_expr(&env, &matching);
@@ -1802,7 +1823,10 @@ mod tests {
         let conflicting = Expr::FnDef {
             params: vec![("x".into(), Some("Int".into()))],
             return_type: Some("Bool".into()),
-            body: Box::new(Expr::Variable("x".into())),
+            body: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: Span::default(),
         };
         let err_result = check_expr(&env, &conflicting);
@@ -1843,7 +1867,10 @@ mod tests {
         let expr = Expr::FnDef {
             params: vec![("x".into(), Some("BogusType".into()))],
             return_type: None,
-            body: Box::new(Expr::Variable("x".into())),
+            body: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: Span::default(),
         };
         let result = check_expr(&env, &expr);
@@ -1874,7 +1901,10 @@ mod tests {
         let expr = Expr::FnDef {
             params: vec![("x".into(), None)],
             return_type: Some("BogusRet".into()),
-            body: Box::new(Expr::Variable("x".into())),
+            body: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: Span::default(),
         };
         let result = check_expr(&env, &expr);
@@ -1914,7 +1944,10 @@ mod tests {
         let expr = Expr::FnDef {
             params: vec![("x".into(), Some("Color".into()))],
             return_type: None,
-            body: Box::new(Expr::Variable("x".into())),
+            body: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_parser::token::Span::default(),
+            }),
             span: Span::default(),
         };
         let result = check_expr(&env, &expr);

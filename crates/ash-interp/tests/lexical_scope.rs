@@ -28,20 +28,32 @@ fn execution_contexts() -> (
 async fn lexical_scope_let_bindings_visible_in_later_statements() {
     // Test that a let binding is visible in a later let binding
     let workflow = Workflow::Let {
-        pattern: Pattern::Variable("items".to_string()),
+        pattern: Pattern::Variable {
+            name: "items".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         expr: Expr::Literal(Value::List(Box::new(vec![
             Value::Int(1),
             Value::Int(2),
             Value::Int(3),
         ]))),
         continuation: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("first".to_string()),
+            pattern: Pattern::Variable {
+                name: "first".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::IndexAccess {
-                expr: Box::new(Expr::Variable("items".to_string())),
+                expr: Box::new(Expr::Variable {
+                    name: "items".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 index: Box::new(Expr::Literal(Value::Int(0))),
             },
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("first".to_string()),
+                expr: Expr::Variable {
+                    name: "first".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };
@@ -60,7 +72,10 @@ async fn lexical_scope_let_bindings_visible_in_later_statements() {
 async fn lexical_scope_unbound_variable_fails_at_runtime() {
     // Test that an unbound variable fails at runtime
     let workflow = Workflow::Ret {
-        expr: Expr::Variable("undefined".to_string()),
+        expr: Expr::Variable {
+            name: "undefined".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
     };
 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
@@ -82,23 +97,41 @@ async fn lexical_scope_unbound_variable_fails_at_runtime() {
 async fn lexical_scope_nested_let_bindings() {
     // Test deeply nested let bindings
     let workflow = Workflow::Let {
-        pattern: Pattern::Variable("a".to_string()),
+        pattern: Pattern::Variable {
+            name: "a".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         expr: Expr::Literal(Value::Int(10)),
         continuation: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("b".to_string()),
+            pattern: Pattern::Variable {
+                name: "b".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(20)),
             continuation: Box::new(Workflow::Let {
-                pattern: Pattern::Variable("c".to_string()),
+                pattern: Pattern::Variable {
+                    name: "c".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 expr: Expr::Literal(Value::Int(30)),
                 continuation: Box::new(Workflow::Ret {
                     expr: Expr::Binary {
                         op: ash_core::BinaryOp::Add,
                         left: Box::new(Expr::Binary {
                             op: ash_core::BinaryOp::Add,
-                            left: Box::new(Expr::Variable("a".to_string())),
-                            right: Box::new(Expr::Variable("b".to_string())),
+                            left: Box::new(Expr::Variable {
+                                name: "a".to_string(),
+                                span: ash_core::ast::Span::default(),
+                            }),
+                            right: Box::new(Expr::Variable {
+                                name: "b".to_string(),
+                                span: ash_core::ast::Span::default(),
+                            }),
                         }),
-                        right: Box::new(Expr::Variable("c".to_string())),
+                        right: Box::new(Expr::Variable {
+                            name: "c".to_string(),
+                            span: ash_core::ast::Span::default(),
+                        }),
                     },
                 }),
             }),
@@ -120,7 +153,10 @@ async fn lexical_scope_binding_not_visible_outside_scope() {
     // Test that a binding is not visible outside its continuation
     // This is implicit in the LET ... IN cont structure
     let workflow = Workflow::Let {
-        pattern: Pattern::Variable("inner".to_string()),
+        pattern: Pattern::Variable {
+            name: "inner".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         expr: Expr::Literal(Value::Int(42)),
         continuation: Box::new(Workflow::Done),
     };
@@ -142,13 +178,19 @@ async fn seq_preserves_explicit_sequencing() {
     // SEQ should execute first, then second, without introducing lexical scope
     let workflow = Workflow::Seq {
         first: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(1)),
             continuation: Box::new(Workflow::Done),
         }),
         second: Box::new(Workflow::Ret {
             // This should fail because x is not in scope across SEQ boundary
-            expr: Expr::Variable("x".to_string()),
+            expr: Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
         }),
     };
 
@@ -176,17 +218,29 @@ async fn seq_with_nested_let_preserves_scope() {
     // Test that SEQ can contain nested LETs that maintain their own scope
     let workflow = Workflow::Seq {
         first: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("a".to_string()),
+            pattern: Pattern::Variable {
+                name: "a".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(10)),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("a".to_string()),
+                expr: Expr::Variable {
+                    name: "a".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
         second: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("b".to_string()),
+            pattern: Pattern::Variable {
+                name: "b".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(20)),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("b".to_string()),
+                expr: Expr::Variable {
+                    name: "b".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };
@@ -210,17 +264,29 @@ async fn canonical_form_nested_let_bindings() {
     // let y = x + 1
     // ret y
     let workflow = Workflow::Let {
-        pattern: Pattern::Variable("x".to_string()),
+        pattern: Pattern::Variable {
+            name: "x".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
         expr: Expr::Literal(Value::Int(1)),
         continuation: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("y".to_string()),
+            pattern: Pattern::Variable {
+                name: "y".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Binary {
                 op: ash_core::BinaryOp::Add,
-                left: Box::new(Expr::Variable("x".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
                 right: Box::new(Expr::Literal(Value::Int(1))),
             },
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("y".to_string()),
+                expr: Expr::Variable {
+                    name: "y".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };
@@ -242,17 +308,29 @@ async fn if_branches_maintain_separate_scope() {
     let workflow = Workflow::If {
         condition: Expr::Literal(Value::Bool(true)),
         then_branch: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("x".to_string()),
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(1)),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("x".to_string()),
+                expr: Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
         else_branch: Box::new(Workflow::Let {
-            pattern: Pattern::Variable("y".to_string()),
+            pattern: Pattern::Variable {
+                name: "y".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
             expr: Expr::Literal(Value::Int(2)),
             continuation: Box::new(Workflow::Ret {
-                expr: Expr::Variable("y".to_string()),
+                expr: Expr::Variable {
+                    name: "y".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             }),
         }),
     };
@@ -273,8 +351,14 @@ async fn pattern_matching_introduces_bindings() {
     let workflow = Workflow::Let {
         pattern: Pattern::List(
             vec![
-                Pattern::Variable("first".to_string()),
-                Pattern::Variable("second".to_string()),
+                Pattern::Variable {
+                    name: "first".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
+                Pattern::Variable {
+                    name: "second".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
             ],
             None,
         ),
@@ -282,8 +366,14 @@ async fn pattern_matching_introduces_bindings() {
         continuation: Box::new(Workflow::Ret {
             expr: Expr::Binary {
                 op: ash_core::BinaryOp::Add,
-                left: Box::new(Expr::Variable("first".to_string())),
-                right: Box::new(Expr::Variable("second".to_string())),
+                left: Box::new(Expr::Variable {
+                    name: "first".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
+                right: Box::new(Expr::Variable {
+                    name: "second".to_string(),
+                    span: ash_core::ast::Span::default(),
+                }),
             },
         }),
     };

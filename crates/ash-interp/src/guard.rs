@@ -286,7 +286,10 @@ mod tests {
         let pred = Predicate {
             name: "eq".to_string(),
             arguments: vec![
-                Expr::Variable("x".to_string()),
+                Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 Expr::Literal(Value::Int(42)),
             ],
         };
@@ -295,7 +298,10 @@ mod tests {
         let pred = Predicate {
             name: "eq".to_string(),
             arguments: vec![
-                Expr::Variable("x".to_string()),
+                Expr::Variable {
+                    name: "x".to_string(),
+                    span: ash_core::ast::Span::default(),
+                },
                 Expr::Literal(Value::Int(43)),
             ],
         };
@@ -473,14 +479,23 @@ mod tests {
             Box::new(Guard::Pred(Predicate {
                 name: "lt".to_string(),
                 arguments: vec![
-                    Expr::Variable("x".to_string()),
-                    Expr::Variable("y".to_string()),
+                    Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                    Expr::Variable {
+                        name: "y".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                 ],
             })),
             Box::new(Guard::Pred(Predicate {
                 name: "gt".to_string(),
                 arguments: vec![
-                    Expr::Variable("x".to_string()),
+                    Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
                     Expr::Literal(Value::Int(5)),
                 ],
             })),

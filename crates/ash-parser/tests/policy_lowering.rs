@@ -15,7 +15,9 @@ fn decide_lowering_preserves_explicit_policy_and_continuation() {
             policy,
             continuation,
         } => {
-            assert!(matches!(expr, CoreExpr::Variable(ref name) if name == "approved"));
+            assert!(
+                matches!(expr, CoreExpr::Variable { name: ref name, .. } if name == "approved")
+            );
             assert_eq!(policy, "policy_gate");
             assert!(matches!(continuation.as_ref(), CoreWorkflow::Done));
         }
@@ -38,7 +40,7 @@ fn check_lowering_preserves_obligation_identity() {
                 obligation,
                 ash_core::Obligation::Obliged {
                     role: ash_core::Role { ref name, .. },
-                    condition: CoreExpr::Variable(ref condition),
+                    condition: CoreExpr::Variable { name: ref condition, .. },
                 } if name == "admin" && condition == "is_active"
             ));
             assert!(matches!(continuation.as_ref(), CoreWorkflow::Done));

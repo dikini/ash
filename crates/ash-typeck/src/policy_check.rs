@@ -18,8 +18,8 @@
 //! use ash_parser::surface::PolicyExpr;
 //!
 //! let expr = PolicyExpr::And(vec![
-//!     PolicyExpr::Var { name: "p1".into(), span: ash_core::ast::Span::default() },
-//!     PolicyExpr::Var { name: "p2".into(), span: ash_core::ast::Span::default() },
+//!     PolicyExpr::Var { name: "p1".into(), span: ash_parser::token::Span::default() },
+//!     PolicyExpr::Var { name: "p2".into(), span: ash_parser::token::Span::default() },
 //! ]);
 //!
 //! let result = infer_policy_expr(&expr, &|name| {
@@ -216,7 +216,7 @@ pub type TypeLookup<'a> = dyn Fn(&Name) -> Result<PolicyType, PolicyTypeError> +
 /// use ash_typeck::policy_check::{infer_policy_expr, PolicyType};
 /// use ash_parser::surface::PolicyExpr;
 ///
-/// let expr = PolicyExpr::Var { name: "p".into(), span: ash_core::ast::Span::default() };
+/// let expr = PolicyExpr::Var { name: "p".into(), span: ash_parser::token::Span::default() };
 /// let result = infer_policy_expr(&expr, &|_| Ok(PolicyType::Policy));
 ///
 /// assert!(result.is_ok());

@@ -13,6 +13,7 @@ use crate::parse_pattern::pattern;
 use crate::parse_receive::parse_receive;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
+use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
     Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter, Pattern,
@@ -22,7 +23,7 @@ use crate::token::Span;
 
 /// Parse a workflow definition: `workflow <name>[(<params>)] [plays role(R)*] [<contract>] { <body> }`
 pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("workflow").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -63,7 +64,7 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     skip_whitespace_and_comments(input);
     let body = delimited(literal_str("{"), workflow, literal_str("}")).parse_next(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(WorkflowDef {
         name: name.into(),
@@ -109,7 +110,7 @@ fn parse_plays_roles(input: &mut ParseInput) -> ModalResult<Vec<RoleRef>> {
 
 /// Parse a single `plays role(R)` clause.
 fn parse_single_plays_role(input: &mut ParseInput) -> ModalResult<RoleRef> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("plays").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -121,7 +122,7 @@ fn parse_single_plays_role(input: &mut ParseInput) -> ModalResult<RoleRef> {
     skip_whitespace_and_comments(input);
     let _ = literal_str(")").parse_next(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(RoleRef {
         name: role_name.into(),
@@ -176,7 +177,7 @@ fn parse_capability_list(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDe
 
 /// Parse a single capability declaration: `name [@ { constraints }]`
 fn parse_capability_decl(input: &mut ParseInput) -> ModalResult<CapabilityDecl> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
@@ -191,7 +192,7 @@ fn parse_capability_decl(input: &mut ParseInput) -> ModalResult<CapabilityDecl> 
         None
     };
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(CapabilityDecl {
         capability: name.into(),
@@ -202,7 +203,7 @@ fn parse_capability_decl(input: &mut ParseInput) -> ModalResult<CapabilityDecl> 
 
 /// Parse a constraint block: `{ field: value, ... }`
 fn parse_constraint_block(input: &mut ParseInput) -> ModalResult<ConstraintBlock> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     skip_whitespace_and_comments(input);
     let _ = literal_str("{").parse_next(input)?;
@@ -213,7 +214,7 @@ fn parse_constraint_block(input: &mut ParseInput) -> ModalResult<ConstraintBlock
     // Check for empty block
     if input.input.starts_with("}") {
         let _ = literal_str("}").parse_next(input)?;
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(ConstraintBlock { fields, span });
     }
 
@@ -237,13 +238,13 @@ fn parse_constraint_block(input: &mut ParseInput) -> ModalResult<ConstraintBlock
     skip_whitespace_and_comments(input);
     let _ = literal_str("}").parse_next(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
     Ok(ConstraintBlock { fields, span })
 }
 
 /// Parse a single constraint field: `name: value`
 fn parse_constraint_field(input: &mut ParseInput) -> ModalResult<ConstraintField> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
@@ -251,7 +252,7 @@ fn parse_constraint_field(input: &mut ParseInput) -> ModalResult<ConstraintField
     skip_whitespace_and_comments(input);
     let value = parse_constraint_value(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(ConstraintField {
         name: name.into(),
@@ -418,7 +419,7 @@ fn parse_constraint_object(input: &mut ParseInput) -> ModalResult<ConstraintValu
 
 /// Parse an integer or identifier (as string).
 fn parse_constraint_int_or_string(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
-    let start = input.state;
+    let start = input.state.pos;
 
     // Try to parse a number (optional minus followed by digits)
     let mut is_negative = false;
@@ -439,7 +440,7 @@ fn parse_constraint_int_or_string(input: &mut ParseInput) -> ModalResult<Constra
     }
 
     // Not a number - backtrack and try identifier
-    input.state = start;
+    input.state.pos = start;
     let name = identifier(input)?;
     Ok(ConstraintValue::String(name.to_string()))
 }
@@ -465,7 +466,7 @@ fn parse_type_params(input: &mut ParseInput) -> ModalResult<Vec<TypeParam>> {
 
     loop {
         skip_whitespace_and_comments(input);
-        let start = input.state;
+        let start = input.state.pos;
         let name = identifier(input)?;
         skip_whitespace_and_comments(input);
 
@@ -479,7 +480,7 @@ fn parse_type_params(input: &mut ParseInput) -> ModalResult<Vec<TypeParam>> {
         params.push(TypeParam {
             name: name.into(),
             bounds,
-            span: span_from(&start, &input.state),
+            span: span_from(&start, &input.state.pos),
         });
 
         skip_whitespace_and_comments(input);
@@ -503,11 +504,11 @@ fn parse_type_params(input: &mut ParseInput) -> ModalResult<Vec<TypeParam>> {
 }
 
 fn parse_interface_bound(input: &mut ParseInput) -> ModalResult<InterfaceBound> {
-    let start = input.state;
+    let start = input.state.pos;
     let interface = identifier(input)?;
     Ok(InterfaceBound {
         interface: interface.into(),
-        span: span_from(&start, &input.state),
+        span: span_from(&start, &input.state.pos),
     })
 }
 
@@ -526,7 +527,7 @@ fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
 
     loop {
         skip_whitespace_and_comments(input);
-        let param_start = input.state;
+        let param_start = input.state.pos;
 
         // Parse parameter name and validate it's not a keyword
         let name = identifier(input)?;
@@ -544,7 +545,7 @@ fn parse_params(input: &mut ParseInput) -> ModalResult<Vec<Parameter>> {
         // Parse type
         let ty = parse_type(input)?;
 
-        let param_span = span_from(&param_start, &input.state);
+        let param_span = span_from(&param_start, &input.state.pos);
         params.push(Parameter {
             name: name.into(),
             ty,
@@ -669,7 +670,7 @@ fn parse_requires_clause(input: &mut ParseInput) -> ModalResult<Requirement> {
 
 /// Parse an ensures clause: `ensures: <expr>`
 fn parse_ensures_clause(input: &mut ParseInput) -> ModalResult<EnsuresClause> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("ensures").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -677,21 +678,21 @@ fn parse_ensures_clause(input: &mut ParseInput) -> ModalResult<EnsuresClause> {
     skip_whitespace_and_comments(input);
 
     let expr = expr(input)?;
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(EnsuresClause { expr, span })
 }
 
 /// Parse a workflow body - sequence of statements separated by semicolons
 pub fn workflow(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse statements
     let stmts = parse_stmt_list(input)?;
 
     if stmts.is_empty() {
         return Ok(Workflow::Done {
-            span: span_from(&start_pos, &input.state),
+            span: span_from(&start_pos, &input.state.pos),
         });
     }
 
@@ -756,7 +757,7 @@ fn is_terminal_stmt(stmt: &Workflow) -> bool {
 ///
 /// Non-binding statements lower via SEQ (SEQ stmt cont)
 fn lower_stmts_to_nested(stmts: &[Workflow], start_pos: Position, input: &ParseInput) -> Workflow {
-    let end_span = span_from(&start_pos, &input.state);
+    let end_span = span_from(&start_pos, &input.state.pos);
 
     // Fold right-associatively: [s1, s2, s3, done] becomes
     // LET/SEQ s1 (LET/SEQ s2 (LET/SEQ s3 Done))
@@ -918,7 +919,7 @@ fn parse_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 ///
 /// Desugars to `Workflow::Let { pattern: Pattern::Variable { name: "name", span: ash_parser::token::Span::default() }, expr: Expr::FnDef { ... } }`.
 fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("fn").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -948,7 +949,7 @@ fn fn_let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     // Body block
     let body = crate::parse_expr::parse_fn_expr_body_pub(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
     let fn_def_span = span;
 
     Ok(Workflow::Let {
@@ -1026,7 +1027,7 @@ fn parse_simple_type_name_wf(input: &mut ParseInput) -> ModalResult<Name> {
 
 /// Parse an observe statement: `observe <capability> [as <pattern>]`
 fn observe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("observe").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1051,7 +1052,7 @@ fn observe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         None
     };
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Observe {
         capability,
@@ -1086,7 +1087,7 @@ fn parse_observe_index(input: &mut ParseInput) -> ModalResult<Box<str>> {
 
 /// Parse an orient statement: `orient <expr> [as <pattern>]`
 fn orient_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("orient").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1099,7 +1100,7 @@ fn orient_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         None
     };
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Orient {
         expr: e,
@@ -1111,7 +1112,7 @@ fn orient_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a propose statement: `propose <action> [as <pattern>]`
 fn propose_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("propose").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1124,7 +1125,7 @@ fn propose_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         None
     };
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Propose {
         action,
@@ -1141,7 +1142,7 @@ fn receive_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a decide statement: `decide { <expr> } under <policy> then <workflow>`
 fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("decide").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1157,7 +1158,7 @@ fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let _ = keyword("then").parse_next(input)?;
     let then_branch = Box::new(parse_single_stmt_or_block(input)?);
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Decide {
         expr: e,
@@ -1170,13 +1171,13 @@ fn decide_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse an oblige statement: `oblige <obligation>`
 fn oblige_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("oblige").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let obligation = identifier(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Oblige {
         obligation: obligation.into(),
@@ -1186,13 +1187,13 @@ fn oblige_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a check statement: `check <obligation>`
 fn check_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("check").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let target = obligation_ref(input).map(CheckTarget::Obligation)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Check {
         target,
@@ -1203,7 +1204,7 @@ fn check_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse an act statement: `act <action> [where <guard>] [as <name>] [then <workflow>]`
 fn act_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("act").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1231,7 +1232,7 @@ fn act_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         None
     };
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Act {
         action,
@@ -1247,7 +1248,7 @@ fn act_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 /// Also handles sugar: `let <name> = <action_ref>` desugars to
 /// `act <action_ref> as <name>` (SurfaceWorkflow::Act).
 fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("let").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1261,7 +1262,7 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     // EOF, semicolon, or a keyword). Otherwise it could be a normal expression
     // like `items[0]` where action_ref would incorrectly consume just `items`.
     skip_whitespace_and_comments(input);
-    let checkpoint = *input;
+    let checkpoint = input.clone();
     if let Ok(action) = action_ref(input) {
         if let crate::surface::Pattern::Variable { ref name, .. } = pat {
             // Verify what follows is a statement boundary, not an expression continuation.
@@ -1275,7 +1276,7 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
                 || starts_with_keyword(input, "else");
 
             if next_is_boundary {
-                let span = span_from(&start_pos, &input.state);
+                let span = span_from(&start_pos, &input.state.pos);
                 return Ok(Workflow::Act {
                     action,
                     guard: None,
@@ -1296,7 +1297,7 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
     let e = expr(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Let {
         pattern: pat,
@@ -1308,7 +1309,7 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse an if statement: `if <expr> then <workflow> [else <workflow>]`
 fn if_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("if").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1322,7 +1323,7 @@ fn if_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
         None
     };
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::If {
         condition,
@@ -1334,7 +1335,7 @@ fn if_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a for statement: `for <pattern> in <expr> do <workflow>`
 fn for_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("for").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1344,7 +1345,7 @@ fn for_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let _ = keyword("do").parse_next(input)?;
     let body = Box::new(parse_single_stmt_or_block(input)?);
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::For {
         pattern: pat,
@@ -1356,7 +1357,7 @@ fn for_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a with statement: `with <capability> do <workflow>`
 fn with_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("with").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1364,7 +1365,7 @@ fn with_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let _ = keyword("do").parse_next(input)?;
     let body = Box::new(parse_single_stmt_or_block(input)?);
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::With {
         capability: capability.into(),
@@ -1375,7 +1376,7 @@ fn with_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a maybe statement: `maybe <workflow> else <workflow>`
 fn maybe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("maybe").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1383,7 +1384,7 @@ fn maybe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     let _ = keyword("else").parse_next(input)?;
     let fallback = Box::new(parse_single_stmt_or_block(input)?);
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Maybe {
         primary,
@@ -1394,46 +1395,46 @@ fn maybe_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a must statement: `must <workflow>`
 fn must_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("must").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let body = Box::new(parse_single_stmt_or_block(input)?);
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Must { body, span })
 }
 
 /// Parse a done statement: `done`
 fn done_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("done").parse_next(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Done { span })
 }
 
 /// Parse a ret statement: `ret <expr>;`
 fn ret_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("ret").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let e = expr(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Ret { expr: e, span })
 }
 
 /// Parse a set statement in a workflow: `set capability:channel = expr`
 fn set_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_span = input.state;
+    let start_span = input.state.pos;
     let set_expr = parse_set(input)?;
-    let span = span_from(&start_span, &input.state);
+    let span = span_from(&start_span, &input.state.pos);
 
     Ok(Workflow::Set {
         capability: set_expr.capability,
@@ -1446,9 +1447,9 @@ fn set_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
 
 /// Parse a send statement in a workflow: `send capability:channel expr`
 fn send_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_span = input.state;
+    let start_span = input.state.pos;
     let send_expr = parse_send(input)?;
-    let span = span_from(&start_span, &input.state);
+    let span = span_from(&start_span, &input.state.pos);
 
     Ok(Workflow::Send {
         capability: send_expr.capability,
@@ -1676,41 +1677,6 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
                 winnow::error::ContextError::new(),
             ))
         }
-    }
-}
-
-/// Skip whitespace and comments.
-fn skip_whitespace_and_comments(input: &mut ParseInput) {
-    loop {
-        // Skip whitespace
-        let _: ModalResult<&str> =
-            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
-
-        // Check for line comment
-        if input.input.starts_with("--") {
-            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
-            continue;
-        }
-
-        // Check for block comment
-        if input.input.starts_with("/*") {
-            let _ = input.input.next_slice(2);
-            let mut depth = 1;
-            while depth > 0 && !input.input.is_empty() {
-                if input.input.starts_with("/*") {
-                    let _ = input.input.next_slice(2);
-                    depth += 1;
-                } else if input.input.starts_with("*/") {
-                    let _ = input.input.next_slice(2);
-                    depth -= 1;
-                } else {
-                    let _ = input.input.next_token();
-                }
-            }
-            continue;
-        }
-
-        break;
     }
 }
 

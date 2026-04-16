@@ -32,6 +32,7 @@ use winnow::token::take_while;
 
 use crate::input::{ParseInput, Position};
 use crate::parse_expr::expr as parse_expr_value;
+use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{Expr, Name, PolicyExpr};
 use crate::token::Span;
 
@@ -52,7 +53,7 @@ pub fn policy_expr(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
 
 /// Parse a policy OR expression: left | right
 fn policy_or(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let mut exprs = vec![policy_and(input)?];
 
     while policy_ws(literal_str("|")).parse_next(input).is_ok() {
@@ -62,14 +63,14 @@ fn policy_or(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     if exprs.len() == 1 {
         Ok(exprs.into_iter().next().unwrap())
     } else {
-        let _span = span_from(&start_pos, &input.state);
+        let _span = span_from(&start_pos, &input.state.pos);
         Ok(PolicyExpr::Or(exprs))
     }
 }
 
 /// Parse a policy AND expression: left & right
 fn policy_and(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let mut exprs = vec![policy_seq(input)?];
 
     while policy_ws(literal_str("&")).parse_next(input).is_ok() {
@@ -79,14 +80,14 @@ fn policy_and(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     if exprs.len() == 1 {
         Ok(exprs.into_iter().next().unwrap())
     } else {
-        let _span = span_from(&start_pos, &input.state);
+        let _span = span_from(&start_pos, &input.state.pos);
         Ok(PolicyExpr::And(exprs))
     }
 }
 
 /// Parse a policy sequential expression: left >> right
 fn policy_seq(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let mut exprs = vec![policy_unary(input)?];
 
     while policy_ws(literal_str(">>")).parse_next(input).is_ok() {
@@ -96,14 +97,14 @@ fn policy_seq(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
     if exprs.len() == 1 {
         Ok(exprs.into_iter().next().unwrap())
     } else {
-        let _span = span_from(&start_pos, &input.state);
+        let _span = span_from(&start_pos, &input.state.pos);
         Ok(PolicyExpr::Sequential(exprs))
     }
 }
 
 /// Parse a policy unary expression: !expr, forall, exists, or primary
 fn policy_unary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Try negation: !expr
     if policy_ws(literal_str("!")).parse_next(input).is_ok() {
@@ -134,7 +135,7 @@ fn parse_forall(input: &mut ParseInput, start_pos: &Position) -> ModalResult<Pol
     let body = Box::new(policy_expr(input)?);
     let _ = policy_ws(literal_str(")")).parse_next(input)?;
 
-    let span = span_from(start_pos, &input.state);
+    let span = span_from(start_pos, &input.state.pos);
     Ok(PolicyExpr::ForAll {
         var,
         items,
@@ -153,7 +154,7 @@ fn parse_exists(input: &mut ParseInput, start_pos: &Position) -> ModalResult<Pol
     let body = Box::new(policy_expr(input)?);
     let _ = policy_ws(literal_str(")")).parse_next(input)?;
 
-    let span = span_from(start_pos, &input.state);
+    let span = span_from(start_pos, &input.state.pos);
     Ok(PolicyExpr::Exists {
         var,
         items,
@@ -164,7 +165,7 @@ fn parse_exists(input: &mut ParseInput, start_pos: &Position) -> ModalResult<Pol
 
 /// Parse a policy primary expression: identifier, call, or parenthesized
 fn policy_primary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Try parenthesized expression first
     if let Ok(expr) = delimited(
@@ -190,7 +191,7 @@ fn policy_primary(input: &mut ParseInput) -> ModalResult<PolicyExpr> {
             let _ = policy_ws(literal_str(")")).parse_next(input)?;
             args
         };
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         let mut expr = PolicyExpr::Call {
             func: name_str,
             args,
@@ -237,7 +238,7 @@ fn parse_method_chain(
                 vec![]
             };
 
-            let span = span_from(start_pos, &input.state);
+            let span = span_from(start_pos, &input.state.pos);
             receiver = PolicyExpr::MethodCall {
                 receiver: Box::new(receiver),
                 method,
@@ -292,7 +293,7 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
 fn policy_keyword<'a>(word: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult<&'a str> {
     move |input: &mut ParseInput<'a>| {
         skip_whitespace_and_comments(input);
-        let _start = input.state;
+        let _start = input.state.pos;
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
@@ -322,41 +323,6 @@ where
         let result = parser(input)?;
         skip_whitespace_and_comments(input);
         Ok(result)
-    }
-}
-
-/// Skip whitespace and comments.
-fn skip_whitespace_and_comments(input: &mut ParseInput) {
-    loop {
-        // Skip whitespace
-        let _: ModalResult<&str> =
-            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
-
-        // Check for line comment
-        if input.input.starts_with("--") {
-            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
-            continue;
-        }
-
-        // Check for block comment
-        if input.input.starts_with("/*") {
-            let _ = input.input.next_slice(2);
-            let mut depth = 1;
-            while depth > 0 && !input.input.is_empty() {
-                if input.input.starts_with("/*") {
-                    let _ = input.input.next_slice(2);
-                    depth += 1;
-                } else if input.input.starts_with("*/") {
-                    let _ = input.input.next_slice(2);
-                    depth -= 1;
-                } else {
-                    let _ = input.input.next_token();
-                }
-            }
-            continue;
-        }
-
-        break;
     }
 }
 

@@ -11,8 +11,9 @@ use crate::combinators::keyword;
 use crate::input::{ParseInput, update_position};
 use crate::module::{ModuleDecl, ModuleSource};
 use crate::parse_expr::expr;
+use crate::parse_utils::skip_whitespace_and_comments;
 use crate::parse_visibility::parse_visibility;
-use crate::parse_workflow::parse_capabilities_clause;
+use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
 use crate::surface::{
     AssociatedTypeBinding, AssociatedTypeDecl, BlockStmt, CapabilityDef, CapabilityRef, Constraint,
     Contract, Definition, EffectType, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
@@ -40,7 +41,7 @@ use crate::surface::{
 pub fn parse_module_decl(input: &mut ParseInput) -> ModalResult<ModuleDecl> {
     // Parse optional visibility modifier
     skip_whitespace(input);
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let visibility = parse_visibility(input)?;
     skip_whitespace(input);
 
@@ -62,7 +63,7 @@ pub fn parse_module_decl(input: &mut ParseInput) -> ModalResult<ModuleDecl> {
         ModuleSource::Inline(definitions)
     };
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
 
     Ok(ModuleDecl {
         name: name.into(),
@@ -157,7 +158,7 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
 }
 
 fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse optional visibility modifier before "capability" keyword
     let visibility = parse_visibility(input)?;
@@ -194,12 +195,12 @@ fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition
         constraints,
         target_provider: None,
         target_action: None,
-        span: crate::input::span_from(&start_pos, &input.state),
+        span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
 }
 
 fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("role").parse_next(input)?;
     skip_whitespace(input);
@@ -229,12 +230,12 @@ fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         name: name.into(),
         capabilities,
         obligations,
-        span: crate::input::span_from(&start_pos, &input.state),
+        span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
 }
 
 fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let visibility = parse_visibility(input)?;
     skip_whitespace(input);
     let _ = keyword("interface").parse_next(input)?;
@@ -267,12 +268,12 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
         type_params,
         associated_types,
         methods,
-        span: crate::input::span_from(&start_pos, &input.state),
+        span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
 }
 
 fn parse_associated_type_decl(input: &mut ParseInput) -> ModalResult<AssociatedTypeDecl> {
-    let start = input.state;
+    let start = input.state.pos;
     let _ = keyword("type").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
@@ -280,12 +281,12 @@ fn parse_associated_type_decl(input: &mut ParseInput) -> ModalResult<AssociatedT
     let _ = literal_str(";").parse_next(input)?;
     Ok(AssociatedTypeDecl {
         name: name.into(),
-        span: crate::input::span_from(&start, &input.state),
+        span: crate::input::span_from(&start, &input.state.pos),
     })
 }
 
 fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<InterfaceMethodSig> {
-    let start = input.state;
+    let start = input.state.pos;
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
     let _ = literal_str("(").parse_next(input)?;
@@ -312,12 +313,12 @@ fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<Inter
         name: name.into(),
         params,
         return_type,
-        span: crate::input::span_from(&start, &input.state),
+        span: crate::input::span_from(&start, &input.state.pos),
     })
 }
 
 fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let visibility = parse_visibility(input)?;
     skip_whitespace(input);
     let _ = keyword("impl").parse_next(input)?;
@@ -360,7 +361,7 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         where_bounds,
         associated_type_bindings,
         methods,
-        span: crate::input::span_from(&start_pos, &input.state),
+        span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
 }
 
@@ -370,7 +371,7 @@ fn parse_where_bounds(input: &mut ParseInput) -> ModalResult<Vec<WhereBound>> {
 
     let mut bounds = Vec::new();
     loop {
-        let start = input.state;
+        let start = input.state.pos;
         let param = identifier(input)?;
         skip_whitespace_and_comments(input);
         let _ = literal_str(":").parse_next(input)?;
@@ -379,7 +380,7 @@ fn parse_where_bounds(input: &mut ParseInput) -> ModalResult<Vec<WhereBound>> {
         bounds.push(WhereBound {
             param: param.into(),
             bound: bound.into(),
-            span: crate::input::span_from(&start, &input.state),
+            span: crate::input::span_from(&start, &input.state.pos),
         });
         skip_whitespace_and_comments(input);
         if consume_comma_separator(input) {
@@ -391,7 +392,7 @@ fn parse_where_bounds(input: &mut ParseInput) -> ModalResult<Vec<WhereBound>> {
 }
 
 fn parse_associated_type_binding(input: &mut ParseInput) -> ModalResult<AssociatedTypeBinding> {
-    let start = input.state;
+    let start = input.state.pos;
     let _ = keyword("type").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
@@ -404,12 +405,12 @@ fn parse_associated_type_binding(input: &mut ParseInput) -> ModalResult<Associat
     Ok(AssociatedTypeBinding {
         name: name.into(),
         ty,
-        span: crate::input::span_from(&start, &input.state),
+        span: crate::input::span_from(&start, &input.state.pos),
     })
 }
 
 fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMethodDef> {
-    let start = input.state;
+    let start = input.state.pos;
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
     let _ = literal_str("(").parse_next(input)?;
@@ -436,7 +437,7 @@ fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMetho
         name: name.into(),
         params,
         body,
-        span: crate::input::span_from(&start, &input.state),
+        span: crate::input::span_from(&start, &input.state.pos),
     })
 }
 
@@ -884,50 +885,6 @@ fn skip_whitespace(input: &mut ParseInput) {
     }
 }
 
-fn skip_whitespace_and_comments(input: &mut ParseInput) {
-    loop {
-        // Skip whitespace
-        skip_whitespace(input);
-
-        // Check for line comment
-        if input.input.starts_with("--") {
-            while let Some(c) = input.input.next_token() {
-                input.state.advance(c);
-                if c == '\n' {
-                    break;
-                }
-            }
-            continue;
-        }
-
-        // Check for block comment
-        if input.input.starts_with("/*") {
-            let _ = input.input.next_slice(2);
-            update_position(&mut input.state, "/*");
-            let mut depth = 1;
-            while depth > 0 && !input.input.is_empty() {
-                if input.input.starts_with("/*") {
-                    let _ = input.input.next_slice(2);
-                    update_position(&mut input.state, "/*");
-                    depth += 1;
-                } else if input.input.starts_with("*/") {
-                    let _ = input.input.next_slice(2);
-                    update_position(&mut input.state, "*/");
-                    depth -= 1;
-                } else {
-                    let Some(c) = input.input.next_token() else {
-                        break;
-                    };
-                    input.state.advance(c);
-                }
-            }
-            continue;
-        }
-
-        break;
-    }
-}
-
 /// Parse a proxy definition.
 ///
 /// Syntax: `proxy <name> handles role(<role_name>) [observes cap, ...] [receives cap, ...] { <body> }`
@@ -937,7 +894,7 @@ pub fn proxy_def(input: &mut ParseInput) -> ModalResult<ProxyDef> {
 
 /// Internal implementation of proxy definition parsing.
 fn parse_proxy_definition_inner(input: &mut ParseInput) -> ModalResult<ProxyDef> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse optional visibility modifier
     let visibility = parse_visibility(input)?;
@@ -981,7 +938,7 @@ fn parse_proxy_definition_inner(input: &mut ParseInput) -> ModalResult<ProxyDef>
     // Parse body
     let body = delimited(literal_str("{"), parse_proxy_body, literal_str("}")).parse_next(input)?;
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
 
     Ok(ProxyDef {
         visibility,
@@ -1073,7 +1030,7 @@ fn parse_proxy_body(input: &mut ParseInput) -> ModalResult<Workflow> {
 ///
 /// Syntax: `yield role(<role_name>) <expression> resume <var> : <Type> { <arms> }`
 pub fn parse_yield(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("yield").parse_next(input)?;
     skip_whitespace(input);
@@ -1103,7 +1060,7 @@ pub fn parse_yield(input: &mut ParseInput) -> ModalResult<Workflow> {
     // Parse match arms
     let arms = delimited(literal_str("{"), parse_yield_arms, literal_str("}")).parse_next(input)?;
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Yield {
         role: role.into(),
@@ -1126,7 +1083,7 @@ fn parse_yield_arms(input: &mut ParseInput) -> ModalResult<Vec<YieldArm>> {
             break;
         }
 
-        let arm_start = input.state;
+        let arm_start = input.state.pos;
 
         // Parse pattern
         let pattern = crate::parse_pattern::pattern(input)?;
@@ -1139,7 +1096,7 @@ fn parse_yield_arms(input: &mut ParseInput) -> ModalResult<Vec<YieldArm>> {
         // Parse body (either a block or single statement)
         let body = crate::parse_workflow::parse_single_stmt_or_block(input)?;
 
-        let arm_span = crate::input::span_from(&arm_start, &input.state);
+        let arm_span = crate::input::span_from(&arm_start, &input.state.pos);
         arms.push(YieldArm {
             pattern,
             body,
@@ -1161,7 +1118,7 @@ fn parse_yield_arms(input: &mut ParseInput) -> ModalResult<Vec<YieldArm>> {
 ///
 /// Syntax: `resume <expression> : <Type>`
 pub fn parse_resume(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     let _ = keyword("resume").parse_next(input)?;
     skip_whitespace(input);
@@ -1175,7 +1132,7 @@ pub fn parse_resume(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace(input);
     let ty = parse_surface_type(input)?;
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Resume { expr, ty, span })
 }
@@ -1188,7 +1145,7 @@ pub fn parse_resume(input: &mut ParseInput) -> ModalResult<Workflow> {
 ///
 /// Syntax: `[pub] fn <name>[<T, U>](<params>) [-> <return_type>] [requires: ...] [ensures: ...] { <body> }`
 pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse optional visibility modifier
     let visibility = parse_visibility(input)?;
@@ -1229,7 +1186,7 @@ pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     // Parse block body { ... }
     let body = parse_fn_body(input)?;
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
 
     Ok(Definition::Function(FnDef {
         visibility,
@@ -1264,7 +1221,7 @@ fn parse_fn_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
     }
 
     while starts_with_keyword(input, "ensures") {
-        let clause_start = input.state;
+        let clause_start = input.state.pos;
         let _ = keyword("ensures").parse_next(input)?;
         skip_whitespace_and_comments(input);
         let _ = literal_str(":").parse_next(input)?;
@@ -1276,7 +1233,7 @@ fn parse_fn_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
                 .into_iter()
                 .map(|expr| crate::surface::EnsuresClause {
                     expr,
-                    span: crate::input::span_from(&clause_start, &input.state),
+                    span: crate::input::span_from(&clause_start, &input.state.pos),
                 }),
         );
         skip_whitespace_and_comments(input);
@@ -1372,7 +1329,7 @@ fn parse_simple_type_name_local(input: &mut ParseInput) -> ModalResult<Name> {
 
 /// Parse a block expression: `{ [let pat = expr;]* [tail_expr] }`
 fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
@@ -1385,7 +1342,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         // Check for closing brace
         if input.input.starts_with("}") {
             let _ = literal_str("}").parse_next(input)?;
-            let span = crate::input::span_from(&start_pos, &input.state);
+            let span = crate::input::span_from(&start_pos, &input.state.pos);
             return Ok(Expr::Block {
                 statements,
                 tail_expr: None,
@@ -1395,7 +1352,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
         // Try to parse `let` binding
         if starts_with_keyword(input, "let") {
-            let stmt_start = input.state;
+            let stmt_start = input.state.pos;
             let _ = keyword("let").parse_next(input)?;
             skip_whitespace_and_comments(input);
             let pat = crate::parse_pattern::pattern(input)?;
@@ -1409,7 +1366,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                 let _ = input.input.next_slice(1);
                 input.state.advance(';');
             }
-            let stmt_span = crate::input::span_from(&stmt_start, &input.state);
+            let stmt_span = crate::input::span_from(&stmt_start, &input.state.pos);
             statements.push(BlockStmt::Let {
                 pattern: pat,
                 expr: let_expr,
@@ -1421,7 +1378,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         // Try to parse a named local fn: `fn name(params) [-> type] { body }`
         // This desugars to BlockStmt::Let { pattern: Variable("name"), expr: FnDef { ... } }
         if starts_with_keyword(input, "fn") {
-            let stmt_start = input.state;
+            let stmt_start = input.state.pos;
             let _ = keyword("fn").parse_next(input)?;
             skip_whitespace_and_comments(input);
             let fn_name: Name = identifier(input)?.into();
@@ -1446,7 +1403,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                 let _ = input.input.next_slice(1);
                 input.state.advance(';');
             }
-            let stmt_span = crate::input::span_from(&stmt_start, &input.state);
+            let stmt_span = crate::input::span_from(&stmt_start, &input.state.pos);
             statements.push(BlockStmt::Let {
                 pattern: Pattern::Variable {
                     name: fn_name,
@@ -1472,7 +1429,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     // Parse tail expression
     if input.input.starts_with("}") {
         let _ = literal_str("}").parse_next(input)?;
-        let span = crate::input::span_from(&start_pos, &input.state);
+        let span = crate::input::span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Block {
             statements,
             tail_expr: None,
@@ -1484,7 +1441,7 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
     let _ = literal_str("}").parse_next(input)?;
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
     Ok(Expr::Block {
         statements,
         tail_expr: Some(Box::new(tail_expr)),
@@ -1520,7 +1477,7 @@ fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse a value-producing if expression: `if condition then then_branch [else else_branch]`
 fn parse_fn_if_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let _ = keyword("if").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
@@ -1541,7 +1498,7 @@ fn parse_fn_if_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         None
     };
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
     Ok(Expr::If {
         condition: Box::new(condition),
         then_branch: Box::new(then_branch),
@@ -1677,7 +1634,7 @@ fn try_parse_bin_op(input: &mut ParseInput) -> Option<crate::surface::BinaryOp> 
 
 /// Parse a match expression: `match scrutinee { pattern => expr [, ...] }`
 fn parse_fn_match_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let _ = keyword("match").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
@@ -1694,13 +1651,13 @@ fn parse_fn_match_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
     let mut arms = Vec::new();
     while !input.input.starts_with("}") {
-        let arm_start = input.state;
+        let arm_start = input.state.pos;
         let pat = crate::parse_pattern::pattern(input)?;
         skip_whitespace_and_comments(input);
         let _ = literal_str("=>").parse_next(input)?;
         skip_whitespace_and_comments(input);
         let body = parse_fn_block_or_expr(input)?;
-        let arm_span = crate::input::span_from(&arm_start, &input.state);
+        let arm_span = crate::input::span_from(&arm_start, &input.state.pos);
         arms.push(MatchArm {
             pattern: pat,
             body: Box::new(body),
@@ -1716,7 +1673,7 @@ fn parse_fn_match_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     let _ = literal_str("}").parse_next(input)?;
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
     Ok(Expr::Match {
         scrutinee: Box::new(scrutinee),
         arms,
@@ -1726,14 +1683,14 @@ fn parse_fn_match_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse a panic expression: `panic "message"`
 fn parse_panic_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let _ = keyword("panic").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
     // Parse string literal for the message
     let message = parse_panic_string(input)?;
 
-    let span = crate::input::span_from(&start_pos, &input.state);
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
     Ok(Expr::Panic { message, span })
 }
 
@@ -1766,6 +1723,82 @@ fn parse_fn_block_or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     } else {
         parse_fn_expr(input)
     }
+}
+
+/// Parse a complete `.ash` source file into a `ModuleFile`.
+pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::ModuleFile> {
+    let start_pos = input.state.pos;
+    let mut definitions = Vec::new();
+    let mut module_decls = Vec::new();
+    let mut workflow = None;
+
+    loop {
+        skip_whitespace_and_comments(input);
+        if input.input.is_empty() {
+            break;
+        }
+
+        if starts_with_visible_keyword(input, "workflow") {
+            let w = workflow_def(input)?;
+            workflow = Some(w);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "mod") {
+            let decl = parse_module_decl(input)?;
+            module_decls.push(decl);
+            continue;
+        }
+
+        if starts_with_keyword(input, "role") {
+            definitions.push(parse_role_definition(input)?);
+            continue;
+        }
+
+        if starts_with_keyword(input, "capability") {
+            definitions.push(parse_capability_definition(input)?);
+            continue;
+        }
+
+        if starts_with_keyword(input, "proxy") {
+            definitions.push(parse_proxy_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "interface") {
+            definitions.push(parse_interface_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "impl") {
+            definitions.push(parse_impl_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "fn") {
+            definitions.push(parse_fn_definition(input)?);
+            continue;
+        }
+
+        // Unknown item: try to skip past it to avoid infinite loop
+        skip_unknown_definition(input);
+        if input.input.is_empty() {
+            break;
+        }
+        if input.input.starts_with(";") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(';');
+        }
+    }
+
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
+    Ok(crate::surface::ModuleFile {
+        definitions,
+        module_decls,
+        workflow,
+        span,
+        comments: crate::parse_utils::CommentTable::default(),
+    })
 }
 
 #[cfg(test)]

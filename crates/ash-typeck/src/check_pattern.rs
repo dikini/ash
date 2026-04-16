@@ -135,7 +135,7 @@ impl TypeEnv {
 /// use ash_parser::surface::Pattern;
 ///
 /// let env = TypeEnv::new();
-/// let pattern = Pattern::Variable { name: "x".into(), span: ash_core::ast::Span::default() };
+/// let pattern = Pattern::Variable { name: "x".into(), span: ash_parser::token::Span::default() };
 /// let expected = Type::Int;
 ///
 /// let bindings = check_pattern(&env, &pattern, &expected).unwrap();

@@ -12,6 +12,7 @@ use winnow::stream::Stream;
 use winnow::token::take_while;
 
 use crate::input::ParseInput;
+use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{Literal, Name, Pattern, VariantPatternPayload};
 use crate::token::Span;
 
@@ -102,8 +103,8 @@ pub fn pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
 /// - `Some { value: x }` (record variant)
 /// - `RuntimeError(code, msg)` (tuple variant)
 fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
-    let start_pos = input.state;
-    let checkpoint = *input;
+    let start_pos = input.state.pos;
+    let checkpoint = input.clone();
 
     // Try to parse an identifier (variant name)
     let name = match identifier(input) {
@@ -130,7 +131,7 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
             }
         };
 
-        let _span = span_from(&start_pos, &input.state);
+        let _span = span_from(&start_pos, &input.state.pos);
         return Ok(Pattern::Variant {
             name: name.into(),
             fields: Some(fields.clone()),
@@ -142,7 +143,7 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
         let items = parse_variant_tuple_items(input)
             .map_err(|_| winnow::error::ErrMode::Cut(winnow::error::ContextError::new()))?;
 
-        let _span = span_from(&start_pos, &input.state);
+        let _span = span_from(&start_pos, &input.state.pos);
         return Ok(Pattern::Variant {
             name: name.into(),
             fields: None,
@@ -156,7 +157,7 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     let is_uppercase_leading = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
 
     if is_uppercase_leading {
-        let _span = span_from(&start_pos, &input.state);
+        let _span = span_from(&start_pos, &input.state.pos);
         Ok(Pattern::Variant {
             name: name.into(),
             fields: None,
@@ -173,7 +174,7 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
 
 fn parse_variant_tuple_items(input: &mut ParseInput) -> ModalResult<Vec<Pattern>> {
     let _ = literal_str("(").parse_next(input)?;
-    let checkpoint = *input;
+    let checkpoint = input.clone();
     let items = match parse_pattern_list(input) {
         Ok(items) => items,
         Err(err) => {
@@ -266,8 +267,8 @@ fn parse_record_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     // We distinguish from variant pattern by checking if the first field
     // looks like a field binding rather than a variant constructor
 
-    let start_pos = input.state;
-    let checkpoint = *input;
+    let start_pos = input.state.pos;
+    let checkpoint = input.clone();
 
     // Must start with `{`
     if literal_str("{").parse_next(input).is_err() {
@@ -338,7 +339,7 @@ fn parse_record_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     }
 
     // Success - this is a record pattern
-    let _span = span_from(&start_pos, &input.state);
+    let _span = span_from(&start_pos, &input.state.pos);
     Ok(Pattern::Record(fields))
 }
 
@@ -572,41 +573,6 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
                 winnow::error::ContextError::new(),
             ))
         }
-    }
-}
-
-/// Skip whitespace and comments.
-fn skip_whitespace_and_comments(input: &mut ParseInput) {
-    loop {
-        // Skip whitespace
-        let _: ModalResult<&str> =
-            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
-
-        // Check for line comment
-        if input.input.starts_with("--") {
-            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
-            continue;
-        }
-
-        // Check for block comment
-        if input.input.starts_with("/*") {
-            let _ = input.input.next_slice(2);
-            let mut depth = 1;
-            while depth > 0 && !input.input.is_empty() {
-                if input.input.starts_with("/*") {
-                    let _ = input.input.next_slice(2);
-                    depth += 1;
-                } else if input.input.starts_with("*/") {
-                    let _ = input.input.next_slice(2);
-                    depth -= 1;
-                } else {
-                    let _ = input.input.next_token();
-                }
-            }
-            continue;
-        }
-
-        break;
     }
 }
 

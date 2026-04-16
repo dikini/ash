@@ -60,6 +60,8 @@ pub struct ModuleFile {
     pub workflow: Option<WorkflowDef>,
     /// Source span covering the entire file
     pub span: Span,
+    /// Captured comment trivia.
+    pub comments: crate::parse_utils::CommentTable,
 }
 
 /// A top-level definition.

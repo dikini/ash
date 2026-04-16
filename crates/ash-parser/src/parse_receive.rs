@@ -22,7 +22,7 @@ use crate::token::Span;
 /// Grammar:
 ///   receive `[control]` `[wait [DURATION]]` { ARM [, ARM]* }
 pub fn parse_receive(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse "receive" keyword
     keyword("receive").parse_next(input)?;
@@ -51,7 +51,7 @@ pub fn parse_receive(input: &mut ParseInput) -> ModalResult<Workflow> {
     let arms =
         delimited(literal_str("{"), parse_receive_arms, literal_str("}")).parse_next(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Workflow::Receive {
         mode,
@@ -97,7 +97,7 @@ fn parse_receive_arms(input: &mut ParseInput) -> ModalResult<Vec<ReceiveArm>> {
 /// Grammar:
 ///   PATTERN [if EXPR] => WORKFLOW
 fn parse_receive_arm(input: &mut ParseInput) -> ModalResult<ReceiveArm> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse stream pattern
     let pattern = parse_stream_pattern(input)?;
@@ -120,7 +120,7 @@ fn parse_receive_arm(input: &mut ParseInput) -> ModalResult<ReceiveArm> {
     // Body workflow
     let body = parse_single_stmt_or_block(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(ReceiveArm {
         pattern,

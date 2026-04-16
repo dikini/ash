@@ -9,6 +9,7 @@ use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
 use crate::parse_pattern::pattern;
+use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     BinaryOp, BlockStmt, ConstructorPayload, Expr, Literal, Name, Pattern, UnaryOp,
 };
@@ -39,7 +40,7 @@ pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
 /// Params are `(name, optional_type_annotation)` pairs.
 /// This does NOT parse named fn definitions — those are handled at item level.
 pub fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Must start with "fn" keyword
     let _ = keyword("fn").parse_next(input)?;
@@ -47,7 +48,7 @@ pub fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     // If the next non-whitespace token is an identifier, this is a named fn —
     // not an anonymous fn expression. Bail out so the caller can handle it.
     // We peek without consuming.
-    let saved = *input;
+    let saved = input.clone();
     skip_whitespace_and_comments(input);
     if identifier(input).is_ok() {
         // This is `fn name(...)` — restore and reject so named-fn parsers can handle it.
@@ -80,7 +81,7 @@ pub fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     // Body block: { ... }
     let body = parse_fn_expr_body(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Expr::FnDef {
         params,
@@ -98,8 +99,8 @@ pub fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 ///
 /// No return-type annotation in the closure shorthand — use `fn(x: T) -> R { }` for that.
 pub(crate) fn parse_closure_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
-    let saved = *input;
+    let start_pos = input.state.pos;
+    let saved = input.clone();
 
     // Must start with `|`
     skip_whitespace_and_comments(input);
@@ -138,7 +139,7 @@ pub(crate) fn parse_closure_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
     // Body: a single expression (not a block — that's what makes this a shorthand)
     let body = expr(input)?;
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Expr::FnDef {
         params,
@@ -268,7 +269,7 @@ pub fn parse_fn_expr_body_pub(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
@@ -279,7 +280,7 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
 
         if input.input.starts_with("}") {
             let _ = literal_str("}").parse_next(input)?;
-            let span = span_from(&start_pos, &input.state);
+            let span = span_from(&start_pos, &input.state.pos);
             return Ok(Expr::Block {
                 statements,
                 tail_expr: None,
@@ -289,7 +290,7 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
 
         // Try `let pat = expr;`
         if keyword("let").parse_next(input).is_ok() {
-            let stmt_start = input.state;
+            let stmt_start = input.state.pos;
             skip_whitespace_and_comments(input);
             let pat = pattern(input)?;
             skip_whitespace_and_comments(input);
@@ -311,7 +312,7 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
 
         // Try `fn name(params) { body }` as a named local fn (desugars to let)
         if keyword("fn").parse_next(input).is_ok() {
-            let stmt_start = input.state;
+            let stmt_start = input.state.pos;
             skip_whitespace_and_comments(input);
             let name: Name = identifier(input)?.into();
             skip_whitespace_and_comments(input);
@@ -360,7 +361,7 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
 
     if input.input.starts_with("}") {
         let _ = literal_str("}").parse_next(input)?;
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Block {
             statements,
             tail_expr: None,
@@ -372,7 +373,7 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
     let _ = literal_str("}").parse_next(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
     Ok(Expr::Block {
         statements,
         tail_expr: Some(Box::new(tail_expr)),
@@ -382,7 +383,7 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse a ternary expression: condition ? then : else
 fn ternary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let _start_pos = input.state;
+    let _start_pos = input.state.pos;
     let condition = or_expr(input)?;
 
     // Check for ternary operator
@@ -403,7 +404,7 @@ fn ternary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 ///
 /// Example: `if let Some { value: x } = opt then { x } else { 0 }`
 pub fn parse_if_let_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Match "if let"
     let _ = keyword("if").parse_next(input)?;
@@ -435,7 +436,7 @@ pub fn parse_if_let_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     // Parse else branch (block or expression)
     let else_branch = Box::new(parse_block_or_expr(input)?);
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Expr::IfLet {
         pattern: pat,
@@ -500,13 +501,13 @@ fn parse_block_or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse logical OR expressions: left || right
 pub(crate) fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let mut left = and_expr(input)?;
 
     loop {
         if opt(literal_str("||")).parse_next(input)?.is_some() {
             let right = and_expr(input)?;
-            let span = span_from(&start_pos, &input.state);
+            let span = span_from(&start_pos, &input.state.pos);
             left = Expr::Binary {
                 op: BinaryOp::Or,
                 left: Box::new(left),
@@ -523,13 +524,13 @@ pub(crate) fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse logical AND expressions: left && right
 fn and_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let mut left = in_expr(input)?;
 
     loop {
         if opt(literal_str("&&")).parse_next(input)?.is_some() {
             let right = in_expr(input)?;
-            let span = span_from(&start_pos, &input.state);
+            let span = span_from(&start_pos, &input.state.pos);
             left = Expr::Binary {
                 op: BinaryOp::And,
                 left: Box::new(left),
@@ -546,12 +547,12 @@ fn and_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse IN expressions: left in right
 fn in_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let left = comparison_expr(input)?;
 
     if opt(keyword("in")).parse_next(input)?.is_some() {
         let right = comparison_expr(input)?;
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         Ok(Expr::Binary {
             op: BinaryOp::In,
             left: Box::new(left),
@@ -565,7 +566,7 @@ fn in_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse comparison expressions: ==, !=, <, >, <=, >=
 fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let left = additive_expr(input)?;
 
     // Try to match comparison operators
@@ -582,7 +583,7 @@ fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     match op {
         Ok(op) => {
             let right = additive_expr(input)?;
-            let span = span_from(&start_pos, &input.state);
+            let span = span_from(&start_pos, &input.state.pos);
             Ok(Expr::Binary {
                 op,
                 left: Box::new(left),
@@ -596,7 +597,7 @@ fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse additive expressions: +, -
 fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let mut left = multiplicative_expr(input)?;
 
     loop {
@@ -609,7 +610,7 @@ fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         match op {
             Ok(op) => {
                 let right = multiplicative_expr(input)?;
-                let span = span_from(&start_pos, &input.state);
+                let span = span_from(&start_pos, &input.state.pos);
                 left = Expr::Binary {
                     op,
                     left: Box::new(left),
@@ -626,7 +627,7 @@ fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse multiplicative expressions: *, /, %
 fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
     let mut left = unary_expr(input)?;
 
     loop {
@@ -640,7 +641,7 @@ fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         match op {
             Ok(op) => {
                 let right = unary_expr(input)?;
-                let span = span_from(&start_pos, &input.state);
+                let span = span_from(&start_pos, &input.state.pos);
                 left = Expr::Binary {
                     op,
                     left: Box::new(left),
@@ -657,12 +658,12 @@ fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse unary expressions: !, -
 fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Try negation first
     if opt(literal_str("!")).parse_next(input)?.is_some() {
         let operand = unary_expr(input)?;
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Unary {
             op: UnaryOp::Not,
             operand: Box::new(operand),
@@ -682,7 +683,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         // We need to backtrack and parse properly
         // For simplicity, just parse the operand
         let operand = primary_expr(input)?;
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Unary {
             op: UnaryOp::Neg,
             operand: Box::new(operand),
@@ -693,7 +694,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     // Try keyword "not"
     if opt(keyword("not")).parse_next(input)?.is_some() {
         let operand = unary_expr(input)?;
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Unary {
             op: UnaryOp::Not,
             operand: Box::new(operand),
@@ -707,7 +708,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 /// Parse primary expressions: literals, variables, field access, index access, calls
 #[allow(clippy::collapsible_if)]
 fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Try parenthesized expression first
     if let Ok(e) = delimited(literal_str("("), expr, literal_str(")")).parse_next(input) {
@@ -723,7 +724,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     if keyword("check").parse_next(input).is_ok() {
         skip_whitespace_and_comments(input);
         let obligation = identifier(input)?;
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::CheckObligation {
             obligation: obligation.into(),
             span,
@@ -750,7 +751,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                 let _ = literal_str(")").parse_next(input)?;
                 args
             };
-            let span = span_from(&start_pos, &input.state);
+            let span = span_from(&start_pos, &input.state.pos);
             return Ok(Expr::Call {
                 func: second_name,
                 module: Some(name_str),
@@ -760,7 +761,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         }
 
         // No `(` after name::name — not a valid call expression
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Call {
             func: second_name,
             module: Some(name_str),
@@ -776,7 +777,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         } else {
             parse_constructor_fields(input)?
         };
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Constructor {
             name: name_str,
             payload: ConstructorPayload::Record(fields.clone()),
@@ -795,7 +796,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             let _ = literal_str(")").parse_next(input)?;
             items
         };
-        let span = span_from(&start_pos, &input.state);
+        let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Constructor {
             name: name.into(),
             fields: vec![],
@@ -814,7 +815,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         // Field access: .field
         if opt(literal_str(".")).parse_next(input)?.is_some() {
             if let Ok(field) = identifier(input) {
-                let span = span_from(&start_pos, &input.state);
+                let span = span_from(&start_pos, &input.state.pos);
                 expr = Expr::FieldAccess {
                     base: Box::new(expr),
                     field: field.into(),
@@ -828,7 +829,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         if opt(literal_str("[")).parse_next(input)?.is_some() {
             let index = self::expr(input)?;
             let _ = literal_str("]").parse_next(input)?;
-            let span = span_from(&start_pos, &input.state);
+            let span = span_from(&start_pos, &input.state.pos);
             expr = Expr::IndexAccess {
                 base: Box::new(expr),
                 index: Box::new(index),
@@ -846,7 +847,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                 let _ = literal_str(")").parse_next(input)?;
                 args
             };
-            let span = span_from(&start_pos, &input.state);
+            let span = span_from(&start_pos, &input.state.pos);
             expr = Expr::Call {
                 func: match &expr {
                     Expr::Variable { name: n, .. } => n.clone(),
@@ -1069,6 +1070,7 @@ fn parse_list(input: &mut ParseInput) -> ModalResult<Literal> {
 
 /// Parse an identifier.
 pub fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    let start = crate::input::current_span(input);
     // Use take_while to match the entire identifier at once
     // First char: letter or underscore, rest: alphanumeric, underscore, or hyphen
     let result: &str = take_while(1.., |c: char| {
@@ -1096,6 +1098,9 @@ pub fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
         ));
     }
 
+    let end = crate::input::current_span(input);
+    let span = Span::new(start.start, end.start, start.line, start.column);
+    input.state.comments.set_last_token(span);
     Ok(result)
 }
 
@@ -1158,7 +1163,7 @@ fn is_keyword(s: &str) -> bool {
 /// Parse a keyword (ensures word boundary).
 fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::error::ContextError> {
     move |input: &mut ParseInput<'a>| {
-        let _start = input.state;
+        let _start = input.state.pos;
 
         if input.input.starts_with(word) {
             let after = &input.input[word.len()..];
@@ -1215,41 +1220,6 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
                 winnow::error::ContextError::new(),
             ))
         }
-    }
-}
-
-/// Skip whitespace and comments.
-fn skip_whitespace_and_comments(input: &mut ParseInput) {
-    loop {
-        // Skip whitespace
-        let _: ModalResult<&str> =
-            take_while(0.., |c: char| c.is_ascii_whitespace()).parse_next(input);
-
-        // Check for line comment
-        if input.input.starts_with("--") {
-            let _: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
-            continue;
-        }
-
-        // Check for block comment
-        if input.input.starts_with("/*") {
-            let _ = input.input.next_slice(2);
-            let mut depth = 1;
-            while depth > 0 && !input.input.is_empty() {
-                if input.input.starts_with("/*") {
-                    let _ = input.input.next_slice(2);
-                    depth += 1;
-                } else if input.input.starts_with("*/") {
-                    let _ = input.input.next_slice(2);
-                    depth -= 1;
-                } else {
-                    let _ = input.input.next_token();
-                }
-            }
-            continue;
-        }
-
-        break;
     }
 }
 

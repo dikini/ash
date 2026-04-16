@@ -253,7 +253,7 @@ fn parse_type_body(input: &mut ParseInput) -> ModalResult<TypeBody> {
 /// Check if this is an enum body by looking for a | separator
 fn is_enum_body(input: &mut ParseInput) -> bool {
     // Save state
-    let state = input.state;
+    let state = input.state.clone();
     let checkpoint = input.input.checkpoint();
     let mut has_payload = false;
 

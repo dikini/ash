@@ -31,7 +31,7 @@ use crate::use_tree::{SimplePath, Use, UseItem, UsePath};
 /// let result = parse_use.parse_next(&mut input).unwrap();
 /// ```
 pub fn parse_use(input: &mut ParseInput) -> ModalResult<Use> {
-    let start_pos = input.state;
+    let start_pos = input.state.pos;
 
     // Parse optional visibility
     let visibility = parse_visibility(input)?;
@@ -51,7 +51,7 @@ pub fn parse_use(input: &mut ParseInput) -> ModalResult<Use> {
     // Parse semicolon
     let _ = parse_symbol(";")(input)?;
 
-    let span = span_from(&start_pos, &input.state);
+    let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Use {
         visibility,

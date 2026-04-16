@@ -13,6 +13,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   ASTs. `ast::Span` derives `Hash` and `Eq` for downstream Salsa usage. All ~400+
   parser/type-checker/interpreter match sites and test constructors updated.
 
+- Comment trivia preservation and `parse_surface_file` API (TASK-571):
+  `CommentTable` with `leading`/`trailing` comment capture added to `ParseState`;
+  duplicate `skip_whitespace_and_comments` helpers consolidated into
+  `crates/ash-parser/src/parse_utils.rs`. New entry points
+  `parse_surface_file` / `parse_surface_file_with_path` exposed in `lib.rs`.
+  Token helpers auto-classify comments via `set_last_token`.
+
 - Interpreter builtins: `head`, `tail`, `filter`, `map`, `starts_with`, `ends_with`
   (`ash-interp` and `ash-parser`) to support the spec-processor app.
 

@@ -1,11 +1,12 @@
+#![allow(missing_docs)]
 use ash_core::ast::{Expr, Workflow};
 use ash_parser::surface::{
     AssociatedTypeBinding, AssociatedTypeDecl, Expr as SurfaceExpr, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceMethodSig, Literal, Type as SurfaceType, Visibility,
 };
 use ash_parser::token::Span;
-use ash_typeck::type_env::TypeEnv;
 use ash_typeck::Type;
+use ash_typeck::type_env::TypeEnv;
 
 fn test_span() -> Span {
     Span::default()
@@ -22,7 +23,10 @@ fn serializer_interface_def() -> InterfaceDef {
         }],
         methods: vec![InterfaceMethodSig {
             name: "serialize_bool".into(),
-            params: vec![SurfaceType::Name("S".into()), SurfaceType::Name("Bool".into())],
+            params: vec![
+                SurfaceType::Name("S".into()),
+                SurfaceType::Name("Bool".into()),
+            ],
             return_type: SurfaceType::Associated {
                 base: Box::new(SurfaceType::Name("S".into())),
                 name: "Ok".into(),
@@ -78,8 +82,7 @@ fn task568_associated_type_replaced_in_monomorphized_body() {
         Workflow::Ret { expr } => {
             assert!(
                 matches!(expr, Expr::Literal(ash_core::Value::String(s)) if s == "serialized"),
-                "expected monomorphized body literal, got {:?}",
-                expr
+                "expected monomorphized body literal, got {expr:?}"
             );
         }
         _ => panic!("unexpected workflow shape"),
@@ -87,10 +90,7 @@ fn task568_associated_type_replaced_in_monomorphized_body() {
 
     // Also verify that the selected scheme's method signature normalizes correctly.
     let (_, scheme) = env
-        .select_impl_scheme("Serializer", "serialize_bool", &[
-            Type::String,
-            Type::Bool,
-        ])
+        .select_impl_scheme("Serializer", "serialize_bool", &[Type::String, Type::Bool])
         .unwrap();
     let method = scheme
         .methods

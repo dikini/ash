@@ -1,22 +1,49 @@
+//! Engine monomorphization pass.
+//!
+//! Replaces interface method calls in core AST with concrete impl bodies after
+//! type checking so that the interpreter never sees generic impl dispatch at
+//! runtime.
+
 use ash_core::ast::{Expr, Workflow};
 use ash_typeck::type_env::TypeEnv;
 use ash_typeck::{Kind, QualifiedName, Type};
 
-#[derive(Debug, Clone, thiserror::Error, PartialEq)]
+/// Errors that can occur during monomorphization.
+#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum MonomorphizeError {
+    /// Interface resolution failed (e.g. no matching impl scheme).
     #[error("interface resolution failed: {0}")]
     Resolution(String),
+    /// The selected impl scheme does not contain the requested method.
     #[error("missing method '{method}' in scheme for interface '{interface}'")]
-    MissingMethod { interface: String, method: String },
+    MissingMethod {
+        /// Name of the interface.
+        interface: String,
+        /// Name of the missing method.
+        method: String,
+    },
 }
 
 /// Walk a core workflow and replace interface method calls with monomorphized bodies.
+///
+/// # Errors
+///
+/// Returns [`MonomorphizeError::Resolution`] when an interface method call
+/// cannot be resolved to a concrete impl scheme, or
+/// [`MonomorphizeError::MissingMethod`] when the selected scheme lacks the
+/// requested method.
+#[allow(clippy::too_many_lines)]
 pub fn monomorphize_workflow(
     workflow: &mut Workflow,
     type_env: &TypeEnv,
 ) -> Result<(), MonomorphizeError> {
     match workflow {
-        Workflow::Observe { continuation, .. } => {
+        Workflow::Observe { continuation, .. }
+        | Workflow::Check { continuation, .. }
+        | Workflow::Kill { continuation, .. }
+        | Workflow::Pause { continuation, .. }
+        | Workflow::Resume { continuation, .. }
+        | Workflow::CheckHealth { continuation, .. } => {
             monomorphize_workflow(continuation, type_env)?;
         }
         Workflow::Receive { arms, .. } => {
@@ -27,7 +54,21 @@ pub fn monomorphize_workflow(
                 monomorphize_workflow(&mut arm.body, type_env)?;
             }
         }
-        Workflow::Orient { expr, continuation } => {
+        Workflow::Orient { expr, continuation }
+        | Workflow::Decide {
+            expr, continuation, ..
+        }
+        | Workflow::Let {
+            expr, continuation, ..
+        }
+        | Workflow::Spawn {
+            init: expr,
+            continuation,
+            ..
+        }
+        | Workflow::Split {
+            expr, continuation, ..
+        } => {
             monomorphize_expr(expr, type_env)?;
             monomorphize_workflow(continuation, type_env)?;
         }
@@ -41,15 +82,6 @@ pub fn monomorphize_workflow(
             }
             monomorphize_workflow(continuation, type_env)?;
         }
-        Workflow::Decide {
-            expr, continuation, ..
-        } => {
-            monomorphize_expr(expr, type_env)?;
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::Check { continuation, .. } => {
-            monomorphize_workflow(continuation, type_env)?;
-        }
         Workflow::Act {
             arguments,
             continuation,
@@ -60,14 +92,10 @@ pub fn monomorphize_workflow(
             }
             monomorphize_workflow(continuation, type_env)?;
         }
-        Workflow::Oblig { workflow, .. } => {
+        Workflow::Oblig { workflow, .. }
+        | Workflow::With { workflow, .. }
+        | Workflow::Must { workflow } => {
             monomorphize_workflow(workflow, type_env)?;
-        }
-        Workflow::Let {
-            expr, continuation, ..
-        } => {
-            monomorphize_expr(expr, type_env)?;
-            monomorphize_workflow(continuation, type_env)?;
         }
         Workflow::If {
             condition,
@@ -91,33 +119,9 @@ pub fn monomorphize_workflow(
         Workflow::Ret { expr } => {
             monomorphize_expr(expr, type_env)?;
         }
-        Workflow::With { workflow, .. } => {
-            monomorphize_workflow(workflow, type_env)?;
-        }
         Workflow::Maybe { primary, fallback } => {
             monomorphize_workflow(primary, type_env)?;
             monomorphize_workflow(fallback, type_env)?;
-        }
-        Workflow::Must { workflow } => {
-            monomorphize_workflow(workflow, type_env)?;
-        }
-        Workflow::Spawn {
-            init, continuation, ..
-        } => {
-            monomorphize_expr(init, type_env)?;
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::Split {
-            expr, continuation, ..
-        } => {
-            monomorphize_expr(expr, type_env)?;
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::Kill { continuation, .. }
-        | Workflow::Pause { continuation, .. }
-        | Workflow::Resume { continuation, .. }
-        | Workflow::CheckHealth { continuation, .. } => {
-            monomorphize_workflow(continuation, type_env)?;
         }
         Workflow::Yield {
             request,
@@ -130,10 +134,7 @@ pub fn monomorphize_workflow(
         Workflow::ProxyResume { value, .. } => {
             monomorphize_expr(value, type_env)?;
         }
-        Workflow::Set { value, .. } => {
-            monomorphize_expr(value, type_env)?;
-        }
-        Workflow::Send { value, .. } => {
+        Workflow::Set { value, .. } | Workflow::Send { value, .. } => {
             monomorphize_expr(value, type_env)?;
         }
         Workflow::Oblige { .. } | Workflow::CheckObligation { .. } | Workflow::Done => {}
@@ -141,6 +142,7 @@ pub fn monomorphize_workflow(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), MonomorphizeError> {
     match expr {
         Expr::Call {
@@ -156,7 +158,7 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
             let arg_types: Vec<Type> = arguments
                 .iter()
                 .map(|arg| {
-                    infer_type_from_expr(arg).ok_or_else(|| {
+                    infer_type_from_expr(arg, type_env).ok_or_else(|| {
                         MonomorphizeError::Resolution(format!(
                             "cannot infer type for argument: {arg:?}"
                         ))
@@ -217,15 +219,15 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
 
             *expr = body;
         }
-        Expr::FieldAccess { expr: inner, .. } => {
+        Expr::FieldAccess { expr: inner, .. }
+        | Expr::Unary { expr: inner, .. }
+        | Expr::Spawn { init: inner, .. }
+        | Expr::Split(inner) => {
             monomorphize_expr(inner, type_env)?;
         }
         Expr::IndexAccess { expr: inner, index } => {
             monomorphize_expr(inner, type_env)?;
             monomorphize_expr(index, type_env)?;
-        }
-        Expr::Unary { expr: inner, .. } => {
-            monomorphize_expr(inner, type_env)?;
         }
         Expr::Binary { left, right, .. } => {
             monomorphize_expr(left, type_env)?;
@@ -261,12 +263,6 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
             monomorphize_expr(then_branch, type_env)?;
             monomorphize_expr(else_branch, type_env)?;
         }
-        Expr::Spawn { init, .. } => {
-            monomorphize_expr(init, type_env)?;
-        }
-        Expr::Split(inner) => {
-            monomorphize_expr(inner, type_env)?;
-        }
         Expr::FnApply { func, args } => {
             monomorphize_expr(func, type_env)?;
             for arg in args.iter_mut() {
@@ -281,9 +277,10 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
     Ok(())
 }
 
-fn infer_type_from_expr(expr: &Expr) -> Option<Type> {
+fn infer_type_from_expr(expr: &Expr, type_env: &TypeEnv) -> Option<Type> {
     match expr {
         Expr::Literal(v) => Some(value_to_type(v)),
+        Expr::Variable(name) => type_env.lookup_variable(name),
         Expr::Constructor { name, .. } => Some(Type::Constructor {
             name: QualifiedName::root(name.clone()),
             args: vec![],
@@ -303,10 +300,10 @@ fn value_to_type(v: &ash_core::Value) -> Type {
         ash_core::Value::Ref(_) => Type::Ref,
         ash_core::Value::Float(_) => Type::Float,
         ash_core::Value::List(items) => {
-            let item_ty = items
-                .first()
-                .map(value_to_type)
-                .unwrap_or(Type::Var(ash_typeck::types::TypeVar::fresh()));
+            let item_ty = items.first().map_or_else(
+                || Type::Var(ash_typeck::types::TypeVar::fresh()),
+                value_to_type,
+            );
             Type::List(Box::new(item_ty))
         }
         ash_core::Value::Record(fields) => Type::Record(
@@ -315,8 +312,10 @@ fn value_to_type(v: &ash_core::Value) -> Type {
                 .map(|(n, v)| (Box::from(n.as_str()), value_to_type(v)))
                 .collect(),
         ),
-        ash_core::Value::Cap(_) => Type::Var(ash_typeck::types::TypeVar::fresh()),
-        ash_core::Value::Variant { .. } => Type::Var(ash_typeck::types::TypeVar::fresh()),
+        ash_core::Value::Cap(_)
+        | ash_core::Value::Variant { .. }
+        | ash_core::Value::Closure { .. }
+        | ash_core::Value::Stream(_) => Type::Var(ash_typeck::types::TypeVar::fresh()),
         ash_core::Value::Instance(_) => Type::Instance {
             workflow_type: Box::from(""),
         },
@@ -326,15 +325,15 @@ fn value_to_type(v: &ash_core::Value) -> Type {
         ash_core::Value::ControlLink(_) => Type::ControlLink {
             workflow_type: Box::from(""),
         },
-        ash_core::Value::Closure { .. } => Type::Var(ash_typeck::types::TypeVar::fresh()),
-        ash_core::Value::Stream(_) => Type::Var(ash_typeck::types::TypeVar::fresh()),
     }
 }
 
-fn apply_substitution_to_expr(_subst: &ash_typeck::types::Substitution, _expr: &mut Expr) {
-    // TODO: recursively apply substitution to type annotations inside the expression.
-    // For now, the test bodies contain no type variables, so this is a no-op.
-}
+/// Core `Expr` does not embed `Type` values (only string annotations in `FnDef`),
+/// so a type-variable substitution cannot be applied directly to the expression
+/// tree. Nested interface calls are monomorphized recursively by
+/// `monomorphize_expr`, and `FnDef` string annotations are resolved later by the
+/// type checker. This function is intentionally a no-op.
+const fn apply_substitution_to_expr(_subst: &ash_typeck::types::Substitution, _expr: &mut Expr) {}
 
 fn type_contains_associated(ty: &Type) -> bool {
     match ty {

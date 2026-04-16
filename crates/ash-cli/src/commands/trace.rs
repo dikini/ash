@@ -72,8 +72,8 @@ pub async fn trace(args: &TraceArgs) -> Result<()> {
         .with_fs_capabilities()
         .build()
         .context("Failed to build engine")?;
-    let workflow = engine.parse_file(path).map_err(classify_engine_error)?;
-    engine.check(&workflow).map_err(classify_engine_error)?;
+    let mut workflow = engine.parse_file(path).map_err(classify_engine_error)?;
+    engine.check(&mut workflow).map_err(classify_engine_error)?;
 
     // Execute with tracing
     let trace_result = execute_with_full_trace(&engine, &workflow, path, args).await?;

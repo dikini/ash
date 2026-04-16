@@ -534,8 +534,8 @@ async fn test_engine_check_with_providers() {
         .build()
         .expect("engine builds");
 
-    let workflow = engine.parse("workflow main { ret 42; }").expect("parses");
-    let result = engine.check(&workflow);
+    let mut workflow = engine.parse("workflow main { ret 42; }").expect("parses");
+    let result = engine.check(&mut workflow);
     assert!(result.is_ok());
 }
 

@@ -75,8 +75,8 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
 
     let tc_start = Instant::now();
     let check_result: CliResult<()> = match parse_result {
-        Ok(workflow) => {
-            let type_result = engine.check(&workflow);
+        Ok(mut workflow) => {
+            let type_result = engine.check(&mut workflow);
             type_result.map_err(|e| CliError::TypeError {
                 message: format!("{e}"),
                 source: None,

@@ -14,8 +14,8 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_empty() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine.parse("workflow main { done }").unwrap();
-        let result = engine.check(&workflow);
+        let mut workflow = engine.parse("workflow main { done }").unwrap();
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Empty workflow should pass type checking: {result:?}"
@@ -25,7 +25,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_let() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -35,7 +35,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with let should pass type checking: {result:?}"
@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_ret() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -54,7 +54,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with ret should pass type checking: {result:?}"
@@ -64,7 +64,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_if() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -73,7 +73,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with if should pass type checking: {result:?}"
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_if_else() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -93,7 +93,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with if-else should pass type checking: {result:?}"
@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_observe() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -113,7 +113,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with observe should pass type checking: {result:?}"
@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_args_capability_surface() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow main(args: cap Args) {
@@ -133,7 +133,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with Args capability surface should pass type checking: {result:?}"
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_act() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r#"
             workflow test {
@@ -153,7 +153,7 @@ mod tests {
         "#,
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with act should pass type checking: {result:?}"
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_for() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -173,7 +173,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with for should pass type checking: {result:?}"
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_with() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -192,7 +192,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with with should pass type checking: {result:?}"
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_maybe() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -211,7 +211,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with maybe should pass type checking: {result:?}"
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn test_check_valid_workflow_with_must() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -230,7 +230,7 @@ mod tests {
         ",
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with must should pass type checking: {result:?}"
@@ -241,7 +241,7 @@ mod tests {
     fn test_check_valid_complex_workflow() {
         let engine = Engine::new().build().unwrap();
         // Uses explicit provider:action syntax to avoid needing capability resolution context
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r#"
             workflow complex {
@@ -255,7 +255,7 @@ mod tests {
         "#,
             )
             .unwrap();
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Complex workflow should pass type checking: {result:?}"
@@ -272,7 +272,7 @@ mod tests {
         // Parse a workflow that might have type issues
         // Currently the parser accepts most syntax, so type errors would
         // come from semantic analysis during check()
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -285,7 +285,7 @@ mod tests {
 
         // For now, check() is stubbed with todo!()
         // This test will panic until implementation is added
-        let _result = engine.check(&workflow);
+        let _result = engine.check(&mut workflow);
     }
 
     #[test]
@@ -294,11 +294,11 @@ mod tests {
         // the error is of the Type variant
         // Note: This test will be meaningful once type checking is implemented
         let engine = Engine::new().build().unwrap();
-        let workflow = engine.parse("workflow main { done }").unwrap();
+        let mut workflow = engine.parse("workflow main { done }").unwrap();
 
         // Currently this will panic due to todo!()
         // After implementation, this should verify error type
-        let _result = engine.check(&workflow);
+        let _result = engine.check(&mut workflow);
     }
 
     // ============================================================
@@ -321,10 +321,10 @@ mod tests {
         let parse_result = engine.parse(source);
         assert!(parse_result.is_ok(), "Source should parse successfully");
 
-        let workflow = parse_result.unwrap();
+        let mut workflow = parse_result.unwrap();
 
         // Then check
-        let check_result = engine.check(&workflow);
+        let check_result = engine.check(&mut workflow);
         assert!(
             check_result.is_ok(),
             "Parsed workflow should pass type checking: {check_result:?}"
@@ -336,8 +336,8 @@ mod tests {
         let engine = Engine::new().build().unwrap();
         let source = "workflow test { let x = 42; ret x; }";
 
-        let workflow = engine.parse(source).unwrap();
-        let result = engine.check(&workflow);
+        let mut workflow = engine.parse(source).unwrap();
+        let result = engine.check(&mut workflow);
 
         // The workflow structure should be preserved through parse->check
         // This is mainly a compile-time check that &Workflow is accepted
@@ -392,8 +392,8 @@ mod tests {
 
         for name in names {
             let source = format!("workflow {name} {{ done }}");
-            let workflow = engine.parse(&source).unwrap();
-            let result = engine.check(&workflow);
+            let mut workflow = engine.parse(&source).unwrap();
+            let result = engine.check(&mut workflow);
             // Will panic on first iteration due to todo!()
             assert!(
                 result.is_ok(),
@@ -405,7 +405,7 @@ mod tests {
     #[test]
     fn test_check_with_nested_expressions() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -418,7 +418,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with nested expressions should pass type checking: {result:?}"
@@ -428,7 +428,7 @@ mod tests {
     #[test]
     fn test_check_with_string_operations() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r#"
             workflow test {
@@ -440,7 +440,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with strings should pass type checking: {result:?}"
@@ -450,7 +450,7 @@ mod tests {
     #[test]
     fn test_check_with_boolean_operations() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -465,7 +465,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with booleans should pass type checking: {result:?}"
@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn test_check_with_comparison_operations() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -493,7 +493,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with comparisons should pass type checking: {result:?}"
@@ -503,7 +503,7 @@ mod tests {
     #[test]
     fn test_check_with_list_expressions() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine
+        let mut workflow = engine
             .parse(
                 r"
             workflow test {
@@ -514,7 +514,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = engine.check(&workflow);
+        let result = engine.check(&mut workflow);
         assert!(
             result.is_ok(),
             "Workflow with lists should pass type checking: {result:?}"
@@ -524,10 +524,10 @@ mod tests {
     #[test]
     fn test_check_error_message_content() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine.parse("workflow main { done }").unwrap();
+        let mut workflow = engine.parse("workflow main { done }").unwrap();
 
         // After implementation, verify that error messages are descriptive
-        match engine.check(&workflow) {
+        match engine.check(&mut workflow) {
             Ok(()) => {
                 // Success case - valid workflow
             }

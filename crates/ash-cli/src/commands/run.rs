@@ -110,12 +110,12 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
 
     // Dry-run mode: parse and check only
     if args.dry_run {
-        let workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
+        let mut workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
             .map_err(classify_engine_error)?;
         engine
             .verify_entry_workflow(&workflow)
             .map_err(classify_entry_verification_error)?;
-        engine.check(&workflow).map_err(classify_engine_error)?;
+        engine.check(&mut workflow).map_err(classify_engine_error)?;
 
         println!("Dry run successful");
         return Ok(RunOutcome::completed());
@@ -152,9 +152,9 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         let timeout_duration = Duration::from_secs(timeout_secs);
         let execution_fut = async {
             if args.trace {
-                let workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
                     .map_err(classify_engine_error)?;
-                engine.check(&workflow).map_err(classify_engine_error)?;
+                engine.check(&mut workflow).map_err(classify_engine_error)?;
                 execute_with_trace(&engine, &workflow).await
             } else {
                 run_workflow_source(&engine, &source, source_kind).await
@@ -170,9 +170,9 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     } else {
         // No timeout - run normally
         if args.trace {
-            let workflow = parse_runnable_workflow(&engine, &source, source_kind)
+            let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
                 .map_err(classify_engine_error)?;
-            engine.check(&workflow).map_err(classify_engine_error)?;
+            engine.check(&mut workflow).map_err(classify_engine_error)?;
             execute_with_trace(&engine, &workflow).await?
         } else {
             run_workflow_source(&engine, &source, source_kind).await?
@@ -632,9 +632,9 @@ async fn run_workflow_source(
     source: &str,
     source_kind: WorkflowSourceKind,
 ) -> Result<Value> {
-    let workflow =
+    let mut workflow =
         parse_runnable_workflow(engine, source, source_kind).map_err(classify_engine_error)?;
-    engine.check(&workflow).map_err(classify_engine_error)?;
+    engine.check(&mut workflow).map_err(classify_engine_error)?;
     engine.execute(&workflow).await.map_err(classify_exec_error)
 }
 

@@ -60,7 +60,7 @@ async fn variables_example_nested_bindings() {
 async fn variables_example_if_scope() {
     // Test that if branches maintain separate scope
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = engine
+    let mut workflow = engine
         .parse(
             r"
             workflow main(flag: Bool) {
@@ -76,7 +76,9 @@ async fn variables_example_if_scope() {
         )
         .expect("workflow should parse");
 
-    engine.check(&workflow).expect("workflow should type check");
+    engine
+        .check(&mut workflow)
+        .expect("workflow should type check");
 
     // Test true branch
     let mut input = std::collections::HashMap::new();

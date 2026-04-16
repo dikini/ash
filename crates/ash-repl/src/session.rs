@@ -107,8 +107,8 @@ impl Session {
 
         // Treat as expression - wrap in a workflow and execute
         let wrapped = format!("workflow __repl__ {{ ret {trimmed}; }}");
-        let workflow = self.engine.parse(&wrapped)?;
-        self.engine.check(&workflow)?;
+        let mut workflow = self.engine.parse(&wrapped)?;
+        self.engine.check(&mut workflow)?;
         let result = self.engine.execute(&workflow).await?;
 
         Ok(EvalResult::Value(result))
@@ -138,10 +138,10 @@ impl Session {
         let body_source = source[body_start..].to_string();
 
         // Now parse with the engine to get the compiled workflow
-        let workflow = self.engine.parse(source)?;
+        let mut workflow = self.engine.parse(source)?;
 
         // Type check at definition time
-        self.engine.check(&workflow)?;
+        self.engine.check(&mut workflow)?;
 
         // For now, store a simple type representation
         let verified_type = format!("Workflow({})", params.join(", "));
@@ -204,8 +204,8 @@ impl Session {
         };
 
         // Parse, check, and execute the wrapper
-        let workflow = self.engine.parse(&wrapper_source)?;
-        self.engine.check(&workflow)?;
+        let mut workflow = self.engine.parse(&wrapper_source)?;
+        self.engine.check(&mut workflow)?;
         let result = self.engine.execute(&workflow).await?;
 
         Ok(EvalResult::Value(result))

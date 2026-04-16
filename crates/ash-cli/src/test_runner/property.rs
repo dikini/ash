@@ -78,12 +78,12 @@ fn run_property_inner(
                     }
                 };
 
-                let workflow = match engine.parse_file(&path) {
+                let mut workflow = match engine.parse_file(&path) {
                     Ok(w) => w,
                     Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
                 };
 
-                if let Err(e) = engine.check(&workflow) {
+                if let Err(e) = engine.check(&mut workflow) {
                     return (Outcome::Error, Some(format!("type error: {e}")));
                 }
 
@@ -178,12 +178,12 @@ fn run_smallworld_inner(
                     }
                 };
 
-                let workflow = match engine.parse_file(&path) {
+                let mut workflow = match engine.parse_file(&path) {
                     Ok(w) => w,
                     Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
                 };
 
-                if let Err(e) = engine.check(&workflow) {
+                if let Err(e) = engine.check(&mut workflow) {
                     return (Outcome::Error, Some(format!("type error: {e}")));
                 }
 

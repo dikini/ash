@@ -818,7 +818,13 @@ where
     snippets
 }
 
-fn extract_braced_snippets<F>(source: &str, predicate: F) -> Vec<String>
+/// Extract braced code snippets from a source string whose first line matches
+/// the given predicate.
+///
+/// Walks the source line-by-line looking for lines that satisfy `predicate`,
+/// then consumes the matching brace-delimited block and returns it as a
+/// standalone snippet string.
+pub fn extract_braced_snippets<F>(source: &str, predicate: F) -> Vec<String>
 where
     F: Fn(&str) -> bool,
 {

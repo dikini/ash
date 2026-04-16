@@ -4,7 +4,7 @@
 **Spec:** SPEC-034 §6
 **Related:** TASK-565 (scheme registry), TASK-567 (associated types)
 **Estimate:** 6 hours
-**Status:** 📝 Planned (blocked: requires TASK-565)
+**Status:** ✅ Complete
 
 ## Description
 

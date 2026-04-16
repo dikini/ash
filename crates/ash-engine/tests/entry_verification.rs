@@ -156,12 +156,12 @@ fn parses_checks_and_verifies_entry_source_with_runtime_imports() {
     engine
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
-    let workflow = engine
+    let mut workflow = engine
         .parse_entry_source(ENTRY_SOURCE_WITH_RUNTIME_IMPORTS)
         .expect("entry source should parse");
 
     engine
-        .check(&workflow)
+        .check(&mut workflow)
         .expect("entry workflow should type check");
     engine
         .verify_entry_workflow(&workflow)
@@ -184,7 +184,7 @@ fn parses_entry_source_with_leading_comments_before_runtime_imports() {
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let workflow = engine
+    let mut workflow = engine
         .parse_entry_source(
             r"
             -- entrypoint comment header
@@ -199,7 +199,7 @@ fn parses_entry_source_with_leading_comments_before_runtime_imports() {
         .expect("entry source with leading comments should parse");
 
     engine
-        .check(&workflow)
+        .check(&mut workflow)
         .expect("entry workflow should type check");
     engine
         .verify_entry_workflow(&workflow)
@@ -213,7 +213,7 @@ fn parses_entry_source_with_block_comments_before_and_between_runtime_imports() 
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let workflow = engine
+    let mut workflow = engine
         .parse_entry_source(
             r"
             /* entrypoint block comment header
@@ -230,7 +230,7 @@ fn parses_entry_source_with_block_comments_before_and_between_runtime_imports() 
         .expect("entry source with leading block comments should parse");
 
     engine
-        .check(&workflow)
+        .check(&mut workflow)
         .expect("entry workflow should type check");
     engine
         .verify_entry_workflow(&workflow)
@@ -244,14 +244,14 @@ fn parses_entry_source_with_whitespace_variants_in_runtime_imports() {
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let workflow = engine
+    let mut workflow = engine
         .parse_entry_source(
             "use\tresult :: Result\nuse runtime :: RuntimeError\nuse runtime::Args\n\nworkflow main(args: cap Args) -> Result<(), RuntimeError> { done; }\n",
         )
         .expect("entry source with whitespace variants should parse");
 
     engine
-        .check(&workflow)
+        .check(&mut workflow)
         .expect("entry workflow should type check");
     engine
         .verify_entry_workflow(&workflow)
@@ -265,7 +265,7 @@ fn parses_entry_source_with_inline_block_comments_inside_runtime_import_paths() 
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let workflow = engine
+    let mut workflow = engine
         .parse_entry_source(
             r"
             use result/* inline */::Result
@@ -278,7 +278,7 @@ fn parses_entry_source_with_inline_block_comments_inside_runtime_import_paths() 
         .expect("entry source with inline block comments in imports should parse");
 
     engine
-        .check(&workflow)
+        .check(&mut workflow)
         .expect("entry workflow should type check");
     engine
         .verify_entry_workflow(&workflow)
@@ -292,7 +292,7 @@ fn parses_entry_source_with_trailing_line_comments_on_runtime_imports() {
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let workflow = engine
+    let mut workflow = engine
         .parse_entry_source(
             r"
             use result::Result -- result alias for entry main
@@ -305,7 +305,7 @@ fn parses_entry_source_with_trailing_line_comments_on_runtime_imports() {
         .expect("entry source with trailing line comments should parse");
 
     engine
-        .check(&workflow)
+        .check(&mut workflow)
         .expect("entry workflow should type check");
     engine
         .verify_entry_workflow(&workflow)

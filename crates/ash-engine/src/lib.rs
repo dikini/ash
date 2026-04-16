@@ -240,6 +240,12 @@ impl Engine {
             .is_ok_and(|registry| registry.contains_key(module_path))
     }
 
+    /// Check whether a capability provider with the given name is registered.
+    #[must_use]
+    pub fn has_provider(&self, name: &str) -> bool {
+        self.runtime_state.has_provider(name)
+    }
+
     fn runtime_stdlib_type_defs(&self) -> Result<Vec<ash_core::ast::TypeDef>, EngineError> {
         let sources = self
             .runtime_stdlib_modules
@@ -428,10 +434,15 @@ impl Engine {
 
     /// Type check a workflow
     ///
+    /// On success, this also monomorphizes any generic interface method calls
+    /// in the workflow core so that the interpreter never sees unresolved
+    /// dispatch at runtime.
+    ///
     /// # Errors
     ///
-    /// Returns `EngineError::Type` if type checking fails.
-    pub fn check(&self, workflow: &Workflow) -> Result<(), EngineError> {
+    /// Returns `EngineError::Type` if type checking or monomorphization fails.
+    #[allow(clippy::too_many_lines)]
+    pub fn check(&self, workflow: &mut Workflow) -> Result<(), EngineError> {
         // Retrieve the surface workflow definition that was stored during parsing
         let def = self
             .get_surface_workflow_def(workflow.id)
@@ -451,6 +462,8 @@ impl Engine {
             match ash_typeck::type_check_program_in_env(&type_env, &program) {
                 Ok(result) => {
                     if result.is_ok() {
+                        monomorphize::monomorphize_workflow(&mut workflow.core, &type_env)
+                            .map_err(|e| EngineError::Type(e.to_string()))?;
                         return Ok(());
                     }
                     let errors: Vec<String> =
@@ -494,6 +507,8 @@ impl Engine {
             ) {
                 Ok(result) => {
                     if result.is_ok() {
+                        monomorphize::monomorphize_workflow(&mut workflow.core, &type_env)
+                            .map_err(|e| EngineError::Type(e.to_string()))?;
                         return Ok(());
                     }
 
@@ -535,6 +550,8 @@ impl Engine {
         match ash_typeck::type_check_workflow_def_in_env(&type_env, &def) {
             Ok(result) => {
                 if result.is_ok() {
+                    monomorphize::monomorphize_workflow(&mut workflow.core, &type_env)
+                        .map_err(|e| EngineError::Type(e.to_string()))?;
                     Ok(())
                 } else {
                     // Collect type errors into a message
@@ -720,8 +737,8 @@ impl Engine {
     ///
     /// Returns the first error encountered at any stage.
     pub async fn run(&self, source: &str) -> ExecResult<Value> {
-        let workflow = self.parse(source)?;
-        self.check(&workflow)?;
+        let mut workflow = self.parse(source)?;
+        self.check(&mut workflow)?;
         self.execute(&workflow).await
     }
 
@@ -734,8 +751,8 @@ impl Engine {
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns other errors from parse, check, or execute stages.
     pub async fn run_file(&self, path: impl AsRef<std::path::Path>) -> ExecResult<Value> {
-        let workflow = self.parse_file(path)?;
-        self.check(&workflow)?;
+        let mut workflow = self.parse_file(path)?;
+        self.check(&mut workflow)?;
         self.execute(&workflow).await
     }
 
@@ -757,8 +774,8 @@ impl Engine {
         path: impl AsRef<std::path::Path>,
         input_bindings: std::collections::HashMap<String, Value>,
     ) -> ExecResult<Value> {
-        let workflow = self.parse_file(path)?;
-        self.check(&workflow)?;
+        let mut workflow = self.parse_file(path)?;
+        self.check(&mut workflow)?;
         self.execute_with_input(&workflow, input_bindings).await
     }
 
@@ -776,10 +793,9 @@ impl Engine {
     /// error payload carries an out-of-range exit code.
     pub async fn bootstrap_entry_source(&self, source: &str) -> Result<u8, EntryBootstrapError> {
         self.load_runtime_stdlib()?;
-        let workflow = self.parse_entry_source(source)?;
+        let mut workflow = self.parse_entry_source(source)?;
         self.verify_entry_workflow(&workflow)?;
-        self.check(&workflow)?;
-
+        self.check(&mut workflow)?;
         let def = self
             .get_surface_workflow_def(workflow.id)
             .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
@@ -970,8 +986,12 @@ impl EngineBuilder {
 
         // Register filesystem provider if enabled
         if self.enable_fs {
-            let provider = FsProvider::new();
-            providers.insert(provider.name().to_string(), Arc::new(provider));
+            let provider: Arc<dyn ash_core::capability::CapabilityProvider> =
+                Arc::new(FsProvider::new());
+            providers.insert("fs".to_string(), Arc::clone(&provider));
+            // Also register under stdlib capability names for directory and metadata operations
+            providers.insert("dir".to_string(), Arc::clone(&provider));
+            providers.insert("meta".to_string(), provider);
         }
 
         // Register HTTP provider if configured
@@ -1461,8 +1481,8 @@ mod tests {
     #[test]
     fn test_engine_check_valid_workflow() {
         let engine = Engine::new().build().unwrap();
-        let workflow = engine.parse("workflow main { ret 42; }").unwrap();
-        let result = engine.check(&workflow);
+        let mut workflow = engine.parse("workflow main { ret 42; }").unwrap();
+        let result = engine.check(&mut workflow);
         assert!(result.is_ok());
     }
 

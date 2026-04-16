@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use ash_core::ast::{Expr, Workflow};
 use ash_parser::surface::{
     Expr as SurfaceExpr, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, Literal,
@@ -90,8 +91,7 @@ fn task566_monomorphize_replaces_interface_call_with_impl_body() {
         Workflow::Ret { expr } => {
             assert!(
                 matches!(expr, Expr::Literal(ash_core::Value::String(s)) if s == "int"),
-                "expected monomorphized body literal, got {:?}",
-                expr
+                "expected monomorphized body literal, got {expr:?}"
             );
         }
         _ => panic!("unexpected workflow shape"),
@@ -124,8 +124,7 @@ fn task566_monomorphize_recursive_generic_impl() {
         Workflow::Ret { expr } => {
             assert!(
                 matches!(expr, Expr::Literal(ash_core::Value::String(s)) if s == "list"),
-                "expected monomorphized generic impl body literal, got {:?}",
-                expr
+                "expected monomorphized generic impl body literal, got {expr:?}"
             );
         }
         _ => panic!("unexpected workflow shape"),

@@ -420,6 +420,35 @@ impl CapabilityProvider for FsProvider {
                 );
                 Ok(Value::Record(Box::new(map)))
             }
+            "read_dir" => {
+                if args.is_empty() {
+                    return Err(CapabilityError::InvalidArgument(
+                        "read_dir requires a path argument".to_string(),
+                    ));
+                }
+                let path = Self::extract_path(&args[0])?;
+                self.validate_path(&path)?;
+
+                let mut entries = tokio::fs::read_dir(&path).await.map_err(|e| {
+                    CapabilityError::ExecutionFailed(format!(
+                        "Cannot read directory '{}': {e}",
+                        path.display()
+                    ))
+                })?;
+
+                let mut result = Vec::new();
+                while let Some(entry) = entries.next_entry().await.map_err(|e| {
+                    CapabilityError::ExecutionFailed(format!(
+                        "Cannot read entry in '{}': {e}",
+                        path.display()
+                    ))
+                })? {
+                    result.push(Value::String(
+                        entry.file_name().to_string_lossy().into_owned(),
+                    ));
+                }
+                Ok(Value::List(Box::new(result)))
+            }
             _ => Err(CapabilityError::NotAvailable(format!(
                 "Unknown observe action: {action_name}"
             ))),

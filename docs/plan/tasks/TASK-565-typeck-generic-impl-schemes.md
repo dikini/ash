@@ -4,7 +4,7 @@
 **Spec:** SPEC-034 §5
 **Related:** TASK-563 (Complete), TASK-564 (blocked until parser/AST lands)
 **Estimate:** 6 hours
-**Status:** 📝 Planned (blocked: requires TASK-564 AST changes)
+**Status:** ✅ Complete
 
 ## Description
 

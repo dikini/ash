@@ -4,7 +4,7 @@
 **Spec:** SPEC-034 §4, SPEC-035 §4
 **Related:** TASK-563 (Complete; next sequential step in Phase 83)
 **Estimate:** 5 hours
-**Status:** 📝 Planned (blocked: requires TASK-563)
+**Status:** ✅ Complete
 
 ## Description
 

@@ -243,3 +243,69 @@ fn test_io_meta_capability_registered() {
     );
     assert_eq!(result.unwrap(), Value::Int(42));
 }
+
+// ============================================================
+// TASK-590A: FsProvider read_dir and multi-name registration
+// ============================================================
+
+/// Test that `FsProvider` is registered under all three capability names.
+#[test]
+fn test_fs_provider_multi_name_registration() {
+    let engine = Engine::new()
+        .with_fs_capabilities()
+        .build()
+        .expect("engine builds with fs capabilities");
+
+    assert!(
+        engine.has_provider("fs"),
+        "FsProvider should be registered under 'fs'"
+    );
+    assert!(
+        engine.has_provider("dir"),
+        "FsProvider should be registered under 'dir'"
+    );
+    assert!(
+        engine.has_provider("meta"),
+        "FsProvider should be registered under 'meta'"
+    );
+}
+
+/// Test that `FsProvider::observe` handles `read_dir` constraints.
+#[test]
+fn test_fs_provider_read_dir_observe() {
+    use ash_core::Constraint;
+    use ash_core::ast::{Expr, Predicate};
+    use ash_engine::providers::FsProvider;
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("alpha.txt"), "a").unwrap();
+    std::fs::write(dir.path().join("beta.txt"), "b").unwrap();
+
+    let provider = FsProvider::new();
+    let constraint = Constraint {
+        predicate: Predicate {
+            name: "read_dir".to_string(),
+            arguments: vec![Expr::Literal(Value::String(
+                dir.path().to_string_lossy().to_string(),
+            ))],
+        },
+    };
+
+    let result = tokio_test::block_on(async { provider.observe(&[constraint]).await });
+
+    let files = result.expect("observe read_dir should succeed");
+    match files {
+        Value::List(entries) => {
+            let names: Vec<String> = entries
+                .iter()
+                .map(|v| match v {
+                    Value::String(s) => s.clone(),
+                    _ => panic!("expected string file names in list"),
+                })
+                .collect();
+            assert!(names.contains(&"alpha.txt".to_string()));
+            assert!(names.contains(&"beta.txt".to_string()));
+        }
+        _ => panic!("expected Value::List, got {files:?}"),
+    }
+}

@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Wired `monomorphize_workflow` into the engine pipeline after type checking
+  (`Engine::check` now takes `&mut Workflow`) and addressed Phase 83 review
+  findings (TASK-564..TASK-568). Fixed missing match arms in
+  `monomorphize_expr`, extended `infer_type_from_expr` to handle variables,
+  and ensured `cargo clippy --all-targets --all-features` is clean across
+  `ash-engine`, `ash-cli`, and `ash-repl`.
+
 - Corrected PLAN-INDEX metadata drift: Phase 70, 78, and 79 marked `Complete`;
   Phase 76 split into `76A` (Complete — runner substrate) and `76B` (Planned —
   synthesis/small-world exploration); TASK-563 status updated to `Complete`.

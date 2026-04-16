@@ -2440,7 +2440,7 @@ Remove the single type-parameter restriction on interfaces, enable generic `impl
 || [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | ✅ Complete |
 || [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-034 §4, SPEC-035 §4 | 5 | ✅ Done |
 || [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-034 §5 | 6 | ✅ Done |
-|| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | 📝 Planned |
+|| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | ✅ Done |
 || [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | 📝 Planned |
 || [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | 📝 Planned |
 
@@ -2537,3 +2537,43 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 || [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | 📝 Planned |
 
 **Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working.
+
+## Phase 90: Spec Processor
+
+Build a canonical Ash workflow that audits the Ash repository for spec drift, example conformance, PLAN-INDEX coherence, and changelog completeness. This phase exercises the language's self-hosting capability and forces foundational stdlib substrates (`regex`, `markdown`, `json`, `process`).
+
+**Plan Reference:** [PLAN-090: Spec Processor](PLAN-090-SPEC-PROCESSOR.md)
+**Specs:** DESIGN-SPEC-PROCESSOR.md, DESIGN-NOTE-PROCESS-EFFECT.md, DESIGN-NOTE-BATCH-CHECK-API.md, DESIGN-NOTE-JSON-STRATEGY.md
+**Priority:** High
+**Status:** 📝 Planned
+
+### Track A: Pure-String Processor Core
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | 📝 Planned |
+|| [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | 📝 Planned |
+|| [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | 📝 Planned |
+|| [TASK-593](tasks/TASK-593-changelog-checker.md) | Changelog completeness checker | PLAN-090 §Track A | 4 | 📝 Planned |
+|| [TASK-594](tasks/TASK-594-report-formatter.md) | Report formatter (human + JSON) | PLAN-090 §Track A | 4 | 📝 Planned |
+
+### Track B: Stdlib Substrates
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | 📝 Planned |
+|| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | 📝 Planned |
+|| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | 📝 Planned |
+|| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | 📝 Planned |
+|| [TASK-599](tasks/TASK-599-std-diff.md) | `std::diff` line-diff utility | PLAN-090 §Track B | 8 | ⏸️ Deferred |
+
+### Track C: Integration and Meta-Validation
+
+||| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|
+|| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | 📝 Planned |
+|| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | 📝 Planned |
+|| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | 📝 Planned |
+|| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | 📝 Planned |
+
+**Deliverable:** `apps/spec_processor/src/main.ash` runs end-to-end, produces a structured report, and blocks CI on Tier 2 findings. New stdlib modules (`regex`, `markdown`, `json`, `process`) are available for downstream phases.

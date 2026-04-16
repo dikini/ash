@@ -2,9 +2,9 @@
 
 **Phase:** 83
 **Spec:** SPEC-035 §6
-**Related:** TASK-566, TASK-567
+**Related:** TASK-566 (monomorphization), TASK-567 (associated type normalization)
 **Estimate:** 3 hours
-**Status:** 📝 Planned
+**Status:** 📝 Planned (blocked: requires TASK-566 and TASK-567)
 
 ## Description
 

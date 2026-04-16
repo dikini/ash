@@ -2,15 +2,33 @@
 
 **Phase:** 83
 **Spec:** SPEC-034 §6
-**Related:** TASK-565, TASK-567
+**Related:** TASK-565 (scheme registry), TASK-567 (associated types)
 **Estimate:** 6 hours
-**Status:** 📝 Planned
+**Status:** 📝 Planned (blocked: requires TASK-565)
 
 ## Description
 
 Add a post-typecheck lowering pass in `ash-engine` that instantiates generic impl bodies at concrete call sites. The monomorphized method body replaces type parameters with the concrete types selected during interface resolution.
 
-> **Pipeline stage note:** The engine currently lacks a post-typecheck lowering phase. This task requires establishing a new pipeline stage between type-checking and execution. The first 1–2 hours should be spent designing where this stage lives (e.g., `ash-engine/src/monomorphize.rs` called from `Engine::compile` or a dedicated lowering module).
+> **Pipeline stage note:** The engine currently lacks a post-typecheck lowering phase. This task requires establishing a new pipeline stage between type-checking and execution.
+>
+> **Recommended hook point:** `Engine::compile` (or the existing `Engine::check` → `Engine::execute` boundary) should gain an explicit lowering step:
+> ```
+> parse → type_check → monomorphize → execute
+> ```
+> Specifically:
+> 1. After `type_check_module` returns a `TypeEnv`, walk the core AST (`CoreWorkflow` / `CoreExpr`)
+>    and identify every `Expr::Call` with `module: Some(iface)`.
+> 2. For each such call, invoke `type_env.resolve_interface_method_call` (or a new
+>    `select_impl_scheme` API) to obtain the selected `ImplScheme` and substitution.
+> 3. Clone the scheme's method body AST, apply the substitution, and replace the original
+>    `Expr::Call` with the instantiated body (or a synthetic `Expr::FnApply` to a fresh
+>    internal function).
+> 4. The monomorphized module is then passed to the interpreter / executor.
+>
+> **File target:** `crates/ash-engine/src/monomorphize.rs` (new module) with a public entry
+> point `monomorphize_module(module: &mut CoreModule, type_env: &TypeEnv) -> Result<...>`.
+> This keeps the lowering logic isolated from `Engine`'s configuration and CLI surfaces.
 
 ## Requirements
 

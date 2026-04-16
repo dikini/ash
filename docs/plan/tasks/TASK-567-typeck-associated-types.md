@@ -2,9 +2,9 @@
 
 **Phase:** 83
 **Spec:** SPEC-035 §5
-**Related:** TASK-564, TASK-565
+**Related:** TASK-564 (parser/AST), TASK-565 (scheme registry)
 **Estimate:** 6 hours
-**Status:** 📝 Planned
+**Status:** 📝 Planned (blocked: requires TASK-565)
 
 ## Description
 

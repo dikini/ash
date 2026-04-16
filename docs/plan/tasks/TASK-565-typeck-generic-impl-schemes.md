@@ -2,13 +2,15 @@
 
 **Phase:** 83
 **Spec:** SPEC-034 §5
-**Related:** TASK-563, TASK-564
+**Related:** TASK-563 (Complete), TASK-564 (blocked until parser/AST lands)
 **Estimate:** 6 hours
-**Status:** 📝 Planned
+**Status:** 📝 Planned (blocked: requires TASK-564 AST changes)
 
 ## Description
 
 Replace the concrete impl map with a scheme-based registry. Implement ordered scheme search, overlap rejection, and recursive `where` bound checking with a depth limit.
+
+> **Sequencing note:** This task is blocked until TASK-564 lands the new AST fields (`type_params`, `where_bounds`, `associated_types`, `associated_type_bindings`). The registry rewrite from `HashMap<(String, Type), ImplInfo>` to `Vec<ImplScheme>` is the highest-risk structural change in Phase 83 and should not be interleaved with other work.
 
 > **Bound-checking limitation:** For this MVP, `where` bounds may only reference single-parameter interfaces (e.g., `T: Serialize`). Multi-parameter interfaces in `where` clauses (e.g., `T: Map<K, V>`) are deferred. The bound-head construction in `find_matching_impl_scheme` assumes a single type argument.
 

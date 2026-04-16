@@ -37,6 +37,8 @@ These tasks require only currently implemented Ash language features (file I/O, 
 - Create: `apps/spec_processor/src/types.ash`
 - Test: `apps/spec_processor/tests/test_collect.ash` (or Rust integration test if Ash test runner is not ready)
 
+**Step 0:** Scaffold the `apps/spec_processor` crate and add it to the root `Cargo.toml` workspace members (see TASK-590 for full scaffold).
+
 **Step 1: Write failing test**
 
 ```ash

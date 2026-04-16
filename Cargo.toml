@@ -11,6 +11,7 @@ members = [
     "crates/ash-doc-tests",
     "crates/ash-repl",
     "std",
+    "apps/spec_processor",
 ]
 # ash-fuzz excluded - requires nightly toolchain for fuzzing
 # Excluded from main build:

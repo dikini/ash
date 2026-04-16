@@ -31,7 +31,7 @@ Create `apps/spec_processor/Cargo.toml` as a workspace member:
 [package]
 name = "ash-spec-processor"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 
 [dependencies]
 ash-engine = { path = "../../crates/ash-engine" }

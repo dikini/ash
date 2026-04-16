@@ -6,9 +6,9 @@
 
 use crate::error::TypeEnvError;
 use crate::solver::TypeError;
-use crate::types::{Substitution, Type, TypeVar, unify};
+use crate::types::{unify, Substitution, Type, TypeVar};
 use crate::{Kind, QualifiedName};
-use ash_core::adt::{VariantPayloadShape, tuple_field_name};
+use ash_core::adt::{tuple_field_name, VariantPayloadShape};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{ImplDef, InterfaceDef, InterfaceMethodSig, Type as SurfaceType};
@@ -172,15 +172,33 @@ pub struct InterfaceInfo {
     pub methods: HashMap<String, InterfaceMethodInfo>,
 }
 
-/// Internal representation of a registered impl.
+/// Internal representation of a where-bound for type checking.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ImplInfo {
-    /// Implemented interface name.
+pub struct WhereBound {
+    pub type_var: TypeVar,
     pub interface: String,
-    /// Full interface application used as the impl lookup key (e.g., `Pair<Int, String>`).
-    pub impl_head: Type,
-    /// Methods implemented by this impl.
-    pub methods: HashSet<String>,
+}
+
+/// Internal representation of an impl method signature.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplMethodInfo {
+    pub type_params: Vec<TypeVar>,
+    pub params: Vec<Type>,
+    pub return_type: Type,
+}
+
+/// Internal representation of a generic impl scheme.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplScheme {
+    pub interface: String,
+    pub type_params: Vec<TypeVar>,
+    pub head: Type,
+    pub where_bounds: Vec<WhereBound>,
+    pub methods: Vec<ImplMethodInfo>,
+}
+
+pub struct SelectedScheme {
+    pub substitution: Substitution,
 }
 
 fn surface_type_to_type(
@@ -414,8 +432,8 @@ pub struct TypeEnv {
     constructors: HashMap<String, (TypeName, VariantIndex)>,
     /// Registered interfaces by name.
     interfaces: HashMap<String, InterfaceInfo>,
-    /// Registered closed-world impls by (interface, full application).
-    impls: HashMap<(String, Type), ImplInfo>,
+    /// Registered closed-world impls.
+    impls: Vec<ImplScheme>,
     /// Interface bounds attached to workflow type variables.
     type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
     /// Variable bindings: variable name -> type
@@ -484,7 +502,7 @@ impl TypeEnv {
             type_info: HashMap::with_capacity(10),
             constructors: HashMap::with_capacity(10),
             interfaces: HashMap::with_capacity(4),
-            impls: HashMap::with_capacity(4),
+            impls: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             fn_contracts: HashMap::with_capacity(10),
@@ -623,18 +641,25 @@ impl TypeEnv {
             )));
         }
 
+        let param_mapping: HashMap<String, TypeVar> = def
+            .type_params
+            .iter()
+            .map(|param| (param.to_string(), TypeVar::fresh()))
+            .collect();
+
         let lowered_type_args: Vec<Type> = def
             .type_args
             .iter()
             .map(|ta| {
-                surface_type_to_type(ta, &HashMap::new(), self)
+                surface_type_to_type(ta, &param_mapping, self)
                     .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        if !lowered_type_args
-            .iter()
-            .all(is_closed_world_nominal_impl_target)
+        if def.type_params.is_empty()
+            && !lowered_type_args
+                .iter()
+                .all(is_closed_world_nominal_impl_target)
         {
             return Err(TypeEnvError::InvalidDefinition(format!(
                 "impl for interface '{interface_name}' must target concrete nominal types"
@@ -646,13 +671,41 @@ impl TypeEnv {
             args: lowered_type_args.clone(),
             kind: Kind::Type,
         };
-        let key = (interface_name.clone(), impl_head.clone());
-        if self.impls.contains_key(&key) {
-            return Err(TypeEnvError::DuplicateImpl {
-                interface: interface_name,
-                ty: impl_head.to_string(),
-            });
+
+        // Overlap check
+        for scheme in self.impls.iter().filter(|s| s.interface == interface_name) {
+            if crate::types::unify(&scheme.head, &impl_head).is_ok() {
+                if scheme.type_params.is_empty() && def.type_params.is_empty() {
+                    return Err(TypeEnvError::DuplicateImpl {
+                        interface: interface_name,
+                        ty: impl_head.to_string(),
+                    });
+                }
+                return Err(TypeEnvError::OverlappingImpls {
+                    interface: interface_name,
+                });
+            }
         }
+
+        let where_bounds: Vec<WhereBound> = def
+            .where_bounds
+            .iter()
+            .map(|wb| {
+                let type_var = param_mapping
+                    .get(wb.param.as_ref())
+                    .copied()
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(format!(
+                            "unknown type parameter '{}' in where bound",
+                            wb.param
+                        ))
+                    })?;
+                Ok(WhereBound {
+                    type_var,
+                    interface: wb.bound.to_string(),
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         let mut method_names = HashSet::new();
         for method in &def.methods {
@@ -732,14 +785,13 @@ impl TypeEnv {
             }
         }
 
-        self.impls.insert(
-            key,
-            ImplInfo {
-                interface: interface.name,
-                impl_head,
-                methods: method_names,
-            },
-        );
+        self.impls.push(ImplScheme {
+            interface: interface.name,
+            type_params: param_mapping.values().copied().collect(),
+            head: impl_head,
+            where_bounds,
+            methods: Vec::new(),
+        });
 
         Ok(())
     }
@@ -1001,6 +1053,11 @@ impl TypeEnv {
         self.interfaces.get(name)
     }
 
+    /// Return all registered impl schemes.
+    pub fn impl_schemes(&self) -> &[ImplScheme] {
+        &self.impls
+    }
+
     fn type_var_has_interface_bound(&self, var: TypeVar, interface: &str) -> bool {
         self.type_var_interface_bounds
             .get(&var)
@@ -1073,38 +1130,57 @@ impl TypeEnv {
             kind: Kind::Type,
         };
 
-        // Check if this is a bounded type-variable dispatch
-        let is_bounded_var =
-            method_info
-                .type_params
-                .iter()
-                .zip(head_args.iter())
-                .any(|(_, arg)| {
-                    if let Type::Var(var) = arg {
-                        self.type_var_has_interface_bound(*var, interface)
-                    } else {
-                        false
+        let selected = self.find_matching_impl_scheme(interface, &target_head, 0)?;
+        Ok(selected
+            .substitution
+            .apply(&subst.apply(&method_info.return_type)))
+    }
+
+    fn find_matching_impl_scheme(
+        &self,
+        interface: &str,
+        target_head: &Type,
+        depth: usize,
+    ) -> Result<SelectedScheme, TypeEnvError> {
+        if depth > 32 {
+            return Err(TypeEnvError::RecursiveBound {
+                message: "depth limit".into(),
+            });
+        }
+        for scheme in self.impls.iter().filter(|s| s.interface == interface) {
+            if let Ok(scheme_subst) = crate::types::unify(&scheme.head, target_head) {
+                let mut bounds_ok = true;
+                for bound in &scheme.where_bounds {
+                    let bounded_ty = scheme_subst.apply(&Type::Var(bound.type_var));
+                    let bound_head = Type::Constructor {
+                        name: QualifiedName::root(bound.interface.clone()),
+                        args: vec![bounded_ty],
+                        kind: Kind::Type,
+                    };
+                    match self.find_matching_impl_scheme(&bound.interface, &bound_head, depth + 1) {
+                        Ok(_) => {}
+                        Err(TypeEnvError::RecursiveBound { .. }) => {
+                            return Err(TypeEnvError::RecursiveBound {
+                                message: "depth limit".into(),
+                            });
+                        }
+                        Err(_) => {
+                            bounds_ok = false;
+                            break;
+                        }
                     }
-                });
-
-        if !is_bounded_var {
-            let impl_info = self
-                .impls
-                .get(&(interface.to_string(), target_head.clone()))
-                .ok_or_else(|| TypeEnvError::MissingImpl {
-                    interface: interface.to_string(),
-                    ty: target_head.to_string(),
-                })?;
-
-            if !impl_info.methods.contains(method) {
-                return Err(TypeEnvError::InvalidDefinition(format!(
-                    "impl for interface '{interface}' and type '{}' does not define method '{method}'",
-                    target_head
-                )));
+                }
+                if bounds_ok {
+                    return Ok(SelectedScheme {
+                        substitution: scheme_subst,
+                    });
+                }
             }
         }
-
-        Ok(subst.apply(&method_info.return_type))
+        Err(TypeEnvError::MissingImpl {
+            interface: interface.to_string(),
+            ty: target_head.to_string(),
+        })
     }
 
     /// Resolve a type name to its qualified form and info

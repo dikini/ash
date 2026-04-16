@@ -14,6 +14,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Type checker: generic impl schemes, overlap checking, and recursive `where` bound
+  resolution (TASK-565):
+  - Replaced `HashMap<(String, Type), ImplInfo>` with `Vec<ImplScheme>`
+  - Added `OverlappingImpls` and `RecursiveBound` error variants
+  - `register_impl` now builds schemes with fresh type variables and checks overlap
+    via unification
+  - `resolve_interface_method_call` uses ordered scheme search with recursive bound
+    checking (depth limit 32)
+
 - Parser/AST support for generic impls, `where` bounds, and associated types (TASK-564):
   - `surface.rs`: `ImplDef` now has `type_params`, `where_bounds`, `associated_type_bindings`
   - `surface.rs`: `InterfaceDef` now has `associated_types`

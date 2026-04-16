@@ -183,6 +183,14 @@ pub enum TypeEnvError {
         /// Method name
         method: String,
     },
+
+    /// Overlapping impls for an interface
+    #[error("overlapping impls for interface '{interface}'")]
+    OverlappingImpls { interface: String },
+
+    /// Recursive interface bound exceeded depth limit
+    #[error("recursive interface bound exceeded depth limit")]
+    RecursiveBound { message: String },
 }
 
 /// Error type for exhaustiveness checking

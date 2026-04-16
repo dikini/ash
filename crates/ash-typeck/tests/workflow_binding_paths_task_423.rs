@@ -14,6 +14,7 @@ fn explain_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Explain".into(),
         type_params: vec!["T".into()],
+        associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),
             params: vec![SurfaceType::Name("T".into())],
@@ -29,6 +30,9 @@ fn explain_string_impl() -> ImplDef {
         visibility: SurfaceVisibility::Inherited,
         interface: "Explain".into(),
         type_args: vec![SurfaceType::Name("String".into())],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
             params: vec!["value".into()],

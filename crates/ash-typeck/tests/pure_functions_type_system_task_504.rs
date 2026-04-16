@@ -5,7 +5,7 @@ use ash_parser::surface::{
 use ash_parser::token::Span;
 use ash_typeck::check_expr::check_expr;
 use ash_typeck::type_env::TypeEnv;
-use ash_typeck::{Type, type_check_program};
+use ash_typeck::{type_check_program, Type};
 
 fn span() -> Span {
     Span::default()
@@ -46,6 +46,7 @@ fn explain_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Explain".into(),
         type_params: vec!["T".into()],
+        associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),
             params: vec![SurfaceType::Name("T".into())],
@@ -61,6 +62,9 @@ fn explain_string_impl() -> ImplDef {
         visibility: Visibility::Inherited,
         interface: "Explain".into(),
         type_args: vec![SurfaceType::Name("String".into())],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
             params: vec!["value".into()],
@@ -76,6 +80,7 @@ fn option_explain_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "OptionExplain".into(),
         type_params: vec!["T".into()],
+        associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),
             params: vec![SurfaceType::Constructor {
@@ -94,6 +99,9 @@ fn option_explain_string_impl() -> ImplDef {
         visibility: Visibility::Inherited,
         interface: "OptionExplain".into(),
         type_args: vec![SurfaceType::Name("String".into())],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
             params: vec!["value".into()],

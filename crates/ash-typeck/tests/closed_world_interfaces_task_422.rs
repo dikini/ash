@@ -4,10 +4,11 @@ use ash_core::ast::{
 use ash_parser::surface::{
     Definition, Expr, ImplDef, ImplMethodDef, InterfaceBound, InterfaceDef, InterfaceMethodSig,
     Literal, MatchArm, Parameter, Pattern, Program, Type as SurfaceType, TypeParam,
-    VariantPatternPayload, Visibility as SurfaceVisibility, Workflow, WorkflowDef,
+    VariantPatternPayload, Visibility as SurfaceVisibility, WhereBound, Workflow, WorkflowDef,
 };
 use ash_parser::token::Span;
 use ash_typeck::check_expr::check_expr;
+use ash_typeck::error::TypeEnvError;
 use ash_typeck::type_env::TypeEnv;
 use ash_typeck::{Kind, QualifiedName, Type};
 
@@ -40,6 +41,7 @@ fn explain_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Explain".into(),
         type_params: vec!["T".into()],
+        associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),
             params: vec![SurfaceType::Name("T".into())],
@@ -55,6 +57,9 @@ fn explain_impl_for(type_name: &str) -> ImplDef {
         visibility: SurfaceVisibility::Inherited,
         interface: "Explain".into(),
         type_args: vec![SurfaceType::Name(type_name.into())],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
             params: vec!["decision".into()],
@@ -78,6 +83,9 @@ fn explain_string_impl_with_int_body() -> ImplDef {
         visibility: SurfaceVisibility::Inherited,
         interface: "Explain".into(),
         type_args: vec![SurfaceType::Name("String".into())],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
             params: vec!["value".into()],
@@ -95,6 +103,9 @@ fn explain_list_string_impl() -> ImplDef {
         type_args: vec![SurfaceType::List(Box::new(SurfaceType::Name(
             "String".into(),
         )))],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "explain".into(),
             params: vec!["items".into()],
@@ -448,6 +459,7 @@ fn pair_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Pair".into(),
         type_params: vec!["A".into(), "B".into()],
+        associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "first".into(),
             params: vec![SurfaceType::Constructor {
@@ -497,6 +509,9 @@ fn task563_concrete_multi_param_impl_resolves() {
             SurfaceType::Name("Int".into()),
             SurfaceType::Name("String".into()),
         ],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "first".into(),
             params: vec!["p".into()],
@@ -539,6 +554,9 @@ fn task563_wrong_arity_impl_rejected() {
         visibility: SurfaceVisibility::Inherited,
         interface: "Pair".into(),
         type_args: vec![SurfaceType::Name("Int".into())],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "first".into(),
             params: vec!["p".into()],
@@ -559,6 +577,7 @@ fn task563_from_underdetermined_param_errors() {
         visibility: SurfaceVisibility::Inherited,
         name: "From".into(),
         type_params: vec!["A".into(), "B".into()],
+        associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "from".into(),
             params: vec![SurfaceType::Name("A".into())],
@@ -592,6 +611,9 @@ fn task563_duplicate_multi_param_impl_rejected_with_full_application() {
             SurfaceType::Name("Int".into()),
             SurfaceType::Name("String".into()),
         ],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
         methods: vec![ImplMethodDef {
             name: "first".into(),
             params: vec!["p".into()],
@@ -615,5 +637,174 @@ fn task563_duplicate_multi_param_impl_rejected_with_full_application() {
     assert!(
         msg.contains("Int") && msg.contains("String"),
         "error must contain full application types: got '{msg}'"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// TASK-565: Generic impl schemes, overlap checking, recursive resolution
+// ---------------------------------------------------------------------------
+
+fn serialize_interface_def() -> InterfaceDef {
+    InterfaceDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "Serialize".into(),
+        type_params: vec!["T".into()],
+        associated_types: vec![],
+        methods: vec![InterfaceMethodSig {
+            name: "serialize".into(),
+            params: vec![SurfaceType::Name("T".into())],
+            return_type: SurfaceType::Name("String".into()),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+fn serialize_int_impl() -> ImplDef {
+    ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Serialize".into(),
+        type_args: vec![SurfaceType::Name("Int".into())],
+        type_params: vec![],
+        where_bounds: vec![],
+        associated_type_bindings: vec![],
+        methods: vec![ImplMethodDef {
+            name: "serialize".into(),
+            params: vec!["x".into()],
+            body: Expr::Literal(Literal::String("int".into())),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+fn serialize_list_impl() -> ImplDef {
+    ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Serialize".into(),
+        type_args: vec![SurfaceType::List(Box::new(SurfaceType::Name("T".into())))],
+        type_params: vec!["T".into()],
+        where_bounds: vec![WhereBound {
+            param: "T".into(),
+            bound: "Serialize".into(),
+            span: test_span(),
+        }],
+        associated_type_bindings: vec![],
+        methods: vec![ImplMethodDef {
+            name: "serialize".into(),
+            params: vec!["items".into()],
+            body: Expr::Literal(Literal::String("list".into())),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+#[test]
+fn task565_generic_impl_scheme_registers() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&serialize_interface_def())
+        .expect("register Serialize");
+    env.register_impl(&serialize_list_impl())
+        .expect("register generic impl");
+
+    let schemes = env.impl_schemes();
+    assert_eq!(schemes.len(), 1, "expected exactly one impl scheme");
+    assert_eq!(
+        schemes[0].type_params.len(),
+        1,
+        "expected scheme to have one type parameter"
+    );
+    assert_eq!(schemes[0].interface, "Serialize");
+}
+
+#[test]
+fn task565_overlapping_impls_rejected() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&serialize_interface_def())
+        .expect("register Serialize");
+    env.register_impl(&serialize_list_impl())
+        .expect("register first generic impl");
+
+    let result = env.register_impl(&serialize_list_impl());
+    assert!(
+        matches!(
+            result,
+            Err(TypeEnvError::OverlappingImpls { ref interface }) if interface == "Serialize"
+        ),
+        "expected OverlappingImpls error, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn task565_recursive_where_bound_resolution() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&serialize_interface_def())
+        .expect("register Serialize");
+    env.register_impl(&serialize_int_impl())
+        .expect("register concrete Int impl");
+    env.register_impl(&serialize_list_impl())
+        .expect("register generic List impl");
+
+    let nested_list_type = Type::List(Box::new(Type::List(Box::new(Type::Int))));
+
+    let return_ty = env
+        .resolve_interface_method_call("Serialize", "serialize", &[nested_list_type])
+        .expect("recursive bound resolution should succeed for List<List<Int>>");
+    assert_eq!(return_ty, Type::String);
+}
+
+fn cyclic_interface_def() -> InterfaceDef {
+    InterfaceDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "Cyclic".into(),
+        type_params: vec!["T".into()],
+        associated_types: vec![],
+        methods: vec![InterfaceMethodSig {
+            name: "m".into(),
+            params: vec![SurfaceType::Name("T".into())],
+            return_type: SurfaceType::Name("T".into()),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+fn cyclic_impl() -> ImplDef {
+    ImplDef {
+        visibility: SurfaceVisibility::Inherited,
+        interface: "Cyclic".into(),
+        type_args: vec![SurfaceType::Name("T".into())],
+        type_params: vec!["T".into()],
+        where_bounds: vec![WhereBound {
+            param: "T".into(),
+            bound: "Cyclic".into(),
+            span: test_span(),
+        }],
+        associated_type_bindings: vec![],
+        methods: vec![ImplMethodDef {
+            name: "m".into(),
+            params: vec!["x".into()],
+            body: Expr::Variable("x".into()),
+            span: test_span(),
+        }],
+        span: test_span(),
+    }
+}
+
+#[test]
+fn task565_recursive_bound_depth_limit_errors() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&cyclic_interface_def())
+        .expect("register Cyclic");
+    env.register_impl(&cyclic_impl())
+        .expect("register cyclic generic impl");
+
+    let result = env.resolve_interface_method_call("Cyclic", "m", &[Type::Int]);
+    assert!(
+        matches!(result, Err(TypeEnvError::RecursiveBound { .. })),
+        "expected RecursiveBound error after depth 32, got {:?}",
+        result
     );
 }

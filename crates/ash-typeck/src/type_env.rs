@@ -12,6 +12,7 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{ImplDef, InterfaceDef, InterfaceMethodSig, Type as SurfaceType};
+use ash_parser::token::Span;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -236,9 +237,9 @@ fn surface_type_to_type(
                     kind: Kind::Type,
                 }),
                 _ => {
-                    let (qualified, _) = type_env
-                        .resolve_type(name.as_ref())
-                        .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+                    let (qualified, _) = type_env.resolve_type(name.as_ref()).map_err(|e| {
+                        TypeEnvError::InvalidDefinition(format!("{e}"), Span::default())
+                    })?;
                     Ok(Type::Constructor {
                         name: qualified,
                         args: vec![],
@@ -268,9 +269,9 @@ fn surface_type_to_type(
                 surface_type_to_type(&args[0], param_mapping, type_env)
                     .map(|item| Type::List(Box::new(item)))
             } else {
-                let (qualified, _) = type_env
-                    .resolve_type(name.as_ref())
-                    .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+                let (qualified, _) = type_env.resolve_type(name.as_ref()).map_err(|e| {
+                    TypeEnvError::InvalidDefinition(format!("{e}"), Span::default())
+                })?;
                 let args = args
                     .iter()
                     .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
@@ -309,6 +310,7 @@ fn surface_type_to_type(
                     } else if candidates.len() > 1 {
                         return Err(TypeEnvError::AmbiguousAssociatedType {
                             name: name.to_string(),
+                            span: Span::default(),
                         });
                     } else {
                         String::new() // unresolved for now
@@ -678,14 +680,15 @@ impl TypeEnv {
         if let Some(existing) = self.ast_types.get(&type_name) {
             // Allow upgrading a placeholder (empty struct with same name and no params)
             if !Self::is_placeholder(existing) {
-                return Err(TypeEnvError::DuplicateType(type_name));
+                return Err(TypeEnvError::DuplicateType(type_name, Span::default()));
             }
             // Placeholder will be replaced below
         }
 
         // Convert to internal TypeInfo for type checking
-        let type_info = convert_type_def(def, self)
-            .map_err(|e| TypeEnvError::InvalidDefinition(format!("type '{}': {e}", def.name)))?;
+        let type_info = convert_type_def(def, self).map_err(|e| {
+            TypeEnvError::InvalidDefinition(format!("type '{}': {e}", def.name), Span::default())
+        })?;
 
         // Register constructors for enum variants
         if let TypeInfo::Enum { variants, .. } = &type_info {
@@ -704,7 +707,10 @@ impl TypeEnv {
     pub fn register_interface(&mut self, def: &InterfaceDef) -> Result<(), TypeEnvError> {
         let interface_name = def.name.to_string();
         if self.interfaces.contains_key(&interface_name) {
-            return Err(TypeEnvError::DuplicateInterface(interface_name));
+            return Err(TypeEnvError::DuplicateInterface(
+                interface_name,
+                Span::default(),
+            ));
         }
 
         let param_mapping: HashMap<String, TypeVar> = def
@@ -752,15 +758,20 @@ impl TypeEnv {
             .interfaces
             .get(&interface_name)
             .cloned()
-            .ok_or_else(|| TypeEnvError::MissingInterface(interface_name.clone()))?;
+            .ok_or_else(|| {
+                TypeEnvError::MissingInterface(interface_name.clone(), Span::default())
+            })?;
 
         if interface.type_params.len() != def.type_args.len() {
-            return Err(TypeEnvError::InvalidDefinition(format!(
-                "interface '{}' expects {} type parameters, but impl provides {}",
-                interface_name,
-                interface.type_params.len(),
-                def.type_args.len()
-            )));
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "interface '{}' expects {} type parameters, but impl provides {}",
+                    interface_name,
+                    interface.type_params.len(),
+                    def.type_args.len()
+                ),
+                Span::default(),
+            ));
         }
 
         let param_mapping: HashMap<String, TypeVar> = def
@@ -780,9 +791,10 @@ impl TypeEnv {
                 .iter()
                 .all(is_closed_world_nominal_impl_target)
         {
-            return Err(TypeEnvError::InvalidDefinition(format!(
-                "impl for interface '{interface_name}' must target concrete nominal types"
-            )));
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("impl for interface '{interface_name}' must target concrete nominal types"),
+                Span::default(),
+            ));
         }
 
         let impl_head = Type::Constructor {
@@ -798,10 +810,12 @@ impl TypeEnv {
                     return Err(TypeEnvError::DuplicateImpl {
                         interface: interface_name,
                         ty: impl_head.to_string(),
+                        span: Span::default(),
                     });
                 }
                 return Err(TypeEnvError::OverlappingImpls {
                     interface: interface_name,
+                    span: Span::default(),
                 });
             }
         }
@@ -814,10 +828,10 @@ impl TypeEnv {
                     .get(wb.param.as_ref())
                     .copied()
                     .ok_or_else(|| {
-                        TypeEnvError::InvalidDefinition(format!(
-                            "unknown type parameter '{}' in where bound",
-                            wb.param
-                        ))
+                        TypeEnvError::InvalidDefinition(
+                            format!("unknown type parameter '{}' in where bound", wb.param),
+                            Span::default(),
+                        )
                     })?;
                 Ok(WhereBound {
                     type_var,
@@ -840,14 +854,18 @@ impl TypeEnv {
                 return Err(TypeEnvError::MissingAssociatedType {
                     interface: interface_name.clone(),
                     name: assoc_name.clone(),
+                    span: Span::default(),
                 });
             }
         }
         for bound_name in associated_type_bindings.keys() {
             if !interface.associated_types.contains(bound_name) {
-                return Err(TypeEnvError::InvalidDefinition(format!(
-                    "extraneous associated type binding '{bound_name}' in impl for interface '{interface_name}'"
-                )));
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "extraneous associated type binding '{bound_name}' in impl for interface '{interface_name}'"
+                    ),
+                    Span::default(),
+                ));
             }
         }
 
@@ -868,24 +886,31 @@ impl TypeEnv {
                 return Err(TypeEnvError::MissingInterfaceMethod {
                     interface: interface.name.clone(),
                     method: method_name,
+                    span: Span::default(),
                 });
             };
 
             if !method_names.insert(method_name.clone()) {
-                return Err(TypeEnvError::InvalidDefinition(format!(
-                    "duplicate method '{method_name}' in impl for interface '{}'",
-                    interface.name
-                )));
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate method '{method_name}' in impl for interface '{}'",
+                        interface.name
+                    ),
+                    Span::default(),
+                ));
             }
 
             if method_info.params.len() != method.params.len() {
-                return Err(TypeEnvError::InvalidDefinition(format!(
-                    "impl method '{}::{}' signature expects {} parameters, found {}",
-                    interface.name,
-                    method_name,
-                    method_info.params.len(),
-                    method.params.len()
-                )));
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "impl method '{}::{}' signature expects {} parameters, found {}",
+                        interface.name,
+                        method_name,
+                        method_info.params.len(),
+                        method.params.len()
+                    ),
+                    Span::default(),
+                ));
             }
 
             let mut subst = Substitution::new();
@@ -919,22 +944,29 @@ impl TypeEnv {
                         )
                     });
 
-                return Err(TypeEnvError::InvalidDefinition(format!(
-                    "invalid impl method body for '{}::{}': {}",
-                    interface.name, method_name, reason
-                )));
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "invalid impl method body for '{}::{}': {}",
+                        interface.name, method_name, reason
+                    ),
+                    Span::default(),
+                ));
             }
 
             let actual_return_ty = body_result.substitution.apply(&body_result.ty);
             unify(&expected_return_ty, &actual_return_ty).map_err(|_| {
-                TypeEnvError::InvalidDefinition(format!(
-                    "impl method '{}::{}' must return {}, found {}",
-                    interface.name, method_name, expected_return_ty, actual_return_ty
-                ))
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "impl method '{}::{}' must return {}, found {}",
+                        interface.name, method_name, expected_return_ty, actual_return_ty
+                    ),
+                    Span::default(),
+                )
             })?;
 
-            let core_body = ash_parser::lower_expr(&method.body)
-                .map_err(|e| TypeEnvError::InvalidDefinition(format!("lowering error: {e}")))?;
+            let core_body = ash_parser::lower_expr(&method.body).map_err(|e| {
+                TypeEnvError::InvalidDefinition(format!("lowering error: {e}"), Span::default())
+            })?;
 
             method_infos.push(ImplMethodInfo {
                 name: method_name,
@@ -947,10 +979,13 @@ impl TypeEnv {
 
         for required_method in interface.methods.keys() {
             if !method_names.contains(required_method) {
-                return Err(TypeEnvError::InvalidDefinition(format!(
-                    "impl for interface '{}' is missing method '{required_method}'",
-                    interface.name
-                )));
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "impl for interface '{}' is missing method '{required_method}'",
+                        interface.name
+                    ),
+                    Span::default(),
+                ));
             }
         }
 
@@ -1254,12 +1289,14 @@ impl TypeEnv {
                     return Err(TypeEnvError::MismatchedProjectionInterface {
                         expected: scheme.interface.clone(),
                         found: interface.clone(),
+                        span: Span::default(),
                     });
                 }
                 let binding = scheme.associated_type_bindings.get(name).ok_or_else(|| {
                     TypeEnvError::MissingAssociatedType {
                         interface: interface.clone(),
                         name: name.clone(),
+                        span: Span::default(),
                     }
                 })?;
                 let normalized = subst.apply(binding);
@@ -1326,6 +1363,7 @@ impl TypeEnv {
             .ok_or_else(|| TypeEnvError::MissingInterfaceMethod {
                 interface: interface.to_string(),
                 method: method.to_string(),
+                span: Span::default(),
             })?;
         let raw_return = selected.substitution.apply(&method_info.return_type);
         self.normalize_associated_types(&raw_return, scheme, &selected.substitution)
@@ -1337,32 +1375,35 @@ impl TypeEnv {
         method: &str,
         arg_types: &[Type],
     ) -> Result<(SelectedScheme, &ImplScheme), TypeEnvError> {
-        let interface_info = self
-            .interfaces
-            .get(interface)
-            .ok_or_else(|| TypeEnvError::MissingInterface(interface.to_string()))?;
+        let interface_info = self.interfaces.get(interface).ok_or_else(|| {
+            TypeEnvError::MissingInterface(interface.to_string(), Span::default())
+        })?;
 
         let method_info = interface_info.methods.get(method).ok_or_else(|| {
             TypeEnvError::MissingInterfaceMethod {
                 interface: interface.to_string(),
                 method: method.to_string(),
+                span: Span::default(),
             }
         })?;
 
         if method_info.params.len() != arg_types.len() {
-            return Err(TypeEnvError::InvalidDefinition(format!(
-                "interface method '{}::{}' expects {} arguments, found {}",
-                interface,
-                method,
-                method_info.params.len(),
-                arg_types.len()
-            )));
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "interface method '{}::{}' expects {} arguments, found {}",
+                    interface,
+                    method,
+                    method_info.params.len(),
+                    arg_types.len()
+                ),
+                Span::default(),
+            ));
         }
 
         let mut subst = Substitution::new();
         for (expected, actual) in method_info.params.iter().zip(arg_types.iter()) {
             let sub = unify(&subst.apply(expected), actual)
-                .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}")))?;
+                .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}"), Span::default()))?;
             subst = subst.compose(&sub);
         }
 
@@ -1379,10 +1420,13 @@ impl TypeEnv {
                 false
             }
         }) {
-            return Err(TypeEnvError::InvalidDefinition(format!(
-                "interface '{}' type parameters could not be fully determined from arguments",
-                interface
-            )));
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "interface '{}' type parameters could not be fully determined from arguments",
+                    interface
+                ),
+                Span::default(),
+            ));
         }
 
         let target_head = Type::Constructor {
@@ -1397,6 +1441,7 @@ impl TypeEnv {
             return Err(TypeEnvError::MissingInterfaceMethod {
                 interface: interface.to_string(),
                 method: method.to_string(),
+                span: Span::default(),
             });
         }
 
@@ -1412,6 +1457,7 @@ impl TypeEnv {
         if depth > 32 {
             return Err(TypeEnvError::RecursiveBound {
                 message: "depth limit".into(),
+                span: Span::default(),
             });
         }
         for scheme in self.impls.iter().filter(|s| s.interface == interface) {
@@ -1429,6 +1475,7 @@ impl TypeEnv {
                         Err(TypeEnvError::RecursiveBound { .. }) => {
                             return Err(TypeEnvError::RecursiveBound {
                                 message: "depth limit".into(),
+                                span: Span::default(),
                             });
                         }
                         Err(_) => {
@@ -1450,6 +1497,7 @@ impl TypeEnv {
         Err(TypeEnvError::MissingImpl {
             interface: interface.to_string(),
             ty: target_head.to_string(),
+            span: Span::default(),
         })
     }
 
@@ -1476,7 +1524,10 @@ impl TypeEnv {
             return Ok((QualifiedName::root(name), None));
         }
 
-        Err(TypeError::UnboundVariable(name.to_string()))
+        Err(TypeError::UnboundVariable(
+            name.to_string(),
+            Span::default(),
+        ))
     }
 
     /// Unfold a constructor to its definition with type arguments substituted
@@ -1487,7 +1538,8 @@ impl TypeEnv {
     ) -> Result<UnfoldedBody, TypeError> {
         let (_, type_info) = self.resolve_type(&name.name)?;
 
-        let type_info = type_info.ok_or_else(|| TypeError::NotAConstructor(name.display()))?;
+        let type_info =
+            type_info.ok_or_else(|| TypeError::NotAConstructor(name.display(), Span::default()))?;
 
         match type_info {
             TypeInfo::Enum {
@@ -1498,6 +1550,7 @@ impl TypeEnv {
                         name: name.display(),
                         expected_arity: params.len(),
                         found_arity: args.len(),
+                        span: Span::default(),
                     });
                 }
 
@@ -1532,6 +1585,7 @@ impl TypeEnv {
                         name: name.display(),
                         expected_arity: params.len(),
                         found_arity: args.len(),
+                        span: Span::default(),
                     });
                 }
 
@@ -1956,6 +2010,7 @@ mod tests {
                 name,
                 expected_arity: 1,
                 found_arity: 2,
+                ..
             }) if name == "Option"
         ));
     }

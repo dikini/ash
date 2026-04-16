@@ -9,6 +9,7 @@
 
 use ash_core::module_graph::{ModuleGraph, ModuleId};
 use ash_parser::import_resolver::{Binding, BindingKind, BindingTable};
+use ash_parser::token::Span;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -68,20 +69,20 @@ pub enum ResolutionKind {
 pub enum NameError {
     /// Name not found in any scope
     #[error("unresolved name: {name}")]
-    Unresolved { name: String },
+    Unresolved { name: String, span: Span },
     /// Name is private and not accessible
     #[error("name '{name}' is private")]
-    Private { name: String },
+    Private { name: String, span: Span },
     /// Used `::` (fn-call syntax) to call a capability — use `:` instead
     #[error(
         "'{name}' is a capability, not a function; use `provider:action()` syntax instead of `::`"
     )]
-    WrongTargetCapabilityAsFn { name: String },
+    WrongTargetCapabilityAsFn { name: String, span: Span },
     /// Used `:` (capability-call syntax) to call a function — use `::` instead
     #[error(
         "'{name}' is a function, not a capability; use `module::name()` syntax instead of `provider:action()`"
     )]
-    WrongTargetFnAsCapability { name: String },
+    WrongTargetFnAsCapability { name: String, span: Span },
 }
 
 /// Local binding information
@@ -298,6 +299,7 @@ impl<'a> NameBinder<'a> {
         // Name not found
         Err(NameError::Unresolved {
             name: name.to_string(),
+            span: Span::default(),
         })
     }
 
@@ -330,6 +332,7 @@ impl<'a> NameBinder<'a> {
             Ok(resolved) if resolved.definition_kind == Some(DefinitionKind::Capability) => {
                 Err(NameError::WrongTargetCapabilityAsFn {
                     name: name.to_string(),
+                    span: Span::default(),
                 })
             }
             _ => Ok(()),
@@ -349,6 +352,7 @@ impl<'a> NameBinder<'a> {
             Ok(resolved) if resolved.definition_kind == Some(DefinitionKind::Function) => {
                 Err(NameError::WrongTargetFnAsCapability {
                     name: name.to_string(),
+                    span: Span::default(),
                 })
             }
             _ => Ok(()),
@@ -668,7 +672,7 @@ mod tests {
         assert!(result.is_err());
 
         match result.unwrap_err() {
-            NameError::Unresolved { name } => {
+            NameError::Unresolved { name, .. } => {
                 assert_eq!(name, "nonexistent");
             }
             _ => panic!("Expected Unresolved error"),
@@ -800,7 +804,7 @@ mod tests {
         let result = binder.check_qualified_fn_call("read_file", root);
         assert!(result.is_err());
         match result.unwrap_err() {
-            NameError::WrongTargetCapabilityAsFn { name } => {
+            NameError::WrongTargetCapabilityAsFn { name, .. } => {
                 assert_eq!(name, "read_file");
             }
             other => panic!("Expected WrongTargetCapabilityAsFn, got: {:?}", other),
@@ -819,7 +823,7 @@ mod tests {
         let result = binder.check_capability_call("calculate", root);
         assert!(result.is_err());
         match result.unwrap_err() {
-            NameError::WrongTargetFnAsCapability { name } => {
+            NameError::WrongTargetFnAsCapability { name, .. } => {
                 assert_eq!(name, "calculate");
             }
             other => panic!("Expected WrongTargetFnAsCapability, got: {:?}", other),

@@ -4,6 +4,7 @@
 //! ensuring that workflows satisfy their declared obligations.
 
 use crate::types::Type;
+use ash_parser::token::Span;
 use std::collections::HashMap;
 
 /// A proof obligation that must be satisfied
@@ -1160,6 +1161,7 @@ impl ObligationCollector {
             let remaining: Vec<String> = ctx.obligations.remaining().into_iter().cloned().collect();
             Err(TypeError::UnsatisfiedObligations {
                 obligations: remaining,
+                span: Span::default(),
             })
         }
     }

@@ -4,6 +4,7 @@
 //! and other named entities in workflows and expressions.
 
 use ash_parser::surface::{Expr, OperationalTarget, Pattern, Workflow};
+use ash_parser::token::Span;
 use std::collections::HashMap;
 
 /// Resolved capability target - canonical (provider, action) pair.
@@ -208,25 +209,27 @@ pub struct NameResolver {
 pub enum ResolutionError {
     /// Unbound variable
     #[error("Unbound variable: {0}")]
-    UnboundVariable(String),
+    UnboundVariable(String, Span),
     /// Duplicate binding in same scope
     #[error("Duplicate binding: {0}")]
-    DuplicateBinding(String),
+    DuplicateBinding(String, Span),
     /// Undefined capability
     #[error("Undefined capability: {0}")]
-    UndefinedCapability(String),
+    UndefinedCapability(String, Span),
     /// Unresolved symbolic capability - capability name could not be mapped to provider:action
     #[error("Unresolved capability '{capability}': no mapping to provider:action found")]
     UnresolvedSymbolicCapability {
         /// The symbolic capability name that could not be resolved
         capability: String,
+        /// Source span
+        span: Span,
     },
     /// Undefined policy
     #[error("Undefined policy: {0}")]
-    UndefinedPolicy(String),
+    UndefinedPolicy(String, Span),
     /// Undefined role
     #[error("Undefined role: {0}")]
-    UndefinedRole(String),
+    UndefinedRole(String, Span),
 }
 
 impl NameResolver {
@@ -586,10 +589,10 @@ impl NameResolver {
     /// Resolve names in an expression
     fn resolve_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Variable { name, .. } => {
+            Expr::Variable { name, span, .. } => {
                 if !self.is_bound(name) {
                     self.errors
-                        .push(ResolutionError::UnboundVariable(name.to_string()));
+                        .push(ResolutionError::UnboundVariable(name.to_string(), *span));
                 }
             }
 
@@ -713,10 +716,10 @@ impl NameResolver {
         use ash_parser::surface::PolicyExpr;
 
         match expr {
-            PolicyExpr::Var { name, .. } => {
+            PolicyExpr::Var { name, span, .. } => {
                 if !self.is_bound(name) {
                     self.errors
-                        .push(ResolutionError::UnboundVariable(name.to_string()));
+                        .push(ResolutionError::UnboundVariable(name.to_string(), *span));
                 }
             }
 
@@ -768,11 +771,11 @@ impl NameResolver {
     /// Recursively bind names from a pattern, checking for duplicates
     fn bind_pattern_recursive(&mut self, pattern: &Pattern) {
         match pattern {
-            Pattern::Variable { name, .. } => {
+            Pattern::Variable { name, span, .. } => {
                 // Check if this name is already bound in the current pattern
                 if self.pattern_bindings.contains(name.as_ref()) {
                     self.errors
-                        .push(ResolutionError::DuplicateBinding(name.to_string()));
+                        .push(ResolutionError::DuplicateBinding(name.to_string(), *span));
                 } else {
                     self.pattern_bindings.insert(name.clone());
                     self.bind(name.clone());
@@ -802,8 +805,10 @@ impl NameResolver {
                 if let Some(rest_name) = rest {
                     // Check if this name is already bound in the current pattern
                     if self.pattern_bindings.contains(rest_name.as_ref()) {
-                        self.errors
-                            .push(ResolutionError::DuplicateBinding(rest_name.to_string()));
+                        self.errors.push(ResolutionError::DuplicateBinding(
+                            rest_name.to_string(),
+                            Span::default(),
+                        ));
                     } else {
                         self.pattern_bindings.insert(rest_name.clone());
                         self.bind(rest_name.clone());
@@ -895,7 +900,6 @@ pub fn resolve_workflow(workflow: &Workflow) -> Result<ResolutionResult, Vec<Res
 mod tests {
     use super::*;
     use ash_parser::surface::{ActionRef, CheckTarget, Literal, ObligationRef};
-    use ash_parser::token::Span;
 
     fn test_span() -> Span {
         Span::new(0, 0, 1, 1)
@@ -1005,7 +1009,7 @@ mod tests {
         assert_eq!(resolver.errors().len(), 1);
         assert!(matches!(
             resolver.errors()[0],
-            ResolutionError::UnboundVariable(_)
+            ResolutionError::UnboundVariable(_, _)
         ));
     }
 
@@ -1347,13 +1351,13 @@ mod tests {
 
     #[test]
     fn test_resolution_error_display() {
-        let err = ResolutionError::UnboundVariable("x".to_string());
+        let err = ResolutionError::UnboundVariable("x".to_string(), Span::default());
         assert!(format!("{err}").contains("x"));
 
-        let err = ResolutionError::DuplicateBinding("x".to_string());
+        let err = ResolutionError::DuplicateBinding("x".to_string(), Span::default());
         assert!(format!("{err}").contains("x"));
 
-        let err = ResolutionError::UndefinedCapability("FileIO".to_string());
+        let err = ResolutionError::UndefinedCapability("FileIO".to_string(), Span::default());
         assert!(format!("{err}").contains("FileIO"));
     }
 
@@ -1367,7 +1371,10 @@ mod tests {
 
     #[test]
     fn test_resolution_result_failure() {
-        let errors = vec![ResolutionError::UnboundVariable("x".to_string())];
+        let errors = vec![ResolutionError::UnboundVariable(
+            "x".to_string(),
+            Span::default(),
+        )];
         let result = ResolutionResult::failure(errors);
         assert!(!result.success);
         assert_eq!(result.errors.len(), 1);

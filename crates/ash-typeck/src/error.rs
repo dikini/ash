@@ -3,6 +3,7 @@
 //! Defines errors that can occur during type checking of expressions,
 //! including constructor checking errors.
 
+use ash_parser::token::Span;
 use thiserror::Error;
 
 /// Error type for constructor checking
@@ -10,7 +11,7 @@ use thiserror::Error;
 pub enum ConstructorError {
     /// Unknown constructor name
     #[error("Unknown constructor: {0}")]
-    UnknownConstructor(String),
+    UnknownConstructor(String, Span),
 
     /// Missing required field in constructor
     #[error("Missing field '{field}' in constructor '{constructor}'")]
@@ -19,6 +20,8 @@ pub enum ConstructorError {
         constructor: String,
         /// Name of the missing field
         field: String,
+        /// Source span
+        span: Span,
     },
 
     /// Unknown field provided to constructor
@@ -28,6 +31,8 @@ pub enum ConstructorError {
         constructor: String,
         /// Name of the unknown field
         field: String,
+        /// Source span
+        span: Span,
     },
 
     /// Type mismatch in field
@@ -43,6 +48,8 @@ pub enum ConstructorError {
         expected: String,
         /// Actual type
         actual: String,
+        /// Source span
+        span: Span,
     },
 
     /// Type mismatch in positional tuple payload item
@@ -58,6 +65,8 @@ pub enum ConstructorError {
         expected: String,
         /// Actual type
         actual: String,
+        /// Source span
+        span: Span,
     },
 
     /// Wrong number of positional tuple payload items for a constructor.
@@ -71,6 +80,8 @@ pub enum ConstructorError {
         expected: usize,
         /// Actual number of positional items
         actual: usize,
+        /// Source span
+        span: Span,
     },
 
     /// Match expression does not cover all variants of the scrutinee enum
@@ -80,6 +91,8 @@ pub enum ConstructorError {
         scrutinee_type: String,
         /// Human-readable list of missing cases
         missing: String,
+        /// Source span
+        span: Span,
     },
 
     /// Unbound variable - variable not found in environment
@@ -88,7 +101,7 @@ pub enum ConstructorError {
         /// Name of the variable
         name: String,
         /// Source span
-        span: ash_parser::token::Span,
+        span: Span,
     },
 
     /// Type is not iterable (used in for loops)
@@ -97,7 +110,7 @@ pub enum ConstructorError {
         /// The type that cannot be iterated
         ty: crate::types::Type,
         /// Source span
-        span: ash_parser::token::Span,
+        span: Span,
     },
 
     /// Unsupported expression type
@@ -106,7 +119,7 @@ pub enum ConstructorError {
         /// Kind of expression that is unsupported
         kind: String,
         /// Source span
-        span: ash_parser::token::Span,
+        span: Span,
     },
 
     /// Unknown type annotation in FnDef parameter or return type
@@ -117,7 +130,7 @@ pub enum ConstructorError {
         /// Where the annotation appeared, e.g. "parameter `x`" or "return type"
         context: String,
         /// Source span
-        span: ash_parser::token::Span,
+        span: Span,
     },
 
     /// Invalid canonical interface method call
@@ -130,7 +143,7 @@ pub enum ConstructorError {
         /// Human-readable failure reason
         reason: String,
         /// Source span
-        span: ash_parser::token::Span,
+        span: Span,
     },
 }
 
@@ -139,23 +152,23 @@ pub enum ConstructorError {
 pub enum TypeEnvError {
     /// Type already defined
     #[error("Type '{0}' is already defined")]
-    DuplicateType(String),
+    DuplicateType(String, Span),
 
     /// Type not found
     #[error("Type '{0}' not found")]
-    TypeNotFound(String),
+    TypeNotFound(String, Span),
 
     /// Invalid type definition
     #[error("Invalid type definition: {0}")]
-    InvalidDefinition(String),
+    InvalidDefinition(String, Span),
 
     /// Interface already defined
     #[error("Interface '{0}' is already defined")]
-    DuplicateInterface(String),
+    DuplicateInterface(String, Span),
 
     /// Interface not found
     #[error("Interface '{0}' not found")]
-    MissingInterface(String),
+    MissingInterface(String, Span),
 
     /// Duplicate impl for the same interface and full interface application
     #[error("Impl for interface '{interface}' and type '{ty}' is already defined")]
@@ -164,6 +177,8 @@ pub enum TypeEnvError {
         interface: String,
         /// Full interface application
         ty: String,
+        /// Source span
+        span: Span,
     },
 
     /// Impl not found for a canonical interface method call
@@ -173,6 +188,8 @@ pub enum TypeEnvError {
         interface: String,
         /// Full interface application
         ty: String,
+        /// Source span
+        span: Span,
     },
 
     /// Interface method not found
@@ -182,27 +199,58 @@ pub enum TypeEnvError {
         interface: String,
         /// Method name
         method: String,
+        /// Source span
+        span: Span,
     },
 
     /// Overlapping impls for an interface
     #[error("overlapping impls for interface '{interface}'")]
-    OverlappingImpls { interface: String },
+    OverlappingImpls {
+        /// Interface name
+        interface: String,
+        /// Source span
+        span: Span,
+    },
 
     /// Recursive interface bound exceeded depth limit
     #[error("recursive interface bound exceeded depth limit")]
-    RecursiveBound { message: String },
+    RecursiveBound {
+        /// Human-readable failure reason
+        message: String,
+        /// Source span
+        span: Span,
+    },
 
     /// Missing associated type in impl
     #[error("missing associated type '{name}' in impl for interface '{interface}'")]
-    MissingAssociatedType { interface: String, name: String },
+    MissingAssociatedType {
+        /// Interface name
+        interface: String,
+        /// Associated type name
+        name: String,
+        /// Source span
+        span: Span,
+    },
 
     /// Mismatched projection interface
     #[error("mismatched projection interface: expected '{expected}', found '{found}'")]
-    MismatchedProjectionInterface { expected: String, found: String },
+    MismatchedProjectionInterface {
+        /// Expected interface name
+        expected: String,
+        /// Found interface name
+        found: String,
+        /// Source span
+        span: Span,
+    },
 
     /// Ambiguous associated type
     #[error("ambiguous associated type '{name}'")]
-    AmbiguousAssociatedType { name: String },
+    AmbiguousAssociatedType {
+        /// Associated type name
+        name: String,
+        /// Source span
+        span: Span,
+    },
 }
 
 /// Error type for exhaustiveness checking
@@ -224,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_unknown_constructor_error() {
-        let err = ConstructorError::UnknownConstructor("Foo".to_string());
+        let err = ConstructorError::UnknownConstructor("Foo".to_string(), Span::default());
         let msg = format!("{err}");
         assert!(msg.contains("Unknown constructor"));
         assert!(msg.contains("Foo"));
@@ -235,6 +283,7 @@ mod tests {
         let err = ConstructorError::MissingField {
             constructor: "Some".to_string(),
             field: "value".to_string(),
+            span: Span::default(),
         };
         let msg = format!("{err}");
         assert!(msg.contains("Missing field"));
@@ -247,6 +296,7 @@ mod tests {
         let err = ConstructorError::UnknownField {
             constructor: "Point".to_string(),
             field: "z".to_string(),
+            span: Span::default(),
         };
         let msg = format!("{err}");
         assert!(msg.contains("Unknown field"));
@@ -261,6 +311,7 @@ mod tests {
             field: "value".to_string(),
             expected: "Int".to_string(),
             actual: "String".to_string(),
+            span: Span::default(),
         };
         let msg = format!("{err}");
         assert!(msg.contains("Type mismatch"));
@@ -277,6 +328,7 @@ mod tests {
             position: 0,
             expected: "Int".to_string(),
             actual: "String".to_string(),
+            span: Span::default(),
         };
         let msg = format!("{err}");
         assert!(msg.contains("positional item 0"));
@@ -287,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_duplicate_type_error() {
-        let err = TypeEnvError::DuplicateType("Option".to_string());
+        let err = TypeEnvError::DuplicateType("Option".to_string(), Span::default());
         let msg = format!("{err}");
         assert!(msg.contains("already defined"));
         assert!(msg.contains("Option"));
@@ -295,7 +347,7 @@ mod tests {
 
     #[test]
     fn test_type_not_found_error() {
-        let err = TypeEnvError::TypeNotFound("Unknown".to_string());
+        let err = TypeEnvError::TypeNotFound("Unknown".to_string(), Span::default());
         let msg = format!("{err}");
         assert!(msg.contains("not found"));
         assert!(msg.contains("Unknown"));

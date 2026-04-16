@@ -2,6 +2,8 @@
 //!
 //! Provides type checking for expressions, including constructor expressions.
 
+#![allow(clippy::result_large_err)]
+
 use crate::error::ConstructorError;
 use crate::exhaustiveness::{Coverage, check_exhaustive};
 use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo};
@@ -799,6 +801,7 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
             errors.push(ConstructorError::NonExhaustiveMatch {
                 scrutinee_type: type_def.name.clone(),
                 missing: format_missing_witnesses(&witnesses),
+                span: Span::default(),
             });
         }
     }
@@ -858,6 +861,7 @@ fn check_constructor(
         None => {
             return CheckResult::error(ConstructorError::UnknownConstructor(
                 constructor_name.to_string(),
+                Span::default(),
             ));
         }
     };
@@ -914,6 +918,7 @@ fn check_tuple_constructor_fields(
                 constructor: constructor_name.to_string(),
                 expected: variant_def.fields.len(),
                 actual: fields.len(),
+                span: Span::default(),
             });
             return;
         }
@@ -924,6 +929,7 @@ fn check_tuple_constructor_fields(
             constructor: constructor_name.to_string(),
             expected: variant_def.fields.len(),
             actual: tuple_items.len(),
+            span: Span::default(),
         });
     }
 
@@ -940,6 +946,7 @@ fn check_tuple_constructor_fields(
                 constructor: constructor_name.to_string(),
                 expected: variant_def.fields.len(),
                 actual: tuple_items.len(),
+                span: Span::default(),
             });
             continue;
         }
@@ -949,6 +956,7 @@ fn check_tuple_constructor_fields(
                 constructor: constructor_name.to_string(),
                 expected: variant_def.fields.len(),
                 actual: tuple_items.len(),
+                span: Span::default(),
             });
             continue;
         }
@@ -966,6 +974,7 @@ fn check_tuple_constructor_fields(
                 position: index,
                 expected: expected_ty.to_string(),
                 actual: field_result.ty.to_string(),
+                span: Span::default(),
             }),
         }
     }
@@ -991,6 +1000,7 @@ fn check_named_constructor_fields(
             errors.push(ConstructorError::MissingField {
                 constructor: constructor_name.to_string(),
                 field: expected.to_string(),
+                span: Span::default(),
             });
         }
     }
@@ -1000,6 +1010,7 @@ fn check_named_constructor_fields(
             errors.push(ConstructorError::UnknownField {
                 constructor: constructor_name.to_string(),
                 field: provided.to_string(),
+                span: Span::default(),
             });
         }
     }
@@ -1026,6 +1037,7 @@ fn check_named_constructor_fields(
                         field: field_name.to_string(),
                         expected: expected_ty.to_string(),
                         actual: field_result.ty.to_string(),
+                        span: Span::default(),
                     });
                 }
             }
@@ -1231,7 +1243,7 @@ mod tests {
         assert_eq!(result.errors.len(), 1);
         assert!(matches!(
             result.errors[0],
-            ConstructorError::UnknownConstructor(_)
+            ConstructorError::UnknownConstructor(..)
         ));
     }
 
@@ -1252,7 +1264,7 @@ mod tests {
         assert!(!result.is_ok());
         assert!(result.errors.iter().any(|e| matches!(
             e,
-            ConstructorError::MissingField { constructor, field }
+            ConstructorError::MissingField { constructor, field, .. }
             if constructor == "Some" && field == "value"
         )));
     }
@@ -1280,7 +1292,7 @@ mod tests {
         assert!(!result.is_ok());
         assert!(result.errors.iter().any(|e| matches!(
             e,
-            ConstructorError::UnknownField { constructor, field }
+            ConstructorError::UnknownField { constructor, field, .. }
             if constructor == "Some" && field == "extra"
         )));
     }
@@ -1553,7 +1565,7 @@ mod tests {
 
     #[test]
     fn test_check_result_error() {
-        let err = ConstructorError::UnknownConstructor("Foo".to_string());
+        let err = ConstructorError::UnknownConstructor("Foo".to_string(), Span::default());
         let result = CheckResult::error(err.clone());
         assert!(!result.is_ok());
         assert_eq!(result.errors.len(), 1);

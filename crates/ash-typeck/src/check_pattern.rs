@@ -10,6 +10,7 @@ use crate::types::{Type, TypeVar};
 use ash_core::adt::tuple_field_name;
 use ash_core::ast::TypeBody;
 use ash_parser::surface::{Literal, Pattern, VariantPatternPayload};
+use ash_parser::token::Span;
 use std::collections::HashMap;
 
 pub use ash_core::ast::{TypeDef, VariantDef};
@@ -107,6 +108,7 @@ impl TypeEnv {
                     (Some(variant), None) => Ok(Some(variant)),
                     _ => Err(TypeError::InvalidPattern {
                         message: format!("ambiguous variant: {variant_name}"),
+                        span: Span::default(),
                     }),
                 }
             }
@@ -177,6 +179,7 @@ fn check_pattern_inner(
                 Err(TypeError::PatternMismatch {
                     expected: Box::new(expected.clone()),
                     actual: Box::new(lit_type),
+                    span: Span::default(),
                 })
             }
         }
@@ -269,6 +272,7 @@ fn check_variant_pattern(
         return Err(TypeError::PatternMismatch {
             expected: Box::new(expected.clone()),
             actual: Box::new(Type::Var(TypeVar::fresh())),
+            span: Span::default(),
         });
     }
 
@@ -283,7 +287,10 @@ fn check_variant_pattern(
         );
     }
 
-    Err(TypeError::UnknownVariant(variant_name.to_string()))
+    Err(TypeError::UnknownVariant(
+        variant_name.to_string(),
+        Span::default(),
+    ))
 }
 
 /// Simple local conversion of TypeExpr to Type for pattern checking.
@@ -372,6 +379,7 @@ fn check_record_variant_fields(
             } else {
                 Err(TypeError::InvalidPattern {
                     message: format!("variant {variant_name} requires fields"),
+                    span: Span::default(),
                 })
             }
         }
@@ -383,6 +391,7 @@ fn check_record_variant_fields(
                     .map(|(_, ty)| simple_type_expr_to_type(ty))
                     .ok_or_else(|| TypeError::InvalidPattern {
                         message: format!("unknown field: {field_name}"),
+                        span: Span::default(),
                     })?;
                 check_pattern_inner(env, field_pattern, &field_type, bindings)?;
             }
@@ -406,6 +415,7 @@ fn check_tuple_variant_fields(
                 variant_fields.len(),
                 items.len()
             ),
+            span: Span::default(),
         });
     }
 
@@ -422,6 +432,7 @@ fn check_tuple_variant_fields(
             })
             .ok_or_else(|| TypeError::InvalidPattern {
                 message: format!("tuple variant {variant_name} is missing positional slot {index}"),
+                span: Span::default(),
             })?;
         check_pattern_inner(env, pattern, &field_type, bindings)?;
     }
@@ -443,6 +454,7 @@ fn check_tuple_pattern(
                 return Err(TypeError::PatternArityMismatch {
                     expected: fields.len(),
                     actual: patterns.len(),
+                    span: Span::default(),
                 });
             }
 
@@ -455,6 +467,7 @@ fn check_tuple_pattern(
                     .ok_or(TypeError::PatternArityMismatch {
                         expected: fields.len(),
                         actual: patterns.len(),
+                        span: Span::default(),
                     })?;
                 check_pattern_inner(env, pattern, field_type, bindings)?;
             }
@@ -477,6 +490,7 @@ fn check_tuple_pattern(
                     .map(|(i, _)| (Box::from(format!("{i}")), Type::Var(TypeVar::fresh())))
                     .collect(),
             )),
+            span: Span::default(),
         }),
     }
 }
@@ -497,6 +511,7 @@ fn check_record_pattern(
                     .map(|(_, t)| t)
                     .ok_or_else(|| TypeError::InvalidPattern {
                         message: format!("unknown field: {field_name}"),
+                        span: Span::default(),
                     })?;
                 check_pattern_inner(env, field_pattern, field_type, bindings)?;
             }
@@ -519,6 +534,7 @@ fn check_record_pattern(
                     .map(|(n, _)| (n.clone(), Type::Var(TypeVar::fresh())))
                     .collect(),
             )),
+            span: Span::default(),
         }),
     }
 }
@@ -557,6 +573,7 @@ fn check_list_pattern(
         _ => Err(TypeError::PatternMismatch {
             expected: Box::new(expected.clone()),
             actual: Box::new(Type::List(Box::new(Type::Var(TypeVar::fresh())))),
+            span: Span::default(),
         }),
     }
 }
@@ -846,7 +863,8 @@ mod tests {
             result.unwrap_err(),
             TypeError::PatternArityMismatch {
                 expected: 2,
-                actual: 3
+                actual: 3,
+                ..
             }
         ));
     }

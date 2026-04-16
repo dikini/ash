@@ -755,7 +755,7 @@ fn task565_overlapping_impls_rejected() {
     assert!(
         matches!(
             result,
-            Err(TypeEnvError::OverlappingImpls { ref interface }) if interface == "Serialize"
+            Err(TypeEnvError::OverlappingImpls { ref interface, .. }) if interface == "Serialize"
         ),
         "expected OverlappingImpls error, got {:?}",
         result
@@ -1067,7 +1067,7 @@ fn task567_missing_associated_type_in_impl_errors() {
     assert!(
         matches!(
             result,
-            Err(TypeEnvError::MissingAssociatedType { ref interface, ref name })
+            Err(TypeEnvError::MissingAssociatedType { ref interface, ref name, .. })
             if interface == "Serializer" && name == "Ok"
         ),
         "expected MissingAssociatedType error for Ok in Serializer, got {:?}",

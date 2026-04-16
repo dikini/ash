@@ -39,6 +39,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `parse_workflow`, `parse_module`) now delegate to the canonical
   implementation, eliminating drift between keyword lists.
 
+- Added source spans to all spanless type-checker error variants
+  (TASK-572): `TypeEnvError`, `ConstructorError`, `NameError`,
+  `ResolutionError`, and `TypeError` in `ash-typeck` now carry
+  `span: ash_parser::token::Span` on every variant. All construction
+  sites and tests updated; `Span::default()` used where real spans
+  are not yet available.
+
 - Wired `monomorphize_workflow` into the engine pipeline after type checking
   (`Engine::check` now takes `&mut Workflow`) and addressed Phase 83 review
   findings (TASK-564..TASK-568). Fixed missing match arms in

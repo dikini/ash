@@ -2543,7 +2543,7 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 Build a canonical Ash workflow that audits the Ash repository for spec drift, example conformance, PLAN-INDEX coherence, and changelog completeness. This phase exercises the language's self-hosting capability and forces foundational stdlib substrates (`regex`, `markdown`, `json`, `process`).
 
 **Plan Reference:** [PLAN-090: Spec Processor](PLAN-090-SPEC-PROCESSOR.md)
-**Specs:** DESIGN-SPEC-PROCESSOR.md, DESIGN-NOTE-PROCESS-EFFECT.md, DESIGN-NOTE-BATCH-CHECK-API.md, DESIGN-NOTE-JSON-STRATEGY.md
+**Specs:** [../design/DESIGN-SPEC-PROCESSOR.md](../design/DESIGN-SPEC-PROCESSOR.md), DESIGN-NOTE-PROCESS-EFFECT.md, DESIGN-NOTE-BATCH-CHECK-API.md, DESIGN-NOTE-JSON-STRATEGY.md
 **Priority:** High
 **Status:** 📝 Planned
 

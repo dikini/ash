@@ -13,7 +13,7 @@ Aggregate structured findings into human-readable and JSON output formats, with 
 
 ## Dependencies
 
-- None (uses ad-hoc string construction; refactors to `std::json` after TASK-597)
+- TASK-597 (`std::json`) for the eventual refactor from ad-hoc string construction to `json::stringify`.
 
 ## Requirements
 

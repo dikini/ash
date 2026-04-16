@@ -199,17 +199,17 @@ Track C: Integration and meta-validation
 
 ## 7. Capability boundary mechanism
 
-The processor declares its expected language capabilities in `capability_boundary.ash`:
+The processor declares its expected language capabilities in `capability_boundary.ash`. The example below shows the **initial pre-Track-B state**; Track B tasks (TASK-595 through TASK-598) flip these flags from `false` to `true` as each substrate is verified.
 
 ```ash
 let expected_capabilities = {
     file_io: true,
-    process_spawn: false,
-    regex_matching: false,
-    markdown_parsing: false,
-    json_parsing: false,
+    process_spawn: false,  // becomes true after TASK-598
+    regex_matching: false, // becomes true after TASK-595
+    markdown_parsing: false, // becomes true after TASK-596
+    json_parsing: false,   // becomes true after TASK-597
     first_class_functions: true,
-    generic_interfaces: false,
+    generic_interfaces: false, // still pending Phase 83
 };
 ```
 
@@ -236,8 +236,8 @@ At runtime:
 
 ## 10. Relationship to other documents
 
-- [DESIGN-VP-001-MODALITY-ONTOLOGY.md](DESIGN-VP-001-MODALITY-ONTOLOGY.md) — the processor is a text-primary tool with graph-secondary potential.
-- [DESIGN-VP-002-REPL-NOTEBOOK.md](DESIGN-VP-002-REPL-NOTEBOOK.md) — the processor is an ideal notebook-cell demonstration (run each validation rule as a cell).
+- [DESIGN-VP-001-MODALITY-ONTOLOGY.md](visual-programming/DESIGN-VP-001-MODALITY-ONTOLOGY.md) — the processor is a text-primary tool with graph-secondary potential.
+- `DESIGN-VP-002-REPL-NOTEBOOK.md` — planned; the processor is an ideal notebook-cell demonstration (run each validation rule as a cell).
 - `docs/spec/SPEC-039` / `SPEC-042` — span and formatter fidelity are prerequisites for round-tripping processor outputs.
 
 ## 11. References

@@ -13,7 +13,7 @@ Implement a CommonMark-compliant Markdown AST with Pandoc JSON filter compatibil
 
 ## Dependencies
 
-- TASK-597 (`std::json`) for `to_pandoc_json` implementation
+- TASK-597 (`std::json`) for `to_pandoc_json` implementation.
 
 ## Requirements
 

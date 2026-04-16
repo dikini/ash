@@ -239,7 +239,7 @@ These tasks create the missing stdlib modules. They run in parallel with Track A
 **Files:**
 - Create: `std/src/regex.ash`
 - Modify: `std/src/lib.ash` (add `pub use regex::*`)
-- Modify: `crates/ash-engine/src/capabilities/mod.rs` or new provider module
+- Modify: `crates/ash-engine/src/providers/mod.rs` or new provider module
 - Test: `crates/ash-engine/tests/regex_capability.rs`
 
 **Step 1: Define Ash interface**
@@ -275,7 +275,7 @@ Verify real non-test callsites exist (the spec processor uses `regex` in TASK-59
 **Files:**
 - Create: `std/src/markdown.ash`
 - Modify: `std/src/lib.ash`
-- Create: `crates/ash-engine/src/capabilities/markdown.rs`
+- Create: `crates/ash-engine/src/providers/markdown.rs`
 - Test: `crates/ash-engine/tests/markdown_capability.rs`
 
 **Step 1: Define Ash AST**
@@ -336,7 +336,7 @@ Verify that parsing a real `SPEC-*.md` file produces a non-empty `MarkdownDoc` a
 **Files:**
 - Create: `std/src/json.ash`
 - Modify: `std/src/lib.ash`
-- Create: `crates/ash-engine/src/capabilities/json.rs`
+- Create: `crates/ash-engine/src/providers/json.rs`
 - Test: `crates/ash-engine/tests/json_capability.rs`
 
 **Step 1: Define Ash interface**
@@ -383,8 +383,8 @@ Verify `JsonValue` shape matches the design note and that `stringify` produces v
 **Files:**
 - Create: `std/src/process.ash`
 - Modify: `std/src/lib.ash`
-- Create: `crates/ash-engine/src/capabilities/process.rs`
-- Modify: `crates/ash-engine/src/engine.rs` (auto-register `Process` in `Engine::default()`)
+- Create: `crates/ash-engine/src/providers/process.rs`
+- Modify: `crates/ash-engine/src/lib.rs` (add `with_process_capabilities()` to `EngineBuilder` default path)
 - Test: `crates/ash-engine/tests/process_capability.rs`
 
 **Step 1: Define Ash interface**
@@ -415,8 +415,8 @@ pub fn run_with_options(cmd: String, args: List<String>, options: ProcessOptions
 **Step 3: Auto-register in default engine**
 
 ```rust
-// In Engine::default() or EngineBuilder
-self.register_builtin_process_provider();
+// In EngineBuilder::build() or a default builder helper
+builder.with_process_capabilities();
 ```
 
 **Step 4: Verify and commit**

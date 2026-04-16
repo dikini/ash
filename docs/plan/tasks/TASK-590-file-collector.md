@@ -23,6 +23,24 @@ Implement the repository file discovery stage for the spec processor: gather all
 
 ## TDD Steps
 
+### Step 0: Scaffold the crate
+
+Create `apps/spec_processor/Cargo.toml` as a workspace member:
+
+```toml
+[package]
+name = "ash-spec-processor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ash-engine = { path = "../../crates/ash-engine" }
+```
+
+Create the directory layout:
+- `apps/spec_processor/src/collect.ash`
+- `apps/spec_processor/tests/fixtures/repo_a/`
+
 ### Step 1: Write failing test
 
 Create `apps/spec_processor/tests/test_collect.ash` (or Rust harness) that asserts `scan_tree` returns non-empty lists for a mock fixture directory.

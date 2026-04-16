@@ -2538,7 +2538,9 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 
 **Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working.
 
-## Phase 90: Spec Processor
+## Phase 90: Spec Processor (Independent Application Track)
+
+**Scheduling note:** Phase 90 is an independent application track that proceeds in parallel with Phases 83–89. It does not depend on parser tooling, LSP, or incremental analysis. The only hard dependencies are within Phase 90 itself (Track C gates on Tracks A and B).
 
 Build a canonical Ash workflow that audits the Ash repository for spec drift, example conformance, PLAN-INDEX coherence, and changelog completeness. This phase exercises the language's self-hosting capability and forces foundational stdlib substrates (`regex`, `markdown`, `json`, `process`).
 

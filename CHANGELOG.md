@@ -8,6 +8,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- MCP (Model Context Protocol) server bridge in new `ash-mcp` crate
+  (TASK-569 Phase 4).  Built on `rmcp` v1.5, exposes 8 MCP tools that
+  wrap `ash-lsp-core` analysis: `ash_get_diagnostics`, `ash_hover`,
+  `ash_goto_definition`, `ash_complete`, `ash_document_symbols`,
+  `ash_find_references` (placeholder), `ash_workspace_symbols`
+  (placeholder), `ash_code_action` (placeholder).  Files are auto-opened
+  on first tool call per SPEC-038 §8.5.  Responses include a one-line
+  summary for token-efficient LLM consumption.  Stdio transport via
+  `ash-mcp` binary.
+
 - Go-to-definition and completion support in `ash-lsp-core` and `ash-lsp`
   (TASK-569 Phase 3).  `ash-lsp-core` gains a shared `position` module
   (byte-offset ↔ LSP Position conversion, token-at-offset extraction),

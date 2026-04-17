@@ -14,6 +14,7 @@ members = [
     "crates/ash-doc-tests",
     "crates/ash-repl",
     "crates/ash-lsp-core",
+    "crates/ash-mcp",
     "std",
     "apps/spec_processor",
 ]

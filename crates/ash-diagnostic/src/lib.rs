@@ -100,17 +100,22 @@ pub struct Position {
 /// Convert an Ash error to a diagnostic.
 ///
 /// Returns `None` when the error does not carry a source span.
-pub fn ash_error_to_diagnostic(err: &dyn AshLspError, _source: &str) -> Option<Diagnostic> {
+pub fn ash_error_to_diagnostic(err: &dyn AshLspError) -> Option<Diagnostic> {
     let span = err.span()?;
+    // Compute end column from byte-width of the span.  This is accurate for
+    // single-line spans (the common case).  For multi-line spans the end
+    // column is approximate but still strictly better than a 1-char range.
+    let byte_width = span.end.saturating_sub(span.start);
+    let end_col = span.column.saturating_add(byte_width);
     Some(Diagnostic {
         range: Range {
             start: Position {
                 line: span.line.saturating_sub(1) as u32,
-                character: (span.column - 1) as u32,
+                character: span.column.saturating_sub(1) as u32,
             },
             end: Position {
                 line: span.line.saturating_sub(1) as u32,
-                character: span.column as u32,
+                character: end_col.saturating_sub(1) as u32,
             },
         },
         severity: Some(err.severity()),
@@ -147,12 +152,26 @@ mod tests {
         let err = TestError {
             span: Span::new(10, 15, 2, 5),
         };
-        let diag = ash_error_to_diagnostic(&err, "hello world").unwrap();
+        let diag = ash_error_to_diagnostic(&err).unwrap();
         assert_eq!(diag.range.start.line, 1);
         assert_eq!(diag.range.start.character, 4);
+        // byte_width = 15 - 10 = 5, end_col = 5 + 5 = 10, end character = 9
+        assert_eq!(diag.range.end.character, 9);
         assert_eq!(diag.severity, Some(Severity::Error));
         assert_eq!(diag.code, Some("T001".into()));
         assert_eq!(diag.message, "test error");
         assert_eq!(diag.source, Some("ash".into()));
+    }
+
+    #[test]
+    fn test_ash_error_to_diagnostic_zero_width_span() {
+        let err = TestError {
+            span: Span::default(),
+        };
+        let diag = ash_error_to_diagnostic(&err).unwrap();
+        // Zero-width span: start == end == 0, so end_col = 0 + 0 = 0.
+        // Both positions are (0, 0) after 1-indexed → 0-indexed with underflow guard.
+        assert_eq!(diag.range.start.line, 0);
+        assert_eq!(diag.range.end.line, 0);
     }
 }

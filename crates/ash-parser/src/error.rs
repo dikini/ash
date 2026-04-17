@@ -102,12 +102,7 @@ impl std::error::Error for ParseError {}
 
 impl ash_diagnostic::AshLspError for ParseError {
     fn span(&self) -> Option<ash_diagnostic::Span> {
-        Some(ash_diagnostic::Span::new(
-            self.span.start,
-            self.span.end,
-            self.span.line,
-            self.span.column,
-        ))
+        Some(self.span.into())
     }
     fn severity(&self) -> ash_diagnostic::Severity {
         ash_diagnostic::Severity::Error

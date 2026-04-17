@@ -214,6 +214,30 @@ impl Span {
     }
 }
 
+// Static assertion that `ash_diagnostic::Span` layout stays in sync with this
+// type.  `ash-parser` depends on `ash-diagnostic`, not the reverse, so the
+// diagnostic crate defines its own mirror of `Span` to avoid a circular
+// dependency.  If the two structs ever diverge this will fail to compile.
+const _: () = {
+    const fn assert_same_size() {
+        assert!(core::mem::size_of::<Span>() == core::mem::size_of::<ash_diagnostic::Span>());
+        assert!(core::mem::align_of::<Span>() == core::mem::align_of::<ash_diagnostic::Span>());
+    }
+    assert_same_size();
+};
+
+impl From<Span> for ash_diagnostic::Span {
+    fn from(s: Span) -> Self {
+        Self::new(s.start, s.end, s.line, s.column)
+    }
+}
+
+impl From<&Span> for ash_diagnostic::Span {
+    fn from(s: &Span) -> Self {
+        Self::new(s.start, s.end, s.line, s.column)
+    }
+}
+
 /// A token with its kind and source location.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {

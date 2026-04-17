@@ -380,17 +380,33 @@ Create a new crate at `crates/ash-diagnostic` with the following layout.
 [package]
 name = "ash-diagnostic"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "LSP diagnostic trait and types for the Ash compiler"
 
 [dependencies]
-ash-parser = { path = "../ash-parser" }
-# Explicit constraint: must NOT depend on ash-typeck
+thiserror.workspace = true
+# NOTE: ash-diagnostic does NOT depend on ash-parser.
+# It defines its own Span mirror type (see below).
 ```
 
 **`crates/ash-diagnostic/src/lib.rs`**
 
 ```rust
-pub use ash_parser::token::Span;
+/// Source span used in diagnostics.
+///
+/// Mirrors the shape of `ash_parser::token::Span` so conversions are trivial.
+/// A `From<ash_parser::token::Span>` impl in `ash-parser` (with a compile-time
+/// size/alignment assertion) keeps the two types in sync.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+    pub line: usize,
+    pub column: usize,
+}
 
 /// Lightweight newtype for diagnostic codes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -415,8 +431,12 @@ pub trait AshLspError: std::fmt::Display + std::error::Error {
 ```
 
 **Dependency constraints:**
-- `ash-diagnostic` **may** depend on `ash-parser` (to use `Span`).
-- `ash-diagnostic` **must NOT** depend on `ash-typeck` (to avoid a circular dependency; `ash-typeck` will depend on `ash-diagnostic` to implement `AshLspError` for its error types).
+- `ash-diagnostic` **must NOT** depend on `ash-parser` or `ash-typeck` (to avoid circular dependencies).
+- `ash-parser` depends on `ash-diagnostic` and provides `From<ash_parser::token::Span> for ash_diagnostic::Span` with a compile-time layout assertion.
+- `ash-typeck` depends on `ash-diagnostic` and implements `AshLspError` for its error types.
+
+**Span mirroring rationale:**
+`ash-diagnostic` cannot depend on `ash-parser` because `ash-parser` already depends on `ash-diagnostic` (to implement `AshLspError` for `ParseError`). Instead, `ash-diagnostic` defines a mirror of `Span` with identical fields. A compile-time `size_of`/`align_of` assertion in `ash-parser/src/token.rs` ensures the two types stay in sync, and `From`/`Into` conversions make bridging zero-cost.
 
 ## 6. Call Sites to Update
 

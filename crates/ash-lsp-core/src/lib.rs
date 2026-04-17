@@ -18,4 +18,5 @@
 
 pub mod analysis;
 pub mod diagnostics;
+pub mod symbols;
 pub mod vfs;

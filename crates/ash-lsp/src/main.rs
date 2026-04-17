@@ -11,22 +11,24 @@
 
 use ash_lint::LintConfig;
 use ash_lsp_core::analysis::AnalysisCache;
+use ash_lsp_core::symbols::document_symbols as core_document_symbols;
 use ash_lsp_core::vfs::Vfs;
 use clap::Parser;
 use lsp_types::{
-    Diagnostic as CoreDiagnostic, TextDocumentContentChangeEvent as CoreTextDocumentContentChangeEvent,
-    Uri as CoreUri,
+    Diagnostic as CoreDiagnostic, DocumentSymbol as CoreDocumentSymbol,
+    TextDocumentContentChangeEvent as CoreTextDocumentContentChangeEvent, Uri as CoreUri,
 };
 use std::net::SocketAddr;
 use tokio::io::{stdin, stdout};
 use tokio::net::TcpListener;
 use tower_lsp_server::jsonrpc::Result;
 use tower_lsp_server::ls_types::{
-    CompletionOptions, CompletionParams, CompletionResponse, Diagnostic, DidChangeTextDocumentParams,
-    DidCloseTextDocumentParams, DidOpenTextDocumentParams, DocumentSymbolParams,
-    DocumentSymbolResponse, Hover, HoverParams, HoverProviderCapability, InitializeParams,
-    InitializeResult, InitializedParams, MessageType, OneOf, ServerCapabilities, ServerInfo,
-    TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
+    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
+    DocumentSymbol, DocumentSymbolParams, DocumentSymbolResponse, Hover, HoverParams,
+    HoverProviderCapability, InitializeParams, InitializeResult, InitializedParams, MessageType,
+    OneOf, ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent,
+    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 use tracing::{debug, error, info};
@@ -81,6 +83,15 @@ impl AshLanguageServer {
             .collect()
     }
 
+    fn core_document_symbols_to_tower(
+        symbols: Vec<CoreDocumentSymbol>,
+    ) -> std::result::Result<Vec<DocumentSymbol>, serde_json::Error> {
+        symbols
+            .into_iter()
+            .map(|symbol| serde_json::from_value(serde_json::to_value(symbol)?))
+            .collect()
+    }
+
     async fn publish_current_diagnostics(&self, uri: Uri, version: Option<i32>) {
         debug!(uri = uri.as_str(), ?version, "publishing diagnostics");
         let core_uri = match Self::tower_uri_to_core(&uri) {
@@ -100,7 +111,9 @@ impl AshLanguageServer {
             }
         };
 
-        self.client.publish_diagnostics(uri, diagnostics, version).await;
+        self.client
+            .publish_diagnostics(uri, diagnostics, version)
+            .await;
     }
 
     async fn clear_diagnostics(&self, uri: Uri) {
@@ -171,7 +184,12 @@ impl LanguageServer for AshLanguageServer {
         let version = text_document.version;
         let changes = params.content_changes;
 
-        info!(uri = uri.as_str(), version, num_changes = changes.len(), "did_change");
+        info!(
+            uri = uri.as_str(),
+            version,
+            num_changes = changes.len(),
+            "did_change"
+        );
         let core_uri = match Self::tower_uri_to_core(&uri) {
             Ok(uri) => uri,
             Err(err) => {
@@ -218,9 +236,41 @@ impl LanguageServer for AshLanguageServer {
 
     async fn document_symbol(
         &self,
-        _: DocumentSymbolParams,
+        params: DocumentSymbolParams,
     ) -> Result<Option<DocumentSymbolResponse>> {
-        Ok(None)
+        let uri = params.text_document.uri;
+        debug!(uri = uri.as_str(), "document_symbol request");
+
+        let core_uri = match Self::tower_uri_to_core(&uri) {
+            Ok(uri) => uri,
+            Err(err) => {
+                error!(error = %err, "failed to convert document_symbol URI");
+                return Ok(Some(DocumentSymbolResponse::Nested(Vec::new())));
+            }
+        };
+
+        if self.cache.get(&core_uri).is_none() && self.vfs.get(&core_uri).is_some() {
+            let _ = self.cache.analyze(&core_uri, &self.vfs, &self.config);
+        }
+
+        let Some(analysis) = self.cache.get(&core_uri) else {
+            return Ok(Some(DocumentSymbolResponse::Nested(Vec::new())));
+        };
+
+        let Some(module) = analysis.module else {
+            return Ok(Some(DocumentSymbolResponse::Nested(Vec::new())));
+        };
+
+        let core_symbols = core_document_symbols(module.as_ref());
+        let symbols = match Self::core_document_symbols_to_tower(core_symbols) {
+            Ok(symbols) => symbols,
+            Err(err) => {
+                error!(error = %err, "failed to convert document symbols to tower types");
+                return Ok(Some(DocumentSymbolResponse::Nested(Vec::new())));
+            }
+        };
+
+        Ok(Some(DocumentSymbolResponse::Nested(symbols)))
     }
 }
 

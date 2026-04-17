@@ -12,9 +12,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   a DashMap-backed VFS, incremental text change application, line/column ↔ offset
   conversion helpers, diagnostic aggregation (`ash-parser` + `ash-lint`), and a
   version-aware analysis cache. Added new `ash-lsp` binary crate with
-  `tower-lsp-server` transport skeleton, stdio/TCP launch modes, and working
-  `didOpen` / `didChange` / `didClose` diagnostic publishing backed by
-  `ash-lsp-core`.
+  `tower-lsp-server` transport skeleton, stdio/TCP launch modes, working
+  `didOpen` / `didChange` / `didClose` diagnostic publishing, and hierarchical
+  `textDocument/documentSymbol` support backed by `ash-lsp-core` symbol extraction.
 
 - `ash-lint` library crate extracted from CLI binary (TASK-574).
   Public API: `lint_source`, `lint_module`, `lint_workflow`, `LintConfig`,

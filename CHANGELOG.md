@@ -8,11 +8,41 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- `ash-lint` library crate extracted from CLI binary (TASK-574).
+  Public API: `lint_source`, `lint_module`, `lint_workflow`, `LintConfig`,
+  `LintDiagnostic`, `LintCode`, `LintSeverity`, `LintFix`, `LintSpan`,
+  `RuleLevel`, `LintCategory`, `LintRule` trait.
+  Four lint rules: L001 (missing observe/act), L002 (act without orient),
+  L003 (structural), L004 (policy not checked).
+  AST traversal helpers: `walk_definitions`, `walk_expr`, `contains_policy`.
+  13 unit tests covering all rules and configuration.
+  The CLI binary (`ash-lint` bin) is now a thin wrapper around the library,
+  enabling reuse by `ash-lsp-core` (Phase 87) and other consumers.
+
 - LSP diagnostic crate `ash-diagnostic` with `AshLspError` trait, `Severity`,
   `DiagnosticCode`, and `ash_error_to_diagnostic` conversion (TASK-573).
-  Implemented `AshLspError` for `ParseError` (E001), `ConstructorError` (E100),
-  `TypeEnvError` (E101), `TypeError` (E102), `NameError` (E200),
-  `ResolutionError` (E201), and `PurityError` (E300).
+  Implemented `AshLspError` for `ParseError` (E001), `ConstructorError` (E100-E111),
+  `TypeEnvError` (E120-E132), `TypeError` (E140-E160), `NameError` (E200-E203),
+  `ResolutionError` (E210-E215), and `PurityError` (E300).
+  Per-variant diagnostic codes for all error types.
+  `TypeError::Obligation` returns `None` from `span()` (no single location).
+
+### Changed
+
+- `ash_error_to_diagnostic` no longer takes a `_source` parameter; the function
+  derives the range from the span's line/column fields directly.
+
+- `From<ash_parser::token::Span> for ash_diagnostic::Span` added in `ash-parser`
+  with a compile-time size/alignment assertion.  All `AshLspError` impls now
+  use `.into()` instead of the manual `to_diag_span` conversion shim.
+
+- Per-variant diagnostic codes for `PurityError` (E300–E304) and `ash_error_to_diagnostic`
+  now computes end-position from span byte-width instead of emitting a 1-character range.
+  All column/line arithmetic uses saturating subtraction to handle zero-valued spans.
+
+- SPEC-040 §5.4 updated to document the mirrored `Span` approach and the
+  actual dependency constraints (ash-diagnostic depends on neither ash-parser
+  nor ash-typeck).
 
 - Binding spans for variable references (TASK-570): `Expr::Variable`, `Pattern::Variable`,
   and `PolicyExpr::Var` now carry `{ name, span }` struct variants across surface and core

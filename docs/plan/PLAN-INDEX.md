@@ -2485,11 +2485,11 @@ Convert `crates/ash-lint` from a CLI-only binary into a reusable library crate t
 **Plan Reference:** [PLAN-033: Ash Lint Library](PLAN-033-ASH-LINT-LIBRARY.md)
 **Spec:** SPEC-041
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
-||| Task | Description | Spec | Est. Hours | Status ||
+|| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-574](tasks/TASK-574-ash-lint-library.md) | Extract `ash-lint` CLI into a library + binary wrapper | SPEC-041 | 12 | 📝 Planned |
+|| [TASK-574](tasks/TASK-574-ash-lint-library.md) | Extract `ash-lint` CLI into a library + binary wrapper | SPEC-041 | 12 | ✅ Done |
 
 **Deliverable:** `ash-lint` exports `lint_module` API; CLI is a thin wrapper; lint rules are AST visitors.
 

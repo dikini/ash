@@ -7,6 +7,10 @@ license.workspace = true
 authors.workspace = true
 description = "Custom lints for Ash workflow language"
 
+[lib]
+name = "ash_lint"
+path = "src/lib.rs"
+
 [[bin]]
 name = "ash-lint"
 path = "src/main.rs"
@@ -16,9 +20,17 @@ ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }
 anyhow = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
-serde = { workspace = true }
+serde = { workspace = true, optional = true }
 serde_json = { workspace = true }
 colored = "2.1"
+walkdir = { workspace = true }
+
+[features]
+serde = ["dep:serde"]
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+proptest = { workspace = true }
+
+[lints]
+workspace = true

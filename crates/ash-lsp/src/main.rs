@@ -11,6 +11,7 @@
 
 use ash_lint::LintConfig;
 use ash_lsp_core::analysis::AnalysisCache;
+use ash_lsp_core::hover::hover_at as core_hover_at;
 use ash_lsp_core::symbols::document_symbols as core_document_symbols;
 use ash_lsp_core::vfs::Vfs;
 use clap::Parser;
@@ -226,8 +227,65 @@ impl LanguageServer for AshLanguageServer {
         self.clear_diagnostics(uri).await;
     }
 
-    async fn hover(&self, _: HoverParams) -> Result<Option<Hover>> {
-        Ok(None)
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let uri = params.text_document_position_params.text_document.uri;
+        let position = params.text_document_position_params.position;
+        debug!(
+            uri = uri.as_str(),
+            line = position.line,
+            character = position.character,
+            "hover request"
+        );
+
+        let core_uri = match Self::tower_uri_to_core(&uri) {
+            Ok(uri) => uri,
+            Err(err) => {
+                error!(error = %err, "failed to convert hover URI");
+                return Ok(None);
+            }
+        };
+
+        let Some(entry) = self.vfs.get(&core_uri) else {
+            return Ok(None);
+        };
+
+        if self.cache.get(&core_uri).is_none() {
+            let _ = self.cache.analyze(&core_uri, &self.vfs, &self.config);
+        }
+
+        let Some(analysis) = self.cache.get(&core_uri) else {
+            return Ok(None);
+        };
+        let Some(module) = analysis.module else {
+            return Ok(None);
+        };
+
+        let Some(core_hover) = core_hover_at(
+            module.as_ref(),
+            &entry.content,
+            position.line,
+            position.character,
+        ) else {
+            return Ok(None);
+        };
+
+        let hover_value = match serde_json::to_value(core_hover) {
+            Ok(value) => value,
+            Err(err) => {
+                error!(error = %err, "failed to serialize core hover");
+                return Ok(None);
+            }
+        };
+
+        let hover = match serde_json::from_value(hover_value) {
+            Ok(hover) => hover,
+            Err(err) => {
+                error!(error = %err, "failed to convert core hover to tower hover");
+                return Ok(None);
+            }
+        };
+
+        Ok(Some(hover))
     }
 
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {

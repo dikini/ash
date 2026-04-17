@@ -10,11 +10,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - Phase 87 Week 1 LSP foundation (TASK-569): new `ash-lsp-core` crate with
   a DashMap-backed VFS, incremental text change application, line/column ↔ offset
-  conversion helpers, diagnostic aggregation (`ash-parser` + `ash-lint`), and a
-  version-aware analysis cache. Added new `ash-lsp` binary crate with
-  `tower-lsp-server` transport skeleton, stdio/TCP launch modes, working
-  `didOpen` / `didChange` / `didClose` diagnostic publishing, and hierarchical
-  `textDocument/documentSymbol` support backed by `ash-lsp-core` symbol extraction.
+  conversion helpers, diagnostic aggregation (`ash-parser` + `ash-lint`), a
+  version-aware analysis cache, keyword/top-level hover support, and symbol extraction.
+  Added new `ash-lsp` binary crate with `tower-lsp-server` transport skeleton,
+  stdio/TCP launch modes, working `didOpen` / `didChange` / `didClose` diagnostic
+  publishing, hierarchical `textDocument/documentSymbol`, and `textDocument/hover`
+  backed by `ash-lsp-core`.
 
 - `ash-lint` library crate extracted from CLI binary (TASK-574).
   Public API: `lint_source`, `lint_module`, `lint_workflow`, `LintConfig`,

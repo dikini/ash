@@ -14,8 +14,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   version-aware analysis cache, keyword/top-level hover support, and symbol extraction.
   Added new `ash-lsp` binary crate with `tower-lsp-server` transport skeleton,
   stdio/TCP launch modes, working `didOpen` / `didChange` / `didClose` diagnostic
-  publishing, hierarchical `textDocument/documentSymbol`, and `textDocument/hover`
-  backed by `ash-lsp-core`.
+  publishing, hierarchical `textDocument/documentSymbol`, `textDocument/hover`, and
+  service-level JSON-RPC tests covering diagnostics, hover, symbols, and close/change
+  notification behavior.
 
 - `ash-lint` library crate extracted from CLI binary (TASK-574).
   Public API: `lint_source`, `lint_module`, `lint_workflow`, `LintConfig`,

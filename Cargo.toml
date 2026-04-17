@@ -9,6 +9,7 @@ members = [
     "crates/ash-engine",
     "crates/ash-cli",
     "crates/ash-lint",
+    "crates/ash-lsp",
     "crates/ash-macros",
     "crates/ash-doc-tests",
     "crates/ash-repl",

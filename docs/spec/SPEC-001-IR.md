@@ -208,6 +208,8 @@ pub enum Workflow {
 - Lowering may normalize or preserve structure, but it must not require a specific backend
   architecture.
 - Any future JIT must implement the same core meaning as interpretation, not a different contract.
+- A future typed JIT boundary may target an explicit workflow computation type (`comp T`); see
+  `docs/notes/NOTE-001-WORKFLOW-COMPUTATION-TYPE.md`.
 - Core nodes are stable contract boundaries even when current implementations use convenience
   representations internally.
 

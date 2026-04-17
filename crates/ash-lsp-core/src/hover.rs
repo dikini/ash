@@ -23,73 +23,7 @@ use ash_parser::surface::{
 };
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind};
 
-fn line_starts(source: &str) -> Vec<usize> {
-    let mut starts = vec![0];
-    for (idx, ch) in source.char_indices() {
-        if ch == '\n' {
-            starts.push(idx + 1);
-        }
-    }
-    starts
-}
-
-fn offset_from_line_col(source: &str, line: u32, col: u32) -> Option<usize> {
-    let starts = line_starts(source);
-    let line = usize::try_from(line).ok()?;
-    let col = usize::try_from(col).ok()?;
-    let start = *starts.get(line)?;
-    let end = if line + 1 < starts.len() {
-        starts[line + 1].saturating_sub(1)
-    } else {
-        source.len()
-    };
-    Some((start + col).min(end))
-}
-
-const fn is_ident_char(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || ch == '_'
-}
-
-fn token_at_offset(source: &str, offset: usize) -> Option<&str> {
-    if offset > source.len() {
-        return None;
-    }
-
-    let mut selected = None;
-    for (idx, ch) in source.char_indices() {
-        let end = idx + ch.len_utf8();
-        if offset >= idx && offset < end {
-            selected = Some((idx, ch));
-            break;
-        }
-    }
-
-    let (idx, ch) = selected?;
-    if !is_ident_char(ch) {
-        return None;
-    }
-
-    let mut start = idx;
-    for (prev_idx, prev_ch) in source[..idx].char_indices().rev() {
-        if is_ident_char(prev_ch) {
-            start = prev_idx;
-        } else {
-            break;
-        }
-    }
-
-    let mut end = idx + ch.len_utf8();
-    for (next_rel, next_ch) in source[end..].char_indices() {
-        if is_ident_char(next_ch) {
-            end += next_ch.len_utf8();
-        } else {
-            let _ = next_rel;
-            break;
-        }
-    }
-
-    source.get(start..end)
-}
+use crate::position::{offset_from_line_col, token_at_offset};
 
 fn type_to_string(ty: &Type) -> String {
     match ty {

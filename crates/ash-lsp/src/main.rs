@@ -11,6 +11,8 @@
 
 use ash_lint::LintConfig;
 use ash_lsp_core::analysis::AnalysisCache;
+use ash_lsp_core::completion::completions as core_completions;
+use ash_lsp_core::goto::goto_definition as core_goto_definition;
 use ash_lsp_core::hover::hover_at as core_hover_at;
 use ash_lsp_core::symbols::document_symbols as core_document_symbols;
 use ash_lsp_core::vfs::Vfs;
@@ -26,10 +28,10 @@ use tower_lsp_server::jsonrpc::Result;
 use tower_lsp_server::ls_types::{
     CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
     DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DocumentSymbol, DocumentSymbolParams, DocumentSymbolResponse, Hover, HoverParams,
-    HoverProviderCapability, InitializeParams, InitializeResult, InitializedParams, MessageType,
-    OneOf, ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent,
-    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    DocumentSymbol, DocumentSymbolParams, DocumentSymbolResponse, GotoDefinitionParams,
+    GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability, InitializeParams,
+    InitializeResult, InitializedParams, MessageType, OneOf, ServerCapabilities, ServerInfo,
+    TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 use tracing::{debug, error, info};
@@ -142,6 +144,7 @@ impl LanguageServer for AshLanguageServer {
                     ..CompletionOptions::default()
                 }),
                 document_symbol_provider: Some(OneOf::Left(true)),
+                definition_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
             offset_encoding: None,
@@ -288,8 +291,130 @@ impl LanguageServer for AshLanguageServer {
         Ok(Some(hover))
     }
 
-    async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
-        Ok(None)
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let uri = params.text_document_position_params.text_document.uri;
+        let position = params.text_document_position_params.position;
+        debug!(
+            uri = uri.as_str(),
+            line = position.line,
+            character = position.character,
+            "goto_definition request"
+        );
+
+        let core_uri = match Self::tower_uri_to_core(&uri) {
+            Ok(uri) => uri,
+            Err(err) => {
+                error!(error = %err, "failed to convert goto_definition URI");
+                return Ok(None);
+            }
+        };
+
+        let Some(entry) = self.vfs.get(&core_uri) else {
+            return Ok(None);
+        };
+
+        if self.cache.get(&core_uri).is_none() {
+            let _ = self.cache.analyze(&core_uri, &self.vfs, &self.config);
+        }
+
+        let Some(analysis) = self.cache.get(&core_uri) else {
+            return Ok(None);
+        };
+        let Some(module) = analysis.module else {
+            return Ok(None);
+        };
+
+        let core_response = core_goto_definition(
+            module.as_ref(),
+            &entry.content,
+            &core_uri,
+            position.line,
+            position.character,
+        );
+
+        let Some(response) = core_response else {
+            return Ok(None);
+        };
+
+        let value = match serde_json::to_value(response) {
+            Ok(value) => value,
+            Err(err) => {
+                error!(error = %err, "failed to serialize goto_definition response");
+                return Ok(None);
+            }
+        };
+
+        let response = match serde_json::from_value(value) {
+            Ok(response) => response,
+            Err(err) => {
+                error!(error = %err, "failed to convert core goto_definition to tower type");
+                return Ok(None);
+            }
+        };
+
+        Ok(Some(response))
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let uri = params.text_document_position.text_document.uri;
+        let position = params.text_document_position.position;
+        debug!(
+            uri = uri.as_str(),
+            line = position.line,
+            character = position.character,
+            "completion request"
+        );
+
+        let core_uri = match Self::tower_uri_to_core(&uri) {
+            Ok(uri) => uri,
+            Err(err) => {
+                error!(error = %err, "failed to convert completion URI");
+                return Ok(None);
+            }
+        };
+
+        let Some(entry) = self.vfs.get(&core_uri) else {
+            return Ok(None);
+        };
+
+        if self.cache.get(&core_uri).is_none() {
+            let _ = self.cache.analyze(&core_uri, &self.vfs, &self.config);
+        }
+
+        let Some(analysis) = self.cache.get(&core_uri) else {
+            return Ok(None);
+        };
+        let Some(module) = analysis.module else {
+            return Ok(None);
+        };
+
+        let core_response = core_completions(
+            module.as_ref(),
+            &entry.content,
+            position.line,
+            position.character,
+        );
+
+        let value = match serde_json::to_value(core_response) {
+            Ok(value) => value,
+            Err(err) => {
+                error!(error = %err, "failed to serialize completion response");
+                return Ok(None);
+            }
+        };
+
+        let response = match serde_json::from_value(value) {
+            Ok(response) => response,
+            Err(err) => {
+                error!(error = %err, "failed to convert core completion to tower type");
+                return Ok(None);
+            }
+        };
+
+        Ok(Some(response))
     }
 
     async fn document_symbol(
@@ -473,12 +598,19 @@ mod tests {
             .expect("didOpen transport ok");
         assert_eq!(response, None, "didOpen is a notification");
 
-        let outbound = socket.next().await.expect("publishDiagnostics notification");
+        let outbound = socket
+            .next()
+            .await
+            .expect("publishDiagnostics notification");
         assert_eq!(outbound.method(), "textDocument/publishDiagnostics");
         let params_value = outbound.params().cloned().expect("diagnostic params");
-        let params: PublishDiagnosticsParams = serde_json::from_value(params_value).expect("decode diagnostics");
+        let params: PublishDiagnosticsParams =
+            serde_json::from_value(params_value).expect("decode diagnostics");
         assert_eq!(params.uri.to_string(), uri);
-        assert!(!params.diagnostics.is_empty(), "orient-only workflow should emit L001");
+        assert!(
+            !params.diagnostics.is_empty(),
+            "orient-only workflow should emit L001"
+        );
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -503,7 +635,10 @@ mod tests {
             .expect("hover transport ok")
             .expect("hover response exists");
 
-        assert!(response.is_ok(), "hover response should be ok: {response:?}");
+        assert!(
+            response.is_ok(),
+            "hover response should be ok: {response:?}"
+        );
         let result = response.result().cloned().expect("hover result");
         let hover: Hover = serde_json::from_value(result).expect("decode hover");
         match hover.contents {
@@ -538,9 +673,13 @@ mod tests {
             .expect("documentSymbol transport ok")
             .expect("documentSymbol response exists");
 
-        assert!(response.is_ok(), "documentSymbol response should be ok: {response:?}");
+        assert!(
+            response.is_ok(),
+            "documentSymbol response should be ok: {response:?}"
+        );
         let result = response.result().cloned().expect("documentSymbol result");
-        let symbols: DocumentSymbolResponse = serde_json::from_value(result).expect("decode symbols");
+        let symbols: DocumentSymbolResponse =
+            serde_json::from_value(result).expect("decode symbols");
         match symbols {
             DocumentSymbolResponse::Nested(items) => {
                 assert!(!items.is_empty(), "expected at least one symbol");
@@ -581,9 +720,13 @@ mod tests {
         let outbound = socket.next().await.expect("clear diagnostics notification");
         assert_eq!(outbound.method(), "textDocument/publishDiagnostics");
         let params_value = outbound.params().cloned().expect("diagnostic params");
-        let params: PublishDiagnosticsParams = serde_json::from_value(params_value).expect("decode diagnostics");
+        let params: PublishDiagnosticsParams =
+            serde_json::from_value(params_value).expect("decode diagnostics");
         assert_eq!(params.uri.to_string(), uri);
-        assert!(params.diagnostics.is_empty(), "didClose should clear diagnostics");
+        assert!(
+            params.diagnostics.is_empty(),
+            "didClose should clear diagnostics"
+        );
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -595,14 +738,17 @@ mod tests {
             .ready()
             .await
             .expect("service ready")
-            .call(open_request(uri, 1, "workflow main { observe sensor done }"))
+            .call(open_request(
+                uri,
+                1,
+                "workflow main { observe sensor done }",
+            ))
             .await
             .expect("didOpen transport ok");
         let first = socket.next().await.expect("initial diagnostics");
-        let first_params: PublishDiagnosticsParams = serde_json::from_value(
-            first.params().cloned().expect("initial params"),
-        )
-        .expect("decode initial diagnostics");
+        let first_params: PublishDiagnosticsParams =
+            serde_json::from_value(first.params().cloned().expect("initial params"))
+                .expect("decode initial diagnostics");
 
         let _ = service
             .ready()
@@ -612,12 +758,140 @@ mod tests {
             .await
             .expect("didChange transport ok");
         let second = socket.next().await.expect("updated diagnostics");
-        let second_params: PublishDiagnosticsParams = serde_json::from_value(
-            second.params().cloned().expect("updated params"),
-        )
-        .expect("decode updated diagnostics");
+        let second_params: PublishDiagnosticsParams =
+            serde_json::from_value(second.params().cloned().expect("updated params"))
+                .expect("decode updated diagnostics");
 
-        assert!(first_params.diagnostics.is_empty(), "baseline workflow should have no diagnostics");
-        assert!(!second_params.diagnostics.is_empty(), "updated workflow should emit diagnostics");
+        assert!(
+            first_params.diagnostics.is_empty(),
+            "baseline workflow should have no diagnostics"
+        );
+        assert!(
+            !second_params.diagnostics.is_empty(),
+            "updated workflow should emit diagnostics"
+        );
+    }
+
+    fn goto_definition_request(id: i64, uri: &str, line: u32, character: u32) -> Request {
+        Request::build("textDocument/definition")
+            .params(json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character }
+            }))
+            .id(id)
+            .finish()
+    }
+
+    fn completion_request(id: i64, uri: &str, line: u32, character: u32) -> Request {
+        Request::build("textDocument/completion")
+            .params(json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character }
+            }))
+            .id(id)
+            .finish()
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn goto_definition_returns_location() {
+        let (mut service, _socket) = initialized_service().await;
+        let uri = "file:///goto.ash";
+        let source = "fn helper() -> Int { 1 }\nworkflow main { done }";
+
+        let _ = service
+            .ready()
+            .await
+            .expect("service ready")
+            .call(open_request(uri, 1, source))
+            .await
+            .expect("didOpen transport ok");
+
+        // Cursor on "main" in workflow declaration (line 1, col 9)
+        let response = service
+            .ready()
+            .await
+            .expect("service ready")
+            .call(goto_definition_request(2, uri, 1, 9))
+            .await
+            .expect("goto_definition transport ok")
+            .expect("goto_definition response exists");
+
+        assert!(
+            response.is_ok(),
+            "goto_definition response should be ok: {response:?}"
+        );
+        let result = response.result().cloned().expect("goto_definition result");
+        // Should return a Location pointing to the workflow definition
+        assert!(result.is_object(), "result should be an object");
+        let result_str = serde_json::to_string(&result).expect("serialize");
+        assert!(result_str.contains("range"), "should contain range field");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn goto_definition_returns_none_for_unknown() {
+        let (mut service, _socket) = initialized_service().await;
+        let uri = "file:///goto-unknown.ash";
+
+        let _ = service
+            .ready()
+            .await
+            .expect("service ready")
+            .call(open_request(uri, 1, "workflow main { done }"))
+            .await
+            .expect("didOpen transport ok");
+
+        // Cursor on whitespace
+        let response = service
+            .ready()
+            .await
+            .expect("service ready")
+            .call(goto_definition_request(2, uri, 0, 8))
+            .await
+            .expect("goto_definition transport ok")
+            .expect("goto_definition response exists");
+
+        assert!(response.is_ok(), "response should be ok");
+        let result = response.result().cloned().expect("result");
+        assert!(result.is_null(), "should return null for whitespace cursor");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn completion_returns_items() {
+        let (mut service, _socket) = initialized_service().await;
+        let uri = "file:///completion.ash";
+        let source = "fn helper() -> Int { 1 }\nworkflow main { done }";
+
+        let _ = service
+            .ready()
+            .await
+            .expect("service ready")
+            .call(open_request(uri, 1, source))
+            .await
+            .expect("didOpen transport ok");
+
+        let response = service
+            .ready()
+            .await
+            .expect("service ready")
+            .call(completion_request(2, uri, 0, 0))
+            .await
+            .expect("completion transport ok")
+            .expect("completion response exists");
+
+        assert!(
+            response.is_ok(),
+            "completion response should be ok: {response:?}"
+        );
+        let result = response.result().cloned().expect("completion result");
+        // Result should be an array of completion items
+        let result_str = serde_json::to_string(&result).expect("serialize");
+        assert!(
+            result_str.contains("fn"),
+            "completions should include 'fn' keyword"
+        );
+        assert!(
+            result_str.contains("helper"),
+            "completions should include 'helper' function"
+        );
     }
 }

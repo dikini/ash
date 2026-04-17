@@ -17,7 +17,10 @@
 )]
 
 pub mod analysis;
+pub mod completion;
 pub mod diagnostics;
+pub mod goto;
 pub mod hover;
+pub mod position;
 pub mod symbols;
 pub mod vfs;

@@ -8,6 +8,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Go-to-definition and completion support in `ash-lsp-core` and `ash-lsp`
+  (TASK-569 Phase 3).  `ash-lsp-core` gains a shared `position` module
+  (byte-offset ↔ LSP Position conversion, token-at-offset extraction),
+  `goto_definition` (identifier → definition span lookup across module
+  declarations, nested definitions, and workflow entry), and `completions`
+  (Ash keyword snippets + module definition name suggestions, excluding the
+  token under the cursor).  `ash-lsp` wires `textDocument/definition` and
+  `textDocument/completion` handlers with full `tower-lsp-server` ↔
+  `lsp_types` boundary conversion.  14 new tests across both crates.
+
 - Phase 87 Week 1 LSP foundation (TASK-569): new `ash-lsp-core` crate with
   a DashMap-backed VFS, incremental text change application, line/column ↔ offset
   conversion helpers, diagnostic aggregation (`ash-parser` + `ash-lint`), a

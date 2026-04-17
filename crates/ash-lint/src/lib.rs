@@ -249,11 +249,11 @@ fn has_observe_or_act(wf: &Workflow) -> bool {
             continuation.as_ref().is_some_and(|c| has_observe_or_act(c))
         }
         Workflow::Yield { arms, .. } => arms.iter().any(|a| has_observe_or_act(&a.body)),
+        Workflow::Receive { arms, .. } => arms.iter().any(|a| has_observe_or_act(&a.body)),
         Workflow::Done { .. }
         | Workflow::Ret { .. }
         | Workflow::Oblige { .. }
-        | Workflow::Resume { .. }
-        | Workflow::Receive { .. } => false,
+        | Workflow::Resume { .. } => false,
     }
 }
 
@@ -343,11 +343,15 @@ fn check_l002(
                 check_l002(&arm.body, seen_orient, config, diagnostics);
             }
         }
+        Workflow::Receive { arms, .. } => {
+            for arm in arms {
+                check_l002(&arm.body, seen_orient, config, diagnostics);
+            }
+        }
         Workflow::Done { .. }
         | Workflow::Ret { .. }
         | Workflow::Oblige { .. }
-        | Workflow::Resume { .. }
-        | Workflow::Receive { .. } => {}
+        | Workflow::Resume { .. } => {}
     }
 }
 
@@ -386,11 +390,11 @@ fn contains_orient(wf: &Workflow) -> bool {
             primary, fallback, ..
         } => contains_orient(primary) || contains_orient(fallback),
         Workflow::Yield { arms, .. } => arms.iter().any(|a| contains_orient(&a.body)),
+        Workflow::Receive { arms, .. } => arms.iter().any(|a| contains_orient(&a.body)),
         Workflow::Done { .. }
         | Workflow::Ret { .. }
         | Workflow::Oblige { .. }
-        | Workflow::Resume { .. }
-        | Workflow::Receive { .. } => false,
+        | Workflow::Resume { .. } => false,
     }
 }
 
@@ -517,19 +521,36 @@ fn safe_l004(wf: &Workflow, pending: bool) -> bool {
             safe_l004(first, pending) && safe_l004(second, pending)
         }
 
-        // 8. All other variants
+        // 8. Variants with continuation but no policy-relevant expression fields
         Workflow::Observe { continuation, .. }
         | Workflow::Propose { continuation, .. }
-        | Workflow::Act { continuation, .. }
-        | Workflow::Let { continuation, .. }
-        | Workflow::Set { continuation, .. }
-        | Workflow::Send { continuation, .. } => {
-            // None of these variants directly contain Policy expressions in their
-            // workflow-level fields (they may have Expr children, but those are not
-            // Decide/Policy at the workflow level).
+        | Workflow::Act { continuation, .. } => match continuation {
+            Some(c) => safe_l004(c, pending),
+            None => !pending,
+        },
+        Workflow::Let {
+            expr, continuation, ..
+        } => {
+            let has_pol = workflow_expr_has_policy(expr);
             match continuation {
-                Some(c) => safe_l004(c, pending),
-                None => !pending,
+                Some(c) => safe_l004(c, pending || has_pol),
+                None => !(pending || has_pol),
+            }
+        }
+        Workflow::Set {
+            value,
+            continuation,
+            ..
+        }
+        | Workflow::Send {
+            value,
+            continuation,
+            ..
+        } => {
+            let has_pol = workflow_expr_has_policy(value);
+            match continuation {
+                Some(c) => safe_l004(c, pending || has_pol),
+                None => !(pending || has_pol),
             }
         }
         Workflow::Orient {
@@ -542,15 +563,23 @@ fn safe_l004(wf: &Workflow, pending: bool) -> bool {
             }
         }
         Workflow::Oblige { .. } => !pending,
-        Workflow::For { body, .. } => safe_l004(body, pending),
+        Workflow::For {
+            collection, body, ..
+        } => {
+            let has_pol = workflow_expr_has_policy(collection);
+            safe_l004(body, pending || has_pol)
+        }
         Workflow::With { body, .. } => safe_l004(body, pending),
         Workflow::Maybe {
             primary, fallback, ..
         } => safe_l004(primary, pending) && safe_l004(fallback, pending),
         Workflow::Must { body, .. } => safe_l004(body, pending),
-        Workflow::Receive { .. } => !pending,
+        Workflow::Receive { arms, .. } => arms.iter().all(|a| {
+            let guard_pol = a.guard.as_ref().is_some_and(workflow_expr_has_policy);
+            safe_l004(&a.body, pending || guard_pol)
+        }),
         Workflow::Yield { arms, .. } => arms.iter().all(|a| safe_l004(&a.body, pending)),
-        Workflow::Resume { .. } => !pending,
+        Workflow::Resume { expr, .. } => !(pending || workflow_expr_has_policy(expr)),
     }
 }
 

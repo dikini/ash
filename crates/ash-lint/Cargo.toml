@@ -16,17 +16,16 @@ name = "ash-lint"
 path = "src/main.rs"
 
 [dependencies]
-ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }
 anyhow = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
 serde = { workspace = true, optional = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, optional = true }
 colored = "2.1"
 walkdir = { workspace = true }
 
 [features]
-serde = ["dep:serde"]
+serde = ["dep:serde", "dep:serde_json"]
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

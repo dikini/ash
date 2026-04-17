@@ -1,0 +1,29 @@
+[package]
+name = "ash-lsp-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core types and logic for the Ash LSP server"
+
+[lib]
+
+[dependencies]
+ash-parser = { path = "../ash-parser" }
+ash-typeck = { path = "../ash-typeck" }
+ash-lint = { path = "../ash-lint" }
+ash-diagnostic = { path = "../ash-diagnostic" }
+dashmap = "6"
+lsp-types = "0.97"
+tokio = { workspace = true, features = ["rt"] }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+parking_lot = "0.12"
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+
+[lints]
+workspace = true

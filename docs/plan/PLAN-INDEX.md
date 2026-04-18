@@ -2589,7 +2589,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-091: Small-Step and Statement-Lifting Productionization](PLAN-091-SMALL-STEP-LIFTING-PRODUCTIONIZATION.md)
 **Specs:** `DESIGN-027`, `DESIGN-028`, `SPEC-001`, `SPEC-002`, `SPEC-025`
 **Priority:** High
-**Status:** 🟢 In Progress
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|

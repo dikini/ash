@@ -20,6 +20,9 @@ pub use mcp::{McpCapabilities, McpConfig, McpProvider};
 pub mod llm;
 pub use llm::{LlmConfig, LlmProvider};
 
+pub mod regex;
+pub use regex::RegexProvider;
+
 /// Standard I/O capability provider
 ///
 /// Provides console input/output capabilities:

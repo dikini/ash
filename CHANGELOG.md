@@ -282,6 +282,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - `resolve_interface_method_call` uses ordered scheme search with recursive bound
     checking (depth limit 32)
 
+- `std::regex` interface and Rust backend (TASK-595):
+  - Added `std/src/regex.ash` with `find`, `matches`, and `replace` functions
+  - Added `RegexProvider` in `crates/ash-engine/src/providers/regex.rs` backed by the `regex` crate
+  - Added `EngineBuilder::with_regex_capabilities()` to register the regex provider
+  - Re-exported regex functions from `std/src/lib.ash`
+  - Invalid patterns return `CapabilityError::InvalidArgument`
+
 - Parser/AST support for generic impls, `where` bounds, and associated types (TASK-564):
   - `surface.rs`: `ImplDef` now has `type_params`, `where_bounds`, `associated_type_bindings`
   - `surface.rs`: `InterfaceDef` now has `associated_types`

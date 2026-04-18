@@ -1953,7 +1953,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Source:** Phase 64 promotion packet plus the frozen tuple-variant, coarse effect-typing, and closed-world interfaces MVP contracts  
 **Priority:** High  
-**Status:** 🟡 Ready
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -1997,7 +1997,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Source:** [SPEC-004: Operational Semantics](../spec/SPEC-004-SEMANTICS.md), [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), [SPEC-026: Implementation Conformance Contract](../spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md), [Formalization Boundary and Proof Targets](../reference/formalization-boundary.md), [MCE-006](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md), [MCE-007](../ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md)
 **Priority:** High
-**Status:** 🟡 Ready
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2590,7 +2590,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-091: Small-Step and Statement-Lifting Productionization](PLAN-091-SMALL-STEP-LIFTING-PRODUCTIONIZATION.md)
 **Specs:** `DESIGN-027`, `DESIGN-028`, `SPEC-001`, `SPEC-002`, `SPEC-025`
 **Priority:** High
-**Status:** 🟡 Ready
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2600,6 +2600,6 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 | [TASK-608](tasks/TASK-608-statement-lifting-contract-hardening.md) | Freeze the conservative non-panicking lifting contract and add regression coverage for formerly panic-prone positions | DESIGN-028, SPEC-002 | 4-6 | ✅ Complete |
 | [TASK-609](tasks/TASK-609-effect-classification-alignment-for-lifting.md) | Replace parser-local heuristic effect classification with a production-quality source of truth | DESIGN-028, SPEC-001 | 5-8 | ✅ Complete |
 | [TASK-610](tasks/TASK-610-rollout-benchmarks-and-production-readiness-evidence.md) | Add rollout policy, benchmarks, and production-readiness verification evidence | DESIGN-027, DESIGN-028, SPEC-025 | 4-6 | ✅ Complete |
-| [TASK-612](tasks/TASK-612-phase-65-phase-91-alignment-remediation.md) | Remediate remaining Phase 65 ↔ Phase 91 parser/typechecker/corpus alignment gaps without widening semantics | TASK-418, TASK-421, TASK-422, TASK-423, TASK-608, TASK-609, TASK-610 | 4-8 | 🟡 Ready |
+| [TASK-612](tasks/TASK-612-phase-65-phase-91-alignment-remediation.md) | Remediate remaining Phase 65 ↔ Phase 91 parser/typechecker/corpus alignment gaps without widening semantics | TASK-418, TASK-421, TASK-422, TASK-423, TASK-608, TASK-609, TASK-610 | 4-8 | ✅ Complete |
 
 **Deliverable:** No runtime stubs for supported `Workflow::Call` paths, no user-facing lifting panics, explicit lifting/effect contracts, parity evidence for supported runtime behavior, documented rollout policy/evidence for production use, and one final remediation task to align the delivered Phase 91 substrate with frozen Phase 65 contracts and surviving task/docs corpus.

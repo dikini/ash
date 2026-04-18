@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- PLAN-INDEX phase status alignment. Phase 65 (8/8 tasks), Phase 67 (11/11
+  tasks), and Phase 91 (7/7 tasks including TASK-612) now correctly show
+  `✅ Complete` instead of stale `🟡 Ready`.
+
 - Phase 90 status reconciliation (TASK-613). PLAN-INDEX.md previously marked
   TASK-590 through TASK-594 (Track A), TASK-596 through TASK-598 (Track B),
   and TASK-600 through TASK-603 (Track C) as ✅ Complete despite no code

@@ -6,6 +6,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Phase 65↔91 alignment remediation (TASK-612). Bare qualified method
+  syntax `Interface::method` without call parentheses is now rejected
+  by the parser instead of silently accepted as a zero-argument call.
+  Lowercase pseudo-variant patterns like `foo(bar)` and `foo { x: y }`
+  are now rejected by the pattern parser instead of silently accepted
+  as variant patterns.  `Propose.binding` is explicitly rejected in the
+  MVP typechecker instead of accepted with a fabricated fresh type
+  variable, restoring the TASK-423 documented contract.  Stale task/doc
+  surfaces presenting record-shaped `RuntimeError { exit_code, message }`
+  reconciled to the canonical tuple-variant form `RuntimeError(Int, String)`.
+
 ### Added
 
 - Small-step interpreter with compressed IR (Stmt/Frame/Config) and full

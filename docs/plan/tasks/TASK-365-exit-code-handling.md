@@ -17,7 +17,7 @@ Propagate exit code from supervisor completion to OS process exit.
 | Condition | Exit Code |
 |-----------|-----------|
 | `main` returns a successful `Ok { value: ... }` payload | 0 |
-| `main` returns `Err { error: RuntimeError(N, _) }` | N |
+| `main` returns `Err { error: RuntimeError(N, _) }` | N |  <!-- tuple-variant form per TASK-413/TASK-418 -->
 | Bootstrap/verification error | 1 |
 | Supervisor crash (implementation error) | 1 |
 
@@ -86,7 +86,7 @@ let entry = r#"
     use runtime::RuntimeError
 
   workflow main() -> Result<(), RuntimeError> {
-        Err { error: RuntimeError(42, "test") }
+        Err { error: RuntimeError(42, "test") }  // (tuple-variant form per TASK-413/TASK-418)
   }
 "#;
 let code = run_and_get_exit_code(entry);

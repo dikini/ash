@@ -11,21 +11,18 @@ Current verification scope for this task is the stdlib ADT surface itself in the
 **Validation status:**
 
 1. **Verify S57-4 (import syntax)**: ✅ Complete - use `use runtime::RuntimeError`
-2. **Verify TYPES-001 or SPEC**: ✅ Complete - canonical ADT form is a single-variant record payload
+2. **Verify TYPES-001 or SPEC**: ✅ Complete - canonical ADT form is a single-variant tuple payload
 3. **Verify task description matches the normative syntax**: ✅ Complete
-4. **Verify no syntax mismatch**: ✅ Complete - `RuntimeError { exit_code, message }` matches the exported stdlib surface
+4. **Verify no syntax mismatch**: ✅ Complete - `RuntimeError(exit_code, message)` matches the exported stdlib surface (tuple-variant form per TASK-413/TASK-418)
 
 ## Design (per updated SPEC)
 
 ```ash
 -- std/src/runtime/error.ash
-pub type RuntimeError = RuntimeError {
-  exit_code: Int,
-  message: String
-};
+pub type RuntimeError = RuntimeError(Int, String);
 ```
 
-**Style:** Canonical single-variant ADT syntax with a record payload, consumed downstream through constructor expressions and variant-pattern destructuring rather than direct field access.
+**Style:** Canonical single-variant ADT syntax with a tuple payload, consumed downstream through positional constructor expressions and variant-pattern destructuring (tuple-variant form per TASK-413/TASK-418).
 
 ## Requirements
 
@@ -53,7 +50,7 @@ assert!(match_runtime_error_exit_code_pattern().is_ok());
 
 - **Location**: `std/src/runtime/error.ash`
 - **Export**: Add to `runtime/mod.ash` and `lib.ash`
-- **Style**: Record-payload ADT consumed via constructor expressions and nested variant patterns
+- **Style**: Tuple-payload ADT consumed via positional constructor expressions and variant patterns (tuple-variant form per TASK-413/TASK-418)
 
 ## Dependencies
 
@@ -68,7 +65,7 @@ assert!(match_runtime_error_exit_code_pattern().is_ok());
 
 | Aspect | Spec |
 |--------|------|
-| Record ADT syntax | SPEC-020 or TYPES-001 |
+| Tuple-variant ADT syntax | SPEC-020 or TYPES-001 |
 | Import syntax | SPEC-012 after S57-4 |
 | Entry point return | SPEC-003/022 after S57-6 |
 
@@ -76,8 +73,12 @@ assert!(match_runtime_error_exit_code_pattern().is_ok());
 
 - [x] S57-4, TYPES-001 show ✅ Complete (validation gate)
 - [x] Type definition parses and exports from the stdlib surface
-- [x] `RuntimeError { exit_code, message }` constructor expressions typecheck in the ADT pipeline
+- [x] `RuntimeError(exit_code, message)` constructor expressions typecheck in the ADT pipeline (tuple-variant form per TASK-413/TASK-418)
 - [x] `RuntimeError` values compose inside `Err { error: ... }` constructors, and runtime pattern matching can extract `exit_code` from the nested ADT payload
 - [x] Tests pass
 
 ## Est. Hours: 2-3
+
+## Reconciliation Note
+
+The type definition originally specified a record payload `RuntimeError { exit_code: Int, message: String }` but was reconciled to the tuple-variant form `RuntimeError(Int, String)` by TASK-413/TASK-418. All downstream docs and code surfaces should use the tuple-variant constructor/pattern syntax exclusively.

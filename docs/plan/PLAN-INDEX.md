@@ -2599,5 +2599,6 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 | [TASK-608](tasks/TASK-608-statement-lifting-contract-hardening.md) | Freeze the conservative non-panicking lifting contract and add regression coverage for formerly panic-prone positions | DESIGN-028, SPEC-002 | 4-6 | ✅ Complete |
 | [TASK-609](tasks/TASK-609-effect-classification-alignment-for-lifting.md) | Replace parser-local heuristic effect classification with a production-quality source of truth | DESIGN-028, SPEC-001 | 5-8 | ✅ Complete |
 | [TASK-610](tasks/TASK-610-rollout-benchmarks-and-production-readiness-evidence.md) | Add rollout policy, benchmarks, and production-readiness verification evidence | DESIGN-027, DESIGN-028, SPEC-025 | 4-6 | ✅ Complete |
+| [TASK-612](tasks/TASK-612-phase-65-phase-91-alignment-remediation.md) | Phase 65↔91 alignment: reject bare qualified method syntax, reject lowercase pseudo-variant patterns, restore Propose.binding rejection, reconcile RuntimeError docs | TASK-418, TASK-423, SPEC-002, SPEC-003 | 3-5 | ✅ Complete |
 
 **Deliverable:** No runtime stubs for supported `Workflow::Call` paths, no user-facing lifting panics, explicit lifting/effect contracts, parity evidence for supported runtime behavior, and documented rollout policy/evidence for production use.

@@ -64,7 +64,7 @@ fn large_exit_code() {
         use runtime::RuntimeError
 
         workflow main() -> Result<(), RuntimeError> {
-            Err(RuntimeError { exit_code: 255, message: "max" })
+            Err(RuntimeError(255, "max"))  // (tuple-variant form per TASK-413/TASK-418)
         }
     "#;
     

@@ -69,7 +69,7 @@ let source = r#"
   use runtime::RuntimeError
   
   fn make_error() -> RuntimeError {
-    RuntimeError { exit_code: 1, message: "error" }
+    RuntimeError(1, "error")  // (tuple-variant form per TASK-413/TASK-418)
   }
 "#;
 let result = compile_with_stdlib(source);

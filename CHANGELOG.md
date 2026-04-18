@@ -6,6 +6,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `builtin fn` declaration form: design note, spec, and implementation plan.
+  Three new documents establish pure runtime-provided functions as a first-class
+  declaration form, closing the gap between `pub fn` (Ash bodies) and capability
+  providers (effectful operations). Includes three-tier classification (strictly
+  monomorphic / ad-hoc polymorphic / parametric polymorphic), full
+  backward-compatibility contract for all 21 current evaluator builtins, and
+  7-track plan (A through F).
+
 ### Fixed
 
 - PLAN-INDEX phase status alignment. Phase 65 (8/8 tasks), Phase 67 (11/11

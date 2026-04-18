@@ -2547,38 +2547,39 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-090: Spec Processor](PLAN-090-SPEC-PROCESSOR.md)
 **Specs:** [../design/DESIGN-SPEC-PROCESSOR.md](../design/DESIGN-SPEC-PROCESSOR.md), DESIGN-NOTE-PROCESS-EFFECT.md, DESIGN-NOTE-BATCH-CHECK-API.md, DESIGN-NOTE-JSON-STRATEGY.md
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** 🟡 Ready
 
 ### Track A: Pure-String Processor Core
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | ✅ Complete |
-|| [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | ✅ Complete |
-|| [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | ✅ Complete |
-|| [TASK-593](tasks/TASK-593-changelog-checker.md) | Changelog completeness checker | PLAN-090 §Track A | 4 | ✅ Complete |
-|| [TASK-594](tasks/TASK-594-report-formatter.md) | Report formatter (human + JSON) | PLAN-090 §Track A | 4 | ✅ Complete |
+||| [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | 📝 Planned ||
+||| [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | 📝 Planned ||
+||| [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | 📝 Planned ||
+||| [TASK-593](tasks/TASK-593-changelog-checker.md) | Changelog completeness checker | PLAN-090 §Track A | 4 | 📝 Planned ||
+||| [TASK-594](tasks/TASK-594-report-formatter.md) | Report formatter (human + JSON) | PLAN-090 §Track A | 4 | 📝 Planned ||
 
 ### Track B: Stdlib Substrates
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | ✅ Complete |
-|| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | ✅ Complete |
-|| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | ✅ Complete |
-|| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | ✅ Complete |
-|| [TASK-599](tasks/TASK-599-std-diff.md) | `std::diff` line-diff utility | PLAN-090 §Track B | 8 | ⏸️ Deferred |
+||| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | 🟡 Partial (Rust provider landed; Ash surface unproven) ||
+||| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | 📝 Planned ||
+||| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | 📝 Planned ||
+||| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | 📝 Planned ||
+||| [TASK-599](tasks/TASK-599-std-diff.md) | `std::diff` line-diff utility | PLAN-090 §Track B | 8 | ⏸️ Deferred ||
 
 ### Track C: Integration and Meta-Validation
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | ✅ Complete |
-|| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | ✅ Complete |
-|| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | ✅ Complete |
-|| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | ✅ Complete |
+|||------|-------------|------|------------|--------|
+|||| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | 📝 Planned ||
+|||| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | 📝 Planned ||
+|||| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | 📝 Planned ||
+|||| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | 📝 Planned ||
+||| [TASK-613](tasks/TASK-613-phase-90-status-corpus-reconciliation-and-task-595-e2e-validation.md) | Reconcile Phase 90 status/task corpus and prove or honestly downgrade TASK-595 end-to-end `std::regex` behavior before merging remaining worktree changes | PLAN-090, TASK-595, SPEC-002, SPEC-003, SPEC-010, SPEC-017 | 4-8 | 🟡 Ready |
 
-**Deliverable:** `apps/spec_processor/src/main.ash` runs end-to-end, produces a structured report, and blocks CI on Tier 2 findings. New stdlib modules (`regex`, `markdown`, `json`, `process`) are available for downstream phases.
+**Deliverable:** `apps/spec_processor/src/main.ash` runs end-to-end, produces a structured report, and blocks CI on Tier 2 findings. New stdlib modules (`regex`, `markdown`, `json`, `process`) are available for downstream phases only where their end-to-end Ash-language surface is actually proven, and Phase 90 task/docs status is internally consistent on `main` after reconciliation.
 
 ---
 
@@ -2589,7 +2590,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-091: Small-Step and Statement-Lifting Productionization](PLAN-091-SMALL-STEP-LIFTING-PRODUCTIONIZATION.md)
 **Specs:** `DESIGN-027`, `DESIGN-028`, `SPEC-001`, `SPEC-002`, `SPEC-025`
 **Priority:** High
-**Status:** ✅ Complete
+**Status:** 🟡 Ready
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2599,6 +2600,6 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 | [TASK-608](tasks/TASK-608-statement-lifting-contract-hardening.md) | Freeze the conservative non-panicking lifting contract and add regression coverage for formerly panic-prone positions | DESIGN-028, SPEC-002 | 4-6 | ✅ Complete |
 | [TASK-609](tasks/TASK-609-effect-classification-alignment-for-lifting.md) | Replace parser-local heuristic effect classification with a production-quality source of truth | DESIGN-028, SPEC-001 | 5-8 | ✅ Complete |
 | [TASK-610](tasks/TASK-610-rollout-benchmarks-and-production-readiness-evidence.md) | Add rollout policy, benchmarks, and production-readiness verification evidence | DESIGN-027, DESIGN-028, SPEC-025 | 4-6 | ✅ Complete |
-| [TASK-612](tasks/TASK-612-phase-65-phase-91-alignment-remediation.md) | Phase 65↔91 alignment: reject bare qualified method syntax, reject lowercase pseudo-variant patterns, restore Propose.binding rejection, reconcile RuntimeError docs | TASK-418, TASK-423, SPEC-002, SPEC-003 | 3-5 | ✅ Complete |
+| [TASK-612](tasks/TASK-612-phase-65-phase-91-alignment-remediation.md) | Remediate remaining Phase 65 ↔ Phase 91 parser/typechecker/corpus alignment gaps without widening semantics | TASK-418, TASK-421, TASK-422, TASK-423, TASK-608, TASK-609, TASK-610 | 4-8 | 🟡 Ready |
 
-**Deliverable:** No runtime stubs for supported `Workflow::Call` paths, no user-facing lifting panics, explicit lifting/effect contracts, parity evidence for supported runtime behavior, and documented rollout policy/evidence for production use.
+**Deliverable:** No runtime stubs for supported `Workflow::Call` paths, no user-facing lifting panics, explicit lifting/effect contracts, parity evidence for supported runtime behavior, documented rollout policy/evidence for production use, and one final remediation task to align the delivered Phase 91 substrate with frozen Phase 65 contracts and surviving task/docs corpus.

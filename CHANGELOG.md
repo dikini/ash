@@ -8,6 +8,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Phase 90 status reconciliation (TASK-613). PLAN-INDEX.md previously marked
+  TASK-590 through TASK-594 (Track A), TASK-596 through TASK-598 (Track B),
+  and TASK-600 through TASK-603 (Track C) as ✅ Complete despite no code
+  existing on `main`. All downgraded to 📝 Planned. TASK-595 (`std::regex`)
+  downgraded from ✅ Complete to 🟡 Partial: the Rust provider is functional
+  with 12 passing tests, but the Ash-language import surface is not proven
+  end-to-end because `fn` bodies with `act execute` cannot yet be parsed at
+  the expression level. TASK-599 (`std::diff`) remains correctly ⏸️ Deferred.
+
 - Phase 65↔91 alignment remediation (TASK-612). Bare qualified method
   syntax `Interface::method` without call parentheses is now rejected
   by the parser instead of silently accepted as a zero-argument call.

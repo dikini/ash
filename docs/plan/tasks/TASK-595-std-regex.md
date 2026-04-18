@@ -1,6 +1,15 @@
 # TASK-595: std::regex Interface and Rust Backend
 
-## Status: 📝 Planned
+## Status: 🟡 Partial
+
+## Completion Note
+
+The Rust-side `regex` capability provider is functional with 12 passing tests in
+`crates/ash-engine/`. However, the Ash-language import surface (`use regex::{find,matches,replace}`)
+is **not** proven end-to-end because `fn` bodies with `act execute` cannot be parsed at the
+expression level yet. The `std/src/regex.ash` file is aspirational documentation, not a
+proven callable module. The task remains Partial until the Ash surface can be exercised
+through the runtime.
 
 ## Description
 

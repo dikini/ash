@@ -43,7 +43,7 @@ Introduce two new declaration forms:
 
 1. **`builtin fn`** -- Pure functions whose implementation is compiled into the Ash binary. This is the immediate solution for the gap described above.
 
-2. **`extern fn`** -- Reserved keyword for future FFI. Functions whose implementation will be resolved when an Ash library containing extern declarations is compiled/linked against a foreign artifact. The mechanism does not exist yet.
+2. **`extern fn`** -- Reserved keyword for future FFI. Functions whose implementation will be resolved at link time of an Ash library against a foreign artifact (C shared object, WASM module, etc.). The mechanism does not exist yet. When implemented, a separate design note will specify: the link-time resolution protocol, ABI boundary constraints, and effect classification rules for foreign code.
 
 ---
 
@@ -229,6 +229,15 @@ Side-effecting operations that require policy gating remain as capabilities:
 ### 5.3 What Converts from Capability to Builtin
 
 **RegexProvider is DELETED.** Regex operations are pure string computations and become `builtin fn` declarations in `std/src/regex.ash`. There is no capability provider, no `act` dispatch, and no effect classification for regex.
+
+> **Current-carrier vs intended-semantics note:** `RegexProvider` currently
+> reports `Operational` effect level (`providers/regex.rs:94-96`). This is an
+> artifact of the capability-provider implementation carrier, not a statement
+> about regex's semantic classification. Regex operations are pure computations
+> on strings -- they have no side effects, no external dependencies, and no
+> policy gating requirement. The `Operational` classification was inherited from
+> the provider framework, not derived from the operation's nature. Migration to
+> `builtin fn` aligns the implementation with the correct semantic classification.
 
 ### 5.4 What Converts from Magic to Builtin
 

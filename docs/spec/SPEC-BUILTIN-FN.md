@@ -26,7 +26,10 @@ declarations.
 - Typechecked: the declared signature is authoritative at call sites.
 - Always available: compiled into the Ash binary, no runtime loading.
 
-This spec does **not** cover `extern fn` (reserved for future FFI).
+This spec does **not** cover `extern fn` (reserved for future FFI). When
+implemented, a separate design note will specify the link-time resolution
+protocol, ABI boundary constraints, and effect classification rules for foreign
+code. The keyword is reserved now to avoid grammar conflicts.
 
 ## 2. Surface Syntax
 
@@ -158,6 +161,24 @@ pub enum CallableKind {
 This replaces the current `body: Expr` field. Existing `pub fn` and `workflow`
 callables use `CallableKind::Ash { body }`. Builtin fn callables use
 `CallableKind::Builtin`.
+
+**InlineCallable consumer sites** that currently access `.body` directly and
+must be updated to match on `CallableKind`:
+
+1. **Evaluator closure construction** (`ash-interp/src/eval.rs`): when
+   building a `Value::Closure` from an imported `InlineCallable`, the code
+   currently reads `callable.body` unconditionally. For `CallableKind::Builtin`,
+   the closure must carry no body and the evaluator must dispatch to the
+   builtin table instead of evaluating an expression.
+2. **Module import resolution** (`ash-engine/src/module_loader.rs:merge_use_exports`,
+   `resolve_import`): these clone `InlineCallable` values. The `CallableKind`
+   discriminant is cloned as-is and needs no special handling, but any code
+   that destructures `.body` must be audited.
+3. **Type environment registration** (`ash-typeck/src/type_env.rs`):
+   `add_builtin_functions()` currently seeds type signatures in Rust. After
+   migration, the typechecker must read signatures from `InlineCallable`'s
+   declared parameter/return types, distinguishing by `CallableKind` only if
+   the registration path differs.
 
 ### 5.2 Snippet Extraction in collect_module_exports
 

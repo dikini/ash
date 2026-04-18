@@ -16,6 +16,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   backward-compatibility contract for all 21 current evaluator builtins, and
   7-track plan (A through F).
 
+- Non-blocking doc clarifications: `extern fn` wording tightened with explicit
+  scope (link-time resolution, ABI constraints, effect rules), InlineCallable
+  consumer sites named concretely (evaluator, import resolution, typeck
+  registration), regex carrier-vs-semantics note added distinguishing
+  current `Operational` provider artifact from intended pure classification.
+
 ### Fixed
 
 - PLAN-INDEX phase status alignment. Phase 65 (8/8 tasks), Phase 67 (11/11

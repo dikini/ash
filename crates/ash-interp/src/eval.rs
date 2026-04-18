@@ -133,24 +133,16 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             // First try built-in function dispatch
             match eval_function_call(func, &args, ctx) {
                 Ok(value) => Ok(value),
+                Err(EvalError::WrongArity {
+                    expected,
+                    actual,
+                    callee: Some(builtin_name),
+                }) if actual < expected => Ok(make_partial_builtin(&builtin_name, &args, expected)),
                 Err(EvalError::UnknownFunction(_)) => {
                     // Not a built-in: try looking up a closure in the context
-                    // This handles imported functions that are bound as closures
                     match ctx.get(func) {
                         Some(Value::Closure { params, body, env }) => {
-                            if args.len() != params.len() {
-                                return Err(EvalError::WrongArity {
-                                    expected: params.len(),
-                                    actual: args.len(),
-                                });
-                            }
-                            let mut call_env =
-                                ash_core::env_frame::EnvFrame::with_parent(env.clone());
-                            for ((name, _ty), val) in params.iter().zip(args) {
-                                call_env.insert(name.clone(), val);
-                            }
-                            let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
-                            eval_expr(body, &call_ctx)
+                            apply_closure(params, body, env, args)
                         }
                         Some(other) => Err(EvalError::TypeMismatch {
                             expected: "callable".to_string(),
@@ -231,20 +223,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                         .iter()
                         .map(|arg| eval_expr(arg, ctx))
                         .collect::<Result<Vec<_>, _>>()?;
-                    if arg_vals.len() != params.len() {
-                        return Err(EvalError::WrongArity {
-                            expected: params.len(),
-                            actual: arg_vals.len(),
-                        });
-                    }
-                    // Build a child EnvFrame with param bindings
-                    let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env);
-                    for ((name, _ty), val) in params.iter().zip(arg_vals) {
-                        call_env.insert(name.clone(), val);
-                    }
-                    // Create a Context from the EnvFrame and evaluate the body
-                    let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
-                    eval_expr(&body, &call_ctx)
+                    apply_closure(&params, &body, &env, arg_vals)
                 }
                 _ => Err(EvalError::NotCallable { value: callee }),
             }
@@ -408,6 +387,11 @@ fn eval_binary_op(op: BinaryOp, left: Value, right: Value) -> EvalResult<Value> 
                 right: format!("{:?}", right),
             }),
         },
+        BinaryOp::Pipe => Err(EvalError::InvalidBinaryOp {
+            op: "pipe".to_string(),
+            left: format!("{:?}", left),
+            right: format!("{:?}", right),
+        }),
     }
 }
 
@@ -500,10 +484,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
         // List operations
         "len" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("len", 1, args.len());
             }
             match &args[0] {
                 Value::List(list) => Ok(Value::Int(list.len() as i64)),
@@ -517,10 +498,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "head" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("head", 1, args.len());
             }
             match &args[0] {
                 Value::List(list) => {
@@ -539,10 +517,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "tail" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("tail", 1, args.len());
             }
             match &args[0] {
                 Value::List(list) => {
@@ -561,10 +536,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "append" => {
             if args.len() != 2 {
-                return Err(EvalError::WrongArity {
-                    expected: 2,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("append", 2, args.len());
             }
             match (&args[0], &args[1]) {
                 (Value::List(list), elem) => {
@@ -581,10 +553,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "concat" => {
             if args.len() != 2 {
-                return Err(EvalError::WrongArity {
-                    expected: 2,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("concat", 2, args.len());
             }
             match (&args[0], &args[1]) {
                 (Value::List(l1), Value::List(l2)) => {
@@ -601,10 +570,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "filter" => {
             if args.len() != 2 {
-                return Err(EvalError::WrongArity {
-                    expected: 2,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("filter", 2, args.len());
             }
             match (&args[0], &args[1]) {
                 (Value::List(list), Value::Closure { params, body, env }) => {
@@ -612,6 +578,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
                         return Err(EvalError::WrongArity {
                             expected: params.len(),
                             actual: 1,
+                            callee: None,
                         });
                     }
                     let mut result = Vec::new();
@@ -641,10 +608,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "map" => {
             if args.len() != 2 {
-                return Err(EvalError::WrongArity {
-                    expected: 2,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("map", 2, args.len());
             }
             match (&args[0], &args[1]) {
                 (Value::List(list), Value::Closure { params, body, env }) => {
@@ -652,6 +616,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
                         return Err(EvalError::WrongArity {
                             expected: params.len(),
                             actual: 1,
+                            callee: None,
                         });
                     }
                     let mut result = Vec::new();
@@ -672,10 +637,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "starts_with" => {
             if args.len() != 2 {
-                return Err(EvalError::WrongArity {
-                    expected: 2,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("starts_with", 2, args.len());
             }
             match (&args[0], &args[1]) {
                 (Value::String(s), Value::String(prefix)) => Ok(Value::Bool(s.starts_with(prefix))),
@@ -688,10 +650,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "ends_with" => {
             if args.len() != 2 {
-                return Err(EvalError::WrongArity {
-                    expected: 2,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("ends_with", 2, args.len());
             }
             match (&args[0], &args[1]) {
                 (Value::String(s), Value::String(suffix)) => Ok(Value::Bool(s.ends_with(suffix))),
@@ -705,10 +664,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
         // Record operations
         "keys" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("keys", 1, args.len());
             }
             match &args[0] {
                 Value::Record(fields) => {
@@ -725,10 +681,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         "values" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("values", 1, args.len());
             }
             match &args[0] {
                 Value::Record(fields) => {
@@ -745,60 +698,42 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
         // Type checking
         "is_int" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("is_int", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::Int(_))))
         }
 
         "is_string" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("is_string", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::String(_))))
         }
 
         "is_bool" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("is_bool", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::Bool(_))))
         }
 
         "is_list" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("is_list", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::List(_))))
         }
 
         "is_record" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("is_record", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::Record(_))))
         }
 
         "is_null" => {
             if args.len() != 1 {
-                return Err(EvalError::WrongArity {
-                    expected: 1,
-                    actual: args.len(),
-                });
+                return builtin_arity_error("is_null", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::Null)))
         }
@@ -829,6 +764,87 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
 
         // Unknown function
         _ => Err(EvalError::UnknownFunction(func.to_string())),
+    }
+}
+
+/// Return a WrongArity error for built-ins, preserving the expected arity.
+fn builtin_arity_error(name: &str, expected: usize, actual: usize) -> EvalResult<Value> {
+    Err(EvalError::WrongArity {
+        expected,
+        actual,
+        callee: Some(name.to_string()),
+    })
+}
+
+/// Build a synthetic closure that represents a partially-applied built-in.
+///
+/// `ends_with(".md")` becomes a closure `|x| => ends_with(x, ".md")` (with args reordered).
+///
+/// This reordering ensures that when used in a pipeline like `filter(ends_with(".md"))`,
+/// the closure correctly receives the iterated element as its first argument.
+fn make_partial_builtin(name: &str, applied_args: &[Value], total_arity: usize) -> Value {
+    let remaining = total_arity - applied_args.len();
+    let param_names: Vec<(String, Option<String>)> = (0..remaining)
+        .map(|i| (format!("__partial_{i}"), None))
+        .collect();
+
+    // Build call args with remaining params FIRST, then applied args.
+    // This ensures `ends_with(".md")` becomes `|x| => ends_with(x, ".md")`
+    // rather than `|x| => ends_with(".md", x)`.
+    let mut call_args: Vec<Expr> = param_names
+        .iter()
+        .enumerate()
+        .map(|(i, _)| Expr::Variable {
+            name: format!("__partial_{i}"),
+            span: ash_core::ast::Span::default(),
+        })
+        .collect();
+
+    call_args.extend(applied_args.iter().map(|v| Expr::Literal(v.clone())));
+
+    Value::Closure {
+        params: param_names,
+        body: Box::new(Expr::Call {
+            func: name.to_string(),
+            module: None,
+            arguments: call_args,
+        }),
+        env: std::sync::Arc::new(ash_core::env_frame::EnvFrame::new()),
+    }
+}
+
+/// Apply a closure, supporting partial application.
+fn apply_closure(
+    params: &[(String, Option<String>)],
+    body: &Expr,
+    env: &std::sync::Arc<ash_core::env_frame::EnvFrame>,
+    args: Vec<Value>,
+) -> EvalResult<Value> {
+    if args.len() == params.len() {
+        let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+        for ((name, _ty), val) in params.iter().zip(args) {
+            call_env.insert(name.clone(), val);
+        }
+        let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+        eval_expr(body, &call_ctx)
+    } else if args.len() < params.len() {
+        // Partial application: bind provided params, keep remaining
+        let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+        for ((name, _ty), val) in params.iter().take(args.len()).zip(args.clone()) {
+            new_env.insert(name.clone(), val);
+        }
+        let remaining_params = params[args.len()..].to_vec();
+        Ok(Value::Closure {
+            params: remaining_params,
+            body: Box::new(body.clone()),
+            env: std::sync::Arc::new(new_env),
+        })
+    } else {
+        Err(EvalError::WrongArity {
+            expected: params.len(),
+            actual: args.len(),
+            callee: None,
+        })
     }
 }
 
@@ -1133,7 +1149,11 @@ mod tests {
             module: None,
             arguments: vec![],
         };
-        assert!(eval_expr(&expr, &ctx).is_err());
+        let value = eval_expr(&expr, &ctx).unwrap();
+        assert!(
+            matches!(value, Value::Closure { .. }),
+            "expected partial-application Closure, got {value:?}"
+        );
     }
 
     #[test]
@@ -2107,7 +2127,7 @@ mod tests {
         );
     }
 
-    /// SPEC-031 §5.7 – FnApply with wrong arity returns WrongArity error.
+    /// SPEC-031 §5.7 – FnApply with wrong arity returns a partial-application Closure.
     #[test]
     fn task559_fnapply_wrong_arity_returns_error() {
         let ctx = Context::new();
@@ -2124,16 +2144,10 @@ mod tests {
             args: vec![Expr::Literal(Value::Int(1))], // only 1 arg, need 2
         };
 
-        let err = eval_expr(&expr, &ctx).unwrap_err();
+        let value = eval_expr(&expr, &ctx).unwrap();
         assert!(
-            matches!(
-                err,
-                EvalError::WrongArity {
-                    expected: 2,
-                    actual: 1
-                }
-            ),
-            "expected WrongArity{{2,1}}, got {err:?}"
+            matches!(value, Value::Closure { .. }),
+            "expected partial-application Closure, got {value:?}"
         );
     }
 

@@ -8,7 +8,86 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- MCP (Model Context Protocol) server bridge in new `ash-mcp` crate
+- Small-step interpreter with compressed IR (Stmt/Frame/Config) and full
+  async execution engine (TASK-604).  Runs workflows via structural
+  reduction instead of recursive evaluation.  18 small-step tests pass
+  including workflow call with parameter binding.
+
+- Statement lifting pass (ANF-style) for pipe operator support (TASK-605).
+  Extracts effectful sub-expressions into synthetic `Let` bindings.  Pipe
+  operator (`|>`) lexed, parsed, and lowered via partial-application
+  desugaring.  2 end-to-end pipe operator tests pass.
+
+- `Workflow::Call` runtime completion (TASK-606).  Big-step and small-step
+  interpreters execute `Workflow::Call` with argument binding, arity
+  checking, and unknown-target rejection.  `RegisteredCallableWorkflow`
+  stores parameter names for runtime binding.  8 call-target tests pass
+  across both interpreters.
+
+- Small-step/big-step parity test corpus (TASK-607).  12 differential tests
+  (`parity_*`) prove both interpreters agree on Done, Ret, Let, Seq, If,
+  ForEach, Maybe, Must, and workflow call outcomes.  Zero divergences.
+
+- Statement lifting contract hardening (TASK-608).  10 regression tests
+  verify conservative preserve-original behavior for effectful expressions
+  in unsupported positions (Ret, If condition, ForEach collection, guards,
+  Send, Spawn, Split, Call arguments).  A sweep test covers all 29
+  Workflow variants asserting no panics.  15 lift tests pass.
+
+- Capability-registry effect classification (TASK-609).  Replaced hardcoded
+  `EFFECTFUL_NAMES` list with `effectful_names_from_definitions()` that
+  derives effectful names from declared `CapabilityDef`s in the program.
+  `LoweringContext` carries the set; `lift_workflow_with_names()` threads it
+  through the lifting pass.  Qualified calls and Spawn remain unconditionally
+  effectful; unqualified calls are classified by declared capabilities.
+  6 new classification tests; 21 lift tests total.
+
+- Local helper workflow surface (TASK-611).  `Program` struct carries
+  `helper_workflows`; parser supports multiple named workflows per file;
+  engine registers helpers as callable targets with typechecker visibility.
+  Helper parameter binding works at runtime in both interpreters.  5 engine
+  integration tests pass including parameterized helper calls.
+
+- `Workflow::Call` and `BinaryOp::Pipe` AST variants in `ash-core`.
+  Compressed IR types (`Stmt`, `Frame`, `Config`) in `ash-core::small_step`.
+  `lower_expr()` public API in `ash-parser`.
+
+### Changed
+
+- Lifting pass no longer panics on effectful expressions in unsupported
+  workflow positions; preserves original expression for downstream
+  diagnostics instead.
+
+- Hardened helper-workflow follow-up fixes: synchronous callable workflow
+  registration now works on current-thread Tokio runtimes without
+  `block_in_place`; spawned child workflow failures are surfaced via explicit
+  error reporting; lift variable numbering is reset per top-level lift pass;
+  the type checker matches `BinaryOp::Pipe` defensively instead of falling
+  through implicitly.
+
+- Effect classification in lifting derived from capability declarations
+  rather than hardcoded name list, eliminating false positives for
+  user-defined functions that shadow stdlib names.
+
+- Scoped-body lifting (Match arms, IfLet branches, FnDef bodies) now
+  preserves the original expression when inner lifting produces synthetic
+  bindings that cannot be hosted, instead of emitting unbound `__lift_`
+  variable references (re-review B1 fix).
+
+- Decide lowering returns `LoweringError::InvalidTarget` for legacy
+  else-branch input instead of panicking (re-review B2 fix).
+
+- Provider registry uses `std::sync::Mutex` instead of tokio async mutex,
+  eliminating `blocking_lock()` panic hazard on current-thread runtimes.
+
+- Pipe operator precedence tests: `a + b |> f` groups addition first;
+  `x |> f(a, b)` prepends `x` as first argument.
+
+- Lift regression tests corrected and expanded: Match arm test now
+  asserts original expression preservation (not broken synthetic var);
+  new IfLet and FnDef preservation tests added.
+
+### MCP (Model Context Protocol) server bridge in new `ash-mcp` crate
   (TASK-569 Phase 4).  Built on `rmcp` v1.5, exposes 8 MCP tools that
   wrap `ash-lsp-core` analysis: `ash_get_diagnostics`, `ash_hover`,
   `ash_goto_definition`, `ash_complete`, `ash_document_symbols`,
@@ -48,6 +127,36 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   13 unit tests covering all rules and configuration.
   The CLI binary (`ash-lint` bin) is now a thin wrapper around the library,
   enabling reuse by `ash-lsp-core` (Phase 87) and other consumers.
+
+- Small-step IR compression prototype (TASK-604): added `Stmt`, `Frame`, `Config`,
+  and `StmtList` types to `ash-core::small_step` with a lowering function from
+  `Workflow`. Implemented an async small-step abstract machine in
+  `ash-interp::small_step` (`step` and `run`) that drives configurations to
+  completion without recursive big-step descent. Unit tests cover `Done`, `Ret`,
+  `Let`, `Seq`, `If`, and `Act` parity with the big-step interpreter.
+
+- Extended small-step IR compression prototype with remaining Workflow variant
+  lowerings and error-handling frames (TASK-604 follow-up): added
+  `Frame::ForEachIter`, `Frame::Catch`, `Frame::MustGuard`, and
+  `Frame::ResumeYield`. Implemented `unwind_stack` for `Maybe` fallback and
+  `MustFailure` propagation. Lowered `Observe`, `Orient`, `Propose`, `Decide`,
+  `Check`, `With`, `Oblig`, `Maybe`, `Must`, `ForEach`, `Spawn`, `Split`,
+  `Kill`, `Pause`, `Resume`, `CheckHealth`, `Yield`, `Set`, `Send`, `Oblige`,
+  `CheckObligation`, and `Receive`. Added unit tests for `ForEach` over a list,
+  `Maybe` fallback on error, `Must` propagating error as `MustFailure`, and
+  `Yield` blocked state. `cargo check` and `cargo clippy` clean.
+
+- Small-step interpreter integration with full runtime context (TASK-604
+  follow-up): extended `step` and `run` signatures in
+  `ash-interp::small_step` to accept `RuntimeState`, `BehaviourContext`,
+  `PolicyEvaluator`, and `StreamContext`. Wired `PolicyEvaluator` into
+  `Stmt::Decide`, `BehaviourContext` and `CapabilityPolicyEvaluator` into
+  `Stmt::Set`, `StreamContext` into `Stmt::Send`, and `RuntimeState`
+  control registry into `Stmt::Kill`, `Pause`, `Resume`, and `CheckHealth`.
+  Added `Workflow::Call` variant to `ast::Workflow`, `Stmt::Call` variant
+  to `small_step::Stmt`, and corresponding lowering. Added stub match arm
+  in big-step `execute_workflow_inner_observed` and small-step `step_inner`.
+  Updated all unit tests to pass full runtime contexts.
 
 - LSP diagnostic crate `ash-diagnostic` with `AshLspError` trait, `Severity`,
   `DiagnosticCode`, and `ash_error_to_diagnostic` conversion (TASK-573).

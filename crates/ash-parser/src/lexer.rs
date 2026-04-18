@@ -151,6 +151,16 @@ impl<'a> Lexer<'a> {
                     TokenKind::Gt
                 }
             }
+            '|' => {
+                self.advance();
+                if self.peek_char() == Some('>') {
+                    self.advance();
+                    TokenKind::Pipe
+                } else {
+                    // '|' alone is unexpected
+                    return Err(LexError::UnexpectedChar('|', start_line, start_col));
+                }
+            }
             '.' => {
                 self.advance();
                 if self.peek_char() == Some('.') {
@@ -705,6 +715,15 @@ mod tests {
             tokens[1].kind,
             TokenKind::Ident("with-multiple-hyphens".into())
         );
+    }
+
+    #[test]
+    fn test_pipe_operator() {
+        let tokens = lex("|>").unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].kind, TokenKind::Pipe);
+        assert_eq!(tokens[0].span.start, 0);
+        assert_eq!(tokens[0].span.end, 2);
     }
 
     #[test]

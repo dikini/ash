@@ -646,6 +646,24 @@ impl DotGenerator {
                 writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
                 id
             }
+            Workflow::Call {
+                target,
+                continuation,
+                ..
+            } => {
+                let id = self.next_id();
+                let cont_id = self.visit_workflow(continuation);
+                writeln!(
+                    self.output,
+                    "  node_{} [label=\"CALL\\n{}\", fillcolor=\"{}\"];",
+                    id,
+                    escape_dot(target),
+                    effect_color(&Effect::Operational)
+                )
+                .unwrap();
+                writeln!(self.output, "  node_{} -> node_{};", id, cont_id).unwrap();
+                id
+            }
             Workflow::ProxyResume { correlation_id, .. } => {
                 let id = self.next_id();
                 writeln!(

@@ -48,6 +48,7 @@ fn test_workflow_par_variant_removed() {
         Workflow::CheckObligation { .. } => panic!("Should not match CheckObligation"),
         Workflow::Yield { .. } => panic!("Should not match Yield"),
         Workflow::ProxyResume { .. } => panic!("Should not match ProxyResume"),
+        Workflow::Call { .. } => panic!("Should not match Call"),
         Workflow::Done => {} // This is the expected match
     }
 }

@@ -122,6 +122,7 @@ fn option_explain_string_impl() -> ImplDef {
 fn generic_pure_fn_call_instantiates_at_workflow_call_site() {
     let program = Program {
         definitions: vec![Definition::Function(generic_identity_fn())],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "id".into(),
@@ -208,6 +209,7 @@ fn fn_body_call_must_target_pure_function_type() {
 
     let program = Program {
         definitions: vec![Definition::Function(bad_function)],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Literal(Literal::Int(0)),
             SurfaceType::Name("Int".into()),
@@ -257,6 +259,7 @@ fn interface_method_call_is_allowed_in_pure_fn_when_impl_exists() {
             Definition::Function(describe_fn),
             Definition::Function(generic_identity_fn()),
         ],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "describe".into(),
@@ -317,6 +320,7 @@ fn if_let_pattern_binding_is_in_scope_for_interface_call_validation() {
             Definition::Impl(explain_string_impl()),
             Definition::Function(describe_fn),
         ],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "describe_if_let".into(),
@@ -373,6 +377,7 @@ fn block_let_binding_is_in_scope_for_later_interface_call_validation() {
             Definition::Impl(explain_string_impl()),
             Definition::Function(describe_fn),
         ],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "describe_block".into(),
@@ -426,6 +431,7 @@ fn non_callable_call_reports_non_callable_diagnostic() {
 fn panic_can_satisfy_non_null_expected_type() {
     let program = Program {
         definitions: vec![],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Panic {
                 message: "boom".into(),
@@ -497,6 +503,7 @@ fn interface_method_resolution_unifies_nested_generic_argument_types() {
             Definition::Impl(option_explain_string_impl()),
             Definition::Function(describe_fn),
         ],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "describe_option".into(),
@@ -572,6 +579,7 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
             Definition::Function(passthrough_fn),
             Definition::Function(uses_qualified_call),
         ],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "call_passthrough".into(),
@@ -636,6 +644,7 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
             Definition::Function(passthrough_fn),
             Definition::Function(uses_qualified_call),
         ],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "call_passthrough".into(),
@@ -693,6 +702,7 @@ fn omitted_return_type_is_rechecked_before_downstream_callers_are_accepted() {
             Definition::Function(returns_int),
             Definition::Function(claims_string),
         ],
+        helper_workflows: vec![],
         workflow: workflow_returning(
             Expr::Call {
                 func: "claims_string".into(),

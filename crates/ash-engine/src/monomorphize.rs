@@ -86,6 +86,11 @@ pub fn monomorphize_workflow(
             arguments,
             continuation,
             ..
+        }
+        | Workflow::Call {
+            arguments,
+            continuation,
+            ..
         } => {
             for arg in arguments.iter_mut() {
                 monomorphize_expr(arg, type_env)?;

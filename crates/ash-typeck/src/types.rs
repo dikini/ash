@@ -389,16 +389,19 @@ impl Type {
     /// Given a function type like `Type::Fn([T, T], T)` and actual args `[Int, Int]`,
     /// this produces `Some(Int)` (the instantiated return type).
     ///
-    /// Returns `None` if the function is not callable with the given argument count.
+    /// If fewer arguments than parameters are provided, returns a partial
+    /// application type containing the remaining parameters.
+    ///
+    /// Returns `None` if too many arguments are provided.
     /// Returns `Err` if argument types don't unify.
     pub fn instantiate_fn_call(&self, arg_types: &[Type]) -> Option<Result<Type, UnifyError>> {
-        let (params, ret) = match self {
-            Type::Fn(params, ret) => (params, ret),
-            Type::Fun(params, ret, _effect) => (params, ret),
+        let (params, ret, effect) = match self {
+            Type::Fn(params, ret) => (params, ret, None),
+            Type::Fun(params, ret, effect) => (params, ret, Some(*effect)),
             _ => return None,
         };
 
-        if params.len() != arg_types.len() {
+        if arg_types.len() > params.len() {
             return None;
         }
 
@@ -410,7 +413,22 @@ impl Type {
             }
         }
 
-        Some(Ok(acc_sub.apply(ret)))
+        if arg_types.len() == params.len() {
+            // Full application
+            Some(Ok(acc_sub.apply(ret)))
+        } else {
+            // Partial application: return function type with remaining params
+            let remaining: Vec<Type> = params[arg_types.len()..]
+                .iter()
+                .map(|p| acc_sub.apply(p))
+                .collect();
+            let ret_ty = acc_sub.apply(ret);
+            let partial_ty = match effect {
+                Some(eff) => Type::Fun(remaining, Box::new(ret_ty), eff),
+                None => Type::Fn(remaining, Box::new(ret_ty)),
+            };
+            Some(Ok(partial_ty))
+        }
     }
 }
 
@@ -464,6 +482,18 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
                 acc_sub = acc_sub.compose(&sub);
             }
             Ok(acc_sub)
+        }
+
+        // Constructor named List vs List
+        (Constructor { name, args, .. }, List(elem))
+            if name.name.ends_with("List") && args.len() == 1 =>
+        {
+            unify(&args[0], elem)
+        }
+        (List(elem), Constructor { name, args, .. })
+            if name.name.ends_with("List") && args.len() == 1 =>
+        {
+            unify(elem, &args[0])
         }
 
         // Constructor cannot unify with primitives

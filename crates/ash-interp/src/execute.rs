@@ -220,6 +220,39 @@ fn spawned_child_control_link(ctx: &Context) -> ExecResult<Option<ash_core::Cont
     }
 }
 
+pub(crate) async fn resolve_registered_runtime_call_target(
+    runtime_state: &RuntimeState,
+    target: &str,
+    arity: usize,
+) -> ExecResult<Workflow> {
+    if let Some(callable) = runtime_state.callable_workflow(target).await {
+        if arity != callable.arity {
+            return Err(ExecError::Eval(EvalError::WrongArity {
+                expected: callable.arity,
+                actual: arity,
+                callee: Some(target.to_string()),
+            }));
+        }
+        return Ok(callable.workflow);
+    }
+
+    let workflow = runtime_state.child_workflow(target).await.ok_or_else(|| {
+        ExecError::ExecutionFailed(format!(
+            "workflow call target '{target}' is not registered in runtime state"
+        ))
+    })?;
+
+    if arity != 0 {
+        return Err(ExecError::Eval(EvalError::WrongArity {
+            expected: 0,
+            actual: arity,
+            callee: Some(target.to_string()),
+        }));
+    }
+
+    Ok(workflow)
+}
+
 #[derive(Debug, Clone)]
 struct TerminalObservationRecorder {
     obligations: Arc<std::sync::Mutex<Option<ConservativeRetainedObligationsSummary>>>,
@@ -313,7 +346,7 @@ async fn run_spawned_child_workflow(
     link: ash_core::ControlLink,
     provenance: ConservativeRetainedProvenanceSummary,
     execution_provenance: Provenance,
-) {
+) -> ExecResult<()> {
     tokio::task::yield_now().await;
 
     let terminal_observer = TerminalObservationRecorder::new();
@@ -330,7 +363,7 @@ async fn run_spawned_child_workflow(
 
     let outcome_state = RuntimeOutcomeState::from_exec_result(&child_result);
     if !outcome_state.is_terminal() {
-        return;
+        return Ok(());
     }
 
     let completion_payload = child_execution_record
@@ -351,14 +384,17 @@ async fn run_spawned_child_workflow(
         .record_control_completion(&link, child_result, effects, obligations, Some(provenance))
         .await
     {
-        Ok(_) => {}
+        Ok(_) => Ok(()),
         Err(ControlLinkError::CompletionAlreadySealed(_, record))
-            if record.kind() == RetainedCompletionKind::ControlTerminated => {}
-        Err(ControlLinkError::Terminated(..)) => {}
-        Err(error) => panic!(
+            if record.kind() == RetainedCompletionKind::ControlTerminated =>
+        {
+            Ok(())
+        }
+        Err(ControlLinkError::Terminated(..)) => Ok(()),
+        Err(error) => Err(ExecError::ExecutionFailed(format!(
             "spawned child completion sealing failed unexpectedly for instance {:?}: {error}",
             link.instance_id
-        ),
+        ))),
     }
 }
 
@@ -659,6 +695,64 @@ fn execute_workflow_inner_observed<'a>(
                 execute_workflow_inner_observed(
                     continuation,
                     exec_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                    stream_ctx,
+                    mailbox,
+                    control_registry,
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
+                    execution_recorder,
+                )
+                .await
+            }
+
+            Workflow::Call {
+                target,
+                arguments,
+                continuation,
+            } => {
+                let callable = runtime_state.callable_workflow(target).await;
+                let child_workflow =
+                    resolve_registered_runtime_call_target(runtime_state, target, arguments.len())
+                        .await?;
+
+                // Build child context with arguments bound to parameter names.
+                // Arguments are evaluated in the caller's context.
+                let child_ctx = if let Some(ref callable) = callable {
+                    let mut child = Context::new();
+                    for (param_name, arg_expr) in callable.params.iter().zip(arguments.iter()) {
+                        let arg_value = eval_expr(arg_expr, &ctx).map_err(ExecError::Eval)?;
+                        child.set(param_name.clone(), arg_value);
+                    }
+                    child
+                } else {
+                    Context::new()
+                };
+
+                execute_workflow_inner_observed(
+                    &child_workflow,
+                    child_ctx,
+                    cap_ctx,
+                    policy_eval,
+                    behaviour_ctx,
+                    stream_ctx,
+                    mailbox.clone(),
+                    control_registry.clone(),
+                    proxy_registry.clone(),
+                    suspended_yields.clone(),
+                    runtime_state,
+                    terminal_observer,
+                    execution_recorder,
+                )
+                .await?;
+
+                execute_workflow_inner_observed(
+                    continuation,
+                    ctx,
                     cap_ctx,
                     policy_eval,
                     behaviour_ctx,
@@ -1085,14 +1179,26 @@ fn execute_workflow_inner_observed<'a>(
                             parent: None,
                             lineage: vec![],
                         });
-                    tokio::spawn(run_spawned_child_workflow(
-                        runtime_state.clone(),
-                        child_workflow,
-                        init_value.clone(),
-                        control,
-                        provenance,
-                        child_execution_provenance,
-                    ));
+                    let spawned_runtime_state = (*runtime_state).clone();
+                    let spawned_init_value = init_value.clone();
+                    let spawned_control = control.clone();
+                    tokio::spawn(async move {
+                        if let Err(error) = run_spawned_child_workflow(
+                            spawned_runtime_state,
+                            child_workflow,
+                            spawned_init_value,
+                            spawned_control.clone(),
+                            provenance,
+                            child_execution_provenance,
+                        )
+                        .await
+                        {
+                            eprintln!(
+                                "spawned child workflow failed for instance {:?}: {error}",
+                                spawned_control.instance_id
+                            );
+                        }
+                    });
                 }
 
                 // Match pattern and bind
@@ -1780,6 +1886,83 @@ mod tests {
         let workflow = Workflow::Done;
         let result = execute_simple(&workflow).await.unwrap();
         assert_eq!(result, Value::Null);
+    }
+
+    #[tokio::test]
+    async fn test_workflow_call_executes_registered_runtime_workflow_in_big_step() {
+        let runtime_state = RuntimeState::new();
+        runtime_state
+            .register_callable_workflow(
+                "worker",
+                Workflow::Ret {
+                    expr: Expr::Literal(Value::Int(7)),
+                },
+                0,
+                vec![],
+            )
+            .await;
+
+        let workflow = Workflow::Call {
+            target: "worker".to_string(),
+            arguments: vec![],
+            continuation: Box::new(Workflow::Ret {
+                expr: Expr::Literal(Value::Int(99)),
+            }),
+        };
+
+        let result = execute_simple_in_state(&workflow, &runtime_state).await;
+        assert_eq!(result.unwrap(), Value::Int(99));
+    }
+
+    #[tokio::test]
+    async fn test_workflow_call_rejects_unknown_runtime_target_in_big_step() {
+        let runtime_state = RuntimeState::new();
+        let workflow = Workflow::Call {
+            target: "missing_worker".to_string(),
+            arguments: vec![],
+            continuation: Box::new(Workflow::Ret {
+                expr: Expr::Literal(Value::Int(99)),
+            }),
+        };
+
+        let result = execute_simple_in_state(&workflow, &runtime_state).await;
+        assert!(matches!(
+            result,
+            Err(ExecError::ExecutionFailed(message)) if message.contains("missing_worker")
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_workflow_call_rejects_non_zero_arity_in_big_step() {
+        let runtime_state = RuntimeState::new();
+        runtime_state
+            .register_callable_workflow(
+                "worker",
+                Workflow::Ret {
+                    expr: Expr::Literal(Value::Int(7)),
+                },
+                0,
+                vec![],
+            )
+            .await;
+
+        let workflow = Workflow::Call {
+            target: "worker".to_string(),
+            arguments: vec![Expr::Literal(Value::Int(1))],
+            continuation: Box::new(Workflow::Ret {
+                expr: Expr::Literal(Value::Int(99)),
+            }),
+        };
+
+        let result = execute_simple_in_state(&workflow, &runtime_state).await;
+        assert!(matches!(
+            result,
+            Err(ExecError::Eval(EvalError::WrongArity {
+                expected: 0,
+                actual: 1,
+                callee: Some(callee),
+            })) if callee == "worker"
+        ));
     }
 
     #[tokio::test]

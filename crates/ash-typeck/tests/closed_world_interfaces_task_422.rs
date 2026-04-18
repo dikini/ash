@@ -289,6 +289,7 @@ fn program_with_interface_impl_and_workflow(workflow: WorkflowDef, impls: Vec<Im
 
     Program {
         definitions,
+        helper_workflows: vec![],
         workflow,
     }
 }
@@ -464,6 +465,7 @@ fn workflow_typecheck_rejects_declared_return_type_mismatch() {
 fn program_typecheck_rejects_declared_workflow_return_type_mismatch() {
     let program = Program {
         definitions: vec![],
+        helper_workflows: vec![],
         workflow: workflow_with_declared_return_type_mismatch(),
     };
 

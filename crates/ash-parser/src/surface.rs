@@ -36,12 +36,17 @@ pub struct DependencyDecl {
     pub span: Span,
 }
 
-/// A program consists of definitions and a main workflow.
+/// A program consists of definitions, optional helper workflows, and a main workflow.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    /// Top-level definitions (capabilities, policies, roles)
+    /// Top-level definitions (capabilities, policies, roles, functions)
     pub definitions: Vec<Definition>,
-    /// The main workflow definition
+    /// Helper workflow definitions preceding the main entry workflow.
+    ///
+    /// These are registered as callable targets at runtime so that
+    /// `Workflow::Call` can dispatch to them by name.
+    pub helper_workflows: Vec<WorkflowDef>,
+    /// The main workflow definition (entry point)
     pub workflow: WorkflowDef,
 }
 
@@ -1083,6 +1088,8 @@ pub enum BinaryOp {
     Geq,
     /// Membership test: in
     In,
+    /// Pipe operator: |>
+    Pipe,
 }
 
 /// Pattern types for destructuring.
@@ -1547,6 +1554,7 @@ mod tests {
     fn test_program_construction() {
         let program = Program {
             definitions: vec![],
+            helper_workflows: vec![],
             workflow: WorkflowDef {
                 name: "main".into(),
                 type_params: vec![],

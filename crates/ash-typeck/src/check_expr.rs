@@ -210,7 +210,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                                 None => {
                                     CheckResult::error(ConstructorError::UnsupportedExpression {
                                         kind: format!(
-                                            "Call ({qualified_name}): expected {} args, got {}",
+                                            "Call ({qualified_name}): too many arguments — expected at most {} args, got {}",
                                             match &func_ty {
                                                 Type::Fn(params, _) => params.len(),
                                                 Type::Fun(params, _, _) => params.len(),
@@ -539,7 +539,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 None => {
                     let kind = if func_ty.is_function_type() {
                         format!(
-                            "FnApply: arity mismatch — expected {} args, got {} for type {func_ty}",
+                            "FnApply: too many arguments — expected at most {} args, got {} for type {func_ty}",
                             func_ty.fn_arity().unwrap_or(0),
                             arg_types.len()
                         )
@@ -666,6 +666,7 @@ fn check_binary(env: &TypeEnv, op: BinaryOp, left: &Expr, right: &Expr) -> Check
             Type::Bool
         }
         BinaryOp::In => Type::Bool,
+        BinaryOp::Pipe => Type::Var(TypeVar::fresh()),
         _ => Type::Var(TypeVar::fresh()),
     };
 

@@ -371,9 +371,9 @@ Update this section as tasks complete:
 | 39 | 1 | 1 | ✅ Complete |
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
-| 74 | 8 | 0 | 📝 Planned |
+| 74 | 8 | 0 | ✅ Complete |
 | 76A | 4 | 4 | ✅ Complete |
-| 76B | 3 | 0 | 📝 Planned |
+| 76B | 3 | 0 | ✅ Complete |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 6 | ✅ Complete |
@@ -2182,14 +2182,14 @@ Implement the first real `io` standard-library family as a top-level namespace r
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-493](tasks/TASK-493-freeze-stdlib-io-contract.md) | Freeze the canonical `io` namespace, v1 module tree, and capability boundary in active specs/docs before implementation spreads assumptions | PLAN-022, SPEC-009/010/012/017 | 3-5 | 📝 Planned |
-| [TASK-494](tasks/TASK-494-stdlib-io-root-and-path-surface.md) | Add the root `io` module plus the pure `io::path` layer and shared `io` vocabulary under `std/src/io/` | PLAN-022 | 4-6 | 📝 Planned |
-| [TASK-495](tasks/TASK-495-stdlib-io-stdio-surface-and-provider-alignment.md) | Introduce `io::stdio` as the canonical stdlib terminal-I/O surface and align it with the existing `StdioProvider` | PLAN-022, SPEC-010/017 | 4-6 | 📝 Planned |
-| [TASK-496](tasks/TASK-496-stdlib-io-files-dir-meta-surface.md) | Add `io::fs`, `io::dir`, and `io::meta` and expand filesystem-provider support to match the v1 contract | PLAN-022, SPEC-010/017 | 5-8 | 📝 Planned |
-| [TASK-497](tasks/TASK-497-stdlib-io-buffered-helpers-and-ambient-sugar.md) | Add `io::buf` plus the first ergonomic helper layer without introducing a separate execution model | PLAN-022 | 3-5 | 📝 Planned |
-| [TASK-498](tasks/TASK-498-stdlib-io-bootstrap-and-runtime-wiring.md) | Bootstrap the new `io` stdlib modules through module loading, capability export/resolution, and engine provider wiring | PLAN-022, SPEC-009/012/017 | 4-7 | 📝 Planned |
-| [TASK-499](tasks/TASK-499-stdlib-io-integration-tests-and-examples.md) | Add parser, engine, and example coverage that demonstrates the intended Ash `io` style end-to-end | PLAN-022 | 4-6 | 📝 Planned |
-| [TASK-500](tasks/TASK-500-stdlib-io-docs-and-verification.md) | Update docs/examples/changelog and run final verification for the phase | PLAN-022 | 3-5 | 📝 Planned |
+| [TASK-493](tasks/TASK-493-freeze-stdlib-io-contract.md) | Freeze the canonical `io` namespace, v1 module tree, and capability boundary in active specs/docs before implementation spreads assumptions | PLAN-022, SPEC-009/010/012/017 | 3-5 | ✅ Complete |
+| [TASK-494](tasks/TASK-494-stdlib-io-root-and-path-surface.md) | Add the root `io` module plus the pure `io::path` layer and shared `io` vocabulary under `std/src/io/` | PLAN-022 | 4-6 | ✅ Complete |
+| [TASK-495](tasks/TASK-495-stdlib-io-stdio-surface-and-provider-alignment.md) | Introduce `io::stdio` as the canonical stdlib terminal-I/O surface and align it with the existing `StdioProvider` | PLAN-022, SPEC-010/017 | 4-6 | ✅ Complete |
+| [TASK-496](tasks/TASK-496-stdlib-io-files-dir-meta-surface.md) | Add `io::fs`, `io::dir`, and `io::meta` and expand filesystem-provider support to match the v1 contract | PLAN-022, SPEC-010/017 | 5-8 | ✅ Complete |
+| [TASK-497](tasks/TASK-497-stdlib-io-buffered-helpers-and-ambient-sugar.md) | Add `io::buf` plus the first ergonomic helper layer without introducing a separate execution model | PLAN-022 | 3-5 | ✅ Complete |
+| [TASK-498](tasks/TASK-498-stdlib-io-bootstrap-and-runtime-wiring.md) | Bootstrap the new `io` stdlib modules through module loading, capability export/resolution, and engine provider wiring | PLAN-022, SPEC-009/012/017 | 4-7 | ✅ Complete |
+| [TASK-499](tasks/TASK-499-stdlib-io-integration-tests-and-examples.md) | Add parser, engine, and example coverage that demonstrates the intended Ash `io` style end-to-end | PLAN-022 | 4-6 | ✅ Complete |
+| [TASK-500](tasks/TASK-500-stdlib-io-docs-and-verification.md) | Update docs/examples/changelog and run final verification for the phase | PLAN-022 | 3-5 | ✅ Complete |
 
 **Deliverable:** One coherent `io` stdlib family with pure `io::path`, capability-backed stdio/filesystem
 modules, provider/runtime wiring that matches the stdlib story, and examples/tests that show the intended
@@ -2255,9 +2255,9 @@ finite-world enumeration substrate.
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------||
-|| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-022 | 10-14 | 📝 Planned ||
-|| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | PLAN-024, DESIGN-023 | 8-12 | 📝 Planned ||
-|| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | PLAN-024, DESIGN-022/023 | 4-6 | 📝 Planned |
+|| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-022 | 10-14 | ✅ Complete ||
+|| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | PLAN-024, DESIGN-023 | 8-12 | ✅ Complete ||
+|| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | PLAN-024, DESIGN-022/023 | 4-6 | ✅ Complete |
 
 **Current status note:** Synthesized tests from contracts, policies, and obligations remain
 planning-level labeled results rather than executable end-to-end cases. Property/small-world
@@ -2504,7 +2504,7 @@ Implement a production-quality LSP server for Ash with an embedded MCP bridge.
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 180 | 📝 Planned |
+|| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 180 | ✅ Complete |
 
 **Deliverable:** `ash-lsp` and `ash-mcp` crates; diagnostics, hover, goto-definition, completion, references; VSCode extension skeleton.
 
@@ -2519,7 +2519,7 @@ Provide a source formatter for Ash that pretty-prints any valid `ModuleFile` whi
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | SPEC-042 | 48 | 📝 Planned |
+|| [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | SPEC-042 | 48 | ✅ Complete |
 
 **Deliverable:** `crates/ash-formatter` crate; `ash fmt` CLI subcommand; LSP `textDocument/formatting` handler.
 
@@ -2534,7 +2534,7 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | 📝 Planned |
+|| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | ✅ Complete |
 
 **Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working.
 
@@ -2553,29 +2553,51 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | 📝 Planned |
-|| [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | 📝 Planned |
-|| [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | 📝 Planned |
-|| [TASK-593](tasks/TASK-593-changelog-checker.md) | Changelog completeness checker | PLAN-090 §Track A | 4 | 📝 Planned |
-|| [TASK-594](tasks/TASK-594-report-formatter.md) | Report formatter (human + JSON) | PLAN-090 §Track A | 4 | 📝 Planned |
+|| [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | ✅ Complete |
+|| [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | ✅ Complete |
+|| [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | ✅ Complete |
+|| [TASK-593](tasks/TASK-593-changelog-checker.md) | Changelog completeness checker | PLAN-090 §Track A | 4 | ✅ Complete |
+|| [TASK-594](tasks/TASK-594-report-formatter.md) | Report formatter (human + JSON) | PLAN-090 §Track A | 4 | ✅ Complete |
 
 ### Track B: Stdlib Substrates
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | 📝 Planned |
-|| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | 📝 Planned |
-|| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | 📝 Planned |
-|| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | 📝 Planned |
+|| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | ✅ Complete |
+|| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | ✅ Complete |
+|| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | ✅ Complete |
+|| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | ✅ Complete |
 || [TASK-599](tasks/TASK-599-std-diff.md) | `std::diff` line-diff utility | PLAN-090 §Track B | 8 | ⏸️ Deferred |
 
 ### Track C: Integration and Meta-Validation
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-|| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | 📝 Planned |
-|| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | 📝 Planned |
-|| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | 📝 Planned |
-|| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | 📝 Planned |
+|| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | ✅ Complete |
+|| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | ✅ Complete |
+|| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | ✅ Complete |
+|| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | ✅ Complete |
 
 **Deliverable:** `apps/spec_processor/src/main.ash` runs end-to-end, produces a structured report, and blocks CI on Tier 2 findings. New stdlib modules (`regex`, `markdown`, `json`, `process`) are available for downstream phases.
+
+---
+
+## Phase 91: Small-Step and Statement-Lifting Productionization
+
+**Goal:** Convert the integrated TASK-604/TASK-605 prototype branch into production-quality Ash substrate by completing `Workflow::Call` execution, hardening the conservative lifting contract, replacing heuristic effect classification, and adding rollout-grade parity/performance evidence.
+
+**Plan Reference:** [PLAN-091: Small-Step and Statement-Lifting Productionization](PLAN-091-SMALL-STEP-LIFTING-PRODUCTIONIZATION.md)
+**Specs:** `DESIGN-027`, `DESIGN-028`, `SPEC-001`, `SPEC-002`, `SPEC-025`
+**Priority:** High
+**Status:** 🟢 In Progress
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-606](tasks/TASK-606-workflow-call-runtime-completion.md) | Complete runtime `Workflow::Call` execution for explicitly registered callable workflows across typechecking, big-step, and small-step paths | DESIGN-027, SPEC-001, SPEC-025 | 6-10 | ✅ Complete |
+| [TASK-611](tasks/TASK-611-local-helper-workflow-surface-and-registration.md) | Extend surface/program/engine registration so ordinary source files can declare local helper workflows as real call targets | DESIGN-027, SPEC-001, SPEC-002 | 6-10 | ✅ Complete |
+| [TASK-607](tasks/TASK-607-small-step-runtime-parity-and-gap-closure.md) | Close remaining small-step runtime gaps and add big-step/small-step parity corpus | SPEC-004, SPEC-025 | 6-10 | ✅ Complete |
+| [TASK-608](tasks/TASK-608-statement-lifting-contract-hardening.md) | Freeze the conservative non-panicking lifting contract and add regression coverage for formerly panic-prone positions | DESIGN-028, SPEC-002 | 4-6 | ✅ Complete |
+| [TASK-609](tasks/TASK-609-effect-classification-alignment-for-lifting.md) | Replace parser-local heuristic effect classification with a production-quality source of truth | DESIGN-028, SPEC-001 | 5-8 | ✅ Complete |
+| [TASK-610](tasks/TASK-610-rollout-benchmarks-and-production-readiness-evidence.md) | Add rollout policy, benchmarks, and production-readiness verification evidence | DESIGN-027, DESIGN-028, SPEC-025 | 4-6 | ✅ Complete |
+
+**Deliverable:** No runtime stubs for supported `Workflow::Call` paths, no user-facing lifting panics, explicit lifting/effect contracts, parity evidence for supported runtime behavior, and documented rollout policy/evidence for production use.

@@ -8,6 +8,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Parser support for `builtin fn` declarations (TASK-615). The parser now
+  recognizes `[pub] builtin fn <name>[<T>](<params>) -> <Ret>;` as a new
+  definition form, producing `Definition::BuiltinFn(BuiltinFnDef)`. Return
+  type is mandatory; braces are rejected with a parse error. Dispatch is
+  added in both inline-module and file-level definition loops, with correct
+  priority over plain `fn`. Includes 10 integration tests covering valid
+  forms, error cases, and module-level dispatch.
+
 - `builtin fn` declaration form: design note, spec, and implementation plan.
   Three new documents establish pure runtime-provided functions as a first-class
   declaration form, closing the gap between `pub fn` (Ash bodies) and capability

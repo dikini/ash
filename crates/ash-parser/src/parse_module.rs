@@ -15,10 +15,10 @@ use crate::parse_utils::skip_whitespace_and_comments;
 use crate::parse_visibility;
 use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
 use crate::surface::{
-    AssociatedTypeBinding, AssociatedTypeDecl, BlockStmt, CapabilityDef, CapabilityRef, Constraint,
-    Contract, Definition, EffectType, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
-    InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate, ProxyDef, RoleDef, Type,
-    Visibility, WhereBound, Workflow, YieldArm,
+    AssociatedTypeBinding, AssociatedTypeDecl, BlockStmt, BuiltinFnDef, CapabilityDef,
+    CapabilityRef, Constraint, Contract, Definition, EffectType, Expr, FnDef, ImplDef,
+    ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate,
+    ProxyDef, RoleDef, Type, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -138,6 +138,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
 
         if starts_with_visible_keyword(input, "impl") {
             definitions.push(parse_impl_definition(input)?);
+            continue;
+        }
+
+        if starts_with_builtin_fn(input) {
+            definitions.push(parse_builtin_fn_definition(input)?);
             continue;
         }
 
@@ -797,6 +802,56 @@ fn starts_with_visible_keyword(input: &ParseInput, word: &str) -> bool {
     }
 }
 
+/// Check if input starts with `[pub] builtin fn` pattern.
+fn starts_with_builtin_fn(input: &ParseInput) -> bool {
+    // Check for "builtin fn" directly
+    if starts_with_keyword(input, "builtin") {
+        let rest = skip_ws_in(&input.input["builtin".len()..]);
+        if starts_with_keyword_from(rest, "fn") {
+            return true;
+        }
+    }
+
+    // Check for "[visibility] builtin fn"
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(Visibility::Inherited) | Err(_) => false,
+        Ok(_) => {
+            skip_whitespace(&mut lookahead);
+            // After visibility, check for "builtin fn"
+            if starts_with_keyword(&lookahead, "builtin") {
+                let rest = skip_ws_in(&lookahead.input["builtin".len()..]);
+                starts_with_keyword_from(rest, "fn")
+            } else {
+                false
+            }
+        }
+    }
+}
+
+fn starts_with_keyword_from(src: &str, word: &str) -> bool {
+    if !src.starts_with(word) {
+        return false;
+    }
+    let after = &src[word.len()..];
+    after
+        .chars()
+        .next()
+        .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+}
+
+fn skip_ws_in(s: &str) -> &str {
+    let mut len = 0;
+    for c in s.chars() {
+        if c.is_ascii_whitespace() {
+            len += c.len_utf8();
+        } else {
+            break;
+        }
+    }
+    &s[len..]
+}
+
 fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
     [
         "pub",
@@ -1202,6 +1257,74 @@ pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         return_type,
         contract,
         body,
+        span,
+    }))
+}
+
+/// Parse a builtin function definition.
+///
+/// Syntax: `[pub] builtin fn <name>[<type_params>](<params>) -> <return_type>;`
+///
+/// Builtin functions are semicolon-terminated with no body. A return type is
+/// required. If braces follow the signature an error is emitted.
+pub fn parse_builtin_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+
+    // Parse optional visibility modifier
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse "builtin" keyword
+    let _ = keyword("builtin").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse "fn" keyword
+    let _ = keyword("fn").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse function name
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Optionally parse type parameters <T, U>
+    let type_params = parse_optional_type_parameter_names(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Parse parameter list (name: Type, ...)
+    let _ = literal_str("(").parse_next(input)?;
+    let params = parse_parameter_list(input)?;
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Reject braces -- builtin fn must not have a body
+    if input.input.starts_with("{") {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    // Parse REQUIRED return type
+    if !input.input.starts_with("->") {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    let _ = literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let return_type = parse_surface_type(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Expect semicolon terminator
+    let _ = literal_str(";").parse_next(input)?;
+
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
+
+    Ok(Definition::BuiltinFn(BuiltinFnDef {
+        visibility,
+        name: name.into(),
+        type_params,
+        params,
+        return_type,
         span,
     }))
 }
@@ -1779,6 +1902,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
 
         if starts_with_visible_keyword(input, "impl") {
             definitions.push(parse_impl_definition(input)?);
+            continue;
+        }
+
+        if starts_with_builtin_fn(input) {
+            definitions.push(parse_builtin_fn_definition(input)?);
             continue;
         }
 

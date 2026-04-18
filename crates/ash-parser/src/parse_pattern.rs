@@ -61,6 +61,19 @@ fn parse_variant_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
     // Check if followed by `{` (record payload), `(` (tuple payload), or not (unit variant)
     skip_whitespace_and_comments(input);
 
+    // Lowercase identifiers cannot be variant patterns with payloads.
+    // If the name starts with a lowercase letter and is followed by `{` or `(`,
+    // return a parse error (Cut) so alt() does not try other branches with
+    // consumed input.
+    let is_uppercase_leading = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
+
+    if !is_uppercase_leading && (input.input.starts_with('{') || input.input.starts_with('(')) {
+        *input = checkpoint;
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
     if input.input.starts_with('{') {
         let fields = match parse_variant_fields(input) {
             Ok(f) => f,
@@ -695,6 +708,62 @@ mod tests {
                 );
             }
             _ => panic!("Expected Variant pattern with nested tuple"),
+        }
+    }
+
+    #[test]
+    fn test_lowercase_tuple_variant_pattern_rejected() {
+        // `foo(bar)` should not parse as a variant pattern
+        let mut input = test_input("foo(bar)");
+        let result = pattern(&mut input);
+        assert!(
+            result.is_err(),
+            "Expected lowercase tuple variant pattern to be rejected, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_lowercase_record_variant_pattern_rejected() {
+        // `foo { x: y }` should not parse as a variant pattern
+        let mut input = test_input("foo { x: y }");
+        let result = pattern(&mut input);
+        assert!(
+            result.is_err(),
+            "Expected lowercase record variant pattern to be rejected, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_uppercase_tuple_variant_pattern_accepted() {
+        let mut input = test_input("Foo(bar)");
+        let result = pattern(&mut input).unwrap();
+        match result {
+            Pattern::Variant {
+                name,
+                payload: VariantPatternPayload::Tuple(items),
+                ..
+            } => {
+                assert_eq!(name.as_ref(), "Foo");
+                assert_eq!(items.len(), 1);
+            }
+            other => panic!("Expected uppercase tuple variant pattern, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_uppercase_record_variant_pattern_accepted() {
+        let mut input = test_input("Foo { x: y }");
+        let result = pattern(&mut input).unwrap();
+        match result {
+            Pattern::Variant {
+                name,
+                payload: VariantPatternPayload::Record(fields),
+                ..
+            } => {
+                assert_eq!(name.as_ref(), "Foo");
+                assert_eq!(fields.len(), 1);
+            }
+            other => panic!("Expected uppercase record variant pattern, got {other:?}"),
         }
     }
 }

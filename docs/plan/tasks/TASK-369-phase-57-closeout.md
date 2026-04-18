@@ -23,7 +23,7 @@ Final verification and closeout for Phase 57: Entry Point and Program Execution.
 - [x] Can run canonical entry workflows to exit `0`
 - [x] Args work through `ash run <file> -- hello world`
 - [x] Errors reported for missing `main` with helpful stderr and exit `1`
-- [x] Exit codes propagate from `Err(RuntimeError { exit_code: 42, ... })`
+- [x] Exit codes propagate from `Err(RuntimeError(42, _))` (tuple-variant form per TASK-413/TASK-418)
 - [x] Runtime stdlib loads, including `use runtime::RuntimeError`
 
 ### SPEC Alignment

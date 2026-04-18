@@ -231,17 +231,18 @@ fn workflow_typecheck_rejects_observe_bound_declared_return_without_honest_resul
 }
 
 #[test]
-fn workflow_typecheck_accepts_propose_binding_with_fresh_type_variable() {
-    let workflow = propose_binding_workflow();
-
-    let result = ash_typeck::type_check_workflow_def(&workflow);
-
-    // Propose binding is now supported, binding with a fresh type variable
-    // (similar to Observe) until result semantics are implemented
+fn workflow_typecheck_rejects_propose_binding_in_mvp() {
+    // TASK-423/TASK-612: Propose.binding is explicitly unsupported in the MVP.
+    // The typechecker must reject it rather than accepting it with a fresh type variable.
+    let result = ash_typeck::type_check_workflow_def(&propose_binding_workflow());
     assert!(
-        result.is_ok(),
-        "propose bindings should now be accepted (with fresh type variable), got: {:?}",
-        result
+        result.is_err(),
+        "Propose.binding should be rejected in MVP, but was accepted"
+    );
+    let err_msg = format!("{:?}", result.unwrap_err());
+    assert!(
+        err_msg.contains("Propose") && err_msg.contains("binding"),
+        "Error should mention both Propose and binding, got: {err_msg}"
     );
 }
 

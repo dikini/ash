@@ -791,10 +791,10 @@ fn validate_interface_calls_in_workflow(
             validate_interface_calls_in_action(env, action)?;
 
             let mut next_env = env.clone();
-            if let Some(binding) = binding {
-                // Bind with a fresh type variable, similar to Observe
-                // Result semantics for propose actions are not yet implemented
-                bind_pattern_variables(&mut next_env, binding, &Type::Var(TypeVar::fresh()));
+            if let Some(_binding) = binding {
+                return Err(TypeCheckError::TypeError(
+                    "Propose.binding is not supported in the current MVP; remove the binding pattern".to_string()
+                ));
             }
 
             if let Some(continuation) = continuation {
@@ -1132,9 +1132,23 @@ fn reject_unsupported_mvp_workflow_features(
     workflow: &ash_parser::surface::Workflow,
 ) -> Result<(), TypeCheckError> {
     match workflow {
+        // TASK-423/TASK-612: Propose.binding is explicitly unsupported in MVP
+        ash_parser::surface::Workflow::Propose {
+            binding,
+            continuation,
+            ..
+        } => {
+            if binding.is_some() {
+                return Err(TypeCheckError::TypeError(
+                    "Propose.binding is not supported in the current MVP; remove the binding pattern".to_string()
+                ));
+            }
+            continuation
+                .as_deref()
+                .map_or(Ok(()), reject_unsupported_mvp_workflow_features)
+        }
         ash_parser::surface::Workflow::Observe { continuation, .. }
         | ash_parser::surface::Workflow::Orient { continuation, .. }
-        | ash_parser::surface::Workflow::Propose { continuation, .. }
         | ash_parser::surface::Workflow::Check { continuation, .. }
         | ash_parser::surface::Workflow::Set { continuation, .. }
         | ash_parser::surface::Workflow::Send { continuation, .. } => continuation

@@ -102,7 +102,7 @@ let entry = temp_file(r#"
   use runtime::RuntimeError
 
   workflow main() -> Result<(), RuntimeError> {
-    Err(RuntimeError { exit_code: 42, message: "test" })
+    Err(RuntimeError(42, "test"))  // (tuple-variant form per TASK-413/TASK-418)
   }
 "#);
 

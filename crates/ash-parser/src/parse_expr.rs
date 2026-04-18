@@ -817,13 +817,9 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         }
 
         // No `(` after name::name — not a valid call expression
-        let span = span_from(&start_pos, &input.state.pos);
-        return Ok(Expr::Call {
-            func: second_name,
-            module: Some(name_str),
-            args: vec![],
-            span,
-        });
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
     }
 
     if parse_inline_record_constructor_start(input) {
@@ -1899,6 +1895,34 @@ mod tests {
                 assert_eq!(args.len(), 2);
             }
             other => panic!("Expected Call without module, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_bare_qualified_method_rejected() {
+        // `Interface::method` without parens should be a parse error
+        let mut input = test_input("Interface::method");
+        let result = expr(&mut input);
+        assert!(
+            result.is_err(),
+            "Expected bare qualified method to be rejected, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_qualified_method_with_call_accepted() {
+        // `Interface::method(x)` should parse successfully
+        let mut input = test_input("Interface::method(x)");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "method");
+                assert_eq!(module.as_ref().map(|s| s.as_ref()), Some("Interface"));
+                assert_eq!(args.len(), 1);
+            }
+            other => panic!("Expected Call with module, got {other:?}"),
         }
     }
 }

@@ -22,7 +22,7 @@ The normative runtime semantics are unchanged: the runtime still owns spawning `
 - ✅ The stdlib-visible body documents the runtime-provided `Result<(), RuntimeError>` completion payload and the parser-feasible exit-code shaping intent:
 
 ```ash
-if let Err { error: RuntimeError { exit_code: code, message: _ } } = completion then code else 0
+if let Err { error: RuntimeError(code, _) } = completion then code else 0  // (tuple-variant form per TASK-413/TASK-418)
 ```
 
 - ✅ Spawn/completion observation stays runtime-internal and is deferred to TASK-363c.
@@ -58,14 +58,14 @@ workflow system_supervisor(args: cap Args) -> Int {
       -- Check obligations discharged (per SPEC)
       0
     }
-    Err { error: RuntimeError { exit_code: code, message: _ } } => {
-      code  -- Nested variant destructuring, not field access
+    Err { error: RuntimeError(code, _) } => {
+      code  -- Tuple-variant destructuring (per TASK-413/TASK-418)
     }
   }
 }
 ```
 
-**Note**: Uses nested variant destructuring because `RuntimeError` is a single-variant ADT and the current expression pipeline does not support direct field access.
+**Note**: Uses tuple-variant destructuring because `RuntimeError` is a single-variant ADT with positional fields `RuntimeError(Int, String)` (tuple-variant form per TASK-413/TASK-418).
 
 ## Requirements
 
@@ -113,7 +113,7 @@ End-to-end bootstrap execution remains owned by TASK-363c once the runtime wires
 - **Current task output**: Canonical stdlib-visible contract and exit-code shaping surface
 - **Normative runtime semantics**: Spawn/observation remain the runtime's responsibility (per S57-1) and are not surfaced as new syntax here
 - **No `await`**: Not in surface language
-- **Pattern extraction**: destructure `Err { error: RuntimeError { exit_code: code, message: _ } }` to obtain the exit code from the `RuntimeError` payload
+- **Pattern extraction**: destructure `Err { error: RuntimeError(code, _) }` to obtain the exit code from the `RuntimeError` payload (tuple-variant form per TASK-413/TASK-418)
 
 ## Dependencies
 

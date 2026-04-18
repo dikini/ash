@@ -116,6 +116,9 @@ fn definition_symbol(definition: &Definition) -> DocumentSymbol {
         Definition::Interface(def) => interface_symbol(def),
         Definition::Impl(def) => impl_symbol(def),
         Definition::Function(def) => fn_symbol(def),
+        Definition::BuiltinFn(def) => {
+            symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
+        }
     }
 }
 
@@ -156,6 +159,7 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Interface(def) => def.span.start,
             Definition::Impl(def) => def.span.start,
             Definition::Function(def) => def.span.start,
+            Definition::BuiltinFn(def) => def.span.start,
         };
         entries.push((start, definition_symbol(definition)));
     }

@@ -276,6 +276,19 @@ fn definition_hover(definition: &Definition) -> Hover {
             Some(format!("Methods: {}", def.methods.len())),
         ),
         Definition::Function(def) => fn_hover(def),
+        Definition::BuiltinFn(def) => {
+            let params = def
+                .params
+                .iter()
+                .map(|param| format!("{}: {}", param.name, type_to_string(&param.ty)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let ret = type_to_string(&def.return_type);
+            markdown(
+                format!("builtin fn {}({params}) -> {ret}", def.name),
+                Some("Builtin function (externally implemented)".to_string()),
+            )
+        }
     }
 }
 
@@ -328,6 +341,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                             Definition::Proxy(def) => def.name.as_ref() == token,
                             Definition::Function(def) => def.name.as_ref() == token,
                             Definition::Interface(_) | Definition::Impl(_) => false,
+                            Definition::BuiltinFn(b) => b.name.as_ref() == token,
                         };
                         if name_matches {
                             return Some(definition_hover(definition));
@@ -361,6 +375,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     Definition::Proxy(def) => def.name.as_ref() == token,
                     Definition::Function(def) => def.name.as_ref() == token,
                     Definition::Interface(_) | Definition::Impl(_) => false,
+                    Definition::BuiltinFn(b) => b.name.as_ref() == token,
                 };
                 if name_matches {
                     return Some(definition_hover(definition));

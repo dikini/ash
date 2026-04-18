@@ -167,6 +167,21 @@ fn parse_variant_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Patter
             break;
         }
 
+        // Handle `..` (rest pattern — ignore remaining fields)
+        if input.input.starts_with("..") {
+            let _ = input.input.next_slice(2);
+            input.state.advance('.');
+            input.state.advance('.');
+            skip_whitespace_and_comments(input);
+            // Optional trailing comma after `..`
+            if input.input.starts_with(",") {
+                let _ = input.input.next_slice(1);
+                input.state.advance(',');
+            }
+            skip_whitespace_and_comments(input);
+            break;
+        }
+
         // Parse field name
         let field_name = identifier(input)?;
 
@@ -237,6 +252,20 @@ fn parse_record_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
         skip_whitespace_and_comments(input);
 
         if input.input.is_empty() || input.input.starts_with("}") {
+            break;
+        }
+
+        // Handle `..` (rest pattern — ignore remaining fields)
+        if input.input.starts_with("..") {
+            let _ = input.input.next_slice(2);
+            input.state.advance('.');
+            input.state.advance('.');
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with(",") {
+                let _ = input.input.next_slice(1);
+                input.state.advance(',');
+            }
+            skip_whitespace_and_comments(input);
             break;
         }
 

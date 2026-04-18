@@ -1487,8 +1487,27 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             })
         }
 
-        // Pure fn expression forms - not yet lowered to core
-        Expr::If { .. } => Err(LoweringError::ExprNotLowerable { kind: "if" }),
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => Ok(CoreExpr::Match {
+            scrutinee: Box::new(lower_expr(condition)?),
+            arms: vec![
+                CoreMatchArm {
+                    pattern: CorePattern::Literal(ash_core::Value::Bool(true)),
+                    body: lower_expr(then_branch)?,
+                },
+                CoreMatchArm {
+                    pattern: CorePattern::Literal(ash_core::Value::Bool(false)),
+                    body: match else_branch {
+                        Some(else_expr) => lower_expr(else_expr)?,
+                        None => CoreExpr::Literal(ash_core::Value::Null),
+                    },
+                },
+            ],
+        }),
         Expr::Panic { .. } => Err(LoweringError::ExprNotLowerable { kind: "panic" }),
         Expr::Block { .. } => Err(LoweringError::ExprNotLowerable { kind: "block" }),
 

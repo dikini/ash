@@ -120,18 +120,13 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             module,
             arguments,
         } => {
-            if module.is_some() {
-                return Err(EvalError::UnknownFunction(format!(
-                    "un-monomorphized interface call {module:?}::{func}"
-                )));
-            }
             let args: Vec<Value> = arguments
                 .iter()
                 .map(|arg| eval_expr(arg, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
             // First try built-in function dispatch
-            match eval_function_call(func, &args, ctx) {
+            match eval_function_call(func, module.as_deref(), &args, ctx) {
                 Ok(value) => Ok(value),
                 Err(EvalError::WrongArity {
                     expected,
@@ -479,10 +474,78 @@ fn compare_values(left: &Value, right: &Value) -> EvalResult<std::cmp::Ordering>
 }
 
 /// Evaluate a built-in function call
-fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<Value> {
-    match func {
+pub fn eval_function_call(
+    func: &str,
+    module: Option<&str>,
+    args: &[Value],
+    _ctx: &Context,
+) -> EvalResult<Value> {
+    match (module, func) {
+        (Some("string"), "concat") => {
+            let mut result = String::new();
+            for arg in args {
+                match arg {
+                    Value::String(s) => result.push_str(s),
+                    _ => {
+                        return Err(EvalError::TypeMismatch {
+                            expected: "string".to_string(),
+                            actual: format!("{:?}", arg),
+                        });
+                    }
+                }
+            }
+            Ok(Value::String(result))
+        }
+        (Some("string"), "starts_with") => {
+            if args.len() != 2 {
+                return Err(EvalError::WrongArity {
+                    expected: 2,
+                    actual: args.len(),
+                    callee: None,
+                });
+            }
+            match (&args[0], &args[1]) {
+                (Value::String(s), Value::String(prefix)) => Ok(Value::Bool(s.starts_with(prefix))),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string, string".to_string(),
+                    actual: format!("{:?}, {:?}", args[0], args[1]),
+                }),
+            }
+        }
+        (Some("string"), "ends_with") => {
+            if args.len() != 2 {
+                return Err(EvalError::WrongArity {
+                    expected: 2,
+                    actual: args.len(),
+                    callee: None,
+                });
+            }
+            match (&args[0], &args[1]) {
+                (Value::String(s), Value::String(suffix)) => Ok(Value::Bool(s.ends_with(suffix))),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string, string".to_string(),
+                    actual: format!("{:?}, {:?}", args[0], args[1]),
+                }),
+            }
+        }
+        (Some("string"), "is_empty") => {
+            if args.len() != 1 {
+                return Err(EvalError::WrongArity {
+                    expected: 1,
+                    actual: args.len(),
+                    callee: None,
+                });
+            }
+            match &args[0] {
+                Value::String(s) => Ok(Value::Bool(s.is_empty())),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string".to_string(),
+                    actual: format!("{:?}", args[0]),
+                }),
+            }
+        }
         // List operations
-        "len" => {
+        (_, "len") => {
             if args.len() != 1 {
                 return builtin_arity_error("len", 1, args.len());
             }
@@ -496,7 +559,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "head" => {
+        (_, "head") => {
             if args.len() != 1 {
                 return builtin_arity_error("head", 1, args.len());
             }
@@ -515,7 +578,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "tail" => {
+        (_, "tail") => {
             if args.len() != 1 {
                 return builtin_arity_error("tail", 1, args.len());
             }
@@ -534,7 +597,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "append" => {
+        (_, "append") => {
             if args.len() != 2 {
                 return builtin_arity_error("append", 2, args.len());
             }
@@ -551,7 +614,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "concat" => {
+        (_, "concat") => {
             if args.len() != 2 {
                 return builtin_arity_error("concat", 2, args.len());
             }
@@ -568,7 +631,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "filter" => {
+        (_, "filter") => {
             if args.len() != 2 {
                 return builtin_arity_error("filter", 2, args.len());
             }
@@ -606,7 +669,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "map" => {
+        (_, "map") => {
             if args.len() != 2 {
                 return builtin_arity_error("map", 2, args.len());
             }
@@ -635,7 +698,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "starts_with" => {
+        (_, "starts_with") => {
             if args.len() != 2 {
                 return builtin_arity_error("starts_with", 2, args.len());
             }
@@ -648,7 +711,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "ends_with" => {
+        (_, "ends_with") => {
             if args.len() != 2 {
                 return builtin_arity_error("ends_with", 2, args.len());
             }
@@ -662,7 +725,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
         }
 
         // Record operations
-        "keys" => {
+        (_, "keys") => {
             if args.len() != 1 {
                 return builtin_arity_error("keys", 1, args.len());
             }
@@ -679,7 +742,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
             }
         }
 
-        "values" => {
+        (_, "values") => {
             if args.len() != 1 {
                 return builtin_arity_error("values", 1, args.len());
             }
@@ -696,42 +759,42 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
         }
 
         // Type checking
-        "is_int" => {
+        (_, "is_int") => {
             if args.len() != 1 {
                 return builtin_arity_error("is_int", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::Int(_))))
         }
 
-        "is_string" => {
+        (_, "is_string") => {
             if args.len() != 1 {
                 return builtin_arity_error("is_string", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::String(_))))
         }
 
-        "is_bool" => {
+        (_, "is_bool") => {
             if args.len() != 1 {
                 return builtin_arity_error("is_bool", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::Bool(_))))
         }
 
-        "is_list" => {
+        (_, "is_list") => {
             if args.len() != 1 {
                 return builtin_arity_error("is_list", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::List(_))))
         }
 
-        "is_record" => {
+        (_, "is_record") => {
             if args.len() != 1 {
                 return builtin_arity_error("is_record", 1, args.len());
             }
             Ok(Value::Bool(matches!(args[0], Value::Record(_))))
         }
 
-        "is_null" => {
+        (_, "is_null") => {
             if args.len() != 1 {
                 return builtin_arity_error("is_null", 1, args.len());
             }
@@ -739,7 +802,7 @@ fn eval_function_call(func: &str, args: &[Value], _ctx: &Context) -> EvalResult<
         }
 
         // Record constructor
-        "record" => {
+        (_, "record") => {
             let mut fields = HashMap::new();
             // Arguments come in pairs: key, value, key, value, ...
             if !args.len().is_multiple_of(2) {

@@ -88,6 +88,8 @@ pub enum Definition {
     Impl(ImplDef),
     /// Pure function definition
     Function(FnDef),
+    /// Builtin function definition (no Ash-level body)
+    BuiltinFn(BuiltinFnDef),
 }
 
 /// A pure function definition.
@@ -109,6 +111,25 @@ pub struct FnDef {
     pub contract: Option<Contract>,
     /// Function body (a block expression)
     pub body: Expr,
+    /// Source span
+    pub span: Span,
+}
+
+/// A builtin function definition (externally implemented, no Ash-level body).
+///
+/// Syntax: `[pub] builtin fn <name>[<type_params>](<params>) -> <return_type>;`
+#[derive(Debug, Clone, PartialEq)]
+pub struct BuiltinFnDef {
+    /// Visibility modifier (pub, pub(crate), etc.)
+    pub visibility: Visibility,
+    /// Function name
+    pub name: Name,
+    /// Generic type parameters (e.g., `<T, U>`)
+    pub type_params: Vec<Name>,
+    /// Function parameters with name and type
+    pub params: Vec<Param>,
+    /// Required return type annotation
+    pub return_type: Type,
     /// Source span
     pub span: Span,
 }
@@ -1658,6 +1679,83 @@ mod tests {
         assert_eq!(cap.effect, EffectType::Write);
         assert_eq!(cap.params.len(), 2);
         assert!(cap.return_type.is_some());
+    }
+
+    #[test]
+    fn test_builtin_fn_def_construction() {
+        let builtin = BuiltinFnDef {
+            visibility: Visibility::Public,
+            name: "find".into(),
+            type_params: vec!["T".into()],
+            params: vec![
+                Param {
+                    name: "collection".into(),
+                    ty: Type::Constructor {
+                        name: "List".into(),
+                        args: vec![Type::Name("T".into())],
+                    },
+                },
+                Param {
+                    name: "predicate".into(),
+                    ty: Type::Fn(
+                        vec![Type::Name("T".into())],
+                        Box::new(Type::Name("Bool".into())),
+                    ),
+                },
+            ],
+            return_type: Type::Constructor {
+                name: "Option".into(),
+                args: vec![Type::Name("T".into())],
+            },
+            span: Span::new(0, 60, 1, 1),
+        };
+
+        assert_eq!(builtin.name, "find".into());
+        assert_eq!(builtin.visibility, Visibility::Public);
+        assert_eq!(builtin.type_params, vec!["T".into()]);
+        assert_eq!(builtin.params.len(), 2);
+        assert_eq!(builtin.params[0].name, "collection".into());
+        assert_eq!(builtin.params[1].name, "predicate".into());
+        // return_type is required, not Optional
+        match &builtin.return_type {
+            Type::Constructor { name, args } => {
+                assert_eq!(name.as_ref(), "Option");
+                assert_eq!(args.len(), 1);
+            }
+            other => panic!("expected Constructor type, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_definition_builtin_fn_variant() {
+        let builtin = BuiltinFnDef {
+            visibility: Visibility::Crate,
+            name: "hash".into(),
+            type_params: vec![],
+            params: vec![Param {
+                name: "input".into(),
+                ty: Type::Name("String".into()),
+            }],
+            return_type: Type::Name("String".into()),
+            span: Span::new(0, 30, 1, 1),
+        };
+
+        let def = Definition::BuiltinFn(builtin);
+
+        // Verify pattern matching works and fields are accessible
+        match &def {
+            Definition::BuiltinFn(b) => {
+                assert_eq!(b.name, "hash".into());
+                assert_eq!(b.visibility, Visibility::Crate);
+                assert!(b.type_params.is_empty());
+                assert_eq!(b.params.len(), 1);
+                assert_eq!(b.return_type, Type::Name("String".into()));
+            }
+            other => panic!("expected BuiltinFn variant, got {other:?}"),
+        }
+
+        // Verify Debug trait works via the Definition enum
+        assert!(format!("{def:?}").contains("BuiltinFn"));
     }
 
     #[test]

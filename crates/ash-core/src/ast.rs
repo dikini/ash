@@ -61,6 +61,12 @@ pub enum Workflow {
         /// Workflow to execute after action completes (Phase 73)
         continuation: Box<Workflow>,
     },
+    /// CALL a workflow by name with arguments
+    Call {
+        target: Name,
+        arguments: Vec<Expr>,
+        continuation: Box<Workflow>,
+    },
     /// OBLIG role to workflow
     Oblig { role: Role, workflow: Box<Workflow> },
     /// LET pattern = expr in continuation
@@ -539,7 +545,10 @@ pub enum BinaryOp {
     Gt,
     Le,
     Ge,
+    /// `in` - Membership test
     In,
+    /// `|>` - Pipe operator
+    Pipe,
 }
 
 /// Match arm: pattern => expression

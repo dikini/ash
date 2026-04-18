@@ -40,6 +40,7 @@ pub mod role_context;
 pub mod role_runtime;
 pub mod runtime_outcome_state;
 pub mod runtime_state;
+pub mod small_step;
 pub mod stream;
 pub mod typed_provider;
 pub mod yield_routing;

@@ -31,7 +31,62 @@ pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
     if let Ok(if_let) = parse_if_let_expr(input) {
         return Ok(if_let);
     }
-    ternary_expr(input)
+    pipe_expr(input)
+}
+
+/// Parse a pipe expression: left |> right
+///
+/// Desugars at the parser surface so the core IR never sees `Pipe`.
+///   `lhs |> func(args)`  =>  `func(lhs, args)`
+///   `lhs |> module::func(args)`  =>  `module::func(lhs, args)`
+///   `lhs |> f`  =>  `f(lhs)`
+fn pipe_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state.pos;
+    let mut left = ternary_expr(input)?;
+
+    loop {
+        if opt(literal_str("|>")).parse_next(input)?.is_some() {
+            skip_whitespace_and_comments(input);
+            let right = ternary_expr(input)?;
+            left = desugar_pipe(left, right, &start_pos, input);
+        } else {
+            break;
+        }
+    }
+
+    Ok(left)
+}
+
+/// Desugar a pipe expression by prepending the left operand as the first argument.
+fn desugar_pipe(lhs: Expr, rhs: Expr, start_pos: &Position, input: &ParseInput) -> Expr {
+    let span = span_from(start_pos, &input.state.pos);
+    match rhs {
+        Expr::Call {
+            func, module, args, ..
+        } => Expr::Call {
+            func,
+            module,
+            args: std::iter::once(lhs).chain(args).collect(),
+            span,
+        },
+        Expr::Variable { name, .. } => Expr::Call {
+            func: name,
+            module: None,
+            args: vec![lhs],
+            span,
+        },
+        Expr::FnApply { func, args, .. } => Expr::FnApply {
+            func,
+            args: std::iter::once(lhs).chain(args).collect(),
+            span,
+        },
+        // Any other expression becomes a function application
+        other => Expr::FnApply {
+            func: Box::new(other),
+            args: vec![lhs],
+            span,
+        },
+    }
 }
 
 /// Parse an anonymous fn expression: `fn(params) [-> type] { body }`.
@@ -1387,6 +1442,135 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn test_parse_pipe_operator_to_unqualified_call() {
+        let mut input = test_input("x |> f");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "f");
+                assert!(module.is_none());
+                assert_eq!(args.len(), 1);
+                assert!(matches!(args[0], Expr::Variable { ref name, .. } if name.as_ref() == "x"));
+            }
+            other => panic!("expected desugared pipe call, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_pipe_operator_chain_is_left_associative() {
+        let mut input = test_input("x |> f |> g");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "g");
+                assert!(module.is_none());
+                assert_eq!(args.len(), 1);
+                match &args[0] {
+                    Expr::Call {
+                        func, module, args, ..
+                    } => {
+                        assert_eq!(func.as_ref(), "f");
+                        assert!(module.is_none());
+                        assert_eq!(args.len(), 1);
+                        assert!(
+                            matches!(args[0], Expr::Variable { ref name, .. } if name.as_ref() == "x")
+                        );
+                    }
+                    other => {
+                        panic!("expected nested call for left-associative pipe, got {other:?}")
+                    }
+                }
+            }
+            other => panic!("expected desugared pipe chain, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_pipe_operator_to_module_qualified_call() {
+        let mut input = test_input("x |> io::read(y)");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "read");
+                assert_eq!(module.as_ref().map(|m| m.as_ref()), Some("io"));
+                assert_eq!(args.len(), 2);
+                assert!(matches!(args[0], Expr::Variable { ref name, .. } if name.as_ref() == "x"));
+                assert!(matches!(args[1], Expr::Variable { ref name, .. } if name.as_ref() == "y"));
+            }
+            other => panic!("expected module-qualified desugared pipe call, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pipe_lower_precedence_than_addition() {
+        // `a + b |> f` should parse as `(a + b) |> f`, i.e. desugars to `f(a + b)`
+        let mut input = test_input("a + b |> f");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "f");
+                assert!(module.is_none());
+                assert_eq!(args.len(), 1);
+                // The single argument should be a binary add: a + b
+                assert!(
+                    matches!(
+                        &args[0],
+                        Expr::Binary {
+                            op: BinaryOp::Add,
+                            ..
+                        }
+                    ),
+                    "expected Binary::Add as the piped argument, got {:?}",
+                    args[0]
+                );
+            }
+            other => panic!("expected desugared pipe call, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_pipe_into_call_with_args() {
+        // `x |> f(a, b)` should desugar to `f(x, a, b)` — x prepended as first arg
+        let mut input = test_input("x |> f(a, b)");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                assert_eq!(func.as_ref(), "f");
+                assert!(module.is_none());
+                assert_eq!(args.len(), 3);
+                // First arg: the piped value x
+                assert!(
+                    matches!(&args[0], Expr::Variable { name, .. } if name.as_ref() == "x"),
+                    "expected first arg to be 'x', got {:?}",
+                    args[0]
+                );
+                // Second and third args: a, b
+                assert!(
+                    matches!(&args[1], Expr::Variable { name, .. } if name.as_ref() == "a"),
+                    "expected second arg to be 'a', got {:?}",
+                    args[1]
+                );
+                assert!(
+                    matches!(&args[2], Expr::Variable { name, .. } if name.as_ref() == "b"),
+                    "expected third arg to be 'b', got {:?}",
+                    args[2]
+                );
+            }
+            other => panic!("expected desugared pipe call with prepended arg, got {other:?}"),
+        }
     }
 
     // ============================================================

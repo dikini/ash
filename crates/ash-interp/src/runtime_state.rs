@@ -1,10 +1,10 @@
 //! Shared runtime-owned state for interpreter executions.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex as StdMutex};
 
 use async_trait::async_trait;
-use tokio::sync::Mutex;
+use tokio::sync::Mutex as AsyncMutex;
 
 use ash_core::{ControlLink, Value, Workflow};
 
@@ -86,16 +86,27 @@ impl ash_core::capability::CapabilityProvider for ArcProviderWrapper {
 /// RuntimeState also maintains a registry of capability providers that can be
 /// used during workflow execution. Providers can be registered using
 /// [`RuntimeState::with_provider`] or [`RuntimeState::with_providers`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct RegisteredCallableWorkflow {
+    /// Workflow body executed when this callable target is invoked.
+    pub workflow: Workflow,
+    /// Expected argument count for the currently registered runtime-call path.
+    pub arity: usize,
+    /// Parameter names in declaration order, used to bind call-site arguments.
+    pub params: Vec<String>,
+}
+
 #[derive(Clone, Default)]
 pub struct RuntimeState {
-    control_registry: Arc<Mutex<ControlLinkRegistry>>,
-    proxy_registry: Arc<Mutex<ProxyRegistry>>,
-    suspended_yields: Arc<Mutex<SuspendedYields>>,
-    yield_router: Arc<Mutex<YieldRouter>>,
-    child_workflows: Arc<Mutex<HashMap<String, Workflow>>>,
-    last_execution_record: Arc<Mutex<Option<ExecutionRecord>>>,
+    control_registry: Arc<AsyncMutex<ControlLinkRegistry>>,
+    proxy_registry: Arc<AsyncMutex<ProxyRegistry>>,
+    suspended_yields: Arc<AsyncMutex<SuspendedYields>>,
+    yield_router: Arc<AsyncMutex<YieldRouter>>,
+    child_workflows: Arc<AsyncMutex<HashMap<String, Workflow>>>,
+    callable_workflows: Arc<AsyncMutex<HashMap<String, RegisteredCallableWorkflow>>>,
+    last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
-    providers: Arc<Mutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
+    providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
 }
 
 impl std::fmt::Debug for RuntimeState {
@@ -106,6 +117,10 @@ impl std::fmt::Debug for RuntimeState {
             .field("suspended_yields", &self.suspended_yields)
             .field("yield_router", &self.yield_router)
             .field("child_workflows", &"<HashMap<String, Workflow>>")
+            .field(
+                "callable_workflows",
+                &"<HashMap<String, RegisteredCallableWorkflow>>",
+            )
             .field("last_execution_record", &self.last_execution_record)
             .field(
                 "providers",
@@ -119,13 +134,14 @@ impl RuntimeState {
     /// Create a new empty runtime state.
     pub fn new() -> Self {
         Self {
-            control_registry: Arc::new(Mutex::new(ControlLinkRegistry::new())),
-            proxy_registry: Arc::new(Mutex::new(ProxyRegistry::new())),
-            suspended_yields: Arc::new(Mutex::new(SuspendedYields::new())),
-            yield_router: Arc::new(Mutex::new(YieldRouter::new())),
-            child_workflows: Arc::new(Mutex::new(HashMap::new())),
-            last_execution_record: Arc::new(Mutex::new(None)),
-            providers: Arc::new(Mutex::new(HashMap::new())),
+            control_registry: Arc::new(AsyncMutex::new(ControlLinkRegistry::new())),
+            proxy_registry: Arc::new(AsyncMutex::new(ProxyRegistry::new())),
+            suspended_yields: Arc::new(AsyncMutex::new(SuspendedYields::new())),
+            yield_router: Arc::new(AsyncMutex::new(YieldRouter::new())),
+            child_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
+            callable_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
+            last_execution_record: Arc::new(AsyncMutex::new(None)),
+            providers: Arc::new(StdMutex::new(HashMap::new())),
         }
     }
 
@@ -154,6 +170,82 @@ impl RuntimeState {
             .cloned()
     }
 
+    /// Register a runtime-owned callable workflow entry keyed by name.
+    ///
+    /// This registry is used by `Workflow::Call` / `Stmt::Call` execution.
+    pub async fn register_callable_workflow(
+        &self,
+        workflow_name: impl Into<String>,
+        workflow: Workflow,
+        arity: usize,
+        params: Vec<String>,
+    ) {
+        self.callable_workflows.lock().await.insert(
+            workflow_name.into(),
+            RegisteredCallableWorkflow {
+                workflow,
+                arity,
+                params,
+            },
+        );
+    }
+
+    /// Blocking version of [`Self::register_callable_workflow`] for use from
+    /// synchronous call sites (e.g., the engine's `parse` method).
+    ///
+    /// Uses `std::sync::Mutex` internally to avoid tokio runtime conflicts.
+    pub fn blocking_register_callable_workflow(
+        &self,
+        workflow_name: impl Into<String>,
+        workflow: Workflow,
+        arity: usize,
+        params: Vec<String>,
+    ) {
+        // tokio::sync::Mutex::try_lock works outside of async context.
+        // Inside a tokio runtime, we must avoid blocking_lock().
+        // Use try_lock which is non-blocking.
+        if let Ok(mut guard) = self.callable_workflows.try_lock() {
+            guard.insert(
+                workflow_name.into(),
+                RegisteredCallableWorkflow {
+                    workflow,
+                    arity,
+                    params,
+                },
+            );
+        } else {
+            // Fallback: acquire the async mutex from a plain thread so this
+            // remains safe on current-thread runtimes where `block_in_place`
+            // would panic.
+            let map = self.callable_workflows.clone();
+            let name = workflow_name.into();
+            let entry = RegisteredCallableWorkflow {
+                workflow,
+                arity,
+                params,
+            };
+            std::thread::spawn(move || {
+                futures::executor::block_on(async move {
+                    map.lock().await.insert(name, entry);
+                });
+            })
+            .join()
+            .expect("blocking callable workflow registration thread panicked");
+        }
+    }
+
+    /// Look up a runtime-owned callable workflow entry by name.
+    pub async fn callable_workflow(
+        &self,
+        workflow_name: &str,
+    ) -> Option<RegisteredCallableWorkflow> {
+        self.callable_workflows
+            .lock()
+            .await
+            .get(workflow_name)
+            .cloned()
+    }
+
     /// Add a capability provider to the registry.
     ///
     /// # Arguments
@@ -176,11 +268,10 @@ impl RuntimeState {
         name: impl Into<String>,
         provider: Arc<dyn CapabilityProvider>,
     ) -> Self {
-        // This is a bit tricky because we need to modify the Arc<Mutex<_>>
-        // We use tokio::sync::Mutex::try_lock in a blocking context
-        if let Ok(mut guard) = self.providers.try_lock() {
-            guard.insert(name.into(), provider);
-        }
+        self.providers
+            .lock()
+            .expect("provider registry mutex poisoned")
+            .insert(name.into(), provider);
         self
     }
 
@@ -205,9 +296,10 @@ impl RuntimeState {
     /// let state = RuntimeState::new().with_providers(providers);
     /// ```
     pub fn with_providers(self, providers: HashMap<String, Arc<dyn CapabilityProvider>>) -> Self {
-        if let Ok(mut guard) = self.providers.try_lock() {
-            guard.extend(providers);
-        }
+        self.providers
+            .lock()
+            .expect("provider registry mutex poisoned")
+            .extend(providers);
         self
     }
 
@@ -234,29 +326,43 @@ impl RuntimeState {
     /// assert!(provider.is_some());
     /// ```
     pub fn get_provider(&self, name: &str) -> Option<Arc<dyn CapabilityProvider>> {
-        // Use blocking_lock for synchronous access
-        self.providers.blocking_lock().get(name).cloned()
+        self.providers
+            .lock()
+            .expect("provider registry mutex poisoned")
+            .get(name)
+            .cloned()
     }
 
     /// Get all registered provider names.
     ///
     /// Returns a vector of all provider names currently registered.
     pub fn provider_names(&self) -> Vec<String> {
-        self.providers.blocking_lock().keys().cloned().collect()
+        self.providers
+            .lock()
+            .expect("provider registry mutex poisoned")
+            .keys()
+            .cloned()
+            .collect()
     }
 
     /// Check if a provider is registered.
     ///
     /// Returns `true` if a provider with the given name is registered.
     pub fn has_provider(&self, name: &str) -> bool {
-        self.providers.blocking_lock().contains_key(name)
+        self.providers
+            .lock()
+            .expect("provider registry mutex poisoned")
+            .contains_key(name)
     }
 
     /// Get the number of registered providers.
     ///
     /// Returns the count of providers currently registered.
     pub fn provider_count(&self) -> usize {
-        self.providers.blocking_lock().len()
+        self.providers
+            .lock()
+            .expect("provider registry mutex poisoned")
+            .len()
     }
 
     /// Create a CapabilityContext from the registered providers.
@@ -271,7 +377,10 @@ impl RuntimeState {
         // Convert Arc<dyn CapabilityProvider> from RuntimeState to Box<dyn CapabilityProvider>
         // for the CapabilityContext. We clone the Arc to get a reference, then create
         // a wrapper that delegates to the original provider.
-        let providers = self.providers.lock().await;
+        let providers = self
+            .providers
+            .lock()
+            .expect("provider registry mutex poisoned");
         for (_name, provider) in providers.iter() {
             // Create a wrapper that implements the CapabilityProvider trait
             // by delegating to the Arc-wrapped provider
@@ -282,7 +391,7 @@ impl RuntimeState {
         CapabilityContext::with_registry(registry)
     }
 
-    pub(crate) fn control_registry(&self) -> Arc<Mutex<ControlLinkRegistry>> {
+    pub(crate) fn control_registry(&self) -> Arc<AsyncMutex<ControlLinkRegistry>> {
         self.control_registry.clone()
     }
 
@@ -457,17 +566,17 @@ impl RuntimeState {
     }
 
     /// Get access to the proxy registry
-    pub fn proxy_registry(&self) -> Arc<Mutex<ProxyRegistry>> {
+    pub fn proxy_registry(&self) -> Arc<AsyncMutex<ProxyRegistry>> {
         self.proxy_registry.clone()
     }
 
     /// Get access to the suspended yields registry
-    pub fn suspended_yields(&self) -> Arc<Mutex<SuspendedYields>> {
+    pub fn suspended_yields(&self) -> Arc<AsyncMutex<SuspendedYields>> {
         self.suspended_yields.clone()
     }
 
     /// Get access to the yield router
-    pub fn yield_router(&self) -> Arc<Mutex<YieldRouter>> {
+    pub fn yield_router(&self) -> Arc<AsyncMutex<YieldRouter>> {
         self.yield_router.clone()
     }
 
@@ -512,6 +621,47 @@ mod tests {
         )
     }
 
+    #[test]
+    fn provider_builder_registers_provider() {
+        let runtime_state = RuntimeState::new().with_provider(
+            "test",
+            Arc::new(crate::capability::MockProvider::new(
+                "test",
+                Effect::Epistemic,
+            )),
+        );
+
+        assert!(runtime_state.has_provider("test"));
+        assert_eq!(runtime_state.provider_count(), 1);
+        assert_eq!(runtime_state.provider_names(), vec!["test".to_string()]);
+        assert!(runtime_state.get_provider("test").is_some());
+    }
+
+    #[test]
+    fn providers_builder_registers_all_providers() {
+        let mut providers: HashMap<String, Arc<dyn CapabilityProvider>> = HashMap::new();
+        providers.insert(
+            "one".to_string(),
+            Arc::new(crate::capability::MockProvider::new(
+                "one",
+                Effect::Epistemic,
+            )),
+        );
+        providers.insert(
+            "two".to_string(),
+            Arc::new(crate::capability::MockProvider::new(
+                "two",
+                Effect::Epistemic,
+            )),
+        );
+
+        let runtime_state = RuntimeState::new().with_providers(providers);
+
+        assert!(runtime_state.has_provider("one"));
+        assert!(runtime_state.has_provider("two"));
+        assert_eq!(runtime_state.provider_count(), 2);
+    }
+
     #[tokio::test]
     async fn child_workflow_registry_round_trips() {
         let runtime_state = RuntimeState::new();
@@ -525,6 +675,28 @@ mod tests {
 
         assert_eq!(runtime_state.child_workflow("worker").await, Some(workflow));
         assert!(runtime_state.child_workflow("missing").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn callable_workflow_registry_round_trips() {
+        let runtime_state = RuntimeState::new();
+        let workflow = Workflow::Ret {
+            expr: Expr::Literal(Value::Int(1)),
+        };
+
+        runtime_state
+            .register_callable_workflow("worker", workflow.clone(), 0, vec![])
+            .await;
+
+        assert_eq!(
+            runtime_state.callable_workflow("worker").await,
+            Some(RegisteredCallableWorkflow {
+                workflow,
+                arity: 0,
+                params: vec![]
+            })
+        );
+        assert!(runtime_state.callable_workflow("missing").await.is_none());
     }
 
     #[tokio::test]

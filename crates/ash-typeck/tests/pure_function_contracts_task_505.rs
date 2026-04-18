@@ -60,6 +60,7 @@ fn fn_requires_rejects_capability_requirements() {
 
     let program = Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow: workflow_returning_int(),
     };
 
@@ -97,6 +98,7 @@ fn fn_ensures_rejects_non_result_predicates() {
 
     let program = Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow: workflow_returning_int(),
     };
 
@@ -130,6 +132,7 @@ fn fn_ensures_rejects_non_result_equalities() {
 
     let program = Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow: workflow_returning_int(),
     };
 
@@ -162,6 +165,7 @@ fn fn_contract_rejects_unknown_variables() {
 
     let program = Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow: workflow_returning_int(),
     };
 
@@ -208,6 +212,7 @@ fn fn_contract_boundary_is_stored_with_runtime_postconditions() {
 
     let program = Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow: workflow_returning_int(),
     };
 
@@ -280,6 +285,7 @@ fn valid_stage1_fn_contract_typechecks() {
 
     let program = Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow: workflow_returning_int(),
     };
 
@@ -346,6 +352,7 @@ fn workflow_call_site_must_prove_fn_preconditions() {
 
     let error = type_check_program(&Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow,
     })
     .expect_err("workflow call should reject unproven fn precondition");
@@ -409,6 +416,7 @@ fn workflow_call_site_accepts_proven_fn_preconditions() {
 
     let result = type_check_program(&Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow,
     });
     assert!(
@@ -463,6 +471,7 @@ fn qualified_workflow_call_site_must_prove_fn_preconditions() {
 
     let error = type_check_program(&Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow,
     })
     .expect_err("qualified call should reject unproven fn precondition");
@@ -542,6 +551,7 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
 
     let result = type_check_program(&Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow,
     });
     assert!(
@@ -616,6 +626,7 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
 
     let result = type_check_program(&Program {
         definitions: vec![Definition::Function(function)],
+        helper_workflows: vec![],
         workflow,
     });
     assert!(

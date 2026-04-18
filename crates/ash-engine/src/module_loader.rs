@@ -91,6 +91,7 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
     let mut input = new_input(source);
     skip_whitespace_and_comments(&mut input);
 
+    // Parse leading fn definitions
     let mut definitions = Vec::new();
     loop {
         let snapshot = input.clone();
@@ -103,16 +104,40 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
         }
     }
 
-    let workflow = workflow_def
-        .parse_next(&mut input)
-        .map_err(|error| error.to_string())?;
-    skip_whitespace_and_comments(&mut input);
+    // Parse zero or more named workflow definitions (helper workflows).
+    // Each must have a name (i.e., not be an anonymous `workflow { ... }`).
+    let mut all_workflows = Vec::new();
+    loop {
+        let snapshot = input.clone();
+        match workflow_def.parse_next(&mut input) {
+            Ok(wf) => {
+                skip_whitespace_and_comments(&mut input);
+                // If there is more input, this is a helper workflow; if EOF, it's
+                // the entry workflow. We collect all and split at the end.
+                all_workflows.push(wf);
+            }
+            Err(_) => {
+                input = snapshot;
+                break;
+            }
+        }
+    }
+
+    if all_workflows.is_empty() {
+        return Err("expected at least one workflow definition".to_string());
+    }
+
+    // The last workflow is the entry point; preceding ones are helpers.
+    let workflow = all_workflows.pop().expect("at least one workflow");
+    let helper_workflows = all_workflows;
+
     if !input.input.is_empty() {
         return Err("unexpected trailing input after workflow definition".to_string());
     }
 
     Ok(ash_parser::surface::Program {
         definitions,
+        helper_workflows,
         workflow,
     })
 }

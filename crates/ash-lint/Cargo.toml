@@ -25,7 +25,7 @@ colored = "2.1"
 walkdir = { workspace = true }
 
 [features]
-serde = ["dep:serde", "dep:serde_json"]
+serde = ["dep:serde", "dep:serde_json", "ash-parser/serde"]
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

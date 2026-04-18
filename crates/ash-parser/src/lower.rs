@@ -33,6 +33,9 @@ pub struct LoweringContext {
     pub capability_context: Option<CapabilityResolutionContext>,
     /// Current module ID for module-scoped capability resolution.
     pub current_module: Option<ModuleId>,
+    /// Set of unqualified function names that are known to be effectful,
+    /// derived from declared capability definitions.
+    pub effectful_names: std::collections::HashSet<String>,
 }
 
 impl LoweringContext {
@@ -41,6 +44,7 @@ impl LoweringContext {
         Self {
             capability_context: None,
             current_module: None,
+            effectful_names: std::collections::HashSet::new(),
         }
     }
 
@@ -49,6 +53,7 @@ impl LoweringContext {
         Self {
             capability_context: Some(capability_context),
             current_module: None,
+            effectful_names: std::collections::HashSet::new(),
         }
     }
 
@@ -60,6 +65,16 @@ impl LoweringContext {
         Self {
             capability_context: Some(capability_context),
             current_module: Some(module_id),
+            effectful_names: std::collections::HashSet::new(),
+        }
+    }
+
+    /// Create a new lowering context with explicit effectful names set.
+    pub fn with_effectful_names(effectful_names: std::collections::HashSet<String>) -> Self {
+        Self {
+            capability_context: None,
+            current_module: None,
+            effectful_names,
         }
     }
 
@@ -114,6 +129,10 @@ pub enum LoweringError {
     ExprNotLowerable { kind: &'static str },
     /// fn expression appeared at module scope where only named `pub fn` is allowed.
     FnDefNotAllowedAtModuleScope,
+    /// An invalid target was encountered during lowering.
+    InvalidTarget(String),
+    /// A feature that should have been handled earlier was encountered during lowering.
+    UnsupportedFeature(String),
 }
 
 impl fmt::Display for LoweringError {
@@ -137,6 +156,12 @@ impl fmt::Display for LoweringError {
                     f,
                     "fn expressions are not valid at module scope; use `pub fn` instead"
                 )
+            }
+            LoweringError::InvalidTarget(msg) => {
+                write!(f, "invalid target: {msg}")
+            }
+            LoweringError::UnsupportedFeature(msg) => {
+                write!(f, "unsupported feature: {msg}")
             }
         }
     }
@@ -382,6 +407,36 @@ impl fmt::Display for RoleLoweringError {
 #[cfg(test)]
 impl std::error::Error for RoleLoweringError {}
 
+/// Extract effectful names from a slice of surface definitions.
+///
+/// Capability definitions with operational effects (Act, Write, External, Operational)
+/// or with a `target_action` are considered effectful. Both the capability name
+/// and the target action name (if different) are registered.
+pub fn effectful_names_from_definitions(
+    definitions: &[crate::surface::Definition],
+) -> std::collections::HashSet<String> {
+    let mut names = std::collections::HashSet::new();
+    for def in definitions {
+        if let crate::surface::Definition::Capability(cap_def) = def {
+            if cap_def.target_action.is_some()
+                || matches!(
+                    cap_def.effect,
+                    crate::surface::EffectType::Act
+                        | crate::surface::EffectType::Write
+                        | crate::surface::EffectType::External
+                        | crate::surface::EffectType::Operational
+                )
+            {
+                names.insert(cap_def.name.to_string());
+            }
+            if let Some(action) = &cap_def.target_action {
+                names.insert(action.to_string());
+            }
+        }
+    }
+    names
+}
+
 /// Lower a workflow definition to core IR.
 pub fn lower_workflow(def: &WorkflowDef) -> Result<CoreWorkflow, LoweringError> {
     lower_workflow_with_context(def, &LoweringContext::new())
@@ -395,7 +450,11 @@ pub fn lower_workflow_with_context(
     // Create a provenance for the workflow
     let provenance = Provenance::new();
 
-    lower_workflow_body(&def.body, &provenance, ctx)
+    let core = lower_workflow_body(&def.body, &provenance, ctx)?;
+    Ok(crate::lift::lift_workflow_with_names(
+        core,
+        &ctx.effectful_names,
+    ))
 }
 
 /// Result of lowering a workflow definition with optional implicit role.
@@ -774,16 +833,23 @@ fn lower_workflow_body(
             else_branch,
             ..
         } => {
-            assert!(
-                else_branch.is_none(),
-                "legacy decide else-branches are not part of the canonical lowering contract"
-            );
+            if else_branch.is_some() {
+                return Err(LoweringError::InvalidTarget(
+                    "legacy decide else-branches are not part of the canonical lowering contract"
+                        .to_string(),
+                ));
+            }
 
             Ok(CoreWorkflow::Decide {
                 expr: lower_expr(expr)?,
                 policy: policy
                     .as_ref()
-                    .expect("canonical decide lowering requires an explicit named policy")
+                    .ok_or_else(|| {
+                        LoweringError::InvalidTarget(
+                            "canonical decide lowering requires an explicit named policy"
+                                .to_string(),
+                        )
+                    })?
                     .to_string(),
                 continuation: Box::new(lower_workflow_body(then_branch, provenance, ctx)?),
             })
@@ -1326,7 +1392,7 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         Expr::Binary {
             op, left, right, ..
         } => Ok(CoreExpr::Binary {
-            op: lower_binary_op(*op),
+            op: lower_binary_op(*op)?,
             left: Box::new(lower_expr(left)?),
             right: Box::new(lower_expr(right)?),
         }),
@@ -1536,7 +1602,9 @@ fn lower_receive_pattern(pattern: &StreamPattern) -> Result<CoreReceivePattern, 
 fn lower_check_target(target: &CheckTarget) -> Result<CoreObligation, LoweringError> {
     match target {
         CheckTarget::Obligation(obl) => lower_obligation(obl),
-        CheckTarget::Policy(_) => panic!("policy instances are not valid canonical check targets"),
+        CheckTarget::Policy(_) => Err(LoweringError::InvalidTarget(
+            "policy instances are not valid canonical check targets".to_string(),
+        )),
     }
 }
 
@@ -1569,22 +1637,25 @@ fn lower_unary_op(op: UnaryOp) -> ash_core::UnaryOp {
 }
 
 /// Lower a binary operator.
-fn lower_binary_op(op: BinaryOp) -> ash_core::BinaryOp {
+fn lower_binary_op(op: BinaryOp) -> Result<ash_core::BinaryOp, LoweringError> {
     match op {
-        BinaryOp::Add => ash_core::BinaryOp::Add,
-        BinaryOp::Sub => ash_core::BinaryOp::Sub,
-        BinaryOp::Mul => ash_core::BinaryOp::Mul,
-        BinaryOp::Div => ash_core::BinaryOp::Div,
-        BinaryOp::Mod => ash_core::BinaryOp::Mod,
-        BinaryOp::And => ash_core::BinaryOp::And,
-        BinaryOp::Or => ash_core::BinaryOp::Or,
-        BinaryOp::Eq => ash_core::BinaryOp::Eq,
-        BinaryOp::Neq => ash_core::BinaryOp::Ne,
-        BinaryOp::Lt => ash_core::BinaryOp::Lt,
-        BinaryOp::Gt => ash_core::BinaryOp::Gt,
-        BinaryOp::Leq => ash_core::BinaryOp::Le,
-        BinaryOp::Geq => ash_core::BinaryOp::Ge,
-        BinaryOp::In => ash_core::BinaryOp::In,
+        BinaryOp::Add => Ok(ash_core::BinaryOp::Add),
+        BinaryOp::Sub => Ok(ash_core::BinaryOp::Sub),
+        BinaryOp::Mul => Ok(ash_core::BinaryOp::Mul),
+        BinaryOp::Div => Ok(ash_core::BinaryOp::Div),
+        BinaryOp::Mod => Ok(ash_core::BinaryOp::Mod),
+        BinaryOp::And => Ok(ash_core::BinaryOp::And),
+        BinaryOp::Or => Ok(ash_core::BinaryOp::Or),
+        BinaryOp::Eq => Ok(ash_core::BinaryOp::Eq),
+        BinaryOp::Neq => Ok(ash_core::BinaryOp::Ne),
+        BinaryOp::Lt => Ok(ash_core::BinaryOp::Lt),
+        BinaryOp::Gt => Ok(ash_core::BinaryOp::Gt),
+        BinaryOp::Leq => Ok(ash_core::BinaryOp::Le),
+        BinaryOp::Geq => Ok(ash_core::BinaryOp::Ge),
+        BinaryOp::In => Ok(ash_core::BinaryOp::In),
+        BinaryOp::Pipe => Err(LoweringError::UnsupportedFeature(
+            "Pipe operator should be desugared during parsing".to_string(),
+        )),
     }
 }
 
@@ -2097,35 +2168,35 @@ mod tests {
     #[test]
     fn test_lower_binary_op() {
         assert!(matches!(
-            lower_binary_op(BinaryOp::Add),
+            lower_binary_op(BinaryOp::Add).unwrap(),
             ash_core::BinaryOp::Add
         ));
         assert!(matches!(
-            lower_binary_op(BinaryOp::Sub),
+            lower_binary_op(BinaryOp::Sub).unwrap(),
             ash_core::BinaryOp::Sub
         ));
         assert!(matches!(
-            lower_binary_op(BinaryOp::Mul),
+            lower_binary_op(BinaryOp::Mul).unwrap(),
             ash_core::BinaryOp::Mul
         ));
         assert!(matches!(
-            lower_binary_op(BinaryOp::Div),
+            lower_binary_op(BinaryOp::Div).unwrap(),
             ash_core::BinaryOp::Div
         ));
         assert!(matches!(
-            lower_binary_op(BinaryOp::Mod),
+            lower_binary_op(BinaryOp::Mod).unwrap(),
             ash_core::BinaryOp::Mod
         ));
         assert!(matches!(
-            lower_binary_op(BinaryOp::Eq),
+            lower_binary_op(BinaryOp::Eq).unwrap(),
             ash_core::BinaryOp::Eq
         ));
         assert!(matches!(
-            lower_binary_op(BinaryOp::And),
+            lower_binary_op(BinaryOp::And).unwrap(),
             ash_core::BinaryOp::And
         ));
         assert!(matches!(
-            lower_binary_op(BinaryOp::Or),
+            lower_binary_op(BinaryOp::Or).unwrap(),
             ash_core::BinaryOp::Or
         ));
     }

@@ -11,6 +11,7 @@ pub mod effect;
 pub mod env_frame;
 pub mod module_graph;
 pub mod provenance;
+pub mod small_step;
 pub mod stream;
 pub mod value;
 pub mod visualize;

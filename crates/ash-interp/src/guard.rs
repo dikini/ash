@@ -67,6 +67,7 @@ fn eval_predicate(pred: &Predicate, ctx: &Context) -> Result<bool, EvalError> {
                 return Err(EvalError::WrongArity {
                     expected: 2,
                     actual: pred.arguments.len(),
+                    callee: None,
                 });
             }
             let left = eval_expr(&pred.arguments[0], ctx)?;
@@ -80,6 +81,7 @@ fn eval_predicate(pred: &Predicate, ctx: &Context) -> Result<bool, EvalError> {
                 return Err(EvalError::WrongArity {
                     expected: 2,
                     actual: pred.arguments.len(),
+                    callee: None,
                 });
             }
             let left = eval_expr(&pred.arguments[0], ctx)?;
@@ -111,6 +113,7 @@ fn eval_predicate(pred: &Predicate, ctx: &Context) -> Result<bool, EvalError> {
                 return Err(EvalError::WrongArity {
                     expected: 2,
                     actual: pred.arguments.len(),
+                    callee: None,
                 });
             }
             let collection = eval_expr(&pred.arguments[0], ctx)?;
@@ -138,6 +141,7 @@ fn eval_predicate(pred: &Predicate, ctx: &Context) -> Result<bool, EvalError> {
                 return Err(EvalError::WrongArity {
                     expected: 1,
                     actual: pred.arguments.len(),
+                    callee: None,
                 });
             }
             let value = eval_expr(&pred.arguments[0], ctx)?;
@@ -150,6 +154,7 @@ fn eval_predicate(pred: &Predicate, ctx: &Context) -> Result<bool, EvalError> {
                 return Err(EvalError::WrongArity {
                     expected: 1,
                     actual: pred.arguments.len(),
+                    callee: None,
                 });
             }
             let value = eval_expr(&pred.arguments[0], ctx)?;
@@ -178,6 +183,7 @@ where
         return Err(EvalError::WrongArity {
             expected: 2,
             actual: args.len(),
+            callee: None,
         });
     }
 

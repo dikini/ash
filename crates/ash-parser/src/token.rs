@@ -155,6 +155,8 @@ pub enum TokenKind {
     Le,
     /// `>=` - Greater than or equal
     Ge,
+    /// `|>` - Pipe operator
+    Pipe,
 
     // Delimiters
     /// `(` - Left parenthesis
@@ -191,6 +193,7 @@ pub enum TokenKind {
 
 /// Represents a source code span with location information.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Span {
     /// Byte offset from the start of the file
     pub start: usize,
@@ -431,6 +434,7 @@ mod tests {
             TokenKind::Gt,
             TokenKind::Le,
             TokenKind::Ge,
+            TokenKind::Pipe,
         ];
 
         // Ensure all operators are distinct

@@ -41,7 +41,11 @@ pub enum EvalError {
     UnknownFunction(Name),
 
     #[error("wrong number of arguments: expected {expected}, got {actual}")]
-    WrongArity { expected: usize, actual: usize },
+    WrongArity {
+        expected: usize,
+        actual: usize,
+        callee: Option<String>,
+    },
 
     #[error("division by zero")]
     DivisionByZero,
@@ -89,6 +93,8 @@ pub enum ExecError {
     PolicyDenied {
         policy: Name,
     },
+    /// A `Must` block failed, wrapping the original error.
+    MustFailure(String),
     /// The operation is paused until the explicitly named approval role acts.
     RequiresApproval {
         role: Role,
@@ -165,6 +171,7 @@ impl std::fmt::Display for ExecError {
                 write!(f, "action execution failed: {action} - {reason}")
             }
             Self::PolicyDenied { policy } => write!(f, "policy denied: {policy}"),
+            Self::MustFailure(msg) => write!(f, "must failure: {msg}"),
             Self::RequiresApproval {
                 role,
                 operation,
@@ -282,6 +289,7 @@ impl ExecError {
             | Self::CapabilityNotAvailable(..)
             | Self::ActionFailed { .. }
             | Self::PolicyDenied { .. }
+            | Self::MustFailure(..)
             | Self::TypeMismatch { .. }
             | Self::ValidationFailed(..) => RuntimeOutcomeState::ExecutionFailure,
         }

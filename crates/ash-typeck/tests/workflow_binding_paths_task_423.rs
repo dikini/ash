@@ -186,6 +186,7 @@ fn program_with_interface_impl_and_workflow(workflow: WorkflowDef) -> Program {
             Definition::Interface(explain_interface_def()),
             Definition::Impl(explain_string_impl()),
         ],
+        helper_workflows: vec![],
         workflow,
     }
 }

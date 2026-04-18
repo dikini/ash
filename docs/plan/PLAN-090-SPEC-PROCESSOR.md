@@ -236,7 +236,7 @@ These tasks create the missing stdlib modules. They run in parallel with Track A
 
 ### TASK-595: std::regex Interface and Rust Backend
 
-**Objective:** Add `std::regex` with `match`, `find`, and `replace` functions, backed by the `regex` Rust crate.
+**Objective:** Add `std::regex` with `matches`, `find`, and `replace` functions, backed by the `regex` Rust crate.
 
 **Files:**
 - Create: `std/src/regex.ash`
@@ -267,6 +267,8 @@ Rust integration test that calls the capability through the engine.
 **Step 5: Codex Verification**
 
 Verify real non-test callsites exist (the spec processor uses `regex` in TASK-591/TASK-592).
+
+> **Current status (TASK-613 reconciliation):** The Rust-side `RegexProvider` is landed and tested (12 engine tests pass). The Ash-language surface (`use regex::{find}`) is **not yet functional** — `regex.ash` uses `act execute` inside `fn` bodies, which the parser cannot handle at expression level. Downstream tasks (TASK-591, TASK-592) that depend on `std::regex` from Ash code will remain blocked until the parser supports `act execute` in expression position. The Rust provider can still be exercised directly through engine integration tests.
 
 ---
 
@@ -591,7 +593,8 @@ Before marking Phase 90 complete, verify:
 ## Gating Notes
 
 - **Actionable now:** TASK-590, TASK-591, TASK-592, TASK-593, TASK-594 (Track A)
-- **Blocked on Rust backend capacity:** TASK-595, TASK-596, TASK-597, TASK-598 (Track B)
+- **Partially done:** TASK-595 (Track B) — Rust provider landed and tested; Ash-language import surface blocked on parser support for `act execute` in expression position
+- **Blocked on Rust backend capacity:** TASK-596, TASK-597, TASK-598 (Track B)
 - **Blocked on A + B completion:** TASK-600, TASK-601, TASK-602, TASK-603 (Track C)
 - **Deferred indefinitely:** TASK-599 (`std::diff`)
 

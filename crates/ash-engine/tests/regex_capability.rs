@@ -70,7 +70,10 @@ async fn test_regex_find_through_engine() {
         result.unwrap(),
         ash_core::Value::Variant {
             name: "Some".to_string(),
-            fields: Box::new(vec![("value".to_string(), ash_core::Value::String("123".to_string()))]),
+            fields: Box::new(vec![(
+                "value".to_string(),
+                ash_core::Value::String("123".to_string())
+            )]),
         }
     );
 }
@@ -169,7 +172,10 @@ async fn test_regex_replace_all() {
         .await;
 
     assert!(result.is_ok(), "replace should replace all occurrences");
-    assert_eq!(result.unwrap(), ash_core::Value::String("aXbXc".to_string()));
+    assert_eq!(
+        result.unwrap(),
+        ash_core::Value::String("aXbXc".to_string())
+    );
 }
 
 #[tokio::test]
@@ -185,10 +191,7 @@ async fn test_regex_invalid_pattern() {
         )
         .await;
 
-    assert!(
-        result.is_err(),
-        "invalid pattern should return an error"
-    );
+    assert!(result.is_err(), "invalid pattern should return an error");
     let err = result.unwrap_err();
     assert!(
         err.to_string().contains("Invalid argument") || err.to_string().contains("regex"),

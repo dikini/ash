@@ -16,6 +16,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   with 12 passing tests, but the Ash-language import surface is not proven
   end-to-end because `fn` bodies with `act execute` cannot yet be parsed at
   the expression level. TASK-599 (`std::diff`) remains correctly ⏸️ Deferred.
+  TASK-613 closed as ✅ Complete. Stale worktree references removed from
+  task file. TASK-595 file path and error-handling wording corrected.
+  Limitation regression test added to codify the current import boundary.
 
 - Phase 65↔91 alignment remediation (TASK-612). Bare qualified method
   syntax `Interface::method` without call parentheses is now rejected

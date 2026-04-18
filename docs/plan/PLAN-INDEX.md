@@ -2577,7 +2577,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 |||| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | 📝 Planned ||
 |||| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | 📝 Planned ||
 |||| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | 📝 Planned ||
-||| [TASK-613](tasks/TASK-613-phase-90-status-corpus-reconciliation-and-task-595-e2e-validation.md) | Reconcile Phase 90 status/task corpus and prove or honestly downgrade TASK-595 end-to-end `std::regex` behavior before merging remaining worktree changes | PLAN-090, TASK-595, SPEC-002, SPEC-003, SPEC-010, SPEC-017 | 4-8 | 🟡 Ready |
+||| [TASK-613](tasks/TASK-613-phase-90-status-corpus-reconciliation-and-task-595-e2e-validation.md) | Reconcile Phase 90 status/task corpus and prove or honestly downgrade TASK-595 end-to-end `std::regex` behavior | PLAN-090, TASK-595, SPEC-002, SPEC-003, SPEC-010, SPEC-017 | 4-8 | ✅ Complete |
 
 **Deliverable:** `apps/spec_processor/src/main.ash` runs end-to-end, produces a structured report, and blocks CI on Tier 2 findings. New stdlib modules (`regex`, `markdown`, `json`, `process`) are available for downstream phases only where their end-to-end Ash-language surface is actually proven, and Phase 90 task/docs status is internally consistent on `main` after reconciliation.
 

@@ -67,7 +67,11 @@ impl RegexProvider {
     }
 
     /// Handle `replace` execute operation
-    fn handle_replace(pattern: &str, replacement: &str, text: &str) -> Result<Value, CapabilityError> {
+    fn handle_replace(
+        pattern: &str,
+        replacement: &str,
+        text: &str,
+    ) -> Result<Value, CapabilityError> {
         let re = regex::Regex::new(pattern)
             .map_err(|e| CapabilityError::InvalidArgument(format!("Invalid regex pattern: {e}")))?;
 
@@ -194,7 +198,10 @@ mod tests {
             result.unwrap(),
             Value::Variant {
                 name: "Some".to_string(),
-                fields: Box::new(vec![("value".to_string(), Value::String("123".to_string()))]),
+                fields: Box::new(vec![(
+                    "value".to_string(),
+                    Value::String("123".to_string())
+                )]),
             }
         );
     }
@@ -303,7 +310,9 @@ mod tests {
     #[tokio::test]
     async fn test_regex_provider_insufficient_args() {
         let provider = RegexProvider::new();
-        let result = provider.execute("find", &[Value::String(r"\d+".to_string())]).await;
+        let result = provider
+            .execute("find", &[Value::String(r"\d+".to_string())])
+            .await;
         assert!(result.is_err());
         assert!(
             matches!(result.unwrap_err(), CapabilityError::InvalidArgument(_)),

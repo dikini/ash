@@ -2617,9 +2617,9 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 || [TASK-615](#) | Parse `builtin fn` declarations | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
 || [TASK-616](#) | Lower `BuiltinFnDef` to IR | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
 || [TASK-617](#) | Module-level snippet extraction for `builtin fn` | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-618](#) | Module loader registers `builtin fn` as callable exports | SPEC-BUILTIN-FN | 3-4 | 📝 Planned ||
-|| [TASK-619](#) | Typechecker resolves `builtin fn` type signatures | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
-|| [TASK-620](#) | End-to-end import resolution for `builtin fn` | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
+|| [TASK-618](#) | Module loader registers `builtin fn` as callable exports | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
+|| [TASK-619](#) | Typechecker resolves `builtin fn` type signatures | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
+|| [TASK-620](#) | End-to-end import resolution for `builtin fn` | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
 || [TASK-621](#) | Runtime builtin dispatch table | SPEC-BUILTIN-FN | 3-4 | 📝 Planned ||
 || [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
 || [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||

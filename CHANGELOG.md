@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Track B implementation (TASK-618 to TASK-620): `builtin fn` module loader
+  and typechecker support. Introduces `CallableKind` enum (`User { body }` vs
+  `Builtin`) to distinguish bodyless builtins from Ash-bodied functions. Module
+  loader registers `builtin fn` exports, typechecker resolves their type
+  signatures as `Type::Fn(params, ret)`. D2 decision gate passed: full
+  import/typecheck pipeline works for bodyless functions. 11 new tests.
+
 - Parser support for `builtin fn` declarations (TASK-615). The parser now
   recognizes `[pub] builtin fn <name>[<T>](<params>) -> <Ret>;` as a new
   definition form, producing `Definition::BuiltinFn(BuiltinFnDef)`. Return

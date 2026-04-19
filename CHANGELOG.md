@@ -24,6 +24,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Proptest flake in `capability_parser_props`: `valid_type_name()` strategy
+  could generate `Fn`, a contextual keyword in type position (function-type
+  syntax `Fn(T) -> R`). The `Fn` case now filtered out of the strategy.
+
 - PLAN-INDEX phase status alignment. Phase 65 (8/8 tasks), Phase 67 (11/11
   tasks), and Phase 91 (7/7 tasks including TASK-612) now correctly show
   `✅ Complete` instead of stale `🟡 Ready`.

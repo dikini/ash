@@ -45,7 +45,11 @@ pub enum CallableKind {
         body: Expr,
     },
     /// Bodyless builtin function resolved at link time.
-    Builtin,
+    Builtin {
+        /// Module path joined by `::` (e.g. `"string"`, `"record"`).
+        /// Populated from the import path at import resolution time.
+        module: String,
+    },
 }
 
 /// Imported callable body and parameter list.
@@ -450,7 +454,7 @@ pub(crate) fn collect_module_exports(
     for snippet in
         extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub builtin fn "))
     {
-        if let Some(callable) = parse_builtin_fn_callable(&snippet)? {
+        if let Some(callable) = parse_builtin_fn_callable(&snippet, String::new())? {
             insert_callable_export(&mut exports, &callable.name, callable.callable)?;
         }
     }
@@ -773,7 +777,7 @@ fn parse_supported_pub_fn_callable(
 ///
 /// Builtin functions have no Ash-level body, so a null placeholder expression
 /// is used.  The important data is the function name and parameter list.
-fn parse_builtin_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>, EngineError> {
+fn parse_builtin_fn_callable(snippet: &str, module: String) -> Result<Option<ImportedCallableExport>, EngineError> {
     let mut input = new_input(snippet.trim());
     let parsed = parse_builtin_fn_definition
         .parse_next(&mut input)
@@ -797,7 +801,7 @@ fn parse_builtin_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExp
         callable: InlineCallable {
             exported_name: name,
             params,
-            kind: CallableKind::Builtin,
+            kind: CallableKind::Builtin { module },
         },
     }))
 }
@@ -1282,7 +1286,7 @@ pub type Flag = On | Off;",
         // Verify builtin fn has Builtin kind
         let triple = exports.callables.get("triple").expect("triple callable");
         assert!(
-            matches!(triple.kind, CallableKind::Builtin),
+            matches!(triple.kind, CallableKind::Builtin { .. }),
             "builtin fn kind should be CallableKind::Builtin"
         );
     }
@@ -1312,5 +1316,26 @@ pub type Flag = On | Off;",
             .get("identity")
             .expect("identity callable");
         assert_eq!(identity.params, vec!["value"]);
+    }
+
+    #[test]
+    fn builtin_fn_callable_kind_carries_module_name() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        std::fs::write(dir.join("string.ash"), "pub builtin fn concat(a: String, b: String) -> String;\n")
+            .expect("write");
+        std::fs::write(dir.join("caller.ash"), "use string::{concat}\nworkflow main { ret 0 }\n")
+            .expect("write");
+
+        let result = super::load_ordinary_file(&dir.join("caller.ash")).expect("load");
+        let callable = result.imported_callables.get("concat").expect("concat callable");
+        match &callable.kind {
+            super::CallableKind::Builtin { module } => {
+                // module is empty string at this stage (Task 2 populates the real value)
+                assert_eq!(module.as_str(), "", "module is empty placeholder for now");
+            }
+            other => panic!("expected Builtin {{ module }}, got: {:?}", other),
+        }
     }
 }

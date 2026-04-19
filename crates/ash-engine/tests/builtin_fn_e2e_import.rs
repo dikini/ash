@@ -56,7 +56,7 @@ fn builtin_fn_import_resolves_at_module_load() {
     assert!(
         matches!(
             add_callable.kind,
-            ash_engine::module_loader::CallableKind::Builtin
+            ash_engine::module_loader::CallableKind::Builtin { .. }
         ),
         "Expected CallableKind::Builtin, got: {:?}",
         add_callable.kind
@@ -282,9 +282,46 @@ fn builtin_fn_coexists_with_regular_fn() {
     assert!(
         matches!(
             triple.kind,
-            ash_engine::module_loader::CallableKind::Builtin
+            ash_engine::module_loader::CallableKind::Builtin { .. }
         ),
         "'triple' should be Builtin callable, got: {:?}",
         triple.kind
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Test 6: Imported builtin fn is bound as a closure in the workflow context
+// ---------------------------------------------------------------------------
+
+/// Verify that `build_imported_closures` registers a callable closure for
+/// `CallableKind::Builtin` entries, so the imported name is available at
+/// runtime (even if the implementation may delegate to an unqualified builtin).
+#[test]
+fn builtin_fn_import_is_bound_as_closure_in_workflow() {
+    let tmp_dir = tempfile::tempdir().expect("temp dir created");
+    let module_dir = tmp_dir.path();
+
+    std::fs::write(
+        module_dir.join("math_utils.ash"),
+        "pub builtin fn add(a: Int, b: Int) -> Int;\n",
+    )
+    .expect("write math_utils.ash");
+
+    std::fs::write(
+        module_dir.join("caller.ash"),
+        "use math_utils::{add}\nworkflow main { ret add(1, 2) }\n",
+    )
+    .expect("write caller.ash");
+
+    let engine = ash_engine::Engine::new().build().expect("engine builds");
+    let workflow = engine
+        .parse_file(module_dir.join("caller.ash"))
+        .expect("parse_file should succeed");
+
+    assert!(
+        workflow.imported_closures.contains_key("add"),
+        "Imported builtin fn 'add' must be bound as a closure in the workflow context; \
+         found keys: {:?}",
+        workflow.imported_closures.keys().collect::<Vec<_>>()
     );
 }

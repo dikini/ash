@@ -1273,6 +1273,10 @@ fn build_imported_closures(
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();
     for (name, callable) in imported_callables {
+        let params: Vec<(String, Option<String>)> =
+            callable.params.iter().map(|p| (p.clone(), None)).collect();
+        param_counts.insert(name.clone(), params.len());
+
         let body_expr = match &callable.kind {
             CallableKind::User { body } => match ash_parser::lower_expr(body) {
                 Ok(expr) => expr,
@@ -1282,17 +1286,32 @@ fn build_imported_closures(
                     continue;
                 }
             },
-            CallableKind::Builtin => {
-                // Builtin callables are resolved at runtime; register param
-                // count only so the typechecker knows the arity.
-                param_counts.insert(name.clone(), callable.params.len());
-                continue;
+            CallableKind::Builtin { .. } => {
+                // Build a synthetic closure body that delegates to the builtin
+                // by its exported (unqualified) name.  This binds the imported
+                // name in the runtime context so it is callable.
+                //
+                // NOTE: Track D will thread module-qualified dispatch through
+                // InlineCallable once actual .ash builtin declaration files
+                // exist and their qualified names are registered in the
+                // ash-interp dispatch table.
+                let param_exprs: Vec<ash_core::Expr> = callable
+                    .params
+                    .iter()
+                    .map(|p| ash_core::Expr::Variable {
+                        name: p.clone(),
+                        span: ash_core::ast::Span::default(),
+                    })
+                    .collect();
+                ash_core::Expr::Call {
+                    func: callable.exported_name.clone(),
+                    module: None,
+                    arguments: param_exprs,
+                }
             }
         };
+
         let env_frame = std::sync::Arc::new(ash_core::env_frame::EnvFrame::new());
-        let params: Vec<(String, Option<String>)> =
-            callable.params.iter().map(|p| (p.clone(), None)).collect();
-        param_counts.insert(name.clone(), params.len());
         closures.insert(
             name.clone(),
             Value::Closure {

@@ -1291,10 +1291,10 @@ fn build_imported_closures(
                 // by its exported (unqualified) name.  This binds the imported
                 // name in the runtime context so it is callable.
                 //
-                // NOTE: Track D will thread module-qualified dispatch through
-                // InlineCallable once actual .ash builtin declaration files
-                // exist and their qualified names are registered in the
-                // ash-interp dispatch table.
+                // TODO(Task 3): use the `module` field to select qualified vs.
+                // unqualified dispatch via the builtin_dispatch_table check.
+                // Until then, string ops dispatch wrongly to list concat.
+                // Record ops (keys/values/record) are unqualified and dispatch correctly.
                 let param_exprs: Vec<ash_core::Expr> = callable
                     .params
                     .iter()

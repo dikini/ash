@@ -454,6 +454,8 @@ pub(crate) fn collect_module_exports(
     for snippet in
         extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub builtin fn "))
     {
+        // `module` is left empty here; load_ordinary_file populates the real
+        // value from the import path before inserting into imported_callables.
         if let Some(callable) = parse_builtin_fn_callable(&snippet, String::new())? {
             insert_callable_export(&mut exports, &callable.name, callable.callable)?;
         }
@@ -1332,8 +1334,8 @@ pub type Flag = On | Off;",
         let callable = result.imported_callables.get("concat").expect("concat callable");
         match &callable.kind {
             super::CallableKind::Builtin { module } => {
-                // module is empty string at this stage (Task 2 populates the real value)
-                assert_eq!(module.as_str(), "", "module is empty placeholder for now");
+                assert_eq!(module.as_str(), "string",
+                    "module name must be populated from the import path by load_ordinary_file");
             }
             other => panic!("expected Builtin {{ module }}, got: {:?}", other),
         }

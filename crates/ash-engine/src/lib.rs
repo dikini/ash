@@ -1268,15 +1268,24 @@ impl EngineBuilder {
 fn build_imported_closures(
     imported_callables: &HashMap<String, module_loader::InlineCallable>,
 ) -> (HashMap<String, Value>, HashMap<String, usize>) {
+    use module_loader::CallableKind;
+
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();
     for (name, callable) in imported_callables {
-        // Lower surface body to core Expr
-        let body_expr = match ash_parser::lower_expr(&callable.body) {
-            Ok(expr) => expr,
-            Err(e) => {
-                // TODO: replace with tracing::warn! when tracing is integrated
-                eprintln!("warning: failed to lower imported callable '{name}': {e}");
+        let body_expr = match &callable.kind {
+            CallableKind::User { body } => match ash_parser::lower_expr(body) {
+                Ok(expr) => expr,
+                Err(e) => {
+                    // TODO: replace with tracing::warn! when tracing is integrated
+                    eprintln!("warning: failed to lower imported callable '{name}': {e}");
+                    continue;
+                }
+            },
+            CallableKind::Builtin => {
+                // Builtin callables are resolved at runtime; register param
+                // count only so the typechecker knows the arity.
+                param_counts.insert(name.clone(), callable.params.len());
                 continue;
             }
         };

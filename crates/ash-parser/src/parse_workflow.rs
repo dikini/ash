@@ -1265,6 +1265,16 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
     let checkpoint = input.clone();
     if let Ok(action) = action_ref(input) {
+        // Do not treat known builtin function names as capability action targets.
+        // Builtin functions like `record(...)` would otherwise be misinterpreted as
+        // capability calls when they appear as the RHS of a `let` binding followed
+        // by a statement boundary (newline or `}`).
+        let is_builtin_fn = matches!(
+            &action.target,
+            crate::surface::OperationalTarget::Symbolic { capability_name }
+                if crate::lower::BUILTIN_FUNCTIONS.contains(&capability_name.as_ref())
+        );
+
         if let crate::surface::Pattern::Variable { ref name, .. } = pat {
             // Verify what follows is a statement boundary, not an expression continuation.
             // Use skip_horizontal_ws_and_comments to preserve newlines as delimiters.
@@ -1276,7 +1286,7 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
                 || starts_with_keyword(input, "then")
                 || starts_with_keyword(input, "else");
 
-            if next_is_boundary {
+            if next_is_boundary && !is_builtin_fn {
                 let span = span_from(&start_pos, &input.state.pos);
                 return Ok(Workflow::Act {
                     action,
@@ -1286,7 +1296,7 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
                     span,
                 });
             }
-            // Not a boundary — backtrack and parse as normal expr
+            // Not a boundary or a known builtin — backtrack and parse as normal expr
             *input = checkpoint;
         } else {
             // Pattern is not a simple name; fall through to expr parsing

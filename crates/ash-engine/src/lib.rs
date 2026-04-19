@@ -1304,6 +1304,24 @@ fn build_imported_closures(
                 } else {
                     None
                 };
+
+                // For variadic builtins declared with 0 parameters (e.g. `record`),
+                // skip closure registration entirely.  The caller passes arguments
+                // that would be forwarded to the builtin, but a 0-param closure cannot
+                // forward them — `apply_closure` would raise WrongArity.  Instead we
+                // omit the closure so the evaluator falls through to `eval_function_call`,
+                // which handles variadic dispatch correctly.
+                let unqualified_entry = dispatch_table.get(callable.exported_name.as_str());
+                if callable.params.is_empty() {
+                    if let Some(entry) = unqualified_entry {
+                        if entry.variadic {
+                            // Do not register a closure; let eval use builtin dispatch.
+                            param_counts.insert(name.clone(), 0);
+                            continue;
+                        }
+                    }
+                }
+
                 let param_exprs: Vec<ash_core::Expr> = callable
                     .params
                     .iter()

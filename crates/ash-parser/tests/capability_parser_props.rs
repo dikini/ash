@@ -79,8 +79,9 @@ fn valid_identifier() -> impl Strategy<Value = String> {
 /// Excludes `Fn` because it is a contextual keyword in type position
 /// (parsed as `Fn(T1, T2) -> T3` function-type syntax by `parse_surface_type`).
 fn valid_type_name() -> impl Strategy<Value = String> {
-    "[A-Z][a-zA-Z0-9_]{0,30}"
-        .prop_filter("parser-valid type name", |s| parses_as_identifier(s) && s != "Fn")
+    "[A-Z][a-zA-Z0-9_]{0,30}".prop_filter("parser-valid type name", |s| {
+        parses_as_identifier(s) && s != "Fn"
+    })
 }
 
 /// All basic effect types (surface syntax).

@@ -81,6 +81,11 @@ pub(crate) struct ModuleExports {
 /// # Errors
 ///
 /// Returns a string describing the parse error if the source is invalid.
+///
+/// # Panics
+///
+/// Panics if no workflow definition is found after the check above passes
+/// (should be unreachable).
 pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface::Program, String> {
     use ash_parser::input::new_input;
     use ash_parser::parse_module::parse_fn_definition;
@@ -109,17 +114,14 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
     let mut all_workflows = Vec::new();
     loop {
         let snapshot = input.clone();
-        match workflow_def.parse_next(&mut input) {
-            Ok(wf) => {
-                skip_whitespace_and_comments(&mut input);
-                // If there is more input, this is a helper workflow; if EOF, it's
-                // the entry workflow. We collect all and split at the end.
-                all_workflows.push(wf);
-            }
-            Err(_) => {
-                input = snapshot;
-                break;
-            }
+        if let Ok(wf) = workflow_def.parse_next(&mut input) {
+            skip_whitespace_and_comments(&mut input);
+            // If there is more input, this is a helper workflow; if EOF, it's
+            // the entry workflow. We collect all and split at the end.
+            all_workflows.push(wf);
+        } else {
+            input = snapshot;
+            break;
         }
     }
 
@@ -433,9 +435,9 @@ pub(crate) fn collect_module_exports(
         }
     }
 
-    for snippet in extract_semicolon_snippets(&source, |trimmed| {
-        trimmed.starts_with("pub builtin fn ")
-    }) {
+    for snippet in
+        extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub builtin fn "))
+    {
         if let Some(callable) = parse_builtin_fn_callable(&snippet)? {
             insert_callable_export(&mut exports, &callable.name, callable.callable)?;
         }

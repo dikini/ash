@@ -42,20 +42,23 @@ impl RegexProvider {
         let re = regex::Regex::new(pattern)
             .map_err(|e| CapabilityError::InvalidArgument(format!("Invalid regex pattern: {e}")))?;
 
-        if let Some(mat) = re.find(text) {
-            Ok(Value::Variant {
-                name: "Some".to_string(),
-                fields: Box::new(vec![(
-                    "value".to_string(),
-                    Value::String(mat.as_str().to_string()),
-                )]),
-            })
-        } else {
-            Ok(Value::Variant {
-                name: "None".to_string(),
-                fields: Box::new(vec![]),
-            })
-        }
+        re.find(text).map_or_else(
+            || {
+                Ok(Value::Variant {
+                    name: "None".to_string(),
+                    fields: Box::new(vec![]),
+                })
+            },
+            |mat| {
+                Ok(Value::Variant {
+                    name: "Some".to_string(),
+                    fields: Box::new(vec![(
+                        "value".to_string(),
+                        Value::String(mat.as_str().to_string()),
+                    )]),
+                })
+            },
+        )
     }
 
     /// Handle `matches` execute operation

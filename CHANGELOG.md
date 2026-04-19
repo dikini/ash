@@ -43,6 +43,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   could generate `Fn`, a contextual keyword in type position (function-type
   syntax `Fn(T) -> R`). The `Fn` case now filtered out of the strategy.
 
+- Clippy warnings in `ash-engine`: `parse_program_with_functions` missing
+  `# Panics` doc section, `single_match_else` in workflow loop,
+  `option_if_let_else` in regex provider, `too_many_lines` in
+  `parse_workflow_source_with_imports` (extracted `process_program_definitions`
+  helper and `ProgramProcessingResult` type alias), unnecessary raw string
+  literal hashes in `regex_import_limitation` test.
+
 - PLAN-INDEX phase status alignment. Phase 65 (8/8 tasks), Phase 67 (11/11
   tasks), and Phase 91 (7/7 tasks including TASK-612) now correctly show
   `✅ Complete` instead of stale `🟡 Ready`.

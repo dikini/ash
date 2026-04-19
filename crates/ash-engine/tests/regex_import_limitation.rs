@@ -20,10 +20,10 @@ fn regex_import_fails_at_module_boundary() {
     let mut f = std::fs::File::create(&ash_file).expect("create temp ash file");
     writeln!(
         f,
-        r#"use regex::{{find}}
+        "use regex::{{find}}
 workflow test_regex() -> String {{
     done;
-}}"#
+}}"
     )
     .expect("write temp ash file");
 

@@ -132,6 +132,13 @@ pub struct ModuleFileCheckResult {
     pub errors: Vec<String>,
 }
 
+/// Result of processing a multi-workflow program: closures, param counts, and lowered workflow.
+type ProgramProcessingResult = (
+    HashMap<String, Value>,
+    HashMap<String, usize>,
+    ash_core::ast::Workflow,
+);
+
 impl Engine {
     /// Create a new engine builder with default configuration
     ///
@@ -326,6 +333,72 @@ impl Engine {
             &loaded.imported_callables,
         )
     }
+    /// Extract local function definitions as closures and register helper workflows.
+    ///
+    /// Returns `(local_closures, local_param_counts)` with both imported and
+    /// locally-defined entries.
+    fn process_program_definitions(
+        &self,
+        program: &ash_parser::surface::Program,
+        imported_closures: HashMap<String, Value>,
+        imported_param_counts: HashMap<String, usize>,
+    ) -> Result<ProgramProcessingResult, EngineError> {
+        use ash_core::env_frame::EnvFrame;
+        use ash_parser::{lower_expr, lower_workflow};
+
+        let core = lower_workflow(&program.workflow)
+            .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
+
+        let (mut local_closures, mut local_param_counts) =
+            (imported_closures, imported_param_counts);
+
+        for def_item in &program.definitions {
+            if let ash_parser::surface::Definition::Function(fn_def) = def_item
+                && let Ok(body_expr) = lower_expr(&fn_def.body)
+            {
+                let mut env_frame = EnvFrame::new();
+                let slot = env_frame.insert_late(fn_def.name.to_string());
+                let params: Vec<(String, Option<String>)> = fn_def
+                    .params
+                    .iter()
+                    .map(|p| (p.name.to_string(), None))
+                    .collect();
+                local_param_counts.insert(fn_def.name.to_string(), params.len());
+                let env_frame = std::sync::Arc::new(env_frame);
+                let closure = Value::Closure {
+                    params,
+                    body: Box::new(body_expr),
+                    env: env_frame.clone(),
+                };
+                slot.set_late(closure.clone());
+                local_closures.insert(fn_def.name.to_string(), closure);
+            }
+        }
+
+        for helper in &program.helper_workflows {
+            let helper_core = lower_workflow(helper).map_err(|e| {
+                EngineError::Parse(format!(
+                    "lowering error in helper workflow '{}': {e}",
+                    helper.name
+                ))
+            })?;
+            let arity = helper.params.len();
+            let params: Vec<String> = helper.params.iter().map(|p| p.name.to_string()).collect();
+            self.runtime_state.blocking_register_callable_workflow(
+                helper.name.as_ref(),
+                helper_core,
+                arity,
+                params,
+            );
+        }
+
+        for helper in &program.helper_workflows {
+            local_param_counts.insert(helper.name.to_string(), helper.params.len());
+        }
+
+        Ok((local_closures, local_param_counts, core))
+    }
+
     fn parse_workflow_source_with_imports(
         &self,
         source: &str,
@@ -359,56 +432,13 @@ impl Engine {
                             ))
                         })?;
 
-                    let core = lower_workflow(&program.workflow)
-                        .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                     let id = self.store_surface_workflow_def(program.workflow.clone());
-
-                    let (mut local_closures, mut local_param_counts) =
-                        (imported_closures, imported_param_counts);
-                    for def_item in &program.definitions {
-                        if let ash_parser::surface::Definition::Function(fn_def) = def_item
-                            && let Ok(body_expr) = ash_parser::lower_expr(&fn_def.body)
-                        {
-                            let mut env_frame = ash_core::env_frame::EnvFrame::new();
-                            let slot = env_frame.insert_late(fn_def.name.to_string());
-                            let params: Vec<(String, Option<String>)> = fn_def
-                                .params
-                                .iter()
-                                .map(|p| (p.name.to_string(), None))
-                                .collect();
-                            local_param_counts.insert(fn_def.name.to_string(), params.len());
-                            let env_frame = std::sync::Arc::new(env_frame);
-                            let closure = Value::Closure {
-                                params,
-                                body: Box::new(body_expr),
-                                env: env_frame.clone(),
-                            };
-                            slot.set_late(closure.clone());
-                            local_closures.insert(fn_def.name.to_string(), closure);
-                        }
-                    }
-
-                    for helper in &program.helper_workflows {
-                        let helper_core = lower_workflow(helper).map_err(|e| {
-                            EngineError::Parse(format!(
-                                "lowering error in helper workflow '{}': {e}",
-                                helper.name
-                            ))
-                        })?;
-                        let arity = helper.params.len();
-                        let params: Vec<String> =
-                            helper.params.iter().map(|p| p.name.to_string()).collect();
-                        self.runtime_state.blocking_register_callable_workflow(
-                            helper.name.as_ref(),
-                            helper_core,
-                            arity,
-                            params,
-                        );
-                    }
-
-                    for helper in &program.helper_workflows {
-                        local_param_counts.insert(helper.name.to_string(), helper.params.len());
-                    }
+                    let (local_closures, local_param_counts, core) = self
+                        .process_program_definitions(
+                            &program,
+                            imported_closures,
+                            imported_param_counts,
+                        )?;
 
                     self.store_surface_program(id, program);
                     self.store_imported_type_defs(id, imported_type_defs);
@@ -437,65 +467,12 @@ impl Engine {
                 let program = module_loader::parse_program_with_functions(source)
                     .map_err(|_| EngineError::Parse(format!("{parse_error}")))?;
 
-                let core = lower_workflow(&program.workflow)
-                    .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(program.workflow.clone());
-
-                // Extract local function definitions as closures for execution
-                let (mut local_closures, mut local_param_counts) =
-                    (imported_closures, imported_param_counts);
-                for def in &program.definitions {
-                    if let ash_parser::surface::Definition::Function(fn_def) = def
-                        && let Ok(body_expr) = ash_parser::lower_expr(&fn_def.body)
-                    {
-                        // Use Late binding so recursive calls resolve to the closure itself
-                        let mut env_frame = ash_core::env_frame::EnvFrame::new();
-                        let slot = env_frame.insert_late(fn_def.name.to_string());
-                        let params: Vec<(String, Option<String>)> = fn_def
-                            .params
-                            .iter()
-                            .map(|p| (p.name.to_string(), None))
-                            .collect();
-                        local_param_counts.insert(fn_def.name.to_string(), params.len());
-                        let env_frame = std::sync::Arc::new(env_frame);
-                        let closure = Value::Closure {
-                            params,
-                            body: Box::new(body_expr),
-                            env: env_frame.clone(),
-                        };
-                        slot.set_late(closure.clone());
-                        local_closures.insert(fn_def.name.to_string(), closure);
-                        // Functions with bodies that can't be lowered (e.g., containing
-                        // if/then/else) are silently skipped -- they require
-                        // Expr-level support not yet in the interpreter.
-                    }
-                }
-
-                // Register helper workflows as callable targets in the runtime state.
-                // This enables Workflow::Call to dispatch to them by name at execution time.
-                for helper in &program.helper_workflows {
-                    let helper_core = lower_workflow(helper).map_err(|e| {
-                        EngineError::Parse(format!(
-                            "lowering error in helper workflow '{}': {e}",
-                            helper.name
-                        ))
-                    })?;
-                    let arity = helper.params.len();
-                    let params: Vec<String> =
-                        helper.params.iter().map(|p| p.name.to_string()).collect();
-                    // We use block_on here because parse_workflow_source_with_imports
-                    // is not async, but register_callable_workflow is.
-                    self.runtime_state.blocking_register_callable_workflow(
-                        helper.name.as_ref(),
-                        helper_core,
-                        arity,
-                        params,
-                    );
-                }
-
-                for helper in &program.helper_workflows {
-                    local_param_counts.insert(helper.name.to_string(), helper.params.len());
-                }
+                let (local_closures, local_param_counts, core) = self.process_program_definitions(
+                    &program,
+                    imported_closures,
+                    imported_param_counts,
+                )?;
 
                 self.store_surface_program(id, program);
                 self.store_imported_type_defs(id, imported_type_defs);

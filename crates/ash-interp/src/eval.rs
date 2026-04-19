@@ -165,23 +165,19 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
 /// Check whether `(func, module)` identifies a known builtin.
 ///
 /// Looks up both the qualified form `"module::func"` (when `module` is `Some`)
-/// and the bare `func` name in the dispatch table.
+/// and the bare `func` name in the dispatch table. O(1) via HashMap lookups.
 pub fn is_known_builtin(func: &str, module: Option<&str>) -> bool {
     let table = builtin_dispatch_table();
 
-    // Try qualified name first
+    // Try qualified name first (O(1))
     if let Some(mod_name) = module {
-        #[allow(clippy::collapsible_if)]
-        for &key in table.keys() {
-            if let Some((m, f)) = key.split_once("::") {
-                if m == mod_name && f == func {
-                    return true;
-                }
-            }
+        let qualified = format!("{mod_name}::{func}");
+        if table.contains_key(qualified.as_str()) {
+            return true;
         }
     }
 
-    // Try unqualified name
+    // Try unqualified name (O(1))
     table.contains_key(func)
 }
 
@@ -210,6 +206,15 @@ pub fn dispatch_builtin(
     if !entry.implemented {
         return Some(Err(EvalError::UnimplementedBuiltin {
             name: qualified_name.to_string(),
+        }));
+    }
+
+    // Arity enforcement: reject if argument count doesn't match unless variadic.
+    if !entry.variadic && args.len() != entry.arity {
+        return Some(Err(EvalError::WrongArity {
+            expected: entry.arity,
+            actual: args.len(),
+            callee: Some(qualified_name.to_string()),
         }));
     }
 
@@ -354,7 +359,24 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 return apply_closure(params, body, env, args);
             }
 
-            // Try built-in function dispatch
+            // Try builtin dispatch table first (O(1) qualified lookup).
+            // dispatch_builtin returns Some(result) when the name is in the table.
+            let qname = qualified_builtin_name(func, module.as_deref());
+            if let Some(result) = dispatch_builtin(&qname, &args, ctx) {
+                // Preserve partial-application: if the table rejects for too-few
+                // args, fall through to make_partial_builtin just like the legacy path.
+                match result {
+                    Err(EvalError::WrongArity { expected, actual, callee: Some(ref name) })
+                        if actual < expected =>
+                    {
+                        return Ok(make_partial_builtin(name, &args, expected));
+                    }
+                    other => return other,
+                }
+            }
+
+            // Not in dispatch table: try legacy eval_function_call (covers
+            // unqualified builtins like "len", "head" matched via pattern).
             match eval_function_call(func, module.as_deref(), &args, ctx) {
                 Ok(value) => Ok(value),
                 Err(EvalError::WrongArity {
@@ -363,13 +385,6 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                     callee: Some(builtin_name),
                 }) if actual < expected => Ok(make_partial_builtin(&builtin_name, &args, expected)),
                 Err(EvalError::UnknownFunction(_)) => {
-                    // Check if this was a declared builtin that lacks a runtime
-                    // implementation (TASK-622: clear error on unknown builtin).
-                    if is_known_builtin(func, module.as_deref()) {
-                        let qname = qualified_builtin_name(func, module.as_deref());
-                        return Err(EvalError::UnimplementedBuiltin { name: qname });
-                    }
-
                     // Not a built-in: try looking up a closure in the context
                     match ctx.get(func) {
                         Some(Value::Closure { params, body, env }) => {

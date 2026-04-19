@@ -47,7 +47,14 @@ pub enum CallableKind {
     /// Bodyless builtin function resolved at link time.
     Builtin {
         /// Module path joined by `::` (e.g. `"string"`, `"record"`).
-        /// Populated from the import path at import resolution time.
+        ///
+        /// # Invariant
+        ///
+        /// This field is `String::new()` inside raw [`ModuleExports`] — it is
+        /// populated by [`load_ordinary_file`] from the import path before the
+        /// callable is inserted into `imported_callables`. Any code reading this
+        /// field from a raw `ModuleExports` value (i.e., outside of
+        /// `load_ordinary_file`) will observe an empty string.
         module: String,
     },
 }
@@ -214,7 +221,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                     let module_name = import.module_segments.join("::");
                     for (k, mut v) in exports.callables.clone() {
                         if let CallableKind::Builtin { ref mut module } = v.kind {
-                            *module = module_name.clone();
+                            module_name.clone_into(module);
                         }
                         imported_callables.insert(k, v);
                     }
@@ -1347,6 +1354,34 @@ pub type Flag = On | Off;",
                     "module name must be populated from the import path by load_ordinary_file");
             }
             other => panic!("expected Builtin {{ module }}, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn builtin_fn_glob_import_carries_module_name() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        std::fs::write(
+            dir.join("math.ash"),
+            "pub builtin fn add(x: Int, y: Int) -> Int;\npub builtin fn sub(x: Int, y: Int) -> Int;\n",
+        )
+        .expect("write");
+        std::fs::write(dir.join("caller.ash"), "use math::*\nworkflow main { ret 0 }\n")
+            .expect("write");
+
+        let result = super::load_ordinary_file(&dir.join("caller.ash")).expect("load");
+
+        for name in &["add", "sub"] {
+            let callable = result.imported_callables.get(*name)
+                .unwrap_or_else(|| panic!("'{name}' should be in imported_callables"));
+            match &callable.kind {
+                super::CallableKind::Builtin { module } => {
+                    assert_eq!(module.as_str(), "math",
+                        "glob import must stamp module name on Builtin callable '{name}'");
+                }
+                other => panic!("expected Builtin {{ module }} for '{name}', got: {:?}", other),
+            }
         }
     }
 }

@@ -286,7 +286,7 @@ fn definition_hover(definition: &Definition) -> Hover {
             let ret = type_to_string(&def.return_type);
             markdown(
                 format!("builtin fn {}({params}) -> {ret}", def.name),
-                Some("Builtin function (externally implemented)".to_string()),
+                Some("Builtin function (runtime-provided)".to_string()),
             )
         }
     }

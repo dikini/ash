@@ -678,11 +678,11 @@ pub enum ModuleItem {
     Interface(InterfaceDef),
     /// Interface impl definition
     Impl(ImplDef),
-    /// Builtin function definition (externally implemented, no Ash-level body)
+    /// Builtin function definition (runtime-provided, no Ash-level body)
     BuiltinFn(BuiltinFnDef),
 }
 
-/// Builtin function definition (externally implemented, no Ash-level body).
+/// Builtin function definition (runtime-provided, no Ash-level body).
 ///
 /// Represents a callable registration with a type signature but no body
 /// expression -- dispatch happens at runtime via the host environment.

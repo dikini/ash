@@ -24,6 +24,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   backward-compatibility contract for all 21 current evaluator builtins, and
   7-track plan (A through F).
 
+- Track A implementation (TASK-614 to TASK-617): `builtin fn` parser and
+  surface AST. Adds `BuiltinFnDef` variant, semicolon-terminated parsing,
+  lowering to core IR, and module loader snippet extraction. Decision gate D1
+  passed. Review fixes: private builtin visibility (SPEC Section 5.3), hover
+  text alignment, body-rejection error severity (Cut), spec-required error
+  tests (SPEC Section 11). Phase 92 added to PLAN-INDEX.
+
 - Non-blocking doc clarifications: `extern fn` wording tightened with explicit
   scope (link-time resolution, ABI constraints, effect rules), InlineCallable
   consumer sites named concretely (evaluator, import resolution, typeck

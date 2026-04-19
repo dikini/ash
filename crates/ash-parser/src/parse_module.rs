@@ -1314,6 +1314,13 @@ pub fn parse_builtin_fn_definition(input: &mut ParseInput) -> ModalResult<Defini
     let return_type = parse_surface_type(input)?;
     skip_whitespace_and_comments(input);
 
+    // Reject braces after return type -- builtin fn must not have a body
+    if input.input.starts_with("{") {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
     // Expect semicolon terminator
     let _ = literal_str(";").parse_next(input)?;
 

@@ -80,14 +80,13 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
 
 const fn definition_kind(def: &Definition) -> CompletionItemKind {
     match def {
-        Definition::Function(_) => CompletionItemKind::FUNCTION,
+        Definition::Function(_) | Definition::BuiltinFn(_) => CompletionItemKind::FUNCTION,
         Definition::Capability(_) | Definition::Role(_) | Definition::Proxy(_) => {
             CompletionItemKind::CLASS
         }
         Definition::Policy(_) => CompletionItemKind::STRUCT,
         Definition::Interface(_) => CompletionItemKind::INTERFACE,
         Definition::Impl(_) => CompletionItemKind::CLASS,
-        Definition::BuiltinFn(_) => CompletionItemKind::FUNCTION,
     }
 }
 

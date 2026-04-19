@@ -91,11 +91,29 @@ fn parse_builtin_fn_no_params() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Reject: builtin fn with body (braces)
+// 6. Reject: builtin fn with body (braces) after return type
 // ---------------------------------------------------------------------------
 #[test]
 fn reject_builtin_fn_with_body() {
-    let _err = parse_builtin_err("builtin fn foo(x: Int) -> Int { x }");
+    let err = parse_builtin_err("builtin fn foo(x: Int) -> Int { x }");
+    assert!(
+        matches!(err, winnow::error::ErrMode::Cut(_)),
+        "expected Cut (unrecoverable) error for builtin fn with body, got: {:?}",
+        err
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 6b. Reject: builtin fn with body (braces) in place of return type
+// ---------------------------------------------------------------------------
+#[test]
+fn reject_builtin_fn_with_body_no_return_type() {
+    let err = parse_builtin_err("builtin fn foo(x: Int) { x }");
+    assert!(
+        matches!(err, winnow::error::ErrMode::Cut(_)),
+        "expected Cut (unrecoverable) error for builtin fn with body (no return type), got: {:?}",
+        err
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +121,12 @@ fn reject_builtin_fn_with_body() {
 // ---------------------------------------------------------------------------
 #[test]
 fn reject_builtin_fn_without_return_type() {
-    let _err = parse_builtin_err("builtin fn foo(x: Int);");
+    let err = parse_builtin_err("builtin fn foo(x: Int);");
+    assert!(
+        matches!(err, winnow::error::ErrMode::Cut(_)),
+        "expected Cut (unrecoverable) error for builtin fn without return type, got: {:?}",
+        err
+    );
 }
 
 // ---------------------------------------------------------------------------

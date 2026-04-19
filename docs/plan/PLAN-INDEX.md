@@ -2603,3 +2603,34 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 | [TASK-612](tasks/TASK-612-phase-65-phase-91-alignment-remediation.md) | Remediate remaining Phase 65 ↔ Phase 91 parser/typechecker/corpus alignment gaps without widening semantics | TASK-418, TASK-421, TASK-422, TASK-423, TASK-608, TASK-609, TASK-610 | 4-8 | ✅ Complete |
 
 **Deliverable:** No runtime stubs for supported `Workflow::Call` paths, no user-facing lifting panics, explicit lifting/effect contracts, parity evidence for supported runtime behavior, documented rollout policy/evidence for production use, and one final remediation task to align the delivered Phase 91 substrate with frozen Phase 65 contracts and surviving task/docs corpus.
+
+## Phase 92: `builtin fn` Declaration Form
+
+**Plan Reference:** [PLAN-BUILTIN-FN: builtin fn Declaration Form](PLAN-BUILTIN-FN.md)
+**Specs:** `SPEC-BUILTIN-FN`, `DESIGN-NOTE-BUILTIN-FN-AND-EXTERN-FN`
+**Priority:** High
+**Status:** 🟡 In Progress
+
+|| Task | Description | Spec | Est. Hours | Status ||
+||------|-------------|------|------------|--------|\
+|| [TASK-614](#) | Add `builtin` keyword and `BuiltinFnDef` surface AST variant | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
+|| [TASK-615](#) | Parse `builtin fn` declarations | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
+|| [TASK-616](#) | Lower `BuiltinFnDef` to IR | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
+|| [TASK-617](#) | Module-level snippet extraction for `builtin fn` | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
+|| [TASK-618](#) | Module loader registers `builtin fn` as callable exports | SPEC-BUILTIN-FN | 3-4 | 📝 Planned ||
+|| [TASK-619](#) | Typechecker resolves `builtin fn` type signatures | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
+|| [TASK-620](#) | End-to-end import resolution for `builtin fn` | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
+|| [TASK-621](#) | Runtime builtin dispatch table | SPEC-BUILTIN-FN | 3-4 | 📝 Planned ||
+|| [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
+|| [TASK-626](#) | Declare record operation builtins | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-627](#) | Rewrite `std/src/regex.ash` with `builtin fn` declarations | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-628](#) | Move regex dispatch to evaluator builtin table | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
+|| [TASK-630](#) | Positive end-to-end regex test | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-629](#) | Delete `RegexProvider` | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
+|| [TASK-631A](#) | Remove hardcoded builtin type entries covered by D1 | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-631B](#) | Remove remaining hardcoded builtin type entries (blocked on D2) | SPEC-BUILTIN-FN | 2-3 | 🔴 Blocked ||
+|| [TASK-632](#) | Update CHANGELOG.md and PLAN-INDEX | — | 1 | 📝 Planned ||
+|| [TASK-633](#) | Full workspace verification | — | 1 | 📝 Planned ||
+
+**Deliverable:** `builtin fn` as a first-class declaration form for pure runtime-provided functions. Track A (parser/AST) complete. Tracks B–F remain. Decision gate D1 passed.

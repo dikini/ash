@@ -115,7 +115,7 @@ pub struct FnDef {
     pub span: Span,
 }
 
-/// A builtin function definition (externally implemented, no Ash-level body).
+/// A builtin function definition (runtime-provided, no Ash-level body).
 ///
 /// Syntax: `[pub] builtin fn <name>[<type_params>](<params>) -> <return_type>;`
 #[derive(Debug, Clone, PartialEq)]

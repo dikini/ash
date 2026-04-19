@@ -434,7 +434,7 @@ pub(crate) fn collect_module_exports(
     }
 
     for snippet in extract_semicolon_snippets(&source, |trimmed| {
-        trimmed.starts_with("pub builtin fn ") || trimmed.starts_with("builtin fn ")
+        trimmed.starts_with("pub builtin fn ")
     }) {
         if let Some(callable) = parse_builtin_fn_callable(&snippet)? {
             insert_callable_export(&mut exports, &callable.name, callable.callable)?;
@@ -1209,27 +1209,20 @@ pub type Role = System | User;",
         let exports = collect_module_exports(&dir.join("module.ash"), &mut cache)
             .expect("collecting exports should succeed");
 
-        // Both pub builtin fn and module-private builtin fn should be extracted
+        // Only pub builtin fn is exported; module-private builtin fn is not.
         assert!(
             exports.callables.contains_key("add"),
             "module should export callable 'add'"
         );
         assert!(
-            exports.callables.contains_key("private_helper"),
-            "module should export callable 'private_helper'"
+            !exports.callables.contains_key("private_helper"),
+            "module-private builtin fn should NOT be exported"
         );
 
         // Verify parameter names
         let add = exports.callables.get("add").expect("add callable");
         assert_eq!(add.params, vec!["x", "y"]);
         assert_eq!(add.exported_name, "add");
-
-        let helper = exports
-            .callables
-            .get("private_helper")
-            .expect("helper callable");
-        assert_eq!(helper.params, vec!["a"]);
-        assert_eq!(helper.exported_name, "private_helper");
 
         // Verify type def is also collected (not disrupted by builtin fn extraction)
         assert!(

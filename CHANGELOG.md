@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Track C implementation (TASK-621, TASK-622): runtime builtin dispatch table
+  and clear error on unknown builtins. Adds `BuiltinEntry` metadata struct and
+  `builtin_dispatch_table()` in `ash-interp` mapping qualified names to arity,
+  variadic flag, and implementation status. When `eval_function_call` returns
+  `UnknownFunction` for a name in the dispatch table, produces
+  `EvalError::UnimplementedBuiltin` instead. 23 new integration tests.
+
 - Track B implementation (TASK-618 to TASK-620): `builtin fn` module loader
   and typechecker support. Introduces `CallableKind` enum (`User { body }` vs
   `Builtin`) to distinguish bodyless builtins from Ash-bodied functions. Module

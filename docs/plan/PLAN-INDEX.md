@@ -2620,8 +2620,8 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 || [TASK-618](#) | Module loader registers `builtin fn` as callable exports | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
 || [TASK-619](#) | Typechecker resolves `builtin fn` type signatures | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
 || [TASK-620](#) | End-to-end import resolution for `builtin fn` | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-621](#) | Runtime builtin dispatch table | SPEC-BUILTIN-FN | 3-4 | 📝 Planned ||
-|| [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-621](#) | Runtime builtin dispatch table | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
+|| [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
 || [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
 || [TASK-626](#) | Declare record operation builtins | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
 || [TASK-627](#) | Rewrite `std/src/regex.ash` with `builtin fn` declarations | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
@@ -2633,4 +2633,4 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 || [TASK-632](#) | Update CHANGELOG.md and PLAN-INDEX | — | 1 | 📝 Planned ||
 || [TASK-633](#) | Full workspace verification | — | 1 | 📝 Planned ||
 
-**Deliverable:** `builtin fn` as a first-class declaration form for pure runtime-provided functions. Track A (parser/AST) complete. Tracks B–F remain. Decision gate D1 passed.
+**Deliverable:** `builtin fn` as a first-class declaration form for pure runtime-provided functions. Tracks A (parser/AST), B (module loader/typechecker), C (runtime dispatch) complete. Tracks D–F remain.

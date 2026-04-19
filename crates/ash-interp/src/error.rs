@@ -40,6 +40,9 @@ pub enum EvalError {
     #[error("unknown function: {0}")]
     UnknownFunction(Name),
 
+    #[error("builtin function '{name}' declared but not implemented in runtime")]
+    UnimplementedBuiltin { name: String },
+
     #[error("wrong number of arguments: expected {expected}, got {actual}")]
     WrongArity {
         expected: usize,

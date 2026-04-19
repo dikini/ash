@@ -10,6 +10,194 @@ use crate::EvalResult;
 use crate::context::Context;
 use crate::error::EvalError;
 
+// ── Builtin dispatch table (TASK-621) ────────────────────────────
+
+/// Metadata for a builtin function entry in the dispatch table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BuiltinEntry {
+    /// Number of required parameters (0 for variadic builtins).
+    pub arity: usize,
+    /// Whether the builtin accepts a variable number of arguments.
+    pub variadic: bool,
+    /// Whether the runtime implementation is present.
+    /// Entries with `implemented: false` produce [`EvalError::UnimplementedBuiltin`].
+    pub implemented: bool,
+}
+
+/// Returns the builtin dispatch table mapping qualified names to entries.
+///
+/// Qualified names use `"module::func"` format (e.g., `"string::concat"`).
+/// Unqualified names are used for builtins that accept any module prefix
+/// (e.g., `"len"`, `"head"`).
+pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> {
+    static TABLE: std::sync::OnceLock<HashMap<&'static str, BuiltinEntry>> =
+        std::sync::OnceLock::new();
+    TABLE.get_or_init(|| {
+        let mut m = HashMap::new();
+        // ── String module builtins (qualified) ──
+        m.insert(
+            "string::concat",
+            BuiltinEntry {
+                arity: 0,
+                variadic: true,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "string::starts_with",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "string::ends_with",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "string::is_empty",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+
+        // ── Forward-declared string builtins (not yet implemented) ──
+        m.insert(
+            "string::to_upper",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: false,
+            },
+        );
+        m.insert(
+            "string::to_lower",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: false,
+            },
+        );
+        m.insert(
+            "string::trim",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: false,
+            },
+        );
+
+        // ── Unqualified builtins ──
+        let unqualified = [
+            ("len", 1, false),
+            ("head", 1, false),
+            ("tail", 1, false),
+            ("append", 2, false),
+            ("concat", 2, false),
+            ("filter", 2, false),
+            ("map", 2, false),
+            ("starts_with", 2, false),
+            ("ends_with", 2, false),
+            ("keys", 1, false),
+            ("values", 1, false),
+            ("is_int", 1, false),
+            ("is_string", 1, false),
+            ("is_bool", 1, false),
+            ("is_list", 1, false),
+            ("is_record", 1, false),
+            ("is_null", 1, false),
+        ];
+        for (name, arity, variadic) in unqualified {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic,
+                    implemented: true,
+                },
+            );
+        }
+        m.insert(
+            "record",
+            BuiltinEntry {
+                arity: 0,
+                variadic: true,
+                implemented: true,
+            },
+        );
+        m
+    })
+}
+
+/// Check whether `(func, module)` identifies a known builtin.
+///
+/// Looks up both the qualified form `"module::func"` (when `module` is `Some`)
+/// and the bare `func` name in the dispatch table.
+pub fn is_known_builtin(func: &str, module: Option<&str>) -> bool {
+    let table = builtin_dispatch_table();
+
+    // Try qualified name first
+    if let Some(mod_name) = module {
+        #[allow(clippy::collapsible_if)]
+        for &key in table.keys() {
+            if let Some((m, f)) = key.split_once("::") {
+                if m == mod_name && f == func {
+                    return true;
+                }
+            }
+        }
+    }
+
+    // Try unqualified name
+    table.contains_key(func)
+}
+
+/// Build a qualified builtin name from its components.
+fn qualified_builtin_name(func: &str, module: Option<&str>) -> String {
+    match module {
+        Some(m) => format!("{m}::{func}"),
+        None => func.to_string(),
+    }
+}
+
+/// Dispatch a builtin call by qualified name.
+///
+/// Returns `Some(result)` if the qualified name exists in the dispatch table
+/// (either as implemented or forward-declared), `None` otherwise.
+/// Forward-declared but unimplemented builtins produce
+/// [`EvalError::UnimplementedBuiltin`].
+pub fn dispatch_builtin(
+    qualified_name: &str,
+    args: &[Value],
+    ctx: &Context,
+) -> Option<EvalResult<Value>> {
+    let table = builtin_dispatch_table();
+    let entry = table.get(qualified_name)?;
+
+    if !entry.implemented {
+        return Some(Err(EvalError::UnimplementedBuiltin {
+            name: qualified_name.to_string(),
+        }));
+    }
+
+    // Split qualified name into (module, func) for eval_function_call
+    let (module, func) = match qualified_name.rsplit_once("::") {
+        Some((m, f)) => (Some(m), f),
+        None => (None, qualified_name),
+    };
+
+    Some(eval_function_call(func, module, args, ctx))
+}
+
+// ── End builtin dispatch table ───────────────────────────────────
+
 /// Evaluate an expression in the given context
 ///
 /// # Arguments
@@ -134,6 +322,13 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                     callee: Some(builtin_name),
                 }) if actual < expected => Ok(make_partial_builtin(&builtin_name, &args, expected)),
                 Err(EvalError::UnknownFunction(_)) => {
+                    // Check if this was a declared builtin that lacks a runtime
+                    // implementation (TASK-622: clear error on unknown builtin).
+                    if is_known_builtin(func, module.as_deref()) {
+                        let qname = qualified_builtin_name(func, module.as_deref());
+                        return Err(EvalError::UnimplementedBuiltin { name: qname });
+                    }
+
                     // Not a built-in: try looking up a closure in the context
                     match ctx.get(func) {
                         Some(Value::Closure { params, body, env }) => {

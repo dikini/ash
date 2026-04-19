@@ -211,7 +211,13 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
             match selection {
                 ImportSelection::Glob => {
                     imported_type_defs.extend(exports.type_defs.values().cloned());
-                    imported_callables.extend(exports.callables.clone());
+                    let module_name = import.module_segments.join("::");
+                    for (k, mut v) in exports.callables.clone() {
+                        if let CallableKind::Builtin { ref mut module } = v.kind {
+                            *module = module_name.clone();
+                        }
+                        imported_callables.insert(k, v);
+                    }
                 }
                 ImportSelection::Named { name, alias } => {
                     let exported_name = alias.unwrap_or_else(|| name.clone());
@@ -220,6 +226,9 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                     } else if let Some(callable) = exports.callables.get(&name) {
                         let mut callable = callable.clone();
                         callable.exported_name.clone_from(&exported_name);
+                        if let CallableKind::Builtin { ref mut module } = callable.kind {
+                            *module = import.module_segments.join("::");
+                        }
                         imported_callables.insert(exported_name, callable);
                     } else {
                         return Err(EngineError::Parse(format!(

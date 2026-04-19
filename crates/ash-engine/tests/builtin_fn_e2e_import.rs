@@ -327,7 +327,49 @@ fn builtin_fn_import_is_bound_as_closure_in_workflow() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 7: String builtin dispatches via qualified name end-to-end
+// Test 7: Std regex module imports resolve as builtin callables
+// ---------------------------------------------------------------------------
+
+/// Smoke test that the stdlib regex module now loads through `pub builtin fn`
+/// declarations, so `use regex::{find}` succeeds at module-load time.
+#[test]
+fn std_regex_builtin_import_resolves_at_module_load() {
+    let tmp_dir = tempfile::tempdir().expect("temp dir created");
+    let caller = tmp_dir.path().join("caller.ash");
+    std::fs::write(&caller, "use regex::{find}\nworkflow main { done; }\n")
+        .expect("write caller.ash");
+
+    let result = ash_engine::module_loader::load_ordinary_file(&caller);
+    assert!(
+        result.is_ok(),
+        "Expected std regex import to succeed, but got error: {:?}",
+        result.err()
+    );
+
+    let loaded = result.unwrap();
+    let find_callable = loaded
+        .imported_callables
+        .get("find")
+        .expect("find should be imported from std regex module");
+
+    assert!(
+        matches!(
+            &find_callable.kind,
+            ash_engine::module_loader::CallableKind::Builtin { module }
+                if module == "regex"
+        ),
+        "Expected regex::find to be imported as CallableKind::Builtin from module 'regex', got: {:?}",
+        find_callable.kind
+    );
+    assert_eq!(
+        find_callable.params,
+        vec!["pattern", "text"],
+        "Expected regex::find parameter names to be preserved"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Test 8: String builtin dispatches via qualified name end-to-end
 // ---------------------------------------------------------------------------
 
 /// Verify that a builtin fn imported from a module named "string" dispatches
@@ -358,7 +400,7 @@ async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 8: Record builtin dispatches via unqualified name after import
+// Test 9: Record builtin dispatches via unqualified name after import
 // ---------------------------------------------------------------------------
 
 /// Verify that `use record::{keys}` imports correctly and dispatches to the
@@ -388,5 +430,54 @@ async fn builtin_fn_record_keys_dispatches_via_unqualified_name() {
     assert!(
         matches!(result, ash_core::Value::List(_)),
         "keys() should return a List, got: {result:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Test 10: Std regex builtin dispatches end-to-end through imported closure
+// ---------------------------------------------------------------------------
+
+/// Verify that stdlib regex builtins imported from `regex` execute through the
+/// evaluator builtin path rather than depending on capability dispatch.
+#[tokio::test]
+async fn builtin_fn_regex_dispatches_via_qualified_name() {
+    let tmp_dir = tempfile::tempdir().expect("temp dir");
+    let caller = tmp_dir.path().join("caller.ash");
+    std::fs::write(
+        &caller,
+        concat!(
+            "use regex::{find, matches, replace}\n",
+            "workflow main {\n",
+            "    ret record(\"find\", find(\"a+\", \"baaac\"), ",
+            "\"matches\", matches(\"\\d+\", \"abc123\"), ",
+            "\"replace\", replace(\"\\d+\", \"#\", \"abc123def456\"))\n",
+            "}\n"
+        ),
+    )
+    .expect("write caller.ash");
+
+    let engine = ash_engine::Engine::new().build().expect("engine builds");
+    let mut workflow = engine.parse_file(&caller).expect("parse");
+    engine.check(&mut workflow).expect("typecheck");
+    let result = engine.execute(&workflow).await.expect("execute");
+
+    let ash_core::Value::Record(fields) = result else {
+        panic!("expected record result from regex builtin e2e test");
+    };
+
+    assert_eq!(fields.get("matches"), Some(&ash_core::Value::Bool(true)));
+    assert_eq!(
+        fields.get("replace"),
+        Some(&ash_core::Value::String("abc#def#".to_string()))
+    );
+    assert_eq!(
+        fields.get("find"),
+        Some(&ash_core::Value::Variant {
+            name: "Some".to_string(),
+            fields: Box::new(vec![(
+                "value".to_string(),
+                ash_core::Value::String("aaa".to_string())
+            )]),
+        })
     );
 }

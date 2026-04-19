@@ -1035,8 +1035,6 @@ pub struct EngineBuilder {
     enable_stdio: bool,
     /// Whether to enable filesystem capabilities
     enable_fs: bool,
-    /// Whether to enable regex capabilities
-    enable_regex: bool,
     /// HTTP configuration if enabled
     http_config: Option<HttpConfig>,
     /// Custom providers to register (using the unified `CapabilityProvider` trait)
@@ -1086,12 +1084,6 @@ impl EngineBuilder {
             providers.insert("meta".to_string(), provider);
         }
 
-        // Register regex provider if enabled
-        if self.enable_regex {
-            let provider = crate::providers::RegexProvider::new();
-            providers.insert(provider.name().to_string(), Arc::new(provider));
-        }
-
         // Register HTTP provider if configured
         // Note: HTTP provider is not yet implemented.
         if self.http_config.is_some() {
@@ -1135,16 +1127,6 @@ impl EngineBuilder {
     #[allow(clippy::missing_const_for_fn)] // Cannot be const due to HashMap operations in build()
     pub fn with_fs_capabilities(mut self) -> Self {
         self.enable_fs = true;
-        self
-    }
-
-    /// Add regex capabilities (`find`, `matches`, `replace`)
-    ///
-    /// These are operational-effect capabilities for regular expression operations.
-    #[must_use]
-    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to HashMap operations in build()
-    pub fn with_regex_capabilities(mut self) -> Self {
-        self.enable_regex = true;
         self
     }
 

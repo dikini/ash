@@ -1,6 +1,6 @@
 //! Standard capability providers for the Ash engine
 //!
-//! This module provides built-in capability providers for common I/O operations:
+//! This module provides built-in capability providers for effectful operations:
 //! - `StdioProvider`: Standard input/output operations (print, println, `read_line`)
 //! - `FsProvider`: Filesystem operations (`read_file`, `write_file`, `exists`)
 //! - `McpProvider`: MCP (Model Context Protocol) for LLM communication
@@ -19,9 +19,6 @@ pub use mcp::{McpCapabilities, McpConfig, McpProvider};
 
 pub mod llm;
 pub use llm::{LlmConfig, LlmProvider};
-
-pub mod regex;
-pub use regex::RegexProvider;
 
 /// Standard I/O capability provider
 ///

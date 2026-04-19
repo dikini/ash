@@ -284,7 +284,7 @@ pub builtin fn is_empty(s: String) -> Bool;
 
 1. **Red:** Create `string.ash`. Verify it parses and the module loader exports the four functions.
 2. **Green:** Wire `pub mod string` into the stdlib. Verify `use string::{concat}` resolves.
-3. **Verify:** `cargo test -p ash-engine --test regex_import_limitation` and new string-specific tests pass.
+3. **Verify:** `cargo test -p ash-engine --test builtin_fn_e2e_import`, `cargo test -p ash-engine --test regex_import_limitation`, and new string-specific tests pass.
 
 **Dependencies:** TASK-617, TASK-621
 
@@ -414,7 +414,7 @@ pub builtin fn replace(pattern: String, replacement: String, text: String) -> St
 
 ### TASK-628: Move Regex Dispatch to Evaluator Builtin Table
 
-**Objective:** Move regex function dispatch from `RegexProvider` (capability path) to the evaluator's builtin dispatch table (pure builtin path).
+**Objective:** Move regex function dispatch from the legacy capability path to the evaluator's builtin dispatch table (pure builtin path).
 
 **Files:**
 - Modify: `crates/ash-interp/src/eval.rs` (add `regex::find`, `regex::matches`, `regex::replace` to the builtin match arms)
@@ -423,7 +423,7 @@ pub builtin fn replace(pattern: String, replacement: String, text: String) -> St
 **TDD Steps:**
 
 1. **Red:** Write test calling `regex::find("a+", "abc")` through the builtin dispatch path. Expect failure (not yet wired).
-2. **Green:** Add `(Some("regex"), "find")` match arm to `eval_function_call` that performs the regex operation directly (using the `regex` crate). Same logic as the current `RegexProvider::handle_find`.
+2. **Green:** Add `(Some("regex"), "find")` match arm to `eval_function_call` that performs the regex operation directly (using the `regex` crate). Match the existing regex runtime behavior.
 3. **Verify:** Regex operations work through the evaluator without any capability provider.
 
 **Dependencies:** TASK-621, TASK-627
@@ -434,16 +434,17 @@ pub builtin fn replace(pattern: String, replacement: String, text: String) -> St
 
 ### TASK-630: Positive End-to-End Regex Test
 
-**Objective:** Replace `regex_import_limitation.rs` (which documents that `use regex::{find}` fails) with a positive e2e test proving the full pipeline works.
+**Objective:** Prove the regex builtin path works end-to-end with honest positive coverage for import, typecheck, evaluator dispatch, and runtime execution.
 
 **Files:**
-- Delete or rewrite: `crates/ash-engine/tests/regex_import_limitation.rs` → `crates/ash-engine/tests/regex_e2e.rs`
+- Modify: `crates/ash-engine/tests/builtin_fn_e2e_import.rs`
+- Rewrite honestly as needed: `crates/ash-engine/tests/regex_import_limitation.rs` (historical filename may remain if contents are no longer limitation-framed)
 - Modify: `CHANGELOG.md`, `docs/plan/PLAN-090-SPEC-PROCESSOR.md`, `docs/plan/tasks/TASK-595-std-regex.md`
 
 **TDD Steps:**
 
-1. **Green:** Rewrite as a positive test: create temp `.ash` file with `use regex::{find}`, call `regex::find`, verify result.
-2. **Verify:** New test passes. Old limitation test no longer exists.
+1. **Green:** Add or retain a positive test: create temp `.ash` file with `use regex::{find}`, call the imported builtin through the real engine path, verify result.
+2. **Verify:** Positive regex e2e coverage passes. Any remaining `regex_import_limitation` target is historical-name-only and no longer claims a broken boundary.
 
 **Dependencies:** TASK-627, TASK-628
 
@@ -451,9 +452,9 @@ pub builtin fn replace(pattern: String, replacement: String, text: String) -> St
 
 ---
 
-### TASK-629: Delete `RegexProvider`
+### TASK-629: Delete legacy regex carrier
 
-**Objective:** Remove the `RegexProvider` capability provider, its engine wiring, its capability-specific tests, and all repository references describing regex as a capability provider.
+**Objective:** Remove the legacy regex capability carrier, its engine wiring, its capability-specific tests, and all repository references describing regex as a capability provider.
 
 **Gate:** Must not start until TASK-630 (positive e2e test) passes.
 
@@ -461,9 +462,9 @@ pub builtin fn replace(pattern: String, replacement: String, text: String) -> St
 
 Code (delete or rewrite):
 - Delete: `crates/ash-engine/src/providers/regex.rs`
-- Modify: `crates/ash-engine/src/providers/mod.rs` (remove `mod regex;` and `use regex::RegexProvider`)
-- Modify: `crates/ash-engine/src/lib.rs` (remove RegexProvider wiring at lines ~1114, ~1169)
-- Rewrite: `crates/ash-engine/tests/regex_capability.rs` → `regex_builtin.rs`
+- Modify: `crates/ash-engine/src/providers/mod.rs` (remove legacy regex module export)
+- Modify: `crates/ash-engine/src/lib.rs` (remove regex provider wiring)
+- Remove obsolete provider-era regex integration coverage or replace it with builtin-path coverage
 
 Documentation (update or remove provider references):
 - Modify: `CHANGELOG.md` (update entries at ~303-304 describing regex as provider)
@@ -471,7 +472,7 @@ Documentation (update or remove provider references):
 - Modify: `docs/plan/tasks/TASK-595-std-regex.md` (reflect provider deletion, update to builtin path)
 
 Verification:
-- Grep the entire repository for `RegexProvider`, `regex_provider`, `Regex capability`, and `regex::find.*act` to confirm zero remaining references.
+- Grep the entire repository for stale regex-carrier/provider wording and `regex::find.*act` to confirm cleanup.
 
 **Compatibility tie:** TASK-629 deletion is tied to the backward-compatibility
 decision in SPEC-BUILTIN-FN Section 9.5. Regex operations have no currently
@@ -482,7 +483,7 @@ exists. Deletion is safe once TASK-630 proves the builtin path works.
 
 1. **Red:** Verify existing regex tests still reference the capability provider path.
 2. **Green:** Delete provider, remove wiring, rewrite tests to use the builtin dispatch path. The 12 existing test cases (find, matches, replace, invalid pattern, etc.) should all pass through the evaluator builtin path instead. Update all documentation references.
-3. **Verify:** `cargo test -p ash-engine --test regex_builtin` green. `grep -r "RegexProvider" crates/ docs/` returns zero hits.
+3. **Verify:** builtin-path regex tests are green. Repo grep over crates/docs returns zero stale regex-carrier references.
 
 **Dependencies:** TASK-630 passes
 
@@ -496,7 +497,7 @@ exists. Deletion is safe once TASK-630 proves the builtin path works.
 
 ### TASK-631A: Remove Hardcoded Builtin Type Entries Covered by D1
 
-**Objective:** `add_builtin_functions()` in `type_env.rs` (called from `add_builtin_types()`) seeds type signatures for 13 builtins. After Track D1, string ops and record ops are covered by `.ash` declarations. Remove those entries. Type predicates remain hardcoded until Track D1.5 unblocks.
+**Objective:** `add_builtin_functions()` in `type_env.rs` (called from `add_builtin_types()`) seeds type signatures for 13 builtins. After Track D1, string ops and record ops are covered by `.ash` declarations. Remove any covered hardcoded entries that still remain. In the landed implementation this required deleting the string entries; record entries were already absent. Type predicates remain hardcoded until Track D1.5 unblocks.
 
 **Files:**
 - Modify: `crates/ash-typeck/src/type_env.rs` (remove string-op and record-op entries from `add_builtin_functions`)
@@ -533,7 +534,9 @@ exists. Deletion is safe once TASK-630 proves the builtin path works.
 
 ### TASK-632: Update CHANGELOG.md and PLAN-INDEX
 
-**Objective:** Document the new phase and all completed tasks.
+**Objective:** Reconcile changelog, PLAN-INDEX, and task-file status surfaces so
+they honestly reflect completed Track E work and completed TASK-631A while
+keeping TASK-631B blocked and TASK-633 pending.
 
 **Files:**
 - Modify: `CHANGELOG.md`
@@ -567,7 +570,8 @@ cargo doc --no-deps
 - **Partially parallel:** Tracks D1 and E can proceed once Track C is complete; D1 tasks are independent of each other
 - **Track E strict ordering:** TASK-627 → TASK-628 → TASK-630 → TASK-629. TASK-629 gated on TASK-630 passing.
 - **D2 deferred:** TASK-624-DEFERRED blocked on generic builtin semantics
-- **Blocked on D1 + E:** TASK-631A requires D1; TASK-632/633 require all non-deferred tracks
+- **Track F current state:** TASK-631A, TASK-632, and TASK-633 are complete;
+  TASK-631B remains blocked on deferred D2 generic builtin semantics
 - **Blocked on D2:** TASK-631B blocked on TASK-624-DEFERRED
 
 ## Decision Gates
@@ -576,7 +580,7 @@ cargo doc --no-deps
 - **D2 (after TASK-620):** Full import/typecheck pipeline works for bodyless fns.
 - **D3 (after TASK-622):** Runtime dispatch works. Feature is functionally complete for a single builtin.
 - **D4 (after TASK-630):** Regex e2e test passes. Proven replacement for capability provider.
-- **D5 (after TASK-629):** RegexProvider deleted. Migration is irreversible.
+- **D5 (after TASK-629):** Legacy regex carrier deleted. Migration is irreversible.
 
 ## Estimated Total
 

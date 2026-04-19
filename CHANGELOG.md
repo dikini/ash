@@ -8,6 +8,22 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-629: removed the legacy regex capability carrier and engine wiring now
+  that imported `std::regex` calls are proven through builtin declarations and
+  evaluator dispatch. Provider-era regex tests were dropped in favor of the
+  existing builtin-path coverage in `ash-engine` and `ash-interp`.
+
+- Track E closeout proof (TASK-630): positive end-to-end `std::regex` coverage
+  now explicitly proves module import, typechecking, evaluator dispatch, and
+  runtime execution for imported builtin regex calls. The historical
+  `regex_import_limitation` test target remains only as a stable command name
+  and now covers honest positive/complementary regression behavior.
+
+- Track E implementation (TASK-627, TASK-628): stdlib `regex` builtin imports
+  now execute through evaluator dispatch for `regex::find`, `regex::matches`,
+  and `regex::replace`. `ash-interp` now owns the runtime regex behavior using
+  the `regex` crate directly, preserving clear invalid-pattern errors.
+
 - Track D1 implementation (TASK-623, TASK-626): `std/src/string.ash` and
   `std/src/record.ash` stdlib modules with `builtin fn` declarations, making
   `concat`, `starts_with`, `ends_with`, `is_empty` (string) and `keys`,
@@ -62,6 +78,25 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- TASK-632: reconciled Phase 92 planning/changelog/task surfaces with the
+  landed state. `PLAN-INDEX` now reports TASK-631A and TASK-632 as complete and
+  keeps TASK-631B explicitly blocked on deferred D2 work; TASK-633 remained a
+  separate full-workspace verification task rather than being overclaimed in the
+  status-reconciliation pass.
+
+- TASK-633: fresh full-workspace verification for the Phase 92 worktree passed:
+  `cargo test --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`,
+  `cargo fmt --check`, and `cargo doc --no-deps`. The doc build still emits
+  pre-existing rustdoc warnings in `ash-engine` LLM-provider comments, but the
+  command succeeds and the verification surface for Phase 92 is now current.
+
+- TASK-631A: removed the hardcoded `ash-typeck` registrations for
+  `string::concat`, `string::starts_with`, `string::ends_with`, and
+  `string::is_empty` so imported stdlib string builtins resolve through the
+  Track D1 declaration files instead. Deferred hardcoded entries such as list
+  builtins and bare partial-application helpers remain in place; no record
+  entries needed removal because they were already absent from the type env.
+
 - Proptest flake in `capability_parser_props`: `valid_type_name()` strategy
   could generate `Fn`, a contextual keyword in type position (function-type
   syntax `Fn(T) -> R`). The `Fn` case now filtered out of the strategy.
@@ -91,7 +126,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   the expression level. TASK-599 (`std::diff`) remains correctly ⏸️ Deferred.
   TASK-613 closed as ✅ Complete. Stale worktree references removed from
   task file. TASK-595 file path and error-handling wording corrected.
-  Limitation regression test added to codify the current import boundary.
+  Limitation regression test added to codify the current import boundary at
+  that time; this limitation was later removed by Phase 92 Track E.
+
+- Phase 90/92 regex documentation alignment. Phase 90 surfaces now reflect
+  that `std::regex` is proven end-to-end from imported Ash source via builtin
+  declarations and evaluator dispatch. TASK-595 is restored to ✅ Complete,
+  while legacy regex-carrier cleanup remained explicitly deferred to TASK-629.
 
 - Phase 65↔91 alignment remediation (TASK-612). Bare qualified method
   syntax `Interface::method` without call parentheses is now rejected
@@ -369,10 +410,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - `std::regex` interface and Rust backend (TASK-595):
   - Added `std/src/regex.ash` with `find`, `matches`, and `replace` functions
-  - Added `RegexProvider` in `crates/ash-engine/src/providers/regex.rs` backed by the `regex` crate
-  - Added `EngineBuilder::with_regex_capabilities()` to register the regex provider
+  - Added a Rust regex runtime backend using the `regex` crate
   - Re-exported regex functions from `std/src/lib.ash`
-  - Invalid patterns return `CapabilityError::InvalidArgument`
+  - Invalid patterns surface clear runtime errors for regex builtins
 
 - Parser/AST support for generic impls, `where` bounds, and associated types (TASK-564):
   - `surface.rs`: `ImplDef` now has `type_params`, `where_bounds`, `associated_type_bindings`

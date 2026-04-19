@@ -241,8 +241,8 @@ These tasks create the missing stdlib modules. They run in parallel with Track A
 **Files:**
 - Create: `std/src/regex.ash`
 - Modify: `std/src/lib.ash` (add `pub use regex::*`)
-- Modify: `crates/ash-engine/src/providers/mod.rs` or new provider module
-- Test: `crates/ash-engine/tests/regex_capability.rs`
+- Modify: runtime regex backend wiring
+- Test: imported-builtin and runtime-dispatch regex coverage
 
 **Step 1: Define Ash interface**
 
@@ -254,11 +254,10 @@ pub fn replace(pattern: String, replacement: String, text: String) -> String;
 
 **Step 2: Write failing test**
 
-Rust integration test that calls the capability through the engine.
+Rust integration test that calls regex through the engine/runtime path.
 
 **Step 3: Implement Rust backend**
 
-- Register a built-in `regex` capability provider in the engine.
 - Map `find`/`matches`/`replace` to `regex::Regex` operations.
 - Return `RuntimeError` on invalid pattern.
 
@@ -268,7 +267,7 @@ Rust integration test that calls the capability through the engine.
 
 Verify real non-test callsites exist (the spec processor uses `regex` in TASK-591/TASK-592).
 
-> **Current status (TASK-613 reconciliation):** The Rust-side `RegexProvider` is landed and tested (12 engine tests pass). The Ash-language surface (`use regex::{find}`) is **not yet functional** — `regex.ash` uses `act execute` inside `fn` bodies, which the parser cannot handle at expression level. Downstream tasks (TASK-591, TASK-592) that depend on `std::regex` from Ash code will remain blocked until the parser supports `act execute` in expression position. The Rust provider can still be exercised directly through engine integration tests.
+> **Current status:** `std::regex` is now functional from imported Ash source. `std/src/regex.ash` uses `pub builtin fn` declarations, `use regex::{find}` resolves at module-load time, and imported calls execute through evaluator builtin dispatch. The old capability-carrier cleanup has landed, so downstream Ash tasks are no longer blocked on the former parser limitation.
 
 ---
 
@@ -593,7 +592,7 @@ Before marking Phase 90 complete, verify:
 ## Gating Notes
 
 - **Actionable now:** TASK-590, TASK-591, TASK-592, TASK-593, TASK-594 (Track A)
-- **Partially done:** TASK-595 (Track B) — Rust provider landed and tested; Ash-language import surface blocked on parser support for `act execute` in expression position
+- **Complete:** TASK-595 (Track B) — imported Ash `std::regex` calls now work end-to-end through builtin declarations and evaluator dispatch; the legacy capability-provider carrier has been deleted by TASK-629
 - **Blocked on Rust backend capacity:** TASK-596, TASK-597, TASK-598 (Track B)
 - **Blocked on A + B completion:** TASK-600, TASK-601, TASK-602, TASK-603 (Track C)
 - **Deferred indefinitely:** TASK-599 (`std::diff`)

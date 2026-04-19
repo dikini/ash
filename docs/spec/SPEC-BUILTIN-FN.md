@@ -354,12 +354,12 @@ is where the implementation lives.
 
 ### 9.1 Phase 1: Strictly Monomorphic Builtins (In Scope)
 
-**RegexProvider Deletion:**
+**Regex Migration:**
 
-`RegexProvider` is deleted entirely. Regex operations are pure string
-computations and become `builtin fn` declarations in `std/src/regex.ash`. There
-is no capability provider, no `act` dispatch, and no effect classification for
-regex.
+Regex operations are pure string computations and now use `builtin fn`
+declarations in `std/src/regex.ash`, with imported calls executing through the
+evaluator builtin dispatch path. There is no capability dispatch or effect
+classification on the builtin Ash call path.
 
 **New .ash Declaration Files (strictly monomorphic):**
 

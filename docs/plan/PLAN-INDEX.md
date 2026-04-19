@@ -2563,7 +2563,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-||| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | 🟡 Partial (Rust provider landed; Ash surface unproven) ||
+||| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | ✅ Complete ||
 ||| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | 📝 Planned ||
 ||| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | 📝 Planned ||
 ||| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | 📝 Planned ||
@@ -2609,7 +2609,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-BUILTIN-FN: builtin fn Declaration Form](PLAN-BUILTIN-FN.md)
 **Specs:** `SPEC-BUILTIN-FN`, `DESIGN-NOTE-BUILTIN-FN-AND-EXTERN-FN`
 **Priority:** High
-**Status:** 🟡 In Progress
+**Status:** 🔴 Blocked on deferred D2
 
 || Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|\
@@ -2624,13 +2624,17 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 || [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
 || [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
 || [TASK-626](#) | Declare record operation builtins | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-627](#) | Rewrite `std/src/regex.ash` with `builtin fn` declarations | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
-|| [TASK-628](#) | Move regex dispatch to evaluator builtin table | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
-|| [TASK-630](#) | Positive end-to-end regex test | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
-|| [TASK-629](#) | Delete `RegexProvider` | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
-|| [TASK-631A](#) | Remove hardcoded builtin type entries covered by D1 | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-627](#) | Rewrite `std/src/regex.ash` with `builtin fn` declarations | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
+|| [TASK-628](#) | Move regex dispatch to evaluator builtin table | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
+|| [TASK-630](#) | Positive end-to-end regex test | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
+|| [TASK-629](#) | Delete legacy regex carrier | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
+|| [TASK-631A](#) | Remove hardcoded builtin type entries covered by D1 | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
 || [TASK-631B](#) | Remove remaining hardcoded builtin type entries (blocked on D2) | SPEC-BUILTIN-FN | 2-3 | 🔴 Blocked ||
-|| [TASK-632](#) | Update CHANGELOG.md and PLAN-INDEX | — | 1 | 📝 Planned ||
-|| [TASK-633](#) | Full workspace verification | — | 1 | 📝 Planned ||
+|| [TASK-632](#) | Update CHANGELOG.md and PLAN-INDEX | — | 1 | ✅ Complete ||
+||| [TASK-633](#) | Full workspace verification | — | 1 | ✅ Complete ||
 
-**Deliverable:** `builtin fn` as a first-class declaration form for pure runtime-provided functions. Tracks A (parser/AST), B (module loader/typechecker), C (runtime dispatch) complete. Tracks D–F remain.
+**Deliverable:** `builtin fn` is now implemented as a first-class declaration
+form for pure runtime-provided functions. Tracks A, B, C, D1, E, and the
+unblocked portions of Track F are complete and verified. TASK-631B remains
+blocked on deferred Track D2 generic builtin semantics; that blocked cleanup is
+now the only remaining Phase 92 item.

@@ -1,24 +1,15 @@
 # TASK-595: std::regex Interface and Rust Backend
 
-## Status: 🟡 Partial
+## Status: ✅ Complete
 
 ## Completion Note
 
-The Rust-side `regex` provider is functional with 12 passing tests in
-`crates/ash-engine/`. However, the Ash-language import surface (`use regex::{find,matches,replace}`)
-is **not** proven end-to-end. The `std/src/regex.ash` file defines `pub fn` wrappers
-that use `act execute` inside `fn` bodies, which the parser cannot handle at expression
-level. Attempting `use regex::{find}` fails at module load time with:
-
-```
-item 'find' not found in module 'regex'
-```
-
-This error occurs because `regex.ash` cannot be fully parsed — the module loader
-collects `pub fn` exports but rejects the `act execute` body syntax, so no callable
-items are exported from the module.
-
-The task remains Partial until the Ash surface can be exercised through the runtime.
+`std::regex` is now proven end-to-end from Ash source: `std/src/regex.ash` exposes
+`pub builtin fn` declarations, `use regex::{find,matches,replace}` resolves through
+the module loader, typechecking succeeds, and runtime execution dispatches through
+the evaluator builtin table. The legacy capability carrier has now been removed,
+and the user-visible Ash import/runtime path required for TASK-595 is working on
+the builtin path alone.
 
 ## Description
 
@@ -36,27 +27,26 @@ Add `std::regex` with `find`, `matches`, and `replace` functions, backed by the 
 ## Requirements
 
 1. Define Ash interface: `find`, `matches`, `replace`.
-2. Implement Rust-backed `regex` capability provider.
-3. Return `CapabilityError::InvalidArgument` on invalid pattern (not `RuntimeError` — the provider boundary uses the capability error type, not the runtime error tuple).
+2. Implement the Rust-backed regex behavior used by the runtime.
+3. Surface clear invalid-pattern errors for imported regex calls.
 
 ## TDD Steps
 
 ### Step 1: Write failing test
 
-Rust integration test calling `regex::find` through the engine. Expected: FAIL — capability not found.
+Rust integration test calling `regex::find` through the engine.
 
 ### Step 2: Implement
 
-- `std/src/regex.ash` (aspirational — not yet parseable by current substrate)
-- `crates/ash-engine/src/providers/regex.rs` (landed, tested)
-- Register provider in engine (landed).
+- `std/src/regex.ash` builtin declarations (landed)
+- runtime builtin dispatch implementation in `ash-interp`
+- evaluator builtin dispatch for imported regex calls (landed)
 
 ### Step 3: Verify
 
-Rust-side provider tests pass. Ash-language surface does not yet work.
+Ash-language builtin-import tests and runtime dispatch tests pass.
 
 ## Verification Steps
 
-- [x] Rust provider integration tests pass (`cargo test -p ash-engine --test regex_capability`)
-- [ ] Ash-language `use regex::{find}` import succeeds and function is callable
-- [x] Limitation regression test documents current import failure (`crates/ash-engine/tests/regex_import_limitation.rs`)
+- [x] Ash-language `use regex::{find}` import succeeds and function is callable
+- [x] Positive builtin-import/runtime coverage exists (`crates/ash-engine/tests/builtin_fn_e2e_import.rs`, `crates/ash-engine/tests/regex_import_limitation.rs`)

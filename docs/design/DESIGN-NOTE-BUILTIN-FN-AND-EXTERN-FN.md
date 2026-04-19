@@ -228,16 +228,14 @@ Side-effecting operations that require policy gating remain as capabilities:
 
 ### 5.3 What Converts from Capability to Builtin
 
-**RegexProvider is DELETED.** Regex operations are pure string computations and become `builtin fn` declarations in `std/src/regex.ash`. There is no capability provider, no `act` dispatch, and no effect classification for regex.
+Regex migration is part of this design direction. Regex operations are pure
+string computations and now use `builtin fn` declarations in `std/src/regex.ash`.
+The user-visible Ash path no longer depends on capability dispatch.
 
-> **Current-carrier vs intended-semantics note:** `RegexProvider` currently
-> reports `Operational` effect level (`providers/regex.rs:94-96`). This is an
-> artifact of the capability-provider implementation carrier, not a statement
-> about regex's semantic classification. Regex operations are pure computations
-> on strings -- they have no side effects, no external dependencies, and no
-> policy gating requirement. The `Operational` classification was inherited from
-> the provider framework, not derived from the operation's nature. Migration to
-> `builtin fn` aligns the implementation with the correct semantic classification.
+> Regex operations are pure computations on strings -- they have no side
+> effects, no external dependencies, and no policy gating requirement. Moving
+> them to `builtin fn` aligns the implementation with the correct semantic
+> classification instead of treating them like operational capabilities.
 
 ### 5.4 What Converts from Magic to Builtin
 
@@ -318,7 +316,7 @@ Adopt `builtin fn` as a declaration form for pure runtime-provided functions, an
 
 This unblocks:
 - Proper `.ash` declarations for string and regex builtins (strictly monomorphic, immediate).
-- Deletion of RegexProvider (pure operations should not be capability-gated).
+- Deletion of the legacy regex carrier (pure operations should not be capability-gated).
 - Type system coverage for strictly monomorphic functions callable from Ash code.
 - A clean extension path for type predicates (ad-hoc polymorphic) once simple generic builtin semantics land.
 - A clean extension path for fully polymorphic builtins (list/record ops) once generics land.

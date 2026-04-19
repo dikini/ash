@@ -68,6 +68,32 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
+        // ── Regex module builtins (qualified) ──
+        m.insert(
+            "regex::find",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "regex::matches",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "regex::replace",
+            BuiltinEntry {
+                arity: 3,
+                variadic: false,
+                implemented: true,
+            },
+        );
+
         // ── Forward-declared string builtins (not yet implemented) ──
         m.insert(
             "string::to_upper",
@@ -754,6 +780,31 @@ pub fn eval_function_call(
                 }),
             }
         }
+        (Some("regex"), "find") => {
+            if args.len() != 2 {
+                return builtin_arity_error("regex::find", 2, args.len());
+            }
+            let pattern = expect_string_arg(args, 0, "string")?;
+            let text = expect_string_arg(args, 1, "string")?;
+            regex_find(pattern, text)
+        }
+        (Some("regex"), "matches") => {
+            if args.len() != 2 {
+                return builtin_arity_error("regex::matches", 2, args.len());
+            }
+            let pattern = expect_string_arg(args, 0, "string")?;
+            let text = expect_string_arg(args, 1, "string")?;
+            regex_matches(pattern, text)
+        }
+        (Some("regex"), "replace") => {
+            if args.len() != 3 {
+                return builtin_arity_error("regex::replace", 3, args.len());
+            }
+            let pattern = expect_string_arg(args, 0, "string")?;
+            let replacement = expect_string_arg(args, 1, "string")?;
+            let text = expect_string_arg(args, 2, "string")?;
+            regex_replace(pattern, replacement, text)
+        }
         // List operations
         (_, "len") => {
             if args.len() != 1 {
@@ -1038,6 +1089,50 @@ pub fn eval_function_call(
         // Unknown function
         _ => Err(EvalError::UnknownFunction(func.to_string())),
     }
+}
+
+fn expect_string_arg<'a>(args: &'a [Value], index: usize, expected: &str) -> EvalResult<&'a str> {
+    match &args[index] {
+        Value::String(s) => Ok(s),
+        other => Err(EvalError::TypeMismatch {
+            expected: expected.to_string(),
+            actual: format!("{other:?}"),
+        }),
+    }
+}
+
+fn compile_regex(pattern: &str) -> EvalResult<regex::Regex> {
+    regex::Regex::new(pattern)
+        .map_err(|err| EvalError::ExecutionFailed(format!("Invalid regex pattern: {err}")))
+}
+
+fn regex_find(pattern: &str, text: &str) -> EvalResult<Value> {
+    let regex = compile_regex(pattern)?;
+    Ok(regex.find(text).map_or_else(
+        || Value::Variant {
+            name: "None".to_string(),
+            fields: Box::new(vec![]),
+        },
+        |matched| Value::Variant {
+            name: "Some".to_string(),
+            fields: Box::new(vec![(
+                "value".to_string(),
+                Value::String(matched.as_str().to_string()),
+            )]),
+        },
+    ))
+}
+
+fn regex_matches(pattern: &str, text: &str) -> EvalResult<Value> {
+    let regex = compile_regex(pattern)?;
+    Ok(Value::Bool(regex.is_match(text)))
+}
+
+fn regex_replace(pattern: &str, replacement: &str, text: &str) -> EvalResult<Value> {
+    let regex = compile_regex(pattern)?;
+    Ok(Value::String(
+        regex.replace_all(text, replacement).to_string(),
+    ))
 }
 
 /// Return a WrongArity error for built-ins, preserving the expected arity.

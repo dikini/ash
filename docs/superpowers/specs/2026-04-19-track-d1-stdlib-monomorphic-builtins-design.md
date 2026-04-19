@@ -137,7 +137,7 @@ The dispatch table has unqualified entries `"keys"` (arity 1), `"values"` (arity
 
 ### Regression baseline
 
-All existing tests (`builtin_fn_e2e_import`, `builtin_dispatch`, `regex_capability`) must remain green.
+All existing builtin-path regression tests (`builtin_fn_e2e_import`, `builtin_dispatch`, `regex_import_limitation`) must remain green.
 
 ---
 

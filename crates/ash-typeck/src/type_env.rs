@@ -1100,32 +1100,6 @@ impl TypeEnv {
                 Box::new(Type::List(Box::new(u.clone()))),
             ),
         );
-        self.bind_variable(
-            "starts_with",
-            Type::Fn(vec![Type::String, Type::String], Box::new(Type::Bool)),
-        );
-        self.bind_variable(
-            "ends_with",
-            Type::Fn(vec![Type::String, Type::String], Box::new(Type::Bool)),
-        );
-
-        // String builtins under `string::` prefix (used by stdlib)
-        self.bind_variable(
-            "string::concat",
-            Type::Fn(vec![Type::String, Type::String], Box::new(Type::String)),
-        );
-        self.bind_variable(
-            "string::starts_with",
-            Type::Fn(vec![Type::String, Type::String], Box::new(Type::Bool)),
-        );
-        self.bind_variable(
-            "string::ends_with",
-            Type::Fn(vec![Type::String, Type::String], Box::new(Type::Bool)),
-        );
-        self.bind_variable(
-            "string::is_empty",
-            Type::Fn(vec![Type::String], Box::new(Type::Bool)),
-        );
     }
 
     fn add_builtin_capability_symbols(&mut self) {

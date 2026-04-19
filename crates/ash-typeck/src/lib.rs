@@ -1232,6 +1232,32 @@ fn fn_signature_type(
     Ok(Type::Fn(params, Box::new(ret)))
 }
 
+/// Compute the type signature of a `builtin fn` definition.
+///
+/// Builtin fns are pure functions with no body -- they type identically to
+/// regular `fn` definitions (`Type::Fn(params, ret)`). The return type is
+/// always present (required by the grammar).
+fn builtin_fn_signature_type(
+    env: &TypeEnv,
+    builtin_fn: &ash_parser::surface::BuiltinFnDef,
+) -> Result<Type, TypeCheckError> {
+    let type_param_bindings: std::collections::HashMap<String, Type> = builtin_fn
+        .type_params
+        .iter()
+        .map(|param| (param.to_string(), Type::Var(TypeVar::fresh())))
+        .collect();
+
+    let params = builtin_fn
+        .params
+        .iter()
+        .map(|param| workflow_surface_type_to_type(env, &param.ty, &type_param_bindings))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let ret = workflow_surface_type_to_type(env, &builtin_fn.return_type, &type_param_bindings)?;
+
+    Ok(Type::Fn(params, Box::new(ret)))
+}
+
 fn register_function_signatures(
     env: &mut TypeEnv,
     definitions: &[ash_parser::surface::Definition],
@@ -1241,6 +1267,10 @@ fn register_function_signatures(
             ash_parser::surface::Definition::Function(function) => {
                 let signature = fn_signature_type(env, function)?;
                 env.bind_variable(function.name.as_ref(), signature);
+            }
+            ash_parser::surface::Definition::BuiltinFn(builtin_fn) => {
+                let signature = builtin_fn_signature_type(env, builtin_fn)?;
+                env.bind_variable(builtin_fn.name.as_ref(), signature);
             }
             ash_parser::surface::Definition::Capability(capability) => {
                 env.register_capability_symbol(capability.name.as_ref());

@@ -8,6 +8,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Track D1 implementation (TASK-623, TASK-626): `std/src/string.ash` and
+  `std/src/record.ash` stdlib modules with `builtin fn` declarations, making
+  `concat`, `starts_with`, `ends_with`, `is_empty` (string) and `keys`,
+  `values`, `record` (record) importable via the module system. Extends
+  `CallableKind::Builtin` to carry a `module` name so qualified dispatch routes
+  correctly through the evaluator. Context closures now take priority over
+  unqualified builtins in `eval`, and `builtin fn` names no longer misparse as
+  capability action targets in the parser.
+
 - Track C implementation (TASK-621, TASK-622): runtime builtin dispatch table
   and clear error on unknown builtins. Adds `BuiltinEntry` metadata struct and
   `builtin_dispatch_table()` in `ash-interp` mapping qualified names to arity,

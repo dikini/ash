@@ -2622,8 +2622,8 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 || [TASK-620](#) | End-to-end import resolution for `builtin fn` | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
 || [TASK-621](#) | Runtime builtin dispatch table | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
 || [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
-|| [TASK-626](#) | Declare record operation builtins | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
+|| [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
+|| [TASK-626](#) | Declare record operation builtins | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
 || [TASK-627](#) | Rewrite `std/src/regex.ash` with `builtin fn` declarations | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||
 || [TASK-628](#) | Move regex dispatch to evaluator builtin table | SPEC-BUILTIN-FN | 2-3 | 📝 Planned ||
 || [TASK-630](#) | Positive end-to-end regex test | SPEC-BUILTIN-FN | 1-2 | 📝 Planned ||

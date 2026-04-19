@@ -73,6 +73,8 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::Interface(i) if Some(i.name.as_ref()) == current_token => None,
         Definition::Interface(i) => Some(i.name.as_ref().to_string()),
         Definition::Impl(_) => None, // impl blocks don't have a useful single name
+        Definition::BuiltinFn(b) if Some(b.name.as_ref()) == current_token => None,
+        Definition::BuiltinFn(b) => Some(b.name.as_ref().to_string()),
     }
 }
 
@@ -85,6 +87,7 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         Definition::Policy(_) => CompletionItemKind::STRUCT,
         Definition::Interface(_) => CompletionItemKind::INTERFACE,
         Definition::Impl(_) => CompletionItemKind::CLASS,
+        Definition::BuiltinFn(_) => CompletionItemKind::FUNCTION,
     }
 }
 

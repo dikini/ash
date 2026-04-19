@@ -1573,6 +1573,30 @@ pub(crate) fn lower_fn_def(
     })
 }
 
+/// Lower a surface `BuiltinFnDef` to core IR.
+///
+/// Produces a callable registration with no body expression --
+/// the builtin marker indicates runtime dispatch by the host environment.
+pub fn lower_builtin_fn_def(def: &crate::surface::BuiltinFnDef) -> ash_core::ast::BuiltinFnDef {
+    use ash_core::ast::Visibility;
+
+    ash_core::ast::BuiltinFnDef {
+        name: def.name.to_string(),
+        type_params: def.type_params.iter().map(|n| n.to_string()).collect(),
+        params: def
+            .params
+            .iter()
+            .map(|p| (p.name.to_string(), lower_surface_type(&p.ty)))
+            .collect(),
+        return_type: lower_surface_type(&def.return_type),
+        visibility: match def.visibility {
+            crate::surface::Visibility::Public => Visibility::Public,
+            crate::surface::Visibility::Crate => Visibility::Crate,
+            _ => Visibility::Private,
+        },
+    }
+}
+
 /// Lower a policy expression to core IR.
 fn lower_policy_expr(expr: &PolicyExpr) -> CoreExpr {
     // For now, policy expressions are lowered as strings
@@ -2519,5 +2543,209 @@ mod tests {
             }
             _ => panic!("expected Act workflow, got {:?}", core),
         }
+    }
+
+    // --- BuiltinFnDef lowering tests ---
+
+    #[test]
+    fn test_lower_builtin_fn_simple() {
+        use crate::surface::{BuiltinFnDef, Param, Type, Visibility};
+
+        let def = BuiltinFnDef {
+            visibility: Visibility::Inherited,
+            name: "foo".into(),
+            type_params: vec![],
+            params: vec![Param {
+                name: "x".into(),
+                ty: Type::Name("Int".into()),
+            }],
+            return_type: Type::Name("Int".into()),
+            span: dummy_span(),
+        };
+
+        let core = lower_builtin_fn_def(&def);
+
+        assert_eq!(core.name, "foo");
+        assert!(core.type_params.is_empty());
+        assert_eq!(core.params.len(), 1);
+        assert_eq!(core.params[0].0, "x");
+        assert_eq!(
+            core.params[0].1,
+            ash_core::ast::TypeExpr::Named("Int".to_string())
+        );
+        assert_eq!(
+            core.return_type,
+            ash_core::ast::TypeExpr::Named("Int".to_string())
+        );
+        assert_eq!(core.visibility, ash_core::ast::Visibility::Private);
+    }
+
+    #[test]
+    fn test_lower_builtin_fn_with_type_params() {
+        use crate::surface::{BuiltinFnDef, Param, Type, Visibility};
+
+        let def = BuiltinFnDef {
+            visibility: Visibility::Public,
+            name: "id".into(),
+            type_params: vec!["T".into()],
+            params: vec![Param {
+                name: "value".into(),
+                ty: Type::Name("T".into()),
+            }],
+            return_type: Type::Name("T".into()),
+            span: dummy_span(),
+        };
+
+        let core = lower_builtin_fn_def(&def);
+
+        assert_eq!(core.name, "id");
+        assert_eq!(core.type_params, vec!["T".to_string()]);
+        assert_eq!(core.params.len(), 1);
+        assert_eq!(core.params[0].0, "value");
+        assert_eq!(core.visibility, ash_core::ast::Visibility::Public);
+    }
+
+    #[test]
+    fn test_lower_builtin_fn_multi_param() {
+        use crate::surface::{BuiltinFnDef, Param, Type, Visibility};
+
+        let def = BuiltinFnDef {
+            visibility: Visibility::Crate,
+            name: "add".into(),
+            type_params: vec![],
+            params: vec![
+                Param {
+                    name: "a".into(),
+                    ty: Type::Name("Int".into()),
+                },
+                Param {
+                    name: "b".into(),
+                    ty: Type::Name("Int".into()),
+                },
+            ],
+            return_type: Type::Name("Int".into()),
+            span: dummy_span(),
+        };
+
+        let core = lower_builtin_fn_def(&def);
+
+        assert_eq!(core.name, "add");
+        assert_eq!(core.params.len(), 2);
+        assert_eq!(core.params[0].0, "a");
+        assert_eq!(core.params[1].0, "b");
+        assert_eq!(core.visibility, ash_core::ast::Visibility::Crate);
+    }
+
+    #[test]
+    fn test_lower_builtin_fn_complex_return_type() {
+        use crate::surface::{BuiltinFnDef, Param, Type, Visibility};
+
+        let def = BuiltinFnDef {
+            visibility: Visibility::Inherited,
+            name: "make_list".into(),
+            type_params: vec!["T".into()],
+            params: vec![Param {
+                name: "x".into(),
+                ty: Type::Name("T".into()),
+            }],
+            return_type: Type::Constructor {
+                name: "List".into(),
+                args: vec![Type::Name("T".into())],
+            },
+            span: dummy_span(),
+        };
+
+        let core = lower_builtin_fn_def(&def);
+
+        assert_eq!(core.name, "make_list");
+        assert_eq!(
+            core.return_type,
+            ash_core::ast::TypeExpr::Constructor {
+                name: "List".to_string(),
+                args: vec![ash_core::ast::TypeExpr::Named("T".to_string())],
+            }
+        );
+    }
+
+    #[test]
+    fn test_lower_builtin_fn_no_params() {
+        // Zero-parameter builtin fn (e.g., builtin fn get_time() -> Int;)
+        use crate::surface::{BuiltinFnDef, Type, Visibility};
+
+        let def = BuiltinFnDef {
+            visibility: Visibility::Public,
+            name: "get_time".into(),
+            type_params: vec![],
+            params: vec![],
+            return_type: Type::Name("Int".into()),
+            span: dummy_span(),
+        };
+
+        let core = lower_builtin_fn_def(&def);
+
+        assert_eq!(core.name, "get_time");
+        assert!(core.params.is_empty());
+        assert_eq!(core.visibility, ash_core::ast::Visibility::Public);
+    }
+
+    #[test]
+    fn test_lower_builtin_fn_parse_and_lower_roundtrip() {
+        // Parse a builtin fn from source and lower it
+        let source = "builtin fn foo(x: Int) -> Int;";
+        let parsed = crate::parse_surface_file(source).expect("parse should succeed");
+
+        // Find the BuiltinFn definition
+        let builtin_def = parsed
+            .definitions
+            .iter()
+            .find_map(|d| match d {
+                crate::surface::Definition::BuiltinFn(b) => Some(b.clone()),
+                _ => None,
+            })
+            .expect("should find a BuiltinFn definition");
+
+        assert_eq!(builtin_def.name.as_ref(), "foo");
+
+        let core = lower_builtin_fn_def(&builtin_def);
+
+        assert_eq!(core.name, "foo");
+        assert!(core.type_params.is_empty());
+        assert_eq!(core.params.len(), 1);
+        assert_eq!(core.params[0].0, "x");
+        assert_eq!(
+            core.params[0].1,
+            ash_core::ast::TypeExpr::Named("Int".to_string())
+        );
+        assert_eq!(
+            core.return_type,
+            ash_core::ast::TypeExpr::Named("Int".to_string())
+        );
+    }
+
+    #[test]
+    fn test_lower_builtin_fn_parse_generic_roundtrip() {
+        // Parse a generic builtin fn from source and lower it
+        let source = "pub builtin fn map<T>(f: T, x: Int) -> T;";
+        let parsed = crate::parse_surface_file(source).expect("parse should succeed");
+
+        let builtin_def = parsed
+            .definitions
+            .iter()
+            .find_map(|d| match d {
+                crate::surface::Definition::BuiltinFn(b) => Some(b.clone()),
+                _ => None,
+            })
+            .expect("should find a BuiltinFn definition");
+
+        assert_eq!(builtin_def.name.as_ref(), "map");
+
+        let core = lower_builtin_fn_def(&builtin_def);
+
+        assert_eq!(core.name, "map");
+        assert_eq!(core.type_params, vec!["T".to_string()]);
+        assert_eq!(core.params.len(), 2);
+        assert_eq!(core.params[0].0, "f");
+        assert_eq!(core.params[1].0, "x");
+        assert_eq!(core.visibility, ash_core::ast::Visibility::Public);
     }
 }

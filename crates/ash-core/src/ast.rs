@@ -678,6 +678,27 @@ pub enum ModuleItem {
     Interface(InterfaceDef),
     /// Interface impl definition
     Impl(ImplDef),
+    /// Builtin function definition (externally implemented, no Ash-level body)
+    BuiltinFn(BuiltinFnDef),
+}
+
+/// Builtin function definition (externally implemented, no Ash-level body).
+///
+/// Represents a callable registration with a type signature but no body
+/// expression -- dispatch happens at runtime via the host environment.
+/// Lowered from `surface::BuiltinFnDef`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuiltinFnDef {
+    /// Function name
+    pub name: Name,
+    /// Generic type parameters
+    pub type_params: Vec<Name>,
+    /// Function parameters with name and type
+    pub params: Vec<(Name, TypeExpr)>,
+    /// Return type (required for builtins)
+    pub return_type: TypeExpr,
+    /// Visibility
+    pub visibility: Visibility,
 }
 
 /// Type definition in source code

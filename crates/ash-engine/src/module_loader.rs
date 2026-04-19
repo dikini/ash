@@ -13,7 +13,7 @@ use ash_core::ast::{
     Visibility as CoreVisibility,
 };
 use ash_parser::input::new_input;
-use ash_parser::parse_module::parse_fn_definition;
+use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
 use ash_parser::parse_type_def::{
     TypeBody as ParsedTypeBody, TypeDef as ParsedTypeDef, TypeExpr as ParsedTypeExpr,
     VariantPayload as ParsedVariantPayload, Visibility as ParsedVisibility, parse_type_def,
@@ -433,6 +433,14 @@ pub(crate) fn collect_module_exports(
         }
     }
 
+    for snippet in extract_semicolon_snippets(&source, |trimmed| {
+        trimmed.starts_with("pub builtin fn ") || trimmed.starts_with("builtin fn ")
+    }) {
+        if let Some(callable) = parse_builtin_fn_callable(&snippet)? {
+            insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+        }
+    }
+
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("workflow ")) {
         if let Ok(Some(callable)) = parse_workflow_callable(&snippet) {
             insert_callable_export(&mut exports, &callable.name, callable.callable)?;
@@ -743,6 +751,39 @@ fn parse_supported_pub_fn_callable(
         name: extract_fn_name_from_snippet(snippet),
         reason: format!("{e}"),
     })
+}
+
+/// Parse a `builtin fn` snippet into an [`ImportedCallableExport`].
+///
+/// Builtin functions have no Ash-level body, so a null placeholder expression
+/// is used.  The important data is the function name and parameter list.
+fn parse_builtin_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>, EngineError> {
+    let mut input = new_input(snippet.trim());
+    let parsed = parse_builtin_fn_definition
+        .parse_next(&mut input)
+        .map_err(|error| EngineError::Parse(format!("{error}")))?;
+
+    let Definition::BuiltinFn(builtin) = parsed else {
+        return Err(EngineError::Parse(
+            "expected builtin fn to parse as a BuiltinFn definition".to_string(),
+        ));
+    };
+
+    let name = builtin.name.to_string();
+    let params = builtin
+        .params
+        .iter()
+        .map(|param| param.name.to_string())
+        .collect::<Vec<_>>();
+
+    Ok(Some(ImportedCallableExport {
+        name: name.clone(),
+        callable: InlineCallable {
+            exported_name: name,
+            params,
+            body: Expr::Literal(ash_parser::surface::Literal::Null),
+        },
+    }))
 }
 
 #[derive(Debug, Clone)]
@@ -1147,5 +1188,123 @@ mod tests {
             msg.contains("pub mod 'nonexistent'") || msg.contains("module not found"),
             "error message should reference the missing module: {msg}",
         );
+    }
+
+    /// Test 5: `builtin fn` declarations are extracted as callables.
+    #[test]
+    fn test_builtin_fn_extraction() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        std::fs::write(
+            dir.join("module.ash"),
+            "\
+pub builtin fn add(x: Int, y: Int) -> Int;
+builtin fn private_helper(a: String) -> String;
+pub type Role = System | User;",
+        )
+        .expect("write module");
+
+        let mut cache = HashMap::new();
+        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache)
+            .expect("collecting exports should succeed");
+
+        // Both pub builtin fn and module-private builtin fn should be extracted
+        assert!(
+            exports.callables.contains_key("add"),
+            "module should export callable 'add'"
+        );
+        assert!(
+            exports.callables.contains_key("private_helper"),
+            "module should export callable 'private_helper'"
+        );
+
+        // Verify parameter names
+        let add = exports.callables.get("add").expect("add callable");
+        assert_eq!(add.params, vec!["x", "y"]);
+        assert_eq!(add.exported_name, "add");
+
+        let helper = exports
+            .callables
+            .get("private_helper")
+            .expect("helper callable");
+        assert_eq!(helper.params, vec!["a"]);
+        assert_eq!(helper.exported_name, "private_helper");
+
+        // Verify type def is also collected (not disrupted by builtin fn extraction)
+        assert!(
+            exports.type_defs.contains_key("Role"),
+            "module should still export type Role"
+        );
+    }
+
+    /// Test 6: Mixed `pub fn` and `builtin fn` declarations coexist.
+    #[test]
+    fn test_mixed_fn_and_builtin_fn() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        std::fs::write(
+            dir.join("module.ash"),
+            "\
+pub fn double(x: Int) -> Int { x * 2 }
+pub builtin fn triple(x: Int) -> Int;
+pub type Flag = On | Off;",
+        )
+        .expect("write module");
+
+        let mut cache = HashMap::new();
+        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache)
+            .expect("collecting exports should succeed");
+
+        assert!(
+            exports.callables.contains_key("double"),
+            "module should export callable 'double' (pub fn)"
+        );
+        assert!(
+            exports.callables.contains_key("triple"),
+            "module should export callable 'triple' (pub builtin fn)"
+        );
+        assert!(
+            exports.type_defs.contains_key("Flag"),
+            "module should export type Flag"
+        );
+
+        // Verify builtin fn has null body placeholder
+        let triple = exports.callables.get("triple").expect("triple callable");
+        assert!(
+            matches!(
+                triple.body,
+                Expr::Literal(ash_parser::surface::Literal::Null)
+            ),
+            "builtin fn body should be a null placeholder"
+        );
+    }
+
+    /// Test 7: `builtin fn` with type parameters is extracted correctly.
+    #[test]
+    fn test_builtin_fn_with_type_params() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        std::fs::write(
+            dir.join("module.ash"),
+            "pub builtin fn identity<T>(value: T) -> T;",
+        )
+        .expect("write module");
+
+        let mut cache = HashMap::new();
+        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache)
+            .expect("collecting exports should succeed");
+
+        assert!(
+            exports.callables.contains_key("identity"),
+            "module should export callable 'identity'"
+        );
+        let identity = exports
+            .callables
+            .get("identity")
+            .expect("identity callable");
+        assert_eq!(identity.params, vec!["value"]);
     }
 }

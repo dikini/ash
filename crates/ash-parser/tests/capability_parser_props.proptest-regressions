@@ -10,3 +10,4 @@ cc 846e0ddd029c8dd086eb73bfe4c2b25b60223d8a672547ae6ec29d726388d833 # shrinks to
 cc 2a4337a019e23a354a4b9a4e755d6f22670c217c14ecc9dbe36336f93b05e028 # shrinks to cap_name = "A", param1_name = "let", param1_type = "A", param2_name = "aaa", param2_type = "A"
 cc 0ba56b6ecb74c97b5a81eec818ca66f0076d73b959f6508e87d7fc7413a54307 # shrinks to cap_name = "_", param1_name = "a", param1_type = "A", param2_name = "do", param2_type = "A"
 cc ea45f65321fbadedd0c7fb16a1b6780a2f6017c4feb03f9d60d7cf1269de4811 # shrinks to cap_name = "_", param1_name = "a", param1_type = "Fn", param2_name = "aA", param2_type = "A"
+cc 6064fac66b5a0a33264f9c4c4679f7b46aab4840d2acccad0517efb6fdd09963 # shrinks to cap_name = "_", param1_name = "_", param1_type = "Fn", param2_name = "A", param2_type = "A"

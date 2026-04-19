@@ -1286,15 +1286,18 @@ fn build_imported_closures(
                     continue;
                 }
             },
-            CallableKind::Builtin { .. } => {
-                // Build a synthetic closure body that delegates to the builtin
-                // by its exported (unqualified) name.  This binds the imported
-                // name in the runtime context so it is callable.
-                //
-                // TODO(Task 3): use the `module` field to select qualified vs.
-                // unqualified dispatch via the builtin_dispatch_table check.
-                // Until then, string ops dispatch wrongly to list concat.
-                // Record ops (keys/values/record) are unqualified and dispatch correctly.
+            CallableKind::Builtin { module } => {
+                // Check the dispatch table to decide whether this builtin needs a
+                // qualified call (e.g. "string::concat") or unqualified (e.g. "keys").
+                // String builtins live under "string::*" in the table; record builtins
+                // live under unqualified names ("record::keys" is NOT in the table).
+                let qualified = format!("{module}::{}", callable.exported_name);
+                let call_module =
+                    if ash_interp::eval::builtin_dispatch_table().contains_key(qualified.as_str()) {
+                        Some(module.clone())
+                    } else {
+                        None
+                    };
                 let param_exprs: Vec<ash_core::Expr> = callable
                     .params
                     .iter()
@@ -1305,7 +1308,7 @@ fn build_imported_closures(
                     .collect();
                 ash_core::Expr::Call {
                     func: callable.exported_name.clone(),
-                    module: None,
+                    module: call_module,
                     arguments: param_exprs,
                 }
             }

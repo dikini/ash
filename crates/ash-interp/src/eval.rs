@@ -313,7 +313,16 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 .map(|arg| eval_expr(arg, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            // First try built-in function dispatch
+            // For unqualified calls (module: None), user-defined and imported closures
+            // take priority over builtin dispatch. This allows `use string::{concat}` to
+            // shadow the unqualified list-concat builtin with the correct qualified dispatch.
+            if module.is_none() {
+                if let Some(Value::Closure { params, body, env }) = ctx.get(func) {
+                    return apply_closure(params, body, env, args);
+                }
+            }
+
+            // Try built-in function dispatch
             match eval_function_call(func, module.as_deref(), &args, ctx) {
                 Ok(value) => Ok(value),
                 Err(EvalError::WrongArity {

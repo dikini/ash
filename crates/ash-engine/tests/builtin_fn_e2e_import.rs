@@ -325,3 +325,34 @@ fn builtin_fn_import_is_bound_as_closure_in_workflow() {
         workflow.imported_closures.keys().collect::<Vec<_>>()
     );
 }
+
+// ---------------------------------------------------------------------------
+// Test 7: String builtin dispatches via qualified name end-to-end
+// ---------------------------------------------------------------------------
+
+/// Verify that a builtin fn imported from a module named "string" dispatches
+/// via string::concat (not list concat). This confirms the dispatch-table check
+/// in build_imported_closures selects module: Some("string") for qualified entries.
+#[tokio::test]
+async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
+    let tmp_dir = tempfile::tempdir().expect("temp dir");
+    let dir = tmp_dir.path();
+
+    std::fs::write(
+        dir.join("string.ash"),
+        "pub builtin fn concat(a: String, b: String) -> String;\n",
+    )
+    .expect("write string.ash");
+
+    std::fs::write(
+        dir.join("caller.ash"),
+        "use string::{concat}\nworkflow main { ret concat(\"hello \", \"world\") }\n",
+    )
+    .expect("write caller.ash");
+
+    let engine = ash_engine::Engine::new().build().expect("engine builds");
+    let mut workflow = engine.parse_file(dir.join("caller.ash")).expect("parse");
+    engine.check(&mut workflow).expect("typecheck");
+    let result = engine.execute(&workflow).await.expect("execute");
+    assert_eq!(result, ash_core::Value::String("hello world".to_string()));
+}

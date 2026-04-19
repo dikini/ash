@@ -331,8 +331,8 @@ fn builtin_fn_import_is_bound_as_closure_in_workflow() {
 // ---------------------------------------------------------------------------
 
 /// Verify that a builtin fn imported from a module named "string" dispatches
-/// via string::concat (not list concat). This confirms the dispatch-table check
-/// in build_imported_closures selects module: Some("string") for qualified entries.
+/// via `string::concat` (not list concat). This confirms the dispatch-table check
+/// in `build_imported_closures` selects `module: Some("string")` for qualified entries.
 #[tokio::test]
 async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
     let tmp_dir = tempfile::tempdir().expect("temp dir");
@@ -362,8 +362,8 @@ async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
 // ---------------------------------------------------------------------------
 
 /// Verify that `use record::{keys}` imports correctly and dispatches to the
-/// unqualified "keys" builtin (not "record::keys", which is absent from the
-/// dispatch table). Confirms the module: None path in build_imported_closures.
+/// unqualified `keys` builtin (not `record::keys`, which is absent from the
+/// dispatch table). Confirms the `module: None` path in `build_imported_closures`.
 #[tokio::test]
 async fn builtin_fn_record_keys_dispatches_via_unqualified_name() {
     let tmp_dir = tempfile::tempdir().expect("temp dir");

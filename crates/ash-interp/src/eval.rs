@@ -322,10 +322,10 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             // make_partial_builtin path below. Over-application through a closure found
             // here produces WrongArity { callee: None } rather than a partial value;
             // that is handled inside apply_closure itself.
-            if module.is_none() {
-                if let Some(Value::Closure { params, body, env }) = ctx.get(func) {
-                    return apply_closure(params, body, env, args);
-                }
+            if module.is_none()
+                && let Some(Value::Closure { params, body, env }) = ctx.get(func)
+            {
+                return apply_closure(params, body, env, args);
             }
 
             // Try built-in function dispatch

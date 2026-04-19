@@ -1,13 +1,18 @@
 //! TASK-626: End-to-end tests for std/src/record.ash stdlib import.
 
+fn record_main_source(imports: &str, body: &str) -> String {
+    format!("use record::{{{imports}}}\nworkflow main {{ {body} }}\n")
+}
+
 #[tokio::test]
 async fn record_stdlib_keys_e2e() {
     let tmp_dir = tempfile::tempdir().expect("temp dir");
     let dir = tmp_dir.path();
     std::fs::write(
         dir.join("main.ash"),
-        "use record::{keys}\nworkflow main { let r = record(\"a\", 1, \"b\", 2)\nret keys(r) }\n",
-    ).expect("write main.ash");
+        record_main_source("keys", "let r = record(\"a\", 1, \"b\", 2)\nret keys(r)"),
+    )
+    .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
@@ -17,7 +22,13 @@ async fn record_stdlib_keys_e2e() {
         ash_core::Value::List(items) => {
             let mut keys: Vec<String> = items
                 .iter()
-                .filter_map(|v| if let ash_core::Value::String(s) = v { Some(s.clone()) } else { None })
+                .filter_map(|v| {
+                    if let ash_core::Value::String(s) = v {
+                        Some(s.clone())
+                    } else {
+                        None
+                    }
+                })
                 .collect();
             keys.sort();
             assert_eq!(keys, vec!["a", "b"], "keys should be [\"a\", \"b\"]");
@@ -32,8 +43,12 @@ async fn record_stdlib_values_e2e() {
     let dir = tmp_dir.path();
     std::fs::write(
         dir.join("main.ash"),
-        "use record::{values}\nworkflow main { let r = record(\"a\", 1, \"b\", 2)\nret values(r) }\n",
-    ).expect("write main.ash");
+        record_main_source(
+            "values",
+            "let r = record(\"a\", 1, \"b\", 2)\nret values(r)",
+        ),
+    )
+    .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
@@ -51,8 +66,9 @@ async fn record_stdlib_record_constructor_e2e() {
     let dir = tmp_dir.path();
     std::fs::write(
         dir.join("main.ash"),
-        "use record::{record}\nworkflow main { ret record(\"x\", 42) }\n",
-    ).expect("write main.ash");
+        record_main_source("record", "ret record(\"x\", 42)"),
+    )
+    .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
@@ -69,8 +85,9 @@ async fn record_stdlib_all_three_functions_importable() {
     let dir = tmp_dir.path();
     std::fs::write(
         dir.join("main.ash"),
-        "use record::{keys, values, record}\nworkflow main { ret record(\"k\", 1) }\n",
-    ).expect("write main.ash");
+        record_main_source("keys, values, record", "ret record(\"k\", 1)"),
+    )
+    .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");

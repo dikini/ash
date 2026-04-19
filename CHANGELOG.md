@@ -66,6 +66,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   could generate `Fn`, a contextual keyword in type position (function-type
   syntax `Fn(T) -> R`). The `Fn` case now filtered out of the strategy.
 
+- Phase 79 status drift in `docs/plan/PLAN-INDEX.md`. The phase header and
+  TASK-545 through TASK-550 rows now consistently report `✅ Complete`,
+  matching the already-complete progress tables and landed implementation.
+
 - Clippy warnings in `ash-engine`: `parse_program_with_functions` missing
   `# Panics` doc section, `single_match_else` in workflow loop,
   `option_if_let_else` in regex provider, `too_many_lines` in

@@ -218,10 +218,9 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
             match selection {
                 ImportSelection::Glob => {
                     imported_type_defs.extend(exports.type_defs.values().cloned());
-                    let module_name = import.module_segments.join("::");
                     for (k, mut v) in exports.callables.clone() {
                         if let CallableKind::Builtin { ref mut module } = v.kind {
-                            module_name.clone_into(module);
+                            *module = import.module_segments.join("::");
                         }
                         imported_callables.insert(k, v);
                     }
@@ -795,7 +794,10 @@ fn parse_supported_pub_fn_callable(
 ///
 /// Builtin functions have no Ash-level body, so a null placeholder expression
 /// is used.  The important data is the function name and parameter list.
-fn parse_builtin_fn_callable(snippet: &str, module: String) -> Result<Option<ImportedCallableExport>, EngineError> {
+fn parse_builtin_fn_callable(
+    snippet: &str,
+    module: String,
+) -> Result<Option<ImportedCallableExport>, EngineError> {
     let mut input = new_input(snippet.trim());
     let parsed = parse_builtin_fn_definition
         .parse_next(&mut input)
@@ -1341,19 +1343,33 @@ pub type Flag = On | Off;",
         let temp = tempfile::tempdir().expect("tempdir");
         let dir = temp.path();
 
-        std::fs::write(dir.join("string.ash"), "pub builtin fn concat(a: String, b: String) -> String;\n")
-            .expect("write");
-        std::fs::write(dir.join("caller.ash"), "use string::{concat}\nworkflow main { ret 0 }\n")
-            .expect("write");
+        std::fs::write(
+            dir.join("string.ash"),
+            "pub builtin fn concat(a: String, b: String) -> String;\n",
+        )
+        .expect("write");
+        std::fs::write(
+            dir.join("caller.ash"),
+            "use string::{concat}\nworkflow main { ret 0 }\n",
+        )
+        .expect("write");
 
         let result = super::load_ordinary_file(&dir.join("caller.ash")).expect("load");
-        let callable = result.imported_callables.get("concat").expect("concat callable");
+        let callable = result
+            .imported_callables
+            .get("concat")
+            .expect("concat callable");
         match &callable.kind {
             super::CallableKind::Builtin { module } => {
-                assert_eq!(module.as_str(), "string",
-                    "module name must be populated from the import path by load_ordinary_file");
+                assert_eq!(
+                    module.as_str(),
+                    "string",
+                    "module name must be populated from the import path by load_ordinary_file"
+                );
             }
-            other => panic!("expected Builtin {{ module }}, got: {:?}", other),
+            other @ super::CallableKind::User { .. } => {
+                panic!("expected Builtin {{ module }}, got: {other:?}")
+            }
         }
     }
 
@@ -1367,20 +1383,30 @@ pub type Flag = On | Off;",
             "pub builtin fn add(x: Int, y: Int) -> Int;\npub builtin fn sub(x: Int, y: Int) -> Int;\n",
         )
         .expect("write");
-        std::fs::write(dir.join("caller.ash"), "use math::*\nworkflow main { ret 0 }\n")
-            .expect("write");
+        std::fs::write(
+            dir.join("caller.ash"),
+            "use math::*\nworkflow main { ret 0 }\n",
+        )
+        .expect("write");
 
         let result = super::load_ordinary_file(&dir.join("caller.ash")).expect("load");
 
         for name in &["add", "sub"] {
-            let callable = result.imported_callables.get(*name)
+            let callable = result
+                .imported_callables
+                .get(*name)
                 .unwrap_or_else(|| panic!("'{name}' should be in imported_callables"));
             match &callable.kind {
                 super::CallableKind::Builtin { module } => {
-                    assert_eq!(module.as_str(), "math",
-                        "glob import must stamp module name on Builtin callable '{name}'");
+                    assert_eq!(
+                        module.as_str(),
+                        "math",
+                        "glob import must stamp module name on Builtin callable '{name}'"
+                    );
                 }
-                other => panic!("expected Builtin {{ module }} for '{name}', got: {:?}", other),
+                other @ super::CallableKind::User { .. } => {
+                    panic!("expected Builtin {{ module }} for '{name}', got: {other:?}")
+                }
             }
         }
     }

@@ -2366,16 +2366,16 @@ missing SPEC-029 prompt functions, and three-vertex violations in orchestration 
 
 **Plan Reference:** [PLAN-027: LLM Stdlb Usability Remediation](PLAN-027-LLM-STDLIB-USABILITY-REMEDIATION.md)
 **Priority:** High
-**Status:** Planned
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| TASK-545 | Add Float as a builtin type | SPEC-029 | 1 | Done |
-| TASK-546 | Fix enum variant disambiguation in fn expression parser | SPEC-029 | 4 | Done |
-| TASK-547 | Fix 2-segment use path and improve import error context | SPEC-012 | 2 | Done |
-| TASK-548 | Add missing SPEC-029 prompt functions | SPEC-029 | 3 | Done |
-| TASK-549 | Fix three-vertex violations in orchestration modules | SPEC-029 | 2 | Done |
-| TASK-550 | End-to-end validation and CHANGELOG update | SPEC-029 | 2 | Done |
+| TASK-545 | Add Float as a builtin type | SPEC-029 | 1 | ✅ Complete |
+| TASK-546 | Fix enum variant disambiguation in fn expression parser | SPEC-029 | 4 | ✅ Complete |
+| TASK-547 | Fix 2-segment use path and improve import error context | SPEC-012 | 2 | ✅ Complete |
+| TASK-548 | Add missing SPEC-029 prompt functions | SPEC-029 | 3 | ✅ Complete |
+| TASK-549 | Fix three-vertex violations in orchestration modules | SPEC-029 | 2 | ✅ Complete |
+| TASK-550 | End-to-end validation and CHANGELOG update | SPEC-029 | 2 | ✅ Complete |
 
 **Deliverable:** All 23+ prompt.ash pub fns parse, Float type registered, use llm::Role
 resolves from application code, missing SPEC-029 functions implemented, three-vertex

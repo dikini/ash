@@ -2,12 +2,12 @@
 
 **Status:** Planned
 **Dependencies:** TASK-640, TASK-642, TASK-643
-**Spec:** SPEC-034
+**Spec:** SPEC-044
 **Estimated hours:** 0.5
 
 ## Objective
 
-Document completion of SPEC-034 / PLAN-035.
+Document completion of SPEC-044 / PLAN-035.
 
 ## TDD Steps
 

@@ -2431,16 +2431,16 @@ Remove the single-parameter restriction on interface method signatures and their
 Remove the single type-parameter restriction on interfaces, enable generic `impl` blocks with `where` bounds, and add associated types on interfaces. Redesign the impl registry and add an engine monomorphization pass.
 
 **Plan Reference:** [PLAN-030: Generic Implementations and Associated Types](PLAN-030-GENERIC-IMPLS-AND-ASSOCIATED-TYPES.md)
-**Specs:** SPEC-033, SPEC-034, SPEC-035
+**Specs:** SPEC-033, SPEC-044, SPEC-035
 **Priority:** High
 **Status:** ✅ Complete
 
 |||| Task | Description | Spec | Est. Hours | Status ||
 |||------|-------------|------|------------|--------|
 ||| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | ✅ Complete |
-||| [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-034 §4, SPEC-035 §4 | 5 | ✅ Complete |
-||| [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-034 §5 | 6 | ✅ Complete |
-||| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-034 §6 | 6 | ✅ Complete |
+||| [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-044 §4, SPEC-035 §4 | 5 | ✅ Complete |
+||| [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-044 §5 | 6 | ✅ Complete |
+||| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-044 §6 | 6 | ✅ Complete |
 ||| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | ✅ Complete |
 ||| [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | ✅ Complete |
 
@@ -2642,22 +2642,22 @@ now the only remaining Phase 92 item.
 ## Phase 93: Generic Builtin fn Declarations
 
 **Plan Reference:** [PLAN-035: Generic Builtin fn Declarations](plans/PLAN-035-generic-builtin-fn.md)
-**Specs:** `SPEC-034`
+**Specs:** `SPEC-044`
 **Priority:** Medium
 **Status:** 📝 Planned
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 |||------|-------------|------|------------|--------|\
-||| [TASK-634](#) | Add `signature` field to `InlineCallable` | SPEC-034 | 2-3 | 📝 Planned ||
-||| [TASK-635](#) | Bind imported builtin signatures in `Engine::check()` | SPEC-034 | 3-4 | 📝 Planned ||
-||| [TASK-636](#) | Audit type-variable scoping at call sites | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-637](#) | Create `std/src/list.ash` with generic declarations | SPEC-034 | 2-3 | 📝 Planned ||
-||| [TASK-638](#) | Add list ops to builtin dispatch table | SPEC-034 | 1 | 📝 Planned ||
-||| [TASK-639](#) | Typecheck list ops through imported .ash declarations | SPEC-034 | 2-3 | 📝 Planned ||
-||| [TASK-640](#) | End-to-end list ops verification | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-641](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-642](#) | Type predicates dispatch + e2e verification | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-034 | 1 | 📝 Planned ||
+||| [TASK-634](#) | Add `signature` field to `InlineCallable` | SPEC-044 | 2-3 | 📝 Planned ||
+||| [TASK-635](#) | Bind imported builtin signatures in `Engine::check()` | SPEC-044 | 3-4 | 📝 Planned ||
+||| [TASK-636](#) | Audit type-variable scoping at call sites | SPEC-044 | 1-2 | 📝 Planned ||
+||| [TASK-637](#) | Create `std/src/list.ash` with generic declarations | SPEC-044 | 2-3 | 📝 Planned ||
+||| [TASK-638](#) | Complete list-op qualified dispatch wiring | SPEC-044 | 1 | 📝 Planned ||
+||| [TASK-639](#) | Typecheck list ops through imported .ash declarations | SPEC-044 | 2-3 | 📝 Planned ||
+||| [TASK-640](#) | End-to-end list ops verification | SPEC-044 | 1-2 | 📝 Planned ||
+||| [TASK-641](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-044 | 1-2 | 📝 Planned ||
+||| [TASK-642](#) | Type predicates dispatch + e2e verification | SPEC-044 | 1-2 | 📝 Planned ||
+||| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-044 | 1 | 📝 Planned ||
 ||| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | 📝 Planned ||
 
 **Deliverable:** Generic type parameters on `builtin fn` declarations, unblocking list operations and type predicates. Tracks D2 and D1.5 from Phase 92 resolved. `add_builtin_functions()` deleted.

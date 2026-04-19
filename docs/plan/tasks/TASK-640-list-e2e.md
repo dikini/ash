@@ -2,7 +2,7 @@
 
 **Status:** Planned
 **Dependencies:** TASK-638, TASK-639
-**Spec:** SPEC-034
+**Spec:** SPEC-044
 **Estimated hours:** 1-2
 
 ## Objective

@@ -1,4 +1,4 @@
-# SPEC-034: Generic Builtin fn Declarations
+# SPEC-044: Generic Builtin fn Declarations
 
 **Status:** Draft
 **Date:** 2026-04-19
@@ -214,3 +214,10 @@ The current state is not a single unified model:
 
 This spec aims to unify all three categories under the `.ash` declaration path
 by fixing the import signature propagation gap.
+
+> **Note on string/record row:** After Phase 92, string and record builtins have
+> `.ash` declarations and qualified dispatch entries, but still hit the same
+> arity-only import binding gap. The difference is that string/record types are
+> monomorphic, so the arity-only binding happens to produce the correct type
+> shape. Generic builtins expose the gap because `Fn(Var) -> Var` is wrong for
+> `Fn(List<Var>) -> Int`.

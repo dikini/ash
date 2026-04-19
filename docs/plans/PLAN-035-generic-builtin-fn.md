@@ -4,7 +4,7 @@
 
 **Architecture:** Four tracks: (A) engine signature propagation, (B) freshening audit, (C) list ops stdlib, (D) type predicates stdlib + cleanup. Track A is the prerequisite for C and D. Track B is an independent audit.
 
-**Spec Reference:** [SPEC-034](../spec/SPEC-034-generic-builtin-fn.md)
+**Spec Reference:** [SPEC-044](../spec/SPEC-044-generic-builtin-fn.md)
 
 **Key insight:** The type system already supports generic builtin fn internally. The blocker is that `ash-engine`'s import path discards type signatures, binding imported builtins as arity-only `Fn(Var, Var, ..., Var) -> Var`.
 
@@ -107,9 +107,14 @@ at different call sites typecheck correctly without freshening.
 
 ---
 
-### TASK-638: Add List Ops to Builtin Dispatch Table
+### TASK-638: Complete List-Op Qualified Dispatch Wiring
 
-**Objective:** Register qualified list ops in the dispatch table.
+**Objective:** Register qualified list ops as aliases in the dispatch table.
+
+The runtime already supports list ops via unqualified match arms. This task adds
+qualified-name entries (`list::len`, `list::head`, etc.) so the imported builtin
+dispatch path can route them. This is wiring/consistency work, not new runtime
+semantics.
 
 **Files:**
 - Modify: `crates/ash-interp/src/eval.rs`
@@ -231,7 +236,7 @@ op wiring being complete, not on predicate work.
 || TASK-635 | Bind imported builtin signatures in `Engine::check()` | A | 3-4 | TASK-634 ||
 || TASK-636 | Audit type-variable scoping at call sites | B | 1-2 | — ||
 || TASK-637 | Create `std/src/list.ash` | C | 2-3 | TASK-635 ||
-|| TASK-638 | Add list ops to dispatch table | C | 1 | TASK-637 ||
+|| TASK-638 | Complete list-op qualified dispatch wiring | C | 1 | TASK-637 ||
 || TASK-639 | Typecheck list ops through imported .ash declarations | C | 2-3 | TASK-635, TASK-637 ||
 || TASK-640 | End-to-end list ops verification | C | 1-2 | TASK-638, TASK-639 ||
 || TASK-641 | Create `std/src/predicate.ash` | D | 1-2 | TASK-635 ||

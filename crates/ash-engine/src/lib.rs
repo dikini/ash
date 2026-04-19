@@ -1270,6 +1270,11 @@ fn build_imported_closures(
 ) -> (HashMap<String, Value>, HashMap<String, usize>) {
     use module_loader::CallableKind;
 
+    // Resolved once; builtin_dispatch_table() uses OnceLock so this is a
+    // single atomic load on subsequent calls, but hoisting it avoids calling
+    // the function N times inside the loop.
+    let dispatch_table = ash_interp::eval::builtin_dispatch_table();
+
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();
     for (name, callable) in imported_callables {
@@ -1288,16 +1293,17 @@ fn build_imported_closures(
             },
             CallableKind::Builtin { module } => {
                 // Check the dispatch table to decide whether this builtin needs a
-                // qualified call (e.g. "string::concat") or unqualified (e.g. "keys").
-                // String builtins live under "string::*" in the table; record builtins
-                // live under unqualified names ("record::keys" is NOT in the table).
+                // qualified call (e.g. "string::concat") or unqualified ("keys").
+                // String builtins are registered as "string::concat" etc. (qualified).
+                // Record builtins ("keys", "values", "record") are registered without a
+                // module prefix; "record::keys" is absent from the table, so they
+                // receive module: None and dispatch unqualified.
                 let qualified = format!("{module}::{}", callable.exported_name);
-                let call_module =
-                    if ash_interp::eval::builtin_dispatch_table().contains_key(qualified.as_str()) {
-                        Some(module.clone())
-                    } else {
-                        None
-                    };
+                let call_module = if dispatch_table.contains_key(qualified.as_str()) {
+                    Some(module.clone())
+                } else {
+                    None
+                };
                 let param_exprs: Vec<ash_core::Expr> = callable
                     .params
                     .iter()

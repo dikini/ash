@@ -313,9 +313,15 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 .map(|arg| eval_expr(arg, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            // For unqualified calls (module: None), user-defined and imported closures
-            // take priority over builtin dispatch. This allows `use string::{concat}` to
-            // shadow the unqualified list-concat builtin with the correct qualified dispatch.
+            // For unqualified calls (module: None), context closures take priority over
+            // builtin dispatch so that `use string::{concat}` shadows the unqualified
+            // list-concat builtin. Qualified calls (module: Some) always skip this path
+            // and go directly to builtin dispatch — the context is not consulted.
+            //
+            // Note: this early-exit returns apply_closure directly, bypassing the
+            // make_partial_builtin path below. Over-application through a closure found
+            // here produces WrongArity { callee: None } rather than a partial value;
+            // that is handled inside apply_closure itself.
             if module.is_none() {
                 if let Some(Value::Closure { params, body, env }) = ctx.get(func) {
                     return apply_closure(params, body, env, args);

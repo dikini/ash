@@ -356,3 +356,37 @@ async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
     let result = engine.execute(&workflow).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("hello world".to_string()));
 }
+
+// ---------------------------------------------------------------------------
+// Test 8: Record builtin dispatches via unqualified name after import
+// ---------------------------------------------------------------------------
+
+/// Verify that `use record::{keys}` imports correctly and dispatches to the
+/// unqualified "keys" builtin (not "record::keys", which is absent from the
+/// dispatch table). Confirms the module: None path in build_imported_closures.
+#[tokio::test]
+async fn builtin_fn_record_keys_dispatches_via_unqualified_name() {
+    let tmp_dir = tempfile::tempdir().expect("temp dir");
+    let dir = tmp_dir.path();
+
+    std::fs::write(
+        dir.join("record.ash"),
+        "pub builtin fn keys(r: Record) -> List<String>;\n",
+    )
+    .expect("write record.ash");
+
+    std::fs::write(
+        dir.join("caller.ash"),
+        "use record::{keys}\nworkflow main { ret keys(record(\"a\", 1, \"b\", 2)) }\n",
+    )
+    .expect("write caller.ash");
+
+    let engine = ash_engine::Engine::new().build().expect("engine builds");
+    let mut workflow = engine.parse_file(dir.join("caller.ash")).expect("parse");
+    engine.check(&mut workflow).expect("typecheck");
+    let result = engine.execute(&workflow).await.expect("execute");
+    assert!(
+        matches!(result, ash_core::Value::List(_)),
+        "keys() should return a List, got: {result:?}"
+    );
+}

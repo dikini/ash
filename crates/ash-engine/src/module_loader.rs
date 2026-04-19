@@ -36,6 +36,18 @@ pub struct LoadedOrdinaryFile {
     pub imported_callables: HashMap<String, InlineCallable>,
 }
 
+/// Whether a callable carries an Ash-level body or is bodyless (builtin).
+#[derive(Debug, Clone)]
+pub enum CallableKind {
+    /// User-defined callable with an Ash expression body.
+    User {
+        /// The Ash expression constituting the callable body.
+        body: Expr,
+    },
+    /// Bodyless builtin function resolved at link time.
+    Builtin,
+}
+
 /// Imported callable body and parameter list.
 #[derive(Debug, Clone)]
 pub struct InlineCallable {
@@ -43,8 +55,8 @@ pub struct InlineCallable {
     pub exported_name: String,
     /// Parameter names in call order.
     pub params: Vec<String>,
-    /// Callable body expression.
-    pub body: Expr,
+    /// Whether this callable has an Ash body or is a bodyless builtin.
+    pub kind: CallableKind,
 }
 
 #[derive(Debug, Clone)]
@@ -688,7 +700,9 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
         callable: InlineCallable {
             exported_name: name,
             params,
-            body: normalize_imported_callable_expr(&function.body),
+            kind: CallableKind::User {
+                body: normalize_imported_callable_expr(&function.body),
+            },
         },
     }))
 }
@@ -783,7 +797,7 @@ fn parse_builtin_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExp
         callable: InlineCallable {
             exported_name: name,
             params,
-            body: Expr::Literal(ash_parser::surface::Literal::Null),
+            kind: CallableKind::Builtin,
         },
     }))
 }
@@ -815,7 +829,7 @@ fn extract_callable_from_workflow(
                 .into_iter()
                 .map(|param| param.name.to_string())
                 .collect(),
-            body: expr,
+            kind: CallableKind::User { body: expr },
         },
     }))
 }
@@ -1265,14 +1279,11 @@ pub type Flag = On | Off;",
             "module should export type Flag"
         );
 
-        // Verify builtin fn has null body placeholder
+        // Verify builtin fn has Builtin kind
         let triple = exports.callables.get("triple").expect("triple callable");
         assert!(
-            matches!(
-                triple.body,
-                Expr::Literal(ash_parser::surface::Literal::Null)
-            ),
-            "builtin fn body should be a null placeholder"
+            matches!(triple.kind, CallableKind::Builtin),
+            "builtin fn kind should be CallableKind::Builtin"
         );
     }
 

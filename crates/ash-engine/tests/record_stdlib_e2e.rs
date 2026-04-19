@@ -12,10 +12,18 @@ async fn record_stdlib_keys_e2e() {
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
     let result = engine.execute(&workflow).await.expect("execute");
-    assert!(
-        matches!(result, ash_core::Value::List(_)),
-        "keys() should return a List, got: {result:?}"
-    );
+    // keys() should return the field names as strings
+    match result {
+        ash_core::Value::List(items) => {
+            let mut keys: Vec<String> = items
+                .iter()
+                .filter_map(|v| if let ash_core::Value::String(s) = v { Some(s.clone()) } else { None })
+                .collect();
+            keys.sort();
+            assert_eq!(keys, vec!["a", "b"], "keys should be [\"a\", \"b\"]");
+        }
+        other => panic!("keys() should return a List, got: {other:?}"),
+    }
 }
 
 #[tokio::test]
@@ -30,9 +38,10 @@ async fn record_stdlib_values_e2e() {
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
     let result = engine.execute(&workflow).await.expect("execute");
+    // values() returns heterogeneous values; verify it's a non-empty list
     assert!(
-        matches!(result, ash_core::Value::List(_)),
-        "values() should return a List, got: {result:?}"
+        matches!(&result, ash_core::Value::List(items) if !items.is_empty()),
+        "values() should return a non-empty List, got: {result:?}"
     );
 }
 

@@ -1265,17 +1265,18 @@ fn let_stmt(input: &mut ParseInput) -> ModalResult<Workflow> {
     skip_whitespace_and_comments(input);
     let checkpoint = input.clone();
     if let Ok(action) = action_ref(input) {
-        // Do not treat known builtin function names as capability action targets.
-        // Builtin functions like `record(...)` would otherwise be misinterpreted as
-        // capability calls when they appear as the RHS of a `let` binding followed
-        // by a statement boundary (newline or `}`).
-        let is_builtin_fn = matches!(
-            &action.target,
-            crate::surface::OperationalTarget::Symbolic { capability_name }
-                if crate::lower::BUILTIN_FUNCTIONS.contains(&capability_name.as_ref())
-        );
-
         if let crate::surface::Pattern::Variable { ref name, .. } = pat {
+            // Do not treat known builtin function names as capability action targets.
+            // Builtin functions like `record(...)` would otherwise be misinterpreted as
+            // capability calls when they appear as the RHS of a `let` binding followed
+            // by a statement boundary (newline or `}`).
+            // Only `Symbolic` targets can shadow builtins; `Qualified` and `Explicit`
+            // forms are not affected.
+            let is_builtin_fn = matches!(
+                &action.target,
+                crate::surface::OperationalTarget::Symbolic { capability_name }
+                    if crate::lower::BUILTIN_FUNCTIONS.contains(&capability_name.as_ref())
+            );
             // Verify what follows is a statement boundary, not an expression continuation.
             // Use skip_horizontal_ws_and_comments to preserve newlines as delimiters.
             crate::parse_utils::skip_horizontal_ws_and_comments(input);
@@ -2197,6 +2198,21 @@ mod tests {
         assert!(
             matches!(result, Workflow::Let { .. }),
             "Expected Let, got {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_let_builtin_fn_not_desugared_as_action() {
+        // `record(...)` followed by a newline must parse as Workflow::Let,
+        // not Workflow::Act. Without the builtin-guard, `action_ref` would
+        // parse `record(...)` as a Symbolic capability call and the boundary
+        // check would fire, producing an incorrect Act statement.
+        let mut input = test_input("let r = record(\"a\", 1)\nret r");
+        let result = parse_stmt(&mut input).unwrap();
+        assert!(
+            matches!(result, Workflow::Let { .. }),
+            "builtin fn call should not desugar to Act, got {:?}",
             result
         );
     }

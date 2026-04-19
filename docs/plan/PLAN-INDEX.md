@@ -2638,3 +2638,26 @@ form for pure runtime-provided functions. Tracks A, B, C, D1, E, and the
 unblocked portions of Track F are complete and verified. TASK-631B remains
 blocked on deferred Track D2 generic builtin semantics; that blocked cleanup is
 now the only remaining Phase 92 item.
+
+## Phase 93: Generic Builtin fn Declarations
+
+**Plan Reference:** [PLAN-034: Generic Builtin fn Declarations](plans/PLAN-034-generic-builtin-fn.md)
+**Specs:** `SPEC-034`
+**Priority:** Medium
+**Status:** 📝 Planned
+
+||| Task | Description | Spec | Est. Hours | Status ||
+|||------|-------------|------|------------|--------|\
+||| [TASK-634](#) | Audit type-variable scoping in call resolution | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-635](#) | Add `freshen` to Type (conditional) | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-636](#) | Create `std/src/list.ash` with generic declarations | SPEC-034 | 2-3 | 📝 Planned ||
+||| [TASK-637](#) | Add list ops to builtin dispatch table | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-638](#) | Typecheck list ops through .ash declarations | SPEC-034 | 2-3 | 📝 Planned ||
+||| [TASK-639](#) | End-to-end list ops verification | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-640](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-641](#) | Add type predicates to builtin dispatch table | SPEC-034 | 1 | 📝 Planned ||
+||| [TASK-642](#) | End-to-end type predicate verification | SPEC-034 | 1 | 📝 Planned ||
+||| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-034 | 1 | 📝 Planned ||
+||| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | 📝 Planned ||
+
+**Deliverable:** Generic type parameters on `builtin fn` declarations, unblocking list operations and type predicates. Tracks D2 and D1.5 from Phase 92 resolved. `add_builtin_functions()` deleted.

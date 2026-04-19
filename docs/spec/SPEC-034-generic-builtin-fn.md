@@ -9,32 +9,133 @@
 This spec extends `builtin fn` declarations to support generic type parameters,
 unblocking two deferred categories of stdlib builtins:
 
-1. **Type predicates** (`is_int`, `is_string`, `is_bool`, `is_list`, `is_record`,
-   `is_null`): ad-hoc polymorphic builtins that accept any value and return `Bool`.
-2. **List operations** (`len`, `head`, `tail`, `append`, `concat`, `filter`, `map`):
+1. **List operations** (`len`, `head`, `tail`, `append`, `concat`, `filter`, `map`):
    parametric polymorphic builtins over `List<a>`.
+2. **Type predicates** (`is_int`, `is_string`, `is_bool`, `is_list`, `is_record`,
+   `is_null`): ad-hoc polymorphic builtins that accept any value and return `Bool`.
 
-The good news: the type system already has the machinery. `Type::Var(TypeVar)`
-provides type variables, `builtin_fn_signature_type` in `ash-typeck/src/lib.rs`
-already maps declared type params to fresh type variables, and the unifier
-already handles `Type::List(Box<Type>)` and `Type::Fn(Vec<Type>, Box<Type>)`.
-The work is wiring, not architecture.
+The type system already has the internal machinery (`Type::Var`, unification,
+`builtin_fn_signature_type`). The parser already recognizes `<T>` on builtin fn.
+The critical gap is **type-signature propagation through `ash-engine`'s import
+path**: today, imported builtin declarations lose their type signatures and are
+registered in the type environment using arity-only synthetic types.
 
-## 2. Syntax
+## 2. Current State
 
-### 2.1 Grammar (unchanged from SPEC-BUILTIN-FN)
+### 2.1 What Works
 
+- Parser recognizes `builtin fn name<T>(...) -> Ret;` with `type_params: Vec<Name>`.
+- Surface AST `BuiltinFnDef` carries `type_params` and full parameter/return types.
+- Core AST `BuiltinFnDef` carries the same.
+- Typechecker's `builtin_fn_signature_type()` correctly maps type params to
+  fresh `TypeVar` and resolves parameter/return types through the type environment.
+- Typechecker's `register_function_signatures()` handles `Definition::BuiltinFn`.
+- Unification handles `Type::List(Box<Type>)` and `Type::Fn(Vec<Type>, Box<Type>)`.
+
+### 2.2 The Gap: Engine Import Path Loses Type Signatures
+
+The engine's import pipeline has two breaks:
+
+**Break 1: `InlineCallable` discards type information.**
+
+`InlineCallable` in `module_loader.rs` stores:
+```rust
+pub struct InlineCallable {
+    pub exported_name: String,
+    pub params: Vec<String>,  // names only, no types
+    pub kind: CallableKind,
+}
 ```
-builtin_decl ::= visibility? "builtin" "fn" IDENTIFIER type_params? "(" param_list ")" "->" surface_type ";"
-type_params  ::= "<" IDENTIFIER ("," IDENTIFIER)* ">"
+
+When `parse_builtin_fn_callable()` extracts a builtin fn from a snippet, it
+records param names but discards `params` type annotations and `return_type`.
+The original `BuiltinFnDef` with full type information is not preserved.
+
+**Break 2: `Engine::check()` binds imported callables with arity-only types.**
+
+In `Engine::check()` (lines 532-537, 568-573):
+```rust
+for (name, &param_count) in &workflow.imported_param_counts {
+    let param_types: Vec<Type> = (0..param_count)
+        .map(|_| Type::Var(TypeVar::fresh()))
+        .collect();
+    let ret_type = Type::Var(TypeVar::fresh());
+    type_env.bind_variable(name, Type::Fn(param_types, Box::new(ret_type)));
+}
 ```
 
-The parser already recognizes `<T>` on `builtin fn`. No grammar changes needed.
+This binds each imported callable as `Fn(Var, Var, ..., Var) -> Var` --
+completely unconstrained. For `len<a>(list: List<a>) -> Int`, the type
+environment gets `Fn(Var(N)) -> Var(M)` instead of `Fn(List<Var(N)>) -> Int`.
 
-### 2.2 New Declaration Files
+**Consequence:** Even if `std/src/list.ash` declares `builtin fn len<a>(list: List<a>) -> Int;`,
+and the module loader successfully extracts and imports it, the typechecker will
+never see the `List<a>` constraint or `Int` return type through the import path.
+Calls to `len` would typecheck with any argument type and produce an unknown
+return type.
 
+### 2.3 What Does NOT Need Fixing
+
+**Call-site freshening is probably not needed.** `instantiate_fn_call` starts
+with a fresh `Substitution` per call. Function types bound in the type
+environment are immutable. Each call site gets its own substitution scope, so
+shared `TypeVar` instances in the stored type do not leak across calls. A
+regression test should confirm this, but it is not an architectural prerequisite.
+
+## 3. Required Changes
+
+### 3.1 Preserve Type Signatures in `InlineCallable` (ash-engine)
+
+Add an optional field to `InlineCallable` carrying the declared type signature
+for builtin callables:
+
+```rust
+pub struct InlineCallable {
+    pub exported_name: String,
+    pub params: Vec<String>,
+    pub kind: CallableKind,
+    /// For CallableKind::Builtin: the declared type signature, if available.
+    /// Stored as a surface BuiltinFnDef so the typechecker can resolve type
+    /// params against its own TypeEnv.
+    pub signature: Option<ash_parser::surface::BuiltinFnDef>,
+}
+```
+
+`parse_builtin_fn_callable()` populates `signature` from the parsed definition.
+User-defined callables leave this as `None`.
+
+### 3.2 Bind Imported Builtin Signatures in `Engine::check()` (ash-engine)
+
+When `Engine::check()` iterates imported callables, instead of the arity-only
+synthetic binding, check if the callable has a signature and use it:
+
+```rust
+for (name, callable) in &workflow.imported_callables {
+    if let Some(ref sig) = callable.signature {
+        // Use the declared signature with proper type param resolution
+        let ty = builtin_fn_signature_type(&type_env, sig)?;
+        type_env.bind_variable(name, ty);
+    } else {
+        // Fallback: arity-only synthetic type
+        let param_types: Vec<Type> = (0..callable.params.len())
+            .map(|_| Type::Var(TypeVar::fresh()))
+            .collect();
+        let ret_type = Type::Var(TypeVar::fresh());
+        type_env.bind_variable(name, Type::Fn(param_types, Box::new(ret_type)));
+    }
+}
+```
+
+This requires the engine to pass `imported_callables` (not just
+`imported_param_counts`) to the typechecking path, or at minimum carry the
+signature alongside the param counts.
+
+### 3.3 Stdlib Declaration Files (ash-stdlib)
+
+Two new files with generic builtin fn declarations:
+
+**`std/src/list.ash`:**
 ```ash
--- std/src/list.ash
 pub builtin fn len<a>(list: List<a>) -> Int;
 pub builtin fn head<a>(list: List<a>) -> a;
 pub builtin fn tail<a>(list: List<a>) -> List<a>;
@@ -42,8 +143,10 @@ pub builtin fn append<a>(list: List<a>, elem: a) -> List<a>;
 pub builtin fn concat<a>(left: List<a>, right: List<a>) -> List<a>;
 pub builtin fn filter<a>(list: List<a>, predicate: Fn(a) -> Bool) -> List<a>;
 pub builtin fn map<a, b>(list: List<a>, transform: Fn(a) -> b) -> List<b>;
+```
 
--- std/src/predicate.ash
+**`std/src/predicate.ash`:**
+```ash
 pub builtin fn is_int<a>(value: a) -> Bool;
 pub builtin fn is_string<a>(value: a) -> Bool;
 pub builtin fn is_bool<a>(value: a) -> Bool;
@@ -52,96 +155,29 @@ pub builtin fn is_record<a>(value: a) -> Bool;
 pub builtin fn is_null<a>(value: a) -> Bool;
 ```
 
-**Note on type parameter usage:** For type predicates, the type parameter `<a>`
-is used only in the parameter position -- the return type is always `Bool`. This
-is a special case where the type variable is universally quantified at the call
-site: any concrete argument type is accepted. No new type-system mechanism is
-needed beyond what `Type::Var` + unification already provides.
+### 3.4 Builtin Dispatch Table (ash-interp)
 
-## 3. Type System
+Add qualified entries to the dispatch table for list ops (`list::len`, etc.)
+and type predicates (`predicate::is_int`, etc.). The existing `eval_function_call`
+match arms remain as the runtime implementations.
 
-### 3.1 Type Assignment
+### 3.5 Cleanup: Delete `add_builtin_functions()` (ash-typeck)
 
-A generic builtin fn's type is `Type::Fn(params, ret)` where params/ret may
-contain `Type::Var(TypeVar)` for declared type parameters. This is identical to
-what `add_builtin_functions()` in `type_env.rs` already produces.
+After list op declarations are wired end-to-end, `add_builtin_functions()`
+(which only contains list ops now) can be deleted. This is the unblocked portion
+of TASK-631B.
 
-**Example:** `builtin fn len<a>(list: List<a>) -> Int;` produces:
-```rust
-Type::Fn(
-    vec![Type::List(Box::new(Type::Var(TypeVar(N))))],
-    Box::new(Type::Int),
-)
-```
+## 4. Type-Variable Freshening Audit
 
-### 3.2 Type Checking at Call Sites
+Current code structure strongly suggests freshening is not needed:
 
-When a call to a generic builtin is typechecked:
+- `instantiate_fn_call` creates a fresh `Substitution` per call (line 408).
+- Function types bound in `TypeEnv` are immutable after insertion.
+- The substitution is local to each call's `CheckResult`.
 
-1. **Fresh instantiation:** For each call site, the builtin's type signature is
-   instantiated with fresh type variables. This ensures calls like
-   `len([1, 2, 3])` and `len(["a", "b"])` use distinct type variables.
-2. **Unification:** Argument types are unified with the instantiated parameter
-   types. The unifier resolves type variables as needed.
-3. **Return type:** The return type, after applying the substitution from
-   unification, becomes the type of the call expression.
-
-This is already how `check_expr` works for function calls when the variable is
-bound to a `Type::Fn(...)` containing `Type::Var`. No new checking logic needed.
-
-### 3.3 No Effect Escalation
-
-Generic builtins are pure, identical to monomorphic builtins. No effect
-annotation. No capability dispatch.
-
-## 4. Changes by Crate
-
-### 4.1 ash-parser (minimal)
-
-No changes. The parser already:
-- Recognizes `builtin fn name<T>(...) -> Ret;`
-- Stores `type_params: Vec<Name>` in `BuiltinFnDef`
-- Parses `List<T>` as `Type::List(Box<Type>)` with `T` as `Type::Name`
-
-### 4.2 ash-engine (module loader)
-
-The module loader's `parse_builtin_fn_callable` already parses generic builtin
-fn snippets. The `InlineCallable` records param names and `CallableKind::Builtin`.
-No changes needed for module resolution.
-
-### 4.3 ash-typeck (minimal)
-
-`builtin_fn_signature_type` already maps type params to fresh `TypeVar`. The
-`register_function_signatures` function already handles `BuiltinFn` definitions.
-
-**Change needed:** When `check_expr` resolves a call to a variable bound to a
-polymorphic type (containing `Type::Var`), it must **freshen** the type variables
-at each call site. Currently `add_builtin_functions` binds each builtin once
-with shared `TypeVar` instances. If those are reused across call sites without
-freshening, two calls with different argument types would incorrectly unify.
-
-**Detection:** Check if `check_expr`'s call resolution already freshens type
-variables when looking up a variable's type. If it does, no change needed. If it
-does not, add a `instantiate` step that replaces bound type vars with fresh ones.
-
-### 4.4 ash-interp (runtime dispatch)
-
-The dispatch table in `builtin_dispatch_table()` needs entries for list ops and
-type predicates. The existing `eval_function_call` match arms for `(_, "len")`,
-`(_, "head")`, etc. continue as the runtime implementations.
-
-For **type predicates**, the current match arms in `eval_function_call` already
-handle them under `(_, "is_int")`, `(_, "is_string")`, etc. The dispatch table
-just needs entries so the qualified form (`predicate::is_int`) routes correctly.
-
-For **list ops**, same pattern: dispatch table entries map qualified names to
-the existing implementations.
-
-### 4.5 ash-typeck (cleanup)
-
-After both declaration files are wired, `add_builtin_functions()` can be deleted
-(or reduced to empty) since all its registrations are now handled by
-`.ash` file declarations. This is TASK-631B from Phase 92.
+A regression test should verify that two sequential calls to the same polymorphic
+builtin with different concrete types (e.g., `len([1,2])` then `len(["a"])`)
+both typecheck correctly. If this passes, no freshening machinery is needed.
 
 ## 5. Migration Inventory
 
@@ -159,55 +195,22 @@ After both declaration files are wired, `add_builtin_functions()` can be deleted
 
 ### 5.2 Type Predicates (Track D1.5)
 
-| Function     | .ash Declaration                                    |
-|-------------|-----------------------------------------------------|
-| `is_int`    | `pub builtin fn is_int<a>(value: a) -> Bool;`       |
-| `is_string` | `pub builtin fn is_string<a>(value: a) -> Bool;`    |
-| `is_bool`   | `pub builtin fn is_bool<a>(value: a) -> Bool;`      |
-| `is_list`   | `pub builtin fn is_list<a>(value: a) -> Bool;`      |
-| `is_record` | `pub builtin fn is_record<a>(value: a) -> Bool;`    |
-| `is_null`   | `pub builtin fn is_null<a>(value: a) -> Bool;`      |
+All declared as `pub builtin fn is_X<a>(value: a) -> Bool;`.
 
 ### 5.3 Backward Compatibility
 
-These builtins currently work as unqualified names (`len(...)`, `is_int(...)`).
-After migration, the unqualified forms continue to work because the dispatch
-table has entries for both qualified (`list::len`) and unqualified (`len`) names.
-The `.ash` declarations provide the type signatures; the runtime match arms
-provide the implementations. No breaking change.
+Unqualified forms (`len(...)`, `is_int(...)`) continue to work. The dispatch
+table has entries for both qualified and unqualified names. No breaking change.
 
-## 6. Risks and Open Questions
+## 6. Current Implementation Split (Honest)
 
-### 6.1 Type Variable Freshening at Call Sites
+The current state is not a single unified model:
 
-**Risk:** If the typechecker does not freshen type variables when resolving a
-call to a polymorphic builtin, then two calls with different argument types
-(e.g., `len([1,2])` and `len(["a"])`) would share the same `TypeVar`, causing
-incorrect unification or a spurious type error.
+| Layer | List ops | Type predicates | String ops |
+|-------|----------|-----------------|------------|
+| **Type env** | Hardcoded via `add_builtin_functions()` | Not registered (removed by TASK-631A) | Via `.ash` declarations |
+| **Runtime dispatch** | Unqualified match arms in `eval_function_call` | Unqualified match arms | Qualified dispatch table entries |
+| **Module import** | Arity-only synthetic types | Arity-only synthetic types | Arity-only synthetic types |
 
-**Mitigation:** Audit `check_expr`'s call resolution path. If freshening is
-missing, add it. This is a prerequisite for any generic builtin, not specific
-to list ops or predicates.
-
-### 6.2 `Fn(a) -> Bool` in Type Signatures
-
-`filter` and `map` accept function-typed parameters (`Fn(a) -> Bool`, `Fn(a) -> b`).
-The surface type `Fn(T) -> U` parses as `Type::Fn(Vec<Type>, Box<Type>)`. This
-must survive the surface-to-typechecker conversion in `workflow_surface_type_to_type`.
-Verify this path handles `Fn(...)` types inside generic builtin fn signatures.
-
-### 6.3 Type Predicate Semantics
-
-Type predicates are unusual: they accept any type but always return `Bool`. The
-type parameter `<a>` is a phantom -- it never influences the return type. At
-the call site, `is_int("hello")` should typecheck as `Bool` even though `a ~ String`.
-This works naturally with the unification approach: the parameter type `a`
-unifies with the argument type, and the return type is fixed `Bool`.
-
-## 7. Relationship to Other Specs
-
-| Spec | Relationship |
-|------|-------------|
-| SPEC-BUILTIN-FN | This spec is an extension: generic type params on builtin fn |
-| SPEC-002 (type system) | Provides Type::Var, unification, substitution |
-| DESIGN-020 (three-vertex) | Generic builtins sit at the Transform vertex (pure) |
+This spec aims to unify all three categories under the `.ash` declaration path
+by fixing the import signature propagation gap.

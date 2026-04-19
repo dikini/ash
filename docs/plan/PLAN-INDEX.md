@@ -2641,22 +2641,22 @@ now the only remaining Phase 92 item.
 
 ## Phase 93: Generic Builtin fn Declarations
 
-**Plan Reference:** [PLAN-034: Generic Builtin fn Declarations](plans/PLAN-034-generic-builtin-fn.md)
+**Plan Reference:** [PLAN-035: Generic Builtin fn Declarations](plans/PLAN-035-generic-builtin-fn.md)
 **Specs:** `SPEC-034`
 **Priority:** Medium
 **Status:** 📝 Planned
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 |||------|-------------|------|------------|--------|\
-||| [TASK-634](#) | Audit type-variable scoping in call resolution | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-635](#) | Add `freshen` to Type (conditional) | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-636](#) | Create `std/src/list.ash` with generic declarations | SPEC-034 | 2-3 | 📝 Planned ||
-||| [TASK-637](#) | Add list ops to builtin dispatch table | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-638](#) | Typecheck list ops through .ash declarations | SPEC-034 | 2-3 | 📝 Planned ||
-||| [TASK-639](#) | End-to-end list ops verification | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-640](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-034 | 1-2 | 📝 Planned ||
-||| [TASK-641](#) | Add type predicates to builtin dispatch table | SPEC-034 | 1 | 📝 Planned ||
-||| [TASK-642](#) | End-to-end type predicate verification | SPEC-034 | 1 | 📝 Planned ||
+||| [TASK-634](#) | Add `signature` field to `InlineCallable` | SPEC-034 | 2-3 | 📝 Planned ||
+||| [TASK-635](#) | Bind imported builtin signatures in `Engine::check()` | SPEC-034 | 3-4 | 📝 Planned ||
+||| [TASK-636](#) | Audit type-variable scoping at call sites | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-637](#) | Create `std/src/list.ash` with generic declarations | SPEC-034 | 2-3 | 📝 Planned ||
+||| [TASK-638](#) | Add list ops to builtin dispatch table | SPEC-034 | 1 | 📝 Planned ||
+||| [TASK-639](#) | Typecheck list ops through imported .ash declarations | SPEC-034 | 2-3 | 📝 Planned ||
+||| [TASK-640](#) | End-to-end list ops verification | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-641](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-034 | 1-2 | 📝 Planned ||
+||| [TASK-642](#) | Type predicates dispatch + e2e verification | SPEC-034 | 1-2 | 📝 Planned ||
 ||| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-034 | 1 | 📝 Planned ||
 ||| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | 📝 Planned ||
 

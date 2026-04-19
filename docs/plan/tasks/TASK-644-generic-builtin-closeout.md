@@ -1,13 +1,13 @@
-# TASK-644: Update CHANGELOG and PLAN-INDEX for Generic Builtins
+# TASK-644: Update CHANGELOG and PLAN-INDEX
 
 **Status:** Planned
-**Dependencies:** TASK-643
+**Dependencies:** TASK-640, TASK-642, TASK-643
 **Spec:** SPEC-034
 **Estimated hours:** 0.5
 
 ## Objective
 
-Document completion of SPEC-034 / PLAN-034.
+Document completion of SPEC-034 / PLAN-035.
 
 ## TDD Steps
 

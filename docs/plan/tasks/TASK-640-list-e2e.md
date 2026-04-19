@@ -1,13 +1,13 @@
-# TASK-637: Add List Ops to Builtin Dispatch Table
+# TASK-640: End-to-End List Ops Verification
 
 **Status:** Planned
-**Dependencies:** TASK-636
+**Dependencies:** TASK-638, TASK-639
 **Spec:** SPEC-034
 **Estimated hours:** 1-2
 
 ## Objective
 
-Add qualified entries (list::len, list::head, etc.) to builtin_dispatch_table() in eval.rs. Test dispatch through qualified names.
+Full integration: parse, typecheck, evaluate list::len([10,20,30])=3, list::map([1,2,3],|x|=>x*2)=[2,4,6].
 
 ## TDD Steps
 

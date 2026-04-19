@@ -1,13 +1,13 @@
-# TASK-639: End-to-End List Ops Verification
+# TASK-642: Type Predicates Dispatch + E2E Verification
 
 **Status:** Planned
-**Dependencies:** TASK-637, TASK-638
+**Dependencies:** TASK-641
 **Spec:** SPEC-034
 **Estimated hours:** 1-2
 
 ## Objective
 
-Full integration: parse, typecheck, evaluate list::len([10,20,30])=3, list::map([1,2,3],|x|=>x*2)=[2,4,6].
+Add qualified predicate entries to dispatch table. Verify predicate::is_int(42)=true, predicate::is_int('hi')=false.
 
 ## TDD Steps
 

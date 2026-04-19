@@ -1,13 +1,13 @@
-# TASK-642: End-to-End Type Predicate Verification
+# TASK-638: Add List Ops to Builtin Dispatch Table
 
 **Status:** Planned
-**Dependencies:** TASK-641
+**Dependencies:** TASK-637
 **Spec:** SPEC-034
 **Estimated hours:** 1
 
 ## Objective
 
-Integration: is_int(42)=true, is_int('hi')=false, is_list([1])=true.
+Add qualified entries (list::len, list::head, etc.) to builtin_dispatch_table(). Primarily wiring/consistency, not new runtime semantics.
 
 ## TDD Steps
 

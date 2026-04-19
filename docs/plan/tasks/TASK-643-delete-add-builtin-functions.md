@@ -1,13 +1,13 @@
 # TASK-643: Delete add_builtin_functions()
 
 **Status:** Planned
-**Dependencies:** TASK-639, TASK-642
+**Dependencies:** TASK-640
 **Spec:** SPEC-034
 **Estimated hours:** 1
 
 ## Objective
 
-Remove hardcoded type-env registrations for list ops now covered by .ash declarations. Unblocked portion of TASK-631B.
+Remove hardcoded list-op type registrations now covered by .ash declarations. Contains only list ops (predicates removed by TASK-631A). Depends only on list op completion, not predicate work.
 
 ## TDD Steps
 

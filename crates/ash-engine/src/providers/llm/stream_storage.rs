@@ -31,12 +31,14 @@ impl StreamStorage {
         }
     }
 
-    /// Store a stream and return its ID
+    /// Store a new stream for later retrieval.
     ///
     /// # Arguments
     /// * `stream_id` - Unique identifier for this stream
     /// * `receiver` - Channel receiver for stream chunks
     ///
+    /// # Panics
+    /// Panics if the internal mutex is poisoned.
     pub fn store_stream(&self, stream_id: String, receiver: StreamReceiver) {
         let mut streams = self
             .streams
@@ -45,7 +47,7 @@ impl StreamStorage {
         streams.insert(stream_id, Arc::new(Mutex::new(receiver)));
     }
 
-    /// Pull the next chunk from a stored stream
+    /// Pull the next chunk from a stored stream.
     ///
     /// # Arguments
     /// * `stream_id` - ID of the stream to pull from
@@ -57,6 +59,11 @@ impl StreamStorage {
     /// * `Ok(None)` - No chunk available yet, try again later
     /// * `Err(...)` - Stream not found or other error
     ///
+    /// # Panics
+    /// Panics if the internal mutex is poisoned.
+    ///
+    /// # Errors
+    /// Returns an error string if the stream ID is not found.
     pub fn pull_chunk(&self, stream_id: &str) -> Result<Option<StreamChunk>, String> {
         let streams = self
             .streams
@@ -101,7 +108,10 @@ impl StreamStorage {
         }
     }
 
-    /// Remove a stream from storage
+    /// Remove a stream from storage.
+    ///
+    /// # Panics
+    /// Panics if the internal mutex is poisoned.
     pub fn remove_stream(&self, stream_id: &str) {
         let mut streams = self
             .streams
@@ -110,7 +120,10 @@ impl StreamStorage {
         streams.remove(stream_id);
     }
 
-    /// Check if a stream exists
+    /// Check if a stream exists.
+    ///
+    /// # Panics
+    /// Panics if the internal mutex is poisoned.
     #[must_use]
     pub fn has_stream(&self, stream_id: &str) -> bool {
         let streams = self

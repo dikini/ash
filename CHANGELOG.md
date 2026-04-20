@@ -8,6 +8,33 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 95: `Expr::Let` — pure expression let-binding in core IR. Added
+  `Expr::Let { pattern, expr, body, span }` to `ash_core::ast::Expr` for pure
+  scope extension in fn bodies (TASK-648). Lowerer desugars `Expr::Block` to
+  nested `Expr::Let` (TASK-649), deleting the `normalize_imported_callable_expr`
+  workaround from `module_loader.rs`. Evaluator implements EXPR-LET via child
+  context scope extension (TASK-650). ANF lifter and monomorphizer handle
+  `Expr::Let` (TASK-651). 7 integration tests covering inline fn, top-level fn,
+  nested let, closure capture, list patterns, and variable shadowing (TASK-652).
+  Fixed `and`/`or` short-circuit evaluation per SPEC-004 EXPR-AND-FALSE and
+  EXPR-OR-TRUE (TASK-653).
+
+- Phase 95 code review fixes: replaced dead `BinaryOp::And`/`Or` arms in
+  `eval_binary_op` with `unreachable!()` guard (short-circuit handled in
+  `eval_expr`). Added `LetPatternBindFailed` error variant for Expr::Let
+  pattern-match failure (SPEC-004 `PatternBindFailure`), replacing misused
+  `NonExhaustiveMatch`. Added 2 integration tests: runtime pattern-match
+  failure in fn let-binding, and pub fn with let-sequencing via `parse_file`
+  (9 total e2e tests for Expr::Let).
+
+- Phase 95 spec review fixes (TASK-648/649/650): added `span: Span` to
+  `Expr::Let` in SPEC-001 §2.6, TASK-648, and TASK-649 desugaring sketch for
+  pattern-match-failure diagnostics. Fixed TASK-650 eval sketch to use child
+  context (`ctx.extend()`) matching existing `eval_match`/`eval_if_let` pattern
+  instead of parent-scoped mutation. Clarified TASK-649 module_loader deletion
+  flow: raw surface `Expr::Block` stored in `InlineCallable::body` is desugared
+  at lowering time, unifying all three code paths.
+
 - Ash wiki architecture docs and rollout scaffolding: added FUTURE-004, DESIGN-029, SPEC-045, the initial implementation plan, a concrete metadata schema reference, a shared corpus-analysis substrate design note, and Phase 94 task/PLAN-INDEX scaffolding for the static-first human/AI shared knowledge substrate over the Ash corpus. The new documents define authority/status/health semantics, metadata carrier rules, supersession and drift/audit models, onboarding/library-service goals, staged rollout for static views/query workflows/service exports, and practical reuse boundaries with the spec processor and `ash-lint`.
 
 - Phase 93 generic builtin fn (TASK-634 through TASK-644): imported `builtin fn`

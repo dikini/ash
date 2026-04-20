@@ -1,4 +1,4 @@
-//! TASK-635: Imported builtin signatures in Engine::check().
+//! TASK-635: Imported builtin signatures in [`Engine::check`].
 //!
 //! These tests verify that imported `builtin fn` declarations carry their
 //! declared type signatures into the typechecker, instead of arity-only

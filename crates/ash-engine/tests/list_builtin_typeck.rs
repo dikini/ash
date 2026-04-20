@@ -15,7 +15,7 @@
 
 /// Verify that importing `len` from a list module and calling `len([1, 2, 3])`
 /// typechecks successfully. This exercises the full path: module loading,
-/// builtin fn signature extraction, and type checking through Engine::check().
+/// builtin fn signature extraction, and type checking through [`Engine::check`].
 #[test]
 fn list_len_typechecks_via_imported_declaration() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");

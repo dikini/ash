@@ -406,9 +406,58 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         }
 
         Expr::Binary { op, left, right } => {
-            let left_val = eval_expr(left, ctx)?;
-            let right_val = eval_expr(right, ctx)?;
-            eval_binary_op(*op, left_val, right_val)
+            // Short-circuit evaluation for and/or (SPEC-004 EXPR-AND-FALSE, EXPR-OR-TRUE)
+            match op {
+                BinaryOp::And => {
+                    let left_val = eval_expr(left, ctx)?;
+                    match left_val {
+                        Value::Bool(false) => Ok(Value::Bool(false)),
+                        Value::Bool(true) => {
+                            let right_val = eval_expr(right, ctx)?;
+                            match right_val {
+                                Value::Bool(b) => Ok(Value::Bool(b)),
+                                _ => Err(EvalError::InvalidBinaryOp {
+                                    op: "and".to_string(),
+                                    left: format!("{:?}", left_val),
+                                    right: format!("{:?}", right_val),
+                                }),
+                            }
+                        }
+                        _ => Err(EvalError::InvalidBinaryOp {
+                            op: "and".to_string(),
+                            left: format!("{:?}", left_val),
+                            right: "<unevaluated>".to_string(),
+                        }),
+                    }
+                }
+                BinaryOp::Or => {
+                    let left_val = eval_expr(left, ctx)?;
+                    match left_val {
+                        Value::Bool(true) => Ok(Value::Bool(true)),
+                        Value::Bool(false) => {
+                            let right_val = eval_expr(right, ctx)?;
+                            match right_val {
+                                Value::Bool(b) => Ok(Value::Bool(b)),
+                                _ => Err(EvalError::InvalidBinaryOp {
+                                    op: "or".to_string(),
+                                    left: format!("{:?}", left_val),
+                                    right: format!("{:?}", right_val),
+                                }),
+                            }
+                        }
+                        _ => Err(EvalError::InvalidBinaryOp {
+                            op: "or".to_string(),
+                            left: format!("{:?}", left_val),
+                            right: "<unevaluated>".to_string(),
+                        }),
+                    }
+                }
+                _ => {
+                    let left_val = eval_expr(left, ctx)?;
+                    let right_val = eval_expr(right, ctx)?;
+                    eval_binary_op(*op, left_val, right_val)
+                }
+            }
         }
 
         Expr::Call {
@@ -553,6 +602,30 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 _ => Err(EvalError::NotCallable { value: callee }),
             }
         }
+
+        // EXPR-LET (SPEC-004 §4.6): pure scope extension
+        // Evaluate expr, match pattern, extend env, evaluate body
+        Expr::Let {
+            pattern,
+            expr,
+            body,
+            span: _,
+        } => {
+            let value = eval_expr(expr, ctx)?;
+            match crate::pattern::match_pattern(pattern, &value) {
+                Ok(bindings) => {
+                    let mut child_ctx = ctx.extend();
+                    for (name, val) in bindings {
+                        child_ctx.set(name, val);
+                    }
+                    eval_expr(body, &child_ctx)
+                }
+                Err(_) => Err(EvalError::LetPatternBindFailed {
+                    pattern: format!("{:?}", pattern),
+                    value: format!("{:?}", value),
+                }),
+            }
+        }
     }
 }
 
@@ -666,23 +739,16 @@ fn eval_binary_op(op: BinaryOp, left: Value, right: Value) -> EvalResult<Value> 
             }),
         },
 
-        // Logical
-        BinaryOp::And => match (&left, &right) {
-            (Value::Bool(l), Value::Bool(r)) => Ok(Value::Bool(*l && *r)),
-            _ => Err(EvalError::InvalidBinaryOp {
-                op: "and".to_string(),
-                left: format!("{:?}", left),
-                right: format!("{:?}", right),
-            }),
-        },
-        BinaryOp::Or => match (&left, &right) {
-            (Value::Bool(l), Value::Bool(r)) => Ok(Value::Bool(*l || *r)),
-            _ => Err(EvalError::InvalidBinaryOp {
-                op: "or".to_string(),
-                left: format!("{:?}", left),
-                right: format!("{:?}", right),
-            }),
-        },
+        // Logical — NOTE: And/Or are handled with short-circuit evaluation in
+        // the Expr::Binary arm of eval_expr (SPEC-004 EXPR-AND-FALSE, EXPR-OR-TRUE).
+        // These arms are only reachable if eval_binary_op is called directly.
+        BinaryOp::And | BinaryOp::Or => {
+            unreachable!(
+                "and/or are handled with short-circuit in eval_expr; \
+                 eval_binary_op should never be called for {:?}",
+                op
+            )
+        }
 
         // Comparison
         BinaryOp::Eq => Ok(Value::Bool(left == right)),
@@ -2722,5 +2788,230 @@ mod tests {
             matches!(closure_result, Value::Closure { .. }),
             "expression-level FnDef should produce Value::Closure, got {closure_result:?}"
         );
+    }
+
+    // ── TASK-653: Short-circuit and/or evaluation (SPEC-004) ──────────
+
+    /// SPEC-004 EXPR-AND-FALSE: `false && <error>` returns `false` without
+    /// evaluating the right operand.
+    #[test]
+    fn task653_and_short_circuits_on_false() {
+        let ctx = Context::new();
+
+        // false and (1 / 0) — division by zero on the right must not fire
+        let expr = Expr::Binary {
+            op: BinaryOp::And,
+            left: Box::new(Expr::Literal(Value::Bool(false))),
+            right: Box::new(Expr::Binary {
+                op: BinaryOp::Div,
+                left: Box::new(Expr::Literal(Value::Int(1))),
+                right: Box::new(Expr::Literal(Value::Int(0))),
+            }),
+        };
+
+        let result = eval_expr(&expr, &ctx);
+        assert_eq!(result.unwrap(), Value::Bool(false));
+    }
+
+    /// SPEC-004 EXPR-OR-TRUE: `true || <error>` returns `true` without
+    /// evaluating the right operand.
+    #[test]
+    fn task653_or_short_circuits_on_true() {
+        let ctx = Context::new();
+
+        // true or (1 / 0) — division by zero on the right must not fire
+        let expr = Expr::Binary {
+            op: BinaryOp::Or,
+            left: Box::new(Expr::Literal(Value::Bool(true))),
+            right: Box::new(Expr::Binary {
+                op: BinaryOp::Div,
+                left: Box::new(Expr::Literal(Value::Int(1))),
+                right: Box::new(Expr::Literal(Value::Int(0))),
+            }),
+        };
+
+        let result = eval_expr(&expr, &ctx);
+        assert_eq!(result.unwrap(), Value::Bool(true));
+    }
+
+    /// `true && false` returns `false` (both operands evaluated).
+    #[test]
+    fn task653_and_both_evaluated_when_left_true() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::And,
+            left: Box::new(Expr::Literal(Value::Bool(true))),
+            right: Box::new(Expr::Literal(Value::Bool(false))),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(false));
+    }
+
+    /// `false || true` returns `true` (both operands evaluated).
+    #[test]
+    fn task653_or_both_evaluated_when_left_false() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::Or,
+            left: Box::new(Expr::Literal(Value::Bool(false))),
+            right: Box::new(Expr::Literal(Value::Bool(true))),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(true));
+    }
+
+    /// Non-boolean left operand in `and` produces a type error.
+    #[test]
+    fn task653_and_non_bool_left_is_error() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::And,
+            left: Box::new(Expr::Literal(Value::Int(1))),
+            right: Box::new(Expr::Literal(Value::Bool(true))),
+        };
+        assert!(eval_expr(&expr, &ctx).is_err());
+    }
+
+    /// Non-boolean left operand in `or` produces a type error.
+    #[test]
+    fn task653_or_non_bool_left_is_error() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::Or,
+            left: Box::new(Expr::Literal(Value::Int(0))),
+            right: Box::new(Expr::Literal(Value::Bool(false))),
+        };
+        assert!(eval_expr(&expr, &ctx).is_err());
+    }
+
+    // ── TASK-650: Expr::Let evaluation tests ────────────────────────
+
+    /// Simple let binding: `let x = 42; x` evaluates to 42
+    #[test]
+    fn task650_let_simple_binding() {
+        let ctx = Context::new();
+        let expr = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(42))),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(42));
+    }
+
+    /// Nested let: `let x = 1; let y = 2; y` evaluates to 2
+    #[test]
+    fn task650_let_nested_binding() {
+        let ctx = Context::new();
+        let inner = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "y".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(2))),
+            body: Box::new(Expr::Variable {
+                name: "y".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        let outer = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(1))),
+            body: Box::new(inner),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&outer, &ctx).unwrap(), Value::Int(2));
+    }
+
+    /// Scope isolation: `let x = 1; let x = 2; x` evaluates to 2 (inner shadows outer)
+    #[test]
+    fn task650_let_shadowing() {
+        let ctx = Context::new();
+        let inner = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(2))),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        let outer = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(1))),
+            body: Box::new(inner),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&outer, &ctx).unwrap(), Value::Int(2));
+    }
+
+    /// Let binding doesn't leak into parent scope.
+    #[test]
+    fn task650_let_no_scope_leak() {
+        let ctx = Context::new();
+        // let x = 42; x  -- evaluates to 42, but x is not in parent
+        let let_expr = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(42))),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        // After evaluating the let, x should NOT be in ctx
+        let result = eval_expr(&let_expr, &ctx);
+        assert_eq!(result.unwrap(), Value::Int(42));
+        // Verify x is NOT accessible in the original context
+        assert!(ctx.get("x").is_none());
+    }
+
+    /// Tuple destructuring: `let (a, b) = (1, 2); a` — uses List since no Value::Tuple.
+    /// Test list pattern destructuring: `let [a, b] = [1, 2]; a`
+    #[test]
+    fn task650_let_list_destructure() {
+        let ctx = Context::new();
+        let expr = Expr::Let {
+            pattern: Pattern::List(
+                vec![
+                    Pattern::Variable {
+                        name: "a".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                    Pattern::Variable {
+                        name: "b".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                ],
+                None,
+            ),
+            expr: Box::new(Expr::Literal(Value::List(Box::new(vec![
+                Value::Int(1),
+                Value::Int(2),
+            ])))),
+            body: Box::new(Expr::Variable {
+                name: "a".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(1));
     }
 }

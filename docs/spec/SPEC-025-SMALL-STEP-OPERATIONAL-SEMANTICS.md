@@ -309,7 +309,10 @@ Pure expressions remain atomic in v1 and reuse the pure judgment family from SPE
 Γ ⊢e expr ⇓ v
 ```
 
-No expression-level micro-step relation is introduced by this document.
+No expression-level micro-step relation is introduced by this document. This includes the new
+canonical `Expr::Let` form added by the SPEC-001/SPEC-004 expression-let amendment: pure
+scope extension evaluates atomically (evaluate `expr`, match `pattern`, extend `Γ`, evaluate
+`body`), in contrast to `Workflow::Let` which micro-steps through `LET-EVAL` and `LET-BIND`.
 
 ### 3.3 Atomic Pattern Judgment
 

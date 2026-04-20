@@ -4,15 +4,15 @@
 //!
 //! **Engine-level E2E (import -> typecheck -> execute):**
 //!   len, head, tail, append, concat — tested through the Engine's
-//!   parse_file -> check -> execute pipeline with imported list.ash.
+//!   `parse_file` -> `check` -> `execute` pipeline with imported list.ash.
 //!
 //! **Dispatch-level E2E (closure construction -> dispatch -> evaluate):**
-//!   map, filter — tested via dispatch_builtin with Value::Closure arguments.
+//!   map, filter — tested via `dispatch_builtin` with `Value::Closure` arguments.
 //!   These verify the complete runtime evaluation path for higher-order
 //!   list operations, including closure application inside the builtin body.
 //!
 //! NOTE: map/filter cannot yet be tested at the engine E2E level because
-//! Expr::Block is not lowerable (fn bodies parse as blocks). When that
+//! `Expr::Block` is not lowerable (fn bodies parse as blocks). When that
 //! limitation is lifted, these tests should migrate to engine E2E too.
 
 use std::sync::Arc;
@@ -57,20 +57,18 @@ fn write_caller(
     caller
 }
 
-/// Engine E2E: parse_file -> check -> execute.
+/// Engine E2E: `parse_file` -> `check` -> `execute`.
 async fn engine_e2e(caller: &std::path::Path) -> Value {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(caller).expect("parse should succeed");
-    engine
-        .check(&mut workflow)
-        .expect("typecheck should pass");
+    engine.check(&mut workflow).expect("typecheck should pass");
     engine
         .execute(&workflow)
         .await
         .expect("execution should succeed")
 }
 
-/// Build a Value::Closure from parameter name and body expression.
+/// Build a `Value::Closure` from parameter name and body expression.
 fn make_closure(param: &str, body: Expr) -> Value {
     Value::Closure {
         params: vec![(param.to_string(), None)],
@@ -125,7 +123,11 @@ async fn e2e_append_adds_element() {
 async fn e2e_concat_merges_lists() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(tmp.path(), "use list::{concat}", "ret concat([1, 2], [3, 4])");
+    let caller = write_caller(
+        tmp.path(),
+        "use list::{concat}",
+        "ret concat([1, 2], [3, 4])",
+    );
     assert_eq!(
         engine_e2e(&caller).await,
         Value::List(Box::new(vec![
@@ -189,11 +191,7 @@ async fn e2e_qualified_list_len_via_expr() {
     // Test qualified call (list::len) through expr evaluation
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(
-        tmp.path(),
-        "use list::{len}",
-        "ret len([5, 6, 7, 8])",
-    );
+    let caller = write_caller(tmp.path(), "use list::{len}", "ret len([5, 6, 7, 8])");
     assert_eq!(engine_e2e(&caller).await, Value::Int(4));
 }
 
@@ -210,11 +208,17 @@ fn dispatch_map_doubles_elements() {
     // map([1, 2, 3], |x| x * 2) => [2, 4, 6]
     let ctx = Context::new();
     let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
-    let double_fn = make_closure("x", Expr::Binary {
-        op: ash_core::BinaryOp::Mul,
-        left: Box::new(Expr::Variable { name: "x".into(), span: ash_core::Span::default() }),
-        right: Box::new(Expr::Literal(Value::Int(2))),
-    });
+    let double_fn = make_closure(
+        "x",
+        Expr::Binary {
+            op: ash_core::BinaryOp::Mul,
+            left: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_core::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(2))),
+        },
+    );
     let result = dispatch_builtin("map", &[list, double_fn], &ctx)
         .expect("dispatch should find map")
         .expect("map should succeed");
@@ -234,11 +238,17 @@ fn dispatch_filter_keeps_matching() {
         Value::Int(3),
         Value::Int(4),
     ]));
-    let gt2_fn = make_closure("x", Expr::Binary {
-        op: ash_core::BinaryOp::Gt,
-        left: Box::new(Expr::Variable { name: "x".into(), span: ash_core::Span::default() }),
-        right: Box::new(Expr::Literal(Value::Int(2))),
-    });
+    let gt2_fn = make_closure(
+        "x",
+        Expr::Binary {
+            op: ash_core::BinaryOp::Gt,
+            left: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_core::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(2))),
+        },
+    );
     let result = dispatch_builtin("filter", &[list, gt2_fn], &ctx)
         .expect("dispatch should find filter")
         .expect("filter should succeed");
@@ -258,11 +268,17 @@ fn dispatch_map_then_filter_composition() {
         Value::Int(3),
         Value::Int(4),
     ]));
-    let double_fn = make_closure("x", Expr::Binary {
-        op: ash_core::BinaryOp::Mul,
-        left: Box::new(Expr::Variable { name: "x".into(), span: ash_core::Span::default() }),
-        right: Box::new(Expr::Literal(Value::Int(2))),
-    });
+    let double_fn = make_closure(
+        "x",
+        Expr::Binary {
+            op: ash_core::BinaryOp::Mul,
+            left: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_core::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(2))),
+        },
+    );
     let doubled = dispatch_builtin("map", &[input, double_fn], &ctx)
         .expect("dispatch should find map")
         .expect("map should succeed");
@@ -277,11 +293,17 @@ fn dispatch_map_then_filter_composition() {
     );
 
     // Now filter the doubled list
-    let gt5_fn = make_closure("x", Expr::Binary {
-        op: ash_core::BinaryOp::Gt,
-        left: Box::new(Expr::Variable { name: "x".into(), span: ash_core::Span::default() }),
-        right: Box::new(Expr::Literal(Value::Int(5))),
-    });
+    let gt5_fn = make_closure(
+        "x",
+        Expr::Binary {
+            op: ash_core::BinaryOp::Gt,
+            left: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_core::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(5))),
+        },
+    );
     let result = dispatch_builtin("filter", &[doubled, gt5_fn], &ctx)
         .expect("dispatch should find filter")
         .expect("filter should succeed");
@@ -296,10 +318,16 @@ fn dispatch_qualified_map_via_eval_expr() {
     // eval_expr with qualified list::map call
     let ctx = Context::new();
     let list = Value::List(Box::new(vec![Value::Int(10), Value::Int(20)]));
-    let negate_fn = make_closure("x", Expr::Unary {
-        op: ash_core::UnaryOp::Neg,
-        expr: Box::new(Expr::Variable { name: "x".into(), span: ash_core::Span::default() }),
-    });
+    let negate_fn = make_closure(
+        "x",
+        Expr::Unary {
+            op: ash_core::UnaryOp::Neg,
+            expr: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_core::Span::default(),
+            }),
+        },
+    );
     let expr = Expr::Call {
         func: "map".to_string(),
         module: Some("list".to_string()),
@@ -322,11 +350,17 @@ fn dispatch_filter_with_equality_predicate() {
         Value::Int(1),
         Value::Int(3),
     ]));
-    let eq1_fn = make_closure("x", Expr::Binary {
-        op: ash_core::BinaryOp::Eq,
-        left: Box::new(Expr::Variable { name: "x".into(), span: ash_core::Span::default() }),
-        right: Box::new(Expr::Literal(Value::Int(1))),
-    });
+    let eq1_fn = make_closure(
+        "x",
+        Expr::Binary {
+            op: ash_core::BinaryOp::Eq,
+            left: Box::new(Expr::Variable {
+                name: "x".into(),
+                span: ash_core::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(1))),
+        },
+    );
     let result = dispatch_builtin("filter", &[list, eq1_fn], &ctx)
         .expect("dispatch should find filter")
         .expect("filter should succeed");
@@ -339,21 +373,27 @@ fn dispatch_filter_with_equality_predicate() {
 #[test]
 fn dispatch_map_on_empty_list() {
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![]));
-    let any_fn = make_closure("x", Expr::Variable { name: "x".into(), span: ash_core::Span::default() });
+    let list = Value::List(Box::default());
+    let any_fn = make_closure(
+        "x",
+        Expr::Variable {
+            name: "x".into(),
+            span: ash_core::Span::default(),
+        },
+    );
     let result = dispatch_builtin("map", &[list, any_fn], &ctx)
         .expect("dispatch should find map")
         .expect("map should succeed");
-    assert_eq!(result, Value::List(Box::new(vec![])));
+    assert_eq!(result, Value::List(Box::default()));
 }
 
 #[test]
 fn dispatch_filter_on_empty_list() {
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![]));
+    let list = Value::List(Box::default());
     let any_fn = make_closure("x", Expr::Literal(Value::Bool(true)));
     let result = dispatch_builtin("filter", &[list, any_fn], &ctx)
         .expect("dispatch should find filter")
         .expect("filter should succeed");
-    assert_eq!(result, Value::List(Box::new(vec![])));
+    assert_eq!(result, Value::List(Box::default()));
 }

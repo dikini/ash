@@ -954,6 +954,13 @@ enclosing workflow boundary owns rejection as described in §4.6.1.
   Γ ⊕ ΔΓ ⊢e body ⇓ v'
   ─────────────────────────────────────────────────────────────────
   Γ ⊢e Match(scrutinee, [arm1, ..., armn]) ⇓ v'
+
+(EXPR-LET)
+  Γ ⊢e expr ⇓ v
+  Γ ⊢p pat ⇐ v ⇓ ΔΓ
+  Γ ⊕ ΔΓ ⊢e body ⇓ v'
+  ─────────────────────────────────────────────────────────────────
+  Γ ⊢e Let { pattern = pat, expr, body } ⇓ v'
 ```
 
 `LiteralCarrier` ranges over the runtime literal values admitted by the canonical `Literal` form,
@@ -961,7 +968,7 @@ including scalar literals and literal containers already fully formed before exp
 evaluation. `Expr::Constructor` from SPEC-001 is the canonical variant-construction form; this
 section therefore subsumes the earlier standalone constructor prose. Together, the rules above
 cover the canonical core expression forms listed in SPEC-001: `Literal`, `Variable`,
-`FieldAccess`, `IndexAccess`, `Unary`, `Binary`, `Call`, `Match`, and `Constructor`.
+`FieldAccess`, `IndexAccess`, `Unary`, `Binary`, `Call`, `Match`, `Constructor`, and `Let`.
 
 Surface tuple-variant constructor expressions lower into this canonical constructor form using
 implementation-defined internal payload metadata derived from the source declaration. That
@@ -989,6 +996,11 @@ an expression at a dynamically ill-shaped site, the enclosing workflow rule owns
   workflow boundary as `RuntimeFailure(reason)`;
 - a `Match` expression with no selected arm is rejected by the enclosing workflow boundary as
   `PatternMatchFailure(v)` for the already-evaluated scrutinee value `v`;
+- for `Expr::Let`, well-typed programs guarantee irrefutable patterns. A refutable pattern that
+  fails to match at runtime is rejected by the enclosing workflow boundary as `PatternBindFailure`,
+  just as for non-exhaustive `Match`. The type checker should prevent this case for `Expr::Let`
+  by requiring irrefutable patterns at expression-level let-bindings (distinct from `Workflow::Let`
+  which permits refutable patterns with `LET-REJECT` semantics);
 - the expression judgment itself remains the success-only relation for the pure fragment.
 
 This ownership split keeps pure expression reasoning canonical in one place while preserving the

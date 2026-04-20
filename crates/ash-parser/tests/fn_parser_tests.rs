@@ -248,7 +248,7 @@ fn parse_pub_fn() {
 }
 
 // ---------------------------------------------------------------------------
-// 10. fn accepts nested fn at parse time; lowering rejects Expr::Block
+// 10. fn accepts nested fn at parse time; lowering desugars Expr::Block to nested Expr::Let
 // ---------------------------------------------------------------------------
 #[test]
 fn parse_fn_rejects_nested_fn() {
@@ -296,13 +296,39 @@ fn parse_fn_rejects_nested_fn() {
     );
     assert!(tail_expr.is_some(), "expected tail expression (inner())");
 
-    // Lowering the body should fail because Expr::Block lowering is not yet
-    // supported in core IR (blocks are fn-body-only constructs).
+    // After TASK-649, Expr::Block is desugared to nested Expr::Let during lowering.
+    // The nested fn definition is preserved as Expr::FnDef inside the let-binding's expr.
     let lower_result = lower_expr(&f.body);
     assert!(
-        lower_result.is_err(),
-        "lowering of Expr::Block (containing nested fn) should fail, but got: {:?}",
+        lower_result.is_ok(),
+        "lowering of Expr::Block (containing nested fn) should succeed, but got: {:?}",
         lower_result
+    );
+
+    // The desugared result should be CoreExpr::Let { pattern: inner, expr: FnDef, body: inner() }
+    let lowered = lower_result.unwrap();
+    let ash_core::ast::Expr::Let {
+        ref pattern,
+        ref expr,
+        ref body,
+        ..
+    } = lowered
+    else {
+        panic!("expected CoreExpr::Let, got: {:?}", lowered);
+    };
+    let ash_core::ast::Pattern::Variable { name, .. } = pattern else {
+        panic!("expected Variable pattern, got: {:?}", pattern);
+    };
+    assert_eq!(name, "inner", "expected pattern name 'inner'");
+    assert!(
+        matches!(expr.as_ref(), ash_core::ast::Expr::FnDef { .. }),
+        "expected FnDef as bound expression, got: {:?}",
+        expr
+    );
+    assert!(
+        matches!(body.as_ref(), ash_core::ast::Expr::FnApply { .. }),
+        "expected FnApply as body (inner()), got: {:?}",
+        body
     );
 }
 

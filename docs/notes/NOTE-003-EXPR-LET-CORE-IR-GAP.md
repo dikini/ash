@@ -1,6 +1,6 @@
 # NOTE-003: Missing `Expr::Let` in Core IR — Pure/Imperative Boundary Contamination
 
-## Status: Open Finding
+## Status: Spec Amendments Written
 
 ## Summary
 
@@ -190,17 +190,21 @@ The right operand is not evaluated. But `eval.rs` evaluates both operands eagerl
 
 ## References
 
-- SPEC-001 §2.6 — canonical core expression forms
+- SPEC-001 §2.0 — canonical core expression forms (amended: `Let` added)
+- SPEC-001 §2.6 — Expr enum definition (amended: `Expr::Let` variant added)
+- SPEC-001 §2.6 — Expr::Let vs Workflow::Let distinction table (added)
 - SPEC-002 — surface grammar (fn_def, block_expr, if_expr, workflow if_stmt)
 - SPEC-004 §3.1 — workflow judgment form
 - SPEC-004 §3.2 — expression judgment form
-- SPEC-004 §4.6 — expression evaluation rules (including EXPR-AND-FALSE)
-- SPEC-025 — small-step semantics (LET-EVAL, LET-BIND, SEQ-STEP)
+- SPEC-004 §4.6 — expression evaluation rules (amended: `EXPR-LET` rule added)
+- SPEC-004 §4.6.1 — dynamic expression misuse ownership (amended: Expr::Let pattern failure)
+- SPEC-025 §3.2 — atomic expression judgment (amended: Expr::Let is atomic, not micro-stepped)
+- SPEC-025 §7.2 — workflow LET-EVAL/LET-BIND rules (unchanged — these are Workflow::Let)
 - SPEC-027 §2.2 — fn body grammar
 - SPEC-027 §4.1 — fn body evaluation rules
 - `crates/ash-parser/src/parse_expr.rs:326` — parse_fn_expr_body
 - `crates/ash-parser/src/lower.rs:1512` — Expr::Block rejection
 - `crates/ash-engine/src/module_loader.rs:739` — normalize_imported_callable_expr
-- `crates/ash-core/src/ast.rs` — core Expr enum (no Let variant)
-- `crates/ash-interp/src/eval.rs` — eval_expr (no Expr::Let handling)
+- `crates/ash-core/src/ast.rs` — core Expr enum (no Let variant — implementation gap)
+- `crates/ash-interp/src/eval.rs` — eval_expr (no Expr::Let handling — implementation gap)
 - NOTE-001 — Workflow Computation Type (`comp T`)

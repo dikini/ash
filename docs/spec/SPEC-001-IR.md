@@ -43,7 +43,7 @@ These forms are the ones downstream phases must preserve:
 
 **Sequential workflow contract**: A single workflow in Ash is sequential. Concurrency and parallelism are modeled at the system level through multiple communicating workflows, not through workflow-internal parallel forms. This spec defines the sequential execution model for individual workflows.
 - core expressions: `Literal`, `Variable`, `FieldAccess`, `IndexAccess`, `Unary`, `Binary`,
-  `Call`, `Match`, `Constructor`
+  `Call`, `Match`, `Constructor`, `Let`
 - core patterns: `Variable`, `Tuple`, `Record`, `List`, `Wildcard`, `Literal`, `Variant`
 
 The `Variant` pattern is explicitly listed as a core pattern for matching ADT constructors
@@ -433,6 +433,23 @@ pub enum Expr {
     Call(Box<Expr>, Vec<Expr>),
     Match(Box<Expr>, Vec<MatchArm>),
     Constructor(ConstructorExpr),
+    /// Pure scope extension: evaluate `expr`, bind via `pattern`, evaluate `body`.
+    ///
+    /// This is the expression-level let-binding, distinct from `Workflow::Let`
+    /// which is the imperative/monadic form with continuation semantics.
+    /// `Expr::Let` composes two pure computations by scope extension:
+    /// the bound expression is evaluated, the pattern is matched (irrefutably
+    /// for well-typed programs), and the body is evaluated in the extended
+    /// environment.
+    ///
+    /// Surface syntax: `let <pattern> = <expr>; <body>` inside fn bodies.
+    /// This is semantically `let <pattern> = <expr> in <body>` — expression
+    /// composition, not imperative sequencing.
+    Let {
+        pattern: Pattern,
+        expr: Box<Expr>,
+        body: Box<Expr>,
+    },
 }
 
 /// Constructor expression for ADT value creation
@@ -512,6 +529,24 @@ indicates a type system or implementation error.
 - Constructor expressions in SPEC-002 lower directly to `Expr::Constructor`
 - Match expressions in SPEC-02 lower directly to `Expr::Match`
 - `if let` surface syntax lowers to `Expr::Match` with a wildcard fallback arm
+- Surface `Expr::Block { [BlockStmt::Let], tail_expr }` (fn body blocks) lower to
+  nested `Expr::Let`: each `let` statement wraps the next as its `body`, with the
+  `tail_expr` as the innermost body. `{ let x = e1; let y = e2; tail }` becomes
+  `Expr::Let { pat: x, expr: e1, body: Expr::Let { pat: y, expr: e2, body: tail } }`.
+- Surface `Expr::If` (value-producing if) lowers to `Expr::Match` on `Bool`
+
+**Expr::Let vs Workflow::Let**:
+
+These are semantically distinct despite sharing the `let` keyword:
+
+| Aspect | `Expr::Let` | `Workflow::Let` |
+|--------|-------------|-----------------|
+| Domain | Pure expression | Effectful workflow |
+| Composition | Scope extension (`e1 in e2`) | Monadic bind (thread context forward) |
+| Context | Environment `Γ` only | Full runtime context (Γ, C, P, Ω, π) |
+| Continuation | `body: Expr` (same expression domain) | `continuation: Workflow` (workflow domain) |
+| Effect tracking | None — pure | Observations, actions, provenance |
+| Pattern failure | Type error (irrefutable required) | `LET-REJECT` (runtime rejection) |
 
 ## 3. Provenance
 

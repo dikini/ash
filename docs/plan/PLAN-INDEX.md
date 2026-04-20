@@ -1695,7 +1695,7 @@ test result: ok. 40 passed; 0 failed
 
 **Source:** [MCE-001: Entry Point](../ideas/minimal-core/MCE-001-ENTRY-POINT.md)  
 **Priority:** Critical (minimal core execution environment)  
-**Status:** 🟡 Ready for validated implementation planning
+**Status:** ✅ Done (all 57A + 57B minimum tasks complete; TASK-368b extended tests deferred)
 
 ### Critical Note: SPEC-First Implementation
 

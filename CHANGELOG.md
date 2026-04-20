@@ -108,6 +108,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `sender`. The inspector function was also reverted from `role()` to
   `sender()` and the helper from `role_name()` to `sender_name()`.
 
+- PLAN-INDEX: Phase 57 status corrected from stale "Ready" to "Done" -- all
+  57A (SPEC) and 57B (implementation) tasks were already complete including
+  closeout TASK-369. Only TASK-368b (extended entry-point tests requiring
+  io::Stdout capability) remains deferred to a future phase.
+
 - Removed dead `timeout_ms` and `max_retries` fields from `LlmConfig`. These
   were declared but never wired to the async-openai client, making them
   misleading configuration surface. Also replaced bare `.lock().unwrap()`

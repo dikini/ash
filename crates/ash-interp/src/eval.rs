@@ -120,6 +120,64 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
+        // ── List module builtins (qualified) ──
+        m.insert(
+            "list::len",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "list::head",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "list::tail",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "list::append",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "list::concat",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "list::filter",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "list::map",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+
         // ── Unqualified builtins ──
         let unqualified = [
             ("len", 1, false),
@@ -366,9 +424,11 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 // Preserve partial-application: if the table rejects for too-few
                 // args, fall through to make_partial_builtin just like the legacy path.
                 match result {
-                    Err(EvalError::WrongArity { expected, actual, callee: Some(ref name) })
-                        if actual < expected =>
-                    {
+                    Err(EvalError::WrongArity {
+                        expected,
+                        actual,
+                        callee: Some(ref name),
+                    }) if actual < expected => {
                         return Ok(make_partial_builtin(name, &args, expected));
                     }
                     other => return other,

@@ -16,10 +16,6 @@ pub struct LlmConfig {
     pub api_key: String,
     /// Default model identifier if none specified
     pub default_model: String,
-    /// Request timeout in milliseconds
-    pub timeout_ms: u64,
-    /// Maximum retry count for transient failures
-    pub max_retries: u32,
 }
 
 impl Default for LlmConfig {
@@ -29,15 +25,11 @@ impl Default for LlmConfig {
     /// - `api_base`: "<https://api.openai.com/v1>"
     /// - `api_key`: empty string (must be set before use)
     /// - `default_model`: "gpt-4o"
-    /// - `timeout_ms`: 30000 (30 seconds)
-    /// - `max_retries`: 2
     fn default() -> Self {
         Self {
             api_base: "https://api.openai.com/v1".to_string(),
             api_key: String::new(),
             default_model: "gpt-4o".to_string(),
-            timeout_ms: 30000,
-            max_retries: 2,
         }
     }
 }
@@ -122,8 +114,6 @@ impl LlmConfig {
             api_base: "http://localhost:11434/v1".to_string(),
             api_key: String::new(),
             default_model: "llama3.2".to_string(),
-            timeout_ms: 60000,
-            max_retries: 1,
         }
     }
 
@@ -147,8 +137,8 @@ impl fmt::Display for LlmConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "LlmConfig {{ api_base: {}, api_key: ***, default_model: {}, timeout_ms: {}, max_retries: {} }}",
-            self.api_base, self.default_model, self.timeout_ms, self.max_retries
+            "LlmConfig {{ api_base: {}, api_key: ***, default_model: {} }}",
+            self.api_base, self.default_model
         )
     }
 }
@@ -163,8 +153,6 @@ impl fmt::Debug for LlmConfig {
             .field("api_base", &self.api_base)
             .field("api_key", &"***")
             .field("default_model", &self.default_model)
-            .field("timeout_ms", &self.timeout_ms)
-            .field("max_retries", &self.max_retries)
             .finish()
     }
 }
@@ -179,8 +167,6 @@ mod tests {
         assert_eq!(config.api_base, "https://api.openai.com/v1");
         assert_eq!(config.api_key, "");
         assert_eq!(config.default_model, "gpt-4o");
-        assert_eq!(config.timeout_ms, 30000);
-        assert_eq!(config.max_retries, 2);
     }
 
     #[test]
@@ -189,8 +175,6 @@ mod tests {
             api_base: "https://api.openai.com/v1".to_string(),
             api_key: "sk-test123".to_string(),
             default_model: "gpt-4o".to_string(),
-            timeout_ms: 30000,
-            max_retries: 2,
         };
         assert!(config.validate().is_ok());
     }

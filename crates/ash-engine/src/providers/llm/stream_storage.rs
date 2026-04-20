@@ -37,10 +37,11 @@ impl StreamStorage {
     /// * `stream_id` - Unique identifier for this stream
     /// * `receiver` - Channel receiver for stream chunks
     ///
-    /// # Panics
-    /// Panics if the internal lock is poisoned.
     pub fn store_stream(&self, stream_id: String, receiver: StreamReceiver) {
-        let mut streams = self.streams.lock().unwrap();
+        let mut streams = self
+            .streams
+            .lock()
+            .expect("stream_storage: store_stream lock poisoned");
         streams.insert(stream_id, Arc::new(Mutex::new(receiver)));
     }
 
@@ -56,27 +57,30 @@ impl StreamStorage {
     /// * `Ok(None)` - No chunk available yet, try again later
     /// * `Err(...)` - Stream not found or other error
     ///
-    /// # Panics
-    /// Panics if the internal lock is poisoned.
-    ///
-    /// # Errors
-    /// Returns `Err(String)` if the stream ID is not found in storage.
     pub fn pull_chunk(&self, stream_id: &str) -> Result<Option<StreamChunk>, String> {
-        let streams = self.streams.lock().unwrap();
+        let streams = self
+            .streams
+            .lock()
+            .expect("stream_storage: pull_chunk streams lock poisoned");
         let receiver = streams
             .get(stream_id)
             .ok_or_else(|| format!("Stream '{stream_id}' not found"))?
             .clone();
         drop(streams); // Release lock before potentially blocking
 
-        let mut receiver = receiver.lock().unwrap();
+        let mut receiver = receiver
+            .lock()
+            .expect("stream_storage: pull_chunk receiver lock poisoned");
         // Try to receive without blocking
         match receiver.try_recv() {
             Ok(chunk) => {
                 // Remove stream if End or Error (terminal states)
                 if matches!(chunk, StreamChunk::End | StreamChunk::Error(_)) {
                     drop(receiver);
-                    let mut streams = self.streams.lock().unwrap();
+                    let mut streams = self
+                        .streams
+                        .lock()
+                        .expect("stream_storage: pull_chunk cleanup lock poisoned");
                     streams.remove(stream_id);
                 }
                 Ok(Some(chunk))
@@ -88,28 +92,31 @@ impl StreamStorage {
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 // Channel disconnected - stream ended unexpectedly
                 drop(receiver);
-                self.streams.lock().unwrap().remove(stream_id);
+                self.streams
+                    .lock()
+                    .expect("stream_storage: pull_chunk disconnected cleanup lock poisoned")
+                    .remove(stream_id);
                 Ok(Some(StreamChunk::End))
             }
         }
     }
 
     /// Remove a stream from storage
-    ///
-    /// # Panics
-    /// Panics if the internal lock is poisoned.
     pub fn remove_stream(&self, stream_id: &str) {
-        let mut streams = self.streams.lock().unwrap();
+        let mut streams = self
+            .streams
+            .lock()
+            .expect("stream_storage: remove_stream lock poisoned");
         streams.remove(stream_id);
     }
 
     /// Check if a stream exists
-    ///
-    /// # Panics
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn has_stream(&self, stream_id: &str) -> bool {
-        let streams = self.streams.lock().unwrap();
+        let streams = self
+            .streams
+            .lock()
+            .expect("stream_storage: has_stream lock poisoned");
         streams.contains_key(stream_id)
     }
 }

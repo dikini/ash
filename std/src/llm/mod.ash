@@ -43,10 +43,6 @@ pub mod supervised;
 -- Re-export all types
 pub use types::{
     Role,
-    System,
-    User,
-    Assistant,
-    Tool,
     Message,
     ToolCall,
     ToolCallDelta,
@@ -54,9 +50,7 @@ pub use types::{
     Usage,
     ChatResponse,
     Embedding,
-    ChatChunk,
-    ChatOptions,
-    EmbeddingOptions
+    ChatChunk
 };
 
 -- Re-export prompt constructors

@@ -101,6 +101,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Reverted `role` to `sender` field name in LLM stdlib Message type. `role` is
+  a reserved keyword in Ash, causing parse failures in pattern matching and
+  struct literals. All occurrences in `types.ash`, `prompt.ash`, `mod.ash`,
+  `lib.ash`, and the Rust provider (`chat.rs`, `tool_dispatch.rs`) now use
+  `sender`. The inspector function was also reverted from `role()` to
+  `sender()` and the helper from `role_name()` to `sender_name()`.
+
+- Removed dead `timeout_ms` and `max_retries` fields from `LlmConfig`. These
+  were declared but never wired to the async-openai client, making them
+  misleading configuration surface. Also replaced bare `.lock().unwrap()`
+  with `.lock().expect("descriptive message")` in `stream_storage.rs` for
+  all Mutex acquisitions to provide actionable panic diagnostics.
+
 - PLAN-INDEX: Phase 48 status updated from "Partial" to "Done" -- all remediation
   tasks (TASK-318, TASK-311, TASK-319) completed in Phase 49. Phase 92 status
   updated from "Blocked" to "Done" -- TASK-631B resolved by Phase 93 TASK-643.

@@ -603,8 +603,30 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             }
         }
 
-        Expr::Let { .. } => {
-            todo!("Expr::Let evaluation not yet implemented")
+        // EXPR-LET (SPEC-004 §4.6): pure scope extension
+        // Evaluate expr, match pattern, extend env, evaluate body
+        Expr::Let {
+            pattern,
+            expr,
+            body,
+            span: _,
+        } => {
+            let value = eval_expr(expr, ctx)?;
+            match crate::pattern::match_pattern(pattern, &value) {
+                Ok(bindings) => {
+                    let mut child_ctx = ctx.extend();
+                    for (name, val) in bindings {
+                        child_ctx.set(name, val);
+                    }
+                    eval_expr(body, &child_ctx)
+                }
+                Err(_) => Err(EvalError::NonExhaustiveMatch {
+                    value: format!(
+                        "Expr::Let pattern {:?} failed to match {:?}",
+                        pattern, value
+                    ),
+                }),
+            }
         }
     }
 }
@@ -2867,5 +2889,138 @@ mod tests {
             right: Box::new(Expr::Literal(Value::Bool(false))),
         };
         assert!(eval_expr(&expr, &ctx).is_err());
+    }
+
+    // ── TASK-650: Expr::Let evaluation tests ────────────────────────
+
+    /// Simple let binding: `let x = 42; x` evaluates to 42
+    #[test]
+    fn task650_let_simple_binding() {
+        let ctx = Context::new();
+        let expr = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(42))),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(42));
+    }
+
+    /// Nested let: `let x = 1; let y = 2; y` evaluates to 2
+    #[test]
+    fn task650_let_nested_binding() {
+        let ctx = Context::new();
+        let inner = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "y".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(2))),
+            body: Box::new(Expr::Variable {
+                name: "y".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        let outer = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(1))),
+            body: Box::new(inner),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&outer, &ctx).unwrap(), Value::Int(2));
+    }
+
+    /// Scope isolation: `let x = 1; let x = 2; x` evaluates to 2 (inner shadows outer)
+    #[test]
+    fn task650_let_shadowing() {
+        let ctx = Context::new();
+        let inner = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(2))),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        let outer = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(1))),
+            body: Box::new(inner),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&outer, &ctx).unwrap(), Value::Int(2));
+    }
+
+    /// Let binding doesn't leak into parent scope.
+    #[test]
+    fn task650_let_no_scope_leak() {
+        let ctx = Context::new();
+        // let x = 42; x  -- evaluates to 42, but x is not in parent
+        let let_expr = Expr::Let {
+            pattern: Pattern::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            },
+            expr: Box::new(Expr::Literal(Value::Int(42))),
+            body: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        // After evaluating the let, x should NOT be in ctx
+        let result = eval_expr(&let_expr, &ctx);
+        assert_eq!(result.unwrap(), Value::Int(42));
+        // Verify x is NOT accessible in the original context
+        assert!(ctx.get("x").is_none());
+    }
+
+    /// Tuple destructuring: `let (a, b) = (1, 2); a` — uses List since no Value::Tuple.
+    /// Test list pattern destructuring: `let [a, b] = [1, 2]; a`
+    #[test]
+    fn task650_let_list_destructure() {
+        let ctx = Context::new();
+        let expr = Expr::Let {
+            pattern: Pattern::List(
+                vec![
+                    Pattern::Variable {
+                        name: "a".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                    Pattern::Variable {
+                        name: "b".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                ],
+                None,
+            ),
+            expr: Box::new(Expr::Literal(Value::List(Box::new(vec![
+                Value::Int(1),
+                Value::Int(2),
+            ])))),
+            body: Box::new(Expr::Variable {
+                name: "a".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            span: ash_core::ast::Span::default(),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(1));
     }
 }

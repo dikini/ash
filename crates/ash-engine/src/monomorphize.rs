@@ -278,8 +278,9 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
             monomorphize_expr(body, type_env)?;
         }
         Expr::Literal(_) | Expr::Variable { .. } | Expr::CheckObligation { .. } => {}
-        Expr::Let { .. } => {
-            todo!("Expr::Let not yet implemented in monomorphize")
+        Expr::Let { expr, body, .. } => {
+            monomorphize_expr(expr, type_env)?;
+            monomorphize_expr(body, type_env)?;
         }
     }
     Ok(())

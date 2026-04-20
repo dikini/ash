@@ -317,8 +317,28 @@ fn lift_expr(
             }
         }
 
-        CoreExpr::Let { .. } => {
-            todo!("Expr::Let not yet implemented in lift")
+        // Expr::Let is pure scope extension. Lift sub-expressions, but
+        // discard body bindings (body may reference pattern-bound variables).
+        CoreExpr::Let {
+            pattern,
+            expr,
+            body,
+            span,
+        } => {
+            let (new_expr, e_bindings) = lift_expr(*expr, effectful_names, state);
+            let original_body = (*body).clone();
+            let (new_body, body_bindings) = lift_expr(*body, effectful_names, state);
+            let preserved_body =
+                preserve_original_if_bindings(original_body, new_body, &body_bindings);
+            (
+                CoreExpr::Let {
+                    pattern,
+                    expr: Box::new(new_expr),
+                    body: Box::new(preserved_body),
+                    span,
+                },
+                e_bindings,
+            )
         }
     }
 }

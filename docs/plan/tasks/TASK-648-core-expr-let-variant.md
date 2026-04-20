@@ -20,8 +20,11 @@ Add `Expr::Let { pattern, expr, body }` to the core `Expr` enum in `ash-core/src
        pattern: Pattern,
        expr: Box<Expr>,
        body: Box<Expr>,
+       span: Span,
    }
    ```
+   The `span` field is required for diagnostics when pattern matching fails
+   at runtime (see SPEC-004 §4.6.1 — `PatternBindFailure` must report location).
 
 2. Fix all exhaustive `match` sites on `Expr` across these crates:
    - `ash-interp/src/eval.rs` (~208 sites) — add `Expr::Let` arm that evaluates `expr`, matches `pattern`, extends env, evaluates `body`. Return `todo!()` initially if evaluator work is deferred to TASK-650.

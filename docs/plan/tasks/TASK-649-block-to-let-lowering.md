@@ -18,7 +18,7 @@ Replace the lowerer's rejection of `Expr::Block` with a desugaring pass that con
    Expr::Block { .. } => Err(LoweringError::ExprNotLowerable { kind: "block" }),
    
    // AFTER:
-   Expr::Block { statements, tail_expr, .. } => {
+   Expr::Block { statements, tail_expr, span } => {
        let tail = tail_expr.as_deref().map_or_else(
            || Ok(CoreExpr::Literal(ash_core::Value::Null)),
            |e| lower_expr(e),
@@ -26,11 +26,12 @@ Replace the lowerer's rejection of `Expr::Block` with a desugaring pass that con
        let mut result = tail;
        for stmt in statements.iter().rev() {
            match stmt {
-               BlockStmt::Let { pattern, expr, .. } => {
+               BlockStmt::Let { pattern, expr, span: stmt_span } => {
                    result = CoreExpr::Let {
                        pattern: lower_pattern(pattern)?,
                        expr: Box::new(lower_expr(expr)?),
                        body: Box::new(result),
+                       span: *stmt_span,  // or *span for the block's span
                    };
                }
                // Handle any other BlockStmt variants
@@ -44,7 +45,11 @@ Replace the lowerer's rejection of `Expr::Block` with a desugaring pass that con
 
 3. In `crates/ash-engine/src/module_loader.rs`:
    - Delete `normalize_imported_callable_expr` function entirely
-   - Remove all calls to it — imported callables should now use their raw `Expr::Block` bodies, which will be desugared during lowering.
+   - Remove all calls to it. The module_loader stores the raw surface `Expr::Block`
+     in `InlineCallable::body`. When the callable's body is later lowered through
+     `lower_expr`, the new `Expr::Block` arm handles the desugaring. This unifies
+     all three code paths (imported pub fn, inline fn expr, top-level fn def)
+     through a single lowering path.
 
 4. Also handle `Expr::Block` in `lower_expr_for_module` (the module-scope variant that rejects `FnDef`) if it exists.
 

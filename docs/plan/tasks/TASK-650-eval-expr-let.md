@@ -21,19 +21,22 @@ Implement the `EXPR-LET` evaluation rule in the interpreter's expression evaluat
 
 1. In `crates/ash-interp/src/eval.rs`, add the `Expr::Let` arm to `eval_expr`:
    ```rust
-   Expr::Let { pattern, expr, body } => {
+   Expr::Let { pattern, expr, body, .. } => {
        let value = eval_expr(expr, ctx)?;
-       // Pattern match: extend environment with bindings
+       // Pattern match: create a child context with bindings
+       // (follow the same pattern as eval_match / eval_if_let)
        let bindings = match_pattern(pattern, &value)?;
-       // Bindings are added to context
+       let mut child_ctx = ctx.extend();  // or ctx.clone() + extend
        for (name, val) in bindings {
-           ctx.set(name, val);
+           child_ctx.set(name, val);
        }
-       eval_expr(body, ctx)
+       eval_expr(body, &child_ctx)
    }
    ```
-
-2. Handle scoping correctly: `Expr::Let` should NOT leak bindings into the parent scope. The `body` sees the binding, but after evaluation, the parent scope is unchanged. Use a child context or save/restore pattern.
+   IMPORTANT: Use a child context (`ctx.extend()` or equivalent), NOT in-place
+   mutation of `ctx`. This matches the existing pattern in `eval_match` and
+   `eval_if_let` where pattern bindings go into a fresh child scope. The parent
+   context must remain unchanged after evaluating a let-expression.
 
 3. Handle pattern match failure: for well-typed programs, patterns are irrefutable. For runtime safety, return `EvalError::PatternBindFailure` on refutable pattern failure (per SPEC-004 §4.6.1).
 

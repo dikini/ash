@@ -449,6 +449,8 @@ pub enum Expr {
         pattern: Pattern,
         expr: Box<Expr>,
         body: Box<Expr>,
+        /// Source span for error reporting (pattern match failure diagnostics).
+        span: Span,
     },
 }
 

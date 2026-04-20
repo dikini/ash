@@ -239,6 +239,7 @@ At runtime:
 - [DESIGN-VP-001-MODALITY-ONTOLOGY.md](visual-programming/DESIGN-VP-001-MODALITY-ONTOLOGY.md) — the processor is a text-primary tool with graph-secondary potential.
 - `DESIGN-VP-002-REPL-NOTEBOOK.md` — planned; the processor is an ideal notebook-cell demonstration (run each validation rule as a cell).
 - `docs/spec/SPEC-039` / `SPEC-042` — span and formatter fidelity are prerequisites for round-tripping processor outputs.
+- [DESIGN-NOTE: Shared Document / Corpus Analysis Substrate](DESIGN-NOTE-CORPUS-ANALYSIS-SUBSTRATE.md) — the spec processor should share reusable corpus discovery, markdown/frontmatter extraction, normalized artifact identity, relationship-graph, and evidence/finding substrate with the Ash wiki while remaining a separate CI/repository-audit product rather than merging product semantics.
 
 ## 11. References
 

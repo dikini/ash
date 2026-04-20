@@ -63,6 +63,9 @@ Research and design explorations for OTP-like supervision, fault tolerance, and 
 | ID | Title | Status | Last Revised | Notes |
 |----|-------|--------|--------------|-------|
 | FUTURE-001 | [First-Class Workflows](future/FIRST-CLASS-WORKFLOWS.md) | `deferred` | 2026-03-30 | Post-minimal-core: workflows as values |
+| FUTURE-002 | [AI-Native Workflows and Generated Ash Programs](future/AI-NATIVE-WORKFLOWS.md) | `drafting` | 2026-04-20 | Live exploration of LSP/MCP + quotation/splice + evals as complementary substrate; treats ReAct/RM/RLM-like systems as both useful targets and gap-discovery workloads for Ash infrastructure |
+| FUTURE-003 | [Agentic Workflow Exemplars](future/AGENTIC-WORKFLOW-EXEMPLARS.md) | `drafting` | 2026-04-20 | Companion live note tracking ReAct/RM/RLM-like families as concrete benchmark targets, implementation targets, and substrate gap-finders |
+| FUTURE-004 | [Ash Wiki as Human/AI Shared Knowledge Substrate](future/ASH-WIKI-HUMAN-AI-KNOWLEDGE-SUBSTRATE.md) | `drafting` | 2026-04-20 | Explores a static-first wiki layer as shared human/AI project memory, audit substrate, onboarding surface, and queryable knowledge service over the Ash corpus |
 
 ## Adding a New Exploration
 

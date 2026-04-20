@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Ash wiki architecture docs and rollout scaffolding: added FUTURE-004, DESIGN-029, SPEC-045, the initial implementation plan, a concrete metadata schema reference, a shared corpus-analysis substrate design note, and Phase 94 task/PLAN-INDEX scaffolding for the static-first human/AI shared knowledge substrate over the Ash corpus. The new documents define authority/status/health semantics, metadata carrier rules, supersession and drift/audit models, onboarding/library-service goals, staged rollout for static views/query workflows/service exports, and practical reuse boundaries with the spec processor and `ash-lint`.
+
 - Phase 93 generic builtin fn (TASK-634 through TASK-644): imported `builtin fn`
   declarations now carry full type signatures through the module loader and
   engine typecheck pipeline. `InlineCallable` preserves `BuiltinFnDef` signatures;

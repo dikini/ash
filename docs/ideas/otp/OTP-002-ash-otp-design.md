@@ -2,13 +2,15 @@
 
 **Status:** Drafting  
 **Depends on:** OTP-001  
-**Related:** Future work on Ash runtime architecture
+**Related:** Future work on Ash runtime architecture; [FUTURE-002: AI-Native Workflows and Generated Ash Programs](../future/AI-NATIVE-WORKFLOWS.md)
 
 ---
 
 ## 1. Problem Statement
 
 The goal is to investigate implementing OTP-like supervision, fault tolerance, and process management patterns in Ash. This is complicated by fundamental differences between Erlang's actor model and Ash's capability-effect system.
+
+This also overlaps with the longer-range AI-native workflows direction: if Ash eventually hosts robust long-running agent workflows, supervision, restart policies, and orchestration discipline may become important substrate elements for systems such as ReAct-, RM-, or RLM-like workflow families.
 
 **Key Questions:**
 1. Can we achieve Erlang-like fault isolation without VM-level process boundaries?

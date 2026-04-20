@@ -2661,3 +2661,21 @@ complete and verified. TASK-631B resolved by Phase 93 TASK-643 which deleted
 ||| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | ✅ Done ||
 
 **Deliverable:** Generic type parameters on `builtin fn` declarations, unblocking list operations and type predicates. Tracks D2 and D1.5 from Phase 92 resolved. `add_builtin_functions()` deleted. All 11 tasks complete. 78+ new tests across ash-engine, ash-typeck, ash-interp.
+
+## Phase 94: Ash Wiki Knowledge Substrate
+
+**Plan Reference:** [Ash Wiki Implementation Plan](../plans/2026-04-20-ash-wiki-implementation-plan.md)
+**Specs:** `SPEC-045`
+**Design:** `DESIGN-029`
+**Priority:** Medium
+**Status:** 🟡 Ready
+
+Establish a static-first, human/AI shared knowledge substrate over the Ash corpus. This phase begins with corpus semantics: explicit metadata carriers, authority/status/health classification, and a pilot slice that tests the schema before registry generation, lint/audit tooling, onboarding bundles, and browser/query services.
+
+||| Task | Description | Spec | Est. Hours | Status ||
+|||------|-------------|------|------------|--------||
+||| [TASK-645](tasks/TASK-645-ash-wiki-concept-packet.md) | Ash wiki concept packet | SPEC-045 | 2-4 | ✅ Complete ||
+||| [TASK-646](tasks/TASK-646-ash-wiki-metadata-carrier-schema.md) | Ash wiki metadata carrier schema | SPEC-045 | 2-4 | ✅ Complete ||
+||| [TASK-647](tasks/TASK-647-ash-wiki-pilot-classification-slice.md) | Ash wiki pilot classification slice | SPEC-045 | 3-5 | 📝 Planned ||
+
+**Deliverable:** Initial Ash wiki architecture corpus is in place, the metadata carrier model is frozen, and one pilot slice is ready to validate authority/status/health and supersession semantics before registry/lint/query implementation begins.

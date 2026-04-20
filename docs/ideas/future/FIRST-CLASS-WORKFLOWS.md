@@ -98,6 +98,7 @@ Consider revisiting when:
 - MCE-001 (Entry Point): Deferred first-class workflows, used gradual typing instead
 - MCE-003 (Functions vs Capabilities): Overlaps with "what is the type of a workflow"
 - SPEC-004 (Semantics): Big-step judgment context (Γ, C, P, Ω, π) may inform workflow typing
+- [FUTURE-002: AI-Native Workflows and Generated Ash Programs](AI-NATIVE-WORKFLOWS.md): overlaps with workflow-valued composition, generated workflow packaging, and possible higher-order orchestration patterns for agentic systems
 
 ## Notes
 

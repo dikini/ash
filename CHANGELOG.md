@@ -8,6 +8,21 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 93 generic builtin fn (TASK-634 through TASK-644): imported `builtin fn`
+  declarations now carry full type signatures through the module loader and
+  engine typecheck pipeline. `InlineCallable` preserves `BuiltinFnDef` signatures;
+  `Engine::check()` uses `builtin_fn_signature_type()` for precise polymorphic
+  types instead of arity-only synthetic types. `std/src/list.ash` declares
+  `len`, `head`, `tail`, `append`, `concat`, `filter`, `map` with generic
+  type parameters. `std/src/predicate.ash` declares `is_int`, `is_string`,
+  `is_bool`, `is_list`, `is_record`, `is_null`. Qualified dispatch entries
+  (`list::len`, `predicate::is_int`, etc.) added to `builtin_dispatch_table()`.
+  End-to-end verification: import, typecheck, execute all pass.
+
+- TASK-636: audit confirmed type-variable freshening is unnecessary.
+  `instantiate_fn_call` creates fresh `Substitution` per call; sequential
+  polymorphic calls with different concrete types typecheck independently.
+
 - TASK-629: removed the legacy regex capability carrier and engine wiring now
   that imported `std::regex` calls are proven through builtin declarations and
   evaluator dispatch. Provider-era regex tests were dropped in favor of the
@@ -75,6 +90,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   consumer sites named concretely (evaluator, import resolution, typeck
   registration), regex carrier-vs-semantics note added distinguishing
   current `Operational` provider artifact from intended pure classification.
+
+### Removed
+
+- TASK-643: deleted `add_builtin_functions()` from `ash-typeck/src/type_env.rs`.
+  List builtin type signatures are now provided exclusively through `.ash`
+  declarations via `Engine::check()` -> `builtin_fn_signature_type()`.
 
 ### Fixed
 

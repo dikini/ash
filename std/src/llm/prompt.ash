@@ -75,7 +75,7 @@ pub fn tool_result(call_id: String, content: String) -> Message {
     }
 }
 
--- Create a message with explicit role
+-- Create a message with explicit sender role
 --
 -- Example:
 --   let msg = message(User, "Hello");
@@ -124,7 +124,7 @@ pub fn is_tool(msg: Message) -> Bool {
     }
 }
 
--- Get the role of a message
+-- Get the sender role of a message
 pub fn sender(msg: Message) -> Role {
     match msg {
         Message { sender: r, content: _, tool_calls: _, tool_call_id: _ } => r
@@ -213,7 +213,7 @@ pub fn render_template(template: String, vars: Map<String, String>) -> String {
     template
 }
 
--- Helper: Get role name as string
+-- Helper: Get sender role name as string
 fn sender_name(sender: Role) -> String {
     match sender {
         System => "system",

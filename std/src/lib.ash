@@ -22,12 +22,11 @@ pub use test::{
 -- LLM types
 pub mod llm;
 pub use llm::{
-    Role, System, User, Assistant, Tool,
+    Role,
     Message, ToolCall, ToolCallDelta, ToolDef,
     Usage, ChatResponse, Embedding, ChatChunk,
-    ChatOptions, EmbeddingOptions,
     system, user, assistant, assistant_with_tools, tool_result, message,
-    is_system, is_user, is_assistant, is_tool, role, content,
+    is_system, is_user, is_assistant, is_tool, sender, content,
     get_tool_calls, has_tool_calls, get_tool_call_id,
     render_plaintext, render_markdown,
     count, last, filter_user, filter_assistant, append, prepend

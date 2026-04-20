@@ -112,7 +112,7 @@ fn parse_tool_call_value(value: &Value) -> Result<ToolCallValue, CapabilityError
 pub fn format_tool_result_message(call_id: &str, content: &str) -> Value {
     let mut fields = HashMap::new();
 
-    // role: Tool variant
+    // sender: Tool variant
     fields.insert("sender".to_string(), Value::unit_variant("Tool"));
 
     // content: String
@@ -391,7 +391,7 @@ mod tests {
             panic!("Expected Record");
         };
 
-        // Check role is Tool variant
+        // Check sender is Tool variant
         match fields.get("sender").unwrap() {
             Value::Variant { name, fields } => {
                 assert_eq!(name, "Tool");

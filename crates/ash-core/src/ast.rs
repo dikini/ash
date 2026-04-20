@@ -515,6 +515,26 @@ pub enum Expr {
         body: Box<Expr>,
     },
 
+    /// Pure scope extension: evaluate `expr`, bind via `pattern`, evaluate `body`.
+    ///
+    /// This is the expression-level let-binding, distinct from `Workflow::Let`
+    /// which is the imperative/monadic form with continuation semantics.
+    /// `Expr::Let` composes two pure computations by scope extension:
+    /// the bound expression is evaluated, the pattern is matched (irrefutably
+    /// for well-typed programs), and the body is evaluated in the extended
+    /// environment.
+    ///
+    /// Surface syntax: `let <pattern> = <expr>; <body>` inside fn bodies.
+    /// This is semantically `let <pattern> = <expr> in <body>` — expression
+    /// composition, not imperative sequencing.
+    Let {
+        pattern: Pattern,
+        expr: Box<Expr>,
+        body: Box<Expr>,
+        /// Source span for error reporting (pattern match failure diagnostics).
+        span: Span,
+    },
+
     /// Function application. SPEC-031 §5.4
     FnApply {
         func: Box<Expr>,

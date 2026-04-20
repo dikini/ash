@@ -316,6 +316,10 @@ fn lift_expr(
                 (new_expr, bindings)
             }
         }
+
+        CoreExpr::Let { .. } => {
+            todo!("Expr::Let not yet implemented in lift")
+        }
     }
 }
 

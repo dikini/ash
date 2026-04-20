@@ -8,6 +8,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- `Expr::Let { pattern, expr, body, span }` variant added to `ash_core::ast::Expr`
+  for pure scope extension in fn bodies (TASK-648, Phase 95). All exhaustive
+  match sites in `ash-parser/src/lift.rs`, `ash-interp/src/eval.rs`, and
+  `ash-engine/src/monomorphize.rs` updated with `todo!()` placeholders pending
+  TASK-649/650/651 implementation.
+
 - Phase 95 spec review fixes (TASK-648/649/650): added `span: Span` to
   `Expr::Let` in SPEC-001 §2.6, TASK-648, and TASK-649 desugaring sketch for
   pattern-match-failure diagnostics. Fixed TASK-650 eval sketch to use child

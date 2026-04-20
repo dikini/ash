@@ -553,6 +553,10 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 _ => Err(EvalError::NotCallable { value: callee }),
             }
         }
+
+        Expr::Let { .. } => {
+            todo!("Expr::Let evaluation not yet implemented")
+        }
     }
 }
 

@@ -2685,7 +2685,7 @@ Establish a static-first, human/AI shared knowledge substrate over the Ash corpu
 **Spec Amendments:** SPEC-001 §2.0, §2.6; SPEC-004 §4.6, §4.6.1; SPEC-025 §3.2
 **Design Note:** [NOTE-003](../notes/NOTE-003-EXPR-LET-CORE-IR-GAP.md)
 **Priority:** High (unblocks Phase 90 Track A and any non-trivial fn body)
-**Status:** 🟡 Ready
+**Status:** ✅ Done
 
 Add `Expr::Let { pattern, expr, body }` to the core IR as the canonical representation for pure scope extension inside fn bodies. This is semantically distinct from `Workflow::Let` (imperative monadic bind): `Expr::Let` composes two pure computations by environment extension, carries no effects/traces/provenance, and evaluates atomically per SPEC-025. The spec amendments are already written (commits `155fba8`, `e75f552`).
 
@@ -2695,11 +2695,11 @@ Add `Expr::Let { pattern, expr, body }` to the core IR as the canonical represen
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 |||------|-------------|------|------------|--------||
-||| [TASK-648](tasks/TASK-648-core-expr-let-variant.md) | Add `Expr::Let` to core IR + fix all exhaustive matches | SPEC-001 §2.6 | 2-3 | 📝 Planned ||
-||| [TASK-649](tasks/TASK-649-block-to-let-lowering.md) | Lowerer: desugar `Expr::Block` → nested `Expr::Let`, delete module_loader workaround | SPEC-001 §2.6 | 1-2 | 📝 Planned ||
-||| [TASK-650](tasks/TASK-650-eval-expr-let.md) | Evaluator: handle `Expr::Let` in `eval.rs` | SPEC-004 §4.6 | 0.5-1 | 📝 Planned ||
-||| [TASK-651](tasks/TASK-651-typecheck-expr-let.md) | Type checker: handle `Expr::Let` in `check_expr.rs` | SPEC-004 §4.6 | 1-2 | 📝 Planned ||
-||| [TASK-652](tasks/TASK-652-expr-let-integration-tests.md) | Integration tests: fn bodies with let-sequencing work end-to-end | — | 1-2 | 📝 Planned ||
-||| [TASK-653](tasks/TASK-653-and-or-short-circuit.md) | Fix `and`/`or` to short-circuit per SPEC-004 EXPR-AND-FALSE/EXPR-OR-TRUE | SPEC-004 §4.6 | 0.5-1 | 📝 Planned ||
+||| [TASK-648](tasks/TASK-648-core-expr-let-variant.md) | Add `Expr::Let` to core IR + fix all exhaustive matches | SPEC-001 §2.6 | 2-3 | ✅ Complete ||
+||| [TASK-649](tasks/TASK-649-block-to-let-lowering.md) | Lowerer: desugar `Expr::Block` → nested `Expr::Let`, delete module_loader workaround | SPEC-001 §2.6 | 1-2 | ✅ Complete ||
+||| [TASK-650](tasks/TASK-650-eval-expr-let.md) | Evaluator: handle `Expr::Let` in `eval.rs` | SPEC-004 §4.6 | 0.5-1 | ✅ Complete ||
+||| [TASK-651](tasks/TASK-651-typecheck-expr-let.md) | Type checker: handle `Expr::Let` in `check_expr.rs` | SPEC-004 §4.6 | 1-2 | ✅ Complete ||
+||| [TASK-652](tasks/TASK-652-expr-let-integration-tests.md) | Integration tests: fn bodies with let-sequencing work end-to-end | — | 1-2 | ✅ Complete ||
+||| [TASK-653](tasks/TASK-653-and-or-short-circuit.md) | Fix `and`/`or` to short-circuit per SPEC-004 EXPR-AND-FALSE/EXPR-OR-TRUE | SPEC-004 §4.6 | 0.5-1 | ✅ Complete ||
 
 **Deliverable:** `Expr::Let` is a first-class core expression form. Fn bodies with let-sequencing parse, lower, typecheck, and execute through all code paths (inline fn expressions, top-level fn definitions, imported pub fn). The module_loader `normalize_imported_callable_expr` workaround is deleted. `and`/`or` short-circuit correctly per SPEC-004.

@@ -44,6 +44,15 @@ pub use io::buf::{read_to_end, read_to_string, write_all, lines};
 -- Regex functions
 pub use regex::{find, matches, replace};
 
+-- Process functions
+pub use process::{run};
+
+-- JSON functions
+pub use json::{parse, stringify, stringify_pretty};
+
+-- Markdown functions
+pub use markdown::{parse};
+
 -- Helper functions
 pub use option::{
     is_some,

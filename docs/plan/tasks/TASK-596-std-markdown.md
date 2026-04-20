@@ -1,6 +1,6 @@
 # TASK-596: std::markdown CommonMark AST MVP
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

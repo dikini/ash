@@ -8,6 +8,21 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 90 Track B: `std::json` builtin module with `parse`, `stringify`, and
+  `stringify_pretty` functions backed by `serde_json` (TASK-597).
+  Validates and transforms JSON strings via the evaluator builtin dispatch path.
+- Phase 90 Track B: `std::process` builtin module with `run` function for
+  subprocess execution via `std::process::Command` (TASK-598).
+  Returns stdout as a string. 8 integration tests.
+- Phase 90 Track B: `std::markdown` builtin module with `parse` function backed
+  by `pulldown-cmark` (TASK-596). Parses CommonMark into a JSON AST string with
+  `heading`, `paragraph`, and `code_block` block types. 8 tests.
+
+### Fixed
+
+- Removed unnecessary hash in raw string literal in `expr_let_integration.rs`
+  (clippy `needless_raw_string_hashes`).
+
 - Phase 95: `Expr::Let` — pure expression let-binding in core IR. Added
   `Expr::Let { pattern, expr, body, span }` to `ash_core::ast::Expr` for pure
   scope extension in fn bodies (TASK-648). Lowerer desugars `Expr::Block` to

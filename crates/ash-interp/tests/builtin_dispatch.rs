@@ -795,3 +795,140 @@ fn eval_function_call_unqualified_is_int_still_works_via_expr() {
     let result = eval_expr(&expr, &ctx).expect("unqualified is_int should succeed");
     assert_eq!(result, Value::Bool(true));
 }
+
+// ── TASK-598: process::run dispatch and evaluation ──────────────
+
+#[test]
+fn dispatch_table_contains_process_run() {
+    let table = builtin_dispatch_table();
+    let entry = table
+        .get("process::run")
+        .expect("process::run should be in the dispatch table");
+    assert_eq!(entry.arity, 2);
+    assert!(!entry.variadic);
+    assert!(entry.implemented);
+}
+
+#[test]
+fn is_known_builtin_qualified_process_run() {
+    assert!(is_known_builtin("run", Some("process")));
+}
+
+#[test]
+fn dispatch_builtin_process_run_echo() {
+    let ctx = Context::new();
+    let args = vec![
+        Value::String("echo".into()),
+        Value::List(Box::new(vec![Value::String("hello".into())])),
+    ];
+    let result = dispatch_builtin("process::run", &args, &ctx)
+        .expect("dispatch should find process::run")
+        .expect("process::run should succeed");
+    assert_eq!(result, Value::String("hello\n".to_string()));
+}
+
+#[test]
+fn dispatch_builtin_process_run_with_multiple_args() {
+    let ctx = Context::new();
+    let args = vec![
+        Value::String("echo".into()),
+        Value::List(Box::new(vec![
+            Value::String("hello".into()),
+            Value::String("world".into()),
+        ])),
+    ];
+    let result = dispatch_builtin("process::run", &args, &ctx)
+        .expect("dispatch should find process::run")
+        .expect("process::run should succeed");
+    assert_eq!(result, Value::String("hello world\n".to_string()));
+}
+
+#[test]
+fn dispatch_builtin_process_run_empty_args() {
+    let ctx = Context::new();
+    let args = vec![Value::String("echo".into()), Value::List(Box::default())];
+    let result = dispatch_builtin("process::run", &args, &ctx)
+        .expect("dispatch should find process::run")
+        .expect("process::run should succeed");
+    assert_eq!(result, Value::String("\n".to_string()));
+}
+
+#[test]
+fn dispatch_builtin_process_run_wrong_arity() {
+    let ctx = Context::new();
+    let args = vec![Value::String("echo".into())];
+    let result = dispatch_builtin("process::run", &args, &ctx)
+        .expect("dispatch should find process::run in the table");
+    assert!(
+        result.is_err(),
+        "process::run with 1 arg should produce an error"
+    );
+}
+
+#[test]
+fn dispatch_builtin_process_run_nonexistent_command() {
+    let ctx = Context::new();
+    let args = vec![
+        Value::String("nonexistent_command_xyz_12345".into()),
+        Value::List(Box::default()),
+    ];
+    let result = dispatch_builtin("process::run", &args, &ctx)
+        .expect("dispatch should find process::run")
+        .expect_err("nonexistent command should fail");
+    let msg = result.to_string();
+    assert!(
+        msg.contains("process::run failed"),
+        "error should mention process::run failed, got: {msg}"
+    );
+}
+
+#[test]
+fn eval_function_call_process_run_via_expr() {
+    let ctx = Context::new();
+    let expr = Expr::Call {
+        func: "run".to_string(),
+        module: Some("process".to_string()),
+        arguments: vec![
+            Expr::Literal(Value::String("echo".into())),
+            Expr::Literal(Value::List(Box::new(vec![Value::String("hello".into())]))),
+        ],
+    };
+    let result = eval_expr(&expr, &ctx).expect("process::run should succeed");
+    assert_eq!(result, Value::String("hello\n".to_string()));
+}
+
+// ── TASK-596: Markdown builtin dispatch tests ────────────────────
+
+#[test]
+fn dispatch_table_contains_markdown_parse() {
+    let table = builtin_dispatch_table();
+    let entry = table
+        .get("markdown::parse")
+        .expect("markdown::parse should be in the dispatch table");
+    assert_eq!(entry.arity, 1);
+    assert!(!entry.variadic);
+    assert!(entry.implemented);
+}
+
+#[test]
+fn is_known_builtin_markdown_parse() {
+    assert!(is_known_builtin("parse", Some("markdown")));
+}
+
+#[test]
+fn eval_function_call_markdown_parse_dispatch() {
+    let ctx = Context::new();
+    let args = [Value::String("# Title\n\nParagraph text".to_string())];
+    let result = dispatch_builtin("markdown::parse", &args, &ctx)
+        .expect("dispatch should find markdown::parse")
+        .expect("markdown::parse should succeed");
+    let json_str = match result {
+        Value::String(s) => s,
+        other => panic!("expected String, got {other:?}"),
+    };
+    let val: serde_json::Value = serde_json::from_str(&json_str).expect("should be valid JSON");
+    let blocks = val["blocks"].as_array().expect("blocks should be array");
+    assert_eq!(blocks.len(), 2);
+    assert_eq!(blocks[0]["type"], "heading");
+    assert_eq!(blocks[1]["type"], "paragraph");
+}

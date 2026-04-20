@@ -208,6 +208,25 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
                 },
             );
         }
+        // ── Predicate module builtins (qualified) ──
+        for (name, arity, variadic) in [
+            ("predicate::is_int", 1, false),
+            ("predicate::is_string", 1, false),
+            ("predicate::is_bool", 1, false),
+            ("predicate::is_list", 1, false),
+            ("predicate::is_record", 1, false),
+            ("predicate::is_null", 1, false),
+        ] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic,
+                    implemented: true,
+                },
+            );
+        }
+
         m.insert(
             "record",
             BuiltinEntry {

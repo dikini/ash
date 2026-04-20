@@ -44,7 +44,10 @@ fn builtin_fn_generic_signature_typechecks_len_of_list() {
     assert!(
         workflow.imported_builtin_signatures.contains_key("len"),
         "Expected 'len' in imported_builtin_signatures, found: {:?}",
-        workflow.imported_builtin_signatures.keys().collect::<Vec<_>>()
+        workflow
+            .imported_builtin_signatures
+            .keys()
+            .collect::<Vec<_>>()
     );
 
     // Typecheck should pass — the typechecker now knows len takes List<a> -> Int
@@ -114,11 +117,7 @@ fn non_builtin_callable_uses_arity_only_fallback() {
     let dir = tmp_dir.path();
 
     let utils = dir.join("utils.ash");
-    std::fs::write(
-        &utils,
-        "pub fn double(x: Int) -> Int { x + x }\n",
-    )
-    .expect("write utils.ash");
+    std::fs::write(&utils, "pub fn double(x: Int) -> Int { x + x }\n").expect("write utils.ash");
 
     let caller = dir.join("caller.ash");
     std::fs::write(
@@ -155,11 +154,8 @@ fn builtin_fn_signature_with_unknown_type_falls_back_gracefully() {
     let dir = tmp_dir.path();
 
     let mymod = dir.join("mymod.ash");
-    std::fs::write(
-        &mymod,
-        "pub builtin fn keys(r: Record) -> List<String>;\n",
-    )
-    .expect("write mymod.ash");
+    std::fs::write(&mymod, "pub builtin fn keys(r: Record) -> List<String>;\n")
+        .expect("write mymod.ash");
 
     let caller = dir.join("caller.ash");
     std::fs::write(
@@ -196,11 +192,8 @@ fn builtin_fn_precise_signature_enables_return_type_inference() {
     let dir = tmp_dir.path();
 
     let math_utils = dir.join("math_utils.ash");
-    std::fs::write(
-        &math_utils,
-        "pub builtin fn add(a: Int, b: Int) -> Int;\n",
-    )
-    .expect("write math_utils.ash");
+    std::fs::write(&math_utils, "pub builtin fn add(a: Int, b: Int) -> Int;\n")
+        .expect("write math_utils.ash");
 
     let caller = dir.join("caller.ash");
     std::fs::write(

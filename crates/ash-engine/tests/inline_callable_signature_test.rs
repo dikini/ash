@@ -98,9 +98,7 @@ fn builtin_fn_signature_preserves_type_params_and_return_type() {
             );
         }
         other => {
-            panic!(
-                "expected param type to be Constructor(List, [Name(a)]), got: {other:?}"
-            );
+            panic!("expected param type to be Constructor(List, [Name(a)]), got: {other:?}");
         }
     }
 
@@ -123,11 +121,7 @@ fn user_defined_callable_has_no_signature() {
     let dir = tmp_dir.path();
 
     let module = dir.join("utils.ash");
-    std::fs::write(
-        &module,
-        "pub fn double(x: Int) -> Int { x + x }\n",
-    )
-    .expect("write utils.ash");
+    std::fs::write(&module, "pub fn double(x: Int) -> Int { x + x }\n").expect("write utils.ash");
 
     let caller = dir.join("caller.ash");
     std::fs::write(

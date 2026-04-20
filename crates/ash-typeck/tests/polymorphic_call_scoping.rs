@@ -119,7 +119,8 @@ fn polymorphic_len_sequential_calls_independent() {
     };
     let ty2 = infer(&env, &expr_str);
     assert_eq!(
-        ty2, Type::Int,
+        ty2,
+        Type::Int,
         "second call len([\"a\",\"b\"]) should return Int"
     );
 }

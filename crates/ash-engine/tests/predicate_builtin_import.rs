@@ -131,11 +131,8 @@ pub builtin fn is_null(value: a) -> Bool;
     .expect("write predicate.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use predicate::*\nworkflow main { done; }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use predicate::*\nworkflow main { done; }\n")
+        .expect("write caller.ash");
 
     let result = ash_engine::module_loader::load_ordinary_file(&caller);
     assert!(

@@ -2644,20 +2644,20 @@ now the only remaining Phase 92 item.
 **Plan Reference:** [PLAN-035: Generic Builtin fn Declarations](plans/PLAN-035-generic-builtin-fn.md)
 **Specs:** `SPEC-044`
 **Priority:** Medium
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-|||------|-------------|------|------------|--------|\
-||| [TASK-634](#) | Add `signature` field to `InlineCallable` | SPEC-044 | 2-3 | 📝 Planned ||
-||| [TASK-635](#) | Bind imported builtin signatures in `Engine::check()` | SPEC-044 | 3-4 | 📝 Planned ||
-||| [TASK-636](#) | Audit type-variable scoping at call sites | SPEC-044 | 1-2 | 📝 Planned ||
-||| [TASK-637](#) | Create `std/src/list.ash` with generic declarations | SPEC-044 | 2-3 | 📝 Planned ||
-||| [TASK-638](#) | Complete list-op qualified dispatch wiring | SPEC-044 | 1 | 📝 Planned ||
-||| [TASK-639](#) | Typecheck list ops through imported .ash declarations | SPEC-044 | 2-3 | 📝 Planned ||
-||| [TASK-640](#) | End-to-end list ops verification | SPEC-044 | 1-2 | 📝 Planned ||
-||| [TASK-641](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-044 | 1-2 | 📝 Planned ||
-||| [TASK-642](#) | Type predicates dispatch + e2e verification | SPEC-044 | 1-2 | 📝 Planned ||
-||| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-044 | 1 | 📝 Planned ||
-||| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | 📝 Planned ||
+|||------|-------------|------|------------|--------||
+||| [TASK-634](#) | Add `signature` field to `InlineCallable` | SPEC-044 | 2-3 | ✅ Done ||
+||| [TASK-635](#) | Bind imported builtin signatures in `Engine::check()` | SPEC-044 | 3-4 | ✅ Done ||
+||| [TASK-636](#) | Audit type-variable scoping at call sites | SPEC-044 | 1-2 | ✅ Done ||
+||| [TASK-637](#) | Create `std/src/list.ash` with generic declarations | SPEC-044 | 2-3 | ✅ Done ||
+||| [TASK-638](#) | Complete list-op qualified dispatch wiring | SPEC-044 | 1 | ✅ Done ||
+||| [TASK-639](#) | Typecheck list ops through imported .ash declarations | SPEC-044 | 2-3 | ✅ Done ||
+||| [TASK-640](#) | End-to-end list ops verification | SPEC-044 | 1-2 | ✅ Done ||
+||| [TASK-641](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-044 | 1-2 | ✅ Done ||
+||| [TASK-642](#) | Type predicates dispatch + e2e verification | SPEC-044 | 1-2 | ✅ Done ||
+||| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-044 | 1 | ✅ Done ||
+||| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | ✅ Done ||
 
-**Deliverable:** Generic type parameters on `builtin fn` declarations, unblocking list operations and type predicates. Tracks D2 and D1.5 from Phase 92 resolved. `add_builtin_functions()` deleted.
+**Deliverable:** Generic type parameters on `builtin fn` declarations, unblocking list operations and type predicates. Tracks D2 and D1.5 from Phase 92 resolved. `add_builtin_functions()` deleted. All 11 tasks complete. 78+ new tests across ash-engine, ash-typeck, ash-interp.

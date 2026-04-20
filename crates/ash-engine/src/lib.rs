@@ -94,6 +94,12 @@ pub struct Workflow {
     pub imported_closures: std::collections::HashMap<String, ash_core::Value>,
     /// Param counts for imported callables, used to register type signatures.
     pub imported_param_counts: std::collections::HashMap<String, usize>,
+    /// Declared type signatures for imported builtin fn callables.
+    ///
+    /// When present, `Engine::check()` uses `builtin_fn_signature_type` to
+    /// produce the proper polymorphic type instead of an arity-only synthetic.
+    pub imported_builtin_signatures:
+        std::collections::HashMap<String, ash_parser::surface::BuiltinFnDef>,
 }
 
 impl PartialEq for Workflow {
@@ -411,7 +417,7 @@ impl Engine {
         use winnow::prelude::*;
 
         // Convert imported callables to closure values for runtime binding
-        let (imported_closures, imported_param_counts) =
+        let (imported_closures, imported_param_counts, imported_builtin_signatures) =
             build_imported_closures(imported_callables);
 
         let mut input = new_input(source);
@@ -447,6 +453,7 @@ impl Engine {
                         id,
                         imported_closures: local_closures,
                         imported_param_counts: local_param_counts,
+                        imported_builtin_signatures,
                     });
                 }
 
@@ -460,6 +467,7 @@ impl Engine {
                     id,
                     imported_closures,
                     imported_param_counts,
+                    imported_builtin_signatures,
                 })
             }
             Err(parse_error) => {
@@ -481,6 +489,7 @@ impl Engine {
                     id,
                     imported_closures: local_closures,
                     imported_param_counts: local_param_counts,
+                    imported_builtin_signatures,
                 })
             }
         }
@@ -529,13 +538,7 @@ impl Engine {
         if let Some(program) = self.get_surface_program(workflow.id) {
             // Build type environment with imported callable signatures
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            for (name, &param_count) in &workflow.imported_param_counts {
-                let param_types: Vec<ash_typeck::Type> = (0..param_count)
-                    .map(|_| ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh()))
-                    .collect();
-                let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
-                type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
-            }
+            bind_imported_callable_types(&mut type_env, workflow)?;
 
             match ash_typeck::type_check_program_in_env(&type_env, &program) {
                 Ok(result) => {
@@ -565,13 +568,7 @@ impl Engine {
 
             // Build type environment with imported callable signatures
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            for (name, &param_count) in &workflow.imported_param_counts {
-                let param_types: Vec<ash_typeck::Type> = (0..param_count)
-                    .map(|_| ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh()))
-                    .collect();
-                let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
-                type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
-            }
+            bind_imported_callable_types(&mut type_env, workflow)?;
             if let Some(_refs) = param_refs.first() {
                 for (name, ty) in &param_refs {
                     type_env.bind_variable(name, ty.clone());
@@ -617,13 +614,7 @@ impl Engine {
             }
         }
         // Register imported callable signatures
-        for (name, &param_count) in &workflow.imported_param_counts {
-            let param_types: Vec<ash_typeck::Type> = (0..param_count)
-                .map(|_| ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh()))
-                .collect();
-            let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
-            type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
-        }
+        bind_imported_callable_types(&mut type_env, workflow)?;
 
         match ash_typeck::type_check_workflow_def_in_env(&type_env, &def) {
             Ok(result) => {
@@ -1245,11 +1236,51 @@ impl EngineBuilder {
     }
 }
 
+/// Bind imported callable type signatures into a type environment.
+///
+/// For each entry in `workflow.imported_param_counts`, checks whether a
+/// declared builtin signature is available in `workflow.imported_builtin_signatures`.
+/// If so, uses `builtin_fn_signature_type` to produce the precise polymorphic type.
+/// If signature resolution fails (e.g. unregistered type like `Record`), falls
+/// back to an arity-only synthetic type.  Non-builtin callables always use the
+/// arity-only fallback.
+#[allow(clippy::unnecessary_wraps)]
+fn bind_imported_callable_types(
+    type_env: &mut ash_typeck::type_env::TypeEnv,
+    workflow: &Workflow,
+) -> Result<(), EngineError> {
+    for (name, &param_count) in &workflow.imported_param_counts {
+        if let Some(sig) = workflow.imported_builtin_signatures.get(name) {
+            if let Ok(ty) = ash_typeck::builtin_fn_signature_type(type_env, sig) {
+                type_env.bind_variable(name, ty);
+                continue;
+            }
+            // Signature contains types the typechecker doesn't know about
+            // (e.g. `Record`). Fall back to arity-only synthetic.
+        }
+        // Arity-only synthetic type (fresh type variables)
+        let param_types: Vec<ash_typeck::Type> = (0..param_count)
+            .map(|_| ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh()))
+            .collect();
+        let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
+        type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
+    }
+    Ok(())
+}
+
 /// Convert imported callables to `Value::Closure` for runtime binding.
 /// Each callable body is lowered from surface to core Expr, then wrapped in a closure.
+///
+/// Returns `(closures, param_counts, builtin_signatures)` where `builtin_signatures`
+/// carries the declared type signatures of `builtin fn` callables so that
+/// `Engine::check()` can bind precise types instead of arity-only synthetics.
 fn build_imported_closures(
     imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> (HashMap<String, Value>, HashMap<String, usize>) {
+) -> (
+    HashMap<String, Value>,
+    HashMap<String, usize>,
+    HashMap<String, ash_parser::surface::BuiltinFnDef>,
+) {
     use module_loader::CallableKind;
 
     // Resolved once; builtin_dispatch_table() uses OnceLock so this is a
@@ -1259,10 +1290,16 @@ fn build_imported_closures(
 
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();
+    let mut builtin_signatures = HashMap::new();
     for (name, callable) in imported_callables {
         let params: Vec<(String, Option<String>)> =
             callable.params.iter().map(|p| (p.clone(), None)).collect();
         param_counts.insert(name.clone(), params.len());
+
+        // Extract declared type signature for builtin fn callables.
+        if let Some(sig) = &callable.signature {
+            builtin_signatures.insert(name.clone(), sig.clone());
+        }
 
         let body_expr = match &callable.kind {
             CallableKind::User { body } => match ash_parser::lower_expr(body) {
@@ -1329,7 +1366,7 @@ fn build_imported_closures(
             },
         );
     }
-    (closures, param_counts)
+    (closures, param_counts, builtin_signatures)
 }
 
 #[cfg(test)]

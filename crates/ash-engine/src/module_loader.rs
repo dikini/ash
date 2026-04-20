@@ -68,6 +68,13 @@ pub struct InlineCallable {
     pub params: Vec<String>,
     /// Whether this callable has an Ash body or is a bodyless builtin.
     pub kind: CallableKind,
+    /// Full type signature for builtin fn callables.
+    ///
+    /// Populated by [`parse_builtin_fn_callable`] from the parsed
+    /// [`BuiltinFnDef`], preserving type parameters, parameter types,
+    /// and return type.  `None` for user-defined callables (`pub fn`
+    /// with a body) and workflow callables.
+    pub signature: Option<ash_parser::surface::BuiltinFnDef>,
 }
 
 #[derive(Debug, Clone)]
@@ -724,6 +731,7 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
             kind: CallableKind::User {
                 body: normalize_imported_callable_expr(&function.body),
             },
+            signature: None,
         },
     }))
 }
@@ -822,6 +830,7 @@ fn parse_builtin_fn_callable(
             exported_name: name,
             params,
             kind: CallableKind::Builtin { module },
+            signature: Some(builtin),
         },
     }))
 }
@@ -854,6 +863,7 @@ fn extract_callable_from_workflow(
                 .map(|param| param.name.to_string())
                 .collect(),
             kind: CallableKind::User { body: expr },
+            signature: None,
         },
     }))
 }

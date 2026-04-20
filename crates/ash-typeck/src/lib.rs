@@ -1237,7 +1237,7 @@ fn fn_signature_type(
 /// Builtin fns are pure functions with no body -- they type identically to
 /// regular `fn` definitions (`Type::Fn(params, ret)`). The return type is
 /// always present (required by the grammar).
-fn builtin_fn_signature_type(
+pub fn builtin_fn_signature_type(
     env: &TypeEnv,
     builtin_fn: &ash_parser::surface::BuiltinFnDef,
 ) -> Result<Type, TypeCheckError> {

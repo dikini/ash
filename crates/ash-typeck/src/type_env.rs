@@ -1041,65 +1041,6 @@ impl TypeEnv {
         self.add_result_type();
         self.add_list_type();
         self.add_builtin_capability_symbols();
-        self.add_builtin_functions();
-    }
-
-    fn add_builtin_functions(&mut self) {
-        let t = Type::Var(TypeVar::fresh());
-        let u = Type::Var(TypeVar::fresh());
-
-        self.bind_variable(
-            "len",
-            Type::Fn(vec![Type::List(Box::new(t.clone()))], Box::new(Type::Int)),
-        );
-        self.bind_variable(
-            "head",
-            Type::Fn(vec![Type::List(Box::new(t.clone()))], Box::new(t.clone())),
-        );
-        self.bind_variable(
-            "tail",
-            Type::Fn(
-                vec![Type::List(Box::new(t.clone()))],
-                Box::new(Type::List(Box::new(t.clone()))),
-            ),
-        );
-        self.bind_variable(
-            "append",
-            Type::Fn(
-                vec![Type::List(Box::new(t.clone())), t.clone()],
-                Box::new(Type::List(Box::new(t.clone()))),
-            ),
-        );
-        self.bind_variable(
-            "concat",
-            Type::Fn(
-                vec![
-                    Type::List(Box::new(t.clone())),
-                    Type::List(Box::new(t.clone())),
-                ],
-                Box::new(Type::List(Box::new(t.clone()))),
-            ),
-        );
-        self.bind_variable(
-            "filter",
-            Type::Fn(
-                vec![
-                    Type::List(Box::new(t.clone())),
-                    Type::Fn(vec![t.clone()], Box::new(Type::Bool)),
-                ],
-                Box::new(Type::List(Box::new(t.clone()))),
-            ),
-        );
-        self.bind_variable(
-            "map",
-            Type::Fn(
-                vec![
-                    Type::List(Box::new(t.clone())),
-                    Type::Fn(vec![t.clone()], Box::new(u.clone())),
-                ],
-                Box::new(Type::List(Box::new(u.clone()))),
-            ),
-        );
     }
 
     fn add_builtin_capability_symbols(&mut self) {

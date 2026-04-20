@@ -729,7 +729,7 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
             exported_name: name,
             params,
             kind: CallableKind::User {
-                body: function.body.clone(),
+                body: function.body,
             },
             signature: None,
         },

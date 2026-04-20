@@ -8,11 +8,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- `Expr::Let { pattern, expr, body, span }` variant added to `ash_core::ast::Expr`
-  for pure scope extension in fn bodies (TASK-648, Phase 95). All exhaustive
-  match sites in `ash-parser/src/lift.rs`, `ash-interp/src/eval.rs`, and
-  `ash-engine/src/monomorphize.rs` updated with `todo!()` placeholders pending
-  TASK-649/650/651 implementation.
+- Phase 95: `Expr::Let` — pure expression let-binding in core IR. Added
+  `Expr::Let { pattern, expr, body, span }` to `ash_core::ast::Expr` for pure
+  scope extension in fn bodies (TASK-648). Lowerer desugars `Expr::Block` to
+  nested `Expr::Let` (TASK-649), deleting the `normalize_imported_callable_expr`
+  workaround from `module_loader.rs`. Evaluator implements EXPR-LET via child
+  context scope extension (TASK-650). ANF lifter and monomorphizer handle
+  `Expr::Let` (TASK-651). 7 integration tests covering inline fn, top-level fn,
+  nested let, closure capture, list patterns, and variable shadowing (TASK-652).
+  Fixed `and`/`or` short-circuit evaluation per SPEC-004 EXPR-AND-FALSE and
+  EXPR-OR-TRUE (TASK-653).
 
 - Phase 95 spec review fixes (TASK-648/649/650): added `span: Span` to
   `Expr::Let` in SPEC-001 §2.6, TASK-648, and TASK-649 desugaring sketch for

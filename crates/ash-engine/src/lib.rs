@@ -1250,13 +1250,12 @@ fn bind_imported_callable_types(
     workflow: &Workflow,
 ) -> Result<(), EngineError> {
     for (name, &param_count) in &workflow.imported_param_counts {
+        #[allow(clippy::collapsible_if)]
         if let Some(sig) = workflow.imported_builtin_signatures.get(name) {
             if let Ok(ty) = ash_typeck::builtin_fn_signature_type(type_env, sig) {
                 type_env.bind_variable(name, ty);
                 continue;
             }
-            // Signature contains types the typechecker doesn't know about
-            // (e.g. `Record`). Fall back to arity-only synthetic.
         }
         // Arity-only synthetic type (fresh type variables)
         let param_types: Vec<ash_typeck::Type> = (0..param_count)

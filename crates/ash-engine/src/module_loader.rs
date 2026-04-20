@@ -20,7 +20,7 @@ use ash_parser::parse_type_def::{
 };
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{Definition, Expr, MatchArm as SurfaceMatchArm, Workflow, WorkflowDef};
+use ash_parser::surface::{Definition, Expr, Workflow, WorkflowDef};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
@@ -729,46 +729,11 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
             exported_name: name,
             params,
             kind: CallableKind::User {
-                body: normalize_imported_callable_expr(&function.body),
+                body: function.body.clone(),
             },
             signature: None,
         },
     }))
-}
-
-fn normalize_imported_callable_expr(expr: &Expr) -> Expr {
-    match expr {
-        Expr::Block {
-            statements,
-            tail_expr,
-            span,
-        } => {
-            let mut normalized = tail_expr.as_deref().map_or_else(
-                || Expr::Literal(ash_parser::surface::Literal::Null),
-                normalize_imported_callable_expr,
-            );
-
-            for statement in statements.iter().rev() {
-                let ash_parser::surface::BlockStmt::Let {
-                    pattern,
-                    expr,
-                    span: stmt_span,
-                } = statement;
-                normalized = Expr::Match {
-                    scrutinee: Box::new(normalize_imported_callable_expr(expr)),
-                    arms: vec![SurfaceMatchArm {
-                        pattern: pattern.clone(),
-                        body: Box::new(normalized),
-                        span: *stmt_span,
-                    }],
-                    span: *span,
-                };
-            }
-
-            normalized
-        }
-        _ => expr.clone(),
-    }
 }
 
 /// Diagnostic produced when a `pub fn` snippet fails to parse.

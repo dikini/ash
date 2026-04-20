@@ -18,9 +18,9 @@ use ash_core::RoleObligationRef as CoreRoleObligationRef;
 
 use crate::capability_export::{CapabilityResolutionContext, ModuleId};
 use crate::surface::{
-    BinaryOp, CapabilityDef, CheckTarget, EffectType, Expr, Guard, Literal, ObligationRef, Pattern,
-    PolicyExpr, Predicate, StreamPattern, Type, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef,
-    YieldArm,
+    BinaryOp, BlockStmt, CapabilityDef, CheckTarget, EffectType, Expr, Guard, Literal,
+    ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, Type, UnaryOp,
+    Workflow as SurfaceWorkflow, WorkflowDef, YieldArm,
 };
 
 /// Context for lowering workflows with capability resolution.
@@ -1509,7 +1509,38 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             ],
         }),
         Expr::Panic { .. } => Err(LoweringError::ExprNotLowerable { kind: "panic" }),
-        Expr::Block { .. } => Err(LoweringError::ExprNotLowerable { kind: "block" }),
+        Expr::Block {
+            statements,
+            tail_expr,
+            span: _,
+        } => {
+            // Desugar { let x = e1; let y = e2; tail } into nested Expr::Let
+            let tail = tail_expr
+                .as_deref()
+                .map_or_else(|| Ok(CoreExpr::Literal(ash_core::Value::Null)), lower_expr)?;
+
+            let mut result = tail;
+            for stmt in statements.iter().rev() {
+                match stmt {
+                    BlockStmt::Let {
+                        pattern,
+                        expr,
+                        span: stmt_span,
+                    } => {
+                        result = CoreExpr::Let {
+                            pattern: lower_pattern(pattern)?,
+                            expr: Box::new(lower_expr(expr)?),
+                            body: Box::new(result),
+                            span: ash_core::Span {
+                                start: stmt_span.start,
+                                end: stmt_span.end,
+                            },
+                        };
+                    }
+                }
+            }
+            Ok(result)
+        }
 
         Expr::FnDef {
             params,

@@ -59,6 +59,11 @@ pub enum EvalError {
     #[error("non-exhaustive match: no arm matched value {value}")]
     NonExhaustiveMatch { value: String },
 
+    #[error(
+        "pattern bind failed in let-expression: pattern {pattern} does not match value {value}"
+    )]
+    LetPatternBindFailed { pattern: String, value: String },
+
     #[error("value is not callable: {value}")]
     NotCallable { value: Value },
 

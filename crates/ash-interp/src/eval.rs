@@ -620,11 +620,9 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                     }
                     eval_expr(body, &child_ctx)
                 }
-                Err(_) => Err(EvalError::NonExhaustiveMatch {
-                    value: format!(
-                        "Expr::Let pattern {:?} failed to match {:?}",
-                        pattern, value
-                    ),
+                Err(_) => Err(EvalError::LetPatternBindFailed {
+                    pattern: format!("{:?}", pattern),
+                    value: format!("{:?}", value),
                 }),
             }
         }
@@ -741,23 +739,16 @@ fn eval_binary_op(op: BinaryOp, left: Value, right: Value) -> EvalResult<Value> 
             }),
         },
 
-        // Logical
-        BinaryOp::And => match (&left, &right) {
-            (Value::Bool(l), Value::Bool(r)) => Ok(Value::Bool(*l && *r)),
-            _ => Err(EvalError::InvalidBinaryOp {
-                op: "and".to_string(),
-                left: format!("{:?}", left),
-                right: format!("{:?}", right),
-            }),
-        },
-        BinaryOp::Or => match (&left, &right) {
-            (Value::Bool(l), Value::Bool(r)) => Ok(Value::Bool(*l || *r)),
-            _ => Err(EvalError::InvalidBinaryOp {
-                op: "or".to_string(),
-                left: format!("{:?}", left),
-                right: format!("{:?}", right),
-            }),
-        },
+        // Logical — NOTE: And/Or are handled with short-circuit evaluation in
+        // the Expr::Binary arm of eval_expr (SPEC-004 EXPR-AND-FALSE, EXPR-OR-TRUE).
+        // These arms are only reachable if eval_binary_op is called directly.
+        BinaryOp::And | BinaryOp::Or => {
+            unreachable!(
+                "and/or are handled with short-circuit in eval_expr; \
+                 eval_binary_op should never be called for {:?}",
+                op
+            )
+        }
 
         // Comparison
         BinaryOp::Eq => Ok(Value::Bool(left == right)),

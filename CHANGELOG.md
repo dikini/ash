@@ -19,6 +19,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   Fixed `and`/`or` short-circuit evaluation per SPEC-004 EXPR-AND-FALSE and
   EXPR-OR-TRUE (TASK-653).
 
+- Phase 95 code review fixes: replaced dead `BinaryOp::And`/`Or` arms in
+  `eval_binary_op` with `unreachable!()` guard (short-circuit handled in
+  `eval_expr`). Added `LetPatternBindFailed` error variant for Expr::Let
+  pattern-match failure (SPEC-004 `PatternBindFailure`), replacing misused
+  `NonExhaustiveMatch`. Added 2 integration tests: runtime pattern-match
+  failure in fn let-binding, and pub fn with let-sequencing via `parse_file`
+  (9 total e2e tests for Expr::Let).
+
 - Phase 95 spec review fixes (TASK-648/649/650): added `span: Span` to
   `Expr::Let` in SPEC-001 §2.6, TASK-648, and TASK-649 desugaring sketch for
   pattern-match-failure diagnostics. Fixed TASK-650 eval sketch to use child

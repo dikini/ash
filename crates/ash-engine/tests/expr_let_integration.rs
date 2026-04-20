@@ -53,11 +53,7 @@ async fn task652_inline_fn_nested_let() {
         )
         .await;
 
-    assert!(
-        result.is_ok(),
-        "nested let should work: {:?}",
-        result.err()
-    );
+    assert!(result.is_ok(), "nested let should work: {:?}", result.err());
     // (3 + 1) * 2 = 8
     assert_eq!(result.unwrap(), ash_core::Value::Int(8));
 }
@@ -204,4 +200,76 @@ async fn task652_fn_let_shadowing_in_fn_body() {
         result.err()
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(999));
+}
+
+// ── 6. Pattern match failure at runtime in Expr::Let ──────────────────
+
+#[tokio::test]
+async fn task652_fn_let_pattern_bind_failure() {
+    let engine = Engine::new().build().expect("engine builds");
+
+    // `let [a, b] = 99` — list pattern vs int value → LetPatternBindFailed
+    let result = engine
+        .run(
+            r"
+            workflow main {
+                let bad = fn() -> Int {
+                    let [a, b] = 99
+                    a
+                }
+                ret bad()
+            }
+        ",
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "pattern mismatch in fn let should fail: got {:?}",
+        result.ok()
+    );
+    let err_msg = format!("{}", result.unwrap_err());
+    assert!(
+        err_msg.contains("pattern bind failed"),
+        "error should mention pattern bind failure: {err_msg}"
+    );
+}
+
+// ── 7. Imported pub fn with let-sequencing (3rd code path) ────────────
+
+#[tokio::test]
+async fn task652_imported_pub_fn_let_sequencing() {
+    let tmp_dir = tempfile::tempdir().expect("tempdir");
+    let dir = tmp_dir.path();
+
+    // Write a file that defines a pub fn with let-sequencing, then uses it.
+    // This exercises the module_loader code path for loaded pub fns.
+    std::fs::write(
+        dir.join("main.ash"),
+        r#"
+pub fn add_and_double(x: Int, y: Int) -> Int {
+    let sum = x + y
+    let doubled = sum * 2
+    doubled
+}
+
+workflow main {
+    ret add_and_double(3, 4)
+}
+"#,
+    )
+    .expect("write main.ash");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut workflow).expect("check");
+    let result = engine.execute(&workflow).await;
+
+    assert!(
+        result.is_ok(),
+        "pub fn with let-sequencing should work: {:?}",
+        result.err()
+    );
+    // (3 + 4) * 2 = 14
+    assert_eq!(result.unwrap(), ash_core::Value::Int(14));
 }

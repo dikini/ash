@@ -246,7 +246,7 @@ async fn task652_imported_pub_fn_let_sequencing() {
     // This exercises the module_loader code path for loaded pub fns.
     std::fs::write(
         dir.join("main.ash"),
-        r#"
+        r"
 pub fn add_and_double(x: Int, y: Int) -> Int {
     let sum = x + y
     let doubled = sum * 2
@@ -256,7 +256,7 @@ pub fn add_and_double(x: Int, y: Int) -> Int {
 workflow main {
     ret add_and_double(3, 4)
 }
-"#,
+",
     )
     .expect("write main.ash");
 

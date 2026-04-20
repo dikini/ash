@@ -178,6 +178,16 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
+        // ── Process module builtins (qualified) ──
+        m.insert(
+            "process::run",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+
         // ── Unqualified builtins ──
         let unqualified = [
             ("len", 1, false),
@@ -226,6 +236,42 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
                 },
             );
         }
+
+        // ── JSON module builtins (qualified) ──
+        m.insert(
+            "json::parse",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "json::stringify",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "json::stringify_pretty",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+
+        // ── Markdown module builtins (qualified) ──
+        m.insert(
+            "markdown::parse",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
 
         m.insert(
             "record",
@@ -1145,6 +1191,33 @@ pub fn eval_function_call(
             }
         }
 
+        // Process module
+        (Some("process"), "run") => {
+            if args.len() != 2 {
+                return builtin_arity_error("process::run", 2, args.len());
+            }
+            let cmd = expect_string_arg(args, 0, "string")?;
+            let arg_list = match &args[1] {
+                Value::List(list) => list
+                    .iter()
+                    .map(|v| match v {
+                        Value::String(s) => Ok(s.clone()),
+                        _ => Err(EvalError::TypeMismatch {
+                            expected: "string".to_string(),
+                            actual: format!("{v:?}"),
+                        }),
+                    })
+                    .collect::<EvalResult<Vec<String>>>()?,
+                _ => {
+                    return Err(EvalError::TypeMismatch {
+                        expected: "list".to_string(),
+                        actual: format!("{:?}", args[1]),
+                    });
+                }
+            };
+            process_run(cmd, &arg_list)
+        }
+
         // Record operations
         (_, "keys") => {
             if args.len() != 1 {
@@ -1246,6 +1319,38 @@ pub fn eval_function_call(
             Ok(Value::Record(Box::new(fields)))
         }
 
+        // JSON operations
+        (Some("json"), "parse") => {
+            if args.len() != 1 {
+                return builtin_arity_error("json::parse", 1, args.len());
+            }
+            let text = expect_string_arg(args, 0, "string")?;
+            json_parse(text)
+        }
+        (Some("json"), "stringify") => {
+            if args.len() != 1 {
+                return builtin_arity_error("json::stringify", 1, args.len());
+            }
+            let text = expect_string_arg(args, 0, "string")?;
+            json_stringify(text)
+        }
+        (Some("json"), "stringify_pretty") => {
+            if args.len() != 1 {
+                return builtin_arity_error("json::stringify_pretty", 1, args.len());
+            }
+            let text = expect_string_arg(args, 0, "string")?;
+            json_stringify_pretty(text)
+        }
+
+        // Markdown operations
+        (Some("markdown"), "parse") => {
+            if args.len() != 1 {
+                return builtin_arity_error("markdown::parse", 1, args.len());
+            }
+            let text = expect_string_arg(args, 0, "string")?;
+            markdown_parse(text)
+        }
+
         // Unknown function
         _ => Err(EvalError::UnknownFunction(func.to_string())),
     }
@@ -1293,6 +1398,119 @@ fn regex_replace(pattern: &str, replacement: &str, text: &str) -> EvalResult<Val
     Ok(Value::String(
         regex.replace_all(text, replacement).to_string(),
     ))
+}
+
+/// Run an external command via `std::process::Command` and return stdout.
+fn process_run(cmd: &str, args: &[String]) -> EvalResult<Value> {
+    let output = std::process::Command::new(cmd)
+        .args(args)
+        .output()
+        .map_err(|e| EvalError::ExecutionFailed(format!("process::run failed: {e}")))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    Ok(Value::String(stdout))
+}
+
+fn json_parse(text: &str) -> EvalResult<Value> {
+    match serde_json::from_str::<serde_json::Value>(text) {
+        Ok(_) => Ok(Value::String(text.to_string())),
+        Err(e) => Err(EvalError::ExecutionFailed(format!("JSON parse error: {e}"))),
+    }
+}
+
+fn json_stringify(text: &str) -> EvalResult<Value> {
+    let val: serde_json::Value = serde_json::from_str(text)
+        .map_err(|e| EvalError::ExecutionFailed(format!("JSON parse error: {e}")))?;
+    Ok(Value::String(serde_json::to_string(&val).map_err(|e| {
+        EvalError::ExecutionFailed(format!("JSON stringify error: {e}"))
+    })?))
+}
+
+fn json_stringify_pretty(text: &str) -> EvalResult<Value> {
+    let val: serde_json::Value = serde_json::from_str(text)
+        .map_err(|e| EvalError::ExecutionFailed(format!("JSON parse error: {e}")))?;
+    Ok(Value::String(serde_json::to_string_pretty(&val).map_err(
+        |e| EvalError::ExecutionFailed(format!("JSON stringify error: {e}")),
+    )?))
+}
+
+/// Parse CommonMark markdown text into a JSON AST string.
+///
+/// Returns a JSON string with the structure:
+/// `{ "blocks": [ { "type": "heading", "level": 1, "text": "..." }, ... ] }`
+fn markdown_parse(text: &str) -> EvalResult<Value> {
+    use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
+
+    let mut blocks: Vec<serde_json::Value> = Vec::new();
+    let parser = Parser::new(text);
+
+    let mut current_block: Option<serde_json::Value> = None;
+    let mut current_text = String::new();
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::Heading { level, .. }) => {
+                current_text.clear();
+                let _ = level; // level is used on End
+            }
+            Event::End(TagEnd::Heading(level)) => {
+                blocks.push(serde_json::json!({
+                    "type": "heading",
+                    "level": level as u8,
+                    "text": current_text.trim()
+                }));
+                current_text.clear();
+            }
+            Event::Start(Tag::Paragraph) => {
+                current_text.clear();
+            }
+            Event::End(TagEnd::Paragraph) => {
+                blocks.push(serde_json::json!({
+                    "type": "paragraph",
+                    "text": current_text.trim()
+                }));
+                current_text.clear();
+            }
+            Event::Start(Tag::CodeBlock(kind)) => {
+                let lang = match kind {
+                    CodeBlockKind::Fenced(lang) => lang.to_string(),
+                    _ => String::new(),
+                };
+                current_block = Some(serde_json::json!({
+                    "type": "code_block",
+                    "language": lang,
+                }));
+                current_text.clear();
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                if let Some(mut block) = current_block.take() {
+                    block
+                        .as_object_mut()
+                        .expect("code_block should be a JSON object")
+                        .insert(
+                            "text".to_string(),
+                            serde_json::Value::String(current_text.trim().to_string()),
+                        );
+                    blocks.push(block);
+                }
+                current_text.clear();
+            }
+            Event::Text(t) => {
+                current_text.push_str(&t);
+            }
+            Event::Code(c) => {
+                current_text.push_str(&c);
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                current_text.push(' ');
+            }
+            _ => {}
+        }
+    }
+
+    let result = serde_json::json!({ "blocks": blocks });
+    let json_str = serde_json::to_string(&result)
+        .map_err(|e| EvalError::ExecutionFailed(format!("markdown serialization error: {e}")))?;
+    Ok(Value::String(json_str))
 }
 
 /// Return a WrongArity error for built-ins, preserving the expected arity.
@@ -3013,5 +3231,92 @@ mod tests {
             span: ash_core::ast::Span::default(),
         };
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(1));
+    }
+
+    // ── markdown::parse builtin tests ──
+
+    #[test]
+    fn test_markdown_parse_heading() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "parse",
+            Some("markdown"),
+            &[Value::String("# Hello\n\nWorld".to_string())],
+            &ctx,
+        );
+        let json_str = match result.unwrap() {
+            Value::String(s) => s,
+            other => panic!("expected String, got {other:?}"),
+        };
+        let val: serde_json::Value = serde_json::from_str(&json_str).expect("should be valid JSON");
+        let blocks = val["blocks"].as_array().expect("blocks should be array");
+        assert_eq!(blocks.len(), 2);
+        assert_eq!(blocks[0]["type"], "heading");
+        assert_eq!(blocks[0]["level"], 1);
+        assert_eq!(blocks[0]["text"], "Hello");
+        assert_eq!(blocks[1]["type"], "paragraph");
+        assert_eq!(blocks[1]["text"], "World");
+    }
+
+    #[test]
+    fn test_markdown_parse_paragraph() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "parse",
+            Some("markdown"),
+            &[Value::String("Hello world".to_string())],
+            &ctx,
+        );
+        let json_str = match result.unwrap() {
+            Value::String(s) => s,
+            other => panic!("expected String, got {other:?}"),
+        };
+        let val: serde_json::Value = serde_json::from_str(&json_str).expect("should be valid JSON");
+        let blocks = val["blocks"].as_array().expect("blocks should be array");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0]["type"], "paragraph");
+        assert_eq!(blocks[0]["text"], "Hello world");
+    }
+
+    #[test]
+    fn test_markdown_parse_code_block() {
+        let ctx = Context::new();
+        let input = "```rust\nfn main() {}\n```".to_string();
+        let result = eval_function_call("parse", Some("markdown"), &[Value::String(input)], &ctx);
+        let json_str = match result.unwrap() {
+            Value::String(s) => s,
+            other => panic!("expected String, got {other:?}"),
+        };
+        let val: serde_json::Value = serde_json::from_str(&json_str).expect("should be valid JSON");
+        let blocks = val["blocks"].as_array().expect("blocks should be array");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0]["type"], "code_block");
+        assert_eq!(blocks[0]["language"], "rust");
+        assert_eq!(blocks[0]["text"], "fn main() {}");
+    }
+
+    #[test]
+    fn test_markdown_parse_empty_input() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "parse",
+            Some("markdown"),
+            &[Value::String(String::new())],
+            &ctx,
+        );
+        let json_str = match result.unwrap() {
+            Value::String(s) => s,
+            other => panic!("expected String, got {other:?}"),
+        };
+        let val: serde_json::Value = serde_json::from_str(&json_str).expect("should be valid JSON");
+        let blocks = val["blocks"].as_array().expect("blocks should be array");
+        assert!(blocks.is_empty());
+    }
+
+    #[test]
+    fn test_markdown_parse_arity_error() {
+        let ctx = Context::new();
+        let result = eval_function_call("parse", Some("markdown"), &[], &ctx);
+        assert!(result.is_err());
     }
 }

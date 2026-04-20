@@ -2565,9 +2565,9 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
 ||| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | ✅ Complete ||
-||| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | 📝 Planned ||
-||| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | 📝 Planned ||
-||| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | 📝 Planned ||
+|||| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | ✅ Complete ||
+|||| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | ✅ Complete ||
+|||| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | ✅ Complete ||
 ||| [TASK-599](tasks/TASK-599-std-diff.md) | `std::diff` line-diff utility | PLAN-090 §Track B | 8 | ⏸️ Deferred ||
 
 ### Track C: Integration and Meta-Validation

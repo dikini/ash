@@ -2255,15 +2255,14 @@ finite-world enumeration substrate.
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------||
-|| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-022 | 10-14 | ✅ Complete ||
-|| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | PLAN-024, DESIGN-023 | 8-12 | ✅ Complete ||
-|| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | PLAN-024, DESIGN-022/023 | 4-6 | ✅ Complete |
+|| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-022 | 10-14 | 📝 Planned ||
+|| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | PLAN-024, DESIGN-023 | 8-12 | 📝 Planned ||
+|| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | PLAN-024, DESIGN-022/023 | 4-6 | 📝 Planned ||
 
-**Current status note:** Synthesized tests from contracts, policies, and obligations remain
-planning-level labeled results rather than executable end-to-end cases. Property/small-world
-execution is bounded and reproducible but not yet backed by true generated input/world exploration.
-Both gaps are blocked on a stable runner-facing metadata extraction layer and a finite-world
-enumeration substrate, documented in DESIGN-022 and DESIGN-023.
+**Blockers:** Synthesized tests require a stable runner-facing introspection API for
+lowered contracts (`StoredFnContract`), policy definitions, and obligation lifecycle
+metadata. Small-world exploration requires a `SmallWorld` model and finite-domain
+enumerator. Neither substrate exists yet. See DESIGN-022 and DESIGN-023.
 
 **Deliverable target:** Executable synthesized tests from contracts, policies, and obligations;
 true small-world exploration with deterministic world enumeration; and final phase closeout.

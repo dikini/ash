@@ -406,9 +406,58 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         }
 
         Expr::Binary { op, left, right } => {
-            let left_val = eval_expr(left, ctx)?;
-            let right_val = eval_expr(right, ctx)?;
-            eval_binary_op(*op, left_val, right_val)
+            // Short-circuit evaluation for and/or (SPEC-004 EXPR-AND-FALSE, EXPR-OR-TRUE)
+            match op {
+                BinaryOp::And => {
+                    let left_val = eval_expr(left, ctx)?;
+                    match left_val {
+                        Value::Bool(false) => Ok(Value::Bool(false)),
+                        Value::Bool(true) => {
+                            let right_val = eval_expr(right, ctx)?;
+                            match right_val {
+                                Value::Bool(b) => Ok(Value::Bool(b)),
+                                _ => Err(EvalError::InvalidBinaryOp {
+                                    op: "and".to_string(),
+                                    left: format!("{:?}", left_val),
+                                    right: format!("{:?}", right_val),
+                                }),
+                            }
+                        }
+                        _ => Err(EvalError::InvalidBinaryOp {
+                            op: "and".to_string(),
+                            left: format!("{:?}", left_val),
+                            right: "<unevaluated>".to_string(),
+                        }),
+                    }
+                }
+                BinaryOp::Or => {
+                    let left_val = eval_expr(left, ctx)?;
+                    match left_val {
+                        Value::Bool(true) => Ok(Value::Bool(true)),
+                        Value::Bool(false) => {
+                            let right_val = eval_expr(right, ctx)?;
+                            match right_val {
+                                Value::Bool(b) => Ok(Value::Bool(b)),
+                                _ => Err(EvalError::InvalidBinaryOp {
+                                    op: "or".to_string(),
+                                    left: format!("{:?}", left_val),
+                                    right: format!("{:?}", right_val),
+                                }),
+                            }
+                        }
+                        _ => Err(EvalError::InvalidBinaryOp {
+                            op: "or".to_string(),
+                            left: format!("{:?}", left_val),
+                            right: "<unevaluated>".to_string(),
+                        }),
+                    }
+                }
+                _ => {
+                    let left_val = eval_expr(left, ctx)?;
+                    let right_val = eval_expr(right, ctx)?;
+                    eval_binary_op(*op, left_val, right_val)
+                }
+            }
         }
 
         Expr::Call {
@@ -2726,5 +2775,97 @@ mod tests {
             matches!(closure_result, Value::Closure { .. }),
             "expression-level FnDef should produce Value::Closure, got {closure_result:?}"
         );
+    }
+
+    // ── TASK-653: Short-circuit and/or evaluation (SPEC-004) ──────────
+
+    /// SPEC-004 EXPR-AND-FALSE: `false && <error>` returns `false` without
+    /// evaluating the right operand.
+    #[test]
+    fn task653_and_short_circuits_on_false() {
+        let ctx = Context::new();
+
+        // false and (1 / 0) — division by zero on the right must not fire
+        let expr = Expr::Binary {
+            op: BinaryOp::And,
+            left: Box::new(Expr::Literal(Value::Bool(false))),
+            right: Box::new(Expr::Binary {
+                op: BinaryOp::Div,
+                left: Box::new(Expr::Literal(Value::Int(1))),
+                right: Box::new(Expr::Literal(Value::Int(0))),
+            }),
+        };
+
+        let result = eval_expr(&expr, &ctx);
+        assert_eq!(result.unwrap(), Value::Bool(false));
+    }
+
+    /// SPEC-004 EXPR-OR-TRUE: `true || <error>` returns `true` without
+    /// evaluating the right operand.
+    #[test]
+    fn task653_or_short_circuits_on_true() {
+        let ctx = Context::new();
+
+        // true or (1 / 0) — division by zero on the right must not fire
+        let expr = Expr::Binary {
+            op: BinaryOp::Or,
+            left: Box::new(Expr::Literal(Value::Bool(true))),
+            right: Box::new(Expr::Binary {
+                op: BinaryOp::Div,
+                left: Box::new(Expr::Literal(Value::Int(1))),
+                right: Box::new(Expr::Literal(Value::Int(0))),
+            }),
+        };
+
+        let result = eval_expr(&expr, &ctx);
+        assert_eq!(result.unwrap(), Value::Bool(true));
+    }
+
+    /// `true && false` returns `false` (both operands evaluated).
+    #[test]
+    fn task653_and_both_evaluated_when_left_true() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::And,
+            left: Box::new(Expr::Literal(Value::Bool(true))),
+            right: Box::new(Expr::Literal(Value::Bool(false))),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(false));
+    }
+
+    /// `false || true` returns `true` (both operands evaluated).
+    #[test]
+    fn task653_or_both_evaluated_when_left_false() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::Or,
+            left: Box::new(Expr::Literal(Value::Bool(false))),
+            right: Box::new(Expr::Literal(Value::Bool(true))),
+        };
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(true));
+    }
+
+    /// Non-boolean left operand in `and` produces a type error.
+    #[test]
+    fn task653_and_non_bool_left_is_error() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::And,
+            left: Box::new(Expr::Literal(Value::Int(1))),
+            right: Box::new(Expr::Literal(Value::Bool(true))),
+        };
+        assert!(eval_expr(&expr, &ctx).is_err());
+    }
+
+    /// Non-boolean left operand in `or` produces a type error.
+    #[test]
+    fn task653_or_non_bool_left_is_error() {
+        let ctx = Context::new();
+        let expr = Expr::Binary {
+            op: BinaryOp::Or,
+            left: Box::new(Expr::Literal(Value::Int(0))),
+            right: Box::new(Expr::Literal(Value::Bool(false))),
+        };
+        assert!(eval_expr(&expr, &ctx).is_err());
     }
 }

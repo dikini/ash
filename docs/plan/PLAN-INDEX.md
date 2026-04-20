@@ -1209,7 +1209,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Source:** External audit findings from comprehensive code review  
 **Priority:** Critical to Medium  
-**Status:** ⚠️ Partial - Critical gaps identified in post-review
+**Status:** ✅ Done
 
 ### 48.1: Critical Runtime Fixes (High Priority)
 
@@ -1251,7 +1251,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-298](tasks/TASK-298-json-output-schema.md) | Fix JSON output schema for ash check | SPEC-005/021 | 6 | ✅ Complete |
 | [TASK-288](tasks/TASK-288-repl-ast-command.md) | Fix REPL :ast command output | SPEC-011 | 6 | ✅ Complete |
 
-**Phase 48 Deliverable:** Partial - Critical gaps identified
+**Phase 48 Deliverable:** All critical and medium findings from Phase 46 code review addressed. 15 original tasks complete. Three post-review gaps (exit codes, pub(crate) visibility, HTTP provider no-op) resolved via remediation tasks TASK-318, TASK-311, TASK-319 in Phase 49.
 
 **Summary:**
 
@@ -2609,7 +2609,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-BUILTIN-FN: builtin fn Declaration Form](PLAN-BUILTIN-FN.md)
 **Specs:** `SPEC-BUILTIN-FN`, `DESIGN-NOTE-BUILTIN-FN-AND-EXTERN-FN`
 **Priority:** High
-**Status:** 🔴 Blocked on deferred D2
+**Status:** ✅ Done
 
 || Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|\
@@ -2629,15 +2629,14 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 || [TASK-630](#) | Positive end-to-end regex test | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
 || [TASK-629](#) | Delete legacy regex carrier | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
 || [TASK-631A](#) | Remove hardcoded builtin type entries covered by D1 | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-631B](#) | Remove remaining hardcoded builtin type entries (blocked on D2) | SPEC-BUILTIN-FN | 2-3 | 🔴 Blocked ||
+|| [TASK-631B](#) | Remove remaining hardcoded builtin type entries (blocked on D2) | SPEC-BUILTIN-FN | 2-3 | ✅ Done (Phase 93 TASK-643) ||
 || [TASK-632](#) | Update CHANGELOG.md and PLAN-INDEX | — | 1 | ✅ Complete ||
 ||| [TASK-633](#) | Full workspace verification | — | 1 | ✅ Complete ||
 
 **Deliverable:** `builtin fn` is now implemented as a first-class declaration
-form for pure runtime-provided functions. Tracks A, B, C, D1, E, and the
-unblocked portions of Track F are complete and verified. TASK-631B remains
-blocked on deferred Track D2 generic builtin semantics; that blocked cleanup is
-now the only remaining Phase 92 item.
+form for pure runtime-provided functions. All tracks (A, B, C, D1, D2/D1.5, E, F)
+complete and verified. TASK-631B resolved by Phase 93 TASK-643 which deleted
+`add_builtin_functions()` entirely.
 
 ## Phase 93: Generic Builtin fn Declarations
 

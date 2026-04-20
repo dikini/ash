@@ -2276,7 +2276,7 @@ and prompt functions, OpenAI capability with dispatch workflows, and agent orche
 **Design Reference:** [DESIGN-025: LLM Standard Library](../design/DESIGN-025-LLM-STDLIB.md)
 **Spec Reference:** SPEC-029-LLM-STDLIB.md
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 ### Track 1: Rust Provider Foundation (TASK-516 to TASK-523)
 

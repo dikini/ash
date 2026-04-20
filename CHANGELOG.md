@@ -108,6 +108,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   introspection and enumeration substrates that do not yet exist.
   Phases 84-89 status corrected from "Planned" to "Done" -- all tasks
   (TASK-570 through TASK-576, TASK-569) were already complete.
+  Phase 77 (LLM Standard Library) status corrected from "Planned" to "Done"
+  -- all 23 tasks (TASK-516 through TASK-538) were already complete.
 
 - TASK-632: reconciled Phase 92 planning/changelog/task surfaces with the
   landed state. `PLAN-INDEX` now reports TASK-631A and TASK-632 as complete and

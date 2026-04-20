@@ -106,6 +106,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   Phase 76B task statuses corrected from stale "Complete" to "Planned" with
   blocker documentation -- synthesized tests and small-world exploration require
   introspection and enumeration substrates that do not yet exist.
+  Phases 84-89 status corrected from "Planned" to "Done" -- all tasks
+  (TASK-570 through TASK-576, TASK-569) were already complete.
 
 - TASK-632: reconciled Phase 92 planning/changelog/task surfaces with the
   landed state. `PLAN-INDEX` now reports TASK-631A and TASK-632 as complete and

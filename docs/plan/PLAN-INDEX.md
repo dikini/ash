@@ -2452,14 +2452,16 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 **Plan Reference:** [PLAN-031: Parser Tooling Infrastructure](PLAN-031-PARSER-TOOLING-INFRASTRUCTURE.md)
 **Spec:** SPEC-039
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-570](tasks/TASK-570-parser-binding-spans.md) | Add spans to `Expr::Variable` and `Pattern::Variable` | SPEC-039 §3 | 6 | ✅ Complete |
-|| [TASK-571](tasks/TASK-571-parser-comment-trivia.md) | Preserve comments in lexer and build `CommentTable` side-table | SPEC-039 §4 | 10 | ✅ Complete |
+||------|-------------|------|------------|--------||
+|| [TASK-570](tasks/TASK-570-parser-binding-spans.md) | Add spans to `Expr::Variable` and `Pattern::Variable` | SPEC-039 §3 | 6 | ✅ Done ||
+|| [TASK-571](tasks/TASK-571-parser-comment-trivia.md) | Preserve comments in lexer and build `CommentTable` side-table | SPEC-039 §4 | 10 | ✅ Done ||
 
-**Deliverable:** Variable bindings carry spans; `Comment` tokens emitted by lexer; `CommentTable` attached to `ModuleFile`.
+**Deliverable:** Variable bindings carry spans in surface and core AST. `CommentTable` side-table
+attached to `ModuleFile`. `parse_surface_file()` public API. 594 parser tests pass.
+Unblocks SPEC-040, SPEC-041, SPEC-042, SPEC-043.
 
 ## Phase 85: Diagnostic Infrastructure
 
@@ -2468,12 +2470,12 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 **Plan Reference:** [PLAN-032: Diagnostic Infrastructure](PLAN-032-DIAGNOSTIC-INFRASTRUCTURE.md)
 **Spec:** SPEC-040
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-572](tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError` | SPEC-040 §4 | 12 | ✅ Complete |
-|| [TASK-573](tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | SPEC-040 §5 | 6 | ✅ Complete |
+||------|-------------|------|------------|--------||
+|| [TASK-572](tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError` | SPEC-040 §4 | 12 | ✅ Done ||
+|| [TASK-573](tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | SPEC-040 §5 | 6 | ✅ Done ||
 
 **Deliverable:** All type-checker and name-resolution errors carry spans; `AshLspError` trait enables mechanical LSP diagnostic conversion.
 
@@ -2499,11 +2501,11 @@ Implement a production-quality LSP server for Ash with an embedded MCP bridge.
 **Plan Reference:** [PLAN-036: LSP & MCP Interface](PLAN-036-LSP-MCP-INTERFACE.md)
 **Spec:** SPEC-038
 **Priority:** Medium
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 180 | ✅ Complete |
+||------|-------------|------|------------|--------||
+|| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 180 | ✅ Done ||
 
 **Deliverable:** `ash-lsp` and `ash-mcp` crates; diagnostics, hover, goto-definition, completion, references; VSCode extension skeleton.
 
@@ -2514,11 +2516,11 @@ Provide a source formatter for Ash that pretty-prints any valid `ModuleFile` whi
 **Plan Reference:** [PLAN-034: Ash Source Formatter](PLAN-034-ASH-SOURCE-FORMATTER.md)
 **Spec:** SPEC-042
 **Priority:** Low
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | SPEC-042 | 48 | ✅ Complete |
+||------|-------------|------|------------|--------||
+|| [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | SPEC-042 | 48 | ✅ Done ||
 
 **Deliverable:** `crates/ash-formatter` crate; `ash fmt` CLI subcommand; LSP `textDocument/formatting` handler.
 
@@ -2529,11 +2531,11 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 **Plan Reference:** [PLAN-035: Incremental Analysis Engine](PLAN-035-INCREMENTAL-ANALYSIS.md)
 **Spec:** SPEC-043
 **Priority:** Low
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 ||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | ✅ Complete |
+||------|-------------|------|------------|--------||
+|| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | ✅ Done ||
 
 **Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working.
 

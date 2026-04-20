@@ -102,6 +102,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - PLAN-INDEX: Phase 48 status updated from "Partial" to "Done" -- all remediation
   tasks (TASK-318, TASK-311, TASK-319) completed in Phase 49. Phase 92 status
   updated from "Blocked" to "Done" -- TASK-631B resolved by Phase 93 TASK-643.
+  Phase 74 status updated from "Planned" to "Done" -- all 8 tasks complete.
 
 - TASK-632: reconciled Phase 92 planning/changelog/task surfaces with the
   landed state. `PLAN-INDEX` now reports TASK-631A and TASK-632 as complete and

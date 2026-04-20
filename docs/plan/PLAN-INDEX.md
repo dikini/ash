@@ -2178,7 +2178,7 @@ Implement the first real `io` standard-library family as a top-level namespace r
 **Plan Reference:** [PLAN-022: Stdlib IO V1](PLAN-022-STDLIB-IO-V1.md)
 **Design Reference:** [Stdlib `io` V1 Design](../plans/2026-04-10-stdlib-io-v1-design.md)
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** ✅ Done
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|

@@ -2741,59 +2741,49 @@ Close the gap between executing single-file workflows and executing real program
 
 ## Phase 97: Act Monad — First-Class Effectful Computation
 
-**Priority:** High (resolves NOTE-004/NOTE-005, foundational for fn/capability/workflow unification)
-**Status:** Draft
+**Priority:** High (resolves NOTE-004/NOTE-005, foundational for fn/capability/workflow reconciliation)
+**Status:** 🟡 Ready
 **Spec:** SPEC-047
 **Plan:** docs/plans/2026-04-22-phase-97-act-monad.md
 
-Unify the split between pure expression evaluation and effectful workflow execution. Introduce `Act<A>` as a first-class type constructor. Enable effectful operations as composable expression-level values while preserving governance properties.
+Add expression-level `Act<A>` as a first-class effectful computation model that interoperates with the existing workflow runtime. Phase 97 is explicitly additive: `act { ... }` is surface-only and lowers into existing core expressions; `invoke` is a runtime primitive callable; existing `Workflow::Act` and `Type::Fun(...)` remain in place.
 
 ||| Task | Description | Est. Hours | Status ||
 |||------|-------------|------------|--------||
-||| TASK-672 | Add `ActStmt` + `Expr::ActBlock` to surface AST | 2 | Pending ||
-||| TASK-673 | Parse `act { ... }` in expression context | 3 | Pending ||
-||| TASK-674 | Add `Expr::ActBlock` to core AST | 1 | Pending ||
-||| TASK-675 | Lower ActBlock with bind/unit desugaring | 4 | Pending ||
-||| TASK-676 | Desugarer pass-through for ActBlock | 2 | Pending ||
-||| TASK-677 | Add invoke/unit/bind to builtin dispatch table | 3 | Pending ||
-||| TASK-678 | Register invoke/unit/bind in engine builtin registry | 2 | Pending ||
-||| TASK-679 | Property tests: act block parsing and lowering | 3 | Pending ||
-||| TASK-680 | Register Act type constructor (kind * -> *) | 1 | Pending ||
-||| TASK-681 | Type-check ActBlock: bind, pure bind, return rules | 4 | Pending ||
-||| TASK-682 | Type-check invoke: String -> String -> List -> Act Value | 2 | Pending ||
-||| TASK-683 | Purity enforcement: reject act blocks in pure fn bodies | 3 | Pending ||
-||| TASK-684 | Type-check unit, bind, then, guard builtin signatures | 2 | Pending ||
-||| TASK-685 | Property tests: monad laws, purity rejection, act block inference | 4 | Pending ||
-||| TASK-686 | Define ActEnv struct in interpreter | 2 | Pending ||
-||| TASK-687 | Implement invoke builtin: policy + dispatch + effect log | 4 | Pending ||
-||| TASK-688 | Implement unit builtin: lift value into Act closure | 2 | Pending ||
-||| TASK-689 | Implement bind builtin: thread ActEnv through closures | 4 | Pending ||
-||| TASK-690 | Implement then and guard builtins | 2 | Pending ||
-||| TASK-691 | Evaluate Expr::ActBlock: produce ActEnv-threading closure | 3 | Pending ||
-||| TASK-692 | Workflow bridge: construct ActEnv from workflow context | 3 | Pending ||
-||| TASK-693 | Integration tests: effectful fn, nested act, workflow+act interop | 4 | Pending ||
-||| TASK-694 | Amend SPEC-001: ActBlock, ActStmt in core forms | 1 | Pending ||
-||| TASK-695 | Amend SPEC-002: expression-level act syntax | 1 | Pending ||
-||| TASK-696 | Amend SPEC-003: Act type constructor, purity rules | 2 | Pending ||
-||| TASK-697 | Amend SPEC-004: ActEnv domain, ACT-BIND, ACT-INVOKE rules | 2 | Pending ||
-||| TASK-698 | Amend SPEC-025: small-step for act block reduction | 1 | Pending ||
-||| TASK-699 | Amend SPEC-027: effectful fn declaration, purity boundary | 1 | Pending ||
-||| TASK-700 | Amend SPEC-031: note on ActEnv-capturing closures | 0.5 | Pending ||
-||| TASK-701 | Amend SPEC-BUILTIN-FN: add invoke, unit, bind | 1 | Pending ||
-||| TASK-702 | Create std/src/act.ash library module | 2 | Pending ||
-||| TASK-703 | Cross-layer validation: end-to-end parse -> type -> execute | 3 | Pending ||
-||| TASK-704 | Performance baseline for act block execution | 1 | Pending ||
+||| TASK-672 | Preflight doc cleanup: normalize architecture and syntax | 2 | 🟡 Ready ||
+||| TASK-673 | Add surface `ActStmt` type + `Expr::ActBlock` | 2 | 🟡 Ready ||
+||| TASK-674 | Parse `act { ... }` in expression context | 3 | 🟡 Ready ||
+||| TASK-675 | Lower `SurfaceExpr::ActBlock` into existing core expressions | 5 | 🟡 Ready ||
+||| TASK-676 | Property/integration tests for act-block parsing and lowering | 3 | 🟡 Ready ||
+||| TASK-677 | Register `Act` type constructor with kind `* -> *` | 1 | 🟡 Ready ||
+||| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, return rules | 4 | 🟡 Ready ||
+||| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | 🟡 Ready ||
+||| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure fn bodies | 3 | 🟡 Ready ||
+||| TASK-681 | Record/test additive coexistence with existing `Type::Fun(...)` | 2 | 🟡 Ready ||
+||| TASK-682 | Type-system tests for purity rejection and `Act<T>` inference | 4 | 🟡 Ready ||
+||| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2 | 🟡 Ready ||
+||| TASK-684 | Add `invoke` runtime primitive dispatch through `Expr::Call` | 4 | 🟡 Ready ||
+||| TASK-685 | Implement closure-backed execution path for desugared `Act<T>` values | 4 | 🟡 Ready ||
+||| TASK-686 | Workflow bridge: construct/apply `ActEnv` from workflow context | 3 | 🟡 Ready ||
+||| TASK-687 | Runtime integration tests: effectful fn composition and interop | 4 | 🟡 Ready ||
+||| TASK-688 | Finalize SPEC-047 amendments and targeted spec updates | 2 | 🟡 Ready ||
+||| TASK-689 | Create `std/src/act.ash` with `unit`, `bind`, `then`, `guard` | 2 | 🟡 Ready ||
+||| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end | 3 | 🟡 Ready ||
+||| TASK-691 | Performance baseline for desugared act-block execution | 1 | 🟡 Ready ||
 
-**Track A (Surface + Core):** 20h. Surface AST, parser, core AST, lowerer, builtin registration.
+**Track A (Preflight + Surface + Lowering):** 15h. Normalize docs, add surface act-block syntax, and lower into existing core expressions.
 
-**Track B (Type System):** 16h. Act type constructor, act block typing, purity enforcement.
+**Track B (Type System):** 16h. Register `Act`, type-check act blocks and invoke, enforce purity, and preserve additive coexistence with `Type::Fun(...)`.
 
-**Track C (Runtime):** 24h. ActEnv, invoke/unit/bind builtins, workflow bridge.
+**Track C (Runtime):** 17h. Define `ActEnv`, route `invoke` through the runtime primitive path, execute desugared `Act<T>` values, and bridge from workflow context.
 
-**Track D (Specs + Testing):** 15.5h. Spec amendments, library module, cross-layer tests.
+**Track D (Spec + Library + Validation):** 8h. Finalize aligned specs, add `std/src/act.ash`, and run cross-layer validation.
 
 **Decision gates resolved:**
-- D1: ActBlock as Expr variant (preserves source structure for errors)
-- D2: invoke as builtin fn (Expr::Call dispatch, no new Expr variant)
-- D3: ActEnv is runtime-only (not an Ash value)
-- D4: Workflow::Act unchanged (backward compatible)
+- D1: `act { ... }` is surface-only in Phase 97 and lowers away before core IR
+- D2: `invoke` is a runtime primitive callable routed through `Expr::Call`
+- D3: `ActEnv` is runtime-only (not an Ash value)
+- D4: `Workflow::Act` remains unchanged in Phase 97
+- D5: `unit`, `bind`, `then`, and `guard` remain library functions
+- D6: `Act<A>` is additive and does not retire `Type::Fun(...)` in this phase
+

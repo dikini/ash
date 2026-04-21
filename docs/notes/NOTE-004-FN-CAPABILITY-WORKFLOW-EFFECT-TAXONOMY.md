@@ -1,8 +1,9 @@
 # NOTE-004: Function vs Capability vs Workflow vs Effect Taxonomy
 
 **Date:** 2026-04-21
-**Status:** Open — needs resolution
-**Priority:** High — architectural foundation
+**Status:** Superseded by NOTE-005
+**Priority:** High — resolved by Act monad design
+**Superseded by:** NOTE-005-ACT-MONAD-UNIFYING-PURE-AND-EFFECTFUL.md
 
 ## Problem
 

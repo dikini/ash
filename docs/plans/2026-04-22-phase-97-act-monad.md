@@ -3,118 +3,121 @@
 **Date:** 2026-04-22
 **Status:** Draft
 **Depends on:** SPEC-047, Phase 96 (complete)
-**Related:** NOTE-005, SPEC-001/002/003/004/025/027/031/BUILTIN-FN
+**Related:** NOTE-005, SPEC-001/002/003/004/027/031
 
 ## 1. Goal
 
-Implement the Act monad as specified in SPEC-047, unifying pure expression evaluation and effectful workflow execution into a single composable framework.
+Implement expression-level `Act<A>` as an additive capability in Ash: a first-class effectful computation model that interoperates with the existing workflow runtime without requiring immediate replacement of workflow execution or the current `Type::Fun(...)` substrate.
 
-## 2. Track Structure
+## 2. Phase-97 Architectural Decisions
 
-### Track A: Surface + Core Foundation
-Prerequisite: nothing (can start immediately after Phase 96 merge).
+These decisions are frozen for this plan and MUST be reflected consistently across tasks:
+
+1. **Surface-only act block.** `act { ... }` is introduced in the surface AST as `Expr::ActBlock` with `ActStmt` items. It does not survive into the canonical core IR in Phase 97.
+2. **Lower-away strategy.** `Expr::ActBlock` lowers into existing core expression forms using nested `bind` / `unit` structure plus existing `Expr::Call`, `Expr::FnDef`, and `Expr::FnApply`.
+3. **`invoke` is a runtime primitive callable.** It travels through the existing `Expr::Call` path. It is not a dedicated `Expr::Invoke` variant and it is not a pure `builtin fn` under the current SPEC-BUILTIN-FN contract.
+4. **Library-vs-runtime split.** `unit`, `bind`, `then`, and `guard` remain ordinary library functions in `std/src/act.ash`. Only `invoke` requires runtime support.
+5. **Additive typing model.** `Act<A>` is introduced via existing `Type::Constructor`. Phase 97 does not retire or redefine `Type::Fun(...)`; it coexists with it.
+6. **No SPEC-025 scope expansion.** Expression-level micro-stepping remains out of scope in Phase 97.
+
+## 3. Track Structure
+
+### Track A: Preflight + Surface + Lowering Foundation
+Prerequisite: nothing.
 
 | Task | Description | Est. | Dependencies |
 |------|-------------|------|--------------|
-| TASK-672 | Add `ActStmt` type + `Expr::ActBlock` to surface AST (`surface.rs`) | 2h | — |
-| TASK-673 | Parse `act { ... }` in expression context (`parse_expr.rs`) | 3h | TASK-672 |
-| TASK-674 | Add `Expr::ActBlock` to core AST (`ast.rs`) | 1h | — |
-| TASK-675 | Lower `SurfaceExpr::ActBlock` to `CoreExpr::ActBlock` with bind/unit desugaring (`lower.rs`) | 4h | TASK-672, TASK-674 |
-| TASK-676 | Desugarer pass-through for `ActBlock` in all three desugar passes (`desugar.rs`) | 2h | TASK-672 |
-| TASK-677 | Add `invoke`, `unit`, `bind` to builtin dispatch table (`eval.rs`) | 3h | — |
-| TASK-678 | Register `invoke`, `unit`, `bind` in engine builtin fn registry | 2h | TASK-677 |
-| TASK-679 | Property tests for act block parsing and lowering | 3h | TASK-673, TASK-675 |
+| TASK-672 | Preflight doc cleanup: normalize `Act<T>` syntax, remove `Expr::Invoke`, align builtin/library split in SPEC-047 and this plan | 2h | — |
+| TASK-673 | Add surface `ActStmt` type + `Expr::ActBlock` to `surface.rs` | 2h | TASK-672 |
+| TASK-674 | Parse `act { ... }` in expression context in `parse_expr.rs` | 3h | TASK-673 |
+| TASK-675 | Lower `SurfaceExpr::ActBlock` into existing core expressions using nested `bind` / `unit` calls in `lower.rs` | 5h | TASK-673, TASK-674 |
+| TASK-676 | Property/integration tests for act-block parsing and lowering | 3h | TASK-674, TASK-675 |
 
-**Track A gate:** `act { ret 42 }` parses, lowers, and evaluates to a closure value.
+**Track A gate:** `act { ret 42; }` parses and lowers without any new core IR variants.
 
 ### Track B: Type System
-Prerequisite: Track A (parsing + lowering).
+Prerequisite: Track A.
 
 | Task | Description | Est. | Dependencies |
 |------|-------------|------|--------------|
-| TASK-680 | Register `Act` type constructor with kind `* -> *` in type env | 1h | — |
-| TASK-681 | Type-check `Expr::ActBlock`: bind rule, pure bind rule, return rule | 4h | TASK-680, TASK-675 |
-| TASK-682 | Type-check `invoke`: `String → String → List → Act Value` | 2h | TASK-680 |
-| TASK-683 | Purity enforcement: reject `ActBlock`/`invoke` in pure fn bodies | 3h | TASK-681 |
-| TASK-684 | Type-check `unit`, `bind`, `then`, `guard` builtin signatures | 2h | TASK-680 |
-| TASK-685 | Property tests for type system: monad laws, purity rejection, act block inference | 4h | TASK-681–684 |
+| TASK-677 | Register `Act` type constructor with kind `* -> *` in type environment | 1h | TASK-672 |
+| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, and return rules | 4h | TASK-675, TASK-677 |
+| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2h | TASK-677 |
+| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure `fn` bodies | 3h | TASK-678, TASK-679 |
+| TASK-681 | Record and test the additive coexistence rule with existing `Type::Fun(...)` behavior | 2h | TASK-678 |
+| TASK-682 | Type-system tests: purity rejection, inference, and `Act<T>` constructor behavior | 4h | TASK-678-TASK-681 |
 
-**Track B gate:** Type checker accepts effectful fn declarations and rejects pure fn bodies with act blocks.
+**Track B gate:** The type checker accepts `fn ... -> Act<T>` and rejects `act {}` or `invoke(...)` inside pure `fn ... -> T` bodies.
 
 ### Track C: Runtime
-Prerequisite: Track A. Can proceed in parallel with Track B (but needs Track B for full testing).
+Prerequisite: Track A. Can proceed in parallel with Track B after surface/lowering stabilizes.
 
 | Task | Description | Est. | Dependencies |
 |------|-------------|------|--------------|
-| TASK-686 | Define `ActEnv` struct in interpreter | 2h | — |
-| TASK-687 | Implement `invoke` builtin: policy check → provider dispatch → effect log append | 4h | TASK-677, TASK-686 |
-| TASK-688 | Implement `unit` builtin: lift value into Act closure | 2h | TASK-677, TASK-686 |
-| TASK-689 | Implement `bind` builtin: thread ActEnv through closure chain | 4h | TASK-677, TASK-686 |
-| TASK-690 | Implement `then` and `guard` builtins | 2h | TASK-689 |
-| TASK-691 | Evaluate `Expr::ActBlock`: produce closure capturing ActEnv threading | 3h | TASK-688, TASK-689 |
-| TASK-692 | Workflow bridge: construct ActEnv from workflow execution context | 3h | TASK-686 |
-| TASK-693 | Integration tests: effectful fn composition, nested act blocks, workflow+act interop | 4h | TASK-691, TASK-692 |
+| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2h | TASK-672 |
+| TASK-684 | Add `invoke` runtime primitive dispatch through the existing `Expr::Call` path | 4h | TASK-683 |
+| TASK-685 | Implement closure-backed execution path for desugared `Act<T>` values | 4h | TASK-675, TASK-683, TASK-684 |
+| TASK-686 | Workflow bridge: construct/apply `ActEnv` from workflow execution context when needed | 3h | TASK-683, TASK-685 |
+| TASK-687 | Runtime integration tests: effectful fn composition, nested act blocks, workflow + act interop | 4h | TASK-685, TASK-686 |
 
-**Track C gate:** `fn read(p) -> Act String { act { x = invoke("Fs","read",[p]); ret x } }` executes with real provider.
+**Track C gate:** `fn read(p: String) -> Act<String> { act { x = invoke("Fs", "read", [p]); ret x; } }` executes against a real provider path.
 
-### Track D: Specs + Amendment + Cross-Layer Tests
-Prerequisite: All tracks complete.
+### Track D: Spec + Library + Cross-Layer Validation
+Prerequisite: Tracks A-C complete.
 
 | Task | Description | Est. | Dependencies |
 |------|-------------|------|--------------|
-| TASK-694 | Amend SPEC-001: add ActBlock, Invoke, ActStmt to core forms | 1h | Track A |
-| TASK-695 | Amend SPEC-002: document expression-level act syntax | 1h | Track A |
-| TASK-696 | Amend SPEC-003: Act type constructor, purity rules, typing rules | 2h | Track B |
-| TASK-697 | Amend SPEC-004: semantic rules for bind, invoke, act block | 2h | Track B, C |
-| TASK-698 | Amend SPEC-025: small-step rules for expression-level act | 1h | Track C |
-| TASK-699 | Amend SPEC-027: effectful fn declaration, purity boundary | 1h | Track B |
-| TASK-700 | Amend SPEC-031: note on ActEnv-capturing closures | 0.5h | Track C |
-| TASK-701 | Amend SPEC-BUILTIN-FN: add invoke, unit, bind | 1h | Track A |
-| TASK-702 | Create `std/src/act.ash` with unit, bind, then, guard library functions | 2h | Track C |
-| TASK-703 | Cross-layer validation: end-to-end from parse → type → execute | 3h | All tracks |
-| TASK-704 | Performance baseline for act block execution | 1h | Track C |
+| TASK-688 | Finalize SPEC-047 amendments and targeted updates to SPEC-002/003/004/027/031 | 2h | Tracks A-C |
+| TASK-689 | Create `std/src/act.ash` with `unit`, `bind`, `then`, `guard` library functions | 2h | Track C |
+| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end examples | 3h | TASK-688, TASK-689 |
+| TASK-691 | Performance baseline for desugared act-block execution | 1h | TASK-690 |
 
-**Track D gate:** All specs amended, library module created, cross-layer tests pass.
+**Track D gate:** docs, library definitions, and end-to-end tests all reflect the same additive architecture.
 
-## 3. Decision Gates
+## 4. Decision Gates
 
-**D1: Act block representation.** Resolved: `Expr::ActBlock` with `Vec<ActStmt>`. Alternative (desugar directly to nested `bind`/`unit` calls in the lowerer) was rejected because it loses source structure needed for error messages and debugging.
+**D1: Act block representation.** Resolved: surface-only `Expr::ActBlock` with `Vec<ActStmt>`. It lowers away before core IR.
 
-**D2: Invoke as Expr variant vs builtin fn.** Resolved: `invoke` is a `builtin fn` dispatched through the existing `Expr::Call` path. No new `Expr::Invoke` variant needed. The lowerer maps `invoke(a,b,c)` to `Expr::Call { func: "invoke", .. }`.
+**D2: Invoke representation.** Resolved: `invoke` is a runtime primitive callable routed through the existing `Expr::Call` path. No `Expr::Invoke` variant.
 
-**D3: ActEnv as Value vs runtime-only.** Resolved: runtime-only. `ActEnv` is a Rust struct passed through closures. It is not an Ash value (cannot be constructed or inspected by user code).
+**D3: Runtime boundary.** Resolved: `ActEnv` is runtime-only Rust state, not an Ash value.
 
-**D4: Workflow backward compatibility.** Resolved: `Workflow::Act` continues unchanged. Expression-level `act {}` is a new, separate construct. No migration of existing workflow syntax.
+**D4: Workflow compatibility.** Resolved: `Workflow::Act` remains unchanged in Phase 97. Expression-level `act {}` is additive.
 
-## 4. Spec Amendment Inventory
+**D5: Builtin/library split.** Resolved: `unit`, `bind`, `then`, and `guard` are library functions; `invoke` is the only runtime primitive introduced by this phase.
+
+**D6: Typing coexistence.** Resolved: `Act<A>` is additive and does not retire existing `Type::Fun(...)` behavior in this phase.
+
+## 5. Spec Amendment Inventory
 
 | Spec | Change | Severity |
 |------|--------|----------|
-| SPEC-001 | Add `Expr::ActBlock`, `ActStmt` to core forms | Minor extension |
-| SPEC-002 | Add expression-level `act {}` grammar, dual-context dispatch | Minor extension |
-| SPEC-003 | Add `Act<A>` typing, purity rules, act block rules | Moderate extension |
-| SPEC-004 | Add `ActEnv` domain, `ACT-BIND`, `ACT-INVOKE` rules | Moderate extension |
-| SPEC-025 | Add small-step for act block reduction | Minor addition |
-| SPEC-027 | Add effectful fn form, amend purity definition | Moderate amendment |
-| SPEC-031 | Note on ActEnv-capturing closures | Minor note |
-| SPEC-BUILTIN-FN | Add `invoke`, `unit`, `bind`, `then`, `guard` | Minor extension |
+| SPEC-047 | Normalize architecture around surface-only act blocks and runtime-primitive `invoke` | Major cleanup |
+| SPEC-002 | Add expression-level `act {}` grammar and dual-context dispatch | Minor extension |
+| SPEC-003 | Add `Act<A>` typing, purity rules, and coexistence note with `Type::Fun(...)` | Moderate extension |
+| SPEC-004 | Add `ActEnv` and expression-level effectful computation semantics | Moderate extension |
+| SPEC-027 | Add effectful `fn ... -> Act<T>` form and purity-boundary amendment | Moderate amendment |
+| SPEC-031 | Clarify relationship between closure values, `Act<T>`, and existing workflow-closure typing | Minor amendment |
 
-## 5. Risk Assessment
+No Phase-97 SPEC-025 amendment is planned.
+No Phase-97 SPEC-BUILTIN-FN amendment is planned.
+
+## 6. Risk Assessment
 
 | Risk | Mitigation |
 |------|------------|
-| Circular dependency: bind needs closures, closures need ActEnv | ActEnv is a plain struct, not dependent on closures. Bind operates on Value::Closure. |
-| Type system complexity: Act<A> unification | Act<A> is a Type::Constructor, unification already handles constructors. |
-| Performance: nested bind chains create deep closures | Optimization pass in future phase. Correctness first. |
-| Breaking existing stdlib .ash files | No changes to Workflow::Act. Existing files untouched. Migration is a separate phase. |
-| Cross-crate data flow: ActStmt must survive lowering | ActStmt is lowered to nested CoreExpr calls. Only CoreExpr crosses crate boundaries. |
+| Lowering complexity for pure-vs-monadic bind forms | Keep Phase-97 lowering simple; optimize later if needed |
+| Confusion between `Act<T>` and `Type::Fun(...)` | Keep additive coexistence explicit in docs and tests |
+| Runtime dispatch ambiguity for `invoke` | Route through a clearly distinguished runtime primitive path keyed off `Expr::Call { func: "invoke", .. }` |
+| Drift against existing workflow semantics | Keep `Workflow::Act` unchanged in this phase |
+| Overreaching into small-step semantics | Explicitly keep SPEC-025 untouched in Phase 97 |
 
-## 6. Estimated Total
+## 7. Estimated Total
 
-- Track A: 20 hours
+- Track A: 15 hours
 - Track B: 16 hours
-- Track C: 24 hours
-- Track D: 15.5 hours
-- **Total: 75.5 hours**
+- Track C: 17 hours
+- Track D: 8 hours
+- **Total: 56 hours**
 
-Tracks A, B, C have some parallelism (A must finish first, then B and C can proceed concurrently). Realistic calendar time: 2-3 weeks with sequential subagent execution.
+Tracks B and C can partially overlap once Track A is stable. Realistic calendar time: 1-2 focused implementation weeks.

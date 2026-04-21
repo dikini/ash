@@ -7,22 +7,22 @@
 
 ## 1. Overview
 
-Introduce `Act<A>` as a first-class type constructor in the expression layer, unifying the currently split evaluation contexts: pure expressions (`eval_expr`) and effectful workflows (`execute_workflow`). An `Act<A>` value is a suspended computation that, given an environment of capability providers, policies, and provenance, may produce a value of type `A` alongside an accumulated effect log, or fail with an error.
+Introduce `Act<A>` as a first-class type constructor in the expression layer, adding a composable effectful-computation model that interoperates with the existing workflow runtime. An `Act<A>` value is a suspended computation that, given an environment of capability providers, policies, and provenance, may produce a value of type `A` alongside an accumulated effect log, or fail with an error.
 
 The core friction resolved: `act` currently exists only as a `Workflow` node. You cannot call a capability from inside an expression, and you cannot compose effectful operations as first-class values. The `act {}` block lifts effectful computation into the expression layer while preserving all governance properties (sequential ordering, provenance, policy checking, audit trail).
 
 ### 1.1 Design Principles
 
-1. **No runtime magic.** `unit`, `bind`, `then`, `guard` are ordinary Ash functions. Only `invoke` requires runtime support.
+1. **Minimal runtime primitive set.** `unit`, `bind`, `then`, and `guard` are ordinary Ash functions. Only `invoke` requires runtime support.
 2. **Type-system purity boundary.** Functions returning `B` are pure. Functions returning `Act<B>` are effectful. The type system prevents calling effectful code from pure contexts.
 3. **Governance preservation.** Every `invoke` passes through the policy stack. Effect logs are append-only. Provenance chains are maintained.
-4. **Workflow compatibility.** Workflows become structured sugar over `Act`. Existing workflow syntax, types, and execution remain valid.
+4. **Workflow compatibility.** Existing workflow syntax, types, and execution remain valid. Expression-level `Act` interoperates with workflows, but Phase 97 does not require collapsing the workflow IR into an `Act`-only core.
 5. **Incremental delivery.** The spec is designed to be implemented in phases that leave the system working at each step.
 
 ### 1.2 Scope
 
 In scope:
-- `Act<A>` type constructor in surface syntax, core IR, and type system
+- `Act<A>` type constructor in surface syntax and type system
 - `act { ... }` block expression for monadic composition
 - `invoke` as the single runtime primitive for effectful operations
 - Effectful function declarations (`fn f(x) -> Act<B>`)
@@ -36,6 +36,8 @@ Out of scope (deferred):
 - Interface-based `Functor`/`Applicative`/`Monad` hierarchy (requires HKT)
 - `extern fn` with `Act` return types
 - Migration of existing stdlib `.ash` files (separate phase)
+- Replacing or retiring the existing `Type::Fun(...)` workflow-closure model
+- Expression-level micro-stepping in SPEC-025
 
 ## 2. Surface Syntax
 
@@ -44,34 +46,33 @@ Out of scope (deferred):
 ```
 act_expr ::= "act" "{" act_stmt* "}"
 
-act_stmt ::= IDENTIFIER "=" expr ";"          -- bind or inline
-           | "ret" expr ";"                    -- unit (return)
-           | "invoke" "(" expr "," expr "," expr ")" ";"  -- explicit invoke
+act_stmt ::= IDENTIFIER "=" expr ";"   -- bind or inline
+           | "ret" expr ";"             -- unit (return)
 ```
 
 An `act {}` block is an expression that evaluates to a value of type `Act<A>`. It may appear anywhere an expression is expected: in fn bodies, as arguments, in let-bindings, inside other act blocks.
 
 ### 2.2 Effectful Function Declaration
 
-```
-fn read(path: String) -> Act String {
+```ash
+fn read(path: String) -> Act<String> {
     act {
-        result = invoke("Fs", "read", [path])
-        ret result
+        result = invoke("Fs", "read", [path]);
+        ret result;
     }
 }
 ```
 
-The return type `Act String` distinguishes this from a pure function. The body must produce a value of type `Act String` — either an `act {}` block, a call to another effectful function, or `invoke` directly.
+The return type `Act<String>` distinguishes this from a pure function. The body must produce a value of type `Act<String>` — either an `act {}` block, a call to another effectful function, or `invoke` directly.
 
 ### 2.3 Bind Desugaring
 
 ```
 act {
-    x = read(path)         -- bind (RHS : Act String, x : String)
-    n = len(x)             -- inline (RHS : Int, pure substitution)
-    y = parse(x)           -- bind (RHS : Act Value, y : Value)
-    ret (x, n, y)          -- unit
+    x = read(path);        -- bind (RHS : Act<String>, x : String)
+    n = len(x);            -- inline (RHS : Int, pure substitution)
+    y = parse(x);          -- bind (RHS : Act<Value>, y : Value)
+    ret (x, n, y);         -- unit
 }
 ```
 
@@ -90,32 +91,34 @@ Note: `n` does not appear in the desugared form. `len(x)` is inlined directly. P
 The primitive effectful operation:
 
 ```
-invoke(provider: String, action: String, args: List) -> Act Value
+invoke(provider: String, action: String, args: List<Value>) -> Act<Value>
 ```
 
-This is a `builtin fn` whose implementation is provided by the runtime. It dispatches to the appropriate `CapabilityProvider`, passes through the full policy stack, and appends to the effect log.
+Normatively, `invoke` is a runtime primitive callable that travels through the existing `Expr::Call`
+path. It is not modeled as a dedicated core `Expr::Invoke` variant, and it is not an ordinary pure
+`builtin fn` in the current SPEC-BUILTIN-FN sense.
 
 ### 2.5 Library Functions
 
 These are ordinary Ash functions in `std/src/act.ash`:
 
 ```ash
-fn unit(v: a) -> Act a {
+fn unit(v: a) -> Act<a> {
     |env| => Ok((v, env))
 }
 
-fn bind(ma: Act a, f: (a -> Act b)) -> Act b {
+fn bind(ma: Act<a>, f: Fn(a) -> Act<b>) -> Act<b> {
     |env| => match ma(env) {
         Ok((a, env')) => f(a)(env'),
         Err(e) => Err(e)
     }
 }
 
-fn then(ma: Act a, mb: Act b) -> Act b {
+fn then(ma: Act<a>, mb: Act<b>) -> Act<b> {
     bind(ma, |_a| => mb)
 }
 
-fn guard(policy: Policy, ma: Act a) -> Act a {
+fn guard(policy: Policy, ma: Act<a>) -> Act<a> {
     |env| => match env.policies.check(policy) {
         Deny(reason) => Err(PolicyViolation(reason)),
         Allow => ma(env)
@@ -129,48 +132,15 @@ The block keyword is `act` — consistent with existing workflow `act` syntax an
 
 ## 3. Core IR Changes
 
-### 3.1 New Expression Variants
+### 3.1 Core IR Boundary
 
-Add to `crates/ash-core/src/ast.rs` `Expr` enum:
+Phase 97 does not require adding `ActBlock`, `ActStmt`, or `Invoke` to the canonical core IR.
+Expression-level `act { ... }` is a surface construct that lowers into existing core expression
+forms such as `Expr::Call`, `Expr::FnDef`, and `Expr::FnApply`.
 
-```rust
-/// Act block: monadic composition of effectful operations
-ActBlock {
-    /// Sequence of statements (binds, invokes, returns)
-    stmts: Vec<ActStmt>,
-    span: Span,
-},
+This keeps the initial implementation additive and minimizes churn in `ash-core`.
 
-/// Explicit invoke: the primitive effectful operation
-Invoke {
-    provider: Box<Expr>,
-    action: Box<Expr>,
-    arguments: Box<Expr>,
-    span: Span,
-},
-```
-
-### 3.2 ActStmt
-
-New type:
-
-```rust
-pub enum ActStmt {
-    /// Bind: x = <expr>; — either monadic bind or pure inline
-    Bind {
-        name: String,
-        value: Box<Expr>,
-        span: Span,
-    },
-    /// Return: ret <expr>;
-    Return {
-        value: Box<Expr>,
-        span: Span,
-    },
-}
-```
-
-### 3.3 TypeExpr Addition
+### 3.2 TypeExpr Addition
 
 Add to `crates/ash-core/src/ast.rs` `TypeExpr` enum:
 
@@ -181,9 +151,10 @@ Constructor { name, args } already supports this.
 
 No new `TypeExpr` variant needed. `Act<A>` parses as `TypeExpr::Constructor { name: "Act", args: [A] }`.
 
-### 3.4 Kind System
+### 3.3 Kind System
 
-`Act` has kind `* -> *`. This is already expressible via `Kind::Arrow(vec![Kind::Type], Box::new(Kind::Type))` from SPEC-020. No kind system changes required.
+`Act` has kind `* -> *`. This is already expressible in the current kind system as
+`Kind::Arrow(Box::new(Kind::Type), Box::new(Kind::Type))`. No kind-system changes are required.
 
 ## 4. Surface AST Changes
 
@@ -200,7 +171,7 @@ ActBlock {
 
 ### 4.2 Surface ActStmt
 
-Mirror of core `ActStmt`:
+Surface-only lowering carrier:
 
 ```rust
 pub enum ActStmt {
@@ -208,6 +179,9 @@ pub enum ActStmt {
     Return { value: Box<Expr>, span: Span },
 }
 ```
+
+`ActStmt` is a parser/lowering carrier only in Phase 97. It does not need to survive into the core
+IR.
 
 ### 4.3 Dual-Context `act` Keyword
 
@@ -229,7 +203,7 @@ The type system already has `Type::Constructor { name, args, kind }`. `Act<A>` m
 Type::Constructor {
     name: "Act".into(),
     args: vec![A],
-    kind: Kind::Arrow(vec![Kind::Type], Box::new(Kind::Type)),
+    kind: Kind::Arrow(Box::new(Kind::Type), Box::new(Kind::Type)),
 }
 ```
 
@@ -238,11 +212,11 @@ Type::Constructor {
 The type system must enforce:
 
 ```
-fn f(x: A) -> B        -- body must not contain act {} blocks or invoke
-fn f(x: A) -> Act B    -- body may contain act {} blocks and invoke
+fn f(x: A) -> B         -- body must not contain act {} blocks or invoke
+fn f(x: A) -> Act<B>    -- body may contain act {} blocks and invoke
 ```
 
-Implementation: during `check_expr`, if the enclosing function has pure return type (`B`, not `Act<B>`), reject `Expr::ActBlock` and `Expr::Invoke` with a type error.
+Implementation: during `check_expr`, if the enclosing function has pure return type (`B`, not `Act<B>`), reject `Expr::ActBlock` and expression-level `invoke(...)` calls with a type error.
 
 ### 5.3 Act Block Typing
 
@@ -264,12 +238,12 @@ Implementation: during `check_expr`, if the enclosing function has pure return t
 ### 5.4 Invoke Typing
 
 ```
-Γ ⊢ provider : String   Γ ⊢ action : String   Γ ⊢ args : List
+Γ ⊢ provider : String   Γ ⊢ action : String   Γ ⊢ args : List<Value>
 ─────────────────────────────────────────────────────────────────  (ACT-INVOKE)
-Γ ⊢ invoke(provider, action, args) : Act Value
+Γ ⊢ invoke(provider, action, args) : Act<Value>
 ```
 
-The type `Act Value` is broad. Future refinements can use capability declarations to narrow the return type.
+The type `Act<Value>` is broad. Future refinements can use capability declarations to narrow the return type.
 
 ### 5.5 Bind Typing
 
@@ -279,18 +253,27 @@ The type `Act Value` is broad. Future refinements can use capability declaration
 Γ ⊢ bind(ma, f) : Act b
 ```
 
-### 5.6 No New Type Variants
+### 5.6 Phase-97 Coexistence with `Type::Fun`
 
-The existing `Type::Constructor` handles `Act<A>`. The existing `Type::Fun(args, ret, effect)` handles effectful function types for workflow-level code. For expression-level code, `Act<A>` as a return type is sufficient — the effect information is carried by the type constructor itself, not by a separate `Effect` annotation.
+The existing `Type::Constructor` handles `Act<A>`. Phase 97 is additive with respect to the
+existing `Type::Fn(...)` / `Type::Fun(...)` split:
+
+- `Act<A>` is the new expression-level effectful computation type constructor.
+- Existing `Type::Fun(args, ret, effect)` remains in place for current workflow-context closure
+  classification and the already-promoted three-vertex boundary.
+- Phase 97 does not retire or redefine `Type::Fun(...)`; later phases may revisit that architecture.
 
 ## 6. Lowerer Changes
 
 ### 6.1 New Expr Lowering
 
-In `crates/ash-parser/src/lower.rs`, add match arms for:
+In `crates/ash-parser/src/lower.rs`, add a match arm for:
 
-- `SurfaceExpr::ActBlock { stmts, .. }` → `CoreExpr::ActBlock { stmts: lowered_stmts }`
-- `SurfaceExpr::Invoke { .. }` → Not a surface form. `invoke` is a `builtin fn`, so it's lowered as `Expr::Call { func: "invoke", .. }`.
+- `SurfaceExpr::ActBlock { stmts, .. }` → desugared nested core expressions using existing
+  `CoreExpr::Call`, `CoreExpr::FnDef`, and `CoreExpr::FnApply`.
+
+`invoke` is not a dedicated surface AST form. It parses as an ordinary call expression and lowers
+through the existing `Expr::Call { func: "invoke", .. }` path.
 
 ### 6.2 ActBlock Desugaring
 
@@ -305,8 +288,7 @@ fn lower_act_block(stmts: Vec<ActStmt>) -> CoreExpr {
             CoreExpr::Call { func: "unit".into(), module: None, arguments: vec![lower_expr(value)] }
         }
         [ActStmt::Bind { name, value, .. }, rest @ ..] => {
-            // Determine if bind or inline by checking value type
-            // For MVP: always emit bind; type checker will inline pure cases
+            // Phase 97 desugaring target. Type-directed optimization is deferred.
             let rest_expr = lower_act_block(rest.to_vec());
             CoreExpr::Call {
                 func: "bind".into(),
@@ -332,33 +314,24 @@ fn lower_act_block(stmts: Vec<ActStmt>) -> CoreExpr {
 
 ### 7.1 ActBlock Evaluation
 
-Add to `eval_expr` in `crates/ash-interp/src/eval.rs`:
+Because `ActBlock` lowers away before core evaluation, `eval_expr` does not require a dedicated
+`Expr::ActBlock` arm in Phase 97. The evaluator sees only the desugared core expression forms.
+
+Operationally, an expression-level `Act<A>` value is realized as a closure-shaped runtime value that
+threads an internal `ActEnv`.
+
+### 7.2 Invoke Runtime Primitive
+
+Add `invoke` to the runtime callable dispatch path. It is treated as a distinguished runtime
+primitive callable routed through `Expr::Call`, not as a pure builtin function under the current
+SPEC-BUILTIN-FN contract. Implementation:
 
 ```rust
-Expr::ActBlock { stmts, .. } => {
-    // An act block in expression context produces a closure
-    // representing the suspended computation.
-    // The ActEnv is threaded at invoke time.
-    Ok(Value::Closure {
-        params: vec!["__env".into()],
-        body: Box::new(desugared_act_body(stmts)),
-        env: ctx.capture(),
-    })
-}
-```
-
-**Key design decision:** An `act {}` block in expression context produces a `Value::Closure` that takes an `ActEnv` argument. This is the concrete realization of `Act<A> ≈ ActEnv → Result<(A, ActEnv), ExecError>`.
-
-### 7.2 Invoke as Builtin
-
-Add `invoke` to the builtin dispatch table. Implementation:
-
-```rust
-fn builtin_invoke(args: &[Value], ctx: &mut EvalContext) -> EvalResult<Value> {
+fn runtime_invoke(args: &[Value], ctx: &mut EvalContext) -> EvalResult<Value> {
     // args[0] = provider name (String)
     // args[1] = action name (String)
-    // args[2] = arguments (List)
-    // Returns Act Value (a closure that, given ActEnv, invokes the provider)
+    // args[2] = arguments (List<Value>)
+    // Returns Act<Value> (a closure that, given ActEnv, invokes the provider)
     let provider = args[0].as_string()?;
     let action = args[1].as_string()?;
     let invoke_args = args[2].as_list()?;
@@ -388,9 +361,12 @@ This is a Rust-only type, not an Ash value. It's passed implicitly through the m
 
 ### 7.4 Workflow::Act Bridge
 
-The existing `Workflow::Act` execution path (in `execute.rs`) continues to work unchanged. It operates at the workflow level with direct capability dispatch. The new `Expr::ActBlock` operates at the expression level through closures.
+The existing `Workflow::Act` execution path (in `execute.rs`) continues to work unchanged. It
+operates at the workflow level with direct capability dispatch. The new expression-level `act {}`
+facility interoperates with this runtime but does not replace workflow execution in Phase 97.
 
-Bridge: When a workflow's `act` node encounters an expression-level `Act` value, the workflow executor applies it with the current `ActEnv`.
+Bridge: when workflow-level execution encounters an expression-level `Act<A>` value, the runtime may
+apply it with the current `ActEnv`.
 
 ## 8. Engine Changes
 
@@ -400,12 +376,15 @@ Register `Act` as a built-in type constructor in the type environment:
 
 ```rust
 // In type_env initialization:
-type_env.register_type_constructor("Act", Kind::Arrow(vec![Kind::Type], Box::new(Kind::Type)));
+type_env.register_type_constructor("Act", Kind::Arrow(Box::new(Kind::Type), Box::new(Kind::Type)));
 ```
 
-### 8.2 Builtin Registration
+### 8.2 Registration Boundary
 
-Register `invoke`, `unit`, `bind`, `then`, `guard` as builtin functions in the engine.
+- Register `Act` as a recognized type constructor in the type environment.
+- Register `invoke` as the runtime primitive callable used by expression-level effectful code.
+- Do not register `unit`, `bind`, `then`, or `guard` as runtime builtins in Phase 97; they remain
+  library functions.
 
 ### 8.3 ActEnv Construction
 
@@ -424,8 +403,7 @@ Inside `fn` bodies, `act {}` blocks are expressions. The desugarer treats them l
 ## 10. Changes by Spec Amendment
 
 ### SPEC-001 (IR)
-- Add `Expr::ActBlock`, `Expr::Invoke` to core expression forms
-- Add `ActStmt` type definition
+- Clarify that Phase-97 expression-level `act {}` is a surface construct lowered into existing core expression forms
 - Note that `Act<A>` uses existing `TypeExpr::Constructor`
 
 ### SPEC-002 (Surface Syntax)
@@ -437,6 +415,7 @@ Inside `fn` bodies, `act {}` blocks are expressions. The desugarer treats them l
 - Document `Act<A>` type constructor and kind
 - Document purity enforcement rules
 - Document act block typing rules
+- Document Phase-97 coexistence with the existing `Type::Fun(...)` model
 
 ### SPEC-004 (Operational Semantics)
 - Add semantic rules for `ACT-BIND`, `ACT-PURE-BIND`, `ACT-RETURN`, `ACT-INVOKE`
@@ -444,8 +423,7 @@ Inside `fn` bodies, `act {}` blocks are expressions. The desugarer treats them l
 - Define monad laws as semantic invariants
 
 ### SPEC-025 (Small-Step Semantics)
-- Add small-step reduction rules for expression-level `act {}` blocks
-- Note that act blocks reduce to closure values
+- No Phase-97 amendment required. Expression-level micro-stepping remains out of scope under the current frozen workflow-first small-step contract.
 
 ### SPEC-027 (Pure Functions)
 - Amend purity definition: pure functions must not contain `act {}` blocks or `invoke`
@@ -453,11 +431,11 @@ Inside `fn` bodies, `act {}` blocks are expressions. The desugarer treats them l
 
 ### SPEC-031 (First-Class Functions)
 - Note that closures may capture `ActEnv` (for effectful closures)
-- Note that `Act<A>` is a closure type under the hood
+- Clarify that Phase 97 does not retire the existing `Type::Fun(...)` workflow-closure model
 
 ### SPEC-BUILTIN-FN
-- Add `invoke` as a builtin fn returning `Act Value`
-- Add `unit`, `bind`, `then`, `guard` as builtin fns (or note them as library functions)
+- No direct Phase-97 amendment required if `invoke` is treated as a separate runtime primitive callable rather than a pure builtin fn.
+- `unit`, `bind`, `then`, and `guard` remain library functions.
 
 ## 11. Deferred Items
 
@@ -469,7 +447,7 @@ Inside `fn` bodies, `act {}` blocks are expressions. The desugarer treats them l
 
 4. **Migration of stdlib .ash files.** Files like `std/src/io/fs.ash` contain `act execute` in workflow context. These remain valid. Files that should become `fn ... -> Act<T>` are a separate migration pass.
 
-5. **Typed invoke.** `invoke` currently returns `Act Value`. Capability declarations could provide typed return types: `invoke(Fs, "read", [path]) : Act String`.
+5. **Typed invoke.** `invoke` currently returns `Act<Value>`. Capability declarations could provide typed return types: `invoke(Fs, "read", [path]) : Act<String>`.
 
 ## 12. Semantic Correctness
 
@@ -497,31 +475,31 @@ Proof obligations:
 
 ## 13. Implementation Phases
 
-### Phase 97 Track A: Foundation (estimated 20-25 hours)
+### Phase 97 Track A: Surface + Lowering Foundation (estimated 12-16 hours)
 
 1. Surface AST + Parser: `Expr::ActBlock`, `ActStmt`, expression-context `act {}` parsing
-2. Core AST: `Expr::ActBlock`, `Expr::Invoke` (or `Call` with `invoke` func name)
-3. Lowerer: ActBlock desugaring to nested `bind`/`unit` calls
-4. Builtin registration: `invoke`, `unit`, `bind` in dispatch table
+2. Lowerer: ActBlock desugaring to existing core expressions using `bind`/`unit`
+3. Runtime-call registration: `invoke` as expression-level primitive callable
 
-### Phase 97 Track B: Type System (estimated 15-20 hours)
+### Phase 97 Track B: Type System (estimated 12-16 hours)
 
-5. Type registration: `Act` as type constructor with kind `* -> *`
-6. Act block typing: bind, pure bind, return rules
-7. Purity enforcement: reject `act {}` in pure fn bodies
-8. Invoke typing: `String → String → List → Act Value`
+4. Type registration: `Act` as type constructor with kind `* -> *`
+5. Act block typing: bind, pure bind, return rules
+6. Purity enforcement: reject `act {}` in pure fn bodies
+7. Invoke typing: `String → String → List<Value> → Act<Value>`
+8. Phase-97 coexistence note: retain existing `Type::Fun(...)` model unchanged
 
-### Phase 97 Track C: Runtime (estimated 15-20 hours)
+### Phase 97 Track C: Runtime (estimated 12-16 hours)
 
-9. ActEnv value type construction
-10. `invoke` builtin implementation with capability dispatch
-11. ActBlock evaluation: closure production and application
-12. Workflow bridge: ActEnv construction from workflow context
+9. `ActEnv` runtime construction
+10. `invoke` runtime primitive implementation with capability dispatch
+11. Desugared `Act<A>` execution path: closure production and application
+12. Workflow bridge: `ActEnv` construction from workflow context
 
-### Phase 97 Track D: Specs + Testing (estimated 10-15 hours)
+### Phase 97 Track D: Specs + Testing (estimated 8-12 hours)
 
-13. Spec amendments (SPEC-001/002/003/004/025/027/031/BUILTIN-FN)
+13. Spec amendments (SPEC-002/003/004/027 and targeted clarifications in SPEC-001/031)
 14. Property tests: monad laws, purity enforcement, governance preservation
 15. Integration tests: effectful fn composition, nested act blocks, workflow + act interop
 
-Total estimated: 60-80 hours across 4 tracks.
+Total estimated: 44-60 hours across 4 tracks.

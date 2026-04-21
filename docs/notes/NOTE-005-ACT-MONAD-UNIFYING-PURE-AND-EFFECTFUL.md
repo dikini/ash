@@ -1,7 +1,7 @@
 # NOTE-005: The Act Monad — Unifying Pure and Effectful Computation
 
 **Date:** 2026-04-21
-**Status:** Open — design exploration
+**Status:** Superseded by SPEC-047 (normative spec) and PLAN-097 (implementation plan)
 **Priority:** High — resolves NOTE-004, foundational for fn/capability/workflow unification
 **Supersedes:** NOTE-004 (partial — NOTE-004's open questions are answered here)
 **Depends on:** SPEC-020 (ADTs, Kind system), SPEC-033 (multi-parameter interfaces), SPEC-035 (associated types)

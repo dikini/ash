@@ -8,6 +8,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- SPEC-047: Act Monad specification (draft). Defines `Act<A>` type constructor, `act {}` block expression, `invoke`/`unit`/`bind` builtins, effectful function declarations, purity enforcement, and the unification of pure expression evaluation with effectful workflow execution. 33 tasks across 4 tracks (TASK-672 through TASK-704). Related plan: PLAN-097.
+
+- PLAN-097: Phase 97 Act Monad implementation plan. Track A (surface/core), Track B (type system), Track C (runtime), Track D (specs/testing). Estimated 75.5 hours.
+
+### Changed
+
+- NOTE-005 status updated: design exploration now has a normative spec counterpart (SPEC-047).
+
 - Phase 96 Track A: Module resolution and stdlib integration (TASK-655 through TASK-659). Module resolver now supports cycle detection via visiting set. Stdlib modules (string, list, predicate, result, option) resolve through builtin stdlib root. CLI run command routes ordinary files through `engine.run_file()` for full import resolution. Entry bootstrap path preserved and verified. 12 module resolution + 13 entry bootstrap tests pass.
 
 - Phase 96 Track C: Capability providers (TASK-666 through TASK-668). HttpProvider with get/post/put/delete/head, configurable timeout and host allowlist. TimeProvider with now/now_iso/epoch_millis/sleep and mock time support. ProcessProvider converted from `builtin fn` to capability per three-pillar principle -- timeout, command allowlist, stdout+stderr+exit_code capture. 22 + 21 + 21 = 64 provider tests.

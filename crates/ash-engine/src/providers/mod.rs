@@ -18,6 +18,9 @@ use std::sync::{Arc, Mutex};
 pub mod http;
 pub use http::{HttpConfig, HttpProvider};
 
+pub mod time;
+pub use time::TimeProvider;
+
 pub mod mcp;
 pub use mcp::{McpCapabilities, McpConfig, McpProvider};
 

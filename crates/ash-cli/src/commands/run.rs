@@ -147,29 +147,47 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         return Ok(RunOutcome::Exit(ExitCode::from(exit_code)));
     }
 
-    // Run the workflow file with optional timeout
-    let result = if let Some(timeout_secs) = args.timeout {
-        let timeout_duration = Duration::from_secs(timeout_secs);
-        let execution_fut = async {
-            if args.trace {
-                let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
-                    .map_err(classify_engine_error)?;
-                engine.check(&mut workflow).map_err(classify_engine_error)?;
-                execute_with_trace(&engine, &workflow).await
-            } else {
-                run_workflow_source(&engine, &source, source_kind).await
+    // Run the workflow file with optional timeout.
+    // Ordinary files use the module-resolver-backed file path for import resolution.
+    // LeadingRuntimePrelude files use the source-based path with entry-source parsing.
+    let result = if source_kind == WorkflowSourceKind::Ordinary {
+        if let Some(timeout_secs) = args.timeout {
+            match tokio::time::timeout(
+                Duration::from_secs(timeout_secs),
+                run_ordinary_file(&engine, path, args.trace),
+            )
+            .await
+            {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                }
             }
-        };
-
-        match tokio::time::timeout(timeout_duration, execution_fut).await {
-            Ok(result) => result?,
-            Err(_) => {
-                return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
-            }
+        } else {
+            run_ordinary_file(&engine, path, args.trace).await?
         }
     } else {
-        // No timeout - run normally
-        if args.trace {
+        // LeadingRuntimePrelude: source-based path
+        if let Some(timeout_secs) = args.timeout {
+            let timeout_duration = Duration::from_secs(timeout_secs);
+            let execution_fut = async {
+                if args.trace {
+                    let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                        .map_err(classify_engine_error)?;
+                    engine.check(&mut workflow).map_err(classify_engine_error)?;
+                    execute_with_trace(&engine, &workflow).await
+                } else {
+                    run_workflow_source(&engine, &source, source_kind).await
+                }
+            };
+
+            match tokio::time::timeout(timeout_duration, execution_fut).await {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                }
+            }
+        } else if args.trace {
             let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
                 .map_err(classify_engine_error)?;
             engine.check(&mut workflow).map_err(classify_engine_error)?;
@@ -625,6 +643,26 @@ fn should_use_entry_bootstrap(source_kind: WorkflowSourceKind) -> bool {
         source_kind,
         WorkflowSourceKind::Entry | WorkflowSourceKind::EntryCandidate
     )
+}
+
+/// Execute an ordinary workflow file using the engine's module-resolver-backed file path.
+///
+/// This resolves imports via `engine.parse_file(path)` (which calls
+/// `module_loader::load_ordinary_file`), then type-checks and executes.
+/// When `trace` is true, parsing uses `engine.parse_file()` but execution
+/// goes through the trace-enabled path.
+async fn run_ordinary_file(
+    engine: &ash_engine::Engine,
+    path: &Path,
+    trace: bool,
+) -> Result<Value> {
+    if trace {
+        let mut workflow = engine.parse_file(path).map_err(classify_engine_error)?;
+        engine.check(&mut workflow).map_err(classify_engine_error)?;
+        execute_with_trace(engine, &workflow).await
+    } else {
+        engine.run_file(path).await.map_err(classify_exec_error)
+    }
 }
 
 async fn run_workflow_source(

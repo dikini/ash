@@ -21,7 +21,7 @@ use ash_parser::parse_type_def::{
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
 use ash_parser::surface::{Definition, Expr, Workflow, WorkflowDef};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
 
@@ -183,10 +183,13 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
 /// supported type/callable subset.
 pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError> {
     let source = std::fs::read_to_string(path)?;
+    let canonical_entry = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     let entry_root = path.parent().ok_or_else(|| {
         EngineError::Configuration(format!("workflow path '{}' has no parent", path.display()))
     })?;
     let mut module_cache = HashMap::new();
+    let mut visiting = HashSet::new();
+    visiting.insert(canonical_entry);
 
     let mut imports = Vec::new();
     let mut kept_lines = Vec::new();
@@ -219,7 +222,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                 import.module_segments.join("::")
             ))
         })?;
-        let exports = collect_module_exports(&module_path, &mut module_cache)?;
+        let exports = collect_module_exports(&module_path, &mut module_cache, &mut visiting)?;
 
         for selection in import.selections {
             match selection {
@@ -458,8 +461,16 @@ fn convert_use_statement(use_stmt: ash_parser::use_tree::Use) -> ImportSpec {
 pub(crate) fn collect_module_exports(
     path: &Path,
     cache: &mut HashMap<PathBuf, ModuleExports>,
+    visiting: &mut HashSet<PathBuf>,
 ) -> Result<ModuleExports, EngineError> {
     let path = path.to_path_buf();
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+    if visiting.contains(&canonical) {
+        return Err(EngineError::Parse(format!(
+            "cyclic import detected: '{}'",
+            path.display()
+        )));
+    }
     if let Some(exports) = cache.get(&path) {
         return Ok(exports.clone());
     }
@@ -508,9 +519,33 @@ pub(crate) fn collect_module_exports(
     let module_root = path.parent().ok_or_else(|| {
         EngineError::Configuration(format!("module path '{}' has no parent", path.display()))
     })?;
+
+    // Check regular `use` imports for cycles (e.g. a.ash has `use b::{X}`,
+    // b.ash has `use a::{Y}` -- both reference each other).
+    for line in source.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("use ")
+            && !trimmed.starts_with("pub use ")
+            && let Ok(import_spec) = parse_ordinary_import(trimmed)
+            && let Some(target_path) =
+                resolve_module_path(&import_spec.module_segments, &search_roots(module_root))
+        {
+            let target_canonical =
+                target_path.canonicalize().unwrap_or_else(|_| target_path.clone());
+            if visiting.contains(&target_canonical) {
+                return Err(EngineError::Parse(format!(
+                    "cyclic import detected: '{}'",
+                    target_path.display()
+                )));
+            }
+        }
+    }
+
     for name in extract_pub_mod_declarations(&source) {
         let child_path = resolve_child_module(module_root, &name)?;
-        let child_exports = collect_module_exports(&child_path, cache)?;
+        visiting.insert(canonical.clone());
+        let child_exports = collect_module_exports(&child_path, cache, visiting)?;
+        visiting.remove(&canonical);
         // Store child exports under the child module name (for qualified access)
         exports.child_modules.insert(name, child_exports);
     }
@@ -525,7 +560,9 @@ pub(crate) fn collect_module_exports(
             ))
         })?;
         let resolved = resolve_use_target(module_root, &use_stmt)?;
-        let target_exports = collect_module_exports(&resolved, cache)?;
+        visiting.insert(canonical.clone());
+        let target_exports = collect_module_exports(&resolved, cache, visiting)?;
+        visiting.remove(&canonical);
         merge_use_exports(&mut exports, target_exports, use_stmt)?;
     }
 
@@ -1089,7 +1126,7 @@ mod tests {
         std::fs::write(dir.join("parent.ash"), "pub mod child;").expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache)
+        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
             .expect("collecting parent exports should succeed");
 
         let child = exports
@@ -1120,7 +1157,7 @@ mod tests {
         .expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache)
+        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
             .expect("collecting parent exports should succeed");
 
         // Role is re-exported via pub use
@@ -1157,7 +1194,7 @@ mod tests {
         .expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache)
+        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
             .expect("collecting parent exports should succeed");
 
         // Alpha should be re-exported
@@ -1194,7 +1231,7 @@ mod tests {
         std::fs::write(dir.join("parent.ash"), "pub mod nonexistent;").expect("write parent");
 
         let mut cache = HashMap::new();
-        let result = collect_module_exports(&dir.join("parent.ash"), &mut cache);
+        let result = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new());
 
         let err =
             result.expect_err("collecting exports from file with nonexistent pub mod should fail");
@@ -1221,7 +1258,7 @@ pub type Role = System | User;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache)
+        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
             .expect("collecting exports should succeed");
 
         // Only pub builtin fn is exported; module-private builtin fn is not.
@@ -1262,7 +1299,7 @@ pub type Flag = On | Off;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache)
+        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
             .expect("collecting exports should succeed");
 
         assert!(
@@ -1299,7 +1336,7 @@ pub type Flag = On | Off;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache)
+        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
             .expect("collecting exports should succeed");
 
         assert!(

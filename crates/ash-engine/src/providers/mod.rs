@@ -3,6 +3,7 @@
 //! This module provides built-in capability providers for effectful operations:
 //! - `StdioProvider`: Standard input/output operations (print, println, `read_line`)
 //! - `FsProvider`: Filesystem operations (`read_file`, `write_file`, `exists`)
+//! - `HttpProvider`: HTTP client operations (get, post, put, delete, head)
 //! - `McpProvider`: MCP (Model Context Protocol) for LLM communication
 //!
 //! All providers implement the unified `ash_core::capability::CapabilityProvider` trait.
@@ -13,6 +14,9 @@ use async_trait::async_trait;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+
+pub mod http;
+pub use http::{HttpConfig, HttpProvider};
 
 pub mod mcp;
 pub use mcp::{McpCapabilities, McpConfig, McpProvider};

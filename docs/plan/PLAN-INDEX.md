@@ -2709,7 +2709,7 @@ Add `Expr::Let { pattern, expr, body }` to the core IR as the canonical represen
 ## Phase 96: Runtime Maturity — Multi-File Imports, Stdlib, and Capability Surface
 
 **Priority:** High
-**Status:** In Progress (Track A complete)
+**Status:** ✅ Done
 
 Close the gap between executing single-file workflows and executing real programs. Connect module resolution to engine execution, ensure full stdlib auto-loading, and harden capability providers for real-world IO.
 
@@ -2721,17 +2721,19 @@ Close the gap between executing single-file workflows and executing real program
 ||| TASK-657 | Thread resolver into engine execution | 6-8 | ✅ Complete ||
 ||| TASK-658 | CLI integration — route ordinary files through resolver | 2-3 | ✅ Complete ||
 ||| TASK-659 | Entry bootstrap preservation verification | 1-2 | ✅ Complete ||
-||| TASK-666 | HTTP capability provider | 3-4 | ⬜ Pending ||
-||| TASK-667 | Time capability provider | 2-3 | ⬜ Pending ||
-||| TASK-668 | Process provider hardening | 2-3 | ⬜ Pending ||
-||| TASK-669 | Multi-file e2e tests | 3-4 | ⬜ Pending ||
-||| TASK-670 | Capability boundary audit | 3-4 | ⬜ Pending ||
-||| TASK-671 | Performance baseline | 2-3 | ⬜ Pending ||
+||| TASK-666 | HTTP capability provider | 3-4 | ✅ Complete ||
+||| TASK-667 | Time capability provider | 2-3 | ✅ Complete ||
+||| TASK-668 | Process provider hardening | 2-3 | ✅ Complete ||
+||| TASK-669 | Multi-file e2e tests | 3-4 | ✅ Complete ||
+||| TASK-670 | Capability boundary audit | 3-4 | ✅ Complete ||
+||| TASK-671 | Performance baseline | 2-3 | ✅ Complete ||
 
 **Track A (Module Resolution):** ✅ Complete. Module resolver supports cycle detection, stdlib resolves through builtin root, CLI routes ordinary files through engine.run_file() for import resolution.
 
 **Track B (Stdlib Builtins):** ✅ Complete (prior session). String, list, record, regex, predicate builtins all dispatch via eval.rs table. Four-way classification: pub fn (Ash body), builtin fn (Rust), capability+act (effectful), extern fn (future FFI).
 
-**Track C (Capability Providers):** ⬜ Pending. HTTP, Time, Process hardening.
+**Track C (Capability Providers):** ✅ Complete. HTTP (get/post/put/delete/head), Time (now/now_iso/epoch_millis/sleep), Process (run/which with timeout + allowlists). Process converted from builtin fn to capability per three-pillar principle.
 
-**Track D (Testing and Auditing):** ⬜ Pending. Multi-file e2e, capability boundary audit, performance baseline.
+**Track D (Testing and Auditing):** ✅ Complete. 8 multi-file e2e tests (7 green-path + 1 gap documentation), 21 capability boundary audit tests, 6 performance baseline tests.
+
+**NOTE:** NOTE-004 created — documents tension between fn/builtin fn/capability/workflow/effect, needs spec resolution.

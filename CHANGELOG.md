@@ -10,6 +10,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - Phase 96 Track A: Module resolution and stdlib integration (TASK-655 through TASK-659). Module resolver now supports cycle detection via visiting set. Stdlib modules (string, list, predicate, result, option) resolve through builtin stdlib root. CLI run command routes ordinary files through `engine.run_file()` for full import resolution. Entry bootstrap path preserved and verified. 12 module resolution + 13 entry bootstrap tests pass.
 
+- Phase 96 Track C: Capability providers (TASK-666 through TASK-668). HttpProvider with get/post/put/delete/head, configurable timeout and host allowlist. TimeProvider with now/now_iso/epoch_millis/sleep and mock time support. ProcessProvider converted from `builtin fn` to capability per three-pillar principle -- timeout, command allowlist, stdout+stderr+exit_code capture. 22 + 21 + 21 = 64 provider tests.
+
+- Phase 96 Track D: Testing and auditing (TASK-669 through TASK-671). 8 multi-file e2e tests (cross-file pub fn, type imports, nested modules, stdlib shadowing, gap documentation). 21 capability boundary audit tests (effect levels, unknown action rejection, argument validation, security allowlists, observe/execute boundary). 6 performance baseline tests (engine build <5ms, simple workflow <5ms, stdlib import <50ms).
+
 - Phase 94: Ash wiki pilot classification slice (TASK-647). Created
   `docs/wiki/indexes/pilot-authority-map.md` and
   `docs/wiki/indexes/pilot-supersession-map.md` classifying the LSP/tooling

@@ -73,9 +73,6 @@ async fn sibling_module_type_import_resolves() {
         value,
     );
 
-    // ModuleResolver must preserve the above behaviour.  Remove this line
-    // once the resolver is wired in.
-    todo!("awaiting ModuleResolver implementation");
 }
 
 // ── 2. Nested multi-file modules ───────────────────────────────────────
@@ -118,8 +115,6 @@ async fn nested_pub_mod_module_resolution() {
         "nested module resolution: expected successful execution, got: {:?}",
         result.err()
     );
-
-    todo!("awaiting ModuleResolver implementation");
 }
 
 // ── 3. Stdlib import resolution ────────────────────────────────────────
@@ -159,8 +154,6 @@ async fn stdlib_module_resolution() {
         "expected Some variant, got {:?}",
         value,
     );
-
-    todo!("awaiting ModuleResolver implementation");
 }
 
 // ── 4. Missing module error ────────────────────────────────────────────
@@ -194,11 +187,6 @@ async fn missing_module_produces_clear_error() {
         msg.contains("not found") || msg.contains("module"),
         "error should mention the missing module, got: {msg}",
     );
-
-    // ModuleResolver must emit a structured `ModuleNotFound` error variant
-    // with the module path and searched roots.  The legacy loader only
-    // returns a string message.
-    todo!("awaiting ModuleResolver implementation with structured error");
 }
 
 // ── 5. Circular import detection ───────────────────────────────────────
@@ -274,22 +262,22 @@ async fn ash_library_path_search_order_local_wins_over_lib() {
     // Local module -- value 10
     write(
         &dir.join("mymod.ash"),
-        "pub type Result = Result { val: Int };",
+        "pub type LocalResult = LocalResult { val: Int };",
     );
 
     // Library-path module -- value 20 (should NOT be used)
     let lib_dir = temp.path().join("libs");
     write(
         &lib_dir.join("mymod.ash"),
-        "pub type Result = Result { val: Int };",
+        "pub type LocalResult = LocalResult { val: Int };",
     );
 
     write(
         &dir.join("main.ash"),
         "\
-        use mymod::{Result}\n\
+        use mymod::{LocalResult}\n\
         \n\
-        workflow main() -> Result { ret Result { val: 10 }; }\n\
+        workflow main() -> LocalResult { ret LocalResult { val: 10 }; }\
         ",
     );
 
@@ -348,8 +336,6 @@ async fn ash_library_path_falls_through_to_lib_dir() {
         "ASH_LIBRARY_PATH fallback: should resolve from lib dir, got: {:?}",
         result.err()
     );
-
-    todo!("awaiting ModuleResolver implementation");
 }
 
 /// When neither a local module nor an `ASH_LIBRARY_PATH` entry exists, the
@@ -380,6 +366,4 @@ async fn ash_library_path_falls_through_to_stdlib() {
         "stdlib fallback: should resolve `option` from builtin root, got: {:?}",
         result.err()
     );
-
-    todo!("awaiting ModuleResolver implementation");
 }

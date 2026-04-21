@@ -1,13 +1,8 @@
-//! TDD failing tests for the ModuleResolver module resolution subsystem.
+//! Module resolution integration tests.
 //!
-//! These tests define the **expected** behaviour for six resolution scenarios.
-//! Every test compiles but fails at runtime because the `ModuleResolver`
-//! abstraction does not yet exist.
-//!
-//! Tests that exercise behaviour already handled by the legacy
-//! `module_loader` include a trailing `todo!()` so they still fail in this
-//! red phase.  As the `ModuleResolver` is implemented, replace each
-//! `todo!()` with the real assertion.
+//! Tests verify that the module resolver correctly discovers and loads modules
+//! from the local file tree, `ASH_LIBRARY_PATH`, and the built-in stdlib root,
+//! with proper search precedence, cycle detection, and error reporting.
 
 use ash_engine::Engine;
 use tempfile::TempDir;
@@ -366,4 +361,123 @@ async fn ash_library_path_falls_through_to_stdlib() {
         "stdlib fallback: should resolve `option` from builtin root, got: {:?}",
         result.err()
     );
+}
+
+// ── 7. Comprehensive stdlib resolution ─────────────────────────────────
+
+/// Verify that multiple stdlib modules resolve together: `result` type,
+/// `string` builtin functions, and `list` builtin functions all work
+/// when imported through the resolver.
+#[tokio::test]
+async fn stdlib_result_type_resolves() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("main.ash"),
+        "\
+        use result::{Result, Ok, Err}\n\
+        \n\
+        workflow main() -> Result<Int, String> { ret Ok { value: 42 }; }\n\
+        ",
+    );
+
+    let engine = build_engine();
+    let result = engine.run_file(dir.join("main.ash")).await;
+
+    assert!(
+        result.is_ok(),
+        "stdlib result resolution: expected successful execution, got: {:?}",
+        result.err()
+    );
+    let value = result.expect("checked above");
+    assert!(
+        matches!(
+            &value,
+            ash_core::Value::Variant { name, .. } if name == "Ok"
+        ),
+        "expected Ok variant, got {:?}",
+        value,
+    );
+}
+
+/// Verify that `string` builtin functions resolve through the stdlib root.
+#[tokio::test]
+async fn stdlib_string_builtin_resolves() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("main.ash"),
+        "\
+        use string::{concat}\n\
+        \n\
+        workflow main() -> String { ret concat(\"hello\", \" world\"); }\n\
+        ",
+    );
+
+    let engine = build_engine();
+    let result = engine.run_file(dir.join("main.ash")).await;
+
+    assert!(
+        result.is_ok(),
+        "stdlib string builtin: expected successful execution, got: {:?}",
+        result.err()
+    );
+    assert_eq!(
+        result.expect("checked above"),
+        ash_core::Value::String("hello world".to_string()),
+    );
+}
+
+/// Verify that `list` builtin functions resolve through the stdlib root.
+#[tokio::test]
+async fn stdlib_list_builtin_resolves() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("main.ash"),
+        "\
+        use list::{len}\n\
+        \n\
+        workflow main() -> Int { ret len([1, 2, 3]); }\n\
+        ",
+    );
+
+    let engine = build_engine();
+    let result = engine.run_file(dir.join("main.ash")).await;
+
+    assert!(
+        result.is_ok(),
+        "stdlib list builtin: expected successful execution, got: {:?}",
+        result.err()
+    );
+    assert_eq!(result.expect("checked above"), ash_core::Value::Int(3));
+}
+
+/// Verify that `predicate` builtin functions resolve through the stdlib root.
+#[tokio::test]
+async fn stdlib_predicate_builtin_resolves() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("main.ash"),
+        "\
+        use predicate::{is_int}\n\
+        \n\
+        workflow main() -> Bool { ret is_int(42); }\n\
+        ",
+    );
+
+    let engine = build_engine();
+    let result = engine.run_file(dir.join("main.ash")).await;
+
+    assert!(
+        result.is_ok(),
+        "stdlib predicate builtin: expected successful execution, got: {:?}",
+        result.err()
+    );
+    assert_eq!(result.expect("checked above"), ash_core::Value::Bool(true));
 }

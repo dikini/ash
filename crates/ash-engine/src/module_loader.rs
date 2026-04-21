@@ -524,19 +524,19 @@ pub(crate) fn collect_module_exports(
     // b.ash has `use a::{Y}` -- both reference each other).
     for line in source.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("use ") && !trimmed.starts_with("pub use ") {
-            if let Ok(import_spec) = parse_ordinary_import(trimmed) {
-                if let Some(target_path) =
-                    resolve_module_path(&import_spec.module_segments, &search_roots(module_root))
-                {
-                    let target_canonical = target_path.canonicalize().unwrap_or_else(|_| target_path.clone());
-                    if visiting.contains(&target_canonical) {
-                        return Err(EngineError::Parse(format!(
-                            "cyclic import detected: '{}'",
-                            target_path.display()
-                        )));
-                    }
-                }
+        if trimmed.starts_with("use ")
+            && !trimmed.starts_with("pub use ")
+            && let Ok(import_spec) = parse_ordinary_import(trimmed)
+            && let Some(target_path) =
+                resolve_module_path(&import_spec.module_segments, &search_roots(module_root))
+        {
+            let target_canonical =
+                target_path.canonicalize().unwrap_or_else(|_| target_path.clone());
+            if visiting.contains(&target_canonical) {
+                return Err(EngineError::Parse(format!(
+                    "cyclic import detected: '{}'",
+                    target_path.display()
+                )));
             }
         }
     }

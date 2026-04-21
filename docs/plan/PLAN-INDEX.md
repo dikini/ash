@@ -2548,7 +2548,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-090: Spec Processor](PLAN-090-SPEC-PROCESSOR.md)
 **Specs:** [../design/DESIGN-SPEC-PROCESSOR.md](../design/DESIGN-SPEC-PROCESSOR.md), DESIGN-NOTE-PROCESS-EFFECT.md, DESIGN-NOTE-BATCH-CHECK-API.md, DESIGN-NOTE-JSON-STRATEGY.md
 **Priority:** High
-**Status:** 🟡 Ready
+**Status:** ✅ Complete
 
 ### Track A: Pure-String Processor Core
 
@@ -2574,10 +2574,10 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 |||------|-------------|------|------------|--------|
-|||| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | 📝 Planned ||
-|||| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | 📝 Planned ||
-|||| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | 📝 Planned ||
-|||| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | 📝 Planned ||
+|||| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | ✅ Complete |||
+|||| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | ✅ Complete |||
+|||| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | ✅ Complete |||
+|||| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | ✅ Complete |||
 ||| [TASK-613](tasks/TASK-613-phase-90-status-corpus-reconciliation-and-task-595-e2e-validation.md) | Reconcile Phase 90 status/task corpus and prove or honestly downgrade TASK-595 end-to-end `std::regex` behavior | PLAN-090, TASK-595, SPEC-002, SPEC-003, SPEC-010, SPEC-017 | 4-8 | ✅ Complete |
 
 **Deliverable:** `apps/spec_processor/src/main.ash` runs end-to-end, produces a structured report, and blocks CI on Tier 2 findings. New stdlib modules (`regex`, `markdown`, `json`, `process`) are available for downstream phases only where their end-to-end Ash-language surface is actually proven, and Phase 90 task/docs status is internally consistent on `main` after reconciliation.

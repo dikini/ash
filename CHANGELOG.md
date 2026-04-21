@@ -27,6 +27,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   by `pulldown-cmark` (TASK-596). Parses CommonMark into a JSON AST string with
   `heading`, `paragraph`, and `code_block` block types. 8 tests.
 
+- Phase 90 Track C: `spec_processor` integration and CI gate. Added four modules:
+  `example_check.rs` (parse+type-check `.ash` files via `ash-engine` API, emitting
+  `ExampleFailure` on errors — TASK-600), `capability_boundary.rs` (declare and
+  audit 7 expected stdlib capabilities, emitting `ToolingGap` for missing stubs
+  — TASK-601), `meta_validation.rs` (self-audit processor source tree, doc
+  cross-references, capability consistency, and test coverage — TASK-602), and
+  `pipeline.rs` (orchestrate all 7 check modules into a single `run_pipeline()`
+  entry point returning a `Report` suitable for CI gating — TASK-603). 63 tests
+  across 10 suites (2 ignored for real-repo manual verification). All review
+  findings addressed: `Result`-based error propagation (no panics), private
+  `PipelineError` fields, explicit `match` on all file reads, `and_then` for
+  flattened error chaining, `starts_with` for declaration detection.
+
 ### Fixed
 
 - Removed unnecessary hash in raw string literal in `expr_let_integration.rs`

@@ -8,7 +8,7 @@ Implement expression evaluation in Lean 4 following the big-step operational sem
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 6.1 (Expression Evaluation)
+- SPEC-046: Lean Reference - Section 6.1 (Expression Evaluation)
 - SPEC-004: Operational Semantics - Section 5.1 (Constructor Evaluation)
 - SPEC-004: Operational Semantics - Section 3 (Big-Step Judgment)
 

@@ -8,7 +8,7 @@ Implement environment (variable binding) and effect tracking in Lean 4. This pro
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 5.3 (Evaluation Context)
+- SPEC-046: Lean Reference - Section 5.3 (Evaluation Context)
 - SPEC-004: Operational Semantics - Section 5.2 (Effect Join)
 
 ## Requirements

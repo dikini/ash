@@ -226,6 +226,7 @@ Rules:
 2. `archived` indicates retired or preserved material not expected to receive ongoing maintenance.
 3. `current` is valid for long-lived docs; `active` is valid for currently in-progress engineering artifacts.
 4. `done` is valid for completed tasks/plans or published audit/report artifacts.
+5. **Ash spec convention:** Ash specifications conventionally use `status: draft` even after implementation is complete, because specs are treated as implementation-grade drafts that may still evolve. This does not mean they are pre-acceptance or tentative. The wiki metadata model SHOULD treat `draft` specs with completed implementation phases as effectively accepted and governing, unless a supersession or drift record says otherwise.
 
 ### 7.3 Health
 

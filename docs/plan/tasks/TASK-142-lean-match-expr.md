@@ -8,7 +8,7 @@ Implement match expression evaluation in Lean 4. This enables multi-arm pattern 
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 6.4 (Match Expression)
+- SPEC-046: Lean Reference - Section 6.4 (Match Expression)
 - SPEC-004: Operational Semantics - Section 5.2 (MATCH rules)
 
 ## Requirements

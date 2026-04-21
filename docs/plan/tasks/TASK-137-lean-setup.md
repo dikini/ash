@@ -8,7 +8,7 @@ Set up Lean 4 development environment and project structure for the Ash referenc
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 4 (Architecture)
+- SPEC-046: Lean Reference - Section 4 (Architecture)
 
 ## Requirements
 
@@ -221,7 +221,7 @@ lake build
 1. **Simplicity**: Is the structure minimal?
    - Yes: Standard Lean 4 project layout
 
-2. **Spec drift**: Does it match SPEC-021?
+2. **Spec drift**: Does it match SPEC-046?
    - Directory structure matches architecture section
 
 3. **Cross-platform**: Will it work on macOS/Linux?

@@ -154,7 +154,7 @@ See [docs/AST-Subset.md](docs/AST-Subset.md) for the complete comparison table.
 ## Related Documents
 
 - [SPEC-004: Operational Semantics](../docs/spec/SPEC-004-SEMANTICS.md)
-- [SPEC-021: Lean Reference](../docs/spec/SPEC-021-LEAN-REFERENCE.md)
+- [SPEC-046: Lean Reference](../docs/spec/SPEC-046-LEAN-REFERENCE.md)
 - [TASK-137](../docs/plan/tasks/TASK-137-lean-setup.md) - This task
 - [AST Subset Documentation](docs/AST-Subset.md) - Detailed comparison
 

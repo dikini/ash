@@ -65,16 +65,13 @@ The following artifact families within the pilot slice have no supersession rela
 
 ## Friction Points Discovered
 
-### FP-1: Spec numbering collision (SPEC-021)
+### FP-1: Spec numbering collision (SPEC-021) — RESOLVED
 
-SPEC-021 exists in two unrelated files:
-- `SPEC-021-LEAN-REFERENCE.md` (Lean 4 reference interpreter)
-- `SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md` (runtime observable behavior)
+SPEC-021 previously existed in two unrelated files:
+- `SPEC-021-LEAN-REFERENCE.md` (Lean 4 reference interpreter) — renumbered to `SPEC-046-LEAN-REFERENCE.md`
+- `SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md` (runtime observable behavior) — retains SPEC-021
 
-This is not a supersession but a naming collision. The wiki schema's uniqueness constraint on `id` would flag both as `SPEC-021`. Resolution: one must be renumbered. This is a concrete friction point the pilot uncovered.
-
-**Severity:** Medium — schema validation would reject the registry until resolved.
-**Recommended action:** Renumber one SPEC-021 to SPEC-046 or SPEC-047.
+This was a naming collision. The Lean Reference spec was renumbered to SPEC-046 to resolve the wiki schema's uniqueness constraint on `id`.
 
 ### FP-2: Implicit dependency chains are not first-class
 
@@ -104,9 +101,9 @@ Design notes (`DESIGN-NOTE-CORPUS-ANALYSIS-SUBSTRATE.md`, etc.) use descriptive 
 **Severity:** Low.
 **Recommended action:** Assign DESIGN-NOTE-NNN IDs or accept descriptive IDs in the registry.
 
-### FP-6: PLAN-035 numbering collision
+### FP-6: PLAN-035 numbering collision — RESOLVED
 
-PLAN-035 exists as two unrelated files: `docs/plan/PLAN-035-INCREMENTAL-ANALYSIS.md` (Phase 89, incremental analysis) and `docs/plans/PLAN-035-generic-builtin-fn.md` (Phase 93, generic builtin fn). The authority map lists PLAN-035 once (as "Incremental Analysis Engine"), missing the second PLAN-035. This is the same class of problem as FP-1 (SPEC-021 collision).
+PLAN-035 existed as two unrelated files: `docs/plan/PLAN-035-INCREMENTAL-ANALYSIS.md` (Phase 89, incremental analysis) and `docs/plans/PLAN-035-generic-builtin-fn.md` (Phase 93, generic builtin fn). The Phase 93 plan was renumbered to **PLAN-037** to resolve the collision. The authority map entry for PLAN-035 (Incremental Analysis Engine) is unaffected.
 
-**Severity:** Medium — schema validation would flag both as the same ID.
-**Recommended action:** Renumber one PLAN-035 to resolve the collision.
+**Severity:** Medium — resolved by renumbering.
+**Status:** ✅ Resolved — `docs/plans/PLAN-037-generic-builtin-fn.md`.

@@ -12,10 +12,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `docs/wiki/indexes/pilot-authority-map.md` and
   `docs/wiki/indexes/pilot-supersession-map.md` classifying the LSP/tooling
   cluster (SPEC-038 through SPEC-043, Phases 84-89) against the SPEC-045
-  authority/status/health model. Identified 5 friction points including
-  a SPEC-021 numbering collision, missing `implemented_by` relationship
-  type, and `draft` vs `current` status ambiguity for completed normative
-  specs.
+  authority/status/health model. Identified 6 friction points.
+
+- Resolved FP-1: Renumbered SPEC-021-LEAN-REFERENCE to SPEC-046, eliminating
+  the SPEC-021 numbering collision with SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.
+  Updated 22 files, 45 references. No runtime-observable references changed.
+
+- Resolved FP-6: Renumbered PLAN-035-generic-builtin-fn to PLAN-037, eliminating
+  the PLAN-035 numbering collision with PLAN-035-INCREMENTAL-ANALYSIS.
+  Updated 4 files.
+
+- Resolved FP-3: Documented the Ash spec `draft` convention in SPEC-045 §7.2
+  rule 5. Specs use `status: draft` even after implementation; the wiki
+  metadata model treats these as accepted and governing unless superseded.
 
 - Phase 90 Track A: `spec_processor` crate — repository analysis pipeline
   for Ash plan/spec documents. Implements file collection (`collect.rs`),
@@ -1513,7 +1522,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Runtime-reasoner design-review planning scaffold for TASK-187 through TASK-190. [docs/design/RUNTIME_REASONER_INTERACTION_MODEL.md](docs/design/RUNTIME_REASONER_INTERACTION_MODEL.md) now has a matching review phase in [docs/plan/PLAN-INDEX.md](docs/plan/PLAN-INDEX.md), plus a design-review plan in [docs/plan/2026-03-20-runtime-reasoner-design-review-plan.md](docs/plan/2026-03-20-runtime-reasoner-design-review-plan.md) and task definitions for freezing separation rules, auditing canonical docs, and synthesizing the follow-up spec delta program.
 - Monitor authority and exposed workflow views for TASK-186. [SPEC-002](docs/spec/SPEC-002-SURFACE.md), [SPEC-017](docs/spec/SPEC-017-CAPABILITY-INTEGRATION.md), [SPEC-020](docs/spec/SPEC-020-ADT-TYPES.md), and [SPEC-021](docs/spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) now define an explicit `exposes { ... }` workflow clause, first-class `MonitorLink` authority, exposed monitor views, and monitor-view observability without adding a monitor-specific policy sublanguage.
 - Spec hardening readiness audit for TASK-184. [docs/audit/2026-03-19-spec-hardening-readiness-review.md](docs/audit/2026-03-19-spec-hardening-readiness-review.md) now gates Rust convergence, confirms Lean formalization has a stable starting corpus, and records that the hardened language definition has no canonical `catch`.
-- TASK-183 follow-up refinement for the formalization boundary. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now distinguishes the canonical semantic corpus from authoritative source/handoff contracts and historical artifacts, and [docs/spec/SPEC-021-LEAN-REFERENCE.md](docs/spec/SPEC-021-LEAN-REFERENCE.md) is explicitly marked as a legacy sketch rather than a competing current spec.
+- TASK-183 follow-up refinement for the formalization boundary. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now distinguishes the canonical semantic corpus from authoritative source/handoff contracts and historical artifacts, and [docs/spec/SPEC-046-LEAN-REFERENCE.md](docs/spec/SPEC-046-LEAN-REFERENCE.md) is explicitly marked as a legacy sketch rather than a competing current spec.
 - Formalization boundary note for TASK-183. [docs/reference/formalization-boundary.md](docs/reference/formalization-boundary.md) now names the canonical Lean/Rust proof corpus, separates migration-only artifacts, and lists the initial proof and bisimulation targets for the hardened language contract.
 - TASK-182 follow-up tightening for runtime observable behavior. [SPEC-011](docs/spec/SPEC-011-REPL.md) now defers REPL error rendering to [SPEC-021](docs/spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), [SPEC-021](docs/spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) now treats verification warnings as observable tooling output, and [docs/reference/runtime-observable-behavior-contract.md](docs/reference/runtime-observable-behavior-contract.md) is now mechanically a handoff note rather than a second canonical owner.
 - Runtime observable behavior specification for TASK-182. [SPEC-021](docs/spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) now owns the canonical CLI/REPL observable contract, runtime verification visibility, constructor-shaped ADT display, and explicit `Result`-based recoverable failure handling.

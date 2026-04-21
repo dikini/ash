@@ -19,7 +19,7 @@ This remains planning/reference work only.
 - [TASK-428: Implementation Conformance Contract](TASK-428-implementation-conformance-contract.md)
 - [TASK-431: Big-Step / Small-Step Meta-Properties and Formalization Boundary Refresh](TASK-431-big-step-small-step-meta-properties-and-formalization-boundary-refresh.md)
 - [TASK-438: Canonical IR Semantics Corpus and Result Format](TASK-438-canonical-ir-semantics-corpus-and-result-format.md)
-- [PLAN-021: Lean Reference Interpreter](../PLAN-021-LEAN-REFERENCE.md)
+- [PLAN-046: Lean Reference Interpreter](../PLAN-046-LEAN-REFERENCE.md)
 
 ## Dependencies
 
@@ -72,7 +72,7 @@ This task is complete when:
 
 ## Files
 
-- Modify: `docs/plan/PLAN-021-LEAN-REFERENCE.md`
+- Modify: `docs/plan/PLAN-046-LEAN-REFERENCE.md`
 - Modify: `docs/plan/LEAN_REFERENCE_SUMMARY.md`
 - Modify: `docs/reference/formalization-boundary.md`
 - Modify: `docs/plan/PLAN-INDEX.md`

@@ -8,7 +8,7 @@ Implement the pattern matching engine in Lean 4. This provides the core matching
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 6.3 (Pattern Matching)
+- SPEC-046: Lean Reference - Section 6.3 (Pattern Matching)
 - SPEC-004: Operational Semantics - Section 5.2 (Pattern Binding)
 - SPEC-004: Operational Semantics - Section 6.1 (Extended Pattern Binding)
 
@@ -402,7 +402,7 @@ lake exe ash_ref
    - Yes: Pure function, same input → same output
 
 3. **Completeness**: Are all pattern types handled?
-   - Yes: All 6 pattern types from SPEC-021 implemented
+   - Yes: All 6 pattern types from SPEC-046 implemented
 
 ## Estimated Effort
 

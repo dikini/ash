@@ -75,7 +75,7 @@ Applied:
 Explicitly left out:
 
 - CLI `json` examples and file names, which describe data formats rather than Ash type names
-- Lean reference syntax in `SPEC-021-LEAN-REFERENCE`, which is not Ash surface syntax
+- Lean reference syntax in `SPEC-046-LEAN-REFERENCE`, which is not Ash surface syntax
 - broad cross-corpus editorial restyling, which would exceed the “minimum safe normalization”
   boundary of this task
 

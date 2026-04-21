@@ -364,7 +364,7 @@ When differential testing finds a failure, minimize:
 ## Getting Help
 
 1. Check [SPEC-004](../../docs/spec/SPEC-004-SEMANTICS.md) for semantics questions
-2. Check [SPEC-021](../../docs/spec/SPEC-021-LEAN-REFERENCE.md) for implementation details
+2. Check [SPEC-046](../../docs/spec/SPEC-046-LEAN-REFERENCE.md) for implementation details
 3. Run with `#eval` to debug specific cases
 4. Use `dbg_trace` for print debugging
 

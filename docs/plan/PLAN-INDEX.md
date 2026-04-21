@@ -461,18 +461,18 @@ Reference interpreter implementation in Lean 4 for specification verification.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-137](tasks/TASK-137-lean-setup.md) | Lean 4 project setup with lake | SPEC-021 | 4 | ✅ Complete |
-| [TASK-138](tasks/TASK-138-lean-ast-types.md) | Core AST types (Value, Pattern, Expr) | SPEC-021 | 8 | ✅ Complete |
-| [TASK-139](tasks/TASK-139-lean-environment.md) | Environment and Bindings types | SPEC-021 | 6 | ✅ Complete |
-| [TASK-140](tasks/TASK-140-lean-expression-eval.md) | Expression evaluation | SPEC-021 | 12 | ✅ Complete |
-| [TASK-141](tasks/TASK-141-lean-pattern-match.md) | Pattern matching engine | SPEC-021 | 12 | ✅ Complete |
-| [TASK-142](tasks/TASK-142-lean-match-expr.md) | Match expression evaluation | SPEC-021 | 8 | ✅ Complete |
-| [TASK-143](tasks/TASK-143-lean-if-let.md) | If-let expression evaluation | SPEC-021 | 6 | ✅ Complete |
-| [TASK-144](tasks/TASK-144-lean-json-serialization.md) | JSON serialization for diff testing | SPEC-021 | 8 | ✅ Complete |
-| [TASK-145](tasks/TASK-145-lean-differential-testing.md) | Differential testing framework | SPEC-021 | 10 | ✅ Complete |
-| [TASK-146](tasks/TASK-146-lean-property-tests.md) | Property-based tests with Plausible | SPEC-021 | 8 | ✅ Complete |
-| [TASK-147](tasks/TASK-147-lean-ci-integration.md) | CI integration for Lean | SPEC-021 | 4 | ✅ Complete |
-| [TASK-148](tasks/TASK-148-lean-documentation.md) | API documentation and examples | SPEC-021 | 6 | ✅ Complete |
+| [TASK-137](tasks/TASK-137-lean-setup.md) | Lean 4 project setup with lake | SPEC-046 | 4 | ✅ Complete |
+| [TASK-138](tasks/TASK-138-lean-ast-types.md) | Core AST types (Value, Pattern, Expr) | SPEC-046 | 8 | ✅ Complete |
+| [TASK-139](tasks/TASK-139-lean-environment.md) | Environment and Bindings types | SPEC-046 | 6 | ✅ Complete |
+| [TASK-140](tasks/TASK-140-lean-expression-eval.md) | Expression evaluation | SPEC-046 | 12 | ✅ Complete |
+| [TASK-141](tasks/TASK-141-lean-pattern-match.md) | Pattern matching engine | SPEC-046 | 12 | ✅ Complete |
+| [TASK-142](tasks/TASK-142-lean-match-expr.md) | Match expression evaluation | SPEC-046 | 8 | ✅ Complete |
+| [TASK-143](tasks/TASK-143-lean-if-let.md) | If-let expression evaluation | SPEC-046 | 6 | ✅ Complete |
+| [TASK-144](tasks/TASK-144-lean-json-serialization.md) | JSON serialization for diff testing | SPEC-046 | 8 | ✅ Complete |
+| [TASK-145](tasks/TASK-145-lean-differential-testing.md) | Differential testing framework | SPEC-046 | 10 | ✅ Complete |
+| [TASK-146](tasks/TASK-146-lean-property-tests.md) | Property-based tests with Plausible | SPEC-046 | 8 | ✅ Complete |
+| [TASK-147](tasks/TASK-147-lean-ci-integration.md) | CI integration for Lean | SPEC-046 | 4 | ✅ Complete |
+| [TASK-148](tasks/TASK-148-lean-documentation.md) | API documentation and examples | SPEC-046 | 6 | ✅ Complete |
 
 **Phase 17 Deliverable**: Complete Lean 4 reference interpreter with testing
 
@@ -2643,7 +2643,7 @@ complete and verified. TASK-631B resolved by Phase 93 TASK-643 which deleted
 
 ## Phase 93: Generic Builtin fn Declarations
 
-**Plan Reference:** [PLAN-035: Generic Builtin fn Declarations](plans/PLAN-035-generic-builtin-fn.md)
+**Plan Reference:** [PLAN-037: Generic Builtin fn Declarations](plans/PLAN-037-generic-builtin-fn.md)
 **Specs:** `SPEC-044`
 **Priority:** Medium
 **Status:** ✅ Done

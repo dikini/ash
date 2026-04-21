@@ -193,7 +193,7 @@ ash/
 
 ## Related Documents
 
-- SPEC-021: Lean Reference Specification
+- SPEC-046: Lean Reference Specification
 - SPEC-004: Operational Semantics (source of truth)
 - TASK-137 through TASK-148: Individual task files
 - docs/design/BISIMULATION_VERIFICATION.md: Theoretical foundation

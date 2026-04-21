@@ -8,7 +8,7 @@ Create comprehensive documentation and example programs for the Lean reference i
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 10 (References)
+- SPEC-046: Lean Reference - Section 10 (References)
 - docs/plan/LEAN_REFERENCE_SUMMARY.md
 
 ## Requirements
@@ -159,7 +159,7 @@ cat tests/differential/failures/*.json
 
 This implementation follows:
 - [SPEC-004: Operational Semantics](../docs/spec/SPEC-004-SEMANTICS.md)
-- [SPEC-021: Lean Reference](../docs/spec/SPEC-021-LEAN-REFERENCE.md)
+- [SPEC-046: Lean Reference](../docs/spec/SPEC-046-LEAN-REFERENCE.md)
 
 ## Contributing
 
@@ -974,7 +974,7 @@ pure { value := v, effect := scrutineeEffect.join bodyEffect }
 ## Getting Help
 
 1. Check [SPEC-004](../docs/spec/SPEC-004-SEMANTICS.md) for semantics questions
-2. Check [SPEC-021](../docs/spec/SPEC-021-LEAN-REFERENCE.md) for implementation details
+2. Check [SPEC-046](../docs/spec/SPEC-046-LEAN-REFERENCE.md) for implementation details
 3. Run with `#eval` to debug specific cases
 4. Use `dbg_trace` for debugging (Lean's print debugging)
 

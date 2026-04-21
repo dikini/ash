@@ -8,7 +8,7 @@ Implement the comparison harness between Lean reference and Rust implementation 
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 7 (Differential Testing Interface)
+- SPEC-046: Lean Reference - Section 7 (Differential Testing Interface)
 - docs/design/BISIMULATION_VERIFICATION.md
 
 ## Requirements

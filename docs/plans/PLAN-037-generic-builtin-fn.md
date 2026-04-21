@@ -1,4 +1,4 @@
-# PLAN-035: Generic Builtin fn Declarations
+# PLAN-037: Generic Builtin fn Declarations
 
 **Goal:** Enable `builtin fn` declarations with generic type parameters, unblocking list operations (Track D2) and type predicates (Track D1.5).
 

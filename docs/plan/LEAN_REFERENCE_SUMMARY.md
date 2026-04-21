@@ -13,12 +13,12 @@ Complete plan and specification for implementing a Lean 4 reference interpreter 
 ### Specification
 | Document | Purpose |
 |----------|---------|
-| `docs/spec/SPEC-021-LEAN-REFERENCE.md` | Technical specification for the interpreter |
+| `docs/spec/SPEC-046-LEAN-REFERENCE.md` | Technical specification for the interpreter |
 
 ### Plans
 | Document | Purpose |
 |----------|---------|
-| `docs/plan/PLAN-021-LEAN-REFERENCE.md` | Implementation plan with phases and dependencies |
+| `docs/plan/PLAN-046-LEAN-REFERENCE.md` | Implementation plan with phases and dependencies |
 | `docs/plan/LEAN_IMPLEMENTATION_EFFORT.md` | Effort estimates and options |
 | `docs/design/BISIMULATION_VERIFICATION.md` | Theoretical foundation (bisimulation) |
 | `docs/design/TEST_GENERATION_AND_VERIFICATION.md` | Testing strategies |
@@ -103,8 +103,8 @@ ash/
 ├── scripts/
 │   └── differential_test.sh     # NEW
 └── docs/
-    ├── spec/SPEC-021-LEAN-REFERENCE.md
-    ├── plan/PLAN-021-LEAN-REFERENCE.md
+    ├── spec/SPEC-046-LEAN-REFERENCE.md
+    ├── plan/PLAN-046-LEAN-REFERENCE.md
     └── design/
         ├── BISIMULATION_VERIFICATION.md
         └── TEST_GENERATION_AND_VERIFICATION.md
@@ -163,7 +163,7 @@ ash/
 
 ## Next Steps
 
-1. **Review**: SPEC-021 and PLAN-021 with team
+1. **Review**: SPEC-046 and PLAN-046 with team
 2. **Schedule**: Start TASK-137 after TASK-121 complete
 3. **Assign**: Developer with FP background to lead
 4. **Prepare**: Rust JSON serialization (for bridge)

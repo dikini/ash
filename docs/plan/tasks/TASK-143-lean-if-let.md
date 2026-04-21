@@ -8,7 +8,7 @@ Implement if-let expression evaluation in Lean 4. This provides syntactic sugar 
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 6.5 (If-Let Expression)
+- SPEC-046: Lean Reference - Section 6.5 (If-Let Expression)
 - SPEC-004: Operational Semantics - Section 5.3 (IF-LET rules)
 
 ## Requirements

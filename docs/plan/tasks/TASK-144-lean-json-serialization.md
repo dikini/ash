@@ -8,8 +8,8 @@ Implement JSON serialization and deserialization for AST types in Lean 4. This p
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 7.1 (JSON Serialization)
-- SPEC-021: Lean Reference - Section 7.2 (Bisimulation Comparison)
+- SPEC-046: Lean Reference - Section 7.1 (JSON Serialization)
+- SPEC-046: Lean Reference - Section 7.2 (Bisimulation Comparison)
 
 ## Requirements
 

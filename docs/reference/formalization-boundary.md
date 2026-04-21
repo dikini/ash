@@ -130,7 +130,7 @@ The following sources remain useful, but they are not canonical semantic authori
   [MCE-006: Small-Step ↔ IR Execution](../ideas/minimal-core/MCE-006-SMALL-STEP-IR.md), and
   [MCE-007: Full Layer Alignment](../ideas/minimal-core/MCE-007-FULL-ALIGNMENT.md);
 - the old reference interpreter sketch at
-  [Lean Reference Interpreter](../spec/SPEC-021-LEAN-REFERENCE.md).
+  [Lean Reference Interpreter](../spec/SPEC-046-LEAN-REFERENCE.md).
 
 Lean may consult these artifacts for rationale, migration context, or current implementation-evidence
 boundaries, but not as a substitute for the canonical specs.

@@ -8,7 +8,7 @@ Define AST types in Lean 4 mirroring the Rust implementation: Expr, Pattern, Val
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 5 (Core Types)
+- SPEC-046: Lean Reference - Section 5 (Core Types)
 - SPEC-020: ADT Types - Type definitions
 
 ## Requirements

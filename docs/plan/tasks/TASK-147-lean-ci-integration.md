@@ -8,7 +8,7 @@ Set up continuous integration for the Lean reference interpreter, including auto
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 9.2 (CI Integration)
+- SPEC-046: Lean Reference - Section 9.2 (CI Integration)
 - docs/plan/LEAN_REFERENCE_SUMMARY.md - CI Integration section
 
 ## Requirements

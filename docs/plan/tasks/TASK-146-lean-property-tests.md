@@ -8,7 +8,7 @@ Implement comprehensive property-based tests for the Lean reference interpreter 
 
 ## Specification Reference
 
-- SPEC-021: Lean Reference - Section 8 (Testable Properties)
+- SPEC-046: Lean Reference - Section 8 (Testable Properties)
 - SPEC-004: Operational Semantics - Section 7 (Property Testing)
 
 ## Requirements
@@ -28,7 +28,7 @@ Implement comprehensive property-based tests for the Lean reference interpreter 
 ### Property Requirements
 
 ```lean
--- From SPEC-021 Section 8
+-- From SPEC-046 Section 8
 prop_constructor_pure(fields, env) = 
   match eval env (.constructor "Test" fields) with
   | .ok result => result.effect = .epistemic

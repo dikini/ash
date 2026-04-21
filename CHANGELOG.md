@@ -8,6 +8,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 90 Track A: `spec_processor` crate — repository analysis pipeline
+  for Ash plan/spec documents. Implements file collection (`collect.rs`),
+  shared finding types with `Tier` enum (`finding.rs`), plan-index coherence
+  checker (`plan_index.rs`), changelog completeness checker (`changelog.rs`),
+  spec cross-reference validator (`spec_links.rs`), and report aggregator
+  with human-readable and JSON output (`report.rs`). 49 tests across 6
+  suites. All functions use `Result`-based error handling, `LazyLock` regex
+  caching, and comprehensive documentation (TASK-590 through TASK-599).
+
 - Phase 90 Track B: `std::json` builtin module with `parse`, `stringify`, and
   `stringify_pretty` functions backed by `serde_json` (TASK-597).
   Validates and transforms JSON strings via the evaluator builtin dispatch path.

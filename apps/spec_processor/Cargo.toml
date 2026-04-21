@@ -8,6 +8,12 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-ash-engine = { path = "../../crates/ash-engine" }
-ash-core = { path = "../../crates/ash-core" }
-tokio = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

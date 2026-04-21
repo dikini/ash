@@ -1,2 +1,2 @@
-// hello example
-print("hello");
+-- hello example
+workflow main { done }

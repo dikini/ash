@@ -31,13 +31,13 @@ This slice was chosen because it:
 
 | ID | Title | Authority | Status | Health | Carrier | Notes |
 |----|-------|-----------|--------|--------|---------|-------|
-| SPEC-038 | Ash LSP & MCP Interface | normative | current | aligned | frontmatter | Implementation-grade draft; Phase 87 complete (TASK-569) |
-| SPEC-038-RESEARCH | Rust LSP & MCP Stack Research (2025) | historical | done | aligned | frontmatter | Consumed into SPEC-038 design decisions; retained for archaeology |
-| SPEC-039 | Parser Tooling Infrastructure | normative | current | aligned | frontmatter | Phase 84 complete (TASK-570, TASK-571) |
-| SPEC-040 | Diagnostic Infrastructure | normative | current | aligned | frontmatter | Phase 85 complete (TASK-572, TASK-573) |
-| SPEC-041 | Ash Lint Library Extraction | normative | current | aligned | frontmatter | Phase 86 complete (TASK-574) |
-| SPEC-042 | Ash Source Formatter | normative | current | aligned | frontmatter | Phase 88 complete (TASK-575) |
-| SPEC-043 | Incremental Analysis Engine | normative | current | aligned | frontmatter | Phase 89 complete (TASK-576) |
+| SPEC-038 | Ash LSP & MCP Interface | normative | draft | aligned | registry-fallback | Implementation-grade draft; Phase 87 complete (TASK-569) |
+| SPEC-038-RESEARCH | Rust LSP & MCP Stack Research (2025) | historical | done | aligned | registry-fallback | Consumed into SPEC-038 design decisions; retained for archaeology |
+| SPEC-039 | Parser Tooling Infrastructure | normative | draft | aligned | registry-fallback | Phase 84 complete (TASK-570, TASK-571) |
+| SPEC-040 | Diagnostic Infrastructure | normative | draft | aligned | registry-fallback | Phase 85 complete (TASK-572, TASK-573) |
+| SPEC-041 | Ash Lint Library Extraction | normative | draft | aligned | registry-fallback | Phase 86 complete (TASK-574) |
+| SPEC-042 | Ash Source Formatter | normative | draft | aligned | registry-fallback | Phase 88 complete (TASK-575) |
+| SPEC-043 | Incremental Analysis Engine | normative | draft | aligned | registry-fallback | Phase 89 complete (TASK-576) |
 
 ### Designs
 
@@ -81,7 +81,7 @@ This slice was chosen because it:
 
 | ID | Title | Authority | Status | Health | Carrier | Notes |
 |----|-------|-----------|--------|--------|---------|-------|
-| (future idea) | AGENTIC-WORKFLOWS-EXEMPLARS | exploratory | draft | aligned | registry-fallback | LSP agent integration is a future exemplar |
+| (future idea) | AGENTIC-WORKFLOW-EXEMPLARS | exploratory | draft | aligned | registry-fallback | LSP agent integration is a future exemplar |
 | (future idea) | FIRST-CLASS-WORKFLOWS | exploratory | draft | aligned | registry-fallback | May affect LSP workflow-aware completion |
 
 ### Reference Documents

@@ -103,3 +103,10 @@ Design notes (`DESIGN-NOTE-CORPUS-ANALYSIS-SUBSTRATE.md`, etc.) use descriptive 
 
 **Severity:** Low.
 **Recommended action:** Assign DESIGN-NOTE-NNN IDs or accept descriptive IDs in the registry.
+
+### FP-6: PLAN-035 numbering collision
+
+PLAN-035 exists as two unrelated files: `docs/plan/PLAN-035-INCREMENTAL-ANALYSIS.md` (Phase 89, incremental analysis) and `docs/plans/PLAN-035-generic-builtin-fn.md` (Phase 93, generic builtin fn). The authority map lists PLAN-035 once (as "Incremental Analysis Engine"), missing the second PLAN-035. This is the same class of problem as FP-1 (SPEC-021 collision).
+
+**Severity:** Medium — schema validation would flag both as the same ID.
+**Recommended action:** Renumber one PLAN-035 to resolve the collision.

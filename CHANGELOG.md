@@ -8,6 +8,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 94: Ash wiki pilot classification slice (TASK-647). Created
+  `docs/wiki/indexes/pilot-authority-map.md` and
+  `docs/wiki/indexes/pilot-supersession-map.md` classifying the LSP/tooling
+  cluster (SPEC-038 through SPEC-043, Phases 84-89) against the SPEC-045
+  authority/status/health model. Identified 5 friction points including
+  a SPEC-021 numbering collision, missing `implemented_by` relationship
+  type, and `draft` vs `current` status ambiguity for completed normative
+  specs.
+
 - Phase 90 Track A: `spec_processor` crate — repository analysis pipeline
   for Ash plan/spec documents. Implements file collection (`collect.rs`),
   shared finding types with `Tier` enum (`finding.rs`), plan-index coherence

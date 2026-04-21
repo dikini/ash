@@ -2705,3 +2705,33 @@ Add `Expr::Let { pattern, expr, body }` to the core IR as the canonical represen
 ||| [TASK-653](tasks/TASK-653-and-or-short-circuit.md) | Fix `and`/`or` to short-circuit per SPEC-004 EXPR-AND-FALSE/EXPR-OR-TRUE | SPEC-004 §4.6 | 0.5-1 | ✅ Complete ||
 
 **Deliverable:** `Expr::Let` is a first-class core expression form. Fn bodies with let-sequencing parse, lower, typecheck, and execute through all code paths (inline fn expressions, top-level fn definitions, imported pub fn). The module_loader `normalize_imported_callable_expr` workaround is deleted. `and`/`or` short-circuit correctly per SPEC-004.
+
+## Phase 96: Runtime Maturity — Multi-File Imports, Stdlib, and Capability Surface
+
+**Priority:** High
+**Status:** In Progress (Track A complete)
+
+Close the gap between executing single-file workflows and executing real programs. Connect module resolution to engine execution, ensure full stdlib auto-loading, and harden capability providers for real-world IO.
+
+||| Task | Description | Est. Hours | Status ||
+|||------|-------------|------------|--------||
+||| TASK-654 | Module resolver failing test suite | 2-3 | ✅ Complete ||
+||| TASK-655 | Module resolver core — cycle detection | 2-3 | ✅ Complete ||
+||| TASK-656 | Stdlib as resolver root | 3-4 | ✅ Complete ||
+||| TASK-657 | Thread resolver into engine execution | 6-8 | ✅ Complete ||
+||| TASK-658 | CLI integration — route ordinary files through resolver | 2-3 | ✅ Complete ||
+||| TASK-659 | Entry bootstrap preservation verification | 1-2 | ✅ Complete ||
+||| TASK-666 | HTTP capability provider | 3-4 | ⬜ Pending ||
+||| TASK-667 | Time capability provider | 2-3 | ⬜ Pending ||
+||| TASK-668 | Process provider hardening | 2-3 | ⬜ Pending ||
+||| TASK-669 | Multi-file e2e tests | 3-4 | ⬜ Pending ||
+||| TASK-670 | Capability boundary audit | 3-4 | ⬜ Pending ||
+||| TASK-671 | Performance baseline | 2-3 | ⬜ Pending ||
+
+**Track A (Module Resolution):** ✅ Complete. Module resolver supports cycle detection, stdlib resolves through builtin root, CLI routes ordinary files through engine.run_file() for import resolution.
+
+**Track B (Stdlib Builtins):** ✅ Complete (prior session). String, list, record, regex, predicate builtins all dispatch via eval.rs table. Four-way classification: pub fn (Ash body), builtin fn (Rust), capability+act (effectful), extern fn (future FFI).
+
+**Track C (Capability Providers):** ⬜ Pending. HTTP, Time, Process hardening.
+
+**Track D (Testing and Auditing):** ⬜ Pending. Multi-file e2e, capability boundary audit, performance baseline.

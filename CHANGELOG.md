@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 96 Track A: Module resolution and stdlib integration (TASK-655 through TASK-659). Module resolver now supports cycle detection via visiting set. Stdlib modules (string, list, predicate, result, option) resolve through builtin stdlib root. CLI run command routes ordinary files through `engine.run_file()` for full import resolution. Entry bootstrap path preserved and verified. 12 module resolution + 13 entry bootstrap tests pass.
+
 - Phase 94: Ash wiki pilot classification slice (TASK-647). Created
   `docs/wiki/indexes/pilot-authority-map.md` and
   `docs/wiki/indexes/pilot-supersession-map.md` classifying the LSP/tooling

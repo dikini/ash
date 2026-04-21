@@ -2554,11 +2554,11 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 
 ||| Task | Description | Spec | Est. Hours | Status ||
 ||------|-------------|------|------------|--------|
-||| [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | 📝 Planned ||
-||| [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | 📝 Planned ||
-||| [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | 📝 Planned ||
-||| [TASK-593](tasks/TASK-593-changelog-checker.md) | Changelog completeness checker | PLAN-090 §Track A | 4 | 📝 Planned ||
-||| [TASK-594](tasks/TASK-594-report-formatter.md) | Report formatter (human + JSON) | PLAN-090 §Track A | 4 | 📝 Planned ||
+| [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | ✅ Complete |
+| [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | ✅ Complete |
+| [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | ✅ Complete |
+| [TASK-593](tasks/TASK-593-changelog-checker.md) | Changelog completeness checker | PLAN-090 §Track A | 4 | ✅ Complete |
+| [TASK-594](tasks/TASK-594-report-formatter.md) | Report formatter (human + JSON) | PLAN-090 §Track A | 4 | ✅ Complete |
 
 ### Track B: Stdlib Substrates
 

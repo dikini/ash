@@ -21,6 +21,9 @@ pub use http::{HttpConfig, HttpProvider};
 pub mod time;
 pub use time::TimeProvider;
 
+pub mod process;
+pub use process::{ProcessConfig, ProcessProvider};
+
 pub mod mcp;
 pub use mcp::{McpCapabilities, McpConfig, McpProvider};
 

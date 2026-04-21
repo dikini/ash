@@ -178,16 +178,6 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
-        // ── Process module builtins (qualified) ──
-        m.insert(
-            "process::run",
-            BuiltinEntry {
-                arity: 2,
-                variadic: false,
-                implemented: true,
-            },
-        );
-
         // ── Unqualified builtins ──
         let unqualified = [
             ("len", 1, false),
@@ -1227,33 +1217,6 @@ pub fn eval_function_call(
             }
         }
 
-        // Process module
-        (Some("process"), "run") => {
-            if args.len() != 2 {
-                return builtin_arity_error("process::run", 2, args.len());
-            }
-            let cmd = expect_string_arg(args, 0, "string")?;
-            let arg_list = match &args[1] {
-                Value::List(list) => list
-                    .iter()
-                    .map(|v| match v {
-                        Value::String(s) => Ok(s.clone()),
-                        _ => Err(EvalError::TypeMismatch {
-                            expected: "string".to_string(),
-                            actual: format!("{v:?}"),
-                        }),
-                    })
-                    .collect::<EvalResult<Vec<String>>>()?,
-                _ => {
-                    return Err(EvalError::TypeMismatch {
-                        expected: "list".to_string(),
-                        actual: format!("{:?}", args[1]),
-                    });
-                }
-            };
-            process_run(cmd, &arg_list)
-        }
-
         // Record operations
         (_, "keys") => {
             if args.len() != 1 {
@@ -1434,16 +1397,6 @@ fn regex_replace(pattern: &str, replacement: &str, text: &str) -> EvalResult<Val
     Ok(Value::String(
         regex.replace_all(text, replacement).to_string(),
     ))
-}
-
-/// Run an external command via `std::process::Command` and return stdout.
-fn process_run(cmd: &str, args: &[String]) -> EvalResult<Value> {
-    let output = std::process::Command::new(cmd)
-        .args(args)
-        .output()
-        .map_err(|e| EvalError::ExecutionFailed(format!("process::run failed: {e}")))?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    Ok(Value::String(stdout))
 }
 
 fn json_parse(text: &str) -> EvalResult<Value> {

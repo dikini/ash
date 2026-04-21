@@ -94,13 +94,13 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
-        // ── Forward-declared string builtins (not yet implemented) ──
+        // ── String case / whitespace builtins ──
         m.insert(
             "string::to_upper",
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: false,
+                implemented: true,
             },
         );
         m.insert(
@@ -108,7 +108,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: false,
+                implemented: true,
             },
         );
         m.insert(
@@ -116,7 +116,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: false,
+                implemented: true,
             },
         );
 
@@ -980,6 +980,42 @@ pub fn eval_function_call(
             }
             match &args[0] {
                 Value::String(s) => Ok(Value::Bool(s.is_empty())),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string".to_string(),
+                    actual: format!("{:?}", args[0]),
+                }),
+            }
+        }
+        (Some("string"), "to_upper") => {
+            if args.len() != 1 {
+                return builtin_arity_error("string::to_upper", 1, args.len());
+            }
+            match &args[0] {
+                Value::String(s) => Ok(Value::String(s.to_uppercase())),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string".to_string(),
+                    actual: format!("{:?}", args[0]),
+                }),
+            }
+        }
+        (Some("string"), "to_lower") => {
+            if args.len() != 1 {
+                return builtin_arity_error("string::to_lower", 1, args.len());
+            }
+            match &args[0] {
+                Value::String(s) => Ok(Value::String(s.to_lowercase())),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "string".to_string(),
+                    actual: format!("{:?}", args[0]),
+                }),
+            }
+        }
+        (Some("string"), "trim") => {
+            if args.len() != 1 {
+                return builtin_arity_error("string::trim", 1, args.len());
+            }
+            match &args[0] {
+                Value::String(s) => Ok(Value::String(s.trim().to_string())),
                 _ => Err(EvalError::TypeMismatch {
                     expected: "string".to_string(),
                     actual: format!("{:?}", args[0]),
@@ -3317,6 +3353,464 @@ mod tests {
     fn test_markdown_parse_arity_error() {
         let ctx = Context::new();
         let result = eval_function_call("parse", Some("markdown"), &[], &ctx);
+        assert!(result.is_err());
+    }
+
+    // ============================================================
+    // TASK-661: string::to_upper, string::to_lower, string::trim
+    // ============================================================
+
+    #[test]
+    fn test_string_to_upper_basic() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_upper",
+            Some("string"),
+            &[Value::String("hello".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("HELLO".to_string()));
+    }
+
+    #[test]
+    fn test_string_to_upper_already_upper() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_upper",
+            Some("string"),
+            &[Value::String("HELLO".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("HELLO".to_string()));
+    }
+
+    #[test]
+    fn test_string_to_upper_mixed_case() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_upper",
+            Some("string"),
+            &[Value::String("hElLo".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("HELLO".to_string()));
+    }
+
+    #[test]
+    fn test_string_to_upper_empty() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_upper",
+            Some("string"),
+            &[Value::String(String::new())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String(String::new()));
+    }
+
+    #[test]
+    fn test_string_to_upper_type_error() {
+        let ctx = Context::new();
+        let result = eval_function_call("to_upper", Some("string"), &[Value::Int(42)], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_string_to_upper_arity_error() {
+        let ctx = Context::new();
+        let result = eval_function_call("to_upper", Some("string"), &[], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_string_to_lower_basic() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_lower",
+            Some("string"),
+            &[Value::String("HELLO".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn test_string_to_lower_already_lower() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_lower",
+            Some("string"),
+            &[Value::String("hello".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn test_string_to_lower_mixed_case() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_lower",
+            Some("string"),
+            &[Value::String("HeLLo".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn test_string_to_lower_empty() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "to_lower",
+            Some("string"),
+            &[Value::String(String::new())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String(String::new()));
+    }
+
+    #[test]
+    fn test_string_to_lower_type_error() {
+        let ctx = Context::new();
+        let result = eval_function_call("to_lower", Some("string"), &[Value::Bool(true)], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_string_to_lower_arity_error() {
+        let ctx = Context::new();
+        let result = eval_function_call("to_lower", Some("string"), &[], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_string_trim_basic() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "trim",
+            Some("string"),
+            &[Value::String("  hi  ".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("hi".to_string()));
+    }
+
+    #[test]
+    fn test_string_trim_leading() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "trim",
+            Some("string"),
+            &[Value::String("   hello".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn test_string_trim_trailing() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "trim",
+            Some("string"),
+            &[Value::String("hello   ".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn test_string_trim_no_whitespace() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "trim",
+            Some("string"),
+            &[Value::String("hello".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn test_string_trim_empty() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "trim",
+            Some("string"),
+            &[Value::String(String::new())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String(String::new()));
+    }
+
+    #[test]
+    fn test_string_trim_only_whitespace() {
+        let ctx = Context::new();
+        let result = eval_function_call(
+            "trim",
+            Some("string"),
+            &[Value::String("   ".to_string())],
+            &ctx,
+        );
+        assert_eq!(result.unwrap(), Value::String(String::new()));
+    }
+
+    #[test]
+    fn test_string_trim_type_error() {
+        let ctx = Context::new();
+        let result = eval_function_call("trim", Some("string"), &[Value::Int(42)], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_string_trim_arity_error() {
+        let ctx = Context::new();
+        let result = eval_function_call("trim", Some("string"), &[], &ctx);
+        assert!(result.is_err());
+    }
+
+    // ============================================================
+    // TASK-664: list::filter and list::map closure callback tests
+    // ============================================================
+
+    /// Helper: build a simple 1-param closure (x => body).
+    fn simple_closure(body: Expr) -> Value {
+        use ash_core::env_frame::EnvFrame;
+        use std::sync::Arc;
+        Value::Closure {
+            params: vec![("x".to_string(), None)],
+            body: Box::new(body),
+            env: Arc::new(EnvFrame::new()),
+        }
+    }
+
+    // ── filter tests ──────────────────────────────────────────────
+
+    #[test]
+    fn test_filter_keep_greater_than_3() {
+        let ctx = Context::new();
+        // filter [1, 4, 2, 5, 6, 3] with (x > 3)
+        let closure = simple_closure(Expr::Binary {
+            op: BinaryOp::Gt,
+            left: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(3))),
+        });
+        let list = Value::List(Box::new(vec![
+            Value::Int(1),
+            Value::Int(4),
+            Value::Int(2),
+            Value::Int(5),
+            Value::Int(6),
+            Value::Int(3),
+        ]));
+        let result = eval_function_call("filter", None, &[list, closure], &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::List(Box::new(vec![Value::Int(4), Value::Int(5), Value::Int(6)]))
+        );
+    }
+
+    #[test]
+    fn test_filter_keeps_nothing() {
+        let ctx = Context::new();
+        // filter [1, 2, 3] with (x > 100) → []
+        let closure = simple_closure(Expr::Binary {
+            op: BinaryOp::Gt,
+            left: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(100))),
+        });
+        let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+        let result = eval_function_call("filter", None, &[list, closure], &ctx).unwrap();
+        assert_eq!(result, Value::List(Box::default()));
+    }
+
+    #[test]
+    fn test_filter_keeps_everything() {
+        let ctx = Context::new();
+        // filter [1, 2, 3] with (x > 0) → [1, 2, 3]
+        let closure = simple_closure(Expr::Binary {
+            op: BinaryOp::Gt,
+            left: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(0))),
+        });
+        let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+        let result = eval_function_call("filter", None, &[list, closure], &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3),]))
+        );
+    }
+
+    // ── map tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_map_double_elements() {
+        let ctx = Context::new();
+        // map [1, 2, 3] with (x * 2) → [2, 4, 6]
+        let closure = simple_closure(Expr::Binary {
+            op: BinaryOp::Mul,
+            left: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::Int(2))),
+        });
+        let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+        let result = eval_function_call("map", None, &[list, closure], &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::List(Box::new(vec![Value::Int(2), Value::Int(4), Value::Int(6),]))
+        );
+    }
+
+    #[test]
+    fn test_map_string_transform() {
+        let ctx = Context::new();
+        // map ["a", "b"] with (x + "!") → ["a!", "b!"]
+        let closure = simple_closure(Expr::Binary {
+            op: BinaryOp::Add,
+            left: Box::new(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+            right: Box::new(Expr::Literal(Value::String("!".to_string()))),
+        });
+        let list = Value::List(Box::new(vec![
+            Value::String("a".to_string()),
+            Value::String("b".to_string()),
+        ]));
+        let result = eval_function_call("map", None, &[list, closure], &ctx).unwrap();
+        assert_eq!(
+            result,
+            Value::List(Box::new(vec![
+                Value::String("a!".to_string()),
+                Value::String("b!".to_string()),
+            ]))
+        );
+    }
+
+    // ── filter/map error cases ────────────────────────────────────
+
+    #[test]
+    fn test_filter_wrong_first_arg_type() {
+        let ctx = Context::new();
+        let closure = simple_closure(Expr::Literal(Value::Bool(true)));
+        // filter(42, closure) → TypeMismatch
+        let result = eval_function_call("filter", None, &[Value::Int(42), closure], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_filter_wrong_second_arg_type() {
+        let ctx = Context::new();
+        let list = Value::List(Box::new(vec![Value::Int(1)]));
+        // filter(list, 99) → TypeMismatch
+        let result = eval_function_call("filter", None, &[list, Value::Int(99)], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_map_wrong_first_arg_type() {
+        let ctx = Context::new();
+        let closure = simple_closure(Expr::Literal(Value::Int(0)));
+        // map("hello", closure) → TypeMismatch
+        let result = eval_function_call(
+            "map",
+            None,
+            &[Value::String("hello".to_string()), closure],
+            &ctx,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_map_wrong_second_arg_type() {
+        let ctx = Context::new();
+        let list = Value::List(Box::new(vec![Value::Int(1)]));
+        // map(list, true) → TypeMismatch
+        let result = eval_function_call("map", None, &[list, Value::Bool(true)], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_filter_wrong_arity_too_few() {
+        let ctx = Context::new();
+        let result = eval_function_call("filter", None, &[], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_filter_wrong_arity_too_many() {
+        let ctx = Context::new();
+        let closure = simple_closure(Expr::Literal(Value::Bool(true)));
+        let result = eval_function_call(
+            "filter",
+            None,
+            &[Value::List(Box::default()), closure, Value::Int(1)],
+            &ctx,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_map_wrong_arity_too_few() {
+        let ctx = Context::new();
+        let result = eval_function_call("map", None, &[], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_map_wrong_arity_too_many() {
+        let ctx = Context::new();
+        let closure = simple_closure(Expr::Literal(Value::Int(0)));
+        let result = eval_function_call(
+            "map",
+            None,
+            &[Value::List(Box::default()), closure, Value::Int(1)],
+            &ctx,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_filter_closure_wrong_param_count() {
+        let ctx = Context::new();
+        use ash_core::env_frame::EnvFrame;
+        use std::sync::Arc;
+        // Closure with 0 params → WrongArity
+        let closure = Value::Closure {
+            params: vec![],
+            body: Box::new(Expr::Literal(Value::Bool(true))),
+            env: Arc::new(EnvFrame::new()),
+        };
+        let list = Value::List(Box::new(vec![Value::Int(1)]));
+        let result = eval_function_call("filter", None, &[list, closure], &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_map_closure_wrong_param_count() {
+        let ctx = Context::new();
+        use ash_core::env_frame::EnvFrame;
+        use std::sync::Arc;
+        // Closure with 2 params → WrongArity
+        let closure = Value::Closure {
+            params: vec![("x".to_string(), None), ("y".to_string(), None)],
+            body: Box::new(Expr::Literal(Value::Int(0))),
+            env: Arc::new(EnvFrame::new()),
+        };
+        let list = Value::List(Box::new(vec![Value::Int(1)]));
+        let result = eval_function_call("map", None, &[list, closure], &ctx);
         assert!(result.is_err());
     }
 }

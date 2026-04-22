@@ -23,6 +23,8 @@ pub enum PurityViolation {
     UnresolvedCall { callee: String },
     NonPureCall { callee: String, found: String },
     InvalidInterfaceMethodCall { interface: String, method: String },
+    ActBlockInPureContext,
+    InvokeInPureContext,
 }
 
 impl fmt::Display for PurityViolation {
@@ -51,6 +53,12 @@ impl fmt::Display for PurityViolation {
                     interface, method
                 )
             }
+            PurityViolation::ActBlockInPureContext => {
+                write!(f, "act block not allowed in pure function body")
+            }
+            PurityViolation::InvokeInPureContext => {
+                write!(f, "invoke call not allowed in pure function body")
+            }
         }
     }
 }
@@ -63,9 +71,18 @@ impl fmt::Display for PurityError {
 
 impl std::error::Error for PurityError {}
 
-pub fn check_purity(env: &TypeEnv, expr: &Expr) -> Result<(), Vec<PurityError>> {
+/// Check whether an expression is pure enough for a function body.
+///
+/// When `allow_effects` is `true`, `act {}` blocks and `invoke(...)` calls
+/// are permitted (the function declares `Act<T>` return type). When `false`,
+/// both are rejected as purity violations.
+pub fn check_purity(
+    env: &TypeEnv,
+    expr: &Expr,
+    allow_effects: bool,
+) -> Result<(), Vec<PurityError>> {
     let mut errors = Vec::new();
-    check_purity_recursive(env, expr, &mut errors);
+    check_purity_recursive(env, expr, allow_effects, &mut errors);
     if errors.is_empty() {
         Ok(())
     } else {
@@ -73,7 +90,12 @@ pub fn check_purity(env: &TypeEnv, expr: &Expr) -> Result<(), Vec<PurityError>> 
     }
 }
 
-fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityError>) {
+fn check_purity_recursive(
+    env: &TypeEnv,
+    expr: &Expr,
+    allow_effects: bool,
+    errors: &mut Vec<PurityError>,
+) {
     match expr {
         Expr::Policy(_) => {
             errors.push(PurityError {
@@ -89,18 +111,18 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
         }
         Expr::Literal(_) | Expr::Variable { .. } | Expr::Panic { .. } => {}
         Expr::FieldAccess { base, .. } => {
-            check_purity_recursive(env, base, errors);
+            check_purity_recursive(env, base, allow_effects, errors);
         }
         Expr::IndexAccess { base, index, .. } => {
-            check_purity_recursive(env, base, errors);
-            check_purity_recursive(env, index, errors);
+            check_purity_recursive(env, base, allow_effects, errors);
+            check_purity_recursive(env, index, allow_effects, errors);
         }
         Expr::Unary { operand, .. } => {
-            check_purity_recursive(env, operand, errors);
+            check_purity_recursive(env, operand, allow_effects, errors);
         }
         Expr::Binary { left, right, .. } => {
-            check_purity_recursive(env, left, errors);
-            check_purity_recursive(env, right, errors);
+            check_purity_recursive(env, left, allow_effects, errors);
+            check_purity_recursive(env, right, allow_effects, errors);
         }
         Expr::Call {
             func,
@@ -108,8 +130,17 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             args,
             span,
         } => {
+            // Reject invoke() in pure contexts
+            if !allow_effects && module.is_none() && func.as_ref() == "invoke" {
+                errors.push(PurityError {
+                    kind: PurityViolation::InvokeInPureContext,
+                    span: *span,
+                });
+                return;
+            }
+
             for arg in args {
-                check_purity_recursive(env, arg, errors);
+                check_purity_recursive(env, arg, allow_effects, errors);
             }
 
             // Check if this is an interface method call
@@ -163,7 +194,7 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
         Expr::Match {
             scrutinee, arms, ..
         } => {
-            check_purity_recursive(env, scrutinee, errors);
+            check_purity_recursive(env, scrutinee, allow_effects, errors);
             for arm in arms {
                 let mut arm_env = env.clone();
                 let scrutinee_result = check_expr(env, scrutinee);
@@ -174,7 +205,7 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
                         &scrutinee_result.substitution.apply(&scrutinee_result.ty),
                     );
                 }
-                check_purity_recursive(&arm_env, arm.body.as_ref(), errors);
+                check_purity_recursive(&arm_env, arm.body.as_ref(), allow_effects, errors);
             }
         }
         Expr::IfLet {
@@ -184,7 +215,7 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             else_branch,
             ..
         } => {
-            check_purity_recursive(env, expr, errors);
+            check_purity_recursive(env, expr, allow_effects, errors);
             let mut then_env = env.clone();
             let matched = check_expr(env, expr);
             if matched.is_ok() {
@@ -194,25 +225,25 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
                     &matched.substitution.apply(&matched.ty),
                 );
             }
-            check_purity_recursive(&then_env, then_branch, errors);
-            check_purity_recursive(env, else_branch, errors);
+            check_purity_recursive(&then_env, then_branch, allow_effects, errors);
+            check_purity_recursive(env, else_branch, allow_effects, errors);
         }
         Expr::Constructor {
             fields, payload, ..
         } => {
             for (_, field_expr) in fields {
-                check_purity_recursive(env, field_expr, errors);
+                check_purity_recursive(env, field_expr, allow_effects, errors);
             }
             match payload {
                 ash_parser::surface::ConstructorPayload::Unit => {}
                 ash_parser::surface::ConstructorPayload::Record(rec_fields) => {
                     for (_, field_expr) in rec_fields {
-                        check_purity_recursive(env, field_expr, errors);
+                        check_purity_recursive(env, field_expr, allow_effects, errors);
                     }
                 }
                 ash_parser::surface::ConstructorPayload::Tuple(elems) => {
                     for elem in elems {
-                        check_purity_recursive(env, elem, errors);
+                        check_purity_recursive(env, elem, allow_effects, errors);
                     }
                 }
             }
@@ -223,10 +254,10 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             else_branch,
             ..
         } => {
-            check_purity_recursive(env, condition, errors);
-            check_purity_recursive(env, then_branch, errors);
+            check_purity_recursive(env, condition, allow_effects, errors);
+            check_purity_recursive(env, then_branch, allow_effects, errors);
             if let Some(else_expr) = else_branch {
-                check_purity_recursive(env, else_expr, errors);
+                check_purity_recursive(env, else_expr, allow_effects, errors);
             }
         }
         Expr::Block {
@@ -237,7 +268,7 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             let mut block_env = env.extend();
             for stmt in statements {
                 let BlockStmt::Let { pattern, expr, .. } = stmt;
-                check_purity_recursive(&block_env, expr, errors);
+                check_purity_recursive(&block_env, expr, allow_effects, errors);
                 let expr_result = check_expr(&block_env, expr);
                 if expr_result.is_ok() {
                     crate::bind_pattern_variables(
@@ -248,7 +279,7 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
                 }
             }
             if let Some(tail) = tail_expr {
-                check_purity_recursive(&block_env, tail, errors);
+                check_purity_recursive(&block_env, tail, allow_effects, errors);
             }
         }
         Expr::FnDef { params, body, .. } => {
@@ -256,22 +287,29 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             for (name, _ty) in params {
                 fn_env.bind_variable(name.as_ref(), Type::Var(crate::types::TypeVar::fresh()));
             }
-            check_purity_recursive(&fn_env, body, errors);
+            check_purity_recursive(&fn_env, body, allow_effects, errors);
         }
         Expr::FnApply { func, args, .. } => {
-            check_purity_recursive(env, func, errors);
+            check_purity_recursive(env, func, allow_effects, errors);
             for arg in args {
-                check_purity_recursive(env, arg, errors);
+                check_purity_recursive(env, arg, allow_effects, errors);
             }
         }
-        // TODO(TASK-674): Act block purity checking
-        Expr::ActBlock { stmts, .. } => {
+        // TASK-680: Purity enforcement for act {} blocks
+        Expr::ActBlock { stmts, span, .. } => {
+            if !allow_effects {
+                errors.push(PurityError {
+                    kind: PurityViolation::ActBlockInPureContext,
+                    span: *span,
+                });
+                return;
+            }
             for stmt in stmts {
                 let value = match stmt {
                     ActStmt::Bind { value, .. } => value,
                     ActStmt::Return { value, .. } => value,
                 };
-                check_purity_recursive(env, value, errors);
+                check_purity_recursive(env, value, allow_effects, errors);
             }
         }
     }
@@ -308,7 +346,7 @@ mod tests {
     fn pure_literal_is_ok() {
         let env = TypeEnv::new();
         let expr = Expr::Literal(Literal::Int(42));
-        assert!(check_purity(&env, &expr).is_ok());
+        assert!(check_purity(&env, &expr, false).is_ok());
     }
 
     #[test]
@@ -320,7 +358,7 @@ mod tests {
             right: int_lit(2),
             span: Span::default(),
         };
-        assert!(check_purity(&env, &expr).is_ok());
+        assert!(check_purity(&env, &expr, false).is_ok());
     }
 
     #[test]
@@ -330,7 +368,7 @@ mod tests {
             name: box_name("x"),
             span: ash_parser::token::Span::default(),
         };
-        assert!(check_purity(&env, &expr).is_ok());
+        assert!(check_purity(&env, &expr, false).is_ok());
     }
 
     #[test]
@@ -343,7 +381,7 @@ mod tests {
             args: vec![*int_lit(1)],
             span: Span::default(),
         };
-        assert!(check_purity(&env, &expr).is_ok());
+        assert!(check_purity(&env, &expr, false).is_ok());
     }
 
     #[test]
@@ -362,7 +400,7 @@ mod tests {
             args: vec![*int_lit(1)],
             span: Span::default(),
         };
-        let result = check_purity(&env, &expr).unwrap_err();
+        let result = check_purity(&env, &expr, false).unwrap_err();
         assert!(matches!(
             &result[0].kind,
             PurityViolation::NonPureCall { callee, .. } if callee == "f"
@@ -377,7 +415,7 @@ mod tests {
             name: box_name("deny"),
             span: ash_parser::token::Span::default(),
         });
-        let result = check_purity(&env, &expr);
+        let result = check_purity(&env, &expr, false);
         assert!(result.is_err());
         let errors = result.unwrap_err();
         assert_eq!(errors.len(), 1);
@@ -391,7 +429,7 @@ mod tests {
             obligation: box_name("auth"),
             span: Span::default(),
         };
-        let result = check_purity(&env, &expr);
+        let result = check_purity(&env, &expr, false);
         assert!(result.is_err());
         let errors = result.unwrap_err();
         assert_eq!(errors.len(), 1);
@@ -409,7 +447,7 @@ mod tests {
             args: vec![*int_lit(42)],
             span: Span::default(),
         };
-        let result = check_purity(&env, &expr);
+        let result = check_purity(&env, &expr, false);
         assert!(result.is_err());
         let errors = result.unwrap_err();
         assert_eq!(errors.len(), 1);
@@ -436,7 +474,7 @@ mod tests {
             })),
             span: Span::default(),
         };
-        let result = check_purity(&env, &expr);
+        let result = check_purity(&env, &expr, false);
         assert!(result.is_err());
         let errors = result.unwrap_err();
         assert_eq!(errors.len(), 2);
@@ -457,7 +495,7 @@ mod tests {
             tail_expr: Some(var("x")),
             span: Span::default(),
         };
-        assert!(check_purity(&env, &expr).is_ok());
+        assert!(check_purity(&env, &expr, false).is_ok());
     }
 
     #[test]
@@ -467,7 +505,7 @@ mod tests {
             message: box_name("oops"),
             span: Span::default(),
         };
-        assert!(check_purity(&env, &expr).is_ok());
+        assert!(check_purity(&env, &expr, false).is_ok());
     }
 
     #[test]
@@ -479,6 +517,67 @@ mod tests {
             else_branch: None,
             span: Span::default(),
         };
-        assert!(check_purity(&env, &expr).is_ok());
+        assert!(check_purity(&env, &expr, false).is_ok());
+    }
+
+    // ── TASK-680: act {} and invoke() purity enforcement ──
+
+    #[test]
+    fn act_block_rejected_in_pure_context() {
+        let env = TypeEnv::new();
+        let expr = Expr::ActBlock {
+            stmts: vec![ActStmt::Return {
+                value: int_lit(42),
+                span: Span::default(),
+            }],
+            span: Span::default(),
+        };
+        let result = check_purity(&env, &expr, false).unwrap_err();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].kind, PurityViolation::ActBlockInPureContext);
+    }
+
+    #[test]
+    fn invoke_rejected_in_pure_context() {
+        let mut env = TypeEnv::new();
+        // bind "invoke" as a non-Fn type so it doesn't get resolved as a pure call
+        env.bind_variable("invoke", Type::Int);
+        let expr = Expr::Call {
+            func: box_name("invoke"),
+            module: None,
+            args: vec![],
+            span: Span::default(),
+        };
+        let result = check_purity(&env, &expr, false).unwrap_err();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].kind, PurityViolation::InvokeInPureContext);
+    }
+
+    #[test]
+    fn act_block_allowed_in_effective_context() {
+        let env = TypeEnv::new();
+        let expr = Expr::ActBlock {
+            stmts: vec![ActStmt::Return {
+                value: int_lit(42),
+                span: Span::default(),
+            }],
+            span: Span::default(),
+        };
+        assert!(check_purity(&env, &expr, true).is_ok());
+    }
+
+    #[test]
+    fn invoke_allowed_in_effective_context() {
+        let mut env = TypeEnv::new();
+        env.bind_variable("invoke", Type::Fn(vec![], Box::new(Type::Int)));
+        let expr = Expr::Call {
+            func: box_name("invoke"),
+            module: None,
+            args: vec![],
+            span: Span::default(),
+        };
+        // With allow_effects=true, the invoke shortcut should not fire,
+        // but it still needs to resolve as a valid call target.
+        assert!(check_purity(&env, &expr, true).is_ok());
     }
 }

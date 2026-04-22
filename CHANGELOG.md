@@ -10,6 +10,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - SPEC-047: Act Monad specification (draft). Defines `Act<A>` type constructor, `act {}` block expression, `invoke`/`unit`/`bind` builtins, effectful function declarations, purity enforcement, and the unification of pure expression evaluation with effectful workflow execution. 33 tasks across 4 tracks (TASK-672 through TASK-704). Related plan: PLAN-097.
 
+- TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
+
 - PLAN-097: Phase 97 Act Monad implementation plan. Track A (surface/core), Track B (type system), Track C (runtime), Track D (specs/testing). Estimated 75.5 hours.
 
 ### Changed

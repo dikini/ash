@@ -1914,7 +1914,12 @@ fn check_function_def_in_env(
         .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
     validate_fn_contract_namespace(function, &lowered_contract)?;
 
-    crate::purity::check_purity(&fn_env, &function.body).map_err(|errors| {
+    let allow_effects = matches!(
+        &declared_return_ty,
+        Type::Constructor { name, .. } if name.name == "Act"
+    );
+
+    crate::purity::check_purity(&fn_env, &function.body, allow_effects).map_err(|errors| {
         TypeCheckError::TypeError(
             errors
                 .into_iter()

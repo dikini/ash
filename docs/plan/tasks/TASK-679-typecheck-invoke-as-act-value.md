@@ -1,6 +1,6 @@
 # TASK-679: Type-check invoke as Act<Value>
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 

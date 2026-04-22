@@ -2755,10 +2755,10 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 ||| TASK-674 | Parse `act { ... }` in expression context | 3 | ✅ Complete ||
 ||| TASK-675 | Lower `SurfaceExpr::ActBlock` into existing core expressions | 5 | ✅ Complete ||
 ||| TASK-676 | Property/integration tests for act-block parsing and lowering | 3 | ✅ Complete ||
-||| TASK-677 | Register `Act` type constructor with kind `* -> *` | 1 | 🟡 Ready ||
-||| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, return rules | 4 | 🟡 Ready ||
-||| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | 🟡 Ready ||
-||| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure fn bodies | 3 | 🟡 Ready ||
+||| TASK-677 | Register `Act` type constructor with kind `* -> *` | 1 | ✅ Complete ||
+||| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, return rules | 4 | ✅ Complete ||
+||| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | ✅ Complete ||
+||| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure fn bodies | 3 | ✅ Complete ||
 ||| TASK-681 | Record/test additive coexistence with existing `Type::Fun(...)` | 2 | 🟡 Ready ||
 ||| TASK-682 | Type-system tests for purity rejection and `Act<T>` inference | 4 | 🟡 Ready ||
 ||| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2 | 🟡 Ready ||

@@ -1,6 +1,6 @@
 # TASK-678: Type-check Expr::ActBlock
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 

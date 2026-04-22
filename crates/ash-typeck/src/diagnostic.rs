@@ -239,6 +239,8 @@ impl AshLspError for crate::purity::PurityError {
                 crate::purity::PurityViolation::UnresolvedCall { .. } => "E302",
                 crate::purity::PurityViolation::NonPureCall { .. } => "E303",
                 crate::purity::PurityViolation::InvalidInterfaceMethodCall { .. } => "E304",
+                crate::purity::PurityViolation::ActBlockInPureContext => "E305",
+                crate::purity::PurityViolation::InvokeInPureContext => "E306",
             }
             .into(),
         ))

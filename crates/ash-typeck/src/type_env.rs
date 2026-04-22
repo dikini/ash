@@ -1040,6 +1040,7 @@ impl TypeEnv {
         self.add_option_type();
         self.add_result_type();
         self.add_list_type();
+        self.add_act_type();
         self.add_builtin_capability_symbols();
     }
 
@@ -1120,6 +1121,19 @@ impl TypeEnv {
 
         self.register_type(&list_type)
             .expect("Failed to register List type");
+    }
+
+    /// Add the Act<T> type
+    fn add_act_type(&mut self) {
+        let act_type = TypeDef {
+            name: "Act".to_string(),
+            params: vec!["T".to_string()],
+            body: TypeBody::Struct(vec![]),
+            visibility: ash_core::ast::Visibility::Public,
+        };
+
+        self.register_type(&act_type)
+            .expect("Failed to register Act type");
     }
 
     /// Check if a type is registered

@@ -1589,7 +1589,8 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 /// Parse an expression inside a fn body.
 ///
 /// This is the entry point for fn-body expressions. It dispatches to
-/// if/match/panic/binary/unary/call/literal/variable as appropriate.
+/// if/match/panic before falling back to the general expression parser
+/// (which handles act blocks, closures, and all other expression forms).
 fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
 
@@ -2414,5 +2415,43 @@ mod tests {
 
         assert_eq!(capability.span.line, 3);
         assert_eq!(capability.span.column, 3);
+    }
+
+    // =========================================================================
+    // TASK-674: act block expression parsing tests
+    // =========================================================================
+
+    #[test]
+    fn test_parse_act_block_simple_return() {
+        let mut input = test_input("{ act { ret 42; } }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
+        let expr = result.unwrap();
+        assert!(
+            matches!(expr, Expr::Block { ref tail_expr, .. } if tail_expr.is_some()),
+            "expected a block with a tail expression, got: {:?}",
+            expr
+        );
+    }
+
+    #[test]
+    fn test_parse_act_block_bind_and_return() {
+        let mut input = test_input("{ act { x = 42; ret x; } }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
+    }
+
+    #[test]
+    fn test_parse_act_block_nested_calls() {
+        let mut input = test_input("{ act { result = read_file(path); ret result; } }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
+    }
+
+    #[test]
+    fn test_parse_act_block_empty() {
+        let mut input = test_input("{ act {} }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
     }
 }

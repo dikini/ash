@@ -100,7 +100,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: true,
+                implemented: false,
             },
         );
         m.insert(
@@ -108,13 +108,23 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: true,
+                implemented: false,
             },
         );
         m.insert(
             "string::trim",
             BuiltinEntry {
                 arity: 1,
+                variadic: false,
+                implemented: false,
+            },
+        );
+
+        // ── Process module builtins (qualified) ──
+        m.insert(
+            "process::run",
+            BuiltinEntry {
+                arity: 2,
                 variadic: false,
                 implemented: true,
             },
@@ -1036,6 +1046,52 @@ pub fn eval_function_call(
             let replacement = expect_string_arg(args, 1, "string")?;
             let text = expect_string_arg(args, 2, "string")?;
             regex_replace(pattern, replacement, text)
+        }
+        (Some("process"), "run") => {
+            if args.len() != 2 {
+                return builtin_arity_error("process::run", 2, args.len());
+            }
+            let cmd = expect_string_arg(args, 0, "string")?;
+            let list = match &args[1] {
+                Value::List(items) => items,
+                other => {
+                    return Err(EvalError::TypeMismatch {
+                        expected: "list".to_string(),
+                        actual: format!("{other:?}"),
+                    });
+                }
+            };
+
+            let mut command = std::process::Command::new(cmd);
+            for item in list.iter() {
+                match item {
+                    Value::String(s) => {
+                        command.arg(s);
+                    }
+                    other => {
+                        return Err(EvalError::TypeMismatch {
+                            expected: "string".to_string(),
+                            actual: format!("{other:?}"),
+                        });
+                    }
+                }
+            }
+
+            let output = command
+                .output()
+                .map_err(|e| EvalError::ExecutionFailed(format!("process::run failed: {e}")))?;
+
+            if output.status.success() {
+                Ok(Value::String(
+                    String::from_utf8_lossy(&output.stdout).to_string(),
+                ))
+            } else {
+                Err(EvalError::ExecutionFailed(format!(
+                    "process::run exited with status {}: {}",
+                    output.status,
+                    String::from_utf8_lossy(&output.stderr)
+                )))
+            }
         }
         // List operations
         (_, "len") => {

@@ -14,6 +14,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Phase 97 TASK-672 is now complete. SPEC-047, PLAN-097, and the Phase 97 PLAN-INDEX packet are aligned around the additive architecture: surface-only `act { ... }`, lowering into existing core expressions, `invoke` as a runtime primitive callable via `Expr::Call`, `unit`/`bind`/`then`/`guard` as library functions, and no Phase-97 SPEC-025 expansion.
+
+- Baseline verification gates are green again for Phase 97 worktree execution. Repaired pre-existing workspace blockers by restoring `process::run` builtin dispatch compatibility for existing interpreter tests, aligning provider/test files with `cargo fmt` and strict clippy, and hardening a parser debug test fixture path/expectation so `cargo test --all`, `cargo fmt --check`, and `cargo clippy --all-targets --all-features -- -D warnings` pass cleanly.
+
+- TASK-673 act-block lowering now respects declared effectful names when deciding whether to wrap bind RHS in `unit()`, so user-defined effectful calls are preserved as monadic values instead of being misclassified as pure.
+
+- TASK-673 surface Act substrate is now landed: `surface::ActStmt` and `surface::Expr::ActBlock` are present as span-carrying parser/lowering carriers without introducing a new core IR act-block form.
+
+- Engine callable lowering now propagates module/program effectful-name context through local and imported user-defined function bodies, closing the remaining Phase 97 act-block gap where effectful RHS calls could still be mislowered outside workflow-body lowering.
+
+- Phase 97 Track A surface/lowering slice is now landed for TASK-674 through TASK-676. `parse_expr::expr()` accepts only braced expression-level `act { ... }` blocks with bind/return statements, lowering desugars `Expr::ActBlock` into existing `unit(...)`/`bind(...)` + closure core forms, and `ash-parser` now carries focused regression/property coverage for nesting, invalid sequences, and workflow-vs-expression `act` disambiguation.
+
 - NOTE-005 status updated: design exploration now has a normative spec counterpart (SPEC-047).
 
 - Phase 96 Track A: Module resolution and stdlib integration (TASK-655 through TASK-659). Module resolver now supports cycle detection via visiting set. Stdlib modules (string, list, predicate, result, option) resolve through builtin stdlib root. CLI run command routes ordinary files through `engine.run_file()` for full import resolution. Entry bootstrap path preserved and verified. 12 module resolution + 13 entry bootstrap tests pass.

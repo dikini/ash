@@ -66,6 +66,9 @@ pub struct InlineCallable {
     pub exported_name: String,
     /// Parameter names in call order.
     pub params: Vec<String>,
+    /// Unqualified function names from the exporting module that should be
+    /// treated as effectful when lowering nested `act { ... }` expressions.
+    pub effectful_names: HashSet<String>,
     /// Whether this callable has an Ash body or is a bodyless builtin.
     pub kind: CallableKind,
     /// Full type signature for builtin fn callables.
@@ -477,6 +480,10 @@ pub(crate) fn collect_module_exports(
 
     let source = std::fs::read_to_string(&path)?;
     let mut exports = ModuleExports::default();
+    let module_effectful_names = ash_parser::parse_surface_file(&source)
+        .ok()
+        .map(|module| ash_parser::effectful_names_from_definitions(&module.definitions))
+        .unwrap_or_default();
 
     for snippet in extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub type ")) {
         for type_def in parse_public_type_defs(&snippet)? {
@@ -490,13 +497,19 @@ pub(crate) fn collect_module_exports(
         // `module` is left empty here; load_ordinary_file populates the real
         // value from the import path before inserting into imported_callables.
         if let Some(callable) = parse_builtin_fn_callable(&snippet, String::new())? {
-            insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+            let mut callable = callable.callable;
+            callable.effectful_names.clone_from(&module_effectful_names);
+            let exported_name = callable.exported_name.clone();
+            insert_callable_export(&mut exports, &exported_name, callable)?;
         }
     }
 
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("workflow ")) {
         if let Ok(Some(callable)) = parse_workflow_callable(&snippet) {
-            insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+            let mut callable = callable.callable;
+            callable.effectful_names.clone_from(&module_effectful_names);
+            let exported_name = callable.exported_name.clone();
+            insert_callable_export(&mut exports, &exported_name, callable)?;
         }
         // Silently skip workflows that fail to parse during module export collection.
         // This mirrors the graceful handling of pub fn parse failures above.
@@ -505,7 +518,10 @@ pub(crate) fn collect_module_exports(
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
         match parse_supported_pub_fn_callable(&snippet) {
             Ok(Some(callable)) => {
-                insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+                let mut callable = callable.callable;
+                callable.effectful_names.clone_from(&module_effectful_names);
+                let exported_name = callable.exported_name.clone();
+                insert_callable_export(&mut exports, &exported_name, callable)?;
             }
             Ok(None) => {}
             Err(_diag) => {
@@ -530,8 +546,9 @@ pub(crate) fn collect_module_exports(
             && let Some(target_path) =
                 resolve_module_path(&import_spec.module_segments, &search_roots(module_root))
         {
-            let target_canonical =
-                target_path.canonicalize().unwrap_or_else(|_| target_path.clone());
+            let target_canonical = target_path
+                .canonicalize()
+                .unwrap_or_else(|_| target_path.clone());
             if visiting.contains(&target_canonical) {
                 return Err(EngineError::Parse(format!(
                     "cyclic import detected: '{}'",
@@ -761,10 +778,10 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
         .collect::<Vec<_>>();
 
     Ok(Some(ImportedCallableExport {
-        name: name.clone(),
         callable: InlineCallable {
             exported_name: name,
             params,
+            effectful_names: HashSet::new(),
             kind: CallableKind::User {
                 body: function.body,
             },
@@ -827,10 +844,10 @@ fn parse_builtin_fn_callable(
         .collect::<Vec<_>>();
 
     Ok(Some(ImportedCallableExport {
-        name: name.clone(),
         callable: InlineCallable {
             exported_name: name,
             params,
+            effectful_names: HashSet::new(),
             kind: CallableKind::Builtin { module },
             signature: Some(builtin),
         },
@@ -839,7 +856,6 @@ fn parse_builtin_fn_callable(
 
 #[derive(Debug, Clone)]
 struct ImportedCallableExport {
-    name: String,
     callable: InlineCallable,
 }
 
@@ -857,13 +873,13 @@ fn extract_callable_from_workflow(
     };
 
     Ok(Some(ImportedCallableExport {
-        name: name.to_string(),
         callable: InlineCallable {
             exported_name: name.to_string(),
             params: params
                 .into_iter()
                 .map(|param| param.name.to_string())
                 .collect(),
+            effectful_names: HashSet::new(),
             kind: CallableKind::User { body: expr },
             signature: None,
         },
@@ -1126,8 +1142,9 @@ mod tests {
         std::fs::write(dir.join("parent.ash"), "pub mod child;").expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting parent exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting parent exports should succeed");
 
         let child = exports
             .child_modules
@@ -1157,8 +1174,9 @@ mod tests {
         .expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting parent exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting parent exports should succeed");
 
         // Role is re-exported via pub use
         assert!(
@@ -1194,8 +1212,9 @@ mod tests {
         .expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting parent exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting parent exports should succeed");
 
         // Alpha should be re-exported
         assert!(
@@ -1231,7 +1250,8 @@ mod tests {
         std::fs::write(dir.join("parent.ash"), "pub mod nonexistent;").expect("write parent");
 
         let mut cache = HashMap::new();
-        let result = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new());
+        let result =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new());
 
         let err =
             result.expect_err("collecting exports from file with nonexistent pub mod should fail");
@@ -1258,8 +1278,9 @@ pub type Role = System | User;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting exports should succeed");
 
         // Only pub builtin fn is exported; module-private builtin fn is not.
         assert!(
@@ -1299,8 +1320,9 @@ pub type Flag = On | Off;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting exports should succeed");
 
         assert!(
             exports.callables.contains_key("double"),
@@ -1336,8 +1358,9 @@ pub type Flag = On | Off;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting exports should succeed");
 
         assert!(
             exports.callables.contains_key("identity"),

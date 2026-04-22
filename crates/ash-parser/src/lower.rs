@@ -3,7 +3,7 @@
 //! This module converts the surface syntax AST into the core IR representation
 //! used by the ash-core crate.
 
-use std::fmt;
+use std::{cell::RefCell, fmt};
 
 use ash_core::adt::tuple_field_name;
 use ash_core::{
@@ -22,6 +22,31 @@ use crate::surface::{
     ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, Type, UnaryOp,
     Workflow as SurfaceWorkflow, WorkflowDef, YieldArm,
 };
+
+thread_local! {
+    static ACTIVE_EFFECTFUL_NAMES: RefCell<Option<std::collections::HashSet<String>>> =
+        const { RefCell::new(None) };
+}
+
+fn with_active_effectful_names<T>(
+    effectful_names: &std::collections::HashSet<String>,
+    f: impl FnOnce() -> T,
+) -> T {
+    let previous = ACTIVE_EFFECTFUL_NAMES.with(|cell| cell.replace(Some(effectful_names.clone())));
+    let result = f();
+    ACTIVE_EFFECTFUL_NAMES.with(|cell| {
+        let _ = cell.replace(previous);
+    });
+    result
+}
+
+fn active_effectful_names_contains(name: &str) -> bool {
+    ACTIVE_EFFECTFUL_NAMES.with(|cell| {
+        cell.borrow()
+            .as_ref()
+            .is_some_and(|names| names.contains(name))
+    })
+}
 
 /// Context for lowering workflows with capability resolution.
 ///
@@ -450,7 +475,9 @@ pub fn lower_workflow_with_context(
     // Create a provenance for the workflow
     let provenance = Provenance::new();
 
-    let core = lower_workflow_body(&def.body, &provenance, ctx)?;
+    let core = with_active_effectful_names(&ctx.effectful_names, || {
+        lower_workflow_body(&def.body, &provenance, ctx)
+    })?;
     Ok(crate::lift::lift_workflow_with_names(
         core,
         &ctx.effectful_names,
@@ -1365,6 +1392,14 @@ pub const BUILTIN_FUNCTIONS: &[&str] = &[
 ];
 
 /// Lower a surface expression to core IR.
+pub fn lower_expr_with_context(
+    expr: &Expr,
+    ctx: &LoweringContext,
+) -> Result<CoreExpr, LoweringError> {
+    with_active_effectful_names(&ctx.effectful_names, || lower_expr(expr))
+}
+
+/// Lower a surface expression to core IR.
 pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
     match expr {
         Expr::Literal(lit) => Ok(CoreExpr::Literal(lower_literal(lit)?)),
@@ -1556,6 +1591,68 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
                 args: lowered_args,
             })
         }
+
+        Expr::ActBlock { stmts, .. } => lower_act_block(stmts),
+    }
+}
+
+/// Lower an act block into nested bind/unit calls. SPEC-047 §6.2
+///
+/// Empty act blocks and invalid statement sequences (e.g., return followed by
+/// more statements) are rejected with a lowering error per the spec contract.
+fn lower_act_block(stmts: &[crate::surface::ActStmt]) -> Result<CoreExpr, LoweringError> {
+    match stmts {
+        [] => Err(LoweringError::ExprNotLowerable {
+            kind: "empty act block",
+        }),
+        [crate::surface::ActStmt::Return { value, .. }] => {
+            let lowered = lower_expr(value)?;
+            Ok(CoreExpr::Call {
+                func: "unit".to_string(),
+                module: None,
+                arguments: vec![lowered],
+            })
+        }
+        [crate::surface::ActStmt::Bind { name, value, .. }, rest @ ..] => {
+            let lowered_value = lower_expr(value)?;
+            let monadic_value = if is_act_like_surface_expr(value) {
+                lowered_value
+            } else {
+                CoreExpr::Call {
+                    func: "unit".to_string(),
+                    module: None,
+                    arguments: vec![lowered_value],
+                }
+            };
+            let body = lower_act_block(rest)?;
+            Ok(CoreExpr::Call {
+                func: "bind".to_string(),
+                module: None,
+                arguments: vec![
+                    monadic_value,
+                    CoreExpr::FnDef {
+                        params: vec![(name.to_string(), None)],
+                        return_type: None,
+                        body: Box::new(body),
+                    },
+                ],
+            })
+        }
+        // Catch-all: invalid sequence (e.g., Return followed by more statements)
+        _ => Err(LoweringError::ExprNotLowerable {
+            kind: "invalid act statement sequence (return must be last)",
+        }),
+    }
+}
+
+fn is_act_like_surface_expr(expr: &Expr) -> bool {
+    match expr {
+        Expr::ActBlock { .. } => true,
+        Expr::Call { func, module, .. } if module.is_none() => {
+            matches!(func.as_ref(), "invoke" | "bind" | "then" | "guard" | "unit")
+                || active_effectful_names_contains(func.as_ref())
+        }
+        _ => false,
     }
 }
 
@@ -1872,11 +1969,12 @@ fn lower_effect_type(effect: EffectType) -> Effect {
 mod tests {
     use super::*;
     use crate::surface::{
-        BinaryOp, Contract as SurfaceContract, EffectType, EnsuresClause, Expr as SurfaceExpr,
-        Literal as SurfaceLiteral, Pattern, Requirement as SurfaceRequirement, RoleDef,
-        Workflow as SurfaceWorkflow,
+        ActStmt, BinaryOp, Contract as SurfaceContract, EffectType, EnsuresClause,
+        Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern, Requirement as SurfaceRequirement,
+        RoleDef, Workflow as SurfaceWorkflow,
     };
     use crate::token::Span;
+    use std::collections::HashSet;
 
     fn dummy_span() -> Span {
         Span::new(0, 0, 1, 1)
@@ -2778,5 +2876,566 @@ mod tests {
         assert_eq!(core.params[0].0, "f");
         assert_eq!(core.params[1].0, "x");
         assert_eq!(core.visibility, ash_core::ast::Visibility::Public);
+    }
+
+    // ── Act block lowering tests (TASK-675) ──────────────────────────
+
+    #[test]
+    fn test_lower_act_block_empty_is_rejected() {
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![],
+            span: Span::default(),
+        };
+        let result = lower_expr(&surface);
+        assert!(
+            result.is_err(),
+            "empty act block must be rejected per SPEC-047 §6.2"
+        );
+    }
+
+    #[test]
+    fn test_lower_act_block_return_not_last_is_rejected() {
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![
+                ActStmt::Return {
+                    value: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(1))),
+                    span: Span::default(),
+                },
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(2))),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+        let result = lower_expr(&surface);
+        assert!(
+            result.is_err(),
+            "return followed by more statements must be rejected per SPEC-047 §6.2"
+        );
+    }
+
+    #[test]
+    fn test_lower_act_block_return() {
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![ActStmt::Return {
+                value: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(42))),
+                span: Span::default(),
+            }],
+            span: Span::default(),
+        };
+        let core = lower_expr(&surface).expect("lowering act block return should succeed");
+        match core {
+            CoreExpr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "unit");
+                assert_eq!(arguments.len(), 1);
+                assert!(matches!(
+                    &arguments[0],
+                    CoreExpr::Literal(ash_core::Value::Int(42))
+                ));
+            }
+            _ => panic!("Expected Call, got: {:?}", core),
+        }
+    }
+
+    #[test]
+    fn test_lower_act_block_bind_then_return() {
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(1))),
+                    span: Span::default(),
+                },
+                ActStmt::Return {
+                    value: Box::new(SurfaceExpr::Variable {
+                        name: "x".into(),
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+        let core = lower_expr(&surface).expect("lowering bind+return should succeed");
+        // Should be: bind(1, FnDef { params: [("x", None)], body: unit(Variable "x") })
+        match core {
+            CoreExpr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "bind");
+                assert_eq!(arguments.len(), 2);
+                // First argument: pure value is lifted with unit(1)
+                assert!(matches!(
+                    &arguments[0],
+                    CoreExpr::Call { func, arguments, .. }
+                        if func == "unit"
+                            && arguments.len() == 1
+                            && matches!(&arguments[0], CoreExpr::Literal(ash_core::Value::Int(1)))
+                ));
+                // Second argument: FnDef with param "x" and body unit(Variable "x")
+                match &arguments[1] {
+                    CoreExpr::FnDef { params, body, .. } => {
+                        assert_eq!(params.len(), 1);
+                        assert_eq!(params[0].0, "x");
+                        assert!(params[0].1.is_none());
+                        // body should be unit(Variable "x")
+                        match body.as_ref() {
+                            CoreExpr::Call {
+                                func: body_func,
+                                arguments: body_args,
+                                ..
+                            } => {
+                                assert_eq!(body_func, "unit");
+                                assert_eq!(body_args.len(), 1);
+                                assert!(matches!(
+                                    &body_args[0],
+                                    CoreExpr::Variable { name, .. } if name == "x"
+                                ));
+                            }
+                            _ => panic!("Expected unit call in body, got: {:?}", body),
+                        }
+                    }
+                    _ => panic!("Expected FnDef as second argument, got: {:?}", arguments[1]),
+                }
+            }
+            _ => panic!("Expected Call (bind), got: {:?}", core),
+        }
+    }
+
+    #[test]
+    fn test_lower_act_block_effectful_bind_value_not_double_wrapped() {
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(SurfaceExpr::Call {
+                        func: "invoke".into(),
+                        module: None,
+                        args: vec![
+                            SurfaceExpr::Literal(SurfaceLiteral::String("Fs".into())),
+                            SurfaceExpr::Literal(SurfaceLiteral::String("read".into())),
+                            SurfaceExpr::Literal(SurfaceLiteral::List(vec![])),
+                        ],
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+                ActStmt::Return {
+                    value: Box::new(SurfaceExpr::Variable {
+                        name: "x".into(),
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+
+        let core = lower_expr(&surface).expect("lowering invoke bind should succeed");
+        match core {
+            CoreExpr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "bind");
+                assert_eq!(arguments.len(), 2);
+                assert!(
+                    !matches!(&arguments[0], CoreExpr::Call { func, .. } if func == "unit"),
+                    "effectful-looking bind RHS should not be wrapped with unit()"
+                );
+            }
+            _ => panic!("Expected outer bind call, got: {:?}", core),
+        }
+    }
+
+    #[test]
+    fn test_lower_act_block_effectful_user_defined_bind_value_not_wrapped() {
+        let effectful_names = HashSet::from([String::from("read")]);
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(SurfaceExpr::Call {
+                        func: "read".into(),
+                        module: None,
+                        args: vec![SurfaceExpr::Literal(SurfaceLiteral::String(
+                            "/tmp/file".into(),
+                        ))],
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+                ActStmt::Return {
+                    value: Box::new(SurfaceExpr::Variable {
+                        name: "x".into(),
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+
+        let core = with_active_effectful_names(&effectful_names, || lower_expr(&surface))
+            .expect("lowering effectful bind should succeed");
+
+        match core {
+            CoreExpr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "bind");
+                assert_eq!(arguments.len(), 2);
+                assert!(
+                    !matches!(&arguments[0], CoreExpr::Call { func, .. } if func == "unit"),
+                    "user-defined effectful calls must not be wrapped in unit()"
+                );
+            }
+            _ => panic!("Expected outer bind call, got: {:?}", core),
+        }
+    }
+
+    #[test]
+    fn test_lower_act_block_multiple_binds() {
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(1))),
+                    span: Span::default(),
+                },
+                ActStmt::Bind {
+                    name: "y".into(),
+                    value: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(2))),
+                    span: Span::default(),
+                },
+                ActStmt::Return {
+                    value: Box::new(SurfaceExpr::Variable {
+                        name: "y".into(),
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+        let core = lower_expr(&surface).expect("lowering multi-bind should succeed");
+        // Should be: bind(unit(1), FnDef { params: ["x"], body: bind(unit(2), FnDef { params: ["y"], body: unit(Variable "y") }) })
+        match core {
+            CoreExpr::Call {
+                func: outer_func,
+                arguments: outer_args,
+                ..
+            } => {
+                assert_eq!(outer_func, "bind");
+                assert_eq!(outer_args.len(), 2);
+                // First arg: unit(1)
+                assert!(matches!(
+                    &outer_args[0],
+                    CoreExpr::Call { func, arguments, .. }
+                        if func == "unit"
+                            && arguments.len() == 1
+                            && matches!(&arguments[0], CoreExpr::Literal(ash_core::Value::Int(1)))
+                ));
+                // Second arg: FnDef with param "x", body is another bind
+                match &outer_args[1] {
+                    CoreExpr::FnDef {
+                        params: outer_params,
+                        body: outer_body,
+                        ..
+                    } => {
+                        assert_eq!(outer_params.len(), 1);
+                        assert_eq!(outer_params[0].0, "x");
+                        // body should be bind(2, FnDef { params: ["y"], body: unit(...) })
+                        match outer_body.as_ref() {
+                            CoreExpr::Call {
+                                func: inner_func,
+                                arguments: inner_args,
+                                ..
+                            } => {
+                                assert_eq!(inner_func, "bind");
+                                assert_eq!(inner_args.len(), 2);
+                                assert!(matches!(
+                                    &inner_args[0],
+                                    CoreExpr::Call { func, arguments, .. }
+                                        if func == "unit"
+                                            && arguments.len() == 1
+                                            && matches!(&arguments[0], CoreExpr::Literal(ash_core::Value::Int(2)))
+                                ));
+                                match &inner_args[1] {
+                                    CoreExpr::FnDef {
+                                        params: inner_params,
+                                        ..
+                                    } => {
+                                        assert_eq!(inner_params.len(), 1);
+                                        assert_eq!(inner_params[0].0, "y");
+                                    }
+                                    _ => panic!("Expected inner FnDef"),
+                                }
+                            }
+                            _ => panic!("Expected inner bind call, got: {:?}", outer_body),
+                        }
+                    }
+                    _ => panic!("Expected outer FnDef"),
+                }
+            }
+            _ => panic!("Expected outer bind call, got: {:?}", core),
+        }
+    }
+
+    // ── Act block round-trip and integration tests (TASK-676) ────────
+
+    /// Round-trip: parse source with an act block fn body, then lower.
+    #[test]
+    fn test_parse_and_lower_act_block_roundtrip() {
+        let src = "fn f() { act { x = 1; ret x; } }";
+        let parsed = crate::parse_surface_file(src).expect("parse should succeed");
+
+        // Find the Function definition
+        let fn_def = parsed
+            .definitions
+            .iter()
+            .find_map(|d| match d {
+                crate::surface::Definition::Function(f) => Some(f.clone()),
+                _ => None,
+            })
+            .expect("should find a Function definition");
+
+        assert_eq!(fn_def.name.as_ref(), "f");
+
+        // The body is wrapped in a Block by the fn parser — extract the ActBlock
+        let act_block = match &fn_def.body {
+            SurfaceExpr::ActBlock { .. } => &fn_def.body,
+            SurfaceExpr::Block {
+                tail_expr: Some(tail),
+                ..
+            } => match tail.as_ref() {
+                act @ SurfaceExpr::ActBlock { .. } => act,
+                other => panic!("Expected ActBlock in block tail, got: {:?}", other),
+            },
+            other => panic!(
+                "Expected ActBlock or Block wrapping ActBlock, got: {:?}",
+                other
+            ),
+        };
+
+        match act_block {
+            SurfaceExpr::ActBlock { stmts, .. } => {
+                assert_eq!(stmts.len(), 2);
+                assert!(matches!(&stmts[0], ActStmt::Bind { name, .. } if name.as_ref() == "x"));
+                assert!(matches!(&stmts[1], ActStmt::Return { .. }));
+            }
+            _ => unreachable!(),
+        }
+
+        // Lower the act block expression
+        let core = lower_expr(act_block).expect("lowering act block should succeed");
+
+        // Should be: bind(unit(1), FnDef { params: [("x", None)], body: unit(Variable "x") })
+        match core {
+            CoreExpr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "bind");
+                assert_eq!(arguments.len(), 2);
+                // First argument: unit(1)
+                assert!(matches!(
+                    &arguments[0],
+                    CoreExpr::Call { func, arguments, .. }
+                        if func == "unit"
+                            && arguments.len() == 1
+                            && matches!(&arguments[0], CoreExpr::Literal(ash_core::Value::Int(1)))
+                ));
+                // Second argument: FnDef with param "x"
+                match &arguments[1] {
+                    CoreExpr::FnDef { params, body, .. } => {
+                        assert_eq!(params.len(), 1);
+                        assert_eq!(params[0].0, "x");
+                        // body should be unit(Variable "x")
+                        match body.as_ref() {
+                            CoreExpr::Call {
+                                func: body_func,
+                                arguments: body_args,
+                                ..
+                            } => {
+                                assert_eq!(body_func, "unit");
+                                assert_eq!(body_args.len(), 1);
+                                assert!(matches!(
+                                    &body_args[0],
+                                    CoreExpr::Variable { name, .. } if name == "x"
+                                ));
+                            }
+                            _ => panic!("Expected unit call in body, got: {:?}", body),
+                        }
+                    }
+                    _ => panic!("Expected FnDef, got: {:?}", arguments[1]),
+                }
+            }
+            _ => panic!("Expected bind call, got: {:?}", core),
+        }
+    }
+
+    /// Nested act blocks: act { x = act { ret 1; }; ret x; }
+    /// The inner act block lowers to unit(1), the outer to bind(unit(1), |x| unit(x))
+    #[test]
+    fn test_lower_nested_act_blocks() {
+        let inner_act = SurfaceExpr::ActBlock {
+            stmts: vec![ActStmt::Return {
+                value: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(1))),
+                span: Span::default(),
+            }],
+            span: Span::default(),
+        };
+
+        let surface = SurfaceExpr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(inner_act),
+                    span: Span::default(),
+                },
+                ActStmt::Return {
+                    value: Box::new(SurfaceExpr::Variable {
+                        name: "x".into(),
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+
+        let core = lower_expr(&surface).expect("lowering nested act blocks should succeed");
+
+        // Outer should be: bind(<inner>, FnDef { params: ["x"], body: unit(Variable "x") })
+        match core {
+            CoreExpr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "bind");
+                assert_eq!(arguments.len(), 2);
+
+                // First argument: the inner act block lowered to unit(1)
+                match &arguments[0] {
+                    CoreExpr::Call {
+                        func: inner_func,
+                        arguments: inner_args,
+                        ..
+                    } => {
+                        assert_eq!(inner_func, "unit");
+                        assert_eq!(inner_args.len(), 1);
+                        assert!(matches!(
+                            &inner_args[0],
+                            CoreExpr::Literal(ash_core::Value::Int(1))
+                        ));
+                    }
+                    _ => panic!("Expected inner unit call, got: {:?}", arguments[0]),
+                }
+
+                // Second argument: FnDef with param "x" and body unit(Variable "x")
+                match &arguments[1] {
+                    CoreExpr::FnDef { params, body, .. } => {
+                        assert_eq!(params.len(), 1);
+                        assert_eq!(params[0].0, "x");
+                        match body.as_ref() {
+                            CoreExpr::Call {
+                                func: body_func,
+                                arguments: body_args,
+                                ..
+                            } => {
+                                assert_eq!(body_func, "unit");
+                                assert_eq!(body_args.len(), 1);
+                                assert!(matches!(
+                                    &body_args[0],
+                                    CoreExpr::Variable { name, .. } if name == "x"
+                                ));
+                            }
+                            _ => panic!("Expected unit call in body, got: {:?}", body),
+                        }
+                    }
+                    _ => panic!("Expected FnDef, got: {:?}", arguments[1]),
+                }
+            }
+            _ => panic!("Expected bind call, got: {:?}", core),
+        }
+    }
+
+    // ── Property test: act block lowering (TASK-676) ─────────────────
+
+    /// Recursively verify that a CoreExpr contains only Call, FnDef, Literal, Variable.
+    /// No ActBlock should survive lowering.
+    #[allow(dead_code)]
+    fn assert_act_block_uses_only_call_fndef(expr: &CoreExpr) {
+        match expr {
+            CoreExpr::Literal(_) | CoreExpr::Variable { .. } => {}
+            CoreExpr::Call { arguments, .. } => {
+                for arg in arguments {
+                    assert_act_block_uses_only_call_fndef(arg);
+                }
+            }
+            CoreExpr::FnDef { body, .. } => {
+                assert_act_block_uses_only_call_fndef(body);
+            }
+            // These are valid core IR nodes that may appear in general lowered
+            // expressions but not from simple act-block lowering with literal/variable
+            // sub-expressions. We still allow them for completeness since the
+            // strategy could generate them indirectly.
+            CoreExpr::FieldAccess { expr, .. } => {
+                assert_act_block_uses_only_call_fndef(expr);
+            }
+            CoreExpr::IndexAccess { expr, index } => {
+                assert_act_block_uses_only_call_fndef(expr);
+                assert_act_block_uses_only_call_fndef(index);
+            }
+            CoreExpr::Unary { expr: inner, .. } => {
+                assert_act_block_uses_only_call_fndef(inner);
+            }
+            CoreExpr::Binary { left, right, .. } => {
+                assert_act_block_uses_only_call_fndef(left);
+                assert_act_block_uses_only_call_fndef(right);
+            }
+            CoreExpr::Constructor { fields, .. } => {
+                for (_, e) in fields {
+                    assert_act_block_uses_only_call_fndef(e);
+                }
+            }
+            CoreExpr::Match { scrutinee, arms } => {
+                assert_act_block_uses_only_call_fndef(scrutinee);
+                for arm in arms {
+                    assert_act_block_uses_only_call_fndef(&arm.body);
+                }
+            }
+            CoreExpr::IfLet {
+                expr: inner,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert_act_block_uses_only_call_fndef(inner);
+                assert_act_block_uses_only_call_fndef(then_branch);
+                assert_act_block_uses_only_call_fndef(else_branch);
+            }
+            CoreExpr::Spawn { init, .. } => {
+                assert_act_block_uses_only_call_fndef(init);
+            }
+            CoreExpr::Split(inner) => {
+                assert_act_block_uses_only_call_fndef(inner);
+            }
+            CoreExpr::CheckObligation { .. } => {}
+            CoreExpr::Let {
+                expr: inner, body, ..
+            } => {
+                assert_act_block_uses_only_call_fndef(inner);
+                assert_act_block_uses_only_call_fndef(body);
+            }
+            CoreExpr::FnApply { func, args } => {
+                assert_act_block_uses_only_call_fndef(func);
+                for a in args {
+                    assert_act_block_uses_only_call_fndef(a);
+                }
+            }
+        }
     }
 }

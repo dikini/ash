@@ -1,6 +1,6 @@
 # TASK-674: Parse act block in expression context
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -50,10 +50,9 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Parser tests cover dual-context `act` disambiguation.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `parse_expr::expr()` accepts `act { ... }` in expression position and produces `Expr::ActBlock`.
+- [x] Parser coverage includes nested act blocks plus `act`/workflow disambiguation (`crates/ash-parser/tests/act_block_lowering_props.rs`).
+- [x] Workflow-level `act provider:action(...)` parsing remains separate; the expression parser does not reinterpret it as an act-block expression.
 
 ## Dependencies for Next Task
 
@@ -64,3 +63,4 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - Phase 97 is additive.
 - Preserve `Workflow::Act` behavior.
 - Preserve coexistence with existing `Type::Fun(...)` unless this task explicitly narrows that boundary in docs/tests only.
+- Landed in the current worktree via `crates/ash-parser/src/parse_expr.rs`: expression parsing now recognizes only braced `act { ... }` forms, with `IDENTIFIER = expr;` binds and `ret expr;` returns inside the block.

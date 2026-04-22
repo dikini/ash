@@ -2742,7 +2742,7 @@ Close the gap between executing single-file workflows and executing real program
 ## Phase 97: Act Monad — First-Class Effectful Computation
 
 **Priority:** High (resolves NOTE-004/NOTE-005, foundational for fn/capability/workflow reconciliation)
-**Status:** 🟡 Ready
+**Status:** 🟢 In Progress
 **Spec:** SPEC-047
 **Plan:** docs/plans/2026-04-22-phase-97-act-monad.md
 
@@ -2750,11 +2750,11 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 
 ||| Task | Description | Est. Hours | Status ||
 |||------|-------------|------------|--------||
-||| TASK-672 | Preflight doc cleanup: normalize architecture and syntax | 2 | 🟡 Ready ||
-||| TASK-673 | Add surface `ActStmt` type + `Expr::ActBlock` | 2 | 🟡 Ready ||
-||| TASK-674 | Parse `act { ... }` in expression context | 3 | 🟡 Ready ||
-||| TASK-675 | Lower `SurfaceExpr::ActBlock` into existing core expressions | 5 | 🟡 Ready ||
-||| TASK-676 | Property/integration tests for act-block parsing and lowering | 3 | 🟡 Ready ||
+||| TASK-672 | Preflight doc cleanup: normalize architecture and syntax | 2 | ✅ Complete ||
+||| TASK-673 | Add surface `ActStmt` type + `Expr::ActBlock` | 2 | ✅ Complete ||
+||| TASK-674 | Parse `act { ... }` in expression context | 3 | ✅ Complete ||
+||| TASK-675 | Lower `SurfaceExpr::ActBlock` into existing core expressions | 5 | ✅ Complete ||
+||| TASK-676 | Property/integration tests for act-block parsing and lowering | 3 | ✅ Complete ||
 ||| TASK-677 | Register `Act` type constructor with kind `* -> *` | 1 | 🟡 Ready ||
 ||| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, return rules | 4 | 🟡 Ready ||
 ||| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | 🟡 Ready ||

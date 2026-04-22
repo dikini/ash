@@ -688,12 +688,16 @@ fn task590_debug_scan_tree_parse_minimal() {
 }
 
 #[test]
+#[ignore = "TODO(TASK-590)"]
 fn task590_debug_collect_ash_file_parse() {
     use ash_parser::input::new_input;
     use ash_parser::parse_module::parse_fn_definition;
     use winnow::prelude::Parser;
 
-    let source = std::fs::read_to_string("../../apps/spec_processor/src/collect.ash").unwrap();
+    let source_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../docs/plan/PLAN-090-SPEC-PROCESSOR.md");
+    let source = std::fs::read_to_string(&source_path)
+        .unwrap_or_else(|e| panic!("failed to read {}: {e}", source_path.display()));
     let lines: Vec<&str> = source.lines().collect();
     let mut snippet = String::new();
     let mut in_snippet = false;

@@ -350,17 +350,23 @@ impl Engine {
         imported_param_counts: HashMap<String, usize>,
     ) -> Result<ProgramProcessingResult, EngineError> {
         use ash_core::env_frame::EnvFrame;
-        use ash_parser::{lower_expr, lower_workflow};
+        use ash_parser::{
+            LoweringContext, effectful_names_from_definitions, lower_expr_with_context,
+            lower_workflow,
+        };
 
         let core = lower_workflow(&program.workflow)
             .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
+        let lowering_ctx = LoweringContext::with_effectful_names(effectful_names_from_definitions(
+            &program.definitions,
+        ));
 
         let (mut local_closures, mut local_param_counts) =
             (imported_closures, imported_param_counts);
 
         for def_item in &program.definitions {
             if let ash_parser::surface::Definition::Function(fn_def) = def_item
-                && let Ok(body_expr) = lower_expr(&fn_def.body)
+                && let Ok(body_expr) = lower_expr_with_context(&fn_def.body, &lowering_ctx)
             {
                 let mut env_frame = EnvFrame::new();
                 let slot = env_frame.insert_late(fn_def.name.to_string());
@@ -1301,14 +1307,19 @@ fn build_imported_closures(
         }
 
         let body_expr = match &callable.kind {
-            CallableKind::User { body } => match ash_parser::lower_expr(body) {
-                Ok(expr) => expr,
-                Err(e) => {
-                    // TODO: replace with tracing::warn! when tracing is integrated
-                    eprintln!("warning: failed to lower imported callable '{name}': {e}");
-                    continue;
+            CallableKind::User { body } => {
+                let lowering_ctx = ash_parser::LoweringContext::with_effectful_names(
+                    callable.effectful_names.clone(),
+                );
+                match ash_parser::lower_expr_with_context(body, &lowering_ctx) {
+                    Ok(expr) => expr,
+                    Err(e) => {
+                        // TODO: replace with tracing::warn! when tracing is integrated
+                        eprintln!("warning: failed to lower imported callable '{name}': {e}");
+                        continue;
+                    }
                 }
-            },
+            }
             CallableKind::Builtin { module } => {
                 // Check the dispatch table to decide whether this builtin needs a
                 // qualified call (e.g. "string::concat") or unqualified ("keys").
@@ -1921,5 +1932,140 @@ mod tests {
             result.is_ok(),
             "Engine should build even with invalid LLM config (skips registration)"
         );
+    }
+
+    fn effectful_act_block_body(callee: &str) -> ash_parser::surface::Expr {
+        use ash_parser::surface::{ActStmt, Expr, Literal};
+
+        let span = ash_parser::token::Span::default();
+        Expr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(Expr::Call {
+                        func: callee.into(),
+                        module: None,
+                        args: vec![Expr::Literal(Literal::String("/tmp/file".into()))],
+                        span,
+                    }),
+                    span,
+                },
+                ActStmt::Return {
+                    value: Box::new(Expr::Variable {
+                        name: "x".into(),
+                        span,
+                    }),
+                    span,
+                },
+            ],
+            span,
+        }
+    }
+
+    fn assert_closure_body_preserves_effectful_bind(value: &Value) {
+        let Value::Closure { body, .. } = value else {
+            panic!("expected closure, got: {value:?}");
+        };
+
+        match body.as_ref() {
+            ash_core::Expr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "bind");
+                assert_eq!(arguments.len(), 2);
+                assert!(
+                    !matches!(&arguments[0], ash_core::Expr::Call { func, .. } if func == "unit"),
+                    "effectful bind RHS should not be wrapped in unit()"
+                );
+            }
+            other => panic!("expected bind call, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_process_program_definitions_preserves_effectful_bind_rhs_for_local_functions() {
+        use ash_parser::surface::{
+            CapabilityDef, Definition, EffectType, FnDef, Program, Visibility,
+            Workflow as SurfaceWorkflow, WorkflowDef,
+        };
+
+        let span = ash_parser::token::Span::default();
+        let program = Program {
+            definitions: vec![
+                Definition::Capability(CapabilityDef {
+                    visibility: Visibility::Inherited,
+                    name: "read".into(),
+                    effect: EffectType::Act,
+                    params: vec![],
+                    return_type: None,
+                    constraints: vec![],
+                    target_provider: None,
+                    target_action: None,
+                    span,
+                }),
+                Definition::Function(FnDef {
+                    visibility: Visibility::Inherited,
+                    name: "demo".into(),
+                    type_params: vec![],
+                    params: vec![],
+                    return_type: None,
+                    contract: None,
+                    body: effectful_act_block_body("read"),
+                    span,
+                }),
+            ],
+            helper_workflows: vec![],
+            workflow: WorkflowDef {
+                name: "main".into(),
+                type_params: vec![],
+                params: vec![],
+                declared_return_type: None,
+                plays_roles: vec![],
+                capabilities: vec![],
+                body: SurfaceWorkflow::Ret {
+                    expr: ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Null),
+                    span,
+                },
+                contract: None,
+                span,
+            },
+        };
+
+        let engine = Engine::new().build().expect("engine builds");
+        let (closures, _, _) = engine
+            .process_program_definitions(&program, HashMap::new(), HashMap::new())
+            .expect("program lowering should succeed");
+
+        let closure = closures
+            .get("demo")
+            .expect("local function should be registered as a closure");
+        assert_closure_body_preserves_effectful_bind(closure);
+    }
+
+    #[test]
+    fn test_build_imported_closures_preserves_effectful_bind_rhs_for_user_callables() {
+        use crate::module_loader::{CallableKind, InlineCallable};
+        use std::collections::HashSet;
+
+        let mut imported_callables = HashMap::new();
+        imported_callables.insert(
+            "demo".to_string(),
+            InlineCallable {
+                exported_name: "demo".to_string(),
+                params: vec![],
+                effectful_names: HashSet::from([String::from("read")]),
+                kind: CallableKind::User {
+                    body: effectful_act_block_body("read"),
+                },
+                signature: None,
+            },
+        );
+
+        let (closures, _, _) = build_imported_closures(&imported_callables);
+        let closure = closures
+            .get("demo")
+            .expect("imported callable should lower into a closure");
+
+        assert_closure_body_preserves_effectful_bind(closure);
     }
 }

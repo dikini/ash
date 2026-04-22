@@ -188,6 +188,61 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 .map(|module| format!("{}::{}", module, func))
                 .unwrap_or_else(|| func.to_string());
 
+            if module.is_none() && func.as_ref() == "invoke" {
+                if arg_types.len() != 3 {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "Call ({qualified_name}): invoke expects 3 arguments, found {}",
+                            arg_types.len()
+                        ),
+                        span: *span,
+                    });
+                }
+
+                if !matches!(arg_types[0], Type::String) {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "Call ({qualified_name}): invoke provider must have type String, found {}",
+                            arg_types[0]
+                        ),
+                        span: *span,
+                    });
+                }
+
+                if !matches!(arg_types[1], Type::String) {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "Call ({qualified_name}): invoke action must have type String, found {}",
+                            arg_types[1]
+                        ),
+                        span: *span,
+                    });
+                }
+
+                let value_ty = Type::Constructor {
+                    name: crate::QualifiedName::root("Value"),
+                    args: vec![],
+                    kind: crate::Kind::Type,
+                };
+                match &arg_types[2] {
+                    Type::List(elem_ty) if elem_ty.as_ref() == &value_ty => {}
+                    other => {
+                        return CheckResult::error(ConstructorError::UnsupportedExpression {
+                            kind: format!(
+                                "Call ({qualified_name}): invoke args must have type List<Value>, found {other}"
+                            ),
+                            span: *span,
+                        });
+                    }
+                }
+
+                return CheckResult::success(Type::Constructor {
+                    name: crate::QualifiedName::root("Act"),
+                    args: vec![value_ty],
+                    kind: crate::Kind::Type,
+                });
+            }
+
             match env.lookup_call_target(module.as_deref(), func.as_ref()) {
                 Some(func_ty) => {
                     let func_ty = substitution.apply(&func_ty);
@@ -556,6 +611,61 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 }
             }
         }
+
+        Expr::ActBlock { stmts, .. } => {
+            let mut block_env = env.clone();
+            let mut substitution = Substitution::new();
+            let mut errors: Vec<ConstructorError> = Vec::new();
+            let mut return_ty = Type::Null;
+
+            for stmt in stmts {
+                match stmt {
+                    ash_parser::surface::ActStmt::Bind { name, value, .. } => {
+                        let value_result = check_expr(&block_env, value);
+                        substitution = substitution.compose(&value_result.substitution);
+                        if !value_result.is_ok() {
+                            errors.extend(value_result.errors);
+                            continue;
+                        }
+
+                        let value_ty = substitution.apply(&value_result.ty);
+                        let bound_ty = match &value_ty {
+                            Type::Constructor { name, args, .. }
+                                if name.name == "Act" && args.len() == 1 =>
+                            {
+                                args[0].clone()
+                            }
+                            _ => value_ty,
+                        };
+                        block_env.bind_variable(name.as_ref(), bound_ty);
+                    }
+                    ash_parser::surface::ActStmt::Return { value, .. } => {
+                        let value_result = check_expr(&block_env, value);
+                        substitution = substitution.compose(&value_result.substitution);
+                        if !value_result.is_ok() {
+                            errors.extend(value_result.errors);
+                            continue;
+                        }
+
+                        return_ty = substitution.apply(&value_result.ty);
+                    }
+                }
+            }
+
+            if !errors.is_empty() {
+                return CheckResult {
+                    ty: Type::Var(TypeVar::fresh()),
+                    substitution,
+                    errors,
+                };
+            }
+
+            CheckResult::success(Type::Constructor {
+                name: crate::QualifiedName::root("Act"),
+                args: vec![return_ty],
+                kind: crate::Kind::Type,
+            })
+        }
     }
 }
 
@@ -579,6 +689,7 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Block { span, .. } => *span,
         Expr::FnDef { span, .. } => *span,
         Expr::FnApply { span, .. } => *span,
+        Expr::ActBlock { span, .. } => *span,
     }
 }
 

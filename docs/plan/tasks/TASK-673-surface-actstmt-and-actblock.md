@@ -1,6 +1,6 @@
 # TASK-673: Add surface ActStmt and Expr::ActBlock
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,10 +49,14 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Surface AST compiles and all downstream exhaustive matches are updated.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `surface::ActStmt` and `surface::Expr::ActBlock` are present in `crates/ash-parser/src/surface.rs` with span-carrying structure.
+- [x] Downstream exhaustive matches compile across parser/typeck/lint/repl consumers.
+- [x] Focused surface construction tests cover `ActStmt` and `Expr::ActBlock` carriers.
+
+## Completion Notes
+
+- Landed as the surface-only Phase 97 substrate in `crates/ash-parser/src/surface.rs`.
+- This task intentionally stops at the carrier boundary; parsing, lowering, and property/integration coverage are completed by TASK-674 through TASK-676.
 
 ## Dependencies for Next Task
 

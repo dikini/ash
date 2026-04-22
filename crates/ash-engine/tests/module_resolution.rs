@@ -64,10 +64,8 @@ async fn sibling_module_type_import_resolves() {
                     && fields[0].0 == "x" && fields[0].1 == ash_core::Value::Int(1)
                     && fields[1].0 == "y" && fields[1].1 == ash_core::Value::Int(2)
         ),
-        "expected Point {{ x: 1, y: 2 }}, got {:?}",
-        value,
+        "expected Point {{ x: 1, y: 2 }}, got {value:?}",
     );
-
 }
 
 // ── 2. Nested multi-file modules ───────────────────────────────────────
@@ -146,8 +144,7 @@ async fn stdlib_module_resolution() {
             &value,
             ash_core::Value::Variant { name, .. } if name == "Some"
         ),
-        "expected Some variant, got {:?}",
-        value,
+        "expected Some variant, got {value:?}",
     );
 }
 
@@ -396,8 +393,7 @@ async fn stdlib_result_type_resolves() {
             &value,
             ash_core::Value::Variant { name, .. } if name == "Ok"
         ),
-        "expected Ok variant, got {:?}",
-        value,
+        "expected Ok variant, got {value:?}",
     );
 }
 

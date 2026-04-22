@@ -6,7 +6,7 @@
 use crate::check_expr::check_expr;
 use crate::type_env::TypeEnv;
 use crate::types::Type;
-use ash_parser::surface::{BlockStmt, Expr};
+use ash_parser::surface::{ActStmt, BlockStmt, Expr};
 use ash_parser::token::Span;
 use std::fmt;
 
@@ -262,6 +262,16 @@ fn check_purity_recursive(env: &TypeEnv, expr: &Expr, errors: &mut Vec<PurityErr
             check_purity_recursive(env, func, errors);
             for arg in args {
                 check_purity_recursive(env, arg, errors);
+            }
+        }
+        // TODO(TASK-674): Act block purity checking
+        Expr::ActBlock { stmts, .. } => {
+            for stmt in stmts {
+                let value = match stmt {
+                    ActStmt::Bind { value, .. } => value,
+                    ActStmt::Return { value, .. } => value,
+                };
+                check_purity_recursive(env, value, errors);
             }
         }
     }

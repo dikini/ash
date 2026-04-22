@@ -628,6 +628,17 @@ fn validate_interface_calls_in_expr(
             }
             Ok(())
         }
+        ash_parser::surface::Expr::ActBlock { stmts, .. } => {
+            use ash_parser::surface::ActStmt;
+            for stmt in stmts {
+                let value = match stmt {
+                    ActStmt::Bind { value, .. } => value,
+                    ActStmt::Return { value, .. } => value,
+                };
+                validate_interface_calls_in_expr(env, value)?;
+            }
+            Ok(())
+        }
     }
 }
 
@@ -1767,6 +1778,17 @@ fn validate_fn_call_preconditions_expr(
             validate_fn_call_preconditions_expr(env, func, facts, assumptions)?;
             for arg in args {
                 validate_fn_call_preconditions_expr(env, arg, facts, assumptions)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::ActBlock { stmts, .. } => {
+            use ash_parser::surface::ActStmt;
+            for stmt in stmts {
+                let value = match stmt {
+                    ActStmt::Bind { value, .. } => value,
+                    ActStmt::Return { value, .. } => value,
+                };
+                validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
             }
             Ok(())
         }

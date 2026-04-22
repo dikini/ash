@@ -119,3 +119,140 @@ fn invoke_rejects_non_string_provider_or_action() {
         "invoke with a non-string provider should be rejected"
     );
 }
+
+// ── TASK-678: direct ActBlock type inference regression tests ──
+
+#[test]
+fn act_block_return_infers_act_type() {
+    // act { ret 42; } should type-check as Act<Int>
+    let env = TypeEnv::with_builtin_types();
+    let expr = Expr::ActBlock {
+        stmts: vec![ash_parser::surface::ActStmt::Return {
+            value: Box::new(Expr::Literal(Literal::Int(42))),
+            span: span(),
+        }],
+        span: span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(result.is_ok(), "single-return act block should type-check");
+    assert_eq!(
+        result.ty,
+        Type::Constructor {
+            name: QualifiedName::root("Act"),
+            args: vec![Type::Int],
+            kind: Kind::Type,
+        },
+        "act {{ ret 42; }} should infer Act<Int>"
+    );
+}
+
+#[test]
+fn act_block_bind_then_return_infers_inner_type() {
+    // act { x = pure_call(); ret x; } where pure_call returns Int
+    // Should infer Act<Int>
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable("pure_call", Type::Fn(vec![], Box::new(Type::Int)));
+
+    let expr = Expr::ActBlock {
+        stmts: vec![
+            ash_parser::surface::ActStmt::Bind {
+                name: "x".into(),
+                value: Box::new(Expr::Call {
+                    func: "pure_call".into(),
+                    module: None,
+                    args: vec![],
+                    span: span(),
+                }),
+                span: span(),
+            },
+            ash_parser::surface::ActStmt::Return {
+                value: Box::new(Expr::Variable {
+                    name: "x".into(),
+                    span: span(),
+                }),
+                span: span(),
+            },
+        ],
+        span: span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        result.is_ok(),
+        "bind-then-return act block should type-check"
+    );
+    assert_eq!(
+        result.ty,
+        Type::Constructor {
+            name: QualifiedName::root("Act"),
+            args: vec![Type::Int],
+            kind: Kind::Type,
+        },
+        "act {{ x = pure_call(); ret x; }} should infer Act<Int>"
+    );
+}
+
+// ── B1: structural contract alignment tests ──
+
+#[test]
+fn act_block_empty_is_rejected_by_typeck() {
+    // Empty act block should be rejected (aligns with lower_act_block)
+    let env = TypeEnv::with_builtin_types();
+    let expr = Expr::ActBlock {
+        stmts: vec![],
+        span: span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        !result.is_ok(),
+        "empty act block should be rejected by typeck"
+    );
+}
+
+#[test]
+fn act_block_bind_without_return_is_rejected_by_typeck() {
+    // act { x = 1; } — no return, should be rejected
+    let env = TypeEnv::with_builtin_types();
+    let expr = Expr::ActBlock {
+        stmts: vec![ash_parser::surface::ActStmt::Bind {
+            name: "x".into(),
+            value: Box::new(Expr::Literal(Literal::Int(1))),
+            span: span(),
+        }],
+        span: span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        !result.is_ok(),
+        "act block without return should be rejected by typeck"
+    );
+}
+
+#[test]
+fn act_block_return_not_last_is_rejected_by_typeck() {
+    // act { ret 1; y = 2; } — return not last, should be rejected
+    let env = TypeEnv::with_builtin_types();
+    let expr = Expr::ActBlock {
+        stmts: vec![
+            ash_parser::surface::ActStmt::Return {
+                value: Box::new(Expr::Literal(Literal::Int(1))),
+                span: span(),
+            },
+            ash_parser::surface::ActStmt::Bind {
+                name: "y".into(),
+                value: Box::new(Expr::Literal(Literal::Int(2))),
+                span: span(),
+            },
+        ],
+        span: span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        !result.is_ok(),
+        "act block with return not last should be rejected by typeck"
+    );
+}

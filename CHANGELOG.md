@@ -12,6 +12,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
+### Fixed
+
+- Typeck/lowering contract alignment for act-block structural validation: `check_expr` now enforces the same empty/requires-return/return-must-be-last contract as `lower_act_block`, closing an end-to-end semantic mismatch where typeck would accept shapes that lowering rejects.
+
+- Purity enforcement for nested `Expr::FnDef` bodies now computes `allow_effects` from the nested function's own return type annotation rather than inheriting the enclosing function's flag, so `fn(x) -> Act { act { ret x; } }` is legal inside a pure outer function body.
+
 - PLAN-097: Phase 97 Act Monad implementation plan. Track A (surface/core), Track B (type system), Track C (runtime), Track D (specs/testing). Estimated 75.5 hours.
 
 ### Changed

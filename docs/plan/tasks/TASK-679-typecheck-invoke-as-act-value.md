@@ -49,10 +49,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Type-checker rejects malformed invoke calls and accepts valid ones.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Type-checker rejects malformed invoke calls and accepts valid ones.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

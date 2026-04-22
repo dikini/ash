@@ -12,7 +12,9 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
-use ash_parser::surface::{BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp};
+use ash_parser::surface::{
+    ActStmt, BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
+};
 use ash_parser::token::Span;
 use std::collections::HashSet;
 
@@ -612,10 +614,38 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             }
         }
 
-        Expr::ActBlock { stmts, .. } => {
+        Expr::ActBlock { stmts, span, .. } => {
             let mut block_env = env.clone();
             let mut substitution = Substitution::new();
             let mut errors: Vec<ConstructorError> = Vec::new();
+
+            // Enforce the same structural contract as lower_act_block:
+            // non-empty, return must be last.
+            if stmts.is_empty() {
+                return CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: "empty act block".to_string(),
+                    span: *span,
+                });
+            }
+
+            let last = stmts.last().unwrap();
+            if !matches!(last, ActStmt::Return { .. }) {
+                return CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: "act block must end with a return statement".to_string(),
+                    span: *span,
+                });
+            }
+
+            // Verify no Return appears before the last statement
+            for (i, stmt) in stmts.iter().enumerate() {
+                if matches!(stmt, ActStmt::Return { .. }) && i + 1 < stmts.len() {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: "return must be the last statement in an act block".to_string(),
+                        span: *span,
+                    });
+                }
+            }
+
             let mut return_ty = Type::Null;
 
             for stmt in stmts {

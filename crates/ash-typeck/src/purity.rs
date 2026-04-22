@@ -282,12 +282,23 @@ fn check_purity_recursive(
                 check_purity_recursive(&block_env, tail, allow_effects, errors);
             }
         }
-        Expr::FnDef { params, body, .. } => {
+        Expr::FnDef {
+            params,
+            return_type,
+            body,
+            ..
+        } => {
             let mut fn_env = env.extend();
             for (name, _ty) in params {
                 fn_env.bind_variable(name.as_ref(), Type::Var(crate::types::TypeVar::fresh()));
             }
-            check_purity_recursive(&fn_env, body, allow_effects, errors);
+            // A nested fn body gets its own allow_effects based on its return type,
+            // not the enclosing function's. fn(x) -> Act { act { ret x; } } is legal
+            // even inside a pure outer fn.
+            let nested_allow_effects = return_type
+                .as_ref()
+                .is_some_and(|rt| rt.as_ref().starts_with("Act"));
+            check_purity_recursive(&fn_env, body, nested_allow_effects, errors);
         }
         Expr::FnApply { func, args, .. } => {
             check_purity_recursive(env, func, allow_effects, errors);
@@ -577,7 +588,57 @@ mod tests {
             span: Span::default(),
         };
         // With allow_effects=true, the invoke shortcut should not fire,
-        // but it still needs to resolve as a valid call target.
         assert!(check_purity(&env, &expr, true).is_ok());
+    }
+
+    // ── B2: nested fn body gets own allow_effects ──
+
+    #[test]
+    fn nested_act_returning_fn_allowed_in_pure_outer() {
+        // fn(x) -> Act { act { ret x; } } inside a pure outer fn body
+        // should be allowed — the nested fn's own return type is Act.
+        let env = TypeEnv::new();
+        let inner_fn = Expr::FnDef {
+            params: vec![(box_name("x"), None)],
+            return_type: Some(box_name("Act")),
+            body: Box::new(Expr::ActBlock {
+                stmts: vec![ActStmt::Return {
+                    value: var("x"),
+                    span: Span::default(),
+                }],
+                span: Span::default(),
+            }),
+            span: Span::default(),
+        };
+        // Outer context is pure (allow_effects=false)
+        let result = check_purity(&env, &inner_fn, false);
+        assert!(
+            result.is_ok(),
+            "nested fn(x) -> Act {{ act {{ ret x; }} }} should be allowed in pure outer fn"
+        );
+    }
+
+    #[test]
+    fn nested_pure_fn_rejects_act_block_in_pure_outer() {
+        // fn(x) -> Int { act { ret x; } } inside a pure outer fn body
+        // should be rejected — the nested fn's own return type is not Act.
+        let env = TypeEnv::new();
+        let inner_fn = Expr::FnDef {
+            params: vec![(box_name("x"), None)],
+            return_type: Some(box_name("Int")),
+            body: Box::new(Expr::ActBlock {
+                stmts: vec![ActStmt::Return {
+                    value: var("x"),
+                    span: Span::default(),
+                }],
+                span: Span::default(),
+            }),
+            span: Span::default(),
+        };
+        let result = check_purity(&env, &inner_fn, false);
+        assert!(
+            result.is_err(),
+            "nested fn(x) -> Int {{ act {{ ret x; }} }} should be rejected"
+        );
     }
 }

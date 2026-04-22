@@ -18,6 +18,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - Purity enforcement for nested `Expr::FnDef` bodies now computes `allow_effects` from the nested function's own return type annotation rather than inheriting the enclosing function's flag, so `fn(x) -> Act { act { ret x; } }` is legal inside a pure outer function body.
 
+- TASK-681: 56 tests proving Phase 97's `Act<T>` typing is additive — Type::Fun construction, non-unification with Type::Fn, non-collapse with Type::Constructor, substitution independence, and proptests. (TASK-681)
+
+- TASK-682: 13 tests for Act<T> inference (String, Bool, chained binds), purity rejection via check_expr and check_purity, and proptests for type inference invariants. (TASK-682)
+
 - PLAN-097: Phase 97 Act Monad implementation plan. Track A (surface/core), Track B (type system), Track C (runtime), Track D (specs/testing). Estimated 75.5 hours.
 
 ### Changed

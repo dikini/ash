@@ -1,6 +1,6 @@
 # TASK-681: Document and test additive coexistence with Type::Fun
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -50,10 +50,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Existing `Type::Fun(...)` behavior remains unchanged by Phase 97 typing additions.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Existing `Type::Fun(...)` behavior remains unchanged by Phase 97 typing additions.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

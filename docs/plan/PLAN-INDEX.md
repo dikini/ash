@@ -2760,7 +2760,7 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 ||| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | ✅ Complete ||
 ||| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure fn bodies | 3 | ✅ Complete ||
 ||| TASK-681 | Record/test additive coexistence with existing `Type::Fun(...)` | 2 | 🟡 Ready ||
-||| TASK-682 | Type-system tests for purity rejection and `Act<T>` inference | 4 | 🟡 Ready ||
+||| TASK-682 | Type-system tests for purity rejection and `Act<T>` inference | 4 | ✅ Complete ||
 ||| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2 | 🟡 Ready ||
 ||| TASK-684 | Add `invoke` runtime primitive dispatch through `Expr::Call` | 4 | 🟡 Ready ||
 ||| TASK-685 | Implement closure-backed execution path for desugared `Act<T>` values | 4 | 🟡 Ready ||

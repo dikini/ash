@@ -36,6 +36,7 @@ This directory contains the canonical specifications for the Ash workflow langua
 | SPEC-028 | Function Constraint System | Draft | fn contract vocabulary, constraint evolution path, Z3 integration plan |
 | SPEC-045 | Ash Wiki Knowledge Substrate | Draft | Static-first metadata, authority, supersession, audit, and human/AI service contract over the project corpus |
 | SPEC-047 | Act Monad | Draft | First-class effectful computation, Act<A> type constructor, act {} blocks, invoke/unit/bind builtins, unifying pure expressions and effectful workflows |
+| SPEC-048 | Proc Library | Draft | Minimal process-structured computation type/library (`Proc<A>`) with library-first process combinators and deferred runtime-heavy features |
 
 ## Deprecated Specifications
 

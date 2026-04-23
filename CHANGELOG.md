@@ -12,6 +12,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - PLAN-097: Phase 97 Act Monad implementation plan. Track A (surface/core), Track B (type system), Track C (runtime), Track D (specs/testing). Estimated 75.5 hours.
 
+- NOTE-006: workflow ambient typing and runtime failure boundary. Records the current design direction that workflows still produce `Act<A>`, workflow typing tracks structured ambient-context projections (`capabilities`, `plays role`, `requires`, `ensures`) rather than raw `ActEnv`, and runtime execution reports `Result<A, WorkflowFailure>` without prematurely committing to supervisors or orchestration-specific recovery semantics.
+
+- DESIGN-030 and SPEC-048: proc library and minimal runtime substrate draft packet. Define `Proc<A>` as a distinct process-structured computation type with a library-first `proc` surface (`unit`, `bind`, `then`, `par`, `scatter`, `gather`), keep workflow compatibility explicit, and defer runtime-heavy features such as `run`, mailbox/channel mechanics, and spawning.
+
 ### Changed
 
 - NOTE-005 status updated: design exploration now has a normative spec counterpart (SPEC-047).

@@ -16,7 +16,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - DESIGN-030 and SPEC-048: proc library and minimal runtime substrate draft packet. Define `Proc<A>` as a distinct process-structured computation type with a library-first `proc` surface (`unit`, `bind`, `then`, `par`, `scatter`, `gather`), keep workflow compatibility explicit, and defer runtime-heavy features such as `run`, mailbox/channel mechanics, and spawning.
 
+- NOTE-007 and NOTE-008: runtime environment and operational bottom/failure design notes for the Act/Proc/Workflow tower. Capture identity-indexed typed component lookup, EffEnv vs ProcEnv boundaries, initial access modes, effect-failure channel, `fail` as operational bottom, multi-arm `with_error`, and async `par` failure observation via process handles.
+
 ### Changed
+
+- DESIGN-030 and SPEC-048 now record the current semantic-environment lattice `Pure < Effectful < Proc < Workflow`, clarifying that capability/provider and policy admissibility begin in the Effectful/Act stratum, proc adds split/join/process-local runtime semantics, workflow adds governance metadata and failure/reporting semantics, operational availability flows top-down from outside/workflows to processes to effects to pure functions, environment component lookup is identity-indexed by workflow/process/branch/effect/lexical frame identity, and async `par` returns running process handles `P<A>` rather than a synchronous result pair or special join object.
 
 - NOTE-005 status updated: design exploration now has a normative spec counterpart (SPEC-047).
 

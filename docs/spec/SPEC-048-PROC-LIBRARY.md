@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Date:** 2026-04-23
-**Related:** DESIGN-030, NOTE-006, SPEC-047, SPEC-004, SPEC-022
+**Related:** DESIGN-030, NOTE-006, NOTE-007, NOTE-008, SPEC-047, SPEC-004, SPEC-022
 
 ## Summary
 
@@ -13,7 +13,7 @@ This spec is intentionally narrower than a full process/workflow runtime spec. I
 - the public identity of `Proc<A>`
 - the initial proc-library surface
 - the algebraic intent of that surface
-- explicit deferrals for runtime-heavy features such as mailbox mechanics, spawning, and full execution semantics
+- explicit deferrals for runtime-heavy features such as mailbox mechanics, spawning, bottom/failure handling, and full execution semantics
 
 ## Motivation
 
@@ -35,7 +35,21 @@ Normative position:
 - `Act<A>` remains the sequential effectful-computation type
 - `Proc<A>` is the public type of process-structured computation
 
-This spec does not define `Proc` as reducible to `Act`, even though `Proc<Act<A>>` is recognized as an especially important and useful case.
+This spec does not define `Proc` as reducible to `Act`, even though `Proc<Act<A>>` remains a valid nested type.
+
+Design-note refinement: `Act<A>` is currently best understood as the `Effectful`/sequential stratum below `Proc<A>` in the semantic tower:
+
+```text
+Pure < Effectful / Act < Proc < Workflow
+```
+
+This spec preserves the public `Act`/`Proc` distinction because the strata differ in both admissible power and environment model. The common embedding direction is from sequential effectful computation into process composition. A later proc surface may expose this as an explicit operation such as:
+
+```text
+from_act : Act<A> -> Proc<A>
+```
+
+This does not imply that `Proc<Act<A>>` implicitly flattens. `Proc<Act<A>>` means “a process computation whose normal result is a suspended effectful computation.”
 
 ### 1.2 Public type form
 
@@ -57,10 +71,11 @@ This spec does not expose raw `ActEnv` structure or any lower-level process-envi
 In scope:
 
 - `Proc<A>` as a draft public type constructor
+- `P<A>` as a draft public running-process handle type, used by async `par`/`join`/message operations
 - a `proc` library namespace/module
-- initial library surface: `unit`, `bind`, `then`, `par`, `scatter`, `gather`
+- initial library surface: `unit`, `bind`, `then`, `par`, `join`, `scatter`, `gather`
 - algebraic intent for sequential vs. parallel process composition
-- explicit deferral of mailbox/spawn/runtime-heavy features
+- explicit deferral of mailbox/spawn/full runtime-heavy features
 
 Out of scope for this spec:
 
@@ -71,6 +86,7 @@ Out of scope for this spec:
 - exact environment-distribution law for `par`
 - role/capability/process enrichment hooks (`with_roles`, `with_capabilities`, etc.)
 - process IR / runtime scheduler design
+- exact operational bottom/failure handling semantics (`fail`, `with_error`) beyond compatibility constraints in this spec (see NOTE-008)
 
 ## 3. Surface Direction
 
@@ -83,6 +99,7 @@ Inside that namespace, the ordinary unsuffixed names are preferred:
 - `bind`
 - `then`
 - `par`
+- `join`
 - `scatter`
 - `gather`
 
@@ -99,6 +116,14 @@ Proc<A>
 This spec intentionally keeps the public type shape simple.
 Any deeper semantic relation to `Act<A>` remains specification prose or implementation detail, not a surface kind/generalization commitment.
 
+The proc surface also reserves a public running-process handle type:
+
+```ash
+P<A>
+```
+
+`P<A>` is an opaque handle to a running process that may eventually produce `A`. It is not a special join token; the same handle identity may be used by `join`, `gather`, `send`, cancellation, and later mailbox/channel operations.
+
 ## 4. Initial Library Surface
 
 ### 4.1 Core signatures
@@ -109,7 +134,8 @@ The initial proc-library surface should support at least the following shapes:
 unit   : A -> Proc<A>
 bind   : Proc<A> -> (A -> Proc<B>) -> Proc<B>
 then   : Proc<A> -> Proc<B> -> Proc<B>
-par    : Proc<A> -> Proc<B> -> Proc<(A, B)>
+par    : Proc<A> -> Proc<B> -> Proc<(P<A>, P<B>)>
+join   : P<A> -> P<B> -> Proc<(A, B)>
 ```
 
 Interpretation:
@@ -117,18 +143,19 @@ Interpretation:
 - `unit` lifts a pure value into trivial process structure
 - `bind` gives dependent sequential process composition
 - `then` sequences while discarding the left value
-- `par` composes independent processes in parallel/process structure
+- `par` starts/adopts independent process computations and returns their running process handles
+- `join` observes/synchronizes two running process handles and returns their completed values, or propagates observed process failure according to the later proc failure semantics
 
 ### 4.2 Derived or library-level combinators
 
 A plausible initial proc library may also expose:
 
 ```text
-scatter : List<A> -> (A -> Proc<B>) -> Proc<List<B>>
-gather  : List<Proc<A>> -> Proc<List<A>>
+scatter : List<A> -> (A -> Proc<B>) -> Proc<List<P<B>>>
+gather  : List<P<A>> -> Proc<List<A>>
 ```
 
-These are process-oriented collection combinators and may be specified as library-layer combinators over the core surface.
+These are process-oriented collection combinators over running process handles. `scatter` starts/adopts one process per input element and returns handles. `gather` observes a collection of process handles and returns their completed values, or propagates observed process failure according to later proc failure semantics.
 
 This spec does not require a unique encoding yet, but they belong in the proc-library vocabulary.
 
@@ -141,15 +168,41 @@ This is the part of the process algebra closest to ordinary monadic composition.
 
 ### 5.2 Parallel face
 
-`par` defines the independent composition face of `Proc`.
+`par` defines the independent process-start face of `Proc`.
 This spec treats `par` as more central to the concurrency/process story than `bind`, without removing `bind`.
 
 Working process-composition intuition:
 
 ```text
-Act . Act . Act      -- sequential effect composition via bind
-Proc || Proc || Proc -- parallel process composition via par
+Act . Act . Act          -- sequential effect composition via bind
+Proc || Proc || Proc     -- async process start/composition via par
+join(P<A>, P<B>)         -- later observation/synchronization point
 ```
+
+Because `par` is asynchronous, a failure inside one of the returned running processes does not retroactively fail the lexical `par` call after it has returned. Such failures are attached to the running process identity and are observed by later `join`, `gather`, cancellation, supervision, or workflow boundary operations.
+
+Consequently, a scoped bottom handler around `par` handles only failure to start/admit/create the running process handles:
+
+```ash
+with_error {
+    par(p1, p2)
+} handle {
+    _ => fallback_handles
+}
+```
+
+Branch/process failures should be handled around observation points such as `join` or inside the processes themselves:
+
+```ash
+handles = par(p1, p2);
+with_error {
+    join(handles.0, handles.1)
+} handle {
+    _ => fallback_result
+}
+```
+
+The `with_error`/`fail` syntax above is included as semantic direction only. NOTE-008 records the current bottom/failure handling model; a dedicated normative failure spec must define exact parser, typing, and runtime behavior before implementation.
 
 ### 5.3 Applicative / monoidal reading
 
@@ -204,6 +257,7 @@ Even though these features are deferred, the proc-library design must remain com
 - channel-based communication
 - process execution via `run`
 - workflow elaboration into proc machinery
+- identity-indexed process handles usable by `join`, `gather`, message send/receive, cancellation, and workflow reporting
 
 ## 7. Relation to Workflow
 
@@ -221,10 +275,12 @@ Compatibility statement:
 A later proc/runtime spec should define:
 
 1. `run` semantics
-2. mailbox/channel model
-3. `send` / `receive` process operations
-4. precise `par` failure and environment rules
-5. interaction between proc and workflow execution/failure reporting
+2. `P<A>` runtime representation and process identity discipline (see NOTE-007)
+3. mailbox/channel model
+4. `send` / `receive` process operations over process handles
+5. precise `par` start/admission failure vs process-observation failure rules (see NOTE-008)
+6. `join`/`gather` observation, cancellation, and ownership/consumption semantics
+7. interaction between proc and workflow execution/failure reporting
 
 ## 9. Implementation Guidance
 
@@ -244,20 +300,28 @@ If the current parser/typechecker cannot yet represent the necessary public type
 The recommended implementation order is:
 
 1. establish the public `Proc<A>` type identity
-2. establish the proc library surface and typing intent
-3. defer runtime-heavy pieces unless a small runtime hook is absolutely necessary
+2. establish the public `P<A>` process-handle type identity
+3. establish the proc library surface and typing intent
+4. defer runtime-heavy pieces unless a small runtime hook is absolutely necessary
 
 This preserves the "minimal runtime interference" goal.
 
-## 10. Open Questions
+## 10. Current Answers and Open Questions
 
-1. Should `Proc<A>` first appear as a surface-visible type constructor or as a type/library contract backed later by runtime representation work?
-2. Is `par : Proc<A> -> Proc<B> -> Proc<(A, B)>` the right first canonical type?
-3. Which proc combinators can be landed as library declarations before any runtime backing exists?
-4. How should `run` be specified later so `Proc` stays distinct from `Act` while still supporting valuable cases such as `Proc<Act<A>>`?
-5. How should `scatter` and `gather` relate to `par` in the final proc algebra?
+1. Public type surface: keep `Act<A>` and `Proc<A>` for now. This remains open to future extension with explicit `Pure`/`Workflow` computation names or indexed `Comp<K, A>` only if implementation pressure justifies it.
+2. Process-handle spelling: current preference is `Process<A>`, but this spec continues to use `P<A>` as short draft notation until naming is finalized.
+3. `par` identity creation: current direction is that `par` creates new child processes or workflows depending on the level where it is interpreted; the returned values are process handles.
+4. `join` shape: `join` is binary. The core primitive is probably an await-like operation over one running process handle, from which `join` and `gather` can be built.
+5. Which proc combinators can be landed as library declarations before any runtime backing exists?
+6. How should `run` be specified later so `Proc` stays distinct from `Act` while still supporting the embedding of sequential `Act<A>` computations into process composition?
+7. How exactly should `scatter`/`gather` relate to `par`/`join`/await in the final proc algebra?
+8. Which bottom/failure semantics (`fail`, `with_error`, process-observation failure) belong in this spec vs a dedicated failure semantics spec? Current direction: DESIGN-030 records the relation, NOTE-008 records the draft model, and a future normative spec should harden parser/type/runtime behavior.
 
 ## Changelog
+
+### 2026-04-24
+
+- Aligned the proc library draft with DESIGN-030's semantic tower. Added `P<A>` running process handles, changed `par` to asynchronous process start returning handles, added `join`, updated `scatter`/`gather` around handles, clarified `Act<A>` as the effectful/sequential stratum below `Proc<A>`, recorded current answers for public type surface/process-handle naming/`par` identity creation/`join` shape, and deferred exact `fail`/`with_error` bottom semantics to NOTE-008 and a future normative spec.
 
 ### 2026-04-23
 

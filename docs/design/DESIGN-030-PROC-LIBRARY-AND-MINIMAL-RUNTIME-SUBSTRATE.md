@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Date:** 2026-04-23
-**Related:** NOTE-006, SPEC-047, SPEC-022, SPEC-004, THREADING_MODEL.md, WORKFLOW_SPAWNING_AND_SUPERVISION.md
+**Related:** NOTE-006, NOTE-007, NOTE-008, SPEC-047, SPEC-022, SPEC-004, THREADING_MODEL.md, WORKFLOW_SPAWNING_AND_SUPERVISION.md
 
 ## 1. Problem Statement
 
@@ -44,6 +44,77 @@ This slice does not attempt to settle:
 
 ## 4. Core Position
 
+### 4.0 Semantic strata and environment lattice
+
+The current proc/act design is easiest to reason about as a monotone semantic lattice:
+
+```text
+Pure < Effectful < Proc < Workflow
+```
+
+Each step adds both:
+
+1. more admissible expression/process power, and
+2. a richer execution environment that the computation may understand and rely on.
+
+| Stratum | Extra power beyond lower strata | Environment understood by the computation | Representative operations / forms |
+| --- | --- | --- | --- |
+| `Pure` | lexical computation only | lexical bindings only | pure `let`, closure/application, pattern/match, pure data construction |
+| `Effectful` / `Act` | sequential effects over pure computation | lexical + effect environment | `unit`, `bind`, `then`, `guard`, `invoke`; capability/provider access; policy/capability admissibility; provenance begins when effect execution records it |
+| `Proc` | process composition over effectful computation | lexical + effect + proc environment | all sequential `Act` operations plus `par`, `scatter`, `gather`; later mailbox/channel, spawn, process identity, cancellation/failure scope |
+| `Workflow` | governed/admitted proc execution | lexical + effect + proc + workflow environment | proc computation plus admitted roles, `requires`, `ensures`, workflow failure boundary, reporting/obligation/supervision semantics |
+
+Important consequences:
+
+- `Act` is not just "less syntax" than `Proc`; it is the effectful/sequential stratum with a smaller environment model.
+- `Proc` is not where effects start; it is where process-local composition and split/join semantics start.
+- `Workflow` should be understood as proc computation plus extra governance metadata and governance-sensitive operators, not as the first place where capability semantics appear.
+
+Operationally, availability is restricted from the top of the tower downward:
+
+```text
+outside runtime / `ash run` / another workflow
+  starts Workflow
+Workflow
+  starts/adopts Proc
+Proc
+  invokes Effectful / Act computation
+Effectful / Act
+  calls Pure functions
+```
+
+Short-circuits may exist for runtime efficiency, ergonomics, or migration compatibility, but the reference semantics should preserve this tower. A lower stratum should not directly assume the environment of a higher stratum; higher strata admit, start, or enrich lower-stratum computations.
+
+Environment components should also be identity-indexed, not just tower-indexed. At minimum, every live execution context is rooted in a workflow/run identity created by the outside runtime or by another workflow. Lower strata then receive projected or derived identities:
+
+```text
+WorkflowId
+  owns/adopts ProcessId(s)
+ProcessId
+  owns/adopts BranchId(s) and effect invocation scopes
+EffectInvocationId / EffectScopeId
+  owns sequential effect trace entries
+LexicalFrameId
+  owns ordinary lexical bindings
+```
+
+So an environment lookup is not merely `(TowerLevel, ComponentType)`, but approximately:
+
+```text
+(TowerLevel, EntityId, ComponentType, Key)
+```
+
+For example:
+
+- workflow role admission: `(Workflow, WorkflowId, AdmittedRoles, role)`
+- process mailbox lookup: `(Proc, ProcessId, MailboxSet, self)`
+- branch provenance segment: `(Effectful, BranchId or EffectScopeId, ProvenanceLog, current)`
+- lexical variable lookup: `(Pure, LexicalFrameId, LexicalBindings, name)`
+
+The open semantic question is how identities split and derive downward. `par`, `scatter`, and `gather` should not clone one ambiguous process/effect context; they should create child or branch identities with explicit parentage and join semantics. The workflow identity remains the governance root, while process/branch/effect identities determine isolation, attribution, and merge behavior below it. See NOTE-007 for the current runtime environment/component model and NOTE-008 for the corresponding operational bottom/failure model.
+
+This lattice is currently the best working model for the relation between pure expressions, `Act`, `Proc`, and workflow execution.
+
 ### 4.1 `Proc<A>` is distinct from `Act<A>`
 
 Current position:
@@ -54,6 +125,13 @@ Current position:
 
 This distinction should be strengthened rather than weakened.
 `Proc` is not merely "Act with mailbox" and should not be defined away as reducible to `Act`.
+
+At the same time, the lattice above suggests a compatible semantic reading:
+
+- `Act<A>` is the `Effectful`/sequential stratum
+- `Proc<A>` is the general process stratum above it
+
+So every useful `Act` computation should remain embeddable into `Proc`, but the language may still preserve the public distinction because the two strata differ in both admissible power and environment model.
 
 ### 4.2 `Proc<Act<A>>` remains especially valuable
 
@@ -87,6 +165,28 @@ This suggests:
 - `Proc` should still support `unit` and `bind`
 - but applicative/monoidal structure is likely more semantically central for concurrency than monadic sequencing alone
 - `||` should be treated as a process-composition operator, not as a mere alias for `then`
+
+### 4.4 Async `par` returns running process handles
+
+The preferred process-algebra reading of `par` is asynchronous process start, not synchronous pair production.
+
+Therefore the process-level shape should be closer to:
+
+```text
+par : Proc<A> -> Proc<B> -> Proc<(P<A>, P<B>)>
+```
+
+where `P<A>` stands for a running process handle for a process that may eventually produce `A`.
+`P<A>` should be understood as an opaque handle around a process identity, not as a join-specific wrapper type.
+
+Consequences:
+
+- `par(p1, p2)` starts/adopts two running processes and returns handles to those processes.
+- `join` should consume or observe running process handles, for example `join(pa, pb)`, rather than consume a special `Join<A, B>` object returned by `par`.
+- `send`/mailbox/channel operations can target the same process handles.
+- `scatter` and `gather` can be arranged around collections of `P<A>` handles using the same identity discipline.
+- A `with_error { par(p1, p2) } handle { ... }` block handles failure of the `par` start/admission operation itself, not later failures inside `p1` or `p2`.
+- Failures in running process handles propagate along their process identity toward a future `join`/`gather`/observation point, not back to the lexical `par` call after it has returned.
 
 ## 5. Library-First Direction
 

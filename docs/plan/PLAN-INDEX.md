@@ -2787,3 +2787,44 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 - D5: `unit`, `bind`, `then`, and `guard` remain library functions
 - D6: `Act<A>` is additive and does not retire `Type::Fun(...)` in this phase
 
+## Phase 98: Proc, Process Runtime, Failure, and Workflow Boundary
+
+**Priority:** High (implements SPEC-048 through SPEC-051 after the Act substrate)
+**Status:** 🟡 Ready
+**Spec:** SPEC-048, SPEC-049, SPEC-050, SPEC-051
+**Plan:** docs/plan/PLAN-098-PROC-PROCESS-WORKFLOW-RUNTIME.md
+
+Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process handles, operational `fail`/`with_error`, process identity/lifecycle, and workflow boundary reporting. Phase 98 is substrate-first: it does not jump directly to `par`; it first establishes identity, failure, type constructors, process registry, and handle observation.
+
+||| Task | Description | Est. Hours | Status ||
+|||------|-------------|------------|--------||
+||| TASK-705 | Semantic tower runtime preflight and Phase 97 dependency check | 2 | 🟡 Ready ||
+||| TASK-706 | Runtime identity and structured failure carriers | 5 | 🟡 Ready ||
+||| TASK-707 | Register `Proc` and `P` type constructors | 3 | 🟡 Ready ||
+||| TASK-718 | `Proc` core `unit`/`bind`/`then` combinators | 4 | 🟡 Ready ||
+||| TASK-708 | Operational `fail` and scoped `with_error` | 8 | 🟡 Ready ||
+||| TASK-709 | Process registry and child environment projection | 7 | 🟡 Ready ||
+||| TASK-710 | Affine process handles and `await` | 6 | 🟡 Ready ||
+||| TASK-711 | Process `yield : Proc<Unit>` | 3 | 🟡 Ready ||
+||| TASK-712 | `par` and `scatter` child admission | 7 | 🟡 Ready ||
+||| TASK-713 | `join` and `gather` wait-for-all observation | 6 | 🟡 Ready ||
+||| TASK-714 | Workflow boundary carriers and admission context | 5 | 🟡 Ready ||
+||| TASK-715 | Workflow admission and contract evidence | 6 | 🟡 Ready ||
+||| TASK-716 | Workflow completion/report construction | 6 | 🟡 Ready ||
+||| TASK-717 | Semantic tower cross-layer validation | 5 | 🟡 Ready ||
+
+**Track A (Substrate + Failure):** 22h. Validate prerequisites, add identity/failure carriers, register process types, add the non-concurrent `Proc` combinator surface, and implement operational bottom/scoped handling.
+
+**Track B (Process Runtime):** 16h. Add process registry, child environment projection, affine handles, `await`, and process `yield`.
+
+**Track C (Concurrency Library):** 13h. Implement `par`/`scatter` admission and wait-for-all `join`/`gather`.
+
+**Track D (Workflow Boundary):** 22h. Add workflow outcome/report carriers, admission/requires evidence, completion-time ensures/obligation checks, lower-failure reinterpretation, and cross-layer validation.
+
+**Decision gates resolved:**
+- D1: Phase 98 is substrate-first and must not start with public `par` behavior.
+- D2: `ControlLink` is not `P<A>`; affine process handles are a separate result-observation authority.
+- D3: existing workflow/proxy `Yield` remains distinct from process `yield : Proc<Unit>`.
+- D4: workflow reporting is introduced through a new boundary API before replacing compatibility `ExecResult<Value>` APIs.
+- D5: `Proc` `unit`/`bind`/`then` are planned explicitly before public process concurrency operations.
+

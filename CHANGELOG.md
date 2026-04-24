@@ -20,6 +20,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - SPEC-049, SPEC-050, and SPEC-051: normative draft specs for process runtime semantics, operational bottom/scoped handling, and initial workflow semantics. The new specs promote the resolved `Proc<A>`/`P<A>` process model into process identity, affine/linear handle, child environment projection, `yield`, `await`, wait-for-all `join`/`gather`, tower/entity-indexed `fail`/`with_error`, process-observation failure aggregation, workflow admission/governance, `WorkflowFailure`, reporting, and lower-failure reinterpretation contracts.
 
+- PLAN-098: Proc, process runtime, failure, and workflow boundary implementation plan. Adds substrate-first tasks TASK-705 through TASK-718 for runtime identities, operational `fail`/`with_error`, `Proc`/`P` type registration, `Proc` core combinators, process handles, `yield`, `par`/`scatter`, `await`/`join`/`gather`, workflow boundary reports, and cross-layer validation.
+
 ### Changed
 
 - DESIGN-030 and SPEC-048 now record the current semantic-environment lattice `Pure < Effectful < Proc < Workflow`, clarifying that capability/provider and policy admissibility begin in the Effectful/Act stratum, proc adds split/join/process-local runtime semantics, workflow adds governance metadata and failure/reporting semantics, operational availability flows top-down from outside/workflows to processes to effects to pure functions, environment component lookup is identity-indexed by workflow/process/branch/effect/lexical frame identity, and async `par` returns running process handles `P<A>` rather than a synchronous result pair or special join object.

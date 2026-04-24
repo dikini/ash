@@ -11,6 +11,7 @@ pub mod effect;
 pub mod env_frame;
 pub mod module_graph;
 pub mod provenance;
+pub mod runtime;
 pub mod small_step;
 pub mod stream;
 pub mod value;
@@ -28,6 +29,7 @@ pub mod test_helpers;
 pub use ast::*;
 pub use effect::*;
 pub use provenance::*;
+pub use runtime::*;
 pub use stream::{
     Mailbox, MailboxEntry, MailboxOverflowError, OverflowStrategy, Receive as StreamReceive,
     ReceiveArm as StreamReceiveArm, ReceiveMode as StreamReceiveMode, StreamRef,

@@ -1,6 +1,6 @@
 # TASK-706: Runtime identity and failure carriers
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -53,12 +53,24 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Identity newtypes are serializable/debuggable where existing ID types are.
-- [ ] Failure carriers preserve source process/workflow identity in unit tests.
-- [ ] No public API treats `ControlLink` as `P<A>`.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Identity newtypes are serializable/debuggable where existing ID types are.
+- [x] Failure carriers preserve source process/workflow identity in unit tests.
+- [x] No public API treats `ControlLink` as `P<A>`.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` passes cleanly
+- [x] `cargo fmt --check` passes
+
+## Completion Notes
+
+- Added `ash_core::runtime` carrier substrate with `RunId`, `ProcessId`, crate-internal `BranchId`, `LexicalFrameId`, `EffectScopeId`, lifecycle/terminal-state carriers, structured operational/process failure carriers, and skeleton workflow failure/report carriers.
+- Kept `BranchId` internal to the runtime module and kept existing `ControlLink` semantics distinct from future affine `P<A>` handles.
+- Deferred runtime admission, Proc/P type registration, process scheduling, operational `fail`/`with_error`, and workflow admission/report wiring to later Phase 98 tasks.
+
+## Verification Evidence
+
+- `cargo fmt --check`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo test --all`
 
 ## Dependencies for Next Task
 

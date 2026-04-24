@@ -81,9 +81,12 @@ reported effect is computed from canonical workflow forms and source-level contr
 by lattice join. Embedding-side provider metadata may inform compatibility checks elsewhere, but it
 is not the primary source of workflow effect classification in this semantics.
 
-The possible addition of a surfaced `Pure` bottom element remains explicit follow-up work. Until
-that broader corpus change is made, this document continues to use the current four-grade lattice
-without silently treating `Pure` as already normative.
+The possible addition of a surfaced `Pure` bottom element was originally left as explicit
+follow-up work in this document. [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md)
+now provides the first normative operational-bottom model across the semantic tower, including
+`Pure`-attributed operational failures. This document's legacy workflow small-step rules continue
+to use the current four-grade effect lattice for effect classification; SPEC-050 owns the separate
+operational-failure channel and supersedes this paragraph for bottom/failure attribution.
 
 Notation used below:
 
@@ -1123,7 +1126,7 @@ runtime tuple-variant value family.
 
 **Precondition:** The operational semantics defined here operate over canonical core workflow forms.
 Surface statement lists are normatively lowered to nested `LET ... in cont` and `SEQ` forms before
-reaching this layer (see [SPEC-002](../SPEC-002-SURFACE.md) §4.4).
+reaching this layer (see [SPEC-002](SPEC-002-SURFACE.md) §4.4).
 
 ```
 (SEQ)

@@ -1,6 +1,6 @@
 # TASK-705: Semantic tower runtime preflight
 
-## Status: 🟠 Preflight recorded; baseline drift blocks completion
+## Status: ✅ Complete
 
 ## Description
 
@@ -54,9 +54,9 @@ Do not implement runtime behavior in this preflight task. Its output is verified
 - [x] No runtime implementation is performed in this task.
 - [x] PLAN-098 dependency assumptions are validated against live code.
 - [x] Any changed prerequisite order is documented in PLAN-INDEX and task dependencies.
-- [x] Baseline `cargo fmt --check` was attempted; pre-existing formatting drift is recorded below.
-- [x] Baseline `cargo test --all` was sampled through the known failing Act module-resolution test; the pre-existing failure is recorded below.
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly; not run because baseline fmt/test gates are already failing outside TASK-705 scope.
+- [x] `cargo fmt --check` passes after merging current `main` into this worktree.
+- [x] `cargo test --all` passes after merging current `main` into this worktree.
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` passes after merging current `main` into this worktree.
 
 ## Dependencies for Next Task
 
@@ -91,14 +91,14 @@ Act-dependent Phase 98 work remains deferred until the relevant Phase 97 Act sub
 
 ### Phase 97 / Act dependency status
 
-Phase 97 and TASK-672 through TASK-691 are still marked Ready in PLAN-INDEX in this worktree. The survey found no completed expression-level Act substrate carriers such as `ActBlock`, `ActStmt`, `ActEnv`, `Act` type constructor registration, or `invoke` as `Act<Value>`. This does not block TASK-706, but it blocks or constrains Act-dependent later slices.
+After merging current `main` into this worktree, Phase 97 and TASK-672 through TASK-691 are marked complete in PLAN-INDEX. The worktree now contains expression-level Act substrate such as surface `ActBlock`/`ActStmt`, Act lowering, `ActEnv`/`ActEnvToken` runtime boundary pieces, `Act` type-constructor registration, and `invoke` typed as `Act<Value>`. TASK-706 remains safe to start because it is carrier/substrate-only; later Act-dependent Phase 98 slices should still verify their exact Phase 97 call paths before relying on them.
 
-### Baseline verification drift
+### Baseline verification
 
-The preflight intentionally did not repair unrelated baseline drift. Current baseline issues observed in this worktree:
+The first preflight pass recorded unrelated baseline drift inherited from the older Phase 98 worktree. After merging current `main` into this worktree, the baseline gates are green:
 
-- `cargo fmt --check` reports formatting drift in existing files including `crates/ash-cli/src/commands/run.rs`, `crates/ash-engine/src/module_loader.rs`, `crates/ash-engine/src/providers/http.rs`, `crates/ash-engine/src/providers/process.rs`, `crates/ash-engine/src/providers/time.rs`, and several `ash-engine` tests.
-- Targeted test command `cargo test --all --test module_resolution stdlib_act_module_resolution -- --exact` fails in `ash-engine --test module_resolution`: `stdlib_act_module_resolution` reports `Parse("item 'unit' not found in module 'act'")`.
-- Full clippy was not run because the read-only baseline already has fmt/test failures outside this task's scope.
+- `cargo fmt --check` passes.
+- `cargo test --all` passes.
+- `cargo clippy --all-targets --all-features -- -D warnings` passes.
 
-These baseline failures prevent claiming the whole workspace gate is green, but they do not expose a semantic fork in PLAN-098 and do not block TASK-706 if TASK-706 remains carrier/substrate-only.
+The resolved baseline confirms TASK-706 may proceed as carrier/substrate-only work without inheriting unrelated Phase 97 drift.

@@ -94,6 +94,8 @@ pub struct Workflow {
     pub imported_closures: std::collections::HashMap<String, ash_core::Value>,
     /// Param counts for imported callables, used to register type signatures.
     pub imported_param_counts: std::collections::HashMap<String, usize>,
+    /// Declared type signatures for imported ordinary `pub fn` callables.
+    pub imported_fn_signatures: std::collections::HashMap<String, ash_parser::surface::FnDef>,
     /// Declared type signatures for imported builtin fn callables.
     ///
     /// When present, `Engine::check()` uses `builtin_fn_signature_type` to
@@ -272,7 +274,9 @@ impl Engine {
 
         let mut type_defs = Vec::new();
         for source in &sources {
-            type_defs.extend(module_loader::collect_public_type_defs_from_source(source)?);
+            type_defs.extend(module_loader::collect_type_identity_defs_from_source(
+                source,
+            )?);
         }
         Ok(type_defs)
     }
@@ -423,8 +427,12 @@ impl Engine {
         use winnow::prelude::*;
 
         // Convert imported callables to closure values for runtime binding
-        let (imported_closures, imported_param_counts, imported_builtin_signatures) =
-            build_imported_closures(imported_callables);
+        let (
+            imported_closures,
+            imported_param_counts,
+            imported_fn_signatures,
+            imported_builtin_signatures,
+        ) = build_imported_closures(imported_callables);
 
         let mut input = new_input(source);
         skip_whitespace_and_comments(&mut input);
@@ -459,6 +467,7 @@ impl Engine {
                         id,
                         imported_closures: local_closures,
                         imported_param_counts: local_param_counts,
+                        imported_fn_signatures,
                         imported_builtin_signatures,
                     });
                 }
@@ -473,6 +482,7 @@ impl Engine {
                     id,
                     imported_closures,
                     imported_param_counts,
+                    imported_fn_signatures,
                     imported_builtin_signatures,
                 })
             }
@@ -495,6 +505,7 @@ impl Engine {
                     id,
                     imported_closures: local_closures,
                     imported_param_counts: local_param_counts,
+                    imported_fn_signatures,
                     imported_builtin_signatures,
                 })
             }
@@ -611,11 +622,16 @@ impl Engine {
                 type_env.declare_type_name(&imported_type.name);
             }
         }
-        // Now register all types (upgrades placeholders to full definitions)
+        // Now register all type identities (upgrades placeholders to full definitions)
         for imported_type in imported_type_defs {
             if !type_env.has_full_type(&imported_type.name) {
                 type_env
-                    .register_type(&imported_type)
+                    .register_type_identity(&imported_type)
+                    .map_err(|error| EngineError::Type(error.to_string()))?;
+            }
+            if matches!(imported_type.visibility, ash_core::ast::Visibility::Public) {
+                type_env
+                    .expose_type_representation(&imported_type.name)
                     .map_err(|error| EngineError::Type(error.to_string()))?;
             }
         }
@@ -1247,21 +1263,31 @@ impl EngineBuilder {
 /// For each entry in `workflow.imported_param_counts`, checks whether a
 /// declared builtin signature is available in `workflow.imported_builtin_signatures`.
 /// If so, uses `builtin_fn_signature_type` to produce the precise polymorphic type.
-/// If signature resolution fails (e.g. unregistered type like `Record`), falls
-/// back to an arity-only synthetic type.  Non-builtin callables always use the
-/// arity-only fallback.
+/// If a declared signature exists, signature conversion errors are hard type
+/// errors rather than silently falling back to arity-only types.
 #[allow(clippy::unnecessary_wraps)]
 fn bind_imported_callable_types(
     type_env: &mut ash_typeck::type_env::TypeEnv,
     workflow: &Workflow,
 ) -> Result<(), EngineError> {
     for (name, &param_count) in &workflow.imported_param_counts {
-        #[allow(clippy::collapsible_if)]
+        if let Some(sig) = workflow.imported_fn_signatures.get(name) {
+            let ty = ash_typeck::fn_signature_type(type_env, sig).map_err(|error| {
+                EngineError::Type(format!(
+                    "failed to resolve imported function signature for '{name}': {error}"
+                ))
+            })?;
+            type_env.bind_variable(name, ty);
+            continue;
+        }
         if let Some(sig) = workflow.imported_builtin_signatures.get(name) {
-            if let Ok(ty) = ash_typeck::builtin_fn_signature_type(type_env, sig) {
-                type_env.bind_variable(name, ty);
-                continue;
-            }
+            let ty = ash_typeck::builtin_fn_signature_type(type_env, sig).map_err(|error| {
+                EngineError::Type(format!(
+                    "failed to resolve imported builtin signature for '{name}': {error}"
+                ))
+            })?;
+            type_env.bind_variable(name, ty);
+            continue;
         }
         // Arity-only synthetic type (fresh type variables)
         let param_types: Vec<ash_typeck::Type> = (0..param_count)
@@ -1273,19 +1299,23 @@ fn bind_imported_callable_types(
     Ok(())
 }
 
+/// Imported callable bindings built for runtime and type-checker integration.
+type ImportedClosureBindings = (
+    HashMap<String, Value>,
+    HashMap<String, usize>,
+    HashMap<String, ash_parser::surface::FnDef>,
+    HashMap<String, ash_parser::surface::BuiltinFnDef>,
+);
+
 /// Convert imported callables to `Value::Closure` for runtime binding.
 /// Each callable body is lowered from surface to core Expr, then wrapped in a closure.
 ///
-/// Returns `(closures, param_counts, builtin_signatures)` where `builtin_signatures`
-/// carries the declared type signatures of `builtin fn` callables so that
-/// `Engine::check()` can bind precise types instead of arity-only synthetics.
+/// Returns `(closures, param_counts, fn_signatures, builtin_signatures)` where
+/// the signature maps carry declared type signatures for imported callables so
+/// that `Engine::check()` can bind precise types instead of arity-only synthetics.
 fn build_imported_closures(
     imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> (
-    HashMap<String, Value>,
-    HashMap<String, usize>,
-    HashMap<String, ash_parser::surface::BuiltinFnDef>,
-) {
+) -> ImportedClosureBindings {
     use module_loader::CallableKind;
 
     // Resolved once; builtin_dispatch_table() uses OnceLock so this is a
@@ -1295,15 +1325,23 @@ fn build_imported_closures(
 
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();
+    let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
     for (name, callable) in imported_callables {
         let params: Vec<(String, Option<String>)> =
             callable.params.iter().map(|p| (p.clone(), None)).collect();
         param_counts.insert(name.clone(), params.len());
 
-        // Extract declared type signature for builtin fn callables.
+        // Extract declared type signature for imported callables.
         if let Some(sig) = &callable.signature {
-            builtin_signatures.insert(name.clone(), sig.clone());
+            match sig {
+                module_loader::CallableSignature::Function(fn_def) => {
+                    fn_signatures.insert(name.clone(), fn_def.clone());
+                }
+                module_loader::CallableSignature::Builtin(builtin) => {
+                    builtin_signatures.insert(name.clone(), builtin.clone());
+                }
+            }
         }
 
         let body_expr = match &callable.kind {
@@ -1376,7 +1414,7 @@ fn build_imported_closures(
             },
         );
     }
-    (closures, param_counts, builtin_signatures)
+    (closures, param_counts, fn_signatures, builtin_signatures)
 }
 
 #[cfg(test)]
@@ -2061,11 +2099,69 @@ mod tests {
             },
         );
 
-        let (closures, _, _) = build_imported_closures(&imported_callables);
+        let (closures, _, _, _) = build_imported_closures(&imported_callables);
         let closure = closures
             .get("demo")
             .expect("imported callable should lower into a closure");
 
         assert_closure_body_preserves_effectful_bind(closure);
+    }
+
+    #[test]
+    fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
+        use ash_parser::input::new_input;
+        use ash_parser::parse_module::parse_fn_definition;
+        use ash_parser::surface::Definition;
+        use ash_typeck::Type;
+        use ash_typeck::type_env::TypeEnv;
+        use winnow::Parser;
+
+        let mut input = new_input("pub fn bind(ma: Int, f: Fn(Int) -> Int) -> Int { ma }");
+        let parsed = parse_fn_definition
+            .parse_next(&mut input)
+            .expect("function definition should parse");
+        let Definition::Function(function) = parsed else {
+            panic!("expected ordinary function definition");
+        };
+
+        let mut workflow = Workflow {
+            core: ash_core::Workflow::Done,
+            id: 0,
+            imported_closures: HashMap::new(),
+            imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
+            imported_fn_signatures: HashMap::from([(String::from("bind"), function)]),
+            imported_builtin_signatures: HashMap::new(),
+        };
+
+        let mut env = TypeEnv::with_builtin_types();
+        bind_imported_callable_types(&mut env, &workflow)
+            .expect("imported pub fn signature should bind cleanly");
+
+        let Some(bound_ty) = env.lookup_call_target(None, "bind") else {
+            panic!("expected imported pub fn binding for bind");
+        };
+
+        match bound_ty {
+            Type::Fn(params, ret) => {
+                assert_eq!(params.len(), 2, "bind should preserve arity");
+                assert!(matches!(params[0], Type::Int), "first param should be Int");
+                assert!(
+                    matches!(&params[1], Type::Fn(inner, inner_ret)
+                        if inner.len() == 1
+                            && matches!(inner[0], Type::Int)
+                            && matches!(inner_ret.as_ref(), Type::Int)),
+                    "second param should preserve Fn(Int) -> Int, got {:?}",
+                    params[1]
+                );
+                assert!(
+                    matches!(ret.as_ref(), Type::Int),
+                    "return type should be Int"
+                );
+            }
+            other => panic!("expected Type::Fn for imported ordinary fn, got {other:?}"),
+        }
+
+        // keep mutable binding used so clippy doesn't complain if future fields change
+        workflow.imported_param_counts.clear();
     }
 }

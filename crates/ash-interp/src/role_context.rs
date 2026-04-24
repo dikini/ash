@@ -36,9 +36,9 @@
 //! ```
 
 use ash_core::{Capability, Name, Role};
-use std::cell::RefCell;
 use std::collections::{BTreeSet, HashSet};
 use std::fmt;
+use std::sync::{Arc, Mutex};
 
 /// Errors that can occur when discharging an obligation
 #[derive(Debug, Clone, PartialEq)]
@@ -66,12 +66,26 @@ impl std::error::Error for DischargeError {}
 ///
 /// Tracks the active role and discharged obligations using interior mutability
 /// for linear discharge semantics.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RoleContext {
     /// The active role with its authority and obligations
     pub active_role: Role,
     /// Set of obligations that have been discharged (linear semantics)
-    discharged_obligations: RefCell<HashSet<Name>>,
+    discharged_obligations: Arc<Mutex<HashSet<Name>>>,
+}
+
+impl Clone for RoleContext {
+    fn clone(&self) -> Self {
+        let discharged_obligations = self
+            .discharged_obligations
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned")
+            .clone();
+        Self {
+            active_role: self.active_role.clone(),
+            discharged_obligations: Arc::new(Mutex::new(discharged_obligations)),
+        }
+    }
 }
 
 impl RoleContext {
@@ -79,7 +93,7 @@ impl RoleContext {
     pub fn new(active_role: Role) -> Self {
         Self {
             active_role,
-            discharged_obligations: RefCell::new(HashSet::new()),
+            discharged_obligations: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 
@@ -96,7 +110,10 @@ impl RoleContext {
 
     /// Check if an obligation has been discharged
     pub fn is_discharged(&self, obligation: &str) -> bool {
-        self.discharged_obligations.borrow().contains(obligation)
+        self.discharged_obligations
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned")
+            .contains(obligation)
     }
 
     /// Discharge an obligation (mark it as fulfilled)
@@ -120,7 +137,10 @@ impl RoleContext {
             return Err(DischargeError::UndeclaredObligation);
         }
 
-        let mut discharged = self.discharged_obligations.borrow_mut();
+        let mut discharged = self
+            .discharged_obligations
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned");
         if discharged.contains(obligation) {
             // Already discharged
             Err(DischargeError::AlreadyDischarged)
@@ -132,7 +152,10 @@ impl RoleContext {
 
     /// Check if all role obligations have been discharged
     pub fn all_discharged(&self) -> bool {
-        let discharged = self.discharged_obligations.borrow();
+        let discharged = self
+            .discharged_obligations
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned");
         self.active_role
             .obligations
             .iter()
@@ -146,7 +169,10 @@ impl RoleContext {
 
     /// Get the pending obligations as a stable sorted set.
     pub fn pending_obligations_set(&self) -> BTreeSet<Name> {
-        let discharged = self.discharged_obligations.borrow();
+        let discharged = self
+            .discharged_obligations
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned");
         self.active_role
             .obligations
             .iter()
@@ -157,13 +183,17 @@ impl RoleContext {
 
     /// Get the set of discharged obligations (for testing/inspection)
     pub fn discharged_set(&self) -> HashSet<Name> {
-        self.discharged_obligations.borrow().clone()
+        self.discharged_obligations
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned")
+            .clone()
     }
 
     /// Get the discharged obligations as a stable sorted set.
     pub fn discharged_obligations_set(&self) -> BTreeSet<Name> {
         self.discharged_obligations
-            .borrow()
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned")
             .iter()
             .cloned()
             .collect()
@@ -171,7 +201,10 @@ impl RoleContext {
 
     /// Reset all discharged obligations (for testing)
     pub fn reset_discharged(&self) {
-        self.discharged_obligations.borrow_mut().clear();
+        self.discharged_obligations
+            .lock()
+            .expect("role context discharged obligations mutex should not be poisoned")
+            .clear();
     }
 }
 
@@ -341,5 +374,32 @@ mod tests {
             constraints: vec![],
         };
         assert!(!ctx.can_access(&cap));
+    }
+
+    #[test]
+    fn test_role_context_clone_copies_discharged_obligations_by_value() {
+        let role = create_test_role();
+        let ctx = RoleContext::new(role);
+        ctx.discharge("audit").unwrap();
+
+        let cloned = ctx.clone();
+        assert!(cloned.is_discharged("audit"));
+
+        cloned.reset_discharged();
+
+        assert!(
+            ctx.is_discharged("audit"),
+            "cloning RoleContext should preserve today's by-value discharge state semantics"
+        );
+        assert!(
+            !cloned.is_discharged("audit"),
+            "resetting the clone should not mutate the original"
+        );
+    }
+
+    #[test]
+    fn task689d_role_context_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<RoleContext>();
     }
 }

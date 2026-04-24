@@ -156,6 +156,10 @@ Examples:
 - `Result` has kind `Type -> Type -> Type` (or `* -> * -> *`)
 - `* -> *` is parsed as `Arrow(Box::new(Type), Box::new(Type))`
 
+Phase 97 uses the existing `Type::Constructor` machinery to represent `Act<A>` as a unary
+constructor of kind `* -> *`; no new `Type` variant or kind rule is introduced, and the existing
+`Type::Fn` / `Type::Fun` split remains intact.
+
 ### 3.3 Qualified Names
 
 ```rust

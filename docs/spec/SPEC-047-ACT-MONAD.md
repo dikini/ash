@@ -13,11 +13,14 @@ The core friction resolved: `act` currently exists only as a `Workflow` node. Yo
 
 ### 1.1 Design Principles
 
-1. **Minimal runtime primitive set.** `unit`, `bind`, `then`, and `guard` are ordinary Ash functions. Only `invoke` requires runtime support.
-2. **Type-system purity boundary.** Functions returning `B` are pure. Functions returning `Act<B>` are effectful. The type system prevents calling effectful code from pure contexts.
-3. **Governance preservation.** Every `invoke` passes through the policy stack. Effect logs are append-only. Provenance chains are maintained.
-4. **Workflow compatibility.** Existing workflow syntax, types, and execution remain valid. Expression-level `Act` interoperates with workflows, but Phase 97 does not require collapsing the workflow IR into an `Act`-only core.
-5. **Incremental delivery.** The spec is designed to be implemented in phases that leave the system working at each step.
+1. **Minimal runtime primitive set.** `unit`, `bind`, `then`, and `guard` belong to the `act::` library algebra. `invoke` is the only required runtime primitive; Phase 97 may realize some algebra members through bridge-backed library exports where opacity requires it.
+2. **Act is the outer marker of effectfulness.** Effectful APIs surface as `Act<A>` at the outermost type level. Domain-level failure remains an author-chosen convention inside that effectful result, e.g. `Act<Result<A, E>>`.
+3. **Type-system purity boundary.** Functions returning `B` are pure. Functions returning `Act<B>` are effectful. The type system prevents calling effectful code from pure contexts.
+4. **Governance preservation.** Every `invoke` passes through the policy stack. Effect logs are append-only. Provenance chains are maintained.
+5. **Act opacity.** `Act` is composed and eliminated through effectful contexts (`act { ... }`, effectful function bodies, workflow sequencing, and runtime interpretation). Pure code may carry/combine `Act` values abstractly, but should not deconstruct raw `Act` representations directly.
+6. **Workflow layering.** Workflows are intended to evolve into richer constructs built on effectful functions and `Act` sequencing, adding metadata/context rather than introducing a second sequencing foundation.
+7. **Incremental delivery.** The spec is designed to be implemented in phases that leave the system working at each step.
+8. **Runtime-managed state substrate.** `Act` is modeled after state-threading runtimes such as Haskell `IO`: the semantic substrate is a runtime-managed `ActEnv` carrier, not `Result` and not any public surrogate value encoding.
 
 ### 1.2 Scope
 
@@ -100,31 +103,55 @@ path. It is not modeled as a dedicated core `Expr::Invoke` variant, and it is no
 
 ### 2.5 Library Functions
 
-These are ordinary Ash functions in `std/src/act.ash`:
+These are library-level `Act` operations exposed at the `act::` boundary.
+
+Normative surface rules:
+- `Act` is the exported effect marker and remains opaque as a public abstraction; user/library code should compose it through the `act::` algebra rather than rely on raw representation deconstruction.
+- `unit`, `bind`, `then`, `map`, `apply`, `sequence`, and `traverse` belong to the `act::` algebra.
+- Convenience helpers specialized for `Act<Result<...>>` belong under `act::result::...` rather than as suffixed global helpers.
+- Pure code may transport and combine `Act` values abstractly, but elimination/inspection happens only after sequencing in effectful contexts.
+
+Illustrative equations:
+
+These equations are normative algebraic semantics, not a requirement that every operation be immediately expressible as raw ordinary Ash definitions under the current Phase-97 substrate.
 
 ```ash
-fn unit(v: a) -> Act<a> {
-    |env| => Ok((v, env))
-}
-
-fn bind(ma: Act<a>, f: Fn(a) -> Act<b>) -> Act<b> {
-    |env| => match ma(env) {
-        Ok((a, env')) => f(a)(env'),
-        Err(e) => Err(e)
-    }
-}
-
-fn then(ma: Act<a>, mb: Act<b>) -> Act<b> {
-    bind(ma, |_a| => mb)
-}
-
-fn guard(policy: Policy, ma: Act<a>) -> Act<a> {
-    |env| => match env.policies.check(policy) {
-        Deny(reason) => Err(PolicyViolation(reason)),
-        Allow => ma(env)
-    }
-}
+fn unit(v: a) -> Act<a> { ... }
+fn bind(ma: Act<a>, f: Fn(a) -> Act<b>) -> Act<b> { ... }
+fn then(ma: Act<a>, mb: Act<b>) -> Act<b> { ... }
+fn guard(policy: Policy, ma: Act<a>) -> Act<a> { ... }
 ```
+
+`Act<Result<A, E>>` is the preferred conventional shape for effectful computations that also return a domain-level success/failure result. `Result<Act<A>, E>` is reserved for the distinct case where computation construction fails before an effectful computation can be obtained.
+
+### 2.5.1 Builtin Substrate Contract
+
+Phase 97 treats the `Act` substrate as runtime/engine managed.
+
+Preferred semantic reading:
+
+```ash
+builtin type ActEnv
+type Act<A> = ActEnv -> (ActEnv, A)
+```
+
+Interpretation rule:
+- the explicit RHS is preferred as a definitional semantic equation when implementation pressure permits;
+- if the real parser/typechecker/engine/runtime shows that literal definitional equality creates substantial complexity or fragility, the implementation may downgrade this to a checked normative correspondence while preserving the same public laws and observable typing/composition behavior.
+
+Builtin-boundary fallback ladder:
+- A (preferred): `builtin type ActEnv`; ordinary `type Act<A> = ActEnv -> (ActEnv, A)`
+- B (fallback): `builtin type ActEnv`; `builtin type Act<A> = ActEnv -> (ActEnv, A)`
+- C (last resort): `builtin type ActEnv`; fully opaque builtin `Act<A>` without exposing the equation directly
+
+Selection rule:
+- choose A unless real implementation pressure in the parser/typechecker/engine/runtime makes A materially riskier or more complex than B;
+- choose B unless B itself becomes materially riskier or more complex than C;
+- C carries the most debt and is the last resort.
+
+Builtin artifact identity rule:
+- builtin artifacts are identified internally by flat builtin IDs, not by surface module paths;
+- surface names such as `act::ActEnv`, reexports, or aliases are only bindings onto that internal builtin identity.
 
 ### 2.6 Keyword Choice
 
@@ -361,12 +388,17 @@ This is a Rust-only type, not an Ash value. It's passed implicitly through the m
 
 ### 7.4 Workflow::Act Bridge
 
-The existing `Workflow::Act` execution path (in `execute.rs`) continues to work unchanged. It
-operates at the workflow level with direct capability dispatch. The new expression-level `act {}`
-facility interoperates with this runtime but does not replace workflow execution in Phase 97.
+The existing `Workflow::Act` execution path (in `execute.rs`) continues to work unchanged in Phase 97.
 
-Bridge: when workflow-level execution encounters an expression-level `Act<A>` value, the runtime may
-apply it with the current `ActEnv`.
+Normative design direction:
+- effect sequencing semantics live in `Act` / effectful functions
+- workflows are intended to evolve into richer constructs built on top of that substrate
+- workflow syntax may add metadata, authority/role context, provenance/policy framing, and orchestration conveniences
+- workflows should not introduce a second competing sequencing foundation
+
+In Phase 97, workflow execution still operates at the workflow level with direct capability dispatch for practical implementation reasons. Expression-level `act {}` interoperates with that runtime, but does not yet replace workflow execution wholesale.
+
+Bridge: when workflow-level execution encounters an expression-level `Act<A>` value, the runtime may apply it with the current `ActEnv`.
 
 ## 8. Engine Changes
 

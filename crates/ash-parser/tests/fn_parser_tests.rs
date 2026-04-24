@@ -29,6 +29,49 @@ fn parse_simple_fn() {
     assert!(f.return_type.is_some());
 }
 
+#[test]
+fn parse_fn_with_keyword_name_then() {
+    let def = parse_fn(r#"fn then(a: Int, b: Int) -> Int { b }"#);
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+    assert_eq!(f.name.as_ref(), "then");
+    assert_eq!(f.params.len(), 2);
+}
+
+#[test]
+fn parse_fn_with_keyword_name_guard() {
+    let def = parse_fn(r#"fn guard(a: Int) -> Int { a }"#);
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+    assert_eq!(f.name.as_ref(), "guard");
+    assert_eq!(f.params.len(), 1);
+}
+
+#[test]
+fn task689d_parse_fn_parameter_with_arrow_function_type() {
+    let def = parse_fn(r#"fn keep(f: Int -> Int) -> Int { 1 }"#);
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+    assert_eq!(f.params.len(), 1);
+    match &f.params[0].ty {
+        Type::Fn(params, ret) => {
+            assert_eq!(params.len(), 1);
+            match &params[0] {
+                Type::Name(name) => assert_eq!(name.as_ref(), "Int"),
+                other => panic!("expected Int parameter type, got {other:?}"),
+            }
+            match ret.as_ref() {
+                Type::Name(name) => assert_eq!(name.as_ref(), "Int"),
+                other => panic!("expected Int return type, got {other:?}"),
+            }
+        }
+        other => panic!("expected arrow function type, got {other:?}"),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // 2. fn with contract (requires)
 // ---------------------------------------------------------------------------
@@ -630,6 +673,47 @@ fn task557_closure_in_let_binding() {
         expr
     );
     assert!(tail_expr.is_some(), "expected tail expr (f(0))");
+}
+
+#[test]
+fn task689c_projected_callable_invocation_parses_as_fnapply() {
+    use ash_parser::parse_expr::expr;
+
+    let mut input = new_input(r#"env.policies.check(p)"#);
+    let result = expr(&mut input).expect("projected callable invocation should parse");
+
+    match result {
+        Expr::FnApply { func, args, .. } => {
+            assert_eq!(args.len(), 1, "expected one argument to projected callable");
+            assert!(
+                matches!(&args[0], Expr::Variable { name, .. } if name.as_ref() == "p"),
+                "expected p variable as argument, got: {:?}",
+                args[0]
+            );
+            assert!(
+                matches!(
+                    func.as_ref(),
+                    Expr::FieldAccess { base, field, .. }
+                        if field.as_ref() == "check"
+                            && matches!(
+                                base.as_ref(),
+                                Expr::FieldAccess { base, field, .. }
+                                    if field.as_ref() == "policies"
+                                        && matches!(
+                                            base.as_ref(),
+                                            Expr::Variable { name, .. } if name.as_ref() == "env"
+                                        )
+                            )
+                ),
+                "expected nested field access callee, got: {:?}",
+                func
+            );
+        }
+        other => panic!(
+            "expected FnApply for projected callable invocation, got: {:?}",
+            other
+        ),
+    }
 }
 
 // TODO(TASK-590): known failure — parser gap with multiline record constructor + trailing comma.

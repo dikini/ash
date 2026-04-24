@@ -1219,7 +1219,8 @@ fn reject_unsupported_mvp_workflow_features(
     }
 }
 
-fn fn_signature_type(
+/// Compute the type signature of an ordinary `fn` definition.
+pub fn fn_signature_type(
     env: &TypeEnv,
     function: &ash_parser::surface::FnDef,
 ) -> Result<Type, TypeCheckError> {

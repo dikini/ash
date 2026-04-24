@@ -47,6 +47,9 @@ pub use regex::{find, matches, replace};
 -- Process functions
 pub use process::{run};
 
+-- Act monad helpers
+pub use act::{unit, bind, then, guard};
+
 -- JSON functions
 pub use json::{parse, stringify, stringify_pretty};
 

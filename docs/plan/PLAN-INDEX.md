@@ -2759,17 +2759,22 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 ||| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, return rules | 4 | ✅ Complete ||
 ||| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | ✅ Complete ||
 ||| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure fn bodies | 3 | ✅ Complete ||
-||| TASK-681 | Record/test additive coexistence with existing `Type::Fun(...)` | 2 | 🟡 Ready ||
+||| TASK-681 | Record/test additive coexistence with existing `Type::Fun(...)` | 2 | ✅ Complete ||
 ||| TASK-682 | Type-system tests for purity rejection and `Act<T>` inference | 4 | ✅ Complete ||
-||| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2 | 🟡 Ready ||
-||| TASK-684 | Add `invoke` runtime primitive dispatch through `Expr::Call` | 4 | 🟡 Ready ||
-||| TASK-685 | Implement closure-backed execution path for desugared `Act<T>` values | 4 | 🟡 Ready ||
-||| TASK-686 | Workflow bridge: construct/apply `ActEnv` from workflow context | 3 | 🟡 Ready ||
-||| TASK-687 | Runtime integration tests: effectful fn composition and interop | 4 | 🟡 Ready ||
-||| TASK-688 | Finalize SPEC-047 amendments and targeted spec updates | 2 | 🟡 Ready ||
-||| TASK-689 | Create `std/src/act.ash` with `unit`, `bind`, `then`, `guard` | 2 | 🟡 Ready ||
-||| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end | 3 | 🟡 Ready ||
-||| TASK-691 | Performance baseline for desugared act-block execution | 1 | 🟡 Ready ||
+||| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2 | ✅ Complete ||
+||| TASK-684 | Add `invoke` runtime primitive dispatch through `Expr::Call` | 4 | ✅ Complete ||
+||| TASK-685 | Implement closure-backed execution path for desugared `Act<T>` values | 4 | ✅ Complete ||
+||| TASK-686 | Workflow bridge: construct/apply `ActEnv` from workflow context | 3 | ✅ Complete ||
+||| TASK-687 | Runtime integration tests: effectful fn composition and interop | 4 | ✅ Complete ||
+||| TASK-688 | Finalize SPEC-047 amendments and targeted spec updates | 2 | ✅ Complete ||
+||| TASK-689A | Establish honest `std::act` substrate for ordinary library helpers | 3 | ✅ Complete ||
+||| TASK-689B | Preserve imported ordinary `pub fn` signatures for `std::act` | 3 | ✅ Complete ||
+||| TASK-689C | Establish policy/environment substrate for ordinary `std::act` `guard` | 3 | ✅ Complete ||
+||| TASK-689E | Refine library type-export semantics for opaque `Act` | 3 | ✅ Complete ||
+||| TASK-689D | Establish honest opaque `Act` library boundary for ordinary `std::act` helpers | 3 | ✅ Complete ||
+||| TASK-689 | Replace placeholder `std::act` stubs with ordinary library implementations | 2 | 🟡 Ready ||
+||| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end | 3 | ⛔ Blocked on TASK-689 ||
+||| TASK-691 | Performance baseline for desugared act-block execution | 1 | ⛔ Blocked on TASK-690 ||
 
 **Track A (Preflight + Surface + Lowering):** 15h. Normalize docs, add surface act-block syntax, and lower into existing core expressions.
 

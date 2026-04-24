@@ -3,28 +3,51 @@
 //! Provides nested scope management for the interpreter.
 
 use ash_core::{Name, Value};
-use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::sync::{Arc, Mutex};
 
 /// Runtime execution context with variable bindings and obligation tracking
 ///
 /// Contexts form a hierarchy - lookups traverse from child to parent.
 /// Bindings are immutable once set (functional style).
 /// Obligations use interior mutability for linear discharge semantics.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Context {
     bindings: HashMap<Name, Value>,
     parent: Option<Box<Context>>,
-    /// Active obligations that must be discharged (interior mutability for &self discharge)
-    obligations: RefCell<HashSet<Name>>,
+    /// Active obligations that must be discharged.
+    obligations: Arc<Mutex<HashSet<Name>>>,
     /// Optional role context for authority and obligation tracking
     role_context: Option<crate::role_context::RoleContext>,
+    /// Hidden runtime policy evaluator available to expression-level bridge primitives.
+    policy_evaluator: Option<Arc<crate::policy::PolicyEvaluator>>,
+    /// Hidden runtime Act environment available to expression-level Act forcing.
+    act_env: Option<Arc<crate::act_env::ActEnv>>,
     /// Pure-context nesting depth for SPEC-031 three-vertex boundary enforcement.
     ///
     /// 0 = not in a pure context.  >0 = inside `pure_depth` layers of pure-fn calls.
     /// When `pure_depth > 0`, `Expr::FnDef` is rejected at runtime (the type checker
     /// is the primary enforcer; this is a defense-in-depth safety net).
     pure_depth: u32,
+}
+
+impl Clone for Context {
+    fn clone(&self) -> Self {
+        let obligations = self
+            .obligations
+            .lock()
+            .expect("context obligations mutex should not be poisoned")
+            .clone();
+        Self {
+            bindings: self.bindings.clone(),
+            parent: self.parent.clone(),
+            obligations: Arc::new(Mutex::new(obligations)),
+            role_context: self.role_context.clone(),
+            policy_evaluator: self.policy_evaluator.clone(),
+            act_env: self.act_env.clone(),
+            pure_depth: self.pure_depth,
+        }
+    }
 }
 
 impl Default for Context {
@@ -39,26 +62,37 @@ impl Context {
         Self {
             bindings: HashMap::new(),
             parent: None,
-            obligations: RefCell::new(HashSet::new()),
+            obligations: Arc::new(Mutex::new(HashSet::new())),
             role_context: None,
+            policy_evaluator: None,
+            act_env: None,
             pure_depth: 0,
         }
     }
 
     /// Add an obligation to the context
     pub fn add_obligation(&self, obligation: Name) {
-        self.obligations.borrow_mut().insert(obligation);
+        self.obligations
+            .lock()
+            .expect("context obligations mutex should not be poisoned")
+            .insert(obligation);
     }
 
     /// Check if an obligation exists and discharge it (remove it)
     /// Returns true if the obligation was found and discharged
     pub fn discharge_obligation(&self, obligation: &str) -> bool {
-        self.obligations.borrow_mut().remove(obligation)
+        self.obligations
+            .lock()
+            .expect("context obligations mutex should not be poisoned")
+            .remove(obligation)
     }
 
     /// Check if an obligation exists (without discharging)
     pub fn has_obligation(&self, obligation: &str) -> bool {
-        self.obligations.borrow().contains(obligation)
+        self.obligations
+            .lock()
+            .expect("context obligations mutex should not be poisoned")
+            .contains(obligation)
     }
 
     /// Look up a variable by name
@@ -90,8 +124,10 @@ impl Context {
         Self {
             bindings: HashMap::new(),
             parent: Some(Box::new(self.clone())),
-            obligations: RefCell::new(HashSet::new()),
+            obligations: Arc::new(Mutex::new(HashSet::new())),
             role_context: self.role_context.clone(),
+            policy_evaluator: self.policy_evaluator.clone(),
+            act_env: self.act_env.clone(),
             pure_depth: self.pure_depth,
         }
     }
@@ -101,8 +137,10 @@ impl Context {
         Self {
             bindings,
             parent: None,
-            obligations: RefCell::new(HashSet::new()),
+            obligations: Arc::new(Mutex::new(HashSet::new())),
             role_context: None,
+            policy_evaluator: None,
+            act_env: None,
             pure_depth: 0,
         }
     }
@@ -130,6 +168,46 @@ impl Context {
     pub fn with_role_context(mut self, role_context: crate::role_context::RoleContext) -> Self {
         self.role_context = Some(role_context);
         self
+    }
+
+    /// Attach a hidden runtime policy evaluator to this context.
+    pub fn with_policy_evaluator(
+        mut self,
+        policy_evaluator: crate::policy::PolicyEvaluator,
+    ) -> Self {
+        self.policy_evaluator = Some(Arc::new(policy_evaluator));
+        self
+    }
+
+    /// Return the hidden runtime policy evaluator if one is present.
+    pub fn policy_evaluator(&self) -> Option<Arc<crate::policy::PolicyEvaluator>> {
+        self.policy_evaluator.clone()
+    }
+
+    /// Attach a shared hidden runtime policy evaluator to this context.
+    pub(crate) fn with_policy_evaluator_arc(
+        mut self,
+        policy_evaluator: Arc<crate::policy::PolicyEvaluator>,
+    ) -> Self {
+        self.policy_evaluator = Some(policy_evaluator);
+        self
+    }
+
+    /// Attach a hidden runtime Act environment to this context.
+    pub fn with_act_env(mut self, act_env: crate::act_env::ActEnv) -> Self {
+        self.act_env = Some(Arc::new(act_env));
+        self
+    }
+
+    /// Attach a shared hidden runtime Act environment to this context.
+    pub(crate) fn with_act_env_arc(mut self, act_env: Arc<crate::act_env::ActEnv>) -> Self {
+        self.act_env = Some(act_env);
+        self
+    }
+
+    /// Return the hidden runtime Act environment if one is present.
+    pub fn act_env(&self) -> Option<Arc<crate::act_env::ActEnv>> {
+        self.act_env.clone()
     }
 
     /// Get a reference to the role context if set
@@ -160,7 +238,12 @@ impl Context {
 
     /// Return the local pending obligations visible in this context frame.
     pub fn local_pending_obligations(&self) -> BTreeSet<Name> {
-        self.obligations.borrow().iter().cloned().collect()
+        self.obligations
+            .lock()
+            .expect("context obligations mutex should not be poisoned")
+            .iter()
+            .cloned()
+            .collect()
     }
 
     /// Return the cumulative pending obligations visible from this frame through its parent chain.
@@ -316,5 +399,31 @@ mod tests {
         assert_eq!(child.get("a"), Some(&Value::Int(1)));
         assert_eq!(child.get("b"), Some(&Value::Int(2)));
         assert_eq!(child.get("c"), Some(&Value::Int(3)));
+    }
+
+    #[test]
+    fn test_context_clone_copies_local_obligations_by_value() {
+        let ctx = Context::new();
+        ctx.add_obligation("audit".to_string());
+
+        let cloned = ctx.clone();
+        assert!(cloned.has_obligation("audit"));
+
+        cloned.discharge_obligation("audit");
+
+        assert!(
+            ctx.has_obligation("audit"),
+            "cloning Context should preserve today's by-value local obligation semantics"
+        );
+        assert!(
+            !cloned.has_obligation("audit"),
+            "discharging on the clone should not mutate the original"
+        );
+    }
+
+    #[test]
+    fn task689d_context_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<Context>();
     }
 }

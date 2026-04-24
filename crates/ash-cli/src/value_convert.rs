@@ -108,6 +108,7 @@ pub fn value_to_json(value: &Value) -> serde_json::Value {
         Value::Closure { params, .. } => {
             serde_json::Value::String(format!("<closure({} params)>", params.len()))
         }
+        Value::ActEnvToken => serde_json::Value::String("<act-env-token>".to_string()),
     }
 }
 

@@ -195,7 +195,7 @@ The type checker validates fn bodies by classifying every Expr node:
 
 **Resolved by callee:** Expr::Call -- pure when the callee resolves to a fn definition; rejected when the callee is a capability. Expr::InterfaceMethodCall -- same resolution logic applies.
 
-Additionally, the following keywords are rejected in fn bodies: `ret`, `act`, `observe`, `orient`, `propose`, `decide`, `receive`, `send`, `spawn`, `oblige`, `check`, `maybe`, `must`, `attempt`, `retry`, `timeout`, `yield`, `resume`. `cap` parameter types are rejected.
+Additionally, the following keywords are rejected in fn bodies: `ret`, `act`, `observe`, `orient`, `propose`, `decide`, `receive`, `send`, `spawn`, `oblige`, `check`, `maybe`, `must`, `attempt`, `retry`, `timeout`, `yield`, `resume`. Calls to `invoke(...)` are also rejected in pure fn bodies. `cap` parameter types are rejected.
 
 ### 3.6 Error Conditions
 
@@ -203,7 +203,7 @@ The type checker produces the following errors for fn purity violations:
 
 - `E0xxx`: `ret` in fn body -- fn uses tail-expression return, not `ret`
 - `E0xxx`: capability parameter in fn definition -- fn parameters cannot be `cap` types
-- `E0xxx`: effectful expression in fn body -- `[construct]` is not allowed in pure fn bodies
+- `E0xxx`: effectful expression in fn body -- `act { ... }` / `invoke(...)` is not allowed in pure fn bodies
 - `E0xxx`: call to capability from fn body -- `[name]` is a capability, not a function
 - `E0xxx`: non-exhaustive match -- not all constructors of `[type]` are covered
 - `E0xxx`: non-value-producing branch -- if/else branches produce incompatible types

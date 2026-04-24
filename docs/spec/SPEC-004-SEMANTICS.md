@@ -765,6 +765,10 @@ by background cleanup in the same runtime state.
                Ω,
                π'
 
+Workflow-level `ACT` semantics remain unchanged in Phase 97. When workflow execution applies an
+expression-level `Act` value, the runtime threads the current `ActEnv` rather than introducing a
+new workflow form.
+
 (ACT-POLICY-FAIL)
   eval_guard(Γ, guard) = true
   policy_check(P, provider_name, action_name, args, Γ) ↝ error reason

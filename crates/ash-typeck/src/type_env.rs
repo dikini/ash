@@ -72,19 +72,30 @@ pub fn type_expr_to_type(
         }
 
         TypeExpr::Constructor { name, args } => {
-            let (qualified, _) = type_env.resolve_type(name)?;
+            if name == "Fn" {
+                let mut arg_types: Vec<_> = args
+                    .iter()
+                    .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let ret = arg_types
+                    .pop()
+                    .expect("Fn constructor type should include a return type");
+                Ok(Type::Fn(arg_types, Box::new(ret)))
+            } else {
+                let (qualified, _) = type_env.resolve_type(name)?;
 
-            // Convert all arguments
-            let arg_types: Result<Vec<_>, _> = args
-                .iter()
-                .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
-                .collect();
+                // Convert all arguments
+                let arg_types: Result<Vec<_>, _> = args
+                    .iter()
+                    .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
+                    .collect();
 
-            Ok(Type::Constructor {
-                name: qualified,
-                args: arg_types?,
-                kind: Kind::Type,
-            })
+                Ok(Type::Constructor {
+                    name: qualified,
+                    args: arg_types?,
+                    kind: Kind::Type,
+                })
+            }
         }
 
         TypeExpr::Tuple(elems) => {
@@ -283,6 +294,7 @@ fn surface_type_to_type(
                 })
             }
         }
+
         SurfaceType::Fn(params, ret) => {
             let params = params
                 .iter()
@@ -662,6 +674,7 @@ impl TypeEnv {
             params: vec![],
             body: TypeBody::Struct(vec![]), // minimal placeholder: empty struct
             visibility: ash_core::ast::Visibility::Public,
+            builtin: false,
         };
         self.ast_types.entry(name.to_owned()).or_insert(placeholder);
     }
@@ -673,8 +686,9 @@ impl TypeEnv {
         def.params.is_empty() && matches!(&def.body, TypeBody::Struct(fields) if fields.is_empty())
     }
 
-    /// Register a type definition and its constructors from AST TypeDef
-    pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
+    /// Register a type definition without exposing its constructors or
+    /// representation symbols.
+    pub fn register_type_identity(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         let type_name = def.name.clone();
 
         if let Some(existing) = self.ast_types.get(&type_name) {
@@ -690,17 +704,34 @@ impl TypeEnv {
             TypeEnvError::InvalidDefinition(format!("type '{}': {e}", def.name), Span::default())
         })?;
 
-        // Register constructors for enum variants
-        if let TypeInfo::Enum { variants, .. } = &type_info {
-            for (index, variant) in variants.iter().enumerate() {
-                self.constructors
-                    .insert(variant.name.clone(), (type_name.clone(), index));
-            }
-        }
-
         self.ast_types.insert(type_name.clone(), def.clone());
         self.type_info.insert(type_name, type_info);
         Ok(())
+    }
+
+    /// Expose constructors/representation for a previously-registered type.
+    pub fn expose_type_representation(&mut self, name: &str) -> Result<(), TypeEnvError> {
+        let Some(type_info) = self.type_info.get(name).cloned() else {
+            return Err(TypeEnvError::TypeNotFound(
+                name.to_string(),
+                Span::default(),
+            ));
+        };
+
+        if let TypeInfo::Enum { variants, .. } = type_info {
+            for (index, variant) in variants.iter().enumerate() {
+                self.constructors
+                    .insert(variant.name.clone(), (name.to_string(), index));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Register a type definition and its constructors from AST TypeDef
+    pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
+        self.register_type_identity(def)?;
+        self.expose_type_representation(&def.name)
     }
 
     /// Register an interface declaration.
@@ -1040,6 +1071,8 @@ impl TypeEnv {
         self.add_option_type();
         self.add_result_type();
         self.add_list_type();
+        self.add_record_type();
+        self.add_act_env_type();
         self.add_act_type();
         self.add_builtin_capability_symbols();
     }
@@ -1072,10 +1105,13 @@ impl TypeEnv {
                 },
             ]),
             visibility: ash_core::ast::Visibility::Public,
+            builtin: false,
         };
 
-        self.register_type(&option_type)
+        self.register_type_identity(&option_type)
             .expect("Failed to register Option type");
+        self.expose_type_representation("Option")
+            .expect("Failed to expose Option constructors");
     }
 
     /// Add the Result<T, E> type
@@ -1103,10 +1139,13 @@ impl TypeEnv {
                 },
             ]),
             visibility: ash_core::ast::Visibility::Public,
+            builtin: false,
         };
 
-        self.register_type(&result_type)
+        self.register_type_identity(&result_type)
             .expect("Failed to register Result type");
+        self.expose_type_representation("Result")
+            .expect("Failed to expose Result constructors");
     }
 
     /// Add the List<T> type
@@ -1117,10 +1156,43 @@ impl TypeEnv {
             params: vec!["T".to_string()],
             body: TypeBody::Struct(vec![]), // opaque builtin; no fields needed for type checking
             visibility: ash_core::ast::Visibility::Public,
+            builtin: true,
         };
 
-        self.register_type(&list_type)
+        self.register_type_identity(&list_type)
             .expect("Failed to register List type");
+        self.expose_type_representation("List")
+            .expect("Failed to expose List representation");
+    }
+
+    /// Add the Record type
+    fn add_record_type(&mut self) {
+        let record_type = TypeDef {
+            name: "Record".to_string(),
+            params: vec![],
+            body: TypeBody::Struct(vec![]),
+            visibility: ash_core::ast::Visibility::Public,
+            builtin: true,
+        };
+
+        self.register_type_identity(&record_type)
+            .expect("Failed to register Record type");
+        self.expose_type_representation("Record")
+            .expect("Failed to expose Record representation");
+    }
+
+    /// Add the ActEnv type
+    fn add_act_env_type(&mut self) {
+        let act_env_type = TypeDef {
+            name: "ActEnv".to_string(),
+            params: vec![],
+            body: TypeBody::Struct(vec![]),
+            visibility: ash_core::ast::Visibility::Public,
+            builtin: true,
+        };
+
+        self.register_type_identity(&act_env_type)
+            .expect("Failed to register ActEnv type");
     }
 
     /// Add the Act<T> type
@@ -1130,6 +1202,7 @@ impl TypeEnv {
             params: vec!["T".to_string()],
             body: TypeBody::Struct(vec![]),
             visibility: ash_core::ast::Visibility::Public,
+            builtin: true,
         };
 
         self.register_type(&act_type)
@@ -1754,6 +1827,10 @@ mod tests {
         assert!(env.has_type("Result"));
         assert!(env.has_constructor("Ok"));
         assert!(env.has_constructor("Err"));
+
+        // Check runtime-managed Act substrate types exist
+        assert!(env.has_type("ActEnv"));
+        assert!(env.has_type("Act"));
     }
 
     #[test]
@@ -1835,6 +1912,7 @@ mod tests {
                 },
             ]),
             visibility: Visibility::Public,
+            builtin: false,
         };
 
         env.register_type(&status_type).unwrap();
@@ -1850,6 +1928,68 @@ mod tests {
         let (type_name, idx) = env.lookup_constructor("Complete").unwrap();
         assert_eq!(type_name, "Status");
         assert_eq!(idx, 1);
+    }
+
+    #[test]
+    fn test_register_type_identity_keeps_constructors_hidden() {
+        let mut env = TypeEnv::new();
+
+        let hidden_type = TypeDef {
+            name: "Hidden".to_string(),
+            params: vec!["A".to_string()],
+            body: TypeBody::Enum(vec![VariantDef {
+                name: "Hidden".to_string(),
+                fields: vec![("value".to_string(), TypeExpr::Named("A".to_string()))],
+                payload: VariantPayload::Record(vec![(
+                    "value".to_string(),
+                    TypeExpr::Named("A".to_string()),
+                )]),
+            }]),
+            visibility: Visibility::Private,
+            builtin: false,
+        };
+
+        env.register_type_identity(&hidden_type).unwrap();
+
+        let type_def = env
+            .lookup_type("Hidden")
+            .expect("type identity should register");
+        assert_eq!(type_def.params.len(), 1);
+        assert!(
+            env.lookup_constructor("Hidden").is_none(),
+            "identity-only registration should not expose constructors"
+        );
+    }
+
+    #[test]
+    fn test_expose_type_representation_registers_constructors_after_identity() {
+        let mut env = TypeEnv::new();
+
+        let hidden_type = TypeDef {
+            name: "Hidden".to_string(),
+            params: vec![],
+            body: TypeBody::Enum(vec![VariantDef {
+                name: "Reveal".to_string(),
+                fields: vec![("value".to_string(), TypeExpr::Named("Int".to_string()))],
+                payload: VariantPayload::Record(vec![(
+                    "value".to_string(),
+                    TypeExpr::Named("Int".to_string()),
+                )]),
+            }]),
+            visibility: Visibility::Private,
+            builtin: false,
+        };
+
+        env.register_type_identity(&hidden_type).unwrap();
+        assert!(env.lookup_constructor("Reveal").is_none());
+
+        env.expose_type_representation("Hidden").unwrap();
+
+        let (type_name, variant_idx) = env
+            .lookup_constructor("Reveal")
+            .expect("constructor should become visible after representation exposure");
+        assert_eq!(type_name, "Hidden");
+        assert_eq!(variant_idx, 0);
     }
 
     #[test]
@@ -1945,6 +2085,42 @@ mod tests {
                 assert_eq!(kind, Kind::Type);
             }
             _ => panic!("Expected Type::Constructor, got {:?}", ty),
+        }
+    }
+
+    #[test]
+    fn task689d_fn_constructor_type_expr_converts_to_function_type() {
+        let env = TypeEnv::with_builtin_types();
+        let type_expr = TypeExpr::Constructor {
+            name: "Fn".to_string(),
+            args: vec![
+                TypeExpr::Named("ActEnv".to_string()),
+                TypeExpr::Tuple(vec![
+                    TypeExpr::Named("ActEnv".to_string()),
+                    TypeExpr::Named("Int".to_string()),
+                ]),
+            ],
+        };
+
+        let ty = type_expr_to_type(&type_expr, &HashMap::new(), &env).unwrap();
+        match ty {
+            Type::Fn(params, ret) => {
+                assert_eq!(params.len(), 1);
+                match &params[0] {
+                    Type::Constructor { name, args, .. } => {
+                        assert_eq!(name.display(), "ActEnv");
+                        assert!(args.is_empty());
+                    }
+                    other => panic!("expected ActEnv parameter type, got {other:?}"),
+                }
+                match ret.as_ref() {
+                    Type::Record(fields) => {
+                        assert_eq!(fields.len(), 2);
+                    }
+                    other => panic!("expected tuple-lowered return record, got {other:?}"),
+                }
+            }
+            other => panic!("expected Type::Fn, got {other:?}"),
         }
     }
 

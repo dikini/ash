@@ -1,6 +1,6 @@
 # TASK-690: Cross-layer validation for parse -> type -> execute
 
-## Status: 🟡 Ready
+## Status: ⛔ Blocked on TASK-689
 
 ## Description
 

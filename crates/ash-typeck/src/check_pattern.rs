@@ -606,6 +606,7 @@ mod tests {
                     },
                 ]),
                 visibility: Visibility::Public,
+                builtin: false,
             },
         );
         env
@@ -1089,6 +1090,7 @@ mod tests {
                     },
                 ]),
                 visibility: Visibility::Public,
+                builtin: false,
             },
         );
         let pattern = Pattern::Variant {
@@ -1150,6 +1152,7 @@ mod tests {
                     },
                 ]),
                 visibility: Visibility::Public,
+                builtin: false,
             },
         );
 

@@ -184,6 +184,7 @@ mod tests {
                 },
             ]),
             visibility: Visibility::Public,
+            builtin: false,
         }
     }
 

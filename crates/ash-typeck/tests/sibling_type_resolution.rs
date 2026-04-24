@@ -23,6 +23,7 @@ fn unit_enum_def(name: &str, variants: &[&str]) -> TypeDef {
                 .collect(),
         ),
         visibility: Visibility::Public,
+        builtin: false,
     }
 }
 
@@ -38,6 +39,7 @@ fn struct_def(name: &str, fields: Vec<(&str, &str)>) -> TypeDef {
                 .collect(),
         ),
         visibility: Visibility::Public,
+        builtin: false,
     }
 }
 
@@ -53,6 +55,7 @@ fn struct_def_with_generic(name: &str, fields: Vec<(&str, TypeExpr)>) -> TypeDef
                 .collect(),
         ),
         visibility: Visibility::Public,
+        builtin: false,
     }
 }
 
@@ -275,6 +278,7 @@ fn test_generic_reference_resolves() {
             ),
         ]),
         visibility: Visibility::Public,
+        builtin: false,
     };
 
     let mut env = TypeEnv::with_builtin_types();

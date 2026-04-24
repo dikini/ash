@@ -10,9 +10,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - SPEC-047: Act Monad specification (draft). Defines `Act<A>` type constructor, `act {}` block expression, `invoke`/`unit`/`bind` builtins, effectful function declarations, purity enforcement, and the unification of pure expression evaluation with effectful workflow execution. 33 tasks across 4 tracks (TASK-672 through TASK-704). Related plan: PLAN-097.
 
+- TASK-683: introduced the runtime-only `ActEnv` carrier in `ash-interp` with explicit construction from runtime state/capability context, policy evaluator, provenance, and effect log state; kept it out of `ash_core::Value` and added regression coverage for the runtime boundary.
+
+- TASK-684: routed expression-level `invoke(...)` through a dedicated runtime primitive path under `Expr::Call`, returning a closure-shaped Act value that captures provider/action/args while preserving existing pure builtin dispatch. (TASK-684)
+
+- TASK-685: added closure-backed execution support for lowered `Act<T>` shapes via runtime `unit`/`bind` sequencing, plus regression tests proving lowered act blocks execute through the interpreter. (TASK-685)
+
+- TASK-686: bridged workflow execution into the Act runtime boundary by constructing `ActEnv` from workflow runtime state, policy evaluation, and provenance on entry; added coverage to verify the workflow bridge reuses the existing capability context without regressing workflow-level act semantics. (TASK-686)
+
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+
+- CLI module-file fallback now ignores `workflow` mentions in line comments, so `ash check std/src/lib.ash` reports the stdlib root as a module file instead of surfacing a generic workflow parse error.
 
 - Typeck/lowering contract alignment for act-block structural validation: `check_expr` now enforces the same empty/requires-return/return-must-be-last contract as `lower_act_block`, closing an end-to-end semantic mismatch where typeck would accept shapes that lowering rejects.
 
@@ -25,6 +35,22 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - PLAN-097: Phase 97 Act Monad implementation plan. Track A (surface/core), Track B (type system), Track C (runtime), Track D (specs/testing). Estimated 75.5 hours.
 
 ### Changed
+
+- TASK-689D is complete for the public opaque `Act` boundary. The now-superseded exploratory/probing slices established the preferred A-path (`builtin type ActEnv`; ordinary `type Act<A> = ActEnv -> (ActEnv, A)`), hidden-carrier enforcement, hidden runtime `ActEnv` threading, `invoke(...)` dispatch through that hidden carrier, async Act-force support across the relevant workflow/expression surfaces, Send/Sync storage cleanup, and stream-backed workflow entry coverage. `std::act` now exposes ordinary `unit`/`bind`/`then`/`guard` helpers over hidden bridge builtins; the remaining token/list force-result shape is documented as an internal compatibility detail for follow-on native effect-runtime work rather than as a public representation or a TASK-689D blocker.
+
+- TASK-689E is now complete: the engine/type boundary distinguishes public type identity from public constructor visibility. Plain `type` definitions now remain importable/discoverable for signatures and type annotations without auto-exporting constructors, while `pub type` continues to expose constructors/representation. TASK-689D is now unblocked as the next opaque-`Act` follow-on.
+
+- TASK-689B now preserves imported ordinary `pub fn` signatures for `std::act` through module loading and engine type binding. `Workflow` carries imported ordinary-function signatures, `build_imported_closures(...)` threads them across the engine boundary, `bind_imported_callable_types(...)` binds them with `ash_typeck::fn_signature_type(...)`, and focused ash-engine coverage now verifies the upgraded internal binding path.
+
+- TASK-689A now documents and tests the real `std::act` boundary honestly: `check_module_file` still accepts `std/src/act.ash`, and ordinary import-backed engine execution can now resolve `use act::{unit, bind, then, guard}` through the real engine path. TASK-689 remains open because `std::act` still exposes placeholder builtin declarations and a surrogate public `Act` representation rather than the ordinary-library contract promised by SPEC-047.
+
+- TASK-689C is now complete: `ash-typeck` supports record field projection, projected callable invocation now parses/typechecks/evaluates honestly, and Phase 97 gained a narrow `act::policy_check` bridge that preserves the runtime-only `ActEnv` boundary while allowing `std::act::guard` to be implemented as an ordinary library function.
+
+- Phase 97 design laws are now made explicit in SPEC-047: `Act` is the outer marker of effectfulness, `Act<Result<A, E>>` is the preferred conventional shape for effectful computations with domain failure, `Act` remains representationally opaque and eliminable only through effectful contexts, and workflows are intended to converge toward richer constructs built on top of effectful functions rather than a separate sequencing foundation.
+
+- Phase 97 Track D queue is now aligned with the current `std::act` reality: TASK-689A established an honest substrate for ordinary library helpers, TASK-689B preserved imported ordinary `pub fn` signatures for `std::act`, TASK-689C landed the policy/environment substrate for an honest ordinary-library `guard`, TASK-689E refined opaque public type identity exports, TASK-689D completed the public opaque `Act` boundary and hidden-carrier runtime proof, TASK-689 is now ready for its own closeout pass, and TASK-690/TASK-691 remain blocked on the follow-on library completion work.
+
+- TASK-688: finalized the Phase 97 SPEC-047 amendment set with targeted downstream spec updates for surface syntax, type-system coexistence, operational semantics, purity boundaries, and first-class-function dispatch notes. (TASK-688)
 
 - Phase 97 TASK-672 is now complete. SPEC-047, PLAN-097, and the Phase 97 PLAN-INDEX packet are aligned around the additive architecture: surface-only `act { ... }`, lowering into existing core expressions, `invoke` as a runtime primitive callable via `Expr::Call`, `unit`/`bind`/`then`/`guard` as library functions, and no Phase-97 SPEC-025 expansion.
 

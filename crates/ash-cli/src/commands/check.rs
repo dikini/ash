@@ -88,7 +88,7 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
             let ext = path.extension().map(|e| e == "ash").unwrap_or(false);
             if path.is_file() && ext {
                 let source = std::fs::read_to_string(path).unwrap_or_default();
-                let looks_like_workflow = source.contains("workflow ");
+                let looks_like_workflow = uncommented_source_contains_workflow_keyword(&source);
                 if !looks_like_workflow {
                     match engine.check_module_file(path) {
                         Ok(result) if result.errors.is_empty() => {
@@ -165,6 +165,14 @@ fn report_parse_error(parse_err: ash_engine::EngineError, path: &Path) -> CliRes
             source: None,
         })
     }
+}
+
+fn uncommented_source_contains_workflow_keyword(source: &str) -> bool {
+    source.lines().any(|line| {
+        let code = line.split("--").next().unwrap_or_default();
+        code.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+            .any(|token| token == "workflow")
+    })
 }
 
 /// Output JSON results for a successful module-file check.
@@ -413,5 +421,19 @@ mod tests {
             policy_check: true,
         };
         assert!(args.policy_check);
+    }
+
+    #[test]
+    fn workflow_keyword_in_line_comment_does_not_block_module_fallback() {
+        let source = "-- Ash workflow language module\npub use option::{Option};\n";
+
+        assert!(!uncommented_source_contains_workflow_keyword(source));
+    }
+
+    #[test]
+    fn workflow_keyword_in_code_still_marks_workflow_file() {
+        let source = "-- comment mentions workflow\nworkflow main { ret 0 }\n";
+
+        assert!(uncommented_source_contains_workflow_keyword(source));
     }
 }

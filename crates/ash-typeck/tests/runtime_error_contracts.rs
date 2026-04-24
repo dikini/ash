@@ -22,6 +22,7 @@ fn runtime_error_type_def() -> TypeDef {
             ]),
         }]),
         visibility: Visibility::Public,
+        builtin: false,
     }
 }
 

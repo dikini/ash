@@ -880,7 +880,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     // Try identifier/variable (and potential field access/call)
-    let (name, name_span) = identifier_with_span(input)?;
+    let (name, name_span) = expr_name_with_span(input)?;
     let name_str: Name = name.into();
 
     if opt(literal_str("::")).parse_next(input)?.is_some() {
@@ -958,7 +958,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     loop {
         // Field access: .field
         if opt(literal_str(".")).parse_next(input)?.is_some() {
-            if let Ok(field) = identifier(input) {
+            if let Ok(field) = parse_field_name(input) {
                 let span = span_from(&start_pos, &input.state.pos);
                 expr = Expr::FieldAccess {
                     base: Box::new(expr),
@@ -992,14 +992,18 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                 args
             };
             let span = span_from(&start_pos, &input.state.pos);
-            expr = Expr::Call {
-                func: match &expr {
-                    Expr::Variable { name: n, .. } => n.clone(),
-                    _ => "call".into(),
+            expr = match expr {
+                Expr::Variable { name, .. } => Expr::Call {
+                    func: name,
+                    module: None,
+                    args,
+                    span,
                 },
-                module: None,
-                args,
-                span,
+                other => Expr::FnApply {
+                    func: Box::new(other),
+                    args,
+                    span,
+                },
             };
             continue;
         }
@@ -1036,6 +1040,28 @@ fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Ex
 /// Unlike `identifier`, this allows keywords as field names (e.g. `role: User`).
 fn parse_field_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)
+}
+
+fn expr_name_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
+    let checkpoint = input.clone();
+    if let Ok(parsed) = identifier_with_span(input) {
+        return Ok(parsed);
+    }
+    *input = checkpoint;
+
+    let start_pos = input.state.pos;
+    for keyword_name in ["act", "then", "guard"] {
+        let checkpoint = input.clone();
+        if keyword(keyword_name).parse_next(input).is_ok() {
+            let span = span_from(&start_pos, &input.state.pos);
+            return Ok((keyword_name, span));
+        }
+        *input = checkpoint;
+    }
+
+    Err(winnow::error::ErrMode::Backtrack(
+        winnow::error::ContextError::new(),
+    ))
 }
 
 fn parse_constructor_field(input: &mut ParseInput) -> ModalResult<(Name, Expr)> {

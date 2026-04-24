@@ -44,6 +44,9 @@ These forms are the ones downstream phases must preserve:
 **Sequential workflow contract**: A single workflow in Ash is sequential. Concurrency and parallelism are modeled at the system level through multiple communicating workflows, not through workflow-internal parallel forms. This spec defines the sequential execution model for individual workflows.
 - core expressions: `Literal`, `Variable`, `FieldAccess`, `IndexAccess`, `Unary`, `Binary`,
   `Call`, `Match`, `Constructor`, `Let`
+- Phase 97 expression-level `act { ... }` is surface syntax only: it lowers into existing core
+  expression forms (`Call`, `FnDef`, `FnApply`) and does not add a new core IR node. The runtime
+  primitive `invoke` is dispatched through the existing `Call` path.
 - core patterns: `Variable`, `Tuple`, `Record`, `List`, `Wildcard`, `Literal`, `Variant`
 
 The `Variant` pattern is explicitly listed as a core pattern for matching ADT constructors

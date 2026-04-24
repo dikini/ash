@@ -34,6 +34,7 @@ fn policy_decision_type_def() -> CoreTypeDef {
             },
         ]),
         visibility: CoreVisibility::Public,
+        builtin: false,
     }
 }
 
@@ -508,6 +509,7 @@ fn task563_pair_two_param_interface_registers() {
         params: vec![],
         body: TypeBody::Struct(vec![]),
         visibility: CoreVisibility::Public,
+        builtin: false,
     })
     .unwrap();
     env.register_interface(&pair_interface_def())
@@ -524,6 +526,7 @@ fn task563_concrete_multi_param_impl_resolves() {
         params: vec![],
         body: TypeBody::Struct(vec![]),
         visibility: CoreVisibility::Public,
+        builtin: false,
     })
     .unwrap();
     // Register Pair<A,B> interface
@@ -573,6 +576,7 @@ fn task563_wrong_arity_impl_rejected() {
         params: vec![],
         body: TypeBody::Struct(vec![]),
         visibility: CoreVisibility::Public,
+        builtin: false,
     })
     .unwrap();
     env.register_interface(&pair_interface_def()).unwrap();
@@ -627,6 +631,7 @@ fn task563_duplicate_multi_param_impl_rejected_with_full_application() {
         params: vec![],
         body: TypeBody::Struct(vec![]),
         visibility: CoreVisibility::Public,
+        builtin: false,
     })
     .unwrap();
     env.register_interface(&pair_interface_def()).unwrap();

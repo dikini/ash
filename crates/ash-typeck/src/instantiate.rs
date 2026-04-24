@@ -158,6 +158,7 @@ impl InstantiateSubst {
 ///         },
 ///     ]),
 ///     visibility: Visibility::Public,
+///     builtin: false,
 /// };
 ///
 /// // Instantiate Option<Int>
@@ -211,6 +212,7 @@ mod tests {
                 },
             ]),
             visibility: Visibility::Public,
+            builtin: false,
         }
     }
 
@@ -238,6 +240,7 @@ mod tests {
                 },
             ]),
             visibility: Visibility::Public,
+            builtin: false,
         }
     }
 
@@ -251,6 +254,7 @@ mod tests {
                 ("second".into(), TypeExpr::Named("U".into())),
             ]),
             visibility: Visibility::Public,
+            builtin: false,
         }
     }
 
@@ -264,6 +268,7 @@ mod tests {
                 args: vec![TypeExpr::Named("Int".into())],
             }),
             visibility: Visibility::Private,
+            builtin: false,
         }
     }
 
@@ -274,6 +279,7 @@ mod tests {
             params: vec!["T".to_string()],
             body: TypeBody::Alias(TypeExpr::Named("T".into())),
             visibility: Visibility::Public,
+            builtin: false,
         }
     }
 
@@ -487,6 +493,7 @@ mod tests {
                 },
             )]),
             visibility: Visibility::Public,
+            builtin: false,
         };
 
         let result = instantiate(&container_def, &[TypeExpr::Named("Int".into())]);
@@ -522,6 +529,7 @@ mod tests {
                 ]),
             )]),
             visibility: Visibility::Public,
+            builtin: false,
         };
 
         let result = instantiate(&pair_wrapper_def, &[TypeExpr::Named("String".into())]);
@@ -551,6 +559,7 @@ mod tests {
                 TypeExpr::Record(vec![("inner".into(), TypeExpr::Named("T".into()))]),
             )]),
             visibility: Visibility::Public,
+            builtin: false,
         };
 
         let result = instantiate(&boxed_def, &[TypeExpr::Named("Bool".into())]);
@@ -580,6 +589,7 @@ mod tests {
                 ("y".into(), TypeExpr::Named("Int".into())),
             ]),
             visibility: Visibility::Public,
+            builtin: false,
         };
 
         let result = instantiate(&mixed_def, &[TypeExpr::Named("String".into())]);

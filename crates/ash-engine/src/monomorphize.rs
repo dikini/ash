@@ -324,7 +324,8 @@ fn value_to_type(v: &ash_core::Value) -> Type {
         ash_core::Value::Cap(_)
         | ash_core::Value::Variant { .. }
         | ash_core::Value::Closure { .. }
-        | ash_core::Value::Stream(_) => Type::Var(ash_typeck::types::TypeVar::fresh()),
+        | ash_core::Value::Stream(_)
+        | ash_core::Value::ActEnvToken => Type::Var(ash_typeck::types::TypeVar::fresh()),
         ash_core::Value::Instance(_) => Type::Instance {
             workflow_type: Box::from(""),
         },

@@ -121,16 +121,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             scrutinee, arms, ..
         } => check_match(env, scrutinee, arms),
         Expr::FieldAccess { base, field, span } => {
-            // Field access is not yet fully implemented
-            // Check the base expression first, then report unsupported
-            let base_result = check_expr(env, base);
-            if !base_result.is_ok() {
-                return base_result;
-            }
-            CheckResult::error(ConstructorError::UnsupportedExpression {
-                kind: format!("FieldAccess (.{field})"),
-                span: *span,
-            })
+            check_field_access(env, base, field.as_ref(), *span)
         }
         Expr::IndexAccess { base, index, span } => {
             // Index access is not yet fully implemented
@@ -720,6 +711,34 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::FnDef { span, .. } => *span,
         Expr::FnApply { span, .. } => *span,
         Expr::ActBlock { span, .. } => *span,
+    }
+}
+
+/// Check a field-access expression against record types.
+fn check_field_access(env: &TypeEnv, base: &Expr, field: &str, span: Span) -> CheckResult {
+    let base_result = check_expr(env, base);
+    if !base_result.is_ok() {
+        return base_result;
+    }
+
+    let base_ty = base_result.substitution.apply(&base_result.ty);
+    match &base_ty {
+        Type::Record(fields) => match fields.iter().find(|(name, _)| name.as_ref() == field) {
+            Some((_, field_ty)) => CheckResult {
+                ty: base_result.substitution.apply(field_ty),
+                substitution: base_result.substitution,
+                errors: Vec::new(),
+            },
+            None => CheckResult::error(ConstructorError::MissingRecordField {
+                field: field.to_string(),
+                span,
+            }),
+        },
+        other => CheckResult::error(ConstructorError::NotARecord {
+            field: field.to_string(),
+            actual: other.clone(),
+            span,
+        }),
     }
 }
 
@@ -2092,6 +2111,7 @@ mod tests {
             params: vec![],
             body: TypeBody::Enum(vec![]),
             visibility: Visibility::Public,
+            builtin: false,
         };
         env.register_type(&color_def).expect("register Color type");
         // fn(x: Color) { x }

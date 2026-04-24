@@ -1389,6 +1389,10 @@ pub const BUILTIN_FUNCTIONS: &[&str] = &[
     "is_record",
     "is_null",
     "record",
+    "__unit",
+    "__bind",
+    "__then",
+    "__fail",
 ];
 
 /// Lower a surface expression to core IR.
@@ -1649,8 +1653,18 @@ fn is_act_like_surface_expr(expr: &Expr) -> bool {
     match expr {
         Expr::ActBlock { .. } => true,
         Expr::Call { func, module, .. } if module.is_none() => {
-            matches!(func.as_ref(), "invoke" | "bind" | "then" | "guard" | "unit")
-                || active_effectful_names_contains(func.as_ref())
+            matches!(
+                func.as_ref(),
+                "invoke"
+                    | "bind"
+                    | "then"
+                    | "guard"
+                    | "unit"
+                    | "__unit"
+                    | "__bind"
+                    | "__then"
+                    | "__fail"
+            ) || active_effectful_names_contains(func.as_ref())
         }
         _ => false,
     }

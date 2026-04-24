@@ -1,6 +1,6 @@
 # TASK-691: Performance baseline for desugared act-block execution
 
-## Status: 🟡 Ready
+## Status: ⛔ Blocked on TASK-690
 
 ## Description
 

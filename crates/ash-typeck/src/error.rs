@@ -113,6 +113,26 @@ pub enum ConstructorError {
         span: Span,
     },
 
+    /// Field access requested a field missing from a record-typed base.
+    #[error("missing field '{field}' in record")]
+    MissingRecordField {
+        /// Missing field name.
+        field: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Field access was applied to a non-record value.
+    #[error("cannot access field '{field}' on non-record type {actual}")]
+    NotARecord {
+        /// Field being requested.
+        field: String,
+        /// Actual base type encountered.
+        actual: crate::types::Type,
+        /// Source span.
+        span: Span,
+    },
+
     /// Unsupported expression type
     #[error("unsupported expression: {kind}")]
     UnsupportedExpression {

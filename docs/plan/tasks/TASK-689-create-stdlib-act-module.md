@@ -1,6 +1,6 @@
 # TASK-689: Replace placeholder `std::act` stubs with ordinary library implementations
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -55,9 +55,9 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] `std/src/act.ash` no longer exposes placeholder builtin helper declarations.
-- [ ] `std/src/act.ash` matches the ordinary-library Phase 97 architecture.
-- [ ] Focused engine/runtime tests prove import + type + execute behavior for ordinary `std::act` helpers.
+- [x] `std/src/act.ash` no longer exposes placeholder builtin helper declarations.
+- [x] `std/src/act.ash` matches the ordinary-library Phase 97 architecture.
+- [x] Focused engine/runtime tests prove import + type + execute behavior for ordinary `std::act` helpers.
 - [ ] `cargo test --all` passes
 - [ ] `cargo clippy --all-targets --all-features` passes cleanly
 - [ ] `cargo fmt --check` passes
@@ -75,5 +75,7 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - TASK-689B preserved imported ordinary `pub fn` signatures through module loading and engine type binding, so imported ordinary helpers are no longer forced through an arity-only fallback.
 - TASK-689C is now sufficient for an honest ordinary-library `guard` through the narrow `act::policy_check` bridge while preserving the runtime-only `ActEnv` boundary.
 - TASK-689E landed the enabling library/type-export semantics so `type T = ...` now preserves public/discoverable type identity without automatically exporting constructors/representation.
-- TASK-689D completed the public opaque `Act` prerequisite: the public boundary, ordinary helper import path, hidden-carrier protection checks, async-force workflow coverage, and internal-forcing correspondence are landed. TASK-689 is now ready for its own closeout pass over the remaining `std::act` placeholder/runtime-builtin cleanup criteria.
+- TASK-689D completed the public opaque `Act` prerequisite: the public boundary, ordinary helper import path, hidden-carrier protection checks, async-force workflow coverage, and internal-forcing correspondence are landed.
+- TASK-689 closeout is now proven by focused end-to-end checks: `cargo run -q -p ash-cli -- check std/src/act.ash`, `cargo test -p ash-engine --test module_resolution -- --nocapture`, and `cargo test -p ash-interp --test act_env_runtime_boundary -- --nocapture`.
+- `guard` now executes through the ordinary-library boundary while deferring policy evaluation to Act-force time via the internal `act::__guard` bridge, preserving the runtime-only `ActEnv` boundary.
 - Any broader Ash-visible runtime-environment feature or fully native replacement for the internal token/list force-result compatibility shape should be spun out into a separate spec/plan track instead of being silently folded into TASK-689.

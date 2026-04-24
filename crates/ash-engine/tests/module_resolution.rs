@@ -4,11 +4,14 @@
 //! from the local file tree, `ASH_LIBRARY_PATH`, and the built-in stdlib root,
 //! with proper search precedence, cycle detection, and error reporting.
 
-use ash_core::{Expr, Value};
+use ash_core::{Decision, Expr, Provenance, Value};
 use ash_engine::Engine;
+use ash_interp::act_env::ActEnv;
+use ash_interp::capability::CapabilityContext;
 use ash_interp::context::Context;
 use ash_interp::error::EvalError;
 use ash_interp::eval::eval_expr;
+use ash_interp::policy::{Policy, PolicyEvaluator};
 use tempfile::TempDir;
 
 /// Helper: write `contents` to `path`, creating parent directories as needed.
@@ -320,36 +323,91 @@ async fn stdlib_act_then_dummy_arg_force_rejects_fake_actenv() {
         "sequenced Act values should also reject arbitrary visible arguments as fake ActEnv carriers, got {forced:?}"
     );
 }
+fn force_act_with_policy(
+    value: Value,
+    policy_name: &str,
+    decision: Decision,
+) -> Result<Value, EvalError> {
+    let mut policies = PolicyEvaluator::new();
+    policies.register(Policy::new(policy_name).with_default(decision));
+    let act_env = ActEnv::new(
+        CapabilityContext::new(),
+        policies.clone(),
+        Provenance::new(),
+    );
+    let ctx = Context::new()
+        .with_policy_evaluator(policies)
+        .with_act_env(act_env);
+
+    eval_expr(
+        &Expr::FnApply {
+            func: Box::new(Expr::Literal(value)),
+            args: vec![Expr::Literal(Value::ActEnvToken)],
+        },
+        &ctx,
+    )
+}
+
 /// `std::act::guard` should import as an ordinary helper with its opaque `Act`
-/// signature; execution pressure for nested generic calls remains separate.
+/// signature and execute policy-allowed actions through the library boundary.
 #[tokio::test]
-async fn stdlib_act_guard_ordinary_function_imports_with_policy_context() {
+async fn stdlib_act_guard_permits_allowed_policy() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
     write(
         &dir.join("main.ash"),
-        "\
-        use act::{Act, guard, unit}\n\
-        \n\
-        workflow main() -> Act<Int> { ret unit(1) }\n\
-        ",
+        r#"
+        use act::{Act, guard, unit}
+
+        workflow main() -> Act<Int> { ret guard("allowed", unit(7)) }
+        "#,
     );
 
     let engine = build_engine();
-    let result = engine.run_file(dir.join("main.ash")).await;
+    let act_value = engine
+        .run_file(dir.join("main.ash"))
+        .await
+        .expect("guard over allowed policy should produce an Act value");
 
-    assert!(
-        result.is_ok(),
-        "stdlib act ordinary guard: expected successful execution, got: {:?}",
-        result.err()
+    let forced = force_act_with_policy(act_value, "allowed", Decision::Permit)
+        .expect("allowed guard should force successfully");
+    assert_eq!(
+        forced,
+        Value::List(Box::new(vec![Value::ActEnvToken, Value::Int(7)]))
     );
-    assert!(
-        matches!(
-            result.expect("checked above"),
-            ash_core::Value::Closure { .. }
-        ),
-        "guard should return an opaque closure-shaped Act value"
+}
+
+/// Denied policies should execute `std::act::guard`'s ordinary-library failure path
+/// rather than bypassing the helper through a public runtime builtin.
+#[tokio::test]
+async fn stdlib_act_guard_denies_rejected_policy() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("main.ash"),
+        r#"
+        use act::{Act, guard, unit}
+
+        workflow main() -> Act<Int> { ret guard("denied", unit(7)) }
+        "#,
+    );
+
+    let engine = build_engine();
+    let act_value = engine
+        .run_file(dir.join("main.ash"))
+        .await
+        .expect("guard over denied policy should still produce an Act value");
+
+    let forced = force_act_with_policy(act_value, "denied", Decision::Deny)
+        .expect("denied guard should force its failure Act");
+    assert_eq!(
+        forced,
+        Value::List(Box::new(vec![
+            Value::ActEnvToken,
+            Value::String("policy denied".to_string())
+        ]))
     );
 }
 

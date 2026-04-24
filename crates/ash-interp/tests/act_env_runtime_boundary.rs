@@ -321,6 +321,53 @@ async fn workflow_ret_uses_async_force_path_for_task_local_provider() {
 }
 
 #[tokio::test]
+async fn workflow_ret_unary_uses_async_force_path_for_task_local_provider() {
+    let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+
+    let workflow = Workflow::Ret {
+        expr: Expr::Unary {
+            op: ash_core::UnaryOp::Not,
+            expr: Box::new(Expr::Binary {
+                op: ash_core::BinaryOp::Eq,
+                left: Box::new(Expr::IndexAccess {
+                    expr: Box::new(Expr::FnApply {
+                        func: Box::new(Expr::Call {
+                            func: "invoke".to_string(),
+                            module: None,
+                            arguments: vec![
+                                Expr::Literal(Value::String("tasklocal".to_string())),
+                                Expr::Literal(Value::String("mark".to_string())),
+                                Expr::Literal(Value::List(Box::default())),
+                            ],
+                        }),
+                        args: vec![Expr::Literal(Value::ActEnvToken)],
+                    }),
+                    index: Box::new(Expr::Literal(Value::Int(1))),
+                }),
+                right: Box::new(Expr::Literal(Value::String("not-the-marker".to_string()))),
+            }),
+        },
+    };
+
+    let result = TASK_MARKER
+        .scope(
+            "workflow-unary-task-local",
+            execute_workflow_with_behaviour_in_state(
+                &workflow,
+                Context::new(),
+                &CapabilityContext::new(),
+                &PolicyEvaluator::new(),
+                &BehaviourContext::new(),
+                &runtime_state,
+            ),
+        )
+        .await
+        .expect("workflow ret unary should use async force path on the current task");
+
+    assert_eq!(result, Value::Bool(true));
+}
+
+#[tokio::test]
 async fn workflow_let_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
 

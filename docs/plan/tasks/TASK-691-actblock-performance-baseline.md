@@ -1,6 +1,6 @@
 # TASK-691: Performance baseline for desugared act-block execution
 
-## Status: ⛔ Blocked on TASK-690
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,7 +49,7 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] A reproducible baseline exists for future Phase-97 optimization discussions.
+- [x] A reproducible baseline exists for future Phase-97 optimization discussions.
 - [ ] `cargo test --all` passes
 - [ ] `cargo clippy --all-targets --all-features` passes cleanly
 - [ ] `cargo fmt --check` passes
@@ -63,3 +63,6 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - Phase 97 is additive.
 - Preserve `Workflow::Act` behavior.
 - Preserve coexistence with existing `Type::Fun(...)` unless this task explicitly narrows that boundary in docs/tests only.
+- The baseline is now captured by the standalone `ash-bench` Criterion harness (`[workspace]` isolated in `crates/ash-bench/Cargo.toml`) and the new `phase97_act` benchmark covering permit-path `guard` forcing plus desugared bind-chain forcing depths 1/4/8/16.
+- Repro command: `cargo bench --manifest-path crates/ash-bench/Cargo.toml --bench phase97_act -- --measurement-time 0.1 --sample-size 10`.
+- Initial numbers recorded in this worktree: `guard_force_permit` ≈ 5.6 µs, `bind_chain_force_1` ≈ 9.8 µs, `bind_chain_force_4` ≈ 51.7 µs, `bind_chain_force_8` ≈ 107 µs, `bind_chain_force_16` ≈ 226 µs.

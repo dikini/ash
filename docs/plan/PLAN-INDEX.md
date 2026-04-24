@@ -2772,9 +2772,9 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 ||| TASK-689C | Establish policy/environment substrate for ordinary `std::act` `guard` | 3 | ✅ Complete ||
 ||| TASK-689E | Refine library type-export semantics for opaque `Act` | 3 | ✅ Complete ||
 ||| TASK-689D | Establish honest opaque `Act` library boundary for ordinary `std::act` helpers | 3 | ✅ Complete ||
-||| TASK-689 | Replace placeholder `std::act` stubs with ordinary library implementations | 2 | 🟡 Ready ||
-||| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end | 3 | ⛔ Blocked on TASK-689 ||
-||| TASK-691 | Performance baseline for desugared act-block execution | 1 | ⛔ Blocked on TASK-690 ||
+||| TASK-689 | Replace placeholder `std::act` stubs with ordinary library implementations | 2 | ✅ Complete ||
+||| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end | 3 | ✅ Complete ||
+||| TASK-691 | Performance baseline for desugared act-block execution | 1 | ✅ Complete ||
 
 **Track A (Preflight + Surface + Lowering):** 15h. Normalize docs, add surface act-block syntax, and lower into existing core expressions.
 

@@ -89,7 +89,7 @@ Prerequisite: Tracks A-C complete.
 
 **D4: Workflow compatibility.** Resolved: `Workflow::Act` remains unchanged in Phase 97. Expression-level `act {}` is additive.
 
-**D5: Builtin/library split.** Resolved at the contract level: `unit`, `bind`, `then`, and `guard` are library functions; `invoke` is the only runtime primitive introduced by this phase. Track D still requires explicit substrate closeout before `std/src/act.ash` can replace the current placeholder declarations with ordinary library implementations. TASK-689A closed the parser/module honesty gap by making the placeholder `std::act` surface importable through the real engine path; the remaining work is replacing those placeholders with the ordinary-library contract promised by SPEC-047.
+**D5: Builtin/library split.** Resolved at the contract level: `unit`, `bind`, `then`, and `guard` are library functions; `invoke` is the only runtime primitive introduced by this phase. Track D closeout is now landed in the Phase 97 worktree: `std/src/act.ash` uses the ordinary-library helper surface, `guard` executes through the deferred internal `act::__guard` bridge so policy is checked at Act-force time, focused engine/interpreter validation covers import + type + execute behavior, and a standalone `ash-bench` baseline exists for representative desugared Act execution paths.
 
 **D6: Typing coexistence.** Resolved: `Act<A>` is additive and does not retire existing `Type::Fun(...)` behavior in this phase.
 

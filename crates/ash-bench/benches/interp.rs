@@ -2,8 +2,8 @@
 //!
 //! Benchmarks workflow interpretation with various configurations.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use ash_core::{Workflow, Expr, Value, BinaryOp, Pattern};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use ash_core::{BinaryOp, Expr, Pattern, Span, Value, Workflow};
 
 // ============================================================================
 // Workflow Construction Helpers
@@ -192,7 +192,7 @@ fn bench_serialization(c: &mut Criterion) {
     });
     
     // Value serialization
-    let value = Value::List((0..100).map(|i| Value::Int(i)).collect());
+    let value = Value::List(Box::new((0..100).map(|i| Value::Int(i)).collect()));
     
     group.bench_function("serialize_value_list_100", |b| {
         b.iter(|| {

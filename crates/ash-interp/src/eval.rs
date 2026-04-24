@@ -669,6 +669,58 @@ fn runtime_fail(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     })
 }
 
+fn runtime_guard(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("guard".to_string()),
+        });
+    }
+
+    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    frame.insert("__guard_policy".to_string(), args[0].clone());
+    frame.insert("__guard_act".to_string(), args[1].clone());
+
+    let span = ash_core::ast::Span::default();
+    let act_env = Expr::Variable {
+        name: "__act_env".to_string(),
+        span,
+    };
+    let body = Expr::Match {
+        scrutinee: Box::new(Expr::Call {
+            func: "policy_check".to_string(),
+            module: Some("act".to_string()),
+            arguments: vec![Expr::Variable {
+                name: "__guard_policy".to_string(),
+                span,
+            }],
+        }),
+        arms: vec![
+            ash_core::MatchArm {
+                pattern: ash_core::ast::Pattern::Literal(Value::Bool(true)),
+                body: Expr::FnApply {
+                    func: Box::new(Expr::Variable {
+                        name: "__guard_act".to_string(),
+                        span,
+                    }),
+                    args: vec![act_env],
+                },
+            },
+            ash_core::MatchArm {
+                pattern: ash_core::ast::Pattern::Literal(Value::Bool(false)),
+                body: Expr::Literal(act_result(Value::String("policy denied".to_string()))),
+            },
+        ],
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__act_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(frame),
+    })
+}
+
 fn runtime_policy_check(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     if args.len() != 1 {
         return Err(EvalError::WrongArity {
@@ -887,6 +939,9 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 }
                 if module.is_none() && func == "__fail" {
                     return runtime_fail(&args, ctx);
+                }
+                if module.is_none() && func == "__guard" {
+                    return runtime_guard(&args, ctx);
                 }
                 if let (true, Some(Value::Closure { params, body, env })) =
                     (module.is_none(), ctx.get(func))
@@ -1339,6 +1394,10 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 return runtime_fail(&args, ctx);
             }
 
+            if module.is_none() && func == "__guard" {
+                return runtime_guard(&args, ctx);
+            }
+
             // Note: this early-exit returns apply_closure directly, bypassing the
             // make_partial_builtin path below. Over-application through a closure found
             // here produces WrongArity { callee: None } rather than a partial value;
@@ -1757,6 +1816,7 @@ pub fn eval_function_call(
     ctx: &Context,
 ) -> EvalResult<Value> {
     match (module, func) {
+        (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
         (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
         (Some("string"), "concat") => {
             let mut result = String::new();

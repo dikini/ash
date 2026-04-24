@@ -13,7 +13,8 @@ builtin fn __unit<A>(v: A) -> Act<A>;
 builtin fn __bind<A, B>(ma: Act<A>, f: A -> Act<B>) -> Act<B>;
 builtin fn __then<A, B>(ma: Act<A>, mb: Act<B>) -> Act<B>;
 builtin fn __fail<A>(error: String) -> Act<A>;
-pub builtin fn policy_check(p: Policy) -> Bool;
+builtin fn __guard<A>(p: String, ma: Act<A>) -> Act<A>;
+pub builtin fn policy_check(p: String) -> Bool;
 
 pub fn unit<A>(v: A) -> Act<A> {
     __unit(v)
@@ -27,9 +28,6 @@ pub fn then<A, B>(ma: Act<A>, mb: Act<B>) -> Act<B> {
     __then(ma, mb)
 }
 
-pub fn guard<A>(p: Policy, ma: Act<A>) -> Act<A> {
-    if act::policy_check(p) then
-        ma
-    else
-        __fail("policy denied")
+pub fn guard<A>(p: String, ma: Act<A>) -> Act<A> {
+    act::__guard(p, ma)
 }

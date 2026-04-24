@@ -1313,10 +1313,18 @@ type ImportedClosureBindings = (
 /// Returns `(closures, param_counts, fn_signatures, builtin_signatures)` where
 /// the signature maps carry declared type signatures for imported callables so
 /// that `Engine::check()` can bind precise types instead of arity-only synthetics.
+#[allow(clippy::too_many_lines)]
 fn build_imported_closures(
     imported_callables: &HashMap<String, module_loader::InlineCallable>,
 ) -> ImportedClosureBindings {
     use module_loader::CallableKind;
+
+    struct ClosureSpec {
+        name: String,
+        params: Vec<(String, Option<String>)>,
+        body: ash_core::Expr,
+        shared_env: bool,
+    }
 
     // Resolved once; builtin_dispatch_table() uses OnceLock so this is a
     // single atomic load on subsequent calls, but hoisting it avoids calling
@@ -1327,12 +1335,13 @@ fn build_imported_closures(
     let mut param_counts = HashMap::new();
     let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
+    let mut specs = Vec::new();
+
     for (name, callable) in imported_callables {
         let params: Vec<(String, Option<String>)> =
             callable.params.iter().map(|p| (p.clone(), None)).collect();
         param_counts.insert(name.clone(), params.len());
 
-        // Extract declared type signature for imported callables.
         if let Some(sig) = &callable.signature {
             match sig {
                 module_loader::CallableSignature::Function(fn_def) => {
@@ -1352,19 +1361,12 @@ fn build_imported_closures(
                 match ash_parser::lower_expr_with_context(body, &lowering_ctx) {
                     Ok(expr) => expr,
                     Err(e) => {
-                        // TODO: replace with tracing::warn! when tracing is integrated
                         eprintln!("warning: failed to lower imported callable '{name}': {e}");
                         continue;
                     }
                 }
             }
             CallableKind::Builtin { module } => {
-                // Check the dispatch table to decide whether this builtin needs a
-                // qualified call (e.g. "string::concat") or unqualified ("keys").
-                // String builtins are registered as "string::concat" etc. (qualified).
-                // Record builtins ("keys", "values", "record") are registered without a
-                // module prefix; "record::keys" is absent from the table, so they
-                // receive module: None and dispatch unqualified.
                 let qualified = format!("{module}::{}", callable.exported_name);
                 let call_module = if dispatch_table.contains_key(qualified.as_str()) {
                     Some(module.clone())
@@ -1372,18 +1374,11 @@ fn build_imported_closures(
                     None
                 };
 
-                // For variadic builtins declared with 0 parameters (e.g. `record`),
-                // skip closure registration entirely.  The caller passes arguments
-                // that would be forwarded to the builtin, but a 0-param closure cannot
-                // forward them — `apply_closure` would raise WrongArity.  Instead we
-                // omit the closure so the evaluator falls through to `eval_function_call`,
-                // which handles variadic dispatch correctly.
                 let unqualified_entry = dispatch_table.get(callable.exported_name.as_str());
                 if callable.params.is_empty()
                     && let Some(entry) = unqualified_entry
                     && entry.variadic
                 {
-                    // Do not register a closure; let eval use builtin dispatch.
                     param_counts.insert(name.clone(), 0);
                     continue;
                 }
@@ -1404,16 +1399,40 @@ fn build_imported_closures(
             }
         };
 
-        let env_frame = std::sync::Arc::new(ash_core::env_frame::EnvFrame::new());
-        closures.insert(
-            name.clone(),
-            Value::Closure {
-                params,
-                body: Box::new(body_expr),
-                env: env_frame,
-            },
-        );
+        specs.push(ClosureSpec {
+            name: name.clone(),
+            params,
+            body: body_expr,
+            shared_env: matches!(&callable.kind, CallableKind::User { .. }),
+        });
     }
+
+    let mut shared_env = ash_core::env_frame::EnvFrame::new();
+    let mut late_slots = HashMap::new();
+    for spec in &specs {
+        if spec.shared_env {
+            let slot = shared_env.insert_late(spec.name.clone());
+            late_slots.insert(spec.name.clone(), slot);
+        }
+    }
+    let shared_env = std::sync::Arc::new(shared_env);
+
+    for spec in specs {
+        let closure = Value::Closure {
+            params: spec.params,
+            body: Box::new(spec.body),
+            env: if spec.shared_env {
+                shared_env.clone()
+            } else {
+                std::sync::Arc::new(ash_core::env_frame::EnvFrame::new())
+            },
+        };
+        if let Some(slot) = late_slots.get(&spec.name) {
+            slot.set_late(closure.clone());
+        }
+        closures.insert(spec.name, closure);
+    }
+
     (closures, param_counts, fn_signatures, builtin_signatures)
 }
 

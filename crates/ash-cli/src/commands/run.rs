@@ -651,11 +651,7 @@ fn should_use_entry_bootstrap(source_kind: WorkflowSourceKind) -> bool {
 /// `module_loader::load_ordinary_file`), then type-checks and executes.
 /// When `trace` is true, parsing uses `engine.parse_file()` but execution
 /// goes through the trace-enabled path.
-async fn run_ordinary_file(
-    engine: &ash_engine::Engine,
-    path: &Path,
-    trace: bool,
-) -> Result<Value> {
+async fn run_ordinary_file(engine: &ash_engine::Engine, path: &Path, trace: bool) -> Result<Value> {
     if trace {
         let mut workflow = engine.parse_file(path).map_err(classify_engine_error)?;
         engine.check(&mut workflow).map_err(classify_engine_error)?;

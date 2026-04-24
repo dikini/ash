@@ -47,10 +47,7 @@ async fn baseline_simple_workflow() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
-    write(
-        &dir.join("main.ash"),
-        "workflow main() -> Int { ret 42; }",
-    );
+    write(&dir.join("main.ash"), "workflow main() -> Int { ret 42; }");
 
     let engine = Engine::new().build().expect("engine builds");
 
@@ -170,7 +167,9 @@ workflow main() -> Int { ret double(21); }
 
 #[test]
 fn baseline_provider_creation() {
-    use ash_engine::providers::{FsProvider, HttpProvider, ProcessProvider, StdioProvider, TimeProvider};
+    use ash_engine::providers::{
+        FsProvider, HttpProvider, ProcessProvider, StdioProvider, TimeProvider,
+    };
 
     let start = Instant::now();
     for _ in 0..100 {

@@ -1,6 +1,6 @@
 # TASK-672: Phase 97 preflight doc cleanup
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,10 +49,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] PLAN-097 and PLAN-INDEX Phase 97 text match the current SPEC-047 decisions line-for-line where applicable.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] PLAN-097 and PLAN-INDEX Phase 97 text match the current SPEC-047 decisions line-for-line where applicable.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

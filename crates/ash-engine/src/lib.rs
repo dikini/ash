@@ -94,6 +94,8 @@ pub struct Workflow {
     pub imported_closures: std::collections::HashMap<String, ash_core::Value>,
     /// Param counts for imported callables, used to register type signatures.
     pub imported_param_counts: std::collections::HashMap<String, usize>,
+    /// Declared type signatures for imported ordinary `pub fn` callables.
+    pub imported_fn_signatures: std::collections::HashMap<String, ash_parser::surface::FnDef>,
     /// Declared type signatures for imported builtin fn callables.
     ///
     /// When present, `Engine::check()` uses `builtin_fn_signature_type` to
@@ -272,7 +274,9 @@ impl Engine {
 
         let mut type_defs = Vec::new();
         for source in &sources {
-            type_defs.extend(module_loader::collect_public_type_defs_from_source(source)?);
+            type_defs.extend(module_loader::collect_type_identity_defs_from_source(
+                source,
+            )?);
         }
         Ok(type_defs)
     }
@@ -350,17 +354,23 @@ impl Engine {
         imported_param_counts: HashMap<String, usize>,
     ) -> Result<ProgramProcessingResult, EngineError> {
         use ash_core::env_frame::EnvFrame;
-        use ash_parser::{lower_expr, lower_workflow};
+        use ash_parser::{
+            LoweringContext, effectful_names_from_definitions, lower_expr_with_context,
+            lower_workflow,
+        };
 
         let core = lower_workflow(&program.workflow)
             .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
+        let lowering_ctx = LoweringContext::with_effectful_names(effectful_names_from_definitions(
+            &program.definitions,
+        ));
 
         let (mut local_closures, mut local_param_counts) =
             (imported_closures, imported_param_counts);
 
         for def_item in &program.definitions {
             if let ash_parser::surface::Definition::Function(fn_def) = def_item
-                && let Ok(body_expr) = lower_expr(&fn_def.body)
+                && let Ok(body_expr) = lower_expr_with_context(&fn_def.body, &lowering_ctx)
             {
                 let mut env_frame = EnvFrame::new();
                 let slot = env_frame.insert_late(fn_def.name.to_string());
@@ -417,8 +427,12 @@ impl Engine {
         use winnow::prelude::*;
 
         // Convert imported callables to closure values for runtime binding
-        let (imported_closures, imported_param_counts, imported_builtin_signatures) =
-            build_imported_closures(imported_callables);
+        let (
+            imported_closures,
+            imported_param_counts,
+            imported_fn_signatures,
+            imported_builtin_signatures,
+        ) = build_imported_closures(imported_callables);
 
         let mut input = new_input(source);
         skip_whitespace_and_comments(&mut input);
@@ -453,6 +467,7 @@ impl Engine {
                         id,
                         imported_closures: local_closures,
                         imported_param_counts: local_param_counts,
+                        imported_fn_signatures,
                         imported_builtin_signatures,
                     });
                 }
@@ -467,6 +482,7 @@ impl Engine {
                     id,
                     imported_closures,
                     imported_param_counts,
+                    imported_fn_signatures,
                     imported_builtin_signatures,
                 })
             }
@@ -489,6 +505,7 @@ impl Engine {
                     id,
                     imported_closures: local_closures,
                     imported_param_counts: local_param_counts,
+                    imported_fn_signatures,
                     imported_builtin_signatures,
                 })
             }
@@ -605,11 +622,16 @@ impl Engine {
                 type_env.declare_type_name(&imported_type.name);
             }
         }
-        // Now register all types (upgrades placeholders to full definitions)
+        // Now register all type identities (upgrades placeholders to full definitions)
         for imported_type in imported_type_defs {
             if !type_env.has_full_type(&imported_type.name) {
                 type_env
-                    .register_type(&imported_type)
+                    .register_type_identity(&imported_type)
+                    .map_err(|error| EngineError::Type(error.to_string()))?;
+            }
+            if matches!(imported_type.visibility, ash_core::ast::Visibility::Public) {
+                type_env
+                    .expose_type_representation(&imported_type.name)
                     .map_err(|error| EngineError::Type(error.to_string()))?;
             }
         }
@@ -1241,21 +1263,31 @@ impl EngineBuilder {
 /// For each entry in `workflow.imported_param_counts`, checks whether a
 /// declared builtin signature is available in `workflow.imported_builtin_signatures`.
 /// If so, uses `builtin_fn_signature_type` to produce the precise polymorphic type.
-/// If signature resolution fails (e.g. unregistered type like `Record`), falls
-/// back to an arity-only synthetic type.  Non-builtin callables always use the
-/// arity-only fallback.
+/// If a declared signature exists, signature conversion errors are hard type
+/// errors rather than silently falling back to arity-only types.
 #[allow(clippy::unnecessary_wraps)]
 fn bind_imported_callable_types(
     type_env: &mut ash_typeck::type_env::TypeEnv,
     workflow: &Workflow,
 ) -> Result<(), EngineError> {
     for (name, &param_count) in &workflow.imported_param_counts {
-        #[allow(clippy::collapsible_if)]
+        if let Some(sig) = workflow.imported_fn_signatures.get(name) {
+            let ty = ash_typeck::fn_signature_type(type_env, sig).map_err(|error| {
+                EngineError::Type(format!(
+                    "failed to resolve imported function signature for '{name}': {error}"
+                ))
+            })?;
+            type_env.bind_variable(name, ty);
+            continue;
+        }
         if let Some(sig) = workflow.imported_builtin_signatures.get(name) {
-            if let Ok(ty) = ash_typeck::builtin_fn_signature_type(type_env, sig) {
-                type_env.bind_variable(name, ty);
-                continue;
-            }
+            let ty = ash_typeck::builtin_fn_signature_type(type_env, sig).map_err(|error| {
+                EngineError::Type(format!(
+                    "failed to resolve imported builtin signature for '{name}': {error}"
+                ))
+            })?;
+            type_env.bind_variable(name, ty);
+            continue;
         }
         // Arity-only synthetic type (fresh type variables)
         let param_types: Vec<ash_typeck::Type> = (0..param_count)
@@ -1267,20 +1299,32 @@ fn bind_imported_callable_types(
     Ok(())
 }
 
+/// Imported callable bindings built for runtime and type-checker integration.
+type ImportedClosureBindings = (
+    HashMap<String, Value>,
+    HashMap<String, usize>,
+    HashMap<String, ash_parser::surface::FnDef>,
+    HashMap<String, ash_parser::surface::BuiltinFnDef>,
+);
+
 /// Convert imported callables to `Value::Closure` for runtime binding.
 /// Each callable body is lowered from surface to core Expr, then wrapped in a closure.
 ///
-/// Returns `(closures, param_counts, builtin_signatures)` where `builtin_signatures`
-/// carries the declared type signatures of `builtin fn` callables so that
-/// `Engine::check()` can bind precise types instead of arity-only synthetics.
+/// Returns `(closures, param_counts, fn_signatures, builtin_signatures)` where
+/// the signature maps carry declared type signatures for imported callables so
+/// that `Engine::check()` can bind precise types instead of arity-only synthetics.
+#[allow(clippy::too_many_lines)]
 fn build_imported_closures(
     imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> (
-    HashMap<String, Value>,
-    HashMap<String, usize>,
-    HashMap<String, ash_parser::surface::BuiltinFnDef>,
-) {
+) -> ImportedClosureBindings {
     use module_loader::CallableKind;
+
+    struct ClosureSpec {
+        name: String,
+        params: Vec<(String, Option<String>)>,
+        body: ash_core::Expr,
+        shared_env: bool,
+    }
 
     // Resolved once; builtin_dispatch_table() uses OnceLock so this is a
     // single atomic load on subsequent calls, but hoisting it avoids calling
@@ -1289,33 +1333,40 @@ fn build_imported_closures(
 
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();
+    let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
+    let mut specs = Vec::new();
+
     for (name, callable) in imported_callables {
         let params: Vec<(String, Option<String>)> =
             callable.params.iter().map(|p| (p.clone(), None)).collect();
         param_counts.insert(name.clone(), params.len());
 
-        // Extract declared type signature for builtin fn callables.
         if let Some(sig) = &callable.signature {
-            builtin_signatures.insert(name.clone(), sig.clone());
+            match sig {
+                module_loader::CallableSignature::Function(fn_def) => {
+                    fn_signatures.insert(name.clone(), fn_def.clone());
+                }
+                module_loader::CallableSignature::Builtin(builtin) => {
+                    builtin_signatures.insert(name.clone(), builtin.clone());
+                }
+            }
         }
 
         let body_expr = match &callable.kind {
-            CallableKind::User { body } => match ash_parser::lower_expr(body) {
-                Ok(expr) => expr,
-                Err(e) => {
-                    // TODO: replace with tracing::warn! when tracing is integrated
-                    eprintln!("warning: failed to lower imported callable '{name}': {e}");
-                    continue;
+            CallableKind::User { body } => {
+                let lowering_ctx = ash_parser::LoweringContext::with_effectful_names(
+                    callable.effectful_names.clone(),
+                );
+                match ash_parser::lower_expr_with_context(body, &lowering_ctx) {
+                    Ok(expr) => expr,
+                    Err(e) => {
+                        eprintln!("warning: failed to lower imported callable '{name}': {e}");
+                        continue;
+                    }
                 }
-            },
+            }
             CallableKind::Builtin { module } => {
-                // Check the dispatch table to decide whether this builtin needs a
-                // qualified call (e.g. "string::concat") or unqualified ("keys").
-                // String builtins are registered as "string::concat" etc. (qualified).
-                // Record builtins ("keys", "values", "record") are registered without a
-                // module prefix; "record::keys" is absent from the table, so they
-                // receive module: None and dispatch unqualified.
                 let qualified = format!("{module}::{}", callable.exported_name);
                 let call_module = if dispatch_table.contains_key(qualified.as_str()) {
                     Some(module.clone())
@@ -1323,18 +1374,11 @@ fn build_imported_closures(
                     None
                 };
 
-                // For variadic builtins declared with 0 parameters (e.g. `record`),
-                // skip closure registration entirely.  The caller passes arguments
-                // that would be forwarded to the builtin, but a 0-param closure cannot
-                // forward them — `apply_closure` would raise WrongArity.  Instead we
-                // omit the closure so the evaluator falls through to `eval_function_call`,
-                // which handles variadic dispatch correctly.
                 let unqualified_entry = dispatch_table.get(callable.exported_name.as_str());
                 if callable.params.is_empty()
                     && let Some(entry) = unqualified_entry
                     && entry.variadic
                 {
-                    // Do not register a closure; let eval use builtin dispatch.
                     param_counts.insert(name.clone(), 0);
                     continue;
                 }
@@ -1355,17 +1399,41 @@ fn build_imported_closures(
             }
         };
 
-        let env_frame = std::sync::Arc::new(ash_core::env_frame::EnvFrame::new());
-        closures.insert(
-            name.clone(),
-            Value::Closure {
-                params,
-                body: Box::new(body_expr),
-                env: env_frame,
-            },
-        );
+        specs.push(ClosureSpec {
+            name: name.clone(),
+            params,
+            body: body_expr,
+            shared_env: matches!(&callable.kind, CallableKind::User { .. }),
+        });
     }
-    (closures, param_counts, builtin_signatures)
+
+    let mut shared_env = ash_core::env_frame::EnvFrame::new();
+    let mut late_slots = HashMap::new();
+    for spec in &specs {
+        if spec.shared_env {
+            let slot = shared_env.insert_late(spec.name.clone());
+            late_slots.insert(spec.name.clone(), slot);
+        }
+    }
+    let shared_env = std::sync::Arc::new(shared_env);
+
+    for spec in specs {
+        let closure = Value::Closure {
+            params: spec.params,
+            body: Box::new(spec.body),
+            env: if spec.shared_env {
+                shared_env.clone()
+            } else {
+                std::sync::Arc::new(ash_core::env_frame::EnvFrame::new())
+            },
+        };
+        if let Some(slot) = late_slots.get(&spec.name) {
+            slot.set_late(closure.clone());
+        }
+        closures.insert(spec.name, closure);
+    }
+
+    (closures, param_counts, fn_signatures, builtin_signatures)
 }
 
 #[cfg(test)]
@@ -1921,5 +1989,198 @@ mod tests {
             result.is_ok(),
             "Engine should build even with invalid LLM config (skips registration)"
         );
+    }
+
+    fn effectful_act_block_body(callee: &str) -> ash_parser::surface::Expr {
+        use ash_parser::surface::{ActStmt, Expr, Literal};
+
+        let span = ash_parser::token::Span::default();
+        Expr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(Expr::Call {
+                        func: callee.into(),
+                        module: None,
+                        args: vec![Expr::Literal(Literal::String("/tmp/file".into()))],
+                        span,
+                    }),
+                    span,
+                },
+                ActStmt::Return {
+                    value: Box::new(Expr::Variable {
+                        name: "x".into(),
+                        span,
+                    }),
+                    span,
+                },
+            ],
+            span,
+        }
+    }
+
+    fn assert_closure_body_preserves_effectful_bind(value: &Value) {
+        let Value::Closure { body, .. } = value else {
+            panic!("expected closure, got: {value:?}");
+        };
+
+        match body.as_ref() {
+            ash_core::Expr::Call {
+                func, arguments, ..
+            } => {
+                assert_eq!(func, "bind");
+                assert_eq!(arguments.len(), 2);
+                assert!(
+                    !matches!(&arguments[0], ash_core::Expr::Call { func, .. } if func == "unit"),
+                    "effectful bind RHS should not be wrapped in unit()"
+                );
+            }
+            other => panic!("expected bind call, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_process_program_definitions_preserves_effectful_bind_rhs_for_local_functions() {
+        use ash_parser::surface::{
+            CapabilityDef, Definition, EffectType, FnDef, Program, Visibility,
+            Workflow as SurfaceWorkflow, WorkflowDef,
+        };
+
+        let span = ash_parser::token::Span::default();
+        let program = Program {
+            definitions: vec![
+                Definition::Capability(CapabilityDef {
+                    visibility: Visibility::Inherited,
+                    name: "read".into(),
+                    effect: EffectType::Act,
+                    params: vec![],
+                    return_type: None,
+                    constraints: vec![],
+                    target_provider: None,
+                    target_action: None,
+                    span,
+                }),
+                Definition::Function(FnDef {
+                    visibility: Visibility::Inherited,
+                    name: "demo".into(),
+                    type_params: vec![],
+                    params: vec![],
+                    return_type: None,
+                    contract: None,
+                    body: effectful_act_block_body("read"),
+                    span,
+                }),
+            ],
+            helper_workflows: vec![],
+            workflow: WorkflowDef {
+                name: "main".into(),
+                type_params: vec![],
+                params: vec![],
+                declared_return_type: None,
+                plays_roles: vec![],
+                capabilities: vec![],
+                body: SurfaceWorkflow::Ret {
+                    expr: ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Null),
+                    span,
+                },
+                contract: None,
+                span,
+            },
+        };
+
+        let engine = Engine::new().build().expect("engine builds");
+        let (closures, _, _) = engine
+            .process_program_definitions(&program, HashMap::new(), HashMap::new())
+            .expect("program lowering should succeed");
+
+        let closure = closures
+            .get("demo")
+            .expect("local function should be registered as a closure");
+        assert_closure_body_preserves_effectful_bind(closure);
+    }
+
+    #[test]
+    fn test_build_imported_closures_preserves_effectful_bind_rhs_for_user_callables() {
+        use crate::module_loader::{CallableKind, InlineCallable};
+        use std::collections::HashSet;
+
+        let mut imported_callables = HashMap::new();
+        imported_callables.insert(
+            "demo".to_string(),
+            InlineCallable {
+                exported_name: "demo".to_string(),
+                params: vec![],
+                effectful_names: HashSet::from([String::from("read")]),
+                kind: CallableKind::User {
+                    body: effectful_act_block_body("read"),
+                },
+                signature: None,
+            },
+        );
+
+        let (closures, _, _, _) = build_imported_closures(&imported_callables);
+        let closure = closures
+            .get("demo")
+            .expect("imported callable should lower into a closure");
+
+        assert_closure_body_preserves_effectful_bind(closure);
+    }
+
+    #[test]
+    fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
+        use ash_parser::input::new_input;
+        use ash_parser::parse_module::parse_fn_definition;
+        use ash_parser::surface::Definition;
+        use ash_typeck::Type;
+        use ash_typeck::type_env::TypeEnv;
+        use winnow::Parser;
+
+        let mut input = new_input("pub fn bind(ma: Int, f: Fn(Int) -> Int) -> Int { ma }");
+        let parsed = parse_fn_definition
+            .parse_next(&mut input)
+            .expect("function definition should parse");
+        let Definition::Function(function) = parsed else {
+            panic!("expected ordinary function definition");
+        };
+
+        let mut workflow = Workflow {
+            core: ash_core::Workflow::Done,
+            id: 0,
+            imported_closures: HashMap::new(),
+            imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
+            imported_fn_signatures: HashMap::from([(String::from("bind"), function)]),
+            imported_builtin_signatures: HashMap::new(),
+        };
+
+        let mut env = TypeEnv::with_builtin_types();
+        bind_imported_callable_types(&mut env, &workflow)
+            .expect("imported pub fn signature should bind cleanly");
+
+        let Some(bound_ty) = env.lookup_call_target(None, "bind") else {
+            panic!("expected imported pub fn binding for bind");
+        };
+
+        match bound_ty {
+            Type::Fn(params, ret) => {
+                assert_eq!(params.len(), 2, "bind should preserve arity");
+                assert!(matches!(params[0], Type::Int), "first param should be Int");
+                assert!(
+                    matches!(&params[1], Type::Fn(inner, inner_ret)
+                        if inner.len() == 1
+                            && matches!(inner[0], Type::Int)
+                            && matches!(inner_ret.as_ref(), Type::Int)),
+                    "second param should preserve Fn(Int) -> Int, got {:?}",
+                    params[1]
+                );
+                assert!(
+                    matches!(ret.as_ref(), Type::Int),
+                    "return type should be Int"
+                );
+            }
+            other => panic!("expected Type::Fn for imported ordinary fn, got {other:?}"),
+        }
+
+        // keep mutable binding used so clippy doesn't complain if future fields change
+        workflow.imported_param_counts.clear();
     }
 }

@@ -1,6 +1,6 @@
 # TASK-687: Runtime integration tests for effectful fn composition and interop
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -50,10 +50,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Runtime integration suite passes with real provider-path execution.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Runtime integration suite passes with real provider-path execution.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

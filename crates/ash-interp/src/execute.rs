@@ -4,6 +4,8 @@
 
 use ash_core::{Expr, Provenance, Value, Workflow};
 
+use crate::act_env::ActEnv;
+
 use crate::ExecResult;
 use crate::behaviour::BehaviourContext;
 use crate::capability::CapabilityContext;
@@ -15,7 +17,7 @@ use crate::control_link::{
     RetainedCompletionKind,
 };
 use crate::error::{EvalError, ExecError};
-use crate::eval::eval_expr;
+use crate::eval::eval_expr_async;
 use crate::exec_send::execute_send;
 use crate::execute_set::execute_set;
 use crate::execute_stream::{CoreReceiveRuntime, execute_core_receive};
@@ -136,6 +138,14 @@ pub(crate) fn shared_suspended_yields(runtime_state: &RuntimeState) -> SharedSus
     runtime_state.suspended_yields()
 }
 
+async fn build_workflow_act_env(
+    runtime_state: &RuntimeState,
+    policy_eval: &PolicyEvaluator,
+    provenance: Provenance,
+) -> ActEnv {
+    ActEnv::from_runtime_state(runtime_state, policy_eval.clone(), provenance).await
+}
+
 fn active_actor(ctx: &Context) -> Role {
     ctx.role_context()
         .map(|role_ctx| Role::new(role_ctx.active_role.name.clone()))
@@ -169,11 +179,19 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
     runtime_state: &'a RuntimeState,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
+        let ctx = ctx.with_policy_evaluator(policy_eval.clone());
         let mailbox = shared_mailbox();
         let control_registry = shared_control_registry(runtime_state);
         let proxy_registry = shared_proxy_registry(runtime_state);
         let suspended_yields = shared_suspended_yields(runtime_state);
         let execution_recorder = ExecutionRecorder::new(Provenance::new());
+        let act_env = build_workflow_act_env(
+            runtime_state,
+            policy_eval,
+            execution_recorder.snapshot().provenance().clone(),
+        )
+        .await;
+        let ctx = ctx.with_act_env(act_env);
         let result = execute_workflow_inner_observed(
             workflow,
             ctx,
@@ -458,7 +476,7 @@ fn execute_workflow_inner_observed<'a>(
             Workflow::Done => Ok(Value::Null),
 
             // Return with value
-            Workflow::Ret { expr } => eval_expr(expr, &ctx).map_err(ExecError::Eval),
+            Workflow::Ret { expr } => eval_expr_async(expr, &ctx).await.map_err(ExecError::Eval),
 
             // Variable binding
             Workflow::Let {
@@ -466,7 +484,7 @@ fn execute_workflow_inner_observed<'a>(
                 expr,
                 continuation,
             } => {
-                let value = eval_expr(expr, &ctx).map_err(ExecError::Eval)?;
+                let value = eval_expr_async(expr, &ctx).await.map_err(ExecError::Eval)?;
                 let bindings =
                     match_pattern(pattern, &value).map_err(|_| ExecError::PatternMatchFailed {
                         pattern: format!("{:?}", pattern),
@@ -500,7 +518,9 @@ fn execute_workflow_inner_observed<'a>(
                 then_branch,
                 else_branch,
             } => {
-                let cond_val = eval_expr(condition, &ctx).map_err(ExecError::Eval)?;
+                let cond_val = eval_expr_async(condition, &ctx)
+                    .await
+                    .map_err(ExecError::Eval)?;
                 match cond_val {
                     Value::Bool(true) => {
                         execute_workflow_inner_observed(
@@ -620,7 +640,7 @@ fn execute_workflow_inner_observed<'a>(
 
             // Orient - evaluate expression and continue
             Workflow::Orient { expr, continuation } => {
-                let _ = eval_expr(expr, &ctx).map_err(ExecError::Eval)?;
+                let _ = eval_expr_async(expr, &ctx).await.map_err(ExecError::Eval)?;
                 if let Some(recorder) = execution_recorder {
                     recorder.record_orient(&format!("{expr:?}"));
                 }
@@ -664,10 +684,13 @@ fn execute_workflow_inner_observed<'a>(
                 }
 
                 // Evaluate action arguments
-                let evaluated_args = arguments
-                    .iter()
-                    .map(|expr| eval_expr(expr, &ctx).map_err(ExecError::Eval))
-                    .collect::<Result<Vec<_>, _>>()?;
+                let evaluated_args = {
+                    let mut values = Vec::with_capacity(arguments.len());
+                    for expr in arguments {
+                        values.push(eval_expr_async(expr, &ctx).await.map_err(ExecError::Eval)?);
+                    }
+                    values
+                };
 
                 if let Some(recorder) = execution_recorder {
                     recorder.record_act(action_name, &format!("{guard:?}"));
@@ -724,13 +747,28 @@ fn execute_workflow_inner_observed<'a>(
                 // Arguments are evaluated in the caller's context.
                 let child_ctx = if let Some(ref callable) = callable {
                     let mut child = Context::new();
+                    if let Some(policy_evaluator) = ctx.policy_evaluator() {
+                        child = child.with_policy_evaluator_arc(policy_evaluator);
+                    }
+                    if let Some(act_env) = ctx.act_env() {
+                        child = child.with_act_env_arc(act_env);
+                    }
                     for (param_name, arg_expr) in callable.params.iter().zip(arguments.iter()) {
-                        let arg_value = eval_expr(arg_expr, &ctx).map_err(ExecError::Eval)?;
+                        let arg_value = eval_expr_async(arg_expr, &ctx)
+                            .await
+                            .map_err(ExecError::Eval)?;
                         child.set(param_name.clone(), arg_value);
                     }
                     child
                 } else {
-                    Context::new()
+                    let mut child = Context::new();
+                    if let Some(policy_evaluator) = ctx.policy_evaluator() {
+                        child = child.with_policy_evaluator_arc(policy_evaluator);
+                    }
+                    if let Some(act_env) = ctx.act_env() {
+                        child = child.with_act_env_arc(act_env);
+                    }
+                    child
                 };
 
                 execute_workflow_inner_observed(
@@ -799,7 +837,7 @@ fn execute_workflow_inner_observed<'a>(
                 policy,
                 continuation,
             } => {
-                let value = eval_expr(expr, &ctx).map_err(ExecError::Eval)?;
+                let value = eval_expr_async(expr, &ctx).await.map_err(ExecError::Eval)?;
 
                 // Create a temporary context with the decision value
                 let mut decision_ctx = ctx.extend();
@@ -847,7 +885,9 @@ fn execute_workflow_inner_observed<'a>(
                 collection,
                 body,
             } => {
-                let coll_val = eval_expr(collection, &ctx).map_err(ExecError::Eval)?;
+                let coll_val = eval_expr_async(collection, &ctx)
+                    .await
+                    .map_err(ExecError::Eval)?;
 
                 match coll_val {
                     Value::List(items) => {
@@ -986,7 +1026,10 @@ fn execute_workflow_inner_observed<'a>(
                     ash_core::Obligation::Obliged { role, condition } => {
                         require_active_role(&ctx, role)?;
 
-                        match eval_expr(condition, &ctx).map_err(ExecError::Eval)? {
+                        match eval_expr_async(condition, &ctx)
+                            .await
+                            .map_err(ExecError::Eval)?
+                        {
                             Value::Bool(true) => {
                                 if let Some(recorder) = execution_recorder {
                                     recorder.record_obligation_check(&role.name, true);
@@ -1063,7 +1106,9 @@ fn execute_workflow_inner_observed<'a>(
                 channel,
                 value,
             } => {
-                let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
+                let val = eval_expr_async(value, &ctx)
+                    .await
+                    .map_err(ExecError::Eval)?;
                 let capability_policy_eval = CapabilityPolicyEvaluator::new();
                 let actor = active_actor(&ctx);
                 execute_set(
@@ -1089,7 +1134,9 @@ fn execute_workflow_inner_observed<'a>(
                             .to_string(),
                     )
                 })?;
-                let val = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
+                let val = eval_expr_async(value, &ctx)
+                    .await
+                    .map_err(ExecError::Eval)?;
                 let capability_policy_eval = CapabilityPolicyEvaluator::new();
                 let actor = active_actor(&ctx);
                 execute_send(
@@ -1147,7 +1194,7 @@ fn execute_workflow_inner_observed<'a>(
                 pattern,
                 continuation,
             } => {
-                let init_value = eval_expr(init, &ctx).map_err(ExecError::Eval)?;
+                let init_value = eval_expr_async(init, &ctx).await.map_err(ExecError::Eval)?;
                 let child_workflow = runtime_state.child_workflow(workflow_type).await;
                 let instance_id = ash_core::WorkflowId::new();
                 let control = child_workflow
@@ -1237,7 +1284,8 @@ fn execute_workflow_inner_observed<'a>(
                 continuation,
             } => {
                 // Evaluate the split expression
-                let split_value = eval_expr(&Expr::Split(Box::new(expr.clone())), &ctx)
+                let split_value = eval_expr_async(&Expr::Split(Box::new(expr.clone())), &ctx)
+                    .await
                     .map_err(ExecError::Eval)?;
 
                 // Match pattern and bind
@@ -1472,7 +1520,9 @@ fn execute_workflow_inner_observed<'a>(
                 };
 
                 // Evaluate the request expression
-                let request_value = eval_expr(request, &ctx).map_err(ExecError::Eval)?;
+                let request_value = eval_expr_async(request, &ctx)
+                    .await
+                    .map_err(ExecError::Eval)?;
 
                 // Generate correlation ID and create yield state
                 let correlation_id = CorrelationId::new();
@@ -1540,7 +1590,9 @@ fn execute_workflow_inner_observed<'a>(
                 };
 
                 // Evaluate the response value expression
-                let response_value = eval_expr(value, &ctx).map_err(ExecError::Eval)?;
+                let response_value = eval_expr_async(value, &ctx)
+                    .await
+                    .map_err(ExecError::Eval)?;
 
                 // TODO: Type-check the response value against expected_response_type
                 // For now, we skip type checking but the infrastructure is in place
@@ -1685,11 +1737,19 @@ pub fn execute_workflow_with_stream_in_state<'a>(
     runtime_state: &'a RuntimeState,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
+        let ctx = ctx.with_policy_evaluator(policy_eval.clone());
         let mailbox = shared_mailbox();
         let control_registry = shared_control_registry(runtime_state);
         let proxy_registry = shared_proxy_registry(runtime_state);
         let suspended_yields = shared_suspended_yields(runtime_state);
         let execution_recorder = ExecutionRecorder::new(Provenance::new());
+        let act_env = build_workflow_act_env(
+            runtime_state,
+            policy_eval,
+            execution_recorder.snapshot().provenance().clone(),
+        )
+        .await;
+        let ctx = ctx.with_act_env(act_env);
         let result = execute_workflow_inner_observed(
             workflow,
             ctx,
@@ -1776,9 +1836,13 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
     execution_provenance: Provenance,
     persist_last_execution_record: bool,
 ) -> (ExecResult<Value>, ExecutionRecord) {
-    let ctx = Context::with_bindings(input_bindings);
     let cap_ctx = runtime_state.create_capability_context().await;
     let policy_eval = PolicyEvaluator::new();
+    let act_env =
+        build_workflow_act_env(runtime_state, &policy_eval, execution_provenance.clone()).await;
+    let ctx = Context::with_bindings(input_bindings)
+        .with_policy_evaluator(policy_eval.clone())
+        .with_act_env(act_env);
     let behaviour_ctx = BehaviourContext::new();
     let mailbox = shared_mailbox();
     let control_registry = shared_control_registry(runtime_state);
@@ -1818,6 +1882,7 @@ mod tests {
         BinaryOp, Capability, ControlLink, Effect, Expr, Guard, Obligation, Pattern, Provenance,
         RoleObligationRef,
     };
+    use std::sync::Arc;
 
     fn test_role(name: &str) -> ash_core::Role {
         ash_core::Role {
@@ -1963,6 +2028,36 @@ mod tests {
                 callee: Some(callee),
             })) if callee == "worker"
         ));
+    }
+
+    #[tokio::test]
+    async fn test_build_workflow_act_env_uses_runtime_state_capability_context() {
+        let runtime_state = RuntimeState::new().with_provider(
+            "sensor",
+            Arc::new(
+                crate::capability::MockProvider::new("sensor", Effect::Epistemic)
+                    .with_observe_value(Value::Int(7)),
+            ),
+        );
+        let provenance = Provenance::new();
+
+        let act_env =
+            build_workflow_act_env(&runtime_state, &PolicyEvaluator::new(), provenance.clone())
+                .await;
+
+        let observed = act_env
+            .capability_ctx
+            .observe(&Capability {
+                name: "sensor".to_string(),
+                effect: Effect::Epistemic,
+                constraints: vec![],
+            })
+            .await
+            .expect("capability context should be wired from runtime state");
+
+        assert_eq!(observed, Value::Int(7));
+        assert_eq!(act_env.provenance, provenance);
+        assert!(act_env.effects.is_empty());
     }
 
     #[tokio::test]

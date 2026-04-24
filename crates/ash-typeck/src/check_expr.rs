@@ -12,7 +12,9 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
-use ash_parser::surface::{BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp};
+use ash_parser::surface::{
+    ActStmt, BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
+};
 use ash_parser::token::Span;
 use std::collections::HashSet;
 
@@ -119,16 +121,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             scrutinee, arms, ..
         } => check_match(env, scrutinee, arms),
         Expr::FieldAccess { base, field, span } => {
-            // Field access is not yet fully implemented
-            // Check the base expression first, then report unsupported
-            let base_result = check_expr(env, base);
-            if !base_result.is_ok() {
-                return base_result;
-            }
-            CheckResult::error(ConstructorError::UnsupportedExpression {
-                kind: format!("FieldAccess (.{field})"),
-                span: *span,
-            })
+            check_field_access(env, base, field.as_ref(), *span)
         }
         Expr::IndexAccess { base, index, span } => {
             // Index access is not yet fully implemented
@@ -187,6 +180,61 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 .as_ref()
                 .map(|module| format!("{}::{}", module, func))
                 .unwrap_or_else(|| func.to_string());
+
+            if module.is_none() && func.as_ref() == "invoke" {
+                if arg_types.len() != 3 {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "Call ({qualified_name}): invoke expects 3 arguments, found {}",
+                            arg_types.len()
+                        ),
+                        span: *span,
+                    });
+                }
+
+                if !matches!(arg_types[0], Type::String) {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "Call ({qualified_name}): invoke provider must have type String, found {}",
+                            arg_types[0]
+                        ),
+                        span: *span,
+                    });
+                }
+
+                if !matches!(arg_types[1], Type::String) {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "Call ({qualified_name}): invoke action must have type String, found {}",
+                            arg_types[1]
+                        ),
+                        span: *span,
+                    });
+                }
+
+                let value_ty = Type::Constructor {
+                    name: crate::QualifiedName::root("Value"),
+                    args: vec![],
+                    kind: crate::Kind::Type,
+                };
+                match &arg_types[2] {
+                    Type::List(elem_ty) if elem_ty.as_ref() == &value_ty => {}
+                    other => {
+                        return CheckResult::error(ConstructorError::UnsupportedExpression {
+                            kind: format!(
+                                "Call ({qualified_name}): invoke args must have type List<Value>, found {other}"
+                            ),
+                            span: *span,
+                        });
+                    }
+                }
+
+                return CheckResult::success(Type::Constructor {
+                    name: crate::QualifiedName::root("Act"),
+                    args: vec![value_ty],
+                    kind: crate::Kind::Type,
+                });
+            }
 
             match env.lookup_call_target(module.as_deref(), func.as_ref()) {
                 Some(func_ty) => {
@@ -556,6 +604,89 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 }
             }
         }
+
+        Expr::ActBlock { stmts, span, .. } => {
+            let mut block_env = env.clone();
+            let mut substitution = Substitution::new();
+            let mut errors: Vec<ConstructorError> = Vec::new();
+
+            // Enforce the same structural contract as lower_act_block:
+            // non-empty, return must be last.
+            if stmts.is_empty() {
+                return CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: "empty act block".to_string(),
+                    span: *span,
+                });
+            }
+
+            let last = stmts.last().unwrap();
+            if !matches!(last, ActStmt::Return { .. }) {
+                return CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: "act block must end with a return statement".to_string(),
+                    span: *span,
+                });
+            }
+
+            // Verify no Return appears before the last statement
+            for (i, stmt) in stmts.iter().enumerate() {
+                if matches!(stmt, ActStmt::Return { .. }) && i + 1 < stmts.len() {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: "return must be the last statement in an act block".to_string(),
+                        span: *span,
+                    });
+                }
+            }
+
+            let mut return_ty = Type::Null;
+
+            for stmt in stmts {
+                match stmt {
+                    ash_parser::surface::ActStmt::Bind { name, value, .. } => {
+                        let value_result = check_expr(&block_env, value);
+                        substitution = substitution.compose(&value_result.substitution);
+                        if !value_result.is_ok() {
+                            errors.extend(value_result.errors);
+                            continue;
+                        }
+
+                        let value_ty = substitution.apply(&value_result.ty);
+                        let bound_ty = match &value_ty {
+                            Type::Constructor { name, args, .. }
+                                if name.name == "Act" && args.len() == 1 =>
+                            {
+                                args[0].clone()
+                            }
+                            _ => value_ty,
+                        };
+                        block_env.bind_variable(name.as_ref(), bound_ty);
+                    }
+                    ash_parser::surface::ActStmt::Return { value, .. } => {
+                        let value_result = check_expr(&block_env, value);
+                        substitution = substitution.compose(&value_result.substitution);
+                        if !value_result.is_ok() {
+                            errors.extend(value_result.errors);
+                            continue;
+                        }
+
+                        return_ty = substitution.apply(&value_result.ty);
+                    }
+                }
+            }
+
+            if !errors.is_empty() {
+                return CheckResult {
+                    ty: Type::Var(TypeVar::fresh()),
+                    substitution,
+                    errors,
+                };
+            }
+
+            CheckResult::success(Type::Constructor {
+                name: crate::QualifiedName::root("Act"),
+                args: vec![return_ty],
+                kind: crate::Kind::Type,
+            })
+        }
     }
 }
 
@@ -579,6 +710,35 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Block { span, .. } => *span,
         Expr::FnDef { span, .. } => *span,
         Expr::FnApply { span, .. } => *span,
+        Expr::ActBlock { span, .. } => *span,
+    }
+}
+
+/// Check a field-access expression against record types.
+fn check_field_access(env: &TypeEnv, base: &Expr, field: &str, span: Span) -> CheckResult {
+    let base_result = check_expr(env, base);
+    if !base_result.is_ok() {
+        return base_result;
+    }
+
+    let base_ty = base_result.substitution.apply(&base_result.ty);
+    match &base_ty {
+        Type::Record(fields) => match fields.iter().find(|(name, _)| name.as_ref() == field) {
+            Some((_, field_ty)) => CheckResult {
+                ty: base_result.substitution.apply(field_ty),
+                substitution: base_result.substitution,
+                errors: Vec::new(),
+            },
+            None => CheckResult::error(ConstructorError::MissingRecordField {
+                field: field.to_string(),
+                span,
+            }),
+        },
+        other => CheckResult::error(ConstructorError::NotARecord {
+            field: field.to_string(),
+            actual: other.clone(),
+            span,
+        }),
     }
 }
 
@@ -1951,6 +2111,7 @@ mod tests {
             params: vec![],
             body: TypeBody::Enum(vec![]),
             visibility: Visibility::Public,
+            builtin: false,
         };
         env.register_type(&color_def).expect("register Color type");
         // fn(x: Color) { x }

@@ -79,6 +79,31 @@ fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     crate::parse_utils::identifier(input)
 }
 
+/// Parse a callable name.
+///
+/// Ash normally rejects keywords as identifiers, but a small set of contextual
+/// keywords are allowed as function names to support standard-library helpers
+/// like `then` and `guard` from SPEC-047.
+fn callable_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    let checkpoint = input.clone();
+    if let Ok(name) = identifier(input) {
+        return Ok(name);
+    }
+    *input = checkpoint;
+
+    for keyword_name in ["then", "guard"] {
+        let checkpoint = input.clone();
+        if keyword(keyword_name).parse_next(input).is_ok() {
+            return Ok(keyword_name);
+        }
+        *input = checkpoint;
+    }
+
+    Err(winnow::error::ErrMode::Backtrack(
+        winnow::error::ContextError::new(),
+    ))
+}
+
 /// Parse an identifier and return it with its source span.
 fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
     crate::parse_utils::identifier_with_span(input)
@@ -645,7 +670,7 @@ fn parse_optional_return_type(input: &mut ParseInput) -> ModalResult<Option<Type
 fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
 
-    // Parse Fn(T1, T2) -> T3 type syntax
+    // Parse explicit Fn(T1, T2) -> T3 type syntax
     if starts_with_keyword(input, "Fn") {
         let _ = keyword("Fn").parse_next(input)?;
         skip_whitespace_and_comments(input);
@@ -668,6 +693,20 @@ fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
         let ret = parse_surface_type(input)?;
         return Ok(Type::Fn(params, Box::new(ret)));
     }
+
+    let lhs = parse_surface_type_atom(input)?;
+    skip_whitespace_and_comments(input);
+    if literal_str("->").parse_next(input).is_ok() {
+        skip_whitespace_and_comments(input);
+        let rhs = parse_surface_type(input)?;
+        Ok(Type::Fn(vec![lhs], Box::new(rhs)))
+    } else {
+        Ok(lhs)
+    }
+}
+
+fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {
+    skip_whitespace_and_comments(input);
 
     if starts_with_keyword(input, "capability") {
         let _ = keyword("capability").parse_next(input)?;
@@ -1217,7 +1256,7 @@ pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     skip_whitespace_and_comments(input);
 
     // Parse function name
-    let name = identifier(input)?;
+    let name = callable_name(input)?;
     skip_whitespace_and_comments(input);
 
     // Optionally parse type parameters <T, U>
@@ -1283,7 +1322,7 @@ pub fn parse_builtin_fn_definition(input: &mut ParseInput) -> ModalResult<Defini
     skip_whitespace_and_comments(input);
 
     // Parse function name
-    let name = identifier(input)?;
+    let name = callable_name(input)?;
     skip_whitespace_and_comments(input);
 
     // Optionally parse type parameters <T, U>
@@ -1589,7 +1628,8 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 /// Parse an expression inside a fn body.
 ///
 /// This is the entry point for fn-body expressions. It dispatches to
-/// if/match/panic/binary/unary/call/literal/variable as appropriate.
+/// if/match/panic before falling back to the general expression parser
+/// (which handles act blocks, closures, and all other expression forms).
 fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
 
@@ -2414,5 +2454,43 @@ mod tests {
 
         assert_eq!(capability.span.line, 3);
         assert_eq!(capability.span.column, 3);
+    }
+
+    // =========================================================================
+    // TASK-674: act block expression parsing tests
+    // =========================================================================
+
+    #[test]
+    fn test_parse_act_block_simple_return() {
+        let mut input = test_input("{ act { ret 42; } }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
+        let expr = result.unwrap();
+        assert!(
+            matches!(expr, Expr::Block { ref tail_expr, .. } if tail_expr.is_some()),
+            "expected a block with a tail expression, got: {:?}",
+            expr
+        );
+    }
+
+    #[test]
+    fn test_parse_act_block_bind_and_return() {
+        let mut input = test_input("{ act { x = 42; ret x; } }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
+    }
+
+    #[test]
+    fn test_parse_act_block_nested_calls() {
+        let mut input = test_input("{ act { result = read_file(path); ret result; } }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
+    }
+
+    #[test]
+    fn test_parse_act_block_empty() {
+        let mut input = test_input("{ act {} }");
+        let result = parse_fn_body(&mut input);
+        assert!(result.is_ok(), "parse failed: {:?}", result);
     }
 }

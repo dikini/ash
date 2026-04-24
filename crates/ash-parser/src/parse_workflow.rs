@@ -2216,4 +2216,41 @@ mod tests {
             result
         );
     }
+
+    // ── Dual-context test: workflow-level act vs expression-level act block (TASK-676) ──
+
+    #[test]
+    fn test_workflow_act_unchanged_after_act_block_expression() {
+        // Workflow-level `act provider:action(args)` should produce Workflow::Act,
+        // NOT an Expr::ActBlock.  This confirms the two parsing contexts remain distinct.
+        let mut input = test_input("act provider:action(args)");
+        let result = parse_stmt(&mut input).unwrap();
+        match result {
+            Workflow::Act {
+                action,
+                guard,
+                result_name,
+                continuation,
+                ..
+            } => {
+                // Verify it is a workflow-level Act, not an expression-level ActBlock
+                assert!(guard.is_none());
+                assert!(result_name.is_none());
+                assert!(continuation.is_none());
+                // Verify the action parsed with explicit target
+                match &action.target {
+                    crate::surface::OperationalTarget::Explicit {
+                        provider,
+                        action: action_name,
+                    } => {
+                        assert_eq!(provider.as_ref(), "provider");
+                        assert_eq!(action_name.as_ref(), "action");
+                    }
+                    _ => panic!("Expected explicit target, got: {:?}", action.target),
+                }
+                assert_eq!(action.args.len(), 1);
+            }
+            _ => panic!("Expected Workflow::Act, got: {:?}", result),
+        }
+    }
 }

@@ -45,7 +45,7 @@ impl HttpConfig {
 
     /// Set the request timeout in seconds
     #[must_use]
-    pub fn with_timeout(mut self, secs: u64) -> Self {
+    pub const fn with_timeout(mut self, secs: u64) -> Self {
         self.timeout_secs = secs;
         self
     }
@@ -100,11 +100,9 @@ impl HttpProvider {
             let parsed = url::Url::parse(url).map_err(|e| {
                 CapabilityError::InvalidArgument(format!("Invalid URL '{url}': {e}"))
             })?;
-            let host = parsed
-                .host_str()
-                .ok_or_else(|| {
-                    CapabilityError::InvalidArgument(format!("URL has no host: {url}"))
-                })?;
+            let host = parsed.host_str().ok_or_else(|| {
+                CapabilityError::InvalidArgument(format!("URL has no host: {url}"))
+            })?;
             if !allowed.iter().any(|h| h == host) {
                 return Err(CapabilityError::PermissionDenied(format!(
                     "Host '{host}' not in allowed list"
@@ -178,11 +176,9 @@ impl HttpProvider {
         builder
     }
 
-    /// Convert a reqwest Response into an Ash Value::Record
-    async fn response_to_value(
-        response: reqwest::Response,
-    ) -> Result<Value, CapabilityError> {
-        let status = response.status().as_u16() as i64;
+    /// Convert a reqwest Response into an Ash `Value::Record`
+    async fn response_to_value(response: reqwest::Response) -> Result<Value, CapabilityError> {
+        let status = i64::from(response.status().as_u16());
 
         let headers: HashMap<String, Value> = response
             .headers()
@@ -190,19 +186,14 @@ impl HttpProvider {
             .map(|(name, val)| {
                 (
                     name.to_string(),
-                    Value::String(
-                        val.to_str()
-                            .unwrap_or("<non-ascii>")
-                            .to_string(),
-                    ),
+                    Value::String(val.to_str().unwrap_or("<non-ascii>").to_string()),
                 )
             })
             .collect();
 
-        let body = response
-            .text()
-            .await
-            .map_err(|e| CapabilityError::ExecutionFailed(format!("Failed to read response body: {e}")))?;
+        let body = response.text().await.map_err(|e| {
+            CapabilityError::ExecutionFailed(format!("Failed to read response body: {e}"))
+        })?;
 
         let mut result = HashMap::new();
         result.insert("status".to_string(), Value::Int(status));
@@ -219,9 +210,10 @@ impl HttpProvider {
         let headers = Self::extract_headers(args)?;
 
         let builder = Self::apply_headers(self.client.get(&url), &headers);
-        let response = builder.send().await.map_err(|e| {
-            CapabilityError::ExecutionFailed(format!("HTTP GET failed: {e}"))
-        })?;
+        let response = builder
+            .send()
+            .await
+            .map_err(|e| CapabilityError::ExecutionFailed(format!("HTTP GET failed: {e}")))?;
 
         Self::response_to_value(response).await
     }
@@ -233,13 +225,11 @@ impl HttpProvider {
         let body = Self::extract_body(args)?;
         let headers = Self::extract_headers(args)?;
 
-        let builder = Self::apply_headers(
-            self.client.post(&url).body(body),
-            &headers,
-        );
-        let response = builder.send().await.map_err(|e| {
-            CapabilityError::ExecutionFailed(format!("HTTP POST failed: {e}"))
-        })?;
+        let builder = Self::apply_headers(self.client.post(&url).body(body), &headers);
+        let response = builder
+            .send()
+            .await
+            .map_err(|e| CapabilityError::ExecutionFailed(format!("HTTP POST failed: {e}")))?;
 
         Self::response_to_value(response).await
     }
@@ -251,13 +241,11 @@ impl HttpProvider {
         let body = Self::extract_body(args)?;
         let headers = Self::extract_headers(args)?;
 
-        let builder = Self::apply_headers(
-            self.client.put(&url).body(body),
-            &headers,
-        );
-        let response = builder.send().await.map_err(|e| {
-            CapabilityError::ExecutionFailed(format!("HTTP PUT failed: {e}"))
-        })?;
+        let builder = Self::apply_headers(self.client.put(&url).body(body), &headers);
+        let response = builder
+            .send()
+            .await
+            .map_err(|e| CapabilityError::ExecutionFailed(format!("HTTP PUT failed: {e}")))?;
 
         Self::response_to_value(response).await
     }
@@ -269,9 +257,10 @@ impl HttpProvider {
         let headers = Self::extract_headers(args)?;
 
         let builder = Self::apply_headers(self.client.delete(&url), &headers);
-        let response = builder.send().await.map_err(|e| {
-            CapabilityError::ExecutionFailed(format!("HTTP DELETE failed: {e}"))
-        })?;
+        let response = builder
+            .send()
+            .await
+            .map_err(|e| CapabilityError::ExecutionFailed(format!("HTTP DELETE failed: {e}")))?;
 
         Self::response_to_value(response).await
     }
@@ -281,22 +270,21 @@ impl HttpProvider {
         let url = Self::extract_url(args)?;
         self.validate_host(&url)?;
 
-        let response = self.client.head(&url).send().await.map_err(|e| {
-            CapabilityError::ExecutionFailed(format!("HTTP HEAD failed: {e}"))
-        })?;
+        let response = self
+            .client
+            .head(&url)
+            .send()
+            .await
+            .map_err(|e| CapabilityError::ExecutionFailed(format!("HTTP HEAD failed: {e}")))?;
 
-        let status = response.status().as_u16() as i64;
+        let status = i64::from(response.status().as_u16());
         let headers: HashMap<String, Value> = response
             .headers()
             .iter()
             .map(|(name, val)| {
                 (
                     name.to_string(),
-                    Value::String(
-                        val.to_str()
-                            .unwrap_or("<non-ascii>")
-                            .to_string(),
-                    ),
+                    Value::String(val.to_str().unwrap_or("<non-ascii>").to_string()),
                 )
             })
             .collect();
@@ -317,7 +305,7 @@ impl Default for HttpProvider {
 
 #[async_trait]
 impl CapabilityProvider for HttpProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "http"
     }
 
@@ -446,7 +434,10 @@ mod tests {
     #[test]
     fn test_extract_headers_from_record() {
         let mut fields = HashMap::new();
-        fields.insert("Content-Type".to_string(), Value::String("application/json".to_string()));
+        fields.insert(
+            "Content-Type".to_string(),
+            Value::String("application/json".to_string()),
+        );
         fields.insert("Accept".to_string(), Value::String("text/html".to_string()));
         let args = [
             Value::String("https://example.com".to_string()),
@@ -481,8 +472,7 @@ mod tests {
 
     #[test]
     fn test_validate_host_allowed() {
-        let config = HttpConfig::new()
-            .with_allowed_hosts(vec!["example.com".to_string()]);
+        let config = HttpConfig::new().with_allowed_hosts(vec!["example.com".to_string()]);
         let provider = HttpProvider::with_config(config);
 
         // Should succeed
@@ -491,14 +481,11 @@ mod tests {
 
     #[test]
     fn test_validate_host_blocked() {
-        let config = HttpConfig::new()
-            .with_allowed_hosts(vec!["example.com".to_string()]);
+        let config = HttpConfig::new().with_allowed_hosts(vec!["example.com".to_string()]);
         let provider = HttpProvider::with_config(config);
 
         // Should fail
-        let err = provider
-            .validate_host("https://evil.com/path")
-            .unwrap_err();
+        let err = provider.validate_host("https://evil.com/path").unwrap_err();
         assert!(matches!(err, CapabilityError::PermissionDenied(_)));
     }
 
@@ -538,11 +525,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_blocked_host() {
-        let config = HttpConfig::new()
-            .with_allowed_hosts(vec!["allowed.com".to_string()]);
+        let config = HttpConfig::new().with_allowed_hosts(vec!["allowed.com".to_string()]);
         let provider = HttpProvider::with_config(config);
         let err = provider
-            .execute("get", &[Value::String("https://blocked.com/path".to_string())])
+            .execute(
+                "get",
+                &[Value::String("https://blocked.com/path".to_string())],
+            )
             .await
             .unwrap_err();
         assert!(matches!(err, CapabilityError::PermissionDenied(_)));

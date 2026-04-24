@@ -66,15 +66,22 @@ pub struct InlineCallable {
     pub exported_name: String,
     /// Parameter names in call order.
     pub params: Vec<String>,
+    /// Unqualified function names from the exporting module that should be
+    /// treated as effectful when lowering nested `act { ... }` expressions.
+    pub effectful_names: HashSet<String>,
     /// Whether this callable has an Ash body or is a bodyless builtin.
     pub kind: CallableKind,
-    /// Full type signature for builtin fn callables.
-    ///
-    /// Populated by [`parse_builtin_fn_callable`] from the parsed
-    /// [`BuiltinFnDef`], preserving type parameters, parameter types,
-    /// and return type.  `None` for user-defined callables (`pub fn`
-    /// with a body) and workflow callables.
-    pub signature: Option<ash_parser::surface::BuiltinFnDef>,
+    /// Full declared type signature for imported callables.
+    pub signature: Option<CallableSignature>,
+}
+
+/// Declared signature preserved for imported callables.
+#[derive(Debug, Clone)]
+pub enum CallableSignature {
+    /// Signature from an ordinary `pub fn` definition.
+    Function(ash_parser::surface::FnDef),
+    /// Signature from a `pub builtin fn` definition.
+    Builtin(ash_parser::surface::BuiltinFnDef),
 }
 
 #[derive(Debug, Clone)]
@@ -92,6 +99,7 @@ enum ImportSelection {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ModuleExports {
     pub(crate) type_defs: HashMap<String, CoreTypeDef>,
+    pub(crate) constructor_defs: HashMap<String, CoreTypeDef>,
     pub(crate) callables: HashMap<String, InlineCallable>,
     /// Child module exports loaded via `pub mod <name>;` declarations.
     ///
@@ -212,6 +220,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
     }
 
     let mut imported_type_defs = Vec::new();
+    let mut imported_type_names = HashSet::new();
     let mut imported_callables = HashMap::new();
 
     for import in imports {
@@ -227,7 +236,11 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
         for selection in import.selections {
             match selection {
                 ImportSelection::Glob => {
-                    imported_type_defs.extend(exports.type_defs.values().cloned());
+                    for type_def in exports.type_defs.values() {
+                        if imported_type_names.insert(type_def.name.clone()) {
+                            imported_type_defs.push(type_def.clone());
+                        }
+                    }
                     for (k, mut v) in exports.callables.clone() {
                         if let CallableKind::Builtin { ref mut module } = v.kind {
                             *module = import.module_segments.join("::");
@@ -238,8 +251,23 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                 ImportSelection::Named { name, alias } => {
                     let exported_name = alias.unwrap_or_else(|| name.clone());
                     if let Some(type_def) = exports.type_defs.get(&name) {
-                        imported_type_defs.push(type_def.clone());
+                        if imported_type_names.insert(type_def.name.clone()) {
+                            imported_type_defs.push(type_def.clone());
+                        }
+                    } else if let Some(type_def) = exports.constructor_defs.get(&name) {
+                        if imported_type_names.insert(type_def.name.clone()) {
+                            imported_type_defs.push(type_def.clone());
+                        }
                     } else if let Some(callable) = exports.callables.get(&name) {
+                        // Imported callable signatures may mention private/opaque
+                        // module-local type identities (for example std::act::Act
+                        // and Policy). Bring those identities into the type
+                        // environment without exposing constructors.
+                        for type_def in exports.type_defs.values() {
+                            if imported_type_names.insert(type_def.name.clone()) {
+                                imported_type_defs.push(type_def.clone());
+                            }
+                        }
                         let mut callable = callable.clone();
                         callable.exported_name.clone_from(&exported_name);
                         if let CallableKind::Builtin { ref mut module } = callable.kind {
@@ -274,10 +302,39 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
 /// Returns [`EngineError::Parse`] if any type snippet contains invalid syntax.
 pub fn collect_public_type_defs_from_source(source: &str) -> Result<Vec<CoreTypeDef>, EngineError> {
     let mut type_defs = Vec::new();
-    for snippet in extract_semicolon_snippets(source, |trimmed| trimmed.starts_with("pub type ")) {
-        type_defs.extend(parse_public_type_defs(&snippet)?);
+    for snippet in extract_semicolon_snippets(source, is_public_type_definition_start) {
+        type_defs.push(parse_type_def_snippet(&snippet)?);
     }
     Ok(type_defs)
+}
+
+/// Extract all type definitions whose identities should be discoverable from
+/// source text.
+///
+/// This includes both `type` and `pub type` declarations.
+///
+/// # Errors
+///
+/// Returns [`EngineError::Parse`] if any type snippet contains invalid syntax.
+pub fn collect_type_identity_defs_from_source(
+    source: &str,
+) -> Result<Vec<CoreTypeDef>, EngineError> {
+    let mut type_defs = Vec::new();
+    for snippet in extract_semicolon_snippets(source, is_type_definition_start) {
+        type_defs.push(parse_type_def_snippet(&snippet)?);
+    }
+    Ok(type_defs)
+}
+
+fn is_public_type_definition_start(trimmed: &str) -> bool {
+    trimmed.starts_with("pub type ") || trimmed.starts_with("pub builtin type ")
+}
+
+fn is_type_definition_start(trimmed: &str) -> bool {
+    trimmed.starts_with("type ")
+        || trimmed.starts_with("pub type ")
+        || trimmed.starts_with("builtin type ")
+        || trimmed.starts_with("pub builtin type ")
 }
 
 /// Count the number of `pub fn` snippets in source text that parse successfully,
@@ -477,11 +534,14 @@ pub(crate) fn collect_module_exports(
 
     let source = std::fs::read_to_string(&path)?;
     let mut exports = ModuleExports::default();
+    let module_effectful_names = ash_parser::parse_surface_file(&source)
+        .ok()
+        .map(|module| ash_parser::effectful_names_from_definitions(&module.definitions))
+        .unwrap_or_default();
 
-    for snippet in extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub type ")) {
-        for type_def in parse_public_type_defs(&snippet)? {
-            insert_type_export(&mut exports, &type_def)?;
-        }
+    for snippet in extract_semicolon_snippets(&source, is_type_definition_start) {
+        let type_def = parse_type_def_snippet(&snippet)?;
+        insert_type_export(&mut exports, &type_def)?;
     }
 
     for snippet in
@@ -490,13 +550,19 @@ pub(crate) fn collect_module_exports(
         // `module` is left empty here; load_ordinary_file populates the real
         // value from the import path before inserting into imported_callables.
         if let Some(callable) = parse_builtin_fn_callable(&snippet, String::new())? {
-            insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+            let mut callable = callable.callable;
+            callable.effectful_names.clone_from(&module_effectful_names);
+            let exported_name = callable.exported_name.clone();
+            insert_callable_export(&mut exports, &exported_name, callable)?;
         }
     }
 
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("workflow ")) {
         if let Ok(Some(callable)) = parse_workflow_callable(&snippet) {
-            insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+            let mut callable = callable.callable;
+            callable.effectful_names.clone_from(&module_effectful_names);
+            let exported_name = callable.exported_name.clone();
+            insert_callable_export(&mut exports, &exported_name, callable)?;
         }
         // Silently skip workflows that fail to parse during module export collection.
         // This mirrors the graceful handling of pub fn parse failures above.
@@ -505,7 +571,10 @@ pub(crate) fn collect_module_exports(
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
         match parse_supported_pub_fn_callable(&snippet) {
             Ok(Some(callable)) => {
-                insert_callable_export(&mut exports, &callable.name, callable.callable)?;
+                let mut callable = callable.callable;
+                callable.effectful_names.clone_from(&module_effectful_names);
+                let exported_name = callable.exported_name.clone();
+                insert_callable_export(&mut exports, &exported_name, callable)?;
             }
             Ok(None) => {}
             Err(_diag) => {
@@ -530,8 +599,9 @@ pub(crate) fn collect_module_exports(
             && let Some(target_path) =
                 resolve_module_path(&import_spec.module_segments, &search_roots(module_root))
         {
-            let target_canonical =
-                target_path.canonicalize().unwrap_or_else(|_| target_path.clone());
+            let target_canonical = target_path
+                .canonicalize()
+                .unwrap_or_else(|_| target_path.clone());
             if visiting.contains(&target_canonical) {
                 return Err(EngineError::Parse(format!(
                     "cyclic import detected: '{}'",
@@ -625,6 +695,9 @@ fn merge_use_exports(
             for (name, type_def) in target_exports.type_defs {
                 insert_type_export_with_name(exports, &name, type_def)?;
             }
+            for (name, type_def) in target_exports.constructor_defs {
+                insert_constructor_export_with_name(exports, &name, type_def)?;
+            }
             for (name, callable) in target_exports.callables {
                 insert_callable_export(exports, &name, callable)?;
             }
@@ -640,6 +713,8 @@ fn merge_use_exports(
                 .map_or_else(|| name.clone(), |alias| alias.to_string());
             if let Some(type_def) = target_exports.type_defs.get(&name) {
                 insert_type_export_with_name(exports, &exported_name, type_def.clone())?;
+            } else if let Some(type_def) = target_exports.constructor_defs.get(&name) {
+                insert_constructor_export_with_name(exports, &exported_name, type_def.clone())?;
             } else if let Some(callable) = target_exports.callables.get(&name) {
                 let mut callable = callable.clone();
                 callable.exported_name.clone_from(&exported_name);
@@ -655,6 +730,10 @@ fn merge_use_exports(
                     .map_or_else(|| item.name.to_string(), |alias| alias.to_string());
                 if let Some(type_def) = target_exports.type_defs.get(item.name.as_ref()) {
                     insert_type_export_with_name(exports, &exported_name, type_def.clone())?;
+                } else if let Some(type_def) =
+                    target_exports.constructor_defs.get(item.name.as_ref())
+                {
+                    insert_constructor_export_with_name(exports, &exported_name, type_def.clone())?;
                 } else if let Some(callable) = target_exports.callables.get(item.name.as_ref()) {
                     let mut callable = callable.clone();
                     callable.exported_name.clone_from(&exported_name);
@@ -673,20 +752,29 @@ fn insert_type_export(
     exports: &mut ModuleExports,
     type_def: &CoreTypeDef,
 ) -> Result<(), EngineError> {
-    let variant_names = match &type_def.body {
-        CoreTypeBody::Enum(variants) => variants
-            .iter()
-            .map(|variant| variant.name.clone())
-            .collect(),
-        _ => Vec::new(),
+    // Always export the type identity so imported callable signatures may name
+    // private/opaque types without exposing their representation.
+    let exported_type_def = if matches!(type_def.visibility, CoreVisibility::Public) {
+        type_def.clone()
+    } else {
+        let mut opaque = type_def.clone();
+        opaque.body = CoreTypeBody::Struct(vec![]);
+        opaque.builtin = true;
+        opaque
     };
+    insert_type_export_with_name(exports, &type_def.name, exported_type_def)?;
 
-    insert_type_export_with_name(exports, &type_def.name, type_def.clone())?;
-    for variant_name in variant_names {
-        if variant_name == type_def.name {
-            continue;
+    // Only public type definitions expose constructor names/representation to
+    // importing modules.
+    if matches!(type_def.visibility, CoreVisibility::Public)
+        && let CoreTypeBody::Enum(variants) = &type_def.body
+    {
+        for variant_name in variants.iter().map(|variant| variant.name.clone()) {
+            if variant_name == type_def.name {
+                continue;
+            }
+            insert_constructor_export_with_name(exports, &variant_name, type_def.clone())?;
         }
-        insert_type_export_with_name(exports, &variant_name, type_def.clone())?;
     }
     Ok(())
 }
@@ -703,6 +791,23 @@ fn insert_type_export_with_name(
     {
         return Err(EngineError::Configuration(format!(
             "duplicate exported type '{name}'"
+        )));
+    }
+    Ok(())
+}
+
+fn insert_constructor_export_with_name(
+    exports: &mut ModuleExports,
+    name: &str,
+    type_def: CoreTypeDef,
+) -> Result<(), EngineError> {
+    if exports
+        .constructor_defs
+        .insert(name.to_string(), type_def)
+        .is_some()
+    {
+        return Err(EngineError::Configuration(format!(
+            "duplicate exported constructor '{name}'"
         )));
     }
     Ok(())
@@ -725,12 +830,12 @@ fn insert_callable_export(
     Ok(())
 }
 
-fn parse_public_type_defs(snippet: &str) -> Result<Vec<CoreTypeDef>, EngineError> {
+fn parse_type_def_snippet(snippet: &str) -> Result<CoreTypeDef, EngineError> {
     let mut input = new_input(snippet.trim());
     let parsed = parse_type_def
         .parse_next(&mut input)
         .map_err(|error| EngineError::Parse(format!("{error}")))?;
-    Ok(vec![convert_type_def(&parsed)])
+    Ok(convert_type_def(&parsed))
 }
 
 fn parse_workflow_callable(snippet: &str) -> Result<Option<ImportedCallableExport>, EngineError> {
@@ -761,14 +866,14 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
         .collect::<Vec<_>>();
 
     Ok(Some(ImportedCallableExport {
-        name: name.clone(),
         callable: InlineCallable {
             exported_name: name,
             params,
+            effectful_names: HashSet::new(),
             kind: CallableKind::User {
-                body: function.body,
+                body: function.body.clone(),
             },
-            signature: None,
+            signature: Some(CallableSignature::Function(function)),
         },
     }))
 }
@@ -827,19 +932,18 @@ fn parse_builtin_fn_callable(
         .collect::<Vec<_>>();
 
     Ok(Some(ImportedCallableExport {
-        name: name.clone(),
         callable: InlineCallable {
             exported_name: name,
             params,
+            effectful_names: HashSet::new(),
             kind: CallableKind::Builtin { module },
-            signature: Some(builtin),
+            signature: Some(CallableSignature::Builtin(builtin)),
         },
     }))
 }
 
 #[derive(Debug, Clone)]
 struct ImportedCallableExport {
-    name: String,
     callable: InlineCallable,
 }
 
@@ -857,13 +961,13 @@ fn extract_callable_from_workflow(
     };
 
     Ok(Some(ImportedCallableExport {
-        name: name.to_string(),
         callable: InlineCallable {
             exported_name: name.to_string(),
             params: params
                 .into_iter()
                 .map(|param| param.name.to_string())
                 .collect(),
+            effectful_names: HashSet::new(),
             kind: CallableKind::User { body: expr },
             signature: None,
         },
@@ -1082,6 +1186,7 @@ fn convert_type_def(parsed: &ParsedTypeDef) -> CoreTypeDef {
             ParsedVisibility::Crate => CoreVisibility::Crate,
             ParsedVisibility::Private => CoreVisibility::Private,
         },
+        builtin: parsed.builtin,
     }
 }
 
@@ -1126,8 +1231,9 @@ mod tests {
         std::fs::write(dir.join("parent.ash"), "pub mod child;").expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting parent exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting parent exports should succeed");
 
         let child = exports
             .child_modules
@@ -1157,8 +1263,9 @@ mod tests {
         .expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting parent exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting parent exports should succeed");
 
         // Role is re-exported via pub use
         assert!(
@@ -1194,8 +1301,9 @@ mod tests {
         .expect("write parent");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting parent exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting parent exports should succeed");
 
         // Alpha should be re-exported
         assert!(
@@ -1231,7 +1339,8 @@ mod tests {
         std::fs::write(dir.join("parent.ash"), "pub mod nonexistent;").expect("write parent");
 
         let mut cache = HashMap::new();
-        let result = collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new());
+        let result =
+            collect_module_exports(&dir.join("parent.ash"), &mut cache, &mut HashSet::new());
 
         let err =
             result.expect_err("collecting exports from file with nonexistent pub mod should fail");
@@ -1258,8 +1367,9 @@ pub type Role = System | User;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting exports should succeed");
 
         // Only pub builtin fn is exported; module-private builtin fn is not.
         assert!(
@@ -1299,8 +1409,9 @@ pub type Flag = On | Off;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting exports should succeed");
 
         assert!(
             exports.callables.contains_key("double"),
@@ -1336,8 +1447,9 @@ pub type Flag = On | Off;",
         .expect("write module");
 
         let mut cache = HashMap::new();
-        let exports = collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
-            .expect("collecting exports should succeed");
+        let exports =
+            collect_module_exports(&dir.join("module.ash"), &mut cache, &mut HashSet::new())
+                .expect("collecting exports should succeed");
 
         assert!(
             exports.callables.contains_key("identity"),
@@ -1421,5 +1533,151 @@ pub type Flag = On | Off;",
                 }
             }
         }
+    }
+
+    #[test]
+    fn builtin_fn_higher_order_signature_imports_cleanly() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+
+        std::fs::write(
+            dir.join("act.ash"),
+            "pub builtin fn bind<A, B>(ma: Act<A>, f: Fn(A) -> Act<B>) -> Act<B>;\n",
+        )
+        .expect("write module");
+
+        let mut cache = HashMap::new();
+        let exports = collect_module_exports(&dir.join("act.ash"), &mut cache, &mut HashSet::new())
+            .expect(
+                "higher-order builtin fn signatures should parse for current std::act placeholders",
+            );
+
+        assert!(
+            exports.callables.contains_key("bind"),
+            "expected higher-order builtin fn to be exported"
+        );
+    }
+
+    #[test]
+    fn type_identity_collector_includes_builtin_type_forms() {
+        let defs = collect_type_identity_defs_from_source(
+            "builtin type ActEnv;\npub builtin type PublicOpaque;\ntype Local = Int;\npub type Exported = String;",
+        )
+        .expect("collect type identities");
+
+        let names = defs.iter().map(|def| def.name.as_str()).collect::<Vec<_>>();
+        assert_eq!(names, vec!["ActEnv", "PublicOpaque", "Local", "Exported"]);
+        assert!(
+            defs.iter()
+                .find(|def| def.name == "ActEnv")
+                .unwrap()
+                .builtin
+        );
+        assert!(
+            defs.iter()
+                .find(|def| def.name == "PublicOpaque")
+                .unwrap()
+                .builtin
+        );
+    }
+
+    #[test]
+    fn module_exports_include_opaque_private_type_identities_without_representation() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let module = temp.path().join("types.ash");
+        std::fs::write(
+            &module,
+            "builtin type PrivateOpaque;\ntype PrivateAlias = Int;\npub builtin type PublicOpaque;\npub type PublicAlias = String;",
+        )
+        .expect("write module");
+
+        let exports = collect_module_exports(&module, &mut HashMap::new(), &mut HashSet::new())
+            .expect("collect exports");
+
+        assert!(exports.type_defs.contains_key("PublicOpaque"));
+        assert!(exports.type_defs.contains_key("PublicAlias"));
+        let private_opaque = exports
+            .type_defs
+            .get("PrivateOpaque")
+            .expect("private builtin identity should export opaquely");
+        assert!(private_opaque.builtin);
+        assert!(
+            matches!(private_opaque.body, CoreTypeBody::Struct(ref fields) if fields.is_empty())
+        );
+        let private_alias = exports
+            .type_defs
+            .get("PrivateAlias")
+            .expect("private alias identity should export opaquely");
+        assert!(private_alias.builtin);
+        assert!(
+            matches!(private_alias.body, CoreTypeBody::Struct(ref fields) if fields.is_empty())
+        );
+        assert!(!exports.constructor_defs.contains_key("PrivateOpaque"));
+        assert!(!exports.constructor_defs.contains_key("PrivateAlias"));
+    }
+
+    #[test]
+    fn private_type_identity_can_import_without_representation_or_constructor() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let dir = temp.path();
+        std::fs::write(
+            dir.join("inner.ash"),
+            "type Secret = Int;\npub type Public = Int;",
+        )
+        .expect("write inner");
+        std::fs::write(dir.join("outer.ash"), "pub use inner::{Secret, Public};")
+            .expect("write outer");
+        std::fs::write(
+            dir.join("caller.ash"),
+            "use outer::{Public}\nworkflow main { ret 0 }\n",
+        )
+        .expect("write caller");
+
+        let loaded = load_ordinary_file(&dir.join("caller.ash"))
+            .expect("public type remains importable through mixed re-export");
+        assert!(
+            loaded
+                .imported_type_defs
+                .iter()
+                .any(|def| def.name == "Public")
+        );
+        assert!(
+            !loaded
+                .imported_type_defs
+                .iter()
+                .any(|def| def.name == "Secret")
+        );
+
+        let reexport_secret_caller = dir.join("reexport_secret_caller.ash");
+        std::fs::write(
+            &reexport_secret_caller,
+            "use outer::{Secret}\nworkflow main { ret 0 }\n",
+        )
+        .expect("write re-export secret caller");
+        let loaded = load_ordinary_file(&reexport_secret_caller)
+            .expect("private Secret identity should be importable opaquely");
+        let secret = loaded
+            .imported_type_defs
+            .iter()
+            .find(|def| def.name == "Secret")
+            .expect("Secret identity imported");
+        assert!(secret.builtin);
+        assert!(matches!(secret.body, CoreTypeBody::Struct(ref fields) if fields.is_empty()));
+
+        let secret_caller = dir.join("secret_caller.ash");
+        std::fs::write(
+            &secret_caller,
+            "use inner::{Secret}\nworkflow main { ret 0 }\n",
+        )
+        .expect("write secret caller");
+        let loaded = load_ordinary_file(&secret_caller)
+            .expect("private Secret identity should be directly importable opaquely");
+        let secret = loaded
+            .imported_type_defs
+            .iter()
+            .find(|def| def.name == "Secret")
+            .expect("Secret identity imported");
+        assert!(secret.builtin);
+        assert!(matches!(secret.body, CoreTypeBody::Struct(ref fields) if fields.is_empty()));
     }
 }

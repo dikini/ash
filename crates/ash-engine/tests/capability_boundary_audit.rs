@@ -1,15 +1,16 @@
 //! Capability boundary audit tests (TASK-670).
 //!
 //! Verifies that the capability system enforces proper boundaries:
-//! - Every effectful operation goes through a CapabilityProvider
+//! - Every effectful operation goes through a `CapabilityProvider`
 //! - Providers declare correct Effect levels
-//! - No capability bypasses (raw std::process, raw I/O) in non-provider code
+//! - No capability bypasses (raw `std::process`, raw I/O) in non-provider code
 //! - All providers are registered correctly with the engine
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
 use ash_core::Effect;
-use ash_engine::providers::{FsProvider, HttpProvider, ProcessProvider, StdioProvider, TimeProvider};
-use ash_engine::Engine;
+use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_engine::providers::{
+    FsProvider, HttpProvider, ProcessProvider, StdioProvider, TimeProvider,
+};
 
 // ── 1. Provider effect level declarations ────────────────────────────────
 
@@ -53,12 +54,12 @@ fn process_provider_declares_operational() {
 #[test]
 fn providers_implement_capability_provider_trait() {
     // All providers must implement the trait (compile-time check)
-    fn _assert_provider<T: CapabilityProvider>(_: &T) {}
-    _assert_provider(&StdioProvider::new());
-    _assert_provider(&FsProvider::new());
-    _assert_provider(&HttpProvider::new());
-    _assert_provider(&TimeProvider::new());
-    _assert_provider(&ProcessProvider::new());
+    fn assert_provider<T: CapabilityProvider>(_: &T) {}
+    assert_provider(&StdioProvider::new());
+    assert_provider(&FsProvider::new());
+    assert_provider(&HttpProvider::new());
+    assert_provider(&TimeProvider::new());
+    assert_provider(&ProcessProvider::new());
 }
 
 // ── 3. Provider reject unknown actions ───────────────────────────────────
@@ -81,7 +82,10 @@ async fn fs_rejects_unknown_action() {
 async fn http_rejects_unknown_action() {
     let provider = HttpProvider::new();
     let err = provider
-        .execute("patch", &[ash_core::Value::String("https://x.com".to_string())])
+        .execute(
+            "patch",
+            &[ash_core::Value::String("https://x.com".to_string())],
+        )
         .await
         .unwrap_err();
     assert!(matches!(err, CapabilityError::NotAvailable(_)));
@@ -148,7 +152,10 @@ async fn http_blocks_disallowed_host() {
     let config = HttpConfig::new().with_allowed_hosts(vec!["safe.com".to_string()]);
     let provider = HttpProvider::with_config(config);
     let err = provider
-        .execute("get", &[ash_core::Value::String("https://evil.com".to_string())])
+        .execute(
+            "get",
+            &[ash_core::Value::String("https://evil.com".to_string())],
+        )
         .await
         .unwrap_err();
     assert!(matches!(err, CapabilityError::PermissionDenied(_)));
@@ -157,8 +164,7 @@ async fn http_blocks_disallowed_host() {
 #[tokio::test]
 async fn process_blocks_disallowed_command() {
     use ash_engine::providers::process::ProcessConfig;
-    let config =
-        ProcessConfig::new().with_allowed_commands(vec!["ls".to_string()]);
+    let config = ProcessConfig::new().with_allowed_commands(vec!["ls".to_string()]);
     let provider = ProcessProvider::with_config(config);
     let err = provider
         .execute("run", &[ash_core::Value::String("rm".to_string())])
@@ -179,7 +185,11 @@ async fn time_observe_now_works() {
     };
     let constraint = ash_core::Constraint { predicate };
     let result = provider.observe(&[constraint]).await;
-    assert!(result.is_ok(), "time observe now should work, got: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "time observe now should work, got: {:?}",
+        result.err()
+    );
 }
 
 /// Observe should fail for execute-only actions.
@@ -199,7 +209,7 @@ async fn stdio_observe_rejects_print() {
 
 /// This test documents the architectural invariant that all effectful
 /// operations must go through capability providers. It checks that no
-/// direct std::process::Command, std::fs, or std::net calls exist
+/// direct `std::process::Command`, `std::fs`, or `std::net` calls exist
 /// in non-provider engine code.
 #[test]
 fn no_raw_process_calls_in_non_provider_code() {

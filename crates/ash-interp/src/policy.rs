@@ -65,6 +65,7 @@ impl Policy {
 }
 
 /// Evaluator for policies
+#[derive(Debug, Clone)]
 pub struct PolicyEvaluator {
     policies: HashMap<Name, Policy>,
 }

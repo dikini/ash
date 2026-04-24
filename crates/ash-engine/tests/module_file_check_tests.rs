@@ -170,7 +170,43 @@ fn test_valid_pub_fn_no_warning() {
     );
 }
 
-/// Test 6: `count_pub_fn_snippets` returns correct count and diagnostics for mixed source.
+/// Test 6: The Phase 97 stdlib act module parses cleanly as a module file.
+#[test]
+fn test_check_module_file_stdlib_act_module() {
+    let engine = make_engine();
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set");
+    let act_path = PathBuf::from(manifest_dir)
+        .join("../../std/src/act.ash")
+        .canonicalize()
+        .expect("act.ash should exist");
+
+    let result = engine
+        .check_module_file(&act_path)
+        .expect("check_module_file should succeed for std/src/act.ash");
+
+    assert_eq!(
+        result.type_count, 1,
+        "act.ash should have 1 pub type definition (Policy alias), got {}",
+        result.type_count,
+    );
+    assert_eq!(
+        result.fn_count, 4,
+        "act.ash should have 4 ordinary pub fn helper definitions, got {}",
+        result.fn_count,
+    );
+    assert!(
+        result.errors.is_empty(),
+        "act.ash should have zero errors, got {:?}",
+        result.errors,
+    );
+    assert!(
+        result.warnings.is_empty(),
+        "act.ash should have zero warnings, got {:?}",
+        result.warnings,
+    );
+}
+
+/// Test 7: `count_pub_fn_snippets` returns correct count and diagnostics for mixed source.
 #[test]
 fn test_count_pub_fn_snippets_with_diagnostics() {
     use ash_engine::module_loader::count_pub_fn_snippets;

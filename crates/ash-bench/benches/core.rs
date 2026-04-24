@@ -2,8 +2,8 @@
 //!
 //! Benchmarks effect lattice operations, value operations, and pattern matching.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use ash_core::{Effect, Value, Pattern};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use ash_core::{Effect, Pattern, Span, Value};
 use std::collections::HashMap;
 
 // ============================================================================
@@ -85,7 +85,7 @@ fn create_nested_value(depth: usize) -> Value {
         let mut map = HashMap::new();
         map.insert("value".to_string(), Value::Int(depth as i64));
         map.insert("nested".to_string(), create_nested_value(depth - 1));
-        Value::Record(map)
+        Value::Record(Box::new(map))
     }
 }
 
@@ -103,14 +103,14 @@ fn bench_value_creation(c: &mut Criterion) {
     group.bench_function("create_list_small", |b| {
         b.iter(|| {
             let list: Vec<Value> = (0..10).map(|i| Value::Int(i)).collect();
-            black_box(Value::List(list))
+            black_box(Value::List(Box::new(list)))
         });
     });
     
     group.bench_function("create_list_large", |b| {
         b.iter(|| {
             let list: Vec<Value> = (0..1000).map(|i| Value::Int(i)).collect();
-            black_box(Value::List(list))
+            black_box(Value::List(Box::new(list)))
         });
     });
     
@@ -119,7 +119,7 @@ fn bench_value_creation(c: &mut Criterion) {
             let mut map = HashMap::new();
             map.insert("name".to_string(), Value::String("test".to_string()));
             map.insert("value".to_string(), Value::Int(42));
-            black_box(Value::Record(map))
+            black_box(Value::Record(Box::new(map)))
         });
     });
     
@@ -136,8 +136,8 @@ fn bench_value_operations(c: &mut Criterion) {
         b.iter(|| black_box(v1 == v2));
     });
     
-    let list1 = Value::List((0..100).map(|i| Value::Int(i)).collect());
-    let list2 = Value::List((0..100).map(|i| Value::Int(i)).collect());
+    let list1 = Value::List(Box::new((0..100).map(|i| Value::Int(i)).collect()));
+    let list2 = Value::List(Box::new((0..100).map(|i| Value::Int(i)).collect()));
     group.bench_function("equality_list_100", |b| {
         b.iter(|| black_box(&list1 == &list2));
     });

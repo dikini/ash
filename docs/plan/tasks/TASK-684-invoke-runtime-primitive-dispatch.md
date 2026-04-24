@@ -1,6 +1,6 @@
 # TASK-684: Add invoke runtime primitive dispatch through Expr::Call
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,10 +49,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] `invoke(...)` dispatch works without introducing a new core AST node.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `invoke(...)` dispatch works without introducing a new core AST node.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

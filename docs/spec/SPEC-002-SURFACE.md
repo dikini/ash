@@ -354,6 +354,10 @@ there.
 ```
 expression      ::= or_expr
 
+act_expr        ::= "act" "{" act_block_stmt* "}"
+act_block_stmt  ::= IDENTIFIER "=" expression ";"
+                  | "ret" expression ";"
+
 or_expr         ::= and_expr ("or" and_expr)*
 and_expr        ::= not_expr ("and" not_expr)*
 not_expr        ::= "not" not_expr | comparison
@@ -370,6 +374,7 @@ primary         ::= literal
                   | primary "." IDENTIFIER      -- Field access
                   | primary "[" expression "]" -- Index access
                   | primary "(" arguments? ")" -- Function / callable-value call
+                  | act_expr
                   | constructor_expr
                   | match_expr
                   | if_expr
@@ -403,8 +408,9 @@ panic_expr      ::= "panic" STRING
 
 These expression forms establish the shared surface baseline for pure-function bodies; SPEC-027 is
 the normative source for `fn` body structure, function-call constraints, `Fn(...) -> ...` typing,
-`module::name(args)` resolution, and panic semantics. `provider:action(args)` remains the separate
-capability-dispatch form.
+`module::name(args)` resolution, and panic semantics. `act { ... }` is an expression form and is
+distinguished from workflow-level `act` by the `{` token immediately after `act`.
+`provider:action(args)` remains the separate capability-dispatch form.
 
 ### 3.9 Patterns
 

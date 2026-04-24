@@ -29,6 +29,7 @@ fn option_type_def() -> TypeDef {
             },
         ]),
         visibility: Visibility::Public,
+        builtin: false,
     }
 }
 
@@ -54,6 +55,7 @@ fn runtime_error_type_def() -> TypeDef {
             ]),
         }]),
         visibility: Visibility::Public,
+        builtin: false,
     }
 }
 

@@ -102,11 +102,15 @@ fn workflow_surface_type_to_type(
                     let (qualified, _) = env
                         .resolve_type(name.as_ref())
                         .map_err(|e| TypeCheckError::TypeError(format!("{e}")))?;
-                    Ok(Type::Constructor {
-                        name: qualified,
-                        args: vec![],
-                        kind: Kind::Type,
-                    })
+                    if let Some(target) = env.transparent_alias_target(&qualified, &[]) {
+                        Ok(target)
+                    } else {
+                        Ok(Type::Constructor {
+                            name: qualified,
+                            args: vec![],
+                            kind: Kind::Type,
+                        })
+                    }
                 }
             }
         }
@@ -136,11 +140,15 @@ fn workflow_surface_type_to_type(
                 .iter()
                 .map(|arg| workflow_surface_type_to_type(env, arg, type_params))
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(Type::Constructor {
-                name: qualified,
-                args,
-                kind: Kind::Type,
-            })
+            if let Some(target) = env.transparent_alias_target(&qualified, &args) {
+                Ok(target)
+            } else {
+                Ok(Type::Constructor {
+                    name: qualified,
+                    args,
+                    kind: Kind::Type,
+                })
+            }
         }
         ash_parser::surface::Type::Fn(params, ret) => {
             // Pure function type: Fn(T, U) -> V => Type::Fn(params, ret)
@@ -625,6 +633,17 @@ fn validate_interface_calls_in_expr(
             validate_interface_calls_in_expr(env, func)?;
             for arg in args {
                 validate_interface_calls_in_expr(env, arg)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::ActBlock { stmts, .. } => {
+            use ash_parser::surface::ActStmt;
+            for stmt in stmts {
+                let value = match stmt {
+                    ActStmt::Bind { value, .. } => value,
+                    ActStmt::Return { value, .. } => value,
+                };
+                validate_interface_calls_in_expr(env, value)?;
             }
             Ok(())
         }
@@ -1208,7 +1227,8 @@ fn reject_unsupported_mvp_workflow_features(
     }
 }
 
-fn fn_signature_type(
+/// Compute the type signature of an ordinary `fn` definition.
+pub fn fn_signature_type(
     env: &TypeEnv,
     function: &ash_parser::surface::FnDef,
 ) -> Result<Type, TypeCheckError> {
@@ -1770,6 +1790,17 @@ fn validate_fn_call_preconditions_expr(
             }
             Ok(())
         }
+        ash_parser::surface::Expr::ActBlock { stmts, .. } => {
+            use ash_parser::surface::ActStmt;
+            for stmt in stmts {
+                let value = match stmt {
+                    ActStmt::Bind { value, .. } => value,
+                    ActStmt::Return { value, .. } => value,
+                };
+                validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
+            }
+            Ok(())
+        }
     }
 }
 
@@ -1892,7 +1923,12 @@ fn check_function_def_in_env(
         .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
     validate_fn_contract_namespace(function, &lowered_contract)?;
 
-    crate::purity::check_purity(&fn_env, &function.body).map_err(|errors| {
+    let allow_effects = matches!(
+        &declared_return_ty,
+        Type::Constructor { name, .. } if name.name == "Act"
+    );
+
+    crate::purity::check_purity(&fn_env, &function.body, allow_effects).map_err(|errors| {
         TypeCheckError::TypeError(
             errors
                 .into_iter()

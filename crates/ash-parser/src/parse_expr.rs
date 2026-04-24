@@ -11,9 +11,97 @@ use crate::input::{ParseInput, Position};
 use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
-    BinaryOp, BlockStmt, ConstructorPayload, Expr, Literal, Name, Pattern, UnaryOp,
+    ActStmt, BinaryOp, BlockStmt, ConstructorPayload, Expr, Literal, Name, Pattern, UnaryOp,
 };
 use crate::token::Span;
+
+/// Check whether the input starts with a keyword boundary match.
+fn input_starts_with_keyword(input: &ParseInput, word: &str) -> bool {
+    if !input.input.starts_with(word) {
+        return false;
+    }
+    let after = &input.input[word.len()..];
+    after
+        .chars()
+        .next()
+        .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+}
+
+/// Try to parse an act block expression: `act { stmt; stmt; ... }`. SPEC-047 §2.1
+///
+/// Returns `Err` (backtrack) if the current position does not start with `act {`.
+/// This distinguishes expression-level `act { ... }` from workflow-level `act provider:action`.
+pub(crate) fn parse_act_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    // Quick check: must start with "act" keyword
+    if !input_starts_with_keyword(input, "act") {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    // Peek ahead: "act" must be followed by "{" (expression-level)
+    let saved = input.clone();
+    let _ = keyword("act").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    if !input.input.starts_with('{') {
+        // Not an act block expression - restore and backtrack
+        *input = saved;
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    // Confirmed "act {" - restore and parse properly
+    *input = saved;
+
+    let start_pos = input.state.pos;
+    let _ = keyword("act").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut stmts = Vec::new();
+
+    // Parse statements until closing }
+    while !input.input.starts_with('}') {
+        let stmt_start = input.state.pos;
+
+        // Check for "ret" keyword
+        if input_starts_with_keyword(input, "ret") {
+            let _ = keyword("ret").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let value = expr(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(";").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let span = span_from(&stmt_start, &input.state.pos);
+            stmts.push(ActStmt::Return {
+                value: Box::new(value),
+                span,
+            });
+        } else {
+            // Bind: identifier = expr;
+            let name: Name = identifier(input)?.into();
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("=").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let value = expr(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(";").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let span = span_from(&stmt_start, &input.state.pos);
+            stmts.push(ActStmt::Bind {
+                name,
+                value: Box::new(value),
+                span,
+            });
+        }
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+    let span = span_from(&start_pos, &input.state.pos);
+
+    Ok(Expr::ActBlock { stmts, span })
+}
 
 /// Parse an expression (entry point).
 ///
@@ -30,6 +118,10 @@ pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
     // Try if-let first (before other expressions to avoid conflicts with 'if')
     if let Ok(if_let) = parse_if_let_expr(input) {
         return Ok(if_let);
+    }
+    // Try act block expression: act { ... }  (SPEC-047 §2.1)
+    if let Ok(act_block) = parse_act_block_expr(input) {
+        return Ok(act_block);
     }
     pipe_expr(input)
 }
@@ -788,7 +880,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     // Try identifier/variable (and potential field access/call)
-    let (name, name_span) = identifier_with_span(input)?;
+    let (name, name_span) = expr_name_with_span(input)?;
     let name_str: Name = name.into();
 
     if opt(literal_str("::")).parse_next(input)?.is_some() {
@@ -866,7 +958,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     loop {
         // Field access: .field
         if opt(literal_str(".")).parse_next(input)?.is_some() {
-            if let Ok(field) = identifier(input) {
+            if let Ok(field) = parse_field_name(input) {
                 let span = span_from(&start_pos, &input.state.pos);
                 expr = Expr::FieldAccess {
                     base: Box::new(expr),
@@ -900,14 +992,18 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                 args
             };
             let span = span_from(&start_pos, &input.state.pos);
-            expr = Expr::Call {
-                func: match &expr {
-                    Expr::Variable { name: n, .. } => n.clone(),
-                    _ => "call".into(),
+            expr = match expr {
+                Expr::Variable { name, .. } => Expr::Call {
+                    func: name,
+                    module: None,
+                    args,
+                    span,
                 },
-                module: None,
-                args,
-                span,
+                other => Expr::FnApply {
+                    func: Box::new(other),
+                    args,
+                    span,
+                },
             };
             continue;
         }
@@ -944,6 +1040,28 @@ fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Ex
 /// Unlike `identifier`, this allows keywords as field names (e.g. `role: User`).
 fn parse_field_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)
+}
+
+fn expr_name_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
+    let checkpoint = input.clone();
+    if let Ok(parsed) = identifier_with_span(input) {
+        return Ok(parsed);
+    }
+    *input = checkpoint;
+
+    let start_pos = input.state.pos;
+    for keyword_name in ["act", "then", "guard"] {
+        let checkpoint = input.clone();
+        if keyword(keyword_name).parse_next(input).is_ok() {
+            let span = span_from(&start_pos, &input.state.pos);
+            return Ok((keyword_name, span));
+        }
+        *input = checkpoint;
+    }
+
+    Err(winnow::error::ErrMode::Backtrack(
+        winnow::error::ContextError::new(),
+    ))
 }
 
 fn parse_constructor_field(input: &mut ParseInput) -> ModalResult<(Name, Expr)> {

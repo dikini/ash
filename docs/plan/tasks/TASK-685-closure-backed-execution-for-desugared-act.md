@@ -1,6 +1,6 @@
 # TASK-685: Implement closure-backed execution path for desugared Act<T>
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -51,10 +51,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Desugared `Act<T>` values execute correctly under runtime tests.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Desugared `Act<T>` values execute correctly under runtime tests.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

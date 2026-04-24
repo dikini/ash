@@ -25,13 +25,13 @@ pub struct TimeProvider {
 impl TimeProvider {
     /// Create a new time provider using real system time
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { mock_now: None }
     }
 
     /// Create a time provider with a fixed mock time for testing
     #[must_use]
-    pub fn mock(epoch_millis: u64) -> Self {
+    pub const fn mock(epoch_millis: u64) -> Self {
         Self {
             mock_now: Some(epoch_millis),
         }
@@ -40,10 +40,13 @@ impl TimeProvider {
     /// Get current epoch millis
     fn current_millis(&self) -> u64 {
         self.mock_now.unwrap_or_else(|| {
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis() as u64
+            u64::try_from(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis(),
+            )
+            .unwrap_or(u64::MAX)
         })
     }
 
@@ -70,14 +73,9 @@ impl TimeProvider {
     /// Extract milliseconds from a Value argument
     fn extract_millis(args: &[Value]) -> Result<u64, CapabilityError> {
         match args.first() {
-            Some(Value::Int(n)) => {
-                if *n < 0 {
-                    return Err(CapabilityError::InvalidArgument(
-                        "Sleep duration must be non-negative".to_string(),
-                    ));
-                }
-                Ok(*n as u64)
-            }
+            Some(Value::Int(n)) => u64::try_from(*n).map_err(|_| {
+                CapabilityError::InvalidArgument("Sleep duration must be non-negative".to_string())
+            }),
             Some(_) => Err(CapabilityError::InvalidArgument(
                 "Duration must be an integer (milliseconds)".to_string(),
             )),
@@ -88,17 +86,20 @@ impl TimeProvider {
     }
 
     /// Handle `now` observe action
-    fn handle_now(&self) -> Result<Value, CapabilityError> {
+    fn handle_now(&self) -> Value {
         let millis = self.current_millis();
         let mut result = HashMap::new();
-        result.insert("epoch_millis".to_string(), Value::Int(millis as i64));
+        result.insert(
+            "epoch_millis".to_string(),
+            Value::Int(i64::try_from(millis).unwrap_or(i64::MAX)),
+        );
         result.insert("iso".to_string(), Value::String(self.current_iso()));
-        Ok(Value::Record(Box::new(result)))
+        Value::Record(Box::new(result))
     }
 
     /// Handle `now_iso` observe action
-    fn handle_now_iso(&self) -> Result<Value, CapabilityError> {
-        Ok(Value::String(self.current_iso()))
+    fn handle_now_iso(&self) -> Value {
+        Value::String(self.current_iso())
     }
 
     /// Handle `sleep` execute action
@@ -109,8 +110,8 @@ impl TimeProvider {
     }
 
     /// Handle `epoch_millis` observe action (returns just the integer)
-    fn handle_epoch_millis(&self) -> Result<Value, CapabilityError> {
-        Ok(Value::Int(self.current_millis() as i64))
+    fn handle_epoch_millis(&self) -> Value {
+        Value::Int(i64::try_from(self.current_millis()).unwrap_or(i64::MAX))
     }
 }
 
@@ -160,16 +161,20 @@ fn days_to_date(days_since_epoch: u64) -> (i64, u32, u32) {
         month += 1;
     }
 
-    (year, month + 1, remaining as u32 + 1)
+    (
+        year,
+        month + 1,
+        u32::try_from(remaining).expect("remaining days must fit in u32") + 1,
+    )
 }
 
-fn is_leap_year(year: i64) -> bool {
+const fn is_leap_year(year: i64) -> bool {
     (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 }
 
 #[async_trait]
 impl CapabilityProvider for TimeProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "time"
     }
 
@@ -188,9 +193,9 @@ impl CapabilityProvider for TimeProvider {
         }
         let action_name = constraints[0].predicate.name.as_str();
         match action_name {
-            "now" => self.handle_now(),
-            "now_iso" => self.handle_now_iso(),
-            "epoch_millis" => self.handle_epoch_millis(),
+            "now" => Ok(self.handle_now()),
+            "now_iso" => Ok(self.handle_now_iso()),
+            "epoch_millis" => Ok(self.handle_epoch_millis()),
             _ => Err(CapabilityError::NotAvailable(format!(
                 "Unknown time observe action: {action_name}"
             ))),
@@ -200,9 +205,9 @@ impl CapabilityProvider for TimeProvider {
     async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError> {
         match action_name {
             "sleep" => self.handle_sleep(args).await,
-            "now" => self.handle_now(),
-            "now_iso" => self.handle_now_iso(),
-            "epoch_millis" => self.handle_epoch_millis(),
+            "now" => Ok(self.handle_now()),
+            "now_iso" => Ok(self.handle_now_iso()),
+            "epoch_millis" => Ok(self.handle_epoch_millis()),
             _ => Err(CapabilityError::NotAvailable(format!(
                 "Unknown time action: {action_name}"
             ))),
@@ -228,34 +233,43 @@ mod tests {
 
     #[test]
     fn test_mock_now_returns_fixed_time() {
-        let provider = TimeProvider::mock(1700000000000);
-        assert_eq!(provider.current_millis(), 1700000000000);
+        let provider = TimeProvider::mock(1_700_000_000_000);
+        assert_eq!(provider.current_millis(), 1_700_000_000_000);
     }
 
     #[test]
     fn test_new_uses_system_time() {
         let provider = TimeProvider::new();
-        let before = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64;
+        let before = u64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time must be after epoch")
+                .as_millis(),
+        )
+        .unwrap_or(u64::MAX);
         let now = provider.current_millis();
-        let after = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64;
+        let after = u64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time must be after epoch")
+                .as_millis(),
+        )
+        .unwrap_or(u64::MAX);
         assert!(now >= before && now <= after);
     }
 
     #[test]
     fn test_handle_now_returns_record() {
-        let provider = TimeProvider::mock(1700000000000);
-        let result = provider.handle_now().unwrap();
+        let provider = TimeProvider::mock(1_700_000_000_000);
+        let result = provider.handle_now();
         match result {
             Value::Record(fields) => {
                 assert!(fields.contains_key("epoch_millis"));
                 assert!(fields.contains_key("iso"));
-                assert_eq!(fields.get("epoch_millis"), Some(&Value::Int(1700000000000)));
+                assert_eq!(
+                    fields.get("epoch_millis"),
+                    Some(&Value::Int(1_700_000_000_000))
+                );
             }
             _ => panic!("Expected Record, got {result:?}"),
         }
@@ -263,8 +277,8 @@ mod tests {
 
     #[test]
     fn test_handle_now_iso_returns_string() {
-        let provider = TimeProvider::mock(1700000000000);
-        let result = provider.handle_now_iso().unwrap();
+        let provider = TimeProvider::mock(1_700_000_000_000);
+        let result = provider.handle_now_iso();
         match result {
             Value::String(s) => {
                 assert!(s.starts_with("2023"));
@@ -277,9 +291,9 @@ mod tests {
 
     #[test]
     fn test_handle_epoch_millis_returns_int() {
-        let provider = TimeProvider::mock(1700000000000);
-        let result = provider.handle_epoch_millis().unwrap();
-        assert_eq!(result, Value::Int(1700000000000));
+        let provider = TimeProvider::mock(1_700_000_000_000);
+        let result = provider.handle_epoch_millis();
+        assert_eq!(result, Value::Int(1_700_000_000_000));
     }
 
     #[test]
@@ -318,20 +332,14 @@ mod tests {
     #[tokio::test]
     async fn test_sleep_executes() {
         let provider = TimeProvider::new();
-        let result = provider
-            .execute("sleep", &[Value::Int(1)])
-            .await
-            .unwrap();
+        let result = provider.execute("sleep", &[Value::Int(1)]).await.unwrap();
         assert_eq!(result, Value::Null);
     }
 
     #[tokio::test]
     async fn test_execute_unknown_action() {
         let provider = TimeProvider::new();
-        let err = provider
-            .execute("unknown", &[])
-            .await
-            .unwrap_err();
+        let err = provider.execute("unknown", &[]).await.unwrap_err();
         assert!(matches!(err, CapabilityError::NotAvailable(_)));
     }
 
@@ -376,8 +384,7 @@ mod tests {
 
     #[test]
     fn test_clone_preserves_mock() {
-        let provider = TimeProvider::mock(1700000000000);
-        let cloned = provider.clone();
-        assert_eq!(cloned.current_millis(), 1700000000000);
+        let provider = TimeProvider::mock(1_700_000_000_000);
+        assert_eq!(provider.current_millis(), 1_700_000_000_000);
     }
 }

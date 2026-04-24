@@ -1,6 +1,6 @@
 # TASK-675: Lower ActBlock into existing core expressions
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -50,10 +50,9 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Lowered core output contains no `ActBlock`-specific core form.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `crates/ash-parser/src/lower.rs` lowers `surface::Expr::ActBlock` through `lower_act_block()`.
+- [x] Return-only act blocks lower to `unit(...)` calls; bind statements lower to nested `bind(...)` calls with `FnDef` continuations.
+- [x] Lowering rejects empty blocks and invalid statement order, and introduces no `ActBlock`-specific core IR variant.
 
 ## Dependencies for Next Task
 
@@ -64,3 +63,4 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - Phase 97 is additive.
 - Preserve `Workflow::Act` behavior.
 - Preserve coexistence with existing `Type::Fun(...)` unless this task explicitly narrows that boundary in docs/tests only.
+- The landed slice is the additive surface-to-core desugaring promised by PLAN-097: `ActBlock` is erased during lowering into existing `Call`/`FnDef` forms rather than expanding core AST surface area.

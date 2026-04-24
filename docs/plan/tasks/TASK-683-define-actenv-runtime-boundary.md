@@ -1,6 +1,6 @@
 # TASK-683: Define ActEnv runtime struct and boundary
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,10 +49,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Interpreter/runtime compiles with the new `ActEnv` carrier.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Interpreter/runtime compiles with the new `ActEnv` carrier.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

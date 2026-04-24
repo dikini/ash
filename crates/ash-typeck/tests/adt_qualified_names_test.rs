@@ -87,6 +87,7 @@ fn test_resolve_type_returns_qualified_name() {
             },
         ]),
         visibility: Visibility::Public,
+        builtin: false,
     };
 
     env.register_type(&type_def).unwrap();

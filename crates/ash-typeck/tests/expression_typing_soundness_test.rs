@@ -165,31 +165,33 @@ fn test_loop_expression_not_fresh_var() {
 // ============================================================
 
 #[test]
-fn test_unsupported_expression_error() {
-    let env = TypeEnv::with_builtin_types();
+fn test_record_field_access_projects_field_type() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable(
+        "user",
+        Type::Record(vec![
+            ("name".into(), Type::String),
+            ("age".into(), Type::Int),
+        ]),
+    );
 
-    // Field access is not yet fully implemented
     let expr = Expr::FieldAccess {
-        base: Box::new(Expr::Literal(Literal::Int(42))),
-        field: "unknown".into(),
+        base: Box::new(Expr::Variable {
+            name: "user".into(),
+            span: test_span(),
+        }),
+        field: "name".into(),
         span: test_span(),
     };
 
     let result = check_expr(&env, &expr);
-
-    // Should either handle it properly or report an unsupported expression error
-    // But NOT silently return a fresh type variable
-    if !result.is_ok() {
-        assert!(
-            result
-                .errors
-                .iter()
-                .any(|e| e.to_string().contains("unsupported")
-                    || e.to_string().contains("Unsupported")),
-            "Expected unsupported expression error or proper handling, got: {:?}",
-            result.errors
-        );
-    }
+    assert!(
+        result.is_ok(),
+        "record field projection should typecheck, got errors: {:?}",
+        result.errors
+    );
+    assert_eq!(result.ty, Type::String);
+    assert!(result.errors.is_empty());
 }
 
 #[test]
@@ -216,6 +218,133 @@ fn test_index_access_not_silent_fresh_var() {
             "Index access should not return a fresh type variable without checking"
         );
     }
+}
+
+#[test]
+fn test_nested_record_field_access_projects_nested_field_type() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable(
+        "env",
+        Type::Record(vec![(
+            "request".into(),
+            Type::Record(vec![("id".into(), Type::Int)]),
+        )]),
+    );
+
+    let expr = Expr::FieldAccess {
+        base: Box::new(Expr::FieldAccess {
+            base: Box::new(Expr::Variable {
+                name: "env".into(),
+                span: test_span(),
+            }),
+            field: "request".into(),
+            span: test_span(),
+        }),
+        field: "id".into(),
+        span: test_span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        result.is_ok(),
+        "nested record field projection should typecheck, got errors: {:?}",
+        result.errors
+    );
+    assert_eq!(result.ty, Type::Int);
+    assert!(result.errors.is_empty());
+}
+
+#[test]
+fn test_record_field_access_missing_field_reports_explicit_error() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable("user", Type::Record(vec![("name".into(), Type::String)]));
+
+    let expr = Expr::FieldAccess {
+        base: Box::new(Expr::Variable {
+            name: "user".into(),
+            span: test_span(),
+        }),
+        field: "age".into(),
+        span: test_span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(!result.is_ok(), "missing field access should fail");
+    assert!(
+        result.errors.iter().any(|e| matches!(
+            e,
+            ConstructorError::MissingRecordField { field, .. } if field == "age"
+        )),
+        "expected explicit missing-field error, got: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn test_record_field_access_on_non_record_base_reports_explicit_error() {
+    let env = TypeEnv::with_builtin_types();
+
+    let expr = Expr::FieldAccess {
+        base: Box::new(Expr::Literal(Literal::Int(42))),
+        field: "unknown".into(),
+        span: test_span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(!result.is_ok(), "field access on Int should fail");
+    assert!(
+        result.errors.iter().any(|e| matches!(
+            e,
+            ConstructorError::NotARecord { field, actual, .. }
+                if field == "unknown" && actual == &Type::Int
+        )),
+        "expected explicit non-record-base error, got: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn test_projected_callable_invocation_typechecks_via_fnapply() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable(
+        "env",
+        Type::Record(vec![(
+            "policies".into(),
+            Type::Record(vec![(
+                "check".into(),
+                Type::Fn(vec![Type::String], Box::new(Type::Bool)),
+            )]),
+        )]),
+    );
+    env.bind_variable("policy", Type::String);
+
+    let expr = Expr::FnApply {
+        func: Box::new(Expr::FieldAccess {
+            base: Box::new(Expr::FieldAccess {
+                base: Box::new(Expr::Variable {
+                    name: "env".into(),
+                    span: test_span(),
+                }),
+                field: "policies".into(),
+                span: test_span(),
+            }),
+            field: "check".into(),
+            span: test_span(),
+        }),
+        args: vec![Expr::Variable {
+            name: "policy".into(),
+            span: test_span(),
+        }],
+        span: test_span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        result.is_ok(),
+        "projected callable invocation should typecheck, got errors: {:?}",
+        result.errors
+    );
+    assert_eq!(result.ty, Type::Bool);
 }
 
 // ============================================================
@@ -278,14 +407,6 @@ fn test_all_expressions_checked_not_silently_accepted() {
 
     // These expression types should not just silently return fresh type variables
     let expressions = vec![
-        (
-            "FieldAccess",
-            Expr::FieldAccess {
-                base: Box::new(Expr::Literal(Literal::Int(42))),
-                field: "x".into(),
-                span: test_span(),
-            },
-        ),
         (
             "IndexAccess",
             Expr::IndexAccess {

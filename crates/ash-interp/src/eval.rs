@@ -100,7 +100,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: true,
+                implemented: false,
             },
         );
         m.insert(
@@ -108,11 +108,39 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: true,
+                implemented: false,
             },
         );
         m.insert(
             "string::trim",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: false,
+            },
+        );
+
+        // ── Process module builtins (qualified) ──
+        m.insert(
+            "process::run",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+
+        // ── Act module bridge builtins (qualified) ──
+        m.insert(
+            "act::__guard",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "act::policy_check",
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
@@ -342,6 +370,397 @@ pub fn dispatch_builtin(
 
 // ── End builtin dispatch table ───────────────────────────────────
 
+/// Runtime primitive for expression-level `invoke(...)`.
+///
+/// Phase 97 keeps this as a closure-shaped value so the runtime can thread an
+/// internal Act-style environment without adding a new AST node.
+fn runtime_invoke(args: &[Value]) -> EvalResult<Value> {
+    if args.len() != 3 {
+        return Err(EvalError::WrongArity {
+            expected: 3,
+            actual: args.len(),
+            callee: Some("invoke".to_string()),
+        });
+    }
+
+    let provider = match &args[0] {
+        Value::String(s) => s.clone(),
+        other => {
+            return Err(EvalError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{other:?}"),
+            });
+        }
+    };
+
+    let action = match &args[1] {
+        Value::String(s) => s.clone(),
+        other => {
+            return Err(EvalError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{other:?}"),
+            });
+        }
+    };
+
+    let invoke_args = match &args[2] {
+        Value::List(items) => (*items).clone(),
+        other => {
+            return Err(EvalError::TypeMismatch {
+                expected: "list".to_string(),
+                actual: format!("{other:?}"),
+            });
+        }
+    };
+
+    let body = Expr::Literal(act_result(Value::Variant {
+        name: "__InvokeCapture".to_string(),
+        fields: Box::new(vec![
+            ("provider".to_string(), Value::String(provider)),
+            ("action".to_string(), Value::String(action)),
+            ("args".to_string(), Value::List(invoke_args)),
+        ]),
+    }));
+
+    Ok(Value::Closure {
+        params: vec![("__act_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(ash_core::env_frame::EnvFrame::new()),
+    })
+}
+
+fn act_result(value: Value) -> Value {
+    Value::List(Box::new(vec![Value::ActEnvToken, value]))
+}
+
+fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
+    let Value::List(items) = value else {
+        return Ok(value);
+    };
+    if items.len() != 2 || !matches!(items[0], Value::ActEnvToken) {
+        return Ok(Value::List(items));
+    }
+
+    let Value::Variant { name, fields } = &items[1] else {
+        return Ok(Value::List(items));
+    };
+    if name != "__InvokeCapture" {
+        return Ok(Value::List(items));
+    }
+
+    let provider = fields
+        .iter()
+        .find(|(field, _)| field == "provider")
+        .and_then(|(_, value)| match value {
+            Value::String(s) => Some(s.clone()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            EvalError::ExecutionFailed("invoke capture missing string provider".to_string())
+        })?;
+    let action = fields
+        .iter()
+        .find(|(field, _)| field == "action")
+        .and_then(|(_, value)| match value {
+            Value::String(s) => Some(s.clone()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            EvalError::ExecutionFailed("invoke capture missing string action".to_string())
+        })?;
+    let args = fields
+        .iter()
+        .find(|(field, _)| field == "args")
+        .and_then(|(_, value)| match value {
+            Value::List(items) => Some((**items).clone()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            EvalError::ExecutionFailed("invoke capture missing list args".to_string())
+        })?;
+
+    let act_env = runtime_ctx.act_env().ok_or_else(|| {
+        EvalError::ExecutionFailed("invoke capture missing hidden runtime ActEnv".to_string())
+    })?;
+
+    let invoked = std::thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|err| {
+                EvalError::ExecutionFailed(format!("invoke helper runtime build failed: {err}"))
+            })?;
+        runtime.block_on(async move {
+            act_env
+                .capability_ctx
+                .execute(&provider, &action, &args)
+                .await
+                .map_err(|err| EvalError::ExecutionFailed(err.to_string()))
+        })
+    })
+    .join()
+    .map_err(|_| EvalError::ExecutionFailed("invoke dispatch thread panicked".to_string()))??;
+
+    Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
+}
+
+fn runtime_unit(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("unit".to_string()),
+        });
+    }
+
+    Ok(Value::Closure {
+        params: vec![("__act_env".to_string(), None)],
+        body: Box::new(Expr::Literal(act_result(args[0].clone()))),
+        env: ctx.to_env_frame(),
+    })
+}
+
+/// Sequence two Act-shaped closures left-to-right.
+fn runtime_bind(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("bind".to_string()),
+        });
+    }
+
+    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    frame.insert("__bind_act".to_string(), args[0].clone());
+    frame.insert("__bind_cont".to_string(), args[1].clone());
+
+    let span = ash_core::ast::Span::default();
+    let act_env = Expr::Variable {
+        name: "__act_env".to_string(),
+        span,
+    };
+    let bind_pair = Expr::Variable {
+        name: "__bind_pair".to_string(),
+        span,
+    };
+    let bind_value = Expr::Variable {
+        name: "__bind_value".to_string(),
+        span,
+    };
+    let next_act = Expr::Variable {
+        name: "__bind_next_act".to_string(),
+        span,
+    };
+
+    let body = Expr::Let {
+        pattern: ash_core::ast::Pattern::Variable {
+            name: "__bind_pair".to_string(),
+            span,
+        },
+        expr: Box::new(Expr::FnApply {
+            func: Box::new(Expr::Variable {
+                name: "__bind_act".to_string(),
+                span,
+            }),
+            args: vec![act_env.clone()],
+        }),
+        body: Box::new(Expr::Let {
+            pattern: ash_core::ast::Pattern::Variable {
+                name: "__bind_value".to_string(),
+                span,
+            },
+            expr: Box::new(Expr::IndexAccess {
+                expr: Box::new(bind_pair.clone()),
+                index: Box::new(Expr::Literal(Value::Int(1))),
+            }),
+            body: Box::new(Expr::Let {
+                pattern: ash_core::ast::Pattern::Variable {
+                    name: "__bind_next_act".to_string(),
+                    span,
+                },
+                expr: Box::new(Expr::FnApply {
+                    func: Box::new(Expr::Variable {
+                        name: "__bind_cont".to_string(),
+                        span,
+                    }),
+                    args: vec![bind_value],
+                }),
+                body: Box::new(Expr::FnApply {
+                    func: Box::new(next_act),
+                    args: vec![Expr::IndexAccess {
+                        expr: Box::new(bind_pair),
+                        index: Box::new(Expr::Literal(Value::Int(0))),
+                    }],
+                }),
+                span,
+            }),
+            span,
+        }),
+        span,
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__act_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(frame),
+    })
+}
+
+fn runtime_then(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("then".to_string()),
+        });
+    }
+
+    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    frame.insert("__then_left".to_string(), args[0].clone());
+    frame.insert("__then_right".to_string(), args[1].clone());
+
+    let span = ash_core::ast::Span::default();
+    let act_env = Expr::Variable {
+        name: "__act_env".to_string(),
+        span,
+    };
+    let then_pair = Expr::Variable {
+        name: "__then_pair".to_string(),
+        span,
+    };
+
+    let body = Expr::Let {
+        pattern: ash_core::ast::Pattern::Variable {
+            name: "__then_pair".to_string(),
+            span,
+        },
+        expr: Box::new(Expr::FnApply {
+            func: Box::new(Expr::Variable {
+                name: "__then_left".to_string(),
+                span,
+            }),
+            args: vec![act_env],
+        }),
+        body: Box::new(Expr::FnApply {
+            func: Box::new(Expr::Variable {
+                name: "__then_right".to_string(),
+                span,
+            }),
+            args: vec![Expr::IndexAccess {
+                expr: Box::new(then_pair),
+                index: Box::new(Expr::Literal(Value::Int(0))),
+            }],
+        }),
+        span,
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__act_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(frame),
+    })
+}
+
+fn runtime_fail(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("fail".to_string()),
+        });
+    }
+
+    Ok(Value::Closure {
+        params: vec![("__act_env".to_string(), None)],
+        body: Box::new(Expr::Literal(act_result(args[0].clone()))),
+        env: ctx.to_env_frame(),
+    })
+}
+
+fn runtime_guard(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("guard".to_string()),
+        });
+    }
+
+    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    frame.insert("__guard_policy".to_string(), args[0].clone());
+    frame.insert("__guard_act".to_string(), args[1].clone());
+
+    let span = ash_core::ast::Span::default();
+    let act_env = Expr::Variable {
+        name: "__act_env".to_string(),
+        span,
+    };
+    let body = Expr::Match {
+        scrutinee: Box::new(Expr::Call {
+            func: "policy_check".to_string(),
+            module: Some("act".to_string()),
+            arguments: vec![Expr::Variable {
+                name: "__guard_policy".to_string(),
+                span,
+            }],
+        }),
+        arms: vec![
+            ash_core::MatchArm {
+                pattern: ash_core::ast::Pattern::Literal(Value::Bool(true)),
+                body: Expr::FnApply {
+                    func: Box::new(Expr::Variable {
+                        name: "__guard_act".to_string(),
+                        span,
+                    }),
+                    args: vec![act_env],
+                },
+            },
+            ash_core::MatchArm {
+                pattern: ash_core::ast::Pattern::Literal(Value::Bool(false)),
+                body: Expr::Literal(act_result(Value::String("policy denied".to_string()))),
+            },
+        ],
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__act_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(frame),
+    })
+}
+
+fn runtime_policy_check(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("policy_check".to_string()),
+        });
+    }
+
+    let policy_name = match &args[0] {
+        Value::String(s) => s.clone(),
+        other => {
+            return Err(EvalError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{other:?}"),
+            });
+        }
+    };
+
+    let Some(policy_evaluator) = ctx.policy_evaluator() else {
+        return Ok(Value::Bool(false));
+    };
+
+    let permitted = policy_evaluator
+        .evaluate(&policy_name, ctx)
+        .map(crate::policy::PolicyResult::from)
+        .map(|result| matches!(result, crate::policy::PolicyResult::Allow))
+        .unwrap_or(false);
+
+    Ok(Value::Bool(permitted))
+}
+
 /// Evaluate an expression in the given context
 ///
 /// # Arguments
@@ -362,6 +781,462 @@ pub fn dispatch_builtin(
 /// let value = eval_expr(&expr, &ctx).unwrap();
 /// assert_eq!(value, Value::Int(42));
 /// ```
+type EvalBoxFuture<'a> =
+    std::pin::Pin<Box<dyn std::future::Future<Output = EvalResult<Value>> + Send + 'a>>;
+
+fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<'a> {
+    Box::pin(async move {
+        match expr {
+            Expr::Literal(value) => maybe_execute_invoke_capture_async(value.clone(), ctx).await,
+            Expr::Variable { name, .. } => ctx
+                .get(name)
+                .cloned()
+                .or_else(|| {
+                    if name == "()" {
+                        Some(Value::Null)
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| EvalError::UndefinedVariable(name.clone())),
+            Expr::FieldAccess { expr, field } => {
+                let value = eval_expr_force_async(expr, ctx).await?;
+                match value {
+                    Value::Record(mut fields) => {
+                        fields
+                            .remove(field)
+                            .ok_or_else(|| EvalError::FieldNotFound {
+                                field: field.clone(),
+                                value: Value::Record(fields),
+                            })
+                    }
+                    _ => Err(EvalError::TypeMismatch {
+                        expected: "record".to_string(),
+                        actual: format!("{:?}", value),
+                    }),
+                }
+            }
+            Expr::IndexAccess { expr, index } => {
+                let collection = eval_expr_force_async(expr, ctx).await?;
+                let idx_val = eval_expr_force_async(index, ctx).await?;
+                match idx_val {
+                    Value::Int(i) => {
+                        let idx = i as usize;
+                        match collection {
+                            Value::List(list) => {
+                                list.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
+                                    index: i,
+                                    len: list.len(),
+                                })
+                            }
+                            Value::String(s) => s
+                                .chars()
+                                .nth(idx)
+                                .map(|c| Value::String(c.to_string()))
+                                .ok_or(EvalError::IndexOutOfBounds {
+                                    index: i,
+                                    len: s.len(),
+                                }),
+                            _ => Err(EvalError::TypeMismatch {
+                                expected: "list or string".to_string(),
+                                actual: format!("{:?}", collection),
+                            }),
+                        }
+                    }
+                    _ => Err(EvalError::InvalidIndexType(format!("{:?}", idx_val))),
+                }
+            }
+            Expr::Unary { op, expr } => {
+                let value = eval_expr_force_async(expr, ctx).await?;
+                eval_unary_op(*op, value)
+            }
+            Expr::Binary { op, left, right } => match op {
+                BinaryOp::And => {
+                    let left_val = eval_expr_force_async(left, ctx).await?;
+                    match left_val {
+                        Value::Bool(false) => Ok(Value::Bool(false)),
+                        Value::Bool(true) => {
+                            let right_val = eval_expr_force_async(right, ctx).await?;
+                            match right_val {
+                                Value::Bool(b) => Ok(Value::Bool(b)),
+                                _ => Err(EvalError::InvalidBinaryOp {
+                                    op: "and".to_string(),
+                                    left: format!("{:?}", left_val),
+                                    right: format!("{:?}", right_val),
+                                }),
+                            }
+                        }
+                        _ => Err(EvalError::InvalidBinaryOp {
+                            op: "and".to_string(),
+                            left: format!("{:?}", left_val),
+                            right: "<unevaluated>".to_string(),
+                        }),
+                    }
+                }
+                BinaryOp::Or => {
+                    let left_val = eval_expr_force_async(left, ctx).await?;
+                    match left_val {
+                        Value::Bool(true) => Ok(Value::Bool(true)),
+                        Value::Bool(false) => {
+                            let right_val = eval_expr_force_async(right, ctx).await?;
+                            match right_val {
+                                Value::Bool(b) => Ok(Value::Bool(b)),
+                                _ => Err(EvalError::InvalidBinaryOp {
+                                    op: "or".to_string(),
+                                    left: format!("{:?}", left_val),
+                                    right: format!("{:?}", right_val),
+                                }),
+                            }
+                        }
+                        _ => Err(EvalError::InvalidBinaryOp {
+                            op: "or".to_string(),
+                            left: format!("{:?}", left_val),
+                            right: "<unevaluated>".to_string(),
+                        }),
+                    }
+                }
+                _ => {
+                    let left_val = eval_expr_force_async(left, ctx).await?;
+                    let right_val = eval_expr_force_async(right, ctx).await?;
+                    eval_binary_op(*op, left_val, right_val)
+                }
+            },
+            Expr::Let {
+                pattern,
+                expr,
+                body,
+                ..
+            } => {
+                let value = eval_expr_force_async(expr, ctx).await?;
+                let bindings = crate::pattern::match_pattern(pattern, &value).map_err(|_| {
+                    EvalError::LetPatternBindFailed {
+                        pattern: format!("{pattern:?}"),
+                        value: format!("{value:?}"),
+                    }
+                })?;
+                let mut new_ctx = ctx.extend();
+                new_ctx.set_many(bindings);
+                eval_expr_force_async(body, &new_ctx).await
+            }
+            Expr::FnApply { func, args } => {
+                let func_val = eval_expr_force_async(func, ctx).await?;
+                let mut arg_vals = Vec::with_capacity(args.len());
+                for arg in args {
+                    arg_vals.push(eval_expr_force_async(arg, ctx).await?);
+                }
+                apply_closure_async_value(func_val, arg_vals, ctx).await
+            }
+            Expr::Call {
+                func,
+                module,
+                arguments,
+            } => {
+                let mut args = Vec::with_capacity(arguments.len());
+                for arg in arguments {
+                    args.push(eval_expr_force_async(arg, ctx).await?);
+                }
+
+                if module.is_none() && func == "__unit" {
+                    return runtime_unit(&args, ctx);
+                }
+                if module.is_none() && func == "__bind" {
+                    return runtime_bind(&args, ctx);
+                }
+                if module.is_none() && func == "__then" {
+                    return runtime_then(&args, ctx);
+                }
+                if module.is_none() && func == "__fail" {
+                    return runtime_fail(&args, ctx);
+                }
+                if module.is_none() && func == "__guard" {
+                    return runtime_guard(&args, ctx);
+                }
+                if let (true, Some(Value::Closure { params, body, env })) =
+                    (module.is_none(), ctx.get(func))
+                {
+                    return apply_closure_async(params, body, env, args, ctx).await;
+                }
+                if module.is_none() && func == "unit" {
+                    return runtime_unit(&args, ctx);
+                }
+                if module.is_none() && func == "bind" {
+                    return runtime_bind(&args, ctx);
+                }
+                if module.is_none() && func == "invoke" {
+                    return runtime_invoke(&args);
+                }
+                if module.is_none() && func == "policy_check" {
+                    return runtime_policy_check(&args, ctx);
+                }
+
+                let qname = qualified_builtin_name(func, module.as_deref());
+                if let Some(result) = dispatch_builtin(&qname, &args, ctx) {
+                    match result {
+                        Err(EvalError::WrongArity {
+                            expected,
+                            actual,
+                            callee: Some(ref name),
+                        }) if actual < expected => {
+                            return Ok(make_partial_builtin(name, &args, expected));
+                        }
+                        other => return other,
+                    }
+                }
+
+                match eval_function_call(func, module.as_deref(), &args, ctx) {
+                    Ok(value) => Ok(value),
+                    Err(EvalError::WrongArity {
+                        expected,
+                        actual,
+                        callee: Some(builtin_name),
+                    }) if actual < expected => {
+                        Ok(make_partial_builtin(&builtin_name, &args, expected))
+                    }
+                    Err(EvalError::UnknownFunction(_)) => match ctx.get(func) {
+                        Some(Value::Closure { params, body, env }) => {
+                            apply_closure_async(params, body, env, args, ctx).await
+                        }
+                        Some(other) => Err(EvalError::TypeMismatch {
+                            expected: "callable".to_string(),
+                            actual: format!("{other:?}"),
+                        }),
+                        None => Err(EvalError::UnknownFunction(func.clone())),
+                    },
+                    Err(e) => Err(e),
+                }
+            }
+            Expr::Constructor { name, fields } => {
+                let mut evaluated_fields = Vec::with_capacity(fields.len());
+                for (field_name, field_expr) in fields {
+                    let value = eval_expr_force_async(field_expr, ctx).await?;
+                    evaluated_fields.push((field_name.clone(), value));
+                }
+                Ok(Value::Variant {
+                    name: name.clone(),
+                    fields: Box::new(evaluated_fields),
+                })
+            }
+            Expr::Match { scrutinee, arms } => {
+                let value = eval_expr_force_async(scrutinee, ctx).await?;
+                for arm in arms {
+                    match crate::pattern::match_pattern(&arm.pattern, &value) {
+                        Ok(bindings) => {
+                            let mut new_ctx = ctx.extend();
+                            for (name, val) in bindings {
+                                new_ctx.set(name, val);
+                            }
+                            return eval_expr_force_async(&arm.body, &new_ctx).await;
+                        }
+                        Err(_) => continue,
+                    }
+                }
+                Err(EvalError::NonExhaustiveMatch {
+                    value: format!("{:?}", value),
+                })
+            }
+            Expr::IfLet {
+                pattern,
+                expr,
+                then_branch,
+                else_branch,
+            } => {
+                let value = eval_expr_force_async(expr, ctx).await?;
+                match crate::pattern::match_pattern(pattern, &value) {
+                    Ok(bindings) => {
+                        let mut new_ctx = ctx.extend();
+                        for (name, val) in bindings {
+                            new_ctx.set(name, val);
+                        }
+                        eval_expr_force_async(then_branch, &new_ctx).await
+                    }
+                    Err(_) => eval_expr_force_async(else_branch, ctx).await,
+                }
+            }
+            Expr::Spawn { workflow_type, .. } => eval_spawn(workflow_type),
+            Expr::Split(expr) => {
+                let value = eval_expr_force_async(expr, ctx).await?;
+                match value {
+                    Value::Instance(instance) => {
+                        let addr = Value::InstanceAddr(instance.addr);
+                        let control = instance.control.map(Value::ControlLink);
+                        Ok(Value::List(Box::new(vec![
+                            addr,
+                            control.unwrap_or(Value::Null),
+                        ])))
+                    }
+                    _ => Err(EvalError::TypeMismatch {
+                        expected: "Instance".to_string(),
+                        actual: format!("{:?}", value),
+                    }),
+                }
+            }
+            Expr::CheckObligation { obligation, .. } => {
+                Ok(Value::Bool(ctx.discharge_obligation(obligation)))
+            }
+            Expr::FnDef {
+                params,
+                return_type: _,
+                body,
+            } => {
+                let closure = Value::Closure {
+                    params: params.clone(),
+                    body: body.clone(),
+                    env: ctx.to_env_frame(),
+                };
+                if ctx.is_pure() {
+                    return Err(EvalError::BoundaryViolation {
+                        value: closure,
+                        context: "closure created inside pure-function boundary".into(),
+                    });
+                }
+                Ok(closure)
+            }
+        }
+    })
+}
+
+fn apply_closure_async_value<'a>(
+    callee: Value,
+    args: Vec<Value>,
+    runtime_ctx: &'a Context,
+) -> EvalBoxFuture<'a> {
+    Box::pin(async move {
+        match callee {
+            Value::Closure { params, body, env } => {
+                apply_closure_async(&params, &body, &env, args, runtime_ctx).await
+            }
+            other => Err(EvalError::NotCallable { value: other }),
+        }
+    })
+}
+
+fn apply_closure_async<'a>(
+    params: &'a [(String, Option<String>)],
+    body: &'a Expr,
+    env: &'a std::sync::Arc<ash_core::env_frame::EnvFrame>,
+    args: Vec<Value>,
+    runtime_ctx: &'a Context,
+) -> EvalBoxFuture<'a> {
+    Box::pin(async move {
+        let validates_hidden_act_env = |params: &[(String, Option<String>)], args: &[Value]| {
+            for ((name, _ty), val) in params.iter().zip(args.iter()) {
+                if name == "__act_env" {
+                    if !matches!(val, Value::ActEnvToken) {
+                        return Err(EvalError::TypeMismatch {
+                            expected: "hidden ActEnv token".to_string(),
+                            actual: format!("{val:?}"),
+                        });
+                    }
+                    if runtime_ctx.act_env().is_none() {
+                        return Err(EvalError::TypeMismatch {
+                            expected: "hidden runtime ActEnv".to_string(),
+                            actual: "missing runtime ActEnv".to_string(),
+                        });
+                    }
+                }
+            }
+            Ok(())
+        };
+
+        if args.len() == params.len() {
+            validates_hidden_act_env(params, &args)?;
+            let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+            for ((name, _ty), val) in params.iter().zip(args) {
+                call_env.insert(name.clone(), val);
+            }
+            let mut call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+            if let Some(policy_evaluator) = runtime_ctx.policy_evaluator() {
+                call_ctx = call_ctx.with_policy_evaluator_arc(policy_evaluator);
+            }
+            if let Some(act_env) = runtime_ctx.act_env() {
+                call_ctx = call_ctx.with_act_env_arc(act_env);
+            }
+            eval_expr_force_async(body, &call_ctx).await
+        } else if args.len() < params.len() {
+            validates_hidden_act_env(params, &args)?;
+            let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+            for ((name, _ty), val) in params.iter().take(args.len()).zip(args.clone()) {
+                new_env.insert(name.clone(), val);
+            }
+            let remaining_params = params[args.len()..].to_vec();
+            Ok(Value::Closure {
+                params: remaining_params,
+                body: Box::new(body.clone()),
+                env: std::sync::Arc::new(new_env),
+            })
+        } else {
+            Err(EvalError::WrongArity {
+                expected: params.len(),
+                actual: args.len(),
+                callee: None,
+            })
+        }
+    })
+}
+
+async fn maybe_execute_invoke_capture_async(
+    value: Value,
+    runtime_ctx: &Context,
+) -> EvalResult<Value> {
+    let Value::List(items) = value else {
+        return Ok(value);
+    };
+    if items.len() != 2 || !matches!(items[0], Value::ActEnvToken) {
+        return Ok(Value::List(items));
+    }
+    let Value::Variant { name, fields } = &items[1] else {
+        return Ok(Value::List(items));
+    };
+    if name != "__InvokeCapture" {
+        return Ok(Value::List(items));
+    }
+
+    let provider = fields
+        .iter()
+        .find(|(field, _)| field == "provider")
+        .and_then(|(_, value)| match value {
+            Value::String(s) => Some(s.clone()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            EvalError::ExecutionFailed("invoke capture missing string provider".to_string())
+        })?;
+    let action = fields
+        .iter()
+        .find(|(field, _)| field == "action")
+        .and_then(|(_, value)| match value {
+            Value::String(s) => Some(s.clone()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            EvalError::ExecutionFailed("invoke capture missing string action".to_string())
+        })?;
+    let args = fields
+        .iter()
+        .find(|(field, _)| field == "args")
+        .and_then(|(_, value)| match value {
+            Value::List(items) => Some((**items).clone()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            EvalError::ExecutionFailed("invoke capture missing list args".to_string())
+        })?;
+
+    let act_env = runtime_ctx.act_env().ok_or_else(|| {
+        EvalError::ExecutionFailed("invoke capture missing hidden runtime ActEnv".to_string())
+    })?;
+    let invoked = act_env
+        .capability_ctx
+        .execute(&provider, &action, &args)
+        .await
+        .map_err(|err| EvalError::ExecutionFailed(err.to_string()))?;
+    Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
+}
+
+pub async fn eval_expr_async(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
+    eval_expr_force_async(expr, ctx).await
+}
+
 pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
     match expr {
         Expr::Literal(value) => Ok(value.clone()),
@@ -511,14 +1386,50 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             // list-concat builtin. Qualified calls (module: Some) always skip this path
             // and go directly to builtin dispatch — the context is not consulted.
             //
+            if module.is_none() && func == "__unit" {
+                return runtime_unit(&args, ctx);
+            }
+
+            if module.is_none() && func == "__bind" {
+                return runtime_bind(&args, ctx);
+            }
+
+            if module.is_none() && func == "__then" {
+                return runtime_then(&args, ctx);
+            }
+
+            if module.is_none() && func == "__fail" {
+                return runtime_fail(&args, ctx);
+            }
+
+            if module.is_none() && func == "__guard" {
+                return runtime_guard(&args, ctx);
+            }
+
             // Note: this early-exit returns apply_closure directly, bypassing the
             // make_partial_builtin path below. Over-application through a closure found
             // here produces WrongArity { callee: None } rather than a partial value;
             // that is handled inside apply_closure itself.
-            if module.is_none()
-                && let Some(Value::Closure { params, body, env }) = ctx.get(func)
+            if let (true, Some(Value::Closure { params, body, env })) =
+                (module.is_none(), ctx.get(func))
             {
-                return apply_closure(params, body, env, args);
+                return apply_closure(params, body, env, args, ctx);
+            }
+
+            if module.is_none() && func == "unit" {
+                return runtime_unit(&args, ctx);
+            }
+
+            if module.is_none() && func == "bind" {
+                return runtime_bind(&args, ctx);
+            }
+
+            if module.is_none() && func == "invoke" {
+                return runtime_invoke(&args);
+            }
+
+            if module.is_none() && func == "policy_check" {
+                return runtime_policy_check(&args, ctx);
             }
 
             // Try builtin dispatch table first (O(1) qualified lookup).
@@ -552,7 +1463,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                     // Not a built-in: try looking up a closure in the context
                     match ctx.get(func) {
                         Some(Value::Closure { params, body, env }) => {
-                            apply_closure(params, body, env, args)
+                            apply_closure(params, body, env, args, ctx)
                         }
                         Some(other) => Err(EvalError::TypeMismatch {
                             expected: "callable".to_string(),
@@ -633,7 +1544,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                         .iter()
                         .map(|arg| eval_expr(arg, ctx))
                         .collect::<Result<Vec<_>, _>>()?;
-                    apply_closure(&params, &body, &env, arg_vals)
+                    apply_closure(&params, &body, &env, arg_vals, ctx)
                 }
                 _ => Err(EvalError::NotCallable { value: callee }),
             }
@@ -910,9 +1821,11 @@ pub fn eval_function_call(
     func: &str,
     module: Option<&str>,
     args: &[Value],
-    _ctx: &Context,
+    ctx: &Context,
 ) -> EvalResult<Value> {
     match (module, func) {
+        (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
+        (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
         (Some("string"), "concat") => {
             let mut result = String::new();
             for arg in args {
@@ -1036,6 +1949,52 @@ pub fn eval_function_call(
             let replacement = expect_string_arg(args, 1, "string")?;
             let text = expect_string_arg(args, 2, "string")?;
             regex_replace(pattern, replacement, text)
+        }
+        (Some("process"), "run") => {
+            if args.len() != 2 {
+                return builtin_arity_error("process::run", 2, args.len());
+            }
+            let cmd = expect_string_arg(args, 0, "string")?;
+            let list = match &args[1] {
+                Value::List(items) => items,
+                other => {
+                    return Err(EvalError::TypeMismatch {
+                        expected: "list".to_string(),
+                        actual: format!("{other:?}"),
+                    });
+                }
+            };
+
+            let mut command = std::process::Command::new(cmd);
+            for item in list.iter() {
+                match item {
+                    Value::String(s) => {
+                        command.arg(s);
+                    }
+                    other => {
+                        return Err(EvalError::TypeMismatch {
+                            expected: "string".to_string(),
+                            actual: format!("{other:?}"),
+                        });
+                    }
+                }
+            }
+
+            let output = command
+                .output()
+                .map_err(|e| EvalError::ExecutionFailed(format!("process::run failed: {e}")))?;
+
+            if output.status.success() {
+                Ok(Value::String(
+                    String::from_utf8_lossy(&output.stdout).to_string(),
+                ))
+            } else {
+                Err(EvalError::ExecutionFailed(format!(
+                    "process::run exited with status {}: {}",
+                    output.status,
+                    String::from_utf8_lossy(&output.stderr)
+                )))
+            }
         }
         // List operations
         (_, "len") => {
@@ -1554,15 +2513,45 @@ fn apply_closure(
     body: &Expr,
     env: &std::sync::Arc<ash_core::env_frame::EnvFrame>,
     args: Vec<Value>,
+    runtime_ctx: &Context,
 ) -> EvalResult<Value> {
+    let validates_hidden_act_env = |params: &[(String, Option<String>)], args: &[Value]| {
+        for ((name, _ty), val) in params.iter().zip(args.iter()) {
+            if name == "__act_env" {
+                if !matches!(val, Value::ActEnvToken) {
+                    return Err(EvalError::TypeMismatch {
+                        expected: "hidden ActEnv token".to_string(),
+                        actual: format!("{val:?}"),
+                    });
+                }
+                if runtime_ctx.act_env().is_none() {
+                    return Err(EvalError::TypeMismatch {
+                        expected: "hidden runtime ActEnv".to_string(),
+                        actual: "missing runtime ActEnv".to_string(),
+                    });
+                }
+            }
+        }
+        Ok(())
+    };
+
     if args.len() == params.len() {
+        validates_hidden_act_env(params, &args)?;
         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
         for ((name, _ty), val) in params.iter().zip(args) {
             call_env.insert(name.clone(), val);
         }
-        let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
-        eval_expr(body, &call_ctx)
+        let mut call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+        if let Some(policy_evaluator) = runtime_ctx.policy_evaluator() {
+            call_ctx = call_ctx.with_policy_evaluator_arc(policy_evaluator);
+        }
+        if let Some(act_env) = runtime_ctx.act_env() {
+            call_ctx = call_ctx.with_act_env_arc(act_env);
+        }
+        let result = eval_expr(body, &call_ctx)?;
+        maybe_execute_invoke_capture(result, &call_ctx)
     } else if args.len() < params.len() {
+        validates_hidden_act_env(params, &args)?;
         // Partial application: bind provided params, keep remaining
         let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
         for ((name, _ty), val) in params.iter().take(args.len()).zip(args.clone()) {
@@ -2627,6 +3616,86 @@ mod tests {
         };
 
         assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(6));
+    }
+
+    #[test]
+    fn task689c_projected_callable_invocation_evaluates_through_fnapply() {
+        let mut ctx = Context::new();
+        let check_closure = Value::Closure {
+            params: vec![("_p".to_string(), None)],
+            body: Box::new(Expr::Literal(Value::Bool(true))),
+            env: std::sync::Arc::new(ash_core::env_frame::EnvFrame::new()),
+        };
+
+        let mut policies = HashMap::new();
+        policies.insert("check".to_string(), check_closure);
+
+        let mut env_record = HashMap::new();
+        env_record.insert("policies".to_string(), Value::Record(Box::new(policies)));
+        ctx.set("env".to_string(), Value::Record(Box::new(env_record)));
+
+        let expr = Expr::FnApply {
+            func: Box::new(Expr::FieldAccess {
+                expr: Box::new(Expr::FieldAccess {
+                    expr: Box::new(Expr::Variable {
+                        name: "env".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    field: "policies".to_string(),
+                }),
+                field: "check".to_string(),
+            }),
+            args: vec![Expr::Literal(Value::String("demo".to_string()))],
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn task689c_policy_check_fails_closed_without_hidden_policy_context() {
+        let ctx = Context::new();
+        let expr = Expr::Call {
+            func: "policy_check".to_string(),
+            module: Some("act".to_string()),
+            arguments: vec![Expr::Literal(Value::String("missing".to_string()))],
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(false));
+    }
+
+    #[test]
+    fn task689c_policy_check_uses_hidden_policy_evaluator() {
+        let mut evaluator = crate::policy::PolicyEvaluator::new();
+        let policy = crate::policy::Policy::new("allow-large")
+            .with_rule(crate::policy::PolicyRule::new(
+                "allow x > 10",
+                Expr::Binary {
+                    op: BinaryOp::Gt,
+                    left: Box::new(Expr::Variable {
+                        name: "x".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    right: Box::new(Expr::Literal(Value::Int(10))),
+                },
+                ash_core::Decision::Permit,
+            ))
+            .with_default(ash_core::Decision::Deny);
+        evaluator.register(policy);
+
+        let mut ctx = Context::new().with_policy_evaluator(evaluator);
+        ctx.set("x".to_string(), Value::Int(15));
+
+        let expr = Expr::Call {
+            func: "policy_check".to_string(),
+            module: Some("act".to_string()),
+            arguments: vec![Expr::Literal(Value::String("allow-large".to_string()))],
+        };
+
+        assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(true));
+
+        let mut denied_ctx = ctx.clone();
+        denied_ctx.set("x".to_string(), Value::Int(1));
+        assert_eq!(eval_expr(&expr, &denied_ctx).unwrap(), Value::Bool(false));
     }
 
     /// SPEC-031 §5.3 – Closure captures the enclosing scope (make_adder pattern).

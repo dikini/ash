@@ -460,6 +460,13 @@ fn contains_policy(expr: &Expr) -> bool {
         | Expr::Literal(_)
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. } => false,
+        Expr::ActBlock { stmts, .. } => stmts.iter().any(|stmt| {
+            let value = match stmt {
+                ash_parser::surface::ActStmt::Bind { value, .. } => value,
+                ash_parser::surface::ActStmt::Return { value, .. } => value,
+            };
+            contains_policy(value)
+        }),
     }
 }
 

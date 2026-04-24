@@ -102,6 +102,8 @@ fn workflow_surface_type_to_type(
                     let (qualified, _) = env
                         .resolve_type(name.as_ref())
                         .map_err(|e| TypeCheckError::TypeError(format!("{e}")))?;
+                    env.check_type_constructor_arity(&qualified, 0)
+                        .map_err(|e| TypeCheckError::TypeError(format!("{e}")))?;
                     if let Some(target) = env.transparent_alias_target(&qualified, &[]) {
                         Ok(target)
                     } else {
@@ -135,6 +137,8 @@ fn workflow_surface_type_to_type(
         ash_parser::surface::Type::Constructor { name, args } => {
             let (qualified, _) = env
                 .resolve_type(name.as_ref())
+                .map_err(|e| TypeCheckError::TypeError(format!("{e}")))?;
+            env.check_type_constructor_arity(&qualified, args.len())
                 .map_err(|e| TypeCheckError::TypeError(format!("{e}")))?;
             let args = args
                 .iter()

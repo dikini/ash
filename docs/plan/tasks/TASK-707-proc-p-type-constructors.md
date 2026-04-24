@@ -1,6 +1,6 @@
 # TASK-707: Register Proc and P type constructors
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -53,12 +53,19 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Typechecker accepts well-formed `Proc<Int>` and `P<String>` annotations.
-- [ ] Typechecker rejects malformed `Proc`/`P` arity.
-- [ ] Existing non-process type constructor behavior is unchanged.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Typechecker accepts well-formed `Proc<Int>` and `P<String>` annotations.
+- [x] Typechecker rejects malformed `Proc`/`P` arity.
+- [x] Existing non-process type constructor behavior is unchanged.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
+
+Verification evidence recorded during completion:
+
+- Red: `cargo test -p ash-typeck --test task_707_proc_type_constructors -- --nocapture` failed before registration because `Proc` and `P` were unbound/mis-arity cases were not reported.
+- Green: `cargo test -p ash-typeck --test task_707_proc_type_constructors -- --nocapture` passed with 8 tests.
+- Targeted gate: `cargo fmt --check && cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings` passed.
+- Final workspace gate: `cargo test --all`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo fmt --check`, `cargo doc --workspace --no-deps`, and `git diff --check` passed.
 
 ## Dependencies for Next Task
 

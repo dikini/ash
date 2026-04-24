@@ -62,6 +62,7 @@ pub fn type_expr_to_type(
                 _ => {
                     // User-defined type with no args - look it up
                     let (qualified, _) = type_env.resolve_type(name)?;
+                    type_env.check_type_constructor_arity(&qualified, 0)?;
                     Ok(Type::Constructor {
                         name: qualified,
                         args: vec![],
@@ -83,6 +84,7 @@ pub fn type_expr_to_type(
                 Ok(Type::Fn(arg_types, Box::new(ret)))
             } else {
                 let (qualified, _) = type_env.resolve_type(name)?;
+                type_env.check_type_constructor_arity(&qualified, args.len())?;
 
                 // Convert all arguments
                 let arg_types: Result<Vec<_>, _> = args
@@ -165,6 +167,14 @@ pub enum TypeInfo {
         /// Fields of the struct
         fields: Vec<(FieldName, Type)>,
     },
+}
+
+impl TypeInfo {
+    fn type_arg_count(&self) -> usize {
+        match self {
+            Self::Enum { params, .. } | Self::Struct { params, .. } => params.len(),
+        }
+    }
 }
 
 /// Internal representation of an interface method signature.
@@ -251,6 +261,11 @@ fn surface_type_to_type(
                     let (qualified, _) = type_env.resolve_type(name.as_ref()).map_err(|e| {
                         TypeEnvError::InvalidDefinition(format!("{e}"), Span::default())
                     })?;
+                    type_env
+                        .check_type_constructor_arity(&qualified, 0)
+                        .map_err(|e| {
+                            TypeEnvError::InvalidDefinition(format!("{e}"), Span::default())
+                        })?;
                     Ok(Type::Constructor {
                         name: qualified,
                         args: vec![],
@@ -283,6 +298,11 @@ fn surface_type_to_type(
                 let (qualified, _) = type_env.resolve_type(name.as_ref()).map_err(|e| {
                     TypeEnvError::InvalidDefinition(format!("{e}"), Span::default())
                 })?;
+                type_env
+                    .check_type_constructor_arity(&qualified, args.len())
+                    .map_err(|e| {
+                        TypeEnvError::InvalidDefinition(format!("{e}"), Span::default())
+                    })?;
                 let args = args
                     .iter()
                     .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
@@ -1099,6 +1119,8 @@ impl TypeEnv {
         self.add_record_type();
         self.add_act_env_type();
         self.add_act_type();
+        self.add_proc_type();
+        self.add_process_handle_type();
         self.add_builtin_capability_symbols();
     }
 
@@ -1232,6 +1254,34 @@ impl TypeEnv {
 
         self.register_type(&act_type)
             .expect("Failed to register Act type");
+    }
+
+    /// Add the Proc<T> type.
+    fn add_proc_type(&mut self) {
+        let proc_type = TypeDef {
+            name: "Proc".to_string(),
+            params: vec!["T".to_string()],
+            body: TypeBody::Struct(vec![]),
+            visibility: ash_core::ast::Visibility::Public,
+            builtin: true,
+        };
+
+        self.register_type(&proc_type)
+            .expect("Failed to register Proc type");
+    }
+
+    /// Add the opaque P<T> process handle type.
+    fn add_process_handle_type(&mut self) {
+        let process_handle_type = TypeDef {
+            name: "P".to_string(),
+            params: vec!["T".to_string()],
+            body: TypeBody::Struct(vec![]),
+            visibility: ash_core::ast::Visibility::Public,
+            builtin: true,
+        };
+
+        self.register_type(&process_handle_type)
+            .expect("Failed to register P type");
     }
 
     /// Check if a type is registered
@@ -1641,6 +1691,40 @@ impl TypeEnv {
             name.to_string(),
             Span::default(),
         ))
+    }
+
+    /// Check the number of type arguments supplied to a known process type constructor.
+    pub fn check_type_constructor_arity(
+        &self,
+        name: &QualifiedName,
+        found_arity: usize,
+    ) -> Result<(), TypeError> {
+        if !matches!(name.name.as_str(), "Proc" | "P") {
+            return Ok(());
+        }
+
+        let (_, type_info) = self.resolve_type(&name.name)?;
+        let expected_arity = if let Some(type_info) = type_info {
+            type_info.type_arg_count()
+        } else if let Some(type_def) = self.ast_types.get(&name.name) {
+            if Self::is_placeholder(type_def) {
+                return Ok(());
+            }
+            type_def.params.len()
+        } else {
+            0
+        };
+
+        if expected_arity != found_arity {
+            return Err(TypeError::ConstructorArityMismatch {
+                name: name.display(),
+                expected_arity,
+                found_arity,
+                span: Span::default(),
+            });
+        }
+
+        Ok(())
     }
 
     /// Unfold a constructor to its definition with type arguments substituted

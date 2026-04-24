@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- NOTE-009: exploratory design note for capability interfaces, Ash-defined capability implementations, resource types/instances/bindings, internal authority, authority provenance, and late binding between interfaces, implementations, and concrete resources.
+
 - TASK-706: added `ash-core` runtime identity and failure carrier substrate for Phase 98, including `RunId`, `ProcessId`, crate-internal `BranchId`, `LexicalFrameId`, `EffectScopeId`, process lifecycle/terminal carriers, structured operational/process failure carriers, and skeleton workflow failure/report carriers without wiring runtime admission or Proc operations.
 
 - SPEC-047: Act Monad specification (draft). Defines `Act<A>` type constructor, `act {}` block expression, `invoke`/`unit`/`bind` builtins, effectful function declarations, purity enforcement, and the unification of pure expression evaluation with effectful workflow execution. 33 tasks across 4 tracks (TASK-672 through TASK-704). Related plan: PLAN-097.

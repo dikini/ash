@@ -3,10 +3,12 @@ use ash_core::{
     Constraint, ControlLink, Effect, Expr, Guard, Pattern, Provenance, Value, Workflow, WorkflowId,
 };
 use ash_interp::RuntimeState;
+use ash_interp::act_env::ActEnv;
 use ash_interp::behaviour::BehaviourContext;
 use ash_interp::capability::{CapabilityContext, CapabilityProvider, MockProvider};
 use ash_interp::context::Context;
 use ash_interp::error::{EvalError, ExecError};
+use ash_interp::eval::eval_expr;
 use ash_interp::execute::{
     execute_workflow_with_behaviour, execute_workflow_with_behaviour_in_state,
 };
@@ -46,6 +48,18 @@ fn execution_contexts() -> (
         PolicyEvaluator::new(),
         BehaviourContext::new(),
     )
+}
+
+fn invoke_expr() -> Expr {
+    Expr::Call {
+        func: "invoke".to_string(),
+        module: None,
+        arguments: vec![
+            Expr::Literal(Value::String("sensor".to_string())),
+            Expr::Literal(Value::String("read".to_string())),
+            Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+        ],
+    }
 }
 
 fn spawn_with_control(continuation: Workflow) -> Workflow {
@@ -887,4 +901,77 @@ async fn retained_completion_write_once_keeps_original_provenance_contents() {
         )
     );
     assert_eq!(runtime_state.retained_completion(&link).await, Some(sealed));
+}
+
+#[tokio::test]
+async fn workflow_can_transport_and_reapply_effectful_closures() {
+    let workflow = Workflow::Let {
+        pattern: Pattern::Variable {
+            name: "compose".to_string(),
+            span: ash_core::ast::Span::default(),
+        },
+        expr: Expr::FnDef {
+            params: vec![("act".to_string(), None)],
+            return_type: None,
+            body: Box::new(Expr::Variable {
+                name: "act".to_string(),
+                span: ash_core::ast::Span::default(),
+            }),
+        },
+        continuation: Box::new(Workflow::Ret {
+            expr: Expr::FnApply {
+                func: Box::new(Expr::FnApply {
+                    func: Box::new(Expr::Variable {
+                        name: "compose".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    }),
+                    args: vec![invoke_expr()],
+                }),
+                args: vec![],
+            },
+        }),
+    };
+
+    let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
+    let runtime_state = RuntimeState::new().with_provider(
+        "sensor",
+        Arc::new(
+            MockProvider::new("sensor", Effect::Operational)
+                .with_execute_result(Ok(Value::String("read-result".to_string()))),
+        ),
+    );
+
+    let result = execute_workflow_with_behaviour_in_state(
+        &workflow,
+        ctx,
+        &cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        &runtime_state,
+    )
+    .await
+    .expect("workflow should transport and reapply effectful closures");
+
+    assert!(
+        matches!(result, Value::Closure { .. }),
+        "workflow should transport the public opaque Act closure until an ActEnv forces it, got {result:?}"
+    );
+
+    let act_env = ActEnv::from_runtime_state(&runtime_state, policy_eval, Provenance::new()).await;
+    let forced = eval_expr(
+        &Expr::FnApply {
+            func: Box::new(Expr::Literal(result)),
+            args: vec![Expr::Literal(Value::ActEnvToken)],
+        },
+        &Context::new().with_act_env(act_env),
+    )
+    .expect("transported effectful closure should force through the hidden runtime ActEnv");
+
+    assert_eq!(
+        forced,
+        Value::List(Box::new(vec![
+            Value::ActEnvToken,
+            Value::String("read-result".to_string())
+        ]))
+    );
 }

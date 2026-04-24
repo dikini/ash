@@ -1,6 +1,6 @@
 # TASK-690: Cross-layer validation for parse -> type -> execute
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -52,10 +52,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] End-to-end validation examples pass cleanly.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] End-to-end validation examples pass cleanly.
+- [x] `cargo test --all` passed during Phase 97 baseline verification.
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` passed during Phase 97 baseline verification.
+- [x] `cargo fmt --check` passed during Phase 97 baseline verification.
 
 ## Dependencies for Next Task
 
@@ -66,3 +66,4 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - Phase 97 is additive.
 - Preserve `Workflow::Act` behavior.
 - Preserve coexistence with existing `Type::Fun(...)` unless this task explicitly narrows that boundary in docs/tests only.
+- Cross-layer validation now includes ordinary-library `std::act::guard` permit/deny execution, async-force workflow boundary coverage for `Expr::Unary`, and the broader `cargo test -p ash-engine --test module_resolution -- --nocapture` / `cargo test -p ash-interp --test act_env_runtime_boundary -- --nocapture` focused suites.

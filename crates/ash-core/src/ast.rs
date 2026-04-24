@@ -732,6 +732,8 @@ pub struct TypeDef {
     pub body: TypeBody,
     /// Visibility of the type
     pub visibility: Visibility,
+    /// Whether the type is declared as a runtime/engine managed builtin substrate.
+    pub builtin: bool,
 }
 
 /// Body of a type definition

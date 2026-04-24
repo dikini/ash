@@ -46,7 +46,7 @@ impl ProcessConfig {
 
     /// Set command timeout in seconds
     #[must_use]
-    pub fn with_timeout(mut self, secs: u64) -> Self {
+    pub const fn with_timeout(mut self, secs: u64) -> Self {
         self.timeout_secs = secs;
         self
     }
@@ -84,18 +84,18 @@ impl ProcessProvider {
 
     /// Create a new process provider with custom configuration
     #[must_use]
-    pub fn with_config(config: ProcessConfig) -> Self {
+    pub const fn with_config(config: ProcessConfig) -> Self {
         Self { config }
     }
 
     /// Validate that the command is in the allowed list
     fn validate_command(&self, cmd: &str) -> Result<(), CapabilityError> {
-        if let Some(ref allowed) = self.config.allowed_commands {
-            if !allowed.iter().any(|a| a == cmd) {
-                return Err(CapabilityError::PermissionDenied(format!(
-                    "Command '{cmd}' not in allowed list"
-                )));
-            }
+        if let Some(ref allowed) = self.config.allowed_commands
+            && !allowed.iter().any(|a| a == cmd)
+        {
+            return Err(CapabilityError::PermissionDenied(format!(
+                "Command '{cmd}' not in allowed list"
+            )));
         }
         Ok(())
     }
@@ -165,13 +165,11 @@ impl ProcessProvider {
                 self.config.timeout_secs
             ))
         })?
-        .map_err(|e| {
-            CapabilityError::ExecutionFailed(format!("Command '{cmd}' failed: {e}"))
-        })?;
+        .map_err(|e| CapabilityError::ExecutionFailed(format!("Command '{cmd}' failed: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        let exit_code = output.status.code().unwrap_or(-1) as i64;
+        let exit_code = i64::from(output.status.code().unwrap_or(-1));
 
         let mut result = HashMap::new();
         result.insert("stdout".to_string(), Value::String(stdout));
@@ -182,13 +180,11 @@ impl ProcessProvider {
     }
 
     /// Check if a command exists (observe)
-    fn handle_which(&self, args: &[Value]) -> Result<Value, CapabilityError> {
+    fn handle_which(args: &[Value]) -> Result<Value, CapabilityError> {
         let cmd = Self::extract_cmd(args)?;
 
         // Use `which` to check if command exists
-        let output = std::process::Command::new("which")
-            .arg(&cmd)
-            .output();
+        let output = std::process::Command::new("which").arg(&cmd).output();
 
         match output {
             Ok(o) if o.status.success() => {
@@ -208,7 +204,7 @@ impl Default for ProcessProvider {
 
 #[async_trait]
 impl CapabilityProvider for ProcessProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "process"
     }
 
@@ -241,7 +237,7 @@ impl CapabilityProvider for ProcessProvider {
     async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError> {
         match action_name {
             "run" => self.handle_run(args).await,
-            "which" => self.handle_which(args),
+            "which" => Self::handle_which(args),
             _ => Err(CapabilityError::NotAvailable(format!(
                 "Unknown process action: {action_name}"
             ))),
@@ -289,16 +285,14 @@ mod tests {
 
     #[test]
     fn test_validate_command_allowed() {
-        let config =
-            ProcessConfig::new().with_allowed_commands(vec!["echo".to_string()]);
+        let config = ProcessConfig::new().with_allowed_commands(vec!["echo".to_string()]);
         let provider = ProcessProvider::with_config(config);
         provider.validate_command("echo").unwrap();
     }
 
     #[test]
     fn test_validate_command_blocked() {
-        let config =
-            ProcessConfig::new().with_allowed_commands(vec!["echo".to_string()]);
+        let config = ProcessConfig::new().with_allowed_commands(vec!["echo".to_string()]);
         let provider = ProcessProvider::with_config(config);
         let err = provider.validate_command("rm").unwrap_err();
         assert!(matches!(err, CapabilityError::PermissionDenied(_)));
@@ -352,10 +346,7 @@ mod tests {
 
     #[test]
     fn test_extract_args_wrong_type() {
-        let args = [
-            Value::String("echo".to_string()),
-            Value::Int(42),
-        ];
+        let args = [Value::String("echo".to_string()), Value::Int(42)];
         let err = ProcessProvider::extract_args(&args).unwrap_err();
         assert!(matches!(err, CapabilityError::InvalidArgument(_)));
     }
@@ -388,8 +379,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_blocked_command() {
-        let config =
-            ProcessConfig::new().with_allowed_commands(vec!["echo".to_string()]);
+        let config = ProcessConfig::new().with_allowed_commands(vec!["echo".to_string()]);
         let provider = ProcessProvider::with_config(config);
         let err = provider
             .execute("run", &[Value::String("rm".to_string())])
@@ -426,7 +416,9 @@ mod tests {
                 "run",
                 &[
                     Value::String("ls".to_string()),
-                    Value::List(Box::new(vec![Value::String("/nonexistent_path_xyz".to_string())])),
+                    Value::List(Box::new(vec![Value::String(
+                        "/nonexistent_path_xyz".to_string(),
+                    )])),
                 ],
             )
             .await

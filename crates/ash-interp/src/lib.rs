@@ -15,6 +15,7 @@
 //! # });
 //! ```
 
+pub mod act_env;
 pub mod behaviour;
 pub mod capability;
 pub mod capability_policy;
@@ -46,6 +47,7 @@ pub mod typed_provider;
 pub mod yield_routing;
 pub mod yield_state;
 
+pub use act_env::ActEnv;
 pub use behaviour::{
     BehaviourContext, BehaviourProvider, BehaviourRegistry, BidirectionalBehaviour,
     BidirectionalBehaviourProvider, MockBehaviourProvider, MockBidirectionalProvider,
@@ -68,7 +70,7 @@ pub use error::{
     EvalError, EvalResult, ExecError, ExecResult, PatternError, PatternResult, ValidationError,
     ValidationResult,
 };
-pub use eval::eval_expr;
+pub use eval::{eval_expr, eval_expr_async};
 pub use exec_send::execute_send;
 pub use execute::{
     execute_simple, execute_simple_in_state, execute_with_bindings_in_state, execute_workflow,

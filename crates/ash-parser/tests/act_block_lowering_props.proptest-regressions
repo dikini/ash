@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc efde02fae17d18b890f9dd2f388a1da0d2c89ab576e56be7ba6f74e762762168 # shrinks to stmts = [Return { value: Literal(Int(42)), span: Span { start: 0, end: 0, line: 0, column: 0 } }, Return { value: Literal(Int(99)), span: Span { start: 0, end: 0, line: 0, column: 0 } }]

@@ -1,13 +1,10 @@
-//! TASK-635: Imported builtin signatures in [`Engine::check`].
+//! Imported callable signatures in [`Engine::check`].
 //!
-//! These tests verify that imported `builtin fn` declarations carry their
-//! declared type signatures into the typechecker, instead of arity-only
-//! synthetic types (fresh type variables).
+//! These tests verify that imported callable declarations carry their declared
+//! type signatures into the typechecker, instead of arity-only synthetic types
+//! (fresh type variables).
 //!
-//! Test 1: `len<a>(list: List<a>) -> Int` typechecks `len([1,2,3])` as `Int`.
-//! Test 2: Signature stored and typechecks when types match
-//! Test 3: Non-builtin callables still use arity-only fallback.
-//! Test 4: Signatures with unknown types (e.g. `Record`) fall back gracefully.
+//! Coverage includes both `builtin fn` imports and ordinary `pub fn` imports.
 
 // ---------------------------------------------------------------------------
 // Test 1: Generic builtin fn with proper signature typechecks correctly
@@ -142,41 +139,46 @@ fn non_builtin_callable_uses_arity_only_fallback() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Signatures with unknown types fall back gracefully
+// Test 4: Declared signatures with unknown types are hard failures
 // ---------------------------------------------------------------------------
 
-/// Verify that if a builtin fn signature references a type the typechecker
-/// doesn't know about (e.g. `Record`), the system falls back to an arity-only
-/// synthetic type rather than failing.
+/// Verify that if an imported builtin fn declaration references a type the
+/// typechecker does not know about, `Engine::check` fails rather than silently
+/// replacing the declared signature with an arity-only synthetic type.
 #[test]
-fn builtin_fn_signature_with_unknown_type_falls_back_gracefully() {
+fn builtin_fn_signature_with_unknown_type_fails_check() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
 
     let mymod = dir.join("mymod.ash");
-    std::fs::write(&mymod, "pub builtin fn keys(r: Record) -> List<String>;\n")
-        .expect("write mymod.ash");
+    std::fs::write(
+        &mymod,
+        "pub builtin fn keys(r: NotRegistered) -> List<String>;\n",
+    )
+    .expect("write mymod.ash");
 
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use mymod::{keys}\nworkflow main { ret keys(record(\"a\", 1)) }\n",
+        "use mymod::{keys}\nworkflow main { ret keys(1) }\n",
     )
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
 
-    // The signature IS recorded (it was parsed)
     assert!(
         workflow.imported_builtin_signatures.contains_key("keys"),
         "Expected 'keys' in imported_builtin_signatures"
     );
 
-    // Typecheck should still pass via fallback to arity-only synthetic
-    engine
+    let err = engine
         .check(&mut workflow)
-        .expect("typecheck should pass with arity-only fallback for unknown type in signature");
+        .expect_err("unknown type in declared imported signature must fail check");
+    assert!(
+        err.to_string().contains("NotRegistered"),
+        "error should mention unknown type, got: {err}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -253,4 +255,70 @@ fn multiple_builtin_fn_signatures_coexist() {
     engine
         .check(&mut workflow)
         .expect("typecheck should pass for add(1, mul(2, 3))");
+}
+
+// ---------------------------------------------------------------------------
+// Test 7: Imported ordinary pub fn signatures are preserved
+// ---------------------------------------------------------------------------
+
+/// Verify that imported ordinary `pub fn` signatures are preserved for public
+/// type aliases and are used during checking rather than falling back to arity.
+#[test]
+fn ordinary_fn_signature_typechecks_with_public_type_identity_import() {
+    let tmp_dir = tempfile::tempdir().expect("temp dir created");
+    let dir = tmp_dir.path();
+
+    let utils = dir.join("utils.ash");
+    std::fs::write(
+        &utils,
+        "pub type Visible = Visible { value: Int };\npub fn keep(x: Visible) -> Visible { x }\n",
+    )
+    .expect("write utils.ash");
+
+    let caller = dir.join("caller.ash");
+    std::fs::write(
+        &caller,
+        "use utils::{Visible, keep}\nworkflow main(x: Visible) -> Visible { ret keep(x) }\n",
+    )
+    .expect("write caller.ash");
+
+    let engine = ash_engine::Engine::new().build().expect("engine builds");
+    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+
+    assert!(
+        workflow.imported_fn_signatures.contains_key("keep"),
+        "Expected 'keep' in imported_fn_signatures"
+    );
+
+    engine.check(&mut workflow).expect(
+        "typecheck should pass for ordinary pub fn signature using imported public type identity",
+    );
+}
+
+/// Private/opaque type identities are importable so public callable signatures
+/// can name them without exposing constructors or representations.
+#[test]
+fn private_act_alias_identity_imports_for_public_callable_signatures() {
+    let tmp_dir = tempfile::tempdir().expect("temp dir created");
+    let dir = tmp_dir.path();
+
+    let utils = dir.join("utils.ash");
+    std::fs::write(
+        &utils,
+        "builtin type ActEnv;\ntype Act<A> = ActEnv -> (ActEnv, A);\npub fn keep(x: Act<Int>) -> Act<Int> { x }\n",
+    )
+    .expect("write utils.ash");
+
+    let caller = dir.join("caller.ash");
+    std::fs::write(&caller, "use utils::{Act, keep}\nworkflow main { ret 0 }\n")
+        .expect("write caller.ash");
+
+    let engine = ash_engine::Engine::new().build().expect("engine builds");
+    let mut workflow = engine
+        .parse_file(&caller)
+        .expect("private Act identity should import cleanly");
+
+    engine
+        .check(&mut workflow)
+        .expect("public callable signature should typecheck using imported opaque Act identity");
 }

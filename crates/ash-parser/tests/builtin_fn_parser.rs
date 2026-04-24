@@ -81,6 +81,26 @@ fn parse_builtin_fn_multiple_params() {
 // 5. builtin fn with no params
 // ---------------------------------------------------------------------------
 #[test]
+fn parse_pub_builtin_fn_with_keyword_name_then() {
+    let def = parse_builtin("pub builtin fn then<A, B>(ma: Act<A>, mb: Act<B>) -> Act<B>;");
+    let Definition::BuiltinFn(f) = def else {
+        panic!("expected BuiltinFn definition, got: {def:?}");
+    };
+    assert_eq!(f.name.as_ref(), "then");
+    assert_eq!(f.params.len(), 2);
+}
+
+#[test]
+fn parse_pub_builtin_fn_with_keyword_name_guard() {
+    let def = parse_builtin("pub builtin fn guard<A>(p: Policy, ma: Act<A>) -> Act<A>;");
+    let Definition::BuiltinFn(f) = def else {
+        panic!("expected BuiltinFn definition, got: {def:?}");
+    };
+    assert_eq!(f.name.as_ref(), "guard");
+    assert_eq!(f.params.len(), 2);
+}
+
+#[test]
 fn parse_builtin_fn_no_params() {
     let def = parse_builtin("builtin fn magic() -> Int;");
     let Definition::BuiltinFn(f) = def else {

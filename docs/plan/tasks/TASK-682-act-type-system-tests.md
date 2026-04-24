@@ -1,6 +1,6 @@
 # TASK-682: Type-system tests for purity rejection and Act inference
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -52,10 +52,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Phase-97 type-system test suite passes.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Phase-97 type-system test suite passes.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

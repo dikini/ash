@@ -77,6 +77,8 @@ pub enum Value {
         body: Box<crate::ast::Expr>,
         env: std::sync::Arc<crate::env_frame::EnvFrame>,
     },
+    /// Hidden runtime-only Act environment carrier token.
+    ActEnvToken,
 }
 
 /// Handle to a stream that can be consumed incrementally
@@ -253,6 +255,7 @@ impl std::fmt::Display for Value {
             Value::Closure { params, .. } => {
                 write!(f, "<closure({})>", params.len())
             }
+            Value::ActEnvToken => write!(f, "<act-env>"),
         }
     }
 }
@@ -263,8 +266,8 @@ impl std::fmt::Display for Value {
 impl Serialize for Value {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Value::Closure { .. } => Err(serde::ser::Error::custom(
-                "Value::Closure cannot be serialized",
+            Value::Closure { .. } | Value::ActEnvToken => Err(serde::ser::Error::custom(
+                "runtime-only value cannot be serialized",
             )),
             Value::Int(v) => {
                 serde::Serialize::serialize(&serde_helper::SerializableValue::Int(*v), serializer)
@@ -412,6 +415,34 @@ mod tests {
                 ]
             },
         )
+    }
+
+    #[test]
+    fn value_enum_shape_remains_closed_to_runtime_only_types() {
+        fn classify(value: Value) -> &'static str {
+            match value {
+                Value::Int(_) => "Int",
+                Value::Float(_) => "Float",
+                Value::String(_) => "String",
+                Value::Bool(_) => "Bool",
+                Value::Null => "Null",
+                Value::Time(_) => "Time",
+                Value::Ref(_) => "Ref",
+                Value::List(_) => "List",
+                Value::Record(_) => "Record",
+                Value::Cap(_) => "Cap",
+                Value::Variant { .. } => "Variant",
+                Value::Instance(_) => "Instance",
+                Value::InstanceAddr(_) => "InstanceAddr",
+                Value::ControlLink(_) => "ControlLink",
+                Value::Stream(_) => "Stream",
+                Value::Closure { .. } => "Closure",
+                Value::ActEnvToken => "ActEnvToken",
+            }
+        }
+
+        assert_eq!(classify(Value::Null), "Null");
+        assert_eq!(classify(Value::ActEnvToken), "ActEnvToken");
     }
 
     // Serde Roundtrip Tests

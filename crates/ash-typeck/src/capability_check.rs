@@ -788,6 +788,19 @@ impl CapabilityChecker {
                 }
                 Ok(())
             }
+
+            // TODO(TASK-674): Act block capability checking
+            Expr::ActBlock { stmts, .. } => {
+                use ash_parser::surface::ActStmt;
+                for stmt in stmts {
+                    let value = match stmt {
+                        ActStmt::Bind { value, .. } => value,
+                        ActStmt::Return { value, .. } => value,
+                    };
+                    self.verify_expr(value)?;
+                }
+                Ok(())
+            }
         }
     }
 

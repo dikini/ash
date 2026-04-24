@@ -1,26 +1,33 @@
 -- Act monad helpers
 --
 -- Phase 97 library surface for effectful computations.
--- These remain ordinary Ash functions in the stdlib surface.
+-- Runtime-managed substrate:
+--   builtin type ActEnv
+--   type Act<A> = ActEnv -> (ActEnv, A)
 
-pub fn unit<A>(value: A) -> Act<A> {
-    |env| => Ok { value: (value, env) }
+builtin type ActEnv;
+type Act<A> = ActEnv -> (ActEnv, A);
+pub type Policy = String;
+
+builtin fn __unit<A>(v: A) -> Act<A>;
+builtin fn __bind<A, B>(ma: Act<A>, f: A -> Act<B>) -> Act<B>;
+builtin fn __then<A, B>(ma: Act<A>, mb: Act<B>) -> Act<B>;
+builtin fn __fail<A>(error: String) -> Act<A>;
+builtin fn __guard<A>(p: String, ma: Act<A>) -> Act<A>;
+pub builtin fn policy_check(p: String) -> Bool;
+
+pub fn unit<A>(v: A) -> Act<A> {
+    __unit(v)
 }
 
-pub fn bind<A, B>(ma: Act<A>, f: Fn(A) -> Act<B>) -> Act<B> {
-    |env| => match ma(env) {
-        Ok { value: (a, next_env) } => f(a)(next_env),
-        Err { error: e } => Err { error: e }
-    }
+pub fn bind<A, B>(ma: Act<A>, f: A -> Act<B>) -> Act<B> {
+    __bind(ma, f)
 }
 
 pub fn then<A, B>(ma: Act<A>, mb: Act<B>) -> Act<B> {
-    bind(ma, |_a| => mb)
+    __then(ma, mb)
 }
 
-pub fn guard<A>(policy: Policy, ma: Act<A>) -> Act<A> {
-    |env| => match env.policies.check(policy) {
-        Deny(reason) => Err { error: PolicyViolation(reason) },
-        Allow => ma(env)
-    }
+pub fn guard<A>(p: String, ma: Act<A>) -> Act<A> {
+    act::__guard(p, ma)
 }

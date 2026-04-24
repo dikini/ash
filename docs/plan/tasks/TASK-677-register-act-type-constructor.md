@@ -1,6 +1,6 @@
 # TASK-677: Register Act type constructor
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -49,10 +49,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Type environment resolves `Act<T>` as a constructor application.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Type environment resolves `Act<T>` as a constructor application.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

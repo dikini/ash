@@ -75,6 +75,10 @@ add(1, 2)
 
 When `add` resolves to a closure value, the application extends the closure's captured environment with parameter bindings and evaluates the body.
 
+`Expr::Call` remains the shared dispatch path for pure builtins and the distinguished runtime
+primitive `invoke`; `Expr::FnApply` remains reserved for user-defined functions and closures. No
+`Expr::Invoke` variant is introduced.
+
 ### 4.5 Higher-Order Functions
 
 Local closures can be passed as arguments and returned from calls. All function values here are local let-bindings (not module-level functions, which are never reified as closures per §3.1):
@@ -118,6 +122,7 @@ Closures respect the three-vertex model:
 
 - **Closures defined inside `fn` context** have type `Type::Fn(params, ret)` (pure). They can only capture pure values.
 - **Closures defined inside `workflow` context** have type `Type::Fun(params, ret, effect)` where `effect >= Epistemic`. The type checker prevents passing these into pure `fn` parameters that expect `Type::Fn`.
+- `Expr::Call` is the shared dispatch path for pure builtins and the distinguished runtime primitive `invoke`; `Expr::FnApply` is reserved for user-defined functions and closures.
 - This uses the **existing** `Type::Fn` / `Type::Fun` split in `ash_typeck` (see §6).
 
 **Prohibited escape cases and enforcement points:**

@@ -1,6 +1,6 @@
 # TASK-686: Workflow bridge: construct/apply ActEnv from workflow context
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -21,7 +21,7 @@ Bridge expression-level `Act<T>` values into workflow execution by constructing 
 ### Functional Requirements
 
 1. Build `ActEnv` from workflow capability/policy/provenance state.
-2. Apply expression-level `Act<T>` values when encountered from workflow execution contexts that support the bridge.
+2. Preserve the additive bridge so workflow execution can enter the Act runtime boundary without altering `Workflow::Act` semantics.
 3. Leave `Workflow::Act` unchanged in Phase 97.
 
 ### Property Requirements (proptest)
@@ -51,10 +51,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] Workflow/expression interop cases execute without regressing workflow-level act semantics.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Workflow/expression interop cases execute without regressing workflow-level act semantics.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

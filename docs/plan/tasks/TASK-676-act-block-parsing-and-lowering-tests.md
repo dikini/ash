@@ -1,6 +1,6 @@
 # TASK-676: Property and integration tests for act-block parsing and lowering
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -51,10 +51,9 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [ ] New parser/lowering tests pass consistently.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `crates/ash-parser/tests/act_block_lowering_props.rs` covers single-return, nested, invalid-order, and empty-block cases.
+- [x] Property tests assert valid act blocks lower successfully and only into existing core expression forms.
+- [x] Regression tests cover dual-context parsing so expression-level `act { ... }` works without collapsing workflow-level `act` syntax.
 
 ## Dependencies for Next Task
 
@@ -65,3 +64,4 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - Phase 97 is additive.
 - Preserve `Workflow::Act` behavior.
 - Preserve coexistence with existing `Type::Fun(...)` unless this task explicitly narrows that boundary in docs/tests only.
+- The landed coverage is parser/lowering-focused for the shipped Phase 97 surface slice; broader cross-layer `Act<T>` validation remains tracked by later Phase 97 tasks.

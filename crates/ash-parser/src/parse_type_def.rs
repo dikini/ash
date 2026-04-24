@@ -25,6 +25,8 @@ pub struct TypeDef {
     pub body: TypeBody,
     /// Visibility of the type
     pub visibility: Visibility,
+    /// Whether the type is declared as runtime-managed builtin substrate.
+    pub builtin: bool,
 }
 
 /// Body of a type definition
@@ -110,6 +112,10 @@ pub fn parse_type_def(input: &mut ParseInput) -> ModalResult<TypeDef> {
     let visibility = parse_visibility(input)?;
     skip_whitespace_and_comments(input);
 
+    // Parse optional builtin modifier.
+    let is_builtin = keyword(input, "builtin").is_ok();
+    skip_whitespace_and_comments(input);
+
     // Parse "type" keyword
     keyword(input, "type")?;
     skip_whitespace_and_comments(input);
@@ -122,22 +128,33 @@ pub fn parse_type_def(input: &mut ParseInput) -> ModalResult<TypeDef> {
     let params = parse_type_params(input)?;
     skip_whitespace_and_comments(input);
 
-    // Parse "="
-    literal_str("=").parse_next(input)?;
-    skip_whitespace_and_comments(input);
+    let body = if literal_str(";").parse_next(input).is_ok() {
+        if !is_builtin {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+        TypeBody::Struct(vec![])
+    } else {
+        // Parse "="
+        literal_str("=").parse_next(input)?;
+        skip_whitespace_and_comments(input);
 
-    // Parse type body
-    let body = parse_type_body(input)?;
-    skip_whitespace_and_comments(input);
+        // Parse type body
+        let body = parse_type_body(input)?;
+        skip_whitespace_and_comments(input);
 
-    // Parse trailing semicolon
-    literal_str(";").parse_next(input)?;
+        // Parse trailing semicolon
+        literal_str(";").parse_next(input)?;
+        body
+    };
 
     Ok(TypeDef {
         name: name.to_string(),
         params,
         body,
         visibility,
+        builtin: is_builtin,
     })
 }
 
@@ -462,13 +479,63 @@ fn parse_alias_body(input: &mut ParseInput) -> ModalResult<TypeBody> {
 fn parse_type_expr(input: &mut ParseInput) -> ModalResult<TypeExpr> {
     skip_whitespace_and_comments(input);
 
-    alt((
+    let lhs = alt((
+        parse_fn_type,
         parse_tuple_type,
         parse_record_type,
         parse_constructor_type,
         parse_named_type,
     ))
-    .parse_next(input)
+    .parse_next(input)?;
+
+    skip_whitespace_and_comments(input);
+    if literal_str("->").parse_next(input).is_ok() {
+        skip_whitespace_and_comments(input);
+        let rhs = parse_type_expr(input)?;
+        Ok(TypeExpr::Constructor {
+            name: "Fn".to_string(),
+            args: vec![lhs, rhs],
+        })
+    } else {
+        Ok(lhs)
+    }
+}
+
+/// Parse a function type: `Fn(Int, String) -> Bool`
+fn parse_fn_type(input: &mut ParseInput) -> ModalResult<TypeExpr> {
+    let checkpoint = input.checkpoint();
+
+    if literal_str("Fn").parse_next(input).is_err() {
+        input.reset(&checkpoint);
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    skip_whitespace_and_comments(input);
+    literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let params = if literal_str(")").parse_next(input).is_ok() {
+        Vec::new()
+    } else {
+        let params = separated(1.., parse_type_expr, parse_type_arg_separator).parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        literal_str(")").parse_next(input)?;
+        params
+    };
+
+    skip_whitespace_and_comments(input);
+    literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ret = parse_type_expr(input)?;
+
+    let mut args = params;
+    args.push(ret);
+    Ok(TypeExpr::Constructor {
+        name: "Fn".to_string(),
+        args,
+    })
 }
 
 /// Parse a named type: `Int`, `String`, `T`
@@ -687,6 +754,31 @@ mod tests {
             }
             _ => panic!("Expected alias body, got: {:?}", type_def.body),
         }
+    }
+
+    #[test]
+    fn task689d_parse_builtin_type_actenv() {
+        let mut input = new_input("builtin type ActEnv;");
+        let result = parse_type_def(&mut input);
+        assert!(
+            result.is_ok(),
+            "builtin type syntax should parse for runtime-managed Act substrate: {:?}",
+            result
+        );
+        let type_def = result.unwrap();
+        assert!(type_def.builtin);
+        assert_eq!(type_def.name, "ActEnv");
+    }
+
+    #[test]
+    fn task689d_parse_act_alias_as_state_threading_function_type() {
+        let mut input = new_input("type Act<A> = ActEnv -> (ActEnv, A);");
+        let result = parse_type_def(&mut input);
+        assert!(
+            result.is_ok(),
+            "Act alias should parse as state-threading function type: {:?}",
+            result
+        );
     }
 
     #[test]

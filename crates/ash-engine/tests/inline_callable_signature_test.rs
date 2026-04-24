@@ -5,6 +5,7 @@
 //!    (type params, param types, return type).
 //! 2. User-defined callables (`pub fn` with body) have `signature: None`.
 
+use ash_engine::module_loader::CallableSignature;
 use ash_parser::surface::Type;
 use std::io::Write;
 
@@ -13,8 +14,8 @@ use std::io::Write;
 // ---------------------------------------------------------------------------
 
 /// Verify that parsing `pub builtin fn len<a>(list: List<a>) -> Int;` produces
-/// an `InlineCallable` whose `signature` is `Some(BuiltinFnDef)` with the
-/// correct `type_params`, parameter types, and return type.
+/// an `InlineCallable` whose `signature` is `Some(CallableSignature::Builtin(_))`
+/// with the correct `type_params`, parameter types, and return type.
 #[test]
 fn builtin_fn_signature_preserves_type_params_and_return_type() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
@@ -58,10 +59,16 @@ fn builtin_fn_signature_preserves_type_params_and_return_type() {
     assert_eq!(callable.params, vec!["list"]);
 
     // Verify signature is present
-    let sig = callable
+    let sig = match callable
         .signature
         .as_ref()
-        .expect("builtin fn callable should have a signature");
+        .expect("builtin fn callable should have a signature")
+    {
+        CallableSignature::Builtin(sig) => sig,
+        other @ CallableSignature::Function(_) => {
+            panic!("expected builtin callable signature, got: {other:?}")
+        }
+    };
 
     // Verify type params
     assert_eq!(
@@ -114,9 +121,9 @@ fn builtin_fn_signature_preserves_type_params_and_return_type() {
 // Test 2: User-defined callable (pub fn with body) has signature: None
 // ---------------------------------------------------------------------------
 
-/// Verify that `pub fn` callables (with a body) have `signature: None`.
+/// Verify that `pub fn` callables (with a body) preserve a `CallableSignature::Function`.
 #[test]
-fn user_defined_callable_has_no_signature() {
+fn user_defined_callable_has_function_signature() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
 
@@ -148,12 +155,16 @@ fn user_defined_callable_has_no_signature() {
         callable.kind,
     );
 
-    // Verify signature is None
-    assert!(
-        callable.signature.is_none(),
-        "user-defined callable should have signature: None, got: {:?}",
-        callable.signature,
-    );
+    // Verify signature is preserved for ordinary pub fn callables
+    match callable.signature.as_ref() {
+        Some(CallableSignature::Function(sig)) => {
+            assert_eq!(sig.name.as_ref(), "double");
+            assert_eq!(sig.params.len(), 1);
+        }
+        other => {
+            panic!("user-defined callable should have CallableSignature::Function, got: {other:?}")
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -189,10 +200,16 @@ fn builtin_fn_without_type_params_has_signature() {
         .get("add")
         .expect("'add' should be in imported_callables");
 
-    let sig = callable
+    let sig = match callable
         .signature
         .as_ref()
-        .expect("builtin fn should have a signature");
+        .expect("builtin fn should have a signature")
+    {
+        CallableSignature::Builtin(sig) => sig,
+        other @ CallableSignature::Function(_) => {
+            panic!("expected builtin callable signature, got: {other:?}")
+        }
+    };
 
     // No type params
     assert!(
@@ -249,10 +266,16 @@ fn glob_imported_builtin_fn_preserves_signature() {
         .get("map")
         .expect("'map' should be in imported_callables");
 
-    let sig = callable
+    let sig = match callable
         .signature
         .as_ref()
-        .expect("glob-imported builtin fn should have a signature");
+        .expect("glob-imported builtin fn should have a signature")
+    {
+        CallableSignature::Builtin(sig) => sig,
+        other @ CallableSignature::Function(_) => {
+            panic!("expected builtin callable signature, got: {other:?}")
+        }
+    };
 
     // Two type params
     assert_eq!(sig.type_params.len(), 2);

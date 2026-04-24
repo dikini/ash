@@ -1,7 +1,7 @@
 # PLAN-097: Act Monad Implementation
 
 **Date:** 2026-04-22
-**Status:** Draft
+**Status:** Complete
 **Depends on:** SPEC-047, Phase 96 (complete)
 **Related:** NOTE-005, SPEC-001/002/003/004/027/031
 
@@ -68,11 +68,16 @@ Prerequisite: Tracks A-C complete.
 | Task | Description | Est. | Dependencies |
 |------|-------------|------|--------------|
 | TASK-688 | Finalize SPEC-047 amendments and targeted updates to SPEC-002/003/004/027/031 | 2h | Tracks A-C |
-| TASK-689 | Create `std/src/act.ash` with `unit`, `bind`, `then`, `guard` library functions | 2h | Track C |
+| TASK-689A | Establish honest `std::act` substrate for ordinary library helpers | 3h | TASK-688, TASK-687 |
+| TASK-689B | Preserve imported ordinary `pub fn` signatures for `std::act` | 3h | TASK-689A |
+| TASK-689C | Establish policy/environment substrate for ordinary `std::act` `guard` | 3h | TASK-689B |
+| TASK-689E | Refine library type-export semantics for opaque `Act` | 3h | TASK-689C |
+| TASK-689D | Establish honest opaque `Act` library boundary for ordinary `std::act` helpers | 3h | TASK-689E |
+| TASK-689 | Replace placeholder `std::act` stubs with ordinary library implementations | 2h | TASK-689D |
 | TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end examples | 3h | TASK-688, TASK-689 |
 | TASK-691 | Performance baseline for desugared act-block execution | 1h | TASK-690 |
 
-**Track D gate:** docs, library definitions, and end-to-end tests all reflect the same additive architecture.
+**Track D gate:** docs, the `std::act` substrate, library definitions, end-to-end tests, and the approximate benchmark smoke baseline all reflect the same additive architecture. This gate is now complete in the Phase 97 worktree.
 
 ## 4. Decision Gates
 
@@ -84,9 +89,16 @@ Prerequisite: Tracks A-C complete.
 
 **D4: Workflow compatibility.** Resolved: `Workflow::Act` remains unchanged in Phase 97. Expression-level `act {}` is additive.
 
-**D5: Builtin/library split.** Resolved: `unit`, `bind`, `then`, and `guard` are library functions; `invoke` is the only runtime primitive introduced by this phase.
+**D5: Builtin/library split.** Resolved at the contract level: `unit`, `bind`, `then`, and `guard` are library functions; `invoke` is the only runtime primitive introduced by this phase. Track D closeout is now landed in the Phase 97 worktree: `std/src/act.ash` uses the ordinary-library helper surface, `guard` executes through the deferred internal `act::__guard` bridge so policy is checked at Act-force time, focused engine/interpreter validation covers import + type + execute behavior, and a standalone `ash-bench` baseline exists for representative desugared Act execution paths.
 
 **D6: Typing coexistence.** Resolved: `Act<A>` is additive and does not retire existing `Type::Fun(...)` behavior in this phase.
+
+**D7: Builtin substrate decision protocol.** Resolved as an implementation rule-set rather than a precommitted branch:
+- prefer `builtin type ActEnv` plus ordinary `type Act<A> = ActEnv -> (ActEnv, A)`;
+- if real implementation pressure makes that materially riskier or more complex, escalate to builtin `Act` with the same explicit equation;
+- only if that also becomes materially riskier or more complex should Phase 97 fall back to a more opaque builtin `Act` form.
+- prefer treating the explicit RHS as definitional equality; downgrade to checked correspondence only if real engine/runtime complexity justifies it.
+- builtin artifacts use internal flat identities, not source module paths, so reexports/aliases do not change builtin meaning.
 
 ## 5. Spec Amendment Inventory
 
@@ -117,7 +129,7 @@ No Phase-97 SPEC-BUILTIN-FN amendment is planned.
 - Track A: 15 hours
 - Track B: 16 hours
 - Track C: 17 hours
-- Track D: 8 hours
-- **Total: 56 hours**
+- Track D: 23 hours
+- **Total: 71 hours**
 
 Tracks B and C can partially overlap once Track A is stable. Realistic calendar time: 1-2 focused implementation weeks.

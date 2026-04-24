@@ -818,6 +818,29 @@ pub struct ReceiveArm {
     pub span: Span,
 }
 
+/// A statement inside an `act { ... }` block expression. SPEC-047 §4.2
+///
+/// Surface-only lowering carrier — does not survive into core IR.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ActStmt {
+    /// Monadic or pure bind: `name = expr;`
+    Bind {
+        /// Binding name
+        name: Name,
+        /// Bound expression (may be pure or effectful)
+        value: Box<Expr>,
+        /// Source span
+        span: Span,
+    },
+    /// Return statement: `ret expr;`
+    Return {
+        /// Expression to return
+        value: Box<Expr>,
+        /// Source span
+        span: Span,
+    },
+}
+
 /// Expression types.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -964,6 +987,17 @@ pub enum Expr {
         func: Box<Expr>,
         /// Arguments to apply
         args: Vec<Expr>,
+        /// Source span
+        span: Span,
+    },
+
+    /// Act block expression: `act { stmt; stmt; ... }`. SPEC-047 §4.1
+    ///
+    /// Surface-only: lowers to nested `bind`/`unit` calls via the lowerer.
+    /// Does not appear in core IR.
+    ActBlock {
+        /// Statements inside the act block
+        stmts: Vec<ActStmt>,
         /// Source span
         span: Span,
     },
@@ -1381,6 +1415,7 @@ impl Spanned for Expr {
             Expr::Block { span, .. } => *span,
             Expr::FnDef { span, .. } => *span,
             Expr::FnApply { span, .. } => *span,
+            Expr::ActBlock { span, .. } => *span,
         }
     }
 }
@@ -3743,5 +3778,84 @@ mod effect_tests {
             span: dummy_span(),
         };
         assert_eq!(workflow.effect(), Effect::Epistemic);
+    }
+
+    // =========================================================================
+    // ActStmt + Expr::ActBlock Tests (TASK-673)
+    // =========================================================================
+
+    #[test]
+    fn test_act_stmt_bind_construction() {
+        let stmt = ActStmt::Bind {
+            name: "x".into(),
+            value: Box::new(Expr::Literal(Literal::Int(42))),
+            span: Span::new(0, 10, 1, 1),
+        };
+
+        match stmt {
+            ActStmt::Bind {
+                name,
+                value,
+                span: _,
+            } => {
+                assert_eq!(name, "x".into());
+                assert!(matches!(*value, Expr::Literal(Literal::Int(42))));
+            }
+            _ => panic!("Expected ActStmt::Bind"),
+        }
+    }
+
+    #[test]
+    fn test_act_stmt_return_construction() {
+        let stmt = ActStmt::Return {
+            value: Box::new(Expr::Literal(Literal::Int(99))),
+            span: Span::new(5, 12, 1, 6),
+        };
+
+        match stmt {
+            ActStmt::Return { value, span: _ } => {
+                assert!(matches!(*value, Expr::Literal(Literal::Int(99))));
+            }
+            _ => panic!("Expected ActStmt::Return"),
+        }
+    }
+
+    #[test]
+    fn test_expr_act_block_construction() {
+        let expr = Expr::ActBlock {
+            stmts: vec![
+                ActStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(Expr::Literal(Literal::Int(42))),
+                    span: Span::new(0, 10, 1, 1),
+                },
+                ActStmt::Return {
+                    value: Box::new(Expr::Variable {
+                        name: "x".into(),
+                        span: Span::new(11, 12, 1, 12),
+                    }),
+                    span: Span::new(11, 17, 1, 12),
+                },
+            ],
+            span: Span::new(0, 18, 1, 1),
+        };
+
+        match expr {
+            Expr::ActBlock { stmts, span: _ } => {
+                assert_eq!(stmts.len(), 2);
+                assert!(matches!(&stmts[0], ActStmt::Bind { name, .. } if name.as_ref() == "x"));
+                assert!(matches!(&stmts[1], ActStmt::Return { .. }));
+            }
+            _ => panic!("Expected Expr::ActBlock"),
+        }
+    }
+
+    #[test]
+    fn test_expr_act_block_empty() {
+        let expr = Expr::ActBlock {
+            stmts: vec![],
+            span: Span::new(0, 6, 1, 1),
+        };
+        assert!(matches!(expr, Expr::ActBlock { stmts, .. } if stmts.is_empty()));
     }
 }

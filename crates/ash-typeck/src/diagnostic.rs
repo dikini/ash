@@ -15,6 +15,8 @@ impl AshLspError for crate::error::ConstructorError {
                 Self::NonExhaustiveMatch { span, .. } => span,
                 Self::UnboundVariable { span, .. } => span,
                 Self::NotIterable { span, .. } => span,
+                Self::MissingRecordField { span, .. } => span,
+                Self::NotARecord { span, .. } => span,
                 Self::UnsupportedExpression { span, .. } => span,
                 Self::UnknownTypeAnnotation { span, .. } => span,
                 Self::InvalidInterfaceMethodCall { span, .. } => span,
@@ -39,9 +41,11 @@ impl AshLspError for crate::error::ConstructorError {
                 Self::NonExhaustiveMatch { .. } => "E106",
                 Self::UnboundVariable { .. } => "E107",
                 Self::NotIterable { .. } => "E108",
-                Self::UnsupportedExpression { .. } => "E109",
-                Self::UnknownTypeAnnotation { .. } => "E110",
-                Self::InvalidInterfaceMethodCall { .. } => "E111",
+                Self::MissingRecordField { .. } => "E109",
+                Self::NotARecord { .. } => "E110",
+                Self::UnsupportedExpression { .. } => "E111",
+                Self::UnknownTypeAnnotation { .. } => "E112",
+                Self::InvalidInterfaceMethodCall { .. } => "E113",
             }
             .into(),
         ))
@@ -239,6 +243,8 @@ impl AshLspError for crate::purity::PurityError {
                 crate::purity::PurityViolation::UnresolvedCall { .. } => "E302",
                 crate::purity::PurityViolation::NonPureCall { .. } => "E303",
                 crate::purity::PurityViolation::InvalidInterfaceMethodCall { .. } => "E304",
+                crate::purity::PurityViolation::ActBlockInPureContext => "E305",
+                crate::purity::PurityViolation::InvokeInPureContext => "E306",
             }
             .into(),
         ))

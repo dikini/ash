@@ -171,7 +171,7 @@ workflow main() -> MyOption { ret MySome { v: 99 }; }
 // ── 5. Two files sharing a type definition ───────────────────────────────
 
 /// `shared.ash` defines a type, `main.ash` imports and uses it in a workflow.
-/// Note: FieldAccess on imported types not yet supported in typeck.
+/// Note: `FieldAccess` on imported types not yet supported in typeck.
 /// This test verifies type construction only.
 #[tokio::test]
 async fn shared_type_import_and_construct() {
@@ -279,7 +279,10 @@ workflow main() -> String { ret make_label(42); }
         "stdlib + local fn: expected success, got: {:?}",
         result.err()
     );
-    assert_eq!(result.unwrap(), ash_core::Value::String("value".to_string()));
+    assert_eq!(
+        result.unwrap(),
+        ash_core::Value::String("value".to_string())
+    );
 }
 
 // ── 8. Gap documentation: cross-file fn calling cross-file fn ─────────────

@@ -24,6 +24,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Recorded TASK-705 semantic tower runtime preflight findings for Phase 98, including baseline verification drift and the decision that TASK-706 may proceed as carrier-only work while Act-dependent Proc slices remain deferred (TASK-705).
+
 - DESIGN-030 and SPEC-048 now record the current semantic-environment lattice `Pure < Effectful < Proc < Workflow`, clarifying that capability/provider and policy admissibility begin in the Effectful/Act stratum, proc adds split/join/process-local runtime semantics, workflow adds governance metadata and failure/reporting semantics, operational availability flows top-down from outside/workflows to processes to effects to pure functions, environment component lookup is identity-indexed by workflow/process/branch/effect/lexical frame identity, and async `par` returns running process handles `P<A>` rather than a synchronous result pair or special join object.
 
 - DESIGN-030 previously recorded the resolved `par` semantics slice; SPEC-048, SPEC-049, and SPEC-050 now split that slice across public surface, process-runtime, and operational-failure ownership: `par` creates child `ProcessId`s, derives child environments by typed projection instead of context cloning, limits `par`-site handlers to start/admission/handle-creation failures, treats `P<A>` as a first-pass affine/linear process handle, defines `await` as the single-handle observation primitive, defines `join`/`gather` as wait-for-all observation barriers with aggregate failure preservation, and adds `yield : Proc<Unit>` as an explicit cooperative scheduling point.

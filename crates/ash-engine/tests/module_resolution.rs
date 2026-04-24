@@ -151,6 +151,32 @@ async fn stdlib_module_resolution() {
     );
 }
 
+/// `main.ash` can import the Phase 97 Act stdlib helpers from the builtin
+/// stdlib root.
+#[tokio::test]
+async fn stdlib_act_module_resolution() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("main.ash"),
+        "\
+        use act::{unit, bind, then, guard}\n\
+        \n\
+        workflow main() -> Int { ret 1; }\n\
+        ",
+    );
+
+    let engine = build_engine();
+    let result = engine.run_file(dir.join("main.ash")).await;
+
+    assert!(
+        result.is_ok(),
+        "stdlib act module resolution: expected successful execution, got: {:?}",
+        result.err()
+    );
+}
+
 // ── 4. Missing module error ────────────────────────────────────────────
 
 /// `main.ash` imports from a module `nonexistent` that does not exist on

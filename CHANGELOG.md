@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- NOTE-009: exploratory design note for capability interfaces, Ash-defined capability implementations, resource types/instances/bindings, internal authority, authority provenance, and late binding between interfaces, implementations, and concrete resources.
+
 - SPEC-047: Act Monad specification (draft). Defines `Act<A>` type constructor, `act {}` block expression, `invoke`/`unit`/`bind` builtins, effectful function declarations, purity enforcement, and the unification of pure expression evaluation with effectful workflow execution. 33 tasks across 4 tracks (TASK-672 through TASK-704). Related plan: PLAN-097.
 
 - TASK-683: introduced the runtime-only `ActEnv` carrier in `ash-interp` with explicit construction from runtime state/capability context, policy evaluator, provenance, and effect log state; kept it out of `ash_core::Value` and added regression coverage for the runtime boundary.

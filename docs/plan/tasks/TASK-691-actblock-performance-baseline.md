@@ -49,10 +49,10 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 
 ## Verification Steps
 
-- [x] A reproducible baseline exists for future Phase-97 optimization discussions.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] An approximate smoke-baseline exists for future Phase-97 optimization discussions.
+- [x] `cargo test --all` passed during Phase 97 baseline verification.
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` passed during Phase 97 baseline verification.
+- [x] `cargo fmt --check` passed during Phase 97 baseline verification.
 
 ## Dependencies for Next Task
 
@@ -63,6 +63,7 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - Phase 97 is additive.
 - Preserve `Workflow::Act` behavior.
 - Preserve coexistence with existing `Type::Fun(...)` unless this task explicitly narrows that boundary in docs/tests only.
-- The baseline is now captured by the standalone `ash-bench` Criterion harness (`[workspace]` isolated in `crates/ash-bench/Cargo.toml`) and the new `phase97_act` benchmark covering permit-path `guard` forcing plus desugared bind-chain forcing depths 1/4/8/16.
-- Repro command: `cargo bench --manifest-path crates/ash-bench/Cargo.toml --bench phase97_act -- --measurement-time 0.1 --sample-size 10`.
-- Initial numbers recorded in this worktree: `guard_force_permit` ≈ 5.6 µs, `bind_chain_force_1` ≈ 9.8 µs, `bind_chain_force_4` ≈ 51.7 µs, `bind_chain_force_8` ≈ 107 µs, `bind_chain_force_16` ≈ 226 µs.
+- The baseline is captured by the standalone `ash-bench` Criterion harness (`[workspace]` isolated in `crates/ash-bench/Cargo.toml`) and the `phase97_act` benchmark covering permit-path `guard` forcing plus desugared bind-chain forcing depths 1/4/8/16.
+- Smoke-baseline command: `cargo bench --manifest-path crates/ash-bench/Cargo.toml --bench phase97_act -- --measurement-time 0.1 --sample-size 10`.
+- Reproducibility caveat: this is an approximate smoke baseline, not an exact reproducibility claim. The repository ignores `Cargo.lock`, the standalone benchmark resolves dependencies/toolchain locally, and the short Criterion settings intentionally trade statistical confidence for a lightweight comparison point.
+- Initial approximate numbers recorded in this worktree: `guard_force_permit` ≈ 5.6 µs, `bind_chain_force_1` ≈ 9.8 µs, `bind_chain_force_4` ≈ 51.7 µs, `bind_chain_force_8` ≈ 107 µs, `bind_chain_force_16` ≈ 226 µs.

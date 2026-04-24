@@ -348,6 +348,32 @@ fn force_act_with_policy(
     )
 }
 
+/// `std::act::Policy` should remain coherent with policy-facing helpers when
+/// imported across the stdlib module boundary.
+#[tokio::test]
+async fn stdlib_act_policy_alias_can_flow_into_guard() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("main.ash"),
+        r"
+        use act::{Act, Policy, guard, unit}
+
+        workflow main(p: Policy) -> Act<Int> { ret guard(p, unit(1)); }
+        ",
+    );
+
+    let engine = build_engine();
+    let mut workflow = engine
+        .parse_file(dir.join("main.ash"))
+        .expect("imported Policy alias should parse cleanly");
+
+    engine
+        .check(&mut workflow)
+        .expect("imported Policy values should type-check when passed to guard");
+}
+
 /// `std::act::guard` should import as an ordinary helper with its opaque `Act`
 /// signature and execute policy-allowed actions through the library boundary.
 #[tokio::test]

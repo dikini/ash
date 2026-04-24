@@ -58,9 +58,9 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 - [x] `std/src/act.ash` no longer exposes placeholder builtin helper declarations.
 - [x] `std/src/act.ash` matches the ordinary-library Phase 97 architecture.
 - [x] Focused engine/runtime tests prove import + type + execute behavior for ordinary `std::act` helpers.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `cargo test --all` passed during Phase 97 baseline verification.
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` passed during Phase 97 baseline verification.
+- [x] `cargo fmt --check` passed during Phase 97 baseline verification.
 
 ## Dependencies for Next Task
 
@@ -71,7 +71,7 @@ This task outputs substrate needed by its direct dependents in PLAN-097.
 - Phase 97 is additive.
 - Preserve `Workflow::Act` behavior.
 - Preserve coexistence with existing `Type::Fun(...)` unless this task explicitly narrows that boundary in docs/tests only.
-- The current `std/src/act.ash` file is only a placeholder surface until TASK-689A lands the honest substrate required for ordinary library definitions.
+- `std/src/act.ash` now exposes the completed ordinary-library helper boundary for Phase 97; earlier placeholder public helper builtins were removed by TASK-689 closeout.
 - TASK-689B preserved imported ordinary `pub fn` signatures through module loading and engine type binding, so imported ordinary helpers are no longer forced through an arity-only fallback.
 - TASK-689C is now sufficient for an honest ordinary-library `guard` through the narrow `act::policy_check` bridge while preserving the runtime-only `ActEnv` boundary.
 - TASK-689E landed the enabling library/type-export semantics so `type T = ...` now preserves public/discoverable type identity without automatically exporting constructors/representation.

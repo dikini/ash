@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use ash_core::capability::CapabilityError;
@@ -61,6 +62,11 @@ struct TaskLocalProvider;
 
 #[derive(Debug)]
 struct TaskLocalListProvider;
+
+#[derive(Debug)]
+struct CountingProvider {
+    calls: Arc<AtomicUsize>,
+}
 
 #[async_trait]
 impl CapabilityProvider for TaskLocalProvider {
@@ -125,6 +131,26 @@ impl CapabilityProvider for TokioSleepProvider {
     async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
         tokio::time::sleep(Duration::from_millis(1)).await;
         Ok(Value::String("slept".to_string()))
+    }
+}
+
+#[async_trait]
+impl CapabilityProvider for CountingProvider {
+    fn name(&self) -> &str {
+        "counting"
+    }
+
+    fn effect(&self) -> Effect {
+        Effect::Operational
+    }
+
+    async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
+        unreachable!("counting provider does not support observe")
+    }
+
+    async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Ok(Value::String("forced".to_string()))
     }
 }
 
@@ -634,6 +660,56 @@ async fn workflow_decide_uses_async_force_path_for_task_local_provider() {
         .expect("workflow decide should use async force path on the current task");
 
     assert_eq!(result, Value::String("permitted".to_string()));
+}
+
+#[tokio::test]
+async fn denied_guard_does_not_force_guarded_provider_act() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let runtime_state = RuntimeState::new().with_provider(
+        "counting",
+        Arc::new(CountingProvider {
+            calls: Arc::clone(&calls),
+        }),
+    );
+
+    let mut policy_eval = PolicyEvaluator::new();
+    policy_eval.register(ash_interp::Policy::new("deny-all"));
+
+    let act_env = ActEnv::from_runtime_state(&runtime_state, policy_eval, Provenance::new()).await;
+    let ctx = Context::new().with_act_env(act_env);
+
+    let guarded = Expr::FnApply {
+        func: Box::new(Expr::Call {
+            func: "__guard".to_string(),
+            module: Some("act".to_string()),
+            arguments: vec![
+                Expr::Literal(Value::String("deny-all".to_string())),
+                Expr::Call {
+                    func: "invoke".to_string(),
+                    module: None,
+                    arguments: vec![
+                        Expr::Literal(Value::String("counting".to_string())),
+                        Expr::Literal(Value::String("run".to_string())),
+                        Expr::Literal(Value::List(Box::default())),
+                    ],
+                },
+            ],
+        }),
+        args: vec![Expr::Literal(Value::ActEnvToken)],
+    };
+
+    let result = eval_expr_async(&guarded, &ctx)
+        .await
+        .expect("denied guard should return a denied Act result without forcing the provider");
+
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        result,
+        Value::List(Box::new(vec![
+            Value::ActEnvToken,
+            Value::String("policy denied".to_string()),
+        ]))
+    );
 }
 
 #[tokio::test]

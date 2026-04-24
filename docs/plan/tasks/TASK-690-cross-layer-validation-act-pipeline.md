@@ -53,9 +53,9 @@ Add or extend proptests for algebraic/lowering/runtime invariants where appropri
 ## Verification Steps
 
 - [x] End-to-end validation examples pass cleanly.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `cargo test --all` passed during Phase 97 baseline verification.
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` passed during Phase 97 baseline verification.
+- [x] `cargo fmt --check` passed during Phase 97 baseline verification.
 
 ## Dependencies for Next Task
 

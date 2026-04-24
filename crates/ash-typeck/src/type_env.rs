@@ -544,6 +544,8 @@ pub struct TypeEnv {
     type_info: HashMap<TypeName, TypeInfo>,
     /// Constructor mappings: constructor name -> (type name, variant index)
     constructors: HashMap<String, (TypeName, VariantIndex)>,
+    /// Public alias names whose underlying representation is intentionally transparent.
+    transparent_aliases: HashSet<TypeName>,
     /// Registered interfaces by name.
     pub(crate) interfaces: HashMap<String, InterfaceInfo>,
     /// Registered closed-world impls.
@@ -627,6 +629,7 @@ impl TypeEnv {
             ast_types: HashMap::with_capacity(10),
             type_info: HashMap::with_capacity(10),
             constructors: HashMap::with_capacity(10),
+            transparent_aliases: HashSet::with_capacity(4),
             interfaces: HashMap::with_capacity(4),
             impls: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
@@ -718,14 +721,36 @@ impl TypeEnv {
             ));
         };
 
-        if let TypeInfo::Enum { variants, .. } = type_info {
-            for (index, variant) in variants.iter().enumerate() {
-                self.constructors
-                    .insert(variant.name.clone(), (name.to_string(), index));
+        match type_info {
+            TypeInfo::Enum { variants, .. } => {
+                for (index, variant) in variants.iter().enumerate() {
+                    self.constructors
+                        .insert(variant.name.clone(), (name.to_string(), index));
+                }
             }
+            TypeInfo::Struct { fields, .. } if matches!(fields.as_slice(), [(field_name, _)] if field_name == "__alias_target") =>
+            {
+                self.transparent_aliases.insert(name.to_string());
+            }
+            TypeInfo::Struct { .. } => {}
         }
 
         Ok(())
+    }
+
+    #[must_use]
+    pub fn transparent_alias_target(&self, name: &QualifiedName, args: &[Type]) -> Option<Type> {
+        if !self.transparent_aliases.contains(name.name.as_str()) {
+            return None;
+        }
+
+        match self.unfold_constructor(name, args).ok()? {
+            UnfoldedBody::Struct(fields) => match fields.as_slice() {
+                [(field_name, target)] if field_name == "__alias_target" => Some(target.clone()),
+                _ => None,
+            },
+            UnfoldedBody::Enum(_) => None,
+        }
     }
 
     /// Register a type definition and its constructors from AST TypeDef
@@ -1323,6 +1348,7 @@ impl TypeEnv {
             ast_types: self.ast_types.clone(),
             type_info: self.type_info.clone(),
             constructors: self.constructors.clone(),
+            transparent_aliases: self.transparent_aliases.clone(),
             interfaces: self.interfaces.clone(),
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),

@@ -102,11 +102,15 @@ fn workflow_surface_type_to_type(
                     let (qualified, _) = env
                         .resolve_type(name.as_ref())
                         .map_err(|e| TypeCheckError::TypeError(format!("{e}")))?;
-                    Ok(Type::Constructor {
-                        name: qualified,
-                        args: vec![],
-                        kind: Kind::Type,
-                    })
+                    if let Some(target) = env.transparent_alias_target(&qualified, &[]) {
+                        Ok(target)
+                    } else {
+                        Ok(Type::Constructor {
+                            name: qualified,
+                            args: vec![],
+                            kind: Kind::Type,
+                        })
+                    }
                 }
             }
         }
@@ -136,11 +140,15 @@ fn workflow_surface_type_to_type(
                 .iter()
                 .map(|arg| workflow_surface_type_to_type(env, arg, type_params))
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(Type::Constructor {
-                name: qualified,
-                args,
-                kind: Kind::Type,
-            })
+            if let Some(target) = env.transparent_alias_target(&qualified, &args) {
+                Ok(target)
+            } else {
+                Ok(Type::Constructor {
+                    name: qualified,
+                    args,
+                    kind: Kind::Type,
+                })
+            }
         }
         ash_parser::surface::Type::Fn(params, ret) => {
             // Pure function type: Fn(T, U) -> V => Type::Fn(params, ret)

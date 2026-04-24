@@ -1,7 +1,7 @@
 # PLAN-097: Act Monad Implementation
 
 **Date:** 2026-04-22
-**Status:** Draft
+**Status:** Complete
 **Depends on:** SPEC-047, Phase 96 (complete)
 **Related:** NOTE-005, SPEC-001/002/003/004/027/031
 
@@ -77,7 +77,7 @@ Prerequisite: Tracks A-C complete.
 | TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end examples | 3h | TASK-688, TASK-689 |
 | TASK-691 | Performance baseline for desugared act-block execution | 1h | TASK-690 |
 
-**Track D gate:** docs, the `std::act` substrate, library definitions, and end-to-end tests all reflect the same additive architecture.
+**Track D gate:** docs, the `std::act` substrate, library definitions, end-to-end tests, and the approximate benchmark smoke baseline all reflect the same additive architecture. This gate is now complete in the Phase 97 worktree.
 
 ## 4. Decision Gates
 
@@ -129,7 +129,7 @@ No Phase-97 SPEC-BUILTIN-FN amendment is planned.
 - Track A: 15 hours
 - Track B: 16 hours
 - Track C: 17 hours
-- Track D: 8 hours
-- **Total: 56 hours**
+- Track D: 23 hours
+- **Total: 71 hours**
 
 Tracks B and C can partially overlap once Track A is stable. Realistic calendar time: 1-2 focused implementation weeks.

@@ -132,6 +132,14 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
 
         // ── Act module bridge builtins (qualified) ──
         m.insert(
+            "act::__guard",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
             "act::policy_check",
             BuiltinEntry {
                 arity: 1,

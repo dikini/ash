@@ -2742,7 +2742,7 @@ Close the gap between executing single-file workflows and executing real program
 ## Phase 97: Act Monad — First-Class Effectful Computation
 
 **Priority:** High (resolves NOTE-004/NOTE-005, foundational for fn/capability/workflow reconciliation)
-**Status:** 🟢 In Progress
+**Status:** ✅ Complete
 **Spec:** SPEC-047
 **Plan:** docs/plans/2026-04-22-phase-97-act-monad.md
 
@@ -2782,7 +2782,7 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 
 **Track C (Runtime):** 17h. Define `ActEnv`, route `invoke` through the runtime primitive path, execute desugared `Act<T>` values, and bridge from workflow context.
 
-**Track D (Spec + Library + Validation):** 8h. Finalize aligned specs, add `std/src/act.ash`, and run cross-layer validation.
+**Track D (Spec + Library + Validation):** 23h. Finalize aligned specs, land the ordinary-library `std::act` closeout steps, run cross-layer validation, and record the approximate benchmark smoke baseline.
 
 **Decision gates resolved:**
 - D1: `act { ... }` is surface-only in Phase 97 and lowers away before core IR

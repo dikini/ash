@@ -22,6 +22,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - DESIGN-030 and SPEC-048 now record the current semantic-environment lattice `Pure < Effectful < Proc < Workflow`, clarifying that capability/provider and policy admissibility begin in the Effectful/Act stratum, proc adds split/join/process-local runtime semantics, workflow adds governance metadata and failure/reporting semantics, operational availability flows top-down from outside/workflows to processes to effects to pure functions, environment component lookup is identity-indexed by workflow/process/branch/effect/lexical frame identity, and async `par` returns running process handles `P<A>` rather than a synchronous result pair or special join object.
 
+- DESIGN-030 now records the resolved `par` semantics slice for the next process-runtime spec: `par` creates child `ProcessId`s, derives child environments by typed projection instead of context cloning, limits `par`-site handlers to start/admission/handle-creation failures, treats `P<A>` as a first-pass affine/linear process handle, defines `join`/`gather` as wait-for-all observation barriers with aggregate failure preservation, and adds `yield : Proc<Unit>` as an explicit cooperative scheduling point.
+
+- DESIGN-030 removes the stale synchronous-`par` open question, includes `join` in the initial proc library surface, records NOTE-007/NOTE-008 as the current environment/failure design-note layer, and states that workflow needs a separate semantics spec rather than only surface-syntax tracking.
+
 - NOTE-005 status updated: design exploration now has a normative spec counterpart (SPEC-047).
 
 - Phase 96 Track A: Module resolution and stdlib integration (TASK-655 through TASK-659). Module resolver now supports cycle detection via visiting set. Stdlib modules (string, list, predicate, result, option) resolve through builtin stdlib root. CLI run command routes ordinary files through `engine.run_file()` for full import resolution. Entry bootstrap path preserved and verified. 12 module resolution + 13 entry bootstrap tests pass.

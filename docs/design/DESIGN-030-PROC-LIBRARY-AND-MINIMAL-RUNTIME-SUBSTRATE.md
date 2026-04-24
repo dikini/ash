@@ -188,6 +188,152 @@ Consequences:
 - A `with_error { par(p1, p2) } handle { ... }` block handles failure of the `par` start/admission operation itself, not later failures inside `p1` or `p2`.
 - Failures in running process handles propagate along their process identity toward a future `join`/`gather`/observation point, not back to the lexical `par` call after it has returned.
 
+### 4.5 Resolved `par` semantics slice
+
+This section records the current resolved direction for the next process-runtime spec. It is intentionally narrower than a full runtime spec, but it closes the blockers that would otherwise make `par`, process handles, and process failure observation ambiguous.
+
+#### 4.5.1 Identity splitting
+
+Normatively, `par` creates child process identities. Given current process `P0`:
+
+```text
+par(pa, pb)
+  creates child ProcessId P1 under P0 for pa
+  creates child ProcessId P2 under P0 for pb
+  starts pa in P1
+  starts pb in P2
+  returns (P<A>{P1}, P<B>{P2})
+```
+
+The returned handles denote `ProcessId`s, not `BranchId`s. `BranchId` remains available as a subordinate/internal runtime identity for trace segments, branch-local facts, or lower-level scheduling structure inside a process, but it is not the public identity of `P<A>`.
+
+Consequences:
+
+- `ProcessId` owns observable lifecycle.
+- `ProcessId` is what `P<A>` points at.
+- process failure is indexed to `ProcessId`.
+- cancellation/supervision targets `ProcessId`.
+- `join`, `gather`, and await-like observation observe `ProcessId` completion/failure.
+- `BranchId` may index internal branch-local environment, trace, or facts, but not public process handles.
+
+#### 4.5.2 Child environment projection
+
+`par` must not clone a monolithic context. It derives child process environments by typed projection:
+
+```text
+derive_child_env(parent_env, child_process_id, child_index)
+```
+
+Each component declares its split behavior. Initial classification:
+
+| Component | Split behavior | Notes |
+| --- | --- | --- |
+| provider registry | `CopyReadOnly` | runtime/provider handles are visible but not child-owned authority minting |
+| capability definitions | `CopyReadOnly` | definitions are copied/read, not mutated |
+| static policy definitions | `CopyReadOnly` | policy definitions are shared as immutable context |
+| admitted capability surface | `CopyReadOnly` or `RefinedChildLocal` | child may receive the same or narrower surface, never wider |
+| sequential effect state | `ChildLocal` | parent sequential effect state is not shared mutably across children |
+| provenance/audit sink | `AppendMerge` | children append child-local segments merged/reported by process identity |
+| effect invocation scope | `ChildLocal` | new effect scopes are created under each child process |
+| effect-level failure channel | `ChildLocal` | failures are attributed through child process/effect identities |
+| linear/exclusive resources | `ForbiddenInPar` unless explicitly partitioned or moved | no implicit cloning |
+| parent `ProcessId` | `CopyReadOnly` parent link | child knows parentage for attribution/supervision |
+| current `ProcessId` | `ChildLocal` | `P1` for left child, `P2` for right child |
+| child registry | parent-owned `Append/Track` | parent records started children |
+| scheduler handle | `SharedConcurrent` runtime substrate | scheduler is shared by runtime, not cloned user state |
+| mailbox identity | `ChildLocal` | each child receives its own mailbox identity when mailboxes exist |
+| channel endpoints | `SharedConcurrent`, `ExplicitMove`, or `ForbiddenInPar` | only share endpoints with explicit concurrent endpoint semantics |
+| cancellation scope | `ChildLocal` with parent propagation link | parent cancellation may propagate to children |
+| process failure scope | `ChildLocal` | observed through process handles |
+| join/observation registry | observer-side / parent-side | not copied into children as ordinary mutable state |
+| process-local resources | `ChildLocal` or explicitly partitioned `Exclusive` | no ambient shared mutable process-local state |
+
+Invariant:
+
+```text
+Child process env may be equal-or-less-authorized than parent env.
+It may not manufacture new authority.
+```
+
+#### 4.5.3 Failure timing
+
+A handler around the `par` expression catches only failures that occur before `par` successfully returns handles:
+
+```ash
+with_error {
+  par(pa, pb)
+} handle {
+  _ => recover_start_failure
+}
+```
+
+Catchable at the `par` call site:
+
+- parent process lacks authority to start/admit child processes
+- child `ProcessId` allocation fails
+- child environment projection fails
+- exclusive/linear resource split is invalid
+- scheduler/admission refuses child start
+- process handle allocation or registration fails
+- initial child start fails before a handle becomes valid
+
+Not catchable at the `par` call site:
+
+- `pa` fails after `P1` has started
+- `pb` fails after `P2` has started
+- an effect invocation fails inside `P1` or `P2`
+- a child process is cancelled after handles are returned
+- a child process deadlocks, times out, or violates a process-local invariant after handles are returned
+
+After `par` returns handles, child failures belong to child `ProcessId`s and become visible only at observation or boundary points such as `await`, `join`, `gather`, cancellation/supervision, or workflow reporting.
+
+#### 4.5.4 Linear process handles
+
+The first normative process model treats `P<A>` as an affine process handle. It may be moved, dropped/detached only under explicit rules, cancelled, or observed once.
+
+Observation consumes the handle:
+
+```text
+await  : P<A> -> Proc<A>
+join   : P<A> -> P<B> -> Proc<(A, B)>
+gather : List<P<A>> -> Proc<List<A>>
+```
+
+A successful observation consumes the handle and returns the child result. A failed observation consumes the handle and raises the child process failure in the observing process.
+
+Multiple observation, cached/replayable results, `dup`, shared process handles, monitors, and supervisor subscriptions are deferred to later supervision semantics. They should not be part of the first process-runtime spec unless implementation pressure forces them.
+
+#### 4.5.5 `join` and `gather` as observation barriers
+
+`join` is a wait-for-both observation barrier, not a left-then-right sequential await. It consumes both handles, observes both child processes to terminality, and then:
+
+- returns `(a, b)` if both complete normally
+- raises the single child failure if one child fails
+- raises an aggregate process failure preserving both child failures if both fail
+
+The observer-visible failure should preserve the child process failures and their identities. `gather` generalizes this rule to collections: consume all handles, wait for all terminal states, return ordered results if all succeed, and raise an aggregate failure containing every observed child failure if one or more fail.
+
+#### 4.5.6 Cooperative scheduling
+
+The proc operation set should include an explicit cooperative scheduling point:
+
+```text
+yield : Proc<Unit>
+```
+
+`yield` voluntarily suspends the current process and permits the scheduler to make progress on other runnable processes. When resumed, it returns `Unit` in the same process identity.
+
+Identity and environment behavior:
+
+- current `ProcessId` before and after `yield` is unchanged
+- `yield` does not split `EffEnv` or `ProcEnv`
+- `yield` preserves the current process environment
+
+Failure behavior:
+
+- `yield` normally returns `Unit`
+- if the current process has been cancelled or the scheduler refuses resumption, `yield` may surface the relevant process failure/cancellation
+
 ## 5. Library-First Direction
 
 The preferred near-term direction is to define a `proc` library independently of workflow syntax, while keeping it compatible with later workflow goals.
@@ -206,9 +352,12 @@ The proc library should expose ordinary unsuffixed names within its own namespac
 - `bind`
 - `then`
 - `par`
+- `yield`
+- `await` or an equivalent single-handle observation primitive
+- `join`
 - `scatter`
 - `gather`
-- later: `send`, `receive`, `spawn`, `run`
+- later: `send`, `receive`, `spawn`, `run`, shared-handle/supervision operations such as `dup` or `monitor`
 
 The `act` library may simultaneously expose its own unsuffixed `unit` / `bind` / `then` within `act::...`.
 The distinction is by algebra/module, not by globally bloated names.
@@ -261,9 +410,10 @@ Do not require, in the first proc slice:
 The initial proc design should merely reserve a small compatible runtime boundary for future realization:
 
 - a distinct `Proc<A>` runtime representation
+- an opaque running-process handle representation (`P<A>` in current draft notation, with `Process<A>` as the likely eventual spelling)
 - a `run` interpretation boundary
 - a future home for process-local mailbox/channel support
-- a future home for `par` execution semantics
+- a future home for `par` execution semantics, process identity creation, and observation via `join`/`gather`/await-like operations
 
 This runtime boundary should remain narrow enough that the library/type work can move first.
 
@@ -296,11 +446,14 @@ Target compatibility statement:
 - the proc library lands independently
 - workflow remains unchanged in the initial slice
 - later workflow syntax may elaborate into `Proc` construction plus process/workflow enrichers
+- workflow must still be tracked in its own normative spec, covering semantic behavior and not only surface syntax
 - no decision in this design should force workflow to remain separate forever
+
+Workflow surface syntax may remain close to the current form, but that does not make workflow a mere syntax layer. The separate workflow spec should own the governed-execution semantics above `Proc`: admission, role/capability context, `requires`, `ensures`, workflow failure/reporting boundaries, and the rules by which unhandled lower-level failures become workflow-level failures.
 
 ## 9. Recommended Documentation Split
 
-Use two documents:
+Use a staged documentation split:
 
 1. design doc (this file)
    - architectural rationale
@@ -313,15 +466,25 @@ Use two documents:
    - algebraic intent (`unit`, `bind`, `then`, `par`, etc.)
    - explicit deferrals for runtime-heavy features
 
-That keeps the spec tight while preserving architectural context.
+3. environment and failure design notes
+   - NOTE-007 owns the current runtime identity/component model: workflow/run identity, process identity, branch/effect/lexical identities, and identity-indexed component lookup
+   - NOTE-008 owns the current operational-bottom model: `fail`, scoped `with_error`, tower/entity-indexed failure objects, and async process-failure observation
+
+4. later normative runtime specs
+   - process runtime semantics: `P<A>`/`Process<A>` representation, `par` identity splitting, branch-local `EffEnv`/`ProcEnv`, `join`/`gather` observation, cancellation, and process-failure propagation
+   - workflow semantics: a separate workflow spec, not just a surface-syntax spec, covering workflow as governed proc execution, admission, roles/capabilities, `requires`/`ensures`, `WorkflowFailure`, reporting, and lower-failure reinterpretation at the workflow boundary
+
+That keeps SPEC-048 tight while preserving architectural context and avoiding premature workflow/runtime hardening.
 
 ## 10. Open Questions
 
 1. Should `Proc<A>` be surface-visible immediately, or first land as a library/type contract with delayed runtime backing?
-2. What exact type should `par` have in the first spec slice (`Proc<A> -> Proc<B> -> Proc<(A, B)>` is the current leading candidate)?
-3. Which proc operations must be runtime-backed in the first implementation slice, and which can remain specified-but-deferred?
-4. How should `run` be specified so `Proc` remains distinct from `Act` while still supporting especially valuable cases such as `Proc<Act<A>>`?
-5. When mailbox/channel support lands, what is the smallest channel/address model that remains compatible with workflow isolation?
+2. Which proc operations must be runtime-backed in the first implementation slice, and which can remain specified-but-deferred?
+3. How should `run` be specified so `Proc` remains distinct from `Act` while still supporting explicit embedding of sequential `Act<A>` computations into process composition?
+4. When mailbox/channel support lands, what is the smallest channel/address model that remains compatible with workflow isolation?
+5. What are the exact cancellation and detach/drop semantics for linear `P<A>` handles?
+6. What supervision model justifies later shared-handle operations such as `dup`, `monitor`, cached observation, or multiple observers?
+7. What is the exact boundary between the process-runtime spec and the separate workflow-semantics spec, especially for admission failures, completion failures, and lower-failure reinterpretation?
 
 ## 11. Current Recommendation
 
@@ -329,6 +492,17 @@ Proceed with a tight proc packet consisting of:
 
 - one design doc for the runtime/library split and workflow compatibility
 - one proc spec focused on public types and library surface
+- NOTE-007 and NOTE-008 as the current exploratory records for environment identity and operational failure
+- a separate workflow-semantics spec once the process/failure substrate is sufficiently stable; this spec should cover semantics as well as any surface syntax cleanup
 - minimal or no immediate runtime changes beyond reserving the abstraction boundary
 
-This keeps the work aligned with current Ash semantics while avoiding premature commitment to full workflow migration or concurrency-runtime details.
+The `par` semantics slice is now resolved enough to seed the next normative process-runtime spec:
+
+- `par` normatively creates child `ProcessId`s and returns handles to those child processes; `BranchId` is subordinate/internal, not the public identity of `P<A>`
+- child `EffEnv`/`ProcEnv` values are derived by typed projection from the parent environment, not by cloning a monolithic context
+- handlers around `par` catch only start/admission/handle-creation failures; failures inside already-started children are observed at `await`, `join`, `gather`, supervision, or workflow reporting boundaries
+- `P<A>` is affine/linear in the first normative model; observation consumes the handle, while `dup`, monitoring, cached observation, and multiple observers are deferred to supervision semantics
+- `join` and `gather` are wait-for-all observation barriers that preserve child process failure identities and aggregate multiple failures
+- the proc operation set should include `yield : Proc<Unit>` as an explicit cooperative scheduling point
+
+This keeps the work aligned with current Ash semantics while avoiding premature commitment to full workflow migration or supervision/runtime details.

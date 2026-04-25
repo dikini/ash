@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-718: added the initial `std::proc` library surface and runtime stubs for `proc::unit`, `proc::bind`, and `proc::then` over opaque `Proc<A>` values without creating child processes, `P<A>` handles, scheduler behavior, or `from_act` embedding.
+
 - NOTE-009: exploratory design note for capability interfaces, Ash-defined capability implementations, resource types/instances/bindings, internal authority, authority provenance, and late binding between interfaces, implementations, and concrete resources.
 
 - TASK-707: registered opaque builtin `Proc<T>` and `P<T>` type constructors in `ash-typeck`, preserving generic process constructor annotations through type conversion and rejecting malformed process constructor arities without adding runtime process operations.

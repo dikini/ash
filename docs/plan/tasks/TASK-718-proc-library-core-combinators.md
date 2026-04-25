@@ -1,6 +1,6 @@
 # TASK-718: Proc library core combinators
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -51,12 +51,26 @@ Add or extend tests for sequencing identity/associativity where representable wi
 
 ## Verification Steps
 
-- [ ] `Proc` unit/bind/then type-check as SPEC-048 library functions.
-- [ ] `from_act` is either implemented behind verified Phase 97 substrate or explicitly deferred in docs/tests.
-- [ ] No task in this slice creates child `ProcessId`s or public `P<A>` handles.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `Proc` unit/bind/then type-check as SPEC-048 library functions.
+- [x] `from_act` is either implemented behind verified Phase 97 substrate or explicitly deferred in docs/tests.
+- [x] No task in this slice creates child `ProcessId`s or public `P<A>` handles.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
+
+Verification evidence recorded during completion:
+
+- Red: `cargo test -p ash-interp --test task_718_proc_runtime -- --nocapture` failed before runtime registration with `UnknownFunction("unit")` for qualified `proc::unit` calls.
+- Red: `cargo test -p ash-engine --test task_718_proc_stdlib -- --nocapture` failed before adding `std/src/proc.ash` with `module 'proc' not found`.
+- Green targeted runtime: `cargo test -p ash-interp --test task_718_proc_runtime -- --nocapture` passed with 3 tests.
+- Green targeted stdlib/import: `cargo test -p ash-engine --test task_718_proc_stdlib -- --nocapture` passed with 2 tests.
+- Green targeted type signatures/proptest: `cargo test -p ash-typeck --test task_718_proc_combinators -- --nocapture` passed with 4 tests.
+
+Completion notes:
+
+- Added `std/src/proc.ash` with `pub builtin fn unit`, `bind`, and `then` over `Proc<A>` and exposed the namespace from `std/src/lib.ash` as `pub mod proc` without re-exporting the names unqualified, preserving the existing top-level `act::{unit, bind, then}` surface.
+- Added interpreter runtime stubs for qualified `proc::unit`, `proc::bind`, and `proc::then`. They are closure-shaped, non-concurrent `Proc` values with an opaque `__proc_env` parameter and do not allocate `ProcessId`, return `P<A>`, schedule children, or observe handles.
+- `from_act` is explicitly deferred from TASK-718. This slice does not add the Act-to-Proc embedding surface; later Phase 98 work should verify the exact Phase 97 Act force/hidden-carrier paths before introducing it.
 
 ## Dependencies for Next Task
 

@@ -148,6 +148,18 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
+        // ── Proc module bridge builtins (qualified) ──
+        for (name, arity) in [("proc::unit", 1), ("proc::bind", 2), ("proc::then", 2)] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic: false,
+                    implemented: true,
+                },
+            );
+        }
+
         // ── List module builtins (qualified) ──
         m.insert(
             "list::len",
@@ -431,6 +443,137 @@ fn runtime_invoke(args: &[Value]) -> EvalResult<Value> {
 
 fn act_result(value: Value) -> Value {
     Value::List(Box::new(vec![Value::ActEnvToken, value]))
+}
+
+fn runtime_proc_unit(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("proc::unit".to_string()),
+        });
+    }
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(args[0].clone())),
+        env: ctx.to_env_frame(),
+    })
+}
+
+fn runtime_proc_bind(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("proc::bind".to_string()),
+        });
+    }
+
+    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    frame.insert("__proc_bind_left".to_string(), args[0].clone());
+    frame.insert("__proc_bind_cont".to_string(), args[1].clone());
+
+    let span = ash_core::ast::Span::default();
+    let proc_env = Expr::Variable {
+        name: "__proc_env".to_string(),
+        span,
+    };
+    let bind_value = Expr::Variable {
+        name: "__proc_bind_value".to_string(),
+        span,
+    };
+    let next_proc = Expr::Variable {
+        name: "__proc_bind_next".to_string(),
+        span,
+    };
+
+    let body = Expr::Let {
+        pattern: Pattern::Variable {
+            name: "__proc_bind_value".to_string(),
+            span,
+        },
+        expr: Box::new(Expr::FnApply {
+            func: Box::new(Expr::Variable {
+                name: "__proc_bind_left".to_string(),
+                span,
+            }),
+            args: vec![proc_env.clone()],
+        }),
+        body: Box::new(Expr::Let {
+            pattern: Pattern::Variable {
+                name: "__proc_bind_next".to_string(),
+                span,
+            },
+            expr: Box::new(Expr::FnApply {
+                func: Box::new(Expr::Variable {
+                    name: "__proc_bind_cont".to_string(),
+                    span,
+                }),
+                args: vec![bind_value],
+            }),
+            body: Box::new(Expr::FnApply {
+                func: Box::new(next_proc),
+                args: vec![proc_env],
+            }),
+            span,
+        }),
+        span,
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(frame),
+    })
+}
+
+fn runtime_proc_then(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("proc::then".to_string()),
+        });
+    }
+
+    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    frame.insert("__proc_then_left".to_string(), args[0].clone());
+    frame.insert("__proc_then_right".to_string(), args[1].clone());
+
+    let span = ash_core::ast::Span::default();
+    let proc_env = Expr::Variable {
+        name: "__proc_env".to_string(),
+        span,
+    };
+
+    let body = Expr::Let {
+        pattern: Pattern::Variable {
+            name: "__proc_then_ignored".to_string(),
+            span,
+        },
+        expr: Box::new(Expr::FnApply {
+            func: Box::new(Expr::Variable {
+                name: "__proc_then_left".to_string(),
+                span,
+            }),
+            args: vec![proc_env.clone()],
+        }),
+        body: Box::new(Expr::FnApply {
+            func: Box::new(Expr::Variable {
+                name: "__proc_then_right".to_string(),
+                span,
+            }),
+            args: vec![proc_env],
+        }),
+        span,
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(frame),
+    })
 }
 
 fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
@@ -951,6 +1094,12 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 if module.is_none() && func == "__guard" {
                     return runtime_guard(&args, ctx);
                 }
+                match (module.as_deref(), func.as_str()) {
+                    (Some("proc"), "unit") => return runtime_proc_unit(&args, ctx),
+                    (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
+                    (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
+                    _ => {}
+                }
                 if let (true, Some(Value::Closure { params, body, env })) =
                     (module.is_none(), ctx.get(func))
                 {
@@ -1406,6 +1555,13 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 return runtime_guard(&args, ctx);
             }
 
+            match (module.as_deref(), func.as_str()) {
+                (Some("proc"), "unit") => return runtime_proc_unit(&args, ctx),
+                (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
+                (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
+                _ => {}
+            }
+
             // Note: this early-exit returns apply_closure directly, bypassing the
             // make_partial_builtin path below. Over-application through a closure found
             // here produces WrongArity { callee: None } rather than a partial value;
@@ -1824,6 +1980,9 @@ pub fn eval_function_call(
     ctx: &Context,
 ) -> EvalResult<Value> {
     match (module, func) {
+        (Some("proc"), "unit") => runtime_proc_unit(args, ctx),
+        (Some("proc"), "bind") => runtime_proc_bind(args, ctx),
+        (Some("proc"), "then") => runtime_proc_then(args, ctx),
         (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
         (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
         (Some("string"), "concat") => {

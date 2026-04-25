@@ -50,6 +50,9 @@ pub use process::{run};
 -- Act monad helpers
 pub use act::{unit, bind, then, guard};
 
+-- Proc process-structured computation helpers
+pub mod proc;
+
 -- JSON functions
 pub use json::{parse, stringify, stringify_pretty};
 

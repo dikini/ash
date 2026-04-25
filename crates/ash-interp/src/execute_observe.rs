@@ -105,7 +105,7 @@ pub async fn execute_observe(
     let bindings =
         match_pattern(&observe.pattern, &value).map_err(|_| ExecError::PatternMatchFailed {
             pattern: format!("{:?}", observe.pattern),
-            value: value.clone(),
+            value: Box::new(value.clone()),
         })?;
 
     // Create new context with bindings

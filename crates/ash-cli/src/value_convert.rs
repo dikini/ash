@@ -118,6 +118,8 @@ pub fn value_to_json(value: &Value) -> serde_json::Value {
         Value::ProcYieldCapture => serde_json::Value::String("<proc-yield>".to_string()),
         Value::ProcParCapture { .. } => serde_json::Value::String("<proc-par>".to_string()),
         Value::ProcScatterCapture { .. } => serde_json::Value::String("<proc-scatter>".to_string()),
+        Value::ProcJoinCapture { .. } => serde_json::Value::String("<proc-join>".to_string()),
+        Value::ProcGatherCapture { .. } => serde_json::Value::String("<proc-gather>".to_string()),
         Value::Closure { params, .. } => {
             serde_json::Value::String(format!("<closure({} params)>", params.len()))
         }

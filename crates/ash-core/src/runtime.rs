@@ -391,6 +391,71 @@ pub enum WorkflowReportStatus {
     Failed,
 }
 
+/// Admitted workflow boundary context.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct WorkflowAdmissionContext {
+    /// Active admitted role name, if any.
+    pub active_role: Option<String>,
+    /// Capability surface admitted to the workflow boundary.
+    pub admitted_capabilities: Vec<String>,
+    /// Evidence used to satisfy admission-time `requires` checks.
+    pub requires_evidence: Vec<String>,
+}
+
+/// Structured workflow contract evidence status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkflowEvidenceStatus {
+    /// The contract clause has not yet been evaluated.
+    Pending,
+    /// The contract clause evaluated successfully.
+    Passed,
+    /// The contract clause evaluated unsuccessfully.
+    Failed,
+}
+
+/// Structured workflow contract evidence for `requires` / `ensures` reporting.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowContractCheckEvidence {
+    /// Clause or label being checked.
+    pub clause: String,
+    /// Current evidence status.
+    pub status: WorkflowEvidenceStatus,
+    /// Human- or runtime-readable evidence notes.
+    pub notes: Vec<String>,
+}
+
+impl WorkflowContractCheckEvidence {
+    /// Construct pending evidence for deferred completion-time checks.
+    #[must_use]
+    pub fn pending(clause: impl Into<String>, notes: Vec<String>) -> Self {
+        Self {
+            clause: clause.into(),
+            status: WorkflowEvidenceStatus::Pending,
+            notes,
+        }
+    }
+
+    /// Construct passed evidence for admission-time checks.
+    #[must_use]
+    pub fn passed(clause: impl Into<String>, notes: Vec<String>) -> Self {
+        Self {
+            clause: clause.into(),
+            status: WorkflowEvidenceStatus::Passed,
+            notes,
+        }
+    }
+
+    /// Construct failed evidence for admission/completion checks.
+    #[must_use]
+    pub fn failed(clause: impl Into<String>, notes: Vec<String>) -> Self {
+        Self {
+            clause: clause.into(),
+            status: WorkflowEvidenceStatus::Failed,
+            notes,
+        }
+    }
+}
+
 /// Workflow boundary report skeleton.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorkflowReport {
@@ -402,12 +467,26 @@ pub struct WorkflowReport {
     pub status: WorkflowReportStatus,
     /// Failure details for failed reports.
     pub failure: Option<WorkflowFailure>,
+    /// Admitted workflow context captured at the boundary.
+    pub admission: WorkflowAdmissionContext,
+    /// Admission-time `requires` evidence recorded for the boundary.
+    pub requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    /// Completion-time `ensures` evidence placeholders.
+    pub ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+    /// Completion obligation evidence placeholders.
+    pub obligation_evidence: Vec<String>,
+    /// Lower process failures observed at or preserved for the boundary.
+    pub lower_process_failures: Vec<ProcessFailure>,
     /// Generic evidence placeholders for initial substrate stability.
     pub evidence: Vec<String>,
     /// Lower operational causes preserved for report consumers.
     pub lower_causes: Vec<OperationalFailure>,
     /// Provenance/audit placeholders for initial substrate stability.
     pub provenance: Vec<String>,
+    /// Successful workflow result, when available.
+    pub result: Option<Value>,
+    /// Placeholder external report sink identity/reference.
+    pub external_report_sink: Option<String>,
 }
 
 impl WorkflowReport {
@@ -419,28 +498,136 @@ impl WorkflowReport {
             run_id,
             status: WorkflowReportStatus::Succeeded,
             failure: None,
+            admission: WorkflowAdmissionContext::default(),
+            requires_evidence: Vec::new(),
+            ensures_evidence: Vec::new(),
+            obligation_evidence: Vec::new(),
+            lower_process_failures: Vec::new(),
             evidence: Vec::new(),
             lower_causes: Vec::new(),
             provenance: Vec::new(),
+            result: None,
+            external_report_sink: None,
         }
     }
 
     /// Create a failed workflow report skeleton.
     #[must_use]
     pub fn failed(workflow_id: WorkflowId, run_id: RunId, failure: WorkflowFailure) -> Self {
-        let lower_causes = failure
-            .cause
-            .as_deref()
-            .map(|cause| vec![cause.clone()])
+        let lower_cause = failure.cause.as_deref().cloned();
+        let lower_causes = lower_cause.iter().cloned().collect();
+        let lower_process_failures = lower_cause
+            .and_then(|cause| match cause.entity {
+                FailureEntity::Process(process_id) => {
+                    Some(vec![ProcessFailure::new(process_id, cause)])
+                }
+                _ => None,
+            })
             .unwrap_or_default();
         Self {
             workflow_id,
             run_id,
             status: WorkflowReportStatus::Failed,
             failure: Some(failure),
+            admission: WorkflowAdmissionContext::default(),
+            requires_evidence: Vec::new(),
+            ensures_evidence: Vec::new(),
+            obligation_evidence: Vec::new(),
+            lower_process_failures,
             evidence: Vec::new(),
             lower_causes,
             provenance: Vec::new(),
+            result: None,
+            external_report_sink: None,
+        }
+    }
+
+    /// Attach admitted workflow context and project admission evidence into the report.
+    #[must_use]
+    pub fn with_admission_context(mut self, admission: WorkflowAdmissionContext) -> Self {
+        self.requires_evidence = admission
+            .requires_evidence
+            .iter()
+            .cloned()
+            .map(|note| WorkflowContractCheckEvidence::passed(note.clone(), vec![note]))
+            .collect();
+        self.admission = admission;
+        self
+    }
+
+    /// Attach structured admission-time `requires` evidence.
+    #[must_use]
+    pub fn with_requires_evidence(
+        mut self,
+        requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    ) -> Self {
+        self.requires_evidence = requires_evidence;
+        self
+    }
+
+    /// Attach structured completion-time `ensures` evidence/plumbing.
+    #[must_use]
+    pub fn with_ensures_evidence(
+        mut self,
+        ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+    ) -> Self {
+        self.ensures_evidence = ensures_evidence;
+        self
+    }
+
+    /// Attach the normal workflow result to a success report.
+    #[must_use]
+    pub fn with_result(mut self, value: Value) -> Self {
+        self.result = Some(value);
+        self
+    }
+}
+
+/// Outer workflow-boundary outcome carrier.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum WorkflowBoundaryOutcome {
+    /// Workflow body and boundary governance completed successfully.
+    WorkflowSucceeded {
+        value: Value,
+        report: WorkflowReport,
+    },
+    /// Workflow failed at admission, by escaped body failure, or completion governance.
+    WorkflowFailed {
+        failure: WorkflowFailure,
+        report: WorkflowReport,
+    },
+}
+
+impl WorkflowBoundaryOutcome {
+    /// Construct a successful workflow boundary outcome.
+    #[must_use]
+    pub fn succeeded(value: Value, report: WorkflowReport) -> Self {
+        Self::WorkflowSucceeded { value, report }
+    }
+
+    /// Construct a failed workflow boundary outcome.
+    #[must_use]
+    pub fn failed(failure: WorkflowFailure, report: WorkflowReport) -> Self {
+        Self::WorkflowFailed { failure, report }
+    }
+
+    /// Return the workflow identity associated with this boundary outcome.
+    #[must_use]
+    pub fn workflow_id(&self) -> WorkflowId {
+        self.report().workflow_id
+    }
+
+    /// Return the host/runtime run identity associated with this boundary outcome.
+    #[must_use]
+    pub fn run_id(&self) -> RunId {
+        self.report().run_id
+    }
+
+    /// Borrow the boundary report carried by this outcome.
+    #[must_use]
+    pub fn report(&self) -> &WorkflowReport {
+        match self {
+            Self::WorkflowSucceeded { report, .. } | Self::WorkflowFailed { report, .. } => report,
         }
     }
 }

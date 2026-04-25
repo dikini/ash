@@ -31,8 +31,16 @@ pub use error::EngineError;
 // Re-export the unified CapabilityProvider trait from ash_core
 pub use ash_core::capability::CapabilityProvider;
 
-use ash_core::Value;
-use ash_interp::{ExecResult, RuntimeState, interpret_in_state};
+use ash_core::runtime::{
+    FailureEntity, OperationalFailure, RunId, TowerLevel, WorkflowAdmissionContext,
+    WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
+    WorkflowFailure, WorkflowFailureKind, WorkflowReport,
+};
+use ash_core::{Role, Value, WorkflowId};
+use ash_interp::{
+    BehaviourContext, Context, ExecResult, PolicyEvaluator, RoleContext, RuntimeState,
+    execute_workflow_with_behaviour_in_state, interpret_in_state,
+};
 use ash_parser::surface::Type as SurfaceType;
 use std::collections::HashMap;
 
@@ -140,12 +148,181 @@ pub struct ModuleFileCheckResult {
     pub errors: Vec<String>,
 }
 
+/// Admission-time workflow contract requirements evaluated above interpreter execution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WorkflowContractRequirement {
+    /// Require the admitted workflow role to match this role name.
+    Role(String),
+    /// Require the admitted capability surface to include this capability name.
+    Capability(String),
+    /// Host/runtime-supplied evidence result for one `requires` clause.
+    Evidence {
+        /// Clause label being checked at admission.
+        clause: String,
+        /// Whether the host/runtime considered the clause satisfied.
+        passed: bool,
+        /// Evidence notes explaining the admission-time check result.
+        notes: Vec<String>,
+    },
+}
+
+/// Request for workflow admission above interpreter execution.
+#[derive(Debug, Clone)]
+pub struct WorkflowAdmissionRequest {
+    /// Human-readable workflow name for admission/reporting.
+    pub workflow_name: String,
+    /// Core workflow body to execute if admission succeeds.
+    pub workflow: ash_core::Workflow,
+    /// Explicit workflow identity to preserve, if one is already allocated.
+    pub workflow_id: Option<WorkflowId>,
+    /// Explicit host/runtime run identity to preserve, if one is already allocated.
+    pub run_id: Option<RunId>,
+    /// Admitted active role name, if any.
+    pub active_role: Option<String>,
+    /// Capability surface admitted to the workflow boundary.
+    pub required_capabilities: Vec<String>,
+    /// Admission-time requirements to validate before body execution.
+    pub requires: Vec<WorkflowContractRequirement>,
+    /// Ensures clause labels carried forward for TASK-716 completion-time evaluation.
+    pub ensures: Vec<String>,
+}
+
+/// Admitted workflow boundary carrier returned by engine admission.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AdmittedWorkflowBoundary {
+    outcome: WorkflowBoundaryOutcome,
+}
+
+impl AdmittedWorkflowBoundary {
+    /// Wrap one admitted workflow boundary outcome.
+    #[must_use]
+    pub const fn new(outcome: WorkflowBoundaryOutcome) -> Self {
+        Self { outcome }
+    }
+
+    /// Return the admitted workflow identity.
+    #[must_use]
+    pub fn workflow_id(&self) -> WorkflowId {
+        self.outcome.workflow_id()
+    }
+
+    /// Return the admitted host/runtime run identity.
+    #[must_use]
+    pub fn run_id(&self) -> RunId {
+        self.outcome.run_id()
+    }
+
+    /// Borrow the admitted workflow boundary report.
+    #[must_use]
+    pub fn report(&self) -> &WorkflowReport {
+        self.outcome.report()
+    }
+
+    /// Borrow the underlying workflow boundary outcome.
+    #[must_use]
+    pub const fn outcome(&self) -> &WorkflowBoundaryOutcome {
+        &self.outcome
+    }
+}
+
+/// Result of workflow admission above interpreter execution.
+#[derive(Debug, Clone, PartialEq)]
+pub enum WorkflowAdmissionOutcome {
+    /// Admission succeeded and produced a workflow boundary carrier.
+    Admitted {
+        /// Boundary outcome and report produced for the admitted workflow.
+        boundary: AdmittedWorkflowBoundary,
+    },
+    /// Admission failed before or at governed execution.
+    Rejected {
+        /// Structured workflow failure describing the rejection.
+        failure: WorkflowFailure,
+        /// Boundary report captured at rejection time.
+        report: WorkflowReport,
+    },
+}
+
 /// Result of processing a multi-workflow program: closures, param counts, and lowered workflow.
 type ProgramProcessingResult = (
     HashMap<String, Value>,
     HashMap<String, usize>,
     ash_core::ast::Workflow,
 );
+
+fn build_pending_ensures_evidence(ensures: &[String]) -> Vec<WorkflowContractCheckEvidence> {
+    ensures
+        .iter()
+        .cloned()
+        .map(|clause| {
+            WorkflowContractCheckEvidence::pending(clause, vec!["deferred-to-task-716".to_string()])
+        })
+        .collect()
+}
+
+fn build_requires_evidence(
+    requires: &[WorkflowContractRequirement],
+) -> Vec<WorkflowContractCheckEvidence> {
+    requires
+        .iter()
+        .filter_map(|requirement| match requirement {
+            WorkflowContractRequirement::Evidence {
+                clause,
+                passed,
+                notes,
+            } => Some(if *passed {
+                WorkflowContractCheckEvidence::passed(clause.clone(), notes.clone())
+            } else {
+                WorkflowContractCheckEvidence::failed(clause.clone(), notes.clone())
+            }),
+            WorkflowContractRequirement::Role(_) | WorkflowContractRequirement::Capability(_) => {
+                None
+            }
+        })
+        .collect()
+}
+
+fn reject_admission(
+    workflow_id: WorkflowId,
+    run_id: RunId,
+    kind: WorkflowFailureKind,
+    admission: WorkflowAdmissionContext,
+    requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+) -> WorkflowAdmissionOutcome {
+    let failure = WorkflowFailure::new(workflow_id, run_id, kind, None);
+    let report = WorkflowReport::failed(workflow_id, run_id, failure.clone())
+        .with_admission_context(admission)
+        .with_requires_evidence(requires_evidence)
+        .with_ensures_evidence(ensures_evidence);
+    WorkflowAdmissionOutcome::Rejected { failure, report }
+}
+
+fn failed_boundary_outcome_from_exec_error(
+    workflow_id: WorkflowId,
+    run_id: RunId,
+    error: impl std::fmt::Display,
+    admission: WorkflowAdmissionContext,
+    requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+) -> WorkflowBoundaryOutcome {
+    let cause = OperationalFailure::new(
+        TowerLevel::Workflow,
+        FailureEntity::Run(run_id),
+        Value::String(error.to_string()),
+        "ExecError",
+    );
+    let failure = WorkflowFailure::new(
+        workflow_id,
+        run_id,
+        WorkflowFailureKind::BodyFailureEscaped,
+        Some(cause),
+    );
+    let report = WorkflowReport::failed(workflow_id, run_id, failure.clone())
+        .with_admission_context(admission)
+        .with_requires_evidence(requires_evidence)
+        .with_ensures_evidence(ensures_evidence);
+    WorkflowBoundaryOutcome::failed(failure, report)
+}
 
 impl Engine {
     /// Create a new engine builder with default configuration
@@ -766,12 +943,11 @@ impl Engine {
     /// Returns execution errors from the interpreter.
     #[doc(hidden)]
     pub async fn execute_core_workflow(&self, workflow: &ash_core::Workflow) -> ExecResult<Value> {
-        use ash_interp::{BehaviourContext, Context, PolicyEvaluator};
         let ctx = Context::new();
         let cap_ctx = self.runtime_state.create_capability_context().await;
         let policy_eval = PolicyEvaluator::new();
         let behaviour_ctx = BehaviourContext::new();
-        ash_interp::execute_workflow_with_behaviour_in_state(
+        execute_workflow_with_behaviour_in_state(
             workflow,
             ctx,
             &cap_ctx,
@@ -780,6 +956,111 @@ impl Engine {
             &self.runtime_state,
         )
         .await
+    }
+
+    /// Admit and execute a workflow through the workflow-boundary carrier substrate.
+    pub async fn admit_workflow(
+        &self,
+        request: WorkflowAdmissionRequest,
+    ) -> WorkflowAdmissionOutcome {
+        let workflow_id = request.workflow_id.unwrap_or_default();
+        let run_id = request.run_id.unwrap_or_default();
+        let admission = WorkflowAdmissionContext {
+            active_role: request.active_role.clone(),
+            admitted_capabilities: request.required_capabilities.clone(),
+            requires_evidence: Vec::new(),
+        };
+        let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
+
+        for requirement in &request.requires {
+            match requirement {
+                WorkflowContractRequirement::Role(required_role)
+                    if request.active_role.as_deref() != Some(required_role.as_str()) =>
+                {
+                    return reject_admission(
+                        workflow_id,
+                        run_id,
+                        WorkflowFailureKind::RoleAdmissionFailure,
+                        admission.clone(),
+                        Vec::new(),
+                        ensures_evidence.clone(),
+                    );
+                }
+                WorkflowContractRequirement::Capability(required_capability)
+                    if !request.required_capabilities.contains(required_capability) =>
+                {
+                    return reject_admission(
+                        workflow_id,
+                        run_id,
+                        WorkflowFailureKind::CapabilityAdmissionFailure,
+                        admission.clone(),
+                        Vec::new(),
+                        ensures_evidence.clone(),
+                    );
+                }
+                WorkflowContractRequirement::Role(_)
+                | WorkflowContractRequirement::Capability(_)
+                | WorkflowContractRequirement::Evidence { .. } => {}
+            }
+        }
+
+        let requires_evidence = build_requires_evidence(&request.requires);
+        if requires_evidence
+            .iter()
+            .any(|entry| entry.status == WorkflowEvidenceStatus::Failed)
+        {
+            return reject_admission(
+                workflow_id,
+                run_id,
+                WorkflowFailureKind::RequiresViolation,
+                admission,
+                requires_evidence,
+                ensures_evidence,
+            );
+        }
+
+        let mut ctx = Context::new();
+        if let Some(active_role) = request.active_role {
+            ctx = ctx.with_role_context(RoleContext::new(Role {
+                name: active_role,
+                authority: vec![],
+                obligations: vec![],
+            }));
+        }
+        let cap_ctx = self.runtime_state.create_capability_context().await;
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+        let outcome = match execute_workflow_with_behaviour_in_state(
+            &request.workflow,
+            ctx,
+            &cap_ctx,
+            &policy_eval,
+            &behaviour_ctx,
+            &self.runtime_state,
+        )
+        .await
+        {
+            Ok(value) => WorkflowBoundaryOutcome::succeeded(
+                value.clone(),
+                WorkflowReport::succeeded(workflow_id, run_id)
+                    .with_admission_context(admission)
+                    .with_requires_evidence(requires_evidence)
+                    .with_ensures_evidence(ensures_evidence)
+                    .with_result(value),
+            ),
+            Err(error) => failed_boundary_outcome_from_exec_error(
+                workflow_id,
+                run_id,
+                error,
+                admission,
+                requires_evidence,
+                ensures_evidence,
+            ),
+        };
+
+        WorkflowAdmissionOutcome::Admitted {
+            boundary: AdmittedWorkflowBoundary::new(outcome),
+        }
     }
 
     /// Register a runtime-owned spawned-child workflow entry.
@@ -953,6 +1234,17 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
         },
         SurfaceType::List(item) => {
             surface_type_to_typeck(item).map(|item| ash_typeck::Type::List(Box::new(item)))
+        }
+        SurfaceType::Tuple(items) => {
+            let items = items
+                .iter()
+                .enumerate()
+                .map(|(index, ty)| {
+                    surface_type_to_typeck(ty)
+                        .map(|ty| (ash_core::adt::tuple_field_name(index).into_boxed_str(), ty))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ash_typeck::Type::Record(items))
         }
         SurfaceType::Record(fields) => {
             let fields = fields

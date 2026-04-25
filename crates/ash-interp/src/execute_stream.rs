@@ -747,7 +747,7 @@ fn try_bind_receive_pattern(
             let bindings =
                 match_pattern(pattern, value).map_err(|_| ExecError::PatternMatchFailed {
                     pattern: format!("{:?}", pattern),
-                    value: value.clone(),
+                    value: Box::new(value.clone()),
                 })?;
             Ok(Some(bindings))
         }
@@ -894,7 +894,7 @@ fn build_arm_context(base_ctx: Context, value: &Value, pattern: &Pattern) -> Exe
     // Extract bindings from the pattern match
     let bindings = match_pattern(pattern, value).map_err(|_| ExecError::PatternMatchFailed {
         pattern: format!("{:?}", pattern),
-        value: value.clone(),
+        value: Box::new(value.clone()),
     })?;
 
     ctx.set_many(bindings);

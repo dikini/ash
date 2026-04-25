@@ -2,7 +2,7 @@
 
 use ash_parser::input::new_input;
 use ash_parser::parse_module::parse_builtin_fn_definition;
-use ash_parser::surface::{Definition, Visibility};
+use ash_parser::surface::{Definition, Type, Visibility};
 
 // ---------------------------------------------------------------------------
 // Helper: parse a builtin fn definition from source text
@@ -108,6 +108,29 @@ fn parse_builtin_fn_no_params() {
     };
     assert_eq!(f.name.as_ref(), "magic");
     assert_eq!(f.params.len(), 0);
+}
+
+#[test]
+fn parse_builtin_fn_with_tuple_return_type() {
+    let def = parse_builtin("pub builtin fn join<A, B>(left: P<A>, right: P<B>) -> Proc<(A, B)>;");
+    let Definition::BuiltinFn(f) = def else {
+        panic!("expected BuiltinFn definition, got: {def:?}");
+    };
+
+    match &f.return_type {
+        Type::Constructor { name, args } => {
+            assert_eq!(name.as_ref(), "Proc");
+            assert_eq!(args.len(), 1);
+            assert!(matches!(
+                &args[0],
+                Type::Tuple(items)
+                    if items.len() == 2
+                        && matches!(&items[0], Type::Name(name) if name.as_ref() == "A")
+                        && matches!(&items[1], Type::Name(name) if name.as_ref() == "B")
+            ));
+        }
+        other => panic!("expected Proc<(A, B)> return type, got: {other:?}"),
+    }
 }
 
 // ---------------------------------------------------------------------------

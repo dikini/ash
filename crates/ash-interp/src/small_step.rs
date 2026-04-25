@@ -74,7 +74,7 @@ fn apply_frame(config: &mut Config) -> ExecResult<Option<StmtList>> {
                     let bindings = match_pattern(&pattern, &item).map_err(|_| {
                         ExecError::PatternMatchFailed {
                             pattern: format!("{pattern:?}"),
-                            value: item.clone(),
+                            value: Box::new(item.clone()),
                         }
                     })?;
                     if let Config::Running { env, frames, .. } = config {
@@ -216,7 +216,7 @@ async fn step_inner(
                     let bindings = match_pattern(&pattern, &value).map_err(|_| {
                         ExecError::PatternMatchFailed {
                             pattern: format!("{pattern:?}"),
-                            value: value.clone(),
+                            value: Box::new(value.clone()),
                         }
                     })?;
                     env.extend(bindings);
@@ -376,7 +376,7 @@ async fn step_inner(
                     let bindings = match_pattern(&pattern, &value).map_err(|_| {
                         ExecError::PatternMatchFailed {
                             pattern: format!("{pattern:?}"),
-                            value: value.clone(),
+                            value: Box::new(value.clone()),
                         }
                     })?;
                     env.extend(bindings);
@@ -526,7 +526,7 @@ async fn step_inner(
                                 let bindings = match_pattern(&pattern, &first).map_err(|_| {
                                     ExecError::PatternMatchFailed {
                                         pattern: format!("{pattern:?}"),
-                                        value: first.clone(),
+                                        value: Box::new(first.clone()),
                                     }
                                 })?;
                                 env.extend(bindings);
@@ -571,7 +571,7 @@ async fn step_inner(
                     let bindings = match_pattern(&pattern, &instance_value).map_err(|_| {
                         ExecError::PatternMatchFailed {
                             pattern: format!("{pattern:?}"),
-                            value: instance_value.clone(),
+                            value: Box::new(instance_value.clone()),
                         }
                     })?;
                     env.extend(bindings);
@@ -587,7 +587,7 @@ async fn step_inner(
                     let bindings = match_pattern(&pattern, &split_value).map_err(|_| {
                         ExecError::PatternMatchFailed {
                             pattern: format!("{pattern:?}"),
-                            value: split_value.clone(),
+                            value: Box::new(split_value.clone()),
                         }
                     })?;
                     env.extend(bindings);

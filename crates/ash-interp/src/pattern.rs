@@ -110,7 +110,7 @@ fn match_pattern_recursive(
                     }
                     Ok(())
                 }
-                _ => Err(PatternError::NotARecord(value.clone())),
+                _ => Err(PatternError::NotARecord(Box::new(value.clone()))),
             }
         }
 

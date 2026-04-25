@@ -1176,6 +1176,7 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
             name: "List".to_string(),
             args: vec![lower_type_to_type_expr(inner)],
         },
+        Type::Tuple(items) => TypeExpr::Tuple(items.iter().map(lower_type_to_type_expr).collect()),
         Type::Record(fields) => TypeExpr::Constructor {
             name: "Record".to_string(),
             args: fields
@@ -1211,6 +1212,7 @@ pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
             name: "List".to_string(),
             args: vec![lower_surface_type(inner)],
         },
+        Type::Tuple(items) => TypeExpr::Tuple(items.iter().map(lower_surface_type).collect()),
         Type::Record(fields) => TypeExpr::Record(
             fields
                 .iter()

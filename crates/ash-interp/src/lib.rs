@@ -110,7 +110,10 @@ pub use typed_provider::{TypedBehaviourProvider, TypedStreamProvider};
 pub use yield_routing::{PendingYield, ResumeResult, YieldError, YieldId, YieldRouter};
 pub use yield_state::{CorrelationId, SuspendedYields, YieldState};
 
-use ash_core::{Value, Workflow};
+use ash_core::{
+    FailureEntity, OperationalFailure, RunId, TowerLevel, Value, Workflow, WorkflowBoundaryOutcome,
+    WorkflowFailure, WorkflowFailureKind, WorkflowId, WorkflowReport,
+};
 
 /// Convenience function to interpret a workflow with default contexts
 ///
@@ -139,6 +142,37 @@ pub async fn interpret_in_state(
     runtime_state: &RuntimeState,
 ) -> ExecResult<Value> {
     execute_simple_in_state(workflow, runtime_state).await
+}
+
+/// Project an existing `ExecResult<Value>` into the outer workflow-boundary carrier.
+#[must_use]
+pub fn workflow_boundary_outcome_from_exec_result(
+    workflow_id: WorkflowId,
+    run_id: RunId,
+    result: ExecResult<Value>,
+) -> WorkflowBoundaryOutcome {
+    match result {
+        Ok(value) => {
+            let report = WorkflowReport::succeeded(workflow_id, run_id).with_result(value.clone());
+            WorkflowBoundaryOutcome::succeeded(value, report)
+        }
+        Err(error) => {
+            let cause = OperationalFailure::new(
+                TowerLevel::Workflow,
+                FailureEntity::Run(run_id),
+                Value::String(error.to_string()),
+                "ExecError",
+            );
+            let failure = WorkflowFailure::new(
+                workflow_id,
+                run_id,
+                WorkflowFailureKind::BodyFailureEscaped,
+                Some(cause),
+            );
+            let report = WorkflowReport::failed(workflow_id, run_id, failure.clone());
+            WorkflowBoundaryOutcome::failed(failure, report)
+        }
+    }
 }
 
 #[cfg(test)]

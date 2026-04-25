@@ -105,6 +105,20 @@ fn proc_stdlib_surface_declares_par_and_scatter_handle_admission_builtins() {
 }
 
 #[test]
+fn proc_stdlib_surface_declares_join_and_gather_wait_for_all_observers() {
+    let proc_module = read_stdlib_file("proc.ash");
+
+    assert!(
+        proc_module.contains("pub builtin fn join<A, B>(left: P<A>, right: P<B>) -> Proc<(A, B)>;"),
+        "std/src/proc.ash should declare proc::join with the canonical wait-for-all pair observer signature"
+    );
+    assert!(
+        proc_module.contains("pub builtin fn gather<A>(handles: List<P<A>>) -> Proc<List<A>>;"),
+        "std/src/proc.ash should declare proc::gather with the canonical wait-for-all ordered handle-list observer signature"
+    );
+}
+
+#[test]
 fn runtime_stdlib_surface_is_exposed() {
     let runtime_error = read_stdlib_file("runtime/error.ash");
     let runtime_error_normalized = normalize_whitespace(&runtime_error);

@@ -5,6 +5,7 @@
 use ash_core::runtime::{EffectScopeId, OperationalFailure, ProcessId, ProcessTerminalState};
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
+use futures::future::join_all;
 use std::collections::HashMap;
 
 use crate::EvalResult;
@@ -60,6 +61,8 @@ fn value_type_name(value: &Value) -> &'static str {
         Value::ProcYieldCapture => "<proc-yield>",
         Value::ProcParCapture { .. } => "<proc-par>",
         Value::ProcScatterCapture { .. } => "<proc-scatter>",
+        Value::ProcJoinCapture { .. } => "<proc-join>",
+        Value::ProcGatherCapture { .. } => "<proc-gather>",
         Value::Closure { .. } => "Closure",
         Value::ActEnvToken => "ActEnvToken",
     }
@@ -111,6 +114,103 @@ async fn observe_terminal_process_async(
     observe_terminal_state(handle.process_id, terminal_state)
 }
 
+async fn wait_for_terminal_process_async(
+    process_id: ash_core::ProcessId,
+    runtime_ctx: &Context,
+) -> EvalResult<ProcessTerminalState> {
+    let runtime_state =
+        runtime_ctx
+            .runtime_state()
+            .ok_or_else(|| EvalError::ProcessObservationUnavailable {
+                process_id,
+                reason: "missing hidden runtime state".to_string(),
+            })?;
+
+    runtime_state
+        .wait_for_process_terminal_state(process_id)
+        .await
+        .ok_or_else(|| EvalError::ProcessObservationUnavailable {
+            process_id,
+            reason: "process is not in a retained terminal state".to_string(),
+        })
+}
+
+fn aggregate_wait_all_failure(
+    runtime_ctx: &Context,
+    observer_name: &str,
+    failures: Vec<(ProcessId, Box<OperationalFailure>)>,
+) -> EvalError {
+    debug_assert!(!failures.is_empty());
+    if failures.len() == 1 {
+        let (_process_id, failure) = failures.into_iter().next().expect("single failure");
+        return EvalError::OperationalFailure(failure);
+    }
+
+    let mut chained_failure: Option<Box<OperationalFailure>> = None;
+    for (_process_id, failure) in failures.into_iter().rev() {
+        chained_failure = Some(match chained_failure {
+            Some(next_failure) => {
+                preserve_caught_failure_as_tail_cause(failure, next_failure.as_ref())
+            }
+            None => failure,
+        });
+    }
+
+    let mut aggregate = operational_failure_for_payload(
+        Value::String(format!(
+            "proc::{observer_name} observed one or more child failures"
+        )),
+        runtime_ctx,
+    );
+    aggregate.cause = chained_failure;
+    EvalError::OperationalFailure(Box::new(aggregate))
+}
+
+async fn observe_terminal_processes_wait_all_async(
+    handles: &[ash_core::ProcessHandle],
+    runtime_ctx: &Context,
+    observer_name: &str,
+) -> EvalResult<Vec<Value>> {
+    for handle in handles {
+        if !handle.try_consume() {
+            return Err(EvalError::ProcessHandleConsumed {
+                process_id: handle.process_id,
+            });
+        }
+    }
+
+    let terminal_states = join_all(
+        handles
+            .iter()
+            .map(|handle| wait_for_terminal_process_async(handle.process_id, runtime_ctx)),
+    )
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()?;
+
+    let mut successes = Vec::with_capacity(terminal_states.len());
+    let mut failures = Vec::new();
+    for (handle, terminal_state) in handles.iter().zip(terminal_states) {
+        match terminal_state {
+            ProcessTerminalState::Succeeded { value } => successes.push(value),
+            ProcessTerminalState::Failed { failure, .. }
+            | ProcessTerminalState::Cancelled { failure, .. } => {
+                failures.push((handle.process_id, failure));
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        Ok(successes)
+    } else {
+        Err(aggregate_wait_all_failure(
+            runtime_ctx,
+            observer_name,
+            failures,
+        ))
+    }
+}
+
 fn observe_terminal_state(
     process_id: ash_core::ProcessId,
     terminal_state: Option<ash_core::runtime::ProcessTerminalState>,
@@ -138,9 +238,10 @@ fn maybe_execute_proc_await_capture(value: Value, runtime_ctx: &Context) -> Eval
 fn maybe_execute_proc_yield_capture(value: Value, _runtime_ctx: &Context) -> EvalResult<Value> {
     match value {
         Value::ProcYieldCapture => Err(EvalError::ProcYieldRequiresAsyncRuntime),
-        Value::ProcParCapture { .. } | Value::ProcScatterCapture { .. } => {
-            Err(EvalError::ProcAdmissionRequiresAsyncRuntime)
-        }
+        Value::ProcParCapture { .. }
+        | Value::ProcScatterCapture { .. }
+        | Value::ProcJoinCapture { .. }
+        | Value::ProcGatherCapture { .. } => Err(EvalError::ProcAdmissionRequiresAsyncRuntime),
         other => Ok(other),
     }
 }
@@ -334,6 +435,29 @@ async fn maybe_execute_proc_admission_capture_async(
     }
 }
 
+async fn maybe_execute_proc_wait_all_capture_async(
+    value: Value,
+    runtime_ctx: &Context,
+) -> EvalResult<Value> {
+    match value {
+        Value::ProcJoinCapture { left, right } => {
+            let values =
+                observe_terminal_processes_wait_all_async(&[left, right], runtime_ctx, "join")
+                    .await?;
+            let mut fields = HashMap::with_capacity(2);
+            fields.insert("_0".to_string(), values[0].clone());
+            fields.insert("_1".to_string(), values[1].clone());
+            Ok(Value::Record(Box::new(fields)))
+        }
+        Value::ProcGatherCapture { handles } => {
+            let values =
+                observe_terminal_processes_wait_all_async(&handles, runtime_ctx, "gather").await?;
+            Ok(Value::List(Box::new(values)))
+        }
+        other => Ok(other),
+    }
+}
+
 fn preserve_caught_failure_as_tail_cause(
     mut raised: Box<OperationalFailure>,
     caught: &OperationalFailure,
@@ -493,6 +617,8 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("proc::yield", 0),
             ("proc::par", 2),
             ("proc::scatter", 2),
+            ("proc::join", 2),
+            ("proc::gather", 1),
         ] {
             m.insert(
                 name,
@@ -1011,6 +1137,71 @@ fn runtime_proc_scatter(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     })
 }
 
+fn runtime_proc_join(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("proc::join".to_string()),
+        });
+    }
+    let Value::ProcessHandle(left) = &args[0] else {
+        return Err(EvalError::TypeMismatch {
+            expected: "P<A>".to_string(),
+            actual: value_type_name(&args[0]).to_string(),
+        });
+    };
+    let Value::ProcessHandle(right) = &args[1] else {
+        return Err(EvalError::TypeMismatch {
+            expected: "P<B>".to_string(),
+            actual: value_type_name(&args[1]).to_string(),
+        });
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(Value::ProcJoinCapture {
+            left: left.clone(),
+            right: right.clone(),
+        })),
+        env: ctx.to_env_frame(),
+    })
+}
+
+fn runtime_proc_gather(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("proc::gather".to_string()),
+        });
+    }
+    let Value::List(handles) = &args[0] else {
+        return Err(EvalError::TypeMismatch {
+            expected: "List<P<A>>".to_string(),
+            actual: value_type_name(&args[0]).to_string(),
+        });
+    };
+    let mut gathered_handles = Vec::with_capacity(handles.len());
+    for handle in handles.iter() {
+        let Value::ProcessHandle(handle) = handle else {
+            return Err(EvalError::TypeMismatch {
+                expected: "List<P<A>>".to_string(),
+                actual: value_type_name(handle).to_string(),
+            });
+        };
+        gathered_handles.push(handle.clone());
+    }
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(Value::ProcGatherCapture {
+            handles: Box::new(gathered_handles),
+        })),
+        env: ctx.to_env_frame(),
+    })
+}
+
 fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
     let Value::List(items) = value else {
         return Ok(value);
@@ -1369,7 +1560,8 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 let value = maybe_execute_invoke_capture_async(value.clone(), ctx).await?;
                 let value = maybe_execute_proc_await_capture_async(value, ctx).await?;
                 let value = maybe_execute_proc_yield_capture_async(value, ctx).await?;
-                maybe_execute_proc_admission_capture_async(value, ctx).await
+                let value = maybe_execute_proc_admission_capture_async(value, ctx).await?;
+                maybe_execute_proc_wait_all_capture_async(value, ctx).await
             }
             Expr::Variable { name, .. } => ctx
                 .get(name)
@@ -1390,7 +1582,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                             .remove(field)
                             .ok_or_else(|| EvalError::FieldNotFound {
                                 field: field.clone(),
-                                value: Value::Record(fields),
+                                value: Box::new(Value::Record(fields)),
                             })
                     }
                     Value::List(items) => {
@@ -1554,6 +1746,8 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     (Some("proc"), "yield") => return runtime_proc_yield(&args, ctx),
                     (Some("proc"), "par") => return runtime_proc_par(&args, ctx),
                     (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
+                    (Some("proc"), "join") => return runtime_proc_join(&args, ctx),
+                    (Some("proc"), "gather") => return runtime_proc_gather(&args, ctx),
                     _ => {}
                 }
                 if let (true, Some(Value::Closure { params, body, env })) =
@@ -1725,7 +1919,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 };
                 if ctx.is_pure() {
                     return Err(EvalError::BoundaryViolation {
-                        value: closure,
+                        value: Box::new(closure),
                         context: "closure created inside pure-function boundary".into(),
                     });
                 }
@@ -1745,7 +1939,9 @@ fn apply_closure_async_value<'a>(
             Value::Closure { params, body, env } => {
                 apply_closure_async(&params, &body, &env, args, runtime_ctx).await
             }
-            other => Err(EvalError::NotCallable { value: other }),
+            other => Err(EvalError::NotCallable {
+                value: Box::new(other),
+            }),
         }
     })
 }
@@ -1911,7 +2107,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                     if removed.is_none() {
                         return Err(EvalError::FieldNotFound {
                             field: field.clone(),
-                            value: Value::Record(fields),
+                            value: Box::new(Value::Record(fields)),
                         });
                     }
                     Ok(removed.unwrap())
@@ -2076,6 +2272,8 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 (Some("proc"), "yield") => return runtime_proc_yield(&args, ctx),
                 (Some("proc"), "par") => return runtime_proc_par(&args, ctx),
                 (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
+                (Some("proc"), "join") => return runtime_proc_join(&args, ctx),
+                (Some("proc"), "gather") => return runtime_proc_gather(&args, ctx),
                 _ => {}
             }
 
@@ -2239,7 +2437,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             // this catches any values that slip through.
             if ctx.is_pure() {
                 return Err(EvalError::BoundaryViolation {
-                    value: closure,
+                    value: Box::new(closure),
                     context: "closure created inside pure-function boundary".into(),
                 });
             }
@@ -2256,7 +2454,9 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                         .collect::<Result<Vec<_>, _>>()?;
                     apply_closure(&params, &body, &env, arg_vals, ctx)
                 }
-                _ => Err(EvalError::NotCallable { value: callee }),
+                _ => Err(EvalError::NotCallable {
+                    value: Box::new(callee),
+                }),
             }
         }
 
@@ -2541,6 +2741,8 @@ pub fn eval_function_call(
         (Some("proc"), "yield") => runtime_proc_yield(args, ctx),
         (Some("proc"), "par") => runtime_proc_par(args, ctx),
         (Some("proc"), "scatter") => runtime_proc_scatter(args, ctx),
+        (Some("proc"), "join") => runtime_proc_join(args, ctx),
+        (Some("proc"), "gather") => runtime_proc_gather(args, ctx),
         (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
         (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
         (Some("string"), "concat") => {
@@ -4708,7 +4910,7 @@ mod tests {
         // Build the error — this is the code path that SPEC-031 §4.8 escape
         // case 5 describes.
         let err = EvalError::BoundaryViolation {
-            value: closure_value,
+            value: Box::new(closure_value),
             context: "closure escaped pure vertex boundary".to_string(),
         };
 

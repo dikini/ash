@@ -276,6 +276,17 @@ fn surface_type_to_type(
         }
         SurfaceType::List(item) => surface_type_to_type(item, param_mapping, type_env)
             .map(|item| Type::List(Box::new(item))),
+        SurfaceType::Tuple(items) => {
+            let items = items
+                .iter()
+                .enumerate()
+                .map(|(index, ty)| {
+                    surface_type_to_type(ty, param_mapping, type_env)
+                        .map(|ty| (tuple_field_name(index).into_boxed_str(), ty))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Type::Record(items))
+        }
         SurfaceType::Record(fields) => {
             let fields = fields
                 .iter()
@@ -1327,7 +1338,21 @@ impl TypeEnv {
             ])],
             kind: crate::Kind::Type,
         };
+        let proc_pair_ab = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![crate::types::Type::Record(vec![
+                ("_0".into(), a.clone()),
+                ("_1".into(), b.clone()),
+            ])],
+            kind: crate::Kind::Type,
+        };
         let list_a = crate::types::Type::List(Box::new(a.clone()));
+        let list_handle_a = crate::types::Type::List(Box::new(handle_a.clone()));
+        let proc_list_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![list_a.clone()],
+            kind: crate::Kind::Type,
+        };
         let list_handle_b = crate::types::Type::List(Box::new(handle_b.clone()));
         let proc_list_handle_b = crate::types::Type::Constructor {
             name: crate::QualifiedName::root("Proc"),
@@ -1358,7 +1383,7 @@ impl TypeEnv {
         );
         self.bind_variable(
             "proc::await",
-            crate::types::Type::Fn(vec![handle_a], Box::new(proc_a.clone())),
+            crate::types::Type::Fn(vec![handle_a.clone()], Box::new(proc_a.clone())),
         );
         self.bind_variable(
             "proc::yield",
@@ -1377,6 +1402,14 @@ impl TypeEnv {
                 vec![list_a, crate::types::Type::Fn(vec![a], Box::new(proc_b))],
                 Box::new(proc_list_handle_b),
             ),
+        );
+        self.bind_variable(
+            "proc::join",
+            crate::types::Type::Fn(vec![handle_a, handle_b], Box::new(proc_pair_ab)),
+        );
+        self.bind_variable(
+            "proc::gather",
+            crate::types::Type::Fn(vec![list_handle_a], Box::new(proc_list_a)),
         );
     }
 

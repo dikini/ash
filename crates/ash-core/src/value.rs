@@ -128,6 +128,13 @@ pub enum Value {
         items: Box<Vec<Value>>,
         mapper: Box<Value>,
     },
+    /// Hidden runtime-only Proc two-handle wait-for-all observation marker.
+    ProcJoinCapture {
+        left: ProcessHandle,
+        right: ProcessHandle,
+    },
+    /// Hidden runtime-only Proc ordered handle-list wait-for-all observation marker.
+    ProcGatherCapture { handles: Box<Vec<ProcessHandle>> },
     /// Runtime closure value. SPEC-031 §5.2
     /// NOT serializable -- manual serde implementation will error on this variant.
     Closure {
@@ -322,6 +329,8 @@ impl std::fmt::Display for Value {
             Value::ProcYieldCapture => write!(f, "<proc-yield>"),
             Value::ProcParCapture { .. } => write!(f, "<proc-par>"),
             Value::ProcScatterCapture { .. } => write!(f, "<proc-scatter>"),
+            Value::ProcJoinCapture { .. } => write!(f, "<proc-join>"),
+            Value::ProcGatherCapture { .. } => write!(f, "<proc-gather>"),
             Value::Closure { params, .. } => {
                 write!(f, "<closure({})>", params.len())
             }
@@ -342,7 +351,9 @@ impl Serialize for Value {
             | Value::ProcAwaitCapture(_)
             | Value::ProcYieldCapture
             | Value::ProcParCapture { .. }
-            | Value::ProcScatterCapture { .. } => Err(serde::ser::Error::custom(
+            | Value::ProcScatterCapture { .. }
+            | Value::ProcJoinCapture { .. }
+            | Value::ProcGatherCapture { .. } => Err(serde::ser::Error::custom(
                 "runtime-only value cannot be serialized",
             )),
             Value::Int(v) => {
@@ -517,6 +528,8 @@ mod tests {
                 Value::ProcYieldCapture => "ProcYieldCapture",
                 Value::ProcParCapture { .. } => "ProcParCapture",
                 Value::ProcScatterCapture { .. } => "ProcScatterCapture",
+                Value::ProcJoinCapture { .. } => "ProcJoinCapture",
+                Value::ProcGatherCapture { .. } => "ProcGatherCapture",
                 Value::Closure { .. } => "Closure",
                 Value::ActEnvToken => "ActEnvToken",
             }

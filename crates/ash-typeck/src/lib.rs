@@ -120,6 +120,17 @@ fn workflow_surface_type_to_type(
             workflow_surface_type_to_type(env, item, type_params)
                 .map(|item| Type::List(Box::new(item)))
         }
+        ash_parser::surface::Type::Tuple(items) => {
+            let items = items
+                .iter()
+                .enumerate()
+                .map(|(index, ty)| {
+                    workflow_surface_type_to_type(env, ty, type_params)
+                        .map(|ty| (ash_core::adt::tuple_field_name(index).into_boxed_str(), ty))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Type::Record(items))
+        }
         ash_parser::surface::Type::Record(fields) => {
             let fields = fields
                 .iter()

@@ -29,7 +29,7 @@ pub enum EvalError {
     InvalidUnaryOp { op: String, operand: String },
 
     #[error("field not found: {field} in {value}")]
-    FieldNotFound { field: Name, value: Value },
+    FieldNotFound { field: Name, value: Box<Value> },
 
     #[error("index out of bounds: {index} in list of length {len}")]
     IndexOutOfBounds { index: i64, len: usize },
@@ -68,10 +68,10 @@ pub enum EvalError {
     LetPatternBindFailed { pattern: String, value: String },
 
     #[error("value is not callable: {value}")]
-    NotCallable { value: Value },
+    NotCallable { value: Box<Value> },
 
     #[error("closure crossed three-vertex boundary: {context}")]
-    BoundaryViolation { value: Value, context: String },
+    BoundaryViolation { value: Box<Value>, context: String },
 
     #[error("operational failure: {0:?}")]
     OperationalFailure(Box<OperationalFailure>),
@@ -109,7 +109,7 @@ pub enum ExecError {
 
     PatternMatchFailed {
         pattern: String,
-        value: Value,
+        value: Box<Value>,
     },
     GuardFailed {
         guard: String,
@@ -360,7 +360,7 @@ pub enum PatternError {
     FieldMissing(Name),
 
     #[error("cannot match against non-record value: {0}")]
-    NotARecord(Value),
+    NotARecord(Box<Value>),
 }
 
 /// Validation errors for provider value validation
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn task558_boundary_violation_displays_correctly() {
         let err = EvalError::BoundaryViolation {
-            value: ash_core::Value::Int(0),
+            value: Box::new(ash_core::Value::Int(0)),
             context: "workflow closure escaped into pure context".to_string(),
         };
         let msg = err.to_string();

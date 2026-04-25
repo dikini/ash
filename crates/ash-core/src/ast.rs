@@ -868,9 +868,9 @@ pub struct ImplMethodDef {
 /// Top-level definition
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Definition {
-    /// Workflow definition
-    Workflow(Workflow),
-    /// Type definition
+    /// Workflow definition.
+    Workflow(Box<Workflow>),
+    /// Type definition.
     TypeDef(TypeDef),
 }
 

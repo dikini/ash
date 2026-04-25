@@ -1,6 +1,6 @@
 # TASK-714: Workflow boundary carriers
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -53,12 +53,12 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Carrier tests prove lower `ExecError`/process failures can be preserved as causes.
-- [ ] Reports can represent success and failure without external sink dependency.
-- [ ] Existing `ExecResult<Value>` APIs remain source-compatible.
+- [x] Carrier tests prove lower `ExecError`/process failures can be preserved as causes.
+- [x] Reports can represent success and failure without external sink dependency.
+- [x] Existing `ExecResult<Value>` APIs remain source-compatible.
 - [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

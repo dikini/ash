@@ -380,6 +380,10 @@ fn format_type(ty: &Type) -> String {
     match ty {
         Type::Name(name) => name.to_string(),
         Type::List(inner) => format!("[{}]", format_type(inner)),
+        Type::Tuple(items) => {
+            let items = items.iter().map(format_type).collect::<Vec<_>>().join(", ");
+            format!("({items})")
+        }
         Type::Record(fields) => {
             let fields = fields
                 .iter()

@@ -1332,6 +1332,8 @@ pub enum Type {
     Name(Name),
     /// List type: \[T\]
     List(Box<Type>),
+    /// Tuple type: `(T, U, ...)`
+    Tuple(Vec<Type>),
     /// Record type: { field: T, ... }
     Record(Vec<(Name, Type)>),
     /// Capability type

@@ -723,6 +723,25 @@ fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {
         return Ok(Type::List(Box::new(inner)));
     }
 
+    if input.input.starts_with("(") {
+        let _ = literal_str("(").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+
+        let mut items = Vec::new();
+        if !input.input.starts_with(")") {
+            items.push(parse_surface_type(input)?);
+            loop {
+                if !consume_comma_separator(input) {
+                    break;
+                }
+                items.push(parse_surface_type(input)?);
+            }
+        }
+
+        let _ = literal_str(")").parse_next(input)?;
+        return Ok(Type::Tuple(items));
+    }
+
     if input.input.starts_with("{") {
         let _ = literal_str("{").parse_next(input)?;
         skip_whitespace_and_comments(input);

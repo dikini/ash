@@ -8,6 +8,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-713: added `proc::join` and `proc::gather` wait-for-all observation across `std::proc`, type checking, and interpreter runtime, including ordered success projection, consume-before-wait handle observation, and aggregated child-failure surfacing that preserves multiple source `ProcessId`s.
+
+- TASK-714: added workflow-boundary carrier substrate across ash-core and ash-interp, including admission-context/report metadata, `WorkflowBoundaryOutcome`, `ExecResult<Value>`-compatible workflow-boundary projection, preserved lower causes/process failures, and focused regression/property coverage for workflow failure/report identity preservation.
+
+- TASK-715: added workflow admission/report substrate across ash-core and ash-engine, including explicit workflow/run identity admission, structured `requires` evidence, pending `ensures` evidence schema for TASK-716, and `WorkflowAdmissionOutcome` carriers that preserve existing `ExecResult<Value>` workflow execution compatibility.
+
 - TASK-712: added `proc::par` and `proc::scatter` all-or-none child admission across `std::proc`, type checking, and interpreter runtime, including ordered child registration/handle return, deferred child-failure observation via later `proc::await`, rollback on admission failure, and tuple-style numeric handle projection compatibility for `proc::par` results.
 
 - TASK-711: added `proc::yield() -> Proc<Unit>` across `std::proc`, type checking, and interpreter forcing, including cooperative scheduler-yield runtime support, process-identity preservation coverage, and regression/proptest checks that yield introduces no child-process or handle-observation side effects.
@@ -39,6 +45,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+
+- Workspace clippy gate now passes again after boxing oversized interpreter error payloads and tightening workflow-admission/test helpers in ash-engine, clearing the Phase 98 verification blockers that had surfaced as `large_enum_variant`, `result_large_err`, and strict clippy API/doc/style violations during TASK-715 follow-through.
+
+- TASK-718: surface callable-signature parsing now accepts tuple types in `fn`/`builtin fn` parameter and return annotations, and imported callable signature lowering/type conversion preserves those tuples for proc stdlib exports such as `proc::join -> Proc<(A, B)>`.
 
 - TASK-708: tightened `fail` / `with_error` keyword-boundary parsing so those contextual forms no longer consume legal identifier prefixes such as `fail_count` or `with_error_handler`.
 

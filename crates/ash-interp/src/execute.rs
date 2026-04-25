@@ -576,7 +576,7 @@ fn execute_workflow_inner_observed<'a>(
                 let bindings =
                     match_pattern(pattern, &value).map_err(|_| ExecError::PatternMatchFailed {
                         pattern: format!("{:?}", pattern),
-                        value: value.clone(),
+                        value: Box::new(value.clone()),
                     })?;
 
                 let mut new_ctx = ctx.extend();
@@ -702,7 +702,7 @@ fn execute_workflow_inner_observed<'a>(
                 let bindings =
                     match_pattern(pattern, &value).map_err(|_| ExecError::PatternMatchFailed {
                         pattern: format!("{:?}", pattern),
-                        value: value.clone(),
+                        value: Box::new(value.clone()),
                     })?;
 
                 let mut new_ctx = ctx.extend();
@@ -985,7 +985,7 @@ fn execute_workflow_inner_observed<'a>(
                             let bindings = match_pattern(pattern, item).map_err(|_| {
                                 ExecError::PatternMatchFailed {
                                     pattern: format!("{:?}", pattern),
-                                    value: item.clone(),
+                                    value: Box::new(item.clone()),
                                 }
                             })?;
 
@@ -1397,7 +1397,7 @@ fn execute_workflow_inner_observed<'a>(
                 let bindings = match_pattern(pattern, &instance_value).map_err(|_| {
                     ExecError::PatternMatchFailed {
                         pattern: format!("{:?}", pattern),
-                        value: instance_value.clone(),
+                        value: Box::new(instance_value.clone()),
                     }
                 })?;
 
@@ -1437,7 +1437,7 @@ fn execute_workflow_inner_observed<'a>(
                 let bindings = match_pattern(pattern, &split_value).map_err(|_| {
                     ExecError::PatternMatchFailed {
                         pattern: format!("{:?}", pattern),
-                        value: split_value.clone(),
+                        value: Box::new(split_value.clone()),
                     }
                 })?;
 

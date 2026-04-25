@@ -339,6 +339,8 @@ fn value_to_type(v: &ash_core::Value) -> Type {
         | ash_core::Value::ProcYieldCapture
         | ash_core::Value::ProcParCapture { .. }
         | ash_core::Value::ProcScatterCapture { .. }
+        | ash_core::Value::ProcJoinCapture { .. }
+        | ash_core::Value::ProcGatherCapture { .. }
         | ash_core::Value::ActEnvToken => Type::Var(ash_typeck::types::TypeVar::fresh()),
         ash_core::Value::Instance(_) => Type::Instance {
             workflow_type: Box::from(""),

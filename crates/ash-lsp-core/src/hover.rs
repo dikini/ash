@@ -29,6 +29,14 @@ fn type_to_string(ty: &Type) -> String {
     match ty {
         Type::Name(name) => name.to_string(),
         Type::List(inner) => format!("List<{}>", type_to_string(inner)),
+        Type::Tuple(items) => {
+            let inner = items
+                .iter()
+                .map(type_to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("({inner})")
+        }
         Type::Record(fields) => {
             let inner = fields
                 .iter()

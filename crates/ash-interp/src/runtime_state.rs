@@ -475,6 +475,27 @@ impl RuntimeState {
             .and_then(|record| record.terminal_state.clone())
     }
 
+    /// Wait until a registered process reaches a retained terminal state.
+    pub async fn wait_for_process_terminal_state(
+        &self,
+        process_id: ProcessId,
+    ) -> Option<ProcessTerminalState> {
+        loop {
+            let maybe_state = {
+                let registry = self.process_registry.lock().await;
+                match registry.record(process_id) {
+                    Some(record) => record.terminal_state.clone(),
+                    None => return None,
+                }
+            };
+            if maybe_state.is_some() {
+                return maybe_state;
+            }
+            tokio::task::yield_now().await;
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    }
+
     /// Blocking version of [`Self::process_terminal_state`] for synchronous Proc observation.
     pub fn blocking_process_terminal_state(
         &self,

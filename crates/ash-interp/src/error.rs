@@ -84,6 +84,9 @@ pub enum EvalError {
         process_id: ProcessId,
         reason: String,
     },
+
+    #[error("proc::yield requires async/runtime scheduler evaluation")]
+    ProcYieldRequiresAsyncRuntime,
 }
 
 /// Errors that can occur during workflow execution

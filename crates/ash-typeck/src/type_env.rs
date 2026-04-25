@@ -56,7 +56,7 @@ pub fn type_expr_to_type(
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
                 "Float" => Ok(Type::Float),
-                "Null" => Ok(Type::Null),
+                "Null" | "Unit" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
                 _ => {
@@ -249,7 +249,7 @@ fn surface_type_to_type(
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
                 "Float" => Ok(Type::Float),
-                "Null" => Ok(Type::Null),
+                "Null" | "Unit" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
                 "()" => Ok(Type::Constructor {
@@ -1126,6 +1126,7 @@ impl TypeEnv {
         self.add_act_type();
         self.add_proc_type();
         self.add_process_handle_type();
+        self.add_proc_builtin_values();
         self.add_builtin_capability_symbols();
     }
 
@@ -1287,6 +1288,59 @@ impl TypeEnv {
 
         self.register_type(&process_handle_type)
             .expect("Failed to register P type");
+    }
+
+    /// Add the qualified proc module builtin value signatures.
+    fn add_proc_builtin_values(&mut self) {
+        let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let b = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let proc_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![a.clone()],
+            kind: crate::Kind::Type,
+        };
+        let proc_b = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![b.clone()],
+            kind: crate::Kind::Type,
+        };
+        let handle_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("P"),
+            args: vec![a.clone()],
+            kind: crate::Kind::Type,
+        };
+        let proc_null = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![crate::types::Type::Null],
+            kind: crate::Kind::Type,
+        };
+
+        self.bind_variable(
+            "proc::unit",
+            crate::types::Type::Fn(vec![a.clone()], Box::new(proc_a.clone())),
+        );
+        self.bind_variable(
+            "proc::bind",
+            crate::types::Type::Fn(
+                vec![
+                    proc_a.clone(),
+                    crate::types::Type::Fn(vec![a.clone()], Box::new(proc_b.clone())),
+                ],
+                Box::new(proc_b.clone()),
+            ),
+        );
+        self.bind_variable(
+            "proc::then",
+            crate::types::Type::Fn(vec![proc_a.clone(), proc_b.clone()], Box::new(proc_b)),
+        );
+        self.bind_variable(
+            "proc::await",
+            crate::types::Type::Fn(vec![handle_a], Box::new(proc_a)),
+        );
+        self.bind_variable(
+            "proc::yield",
+            crate::types::Type::Fn(vec![], Box::new(proc_null)),
+        );
     }
 
     /// Check if a type is registered
@@ -1676,8 +1730,11 @@ impl TypeEnv {
     ) -> Result<(QualifiedName, Option<&TypeInfo>), TypeError> {
         // Try as primitive first
         match name {
-            "Int" | "String" | "Bool" | "Float" | "Null" | "Time" | "Ref" | "()" => {
-                return Ok((QualifiedName::root(name), None));
+            "Int" | "String" | "Bool" | "Float" | "Null" | "Unit" | "Time" | "Ref" | "()" => {
+                return Ok((
+                    QualifiedName::root(if name == "Unit" { "Null" } else { name }),
+                    None,
+                ));
             }
             _ => {}
         }

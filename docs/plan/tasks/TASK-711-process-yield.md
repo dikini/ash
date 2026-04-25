@@ -1,6 +1,6 @@
 # TASK-711: Process yield
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -52,12 +52,18 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Yield tests prove current `ProcessId` is preserved.
-- [ ] Yield returns `Unit` on normal scheduling.
-- [ ] Existing workflow/proxy yield behavior is not changed by this task.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Yield tests prove current `ProcessId` is preserved.
+- [x] Yield returns `Unit` on normal scheduling.
+- [x] Existing workflow/proxy yield behavior is not changed by this task.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
+
+## Completion Notes
+
+- Added `proc::yield() -> Proc<Unit>` to `std::proc` and interpreter/typechecker builtin registration.
+- Forcing the returned Proc uses the async scheduler yield path and returns the Ash no-value runtime representation (`Null`) for `Unit`.
+- Added interpreter coverage for identity preservation and no-side-effect behavior, plus a proptest proving registered child observation remains stable across yield.
 
 ## Dependencies for Next Task
 

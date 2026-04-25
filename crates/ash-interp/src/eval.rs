@@ -57,6 +57,7 @@ fn value_type_name(value: &Value) -> &'static str {
         Value::Stream(_) => "Stream",
         Value::ProcessHandle(_) => "P",
         Value::ProcAwaitCapture(_) => "<proc-await>",
+        Value::ProcYieldCapture => "<proc-yield>",
         Value::Closure { .. } => "Closure",
         Value::ActEnvToken => "ActEnvToken",
     }
@@ -132,6 +133,13 @@ fn maybe_execute_proc_await_capture(value: Value, runtime_ctx: &Context) -> Eval
     }
 }
 
+fn maybe_execute_proc_yield_capture(value: Value, _runtime_ctx: &Context) -> EvalResult<Value> {
+    match value {
+        Value::ProcYieldCapture => Err(EvalError::ProcYieldRequiresAsyncRuntime),
+        other => Ok(other),
+    }
+}
+
 async fn maybe_execute_proc_await_capture_async(
     value: Value,
     runtime_ctx: &Context,
@@ -139,6 +147,19 @@ async fn maybe_execute_proc_await_capture_async(
     match value {
         Value::ProcAwaitCapture(handle) => {
             observe_terminal_process_async(&handle, runtime_ctx).await
+        }
+        other => Ok(other),
+    }
+}
+
+async fn maybe_execute_proc_yield_capture_async(
+    value: Value,
+    _runtime_ctx: &Context,
+) -> EvalResult<Value> {
+    match value {
+        Value::ProcYieldCapture => {
+            tokio::task::yield_now().await;
+            Ok(Value::Null)
         }
         other => Ok(other),
     }
@@ -300,6 +321,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("proc::bind", 2),
             ("proc::then", 2),
             ("proc::await", 1),
+            ("proc::yield", 0),
         ] {
             m.insert(
                 name,
@@ -750,6 +772,22 @@ fn runtime_proc_await(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     })
 }
 
+fn runtime_proc_yield(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if !args.is_empty() {
+        return Err(EvalError::WrongArity {
+            expected: 0,
+            actual: args.len(),
+            callee: Some("proc::yield".to_string()),
+        });
+    }
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(Value::ProcYieldCapture)),
+        env: ctx.to_env_frame(),
+    })
+}
+
 fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
     let Value::List(items) = value else {
         return Ok(value);
@@ -1106,7 +1144,8 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
         match expr {
             Expr::Literal(value) => {
                 let value = maybe_execute_invoke_capture_async(value.clone(), ctx).await?;
-                maybe_execute_proc_await_capture_async(value, ctx).await
+                let value = maybe_execute_proc_await_capture_async(value, ctx).await?;
+                maybe_execute_proc_yield_capture_async(value, ctx).await
             }
             Expr::Variable { name, .. } => ctx
                 .get(name)
@@ -1276,6 +1315,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
                     (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
                     (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
+                    (Some("proc"), "yield") => return runtime_proc_yield(&args, ctx),
                     _ => {}
                 }
                 if let (true, Some(Value::Closure { params, body, env })) =
@@ -1607,7 +1647,8 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
     match expr {
         Expr::Literal(value) => {
             let value = maybe_execute_invoke_capture(value.clone(), ctx)?;
-            maybe_execute_proc_await_capture(value, ctx)
+            let value = maybe_execute_proc_await_capture(value, ctx)?;
+            maybe_execute_proc_yield_capture(value, ctx)
         }
 
         Expr::Variable { name, .. } => ctx
@@ -1780,6 +1821,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
                 (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
                 (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
+                (Some("proc"), "yield") => return runtime_proc_yield(&args, ctx),
                 _ => {}
             }
 
@@ -2241,6 +2283,8 @@ pub fn eval_function_call(
         (Some("proc"), "unit") => runtime_proc_unit(args, ctx),
         (Some("proc"), "bind") => runtime_proc_bind(args, ctx),
         (Some("proc"), "then") => runtime_proc_then(args, ctx),
+        (Some("proc"), "await") => runtime_proc_await(args, ctx),
+        (Some("proc"), "yield") => runtime_proc_yield(args, ctx),
         (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
         (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
         (Some("string"), "concat") => {
@@ -2971,7 +3015,8 @@ fn apply_closure(
         );
         let result = eval_expr(body, &call_ctx)?;
         let result = maybe_execute_invoke_capture(result, &call_ctx)?;
-        maybe_execute_proc_await_capture(result, &call_ctx)
+        let result = maybe_execute_proc_await_capture(result, &call_ctx)?;
+        maybe_execute_proc_yield_capture(result, &call_ctx)
     } else if args.len() < params.len() {
         validates_hidden_act_env(params, &args)?;
         // Partial application: bind provided params, keep remaining

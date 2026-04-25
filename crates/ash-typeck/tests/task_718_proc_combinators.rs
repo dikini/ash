@@ -1,6 +1,9 @@
-use ash_parser::surface::{BuiltinFnDef, Param, Type as SurfaceType, Visibility};
+use ash_parser::surface::{
+    BuiltinFnDef, Expr as SurfaceExpr, Param, Type as SurfaceType, Visibility,
+};
 use ash_parser::token::Span;
 use ash_typeck::builtin_fn_signature_type;
+use ash_typeck::check_expr::check_expr;
 use ash_typeck::type_env::TypeEnv;
 use ash_typeck::types::Type;
 use proptest::prelude::*;
@@ -106,6 +109,49 @@ fn proc_then_signature_typechecks_discarding_left_value() {
     assert_proc_of(&params[0], &Type::Int);
     assert_proc_of(&params[1], &Type::Bool);
     assert_proc_of(&ret, &Type::Bool);
+}
+
+#[test]
+fn proc_yield_signature_typechecks_unit_surface_as_proc_null_runtime_shape() {
+    let env = TypeEnv::with_builtin_types();
+    let sig = builtin(
+        "yield",
+        vec![],
+        constructor("Proc", vec![SurfaceType::Name("Unit".into())]),
+    );
+
+    let ty = builtin_fn_signature_type(&env, &sig).expect("proc::yield signature should resolve");
+    let Type::Fn(params, ret) = ty else {
+        panic!("expected function type");
+    };
+    assert!(params.is_empty());
+    match *ret {
+        Type::Constructor { name, args, .. } => {
+            assert_eq!(name.name, "Proc");
+            assert_eq!(args.len(), 1);
+            assert!(match &args[0] {
+                Type::Null => true,
+                Type::Constructor { name, args, .. } => name.name == "Null" && args.is_empty(),
+                _ => false,
+            });
+        }
+        other => panic!("expected Proc<...>, got {other:?}"),
+    }
+}
+
+#[test]
+fn proc_yield_expression_typechecks_as_nullary_proc_returning_null() {
+    let env = TypeEnv::with_builtin_types();
+    let expr = SurfaceExpr::Call {
+        func: "yield".into(),
+        module: Some("proc".into()),
+        args: vec![],
+        span: Span::default(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(result.is_ok(), "proc::yield() should typecheck: {result:?}");
+    assert_proc_of(&result.substitution.apply(&result.ty), &Type::Null);
 }
 
 proptest! {

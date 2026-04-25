@@ -119,6 +119,8 @@ pub enum Value {
     ProcessHandle(ProcessHandle),
     /// Hidden runtime-only Proc await capture marker.
     ProcAwaitCapture(ProcessHandle),
+    /// Hidden runtime-only Proc scheduler yield marker.
+    ProcYieldCapture,
     /// Runtime closure value. SPEC-031 §5.2
     /// NOT serializable -- manual serde implementation will error on this variant.
     Closure {
@@ -310,6 +312,7 @@ impl std::fmt::Display for Value {
             Value::Stream(handle) => write!(f, "stream({}: {})", handle.id, handle.item_type),
             Value::ProcessHandle(handle) => write!(f, "P<{}>", handle.process_id.0),
             Value::ProcAwaitCapture(handle) => write!(f, "<proc-await:{}>", handle.process_id.0),
+            Value::ProcYieldCapture => write!(f, "<proc-yield>"),
             Value::Closure { params, .. } => {
                 write!(f, "<closure({})>", params.len())
             }
@@ -327,7 +330,8 @@ impl Serialize for Value {
             Value::Closure { .. }
             | Value::ActEnvToken
             | Value::ProcessHandle(_)
-            | Value::ProcAwaitCapture(_) => Err(serde::ser::Error::custom(
+            | Value::ProcAwaitCapture(_)
+            | Value::ProcYieldCapture => Err(serde::ser::Error::custom(
                 "runtime-only value cannot be serialized",
             )),
             Value::Int(v) => {
@@ -499,6 +503,7 @@ mod tests {
                 Value::Stream(_) => "Stream",
                 Value::ProcessHandle(_) => "ProcessHandle",
                 Value::ProcAwaitCapture(_) => "ProcAwaitCapture",
+                Value::ProcYieldCapture => "ProcYieldCapture",
                 Value::Closure { .. } => "Closure",
                 Value::ActEnvToken => "ActEnvToken",
             }

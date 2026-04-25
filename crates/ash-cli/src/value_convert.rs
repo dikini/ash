@@ -115,6 +115,7 @@ pub fn value_to_json(value: &Value) -> serde_json::Value {
             handle.process_id,
             handle.result_type.as_deref().unwrap_or("_")
         )),
+        Value::ProcYieldCapture => serde_json::Value::String("<proc-yield>".to_string()),
         Value::Closure { params, .. } => {
             serde_json::Value::String(format!("<closure({} params)>", params.len()))
         }

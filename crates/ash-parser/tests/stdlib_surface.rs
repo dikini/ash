@@ -73,6 +73,16 @@ fn examples_readme_describes_the_canonical_adt_helper_surface() {
 }
 
 #[test]
+fn proc_stdlib_surface_declares_scheduler_yield_builtin() {
+    let proc_module = read_stdlib_file("proc.ash");
+
+    assert!(
+        proc_module.contains("pub builtin fn yield() -> Proc<Unit>;"),
+        "std/src/proc.ash should declare proc::yield with the canonical Proc<Unit> signature"
+    );
+}
+
+#[test]
 fn runtime_stdlib_surface_is_exposed() {
     let runtime_error = read_stdlib_file("runtime/error.ash");
     let runtime_error_normalized = normalize_whitespace(&runtime_error);

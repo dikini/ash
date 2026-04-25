@@ -2,6 +2,7 @@
 //!
 //! Evaluates expressions in a runtime context, producing values.
 
+use ash_core::runtime::{FailureEntity, LexicalFrameId, OperationalFailure, TowerLevel};
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
 use std::collections::HashMap;
@@ -9,6 +10,50 @@ use std::collections::HashMap;
 use crate::EvalResult;
 use crate::context::Context;
 use crate::error::EvalError;
+
+fn operational_failure_for_payload(payload: Value) -> OperationalFailure {
+    let payload_type = value_type_name(&payload);
+    OperationalFailure::new(
+        TowerLevel::Pure,
+        FailureEntity::LexicalFrame(LexicalFrameId::new()),
+        payload,
+        payload_type,
+    )
+}
+
+fn value_type_name(value: &Value) -> &'static str {
+    match value {
+        Value::Int(_) => "Int",
+        Value::Float(_) => "Float",
+        Value::String(_) => "String",
+        Value::Bool(_) => "Bool",
+        Value::Null => "Null",
+        Value::Time(_) => "Time",
+        Value::Ref(_) => "Ref",
+        Value::List(_) => "List",
+        Value::Record(_) => "Record",
+        Value::Cap(_) => "Cap",
+        Value::Variant { .. } => "Variant",
+        Value::Instance(_) => "Instance",
+        Value::InstanceAddr(_) => "InstanceAddr",
+        Value::ControlLink(_) => "ControlLink",
+        Value::Stream(_) => "Stream",
+        Value::Closure { .. } => "Closure",
+        Value::ActEnvToken => "ActEnvToken",
+    }
+}
+
+fn preserve_caught_failure_as_tail_cause(
+    mut raised: Box<OperationalFailure>,
+    caught: &OperationalFailure,
+) -> Box<OperationalFailure> {
+    let mut cursor = &mut raised;
+    while let Some(ref mut cause) = cursor.cause {
+        cursor = cause;
+    }
+    cursor.cause = Some(Box::new(caught.clone()));
+    raised
+}
 
 // ── Builtin dispatch table (TASK-621) ────────────────────────────
 
@@ -1183,6 +1228,41 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     value: format!("{:?}", value),
                 })
             }
+            Expr::Fail { payload } => {
+                let payload = eval_expr_force_async(payload, ctx).await?;
+                Err(EvalError::OperationalFailure(Box::new(
+                    operational_failure_for_payload(payload),
+                )))
+            }
+            Expr::WithError { body, arms } => match eval_expr_force_async(body, ctx).await {
+                Ok(value) => Ok(value),
+                Err(EvalError::OperationalFailure(original)) => {
+                    for arm in arms {
+                        match crate::pattern::match_pattern(&arm.pattern, &original.payload) {
+                            Ok(bindings) => {
+                                let mut new_ctx = ctx.extend();
+                                for (name, val) in bindings {
+                                    new_ctx.set(name, val);
+                                }
+                                return match eval_expr_force_async(&arm.body, &new_ctx).await {
+                                    Err(EvalError::OperationalFailure(raised)) => {
+                                        Err(EvalError::OperationalFailure(
+                                            preserve_caught_failure_as_tail_cause(
+                                                raised,
+                                                original.as_ref(),
+                                            ),
+                                        ))
+                                    }
+                                    other => other,
+                                };
+                            }
+                            Err(_) => continue,
+                        }
+                    }
+                    Err(EvalError::OperationalFailure(original))
+                }
+                Err(error) => Err(error),
+            },
             Expr::IfLet {
                 pattern,
                 expr,
@@ -1648,6 +1728,43 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         }
 
         Expr::Match { scrutinee, arms } => eval_match(scrutinee, arms, ctx),
+
+        Expr::Fail { payload } => {
+            let payload = eval_expr(payload, ctx)?;
+            Err(EvalError::OperationalFailure(Box::new(
+                operational_failure_for_payload(payload),
+            )))
+        }
+
+        Expr::WithError { body, arms } => match eval_expr(body, ctx) {
+            Ok(value) => Ok(value),
+            Err(EvalError::OperationalFailure(original)) => {
+                for arm in arms {
+                    match crate::pattern::match_pattern(&arm.pattern, &original.payload) {
+                        Ok(bindings) => {
+                            let mut new_ctx = ctx.extend();
+                            for (name, val) in bindings {
+                                new_ctx.set(name, val);
+                            }
+                            return match eval_expr(&arm.body, &new_ctx) {
+                                Err(EvalError::OperationalFailure(raised)) => {
+                                    Err(EvalError::OperationalFailure(
+                                        preserve_caught_failure_as_tail_cause(
+                                            raised,
+                                            original.as_ref(),
+                                        ),
+                                    ))
+                                }
+                                other => other,
+                            };
+                        }
+                        Err(_) => continue,
+                    }
+                }
+                Err(EvalError::OperationalFailure(original))
+            }
+            Err(error) => Err(error),
+        },
 
         Expr::IfLet {
             pattern,

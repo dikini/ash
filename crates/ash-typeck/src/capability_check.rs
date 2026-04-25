@@ -761,6 +761,16 @@ impl CapabilityChecker {
 
             Expr::Panic { .. } => Ok(()),
 
+            Expr::Fail { payload, .. } => self.verify_expr(payload),
+
+            Expr::WithError { body, arms, .. } => {
+                self.verify_expr(body)?;
+                for arm in arms {
+                    self.verify_expr(&arm.body)?;
+                }
+                Ok(())
+            }
+
             Expr::Block {
                 statements,
                 tail_expr,

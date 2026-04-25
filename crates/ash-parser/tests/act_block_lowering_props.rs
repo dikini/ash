@@ -120,6 +120,15 @@ fn assert_only_lowered_forms(core: &CoreExpr) {
         CoreExpr::Split(inner) => {
             assert_only_lowered_forms(inner);
         }
+        CoreExpr::Fail { payload } => {
+            assert_only_lowered_forms(payload);
+        }
+        CoreExpr::WithError { body, arms } => {
+            assert_only_lowered_forms(body);
+            for arm in arms {
+                assert_only_lowered_forms(&arm.body);
+            }
+        }
         CoreExpr::CheckObligation { .. } => {}
     }
 }

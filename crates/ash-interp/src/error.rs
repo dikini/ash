@@ -1,6 +1,6 @@
 //! Error types for the interpreter
 
-use ash_core::{Name, Value};
+use ash_core::{Name, Value, runtime::OperationalFailure};
 use thiserror::Error;
 
 use crate::capability_policy::Role;
@@ -69,6 +69,9 @@ pub enum EvalError {
 
     #[error("closure crossed three-vertex boundary: {context}")]
     BoundaryViolation { value: Value, context: String },
+
+    #[error("operational failure: {0:?}")]
+    OperationalFailure(Box<OperationalFailure>),
 }
 
 /// Errors that can occur during workflow execution

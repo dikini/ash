@@ -11,7 +11,8 @@ use crate::input::{ParseInput, Position};
 use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
-    ActStmt, BinaryOp, BlockStmt, ConstructorPayload, Expr, Literal, Name, Pattern, UnaryOp,
+    ActStmt, BinaryOp, BlockStmt, ConstructorPayload, Expr, Literal, MatchArm, Name, Pattern,
+    UnaryOp,
 };
 use crate::token::Span;
 
@@ -124,6 +125,49 @@ pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
         return Ok(act_block);
     }
     pipe_expr(input)
+}
+
+/// Parse a scoped operational failure handler:
+/// `with_error { body } handle { pattern => expr; ... }`.
+fn parse_with_error_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state.pos;
+    let _ = keyword("with_error").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let body = parse_fn_expr_body(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("handle").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut arms = Vec::new();
+    while !input.input.starts_with('}') {
+        let arm_start = input.state.pos;
+        let pat = pattern(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("=>").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let body = expr(input)?;
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(';') {
+            let _ = literal_str(";").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+        }
+        let span = span_from(&arm_start, &input.state.pos);
+        arms.push(MatchArm {
+            pattern: pat,
+            body: Box::new(body),
+            span,
+        });
+    }
+    let _ = literal_str("}").parse_next(input)?;
+    let span = span_from(&start_pos, &input.state.pos);
+
+    Ok(Expr::WithError {
+        body: Box::new(body),
+        arms,
+        span,
+    })
 }
 
 /// Parse a pipe expression: left |> right
@@ -875,6 +919,22 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::CheckObligation {
             obligation: obligation.into(),
+            span,
+        });
+    }
+
+    // Try scoped operational failure handler as a normal primary expression.
+    if let Ok(with_error) = parse_with_error_expr(input) {
+        return Ok(with_error);
+    }
+
+    // Try operational bottom expression: fail payload
+    if keyword("fail").parse_next(input).is_ok() {
+        skip_whitespace_and_comments(input);
+        let payload = expr(input)?;
+        let span = span_from(&start_pos, &input.state.pos);
+        return Ok(Expr::Fail {
+            payload: Box::new(payload),
             span,
         });
     }

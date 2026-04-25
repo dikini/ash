@@ -120,6 +120,18 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         Expr::Match {
             scrutinee, arms, ..
         } => check_match(env, scrutinee, arms),
+        Expr::Fail { payload, .. } => {
+            let payload_result = check_expr(env, payload);
+            if !payload_result.is_ok() {
+                return payload_result;
+            }
+            CheckResult {
+                ty: Type::Var(TypeVar::fresh()),
+                substitution: payload_result.substitution,
+                errors: Vec::new(),
+            }
+        }
+        Expr::WithError { body, arms, span } => check_with_error(env, body, arms, *span),
         Expr::FieldAccess { base, field, span } => {
             check_field_access(env, base, field.as_ref(), *span)
         }
@@ -707,6 +719,8 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Constructor { span, .. } => *span,
         Expr::If { span, .. } => *span,
         Expr::Panic { span, .. } => *span,
+        Expr::Fail { span, .. } => *span,
+        Expr::WithError { span, .. } => *span,
         Expr::Block { span, .. } => *span,
         Expr::FnDef { span, .. } => *span,
         Expr::FnApply { span, .. } => *span,
@@ -857,6 +871,61 @@ fn merge_branch_results(left: CheckResult, right: CheckResult) -> CheckResult {
         ty,
         substitution,
         errors: Vec::new(),
+    }
+}
+
+fn pattern_type_env_from(env: &TypeEnv) -> crate::check_pattern::TypeEnv {
+    let mut pattern_env = crate::check_pattern::TypeEnv::new();
+    for (name, def) in env.ast_type_defs() {
+        pattern_env.add_type_def(name.clone(), def.clone());
+    }
+    pattern_env
+}
+
+fn check_with_error(env: &TypeEnv, body: &Expr, arms: &[MatchArm], span: Span) -> CheckResult {
+    let body_result = check_expr(env, body);
+    let body_ty = body_result.substitution.apply(&body_result.ty);
+    let mut substitution = body_result.substitution.clone();
+    let mut errors = body_result.errors;
+
+    let pattern_env = pattern_type_env_from(env);
+    for arm in arms {
+        let mut arm_env = env.clone();
+        let failure_payload_ty = Type::Var(TypeVar::fresh());
+        match crate::check_pattern::check_pattern(&pattern_env, &arm.pattern, &failure_payload_ty) {
+            Ok(bindings) => {
+                for (name, ty) in bindings {
+                    arm_env.bind_variable(&name, ty);
+                }
+            }
+            Err(error) => errors.push(ConstructorError::UnsupportedExpression {
+                kind: format!("with_error handler pattern type error: {error}"),
+                span,
+            }),
+        }
+
+        let arm_result = check_expr(&arm_env, &arm.body);
+        errors.extend(arm_result.errors);
+        substitution = substitution.compose(&arm_result.substitution);
+        let arm_ty = substitution.apply(&arm_result.ty);
+        let expected_ty = substitution.apply(&body_ty);
+        match unify(&expected_ty, &arm_ty) {
+            Ok(unify_subst) => {
+                substitution = substitution.compose(&unify_subst);
+            }
+            Err(_) => errors.push(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "with_error handler type mismatch: expected {expected_ty}, got {arm_ty}"
+                ),
+                span,
+            }),
+        }
+    }
+
+    CheckResult {
+        ty: substitution.apply(&body_ty),
+        substitution,
+        errors,
     }
 }
 

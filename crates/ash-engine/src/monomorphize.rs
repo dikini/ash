@@ -258,6 +258,15 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
                 monomorphize_expr(&mut arm.body, type_env)?;
             }
         }
+        Expr::Fail { payload } => {
+            monomorphize_expr(payload, type_env)?;
+        }
+        Expr::WithError { body, arms } => {
+            monomorphize_expr(body, type_env)?;
+            for arm in arms {
+                monomorphize_expr(&mut arm.body, type_env)?;
+            }
+        }
         Expr::IfLet {
             expr,
             then_branch,

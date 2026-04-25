@@ -959,6 +959,22 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
+    /// Operational bottom expression: `fail payload`.
+    Fail {
+        /// Failure payload value
+        payload: Box<Expr>,
+        /// Source span
+        span: Span,
+    },
+    /// Scoped operational failure handler: `with_error { body } handle { arms... }`.
+    WithError {
+        /// Protected body expression
+        body: Box<Expr>,
+        /// Failure handler arms
+        arms: Vec<MatchArm>,
+        /// Source span
+        span: Span,
+    },
     /// Block expression: { stmt1; stmt2; tail_expr }
     Block {
         /// Statements (let-bindings)
@@ -1412,6 +1428,8 @@ impl Spanned for Expr {
             Expr::Constructor { span, .. } => *span,
             Expr::If { span, .. } => *span,
             Expr::Panic { span, .. } => *span,
+            Expr::Fail { span, .. } => *span,
+            Expr::WithError { span, .. } => *span,
             Expr::Block { span, .. } => *span,
             Expr::FnDef { span, .. } => *span,
             Expr::FnApply { span, .. } => *span,

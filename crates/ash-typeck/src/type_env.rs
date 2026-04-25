@@ -1089,6 +1089,11 @@ impl TypeEnv {
         self.ast_types.get(name)
     }
 
+    /// Iterate over AST type definitions visible in this environment.
+    pub fn ast_type_defs(&self) -> impl Iterator<Item = (&TypeName, &TypeDef)> {
+        self.ast_types.iter()
+    }
+
     /// Look up internal type info by name
     pub fn lookup_type_info(&self, name: &str) -> Option<&TypeInfo> {
         self.type_info.get(name)

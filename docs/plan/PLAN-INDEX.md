@@ -2807,7 +2807,7 @@ Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process 
 ||| TASK-706 | Runtime identity and structured failure carriers | 5 | ✅ Complete ||
 ||| TASK-707 | Register `Proc` and `P` type constructors | 3 | ✅ Complete ||
 ||| TASK-718 | `Proc` core `unit`/`bind`/`then` combinators | 4 | ✅ Complete ||
-||| TASK-708 | Operational `fail` and scoped `with_error` | 8 | 🟡 Ready ||
+||| TASK-708 | Operational `fail` and scoped `with_error` | 8 | ✅ Complete ||
 ||| TASK-709 | Process registry and child environment projection | 7 | 🟡 Ready ||
 ||| TASK-710 | Affine process handles and `await` | 6 | 🟡 Ready ||
 ||| TASK-711 | Process `yield : Proc<Unit>` | 3 | 🟡 Ready ||

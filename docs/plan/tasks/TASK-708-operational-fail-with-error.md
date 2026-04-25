@@ -1,6 +1,6 @@
 # TASK-708: Operational fail and with_error
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -19,10 +19,10 @@ Implement `fail` as operational bottom and `with_error` as scoped operational fa
 
 ### Functional Requirements
 
-1. Add explicit surface/core carriers for `fail` and `with_error` or document why a different representation is required before coding.
-2. Type `fail e` as bottom-compatible in expression/workflow positions covered by SPEC-050.
-3. Implement scoped dynamic handling that catches operational failures, not ordinary `Result` values.
-4. Preserve lower failure identity/cause when handlers reinterpret failures.
+1. ✅ Add explicit surface/core carriers for `fail` and `with_error` or document why a different representation is required before coding.
+2. ✅ Type `fail e` as bottom-compatible in expression/workflow positions covered by SPEC-050.
+3. ✅ Implement scoped dynamic handling that catches operational failures, not ordinary `Result` values.
+4. ✅ Preserve lower failure identity/cause when handlers reinterpret failures.
 
 ### Property Requirements (proptest)
 
@@ -36,28 +36,51 @@ Implement `fail` as operational bottom and `with_error` as scoped operational fa
 
 ### Step 1: Write Tests (Red)
 
-Add failing tests that capture the target PLAN-098 behavior before implementation.
+✅ Added failing tests before implementation:
+
+- `crates/ash-parser/tests/task_708_fail_with_error.rs`
+- `crates/ash-typeck/tests/task_708_operational_bottom.rs`
+- `crates/ash-interp/tests/task_708_operational_fail.rs`
 
 ### Step 2: Implement (Green)
 
-Implement the minimal change set needed to satisfy the tests while preserving the semantic tower split.
+✅ Implemented the minimal cross-layer expression slice while preserving the semantic tower split:
+
+- parser surface and core `Expr::Fail` / `Expr::WithError` carriers
+- parser syntax for `fail payload` and `with_error { body } handle { arms }`
+- lowering to core carriers
+- bottom-compatible type checking for `fail`
+- handler/body type unification for `with_error`
+- synchronous and async interpreter handling via `EvalError::OperationalFailure`
 
 ### Step 3: Integration (Green)
 
-Wire the feature through all affected Ash layers honestly; do not collapse Act, Proc, and Workflow boundaries.
+✅ Wired through affected Ash layers without collapsing Act, Proc, or Workflow boundaries. `with_error` catches only the dedicated operational failure carrier and does not catch ordinary Ash domain values such as `Err` variants.
 
 ### Step 4: Property Tests (Verify)
 
-Add or extend proptests for algebraic, typing, runtime identity, failure, or ordering invariants where appropriate.
+Not added in this slice. TASK-708 established focused regression tests for the cross-layer carrier, typing, dynamic handling, domain-error separation, and cause-preservation invariants; broader failure algebra/process aggregation proptests belong with later process-observation tasks.
 
 ## Verification Steps
 
-- [ ] Failing tests cover bottom typing and branch unification.
-- [ ] Handlers catch failures raised in dynamic scope and do not catch ordinary `Err` values.
-- [ ] Existing `panic` behavior is reconciled or explicitly separated from `fail`.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Failing tests cover bottom typing and branch unification.
+- [x] Handlers catch failures raised in dynamic scope and do not catch ordinary `Err` values.
+- [x] Existing `panic` behavior is explicitly separated from `fail`; `panic` remains a parser-only surface expression rejected by lowering, while `fail` lowers to an operational runtime carrier.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
+
+Focused verification run during implementation:
+
+```text
+cargo check --workspace
+cargo test -p ash-parser --test task_708_fail_with_error -- --nocapture
+cargo test -p ash-typeck --test task_708_operational_bottom -- --nocapture
+cargo test -p ash-interp --test task_708_operational_fail -- --nocapture
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all
+```
 
 ## Dependencies for Next Task
 

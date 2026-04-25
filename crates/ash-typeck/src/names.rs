@@ -678,6 +678,20 @@ impl NameResolver {
                 // Nothing to resolve for panic
             }
 
+            Expr::Fail { payload, .. } => {
+                self.resolve_expr(payload);
+            }
+
+            Expr::WithError { body, arms, .. } => {
+                self.resolve_expr(body);
+                for arm in arms {
+                    self.push_scope();
+                    self.bind_pattern(&arm.pattern);
+                    self.resolve_expr(&arm.body);
+                    self.pop_scope();
+                }
+            }
+
             Expr::Block {
                 statements,
                 tail_expr,

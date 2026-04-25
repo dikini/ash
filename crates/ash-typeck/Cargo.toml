@@ -18,3 +18,4 @@ z3 = "0.12"
 proptest = { workspace = true }
 pretty_assertions = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
+winnow = { workspace = true }

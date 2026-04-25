@@ -543,6 +543,16 @@ fn validate_interface_calls_in_expr(
         } => validate_match_expr(env, scrutinee, arms),
         ash_parser::surface::Expr::Policy(_)
         | ash_parser::surface::Expr::CheckObligation { .. } => Ok(()),
+        ash_parser::surface::Expr::Fail { payload, .. } => {
+            validate_interface_calls_in_expr(env, payload)
+        }
+        ash_parser::surface::Expr::WithError { body, arms, .. } => {
+            validate_interface_calls_in_expr(env, body)?;
+            for arm in arms {
+                validate_interface_calls_in_expr(env, &arm.body)?;
+            }
+            Ok(())
+        }
         ash_parser::surface::Expr::IfLet {
             pattern,
             expr,
@@ -1780,6 +1790,16 @@ fn validate_fn_call_preconditions_expr(
         | ash_parser::surface::Expr::Policy(_)
         | ash_parser::surface::Expr::CheckObligation { .. }
         | ash_parser::surface::Expr::Panic { .. } => Ok(()),
+        ash_parser::surface::Expr::Fail { payload, .. } => {
+            validate_fn_call_preconditions_expr(env, payload, facts, assumptions)
+        }
+        ash_parser::surface::Expr::WithError { body, arms, .. } => {
+            validate_fn_call_preconditions_expr(env, body, facts, assumptions)?;
+            for arm in arms {
+                validate_fn_call_preconditions_expr(env, &arm.body, facts, assumptions)?;
+            }
+            Ok(())
+        }
         ash_parser::surface::Expr::FnDef { body, params, .. } => {
             let mut fn_env = env.clone();
             for (name, _ty) in params {

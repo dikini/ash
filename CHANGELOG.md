@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-708: implemented expression-level operational `fail` and scoped `with_error` handling across parser/lowering, type checking, and interpreter runtime, keeping operational failures distinct from ordinary Ash `Result::Err` values and preserving lower failure cause context when handlers re-fail.
+
 - TASK-718: added the initial `std::proc` library surface and runtime stubs for `proc::unit`, `proc::bind`, and `proc::then` over opaque `Proc<A>` values without creating child processes, `P<A>` handles, scheduler behavior, or `from_act` embedding.
 
 - NOTE-009: exploratory design note for capability interfaces, Ash-defined capability implementations, resource types/instances/bindings, internal authority, authority provenance, and late binding between interfaces, implementations, and concrete resources.

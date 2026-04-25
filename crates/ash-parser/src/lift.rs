@@ -267,6 +267,41 @@ fn lift_expr(
             (CoreExpr::CheckObligation { obligation, span }, vec![])
         }
 
+        CoreExpr::Fail { payload } => {
+            let (new_payload, bindings) = lift_expr(*payload, effectful_names, state);
+            (
+                CoreExpr::Fail {
+                    payload: Box::new(new_payload),
+                },
+                bindings,
+            )
+        }
+
+        CoreExpr::WithError { body, arms } => {
+            let original_body = (*body).clone();
+            let (new_body, body_bindings) = lift_expr(*body, effectful_names, state);
+            let preserved_body =
+                preserve_original_if_bindings(original_body, new_body, &body_bindings);
+            let mut new_arms = Vec::new();
+            for arm in arms {
+                let original_arm_body = arm.body.clone();
+                let (new_arm_body, arm_bindings) = lift_expr(arm.body, effectful_names, state);
+                let preserved_arm_body =
+                    preserve_original_if_bindings(original_arm_body, new_arm_body, &arm_bindings);
+                new_arms.push(ash_core::MatchArm {
+                    pattern: arm.pattern,
+                    body: preserved_arm_body,
+                });
+            }
+            (
+                CoreExpr::WithError {
+                    body: Box::new(preserved_body),
+                    arms: new_arms,
+                },
+                vec![],
+            )
+        }
+
         CoreExpr::FnDef {
             params,
             return_type,

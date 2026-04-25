@@ -508,6 +508,18 @@ pub enum Expr {
         span: Span,
     },
 
+    /// Operational bottom: evaluate the payload and abort the current dynamic
+    /// expression context with an operational failure.
+    Fail {
+        payload: Box<Expr>,
+    },
+
+    /// Scoped dynamic handler for operational failure raised by `Fail`.
+    WithError {
+        body: Box<Expr>,
+        arms: Vec<MatchArm>,
+    },
+
     /// Anonymous function definition (closure creation). SPEC-031 §5.1
     FnDef {
         params: Vec<(String, Option<String>)>, // (name, optional type annotation)

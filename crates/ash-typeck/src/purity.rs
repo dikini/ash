@@ -110,6 +110,15 @@ fn check_purity_recursive(
             });
         }
         Expr::Literal(_) | Expr::Variable { .. } | Expr::Panic { .. } => {}
+        Expr::Fail { payload, .. } => {
+            check_purity_recursive(env, payload, allow_effects, errors);
+        }
+        Expr::WithError { body, arms, .. } => {
+            check_purity_recursive(env, body, allow_effects, errors);
+            for arm in arms {
+                check_purity_recursive(env, arm.body.as_ref(), allow_effects, errors);
+            }
+        }
         Expr::FieldAccess { base, .. } => {
             check_purity_recursive(env, base, allow_effects, errors);
         }

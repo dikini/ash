@@ -173,6 +173,24 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::Fail { payload, .. } => {
+            let mut out = String::from("Fail {\n");
+            push_field(&mut out, 2, "payload", &render_expr(payload));
+            out.push('}');
+            out
+        }
+        Expr::WithError { body, arms, .. } => {
+            let mut out = String::from("WithError {\n");
+            push_field(&mut out, 2, "body", &render_expr(body));
+            push_field(
+                &mut out,
+                2,
+                "arms",
+                &render_list(arms.iter().map(render_match_arm)),
+            );
+            out.push('}');
+            out
+        }
         Expr::Block {
             statements,
             tail_expr,

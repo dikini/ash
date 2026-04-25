@@ -1475,6 +1475,23 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
                 .collect::<Result<Vec<_>, _>>()?,
         }),
 
+        Expr::Fail { payload, .. } => Ok(CoreExpr::Fail {
+            payload: Box::new(lower_expr(payload)?),
+        }),
+
+        Expr::WithError { body, arms, .. } => Ok(CoreExpr::WithError {
+            body: Box::new(lower_expr(body)?),
+            arms: arms
+                .iter()
+                .map(|arm| {
+                    Ok(CoreMatchArm {
+                        pattern: lower_pattern(&arm.pattern)?,
+                        body: lower_expr(&arm.body)?,
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+        }),
+
         Expr::Policy(policy_expr) => Ok(lower_policy_expr(policy_expr)),
 
         Expr::IfLet {
@@ -3438,6 +3455,15 @@ mod tests {
                 assert_act_block_uses_only_call_fndef(inner);
             }
             CoreExpr::CheckObligation { .. } => {}
+            CoreExpr::Fail { payload } => {
+                assert_act_block_uses_only_call_fndef(payload);
+            }
+            CoreExpr::WithError { body, arms } => {
+                assert_act_block_uses_only_call_fndef(body);
+                for arm in arms {
+                    assert_act_block_uses_only_call_fndef(&arm.body);
+                }
+            }
             CoreExpr::Let {
                 expr: inner, body, ..
             } => {

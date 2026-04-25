@@ -16,7 +16,7 @@ pub use test::{
     assert_ne_int,
     assert_eq_string,
     assert_eq_bool,
-    fail,
+    fail_test,
 };
 
 -- LLM types

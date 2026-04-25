@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-709: introduced the interpreter process registry and component-wise child environment projection substrate, preserving `ProcessId` parent/child identity, write-once terminal process state, and equal-or-narrower child role authority by capability name/effect/constraints without replacing workflow `ControlLink` supervision.
+
 - TASK-708: implemented expression-level operational `fail` and scoped `with_error` handling across parser/lowering, type checking, and interpreter runtime, keeping operational failures distinct from ordinary Ash `Result::Err` values and preserving lower failure cause context when handlers re-fail.
 
 - TASK-718: added the initial `std::proc` library surface and runtime stubs for `proc::unit`, `proc::bind`, and `proc::then` over opaque `Proc<A>` values without creating child processes, `P<A>` handles, scheduler behavior, or `from_act` embedding.
@@ -33,6 +35,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Fixed
 
 - TASK-708: tightened `fail` / `with_error` keyword-boundary parsing so those contextual forms no longer consume legal identifier prefixes such as `fail_count` or `with_error_handler`.
+
+- TASK-708: `fail` now attributes operational failures to the current runtime tower/identity (`LexicalFrameId`, `EffectScopeId`, or `ProcessId`) instead of hard-coding pure lexical failures, and exact identifier spellings `fail` / `with_error` are now reserved consistently across declarations and expressions.
 
 - CLI module-file fallback now ignores `workflow` mentions in line comments, so `ash check std/src/lib.ash` reports the stdlib root as a module file instead of surfacing a generic workflow parse error.
 

@@ -72,6 +72,8 @@ pub(crate) fn is_keyword(s: &str) -> bool {
         | "fn"
         | "panic"
         | "match"
+        | "fail"
+        | "with_error"
         // Contract
         | "requires"
         | "ensures"

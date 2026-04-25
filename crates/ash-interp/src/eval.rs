@@ -2,7 +2,7 @@
 //!
 //! Evaluates expressions in a runtime context, producing values.
 
-use ash_core::runtime::{FailureEntity, LexicalFrameId, OperationalFailure, TowerLevel};
+use ash_core::runtime::{EffectScopeId, OperationalFailure};
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
 use std::collections::HashMap;
@@ -11,14 +11,28 @@ use crate::EvalResult;
 use crate::context::Context;
 use crate::error::EvalError;
 
-fn operational_failure_for_payload(payload: Value) -> OperationalFailure {
+fn operational_failure_for_payload(payload: Value, ctx: &Context) -> OperationalFailure {
     let payload_type = value_type_name(&payload);
-    OperationalFailure::new(
-        TowerLevel::Pure,
-        FailureEntity::LexicalFrame(LexicalFrameId::new()),
-        payload,
-        payload_type,
-    )
+    let (tower, entity) = ctx.current_failure_attribution();
+    OperationalFailure::new(tower, entity, payload, payload_type)
+}
+
+fn call_context_from_env(
+    env: std::sync::Arc<ash_core::env_frame::EnvFrame>,
+    runtime_ctx: &Context,
+    enters_effect_scope: bool,
+) -> Context {
+    let mut call_ctx = Context::from_env_frame(&env).inherit_runtime_metadata_from(runtime_ctx);
+    if let Some(policy_evaluator) = runtime_ctx.policy_evaluator() {
+        call_ctx = call_ctx.with_policy_evaluator_arc(policy_evaluator);
+    }
+    if let Some(act_env) = runtime_ctx.act_env() {
+        call_ctx = call_ctx.with_act_env_arc(act_env);
+    }
+    if enters_effect_scope {
+        call_ctx = call_ctx.with_effect_scope(EffectScopeId::new());
+    }
+    call_ctx
 }
 
 fn value_type_name(value: &Value) -> &'static str {
@@ -1231,7 +1245,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
             Expr::Fail { payload } => {
                 let payload = eval_expr_force_async(payload, ctx).await?;
                 Err(EvalError::OperationalFailure(Box::new(
-                    operational_failure_for_payload(payload),
+                    operational_failure_for_payload(payload, ctx),
                 )))
             }
             Expr::WithError { body, arms } => match eval_expr_force_async(body, ctx).await {
@@ -1369,17 +1383,19 @@ fn apply_closure_async<'a>(
 
         if args.len() == params.len() {
             validates_hidden_act_env(params, &args)?;
+            let enters_effect_scope = params
+                .iter()
+                .take(args.len())
+                .any(|(name, _ty)| name == "__act_env");
             let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
             for ((name, _ty), val) in params.iter().zip(args) {
                 call_env.insert(name.clone(), val);
             }
-            let mut call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
-            if let Some(policy_evaluator) = runtime_ctx.policy_evaluator() {
-                call_ctx = call_ctx.with_policy_evaluator_arc(policy_evaluator);
-            }
-            if let Some(act_env) = runtime_ctx.act_env() {
-                call_ctx = call_ctx.with_act_env_arc(act_env);
-            }
+            let call_ctx = call_context_from_env(
+                std::sync::Arc::new(call_env),
+                runtime_ctx,
+                enters_effect_scope,
+            );
             eval_expr_force_async(body, &call_ctx).await
         } else if args.len() < params.len() {
             validates_hidden_act_env(params, &args)?;
@@ -1732,7 +1748,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         Expr::Fail { payload } => {
             let payload = eval_expr(payload, ctx)?;
             Err(EvalError::OperationalFailure(Box::new(
-                operational_failure_for_payload(payload),
+                operational_failure_for_payload(payload, ctx),
             )))
         }
 
@@ -2376,7 +2392,8 @@ pub fn eval_function_call(
                     for item in list.iter() {
                         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
                         call_env.insert(params[0].0.clone(), item.clone());
-                        let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+                        let call_ctx =
+                            call_context_from_env(std::sync::Arc::new(call_env), ctx, false);
                         match eval_expr(body, &call_ctx)? {
                             Value::Bool(true) => result.push(item.clone()),
                             Value::Bool(false) => {}
@@ -2414,7 +2431,8 @@ pub fn eval_function_call(
                     for item in list.iter() {
                         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
                         call_env.insert(params[0].0.clone(), item.clone());
-                        let call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
+                        let call_ctx =
+                            call_context_from_env(std::sync::Arc::new(call_env), ctx, false);
                         result.push(eval_expr(body, &call_ctx)?);
                     }
                     Ok(Value::List(Box::new(result)))
@@ -2813,17 +2831,19 @@ fn apply_closure(
 
     if args.len() == params.len() {
         validates_hidden_act_env(params, &args)?;
+        let enters_effect_scope = params
+            .iter()
+            .take(args.len())
+            .any(|(name, _ty)| name == "__act_env");
         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
         for ((name, _ty), val) in params.iter().zip(args) {
             call_env.insert(name.clone(), val);
         }
-        let mut call_ctx = Context::from_env_frame(&std::sync::Arc::new(call_env));
-        if let Some(policy_evaluator) = runtime_ctx.policy_evaluator() {
-            call_ctx = call_ctx.with_policy_evaluator_arc(policy_evaluator);
-        }
-        if let Some(act_env) = runtime_ctx.act_env() {
-            call_ctx = call_ctx.with_act_env_arc(act_env);
-        }
+        let call_ctx = call_context_from_env(
+            std::sync::Arc::new(call_env),
+            runtime_ctx,
+            enters_effect_scope,
+        );
         let result = eval_expr(body, &call_ctx)?;
         maybe_execute_invoke_capture(result, &call_ctx)
     } else if args.len() < params.len() {

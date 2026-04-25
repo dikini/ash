@@ -2,6 +2,7 @@
 //!
 //! Provides nested scope management for the interpreter.
 
+use ash_core::runtime::{EffectScopeId, FailureEntity, LexicalFrameId, TowerLevel};
 use ash_core::{Name, Value};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -23,6 +24,14 @@ pub struct Context {
     policy_evaluator: Option<Arc<crate::policy::PolicyEvaluator>>,
     /// Hidden runtime Act environment available to expression-level Act forcing.
     act_env: Option<Arc<crate::act_env::ActEnv>>,
+    /// Process identity metadata for component-wise projected child process contexts.
+    process_identity: Option<crate::process_env::ProcessEnvIdentity>,
+    /// Current lexical-frame identity for pure failure attribution.
+    lexical_frame_id: LexicalFrameId,
+    /// Current semantic tower used for operational failure attribution.
+    current_tower: TowerLevel,
+    /// Current effect scope identity when executing effectful/Act code.
+    effect_scope_id: Option<EffectScopeId>,
     /// Pure-context nesting depth for SPEC-031 three-vertex boundary enforcement.
     ///
     /// 0 = not in a pure context.  >0 = inside `pure_depth` layers of pure-fn calls.
@@ -45,6 +54,10 @@ impl Clone for Context {
             role_context: self.role_context.clone(),
             policy_evaluator: self.policy_evaluator.clone(),
             act_env: self.act_env.clone(),
+            process_identity: self.process_identity,
+            lexical_frame_id: self.lexical_frame_id,
+            current_tower: self.current_tower,
+            effect_scope_id: self.effect_scope_id,
             pure_depth: self.pure_depth,
         }
     }
@@ -66,6 +79,10 @@ impl Context {
             role_context: None,
             policy_evaluator: None,
             act_env: None,
+            process_identity: None,
+            lexical_frame_id: LexicalFrameId::new(),
+            current_tower: TowerLevel::Pure,
+            effect_scope_id: None,
             pure_depth: 0,
         }
     }
@@ -128,6 +145,10 @@ impl Context {
             role_context: self.role_context.clone(),
             policy_evaluator: self.policy_evaluator.clone(),
             act_env: self.act_env.clone(),
+            process_identity: self.process_identity,
+            lexical_frame_id: LexicalFrameId::new(),
+            current_tower: self.current_tower,
+            effect_scope_id: self.effect_scope_id,
             pure_depth: self.pure_depth,
         }
     }
@@ -141,6 +162,10 @@ impl Context {
             role_context: None,
             policy_evaluator: None,
             act_env: None,
+            process_identity: None,
+            lexical_frame_id: LexicalFrameId::new(),
+            current_tower: TowerLevel::Pure,
+            effect_scope_id: None,
             pure_depth: 0,
         }
     }
@@ -156,6 +181,8 @@ impl Context {
     pub fn enter_pure(&self) -> Self {
         let mut child = self.extend();
         child.pure_depth = self.pure_depth + 1;
+        child.current_tower = TowerLevel::Pure;
+        child.effect_scope_id = None;
         child
     }
 
@@ -210,6 +237,54 @@ impl Context {
         self.act_env.clone()
     }
 
+    /// Return projected process identity metadata when this context represents a child process.
+    pub fn process_identity(&self) -> Option<crate::process_env::ProcessEnvIdentity> {
+        self.process_identity
+    }
+
+    /// Return the current semantic-tower attribution and identity for `fail`.
+    pub(crate) fn current_failure_attribution(&self) -> (TowerLevel, FailureEntity) {
+        match self.current_tower {
+            TowerLevel::Pure => (
+                TowerLevel::Pure,
+                FailureEntity::LexicalFrame(self.lexical_frame_id),
+            ),
+            TowerLevel::Effectful => (
+                TowerLevel::Effectful,
+                FailureEntity::EffectScope(
+                    self.effect_scope_id
+                        .expect("effectful context must carry an effect scope id"),
+                ),
+            ),
+            TowerLevel::Proc => (
+                TowerLevel::Proc,
+                FailureEntity::Process(
+                    self.process_identity
+                        .expect("proc context must carry process identity metadata")
+                        .process_id,
+                ),
+            ),
+            TowerLevel::Workflow => {
+                panic!("workflow failure attribution is not threaded through Context yet")
+            }
+        }
+    }
+
+    /// Inherit runtime failure-attribution metadata from a parent execution context.
+    pub(crate) fn inherit_runtime_metadata_from(mut self, parent: &Context) -> Self {
+        self.process_identity = parent.process_identity;
+        self.current_tower = parent.current_tower;
+        self.effect_scope_id = parent.effect_scope_id;
+        self
+    }
+
+    /// Mark this context as entering a fresh effect scope for Act execution.
+    pub(crate) fn with_effect_scope(mut self, effect_scope_id: EffectScopeId) -> Self {
+        self.current_tower = TowerLevel::Effectful;
+        self.effect_scope_id = Some(effect_scope_id);
+        self
+    }
+
     /// Get a reference to the role context if set
     pub fn role_context(&self) -> Option<&crate::role_context::RoleContext> {
         self.role_context.as_ref()
@@ -260,6 +335,41 @@ impl Context {
     /// Get all bindings in this context (excluding parent)
     pub fn local_bindings(&self) -> &HashMap<Name, Value> {
         &self.bindings
+    }
+
+    /// Snapshot all visible bindings through the parent chain.
+    ///
+    /// Parent bindings are inserted first and local bindings override them,
+    /// matching lookup semantics without copying parent obligation state.
+    pub fn visible_bindings(&self) -> HashMap<Name, Value> {
+        let mut bindings = self
+            .parent
+            .as_ref()
+            .map(|parent| parent.visible_bindings())
+            .unwrap_or_default();
+        bindings.extend(self.bindings.clone());
+        bindings
+    }
+
+    /// Build a child process context from component-wise projection.
+    pub(crate) fn project_process_child(
+        &self,
+        process_identity: crate::process_env::ProcessEnvIdentity,
+        role_context: Option<crate::role_context::RoleContext>,
+    ) -> Self {
+        Self {
+            bindings: self.visible_bindings(),
+            parent: None,
+            obligations: Arc::new(Mutex::new(HashSet::new())),
+            role_context,
+            policy_evaluator: self.policy_evaluator.clone(),
+            act_env: self.act_env.clone(),
+            process_identity: Some(process_identity),
+            lexical_frame_id: LexicalFrameId::new(),
+            current_tower: TowerLevel::Proc,
+            effect_scope_id: None,
+            pure_depth: self.pure_depth,
+        }
     }
 
     /// Check if a name is bound in this context or any parent

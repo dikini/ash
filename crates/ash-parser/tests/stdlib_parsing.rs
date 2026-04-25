@@ -437,7 +437,7 @@ fn test_runtime_import_examples_parse_with_canonical_syntax() {
 fn test_test_import_examples_parse_with_canonical_syntax() {
     for source in [
         "use test::assert_true;",
-        "use test::{assert_true, assert_false, fail};",
+        "use test::{assert_true, assert_false, fail_test};",
         "pub use test::{assert_eq_int, assert_eq_string, assert_eq_bool};",
     ] {
         let mut input = new_input(source);
@@ -464,7 +464,7 @@ fn test_test_public_functions_parse_as_real_fn_definitions() {
             "assert_ne_int",
             "assert_eq_string",
             "assert_eq_bool",
-            "fail",
+            "fail_test",
         ]
     );
 

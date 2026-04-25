@@ -233,7 +233,7 @@ fn parse_fn_match_expr() {
 // ---------------------------------------------------------------------------
 #[test]
 fn parse_fn_panic() {
-    let def = parse_fn(r#"fn fail() -> Int { panic "unreachable" }"#);
+    let def = parse_fn(r#"fn unreachable_panic() -> Int { panic "unreachable" }"#);
     let Definition::Function(f) = def else {
         panic!("expected Function definition");
     };

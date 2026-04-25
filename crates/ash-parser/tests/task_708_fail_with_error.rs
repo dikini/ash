@@ -1,6 +1,7 @@
 use ash_parser::input::new_input;
 use ash_parser::lower::lower_expr;
 use ash_parser::parse_expr::expr;
+use ash_parser::parse_module::parse_fn_definition;
 use ash_parser::surface::{Expr, Literal, Pattern};
 use winnow::prelude::*;
 
@@ -13,6 +14,15 @@ fn parse_expr_source(source: &str) -> Expr {
         input.input
     );
     parsed
+}
+
+fn parse_fn_definition_fails(source: &str) {
+    let mut input = new_input(source);
+    let result = parse_fn_definition(&mut input);
+    assert!(
+        result.is_err(),
+        "expected fn definition to fail parsing: {source}"
+    );
 }
 
 #[test]
@@ -85,6 +95,24 @@ fn with_error_keyword_does_not_capture_identifier_prefixes() {
             "expected {source:?} to parse as a variable, got {parsed:?}"
         );
     }
+}
+
+#[test]
+fn fail_and_with_error_are_reserved_exact_identifiers() {
+    for source in [
+        "{ let fail = 1; fail }",
+        "{ let with_error = 1; with_error }",
+    ] {
+        let mut input = new_input(source);
+        let parsed = expr.parse_next(&mut input);
+        assert!(
+            parsed.is_err(),
+            "expected exact contextual keyword identifier to be rejected: {source}"
+        );
+    }
+
+    parse_fn_definition_fails(r#"fn fail() -> Int { 1 }"#);
+    parse_fn_definition_fails(r#"fn with_error() -> Int { 1 }"#);
 }
 
 #[test]

@@ -29,6 +29,6 @@ pub fn assert_eq_bool(expected: Bool, actual: Bool) -> Bool {
     expected == actual
 }
 
-pub fn fail() -> Bool {
+pub fn fail_test() -> Bool {
     false
 }

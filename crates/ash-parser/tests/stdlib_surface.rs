@@ -186,8 +186,8 @@ fn test_stdlib_exposes_minimal_test_surface() {
         "test.ash should expose the parseable assert_true signature"
     );
     assert!(
-        test_module.contains("pub fn fail() -> Bool"),
-        "test.ash should expose the minimal zero-argument fail helper"
+        test_module.contains("pub fn fail_test() -> Bool"),
+        "test.ash should expose the minimal zero-argument fail_test helper"
     );
     assert!(
         !test_module.contains("panic(message)"),

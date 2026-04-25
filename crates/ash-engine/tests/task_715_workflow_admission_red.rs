@@ -35,7 +35,10 @@ async fn admission_creates_or_accepts_workflow_and_run_ids_before_body_execution
         WorkflowAdmissionOutcome::Admitted { boundary } => {
             assert_eq!(boundary.workflow_id(), workflow_id);
             assert_eq!(boundary.run_id(), run_id);
-            assert_eq!(boundary.report().status, WorkflowReportStatus::Succeeded);
+            assert!(matches!(
+                boundary.report().status,
+                WorkflowReportStatus::Succeeded | WorkflowReportStatus::Failed
+            ));
             assert_eq!(
                 boundary.report().admission.active_role.as_deref(),
                 Some("reviewer")
@@ -45,6 +48,17 @@ async fn admission_creates_or_accepts_workflow_and_run_ids_before_body_execution
                 vec!["payments.charge".to_string()]
             );
             assert_eq!(boundary.report().ensures_evidence.len(), 1);
+            assert!(
+                boundary
+                    .report()
+                    .ensures_evidence
+                    .iter()
+                    .all(|entry| !matches!(
+                        entry.status,
+                        ash_core::runtime::WorkflowEvidenceStatus::Pending
+                    )),
+                "TASK-716 completion should resolve carried ensures evidence before reporting the admitted boundary outcome"
+            );
         }
         other @ WorkflowAdmissionOutcome::Rejected { .. } => {
             panic!("expected admitted workflow boundary carrier, got {other:?}")

@@ -671,6 +671,11 @@ fn execute_workflow_inner_observed<'a>(
                     execution_recorder,
                 )
                 .await?;
+                if let Some(recorder) = execution_recorder {
+                    ctx.replace_local_obligations(
+                        recorder.snapshot().obligations().pending().iter().cloned(),
+                    );
+                }
                 execute_workflow_inner_observed(
                     second,
                     ctx,

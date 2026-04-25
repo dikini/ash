@@ -32,14 +32,14 @@ pub use error::EngineError;
 pub use ash_core::capability::CapabilityProvider;
 
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, RunId, TowerLevel, WorkflowAdmissionContext,
+    FailureEntity, OperationalFailure, ProcessFailure, RunId, TowerLevel, WorkflowAdmissionContext,
     WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
     WorkflowFailure, WorkflowFailureKind, WorkflowReport,
 };
 use ash_core::{Role, Value, WorkflowId};
 use ash_interp::{
-    BehaviourContext, Context, ExecResult, PolicyEvaluator, RoleContext, RuntimeState,
-    execute_workflow_with_behaviour_in_state, interpret_in_state,
+    BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
+    RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
 };
 use ash_parser::surface::Type as SurfaceType;
 use std::collections::HashMap;
@@ -300,28 +300,328 @@ fn reject_admission(
 fn failed_boundary_outcome_from_exec_error(
     workflow_id: WorkflowId,
     run_id: RunId,
-    error: impl std::fmt::Display,
+    error: &ExecError,
     admission: WorkflowAdmissionContext,
     requires_evidence: Vec<WorkflowContractCheckEvidence>,
     ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+    execution_record: Option<&ExecutionRecord>,
 ) -> WorkflowBoundaryOutcome {
-    let cause = OperationalFailure::new(
-        TowerLevel::Workflow,
-        FailureEntity::Run(run_id),
-        Value::String(error.to_string()),
-        "ExecError",
-    );
+    let cause = lower_operational_cause_from_exec_error(run_id, error);
     let failure = WorkflowFailure::new(
         workflow_id,
         run_id,
         WorkflowFailureKind::BodyFailureEscaped,
-        Some(cause),
+        Some(cause.clone()),
     );
-    let report = WorkflowReport::failed(workflow_id, run_id, failure.clone())
-        .with_admission_context(admission)
-        .with_requires_evidence(requires_evidence)
-        .with_ensures_evidence(ensures_evidence);
+    let report = project_execution_report(
+        WorkflowReport::failed(workflow_id, run_id, failure.clone())
+            .with_admission_context(admission)
+            .with_requires_evidence(requires_evidence)
+            .with_ensures_evidence(ensures_evidence),
+        execution_record,
+        Some(&cause),
+    );
     WorkflowBoundaryOutcome::failed(failure, report)
+}
+
+fn lower_operational_cause_from_exec_error(run_id: RunId, error: &ExecError) -> OperationalFailure {
+    match error {
+        ExecError::Eval(EvalError::OperationalFailure(failure)) => failure.as_ref().clone(),
+        ExecError::Eval(eval_error) => OperationalFailure::new(
+            TowerLevel::Proc,
+            FailureEntity::Run(run_id),
+            Value::String(eval_error.to_string()),
+            "EvalError",
+        ),
+        _ => OperationalFailure::new(
+            TowerLevel::Workflow,
+            FailureEntity::Run(run_id),
+            Value::String(error.to_string()),
+            "ExecError",
+        ),
+    }
+}
+
+fn report_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
+    let mut evidence = vec![format!("execution_phase={:?}", execution_record.phase())];
+    if let Some(completion) = execution_record.project_completion() {
+        evidence.push(format!(
+            "terminal_effect={:?}",
+            completion.effects().terminal()
+        ));
+        evidence.push(format!("trace_events={}", execution_record.trace().len()));
+        evidence.push(format!(
+            "lower_process_summary=result={:?};pending_local={};pending_role={};reached_effects={:?}",
+            completion.result(),
+            completion.obligations().pending().len(),
+            completion.obligations().role_pending().len(),
+            completion.effects().reached(),
+        ));
+    }
+    evidence
+}
+
+fn report_provenance_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
+    let provenance = execution_record.provenance();
+    let mut notes = vec![format!(
+        "execution_workflow_id={:?}",
+        provenance.workflow_id
+    )];
+    if let Some(parent) = provenance.parent {
+        notes.push(format!("execution_parent_workflow_id={parent:?}"));
+    }
+    if !provenance.lineage.is_empty() {
+        notes.push(format!("execution_lineage={:?}", provenance.lineage));
+    }
+    notes
+}
+
+fn obligation_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
+    let obligations = execution_record.obligations();
+    let mut evidence = obligations
+        .pending()
+        .iter()
+        .map(|name| format!("local_pending:{name}"))
+        .collect::<Vec<_>>();
+    if let Some(active_role) = obligations.active_role() {
+        evidence.push(format!("active_role:{active_role}"));
+    }
+    evidence.extend(
+        obligations
+            .role_pending()
+            .iter()
+            .map(|name| format!("role_pending:{name}")),
+    );
+    evidence.extend(
+        obligations
+            .role_discharged()
+            .iter()
+            .map(|name| format!("role_discharged:{name}")),
+    );
+    evidence
+}
+
+fn lower_process_failures_from_causes(lower_causes: &[OperationalFailure]) -> Vec<ProcessFailure> {
+    lower_causes
+        .iter()
+        .filter_map(|cause| match cause.entity {
+            FailureEntity::Process(process_id) => {
+                Some(ProcessFailure::new(process_id, cause.clone()))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn pending_local_obligations_after_completion(workflow: &ash_core::Workflow) -> Vec<String> {
+    use std::collections::BTreeSet;
+
+    fn visit(workflow: &ash_core::Workflow, mut pending: BTreeSet<String>) -> BTreeSet<String> {
+        match workflow {
+            ash_core::Workflow::Observe { continuation, .. }
+            | ash_core::Workflow::Orient { continuation, .. }
+            | ash_core::Workflow::Propose { continuation, .. }
+            | ash_core::Workflow::Decide { continuation, .. }
+            | ash_core::Workflow::Check { continuation, .. }
+            | ash_core::Workflow::Act { continuation, .. }
+            | ash_core::Workflow::Call { continuation, .. }
+            | ash_core::Workflow::Let { continuation, .. }
+            | ash_core::Workflow::Spawn { continuation, .. }
+            | ash_core::Workflow::Split { continuation, .. }
+            | ash_core::Workflow::Kill { continuation, .. }
+            | ash_core::Workflow::Pause { continuation, .. }
+            | ash_core::Workflow::Resume { continuation, .. }
+            | ash_core::Workflow::CheckHealth { continuation, .. }
+            | ash_core::Workflow::Yield { continuation, .. } => visit(continuation, pending),
+            ash_core::Workflow::Oblig { workflow, .. }
+            | ash_core::Workflow::With { workflow, .. }
+            | ash_core::Workflow::Must { workflow } => visit(workflow, pending),
+            ash_core::Workflow::If {
+                then_branch,
+                else_branch,
+                ..
+            }
+            | ash_core::Workflow::Maybe {
+                primary: then_branch,
+                fallback: else_branch,
+            } => {
+                let mut merged = visit(then_branch, pending.clone());
+                merged.extend(visit(else_branch, pending));
+                merged
+            }
+            ash_core::Workflow::Seq { first, second } => visit(second, visit(first, pending)),
+            ash_core::Workflow::ForEach { body, .. } => {
+                let mut merged = pending.clone();
+                merged.extend(visit(body, pending));
+                merged
+            }
+            ash_core::Workflow::Oblige { name, .. } => {
+                pending.insert(name.clone());
+                pending
+            }
+            ash_core::Workflow::CheckObligation { name, .. } => {
+                pending.remove(name);
+                pending
+            }
+            ash_core::Workflow::Receive { arms, .. } => {
+                let mut merged = pending.clone();
+                for arm in arms {
+                    merged.extend(visit(&arm.body, pending.clone()));
+                }
+                merged
+            }
+            ash_core::Workflow::Ret { .. }
+            | ash_core::Workflow::Set { .. }
+            | ash_core::Workflow::Send { .. }
+            | ash_core::Workflow::ProxyResume { .. }
+            | ash_core::Workflow::Done => pending,
+        }
+    }
+
+    visit(workflow, BTreeSet::new()).into_iter().collect()
+}
+
+fn project_execution_report(
+    report: WorkflowReport,
+    execution_record: Option<&ExecutionRecord>,
+    lower_cause: Option<&OperationalFailure>,
+) -> WorkflowReport {
+    let lower_causes = lower_cause.cloned().into_iter().collect::<Vec<_>>();
+    let report = report
+        .with_lower_causes(lower_causes.clone())
+        .with_lower_process_failures(lower_process_failures_from_causes(&lower_causes));
+    match execution_record {
+        Some(execution_record) => report
+            .with_obligation_evidence(obligation_evidence_from_execution(execution_record))
+            .with_evidence(report_evidence_from_execution(execution_record))
+            .with_provenance(report_provenance_from_execution(execution_record)),
+        None => report,
+    }
+}
+
+fn resolve_ensures_evidence(
+    ensures: &[String],
+    result: &Value,
+) -> Vec<WorkflowContractCheckEvidence> {
+    ensures
+        .iter()
+        .cloned()
+        .map(|clause| {
+            if let Some(field) = clause.strip_prefix("result.") {
+                let passed = match result {
+                    Value::Record(fields) => fields.get(field).is_some_and(|value| match value {
+                        Value::Bool(boolean) => *boolean,
+                        Value::Null => false,
+                        _ => true,
+                    }),
+                    _ => false,
+                };
+                let note =
+                    format!("evaluated result field `{field}` against workflow result {result}");
+                if passed {
+                    WorkflowContractCheckEvidence::passed(clause, vec![note])
+                } else {
+                    WorkflowContractCheckEvidence::failed(clause, vec![note])
+                }
+            } else {
+                WorkflowContractCheckEvidence::failed(
+                    clause,
+                    vec![
+                        "completion boundary has no evaluator for opaque ensures label".to_string(),
+                    ],
+                )
+            }
+        })
+        .collect()
+}
+
+fn completion_failure_outcome(
+    workflow_id: WorkflowId,
+    run_id: RunId,
+    kind: WorkflowFailureKind,
+    admission: WorkflowAdmissionContext,
+    requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+    execution_record: Option<&ExecutionRecord>,
+) -> WorkflowBoundaryOutcome {
+    let failure = WorkflowFailure::new(workflow_id, run_id, kind, None);
+    let report = project_execution_report(
+        WorkflowReport::failed(workflow_id, run_id, failure.clone())
+            .with_admission_context(admission)
+            .with_requires_evidence(requires_evidence)
+            .with_ensures_evidence(ensures_evidence),
+        execution_record,
+        None,
+    );
+    WorkflowBoundaryOutcome::failed(failure, report)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn admitted_completion_outcome(
+    workflow: &ash_core::Workflow,
+    workflow_id: WorkflowId,
+    run_id: RunId,
+    value: Value,
+    admission: WorkflowAdmissionContext,
+    requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    ensures: &[String],
+    execution_record: Option<&ExecutionRecord>,
+) -> WorkflowBoundaryOutcome {
+    let local_pending = execution_record.map_or_else(
+        || !pending_local_obligations_after_completion(workflow).is_empty(),
+        |record| !record.obligations().pending().is_empty(),
+    );
+    let role_pending =
+        execution_record.is_some_and(|record| !record.obligations().role_pending().is_empty());
+    let ensures_evidence = resolve_ensures_evidence(ensures, &value);
+    let ensures_failed = ensures_evidence
+        .iter()
+        .any(|entry| entry.status == WorkflowEvidenceStatus::Failed);
+
+    if local_pending {
+        completion_failure_outcome(
+            workflow_id,
+            run_id,
+            WorkflowFailureKind::LocalObligationsUndischarged,
+            admission,
+            requires_evidence,
+            Vec::new(),
+            execution_record,
+        )
+    } else if role_pending {
+        completion_failure_outcome(
+            workflow_id,
+            run_id,
+            WorkflowFailureKind::RoleObligationsUndischarged,
+            admission,
+            requires_evidence,
+            Vec::new(),
+            execution_record,
+        )
+    } else if ensures.is_empty() || !ensures_failed {
+        WorkflowBoundaryOutcome::succeeded(
+            value.clone(),
+            project_execution_report(
+                WorkflowReport::succeeded(workflow_id, run_id)
+                    .with_admission_context(admission)
+                    .with_requires_evidence(requires_evidence)
+                    .with_ensures_evidence(ensures_evidence)
+                    .with_result(value),
+                execution_record,
+                None,
+            ),
+        )
+    } else {
+        completion_failure_outcome(
+            workflow_id,
+            run_id,
+            WorkflowFailureKind::EnsuresViolation,
+            admission,
+            requires_evidence,
+            ensures_evidence,
+            execution_record,
+        )
+    }
 }
 
 impl Engine {
@@ -959,6 +1259,7 @@ impl Engine {
     }
 
     /// Admit and execute a workflow through the workflow-boundary carrier substrate.
+    #[allow(clippy::too_many_lines)]
     pub async fn admit_workflow(
         &self,
         request: WorkflowAdmissionRequest,
@@ -1030,7 +1331,7 @@ impl Engine {
         let cap_ctx = self.runtime_state.create_capability_context().await;
         let policy_eval = PolicyEvaluator::new();
         let behaviour_ctx = BehaviourContext::new();
-        let outcome = match execute_workflow_with_behaviour_in_state(
+        let execution_result = execute_workflow_with_behaviour_in_state(
             &request.workflow,
             ctx,
             &cap_ctx,
@@ -1038,23 +1339,28 @@ impl Engine {
             &behaviour_ctx,
             &self.runtime_state,
         )
-        .await
-        {
-            Ok(value) => WorkflowBoundaryOutcome::succeeded(
-                value.clone(),
-                WorkflowReport::succeeded(workflow_id, run_id)
-                    .with_admission_context(admission)
-                    .with_requires_evidence(requires_evidence)
-                    .with_ensures_evidence(ensures_evidence)
-                    .with_result(value),
+        .await;
+        let execution_record = self.runtime_state.last_execution_record().await;
+        let execution_record_ref = execution_record.as_ref();
+        let outcome = match execution_result {
+            Ok(value) => admitted_completion_outcome(
+                &request.workflow,
+                workflow_id,
+                run_id,
+                value,
+                admission,
+                requires_evidence,
+                &request.ensures,
+                execution_record_ref,
             ),
             Err(error) => failed_boundary_outcome_from_exec_error(
                 workflow_id,
                 run_id,
-                error,
+                &error,
                 admission,
                 requires_evidence,
                 ensures_evidence,
+                execution_record_ref,
             ),
         };
 

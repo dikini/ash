@@ -46,6 +46,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- TASK-716: workflow-boundary completion now constructs minimal local reports for completion failures, resolves `ensures` evidence before reporting success, surfaces undischarged local obligations as boundary failures, and projects retained execution/provenance evidence into escaped-lower-failure reports without changing `Engine::execute_core_workflow(...) -> ExecResult<Value>` compatibility.
+
 - Workspace clippy gate now passes again after boxing oversized interpreter error payloads and tightening workflow-admission/test helpers in ash-engine, clearing the Phase 98 verification blockers that had surfaced as `large_enum_variant`, `result_large_err`, and strict clippy API/doc/style violations during TASK-715 follow-through.
 
 - TASK-718: surface callable-signature parsing now accepts tuple types in `fn`/`builtin fn` parameter and return annotations, and imported callable signature lowering/type conversion preserves those tuples for proc stdlib exports such as `proc::join -> Proc<(A, B)>`.

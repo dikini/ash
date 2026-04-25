@@ -511,6 +511,56 @@ impl WorkflowReport {
         }
     }
 
+    fn completion_failure_kind(&self) -> Option<WorkflowFailureKind> {
+        self.failure
+            .as_ref()
+            .map(|failure| failure.kind)
+            .filter(|kind| {
+                matches!(
+                    kind,
+                    WorkflowFailureKind::EnsuresViolation
+                        | WorkflowFailureKind::LocalObligationsUndischarged
+                        | WorkflowFailureKind::RoleObligationsUndischarged
+                )
+            })
+    }
+
+    fn default_obligation_evidence_for(kind: WorkflowFailureKind) -> Vec<String> {
+        match kind {
+            WorkflowFailureKind::LocalObligationsUndischarged => {
+                vec!["workflow-boundary local obligations left undischarged".to_string()]
+            }
+            WorkflowFailureKind::RoleObligationsUndischarged => {
+                vec!["workflow-boundary role obligations left undischarged".to_string()]
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    fn normalize_completion_failure_evidence(&mut self) {
+        match self.completion_failure_kind() {
+            Some(WorkflowFailureKind::EnsuresViolation) => {
+                self.ensures_evidence = self
+                    .ensures_evidence
+                    .drain(..)
+                    .map(|entry| match entry.status {
+                        WorkflowEvidenceStatus::Pending => {
+                            WorkflowContractCheckEvidence::failed(entry.clause, entry.notes)
+                        }
+                        WorkflowEvidenceStatus::Passed | WorkflowEvidenceStatus::Failed => entry,
+                    })
+                    .collect();
+            }
+            Some(
+                kind @ (WorkflowFailureKind::LocalObligationsUndischarged
+                | WorkflowFailureKind::RoleObligationsUndischarged),
+            ) if self.obligation_evidence.is_empty() => {
+                self.obligation_evidence = Self::default_obligation_evidence_for(kind);
+            }
+            _ => {}
+        }
+    }
+
     /// Create a failed workflow report skeleton.
     #[must_use]
     pub fn failed(workflow_id: WorkflowId, run_id: RunId, failure: WorkflowFailure) -> Self {
@@ -524,7 +574,7 @@ impl WorkflowReport {
                 _ => None,
             })
             .unwrap_or_default();
-        Self {
+        let mut report = Self {
             workflow_id,
             run_id,
             status: WorkflowReportStatus::Failed,
@@ -539,7 +589,9 @@ impl WorkflowReport {
             provenance: Vec::new(),
             result: None,
             external_report_sink: None,
-        }
+        };
+        report.normalize_completion_failure_evidence();
+        report
     }
 
     /// Attach admitted workflow context and project admission evidence into the report.
@@ -572,6 +624,46 @@ impl WorkflowReport {
         ensures_evidence: Vec<WorkflowContractCheckEvidence>,
     ) -> Self {
         self.ensures_evidence = ensures_evidence;
+        self.normalize_completion_failure_evidence();
+        self
+    }
+
+    /// Attach completion-boundary obligation evidence.
+    #[must_use]
+    pub fn with_obligation_evidence(mut self, obligation_evidence: Vec<String>) -> Self {
+        self.obligation_evidence = obligation_evidence;
+        self.normalize_completion_failure_evidence();
+        self
+    }
+
+    /// Attach local workflow evidence notes.
+    #[must_use]
+    pub fn with_evidence(mut self, evidence: Vec<String>) -> Self {
+        self.evidence = evidence;
+        self
+    }
+
+    /// Attach workflow provenance/audit notes.
+    #[must_use]
+    pub fn with_provenance(mut self, provenance: Vec<String>) -> Self {
+        self.provenance = provenance;
+        self
+    }
+
+    /// Attach observed lower process failures.
+    #[must_use]
+    pub fn with_lower_process_failures(
+        mut self,
+        lower_process_failures: Vec<ProcessFailure>,
+    ) -> Self {
+        self.lower_process_failures = lower_process_failures;
+        self
+    }
+
+    /// Attach preserved lower operational causes.
+    #[must_use]
+    pub fn with_lower_causes(mut self, lower_causes: Vec<OperationalFailure>) -> Self {
+        self.lower_causes = lower_causes;
         self
     }
 

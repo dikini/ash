@@ -348,6 +348,15 @@ impl Context {
             .collect()
     }
 
+    /// Replace the local pending-obligation set for this frame.
+    pub fn replace_local_obligations(&self, obligations: impl IntoIterator<Item = Name>) {
+        let replacement: HashSet<Name> = obligations.into_iter().collect();
+        *self
+            .obligations
+            .lock()
+            .expect("context obligations mutex should not be poisoned") = replacement;
+    }
+
     /// Return the cumulative pending obligations visible from this frame through its parent chain.
     pub fn visible_pending_obligations(&self) -> BTreeSet<Name> {
         let mut pending = self

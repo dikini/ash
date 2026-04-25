@@ -1,6 +1,6 @@
 # TASK-715: Workflow admission and contract evidence
 
-## Status: 🟠 In Progress
+## Status: ✅ Complete
 
 ## Description
 
@@ -56,8 +56,8 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 - [x] Role/capability admission failures map to structured workflow failures.
 - [x] Requires failure prevents body execution and records evidence.
 - [x] Ensures evidence schema/plumbing is available for TASK-716 without performing completion-time evaluation in this task.
-- [ ] `cargo test --all` passes — blocked by unrelated `ash-engine` regression in `tests/task_718_proc_stdlib.rs` (`use proc::{unit}` / `use proc::{unit, then}` workflow parse failure).
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly — blocked by pre-existing `clippy::large_enum_variant` on `crates/ash-core/src/ast.rs:870` (`Definition`).
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
 - [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
@@ -68,4 +68,5 @@ This task outputs substrate needed by its direct dependents in PLAN-098.
 
 - Preserve existing workflow/control-link behavior unless this task explicitly changes it.
 - Keep `Proc<A>` distinct from `Act<A>` and `Workflow`.
+- TASK-715 intentionally stops at admission-time `requires` evaluation plus structured `ensures` evidence plumbing; completion-time `ensures` evaluation remains deferred to TASK-716.
 - Update `CHANGELOG.md` for implementation/tooling/docs-policy changes made while completing this task.

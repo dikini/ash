@@ -178,16 +178,15 @@ proptest! {
             denied_cap.name);
     }
 
-    /// Property: Authority is name-based, not effect-based.
+    /// Property: Authority follows effect ordering for matching capability names and constraints.
     ///
-    /// A capability with the same name but different effect should still be accessible.
+    /// A capability may be accessed when the role's declared effect is at least as
+    /// powerful as the requested effect, but not when the request is stronger.
     #[test]
-    fn prop_authority_based_on_name_not_effect(
+    fn prop_authority_respects_effect_order(
         base_cap in arb_capability(),
-        different_effect in arb_effect(),
+        requested_effect in arb_effect(),
     ) {
-        prop_assume!(base_cap.effect != different_effect);
-
         let role = Role {
             name: "test_role".to_string(),
             authority: vec![base_cap.clone()],
@@ -195,15 +194,17 @@ proptest! {
         };
         let ctx = RoleContext::new(role);
 
-        // Create a capability with same name but different effect
-        let cap_with_different_effect = Capability {
+        let requested_cap = Capability {
             name: base_cap.name.clone(),
-            effect: different_effect,
-            constraints: vec![],
+            effect: requested_effect,
+            constraints: base_cap.constraints.clone(),
         };
 
-        prop_assert!(ctx.can_access(&cap_with_different_effect),
-            "Authority should be based on capability name, not effect");
+        prop_assert_eq!(
+            ctx.can_access(&requested_cap),
+            base_cap.effect.at_least(requested_effect),
+            "Authority should allow only same-name, same-constraint requests no stronger than declared effect"
+        );
     }
 
     /// Property: Empty authority denies all access.
@@ -706,13 +707,13 @@ proptest! {
 
         let cap = Capability {
             name: cap_name,
-            effect: Effect::Operational, // Different effect, same name
+            effect: Effect::Operational,
             constraints: vec![],
         };
 
-        // Should always allow based on name
+        // Should always return the same denial for stronger same-name requests.
         for _ in 0..5 {
-            prop_assert!(ctx.can_access(&cap),
+            prop_assert!(!ctx.can_access(&cap),
                 "Authority check should be deterministic for audit trail");
         }
     }

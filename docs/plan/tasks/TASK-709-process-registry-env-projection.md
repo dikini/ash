@@ -1,6 +1,6 @@
 # TASK-709: Process registry and child environment projection
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -53,12 +53,20 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Registry tests cover parent/child identity and terminal-state recording.
-- [ ] Projection tests prove no child receives wider authority than parent.
-- [ ] Existing workflow execution still compiles and passes targeted smoke tests.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- ✅ Registry tests cover parent/child identity and terminal-state recording.
+- ✅ Projection tests prove no child receives wider authority than parent.
+- ✅ Existing workflow execution still compiles and passes targeted smoke tests.
+- ✅ `cargo test --all` passes
+- ✅ `cargo clippy --all-targets --all-features` passes cleanly
+- ✅ `cargo fmt --check` passes
+
+## Completion Notes
+
+- Added `ash_interp::ProcessRegistry` with `ProcessId`-keyed process records, parent/child links, ordered child listing, and write-once `ProcessTerminalState` recording.
+- Integrated the process registry into `RuntimeState` beside the existing `ControlLinkRegistry`; workflow control links remain a separate supervision/control authority.
+- Added `ash_interp::derive_child_env(...)` and `ChildEnvProjection` as the named component-wise projection boundary for child process contexts.
+- Child environment projection snapshots visible lexical bindings, allocates fresh child-local obligation state, preserves hidden runtime policy/Act carriers through `Context`'s internal component projection, records child/parent process identity metadata when supplied, and rejects role-authority widening across capability names, effects, and constraints.
+- Added TASK-709 regression/property coverage in `crates/ash-interp/tests/task_709_process_registry.rs`.
 
 ## Dependencies for Next Task
 

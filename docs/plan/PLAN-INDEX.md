@@ -2795,7 +2795,7 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 ## Phase 98: Proc, Process Runtime, Failure, and Workflow Boundary
 
 **Priority:** High (implements SPEC-048 through SPEC-051 after the Act substrate)
-**Status:** 🟡 Ready
+**Status:** 🟠 In Progress
 **Spec:** SPEC-048, SPEC-049, SPEC-050, SPEC-051
 **Plan:** docs/plan/PLAN-098-PROC-PROCESS-WORKFLOW-RUNTIME.md
 
@@ -2808,8 +2808,8 @@ Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process 
 ||| TASK-707 | Register `Proc` and `P` type constructors | 3 | ✅ Complete ||
 ||| TASK-718 | `Proc` core `unit`/`bind`/`then` combinators | 4 | ✅ Complete ||
 ||| TASK-708 | Operational `fail` and scoped `with_error` | 8 | ✅ Complete ||
-||| TASK-709 | Process registry and child environment projection | 7 | 🟡 Ready ||
-||| TASK-710 | Affine process handles and `await` | 6 | 🟡 Ready ||
+||| TASK-709 | Process registry and child environment projection | 7 | ✅ Complete ||
+||| TASK-710 | Affine process handles and `await` | 6 | ✅ Complete ||
 ||| TASK-711 | Process `yield : Proc<Unit>` | 3 | 🟡 Ready ||
 ||| TASK-712 | `par` and `scatter` child admission | 7 | 🟡 Ready ||
 ||| TASK-713 | `join` and `gather` wait-for-all observation | 6 | 🟡 Ready ||

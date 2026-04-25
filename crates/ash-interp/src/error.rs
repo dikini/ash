@@ -1,6 +1,9 @@
 //! Error types for the interpreter
 
-use ash_core::{Name, Value, runtime::OperationalFailure};
+use ash_core::{
+    Name, Value,
+    runtime::{OperationalFailure, ProcessId},
+};
 use thiserror::Error;
 
 use crate::capability_policy::Role;
@@ -72,6 +75,15 @@ pub enum EvalError {
 
     #[error("operational failure: {0:?}")]
     OperationalFailure(Box<OperationalFailure>),
+
+    #[error("process handle already consumed for process {process_id:?}")]
+    ProcessHandleConsumed { process_id: ProcessId },
+
+    #[error("process observation unavailable for process {process_id:?}: {reason}")]
+    ProcessObservationUnavailable {
+        process_id: ProcessId,
+        reason: String,
+    },
 }
 
 /// Errors that can occur during workflow execution

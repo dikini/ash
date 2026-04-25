@@ -39,6 +39,7 @@ use ash_core::{Capability, Name, Role};
 use std::collections::{BTreeSet, HashSet};
 use std::fmt;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
 /// Errors that can occur when discharging an obligation
 #[derive(Debug, Clone, PartialEq)]
@@ -61,6 +62,14 @@ impl fmt::Display for DischargeError {
 }
 
 impl std::error::Error for DischargeError {}
+
+/// Errors that can occur while projecting role authority to a child process.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum RoleProjectionError {
+    /// The requested child authority contains a capability not present in the parent.
+    #[error("child role authority is wider than parent role authority")]
+    WiderAuthority,
+}
 
 /// Runtime context for role-based authority and obligation enforcement
 ///
@@ -99,13 +108,42 @@ impl RoleContext {
 
     /// Check if the active role has authority to access a capability
     ///
-    /// Returns true if the capability is in the role's authority list.
-    /// Authority matching is based on capability name equality.
+    /// Returns true if the role contains a capability with the same name and constraints
+    /// whose effect is at least as powerful as the requested capability.
     pub fn can_access(&self, capability: &Capability) -> bool {
         self.active_role
             .authority
             .iter()
-            .any(|auth| auth.name == capability.name)
+            .any(|auth| capability_covers(auth, capability))
+    }
+
+    /// Project equal-or-narrower role authority for a child process.
+    ///
+    /// The projected role receives the requested authority and the same declared
+    /// obligations, but starts with a fresh discharged-obligation set.
+    pub fn project_authority(
+        &self,
+        authority: Vec<Capability>,
+    ) -> Result<Self, RoleProjectionError> {
+        if !authority.iter().all(|requested| {
+            self.active_role
+                .authority
+                .iter()
+                .any(|auth| capability_covers(auth, requested))
+        }) {
+            return Err(RoleProjectionError::WiderAuthority);
+        }
+
+        Ok(Self::new(Role {
+            name: self.active_role.name.clone(),
+            authority,
+            obligations: self.active_role.obligations.clone(),
+        }))
+    }
+
+    /// Project the same authority to a child process with fresh discharge state.
+    pub fn clone_for_child(&self) -> Self {
+        Self::new(self.active_role.clone())
     }
 
     /// Check if an obligation has been discharged
@@ -206,6 +244,12 @@ impl RoleContext {
             .expect("role context discharged obligations mutex should not be poisoned")
             .clear();
     }
+}
+
+fn capability_covers(authority: &Capability, requested: &Capability) -> bool {
+    authority.name == requested.name
+        && authority.effect.at_least(requested.effect)
+        && authority.constraints == requested.constraints
 }
 
 #[cfg(test)]

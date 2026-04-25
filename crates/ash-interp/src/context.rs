@@ -26,6 +26,8 @@ pub struct Context {
     act_env: Option<Arc<crate::act_env::ActEnv>>,
     /// Process identity metadata for component-wise projected child process contexts.
     process_identity: Option<crate::process_env::ProcessEnvIdentity>,
+    /// Hidden runtime state for Proc handle observation.
+    runtime_state: Option<Arc<crate::runtime_state::RuntimeState>>,
     /// Current lexical-frame identity for pure failure attribution.
     lexical_frame_id: LexicalFrameId,
     /// Current semantic tower used for operational failure attribution.
@@ -55,6 +57,7 @@ impl Clone for Context {
             policy_evaluator: self.policy_evaluator.clone(),
             act_env: self.act_env.clone(),
             process_identity: self.process_identity,
+            runtime_state: self.runtime_state.clone(),
             lexical_frame_id: self.lexical_frame_id,
             current_tower: self.current_tower,
             effect_scope_id: self.effect_scope_id,
@@ -80,6 +83,7 @@ impl Context {
             policy_evaluator: None,
             act_env: None,
             process_identity: None,
+            runtime_state: None,
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: TowerLevel::Pure,
             effect_scope_id: None,
@@ -146,6 +150,7 @@ impl Context {
             policy_evaluator: self.policy_evaluator.clone(),
             act_env: self.act_env.clone(),
             process_identity: self.process_identity,
+            runtime_state: self.runtime_state.clone(),
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: self.current_tower,
             effect_scope_id: self.effect_scope_id,
@@ -163,6 +168,7 @@ impl Context {
             policy_evaluator: None,
             act_env: None,
             process_identity: None,
+            runtime_state: None,
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: TowerLevel::Pure,
             effect_scope_id: None,
@@ -242,6 +248,26 @@ impl Context {
         self.process_identity
     }
 
+    /// Attach hidden runtime state for Proc handle observation.
+    pub fn with_runtime_state(mut self, runtime_state: crate::runtime_state::RuntimeState) -> Self {
+        self.runtime_state = Some(Arc::new(runtime_state));
+        self
+    }
+
+    /// Attach shared hidden runtime state for Proc handle observation.
+    pub(crate) fn with_runtime_state_arc(
+        mut self,
+        runtime_state: Arc<crate::runtime_state::RuntimeState>,
+    ) -> Self {
+        self.runtime_state = Some(runtime_state);
+        self
+    }
+
+    /// Return the hidden runtime state if one is present.
+    pub fn runtime_state(&self) -> Option<Arc<crate::runtime_state::RuntimeState>> {
+        self.runtime_state.clone()
+    }
+
     /// Return the current semantic-tower attribution and identity for `fail`.
     pub(crate) fn current_failure_attribution(&self) -> (TowerLevel, FailureEntity) {
         match self.current_tower {
@@ -273,6 +299,7 @@ impl Context {
     /// Inherit runtime failure-attribution metadata from a parent execution context.
     pub(crate) fn inherit_runtime_metadata_from(mut self, parent: &Context) -> Self {
         self.process_identity = parent.process_identity;
+        self.runtime_state = parent.runtime_state.clone();
         self.current_tower = parent.current_tower;
         self.effect_scope_id = parent.effect_scope_id;
         self
@@ -365,6 +392,7 @@ impl Context {
             policy_evaluator: self.policy_evaluator.clone(),
             act_env: self.act_env.clone(),
             process_identity: Some(process_identity),
+            runtime_state: self.runtime_state.clone(),
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: TowerLevel::Proc,
             effect_scope_id: None,

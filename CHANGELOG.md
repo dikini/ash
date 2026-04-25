@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-710: added affine runtime `P<A>` process handles and `proc::await`, including single-consumption observation, retained terminal-state projection, structured child-failure surfacing with preserved lower causes, and workflow-path runtime-state propagation for Proc await forcing.
+
 - TASK-709: introduced the interpreter process registry and component-wise child environment projection substrate, preserving `ProcessId` parent/child identity, write-once terminal process state, and equal-or-narrower child role authority by capability name/effect/constraints without replacing workflow `ControlLink` supervision.
 
 - TASK-708: implemented expression-level operational `fail` and scoped `with_error` handling across parser/lowering, type checking, and interpreter runtime, keeping operational failures distinct from ordinary Ash `Result::Err` values and preserving lower failure cause context when handlers re-fail.

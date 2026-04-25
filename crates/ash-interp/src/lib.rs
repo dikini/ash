@@ -36,6 +36,8 @@ pub mod guard;
 pub mod mailbox;
 pub mod pattern;
 pub mod policy;
+pub mod process_env;
+pub mod process_registry;
 pub mod proxy_registry;
 pub mod role_context;
 pub mod role_runtime;
@@ -88,6 +90,10 @@ pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};
 pub use pattern::match_pattern;
 pub use policy::{Policy, PolicyEvaluator, PolicyRule};
+pub use process_env::{
+    ChildEnvProjection, ChildEnvProjectionError, ProcessEnvIdentity, derive_child_env,
+};
+pub use process_registry::{ProcessRecord, ProcessRegistry, ProcessRegistryError};
 pub use proxy_registry::{InstanceAddr, ProxyRegistry, RoleName};
 pub use role_context::RoleContext;
 pub use role_runtime::{

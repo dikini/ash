@@ -1,6 +1,6 @@
 # TASK-710: Affine process handles and await
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -54,12 +54,12 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Use-after-consume tests fail with structured handle-consumed error.
-- [ ] Await success returns the child result.
-- [ ] Await failure preserves source `ProcessId` and lower cause.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Use-after-consume tests fail with structured handle-consumed error.
+- [x] Await success returns the child result.
+- [x] Await failure preserves source `ProcessId` and lower cause.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 
@@ -69,4 +69,5 @@ This task outputs substrate needed by its direct dependents in PLAN-098.
 
 - Preserve existing workflow/control-link behavior unless this task explicitly changes it.
 - Keep `Proc<A>` distinct from `Act<A>` and `Workflow`.
+- Child workflow spawn now also records retained terminal process state in the process registry without replacing workflow `ControlLink` supervision.
 - Update `CHANGELOG.md` for implementation/tooling/docs-policy changes made while completing this task.

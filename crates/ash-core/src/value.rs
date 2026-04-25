@@ -3,6 +3,51 @@
 use crate::adt::is_tuple_field_name;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
+/// Opaque affine process handle runtime value.
+#[derive(Debug, Clone)]
+pub struct ProcessHandle {
+    pub handle_id: uuid::Uuid,
+    pub process_id: crate::ProcessId,
+    pub result_type: Option<String>,
+    consumed: Arc<AtomicBool>,
+}
+
+impl ProcessHandle {
+    #[must_use]
+    pub fn new(process_id: crate::ProcessId, result_type: Option<String>) -> Self {
+        Self {
+            handle_id: uuid::Uuid::new_v4(),
+            process_id,
+            result_type,
+            consumed: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    #[must_use]
+    pub fn is_consumed(&self) -> bool {
+        self.consumed.load(Ordering::SeqCst)
+    }
+
+    pub fn try_consume(&self) -> bool {
+        self.consumed
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    }
+}
+
+impl PartialEq for ProcessHandle {
+    fn eq(&self, other: &Self) -> bool {
+        self.handle_id == other.handle_id
+            && self.process_id == other.process_id
+            && self.result_type == other.result_type
+            && self.is_consumed() == other.is_consumed()
+    }
+}
 
 /// Instance address - opaque reference to a workflow instance
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -70,6 +115,10 @@ pub enum Value {
     /// Streams are used for incremental data sources like chat completions
     /// where data arrives in chunks over time.
     Stream(StreamHandle),
+    /// Opaque affine process handle value.
+    ProcessHandle(ProcessHandle),
+    /// Hidden runtime-only Proc await capture marker.
+    ProcAwaitCapture(ProcessHandle),
     /// Runtime closure value. SPEC-031 §5.2
     /// NOT serializable -- manual serde implementation will error on this variant.
     Closure {
@@ -135,6 +184,13 @@ impl Value {
     pub fn as_stream(&self) -> Option<&StreamHandle> {
         match self {
             Value::Stream(handle) => Some(handle),
+            _ => None,
+        }
+    }
+
+    pub fn as_process_handle(&self) -> Option<&ProcessHandle> {
+        match self {
+            Value::ProcessHandle(handle) => Some(handle),
             _ => None,
         }
     }
@@ -252,6 +308,8 @@ impl std::fmt::Display for Value {
             Value::InstanceAddr(addr) => write!(f, "{}", addr),
             Value::ControlLink(link) => write!(f, "{}", link),
             Value::Stream(handle) => write!(f, "stream({}: {})", handle.id, handle.item_type),
+            Value::ProcessHandle(handle) => write!(f, "P<{}>", handle.process_id.0),
+            Value::ProcAwaitCapture(handle) => write!(f, "<proc-await:{}>", handle.process_id.0),
             Value::Closure { params, .. } => {
                 write!(f, "<closure({})>", params.len())
             }
@@ -266,7 +324,10 @@ impl std::fmt::Display for Value {
 impl Serialize for Value {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Value::Closure { .. } | Value::ActEnvToken => Err(serde::ser::Error::custom(
+            Value::Closure { .. }
+            | Value::ActEnvToken
+            | Value::ProcessHandle(_)
+            | Value::ProcAwaitCapture(_) => Err(serde::ser::Error::custom(
                 "runtime-only value cannot be serialized",
             )),
             Value::Int(v) => {
@@ -436,6 +497,8 @@ mod tests {
                 Value::InstanceAddr(_) => "InstanceAddr",
                 Value::ControlLink(_) => "ControlLink",
                 Value::Stream(_) => "Stream",
+                Value::ProcessHandle(_) => "ProcessHandle",
+                Value::ProcAwaitCapture(_) => "ProcAwaitCapture",
                 Value::Closure { .. } => "Closure",
                 Value::ActEnvToken => "ActEnvToken",
             }
@@ -443,6 +506,13 @@ mod tests {
 
         assert_eq!(classify(Value::Null), "Null");
         assert_eq!(classify(Value::ActEnvToken), "ActEnvToken");
+        assert_eq!(
+            classify(Value::ProcessHandle(ProcessHandle::new(
+                crate::ProcessId::new(),
+                Some("Int".to_string())
+            ))),
+            "ProcessHandle"
+        );
     }
 
     // Serde Roundtrip Tests

@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 use async_trait::async_trait;
 use tokio::sync::Mutex as AsyncMutex;
 
+use ash_core::runtime::{ProcessId, ProcessTerminalState};
 use ash_core::{ControlLink, Value, Workflow};
 
 use crate::capability::CapabilityProvider;
@@ -17,6 +18,7 @@ use crate::control_link::{
 use crate::{ExecError, ExecResult};
 
 use crate::execution_record::ExecutionRecord;
+use crate::process_registry::{ProcessRecord, ProcessRegistry, ProcessRegistryError};
 use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
 use crate::yield_routing::YieldRouter;
@@ -104,6 +106,7 @@ pub struct RuntimeState {
     yield_router: Arc<AsyncMutex<YieldRouter>>,
     child_workflows: Arc<AsyncMutex<HashMap<String, Workflow>>>,
     callable_workflows: Arc<AsyncMutex<HashMap<String, RegisteredCallableWorkflow>>>,
+    process_registry: Arc<AsyncMutex<ProcessRegistry>>,
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
@@ -121,6 +124,7 @@ impl std::fmt::Debug for RuntimeState {
                 "callable_workflows",
                 &"<HashMap<String, RegisteredCallableWorkflow>>",
             )
+            .field("process_registry", &self.process_registry)
             .field("last_execution_record", &self.last_execution_record)
             .field(
                 "providers",
@@ -140,6 +144,7 @@ impl RuntimeState {
             yield_router: Arc::new(AsyncMutex::new(YieldRouter::new())),
             child_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             callable_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
+            process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
         }
@@ -393,6 +398,108 @@ impl RuntimeState {
 
     pub(crate) fn control_registry(&self) -> Arc<AsyncMutex<ControlLinkRegistry>> {
         self.control_registry.clone()
+    }
+
+    /// Register one root process identity in the runtime process registry.
+    pub async fn register_root_process(
+        &self,
+        process_id: ProcessId,
+    ) -> Result<(), ProcessRegistryError> {
+        self.process_registry.lock().await.register_root(process_id)
+    }
+
+    /// Register one child process identity in the runtime process registry.
+    pub async fn register_child_process(
+        &self,
+        parent_process_id: ProcessId,
+        child_process_id: ProcessId,
+        child_index: usize,
+    ) -> Result<(), ProcessRegistryError> {
+        self.process_registry.lock().await.register_child(
+            parent_process_id,
+            child_process_id,
+            child_index,
+        )
+    }
+
+    /// Transition one registered process identity to running.
+    pub async fn mark_process_running(
+        &self,
+        process_id: ProcessId,
+    ) -> Result<(), ProcessRegistryError> {
+        self.process_registry.lock().await.mark_running(process_id)
+    }
+
+    /// Record a write-once terminal process state.
+    pub async fn record_process_terminal(
+        &self,
+        process_id: ProcessId,
+        terminal_state: ProcessTerminalState,
+    ) -> Result<(), ProcessRegistryError> {
+        self.process_registry
+            .lock()
+            .await
+            .record_terminal(process_id, terminal_state)
+    }
+
+    /// Look up one process record by identity.
+    pub async fn process_record(&self, process_id: ProcessId) -> Option<ProcessRecord> {
+        self.process_registry
+            .lock()
+            .await
+            .record(process_id)
+            .cloned()
+    }
+
+    /// Return one retained terminal process state by identity, if present.
+    pub async fn process_terminal_state(
+        &self,
+        process_id: ProcessId,
+    ) -> Option<ProcessTerminalState> {
+        self.process_registry
+            .lock()
+            .await
+            .record(process_id)
+            .and_then(|record| record.terminal_state.clone())
+    }
+
+    /// Blocking version of [`Self::process_terminal_state`] for synchronous Proc observation.
+    pub fn blocking_process_terminal_state(
+        &self,
+        process_id: ProcessId,
+    ) -> Option<ProcessTerminalState> {
+        if let Ok(guard) = self.process_registry.try_lock() {
+            return guard
+                .record(process_id)
+                .and_then(|record| record.terminal_state.clone());
+        }
+
+        let registry = self.process_registry.clone();
+        std::thread::spawn(move || {
+            futures::executor::block_on(async move {
+                registry
+                    .lock()
+                    .await
+                    .record(process_id)
+                    .and_then(|record| record.terminal_state.clone())
+            })
+        })
+        .join()
+        .expect("blocking process terminal-state lookup thread panicked")
+    }
+
+    /// Return child process identities for a parent in child-index order.
+    pub async fn process_children(&self, parent_process_id: ProcessId) -> Vec<ProcessId> {
+        self.process_registry
+            .lock()
+            .await
+            .children_of(parent_process_id)
+    }
+
+    /// Return the live control-link state for a workflow identity, if registered.
+    pub async fn control_link_state(&self, instance_id: ash_core::WorkflowId) -> Option<LinkState> {
+        let link = ControlLink { instance_id };
+        self.control_registry.lock().await.check_health(&link).ok()
     }
 
     /// Register one spawned control target in the shared runtime state.

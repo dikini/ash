@@ -29,6 +29,9 @@ fn call_context_from_env(
     if let Some(act_env) = runtime_ctx.act_env() {
         call_ctx = call_ctx.with_act_env_arc(act_env);
     }
+    if let Some(runtime_state) = runtime_ctx.runtime_state() {
+        call_ctx = call_ctx.with_runtime_state_arc(runtime_state);
+    }
     if enters_effect_scope {
         call_ctx = call_ctx.with_effect_scope(EffectScopeId::new());
     }
@@ -52,8 +55,92 @@ fn value_type_name(value: &Value) -> &'static str {
         Value::InstanceAddr(_) => "InstanceAddr",
         Value::ControlLink(_) => "ControlLink",
         Value::Stream(_) => "Stream",
+        Value::ProcessHandle(_) => "P",
+        Value::ProcAwaitCapture(_) => "<proc-await>",
         Value::Closure { .. } => "Closure",
         Value::ActEnvToken => "ActEnvToken",
+    }
+}
+
+fn observe_terminal_process_sync(
+    handle: &ash_core::ProcessHandle,
+    runtime_ctx: &Context,
+) -> EvalResult<Value> {
+    if !handle.try_consume() {
+        return Err(EvalError::ProcessHandleConsumed {
+            process_id: handle.process_id,
+        });
+    }
+
+    let runtime_state =
+        runtime_ctx
+            .runtime_state()
+            .ok_or_else(|| EvalError::ProcessObservationUnavailable {
+                process_id: handle.process_id,
+                reason: "missing hidden runtime state".to_string(),
+            })?;
+
+    let terminal_state = runtime_state.blocking_process_terminal_state(handle.process_id);
+    observe_terminal_state(handle.process_id, terminal_state)
+}
+
+async fn observe_terminal_process_async(
+    handle: &ash_core::ProcessHandle,
+    runtime_ctx: &Context,
+) -> EvalResult<Value> {
+    if !handle.try_consume() {
+        return Err(EvalError::ProcessHandleConsumed {
+            process_id: handle.process_id,
+        });
+    }
+
+    let runtime_state =
+        runtime_ctx
+            .runtime_state()
+            .ok_or_else(|| EvalError::ProcessObservationUnavailable {
+                process_id: handle.process_id,
+                reason: "missing hidden runtime state".to_string(),
+            })?;
+
+    let terminal_state = runtime_state
+        .process_terminal_state(handle.process_id)
+        .await;
+    observe_terminal_state(handle.process_id, terminal_state)
+}
+
+fn observe_terminal_state(
+    process_id: ash_core::ProcessId,
+    terminal_state: Option<ash_core::runtime::ProcessTerminalState>,
+) -> EvalResult<Value> {
+    match terminal_state {
+        Some(ash_core::runtime::ProcessTerminalState::Succeeded { value }) => Ok(value),
+        Some(ash_core::runtime::ProcessTerminalState::Failed { failure, .. })
+        | Some(ash_core::runtime::ProcessTerminalState::Cancelled { failure, .. }) => {
+            Err(EvalError::OperationalFailure(failure))
+        }
+        None => Err(EvalError::ProcessObservationUnavailable {
+            process_id,
+            reason: "process is not in a retained terminal state".to_string(),
+        }),
+    }
+}
+
+fn maybe_execute_proc_await_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
+    match value {
+        Value::ProcAwaitCapture(handle) => observe_terminal_process_sync(&handle, runtime_ctx),
+        other => Ok(other),
+    }
+}
+
+async fn maybe_execute_proc_await_capture_async(
+    value: Value,
+    runtime_ctx: &Context,
+) -> EvalResult<Value> {
+    match value {
+        Value::ProcAwaitCapture(handle) => {
+            observe_terminal_process_async(&handle, runtime_ctx).await
+        }
+        other => Ok(other),
     }
 }
 
@@ -208,7 +295,12 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
         );
 
         // ── Proc module bridge builtins (qualified) ──
-        for (name, arity) in [("proc::unit", 1), ("proc::bind", 2), ("proc::then", 2)] {
+        for (name, arity) in [
+            ("proc::unit", 1),
+            ("proc::bind", 2),
+            ("proc::then", 2),
+            ("proc::await", 1),
+        ] {
             m.insert(
                 name,
                 BuiltinEntry {
@@ -635,6 +727,29 @@ fn runtime_proc_then(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     })
 }
 
+fn runtime_proc_await(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("proc::await".to_string()),
+        });
+    }
+
+    let Value::ProcessHandle(handle) = &args[0] else {
+        return Err(EvalError::TypeMismatch {
+            expected: "P<A>".to_string(),
+            actual: value_type_name(&args[0]).to_string(),
+        });
+    };
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(Value::ProcAwaitCapture(handle.clone()))),
+        env: ctx.to_env_frame(),
+    })
+}
+
 fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
     let Value::List(items) = value else {
         return Ok(value);
@@ -989,7 +1104,10 @@ type EvalBoxFuture<'a> =
 fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<'a> {
     Box::pin(async move {
         match expr {
-            Expr::Literal(value) => maybe_execute_invoke_capture_async(value.clone(), ctx).await,
+            Expr::Literal(value) => {
+                let value = maybe_execute_invoke_capture_async(value.clone(), ctx).await?;
+                maybe_execute_proc_await_capture_async(value, ctx).await
+            }
             Expr::Variable { name, .. } => ctx
                 .get(name)
                 .cloned()
@@ -1157,6 +1275,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     (Some("proc"), "unit") => return runtime_proc_unit(&args, ctx),
                     (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
                     (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
+                    (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
                     _ => {}
                 }
                 if let (true, Some(Value::Closure { params, body, env })) =
@@ -1396,7 +1515,9 @@ fn apply_closure_async<'a>(
                 runtime_ctx,
                 enters_effect_scope,
             );
-            eval_expr_force_async(body, &call_ctx).await
+            let result = eval_expr_force_async(body, &call_ctx).await?;
+            let result = maybe_execute_invoke_capture_async(result, &call_ctx).await?;
+            maybe_execute_proc_await_capture_async(result, &call_ctx).await
         } else if args.len() < params.len() {
             validates_hidden_act_env(params, &args)?;
             let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
@@ -1484,7 +1605,10 @@ pub async fn eval_expr_async(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
 
 pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
     match expr {
-        Expr::Literal(value) => Ok(value.clone()),
+        Expr::Literal(value) => {
+            let value = maybe_execute_invoke_capture(value.clone(), ctx)?;
+            maybe_execute_proc_await_capture(value, ctx)
+        }
 
         Expr::Variable { name, .. } => ctx
             .get(name)
@@ -1655,6 +1779,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 (Some("proc"), "unit") => return runtime_proc_unit(&args, ctx),
                 (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
                 (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
+                (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
                 _ => {}
             }
 
@@ -2845,7 +2970,8 @@ fn apply_closure(
             enters_effect_scope,
         );
         let result = eval_expr(body, &call_ctx)?;
-        maybe_execute_invoke_capture(result, &call_ctx)
+        let result = maybe_execute_invoke_capture(result, &call_ctx)?;
+        maybe_execute_proc_await_capture(result, &call_ctx)
     } else if args.len() < params.len() {
         validates_hidden_act_env(params, &args)?;
         // Partial application: bind provided params, keep remaining

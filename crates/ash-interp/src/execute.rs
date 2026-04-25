@@ -2,7 +2,10 @@
 //!
 //! Executes workflows in a runtime context, handling all workflow variants.
 
-use ash_core::{Expr, Provenance, Value, Workflow};
+use ash_core::runtime::{
+    FailureEntity, LexicalFrameId, OperationalFailure, ProcessId, ProcessTerminalState, TowerLevel,
+};
+use ash_core::{Expr, Provenance, Value, Workflow, WorkflowId};
 
 use crate::act_env::ActEnv;
 
@@ -26,6 +29,7 @@ use crate::guard::eval_guard;
 use crate::mailbox::{Mailbox, SharedMailbox};
 use crate::pattern::match_pattern;
 use crate::policy::PolicyEvaluator;
+use crate::process_env::{ChildEnvProjection, derive_child_env};
 use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
 use crate::runtime_state::{RuntimeState, SPAWNED_CHILD_CONTROL_BINDING};
@@ -179,7 +183,9 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
     runtime_state: &'a RuntimeState,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
-        let ctx = ctx.with_policy_evaluator(policy_eval.clone());
+        let ctx = ctx
+            .with_policy_evaluator(policy_eval.clone())
+            .with_runtime_state(runtime_state.clone());
         let mailbox = shared_mailbox();
         let control_registry = shared_control_registry(runtime_state);
         let proxy_registry = shared_proxy_registry(runtime_state);
@@ -357,11 +363,81 @@ fn finish_with_terminal_observation(
     result
 }
 
+fn process_terminal_state_from_exec_result(
+    process_id: ProcessId,
+    result: &ExecResult<Value>,
+) -> Option<ProcessTerminalState> {
+    match RuntimeOutcomeState::from_exec_result(result) {
+        RuntimeOutcomeState::TerminalSuccess => match result {
+            Ok(value) => Some(ProcessTerminalState::Succeeded {
+                value: value.clone(),
+            }),
+            Err(_) => None,
+        },
+        RuntimeOutcomeState::ExecutionFailure => match result {
+            Err(error) => Some(ProcessTerminalState::Failed {
+                process_id,
+                failure: Box::new(operational_failure_from_exec_error(process_id, error)),
+            }),
+            Ok(_) => None,
+        },
+        RuntimeOutcomeState::InvalidOrTerminated => match result {
+            Err(error) => Some(ProcessTerminalState::Cancelled {
+                process_id,
+                failure: Box::new(operational_failure_from_exec_error(process_id, error)),
+            }),
+            Ok(_) => None,
+        },
+        RuntimeOutcomeState::BlockedOrSuspended | RuntimeOutcomeState::Active => None,
+    }
+}
+
+fn operational_failure_from_exec_error(
+    process_id: ProcessId,
+    error: &ExecError,
+) -> OperationalFailure {
+    match error {
+        ExecError::Eval(EvalError::OperationalFailure(failure)) => failure.as_ref().clone(),
+        ExecError::Eval(eval_error) => OperationalFailure::new(
+            TowerLevel::Proc,
+            FailureEntity::Process(process_id),
+            Value::String(eval_error.to_string()),
+            "String",
+        )
+        .with_cause(operational_failure_from_eval_error(eval_error)),
+        _ => OperationalFailure::new(
+            TowerLevel::Proc,
+            FailureEntity::Process(process_id),
+            Value::String(error.to_string()),
+            "String",
+        )
+        .with_cause(OperationalFailure::new(
+            TowerLevel::Workflow,
+            FailureEntity::Workflow(WorkflowId::new()),
+            Value::String(error.to_string()),
+            "String",
+        )),
+    }
+}
+
+fn operational_failure_from_eval_error(error: &EvalError) -> OperationalFailure {
+    match error {
+        EvalError::OperationalFailure(failure) => failure.as_ref().clone(),
+        _ => OperationalFailure::new(
+            TowerLevel::Pure,
+            FailureEntity::LexicalFrame(LexicalFrameId::new()),
+            Value::String(error.to_string()),
+            "String",
+        ),
+    }
+}
+
 async fn run_spawned_child_workflow(
     runtime_state: RuntimeState,
     child_workflow: Workflow,
-    init_value: Value,
+    child_ctx: Context,
     link: ash_core::ControlLink,
+    process_id: ProcessId,
     provenance: ConservativeRetainedProvenanceSummary,
     execution_provenance: Provenance,
 ) -> ExecResult<()> {
@@ -369,15 +445,27 @@ async fn run_spawned_child_workflow(
 
     let terminal_observer = TerminalObservationRecorder::new();
     let (child_result, child_execution_record) =
-        execute_with_bindings_with_terminal_observation_in_state(
+        execute_with_context_with_terminal_observation_in_state(
             &child_workflow,
             &runtime_state,
-            RuntimeState::spawned_child_init_bindings(init_value, link.clone()),
+            child_ctx,
             &terminal_observer,
             execution_provenance,
             false,
         )
         .await;
+
+    if let Some(terminal_state) = process_terminal_state_from_exec_result(process_id, &child_result)
+    {
+        runtime_state
+            .record_process_terminal(process_id, terminal_state)
+            .await
+            .map_err(|error| {
+                ExecError::ExecutionFailed(format!(
+                    "spawned child terminal process state recording failed unexpectedly for process {process_id:?}: {error}"
+                ))
+            })?;
+    }
 
     let outcome_state = RuntimeOutcomeState::from_exec_result(&child_result);
     if !outcome_state.is_terminal() {
@@ -1209,6 +1297,63 @@ fn execute_workflow_inner_observed<'a>(
                 }));
 
                 if let (Some(control), Some(child_workflow)) = (control, child_workflow) {
+                    let child_process_id = ProcessId::new();
+                    let parent_process_id =
+                        ctx.process_identity().map(|identity| identity.process_id);
+                    let child_index = if let Some(parent_process_id) = parent_process_id {
+                        runtime_state
+                            .process_children(parent_process_id)
+                            .await
+                            .len()
+                    } else {
+                        0
+                    };
+                    match parent_process_id {
+                        Some(parent_process_id) => runtime_state
+                            .register_child_process(
+                                parent_process_id,
+                                child_process_id,
+                                child_index,
+                            )
+                            .await
+                            .map_err(|error| {
+                                ExecError::ExecutionFailed(format!(
+                                    "failed to register child process {child_process_id:?}: {error}"
+                                ))
+                            })?,
+                        None => runtime_state
+                            .register_root_process(child_process_id)
+                            .await
+                            .map_err(|error| {
+                                ExecError::ExecutionFailed(format!(
+                                    "failed to register root process {child_process_id:?}: {error}"
+                                ))
+                            })?,
+                    }
+                    runtime_state
+                        .mark_process_running(child_process_id)
+                        .await
+                        .map_err(|error| {
+                            ExecError::ExecutionFailed(format!(
+                                "failed to mark process {child_process_id:?} running: {error}"
+                            ))
+                        })?;
+
+                    let child_projection = parent_process_id
+                        .map(|parent_process_id| {
+                            ChildEnvProjection::new(child_process_id, child_index)
+                                .with_parent_process_id(parent_process_id)
+                        })
+                        .unwrap_or_else(|| ChildEnvProjection::new(child_process_id, child_index));
+                    let mut child_ctx = derive_child_env(&ctx, child_projection).map_err(|error| {
+                        ExecError::ExecutionFailed(format!(
+                            "failed to project spawned child process environment for {child_process_id:?}: {error}"
+                        ))
+                    })?;
+                    child_ctx.set_many(RuntimeState::spawned_child_init_bindings(
+                        init_value.clone(),
+                        control.clone(),
+                    ));
                     let parent_workflow_id = None;
                     let parent_lineage = vec![];
                     let provenance = conservative_spawn_provenance_summary(
@@ -1227,14 +1372,14 @@ fn execute_workflow_inner_observed<'a>(
                             lineage: vec![],
                         });
                     let spawned_runtime_state = (*runtime_state).clone();
-                    let spawned_init_value = init_value.clone();
                     let spawned_control = control.clone();
                     tokio::spawn(async move {
                         if let Err(error) = run_spawned_child_workflow(
                             spawned_runtime_state,
                             child_workflow,
-                            spawned_init_value,
+                            child_ctx,
                             spawned_control.clone(),
+                            child_process_id,
                             provenance,
                             child_execution_provenance,
                         )
@@ -1737,7 +1882,9 @@ pub fn execute_workflow_with_stream_in_state<'a>(
     runtime_state: &'a RuntimeState,
 ) -> BoxFuture<'a, ExecResult<Value>> {
     Box::pin(async move {
-        let ctx = ctx.with_policy_evaluator(policy_eval.clone());
+        let ctx = ctx
+            .with_policy_evaluator(policy_eval.clone())
+            .with_runtime_state(runtime_state.clone());
         let mailbox = shared_mailbox();
         let control_registry = shared_control_registry(runtime_state);
         let proxy_registry = shared_proxy_registry(runtime_state);
@@ -1828,10 +1975,10 @@ pub async fn execute_with_bindings_in_state(
     .await
 }
 
-async fn execute_with_bindings_with_terminal_observation_in_state(
+async fn execute_with_context_with_terminal_observation_in_state(
     workflow: &Workflow,
     runtime_state: &RuntimeState,
-    input_bindings: std::collections::HashMap<String, Value>,
+    ctx: Context,
     terminal_observer: &TerminalObservationRecorder,
     execution_provenance: Provenance,
     persist_last_execution_record: bool,
@@ -1840,8 +1987,9 @@ async fn execute_with_bindings_with_terminal_observation_in_state(
     let policy_eval = PolicyEvaluator::new();
     let act_env =
         build_workflow_act_env(runtime_state, &policy_eval, execution_provenance.clone()).await;
-    let ctx = Context::with_bindings(input_bindings)
+    let ctx = ctx
         .with_policy_evaluator(policy_eval.clone())
+        .with_runtime_state(runtime_state.clone())
         .with_act_env(act_env);
     let behaviour_ctx = BehaviourContext::new();
     let mailbox = shared_mailbox();
@@ -2207,6 +2355,265 @@ mod tests {
             )
         );
         assert!(record.provenance().parent.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_spawned_child_registers_terminal_process_state_under_parent_process() {
+        let runtime_state = RuntimeState::new();
+        runtime_state
+            .register_child_workflow(
+                "worker",
+                Workflow::Ret {
+                    expr: Expr::Literal(Value::Int(7)),
+                },
+            )
+            .await;
+
+        let parent_process_id = ProcessId::new();
+        runtime_state
+            .register_root_process(parent_process_id)
+            .await
+            .expect("parent root process should register");
+
+        let ctx = Context::new()
+            .with_runtime_state(runtime_state.clone())
+            .project_process_child(
+                crate::process_env::ProcessEnvIdentity::new(parent_process_id, None, 0),
+                None,
+            );
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result = execute_workflow_with_behaviour_in_state(
+            &spawn_and_return_control(Expr::Literal(Value::Null)),
+            ctx,
+            &cap_ctx,
+            &policy_eval,
+            &behaviour_ctx,
+            &runtime_state,
+        )
+        .await
+        .expect("spawn should return a control link");
+
+        let Value::ControlLink(link) = result else {
+            panic!("expected control link, got {result:?}");
+        };
+
+        let _ = wait_for_child_completion(&runtime_state, &link).await;
+
+        let children = runtime_state.process_children(parent_process_id).await;
+        assert_eq!(
+            children.len(),
+            1,
+            "spawn should register exactly one child process"
+        );
+        let child_process_id = children[0];
+        assert_eq!(
+            runtime_state.process_terminal_state(child_process_id).await,
+            Some(ash_core::runtime::ProcessTerminalState::Succeeded {
+                value: Value::Int(7),
+            })
+        );
+    }
+
+    #[tokio::test]
+    async fn test_spawned_child_failure_records_failed_terminal_state_with_preserved_lower_cause() {
+        let runtime_state = RuntimeState::new();
+        runtime_state
+            .register_child_workflow(
+                "worker",
+                Workflow::Ret {
+                    expr: Expr::Variable {
+                        name: "missing_child_value".to_string(),
+                        span: ash_core::ast::Span::default(),
+                    },
+                },
+            )
+            .await;
+
+        let parent_process_id = ProcessId::new();
+        runtime_state
+            .register_root_process(parent_process_id)
+            .await
+            .expect("parent root process should register");
+
+        let ctx = Context::new()
+            .with_runtime_state(runtime_state.clone())
+            .project_process_child(
+                crate::process_env::ProcessEnvIdentity::new(parent_process_id, None, 0),
+                None,
+            );
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result = execute_workflow_with_behaviour_in_state(
+            &spawn_and_return_control(Expr::Literal(Value::Null)),
+            ctx,
+            &cap_ctx,
+            &policy_eval,
+            &behaviour_ctx,
+            &runtime_state,
+        )
+        .await
+        .expect("spawn should return a control link");
+
+        let Value::ControlLink(link) = result else {
+            panic!("expected control link, got {result:?}");
+        };
+
+        let _ = wait_for_child_completion(&runtime_state, &link).await;
+
+        let children = runtime_state.process_children(parent_process_id).await;
+        assert_eq!(
+            children.len(),
+            1,
+            "spawn should register exactly one child process"
+        );
+        let child_process_id = children[0];
+
+        let Some(ProcessTerminalState::Failed {
+            process_id,
+            failure,
+        }) = runtime_state.process_terminal_state(child_process_id).await
+        else {
+            panic!("expected failed terminal state recorded for child process");
+        };
+
+        assert_eq!(process_id, child_process_id);
+        assert_eq!(failure.tower, TowerLevel::Proc);
+        assert_eq!(failure.entity, FailureEntity::Process(child_process_id));
+
+        let cause = failure
+            .cause
+            .as_deref()
+            .expect("failed terminal observation should preserve lower cause");
+        assert_eq!(
+            cause.payload,
+            Value::String("undefined variable: missing_child_value".to_string())
+        );
+        assert_eq!(cause.payload_type, "String");
+    }
+
+    #[test]
+    fn test_process_terminal_state_from_exec_result_skips_blocked_children() {
+        let process_id = ProcessId::new();
+        let result: ExecResult<Value> = Err(ExecError::Blocked("waiting on input".to_string()));
+
+        assert_eq!(
+            process_terminal_state_from_exec_result(process_id, &result),
+            None
+        );
+    }
+
+    #[test]
+    fn test_process_terminal_state_from_exec_result_records_cancelled_terminal_state_for_invalid_runtime()
+     {
+        let process_id = ProcessId::new();
+        let result: ExecResult<Value> = Err(ExecError::InvalidRuntimeState("killed".to_string()));
+
+        let Some(ProcessTerminalState::Cancelled {
+            process_id: observed_process_id,
+            failure,
+        }) = process_terminal_state_from_exec_result(process_id, &result)
+        else {
+            panic!("expected invalid runtime state to map to cancelled terminal process state");
+        };
+
+        assert_eq!(observed_process_id, process_id);
+        assert_eq!(failure.tower, TowerLevel::Proc);
+        assert_eq!(failure.entity, FailureEntity::Process(process_id));
+        assert!(failure.cause.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_spawned_blocked_child_transitions_to_running_without_terminal_state() {
+        let runtime_state = RuntimeState::new();
+        {
+            let registry = runtime_state.proxy_registry();
+            registry
+                .lock()
+                .await
+                .register("test_role".to_string(), "proxy://instance-1".to_string());
+        }
+        runtime_state
+            .register_child_workflow(
+                "worker",
+                Workflow::Yield {
+                    role: "test_role".to_string(),
+                    request: Box::new(Expr::Literal(Value::Int(42))),
+                    expected_response_type: ash_core::workflow_contract::TypeExpr::Named(
+                        "Int".to_string(),
+                    ),
+                    continuation: Box::new(Workflow::Ret {
+                        expr: Expr::Literal(Value::Int(0)),
+                    }),
+                    span: ash_core::ast::Span::default(),
+                    resume_var: "response".to_string(),
+                },
+            )
+            .await;
+
+        let parent_process_id = ProcessId::new();
+        runtime_state
+            .register_root_process(parent_process_id)
+            .await
+            .expect("parent root process should register");
+
+        let ctx = Context::new()
+            .with_runtime_state(runtime_state.clone())
+            .project_process_child(
+                crate::process_env::ProcessEnvIdentity::new(parent_process_id, None, 0),
+                None,
+            );
+        let cap_ctx = CapabilityContext::new();
+        let policy_eval = PolicyEvaluator::new();
+        let behaviour_ctx = BehaviourContext::new();
+
+        let result = execute_workflow_with_behaviour_in_state(
+            &spawn_and_return_control(Expr::Literal(Value::Null)),
+            ctx,
+            &cap_ctx,
+            &policy_eval,
+            &behaviour_ctx,
+            &runtime_state,
+        )
+        .await
+        .expect("spawn should return a control link");
+
+        let Value::ControlLink(_) = result else {
+            panic!("expected control link from spawn");
+        };
+
+        let mut observed_running_child = None;
+        for _ in 0..20 {
+            let children = runtime_state.process_children(parent_process_id).await;
+            if let Some(child_process_id) = children.first().copied()
+                && let Some(record) = runtime_state.process_record(child_process_id).await
+                && record.lifecycle_state == ash_core::runtime::ProcessLifecycleState::Running
+            {
+                observed_running_child = Some(child_process_id);
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+
+        let child_process_id = observed_running_child
+            .expect("spawned blocked child should transition to Running before suspension");
+        let child_record = runtime_state
+            .process_record(child_process_id)
+            .await
+            .expect("child process record should exist");
+        assert_eq!(
+            child_record.lifecycle_state,
+            ash_core::runtime::ProcessLifecycleState::Running
+        );
+        assert_eq!(
+            runtime_state.process_terminal_state(child_process_id).await,
+            None,
+            "blocked child should not record a terminal process state"
+        );
     }
 
     #[tokio::test]

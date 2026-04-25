@@ -32,6 +32,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- TASK-708: tightened `fail` / `with_error` keyword-boundary parsing so those contextual forms no longer consume legal identifier prefixes such as `fail_count` or `with_error_handler`.
+
 - CLI module-file fallback now ignores `workflow` mentions in line comments, so `ash check std/src/lib.ash` reports the stdlib root as a module file instead of surfacing a generic workflow parse error.
 
 - Typeck/lowering contract alignment for act-block structural validation: `check_expr` now enforces the same empty/requires-return/return-must-be-last contract as `lower_act_block`, closing an end-to-end semantic mismatch where typeck would accept shapes that lowering rejects.

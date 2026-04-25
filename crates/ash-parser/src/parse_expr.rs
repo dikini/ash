@@ -1321,7 +1321,7 @@ fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, winnow::er
                 || !after
                     .chars()
                     .next()
-                    .is_some_and(|c| c.is_ascii_alphanumeric())
+                    .is_some_and(crate::parse_utils::is_identifier_continue)
             {
                 // Update position state
                 for c in word.chars() {

@@ -2,7 +2,7 @@ use ash_core::runtime::{FailureEntity, TowerLevel};
 use ash_core::{Expr, MatchArm, Pattern, Value};
 use ash_interp::context::Context;
 use ash_interp::error::EvalError;
-use ash_interp::eval::eval_expr;
+use ash_interp::eval::{eval_expr, eval_expr_async};
 
 fn fail_expr(payload: Value) -> Expr {
     Expr::Fail {
@@ -40,6 +40,22 @@ fn with_error_catches_operational_failure_payload() {
     };
 
     let result = eval_expr(&expr, &Context::new()).expect("handler should recover");
+    assert_eq!(result, Value::Int(42));
+}
+
+#[tokio::test]
+async fn async_with_error_catches_operational_failure_payload() {
+    let expr = Expr::WithError {
+        body: Box::new(fail_expr(Value::String("boom".to_string()))),
+        arms: vec![MatchArm {
+            pattern: Pattern::Literal(Value::String("boom".to_string())),
+            body: Expr::Literal(Value::Int(42)),
+        }],
+    };
+
+    let result = eval_expr_async(&expr, &Context::new())
+        .await
+        .expect("async handler should recover");
     assert_eq!(result, Value::Int(42));
 }
 

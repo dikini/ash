@@ -90,6 +90,15 @@ pub(crate) fn is_keyword(s: &str) -> bool {
     )
 }
 
+/// Returns whether `c` may continue an Ash identifier.
+///
+/// Keep keyword-boundary checks in sync with [`identifier_with_span`] so a
+/// contextual keyword parser cannot consume the prefix of a longer legal
+/// identifier such as `fail_count` or `with_error-handler`.
+pub(crate) fn is_identifier_continue(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_' || c == '-'
+}
+
 /// Parse an identifier and return it with its source span.
 ///
 /// Canonical implementation: all parser modules delegate here rather than
@@ -99,10 +108,7 @@ pub(crate) fn is_keyword(s: &str) -> bool {
 pub(crate) fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, Span)> {
     let start = input.state.source.len() - input.input.len();
 
-    let result: &str = take_while(1.., |c: char| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-'
-    })
-    .parse_next(input)?;
+    let result: &str = take_while(1.., is_identifier_continue).parse_next(input)?;
 
     // First character must be a letter or underscore (not a digit)
     let first = result.chars().next();

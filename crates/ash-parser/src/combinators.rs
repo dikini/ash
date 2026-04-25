@@ -94,9 +94,15 @@ where
 pub fn keyword<'a>(word: &'a str) -> impl Parser<ParseInput<'a>, &'a str, ContextError> {
     move |input: &mut ParseInput<'a>| {
         if input.input.starts_with(word) {
-            // Check that the next char is not alphanumeric (to ensure full word match)
+            // Check that the next char is not an identifier continuation
+            // (to ensure full word match).
             let after = &input.input[word.len()..];
-            if after.is_empty() || !after.chars().next().unwrap().is_ascii_alphanumeric() {
+            if after.is_empty()
+                || !after
+                    .chars()
+                    .next()
+                    .is_some_and(crate::parse_utils::is_identifier_continue)
+            {
                 // Advance the input position state
                 update_position(&mut input.state, word);
                 // Advance the inner stream

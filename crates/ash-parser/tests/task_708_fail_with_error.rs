@@ -66,6 +66,28 @@ fn with_error_participates_in_pipe_precedence() {
 }
 
 #[test]
+fn fail_keyword_does_not_capture_identifier_prefixes() {
+    for source in ["fail_count", "fail-count"] {
+        let parsed = parse_expr_source(source);
+        assert!(
+            matches!(parsed, Expr::Variable { ref name, .. } if name.as_ref() == source),
+            "expected {source:?} to parse as a variable, got {parsed:?}"
+        );
+    }
+}
+
+#[test]
+fn with_error_keyword_does_not_capture_identifier_prefixes() {
+    for source in ["with_error_handler", "with_error-handler"] {
+        let parsed = parse_expr_source(source);
+        assert!(
+            matches!(parsed, Expr::Variable { ref name, .. } if name.as_ref() == source),
+            "expected {source:?} to parse as a variable, got {parsed:?}"
+        );
+    }
+}
+
+#[test]
 fn lowers_fail_and_with_error_to_core_carriers() {
     let parsed = parse_expr_source("with_error { fail \"boom\" } handle { _ => 1; }");
     let lowered = lower_expr(&parsed).expect("with_error lowers");

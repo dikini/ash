@@ -55,7 +55,7 @@ Implement `fail` as operational bottom and `with_error` as scoped operational fa
 
 ### Step 3: Integration (Green)
 
-✅ Wired through affected Ash layers without collapsing Act, Proc, or Workflow boundaries. `with_error` catches only the dedicated operational failure carrier and does not catch ordinary Ash domain values such as `Err` variants.
+✅ Wired through affected Ash layers without collapsing Act, Proc, or Workflow boundaries. `with_error` catches only the dedicated operational failure carrier and does not catch ordinary Ash domain values such as `Err` variants. TASK-708 implements SPEC-050 payload-shorthand handler matching (`failure.payload`); full-form `Failure { tower, payload, ... }` matching remains deferred until the corresponding surface pattern/value representation exists.
 
 ### Step 4: Property Tests (Verify)
 

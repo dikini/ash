@@ -108,6 +108,15 @@ impl ProcessRegistry {
         child_process_id: ProcessId,
         child_index: usize,
     ) -> Result<(), ProcessRegistryError> {
+        self.register_children_batch(parent_process_id, vec![(child_process_id, child_index)])
+    }
+
+    /// Register multiple children atomically below one already-registered parent.
+    pub fn register_children_batch(
+        &mut self,
+        parent_process_id: ProcessId,
+        children: Vec<(ProcessId, usize)>,
+    ) -> Result<(), ProcessRegistryError> {
         let parent = self
             .records
             .get(&parent_process_id)
@@ -115,27 +124,52 @@ impl ProcessRegistry {
         if is_terminal_lifecycle(&parent.lifecycle_state) {
             return Err(ProcessRegistryError::ParentTerminal(parent_process_id));
         }
-        if self
+
+        let existing_children = self
             .children
             .get(&parent_process_id)
-            .into_iter()
-            .flatten()
-            .filter_map(|child_id| self.records.get(child_id))
-            .any(|child| child.child_index == Some(child_index))
-        {
-            return Err(ProcessRegistryError::DuplicateChildIndex {
-                parent_process_id,
-                child_index,
-            });
+            .cloned()
+            .unwrap_or_default();
+        for (_child_process_id, child_index) in &children {
+            if existing_children
+                .iter()
+                .filter_map(|child_id| self.records.get(child_id))
+                .any(|child| child.child_index == Some(*child_index))
+            {
+                return Err(ProcessRegistryError::DuplicateChildIndex {
+                    parent_process_id,
+                    child_index: *child_index,
+                });
+            }
         }
-        self.insert_record(ProcessRecord::child(
-            parent_process_id,
-            child_process_id,
-            child_index,
-        ))?;
-        let children = self.children.entry(parent_process_id).or_default();
-        children.push(child_process_id);
-        children.sort_by_key(|child_id| {
+        for (idx, (child_process_id, child_index)) in children.iter().enumerate() {
+            if children[..idx]
+                .iter()
+                .any(|(_, seen_child_index)| seen_child_index == child_index)
+            {
+                return Err(ProcessRegistryError::DuplicateChildIndex {
+                    parent_process_id,
+                    child_index: *child_index,
+                });
+            }
+            if self.records.contains_key(child_process_id) {
+                return Err(ProcessRegistryError::AlreadyRegistered(*child_process_id));
+            }
+        }
+
+        let child_ids = children
+            .iter()
+            .map(|(child_process_id, _)| *child_process_id)
+            .collect::<Vec<_>>();
+        for (child_process_id, child_index) in children {
+            self.records.insert(
+                child_process_id,
+                ProcessRecord::child(parent_process_id, child_process_id, child_index),
+            );
+        }
+        let registered_children = self.children.entry(parent_process_id).or_default();
+        registered_children.extend(child_ids);
+        registered_children.sort_by_key(|child_id| {
             self.records
                 .get(child_id)
                 .and_then(|record| record.child_index)

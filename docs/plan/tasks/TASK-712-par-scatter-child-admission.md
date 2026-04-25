@@ -1,6 +1,6 @@
 # TASK-712: par and scatter child admission
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,8 +14,8 @@ Implement `par` and `scatter` all-or-none child process admission returning hand
 
 ## Dependencies
 
-- 📝 TASK-710: prerequisite task
-- 📝 TASK-711: prerequisite task
+- ✅ TASK-710: prerequisite task
+- ✅ TASK-711: prerequisite task
 
 ## Requirements
 
@@ -54,12 +54,19 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Admission failure leaves no partially runnable children.
-- [ ] Returned handles preserve child order and child `ProcessId`s.
-- [ ] Child body failure after handle return is observed only through `await`/`join`/`gather`.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Admission failure leaves no partially runnable children.
+- [x] Returned handles preserve child order and child `ProcessId`s.
+- [x] Child body failure after handle return is observed only through `await`/`join`/`gather`.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
+
+## Completion Notes
+
+- Added `proc::par` and `proc::scatter` builtin/typechecker/stdlib surface support for ordered all-or-none child admission.
+- Runtime admission now batch-registers child processes with parent linkage and stable `child_index` ordering before child user code is observed.
+- `proc::par` currently returns a list-backed pair of handles, and evaluator numeric field projection (`.0` / `.1`) now works consistently for that tuple-style surface in both sync and async paths.
+- Added focused parser/typechecker/interpreter coverage for ordered handle return, deferred child-failure observation via later `proc::await`, and rollback on admission failure.
 
 ## Dependencies for Next Task
 

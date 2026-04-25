@@ -1309,9 +1309,29 @@ impl TypeEnv {
             args: vec![a.clone()],
             kind: crate::Kind::Type,
         };
+        let handle_b = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("P"),
+            args: vec![b.clone()],
+            kind: crate::Kind::Type,
+        };
         let proc_null = crate::types::Type::Constructor {
             name: crate::QualifiedName::root("Proc"),
             args: vec![crate::types::Type::Null],
+            kind: crate::Kind::Type,
+        };
+        let proc_pair_handles = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![crate::types::Type::Record(vec![
+                ("_0".into(), handle_a.clone()),
+                ("_1".into(), handle_b.clone()),
+            ])],
+            kind: crate::Kind::Type,
+        };
+        let list_a = crate::types::Type::List(Box::new(a.clone()));
+        let list_handle_b = crate::types::Type::List(Box::new(handle_b.clone()));
+        let proc_list_handle_b = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![list_handle_b],
             kind: crate::Kind::Type,
         };
 
@@ -1331,15 +1351,32 @@ impl TypeEnv {
         );
         self.bind_variable(
             "proc::then",
-            crate::types::Type::Fn(vec![proc_a.clone(), proc_b.clone()], Box::new(proc_b)),
+            crate::types::Type::Fn(
+                vec![proc_a.clone(), proc_b.clone()],
+                Box::new(proc_b.clone()),
+            ),
         );
         self.bind_variable(
             "proc::await",
-            crate::types::Type::Fn(vec![handle_a], Box::new(proc_a)),
+            crate::types::Type::Fn(vec![handle_a], Box::new(proc_a.clone())),
         );
         self.bind_variable(
             "proc::yield",
             crate::types::Type::Fn(vec![], Box::new(proc_null)),
+        );
+        self.bind_variable(
+            "proc::par",
+            crate::types::Type::Fn(
+                vec![proc_a.clone(), proc_b.clone()],
+                Box::new(proc_pair_handles),
+            ),
+        );
+        self.bind_variable(
+            "proc::scatter",
+            crate::types::Type::Fn(
+                vec![list_a, crate::types::Type::Fn(vec![a], Box::new(proc_b))],
+                Box::new(proc_list_handle_b),
+            ),
         );
     }
 

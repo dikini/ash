@@ -422,6 +422,18 @@ impl RuntimeState {
         )
     }
 
+    /// Register multiple child process identities atomically in the runtime process registry.
+    pub async fn register_child_processes_batch(
+        &self,
+        parent_process_id: ProcessId,
+        children: Vec<(ProcessId, usize)>,
+    ) -> Result<(), ProcessRegistryError> {
+        self.process_registry
+            .lock()
+            .await
+            .register_children_batch(parent_process_id, children)
+    }
+
     /// Transition one registered process identity to running.
     pub async fn mark_process_running(
         &self,

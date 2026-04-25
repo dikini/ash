@@ -44,6 +44,16 @@ fn assert_proc_of(ty: &Type, expected_arg: &Type) {
     }
 }
 
+fn assert_handle_of(ty: &Type, expected_arg: &Type) {
+    match ty {
+        Type::Constructor { name, args, .. } => {
+            assert_eq!(name.name, "P");
+            assert_eq!(args, std::slice::from_ref(expected_arg));
+        }
+        other => panic!("expected P<...>, got {other:?}"),
+    }
+}
+
 #[test]
 fn proc_unit_signature_typechecks_as_value_to_proc() {
     let env = TypeEnv::with_builtin_types();
@@ -152,6 +162,101 @@ fn proc_yield_expression_typechecks_as_nullary_proc_returning_null() {
     let result = check_expr(&env, &expr);
     assert!(result.is_ok(), "proc::yield() should typecheck: {result:?}");
     assert_proc_of(&result.substitution.apply(&result.ty), &Type::Null);
+}
+
+#[test]
+fn proc_par_builtin_is_registered_as_ordered_two_handle_admission() {
+    let env = TypeEnv::with_builtin_types();
+
+    let ty = env
+        .lookup_variable("proc::par")
+        .expect("TypeEnv should register proc::par");
+    let Type::Fn(params, ret) = ty else {
+        panic!("expected function type");
+    };
+
+    assert_eq!(params.len(), 2);
+    let left_result = match &params[0] {
+        Type::Constructor { name, args, .. } if name.name == "Proc" && args.len() == 1 => {
+            args[0].clone()
+        }
+        other => panic!("expected left proc parameter, got {other:?}"),
+    };
+    let right_result = match &params[1] {
+        Type::Constructor { name, args, .. } if name.name == "Proc" && args.len() == 1 => {
+            args[0].clone()
+        }
+        other => panic!("expected right proc parameter, got {other:?}"),
+    };
+
+    match *ret {
+        Type::Constructor { name, args, .. } if name.name == "Proc" && args.len() == 1 => {
+            match &args[0] {
+                Type::Record(fields) => {
+                    assert_eq!(
+                        fields.len(),
+                        2,
+                        "par should return exactly two ordered child handles"
+                    );
+                    assert_eq!(fields[0].0.as_ref(), "_0");
+                    assert_handle_of(&fields[0].1, &left_result);
+                    assert_eq!(fields[1].0.as_ref(), "_1");
+                    assert_handle_of(&fields[1].1, &right_result);
+                }
+                other => {
+                    panic!("expected tuple-record payload for proc::par result, got {other:?}")
+                }
+            }
+        }
+        other => panic!("expected Proc<...>, got {other:?}"),
+    }
+}
+
+#[test]
+fn proc_scatter_builtin_is_registered_as_ordered_handle_list_admission() {
+    let env = TypeEnv::with_builtin_types();
+
+    let ty = env
+        .lookup_variable("proc::scatter")
+        .expect("TypeEnv should register proc::scatter");
+    let Type::Fn(params, ret) = ty else {
+        panic!("expected function type");
+    };
+
+    assert_eq!(params.len(), 2);
+    let item_ty = match &params[0] {
+        Type::List(item) => item.as_ref().clone(),
+        Type::Constructor { name, args, .. } if name.name == "List" && args.len() == 1 => {
+            args[0].clone()
+        }
+        other => panic!("expected List<A> input, got {other:?}"),
+    };
+
+    let child_result = match &params[1] {
+        Type::Fn(fn_params, fn_ret) if fn_params.len() == 1 => {
+            assert_eq!(fn_params[0], item_ty);
+            match fn_ret.as_ref() {
+                Type::Constructor { name, args, .. } if name.name == "Proc" && args.len() == 1 => {
+                    args[0].clone()
+                }
+                other => panic!("expected mapper to return Proc<B>, got {other:?}"),
+            }
+        }
+        other => panic!("expected A -> Proc<B> mapper, got {other:?}"),
+    };
+
+    match *ret {
+        Type::Constructor { name, args, .. } if name.name == "Proc" && args.len() == 1 => {
+            match &args[0] {
+                Type::List(inner) => assert_handle_of(inner, &child_result),
+                Type::Constructor { name, args, .. } if name.name == "List" && args.len() == 1 => {
+                    assert_handle_of(&args[0], &child_result)
+                }
+                other => panic!("expected Proc<List<P<B>>>, got {other:?}"),
+            }
+        }
+        other => panic!("expected Proc<...>, got {other:?}"),
+    }
 }
 
 proptest! {

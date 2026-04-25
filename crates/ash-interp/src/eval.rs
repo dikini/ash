@@ -2,7 +2,7 @@
 //!
 //! Evaluates expressions in a runtime context, producing values.
 
-use ash_core::runtime::{EffectScopeId, OperationalFailure};
+use ash_core::runtime::{EffectScopeId, OperationalFailure, ProcessId, ProcessTerminalState};
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
 use std::collections::HashMap;
@@ -58,6 +58,8 @@ fn value_type_name(value: &Value) -> &'static str {
         Value::ProcessHandle(_) => "P",
         Value::ProcAwaitCapture(_) => "<proc-await>",
         Value::ProcYieldCapture => "<proc-yield>",
+        Value::ProcParCapture { .. } => "<proc-par>",
+        Value::ProcScatterCapture { .. } => "<proc-scatter>",
         Value::Closure { .. } => "Closure",
         Value::ActEnvToken => "ActEnvToken",
     }
@@ -136,6 +138,9 @@ fn maybe_execute_proc_await_capture(value: Value, runtime_ctx: &Context) -> Eval
 fn maybe_execute_proc_yield_capture(value: Value, _runtime_ctx: &Context) -> EvalResult<Value> {
     match value {
         Value::ProcYieldCapture => Err(EvalError::ProcYieldRequiresAsyncRuntime),
+        Value::ProcParCapture { .. } | Value::ProcScatterCapture { .. } => {
+            Err(EvalError::ProcAdmissionRequiresAsyncRuntime)
+        }
         other => Ok(other),
     }
 }
@@ -160,6 +165,170 @@ async fn maybe_execute_proc_yield_capture_async(
         Value::ProcYieldCapture => {
             tokio::task::yield_now().await;
             Ok(Value::Null)
+        }
+        other => Ok(other),
+    }
+}
+
+fn ensure_proc_closure(value: &Value) -> EvalResult<()> {
+    match value {
+        Value::Closure { params, .. } if params.len() == 1 && params[0].0 == "__proc_env" => Ok(()),
+        other => Err(EvalError::TypeMismatch {
+            expected: "Proc<A>".to_string(),
+            actual: value_type_name(other).to_string(),
+        }),
+    }
+}
+
+async fn spawn_proc_child_runner(
+    runtime_state: std::sync::Arc<crate::runtime_state::RuntimeState>,
+    proc_value: Value,
+    child_ctx: Context,
+    process_id: ProcessId,
+) {
+    let result = apply_closure_async_value(proc_value, vec![Value::Null], &child_ctx).await;
+    let terminal_state = match result {
+        Ok(value) => ProcessTerminalState::Succeeded { value },
+        Err(EvalError::OperationalFailure(failure)) => ProcessTerminalState::Failed {
+            process_id,
+            failure,
+        },
+        Err(error) => ProcessTerminalState::Failed {
+            process_id,
+            failure: Box::new(operational_failure_for_payload(
+                Value::String(error.to_string()),
+                &child_ctx,
+            )),
+        },
+    };
+
+    if let Err(error) = runtime_state
+        .record_process_terminal(process_id, terminal_state)
+        .await
+    {
+        eprintln!(
+            "proc child terminal process state recording failed unexpectedly for process {process_id:?}: {error}"
+        );
+    }
+}
+
+async fn admit_proc_children_async(
+    parent_ctx: &Context,
+    child_procs: Vec<Value>,
+) -> EvalResult<Vec<ash_core::ProcessHandle>> {
+    let runtime_state = parent_ctx
+        .runtime_state()
+        .ok_or_else(|| EvalError::ExecutionFailed("missing hidden runtime state".to_string()))?;
+    let parent_identity = parent_ctx.process_identity().ok_or_else(|| {
+        EvalError::ExecutionFailed(
+            "proc child admission requires process identity context".to_string(),
+        )
+    })?;
+
+    for proc_value in &child_procs {
+        ensure_proc_closure(proc_value)?;
+    }
+
+    struct ChildPlan {
+        process_id: ProcessId,
+        child_index: usize,
+        proc_value: Value,
+        child_ctx: Context,
+    }
+
+    let base_child_index = runtime_state
+        .process_children(parent_identity.process_id)
+        .await
+        .len();
+    let mut plans = Vec::with_capacity(child_procs.len());
+    for (offset, proc_value) in child_procs.into_iter().enumerate() {
+        let process_id = ProcessId::new();
+        let child_index = base_child_index + offset;
+        let projection = crate::process_env::ChildEnvProjection::new(process_id, child_index)
+            .with_parent_process_id(parent_identity.process_id);
+        let child_ctx = crate::derive_child_env(parent_ctx, projection).map_err(|error| {
+            EvalError::ExecutionFailed(format!(
+                "failed to project child process environment for {process_id:?}: {error}"
+            ))
+        })?;
+        plans.push(ChildPlan {
+            process_id,
+            child_index,
+            proc_value,
+            child_ctx,
+        });
+    }
+
+    runtime_state
+        .register_child_processes_batch(
+            parent_identity.process_id,
+            plans
+                .iter()
+                .map(|plan| (plan.process_id, plan.child_index))
+                .collect(),
+        )
+        .await
+        .map_err(|error| {
+            EvalError::ExecutionFailed(format!(
+                "failed to register child processes below {:?}: {error}",
+                parent_identity.process_id
+            ))
+        })?;
+
+    let handles = plans
+        .iter()
+        .map(|plan| ash_core::ProcessHandle::new(plan.process_id, None))
+        .collect::<Vec<_>>();
+
+    for plan in plans {
+        runtime_state
+            .mark_process_running(plan.process_id)
+            .await
+            .map_err(|error| {
+                EvalError::ExecutionFailed(format!(
+                    "failed to mark process {:?} running: {error}",
+                    plan.process_id
+                ))
+            })?;
+
+        let runtime_state = runtime_state.clone();
+        tokio::spawn(async move {
+            spawn_proc_child_runner(
+                runtime_state,
+                plan.proc_value,
+                plan.child_ctx,
+                plan.process_id,
+            )
+            .await;
+        });
+    }
+
+    Ok(handles)
+}
+
+async fn maybe_execute_proc_admission_capture_async(
+    value: Value,
+    runtime_ctx: &Context,
+) -> EvalResult<Value> {
+    match value {
+        Value::ProcParCapture { left, right } => {
+            let handles = admit_proc_children_async(runtime_ctx, vec![*left, *right]).await?;
+            Ok(Value::List(Box::new(
+                handles.into_iter().map(Value::ProcessHandle).collect(),
+            )))
+        }
+        Value::ProcScatterCapture { items, mapper } => {
+            let mut child_procs = Vec::with_capacity(items.len());
+            for item in *items {
+                let mapped =
+                    apply_closure_async_value((*mapper).clone(), vec![item], runtime_ctx).await?;
+                ensure_proc_closure(&mapped)?;
+                child_procs.push(mapped);
+            }
+            let handles = admit_proc_children_async(runtime_ctx, child_procs).await?;
+            Ok(Value::List(Box::new(
+                handles.into_iter().map(Value::ProcessHandle).collect(),
+            )))
         }
         other => Ok(other),
     }
@@ -322,6 +491,8 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("proc::then", 2),
             ("proc::await", 1),
             ("proc::yield", 0),
+            ("proc::par", 2),
+            ("proc::scatter", 2),
         ] {
             m.insert(
                 name,
@@ -788,6 +959,58 @@ fn runtime_proc_yield(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     })
 }
 
+fn runtime_proc_par(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("proc::par".to_string()),
+        });
+    }
+    ensure_proc_closure(&args[0])?;
+    ensure_proc_closure(&args[1])?;
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(Value::ProcParCapture {
+            left: Box::new(args[0].clone()),
+            right: Box::new(args[1].clone()),
+        })),
+        env: ctx.to_env_frame(),
+    })
+}
+
+fn runtime_proc_scatter(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("proc::scatter".to_string()),
+        });
+    }
+    let Value::List(items) = &args[0] else {
+        return Err(EvalError::TypeMismatch {
+            expected: "List<A>".to_string(),
+            actual: value_type_name(&args[0]).to_string(),
+        });
+    };
+    if !matches!(&args[1], Value::Closure { .. }) {
+        return Err(EvalError::TypeMismatch {
+            expected: "A -> Proc<B>".to_string(),
+            actual: value_type_name(&args[1]).to_string(),
+        });
+    }
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(Value::ProcScatterCapture {
+            items: Box::new((**items).clone()),
+            mapper: Box::new(args[1].clone()),
+        })),
+        env: ctx.to_env_frame(),
+    })
+}
+
 fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
     let Value::List(items) = value else {
         return Ok(value);
@@ -1145,7 +1368,8 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
             Expr::Literal(value) => {
                 let value = maybe_execute_invoke_capture_async(value.clone(), ctx).await?;
                 let value = maybe_execute_proc_await_capture_async(value, ctx).await?;
-                maybe_execute_proc_yield_capture_async(value, ctx).await
+                let value = maybe_execute_proc_yield_capture_async(value, ctx).await?;
+                maybe_execute_proc_admission_capture_async(value, ctx).await
             }
             Expr::Variable { name, .. } => ctx
                 .get(name)
@@ -1168,6 +1392,18 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                                 field: field.clone(),
                                 value: Value::Record(fields),
                             })
+                    }
+                    Value::List(items) => {
+                        let idx = field
+                            .parse::<usize>()
+                            .map_err(|_| EvalError::TypeMismatch {
+                                expected: "record".to_string(),
+                                actual: format!("{:?}", Value::List(items.clone())),
+                            })?;
+                        items.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
+                            index: idx as i64,
+                            len: items.len(),
+                        })
                     }
                     _ => Err(EvalError::TypeMismatch {
                         expected: "record".to_string(),
@@ -1316,6 +1552,8 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
                     (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
                     (Some("proc"), "yield") => return runtime_proc_yield(&args, ctx),
+                    (Some("proc"), "par") => return runtime_proc_par(&args, ctx),
+                    (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
                     _ => {}
                 }
                 if let (true, Some(Value::Closure { params, body, env })) =
@@ -1557,7 +1795,9 @@ fn apply_closure_async<'a>(
             );
             let result = eval_expr_force_async(body, &call_ctx).await?;
             let result = maybe_execute_invoke_capture_async(result, &call_ctx).await?;
-            maybe_execute_proc_await_capture_async(result, &call_ctx).await
+            let result = maybe_execute_proc_await_capture_async(result, &call_ctx).await?;
+            let result = maybe_execute_proc_yield_capture_async(result, &call_ctx).await?;
+            maybe_execute_proc_admission_capture_async(result, &call_ctx).await
         } else if args.len() < params.len() {
             validates_hidden_act_env(params, &args)?;
             let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
@@ -1675,6 +1915,18 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                         });
                     }
                     Ok(removed.unwrap())
+                }
+                Value::List(items) => {
+                    let idx = field
+                        .parse::<usize>()
+                        .map_err(|_| EvalError::TypeMismatch {
+                            expected: "record".to_string(),
+                            actual: format!("{:?}", Value::List(items.clone())),
+                        })?;
+                    items.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
+                        index: idx as i64,
+                        len: items.len(),
+                    })
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "record".to_string(),
@@ -1822,6 +2074,8 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
                 (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
                 (Some("proc"), "yield") => return runtime_proc_yield(&args, ctx),
+                (Some("proc"), "par") => return runtime_proc_par(&args, ctx),
+                (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
                 _ => {}
             }
 
@@ -2285,6 +2539,8 @@ pub fn eval_function_call(
         (Some("proc"), "then") => runtime_proc_then(args, ctx),
         (Some("proc"), "await") => runtime_proc_await(args, ctx),
         (Some("proc"), "yield") => runtime_proc_yield(args, ctx),
+        (Some("proc"), "par") => runtime_proc_par(args, ctx),
+        (Some("proc"), "scatter") => runtime_proc_scatter(args, ctx),
         (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
         (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
         (Some("string"), "concat") => {
@@ -3042,6 +3298,8 @@ fn apply_closure(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::RuntimeState;
+    use ash_core::{ProcessHandle, ProcessId};
 
     #[test]
     fn test_eval_literal() {
@@ -5301,5 +5559,202 @@ mod tests {
         let list = Value::List(Box::new(vec![Value::Int(1)]));
         let result = eval_function_call("map", None, &[list, closure], &ctx);
         assert!(result.is_err());
+    }
+
+    fn proc_unit_expr(expr: Expr) -> Expr {
+        Expr::Call {
+            func: "unit".to_string(),
+            module: Some("proc".to_string()),
+            arguments: vec![expr],
+        }
+    }
+
+    fn proc_par_expr(left: Expr, right: Expr) -> Expr {
+        Expr::Call {
+            func: "par".to_string(),
+            module: Some("proc".to_string()),
+            arguments: vec![left, right],
+        }
+    }
+
+    fn proc_scatter_expr(items: Vec<Value>, mapper: Expr) -> Expr {
+        Expr::Call {
+            func: "scatter".to_string(),
+            module: Some("proc".to_string()),
+            arguments: vec![Expr::Literal(Value::List(Box::new(items))), mapper],
+        }
+    }
+
+    fn proc_await_expr(handle: ProcessHandle) -> Expr {
+        Expr::Call {
+            func: "await".to_string(),
+            module: Some("proc".to_string()),
+            arguments: vec![Expr::Literal(Value::ProcessHandle(handle))],
+        }
+    }
+
+    async fn force_proc_in_context(ctx: &Context, proc_value: Value) -> EvalResult<Value> {
+        let mut proc_ctx = ctx.clone();
+        proc_ctx.set("p".to_string(), proc_value);
+        eval_expr_async(
+            &Expr::Call {
+                func: "p".to_string(),
+                module: None,
+                arguments: vec![Expr::Literal(Value::Null)],
+            },
+            &proc_ctx,
+        )
+        .await
+    }
+
+    fn expect_handle_list(value: Value, expected_len: usize) -> Vec<ProcessHandle> {
+        let Value::List(items) = value else {
+            panic!("expected ordered handle list, got {value:?}");
+        };
+        assert_eq!(items.len(), expected_len, "expected {expected_len} handles");
+        items
+            .iter()
+            .map(|value| match value {
+                Value::ProcessHandle(handle) => handle.clone(),
+                other => panic!("expected process handle, got {other:?}"),
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn proc_par_returns_ordered_child_handles_and_defers_child_failure_to_later_await() {
+        let runtime_state = RuntimeState::new();
+        let parent_process_id = ProcessId::new();
+        runtime_state
+            .register_root_process(parent_process_id)
+            .await
+            .expect("parent process registers");
+
+        let failed_dependency = ProcessId::new();
+        runtime_state
+            .register_root_process(failed_dependency)
+            .await
+            .expect("dependency process registers");
+        runtime_state
+            .record_process_terminal(
+                failed_dependency,
+                ash_core::runtime::ProcessTerminalState::Failed {
+                    process_id: failed_dependency,
+                    failure: Box::new(ash_core::runtime::OperationalFailure::new(
+                        ash_core::runtime::TowerLevel::Proc,
+                        ash_core::runtime::FailureEntity::Process(failed_dependency),
+                        Value::String("boom".to_string()),
+                        "String",
+                    )),
+                },
+            )
+            .await
+            .expect("dependency terminal state records");
+
+        let proc_ctx = Context::new()
+            .with_runtime_state(runtime_state.clone())
+            .project_process_child(
+                crate::process_env::ProcessEnvIdentity::new(parent_process_id, None, 0),
+                None,
+            );
+
+        let proc_value = eval_expr(
+            &proc_par_expr(
+                proc_await_expr(ProcessHandle::new(
+                    failed_dependency,
+                    Some("Int".to_string()),
+                )),
+                proc_unit_expr(Expr::Literal(Value::Int(7))),
+            ),
+            &proc_ctx,
+        )
+        .expect("proc::par should build a Proc closure");
+
+        let handles = expect_handle_list(
+            force_proc_in_context(&proc_ctx, proc_value)
+                .await
+                .expect("proc::par should return child handles before child failure is observed"),
+            2,
+        );
+
+        let children = runtime_state.process_children(parent_process_id).await;
+        assert_eq!(
+            children.len(),
+            2,
+            "proc::par should register two child processes"
+        );
+        assert_eq!(handles[0].process_id, children[0]);
+        assert_eq!(handles[1].process_id, children[1]);
+
+        for _ in 0..1024 {
+            if runtime_state
+                .process_terminal_state(handles[0].process_id)
+                .await
+                .is_some()
+            {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+
+        let await_proc = eval_expr(&proc_await_expr(handles[0].clone()), &Context::new())
+            .expect("await closure builds");
+        let err = force_proc_in_context(&proc_ctx, await_proc)
+            .await
+            .expect_err("child failure should be observed only through later await");
+        assert!(matches!(err, EvalError::OperationalFailure(_)));
+    }
+
+    #[tokio::test]
+    async fn proc_scatter_returns_handles_in_input_order() {
+        let runtime_state = RuntimeState::new();
+        let parent_process_id = ProcessId::new();
+        runtime_state
+            .register_root_process(parent_process_id)
+            .await
+            .expect("parent process registers");
+
+        let proc_ctx = Context::new()
+            .with_runtime_state(runtime_state.clone())
+            .project_process_child(
+                crate::process_env::ProcessEnvIdentity::new(parent_process_id, None, 0),
+                None,
+            );
+
+        let mapper = Expr::FnDef {
+            params: vec![("x".to_string(), None)],
+            return_type: None,
+            body: Box::new(proc_unit_expr(Expr::Variable {
+                name: "x".to_string(),
+                span: ash_core::ast::Span::default(),
+            })),
+        };
+        let proc_value = eval_expr(
+            &proc_scatter_expr(vec![Value::Int(1), Value::Int(2), Value::Int(3)], mapper),
+            &proc_ctx,
+        )
+        .expect("proc::scatter should build a Proc closure");
+
+        let handles = expect_handle_list(
+            force_proc_in_context(&proc_ctx, proc_value)
+                .await
+                .expect("proc::scatter should return one handle per input element"),
+            3,
+        );
+
+        let children = runtime_state.process_children(parent_process_id).await;
+        assert_eq!(
+            children.len(),
+            3,
+            "proc::scatter should admit every child before returning"
+        );
+        assert_eq!(
+            handles
+                .iter()
+                .map(|handle| handle.process_id)
+                .collect::<Vec<_>>(),
+            children,
+            "proc::scatter should preserve stable input order in returned handles"
+        );
     }
 }

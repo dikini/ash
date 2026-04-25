@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-712: added `proc::par` and `proc::scatter` all-or-none child admission across `std::proc`, type checking, and interpreter runtime, including ordered child registration/handle return, deferred child-failure observation via later `proc::await`, rollback on admission failure, and tuple-style numeric handle projection compatibility for `proc::par` results.
+
 - TASK-711: added `proc::yield() -> Proc<Unit>` across `std::proc`, type checking, and interpreter forcing, including cooperative scheduler-yield runtime support, process-identity preservation coverage, and regression/proptest checks that yield introduces no child-process or handle-observation side effects.
 
 - TASK-710: added affine runtime `P<A>` process handles and `proc::await`, including single-consumption observation, retained terminal-state projection, structured child-failure surfacing with preserved lower causes, and workflow-path runtime-state propagation for Proc await forcing.

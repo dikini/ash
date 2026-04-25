@@ -83,6 +83,28 @@ fn proc_stdlib_surface_declares_scheduler_yield_builtin() {
 }
 
 #[test]
+fn proc_stdlib_surface_declares_par_and_scatter_handle_admission_builtins() {
+    let proc_module = read_stdlib_file("proc.ash");
+
+    assert!(
+        proc_module.contains("pub type ParHandles<A, B> = (P<A>, P<B>);"),
+        "std/src/proc.ash should expose the canonical ordered handle-pair alias for proc::par"
+    );
+    assert!(
+        proc_module.contains(
+            "pub builtin fn par<A, B>(left: Proc<A>, right: Proc<B>) -> Proc<ParHandles<A, B>>;"
+        ),
+        "std/src/proc.ash should declare proc::par with the canonical ordered child handle alias"
+    );
+    assert!(
+        proc_module.contains(
+            "pub builtin fn scatter<A, B>(items: List<A>, f: A -> Proc<B>) -> Proc<List<P<B>>>;"
+        ),
+        "std/src/proc.ash should declare proc::scatter with ordered handle-list return shape"
+    );
+}
+
+#[test]
 fn runtime_stdlib_surface_is_exposed() {
     let runtime_error = read_stdlib_file("runtime/error.ash");
     let runtime_error_normalized = normalize_whitespace(&runtime_error);

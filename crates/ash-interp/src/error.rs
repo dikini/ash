@@ -87,6 +87,9 @@ pub enum EvalError {
 
     #[error("proc::yield requires async/runtime scheduler evaluation")]
     ProcYieldRequiresAsyncRuntime,
+
+    #[error("proc child admission requires async/runtime scheduler evaluation")]
+    ProcAdmissionRequiresAsyncRuntime,
 }
 
 /// Errors that can occur during workflow execution

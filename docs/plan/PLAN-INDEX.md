@@ -2811,7 +2811,7 @@ Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process 
 ||| TASK-709 | Process registry and child environment projection | 7 | ✅ Complete ||
 ||| TASK-710 | Affine process handles and `await` | 6 | ✅ Complete ||
 ||| TASK-711 | Process `yield : Proc<Unit>` | 3 | ✅ Complete ||
-||| TASK-712 | `par` and `scatter` child admission | 7 | 🟡 Ready ||
+||| TASK-712 | `par` and `scatter` child admission | 7 | ✅ Complete ||
 ||| TASK-713 | `join` and `gather` wait-for-all observation | 6 | 🟡 Ready ||
 ||| TASK-714 | Workflow boundary carriers and admission context | 5 | 🟡 Ready ||
 ||| TASK-715 | Workflow admission and contract evidence | 6 | 🟡 Ready ||

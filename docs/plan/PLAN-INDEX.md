@@ -2833,3 +2833,23 @@ Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process 
 - D4: workflow reporting is introduced through a new boundary API before replacing compatibility `ExecResult<Value>` APIs.
 - D5: `Proc` `unit`/`bind`/`then` are planned explicitly before public process concurrency operations.
 
+## Phase 99: Act-to-Proc Embedding Boundary
+
+**Priority:** Medium (post-Phase-98 follow-on for the deferred SPEC-048 `from_act` surface)
+**Status:** 📝 Planned
+**Spec:** SPEC-047, SPEC-048, SPEC-049
+**Plan:** docs/plan/PLAN-099-ACT-TO-PROC-EMBEDDING.md
+
+Introduce the explicit `proc::from_act : Act<A> -> Proc<A>` embedding boundary after verifying the landed Phase 97 hidden-`ActEnv` force path. Phase 99 is intentionally narrow: it does not reopen the completed Phase 98 process/workflow runtime slice, and it must preserve the public distinction between `Act<A>` and `Proc<A>`.
+
+|||| Task | Description | Est. Hours | Status ||
+||||------|-------------|------------|--------||
+|||| TASK-719 | Verify and expose `proc::from_act` as the Act-to-Proc embedding boundary | 6 | 📝 Planned ||
+
+**Track A (Embedding Boundary):** 6h. Verify the exact landed `Act` hidden-carrier contract, add the explicit `proc::from_act` surface, and prove it embeds effectful computation into `Proc` honestly without exposing `ActEnv` or silently creating process-runtime semantics.
+
+**Decision gates:**
+- D1: `from_act` is explicit; `Proc<Act<A>>` does not implicitly flatten.
+- D2: the hidden `ActEnv` boundary remains runtime-only and protected.
+- D3: no accidental child-process, public-handle, or workflow-report semantics are added unless explicitly specified and verified.
+

@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- PLAN-099 / TASK-719: planned the post-Phase-98 `proc::from_act` follow-on as an explicit Act-to-Proc embedding boundary, grounded in the verified Phase 97 hidden-`ActEnv` force path and preserving the public `Act`/`Proc` distinction.
+
 - TASK-713: added `proc::join` and `proc::gather` wait-for-all observation across `std::proc`, type checking, and interpreter runtime, including ordered success projection, consume-before-wait handle observation, and aggregated child-failure surfacing that preserves multiple source `ProcessId`s.
 
 - TASK-714: added workflow-boundary carrier substrate across ash-core and ash-interp, including admission-context/report metadata, `WorkflowBoundaryOutcome`, `ExecResult<Value>`-compatible workflow-boundary projection, preserved lower causes/process failures, and focused regression/property coverage for workflow failure/report identity preservation.

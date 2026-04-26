@@ -10,6 +10,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - PLAN-099 / TASK-719: planned the post-Phase-98 `proc::from_act` follow-on as an explicit Act-to-Proc embedding boundary, grounded in the verified Phase 97 hidden-`ActEnv` force path and preserving the public `Act`/`Proc` distinction.
 
+- TASK-719: added the explicit `std::proc::from_act : Act<A> -> Proc<A>` embedding surface across stdlib, type checking, interpreter forcing, and workflow-boundary compatibility checks, preserving hidden-`ActEnv` enforcement, `Proc<Act<A>>` non-flattening, and no child-process/public-handle inflation.
+
 - TASK-713: added `proc::join` and `proc::gather` wait-for-all observation across `std::proc`, type checking, and interpreter runtime, including ordered success projection, consume-before-wait handle observation, and aggregated child-failure surfacing that preserves multiple source `ProcessId`s.
 
 - TASK-714: added workflow-boundary carrier substrate across ash-core and ash-interp, including admission-context/report metadata, `WorkflowBoundaryOutcome`, `ExecResult<Value>`-compatible workflow-boundary projection, preserved lower causes/process failures, and focused regression/property coverage for workflow failure/report identity preservation.
@@ -49,6 +51,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+
+- TASK-719: forcing a `proc::from_act(...)` Proc whose embedded Act fails via hidden `__act_env` invoke capture now preserves the lower structured `EvalError::OperationalFailure(...)` with Effectful/effect-scope attribution and string payload, instead of collapsing that failure to a generic `ExecutionFailed(...)` at the Proc forcing boundary.
 
 - TASK-707: `ash-typeck` Proc/P constructor arity checks now only special-case the root builtin `Proc`/`P` types, so qualified user/imported names with the same terminal segment are no longer resolved through the builtin bare-name path while builtin process constructor arity diagnostics remain enforced.
 

@@ -18,6 +18,34 @@ fn operational_failure_for_payload(payload: Value, ctx: &Context) -> Operational
     OperationalFailure::new(tower, entity, payload, payload_type)
 }
 
+fn operational_failure_with_attribution(
+    payload: Value,
+    tower: ash_core::runtime::TowerLevel,
+    entity: ash_core::runtime::FailureEntity,
+) -> OperationalFailure {
+    let payload_type = value_type_name(&payload);
+    OperationalFailure::new(tower, entity, payload, payload_type)
+}
+
+fn operational_eval_error_for_message(message: String, ctx: &Context) -> EvalError {
+    EvalError::OperationalFailure(Box::new(operational_failure_for_payload(
+        Value::String(message),
+        ctx,
+    )))
+}
+
+fn operational_eval_error_for_message_with_attribution(
+    message: String,
+    tower: ash_core::runtime::TowerLevel,
+    entity: ash_core::runtime::FailureEntity,
+) -> EvalError {
+    EvalError::OperationalFailure(Box::new(operational_failure_with_attribution(
+        Value::String(message),
+        tower,
+        entity,
+    )))
+}
+
 fn call_context_from_env(
     env: std::sync::Arc<ash_core::env_frame::EnvFrame>,
     runtime_ctx: &Context,
@@ -611,6 +639,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
         // ── Proc module bridge builtins (qualified) ──
         for (name, arity) in [
             ("proc::unit", 1),
+            ("proc::from_act", 1),
             ("proc::bind", 2),
             ("proc::then", 2),
             ("proc::await", 1),
@@ -928,6 +957,48 @@ fn runtime_proc_unit(args: &[Value], ctx: &Context) -> EvalResult<Value> {
         params: vec![("__proc_env".to_string(), None)],
         body: Box::new(Expr::Literal(args[0].clone())),
         env: ctx.to_env_frame(),
+    })
+}
+
+fn runtime_proc_from_act(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("proc::from_act".to_string()),
+        });
+    }
+
+    let span = ash_core::ast::Span::default();
+    let body = Expr::Let {
+        pattern: Pattern::Variable {
+            name: "__proc_from_act_result".to_string(),
+            span,
+        },
+        expr: Box::new(Expr::FnApply {
+            func: Box::new(Expr::Variable {
+                name: "__proc_from_act".to_string(),
+                span,
+            }),
+            args: vec![Expr::Literal(Value::ActEnvToken)],
+        }),
+        body: Box::new(Expr::IndexAccess {
+            expr: Box::new(Expr::Variable {
+                name: "__proc_from_act_result".to_string(),
+                span,
+            }),
+            index: Box::new(Expr::Literal(Value::Int(1))),
+        }),
+        span,
+    };
+
+    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    frame.insert("__proc_from_act".to_string(), args[0].clone());
+
+    Ok(Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(body),
+        env: std::sync::Arc::new(frame),
     })
 }
 
@@ -1251,6 +1322,7 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
     let act_env = runtime_ctx.act_env().ok_or_else(|| {
         EvalError::ExecutionFailed("invoke capture missing hidden runtime ActEnv".to_string())
     })?;
+    let (failure_tower, failure_entity) = runtime_ctx.current_failure_attribution();
 
     let invoked = std::thread::spawn(move || {
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -1264,7 +1336,13 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
                 .capability_ctx
                 .execute(&provider, &action, &args)
                 .await
-                .map_err(|err| EvalError::ExecutionFailed(err.to_string()))
+                .map_err(|err| {
+                    operational_eval_error_for_message_with_attribution(
+                        err.to_string(),
+                        failure_tower,
+                        failure_entity,
+                    )
+                })
         })
     })
     .join()
@@ -1740,6 +1818,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 }
                 match (module.as_deref(), func.as_str()) {
                     (Some("proc"), "unit") => return runtime_proc_unit(&args, ctx),
+                    (Some("proc"), "from_act") => return runtime_proc_from_act(&args, ctx),
                     (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
                     (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
                     (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
@@ -2071,7 +2150,7 @@ async fn maybe_execute_invoke_capture_async(
         .capability_ctx
         .execute(&provider, &action, &args)
         .await
-        .map_err(|err| EvalError::ExecutionFailed(err.to_string()))?;
+        .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
     Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
 }
 
@@ -2266,6 +2345,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
 
             match (module.as_deref(), func.as_str()) {
                 (Some("proc"), "unit") => return runtime_proc_unit(&args, ctx),
+                (Some("proc"), "from_act") => return runtime_proc_from_act(&args, ctx),
                 (Some("proc"), "bind") => return runtime_proc_bind(&args, ctx),
                 (Some("proc"), "then") => return runtime_proc_then(&args, ctx),
                 (Some("proc"), "await") => return runtime_proc_await(&args, ctx),
@@ -2735,6 +2815,7 @@ pub fn eval_function_call(
 ) -> EvalResult<Value> {
     match (module, func) {
         (Some("proc"), "unit") => runtime_proc_unit(args, ctx),
+        (Some("proc"), "from_act") => runtime_proc_from_act(args, ctx),
         (Some("proc"), "bind") => runtime_proc_bind(args, ctx),
         (Some("proc"), "then") => runtime_proc_then(args, ctx),
         (Some("proc"), "await") => runtime_proc_await(args, ctx),

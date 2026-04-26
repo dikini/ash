@@ -2836,7 +2836,7 @@ Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process 
 ## Phase 99: Act-to-Proc Embedding Boundary
 
 **Priority:** Medium (post-Phase-98 follow-on for the deferred SPEC-048 `from_act` surface)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** SPEC-047, SPEC-048, SPEC-049
 **Plan:** docs/plan/PLAN-099-ACT-TO-PROC-EMBEDDING.md
 
@@ -2844,7 +2844,7 @@ Introduce the explicit `proc::from_act : Act<A> -> Proc<A>` embedding boundary a
 
 |||| Task | Description | Est. Hours | Status ||
 ||||------|-------------|------------|--------||
-|||| TASK-719 | Verify and expose `proc::from_act` as the Act-to-Proc embedding boundary | 6 | 📝 Planned ||
+||||| TASK-719 | Verify and expose `proc::from_act` as the Act-to-Proc embedding boundary | 6 | ✅ Complete ||
 
 **Track A (Embedding Boundary):** 6h. Verify the exact landed `Act` hidden-carrier contract, add the explicit `proc::from_act` surface, and prove it embeds effectful computation into `Proc` honestly without exposing `ActEnv` or silently creating process-runtime semantics.
 

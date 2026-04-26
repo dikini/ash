@@ -1305,6 +1305,11 @@ impl TypeEnv {
     fn add_proc_builtin_values(&mut self) {
         let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
         let b = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let act_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Act"),
+            args: vec![a.clone()],
+            kind: crate::Kind::Type,
+        };
         let proc_a = crate::types::Type::Constructor {
             name: crate::QualifiedName::root("Proc"),
             args: vec![a.clone()],
@@ -1363,6 +1368,10 @@ impl TypeEnv {
         self.bind_variable(
             "proc::unit",
             crate::types::Type::Fn(vec![a.clone()], Box::new(proc_a.clone())),
+        );
+        self.bind_variable(
+            "proc::from_act",
+            crate::types::Type::Fn(vec![act_a], Box::new(proc_a.clone())),
         );
         self.bind_variable(
             "proc::bind",

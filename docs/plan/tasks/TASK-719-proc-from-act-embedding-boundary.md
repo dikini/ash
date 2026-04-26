@@ -1,6 +1,6 @@
 # TASK-719: Verify and expose `proc::from_act` as the Act-to-Proc embedding boundary
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -90,14 +90,26 @@ Add or extend focused tests for:
 
 ## Verification Steps
 
-- [ ] `proc::from_act` is importable and typed as `Act<A> -> Proc<A>`.
-- [ ] Focused tests prove the embedding reuses the verified hidden `ActEnv` path.
-- [ ] Focused tests prove visible fake carriers remain insufficient.
-- [ ] Focused tests prove `Proc<Act<A>>` does not implicitly flatten.
-- [ ] Focused tests prove no child `ProcessId`/public `P<A>` surface is added by this task unless explicitly documented.
-- [ ] `cargo test --all` passes.
-- [ ] `cargo clippy --all-targets --all-features -- -D warnings` passes cleanly.
-- [ ] `cargo fmt --check` passes.
+- [x] `proc::from_act` is importable and typed as `Act<A> -> Proc<A>`.
+- [x] Focused tests prove the embedding reuses the verified hidden `ActEnv` path.
+- [x] Focused tests prove visible fake carriers remain insufficient.
+- [x] Focused tests prove `Proc<Act<A>>` does not implicitly flatten.
+- [x] Focused tests prove no child `ProcessId`/public `P<A>` surface is added by this task unless explicitly documented.
+- [x] `cargo test --all` passes.
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` passes cleanly.
+- [x] `cargo fmt --check` passes.
+
+## Completion Notes
+
+- Added the explicit stdlib surface `proc::from_act<A>(ma: Act<A>) -> Proc<A>` in `std::proc` and registered it in `ash-typeck` as exactly `Act<A> -> Proc<A>`.
+- Implemented the runtime embedding in `ash-interp` as an opaque `Proc` closure over `__proc_env` that forces the captured `Act` through the existing hidden `__act_env` path and projects the compatibility payload back out, preserving the public `Act`/`Proc` distinction.
+- Focused tests now prove:
+  - explicit embedding vs `Proc<Act<A>>` non-flattening,
+  - hidden-carrier enforcement against visible fake carriers,
+  - no child-process/public-handle inflation,
+  - workflow-boundary preservation as a returned `Proc` closure value,
+  - structured failing-Act propagation as `EvalError::OperationalFailure(...)` with Effectful/effect-scope attribution at the lower Act boundary.
+- No async-only limitation note was required for the landed slice; the implemented force path is the existing async Proc-forcing route already used by Phase 98 Proc runtime tests.
 
 ## Dependencies for Next Task
 

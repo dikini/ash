@@ -1,6 +1,7 @@
 use ash_core::ast::TypeExpr;
 use ash_parser::surface::{BuiltinFnDef, Param, Type as SurfaceType, Visibility};
 use ash_parser::token::Span;
+use ash_typeck::QualifiedName;
 use ash_typeck::builtin_fn_signature_type;
 use ash_typeck::type_env::{TypeEnv, type_expr_to_type};
 use ash_typeck::types::Type;
@@ -162,6 +163,31 @@ fn task_707_p_with_two_type_arguments_reports_constructor_arity() {
         msg.contains('2'),
         "diagnostic should mention found arity 2: {msg}"
     );
+}
+
+#[test]
+fn task_707_builtin_proc_and_p_still_enforce_direct_constructor_arity() {
+    let env = TypeEnv::with_builtin_types();
+
+    let proc_err = env
+        .check_type_constructor_arity(&QualifiedName::root("Proc"), 0)
+        .expect_err("builtin Proc should still require one type argument");
+    assert_arity_message(&proc_err.to_string(), "Proc", '1', '0');
+
+    let p_err = env
+        .check_type_constructor_arity(&QualifiedName::root("P"), 2)
+        .expect_err("builtin P should still require one type argument");
+    assert_arity_message(&p_err.to_string(), "P", '1', '2');
+}
+
+#[test]
+fn task_707_qualified_proc_and_p_are_not_treated_as_builtin_process_constructors() {
+    let env = TypeEnv::with_builtin_types();
+
+    env.check_type_constructor_arity(&QualifiedName::qualified(vec!["user".into()], "Proc"), 0)
+        .expect("qualified user::Proc should not be forced to builtin Proc<T> arity");
+    env.check_type_constructor_arity(&QualifiedName::qualified(vec!["imported".into()], "P"), 2)
+        .expect("qualified imported::P should not be forced to builtin P<T> arity");
 }
 
 #[test]

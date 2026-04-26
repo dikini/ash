@@ -1825,27 +1825,30 @@ impl TypeEnv {
         ))
     }
 
-    /// Check the number of type arguments supplied to a known process type constructor.
+    /// Check the number of type arguments supplied to a known builtin process type constructor.
     pub fn check_type_constructor_arity(
         &self,
         name: &QualifiedName,
         found_arity: usize,
     ) -> Result<(), TypeError> {
-        if !matches!(name.name.as_str(), "Proc" | "P") {
+        let Some(type_def) = name
+            .is_root()
+            .then(|| self.ast_types.get(&name.name))
+            .flatten()
+            .filter(|type_def| type_def.builtin && matches!(name.name.as_str(), "Proc" | "P"))
+        else {
+            return Ok(());
+        };
+
+        if Self::is_placeholder(type_def) {
             return Ok(());
         }
 
-        let (_, type_info) = self.resolve_type(&name.name)?;
-        let expected_arity = if let Some(type_info) = type_info {
-            type_info.type_arg_count()
-        } else if let Some(type_def) = self.ast_types.get(&name.name) {
-            if Self::is_placeholder(type_def) {
-                return Ok(());
-            }
-            type_def.params.len()
-        } else {
-            0
-        };
+        let expected_arity = self
+            .type_info
+            .get(&name.name)
+            .map(TypeInfo::type_arg_count)
+            .unwrap_or_else(|| type_def.params.len());
 
         if expected_arity != found_arity {
             return Err(TypeError::ConstructorArityMismatch {

@@ -1,13 +1,14 @@
 //! Shared runtime-owned state for interpreter executions.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex as StdMutex};
 
 use async_trait::async_trait;
 use tokio::sync::Mutex as AsyncMutex;
 
+use ash_core::capability::CapabilityError;
 use ash_core::runtime::{ProcessId, ProcessTerminalState};
-use ash_core::{ControlLink, Value, Workflow};
+use ash_core::{ControlLink, Effect, Value, Workflow};
 
 use crate::capability::CapabilityProvider;
 use crate::control_link::{
@@ -52,29 +53,123 @@ impl std::fmt::Debug for ArcProviderWrapper {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ProviderAdmissionSurface {
+    Provider,
+    Actions(HashSet<String>),
+}
+
+impl ProviderAdmissionSurface {
+    fn from_capabilities(provider_name: &str, admitted_capabilities: &[String]) -> Option<Self> {
+        let mut admitted_actions = HashSet::new();
+
+        for capability in admitted_capabilities {
+            if capability == provider_name {
+                return Some(Self::Provider);
+            }
+
+            for separator in ['.', ':'] {
+                if let Some((candidate_provider, action_name)) = capability.split_once(separator)
+                    && candidate_provider == provider_name
+                    && !action_name.is_empty()
+                {
+                    admitted_actions.insert(action_name.to_string());
+                }
+            }
+        }
+
+        if admitted_actions.is_empty() {
+            None
+        } else {
+            Some(Self::Actions(admitted_actions))
+        }
+    }
+
+    fn allows_observe(&self) -> bool {
+        matches!(self, Self::Provider)
+    }
+
+    fn allows_action(&self, action_name: &str) -> bool {
+        match self {
+            Self::Provider => true,
+            Self::Actions(actions) => actions.contains(action_name),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ProjectedProviderWrapper {
+    inner: Arc<dyn CapabilityProvider>,
+    surface: ProviderAdmissionSurface,
+}
+
+impl ProjectedProviderWrapper {
+    fn new(inner: Arc<dyn CapabilityProvider>, surface: ProviderAdmissionSurface) -> Self {
+        Self { inner, surface }
+    }
+}
+
 #[async_trait]
 impl ash_core::capability::CapabilityProvider for ArcProviderWrapper {
     fn name(&self) -> &str {
         self.inner.name()
     }
 
-    fn effect(&self) -> ash_core::Effect {
+    fn effect(&self) -> Effect {
         self.inner.effect()
     }
 
     async fn observe(
         &self,
         constraints: &[ash_core::Constraint],
-    ) -> Result<ash_core::Value, ash_core::capability::CapabilityError> {
+    ) -> Result<Value, ash_core::capability::CapabilityError> {
         self.inner.observe(constraints).await
     }
 
     async fn execute(
         &self,
         action_name: &str,
-        args: &[ash_core::Value],
-    ) -> Result<ash_core::Value, ash_core::capability::CapabilityError> {
+        args: &[Value],
+    ) -> Result<Value, ash_core::capability::CapabilityError> {
         self.inner.execute(action_name, args).await
+    }
+}
+
+#[async_trait]
+impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn effect(&self) -> Effect {
+        self.inner.effect()
+    }
+
+    async fn observe(
+        &self,
+        constraints: &[ash_core::Constraint],
+    ) -> Result<Value, ash_core::capability::CapabilityError> {
+        if self.surface.allows_observe() {
+            self.inner.observe(constraints).await
+        } else {
+            Err(CapabilityError::NotAvailable(self.inner.name().to_string()))
+        }
+    }
+
+    async fn execute(
+        &self,
+        action_name: &str,
+        args: &[Value],
+    ) -> Result<Value, ash_core::capability::CapabilityError> {
+        if self.surface.allows_action(action_name) {
+            self.inner.execute(action_name, args).await
+        } else {
+            Err(CapabilityError::NotAvailable(format!(
+                "{}.{}",
+                self.inner.name(),
+                action_name
+            )))
+        }
     }
 }
 
@@ -378,18 +473,41 @@ impl RuntimeState {
         use crate::capability::{CapabilityContext, CapabilityRegistry};
 
         let mut registry = CapabilityRegistry::new();
-
-        // Convert Arc<dyn CapabilityProvider> from RuntimeState to Box<dyn CapabilityProvider>
-        // for the CapabilityContext. We clone the Arc to get a reference, then create
-        // a wrapper that delegates to the original provider.
         let providers = self
             .providers
             .lock()
             .expect("provider registry mutex poisoned");
-        for (_name, provider) in providers.iter() {
-            // Create a wrapper that implements the CapabilityProvider trait
-            // by delegating to the Arc-wrapped provider
+
+        for provider in providers.values() {
             let wrapper = Box::new(ArcProviderWrapper::new(provider.clone()));
+            registry.register(wrapper);
+        }
+
+        CapabilityContext::with_registry(registry)
+    }
+
+    /// Create a CapabilityContext projected to the admitted provider/action surface.
+    pub async fn create_projected_capability_context(
+        &self,
+        admitted_capabilities: &[String],
+    ) -> crate::capability::CapabilityContext {
+        use crate::capability::{CapabilityContext, CapabilityRegistry};
+
+        let mut registry = CapabilityRegistry::new();
+
+        let providers = self
+            .providers
+            .lock()
+            .expect("provider registry mutex poisoned");
+
+        for (name, provider) in providers.iter() {
+            let Some(surface) =
+                ProviderAdmissionSurface::from_capabilities(name, admitted_capabilities)
+            else {
+                continue;
+            };
+
+            let wrapper = Box::new(ProjectedProviderWrapper::new(provider.clone(), surface));
             registry.register(wrapper);
         }
 

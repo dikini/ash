@@ -1,6 +1,6 @@
 # TASK-713: join and gather wait-for-all observation
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Implement wait-for-all `join` and `gather` process observation barriers.
 
 ## Dependencies
 
-- 📝 TASK-712: prerequisite task
+- ✅ TASK-712: completed prerequisite task
 
 ## Requirements
 
@@ -53,12 +53,12 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Join waits for both children even when one fails early.
-- [ ] Gather preserves input ordering for successes.
-- [ ] Aggregate failure tests cover multiple failing children and source identity preservation.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Join waits for both children even when one fails early.
+- [x] Gather preserves input ordering for successes.
+- [x] Aggregate failure tests cover multiple failing children and source identity preservation.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

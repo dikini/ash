@@ -1,6 +1,6 @@
 # TASK-716: Workflow boundary completion and report construction
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,8 +14,8 @@ Implement workflow completion boundary checks, ensures evaluation, lower failure
 
 ## Dependencies
 
-- 📝 TASK-713: prerequisite task
-- 📝 TASK-715: prerequisite task
+- ✅ TASK-713: completed prerequisite task
+- ✅ TASK-715: completed prerequisite task
 
 ## Requirements
 
@@ -55,13 +55,13 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Ensures failures map to workflow-boundary failures with evidence.
-- [ ] Escaping lower failures become workflow failures with preserved causes.
-- [ ] Undischarged obligations are reported as workflow-boundary failures.
-- [ ] A local report exists even when an optional external report sink is absent.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Ensures failures map to workflow-boundary failures with evidence.
+- [x] Escaping lower failures become workflow failures with preserved causes.
+- [x] Undischarged obligations are reported as workflow-boundary failures.
+- [x] A local report exists even when an optional external report sink is absent.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 

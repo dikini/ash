@@ -9,7 +9,8 @@ examples/
 ├── 01-basics/          # Basic language features
 ├── 02-control-flow/    # Control flow patterns
 ├── 03-policies/        # Policy and governance
-└── 04-real-world/      # Real-world applications
+├── 04-real-world/      # Real-world applications
+└── 05-phase98/         # Proc/failure/workflow-boundary conformance examples
 ```
 
 ## Quick Start
@@ -48,6 +49,14 @@ dot -Tpng workflow.dot -o workflow.png
 ### 04 - Real World
 - **customer-support.ash**: Support ticket workflow
 - **code-review.ash**: Pull request review workflow
+
+### 05 - Phase 98 Proc/Failure Conformance
+- **01-fail-with-error.ash**: `fail`/`with_error` recovery exercised through `ash check`, `ash run`, and `ash trace`
+- **02-proc-par-await-join.ash**: source-level `Proc`/`P`, `par`, `await`, `join`, and `yield` composition; the example returns both live handles and source-built observer procs, CLI run/trace honestly show the returned `Proc` closure, and engine tests wait for retained child results before forcing the observers
+- **03-proc-scatter-gather.ash**: `scatter`, `gather`, and `yield` composed as a source-level Proc value that engine tests then force honestly
+- **04-workflow-boundary-reporting.ash**: ordinary workflow source used by engine admission/report tests to exercise `WorkflowBoundaryOutcome` / compatibility wrappers
+
+workflow boundary reporting currently requires the engine admission API rather than a standalone CLI/report surface. TASK-717 therefore keeps the reporting assertion in engine admission/report tests and uses `04-workflow-boundary-reporting.ash` as the source-level workflow input for that path.
 
 ## Canonical ADT Helper Surface
 

@@ -4,7 +4,7 @@ use ash_core::runtime::{
     WorkflowBoundaryOutcome, WorkflowEvidenceStatus, WorkflowFailureKind, WorkflowReportStatus,
 };
 use ash_core::workflow_contract::Span as ContractSpan;
-use ash_core::{Expr, Span, Value, Workflow};
+use ash_core::{Expr, Role, RoleObligationRef, Span, Value, Workflow};
 use ash_engine::{Engine, WorkflowAdmissionOutcome, WorkflowAdmissionRequest};
 
 const fn honest_body() -> Workflow {
@@ -50,6 +50,16 @@ fn body_with_untaken_obligation_branch() -> Workflow {
     }
 }
 
+fn admitted_role_with_obligation(name: &str, obligation: &str) -> Role {
+    Role {
+        name: name.to_string(),
+        authority: vec![],
+        obligations: vec![RoleObligationRef {
+            name: obligation.to_string(),
+        }],
+    }
+}
+
 #[tokio::test]
 async fn completion_must_not_report_success_with_pending_ensures_placeholders() {
     let engine = Engine::new().build().expect("engine builds");
@@ -59,6 +69,7 @@ async fn completion_must_not_report_success_with_pending_ensures_placeholders() 
         workflow_id: None,
         run_id: None,
         active_role: None,
+        admitted_role: None,
         required_capabilities: vec![],
         requires: vec![],
         ensures: vec!["result.audit_recorded".to_string()],
@@ -105,6 +116,7 @@ async fn undischarged_local_obligations_become_workflow_boundary_failure_with_lo
         workflow_id: None,
         run_id: None,
         active_role: None,
+        admitted_role: None,
         required_capabilities: vec![],
         requires: vec![],
         ensures: vec![],
@@ -149,6 +161,7 @@ async fn escaped_lower_failure_retains_local_report_linkage_and_lower_execution_
         workflow_id: None,
         run_id: None,
         active_role: None,
+        admitted_role: None,
         required_capabilities: vec![],
         requires: vec![],
         ensures: vec![],
@@ -196,6 +209,7 @@ async fn untaken_obligation_branch_does_not_trigger_boundary_completion_failure(
         workflow_id: None,
         run_id: None,
         active_role: None,
+        admitted_role: None,
         required_capabilities: vec![],
         requires: vec![],
         ensures: vec![],
@@ -218,6 +232,56 @@ async fn untaken_obligation_branch_does_not_trigger_boundary_completion_failure(
         },
         other @ WorkflowAdmissionOutcome::Rejected { .. } => {
             panic!("untaken obligation branches should not reject admission, got {other:?}")
+        }
+    }
+}
+
+#[tokio::test]
+async fn admitted_role_obligations_are_visible_at_runtime_completion_boundary() {
+    let engine = Engine::new().build().expect("engine builds");
+    let request = WorkflowAdmissionRequest {
+        workflow_name: "task_716_role_obligation_projection".to_string(),
+        workflow: honest_body(),
+        workflow_id: None,
+        run_id: None,
+        active_role: Some("reviewer".to_string()),
+        admitted_role: Some(admitted_role_with_obligation("reviewer", "audit")),
+        required_capabilities: vec![],
+        requires: vec![],
+        ensures: vec![],
+    };
+
+    let outcome = engine.admit_workflow(request).await;
+
+    match outcome {
+        WorkflowAdmissionOutcome::Admitted { boundary } => match boundary.outcome() {
+            WorkflowBoundaryOutcome::WorkflowFailed { failure, report } => {
+                assert_eq!(
+                    failure.kind,
+                    WorkflowFailureKind::RoleObligationsUndischarged
+                );
+                assert_eq!(report.status, WorkflowReportStatus::Failed);
+                assert!(
+                    report
+                        .obligation_evidence
+                        .iter()
+                        .any(|entry| entry == "active_role:reviewer"),
+                    "active role should be visible in retained completion evidence"
+                );
+                assert!(
+                    report
+                        .obligation_evidence
+                        .iter()
+                        .any(|entry| entry == "role_pending:audit"),
+                    "admitted role obligations should remain visible at completion"
+                );
+            }
+            other @ WorkflowBoundaryOutcome::WorkflowSucceeded { .. } => {
+                panic!("expected role-obligation completion failure, got {other:?}")
+            }
+        },
+        other @ WorkflowAdmissionOutcome::Rejected { .. } => {
+            panic!("expected admitted workflow boundary outcome, got {other:?}")
         }
     }
 }

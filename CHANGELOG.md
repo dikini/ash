@@ -14,6 +14,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - TASK-715: added workflow admission/report substrate across ash-core and ash-engine, including explicit workflow/run identity admission, structured `requires` evidence, pending `ensures` evidence schema for TASK-716, and `WorkflowAdmissionOutcome` carriers that preserve existing `ExecResult<Value>` workflow execution compatibility.
 
+- TASK-717: added Phase 98 cross-layer conformance examples/tests across ash-cli and ash-engine, including source-level `fail`/`with_error`, `par`/`await`/`join`, `scatter`/`gather`, and workflow-boundary-reporting example coverage plus honest CLI/engine documentation of the remaining workflow-reporting API boundary.
+
 - TASK-712: added `proc::par` and `proc::scatter` all-or-none child admission across `std::proc`, type checking, and interpreter runtime, including ordered child registration/handle return, deferred child-failure observation via later `proc::await`, rollback on admission failure, and tuple-style numeric handle projection compatibility for `proc::par` results.
 
 - TASK-711: added `proc::yield() -> Proc<Unit>` across `std::proc`, type checking, and interpreter forcing, including cooperative scheduler-yield runtime support, process-identity preservation coverage, and regression/proptest checks that yield introduces no child-process or handle-observation side effects.
@@ -45,6 +47,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+
+- TASK-707: `ash-typeck` Proc/P constructor arity checks now only special-case the root builtin `Proc`/`P` types, so qualified user/imported names with the same terminal segment are no longer resolved through the builtin bare-name path while builtin process constructor arity diagnostics remain enforced.
+
+- TASK-715/TASK-716: workflow admission now projects admitted capability surfaces into runtime execution for both bare provider names and action-qualified names, rejects `active_role` claims that lack a truthful admitted runtime role projection, and adds regression coverage proving omitted providers and carried role obligations are enforced at runtime/completion.
 
 - TASK-716: workflow-boundary completion now constructs minimal local reports for completion failures, resolves `ensures` evidence before reporting success, surfaces undischarged local obligations as boundary failures, and projects retained execution/provenance evidence into escaped-lower-failure reports without changing `Engine::execute_core_workflow(...) -> ExecResult<Value>` compatibility.
 

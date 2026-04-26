@@ -1,6 +1,6 @@
 # TASK-717: Semantic tower cross-layer validation
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,8 +15,8 @@ Validate the full PLAN-098 slice across parser, typechecker, interpreter, engine
 
 ## Dependencies
 
-- 📝 TASK-713: prerequisite task
-- 📝 TASK-716: prerequisite task
+- ✅ TASK-713: completed prerequisite task
+- ✅ TASK-716: completed prerequisite task
 
 ## Requirements
 
@@ -55,12 +55,12 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 
 ## Verification Steps
 
-- [ ] Cross-layer tests pass from parse through execution.
-- [ ] Workspace verification commands pass.
-- [ ] Docs and task status match implemented behavior.
-- [ ] `cargo test --all` passes
-- [ ] `cargo clippy --all-targets --all-features` passes cleanly
-- [ ] `cargo fmt --check` passes
+- [x] Cross-layer tests pass from parse through execution.
+- [x] Workspace verification commands pass.
+- [x] Docs and task status match implemented behavior.
+- [x] `cargo test --all` passes
+- [x] `cargo clippy --all-targets --all-features` passes cleanly
+- [x] `cargo fmt --check` passes
 
 ## Dependencies for Next Task
 
@@ -71,3 +71,5 @@ This task outputs substrate needed by its direct dependents in PLAN-098.
 - Preserve existing workflow/control-link behavior unless this task explicitly changes it.
 - Keep `Proc<A>` distinct from `Act<A>` and `Workflow`.
 - Update `CHANGELOG.md` for implementation/tooling/docs-policy changes made while completing this task.
+- Added `examples/05-phase98/01-fail-with-error.ash` through `04-workflow-boundary-reporting.ash` plus CLI/engine conformance coverage. The proc example now builds source-level `await`/`join` observer procs while engine tests wait for retained terminal child state before forcing them, preserving the honest boundary that CLI `run`/`trace` still render opaque `Proc` closures.
+- Verified fresh gates with `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, and `cargo test --all` in the Phase 98 worktree.

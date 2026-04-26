@@ -14,7 +14,7 @@ Define workflow boundary outcome, admission context, failure, and report carrier
 
 ## Dependencies
 
-- 📝 TASK-706: prerequisite task
+- ✅ TASK-706: completed prerequisite task
 
 ## Requirements
 
@@ -56,7 +56,7 @@ Add or extend proptests for algebraic, typing, runtime identity, failure, or ord
 - [x] Carrier tests prove lower `ExecError`/process failures can be preserved as causes.
 - [x] Reports can represent success and failure without external sink dependency.
 - [x] Existing `ExecResult<Value>` APIs remain source-compatible.
-- [ ] `cargo test --all` passes
+- [x] `cargo test --all` passes
 - [x] `cargo clippy --all-targets --all-features` passes cleanly
 - [x] `cargo fmt --check` passes
 

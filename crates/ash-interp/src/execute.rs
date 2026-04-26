@@ -5,7 +5,7 @@
 use ash_core::runtime::{
     FailureEntity, LexicalFrameId, OperationalFailure, ProcessId, ProcessTerminalState, TowerLevel,
 };
-use ash_core::{Expr, Provenance, Value, Workflow, WorkflowId};
+use ash_core::{Capability, Effect, Expr, Provenance, Value, Workflow, WorkflowId};
 
 use crate::act_env::ActEnv;
 
@@ -174,6 +174,21 @@ fn require_active_role(ctx: &Context, expected_role: &ash_core::Role) -> ExecRes
     }
 }
 
+fn require_role_authority(ctx: &Context, capability: &Capability) -> ExecResult<()> {
+    if let Some(role_ctx) = ctx.role_context() {
+        if role_ctx.can_access(capability) {
+            return Ok(());
+        }
+
+        return Err(ExecError::ExecutionFailed(format!(
+            "active role '{}' does not have authority for capability '{}'",
+            role_ctx.active_role.name, capability.name
+        )));
+    }
+
+    Ok(())
+}
+
 pub fn execute_workflow_with_behaviour_in_state<'a>(
     workflow: &'a Workflow,
     ctx: Context,
@@ -191,13 +206,17 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
         let proxy_registry = shared_proxy_registry(runtime_state);
         let suspended_yields = shared_suspended_yields(runtime_state);
         let execution_recorder = ExecutionRecorder::new(Provenance::new());
-        let act_env = build_workflow_act_env(
-            runtime_state,
-            policy_eval,
-            execution_recorder.snapshot().provenance().clone(),
-        )
-        .await;
-        let ctx = ctx.with_act_env(act_env);
+        let ctx = if ctx.act_env().is_some() {
+            ctx
+        } else {
+            let act_env = build_workflow_act_env(
+                runtime_state,
+                policy_eval,
+                execution_recorder.snapshot().provenance().clone(),
+            )
+            .await;
+            ctx.with_act_env(act_env)
+        };
         let result = execute_workflow_inner_observed(
             workflow,
             ctx,
@@ -703,6 +722,7 @@ fn execute_workflow_inner_observed<'a>(
                 if let Some(recorder) = execution_recorder {
                     recorder.record_observe(&capability.name, capability.effect);
                 }
+                require_role_authority(&ctx, capability)?;
                 let value = cap_ctx.observe(capability).await?;
                 let bindings =
                     match_pattern(pattern, &value).map_err(|_| ExecError::PatternMatchFailed {
@@ -788,6 +808,13 @@ fn execute_workflow_inner_observed<'a>(
                 if let Some(recorder) = execution_recorder {
                     recorder.record_act(action_name, &format!("{guard:?}"));
                 }
+
+                let capability = Capability {
+                    name: provider_name.clone(),
+                    effect: Effect::Operational,
+                    constraints: vec![],
+                };
+                require_role_authority(&ctx, &capability)?;
 
                 // Lookup provider by provider_name and dispatch action
                 let result = cap_ctx
@@ -1895,13 +1922,17 @@ pub fn execute_workflow_with_stream_in_state<'a>(
         let proxy_registry = shared_proxy_registry(runtime_state);
         let suspended_yields = shared_suspended_yields(runtime_state);
         let execution_recorder = ExecutionRecorder::new(Provenance::new());
-        let act_env = build_workflow_act_env(
-            runtime_state,
-            policy_eval,
-            execution_recorder.snapshot().provenance().clone(),
-        )
-        .await;
-        let ctx = ctx.with_act_env(act_env);
+        let ctx = if ctx.act_env().is_some() {
+            ctx
+        } else {
+            let act_env = build_workflow_act_env(
+                runtime_state,
+                policy_eval,
+                execution_recorder.snapshot().provenance().clone(),
+            )
+            .await;
+            ctx.with_act_env(act_env)
+        };
         let result = execute_workflow_inner_observed(
             workflow,
             ctx,

@@ -36,7 +36,7 @@ use ash_core::runtime::{
     WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
     WorkflowFailure, WorkflowFailureKind, WorkflowReport,
 };
-use ash_core::{Role, Value, WorkflowId};
+use ash_core::{Provenance, Role, Value, WorkflowId};
 use ash_interp::{
     BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
     RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
@@ -179,6 +179,8 @@ pub struct WorkflowAdmissionRequest {
     pub run_id: Option<RunId>,
     /// Admitted active role name, if any.
     pub active_role: Option<String>,
+    /// Admitted runtime role context, if the caller can supply a truthful role projection.
+    pub admitted_role: Option<Role>,
     /// Capability surface admitted to the workflow boundary.
     pub required_capabilities: Vec<String>,
     /// Admission-time requirements to validate before body execution.
@@ -279,6 +281,14 @@ fn build_requires_evidence(
             }
         })
         .collect()
+}
+
+fn admitted_role_name(request: &WorkflowAdmissionRequest) -> Option<&str> {
+    request
+        .admitted_role
+        .as_ref()
+        .map(|role| role.name.as_str())
+        .or(request.active_role.as_deref())
 }
 
 fn reject_admission(
@@ -1264,10 +1274,41 @@ impl Engine {
         &self,
         request: WorkflowAdmissionRequest,
     ) -> WorkflowAdmissionOutcome {
+        if let Some(active_role) = request.active_role.as_deref() {
+            let workflow_id = request.workflow_id.unwrap_or_default();
+            let run_id = request.run_id.unwrap_or_default();
+            let admission = WorkflowAdmissionContext {
+                active_role: Some(active_role.to_string()),
+                admitted_capabilities: request.required_capabilities.clone(),
+                requires_evidence: Vec::new(),
+            };
+            let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
+            let Some(admitted_role) = request.admitted_role.as_ref() else {
+                return reject_admission(
+                    workflow_id,
+                    run_id,
+                    WorkflowFailureKind::RoleAdmissionFailure,
+                    admission,
+                    Vec::new(),
+                    ensures_evidence,
+                );
+            };
+            if admitted_role.name != active_role {
+                return reject_admission(
+                    workflow_id,
+                    run_id,
+                    WorkflowFailureKind::RoleAdmissionFailure,
+                    admission,
+                    Vec::new(),
+                    ensures_evidence,
+                );
+            }
+        }
+
         let workflow_id = request.workflow_id.unwrap_or_default();
         let run_id = request.run_id.unwrap_or_default();
         let admission = WorkflowAdmissionContext {
-            active_role: request.active_role.clone(),
+            active_role: admitted_role_name(&request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
             requires_evidence: Vec::new(),
         };
@@ -1276,7 +1317,7 @@ impl Engine {
         for requirement in &request.requires {
             match requirement {
                 WorkflowContractRequirement::Role(required_role)
-                    if request.active_role.as_deref() != Some(required_role.as_str()) =>
+                    if admitted_role_name(&request) != Some(required_role.as_str()) =>
                 {
                     return reject_admission(
                         workflow_id,
@@ -1321,14 +1362,22 @@ impl Engine {
         }
 
         let mut ctx = Context::new();
-        if let Some(active_role) = request.active_role {
-            ctx = ctx.with_role_context(RoleContext::new(Role {
-                name: active_role,
-                authority: vec![],
-                obligations: vec![],
-            }));
+        if let Some(admitted_role) = request.admitted_role.clone() {
+            ctx = ctx.with_role_context(RoleContext::new(admitted_role));
         }
-        let cap_ctx = self.runtime_state.create_capability_context().await;
+        let cap_ctx = self
+            .runtime_state
+            .create_projected_capability_context(&request.required_capabilities)
+            .await;
+        let act_cap_ctx = self
+            .runtime_state
+            .create_projected_capability_context(&request.required_capabilities)
+            .await;
+        ctx = ctx.with_act_env(ash_interp::act_env::ActEnv::new(
+            act_cap_ctx,
+            PolicyEvaluator::new(),
+            Provenance::new(),
+        ));
         let policy_eval = PolicyEvaluator::new();
         let behaviour_ctx = BehaviourContext::new();
         let execution_result = execute_workflow_with_behaviour_in_state(

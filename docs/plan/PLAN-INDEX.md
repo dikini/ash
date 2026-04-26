@@ -2795,7 +2795,7 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 ## Phase 98: Proc, Process Runtime, Failure, and Workflow Boundary
 
 **Priority:** High (implements SPEC-048 through SPEC-051 after the Act substrate)
-**Status:** 🟠 In Progress
+**Status:** ✅ Complete
 **Spec:** SPEC-048, SPEC-049, SPEC-050, SPEC-051
 **Plan:** docs/plan/PLAN-098-PROC-PROCESS-WORKFLOW-RUNTIME.md
 
@@ -2812,11 +2812,11 @@ Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process 
 ||| TASK-710 | Affine process handles and `await` | 6 | ✅ Complete ||
 ||| TASK-711 | Process `yield : Proc<Unit>` | 3 | ✅ Complete ||
 ||| TASK-712 | `par` and `scatter` child admission | 7 | ✅ Complete ||
-||| TASK-713 | `join` and `gather` wait-for-all observation | 6 | 🟡 Ready ||
+||| TASK-713 | `join` and `gather` wait-for-all observation | 6 | ✅ Complete ||
 ||| TASK-714 | Workflow boundary carriers and admission context | 5 | ✅ Complete ||
 ||| TASK-715 | Workflow admission and contract evidence | 6 | ✅ Complete ||
-||| TASK-716 | Workflow completion/report construction | 6 | 🟡 Ready ||
-||| TASK-717 | Semantic tower cross-layer validation | 5 | 🟡 Ready ||
+||| TASK-716 | Workflow completion/report construction | 6 | ✅ Complete ||
+||| TASK-717 | Semantic tower cross-layer validation | 5 | ✅ Complete ||
 
 **Track A (Substrate + Failure):** 22h. Validate prerequisites, add identity/failure carriers, register process types, add the non-concurrent `Proc` combinator surface, and implement operational bottom/scoped handling.
 

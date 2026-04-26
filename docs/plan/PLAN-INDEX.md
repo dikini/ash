@@ -235,7 +235,7 @@ Update this section as tasks complete:
 | 6 | 8 | 8 | ✅ Complete |
 | 7 | 3 | 3 | ✅ Complete |
 | 8 | 3 | 3 | ✅ Complete |
-| 9 | 3 | 3 | ✅ Complete |
+| 9 | 3 | 2 | ⏸️ Deferred |
 | 10 | 11 | 11 | ✅ Complete |
 | 11 | 6 | 6 | ✅ Complete |
 | 12 | 7 | 7 | ✅ Complete |
@@ -273,13 +273,13 @@ Update this section as tasks complete:
 | 69 | 12 | 12 | ✅ Complete |
 | 70 | 8 | 8 | ✅ Complete |
 | 76A | 4 | 4 | ✅ Complete |
-| 76B | 3 | 0 | ✅ Complete |
-| 74 | 8 | 0 | ✅ Complete |
+| 76B | 3 | 0 | 📝 Planned |
+| 74 | 8 | 8 | ✅ Complete |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 6 | ✅ Complete |
-| 80 | 9 | 9 | ✅ Complete |
-| 94 | 3 | 3 | ✅ Done |
+| 80 | 10 | 10 | ✅ Complete |
+| 94 | 3 | 3 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -338,7 +338,7 @@ Update this section as tasks complete:
 | 6 | 8 | 8 | ✅ Complete |
 | 7 | 3 | 3 | ✅ Complete |
 | 8 | 3 | 3 | ✅ Complete |
-| 9 | 3 | 3 | ✅ Complete |
+| 9 | 3 | 2 | ⏸️ Deferred |
 | 10 | 11 | 11 | ✅ Complete |
 | 11 | 6 | 6 | ✅ Complete |
 | 12 | 7 | 7 | ✅ Complete |
@@ -372,14 +372,14 @@ Update this section as tasks complete:
 | 39 | 1 | 1 | ✅ Complete |
 | 40 | 2 | 2 | ✅ Complete |
 | 41-42 | 2 | 2 | ✅ Complete |
-| 74 | 8 | 0 | ✅ Complete |
+| 74 | 8 | 8 | ✅ Complete |
 | 76A | 4 | 4 | ✅ Complete |
-| 76B | 3 | 0 | ✅ Complete |
+| 76B | 3 | 0 | 📝 Planned |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 6 | ✅ Complete |
-| 80 | 9 | 9 | ✅ Complete |
-| 94 | 3 | 3 | ✅ Done |
+| 80 | 10 | 10 | ✅ Complete |
+| 94 | 3 | 3 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -2180,7 +2180,7 @@ Implement the first real `io` standard-library family as a top-level namespace r
 **Plan Reference:** [PLAN-022: Stdlib IO V1](PLAN-022-STDLIB-IO-V1.md)
 **Design Reference:** [Stdlib `io` V1 Design](../plans/2026-04-10-stdlib-io-v1-design.md)
 **Priority:** High
-**Status:** ✅ Done
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
@@ -2550,7 +2550,7 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Plan Reference:** [PLAN-090: Spec Processor](PLAN-090-SPEC-PROCESSOR.md)
 **Specs:** [../design/DESIGN-SPEC-PROCESSOR.md](../design/DESIGN-SPEC-PROCESSOR.md), DESIGN-NOTE-PROCESS-EFFECT.md, DESIGN-NOTE-BATCH-CHECK-API.md, DESIGN-NOTE-JSON-STRATEGY.md
 **Priority:** High
-**Status:** ✅ Complete
+**Status:** ✅ Complete (with TASK-599 deferred)
 
 ### Track A: Pure-String Processor Core
 
@@ -2670,7 +2670,7 @@ complete and verified. TASK-631B resolved by Phase 93 TASK-643 which deleted
 **Specs:** `SPEC-045`
 **Design:** `DESIGN-029`
 **Priority:** Medium
-**Status:** ✅ Done
+**Status:** ✅ Complete
 
 Establish a static-first, human/AI shared knowledge substrate over the Ash corpus. This phase begins with corpus semantics: explicit metadata carriers, authority/status/health classification, and a pilot slice that tests the schema before registry generation, lint/audit tooling, onboarding bundles, and browser/query services.
 

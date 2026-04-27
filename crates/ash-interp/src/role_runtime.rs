@@ -32,6 +32,8 @@
 //!     declared_return_type: None,
 //!     plays_roles: vec![RoleRef { name: "ai_agent".into(), span: ash_parser::token::Span::default() }],
 //!     capabilities: vec![],
+//!     owned_resources: vec![],
+//!     used_bindings: vec![],
 //!     body: ash_parser::surface::Workflow::Done { span: ash_parser::token::Span::default() },
 //!     contract: None,
 //!     span: ash_parser::token::Span::default(),

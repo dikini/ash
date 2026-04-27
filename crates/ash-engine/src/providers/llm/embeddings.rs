@@ -4,7 +4,7 @@
 //!
 //! # Value Contract
 //!
-//! ## Input texts: List<String>
+//! ## Input texts: `List<String>`
 //! A list of strings to embed.
 //!
 //! ## Output Embedding Shape (per SPEC-029 §3.9)
@@ -27,7 +27,7 @@ use async_openai::types::{CreateEmbeddingRequest, CreateEmbeddingResponse, Embed
 /// Expected: [provider, model, texts]
 /// - provider: String - provider name for routing
 /// - model: String - model identifier
-/// - texts: List<String> - texts to embed
+/// - texts: `List<String>` - texts to embed
 ///
 /// # Errors
 /// Returns `CapabilityError::InvalidArgument` if args are missing or have wrong types.
@@ -126,7 +126,7 @@ fn embedding_to_value(embedding: &Embedding) -> Value {
 ///
 /// # Postconditions
 /// - E1: result.length == texts.length (verified in tests)
-/// - E2: result[i].index == i for all i (verified in tests)
+/// - E2: result\[i\].index == i for all i (verified in tests)
 ///
 /// # Errors
 /// Returns `CapabilityError::ExecutionFailed` if the response contains no data.

@@ -1,6 +1,6 @@
 # TASK-729: Add type-checker environments for capability interface operation signatures.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -66,11 +66,40 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+## Completion Notes
+
+- Added `TypeEnv` capability-interface registration and lookup APIs for TASK-729:
+  `register_capability_interface`, `lookup_capability_interface`,
+  `lookup_capability_operation`, and `has_capability_interface`.
+- Preserved static operation metadata as `CapabilityOperationInfo`, including
+  operation mode, parameter names, parameter types, and return type.
+- Validated operation parameter and return types through existing type lowering,
+  rejected duplicate capability interface names, and defensively rejected duplicate
+  operation names before type conversion.
+- Wired `type_check_program_in_env` to register `Definition::CapabilityInterface`
+  declarations before workflow checking.
+- Added focused tests in
+  `crates/ash-typeck/tests/task_729_capability_interface_env.rs`, including RED
+  evidence for missing APIs, registration/lookup, duplicate operation rejection,
+  unknown operation type rejection, child environment inheritance/isolation, and
+  program-level registration.
+- Reconciled unrelated doctest/rustdoc drift found during broad verification:
+  updated the stale `ash-interp` `WorkflowDef` doctest initializer and cleaned
+  `ash-engine` rustdoc links/HTML-like type text so workspace doctests and docs
+  are warning-clean.
+- Verification completed with `cargo fmt --check`, `git diff --check`,
+  `cargo test -p ash-typeck`, `cargo test -p ash-interp --doc`,
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`,
+  `cargo doc --workspace --no-deps`, and `cargo test --workspace`.
+- Scope boundary: this task does not implement capability implementation
+  conformance checking, binding admission, runtime dispatch, or authority/resource
+  semantics; those remain owned by later Phase 102/103 tasks.
 
 ## Dependencies for Next Task
 

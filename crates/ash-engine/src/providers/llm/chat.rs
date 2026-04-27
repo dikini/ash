@@ -458,10 +458,10 @@ fn validate_params(params: &HashMap<String, Value>) -> Result<(), CapabilityErro
 /// Build `CreateChatCompletionRequest` from action arguments
 ///
 /// Expected args for chat:
-/// - args[0]: provider (String) - provider name for routing
-/// - args[1]: model (String) - model identifier  
-/// - args[2]: messages (List<Value>) - conversation messages
-/// - args[3]: params (Option<Value>) - completion parameters (temperature, `top_p`, etc.)
+/// - args\[0\]: provider (`String`) - provider name for routing
+/// - args\[1\]: model (`String`) - model identifier
+/// - args\[2\]: messages (`List<Value>`) - conversation messages
+/// - args\[3\]: params (`Option<Value>`) - completion parameters (temperature, `top_p`, etc.)
 ///
 /// # Errors
 /// Returns `CapabilityError::InvalidArgument` if params fail validation or are malformed.
@@ -539,11 +539,11 @@ pub fn build_chat_request(
 /// Build `CreateChatCompletionRequest` with tools from action arguments
 ///
 /// Expected args for `chat_with_tools`:
-/// - args[0]: provider (String) - provider name for routing
-/// - args[1]: model (String) - model identifier  
-/// - args[2]: messages (List<Value>) - conversation messages
-/// - args[3]: tools (List<ToolDef>) - tool definitions
-/// - args[4]: params (Option<Value>) - completion parameters
+/// - args\[0\]: provider (`String`) - provider name for routing
+/// - args\[1\]: model (`String`) - model identifier
+/// - args\[2\]: messages (`List<Value>`) - conversation messages
+/// - args\[3\]: tools (`List<ToolDef>`) - tool definitions
+/// - args\[4\]: params (`Option<Value>`) - completion parameters
 ///
 /// # Errors
 /// Returns an error if the underlying `build_chat_request` call fails.

@@ -50,10 +50,10 @@ pub enum CallableKind {
         ///
         /// # Invariant
         ///
-        /// This field is `String::new()` inside raw [`ModuleExports`] — it is
+        /// This field is `String::new()` inside raw module exports — it is
         /// populated by [`load_ordinary_file`] from the import path before the
         /// callable is inserted into `imported_callables`. Any code reading this
-        /// field from a raw `ModuleExports` value (i.e., outside of
+        /// field from a raw module-export value (i.e., outside of
         /// `load_ordinary_file`) will observe an empty string.
         module: String,
     },
@@ -294,8 +294,8 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
 
 /// Extract all `pub type` definitions from source text.
 ///
-/// Parses each `pub type` snippet found via [`extract_semicolon_snippets`] and
-/// converts them to AST [`CoreTypeDef`] instances ready for type-checking.
+/// Parses each extracted `pub type` snippet and converts it to AST
+/// [`CoreTypeDef`] instances ready for type-checking.
 ///
 /// # Errors
 ///

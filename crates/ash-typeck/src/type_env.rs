@@ -11,7 +11,10 @@ use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
-use ash_parser::surface::{ImplDef, InterfaceDef, InterfaceMethodSig, Type as SurfaceType};
+use ash_parser::surface::{
+    CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
+    InterfaceMethodSig, Type as SurfaceType,
+};
 use ash_parser::token::Span;
 use std::collections::{HashMap, HashSet};
 
@@ -199,6 +202,28 @@ pub struct InterfaceInfo {
     pub associated_types: Vec<String>,
     /// Methods declared by the interface.
     pub methods: HashMap<String, InterfaceMethodInfo>,
+}
+
+/// Internal representation of a capability interface operation signature.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityOperationInfo {
+    /// Operation effect mode.
+    pub mode: CapabilityOperationMode,
+    /// Declared parameter names in source order.
+    pub param_names: Vec<String>,
+    /// Declared parameter types in source order.
+    pub params: Vec<Type>,
+    /// Declared return type.
+    pub return_type: Type,
+}
+
+/// Internal representation of a capability interface definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityInterfaceInfo {
+    /// Capability interface name.
+    pub name: String,
+    /// Operations declared by the capability interface.
+    pub operations: HashMap<String, CapabilityOperationInfo>,
 }
 
 /// Internal representation of a where-bound for type checking.
@@ -579,6 +604,8 @@ pub struct TypeEnv {
     transparent_aliases: HashSet<TypeName>,
     /// Registered interfaces by name.
     pub(crate) interfaces: HashMap<String, InterfaceInfo>,
+    /// Registered capability interfaces by name.
+    capability_interfaces: HashMap<String, CapabilityInterfaceInfo>,
     /// Registered closed-world impls.
     impls: Vec<ImplScheme>,
     /// Interface bounds attached to workflow type variables.
@@ -662,6 +689,7 @@ impl TypeEnv {
             constructors: HashMap::with_capacity(10),
             transparent_aliases: HashSet::with_capacity(4),
             interfaces: HashMap::with_capacity(4),
+            capability_interfaces: HashMap::with_capacity(4),
             impls: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
@@ -835,6 +863,77 @@ impl TypeEnv {
                 methods,
             },
         );
+        Ok(())
+    }
+
+    fn convert_capability_operation(
+        &self,
+        operation: &CapabilityOperationSig,
+    ) -> Result<(String, CapabilityOperationInfo), TypeEnvError> {
+        let param_names = operation
+            .params
+            .iter()
+            .map(|param| param.name.to_string())
+            .collect();
+        let param_mapping = HashMap::new();
+        let params = operation
+            .params
+            .iter()
+            .map(|param| surface_type_to_type(&param.ty, &param_mapping, self))
+            .collect::<Result<Vec<_>, _>>()?;
+        let return_type = surface_type_to_type(&operation.return_type, &param_mapping, self)?;
+
+        Ok((
+            operation.name.to_string(),
+            CapabilityOperationInfo {
+                mode: operation.mode,
+                param_names,
+                params,
+                return_type,
+            },
+        ))
+    }
+
+    /// Register a capability interface declaration.
+    pub fn register_capability_interface(
+        &mut self,
+        def: &CapabilityInterfaceDef,
+    ) -> Result<(), TypeEnvError> {
+        let interface_name = def.name.to_string();
+        if self.capability_interfaces.contains_key(&interface_name) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("capability interface '{interface_name}' is already defined"),
+                def.span,
+            ));
+        }
+
+        let mut operations = HashMap::with_capacity(def.operations.len());
+        let mut operation_names = HashSet::with_capacity(def.operations.len());
+        for operation in &def.operations {
+            let operation_name = operation.name.to_string();
+            if !operation_names.insert(operation_name.clone()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability interface '{interface_name}' defines duplicate operation '{operation_name}'"
+                    ),
+                    operation.span,
+                ));
+            }
+        }
+
+        for operation in &def.operations {
+            let (operation_name, operation_info) = self.convert_capability_operation(operation)?;
+            operations.insert(operation_name, operation_info);
+        }
+
+        self.capability_interfaces.insert(
+            interface_name.clone(),
+            CapabilityInterfaceInfo {
+                name: interface_name,
+                operations,
+            },
+        );
+
         Ok(())
     }
 
@@ -1538,6 +1637,7 @@ impl TypeEnv {
             constructors: self.constructors.clone(),
             transparent_aliases: self.transparent_aliases.clone(),
             interfaces: self.interfaces.clone(),
+            capability_interfaces: self.capability_interfaces.clone(),
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
@@ -1557,6 +1657,27 @@ impl TypeEnv {
     /// Look up a registered interface.
     pub fn lookup_interface(&self, name: &str) -> Option<&InterfaceInfo> {
         self.interfaces.get(name)
+    }
+
+    /// Check if a capability interface is registered.
+    pub fn has_capability_interface(&self, name: &str) -> bool {
+        self.capability_interfaces.contains_key(name)
+    }
+
+    /// Look up a registered capability interface.
+    pub fn lookup_capability_interface(&self, name: &str) -> Option<&CapabilityInterfaceInfo> {
+        self.capability_interfaces.get(name)
+    }
+
+    /// Look up a registered capability operation signature.
+    pub fn lookup_capability_operation(
+        &self,
+        interface: &str,
+        operation: &str,
+    ) -> Option<&CapabilityOperationInfo> {
+        self.capability_interfaces
+            .get(interface)
+            .and_then(|info| info.operations.get(operation))
     }
 
     /// Return all registered impl schemes.

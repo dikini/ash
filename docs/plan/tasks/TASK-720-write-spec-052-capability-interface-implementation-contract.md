@@ -1,4 +1,4 @@
-# TASK-720: Write the normative SPEC-052 capability interface, implementation, and binding contract promoted from NOTE-009.
+# TASK-720: Write the normative [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) capability interface, implementation, and binding contract promoted from [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md).
 
 ## Status: ✅ Complete
 
@@ -8,12 +8,12 @@ Spec hardening
 
 ## Description
 
-Write the normative SPEC-052 capability interface, implementation, and binding contract promoted from NOTE-009.
+Write the normative [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) capability interface, implementation, and binding contract promoted from [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md).
 
 ## Specification Reference
 
-- NOTE-009
-- SPEC-052
+- [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md)
+- [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)
 
 ## Dependencies
 
@@ -65,17 +65,23 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied by [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) sections 1-13.
+- [x] New docs checks cover the task-owned behavior: Phase 100 source-link and cross-reference sweep verified linked references for [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md), [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), and [TASK-720](TASK-720-write-spec-052-capability-interface-implementation-contract.md).
+- [x] Existing public behavior remains compatible: this task is docs/spec-only and does not change parser/typechecker/runtime behavior.
+- [x] [CHANGELOG.md](../../../CHANGELOG.md) is updated for the spec/plan packet.
+- [x] [PLAN-INDEX.md](../PLAN-INDEX.md) status is updated only because the docs/spec contract exists and was audited.
+
+## Completion Evidence
+
+- Created [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) as the normative draft owner for stateless capability interfaces, implementation recipes, binding-time selection, module visibility, conformance, derived/adapted implementations, and runtime invocation boundaries.
+- Verified [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) preserves compatibility with existing `pub capability` / Rust `CapabilityProvider` behavior and explicitly defers parser/type/runtime implementation to Phases 101-104.
+- Linked this task, [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md), and [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) from the Phase 100 planning surfaces so future implementers can navigate to source artifacts directly.
 
 ## Dependencies for Next Task
 
 This task outputs:
 
-- Spec file created at `docs/spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md`.
+- Spec file created at [`docs/spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md`](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md).
 
 ## Notes
 

@@ -1,4 +1,4 @@
-# TASK-723: Close out Phase 100 by verifying the NOTE-009 promotion packet is internally consistent and ready to drive implementation phases.
+# TASK-723: Close out Phase 100 by verifying the [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) promotion packet is internally consistent and ready to drive implementation phases.
 
 ## Status: ✅ Complete
 
@@ -8,26 +8,26 @@ Docs/Planning
 
 ## Description
 
-Close out Phase 100 by verifying the NOTE-009 promotion packet is internally consistent and ready to drive implementation phases.
+Close out Phase 100 by verifying the [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) promotion packet is internally consistent and ready to drive implementation phases.
 
 ## Specification Reference
 
-- NOTE-009
-- SPEC-052
-- SPEC-053
-- PLAN-100
+- [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md)
+- [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)
+- [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md)
+- [PLAN-100](../PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md)
 
 ## Dependencies
 
-- ✅ TASK-720: prerequisite task
-- ✅ TASK-721: prerequisite task
-- ✅ TASK-722: prerequisite task
+- ✅ [TASK-720](TASK-720-write-spec-052-capability-interface-implementation-contract.md): prerequisite task
+- ✅ [TASK-721](TASK-721-write-spec-053-runtime-resources-authority-provenance.md): prerequisite task
+- ✅ [TASK-722](TASK-722-reconcile-capability-resource-spec-ownership.md): prerequisite task
 
 ## Requirements
 
 ### Functional Requirements
 
-1. Verify every NOTE-009 core concept is either specified or explicitly deferred.
+1. Verify every [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) core concept is either specified or explicitly deferred.
 2. Verify implementation phases map each public spec requirement to a task.
 3. Run documentation consistency checks for new files and changed indices.
 4. Record Phase 100 complete while later implementation phases remain planned.
@@ -69,17 +69,24 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied by the Phase 100 closeout review recorded below.
+- [x] New docs checks cover the task-owned behavior: Phase 100 closeout checked [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) concept coverage, implementation-phase mapping, local markdown links, table syntax, and source-reference links.
+- [x] Existing public behavior remains compatible: this task is docs/planning-only and does not change parser/typechecker/runtime behavior.
+- [x] [CHANGELOG.md](../../../CHANGELOG.md) is updated for the spec/plan packet.
+- [x] [PLAN-INDEX.md](../PLAN-INDEX.md) status is updated only because Phase 100 docs/spec/planning work is complete; Phases 101-104 remain planned.
+
+## Completion Evidence
+
+- [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) concept coverage: [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) owns capability interfaces, implementations, bindings, adapters, module visibility, and invocation boundaries; [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) owns resource types, resource instances/bindings, internal authority, authority provenance, lifecycle, and split/join policy.
+- Implementation mapping: [PLAN-100](../PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md) and [PLAN-INDEX.md](../PLAN-INDEX.md) sequence implementation into Phases 101-104, leaving parser/module metadata, static semantics, runtime resources/bindings, and Ash-defined capability implementation execution planned rather than claimed complete.
+- Remediation performed during closeout: linked source references for Phase 100 task/spec/note/plan artifacts and checked task verification boxes with evidence instead of leaving completed task files with unchecked verification criteria.
+- Remaining risk: [SPEC-052](../../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) and [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) are normative draft specs; concrete parser/typechecker/runtime semantics remain future implementation work in TASK-724 through TASK-745.
 
 ## Dependencies for Next Task
 
 This task outputs:
 
-- Phase 100 is complete; implementation Phases 101-104 remain planned.
+- Phase 100 is complete; implementation [Phases 101-104](../PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md) remain planned.
 
 ## Notes
 

@@ -1,4 +1,4 @@
-# TASK-721: Write the normative SPEC-053 resource, resource-instance, binding, and authority provenance contract promoted from NOTE-009.
+# TASK-721: Write the normative [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) resource, resource-instance, binding, and authority provenance contract promoted from [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md).
 
 ## Status: ✅ Complete
 
@@ -8,16 +8,16 @@ Spec hardening
 
 ## Description
 
-Write the normative SPEC-053 resource, resource-instance, binding, and authority provenance contract promoted from NOTE-009.
+Write the normative [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) resource, resource-instance, binding, and authority provenance contract promoted from [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md).
 
 ## Specification Reference
 
-- NOTE-009
-- SPEC-053
+- [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md)
+- [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md)
 
 ## Dependencies
 
-- ✅ TASK-720: prerequisite task
+- ✅ [TASK-720](TASK-720-write-spec-052-capability-interface-implementation-contract.md): prerequisite task
 
 ## Requirements
 
@@ -65,17 +65,23 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied by [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) sections 1-13.
+- [x] New docs checks cover the task-owned behavior: Phase 100 source-link and cross-reference sweep verified linked references for [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md), [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), and [TASK-721](TASK-721-write-spec-053-runtime-resources-authority-provenance.md).
+- [x] Existing public behavior remains compatible: this task is docs/spec-only and does not change parser/typechecker/runtime behavior.
+- [x] [CHANGELOG.md](../../../CHANGELOG.md) is updated for the spec/plan packet.
+- [x] [PLAN-INDEX.md](../PLAN-INDEX.md) status is updated only because the docs/spec contract exists and was audited.
+
+## Completion Evidence
+
+- Created [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) as the normative draft owner for resource types, resource requirements, allocation/admission sites, resource instances/bindings, host/internal/derived authority provenance, split/join policy, lifecycle, and resource-backed failure/provenance obligations.
+- Verified [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) explicitly separates Ash-owned internal authority from host/external authority and does not claim that Ash can manufacture external authority.
+- Linked this task, [NOTE-009](../../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md), and [SPEC-053](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) from the Phase 100 planning surfaces so future implementers can navigate to source artifacts directly.
 
 ## Dependencies for Next Task
 
 This task outputs:
 
-- Spec file created at `docs/spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md`.
+- Spec file created at [`docs/spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md`](../../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md).
 
 ## Notes
 

@@ -2,8 +2,8 @@
 
 **Status:** Draft
 **Date:** 2026-04-27
-**Promotes:** NOTE-009 resource-type, resource-instance, resource-binding, internal-authority, derived-authority, and authority-provenance design direction
-**Related:** SPEC-003, SPEC-004, SPEC-017, SPEC-019, SPEC-022, SPEC-047, SPEC-048, SPEC-049, SPEC-050, SPEC-051, SPEC-052
+**Promotes:** [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) resource-type, resource-instance, resource-binding, internal-authority, derived-authority, and authority-provenance design direction
+**Related:** SPEC-003, SPEC-004, SPEC-017, SPEC-019, SPEC-022, SPEC-047, SPEC-048, SPEC-049, SPEC-050, SPEC-051, [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)
 
 ## Summary
 
@@ -45,7 +45,7 @@ This spec does not define:
 4. garbage collection or retention policy beyond minimal lifecycle contracts;
 5. host-specific permission syntax;
 6. final first-class `ResourceRef<T>` value semantics;
-7. implementation bodies for capability interfaces; see SPEC-052.
+7. implementation bodies for capability interfaces; see [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md).
 
 ### 1.3 Normative vs informative
 
@@ -290,8 +290,8 @@ Failures from resource-backed operations use SPEC-050 operational-failure semant
 
 ## 12. Implementation Tasks
 
-- TASK-721: Write SPEC-053 runtime resource and authority contract.
-- TASK-722: Reconcile existing capability/runtime specs with SPEC-052/SPEC-053 ownership.
+- [TASK-721](../plan/tasks/TASK-721-write-spec-053-runtime-resources-authority-provenance.md): Write [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) runtime resource and authority contract.
+- [TASK-722](../plan/tasks/TASK-722-reconcile-capability-resource-spec-ownership.md): Reconcile existing capability/runtime specs with [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)/[SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) ownership.
 - TASK-726: Add parser and AST substrate for resource types and resource binding clauses.
 - TASK-731: Add resource type and binding type checking.
 - TASK-732: Add authority provenance static validation.
@@ -315,4 +315,4 @@ Failures from resource-backed operations use SPEC-050 operational-failure semant
 
 ### 2026-04-27
 
-- Initial draft promoted from NOTE-009, defining resource types, resource requirements, resource allocation, resource instances, resource bindings, authority provenance, runtime placement, split/join policy, lifecycle, provenance, and failure semantics.
+- Initial draft promoted from [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md), defining resource types, resource requirements, resource allocation, resource instances, resource bindings, authority provenance, runtime placement, split/join policy, lifecycle, provenance, and failure semantics.

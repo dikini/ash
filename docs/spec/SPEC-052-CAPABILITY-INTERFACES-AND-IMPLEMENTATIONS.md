@@ -2,8 +2,8 @@
 
 **Status:** Draft
 **Date:** 2026-04-27
-**Promotes:** NOTE-009 capability-interface, capability-implementation, capability-binding, late-binding, and capability-adapter design direction
-**Related:** SPEC-002, SPEC-003, SPEC-009, SPEC-012, SPEC-017, SPEC-047, SPEC-048, SPEC-049, SPEC-051, SPEC-053
+**Promotes:** [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) capability-interface, capability-implementation, capability-binding, late-binding, and capability-adapter design direction
+**Related:** SPEC-002, SPEC-003, SPEC-009, SPEC-012, SPEC-017, SPEC-047, SPEC-048, SPEC-049, SPEC-051, [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md)
 
 ## Summary
 
@@ -40,7 +40,7 @@ This spec defines:
 
 This spec does not define:
 
-1. resource type, resource instance, resource allocation, or split/join semantics; see SPEC-053;
+1. resource type, resource instance, resource allocation, or split/join semantics; see [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md);
 2. exact provider implementation APIs in Rust beyond required compatibility hooks;
 3. full concrete parser grammar for every sugar form;
 4. first-class value-level capability handles;
@@ -272,7 +272,7 @@ A conforming implementation must distinguish:
 1. host-backed primitive provider dispatch;
 2. Ash-defined implementation body execution;
 3. adapter/decorator dispatch through inner capability bindings;
-4. internal-resource dispatch backed by SPEC-053 resource instances.
+4. internal-resource dispatch backed by [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) resource instances.
 
 ## 11. Error Conditions
 
@@ -291,8 +291,8 @@ Implementations must report distinct diagnostics or runtime failures for:
 
 ## 12. Implementation Tasks
 
-- TASK-720: Write SPEC-052 capability interface/implementation contract.
-- TASK-722: Reconcile existing capability specs with SPEC-052/SPEC-053 ownership.
+- [TASK-720](../plan/tasks/TASK-720-write-spec-052-capability-interface-implementation-contract.md): Write [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) capability interface/implementation contract.
+- [TASK-722](../plan/tasks/TASK-722-reconcile-capability-resource-spec-ownership.md): Reconcile existing capability specs with [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)/[SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) ownership.
 - TASK-724: Add parser and AST substrate for capability interfaces.
 - TASK-725: Add parser and AST substrate for capability implementations.
 - TASK-727: Export/import capability interface and implementation metadata through modules.
@@ -316,4 +316,4 @@ Implementations must report distinct diagnostics or runtime failures for:
 
 ### 2026-04-27
 
-- Initial draft promoted from NOTE-009, defining capability interfaces, capability implementations, capability bindings, module visibility, implementation conformance, binding-time semantics, derived implementations, and runtime invocation boundaries.
+- Initial draft promoted from [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md), defining capability interfaces, capability implementations, capability bindings, module visibility, implementation conformance, binding-time semantics, derived implementations, and runtime invocation boundaries.

@@ -1446,18 +1446,18 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 ## Phase 44-52 Summary
 
-|||| Phase | Tasks | Est. Hours | Status |
-||||-------|-------|------------|--------|
-|||| 44 | 17 | 102-108 | ✅ Complete |
-|||| 45 | 3 | 14 | ✅ Complete |
-|||| 46 | 13 | 98-108 | ✅ Complete |
-|||| 47 | 10 | 90 | ✅ Complete |
-|||| 48 | 15 | 138 | ✅ Complete |
-|||| 49 | 9 | 52 | ✅ Complete |
-|||| 50 | 13 | 51 | ✅ Complete |
-|||| 51 | 2 | 8.5 | ✅ Complete |
-|||| 52 | 5 | 21-27 | ✅ Complete |
-|||| **Total** | **85** | **589-615** | ✅ Complete |
+| Phase | Tasks | Est. Hours | Status |
+| ------- | ------- | ------------ | -------- |
+| 44 | 17 | 102-108 | ✅ Complete |
+| 45 | 3 | 14 | ✅ Complete |
+| 46 | 13 | 98-108 | ✅ Complete |
+| 47 | 10 | 90 | ✅ Complete |
+| 48 | 15 | 138 | ✅ Complete |
+| 49 | 9 | 52 | ✅ Complete |
+| 50 | 13 | 51 | ✅ Complete |
+| 51 | 2 | 8.5 | ✅ Complete |
+| 52 | 5 | 21-27 | ✅ Complete |
+| **Total** | **85** | **589-615** | ✅ Complete |
 
 ---
 
@@ -2232,12 +2232,12 @@ test metadata/discovery.
 **Priority:** High
 **Status:** ✅ Complete
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| [TASK-509](tasks/TASK-509-ash-test-runner-substrate.md) | Add `ash test` CLI surface, authored discovery roots, canonical suite/result reporting, and the runner substrate entry point | PLAN-024, DESIGN-021 | 6-8 | ✅ Complete ||
-|| [TASK-510](tasks/TASK-510-test-execution-isolation-and-panic-capture.md) | Add per-test isolation, panic capture, timeout handling, and sealed result classification | PLAN-024, DESIGN-021 | 8-12 | ✅ Complete ||
-|| [TASK-511](tasks/TASK-511-ash-test-library-surface.md) | Introduce the minimal Ash test library surface for assertions, panic-aware helpers, and runtime-facing test helpers | PLAN-024, DESIGN-021 | 8-12 | ✅ Complete ||
-|| [TASK-512](tasks/TASK-512-authored-test-metadata-and-execution-model.md) | Freeze authored test metadata/discovery and wire authored unit/integration/e2e execution to the Ash test library surface | PLAN-024, DESIGN-021 | 10-14 | ✅ Complete ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-509](tasks/TASK-509-ash-test-runner-substrate.md) | Add `ash test` CLI surface, authored discovery roots, canonical suite/result reporting, and the runner substrate entry point | PLAN-024, DESIGN-021 | 6-8 | ✅ Complete |
+| [TASK-510](tasks/TASK-510-test-execution-isolation-and-panic-capture.md) | Add per-test isolation, panic capture, timeout handling, and sealed result classification | PLAN-024, DESIGN-021 | 8-12 | ✅ Complete |
+| [TASK-511](tasks/TASK-511-ash-test-library-surface.md) | Introduce the minimal Ash test library surface for assertions, panic-aware helpers, and runtime-facing test helpers | PLAN-024, DESIGN-021 | 8-12 | ✅ Complete |
+| [TASK-512](tasks/TASK-512-authored-test-metadata-and-execution-model.md) | Freeze authored test metadata/discovery and wire authored unit/integration/e2e execution to the Ash test library surface | PLAN-024, DESIGN-021 | 10-14 | ✅ Complete |
 
 **Deliverable:** A CLI-integrated `ash test` command with panic-contained suite execution,
 authored test discovery, a minimal `std::test` surface, and verified smoke coverage.
@@ -2255,11 +2255,11 @@ finite-world enumeration substrate.
 **Priority:** High
 **Status:** 📝 Planned
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-022 | 10-14 | 📝 Planned ||
-|| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | PLAN-024, DESIGN-023 | 8-12 | 📝 Planned ||
-|| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | PLAN-024, DESIGN-022/023 | 4-6 | 📝 Planned ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | PLAN-024, DESIGN-022 | 10-14 | 📝 Planned |
+| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | PLAN-024, DESIGN-023 | 8-12 | 📝 Planned |
+| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | PLAN-024, DESIGN-022/023 | 4-6 | 📝 Planned |
 
 **Blockers:** Synthesized tests require a stable runner-facing introspection API for
 lowered contracts (`StoredFnContract`), policy definitions, and obligation lifecycle
@@ -2394,18 +2394,18 @@ higher-order functions, and three-vertex enforcement via `Type::Fn`/`Type::Fun`.
 **Priority:** High
 **Status:** ✅ Complete
 
-|| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| TASK-551 | Core IR: FnDef, FnApply, EnvFrame, Closure value, interpreter eval | SPEC-031 §5,§10 | 6 | ✅ Complete ||
-|| TASK-552 | Lowering: built-in registry, FnApply, FnDef lowering | SPEC-031 §9 | 4 | ✅ Complete ||
-|| TASK-553 | Type checker: FnDef/FnApply typing with Type::Fn/Type::Fun | SPEC-031 §6 | 4 | ✅ Complete ||
-|| TASK-554 | Engine: inline imported callables into FnApply | SPEC-031 §9.3 | 3 | ✅ Complete ||
-|| TASK-555 | Delete pure_runtime.rs and all dispatch/inlining | SPEC-031 §11 | 3 | ✅ Complete ||
-|| TASK-556 | Parse fn expressions and named local functions | SPEC-031 §8 | 5 | ✅ Complete ||
-|| TASK-557 | Closure syntax \|params\| => body | SPEC-031 §8.3 | 2 | ✅ Complete ||
-|| TASK-558 | Three-vertex enforcement via Type::Fn vs Type::Fun | SPEC-031 §4.8,§6.3 | 4 | ✅ Complete ||
-|| TASK-559 | End-to-end validation and CHANGELOG | SPEC-031 §13 | 3 | ✅ Complete ||
-|| [TASK-560](tasks/TASK-560-fndef-type-annotation-tracking.md) | Track: resolve FnDef type annotations via TypeEnv | SPEC-031 §5.1 | 4 | ✅ Complete ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| TASK-551 | Core IR: FnDef, FnApply, EnvFrame, Closure value, interpreter eval | SPEC-031 §5,§10 | 6 | ✅ Complete |
+| TASK-552 | Lowering: built-in registry, FnApply, FnDef lowering | SPEC-031 §9 | 4 | ✅ Complete |
+| TASK-553 | Type checker: FnDef/FnApply typing with Type::Fn/Type::Fun | SPEC-031 §6 | 4 | ✅ Complete |
+| TASK-554 | Engine: inline imported callables into FnApply | SPEC-031 §9.3 | 3 | ✅ Complete |
+| TASK-555 | Delete pure_runtime.rs and all dispatch/inlining | SPEC-031 §11 | 3 | ✅ Complete |
+| TASK-556 | Parse fn expressions and named local functions | SPEC-031 §8 | 5 | ✅ Complete |
+| TASK-557 | Closure syntax \|params\| => body | SPEC-031 §8.3 | 2 | ✅ Complete |
+| TASK-558 | Three-vertex enforcement via Type::Fn vs Type::Fun | SPEC-031 §4.8,§6.3 | 4 | ✅ Complete |
+| TASK-559 | End-to-end validation and CHANGELOG | SPEC-031 §13 | 3 | ✅ Complete |
+| [TASK-560](tasks/TASK-560-fndef-type-annotation-tracking.md) | Track: resolve FnDef type annotations via TypeEnv | SPEC-031 §5.1 | 4 | ✅ Complete |
 
 |**Deliverable:** `fn(params) { body }` produces `Value::Closure`, closures capture environment,
 recursion works, higher-order functions supported, `pure_runtime.rs` deleted, three-vertex
@@ -2420,10 +2420,10 @@ Remove the single-parameter restriction on interface method signatures and their
 **Priority:** High
 **Status:** ✅ Complete
 
-|||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-561](tasks/TASK-561-parser-multi-param-methods.md) | Parser/AST: multi-parameter method signatures and impl definitions | SPEC-032 §4 | 4 | ✅ Complete |
-|| [TASK-562](tasks/TASK-562-typeck-multi-param-calls.md) | Type checker/Interpreter: multi-parameter interface call resolution | SPEC-032 §5-6 | 5 | ✅ Complete |
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-561](tasks/TASK-561-parser-multi-param-methods.md) | Parser/AST: multi-parameter method signatures and impl definitions | SPEC-032 §4 | 4 | ✅ Complete |
+| [TASK-562](tasks/TASK-562-typeck-multi-param-calls.md) | Type checker/Interpreter: multi-parameter interface call resolution | SPEC-032 §5-6 | 5 | ✅ Complete |
 
 **Deliverable:** Interface methods accept any number of parameters; `InterfaceMethodCall` AST node removed; all interface calls route through `Expr::Call`; interface declarations still limited to one type parameter.
 
@@ -2436,14 +2436,14 @@ Remove the single type-parameter restriction on interfaces, enable generic `impl
 **Priority:** High
 **Status:** ✅ Complete
 
-|||| Task | Description | Spec | Est. Hours | Status ||
-|||------|-------------|------|------------|--------|
-||| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | ✅ Complete |
-||| [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-044 §4, SPEC-035 §4 | 5 | ✅ Complete |
-||| [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-044 §5 | 6 | ✅ Complete |
-||| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-044 §6 | 6 | ✅ Complete |
-||| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | ✅ Complete |
-||| [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | ✅ Complete |
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-563](tasks/TASK-563-typeck-multi-param-interfaces.md) | Type checker: multi-parameter interfaces and impl registry redesign | SPEC-033 §5 | 4 | ✅ Complete |
+| [TASK-564](tasks/TASK-564-parser-generic-impls-and-associated-types.md) | Parser/AST: generic impl syntax, `where` bounds, associated types | SPEC-044 §4, SPEC-035 §4 | 5 | ✅ Complete |
+| [TASK-565](tasks/TASK-565-typeck-generic-impl-schemes.md) | Type checker: impl schemes, overlap checking, recursive resolution | SPEC-044 §5 | 6 | ✅ Complete |
+| [TASK-566](tasks/TASK-566-engine-monomorphization.md) | Engine: post-typecheck monomorphization pass for generic impls | SPEC-044 §6 | 6 | ✅ Complete |
+| [TASK-567](tasks/TASK-567-typeck-associated-types.md) | Type checker: `Type::Associated`, normalization, rigid projections | SPEC-035 §5 | 6 | ✅ Complete |
+| [TASK-568](tasks/TASK-568-engine-associated-type-substitution.md) | Engine: associated type substitution in monomorphized bodies | SPEC-035 §6 | 3 | ✅ Complete |
 
 **Deliverable:** Interfaces accept any number of type parameters; generic impls with `where` bounds compile and resolve recursively; overlapping impl schemes rejected at registration; associated types (`S::Ok`) normalize to concrete types; `Type::Associated` never appears at runtime.
 
@@ -2456,10 +2456,10 @@ Add binding spans and comment-trivia preservation to the Ash parser so that down
 **Priority:** High
 **Status:** ✅ Done
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| [TASK-570](tasks/TASK-570-parser-binding-spans.md) | Add spans to `Expr::Variable` and `Pattern::Variable` | SPEC-039 §3 | 6 | ✅ Done ||
-|| [TASK-571](tasks/TASK-571-parser-comment-trivia.md) | Preserve comments in lexer and build `CommentTable` side-table | SPEC-039 §4 | 10 | ✅ Done ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-570](tasks/TASK-570-parser-binding-spans.md) | Add spans to `Expr::Variable` and `Pattern::Variable` | SPEC-039 §3 | 6 | ✅ Done |
+| [TASK-571](tasks/TASK-571-parser-comment-trivia.md) | Preserve comments in lexer and build `CommentTable` side-table | SPEC-039 §4 | 10 | ✅ Done |
 
 **Deliverable:** Variable bindings carry spans in surface and core AST. `CommentTable` side-table
 attached to `ModuleFile`. `parse_surface_file()` public API. 594 parser tests pass.
@@ -2474,10 +2474,10 @@ Make all Ash compiler errors LSP-diagnostic-ready by adding source spans to ever
 **Priority:** High
 **Status:** ✅ Done
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| [TASK-572](tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError` | SPEC-040 §4 | 12 | ✅ Done ||
-|| [TASK-573](tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | SPEC-040 §5 | 6 | ✅ Done ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-572](tasks/TASK-572-typeck-error-spans.md) | Add spans to `TypeEnvError`, `ExhaustivenessError`, `NameError` | SPEC-040 §4 | 12 | ✅ Done |
+| [TASK-573](tasks/TASK-573-ash-lsp-error-trait.md) | Define `AshLspError` trait and implement it for all error types | SPEC-040 §5 | 6 | ✅ Done |
 
 **Deliverable:** All type-checker and name-resolution errors carry spans; `AshLspError` trait enables mechanical LSP diagnostic conversion.
 
@@ -2490,9 +2490,9 @@ Convert `crates/ash-lint` from a CLI-only binary into a reusable library crate t
 **Priority:** High
 **Status:** ✅ Done
 
-|| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-|| [TASK-574](tasks/TASK-574-ash-lint-library.md) | Extract `ash-lint` CLI into a library + binary wrapper | SPEC-041 | 12 | ✅ Done |
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-574](tasks/TASK-574-ash-lint-library.md) | Extract `ash-lint` CLI into a library + binary wrapper | SPEC-041 | 12 | ✅ Done |
 
 **Deliverable:** `ash-lint` exports `lint_module` API; CLI is a thin wrapper; lint rules are AST visitors.
 
@@ -2505,9 +2505,9 @@ Implement a production-quality LSP server for Ash with an embedded MCP bridge.
 **Priority:** Medium
 **Status:** ✅ Done
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 180 | ✅ Done ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | SPEC-038 | 180 | ✅ Done |
 
 **Deliverable:** `ash-lsp` and `ash-mcp` crates; diagnostics, hover, goto-definition, completion, references; VSCode extension skeleton.
 
@@ -2520,9 +2520,9 @@ Provide a source formatter for Ash that pretty-prints any valid `ModuleFile` whi
 **Priority:** Low
 **Status:** ✅ Done
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | SPEC-042 | 48 | ✅ Done ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | SPEC-042 | 48 | ✅ Done |
 
 **Deliverable:** `crates/ash-formatter` crate; `ash fmt` CLI subcommand; LSP `textDocument/formatting` handler.
 
@@ -2535,9 +2535,9 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 **Priority:** Low
 **Status:** ✅ Done
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------||
-|| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | ✅ Done ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | SPEC-043 | 48 | ✅ Done |
 
 **Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working.
 
@@ -2554,8 +2554,8 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 
 ### Track A: Pure-String Processor Core
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
 | [TASK-590](tasks/TASK-590-file-collector.md) | File collector and repository traversal | PLAN-090 §Track A | 4 | ✅ Complete |
 | [TASK-591](tasks/TASK-591-plan-index-parser.md) | PLAN-INDEX parser and coherence checker | PLAN-090 §Track A | 4 | ✅ Complete |
 | [TASK-592](tasks/TASK-592-spec-links-validator.md) | Spec cross-reference validator | PLAN-090 §Track A | 4 | ✅ Complete |
@@ -2564,23 +2564,23 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 
 ### Track B: Stdlib Substrates
 
-||| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|
-||| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | ✅ Complete ||
-|||| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | ✅ Complete ||
-|||| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | ✅ Complete ||
-|||| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | ✅ Complete ||
-||| [TASK-599](tasks/TASK-599-std-diff.md) | `std::diff` line-diff utility | PLAN-090 §Track B | 8 | ⏸️ Deferred ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-595](tasks/TASK-595-std-regex.md) | `std::regex` interface and Rust backend | PLAN-090 §Track B | 8 | ✅ Complete |
+| [TASK-596](tasks/TASK-596-std-markdown.md) | `std::markdown` CommonMark AST MVP | PLAN-090 §Track B | 16 | ✅ Complete |
+| [TASK-597](tasks/TASK-597-std-json.md) | `std::json` hybrid interface | PLAN-090 §Track B | 10 | ✅ Complete |
+| [TASK-598](tasks/TASK-598-std-process.md) | `std::process` built-in capability | PLAN-090 §Track B | 10 | ✅ Complete |
+| [TASK-599](tasks/TASK-599-std-diff.md) | `std::diff` line-diff utility | PLAN-090 §Track B | 8 | ⏸️ Deferred |
 
 ### Track C: Integration and Meta-Validation
 
-||| Task | Description | Spec | Est. Hours | Status ||
-|||------|-------------|------|------------|--------|
-|||| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | ✅ Complete |||
-|||| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | ✅ Complete |||
-|||| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | ✅ Complete |||
-|||| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | ✅ Complete |||
-||| [TASK-613](tasks/TASK-613-phase-90-status-corpus-reconciliation-and-task-595-e2e-validation.md) | Reconcile Phase 90 status/task corpus and prove or honestly downgrade TASK-595 end-to-end `std::regex` behavior | PLAN-090, TASK-595, SPEC-002, SPEC-003, SPEC-010, SPEC-017 | 4-8 | ✅ Complete |
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-600](tasks/TASK-600-example-conformance.md) | Example syntax conformance (`ash check` integration) | PLAN-090 §Track C | 6 | ✅ Complete |
+| [TASK-601](tasks/TASK-601-capability-boundary.md) | Capability boundary audit | PLAN-090 §Track C | 4 | ✅ Complete |
+| [TASK-602](tasks/TASK-602-meta-validation.md) | Meta-validation (processor audits itself) | PLAN-090 §Track C | 4 | ✅ Complete |
+| [TASK-603](tasks/TASK-603-ci-gate.md) | CI gate integration | PLAN-090 §Track C | 4 | ✅ Complete |
+| [TASK-613](tasks/TASK-613-phase-90-status-corpus-reconciliation-and-task-595-e2e-validation.md) | Reconcile Phase 90 status/task corpus and prove or honestly downgrade TASK-595 end-to-end `std::regex` behavior | PLAN-090, TASK-595, SPEC-002, SPEC-003, SPEC-010, SPEC-017 | 4-8 | ✅ Complete |
 
 **Deliverable:** `apps/spec_processor/src/main.ash` runs end-to-end, produces a structured report, and blocks CI on Tier 2 findings. New stdlib modules (`regex`, `markdown`, `json`, `process`) are available for downstream phases only where their end-to-end Ash-language surface is actually proven, and Phase 90 task/docs status is internally consistent on `main` after reconciliation.
 
@@ -2614,27 +2614,27 @@ Build a canonical Ash workflow that audits the Ash repository for spec drift, ex
 **Priority:** High
 **Status:** ✅ Done
 
-|| Task | Description | Spec | Est. Hours | Status ||
-||------|-------------|------|------------|--------|\
-|| [TASK-614](#) | Add `builtin` keyword and `BuiltinFnDef` surface AST variant | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-615](#) | Parse `builtin fn` declarations | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
-|| [TASK-616](#) | Lower `BuiltinFnDef` to IR | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-617](#) | Module-level snippet extraction for `builtin fn` | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-618](#) | Module loader registers `builtin fn` as callable exports | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
-|| [TASK-619](#) | Typechecker resolves `builtin fn` type signatures | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-620](#) | End-to-end import resolution for `builtin fn` | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-621](#) | Runtime builtin dispatch table | SPEC-BUILTIN-FN | 3-4 | ✅ Complete ||
-|| [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-626](#) | Declare record operation builtins | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-627](#) | Rewrite `std/src/regex.ash` with `builtin fn` declarations | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-628](#) | Move regex dispatch to evaluator builtin table | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-630](#) | Positive end-to-end regex test | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-629](#) | Delete legacy regex carrier | SPEC-BUILTIN-FN | 2-3 | ✅ Complete ||
-|| [TASK-631A](#) | Remove hardcoded builtin type entries covered by D1 | SPEC-BUILTIN-FN | 1-2 | ✅ Complete ||
-|| [TASK-631B](#) | Remove remaining hardcoded builtin type entries (blocked on D2) | SPEC-BUILTIN-FN | 2-3 | ✅ Done (Phase 93 TASK-643) ||
-|| [TASK-632](#) | Update CHANGELOG.md and PLAN-INDEX | — | 1 | ✅ Complete ||
-||| [TASK-633](#) | Full workspace verification | — | 1 | ✅ Complete ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-614](#) | Add `builtin` keyword and `BuiltinFnDef` surface AST variant | SPEC-BUILTIN-FN | 2-3 | ✅ Complete |
+| [TASK-615](#) | Parse `builtin fn` declarations | SPEC-BUILTIN-FN | 3-4 | ✅ Complete |
+| [TASK-616](#) | Lower `BuiltinFnDef` to IR | SPEC-BUILTIN-FN | 2-3 | ✅ Complete |
+| [TASK-617](#) | Module-level snippet extraction for `builtin fn` | SPEC-BUILTIN-FN | 1-2 | ✅ Complete |
+| [TASK-618](#) | Module loader registers `builtin fn` as callable exports | SPEC-BUILTIN-FN | 3-4 | ✅ Complete |
+| [TASK-619](#) | Typechecker resolves `builtin fn` type signatures | SPEC-BUILTIN-FN | 2-3 | ✅ Complete |
+| [TASK-620](#) | End-to-end import resolution for `builtin fn` | SPEC-BUILTIN-FN | 2-3 | ✅ Complete |
+| [TASK-621](#) | Runtime builtin dispatch table | SPEC-BUILTIN-FN | 3-4 | ✅ Complete |
+| [TASK-622](#) | Clear error on unknown builtin | SPEC-BUILTIN-FN | 1-2 | ✅ Complete |
+| [TASK-623](#) | Create `std/src/string.ash` with builtin declarations | SPEC-BUILTIN-FN | 2-3 | ✅ Complete |
+| [TASK-626](#) | Declare record operation builtins | SPEC-BUILTIN-FN | 1-2 | ✅ Complete |
+| [TASK-627](#) | Rewrite `std/src/regex.ash` with `builtin fn` declarations | SPEC-BUILTIN-FN | 1-2 | ✅ Complete |
+| [TASK-628](#) | Move regex dispatch to evaluator builtin table | SPEC-BUILTIN-FN | 2-3 | ✅ Complete |
+| [TASK-630](#) | Positive end-to-end regex test | SPEC-BUILTIN-FN | 1-2 | ✅ Complete |
+| [TASK-629](#) | Delete legacy regex carrier | SPEC-BUILTIN-FN | 2-3 | ✅ Complete |
+| [TASK-631A](#) | Remove hardcoded builtin type entries covered by D1 | SPEC-BUILTIN-FN | 1-2 | ✅ Complete |
+| [TASK-631B](#) | Remove remaining hardcoded builtin type entries (blocked on D2) | SPEC-BUILTIN-FN | 2-3 | ✅ Done (Phase 93 TASK-643) |
+| [TASK-632](#) | Update CHANGELOG.md and PLAN-INDEX | — | 1 | ✅ Complete |
+| [TASK-633](#) | Full workspace verification | — | 1 | ✅ Complete |
 
 **Deliverable:** `builtin fn` is now implemented as a first-class declaration
 form for pure runtime-provided functions. All tracks (A, B, C, D1, D2/D1.5, E, F)
@@ -2648,19 +2648,19 @@ complete and verified. TASK-631B resolved by Phase 93 TASK-643 which deleted
 **Priority:** Medium
 **Status:** ✅ Done
 
-||| Task | Description | Spec | Est. Hours | Status ||
-|||------|-------------|------|------------|--------||
-||| [TASK-634](#) | Add `signature` field to `InlineCallable` | SPEC-044 | 2-3 | ✅ Done ||
-||| [TASK-635](#) | Bind imported builtin signatures in `Engine::check()` | SPEC-044 | 3-4 | ✅ Done ||
-||| [TASK-636](#) | Audit type-variable scoping at call sites | SPEC-044 | 1-2 | ✅ Done ||
-||| [TASK-637](#) | Create `std/src/list.ash` with generic declarations | SPEC-044 | 2-3 | ✅ Done ||
-||| [TASK-638](#) | Complete list-op qualified dispatch wiring | SPEC-044 | 1 | ✅ Done ||
-||| [TASK-639](#) | Typecheck list ops through imported .ash declarations | SPEC-044 | 2-3 | ✅ Done ||
-||| [TASK-640](#) | End-to-end list ops verification | SPEC-044 | 1-2 | ✅ Done ||
-||| [TASK-641](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-044 | 1-2 | ✅ Done ||
-||| [TASK-642](#) | Type predicates dispatch + e2e verification | SPEC-044 | 1-2 | ✅ Done ||
-||| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-044 | 1 | ✅ Done ||
-||| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | ✅ Done ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-634](#) | Add `signature` field to `InlineCallable` | SPEC-044 | 2-3 | ✅ Done |
+| [TASK-635](#) | Bind imported builtin signatures in `Engine::check()` | SPEC-044 | 3-4 | ✅ Done |
+| [TASK-636](#) | Audit type-variable scoping at call sites | SPEC-044 | 1-2 | ✅ Done |
+| [TASK-637](#) | Create `std/src/list.ash` with generic declarations | SPEC-044 | 2-3 | ✅ Done |
+| [TASK-638](#) | Complete list-op qualified dispatch wiring | SPEC-044 | 1 | ✅ Done |
+| [TASK-639](#) | Typecheck list ops through imported .ash declarations | SPEC-044 | 2-3 | ✅ Done |
+| [TASK-640](#) | End-to-end list ops verification | SPEC-044 | 1-2 | ✅ Done |
+| [TASK-641](#) | Create `std/src/predicate.ash` with generic declarations | SPEC-044 | 1-2 | ✅ Done |
+| [TASK-642](#) | Type predicates dispatch + e2e verification | SPEC-044 | 1-2 | ✅ Done |
+| [TASK-643](#) | Delete `add_builtin_functions()` | SPEC-044 | 1 | ✅ Done |
+| [TASK-644](#) | Update CHANGELOG and PLAN-INDEX | — | 0.5 | ✅ Done |
 
 **Deliverable:** Generic type parameters on `builtin fn` declarations, unblocking list operations and type predicates. Tracks D2 and D1.5 from Phase 92 resolved. `add_builtin_functions()` deleted. All 11 tasks complete. 78+ new tests across ash-engine, ash-typeck, ash-interp.
 
@@ -2674,11 +2674,11 @@ complete and verified. TASK-631B resolved by Phase 93 TASK-643 which deleted
 
 Establish a static-first, human/AI shared knowledge substrate over the Ash corpus. This phase begins with corpus semantics: explicit metadata carriers, authority/status/health classification, and a pilot slice that tests the schema before registry generation, lint/audit tooling, onboarding bundles, and browser/query services.
 
-||| Task | Description | Spec | Est. Hours | Status ||
-|||------|-------------|------|------------|--------||
-||| [TASK-645](tasks/TASK-645-ash-wiki-concept-packet.md) | Ash wiki concept packet | SPEC-045 | 2-4 | ✅ Complete ||
-||| [TASK-646](tasks/TASK-646-ash-wiki-metadata-carrier-schema.md) | Ash wiki metadata carrier schema | SPEC-045 | 2-4 | ✅ Complete ||
-|||| [TASK-647](tasks/TASK-647-ash-wiki-pilot-classification-slice.md) | Ash wiki pilot classification slice | SPEC-045 | 3-5 | ✅ Complete ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-645](tasks/TASK-645-ash-wiki-concept-packet.md) | Ash wiki concept packet | SPEC-045 | 2-4 | ✅ Complete |
+| [TASK-646](tasks/TASK-646-ash-wiki-metadata-carrier-schema.md) | Ash wiki metadata carrier schema | SPEC-045 | 2-4 | ✅ Complete |
+| [TASK-647](tasks/TASK-647-ash-wiki-pilot-classification-slice.md) | Ash wiki pilot classification slice | SPEC-045 | 3-5 | ✅ Complete |
 
 **Deliverable:** Initial Ash wiki architecture corpus is in place, the metadata carrier model is frozen, and one pilot slice is ready to validate authority/status/health and supersession semantics before registry/lint/query implementation begins.
 
@@ -2695,14 +2695,14 @@ Add `Expr::Let { pattern, expr, body }` to the core IR as the canonical represen
 
 **Why now:** Any non-trivial fn body (`fn f(x) { let y = x + 1; y * 2 }`) is currently broken. Phase 90 spec processor, Phase 94 wiki, and all future application phases need multi-statement fn bodies.
 
-||| Task | Description | Spec | Est. Hours | Status ||
-|||------|-------------|------|------------|--------||
-||| [TASK-648](tasks/TASK-648-core-expr-let-variant.md) | Add `Expr::Let` to core IR + fix all exhaustive matches | SPEC-001 §2.6 | 2-3 | ✅ Complete ||
-||| [TASK-649](tasks/TASK-649-block-to-let-lowering.md) | Lowerer: desugar `Expr::Block` → nested `Expr::Let`, delete module_loader workaround | SPEC-001 §2.6 | 1-2 | ✅ Complete ||
-||| [TASK-650](tasks/TASK-650-eval-expr-let.md) | Evaluator: handle `Expr::Let` in `eval.rs` | SPEC-004 §4.6 | 0.5-1 | ✅ Complete ||
-||| [TASK-651](tasks/TASK-651-typecheck-expr-let.md) | Type checker: handle `Expr::Let` in `check_expr.rs` | SPEC-004 §4.6 | 1-2 | ✅ Complete ||
-||| [TASK-652](tasks/TASK-652-expr-let-integration-tests.md) | Integration tests: fn bodies with let-sequencing work end-to-end | — | 1-2 | ✅ Complete ||
-||| [TASK-653](tasks/TASK-653-and-or-short-circuit.md) | Fix `and`/`or` to short-circuit per SPEC-004 EXPR-AND-FALSE/EXPR-OR-TRUE | SPEC-004 §4.6 | 0.5-1 | ✅ Complete ||
+| Task | Description | Spec | Est. Hours | Status |
+| ------ | ------------- | ------ | ------------ | -------- |
+| [TASK-648](tasks/TASK-648-core-expr-let-variant.md) | Add `Expr::Let` to core IR + fix all exhaustive matches | SPEC-001 §2.6 | 2-3 | ✅ Complete |
+| [TASK-649](tasks/TASK-649-block-to-let-lowering.md) | Lowerer: desugar `Expr::Block` → nested `Expr::Let`, delete module_loader workaround | SPEC-001 §2.6 | 1-2 | ✅ Complete |
+| [TASK-650](tasks/TASK-650-eval-expr-let.md) | Evaluator: handle `Expr::Let` in `eval.rs` | SPEC-004 §4.6 | 0.5-1 | ✅ Complete |
+| [TASK-651](tasks/TASK-651-typecheck-expr-let.md) | Type checker: handle `Expr::Let` in `check_expr.rs` | SPEC-004 §4.6 | 1-2 | ✅ Complete |
+| [TASK-652](tasks/TASK-652-expr-let-integration-tests.md) | Integration tests: fn bodies with let-sequencing work end-to-end | — | 1-2 | ✅ Complete |
+| [TASK-653](tasks/TASK-653-and-or-short-circuit.md) | Fix `and`/`or` to short-circuit per SPEC-004 EXPR-AND-FALSE/EXPR-OR-TRUE | SPEC-004 §4.6 | 0.5-1 | ✅ Complete |
 
 **Deliverable:** `Expr::Let` is a first-class core expression form. Fn bodies with let-sequencing parse, lower, typecheck, and execute through all code paths (inline fn expressions, top-level fn definitions, imported pub fn). The module_loader `normalize_imported_callable_expr` workaround is deleted. `and`/`or` short-circuit correctly per SPEC-004.
 
@@ -2713,20 +2713,20 @@ Add `Expr::Let { pattern, expr, body }` to the core IR as the canonical represen
 
 Close the gap between executing single-file workflows and executing real programs. Connect module resolution to engine execution, ensure full stdlib auto-loading, and harden capability providers for real-world IO.
 
-||| Task | Description | Est. Hours | Status ||
-|||------|-------------|------------|--------||
-||| TASK-654 | Module resolver failing test suite | 2-3 | ✅ Complete ||
-||| TASK-655 | Module resolver core — cycle detection | 2-3 | ✅ Complete ||
-||| TASK-656 | Stdlib as resolver root | 3-4 | ✅ Complete ||
-||| TASK-657 | Thread resolver into engine execution | 6-8 | ✅ Complete ||
-||| TASK-658 | CLI integration — route ordinary files through resolver | 2-3 | ✅ Complete ||
-||| TASK-659 | Entry bootstrap preservation verification | 1-2 | ✅ Complete ||
-||| TASK-666 | HTTP capability provider | 3-4 | ✅ Complete ||
-||| TASK-667 | Time capability provider | 2-3 | ✅ Complete ||
-||| TASK-668 | Process provider hardening | 2-3 | ✅ Complete ||
-||| TASK-669 | Multi-file e2e tests | 3-4 | ✅ Complete ||
-||| TASK-670 | Capability boundary audit | 3-4 | ✅ Complete ||
-||| TASK-671 | Performance baseline | 2-3 | ✅ Complete ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-654 | Module resolver failing test suite | 2-3 | ✅ Complete |
+| TASK-655 | Module resolver core — cycle detection | 2-3 | ✅ Complete |
+| TASK-656 | Stdlib as resolver root | 3-4 | ✅ Complete |
+| TASK-657 | Thread resolver into engine execution | 6-8 | ✅ Complete |
+| TASK-658 | CLI integration — route ordinary files through resolver | 2-3 | ✅ Complete |
+| TASK-659 | Entry bootstrap preservation verification | 1-2 | ✅ Complete |
+| TASK-666 | HTTP capability provider | 3-4 | ✅ Complete |
+| TASK-667 | Time capability provider | 2-3 | ✅ Complete |
+| TASK-668 | Process provider hardening | 2-3 | ✅ Complete |
+| TASK-669 | Multi-file e2e tests | 3-4 | ✅ Complete |
+| TASK-670 | Capability boundary audit | 3-4 | ✅ Complete |
+| TASK-671 | Performance baseline | 2-3 | ✅ Complete |
 
 **Track A (Module Resolution):** ✅ Complete. Module resolver supports cycle detection, stdlib resolves through builtin root, CLI routes ordinary files through engine.run_file() for import resolution.
 
@@ -2748,33 +2748,33 @@ Close the gap between executing single-file workflows and executing real program
 
 Add expression-level `Act<A>` as a first-class effectful computation model that interoperates with the existing workflow runtime. Phase 97 is explicitly additive: `act { ... }` is surface-only and lowers into existing core expressions; `invoke` is a runtime primitive callable; existing `Workflow::Act` and `Type::Fun(...)` remain in place.
 
-||| Task | Description | Est. Hours | Status ||
-|||------|-------------|------------|--------||
-||| TASK-672 | Preflight doc cleanup: normalize architecture and syntax | 2 | ✅ Complete ||
-||| TASK-673 | Add surface `ActStmt` type + `Expr::ActBlock` | 2 | ✅ Complete ||
-||| TASK-674 | Parse `act { ... }` in expression context | 3 | ✅ Complete ||
-||| TASK-675 | Lower `SurfaceExpr::ActBlock` into existing core expressions | 5 | ✅ Complete ||
-||| TASK-676 | Property/integration tests for act-block parsing and lowering | 3 | ✅ Complete ||
-||| TASK-677 | Register `Act` type constructor with kind `* -> *` | 1 | ✅ Complete ||
-||| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, return rules | 4 | ✅ Complete ||
-||| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | ✅ Complete ||
-||| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure fn bodies | 3 | ✅ Complete ||
-||| TASK-681 | Record/test additive coexistence with existing `Type::Fun(...)` | 2 | ✅ Complete ||
-||| TASK-682 | Type-system tests for purity rejection and `Act<T>` inference | 4 | ✅ Complete ||
-||| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2 | ✅ Complete ||
-||| TASK-684 | Add `invoke` runtime primitive dispatch through `Expr::Call` | 4 | ✅ Complete ||
-||| TASK-685 | Implement closure-backed execution path for desugared `Act<T>` values | 4 | ✅ Complete ||
-||| TASK-686 | Workflow bridge: construct/apply `ActEnv` from workflow context | 3 | ✅ Complete ||
-||| TASK-687 | Runtime integration tests: effectful fn composition and interop | 4 | ✅ Complete ||
-||| TASK-688 | Finalize SPEC-047 amendments and targeted spec updates | 2 | ✅ Complete ||
-||| TASK-689A | Establish honest `std::act` substrate for ordinary library helpers | 3 | ✅ Complete ||
-||| TASK-689B | Preserve imported ordinary `pub fn` signatures for `std::act` | 3 | ✅ Complete ||
-||| TASK-689C | Establish policy/environment substrate for ordinary `std::act` `guard` | 3 | ✅ Complete ||
-||| TASK-689E | Refine library type-export semantics for opaque `Act` | 3 | ✅ Complete ||
-||| TASK-689D | Establish honest opaque `Act` library boundary for ordinary `std::act` helpers | 3 | ✅ Complete ||
-||| TASK-689 | Replace placeholder `std::act` stubs with ordinary library implementations | 2 | ✅ Complete ||
-||| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end | 3 | ✅ Complete ||
-||| TASK-691 | Performance baseline for desugared act-block execution | 1 | ✅ Complete ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-672 | Preflight doc cleanup: normalize architecture and syntax | 2 | ✅ Complete |
+| TASK-673 | Add surface `ActStmt` type + `Expr::ActBlock` | 2 | ✅ Complete |
+| TASK-674 | Parse `act { ... }` in expression context | 3 | ✅ Complete |
+| TASK-675 | Lower `SurfaceExpr::ActBlock` into existing core expressions | 5 | ✅ Complete |
+| TASK-676 | Property/integration tests for act-block parsing and lowering | 3 | ✅ Complete |
+| TASK-677 | Register `Act` type constructor with kind `* -> *` | 1 | ✅ Complete |
+| TASK-678 | Type-check `Expr::ActBlock`: bind, pure-bind, return rules | 4 | ✅ Complete |
+| TASK-679 | Type-check `invoke(provider, action, args)` as `Act<Value>` | 2 | ✅ Complete |
+| TASK-680 | Purity enforcement: reject `act {}` and `invoke(...)` in pure fn bodies | 3 | ✅ Complete |
+| TASK-681 | Record/test additive coexistence with existing `Type::Fun(...)` | 2 | ✅ Complete |
+| TASK-682 | Type-system tests for purity rejection and `Act<T>` inference | 4 | ✅ Complete |
+| TASK-683 | Define `ActEnv` runtime struct and construction boundary | 2 | ✅ Complete |
+| TASK-684 | Add `invoke` runtime primitive dispatch through `Expr::Call` | 4 | ✅ Complete |
+| TASK-685 | Implement closure-backed execution path for desugared `Act<T>` values | 4 | ✅ Complete |
+| TASK-686 | Workflow bridge: construct/apply `ActEnv` from workflow context | 3 | ✅ Complete |
+| TASK-687 | Runtime integration tests: effectful fn composition and interop | 4 | ✅ Complete |
+| TASK-688 | Finalize SPEC-047 amendments and targeted spec updates | 2 | ✅ Complete |
+| TASK-689A | Establish honest `std::act` substrate for ordinary library helpers | 3 | ✅ Complete |
+| TASK-689B | Preserve imported ordinary `pub fn` signatures for `std::act` | 3 | ✅ Complete |
+| TASK-689C | Establish policy/environment substrate for ordinary `std::act` `guard` | 3 | ✅ Complete |
+| TASK-689E | Refine library type-export semantics for opaque `Act` | 3 | ✅ Complete |
+| TASK-689D | Establish honest opaque `Act` library boundary for ordinary `std::act` helpers | 3 | ✅ Complete |
+| TASK-689 | Replace placeholder `std::act` stubs with ordinary library implementations | 2 | ✅ Complete |
+| TASK-690 | Cross-layer validation: parse -> type -> execute end-to-end | 3 | ✅ Complete |
+| TASK-691 | Performance baseline for desugared act-block execution | 1 | ✅ Complete |
 
 **Track A (Preflight + Surface + Lowering):** 15h. Normalize docs, add surface act-block syntax, and lower into existing core expressions.
 
@@ -2801,22 +2801,22 @@ Add expression-level `Act<A>` as a first-class effectful computation model that 
 
 Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process handles, operational `fail`/`with_error`, process identity/lifecycle, and workflow boundary reporting. Phase 98 is substrate-first: it does not jump directly to `par`; it first establishes identity, failure, type constructors, process registry, and handle observation.
 
-||| Task | Description | Est. Hours | Status ||
-|||------|-------------|------------|--------||
-||| TASK-705 | Semantic tower runtime preflight and Phase 97 dependency check | 2 | ✅ Complete ||
-||| TASK-706 | Runtime identity and structured failure carriers | 5 | ✅ Complete ||
-||| TASK-707 | Register `Proc` and `P` type constructors | 3 | ✅ Complete ||
-||| TASK-718 | `Proc` core `unit`/`bind`/`then` combinators | 4 | ✅ Complete ||
-||| TASK-708 | Operational `fail` and scoped `with_error` | 8 | ✅ Complete ||
-||| TASK-709 | Process registry and child environment projection | 7 | ✅ Complete ||
-||| TASK-710 | Affine process handles and `await` | 6 | ✅ Complete ||
-||| TASK-711 | Process `yield : Proc<Unit>` | 3 | ✅ Complete ||
-||| TASK-712 | `par` and `scatter` child admission | 7 | ✅ Complete ||
-||| TASK-713 | `join` and `gather` wait-for-all observation | 6 | ✅ Complete ||
-||| TASK-714 | Workflow boundary carriers and admission context | 5 | ✅ Complete ||
-||| TASK-715 | Workflow admission and contract evidence | 6 | ✅ Complete ||
-||| TASK-716 | Workflow completion/report construction | 6 | ✅ Complete ||
-||| TASK-717 | Semantic tower cross-layer validation | 5 | ✅ Complete ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-705 | Semantic tower runtime preflight and Phase 97 dependency check | 2 | ✅ Complete |
+| TASK-706 | Runtime identity and structured failure carriers | 5 | ✅ Complete |
+| TASK-707 | Register `Proc` and `P` type constructors | 3 | ✅ Complete |
+| TASK-718 | `Proc` core `unit`/`bind`/`then` combinators | 4 | ✅ Complete |
+| TASK-708 | Operational `fail` and scoped `with_error` | 8 | ✅ Complete |
+| TASK-709 | Process registry and child environment projection | 7 | ✅ Complete |
+| TASK-710 | Affine process handles and `await` | 6 | ✅ Complete |
+| TASK-711 | Process `yield : Proc<Unit>` | 3 | ✅ Complete |
+| TASK-712 | `par` and `scatter` child admission | 7 | ✅ Complete |
+| TASK-713 | `join` and `gather` wait-for-all observation | 6 | ✅ Complete |
+| TASK-714 | Workflow boundary carriers and admission context | 5 | ✅ Complete |
+| TASK-715 | Workflow admission and contract evidence | 6 | ✅ Complete |
+| TASK-716 | Workflow completion/report construction | 6 | ✅ Complete |
+| TASK-717 | Semantic tower cross-layer validation | 5 | ✅ Complete |
 
 **Track A (Substrate + Failure):** 22h. Validate prerequisites, add identity/failure carriers, register process types, add the non-concurrent `Proc` combinator surface, and implement operational bottom/scoped handling.
 
@@ -2842,9 +2842,9 @@ Implement the semantic tower runtime slice for `Proc<A>`, affine `P<A>` process 
 
 Introduce the explicit `proc::from_act : Act<A> -> Proc<A>` embedding boundary after verifying the landed Phase 97 hidden-`ActEnv` force path. Phase 99 is intentionally narrow: it does not reopen the completed Phase 98 process/workflow runtime slice, and it must preserve the public distinction between `Act<A>` and `Proc<A>`.
 
-|||| Task | Description | Est. Hours | Status ||
-||||------|-------------|------------|--------||
-||||| TASK-719 | Verify and expose `proc::from_act` as the Act-to-Proc embedding boundary | 6 | ✅ Complete ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-719 | Verify and expose `proc::from_act` as the Act-to-Proc embedding boundary | 6 | ✅ Complete |
 
 **Track A (Embedding Boundary):** 6h. Verify the exact landed `Act` hidden-carrier contract, add the explicit `proc::from_act` surface, and prove it embeds effectful computation into `Proc` honestly without exposing `ActEnv` or silently creating process-runtime semantics.
 
@@ -2862,12 +2862,12 @@ Introduce the explicit `proc::from_act : Act<A> -> Proc<A>` embedding boundary a
 
 Promote NOTE-009 into a split normative contract: SPEC-052 owns capability interfaces, implementation recipes, bindings, module visibility, conformance, and invocation boundaries; SPEC-053 owns runtime resources, resource instances/bindings, authority provenance, lifecycle, and Proc split/join resource policy. This phase is docs/spec-only and intentionally does not implement parser, typechecker, or runtime behavior.
 
-|||| Task | Description | Est. Hours | Status ||
-||||------|-------------|------------|--------||
-|||| TASK-720 | Write SPEC-052 capability interface/implementation contract | 3 | ✅ Complete ||
-|||| TASK-721 | Write SPEC-053 runtime resources and authority provenance contract | 3 | ✅ Complete ||
-|||| TASK-722 | Reconcile capability/resource spec ownership across indices and planning docs | 2 | ✅ Complete ||
-|||| TASK-723 | Phase 100 closeout audit | 1 | ✅ Complete ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-720 | Write SPEC-052 capability interface/implementation contract | 3 | ✅ Complete |
+| TASK-721 | Write SPEC-053 runtime resources and authority provenance contract | 3 | ✅ Complete |
+| TASK-722 | Reconcile capability/resource spec ownership across indices and planning docs | 2 | ✅ Complete |
+| TASK-723 | Phase 100 closeout audit | 1 | ✅ Complete |
 
 **Track A (Spec Ownership):** 9h. Convert NOTE-009 concepts into explicit spec ownership boundaries and a self-contained implementation plan.
 
@@ -2885,13 +2885,13 @@ Promote NOTE-009 into a split normative contract: SPEC-052 owns capability inter
 
 Add parser and surface AST substrate for `capability interface`, `capability impl`, `resource type`, resource allocation clauses, capability binding clauses, and module export/import metadata. This phase transports metadata only; it does not type-check implementation conformance or execute capability implementation bodies.
 
-|||| Task | Description | Est. Hours | Status ||
-||||------|-------------|------------|--------||
-|||| TASK-724 | Capability interface AST/parser substrate | 5 | 📝 Planned ||
-|||| TASK-725 | Capability implementation AST/parser substrate | 6 | 📝 Planned ||
-|||| TASK-726 | Resource type and binding clause parser substrate | 6 | 📝 Planned ||
-|||| TASK-727 | Module metadata for capability/resource definitions | 5 | 📝 Planned ||
-|||| TASK-728 | Parser/module conformance tests and docs | 4 | 📝 Planned ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-724 | Capability interface AST/parser substrate | 5 | 📝 Planned |
+| TASK-725 | Capability implementation AST/parser substrate | 6 | 📝 Planned |
+| TASK-726 | Resource type and binding clause parser substrate | 6 | 📝 Planned |
+| TASK-727 | Module metadata for capability/resource definitions | 5 | 📝 Planned |
+| TASK-728 | Parser/module conformance tests and docs | 4 | 📝 Planned |
 
 **Track A (Syntax):** 17h. Parse and preserve the new declarations and header clauses without runtime behavior.
 **Track B (Module Metadata):** 9h. Export/import visible interfaces, implementations, and resource declarations with focused conformance coverage.
@@ -2905,14 +2905,14 @@ Add parser and surface AST substrate for `capability interface`, `capability imp
 
 Type-check capability interface operation environments, implementation conformance, resource requirements, authority provenance, and module-owned capability binding resolution. This phase rejects malformed implementations and ambient/unadmitted binding use before runtime execution exists.
 
-|||| Task | Description | Est. Hours | Status ||
-||||------|-------------|------------|--------||
-|||| TASK-729 | Capability interface operation signature environments | 5 | 📝 Planned ||
-|||| TASK-730 | Capability implementation conformance checking | 7 | 📝 Planned ||
-|||| TASK-731 | Resource type and binding typechecking | 6 | 📝 Planned ||
-|||| TASK-732 | Authority provenance static validation | 5 | 📝 Planned ||
-|||| TASK-733 | Module-owned capability binding resolution | 6 | 📝 Planned ||
-|||| TASK-734 | Typechecker integration and negative tests | 5 | 📝 Planned ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-729 | Capability interface operation signature environments | 5 | 📝 Planned |
+| TASK-730 | Capability implementation conformance checking | 7 | 📝 Planned |
+| TASK-731 | Resource type and binding typechecking | 6 | 📝 Planned |
+| TASK-732 | Authority provenance static validation | 5 | 📝 Planned |
+| TASK-733 | Module-owned capability binding resolution | 6 | 📝 Planned |
+| TASK-734 | Typechecker integration and negative tests | 5 | 📝 Planned |
 
 **Track A (Interfaces + Implementations):** 12h. Build operation signature environments and check implementation recipes against target interfaces.
 **Track B (Resources + Authority):** 11h. Validate resource requirements, binding clauses, and statically visible authority provenance.
@@ -2927,14 +2927,14 @@ Type-check capability interface operation environments, implementation conforman
 
 Introduce runtime resource instance carriers, resource lifecycle/access/split metadata, capability binding admission, internal authority allocation, derived-authority non-widening checks, and Proc resource split/join policy enforcement. This phase establishes explicit runtime authority without yet requiring all Ash-defined implementation body execution paths.
 
-|||| Task | Description | Est. Hours | Status ||
-||||------|-------------|------------|--------||
-|||| TASK-735 | Runtime resource instance carriers | 6 | 📝 Planned ||
-|||| TASK-736 | Capability binding admission API | 6 | 📝 Planned ||
-|||| TASK-737 | Internal authority allocation and resource admission | 7 | 📝 Planned ||
-|||| TASK-738 | Derived authority non-widening runtime checks | 6 | 📝 Planned ||
-|||| TASK-739 | Proc resource split/join policy enforcement | 7 | 📝 Planned ||
-|||| TASK-740 | Runtime resource/binding integration tests | 5 | 📝 Planned ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-735 | Runtime resource instance carriers | 6 | 📝 Planned |
+| TASK-736 | Capability binding admission API | 6 | 📝 Planned |
+| TASK-737 | Internal authority allocation and resource admission | 7 | 📝 Planned |
+| TASK-738 | Derived authority non-widening runtime checks | 6 | 📝 Planned |
+| TASK-739 | Proc resource split/join policy enforcement | 7 | 📝 Planned |
+| TASK-740 | Runtime resource/binding integration tests | 5 | 📝 Planned |
 
 **Track A (Resource Runtime):** 13h. Add resource identity/lifecycle carriers and allocation/admission.
 **Track B (Capability Admission):** 12h. Admit host/internal/derived capability bindings with provenance.
@@ -2949,13 +2949,13 @@ Introduce runtime resource instance carriers, resource lifecycle/access/split me
 
 Execute Ash-defined capability implementation bodies and prove the model with adapter, mock, replay, internal KV, and test-clock pilots. This phase turns the substrate into a usable capability-substitution workflow for tests, replay, and host/application integration.
 
-|||| Task | Description | Est. Hours | Status ||
-||||------|-------------|------------|--------||
-|||| TASK-741 | Execute Ash-defined capability implementation bodies | 8 | 📝 Planned ||
-|||| TASK-742 | Adapter, mock, and replay capability examples | 5 | 📝 Planned ||
-|||| TASK-743 | CLI/engine capability binding configuration surface | 6 | 📝 Planned ||
-|||| TASK-744 | Standard internal KV and test-clock pilots | 7 | 📝 Planned ||
-|||| TASK-745 | Final docs, examples, and verification closeout | 5 | 📝 Planned ||
+| Task | Description | Est. Hours | Status |
+| ------ | ------------- | ------------ | -------- |
+| TASK-741 | Execute Ash-defined capability implementation bodies | 8 | 📝 Planned |
+| TASK-742 | Adapter, mock, and replay capability examples | 5 | 📝 Planned |
+| TASK-743 | CLI/engine capability binding configuration surface | 6 | 📝 Planned |
+| TASK-744 | Standard internal KV and test-clock pilots | 7 | 📝 Planned |
+| TASK-745 | Final docs, examples, and verification closeout | 5 | 📝 Planned |
 
 **Track A (Execution):** 8h. Route implementation operation bodies through the effectful runtime with explicit dependency scope.
 **Track B (DX Pilots):** 18h. Add examples and host configuration surfaces for substitution, mock/replay, and internal resources.

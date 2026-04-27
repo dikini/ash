@@ -2853,3 +2853,116 @@ Introduce the explicit `proc::from_act : Act<A> -> Proc<A>` embedding boundary a
 - D2: the hidden `ActEnv` boundary remains runtime-only and protected.
 - D3: no accidental child-process, public-handle, or workflow-report semantics are added unless explicitly specified and verified.
 
+## Phase 100: Capability Interfaces, Implementations, Resources, and Authority Provenance Specs
+
+**Priority:** High (promotes NOTE-009 into normative implementation-grade specs)
+**Status:** ✅ Complete
+**Spec:** SPEC-052, SPEC-053
+**Plan:** docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md
+
+Promote NOTE-009 into a split normative contract: SPEC-052 owns capability interfaces, implementation recipes, bindings, module visibility, conformance, and invocation boundaries; SPEC-053 owns runtime resources, resource instances/bindings, authority provenance, lifecycle, and Proc split/join resource policy. This phase is docs/spec-only and intentionally does not implement parser, typechecker, or runtime behavior.
+
+|||| Task | Description | Est. Hours | Status ||
+||||------|-------------|------------|--------||
+|||| TASK-720 | Write SPEC-052 capability interface/implementation contract | 3 | ✅ Complete ||
+|||| TASK-721 | Write SPEC-053 runtime resources and authority provenance contract | 3 | ✅ Complete ||
+|||| TASK-722 | Reconcile capability/resource spec ownership across indices and planning docs | 2 | ✅ Complete ||
+|||| TASK-723 | Phase 100 closeout audit | 1 | ✅ Complete ||
+
+**Track A (Spec Ownership):** 9h. Convert NOTE-009 concepts into explicit spec ownership boundaries and a self-contained implementation plan.
+
+**Decision gates resolved:**
+- D1: Capability interfaces are stateless operation surfaces; implementation recipes and resource instances are separate entities.
+- D2: Ash may create internal authority only for explicit Ash-owned resources with identity, lifecycle, access policy, split/join policy, and provenance.
+- D3: Existing `pub capability` and Rust `CapabilityProvider` behavior remains compatible while explicit interface/implementation/binding syntax is added incrementally.
+
+## Phase 101: Capability/Resource Parser, Surface AST, and Module Metadata
+
+**Priority:** High (syntax and metadata substrate for SPEC-052/SPEC-053)
+**Status:** 📝 Planned
+**Spec:** SPEC-052, SPEC-053, SPEC-009, SPEC-012
+**Plan:** docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md
+
+Add parser and surface AST substrate for `capability interface`, `capability impl`, `resource type`, resource allocation clauses, capability binding clauses, and module export/import metadata. This phase transports metadata only; it does not type-check implementation conformance or execute capability implementation bodies.
+
+|||| Task | Description | Est. Hours | Status ||
+||||------|-------------|------------|--------||
+|||| TASK-724 | Capability interface AST/parser substrate | 5 | 📝 Planned ||
+|||| TASK-725 | Capability implementation AST/parser substrate | 6 | 📝 Planned ||
+|||| TASK-726 | Resource type and binding clause parser substrate | 6 | 📝 Planned ||
+|||| TASK-727 | Module metadata for capability/resource definitions | 5 | 📝 Planned ||
+|||| TASK-728 | Parser/module conformance tests and docs | 4 | 📝 Planned ||
+
+**Track A (Syntax):** 17h. Parse and preserve the new declarations and header clauses without runtime behavior.
+**Track B (Module Metadata):** 9h. Export/import visible interfaces, implementations, and resource declarations with focused conformance coverage.
+
+## Phase 102: Static Semantics and Binding-Time Type Contracts
+
+**Priority:** High (static safety before runtime admission)
+**Status:** 📝 Planned
+**Spec:** SPEC-052, SPEC-053, SPEC-003, SPEC-017
+**Plan:** docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md
+
+Type-check capability interface operation environments, implementation conformance, resource requirements, authority provenance, and module-owned capability binding resolution. This phase rejects malformed implementations and ambient/unadmitted binding use before runtime execution exists.
+
+|||| Task | Description | Est. Hours | Status ||
+||||------|-------------|------------|--------||
+|||| TASK-729 | Capability interface operation signature environments | 5 | 📝 Planned ||
+|||| TASK-730 | Capability implementation conformance checking | 7 | 📝 Planned ||
+|||| TASK-731 | Resource type and binding typechecking | 6 | 📝 Planned ||
+|||| TASK-732 | Authority provenance static validation | 5 | 📝 Planned ||
+|||| TASK-733 | Module-owned capability binding resolution | 6 | 📝 Planned ||
+|||| TASK-734 | Typechecker integration and negative tests | 5 | 📝 Planned ||
+
+**Track A (Interfaces + Implementations):** 12h. Build operation signature environments and check implementation recipes against target interfaces.
+**Track B (Resources + Authority):** 11h. Validate resource requirements, binding clauses, and statically visible authority provenance.
+**Track C (Resolution + Tests):** 11h. Route capability calls through explicit admitted bindings and add negative coverage.
+
+## Phase 103: Runtime Resource and Binding Substrate
+
+**Priority:** High (runtime substrate for internal and derived authority)
+**Status:** 📝 Planned
+**Spec:** SPEC-052, SPEC-053, SPEC-049, SPEC-051
+**Plan:** docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md
+
+Introduce runtime resource instance carriers, resource lifecycle/access/split metadata, capability binding admission, internal authority allocation, derived-authority non-widening checks, and Proc resource split/join policy enforcement. This phase establishes explicit runtime authority without yet requiring all Ash-defined implementation body execution paths.
+
+|||| Task | Description | Est. Hours | Status ||
+||||------|-------------|------------|--------||
+|||| TASK-735 | Runtime resource instance carriers | 6 | 📝 Planned ||
+|||| TASK-736 | Capability binding admission API | 6 | 📝 Planned ||
+|||| TASK-737 | Internal authority allocation and resource admission | 7 | 📝 Planned ||
+|||| TASK-738 | Derived authority non-widening runtime checks | 6 | 📝 Planned ||
+|||| TASK-739 | Proc resource split/join policy enforcement | 7 | 📝 Planned ||
+|||| TASK-740 | Runtime resource/binding integration tests | 5 | 📝 Planned ||
+
+**Track A (Resource Runtime):** 13h. Add resource identity/lifecycle carriers and allocation/admission.
+**Track B (Capability Admission):** 12h. Admit host/internal/derived capability bindings with provenance.
+**Track C (Proc Policy):** 12h. Enforce resource split/join policy across process boundaries and validate with integration tests.
+
+## Phase 104: Ash-Defined Capability Implementations and Pilot DX
+
+**Priority:** Medium (developer-facing proof of the new model)
+**Status:** 📝 Planned
+**Spec:** SPEC-052, SPEC-053, SPEC-005, SPEC-010
+**Plan:** docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md
+
+Execute Ash-defined capability implementation bodies and prove the model with adapter, mock, replay, internal KV, and test-clock pilots. This phase turns the substrate into a usable capability-substitution workflow for tests, replay, and host/application integration.
+
+|||| Task | Description | Est. Hours | Status ||
+||||------|-------------|------------|--------||
+|||| TASK-741 | Execute Ash-defined capability implementation bodies | 8 | 📝 Planned ||
+|||| TASK-742 | Adapter, mock, and replay capability examples | 5 | 📝 Planned ||
+|||| TASK-743 | CLI/engine capability binding configuration surface | 6 | 📝 Planned ||
+|||| TASK-744 | Standard internal KV and test-clock pilots | 7 | 📝 Planned ||
+|||| TASK-745 | Final docs, examples, and verification closeout | 5 | 📝 Planned ||
+
+**Track A (Execution):** 8h. Route implementation operation bodies through the effectful runtime with explicit dependency scope.
+**Track B (DX Pilots):** 18h. Add examples and host configuration surfaces for substitution, mock/replay, and internal resources.
+**Track C (Closeout):** 5h. Reconcile docs, examples, changelog, and verification evidence.
+
+**Decision gates:**
+- D1: First implementation slice keeps resource bindings environment-owned; no first-class `ResourceRef<T>` unless a later spec/task explicitly adds it.
+- D2: Runtime admission distinguishes host, internal, and derived authority provenance.
+- D3: Derived implementations may narrow/decorate authority but must not widen beyond declared dependencies.
+

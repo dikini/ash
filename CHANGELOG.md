@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- SPEC-052, SPEC-053, PLAN-100, and TASK-720 through TASK-745: promoted NOTE-009 into a normative capability/resource planning packet covering stateless capability interfaces, Ash-defined implementation recipes, binding-time selection, runtime resource instances, host/internal/derived authority provenance, Proc resource split/join policy, and phased implementation from parser substrate through pilot DX examples.
+
 - PLAN-099 / TASK-719: planned the post-Phase-98 `proc::from_act` follow-on as an explicit Act-to-Proc embedding boundary, grounded in the verified Phase 97 hidden-`ActEnv` force path and preserving the public `Act`/`Proc` distinction.
 
 - TASK-719: added the explicit `std::proc::from_act : Act<A> -> Proc<A>` embedding surface across stdlib, type checking, interpreter forcing, and workflow-boundary compatibility checks, preserving hidden-`ActEnv` enforcement, `Proc<Act<A>>` non-flattening, and no child-process/public-handle inflation.

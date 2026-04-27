@@ -2879,7 +2879,7 @@ Promote [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-I
 ## Phase 101: Capability/Resource Parser, Surface AST, and Module Metadata
 
 **Priority:** High (syntax and metadata substrate for [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)/[SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md))
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), [SPEC-009](../spec/SPEC-009-MODULES.md), [SPEC-012](../spec/SPEC-012-IMPORTS.md)
 **Plan:** [docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md](PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md)
 
@@ -2887,11 +2887,11 @@ Add parser and surface AST substrate for `capability interface`, `capability imp
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
-| [TASK-724](tasks/TASK-724-capability-interface-ast-parser-substrate.md) | Capability interface AST/parser substrate | 5 | 📝 Planned |
-| [TASK-725](tasks/TASK-725-capability-implementation-ast-parser-substrate.md) | Capability implementation AST/parser substrate | 6 | 📝 Planned |
-| [TASK-726](tasks/TASK-726-resource-type-and-binding-clause-parser-substrate.md) | Resource type and binding clause parser substrate | 6 | 📝 Planned |
-| [TASK-727](tasks/TASK-727-module-metadata-for-capability-resource-definitions.md) | Module metadata for capability/resource definitions | 5 | 📝 Planned |
-| [TASK-728](tasks/TASK-728-parser-module-conformance-tests-and-docs.md) | Parser/module conformance tests and docs | 4 | 📝 Planned |
+| [TASK-724](tasks/TASK-724-capability-interface-ast-parser-substrate.md) | Capability interface AST/parser substrate | 5 | ✅ Complete |
+| [TASK-725](tasks/TASK-725-capability-implementation-ast-parser-substrate.md) | Capability implementation AST/parser substrate | 6 | ✅ Complete |
+| [TASK-726](tasks/TASK-726-resource-type-and-binding-clause-parser-substrate.md) | Resource type and binding clause parser substrate | 6 | ✅ Complete |
+| [TASK-727](tasks/TASK-727-module-metadata-for-capability-resource-definitions.md) | Module metadata for capability/resource definitions | 5 | ✅ Complete |
+| [TASK-728](tasks/TASK-728-parser-module-conformance-tests-and-docs.md) | Parser/module conformance tests and docs | 4 | ✅ Complete |
 
 **Track A (Syntax):** 17h. Parse and preserve the new declarations and header clauses without runtime behavior.
 **Track B (Module Metadata):** 9h. Export/import visible interfaces, implementations, and resource declarations with focused conformance coverage.

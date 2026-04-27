@@ -1,6 +1,6 @@
 # TASK-728: Add parser/module conformance coverage for the new definition syntax and metadata transport.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -68,11 +68,20 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+## Completion Evidence
+
+- Parser/module conformance tests and docs is implemented as Phase 101 parser/module substrate only.
+- Added focused Phase 101 conformance tests for capability interfaces, implementations, resources, workflow `owns`/`uses`, and module metadata transport.
+- Added `docs/reference/phase-101-capability-resource-parser-substrate.md` documenting the syntax as parser/module substrate, not executable semantics.
+- Updated stale parser regression expectations so visibility-qualified capability metadata is asserted as supported rather than rejected.
+- Focused verification: `cargo test --workspace --all-targets --all-features`.
+- Final closeout verification also runs `cargo test --workspace --all-targets --all-features`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo fmt --check`, `cargo doc --workspace --no-deps`, and `git diff --check`.
 
 ## Dependencies for Next Task
 

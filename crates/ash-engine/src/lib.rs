@@ -2726,6 +2726,8 @@ mod tests {
                 declared_return_type: None,
                 plays_roles: vec![],
                 capabilities: vec![],
+                owned_resources: vec![],
+                used_bindings: vec![],
                 body: SurfaceWorkflow::Ret {
                     expr: ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Null),
                     span,

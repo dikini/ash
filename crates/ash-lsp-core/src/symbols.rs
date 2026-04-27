@@ -114,6 +114,15 @@ fn definition_symbol(definition: &Definition) -> DocumentSymbol {
         Definition::Role(def) => symbol(def.name.to_string(), SymbolKind::CLASS, &def.span, None),
         Definition::Proxy(def) => symbol(def.name.to_string(), SymbolKind::OBJECT, &def.span, None),
         Definition::Interface(def) => interface_symbol(def),
+        Definition::CapabilityInterface(def) => {
+            symbol(def.name.to_string(), SymbolKind::INTERFACE, &def.span, None)
+        }
+        Definition::CapabilityImplementation(def) => {
+            symbol(def.name.to_string(), SymbolKind::CLASS, &def.span, None)
+        }
+        Definition::ResourceType(def) => {
+            symbol(def.name.to_string(), SymbolKind::STRUCT, &def.span, None)
+        }
         Definition::Impl(def) => impl_symbol(def),
         Definition::Function(def) => fn_symbol(def),
         Definition::BuiltinFn(def) => {
@@ -157,6 +166,9 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Role(def) => def.span.start,
             Definition::Proxy(def) => def.span.start,
             Definition::Interface(def) => def.span.start,
+            Definition::CapabilityInterface(def) => def.span.start,
+            Definition::CapabilityImplementation(def) => def.span.start,
+            Definition::ResourceType(def) => def.span.start,
             Definition::Impl(def) => def.span.start,
             Definition::Function(def) => def.span.start,
             Definition::BuiltinFn(def) => def.span.start,
@@ -217,6 +229,8 @@ mod tests {
                 declared_return_type: None,
                 plays_roles: vec![],
                 capabilities: vec![],
+                owned_resources: vec![],
+                used_bindings: vec![],
                 body: Workflow::Done {
                     span: span(30, 40, 4, 1),
                 },
@@ -323,6 +337,8 @@ mod tests {
                 declared_return_type: None,
                 plays_roles: vec![],
                 capabilities: vec![],
+                owned_resources: vec![],
+                used_bindings: vec![],
                 body: Workflow::Done {
                     span: span(10, 20, 2, 1),
                 },

@@ -898,13 +898,13 @@ Implement workflow contracts with Hoare-style pre/post-conditions, linear obliga
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-226](tasks/TASK-226-workflow-contracts-ast.md) | Workflow contracts AST extensions | SPEC-022 | 8 | ✅ Complete |
-| [TASK-227](tasks/TASK-227-type-check-obligations.md) | Type check obligations as linear resources | SPEC-022 | 10 | ✅ Complete |
-| [TASK-228](tasks/TASK-228-requirement-checking.md) | Requirement checking at call sites | SPEC-022 | 8 | ✅ Complete |
-| [TASK-229](tasks/TASK-229-audit-trail-integration.md) | Audit trail for obligation checks | SPEC-022 | 6 | ✅ Complete |
-| [TASK-230](tasks/TASK-230-parser-updates.md) | Parser updates for contract syntax | SPEC-022 | 8 | ✅ Complete |
-| [TASK-231](tasks/TASK-231-integration-tests.md) | End-to-end integration tests | SPEC-022 | 6 | ✅ Complete |
-| [TASK-232](tasks/TASK-232-canonicalize-spec-022.md) | Canonicalize SPEC-022 workflow typing | SPEC-022 | 4 | ✅ Complete |
+| TASK-226 | Workflow contracts AST extensions | SPEC-022 | 8 | ✅ Complete |
+| TASK-227 | Type check obligations as linear resources | SPEC-022 | 10 | ✅ Complete |
+| TASK-228 | Requirement checking at call sites | SPEC-022 | 8 | ✅ Complete |
+| TASK-229 | Audit trail for obligation checks | SPEC-022 | 6 | ✅ Complete |
+| TASK-230 | Parser updates for contract syntax | SPEC-022 | 8 | ✅ Complete |
+| TASK-231 | End-to-end integration tests | SPEC-022 | 6 | ✅ Complete |
+| TASK-232 | Canonicalize SPEC-022 workflow typing | SPEC-022 | 4 | ✅ Complete |
 
 **Phase 37 Deliverable**: Complete. Workflow contracts with requires/ensures clauses, linear
 obligation tracking (oblige/check), requirement checking with capabilities/roles, and audit trail
@@ -966,8 +966,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Fix all audit findings from codex-comprehensive-review.md. This is blocking work.
 
-**Duration:** 4-6 weeks  
-**Dependencies:** None  
+**Duration:** 4-6 weeks
+**Dependencies:** None
 **Status:** ✅ Complete
 
 ### 44.1: Critical Runtime Fixes
@@ -1028,8 +1028,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Produce canonicalized reduced syntax specification (SPEC-024).
 
-**Duration:** 1 week  
-**Dependencies:** Phase 44 complete  
+**Duration:** 1 week
+**Dependencies:** Phase 44 complete
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1055,8 +1055,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Implement reduced syntax features.
 
-**Duration:** 6-8 weeks  
-**Dependencies:** Phase 45 complete  
+**Duration:** 6-8 weeks
+**Dependencies:** Phase 45 complete
 **Status:** ✅ Complete
 
 ### 46.1: Parser Extensions
@@ -1118,10 +1118,10 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 ### Phase 46 Closeout Summary
 
-**Status:** ✅ Complete  
-**Date:** 2026-03-26  
-**Total Tasks:** 13/13  
-**Total Estimated Hours:** 98-108  
+**Status:** ✅ Complete
+**Date:** 2026-03-26
+**Total Tasks:** 13/13
+**Total Estimated Hours:** 98-108
 **Actual Hours:** ~90
 
 **Deliverables:**
@@ -1164,8 +1164,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Address critical spec violations identified in external code review.
 
-**Source:** External audit findings from comprehensive code review  
-**Priority:** Critical to Medium  
+**Source:** External audit findings from comprehensive code review
+**Priority:** Critical to Medium
 **Status:** ✅ Complete
 
 ### 47.1: Critical Runtime Contract Fixes
@@ -1209,8 +1209,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Address all critical and medium findings from Phase 46 comprehensive code review (findings_1.md).
 
-**Source:** External audit findings from comprehensive code review  
-**Priority:** Critical to Medium  
+**Source:** External audit findings from comprehensive code review
+**Priority:** Critical to Medium
 **Status:** ✅ Done
 
 ### 48.1: Critical Runtime Fixes (High Priority)
@@ -1359,8 +1359,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Address critical gaps identified in post-implementation review of Phases 47, 48, and 49.
 
-**Source:** User code review findings (2026-03-27)  
-**Priority:** Critical  
+**Source:** User code review findings (2026-03-27)
+**Priority:** Critical
 **Status:** ✅ Complete (all remediation tasks finished)
 
 ### 50.1: CLI SPEC-005 Compliance Fixes
@@ -1426,8 +1426,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Address known issues identified during Phase 50 remediation.
 
-**Source:** Phase 50 test analysis and spec clarification  
-**Priority:** Medium  
+**Source:** Phase 50 test analysis and spec clarification
+**Priority:** Medium
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1465,8 +1465,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 |**Goal:** Fix critical contract gaps identified in post-Phase 50/51 review.
 
-**Source:** User review findings  
-**Priority:** Critical/High  
+**Source:** User review findings
+**Priority:** Critical/High
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1481,7 +1481,7 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 | [TASK-323](tasks/TASK-323-remove-capability-cli-flag.md) | Remove `--capability` flag from CLI and SPEC-005 | SPEC-005 | 2 | ✅ Complete |
 | [TASK-324](tasks/TASK-324-remove-input-cli-flag.md) | Remove `--input` flag from CLI and SPEC-005 | SPEC-005 | 2 | ✅ Complete |
 | [TASK-325](tasks/TASK-325-fix-clippy-warnings.md) | Fix remaining clippy warnings in production and test code | N/A | 1 | ✅ Complete |
-| [TASK-326](tasks/TASK-326-326-remove-http-capability-docs.md) | Remove HTTP capability documentation from SPEC-010 | SPEC-010 | 1 | ✅ Complete |
+| [TASK-326](tasks/TASK-326-remove-http-capability-docs.md) | Remove HTTP capability documentation from SPEC-010 | SPEC-010 | 1 | ✅ Complete |
 
 **Summary:**
 
@@ -1506,8 +1506,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Address remaining contract gaps, clippy warnings, and spec inconsistencies.
 
-**Source:** Post-Phase 52 review findings  
-**Priority:** High  
+**Source:** Post-Phase 52 review findings
+**Priority:** High
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1534,8 +1534,8 @@ See [PHASES-38-43-ROADMAP.md](PHASES-38-43-ROADMAP.md) for detailed dependency g
 
 **Goal:** Implement proper SPEC-009 visibility enforcement in the import resolver for restricted visibility variants.
 
-**Source:** TASK-329 verification findings  
-**Priority:** Critical  
+**Source:** TASK-329 verification findings
+**Priority:** Critical
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1587,8 +1587,8 @@ test result: ok. 33 passed; 0 failed
 
 **Goal:** Add source-defined crate loading and dependency syntax, then enforce real cross-crate visibility boundaries across module loading, import resolution, and type checking.
 
-**Source:** Follow-up to TASK-329 verification findings and the deliberate single-root limitation documented in Phase 54.  
-**Priority:** Critical (spec compliance and security boundary)  
+**Source:** Follow-up to TASK-329 verification findings and the deliberate single-root limitation documented in Phase 54.
+**Priority:** Critical (spec compliance and security boundary)
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1695,8 +1695,8 @@ test result: ok. 40 passed; 0 failed
 
 **Goal:** Implement the Ash program entry point mechanism: CLI invocation, runtime bootstrap, system supervisor, and the `main` workflow convention.
 
-**Source:** [MCE-001: Entry Point](../ideas/minimal-core/MCE-001-ENTRY-POINT.md)  
-**Priority:** Critical (minimal core execution environment)  
+**Source:** [MCE-001: Entry Point](../ideas/minimal-core/MCE-001-ENTRY-POINT.md)
+**Priority:** Critical (minimal core execution environment)
 **Status:** ✅ Done (all 57A + 57B minimum tasks complete; TASK-368b extended tests deferred)
 
 ### Critical Note: SPEC-First Implementation
@@ -1810,7 +1810,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Goal:** Inventory all current IR forms in `ash-core` and identify candidates for elimination or consolidation.
 
-**Source:** [MCE-002: IR Core Forms Audit](../ideas/minimal-core/MCE-002-IR-AUDIT.md)  
+**Source:** [MCE-002: IR Core Forms Audit](../ideas/minimal-core/MCE-002-IR-AUDIT.md)
 **Priority:** High (informed MCE-004 and unblocks MCE-007)
 **Status:** ✅ Complete
 
@@ -1829,8 +1829,8 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Goal:** Add per-task git worktree isolation to `tools/agent-pipeline` so each task executes against an isolated repository workspace while the existing `.agents/` task bundle state model remains intact.
 
-**Source:** Agent-pipeline operational follow-up after supervision/configuration fixes  
-**Priority:** High (operator safety, isolation, and reproducibility)  
+**Source:** Agent-pipeline operational follow-up after supervision/configuration fixes
+**Priority:** High (operator safety, isolation, and reproducibility)
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -1923,7 +1923,7 @@ S57-7 complete, 57B now follows the validated dependency order below.
 | [TASK-401](tasks/TASK-401-runtime-carrier-inventory-and-semantic-mapping-table.md) | Inventory runtime/interpreter carriers and define the canonical semantic mapping table for MCE-006 | MCE-006 | 2-4 | ✅ Complete |
 | [TASK-402](tasks/TASK-402-residual-control-blocked-state-and-completion-realization.md) | Explain residual control, blocked-state carriers, and completion/control realization | MCE-006 | 2-4 | ✅ Complete |
 | [TASK-403](tasks/TASK-403-par-interleaving-branch-state-and-aggregation-correspondence.md) | Define `Par` interleaving, branch-local state, and helper-backed aggregation correspondence | MCE-006 | 2-4 | ✅ Complete |
-| [TASK-404](tasks/TASK-404-observable-preservation-gap-classification-and-mce-007-handoff.md) | Package observable preservation, gap classification, and the MCE-007 runtime handoff | MCE-006 | 2-4 | ✅ Complete | 
+| [TASK-404](tasks/TASK-404-observable-preservation-gap-classification-and-mce-007-handoff.md) | Package observable preservation, gap classification, and the MCE-007 runtime handoff | MCE-006 | 2-4 | ✅ Complete |
 
 **Deliverable:** A frozen MCE-006 runtime correspondence corpus for canonical small-step execution: a semantic-carrier → runtime-structure mapping table, explicit control/blocking/concurrency realization notes, a conservative observable-preservation checklist, a divergence taxonomy, and a concise runtime-evidence packet for MCE-007 ingestion.
 
@@ -1953,8 +1953,8 @@ S57-7 complete, 57B now follows the validated dependency order below.
 
 **Goal:** Implement the code follow-ons unlocked by TASK-413 / TASK-414 / TASK-415 in small, contract-respecting slices across parser, typechecker, interpreter, and runtime-facing docs/tests.
 
-**Source:** Phase 64 promotion packet plus the frozen tuple-variant, coarse effect-typing, and closed-world interfaces MVP contracts  
-**Priority:** High  
+**Source:** Phase 64 promotion packet plus the frozen tuple-variant, coarse effect-typing, and closed-world interfaces MVP contracts
+**Priority:** High
 **Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
@@ -2033,7 +2033,7 @@ work tracked by the broader phase roadmap.
 
 **Goal:** Remove the ambiguity around newline-separated surface statements by making lexical-block lowering normative in `docs/spec`, then align parser, lowering, type checking, IR/execution shape, interpreter behavior, and CLI-facing conformance tests to that one continuation-owned scope model.
 
-**Source:** [SPEC-002: Syntax](../spec/SPEC-002-SYNTAX.md), [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004: Operational Semantics](../spec/SPEC-004-SEMANTICS.md), [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
+**Source:** [SPEC-002: Syntax](../spec/SPEC-002-SURFACE.md), [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004: Operational Semantics](../spec/SPEC-004-SEMANTICS.md), [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
 **Priority:** High
 **Status:** ✅ Complete
 
@@ -2643,7 +2643,7 @@ complete and verified. TASK-631B resolved by Phase 93 TASK-643 which deleted
 
 ## Phase 93: Generic Builtin fn Declarations
 
-**Plan Reference:** [PLAN-037: Generic Builtin fn Declarations](plans/PLAN-037-generic-builtin-fn.md)
+**Plan Reference:** [PLAN-037: Generic Builtin fn Declarations](../plans/PLAN-037-generic-builtin-fn.md)
 **Specs:** `SPEC-044`
 **Priority:** Medium
 **Status:** ✅ Done

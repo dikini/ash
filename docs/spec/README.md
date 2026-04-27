@@ -54,8 +54,8 @@ New specifications should follow this structure:
 ```markdown
 # SPEC-XXX: Title
 
-**Status:** Active | Draft | Deprecated  
-**Supersedes:** SPEC-YYY (if applicable)  
+**Status:** Active | Draft | Deprecated
+**Supersedes:** SPEC-YYY (if applicable)
 **Related:** SPEC-ZZZ, SPEC-WWW
 
 ## Summary

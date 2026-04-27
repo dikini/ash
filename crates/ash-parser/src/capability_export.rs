@@ -8,7 +8,11 @@
 //! - Import resolution to resolve capability symbols across modules
 //! - Lowering to convert symbolic capability calls to explicit `(provider, action)` targets
 
-use crate::surface::{CapabilityDef, Name, Visibility};
+use crate::surface::{
+    CapabilityDef, CapabilityImplementationDef, CapabilityImplementationDependency,
+    CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationSig, Name,
+    ResourceField, ResourceTypeDef, Visibility,
+};
 
 /// Metadata for an exported capability symbol.
 ///
@@ -32,6 +36,159 @@ pub struct CapabilityExport {
 
 /// Re-export ModuleId from ash_core for consistency.
 pub use ash_core::module_graph::ModuleId;
+
+/// Metadata for a Phase 101 module definition export.
+///
+/// This is intentionally separate from [`CapabilityExport`]. `CapabilityExport`
+/// carries legacy direct operational capability provider/action targets; this
+/// substrate carries parsed capability interface, capability implementation, and
+/// resource type definitions for later Phase 102 semantic processing.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModuleDefinitionExport {
+    /// The name visible to importers.
+    pub visible_name: Name,
+    /// The module where this definition was declared.
+    pub declaring_module: ModuleId,
+    /// Visibility of the exported definition.
+    pub visibility: Visibility,
+    /// Parsed metadata for the definition kind.
+    pub kind: ModuleDefinitionExportKind,
+}
+
+/// Phase 101 definition kinds exported through the module metadata substrate.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ModuleDefinitionExportKind {
+    /// Capability interface metadata.
+    CapabilityInterface(CapabilityInterfaceExport),
+    /// Capability implementation recipe metadata.
+    CapabilityImplementation(CapabilityImplementationExport),
+    /// Resource type metadata.
+    ResourceType(ResourceTypeExport),
+}
+
+/// Export metadata for a capability interface definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityInterfaceExport {
+    /// Operation signatures declared by the interface.
+    pub operations: Vec<CapabilityOperationSig>,
+}
+
+/// Export metadata for a capability implementation recipe definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityImplementationExport {
+    /// Target capability interface name.
+    pub interface: Name,
+    /// Explicit dependencies required by the recipe.
+    pub dependencies: Vec<CapabilityImplementationDependency>,
+    /// Operation bodies supplied by the recipe.
+    pub operations: Vec<CapabilityImplementationOperation>,
+}
+
+/// Export metadata for a resource type definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResourceTypeExport {
+    /// Fields declared by the resource type.
+    pub fields: Vec<ResourceField>,
+}
+
+impl ModuleDefinitionExport {
+    /// Build export metadata from a capability interface definition.
+    pub fn from_capability_interface(def: &CapabilityInterfaceDef, module_id: ModuleId) -> Self {
+        Self {
+            visible_name: def.name.clone(),
+            declaring_module: module_id,
+            visibility: def.visibility.clone(),
+            kind: ModuleDefinitionExportKind::CapabilityInterface(CapabilityInterfaceExport {
+                operations: def.operations.clone(),
+            }),
+        }
+    }
+
+    /// Build export metadata from a capability implementation definition.
+    pub fn from_capability_implementation(
+        def: &CapabilityImplementationDef,
+        module_id: ModuleId,
+    ) -> Self {
+        Self {
+            visible_name: def.name.clone(),
+            declaring_module: module_id,
+            visibility: def.visibility.clone(),
+            kind: ModuleDefinitionExportKind::CapabilityImplementation(
+                CapabilityImplementationExport {
+                    interface: def.interface.clone(),
+                    dependencies: def.dependencies.clone(),
+                    operations: def.operations.clone(),
+                },
+            ),
+        }
+    }
+
+    /// Build export metadata from a resource type definition.
+    pub fn from_resource_type(def: &ResourceTypeDef, module_id: ModuleId) -> Self {
+        Self {
+            visible_name: def.name.clone(),
+            declaring_module: module_id,
+            visibility: def.visibility.clone(),
+            kind: ModuleDefinitionExportKind::ResourceType(ResourceTypeExport {
+                fields: def.fields.clone(),
+            }),
+        }
+    }
+
+    /// Check if this export is visible from the given module.
+    pub fn is_visible_from(&self, from_module: ModuleId) -> bool {
+        match &self.visibility {
+            Visibility::Public => true,
+            Visibility::Crate => true,
+            Visibility::Super { .. } => false,
+            Visibility::Self_ => self.declaring_module == from_module,
+            Visibility::Restricted { .. } => false,
+            Visibility::Inherited => self.declaring_module == from_module,
+        }
+    }
+}
+
+/// Collection of Phase 101 definition exports for a module.
+#[derive(Debug, Clone, Default)]
+pub struct ModuleDefinitionExports {
+    exports: Vec<ModuleDefinitionExport>,
+}
+
+impl ModuleDefinitionExports {
+    /// Create an empty export collection.
+    pub fn new() -> Self {
+        Self {
+            exports: Vec::new(),
+        }
+    }
+
+    /// Add a definition export.
+    pub fn add(&mut self, export: ModuleDefinitionExport) {
+        self.exports.push(export);
+    }
+
+    /// Find an export by visible name.
+    pub fn find_by_name(&self, name: &str) -> Option<&ModuleDefinitionExport> {
+        self.exports
+            .iter()
+            .find(|export| export.visible_name.as_ref() == name)
+    }
+
+    /// Get all exports.
+    pub fn all(&self) -> &[ModuleDefinitionExport] {
+        &self.exports
+    }
+
+    /// Check if there are any exports.
+    pub fn is_empty(&self) -> bool {
+        self.exports.is_empty()
+    }
+
+    /// Get the number of exports.
+    pub fn len(&self) -> usize {
+        self.exports.len()
+    }
+}
 
 /// Effect classification for capabilities.
 #[derive(Debug, Clone, Copy, PartialEq)]

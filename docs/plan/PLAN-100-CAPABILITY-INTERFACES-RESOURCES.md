@@ -25,7 +25,7 @@ Tasks:
 
 ## Phase 101: Parser, Surface AST, and Module Metadata
 
-**Status:** 📝 Planned.
+**Status:** ✅ Complete.
 
 Add syntax carriers for `capability interface`, `capability impl`, `resource type`, resource/binding clauses, and module export/import metadata. This phase does not execute capability implementation bodies.
 

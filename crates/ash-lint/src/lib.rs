@@ -718,6 +718,8 @@ mod tests {
             declared_return_type: None,
             plays_roles: vec![],
             capabilities: vec![],
+            owned_resources: vec![],
+            used_bindings: vec![],
             body: decide,
             contract: None,
             span: Span::default(),

@@ -1,6 +1,6 @@
 # TASK-726: Add parser and surface-AST substrate for resource types and workflow/process binding clauses.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -66,11 +66,20 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+## Completion Evidence
+
+- Resource type and binding clause parser substrate is implemented as Phase 101 parser/module substrate only.
+- Added surface AST carriers for `resource type` definitions and workflow header `owns` / `uses` clauses.
+- Parser preserves resource fields, workflow-owned resource declarations, capability binding aliases, interface targets, implementation names, arguments, and spans.
+- The added support remains parser/module metadata only; typechecking and runtime resource allocation stay deferred to later phases.
+- Focused verification: `cargo test -p ash-parser --test phase_101_resource_binding_parser`.
+- Final closeout verification also runs `cargo test --workspace --all-targets --all-features`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo fmt --check`, `cargo doc --workspace --no-deps`, and `git diff --check`.
 
 ## Dependencies for Next Task
 

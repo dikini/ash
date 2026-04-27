@@ -145,6 +145,8 @@ fn workflow_with_bound(bound_interface: &str) -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("T".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Variable {
                 name: "value".into(),
@@ -176,6 +178,8 @@ fn interface_method_call_workflow(type_name: &str) -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Call {
                 func: "explain".into(),
@@ -212,6 +216,8 @@ fn match_bound_interface_method_call_workflow() -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Match {
                 scrutinee: Box::new(Expr::Variable {
@@ -275,6 +281,8 @@ fn workflow_with_declared_return_type_mismatch() -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Literal(Literal::Int(42)),
             span: test_span(),
@@ -948,6 +956,8 @@ fn rigid_projection_workflow() -> WorkflowDef {
         }),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Variable {
                 name: "a".into(),
@@ -982,6 +992,8 @@ fn rigid_projection_concrete_mismatch_workflow() -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Variable {
                 name: "a".into(),

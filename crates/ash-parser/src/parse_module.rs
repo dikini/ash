@@ -10,15 +10,18 @@ use winnow::stream::Stream;
 use crate::combinators::keyword;
 use crate::input::ParseInput;
 use crate::module::{ModuleDecl, ModuleSource};
-use crate::parse_expr::expr;
+use crate::parse_expr::{expr, parse_fn_expr_body_pub};
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::parse_visibility;
 use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
 use crate::surface::{
     AssociatedTypeBinding, AssociatedTypeDecl, BlockStmt, BuiltinFnDef, CapabilityDef,
-    CapabilityRef, Constraint, Contract, Definition, EffectType, Expr, FnDef, ImplDef,
-    ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate,
-    ProxyDef, RoleDef, Type, Visibility, WhereBound, Workflow, YieldArm,
+    CapabilityImplementationDef, CapabilityImplementationDependency,
+    CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
+    CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, CapabilityRef,
+    Constraint, Contract, Definition, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
+    InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate, ProxyDef,
+    ResourceField, ResourceTypeDef, RoleDef, Type, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -146,7 +149,22 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             continue;
         }
 
-        if starts_with_keyword(input, "capability") {
+        if starts_with_visible_resource_type(input) {
+            definitions.push(parse_resource_type_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_capability_interface(input) {
+            definitions.push(parse_capability_interface_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_capability_impl(input) {
+            definitions.push(parse_capability_implementation_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "capability") {
             definitions.push(parse_capability_definition(input)?);
             continue;
         }
@@ -193,6 +211,56 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
     Ok(definitions)
 }
 
+fn parse_resource_type_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("resource").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("type").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut fields = Vec::new();
+    if !input.input.starts_with("}") {
+        loop {
+            fields.push(parse_resource_field(input)?);
+            skip_whitespace_and_comments(input);
+            if consume_comma_separator(input) {
+                continue;
+            }
+            break;
+        }
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+
+    Ok(Definition::ResourceType(ResourceTypeDef {
+        visibility,
+        name: name.into(),
+        fields,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    }))
+}
+
+fn parse_resource_field(input: &mut ParseInput) -> ModalResult<ResourceField> {
+    let start_pos = input.state.pos;
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ty = parse_surface_type(input)?;
+
+    Ok(ResourceField {
+        name: name.into(),
+        ty,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    })
+}
+
 fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     let start_pos = input.state.pos;
 
@@ -208,6 +276,12 @@ fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition
     skip_whitespace(input);
     let effect = parse_effect_type(input)?;
     skip_whitespace(input);
+
+    if !input.input.starts_with("(") {
+        let _ = identifier(input)?;
+        skip_whitespace(input);
+    }
+
     let _ = literal_str("(").parse_next(input)?;
     let params = parse_parameter_list(input)?;
     let _ = literal_str(")").parse_next(input)?;
@@ -222,6 +296,8 @@ fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition
         Vec::new()
     };
 
+    skip_legacy_capability_alternatives(input)?;
+
     Ok(Definition::Capability(CapabilityDef {
         visibility,
         name: name.into(),
@@ -233,6 +309,256 @@ fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition
         target_action: None,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
+}
+
+fn skip_legacy_capability_alternatives(input: &mut ParseInput) -> ModalResult<()> {
+    loop {
+        skip_whitespace_and_comments(input);
+        if !input.input.starts_with("|") {
+            break;
+        }
+
+        let _ = literal_str("|").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = parse_effect_type(input)?;
+        skip_whitespace_and_comments(input);
+        if !input.input.starts_with("(") {
+            let _ = identifier(input)?;
+            skip_whitespace_and_comments(input);
+        }
+        let _ = literal_str("(").parse_next(input)?;
+        let _ = parse_parameter_list(input)?;
+        let _ = literal_str(")").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = parse_optional_return_type(input)?;
+    }
+
+    Ok(())
+}
+
+fn parse_capability_interface_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+
+    let _ = keyword("capability").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("interface").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut operations = Vec::new();
+    while !input.input.starts_with(";") {
+        operations.push(parse_capability_operation_signature(input)?);
+        skip_whitespace_and_comments(input);
+
+        if literal_str("|").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            continue;
+        }
+
+        break;
+    }
+
+    let _ = literal_str(";").parse_next(input)?;
+    reject_duplicate_capability_operations(&operations)?;
+
+    Ok(Definition::CapabilityInterface(CapabilityInterfaceDef {
+        visibility,
+        name: name.into(),
+        operations,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    }))
+}
+
+fn parse_capability_implementation_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+
+    let _ = keyword("capability").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("impl").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("for").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let interface = identifier(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut dependencies = Vec::new();
+    while starts_with_keyword(input, "requires") {
+        dependencies.push(parse_capability_implementation_dependency(input)?);
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut operations = Vec::new();
+    while !input.input.starts_with("}") {
+        operations.push(parse_capability_implementation_operation(input)?);
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+    reject_duplicate_capability_implementation_operations(&operations)?;
+
+    Ok(Definition::CapabilityImplementation(
+        CapabilityImplementationDef {
+            visibility,
+            name: name.into(),
+            interface: interface.into(),
+            dependencies,
+            operations,
+            span: crate::input::span_from(&start_pos, &input.state.pos),
+        },
+    ))
+}
+
+fn parse_capability_implementation_dependency(
+    input: &mut ParseInput,
+) -> ModalResult<CapabilityImplementationDependency> {
+    let start = input.state.pos;
+    let _ = keyword("requires").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let kind = if keyword("resource").parse_next(input).is_ok() {
+        CapabilityImplementationDependencyKind::Resource
+    } else if keyword("capability").parse_next(input).is_ok() {
+        CapabilityImplementationDependencyKind::Capability
+    } else if keyword("config").parse_next(input).is_ok() {
+        CapabilityImplementationDependencyKind::Config
+    } else {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    };
+
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ty = parse_surface_type(input)?;
+
+    Ok(CapabilityImplementationDependency {
+        kind,
+        name: name.into(),
+        ty,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_capability_implementation_operation(
+    input: &mut ParseInput,
+) -> ModalResult<CapabilityImplementationOperation> {
+    let start = input.state.pos;
+    let signature = parse_capability_operation_signature(input)?;
+    skip_whitespace_and_comments(input);
+    let body = parse_fn_expr_body_pub(input)?;
+
+    Ok(CapabilityImplementationOperation {
+        mode: signature.mode,
+        name: signature.name,
+        params: signature.params,
+        return_type: signature.return_type,
+        body,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn reject_duplicate_capability_implementation_operations(
+    operations: &[CapabilityImplementationOperation],
+) -> ModalResult<()> {
+    for (idx, operation) in operations.iter().enumerate() {
+        if operations[..idx]
+            .iter()
+            .any(|previous| previous.name == operation.name)
+        {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn parse_capability_operation_signature(
+    input: &mut ParseInput,
+) -> ModalResult<CapabilityOperationSig> {
+    let start = input.state.pos;
+    let mode = parse_capability_operation_mode(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    let params = parse_parameter_list(input)?;
+    let _ = literal_str(")").parse_next(input)?;
+    reject_duplicate_params(&params)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("returns").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let return_type = parse_surface_type(input)?;
+
+    Ok(CapabilityOperationSig {
+        mode,
+        name: name.into(),
+        params,
+        return_type,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_capability_operation_mode(input: &mut ParseInput) -> ModalResult<CapabilityOperationMode> {
+    if keyword("observe").parse_next(input).is_ok() {
+        Ok(CapabilityOperationMode::Observe)
+    } else if keyword("execute").parse_next(input).is_ok() {
+        Ok(CapabilityOperationMode::Execute)
+    } else {
+        Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ))
+    }
+}
+
+fn reject_duplicate_capability_operations(
+    operations: &[CapabilityOperationSig],
+) -> ModalResult<()> {
+    for (idx, operation) in operations.iter().enumerate() {
+        if operations[..idx]
+            .iter()
+            .any(|previous| previous.name == operation.name)
+        {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn reject_duplicate_params(params: &[Param]) -> ModalResult<()> {
+    for (idx, param) in params.iter().enumerate() {
+        if params[..idx]
+            .iter()
+            .any(|previous| previous.name == param.name)
+        {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -539,6 +865,8 @@ fn parse_optional_type_arguments(input: &mut ParseInput) -> ModalResult<Vec<Type
 fn parse_effect_type(input: &mut ParseInput) -> ModalResult<EffectType> {
     if keyword("observe").parse_next(input).is_ok() {
         Ok(EffectType::Observe)
+    } else if keyword("execute").parse_next(input).is_ok() {
+        Ok(EffectType::Operational)
     } else if keyword("read").parse_next(input).is_ok() {
         Ok(EffectType::Read)
     } else if keyword("analyze").parse_next(input).is_ok() {
@@ -857,6 +1185,44 @@ fn starts_with_visible_keyword(input: &ParseInput, word: &str) -> bool {
             skip_whitespace(&mut lookahead);
             starts_with_keyword(&lookahead, word)
         }
+    }
+}
+
+fn starts_with_visible_resource_type(input: &ParseInput) -> bool {
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(_) => {
+            skip_whitespace(&mut lookahead);
+            if !starts_with_keyword(&lookahead, "resource") {
+                return false;
+            }
+            let rest = skip_ws_in(&lookahead.input["resource".len()..]);
+            starts_with_keyword_from(rest, "type")
+        }
+        Err(_) => false,
+    }
+}
+
+fn starts_with_visible_capability_interface(input: &ParseInput) -> bool {
+    starts_with_visible_capability_subkeyword(input, "interface")
+}
+
+fn starts_with_visible_capability_impl(input: &ParseInput) -> bool {
+    starts_with_visible_capability_subkeyword(input, "impl")
+}
+
+fn starts_with_visible_capability_subkeyword(input: &ParseInput, subkeyword: &str) -> bool {
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(_) => {
+            skip_whitespace(&mut lookahead);
+            if !starts_with_keyword(&lookahead, "capability") {
+                return false;
+            }
+            let rest = skip_ws_in(&lookahead.input["capability".len()..]);
+            starts_with_keyword_from(rest, subkeyword)
+        }
+        Err(_) => false,
     }
 }
 
@@ -1951,7 +2317,22 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
             continue;
         }
 
-        if starts_with_keyword(input, "capability") {
+        if starts_with_visible_resource_type(input) {
+            definitions.push(parse_resource_type_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_capability_interface(input) {
+            definitions.push(parse_capability_interface_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_capability_impl(input) {
+            definitions.push(parse_capability_implementation_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "capability") {
             definitions.push(parse_capability_definition(input)?);
             continue;
         }
@@ -2367,11 +2748,25 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_inline_module_rejects_visibility_qualified_item_after_unknown_item() {
-        assert_inline_module_rejects_after_unknown_item(
+    fn test_parse_inline_module_preserves_visibility_qualified_item_after_unknown_item() {
+        let source = inline_module_with_unknown_item(
             "pub capability approve: decide() role reviewer { capabilities: [approve] }",
-            "visibility-qualified item",
         );
+        let mut input = test_input(&source);
+
+        let result = parse_module_decl(&mut input);
+
+        let decl = result.expect("visibility-qualified capability should parse after recovery");
+        let definitions = decl
+            .definitions()
+            .expect("inline module definitions should be present");
+        match &definitions[0] {
+            Definition::Capability(capability) => {
+                assert_eq!(capability.name.as_ref(), "approve");
+                assert_eq!(capability.visibility, Visibility::Public);
+            }
+            other => panic!("expected capability definition, got {other:?}"),
+        }
     }
 
     #[test]
@@ -2389,15 +2784,22 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_inline_module_rejects_visibility_qualified_capabilities_until_supported() {
+    fn test_parse_inline_module_preserves_visibility_qualified_capabilities() {
         let mut input = test_input("mod governance { pub capability approve: decide() }");
 
         let result = parse_module_decl(&mut input);
 
-        assert!(
-            result.is_err(),
-            "Expected inline modules to reject visibility-qualified capability items explicitly until they are supported"
-        );
+        let decl = result.expect("visibility-qualified capability should parse");
+        let definitions = decl
+            .definitions()
+            .expect("inline module definitions should be present");
+        match &definitions[0] {
+            Definition::Capability(capability) => {
+                assert_eq!(capability.name.as_ref(), "approve");
+                assert_eq!(capability.visibility, Visibility::Public);
+            }
+            other => panic!("expected capability definition, got {other:?}"),
+        }
     }
 
     #[test]

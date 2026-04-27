@@ -411,6 +411,8 @@ mod tests {
                 })
                 .collect(),
             capabilities: vec![],
+            owned_resources: vec![],
+            used_bindings: vec![],
             body: ash_parser::surface::Workflow::Done { span: test_span() },
             contract: None,
             span: test_span(),

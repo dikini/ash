@@ -17,6 +17,8 @@ fn workflow_returning_int() -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("Int".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Literal(Literal::Int(0)),
             span: span(),
@@ -326,6 +328,8 @@ fn workflow_call_site_must_prove_fn_preconditions() {
         declared_return_type: Some(SurfaceType::Name("Int".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Let {
             pattern: ash_parser::surface::Pattern::Variable {
                 name: "x".into(),
@@ -390,6 +394,8 @@ fn workflow_call_site_accepts_proven_fn_preconditions() {
         declared_return_type: Some(SurfaceType::Name("Int".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Let {
             pattern: ash_parser::surface::Pattern::Variable {
                 name: "x".into(),
@@ -456,6 +462,8 @@ fn qualified_workflow_call_site_must_prove_fn_preconditions() {
         declared_return_type: Some(SurfaceType::Name("Int".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Ret {
             expr: Expr::Call {
                 func: "checked".into(),
@@ -517,6 +525,8 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
         declared_return_type: Some(SurfaceType::Name("Int".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::If {
             condition: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Gt,
@@ -595,6 +605,8 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
         declared_return_type: Some(SurfaceType::Name("Int".into())),
         plays_roles: vec![],
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: Workflow::Let {
             pattern: ash_parser::surface::Pattern::Variable {
                 name: "x".into(),

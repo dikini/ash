@@ -279,6 +279,22 @@ fn definition_hover(definition: &Definition) -> Hover {
             Some("Proxy workflow".to_string()),
         ),
         Definition::Interface(def) => interface_hover(def),
+        Definition::CapabilityInterface(def) => markdown(
+            format!("capability interface {}", def.name),
+            Some(format!("Operations: {}", def.operations.len())),
+        ),
+        Definition::CapabilityImplementation(def) => markdown(
+            format!("capability impl {} for {}", def.name, def.interface),
+            Some(format!(
+                "Dependencies: {}, operations: {}",
+                def.dependencies.len(),
+                def.operations.len()
+            )),
+        ),
+        Definition::ResourceType(def) => markdown(
+            format!("resource type {}", def.name),
+            Some(format!("Fields: {}", def.fields.len())),
+        ),
         Definition::Impl(def) => markdown(
             format!("impl {}", def.interface),
             Some(format!("Methods: {}", def.methods.len())),
@@ -344,6 +360,9 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     _ => {
                         let name_matches = match definition {
                             Definition::Capability(def) => def.name.as_ref() == token,
+                            Definition::CapabilityInterface(def) => def.name.as_ref() == token,
+                            Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
+                            Definition::ResourceType(def) => def.name.as_ref() == token,
                             Definition::Policy(def) => def.name.as_ref() == token,
                             Definition::Role(def) => def.name.as_ref() == token,
                             Definition::Proxy(def) => def.name.as_ref() == token,
@@ -378,6 +397,9 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
             _ => {
                 let name_matches = match definition {
                     Definition::Capability(def) => def.name.as_ref() == token,
+                    Definition::CapabilityInterface(def) => def.name.as_ref() == token,
+                    Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
+                    Definition::ResourceType(def) => def.name.as_ref() == token,
                     Definition::Policy(def) => def.name.as_ref() == token,
                     Definition::Role(def) => def.name.as_ref() == token,
                     Definition::Proxy(def) => def.name.as_ref() == token,

@@ -72,6 +72,12 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::Proxy(p) => Some(p.name.as_ref().to_string()),
         Definition::Interface(i) if Some(i.name.as_ref()) == current_token => None,
         Definition::Interface(i) => Some(i.name.as_ref().to_string()),
+        Definition::CapabilityInterface(i) if Some(i.name.as_ref()) == current_token => None,
+        Definition::CapabilityInterface(i) => Some(i.name.as_ref().to_string()),
+        Definition::CapabilityImplementation(i) if Some(i.name.as_ref()) == current_token => None,
+        Definition::CapabilityImplementation(i) => Some(i.name.as_ref().to_string()),
+        Definition::ResourceType(r) if Some(r.name.as_ref()) == current_token => None,
+        Definition::ResourceType(r) => Some(r.name.as_ref().to_string()),
         Definition::Impl(_) => None, // impl blocks don't have a useful single name
         Definition::BuiltinFn(b) if Some(b.name.as_ref()) == current_token => None,
         Definition::BuiltinFn(b) => Some(b.name.as_ref().to_string()),
@@ -84,9 +90,11 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         Definition::Capability(_) | Definition::Role(_) | Definition::Proxy(_) => {
             CompletionItemKind::CLASS
         }
-        Definition::Policy(_) => CompletionItemKind::STRUCT,
-        Definition::Interface(_) => CompletionItemKind::INTERFACE,
-        Definition::Impl(_) => CompletionItemKind::CLASS,
+        Definition::Policy(_) | Definition::ResourceType(_) => CompletionItemKind::STRUCT,
+        Definition::Interface(_) | Definition::CapabilityInterface(_) => {
+            CompletionItemKind::INTERFACE
+        }
+        Definition::CapabilityImplementation(_) | Definition::Impl(_) => CompletionItemKind::CLASS,
     }
 }
 

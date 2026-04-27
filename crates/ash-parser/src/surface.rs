@@ -76,6 +76,12 @@ pub struct ModuleFile {
 pub enum Definition {
     /// Capability definition
     Capability(CapabilityDef),
+    /// Capability interface definition
+    CapabilityInterface(CapabilityInterfaceDef),
+    /// Capability implementation recipe definition
+    CapabilityImplementation(CapabilityImplementationDef),
+    /// Resource type definition
+    ResourceType(ResourceTypeDef),
     /// Policy definition
     Policy(PolicyDef),
     /// Role definition
@@ -90,6 +96,137 @@ pub enum Definition {
     Function(FnDef),
     /// Builtin function definition (no Ash-level body)
     BuiltinFn(BuiltinFnDef),
+}
+
+/// A named resource type definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResourceTypeDef {
+    /// Visibility modifier (pub, pub(crate), etc.)
+    pub visibility: Visibility,
+    /// Name of the resource type
+    pub name: Name,
+    /// Named fields declared by this resource type
+    pub fields: Vec<ResourceField>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A field in a resource type definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResourceField {
+    /// Field name
+    pub name: Name,
+    /// Field type
+    pub ty: Type,
+    /// Source span
+    pub span: Span,
+}
+
+/// A named capability implementation recipe.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityImplementationDef {
+    /// Visibility modifier (pub, pub(crate), etc.)
+    pub visibility: Visibility,
+    /// Name of this implementation recipe
+    pub name: Name,
+    /// Target capability interface name
+    pub interface: Name,
+    /// Explicit dependencies required at binding/admission time
+    pub dependencies: Vec<CapabilityImplementationDependency>,
+    /// Operation implementations provided by this recipe
+    pub operations: Vec<CapabilityImplementationOperation>,
+    /// Source span
+    pub span: Span,
+}
+
+/// An explicit dependency required by a capability implementation recipe.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityImplementationDependency {
+    /// Dependency kind
+    pub kind: CapabilityImplementationDependencyKind,
+    /// Dependency binding name visible to operation bodies
+    pub name: Name,
+    /// Dependency type/interface/config type name
+    pub ty: Type,
+    /// Source span
+    pub span: Span,
+}
+
+/// Capability implementation dependency forms parsed without resolution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CapabilityImplementationDependencyKind {
+    /// `requires resource name: Type`
+    Resource,
+    /// `requires capability name: Interface`
+    Capability,
+    /// `requires config name: Type`
+    Config,
+}
+
+/// An operation body inside a capability implementation recipe.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityImplementationOperation {
+    /// Operation effect mode
+    pub mode: CapabilityOperationMode,
+    /// Operation name
+    pub name: Name,
+    /// Named operation parameters
+    pub params: Vec<Param>,
+    /// Required return type
+    pub return_type: Type,
+    /// Body expression/block preserved for later semantics
+    pub body: Expr,
+    /// Source span
+    pub span: Span,
+}
+
+/// A capability interface definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityInterfaceDef {
+    /// Visibility modifier (pub, pub(crate), etc.)
+    pub visibility: Visibility,
+    /// Name of the capability interface
+    pub name: Name,
+    /// Operation signatures exposed by this interface
+    pub operations: Vec<CapabilityOperationSig>,
+    /// Source span
+    pub span: Span,
+}
+
+/// A capability interface operation signature.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityOperationSig {
+    /// Operation effect mode
+    pub mode: CapabilityOperationMode,
+    /// Operation name
+    pub name: Name,
+    /// Named operation parameters
+    pub params: Vec<Param>,
+    /// Required return type
+    pub return_type: Type,
+    /// Source span
+    pub span: Span,
+}
+
+/// Operation modes supported by capability interfaces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CapabilityOperationMode {
+    /// Read-only observation
+    Observe,
+    /// Effectful execution
+    Execute,
+}
+
+impl CapabilityOperationMode {
+    /// Check whether this mode is `observe`.
+    pub fn is_observe(self) -> bool {
+        matches!(self, Self::Observe)
+    }
+
+    /// Check whether this mode is `execute`.
+    pub fn is_execute(self) -> bool {
+        matches!(self, Self::Execute)
+    }
 }
 
 /// A pure function definition.
@@ -508,6 +645,30 @@ pub enum ConstraintValue {
     Object(Vec<(String, ConstraintValue)>),
 }
 
+/// A workflow-owned resource header clause (`owns name: Type`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkflowOwnedResource {
+    /// Resource binding name
+    pub name: Name,
+    /// Resource type
+    pub ty: Type,
+    /// Source span
+    pub span: Span,
+}
+
+/// A workflow-used capability binding header clause (`uses name: Interface = Impl(args...)`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkflowUsedBinding {
+    /// Binding name visible to the workflow
+    pub name: Name,
+    /// Required capability interface type
+    pub interface: Type,
+    /// Implementation expression used to construct/bind the capability
+    pub implementation: Expr,
+    /// Source span
+    pub span: Span,
+}
+
 /// A workflow definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowDef {
@@ -523,6 +684,10 @@ pub struct WorkflowDef {
     pub plays_roles: Vec<RoleRef>,
     /// Capabilities this workflow uses (from `capabilities: [...]` clause)
     pub capabilities: Vec<CapabilityDecl>,
+    /// Resources this workflow owns (from `owns name: Type` clauses)
+    pub owned_resources: Vec<WorkflowOwnedResource>,
+    /// Capability bindings this workflow uses (from `uses name: Interface = Impl(...)` clauses)
+    pub used_bindings: Vec<WorkflowUsedBinding>,
     /// The workflow body
     pub body: Workflow,
     /// Optional contract (requires/ensures)
@@ -1638,6 +1803,8 @@ mod tests {
                 declared_return_type: None,
                 plays_roles: vec![],
                 capabilities: vec![],
+                owned_resources: vec![],
+                used_bindings: vec![],
                 body: Workflow::Done {
                     span: Span::new(0, 4, 1, 1),
                 },
@@ -1914,6 +2081,8 @@ mod tests {
             declared_return_type: None,
             plays_roles: vec![],
             capabilities: vec![],
+            owned_resources: vec![],
+            used_bindings: vec![],
             body: Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
             },

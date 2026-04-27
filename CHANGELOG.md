@@ -8,6 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-724 through TASK-728 / Phase 101: added parser, surface AST, module export/import metadata, focused conformance tests, and reference documentation for `capability interface`, `capability impl`, `resource type`, workflow `owns` clauses, and workflow `uses` bindings as non-executable capability/resource substrate for SPEC-052 and SPEC-053.
 - [SPEC-052](docs/spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](docs/spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), [PLAN-100](docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md), and [TASK-720](docs/plan/tasks/TASK-720-write-spec-052-capability-interface-implementation-contract.md) through [TASK-745](docs/plan/tasks/TASK-745-capability-resource-final-docs-examples-verification.md): promoted [NOTE-009](docs/notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) into a normative capability/resource planning packet covering stateless capability interfaces, Ash-defined implementation recipes, binding-time selection, runtime resource instances, host/internal/derived authority provenance, Proc resource split/join policy, and phased implementation from parser substrate through pilot DX examples.
 
 - PLAN-099 / TASK-719: planned the post-Phase-98 `proc::from_act` follow-on as an explicit Act-to-Proc embedding boundary, grounded in the verified Phase 97 hidden-`ActEnv` force path and preserving the public `Act`/`Proc` distinction.

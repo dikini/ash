@@ -49,6 +49,8 @@ fn create_test_workflow_def(name: &str, plays_roles: Vec<&str>) -> WorkflowDef {
             })
             .collect(),
         capabilities: vec![],
+        owned_resources: vec![],
+        used_bindings: vec![],
         body: ash_parser::surface::Workflow::Done { span: test_span() },
         contract: None,
         span: test_span(),

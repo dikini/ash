@@ -1,6 +1,6 @@
 # TASK-725: Add parser and surface-AST substrate for `capability impl` declarations.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -64,11 +64,20 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+## Completion Evidence
+
+- Capability implementation AST/parser substrate is implemented as Phase 101 parser/module substrate only.
+- Added surface AST carriers for Ash-defined capability implementations, required resource clauses, and operation implementation methods.
+- Parser accepts `capability impl Name for Interface ... { ... }` and preserves method modes, signatures, target interface, visibility, and spans.
+- Malformed implementation headers and duplicate operation implementations are covered by Phase 101 parser tests.
+- Focused verification: `cargo test -p ash-parser --test phase_101_capability_implementation_parser`.
+- Final closeout verification also runs `cargo test --workspace --all-targets --all-features`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo fmt --check`, `cargo doc --workspace --no-deps`, and `git diff --check`.
 
 ## Dependencies for Next Task
 

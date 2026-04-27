@@ -2461,6 +2461,8 @@ mod tests {
             )),
             plays_roles: vec![],
             capabilities: vec![],
+            owned_resources: vec![],
+            used_bindings: vec![],
             body: Workflow::Ret {
                 expr: ash_parser::surface::Expr::FnDef {
                     params: vec![("x".into(), Some("Int".into()))],

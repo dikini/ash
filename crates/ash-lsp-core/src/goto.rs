@@ -40,6 +40,9 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
             Definition::Role(r) => r.name.as_ref() == token,
             Definition::Proxy(p) => p.name.as_ref() == token,
             Definition::Interface(i) => i.name.as_ref() == token,
+            Definition::CapabilityInterface(i) => i.name.as_ref() == token,
+            Definition::CapabilityImplementation(i) => i.name.as_ref() == token,
+            Definition::ResourceType(r) => r.name.as_ref() == token,
             Definition::Impl(i) => i.interface.as_ref() == token,
             Definition::BuiltinFn(b) => b.name.as_ref() == token,
         };
@@ -51,6 +54,9 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
                 Definition::Role(r) => &r.span,
                 Definition::Proxy(p) => &p.span,
                 Definition::Interface(i) => &i.span,
+                Definition::CapabilityInterface(i) => &i.span,
+                Definition::CapabilityImplementation(i) => &i.span,
+                Definition::ResourceType(r) => &r.span,
                 Definition::Impl(i) => &i.span,
                 Definition::BuiltinFn(b) => &b.span,
             });

@@ -17,7 +17,8 @@ use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
     Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter, Pattern,
-    Requirement, RoleRef, Spanned, Type, TypeParam, Workflow, WorkflowDef,
+    Requirement, RoleRef, Spanned, Type, TypeParam, Workflow, WorkflowDef, WorkflowOwnedResource,
+    WorkflowUsedBinding,
 };
 use crate::token::Span;
 
@@ -53,9 +54,9 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     skip_whitespace_and_comments(input);
     let plays_roles = parse_plays_roles(input)?;
 
-    // Parse optional `capabilities: [...]` clause
+    // Parse optional workflow header clauses.
     skip_whitespace_and_comments(input);
-    let capabilities = parse_capabilities_clause(input)?;
+    let (capabilities, owned_resources, used_bindings) = parse_workflow_header_clauses(input)?;
 
     // Parse optional contract clauses (requires/ensures)
     skip_whitespace_and_comments(input);
@@ -73,6 +74,8 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
         declared_return_type,
         plays_roles,
         capabilities,
+        owned_resources,
+        used_bindings,
         body,
         contract,
         span,
@@ -127,6 +130,78 @@ fn parse_single_plays_role(input: &mut ParseInput) -> ModalResult<RoleRef> {
     Ok(RoleRef {
         name: role_name.into(),
         span,
+    })
+}
+
+/// Parse optional workflow header clauses after roles.
+fn parse_workflow_header_clauses(
+    input: &mut ParseInput,
+) -> ModalResult<(
+    Vec<CapabilityDecl>,
+    Vec<WorkflowOwnedResource>,
+    Vec<WorkflowUsedBinding>,
+)> {
+    let mut capabilities = Vec::new();
+    let mut owned_resources = Vec::new();
+    let mut used_bindings = Vec::new();
+
+    loop {
+        skip_whitespace_and_comments(input);
+        if starts_with_keyword(input, "capabilities") {
+            if !capabilities.is_empty() {
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+            capabilities = parse_capabilities_clause(input)?;
+        } else if starts_with_keyword(input, "owns") {
+            owned_resources.push(parse_owns_clause(input)?);
+        } else if starts_with_keyword(input, "uses") {
+            used_bindings.push(parse_uses_clause(input)?);
+        } else {
+            break;
+        }
+    }
+
+    Ok((capabilities, owned_resources, used_bindings))
+}
+
+fn parse_owns_clause(input: &mut ParseInput) -> ModalResult<WorkflowOwnedResource> {
+    let start_pos = input.state.pos;
+    let _ = keyword("owns").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ty = parse_type(input)?;
+
+    Ok(WorkflowOwnedResource {
+        name: name.into(),
+        ty,
+        span: span_from(&start_pos, &input.state.pos),
+    })
+}
+
+fn parse_uses_clause(input: &mut ParseInput) -> ModalResult<WorkflowUsedBinding> {
+    let start_pos = input.state.pos;
+    let _ = keyword("uses").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let interface = parse_type(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let implementation = expr(input)?;
+
+    Ok(WorkflowUsedBinding {
+        name: name.into(),
+        interface,
+        implementation,
+        span: span_from(&start_pos, &input.state.pos),
     })
 }
 

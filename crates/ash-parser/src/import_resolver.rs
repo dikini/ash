@@ -7,11 +7,12 @@ use ash_core::module_graph::{ModuleGraph, ModuleId};
 use std::collections::HashMap;
 use thiserror::Error;
 
+use crate::capability_export::{ModuleDefinitionExport, ModuleDefinitionExportKind};
 use crate::surface::Visibility;
 use crate::use_tree::{SimplePath, Use, UseItem, UsePath};
 
 /// A binding represents a resolved import.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
     /// The module ID where the target item is defined.
     pub target_module: ModuleId,
@@ -21,8 +22,15 @@ pub struct Binding {
     pub visibility: Visibility,
     /// The kind of binding (direct, glob, etc.).
     pub kind: BindingKind,
+    /// The kind of item that was imported.
+    pub item_kind: BindingItemKind,
     /// For operational capabilities: the target (provider, action) pair
     pub capability_target: Option<(String, String)>,
+    /// For Phase 101 capability/resource definitions: parsed module metadata.
+    ///
+    /// This preserves the parser/module substrate across import resolution
+    /// without making the definitions executable or type-checked in Phase 101.
+    pub definition_metadata: Option<ModuleDefinitionExport>,
 }
 
 /// The kind of binding.
@@ -34,6 +42,33 @@ pub enum BindingKind {
     Glob,
     /// Import with alias: `use crate::foo::bar as baz;`
     Aliased { original: String },
+}
+
+/// The kind of exported item a binding refers to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BindingItemKind {
+    /// Generic legacy item with no richer parser metadata.
+    Item,
+    /// Legacy direct capability export carrying provider/action target metadata.
+    LegacyCapability,
+    /// Phase 101 capability interface definition.
+    CapabilityInterface,
+    /// Phase 101 capability implementation recipe definition.
+    CapabilityImplementation,
+    /// Phase 101 resource type definition.
+    ResourceType,
+}
+
+impl From<&ModuleDefinitionExportKind> for BindingItemKind {
+    fn from(kind: &ModuleDefinitionExportKind) -> Self {
+        match kind {
+            ModuleDefinitionExportKind::CapabilityInterface(_) => Self::CapabilityInterface,
+            ModuleDefinitionExportKind::CapabilityImplementation(_) => {
+                Self::CapabilityImplementation
+            }
+            ModuleDefinitionExportKind::ResourceType(_) => Self::ResourceType,
+        }
+    }
 }
 
 /// Errors that can occur during import resolution.
@@ -82,8 +117,11 @@ pub struct ImportResolver<'a> {
 struct Export {
     name: String,
     visibility: Visibility,
+    item_kind: BindingItemKind,
     /// For operational capabilities: the target (provider, action) pair
     capability_target: Option<(String, String)>,
+    /// For Phase 101 capability/resource definitions: parsed module metadata.
+    definition_metadata: Option<ModuleDefinitionExport>,
 }
 
 impl Binding {
@@ -99,7 +137,48 @@ impl Binding {
             item_name: item_name.into(),
             visibility,
             kind,
+            item_kind: BindingItemKind::Item,
             capability_target: None,
+            definition_metadata: None,
+        }
+    }
+
+    /// Create a new binding with an explicit item kind.
+    pub fn with_item_kind(
+        target_module: ModuleId,
+        item_name: impl Into<String>,
+        visibility: Visibility,
+        kind: BindingKind,
+        item_kind: BindingItemKind,
+    ) -> Self {
+        Self {
+            target_module,
+            item_name: item_name.into(),
+            visibility,
+            kind,
+            item_kind,
+            capability_target: None,
+            definition_metadata: None,
+        }
+    }
+
+    /// Create a new binding with Phase 101 parsed definition metadata.
+    pub fn with_definition_metadata(
+        target_module: ModuleId,
+        item_name: impl Into<String>,
+        visibility: Visibility,
+        kind: BindingKind,
+        metadata: ModuleDefinitionExport,
+    ) -> Self {
+        let item_kind = BindingItemKind::from(&metadata.kind);
+        Self {
+            target_module,
+            item_name: item_name.into(),
+            visibility,
+            kind,
+            item_kind,
+            capability_target: None,
+            definition_metadata: Some(metadata),
         }
     }
 
@@ -116,7 +195,9 @@ impl Binding {
             item_name: item_name.into(),
             visibility,
             kind,
+            item_kind: BindingItemKind::LegacyCapability,
             capability_target: Some(capability_target),
+            definition_metadata: None,
         }
     }
 }
@@ -157,7 +238,9 @@ impl<'a> ImportResolver<'a> {
                     Export {
                         name,
                         visibility: vis,
+                        item_kind: BindingItemKind::Item,
                         capability_target: None,
+                        definition_metadata: None,
                     },
                 )
             })
@@ -183,12 +266,41 @@ impl<'a> ImportResolver<'a> {
                     Export {
                         name,
                         visibility: vis,
+                        item_kind: BindingItemKind::LegacyCapability,
                         capability_target: Some((provider, action)),
+                        definition_metadata: None,
                     },
                 )
             })
             .collect();
         self.module_exports.insert(module_id, export_map);
+    }
+
+    /// Add Phase 101 capability/resource definition exports for a module.
+    ///
+    /// This should be called before `resolve_all` to provide exported parser
+    /// metadata for capability interfaces, capability implementations, and
+    /// resource types.
+    pub fn add_definition_exports(
+        &mut self,
+        module_id: ModuleId,
+        exports: Vec<ModuleDefinitionExport>,
+    ) {
+        let export_map = self.module_exports.entry(module_id).or_default();
+        for metadata in exports {
+            let name = metadata.visible_name.to_string();
+            let item_kind = BindingItemKind::from(&metadata.kind);
+            export_map.insert(
+                name.clone(),
+                Export {
+                    name,
+                    visibility: metadata.visibility.clone(),
+                    item_kind,
+                    capability_target: None,
+                    definition_metadata: Some(metadata),
+                },
+            );
+        }
     }
 
     /// Resolve all imports in the module graph.
@@ -327,8 +439,22 @@ impl<'a> ImportResolver<'a> {
                 kind,
                 (provider.clone(), action.clone()),
             )
+        } else if let Some(metadata) = &export.definition_metadata {
+            Binding::with_definition_metadata(
+                target_module,
+                item_name,
+                export.visibility.clone(),
+                kind,
+                metadata.clone(),
+            )
         } else {
-            Binding::new(target_module, item_name, export.visibility.clone(), kind)
+            Binding::with_item_kind(
+                target_module,
+                item_name,
+                export.visibility.clone(),
+                kind,
+                export.item_kind,
+            )
         };
 
         if bindings.contains_key(&binding_name) {
@@ -375,12 +501,21 @@ impl<'a> ImportResolver<'a> {
                     BindingKind::Glob,
                     (provider.clone(), action.clone()),
                 )
-            } else {
-                Binding::new(
+            } else if let Some(metadata) = &export.definition_metadata {
+                Binding::with_definition_metadata(
                     target_module,
                     name.clone(),
                     export.visibility.clone(),
                     BindingKind::Glob,
+                    metadata.clone(),
+                )
+            } else {
+                Binding::with_item_kind(
+                    target_module,
+                    name.clone(),
+                    export.visibility.clone(),
+                    BindingKind::Glob,
+                    export.item_kind,
                 )
             };
 
@@ -455,11 +590,12 @@ impl<'a> ImportResolver<'a> {
                     (provider.clone(), action.clone()),
                 )
             } else {
-                Binding::new(
+                Binding::with_item_kind(
                     target_module,
                     item_name.to_string(),
                     export.visibility.clone(),
                     kind,
+                    export.item_kind,
                 )
             };
 

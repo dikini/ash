@@ -15,7 +15,7 @@ use async_openai::config::OpenAIConfig;
 /// # Errors
 /// Returns `CapabilityError::InvalidArgument` if:
 /// - args is empty
-/// - args[0] is not a String variant
+/// - args\[0\] is not a `String` variant
 /// - provider string is empty
 pub fn extract_list_models_arg(args: &[Value]) -> Result<&str, CapabilityError> {
     if args.is_empty() {

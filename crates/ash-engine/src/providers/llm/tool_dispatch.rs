@@ -24,7 +24,7 @@ pub struct ToolCallValue {
 /// Extract tool calls from a `ChatResponse` Value
 ///
 /// Input: `ChatResponse` Value with `tool_calls` field
-/// Output: Vec<ToolCallValue> or `CapabilityError`
+/// Output: `Vec<ToolCallValue>` or `CapabilityError`
 ///
 /// # Errors
 /// Returns `CapabilityError::InvalidArgument` if the response is not a Record,
@@ -133,7 +133,7 @@ pub fn format_tool_result_message(call_id: &str, content: &str) -> Value {
 /// Convert Ash `ToolDef` values to `OpenAI` `ChatCompletionTool` format
 ///
 /// Input: List of `ToolDef` Values
-/// Output: Vec<ChatCompletionTool>
+/// Output: `Vec<ChatCompletionTool>`
 ///
 /// Expected `ToolDef` shape:
 /// ```text

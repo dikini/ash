@@ -336,6 +336,10 @@ fn check_purity_recursive(
             // TASK-747 only adds parser substrate. Typed do-block effect/purity
             // semantics are intentionally unsupported until typed elaboration.
         }
+        Expr::Comprehension { .. } => {
+            // TASK-756 only wires parser/visitor substrate. Like DoBlock,
+            // comprehension purity semantics are deferred to typed elaboration.
+        }
     }
 }
 

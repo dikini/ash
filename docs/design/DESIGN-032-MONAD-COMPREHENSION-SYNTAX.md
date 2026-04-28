@@ -1,6 +1,6 @@
 # DESIGN-032: Monad Comprehension Syntax
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-04-28
 **Related:** DESIGN-031, SPEC-054, SPEC-055, PLAN-101, PLAN-102
 
@@ -48,13 +48,10 @@ If the target can be inferred:
 [f(x) | x <- xs]
 ```
 
-is equivalent to:
+is a deferred extension. Phase 106 requires the explicit form:
 
 ```ash
-do {
-    x <- xs;
-    return f(x)
-}
+[f(x) | x <- xs]: K
 ```
 
 ## 3. Target Resolution
@@ -75,11 +72,11 @@ Comprehension syntax supports:
 
 The postfix annotation is comprehension-specific target syntax. It is intentionally shaped like a type ascription, but the current parser should not assume a general expression-level `expr: Type` annotation exists. The postfix slot is used because bracket comprehension is mixfix syntax and has no clean prefix target slot.
 
-Target resolution uses the same mechanism as generalized do-notation:
+Target resolution uses the same mechanism as generalized do-notation. Phase 106 implements the explicit-target MVP only:
 
-1. use the explicit target, if present;
-2. otherwise infer from expected type and qualifier RHS constraints;
-3. otherwise report ambiguity.
+1. use the explicit target;
+2. reject missing targets with a comprehension-specific diagnostic;
+3. reserve expected-type/qualifier-driven inference for a later phase.
 
 The target must resolve to a unary computation constructor:
 

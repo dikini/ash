@@ -1,6 +1,6 @@
 # TASK-758: Comprehension Diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -35,9 +35,9 @@ Add comprehension-specific hard errors and non-fatal teaching diagnostics while 
 
 ## Verification Checklist
 
-- [ ] Every SPEC-055 §12 diagnostic family has a test.
-- [ ] Existing SPEC-054/TASK-752 diagnostics still pass.
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo test -p ash-typeck --test task_758_comprehension_diagnostics` passes.
-- [ ] `cargo test -p ash-typeck --test task_752_do_diagnostics` passes.
-- [ ] Independent review confirms no diagnostic overclaims.
+- [x] Every SPEC-055 §12 diagnostic family has a test.
+- [x] Existing SPEC-054/TASK-752 diagnostics still pass.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo test -p ash-typeck --test task_758_comprehension_diagnostics` passes.
+- [x] `cargo test -p ash-typeck --test task_752_do_diagnostics` passes.
+- [x] Independent review confirms no diagnostic overclaims.

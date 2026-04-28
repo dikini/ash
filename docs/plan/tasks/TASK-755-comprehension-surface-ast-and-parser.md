@@ -1,6 +1,6 @@
 # TASK-755: Comprehension Surface AST and Parser
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -36,9 +36,9 @@ Add source-fidelity parser/surface support for bracket comprehensions without se
 
 ## Verification Checklist
 
-- [ ] Parser tests fail before implementation.
-- [ ] Parser tests pass after implementation.
-- [ ] Existing Phase 105 do/act parser tests still pass.
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo test -p ash-parser` focused parser tests pass.
-- [ ] Independent review confirms parser-state and precedence behavior.
+- [x] Parser tests fail before implementation.
+- [x] Parser tests pass after implementation.
+- [x] Existing Phase 105 do/act parser tests still pass.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo test -p ash-parser` focused parser tests pass.
+- [x] Independent review confirms parser-state and precedence behavior.

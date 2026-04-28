@@ -11,8 +11,8 @@ use crate::input::{ParseInput, Position};
 use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
-    ActStmt, BinaryOp, BlockStmt, ConstructorPayload, DoStmt, DoTarget, Expr, Literal, MatchArm,
-    Name, Pattern, Type, UnaryOp,
+    ActStmt, BinaryOp, BlockStmt, ComprehensionQualifier, ConstructorPayload, DoStmt, DoTarget,
+    Expr, Literal, MatchArm, Name, Pattern, Type, UnaryOp,
 };
 use crate::token::Span;
 
@@ -43,15 +43,7 @@ pub(crate) fn parse_do_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
 
     let target_start = input.state.pos;
-    let target_name: Name = identifier(input)?.into();
-    skip_whitespace_and_comments(input);
-    let target_args = parse_do_target_args(input)?;
-    let target_span = span_from(&target_start, &input.state.pos);
-    let target = DoTarget {
-        name: target_name,
-        args: target_args,
-        span: target_span,
-    };
+    let target = parse_do_target(input, &target_start)?;
 
     skip_whitespace_and_comments(input);
     let _ = literal_str("{").parse_next(input)?;
@@ -75,6 +67,18 @@ pub(crate) fn parse_do_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         target,
         stmts,
         span,
+    })
+}
+
+fn parse_do_target(input: &mut ParseInput, target_start: &Position) -> ModalResult<DoTarget> {
+    let target_name: Name = identifier(input)?.into();
+    skip_whitespace_and_comments(input);
+    let target_args = parse_do_target_args(input)?;
+    let target_span = span_from(target_start, &input.state.pos);
+    Ok(DoTarget {
+        name: target_name,
+        args: target_args,
+        span: target_span,
     })
 }
 
@@ -1095,6 +1099,15 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         return Ok(e);
     }
 
+    // Try bracket comprehension expression: [result | qualifiers]: K (SPEC-055 substrate)
+    {
+        let saved = input.clone();
+        if let Ok(comprehension) = parse_comprehension_expr(input) {
+            return Ok(comprehension);
+        }
+        *input = saved;
+    }
+
     // Try literal
     if let Ok(lit) = literal(input) {
         return Ok(Expr::Literal(lit));
@@ -1274,6 +1287,100 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     Ok(expr)
+}
+
+fn parse_comprehension_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state.pos;
+    let _ = literal_str("[").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let result = expr(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("|").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    if input.input.starts_with(']') {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    let mut qualifiers = vec![parse_comprehension_qualifier(input)?];
+    loop {
+        skip_whitespace_and_comments(input);
+        if !input.input.starts_with(',') {
+            break;
+        }
+        let _ = literal_str(",").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(']') {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+        qualifiers.push(parse_comprehension_qualifier(input)?);
+    }
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("]").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let target = if input.input.starts_with(':') {
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let target_start = input.state.pos;
+        Some(parse_do_target(input, &target_start)?)
+    } else {
+        None
+    };
+
+    let span = span_from(&start_pos, &input.state.pos);
+    Ok(Expr::Comprehension {
+        result: Box::new(result),
+        qualifiers,
+        target,
+        span,
+    })
+}
+
+fn parse_comprehension_qualifier(input: &mut ParseInput) -> ModalResult<ComprehensionQualifier> {
+    let qualifier_start = input.state.pos;
+
+    if input_starts_with_keyword(input, "let") {
+        let _ = keyword("let").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let name: Name = identifier(input)?.into();
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("=").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let value = expr(input)?;
+        let span = span_from(&qualifier_start, &input.state.pos);
+        return Ok(ComprehensionQualifier::Let {
+            name,
+            value: Box::new(value),
+            span,
+        });
+    }
+
+    let name: Name = identifier(input)?.into();
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("<-").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let value = expr(input)?;
+    let span = span_from(&qualifier_start, &input.state.pos);
+
+    if name.as_ref() == "_" {
+        return Ok(ComprehensionQualifier::DiscardBind {
+            value: Box::new(value),
+            span,
+        });
+    }
+
+    Ok(ComprehensionQualifier::Bind {
+        name,
+        value: Box::new(value),
+        span,
+    })
 }
 
 fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Expr)>> {

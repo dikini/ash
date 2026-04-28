@@ -1,6 +1,6 @@
 # TASK-757: Comprehension Typed Elaboration
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -36,10 +36,10 @@ Type-check and elaborate comprehensions by reusing the Phase 105 generalized typ
 
 ## Verification Checklist
 
-- [ ] Tests fail before implementation.
-- [ ] Focused comprehension elaboration tests pass.
-- [ ] Existing TASK-749/TASK-752 typed-do tests still pass.
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo test -p ash-typeck --test task_757_comprehension_elaboration` passes.
-- [ ] `cargo test -p ash-typeck --test task_749_typed_do` passes.
-- [ ] Independent review confirms typed-do semantics were reused rather than forked.
+- [x] Tests fail before implementation.
+- [x] Focused comprehension elaboration tests pass.
+- [x] Existing TASK-749/TASK-752 typed-do tests still pass.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo test -p ash-typeck --test task_757_comprehension_elaboration` passes.
+- [x] `cargo test -p ash-typeck --test task_749_typed_do` passes.
+- [x] Independent review confirms typed-do semantics were reused rather than forked.

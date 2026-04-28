@@ -747,6 +747,28 @@ impl NameResolver {
                     }
                 }
             }
+
+            Expr::Comprehension {
+                result, qualifiers, ..
+            } => {
+                use ash_parser::surface::ComprehensionQualifier;
+
+                self.push_scope();
+                for qualifier in qualifiers {
+                    match qualifier {
+                        ComprehensionQualifier::Let { name, value, .. }
+                        | ComprehensionQualifier::Bind { name, value, .. } => {
+                            self.resolve_expr(value);
+                            self.bind(name.as_ref());
+                        }
+                        ComprehensionQualifier::DiscardBind { value, .. } => {
+                            self.resolve_expr(value);
+                        }
+                    }
+                }
+                self.resolve_expr(result);
+                self.pop_scope();
+            }
         }
     }
 
@@ -938,7 +960,9 @@ pub fn resolve_workflow(workflow: &Workflow) -> Result<ResolutionResult, Vec<Res
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::surface::{ActionRef, CheckTarget, Literal, ObligationRef};
+    use ash_parser::surface::{
+        ActionRef, CheckTarget, ComprehensionQualifier, Literal, ObligationRef,
+    };
 
     fn test_span() -> Span {
         Span::new(0, 0, 1, 1)
@@ -1330,6 +1354,83 @@ mod tests {
 
         let result = resolver.resolve_workflow(&workflow);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_resolve_comprehension_qualifiers_bind_left_to_right() {
+        let mut resolver = NameResolver::new();
+        resolver.bind("xs");
+
+        let workflow = Workflow::Ret {
+            expr: Expr::Comprehension {
+                result: Box::new(Expr::Variable {
+                    name: "y".into(),
+                    span: test_span(),
+                }),
+                qualifiers: vec![
+                    ComprehensionQualifier::Bind {
+                        name: "x".into(),
+                        value: Box::new(Expr::Variable {
+                            name: "xs".into(),
+                            span: test_span(),
+                        }),
+                        span: test_span(),
+                    },
+                    ComprehensionQualifier::Let {
+                        name: "y".into(),
+                        value: Box::new(Expr::Variable {
+                            name: "x".into(),
+                            span: test_span(),
+                        }),
+                        span: test_span(),
+                    },
+                ],
+                target: None,
+                span: test_span(),
+            },
+            span: test_span(),
+        };
+
+        assert!(resolver.resolve_workflow(&workflow).is_ok());
+    }
+
+    #[test]
+    fn test_resolve_comprehension_qualifier_rhs_cannot_see_later_bindings() {
+        let mut resolver = NameResolver::new();
+        resolver.bind("xs");
+
+        let workflow = Workflow::Ret {
+            expr: Expr::Comprehension {
+                result: Box::new(Expr::Variable {
+                    name: "late".into(),
+                    span: test_span(),
+                }),
+                qualifiers: vec![
+                    ComprehensionQualifier::Let {
+                        name: "first".into(),
+                        value: Box::new(Expr::Variable {
+                            name: "late".into(),
+                            span: test_span(),
+                        }),
+                        span: test_span(),
+                    },
+                    ComprehensionQualifier::Bind {
+                        name: "late".into(),
+                        value: Box::new(Expr::Variable {
+                            name: "xs".into(),
+                            span: test_span(),
+                        }),
+                        span: test_span(),
+                    },
+                ],
+                target: None,
+                span: test_span(),
+            },
+            span: test_span(),
+        };
+
+        let result = resolver.resolve_workflow(&workflow);
+        assert!(result.is_err());
     }
 
     #[test]

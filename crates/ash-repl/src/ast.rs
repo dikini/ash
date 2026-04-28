@@ -282,6 +282,36 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::Comprehension {
+            result,
+            qualifiers,
+            target,
+            ..
+        } => {
+            let mut out = String::from("Comprehension {\n");
+            push_field(&mut out, 2, "result", &render_expr(result));
+            push_field(
+                &mut out,
+                2,
+                "qualifiers",
+                &render_list(qualifiers.iter().map(|qualifier| match qualifier {
+                    ash_parser::surface::ComprehensionQualifier::Let { name, value, .. } => {
+                        format!("Let({name:?}, {})", render_expr(value))
+                    }
+                    ash_parser::surface::ComprehensionQualifier::Bind { name, value, .. } => {
+                        format!("Bind({name:?}, {})", render_expr(value))
+                    }
+                    ash_parser::surface::ComprehensionQualifier::DiscardBind { value, .. } => {
+                        format!("DiscardBind({})", render_expr(value))
+                    }
+                })),
+            );
+            if let Some(target) = target {
+                push_field(&mut out, 2, "target", &format!("{:?}", target.name));
+            }
+            out.push('}');
+            out
+        }
     }
 }
 

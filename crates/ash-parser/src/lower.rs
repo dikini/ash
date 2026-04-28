@@ -1620,6 +1620,10 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         Expr::DoBlock { .. } => Err(LoweringError::ExprNotLowerable {
             kind: "generic do block requires typed do elaboration before lowering",
         }),
+
+        Expr::Comprehension { .. } => Err(LoweringError::ExprNotLowerable {
+            kind: "comprehension requires typed do elaboration before lowering",
+        }),
     }
 }
 

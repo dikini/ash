@@ -1,6 +1,6 @@
 # SPEC-055: Monad Comprehension Syntax
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-04-28
 **Promotes:** [DESIGN-032](../design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md)
 **Builds on:** [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md)
@@ -325,13 +325,15 @@ If SPEC-054 evolves from builtin dictionaries to a canonical `Monad<K>` interfac
 
 ## 14. Implementation Status
 
-As of this spec:
+As of Phase 106 closeout:
 
-- DESIGN-032 exists as the design note for this feature.
-- SPEC-054/Phase 105 has implemented the typed do substrate for MVP `Act` and `Proc` targets.
-- SPEC-055 itself is not implemented.
-- The first implementation phase should treat parser/surface support and typed elaboration reuse as planned work.
-- Pure `List`, `Option`, and `Result<_, E>` comprehension examples are semantic targets, not implementation claims, until their dictionaries and constructor support exist.
+- DESIGN-032 is implemented as an MVP over SPEC-054.
+- Parser/surface support exists for bracket comprehensions with source-fidelity qualifiers and comprehension-specific postfix targets.
+- Parser-only lowering rejects comprehension nodes; typed checking owns semantic normalization.
+- Type checking and typed elaboration normalize comprehensions through the existing SPEC-054 generalized typed-do path for MVP `Act` and `Proc` targets.
+- Diagnostics cover missing explicit targets, wrong-kind targets, missing MVP dictionaries, pure RHS values used with `<-`, wrong-constructor RHS values, suspicious `let` bindings of monadic values, and bare boolean qualifier rejection/non-acceptance.
+- Phase 106 still requires explicit targets. Target inference is deferred.
+- Pure `List`, `Option`, and `Result<_, E>` comprehension examples remain future semantic targets, not implementation claims, until their dictionaries and constructor-hole support exist.
 
 ## 15. Deferred Extensions
 

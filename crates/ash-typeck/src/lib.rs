@@ -682,6 +682,22 @@ fn validate_interface_calls_in_expr(
             "generalized do-block type checking is not implemented (TASK-747 parser substrate only)"
                 .to_string(),
         )),
+        ash_parser::surface::Expr::Comprehension {
+            result,
+            qualifiers,
+            ..
+        } => {
+            use ash_parser::surface::ComprehensionQualifier;
+            for qualifier in qualifiers {
+                let value = match qualifier {
+                    ComprehensionQualifier::Let { value, .. }
+                    | ComprehensionQualifier::Bind { value, .. }
+                    | ComprehensionQualifier::DiscardBind { value, .. } => value,
+                };
+                validate_interface_calls_in_expr(env, value)?;
+            }
+            validate_interface_calls_in_expr(env, result)
+        }
     }
 }
 
@@ -1850,6 +1866,22 @@ fn validate_fn_call_preconditions_expr(
             "generalized do-block type checking is not implemented (TASK-747 parser substrate only)"
                 .to_string(),
         )),
+        ash_parser::surface::Expr::Comprehension {
+            result,
+            qualifiers,
+            ..
+        } => {
+            use ash_parser::surface::ComprehensionQualifier;
+            for qualifier in qualifiers {
+                let value = match qualifier {
+                    ComprehensionQualifier::Let { value, .. }
+                    | ComprehensionQualifier::Bind { value, .. }
+                    | ComprehensionQualifier::DiscardBind { value, .. } => value,
+                };
+                validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
+            }
+            validate_fn_call_preconditions_expr(env, result, facts, assumptions)
+        }
     }
 }
 

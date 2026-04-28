@@ -2952,7 +2952,7 @@ Execute Ash-defined capability implementation bodies and prove the model with ad
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-741](tasks/TASK-741-execute-ash-defined-capability-implementation-bodies.md) | Execute Ash-defined capability implementation bodies | 8 | ✅ Complete |
-| [TASK-742](tasks/TASK-742-adapter-mock-replay-capability-examples.md) | Adapter, mock, and replay capability examples | 5 | 📝 Planned |
+| [TASK-742](tasks/TASK-742-adapter-mock-replay-capability-examples.md) | Adapter, mock, and replay capability examples | 5 | ✅ Complete |
 | [TASK-743](tasks/TASK-743-cli-engine-capability-binding-configuration-surface.md) | CLI/engine capability binding configuration surface | 6 | 📝 Planned |
 | [TASK-744](tasks/TASK-744-standard-internal-kv-and-test-clock-pilots.md) | Standard internal KV and test-clock pilots | 7 | 📝 Planned |
 | [TASK-745](tasks/TASK-745-capability-resource-final-docs-examples-verification.md) | Final docs, examples, and verification closeout | 5 | 📝 Planned |

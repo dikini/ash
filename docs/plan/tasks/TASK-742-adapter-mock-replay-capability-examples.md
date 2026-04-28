@@ -1,6 +1,6 @@
 # TASK-742: Add adapter, mock, and replay examples proving test/prod substitution and derived capability patterns.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -65,11 +65,28 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+### Completion Evidence
+
+- Added `examples/06-capability-implementations/` with `ash check`-covered packets for:
+  - mock/internal KV implementation,
+  - logging/cache adapter over an inner `KeyValue` dependency,
+  - recording/replay sketch over replay-log authority.
+- Added top-level and local example README coverage that states the current boundary honestly: source examples are checkable declaration packets, while executable operation-body behavior is covered by runtime API tests until source-level `ash run` lowering/admission is implemented.
+- Added CLI conformance coverage in `crates/ash-cli/tests/task_742_capability_examples_conformance.rs`.
+- Added executable runtime API coverage in `crates/ash-interp/tests/task_742_capability_examples.rs` for host/mock substitution, adapter invocation of an inner capability dependency, and a recording-envelope pilot without claiming persistent replay.
+- Verified focused behavior with:
+  - `cargo test -p ash-cli --test task_742_capability_examples_conformance`
+  - `cargo test -p ash-interp --test task_742_capability_examples`
+  - `cargo clippy -p ash-interp --test task_742_capability_examples --all-features -- -D warnings`
+  - `cargo clippy -p ash-cli --test task_742_capability_examples_conformance --all-features -- -D warnings`
+  - `cargo run --quiet --bin ash -- check` for each Phase 104 source example.
+- Independent review found the implementation broadly compliant after fixing misleading source `Unit` bodies to return `()`.
 
 ## Dependencies for Next Task
 

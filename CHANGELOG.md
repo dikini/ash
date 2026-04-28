@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-742 / Phase 104: added checkable Phase 104 capability implementation examples for mock/internal KV, logging/cache adapter, and recording/replay sketch patterns; documented the current source-level `ash check` versus runtime API execution boundary; added CLI conformance coverage for the examples and executable `ash-interp` runtime API tests proving host/mock substitution, adapter invocation of an inner capability dependency, and a recording-envelope pilot without claiming persistent replay.
+
 - TASK-741 / Phase 104: added runtime execution for Ash-defined capability implementation operation bodies through the effectful `invoke` path, including public operation-body registration, explicit admitted-binding dispatch, parameter/config/capability dependency alias scope, nested implementation dependency invocation, resource dependencies kept authority-only and non-first-class, operational failure attribution for implementation body failures, and focused regression/proptest coverage preserving existing host-provider behavior.
 
 - [DESIGN-031](docs/design/DESIGN-031-GENERALIZED-DO-NOTATION.md): drafted generalized typed do-notation for computation constructors, covering `do:K` syntax, `Monad<M>` intent, explicit `<-`/`let`/`return` forms, tower/purity rules, operational failure interaction, diagnostics, and Act migration direction.

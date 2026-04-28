@@ -724,18 +724,18 @@ fn collect_do_notation_diagnostics(env: &TypeEnv, expr: &Expr, diagnostics: &mut
         }
         Expr::ActBlock { .. } => {}
         Expr::Comprehension {
-            result, qualifiers, ..
+            target,
+            result,
+            qualifiers,
+            ..
         } => {
-            use ash_parser::surface::ComprehensionQualifier;
-            for qualifier in qualifiers {
-                let value = match qualifier {
-                    ComprehensionQualifier::Let { value, .. }
-                    | ComprehensionQualifier::Bind { value, .. }
-                    | ComprehensionQualifier::DiscardBind { value, .. } => value,
-                };
-                collect_do_notation_diagnostics(env, value, diagnostics);
-            }
-            collect_do_notation_diagnostics(env, result, diagnostics);
+            collect_comprehension_diagnostics(
+                env,
+                target.as_ref(),
+                result,
+                qualifiers,
+                diagnostics,
+            );
         }
         Expr::Call { args, .. } => {
             for arg in args {
@@ -1071,6 +1071,82 @@ fn elaborate_typed_do_parts(
     })
 }
 
+fn collect_comprehension_diagnostics(
+    env: &TypeEnv,
+    target: Option<&ash_parser::surface::DoTarget>,
+    result: &Expr,
+    qualifiers: &[ComprehensionQualifier],
+    diagnostics: &mut Vec<String>,
+) {
+    let Some(target) = target else {
+        collect_do_notation_diagnostics(env, result, diagnostics);
+        for qualifier in qualifiers {
+            match qualifier {
+                ComprehensionQualifier::Let { value, .. }
+                | ComprehensionQualifier::Bind { value, .. }
+                | ComprehensionQualifier::DiscardBind { value, .. } => {
+                    collect_do_notation_diagnostics(env, value, diagnostics);
+                }
+            }
+        }
+        return;
+    };
+
+    let Ok(dictionary) = crate::do_target::resolve_do_target(env, target) else {
+        collect_do_notation_diagnostics(env, result, diagnostics);
+        for qualifier in qualifiers {
+            match qualifier {
+                ComprehensionQualifier::Let { value, .. }
+                | ComprehensionQualifier::Bind { value, .. }
+                | ComprehensionQualifier::DiscardBind { value, .. } => {
+                    collect_do_notation_diagnostics(env, value, diagnostics);
+                }
+            }
+        }
+        return;
+    };
+
+    let mut block_env = env.clone();
+    let mut substitution = Substitution::new();
+    for qualifier in qualifiers {
+        match qualifier {
+            ComprehensionQualifier::Let { name, value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if let Some(value_ty) = diagnostic_expr_type(&block_env, value, &substitution) {
+                    if monadic_inner_type(&value_ty, &dictionary.value_constructor).is_some() {
+                        diagnostics.push(format!(
+                            "comprehension:{} let `{name}` binds monadic value {value_ty} without sequencing; use `{name} <- ...` to bind the produced value, or keep `let` only when you intentionally want the computation value itself",
+                            target.name.as_ref()
+                        ));
+                    }
+                    block_env.bind_variable(name.as_ref(), value_ty);
+                }
+                collect_do_notation_diagnostics(&block_env, value, diagnostics);
+            }
+            ComprehensionQualifier::Bind { name, value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if value_result.is_ok() {
+                    let value_ty = substitution.apply(&value_result.ty);
+                    if let Some(bound_ty) =
+                        monadic_inner_type(&value_ty, &dictionary.value_constructor)
+                    {
+                        block_env.bind_variable(name.as_ref(), bound_ty);
+                    }
+                }
+                collect_do_notation_diagnostics(&block_env, value, diagnostics);
+            }
+            ComprehensionQualifier::DiscardBind { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                collect_do_notation_diagnostics(&block_env, value, diagnostics);
+            }
+        }
+    }
+    collect_do_notation_diagnostics(&block_env, result, diagnostics);
+}
+
 fn missing_comprehension_target_error(span: Span) -> ConstructorError {
     ConstructorError::UnsupportedExpression {
         kind: "comprehension MVP requires an explicit target annotation such as `[x | x <- xs]: Act`; target inference is deferred".to_string(),
@@ -1095,11 +1171,32 @@ fn check_comprehension(
             return CheckResult {
                 ty: Type::Var(TypeVar::fresh()),
                 substitution: Substitution::new(),
-                errors,
+                errors: comprehension_errors(errors),
             };
         }
     };
-    check_do_block(env, target, &stmts, span)
+    let mut result = check_do_block(env, target, &stmts, span);
+    if !result.errors.is_empty() {
+        result.errors = comprehension_errors(result.errors);
+    }
+    result
+}
+
+fn comprehension_errors(errors: Vec<ConstructorError>) -> Vec<ConstructorError> {
+    errors
+        .into_iter()
+        .map(|error| match error {
+            ConstructorError::UnsupportedExpression { kind, span }
+                if !kind.starts_with("comprehension") =>
+            {
+                ConstructorError::UnsupportedExpression {
+                    kind: format!("comprehension {kind}"),
+                    span,
+                }
+            }
+            other => other,
+        })
+        .collect()
 }
 
 fn comprehension_do_stmts(

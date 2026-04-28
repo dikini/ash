@@ -3004,7 +3004,7 @@ Promote explicit typed `do:K` notation for computation constructors. Phase 105 i
 ## Phase 106: Monad Comprehension Syntax
 
 **Priority:** Medium (post-Phase-105 syntax ergonomics over the completed typed-do substrate)
-**Status:** 🚧 In Progress (TASK-754 through TASK-757 complete; TASK-758 through TASK-759 planned)
+**Status:** 🚧 In Progress (TASK-754 through TASK-758 complete; TASK-759 planned)
 **Spec:** [SPEC-055](../spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md)
 **Design:** [DESIGN-032](../design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md)
 **Plan:** [docs/plan/PLAN-102-MONAD-COMPREHENSION-SYNTAX.md](PLAN-102-MONAD-COMPREHENSION-SYNTAX.md)

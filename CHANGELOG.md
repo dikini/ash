@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-758 / Phase 106: added comprehension-specific hard-error context and non-fatal teaching diagnostics for explicit-target, wrong-kind, missing-dictionary, pure `<-`, wrong-constructor, `let`-bound monadic value, and bare-boolean-qualifier cases, while preserving existing SPEC-054 do-notation diagnostics and avoiding claims of target inference, guard semantics, or pure List/Option/Result dictionaries.
+
 - TASK-757 / Phase 106: added typed comprehension checking and `elaborate_typed_comprehension`, requiring explicit MVP targets and normalizing qualifiers to the existing generalized typed-do checker/elaborator so Act/Proc comprehensions synthesize `K<A>` and produce the same dictionary-call core shape as equivalent `do:K` blocks. Added coverage for Act/Proc equivalence, pure `<-` rejection, constructor mismatch and `proc::from_act` behavior, wrong-kind/missing-dictionary targets, and missing target annotations.
 
 - TASK-756 / Phase 106: wired comprehension lowering and visitor boundaries across parser, typechecker name/capability/diagnostic/precondition paths, lint policy traversal, REPL AST rendering, and purity handling. Parser-only lowering and direct type checking now reject comprehensions pending typed elaboration, while purity mirrors the existing `DoBlock` deferral boundary.

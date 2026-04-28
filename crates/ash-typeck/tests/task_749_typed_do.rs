@@ -36,6 +36,15 @@ fn unit_call(module: &str, value: Expr) -> Expr {
     }
 }
 
+fn call(module: Option<&str>, func: &str, args: Vec<Expr>) -> Expr {
+    Expr::Call {
+        func: func.into(),
+        module: module.map(Into::into),
+        args,
+        span: span(),
+    }
+}
+
 fn do_block(target_name: &str, stmts: Vec<DoStmt>) -> Expr {
     Expr::DoBlock {
         target: target(target_name),
@@ -157,6 +166,107 @@ fn do_proc_monadic_bind_unwraps_proc_inner_type() {
 }
 
 #[test]
+fn do_proc_pure_return_has_proc_int_type() {
+    let env = TypeEnv::with_builtin_types();
+    let expr = do_block("Proc", vec![ret(int_lit(1))]);
+
+    let result = check_expr(&env, &expr);
+
+    assert!(
+        result.is_ok(),
+        "do:Proc return should type-check: {result:?}"
+    );
+    assert_eq!(result.ty, computation_type("Proc", Type::Int));
+}
+
+#[test]
+fn do_proc_accepts_explicit_proc_from_act_wrapped_do_act() {
+    let env = TypeEnv::with_builtin_types();
+    let act = do_block("Act", vec![ret(int_lit(7))]);
+    let expr = do_block(
+        "Proc",
+        vec![
+            bind_stmt("x", call(Some("proc"), "from_act", vec![act])),
+            ret(var("x")),
+        ],
+    );
+
+    let result = check_expr(&env, &expr);
+
+    assert!(
+        result.is_ok(),
+        "do:Proc should accept explicit proc::from_act(do:Act {{ ... }}): {result:?}"
+    );
+    assert_eq!(
+        result.substitution.apply(&result.ty),
+        computation_type("Proc", Type::Int)
+    );
+}
+
+#[test]
+fn do_proc_rejects_raw_do_act_bind_rhs_without_from_act() {
+    let expr = do_block(
+        "Proc",
+        vec![
+            bind_stmt("x", do_block("Act", vec![ret(int_lit(1))])),
+            ret(var("x")),
+        ],
+    );
+
+    assert_err_contains(expr, &["do:Proc", "Act<Int>", "proc::from_act"]);
+}
+
+#[test]
+fn do_proc_does_not_import_unqualified_proc_operations() {
+    let expr = do_block(
+        "Proc",
+        vec![
+            bind_stmt(
+                "handles",
+                call(
+                    None,
+                    "par",
+                    vec![unit_call("proc", int_lit(1)), unit_call("proc", int_lit(2))],
+                ),
+            ),
+            ret(var("handles")),
+        ],
+    );
+
+    assert_err_contains(expr, &["unknown function 'par'"]);
+}
+
+#[test]
+fn do_proc_unqualified_proc_operation_is_ordinary_scope_binding_when_present() {
+    let mut env = TypeEnv::with_builtin_types();
+    let par_ty = env
+        .lookup_variable("proc::par")
+        .expect("builtin proc::par type is registered");
+    env.bind_variable("par", par_ty);
+    let expr = do_block(
+        "Proc",
+        vec![
+            bind_stmt(
+                "handles",
+                call(
+                    None,
+                    "par",
+                    vec![unit_call("proc", int_lit(1)), unit_call("proc", int_lit(2))],
+                ),
+            ),
+            ret(var("handles")),
+        ],
+    );
+
+    let result = check_expr(&env, &expr);
+
+    assert!(
+        result.is_ok(),
+        "unqualified par should work only when bound by normal scope rules: {result:?}"
+    );
+}
+
+#[test]
 fn do_proc_rejects_act_bind_rhs_as_constructor_mismatch() {
     let mut env = TypeEnv::with_builtin_types();
     env.bind_variable(
@@ -243,6 +353,21 @@ fn typed_elaboration_lowers_proc_bind_through_resolved_proc_dictionary() {
         elaborated.expr,
         CoreExpr::Call { ref func, module: Some(ref module), ref arguments }
             if func == "bind" && module == "proc" && arguments.len() == 2
+    ));
+}
+
+#[test]
+fn typed_elaboration_lowers_proc_return_through_resolved_proc_dictionary() {
+    let env = TypeEnv::with_builtin_types();
+    let expr = do_block("Proc", vec![ret(int_lit(1))]);
+
+    let elaborated = elaborate_typed_do_block(&env, &expr).expect("typed do:Proc elaborates");
+
+    assert_eq!(elaborated.ty, computation_type("Proc", Type::Int));
+    assert!(matches!(
+        elaborated.expr,
+        CoreExpr::Call { ref func, module: Some(ref module), ref arguments }
+            if func == "unit" && module == "proc" && arguments.len() == 1
     ));
 }
 

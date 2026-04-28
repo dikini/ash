@@ -2969,7 +2969,7 @@ Execute Ash-defined capability implementation bodies and prove the model with ad
 ## Phase 105: Generalized Typed Do-Notation
 
 **Priority:** Medium (post-Phase-104 language ergonomics over the completed Act/Proc substrate)
-**Status:** 🟢 In Progress (TASK-747 parser/surface substrate, TASK-748 target/dictionary resolution, TASK-749 typed elaboration, and TASK-750 Act compatibility complete; TASK-751 Proc integration next)
+**Status:** 🟢 In Progress (TASK-747 parser/surface substrate, TASK-748 target/dictionary resolution, TASK-749 typed elaboration, TASK-750 Act compatibility, and TASK-751 Proc/tower integration complete; TASK-752 diagnostics next)
 **Spec:** [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md)
 **Design:** [DESIGN-031](../design/DESIGN-031-GENERALIZED-DO-NOTATION.md)
 **Plan:** [docs/plan/PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md](PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md)
@@ -2983,7 +2983,7 @@ Promote explicit typed `do:K` notation for computation constructors. Phase 105 i
 | [TASK-748](tasks/TASK-748-do-target-kinding-and-dictionary-resolution.md) | Do-target kinding and dictionary resolution | 7 | ✅ Complete |
 | [TASK-749](tasks/TASK-749-typed-do-elaboration-and-lowering.md) | Typed do elaboration and lowering | 8 | ✅ Complete |
 | [TASK-750](tasks/TASK-750-act-block-compatibility-and-migration.md) | Act-block compatibility and migration diagnostics | 6 | ✅ Complete |
-| [TASK-751](tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Proc do integration and tower behavior | 7 | 📝 Planned |
+| [TASK-751](tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Proc do integration and tower behavior | 7 | ✅ Complete |
 | [TASK-752](tasks/TASK-752-do-notation-diagnostics.md) | Do-notation diagnostics | 5 | 📝 Planned |
 | [TASK-753](tasks/TASK-753-do-notation-docs-examples-closeout.md) | Do-notation docs, examples, and closeout | 4 | 📝 Planned |
 

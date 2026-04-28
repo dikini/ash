@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 107 planning packet for stdlib and example corpus repair: documented the `ash-cli check` failure baseline, root-cause buckets, execution order, and TASK-760 through TASK-766 remediation tasks for std module/import fixes, parser comment/diagnostic improvements, and example corpus policy/canonicalization.
+
 - Phase 106 / SPEC-055: completed the explicit-target monad comprehension MVP. Bracket comprehensions now parse as source-fidelity surface AST, reject parser-only lowering, participate in cross-crate visitors, type-check/elaborate through the generalized typed-do Act/Proc dictionary path, and provide comprehension-specific diagnostics. Target inference, guards/filtering, pattern binders, user-defined Monad dictionaries, and pure List/Option/Result dictionaries remain deferred.
 
 - TASK-759 / Phase 106: completed monad comprehension closeout with explicit-target Act/Proc examples, deferred pure List/Option/Result example notes, and reconciled DESIGN-032, SPEC-055, spec index, PLAN-102, PLAN-INDEX, and task-status surfaces to reflect the implemented MVP.

@@ -54,6 +54,10 @@ const KEYWORDS: &[&str] = &[
     "null",
 ];
 
+fn is_keyword(s: &str) -> bool {
+    KEYWORDS.contains(&s)
+}
+
 mod tests {
     use super::*;
 
@@ -64,7 +68,10 @@ mod tests {
     proptest! {
         /// Property: Valid identifiers should lex to an Ident token.
         #[test]
-        fn prop_identifier_roundtrip(ident in "[a-zA-Z_][a-zA-Z0-9_]{0,50}") {
+        fn prop_identifier_roundtrip(
+            ident in "[a-zA-Z_][a-zA-Z0-9_]{0,50}"
+                .prop_filter("identifier must not be a lexer keyword", |ident| !super::is_keyword(ident))
+        ) {
             let tokens = lex(&ident).unwrap();
             prop_assert!(tokens.len() >= 2, "Expected at least 2 tokens");
             prop_assert_eq!(tokens[0].kind.clone(), TokenKind::Ident(ident.clone().into()));

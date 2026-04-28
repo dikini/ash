@@ -68,6 +68,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Parser lexer property tests now exclude reserved keywords from the generated identifier round-trip domain, preventing valid keyword tokens such as `if` from being misclassified as identifier round-trip failures during broad post-merge verification.
+
 - TASK-719: forcing a `proc::from_act(...)` Proc whose embedded Act fails via hidden `__act_env` invoke capture now preserves the lower structured `EvalError::OperationalFailure(...)` with Effectful/effect-scope attribution and string payload, instead of collapsing that failure to a generic `ExecutionFailed(...)` at the Proc forcing boundary.
 
 - TASK-707: `ash-typeck` Proc/P constructor arity checks now only special-case the root builtin `Proc`/`P` types, so qualified user/imported names with the same terminal segment are no longer resolved through the builtin bare-name path while builtin process constructor arity diagnostics remain enforced.

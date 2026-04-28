@@ -7,7 +7,9 @@ use async_trait::async_trait;
 use tokio::sync::Mutex as AsyncMutex;
 
 use ash_core::capability::CapabilityError;
-use ash_core::runtime::{ProcessId, ProcessTerminalState};
+use ash_core::runtime::{
+    ProcessId, ProcessTerminalState, ResourceId, ResourceInstance, ResourceOwner, ResourceTypeId,
+};
 use ash_core::{ControlLink, Effect, Value, Workflow};
 
 use crate::capability::CapabilityProvider;
@@ -202,6 +204,7 @@ pub struct RuntimeState {
     child_workflows: Arc<AsyncMutex<HashMap<String, Workflow>>>,
     callable_workflows: Arc<AsyncMutex<HashMap<String, RegisteredCallableWorkflow>>>,
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
+    resource_instances: Arc<AsyncMutex<HashMap<ResourceId, ResourceInstance>>>,
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
@@ -220,6 +223,10 @@ impl std::fmt::Debug for RuntimeState {
                 &"<HashMap<String, RegisteredCallableWorkflow>>",
             )
             .field("process_registry", &self.process_registry)
+            .field(
+                "resource_instances",
+                &"<HashMap<ResourceId, ResourceInstance>>",
+            )
             .field("last_execution_record", &self.last_execution_record)
             .field(
                 "providers",
@@ -240,6 +247,7 @@ impl RuntimeState {
             child_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             callable_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
+            resource_instances: Arc::new(AsyncMutex::new(HashMap::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
         }
@@ -645,6 +653,57 @@ impl RuntimeState {
             .lock()
             .await
             .children_of(parent_process_id)
+    }
+
+    /// Register or replace one runtime-owned resource instance by stable identity.
+    ///
+    /// This stores environment-owned resource metadata only; it does not expose resources as
+    /// first-class [`Value`] handles or execute resource-backed capability operations.
+    pub async fn register_resource_instance(&self, instance: ResourceInstance) {
+        self.resource_instances
+            .lock()
+            .await
+            .insert(instance.id, instance);
+    }
+
+    /// Look up one runtime-owned resource instance by identity.
+    pub async fn resource_instance(&self, resource_id: ResourceId) -> Option<ResourceInstance> {
+        self.resource_instances
+            .lock()
+            .await
+            .get(&resource_id)
+            .cloned()
+    }
+
+    /// Return true if a resource instance with `resource_id` is registered.
+    pub async fn has_resource_instance(&self, resource_id: ResourceId) -> bool {
+        self.resource_instances
+            .lock()
+            .await
+            .contains_key(&resource_id)
+    }
+
+    /// Return resource instances matching one owner scope and resource type identifier.
+    ///
+    /// Runtime resource lookup remains scoped by owner to avoid ambient type-only discovery across
+    /// unrelated runs, workflows, processes, effect scopes, or test scopes.
+    pub async fn resource_instances_for_owner_by_type(
+        &self,
+        owner: ResourceOwner,
+        type_id: ResourceTypeId,
+    ) -> Vec<ResourceInstance> {
+        self.resource_instances
+            .lock()
+            .await
+            .values()
+            .filter(|instance| instance.owner == owner && instance.type_id == type_id)
+            .cloned()
+            .collect()
+    }
+
+    /// Return the number of registered resource instances.
+    pub async fn resource_instance_count(&self) -> usize {
+        self.resource_instances.lock().await.len()
     }
 
     /// Return the live control-link state for a workflow identity, if registered.

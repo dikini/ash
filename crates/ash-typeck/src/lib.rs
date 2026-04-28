@@ -18,6 +18,7 @@ pub mod check_pattern;
 pub mod constraint_checking;
 pub mod constraints;
 pub mod diagnostic;
+pub(crate) mod do_target;
 pub mod effect;
 pub mod effective_caps;
 pub mod error;

@@ -175,7 +175,7 @@ pub enum TypeInfo {
 }
 
 impl TypeInfo {
-    fn type_arg_count(&self) -> usize {
+    pub(crate) fn type_arg_count(&self) -> usize {
         match self {
             Self::Enum { params, .. } | Self::Struct { params, .. } => params.len(),
         }
@@ -1864,6 +1864,11 @@ impl TypeEnv {
     /// Look up internal type info by name
     pub fn lookup_type_info(&self, name: &str) -> Option<&TypeInfo> {
         self.type_info.get(name)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn remove_type_info_for_test(&mut self, name: &str) {
+        self.type_info.remove(name);
     }
 
     /// Get the variant definition for a constructor

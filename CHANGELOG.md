@@ -8,6 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-748 / Phase 105: added the generalized `do:K` typechecker target-resolution substrate for MVP `Act` and `Proc`, including Monad-shaped dictionaries with hidden Act sequencing evidence, ordinary Proc return/bind operation names, tower levels, diagnostics for unknown, wrong-kind, AST-only generic, and deferred `Result<_, E>` targets, plus focused resolver and `check_expr` integration tests without statement typing or typed elaboration.
 - TASK-747 / Phase 105: added generalized `do:K { ... }` parser-surface substrate with `DoTarget`, `DoStmt`, and `Expr::DoBlock`, focused parser tests for `let`/`<-`/`return`, precedence participation, parser-state restoration on malformed blocks, legacy `act { ret ...; }` preservation, and explicit unsupported lowering/typechecking boundaries pending target resolution and typed elaboration.
 
 - [DESIGN-032](docs/design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md): drafted Monad comprehension syntax as a container-view surface for generalized do-notation, covering `[result | qualifiers]`, optional postfix target annotation, shared `Monad<K>` elaboration, qualifier forms, guard deferral, tower behavior, diagnostics, and MVP exclusions.

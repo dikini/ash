@@ -28,7 +28,7 @@ fn do_block_typecheck_is_explicitly_unsupported_until_typed_elaboration() {
         result.errors.iter().any(|err| matches!(
             err,
             ConstructorError::UnsupportedExpression { kind, .. }
-                if kind.contains("generalized do-block type checking")
+                if kind.contains("generalized do-block statement type checking")
         )),
         "expected explicit unsupported do-block typecheck error, got {:?}",
         result.errors

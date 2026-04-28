@@ -12,7 +12,7 @@
 
 ## Phase 105: Generalized Typed Do-Notation
 
-**Status:** 🟢 In Progress (TASK-747 parser/surface substrate complete; TASK-748 target/dictionary resolution next)
+**Status:** 🟢 In Progress (TASK-747 parser/surface substrate and TASK-748 target/dictionary resolution complete; TASK-749 typed elaboration next)
 **Spec:** [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md)
 **Design:** [DESIGN-031](../design/DESIGN-031-GENERALIZED-DO-NOTATION.md)
 **Depends on:** Phase 104 closeout for normal implementation sequencing; Phase 97 `Act`, Phase 98 `Proc`, Phase 99 `proc::from_act`.
@@ -23,7 +23,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-746](tasks/TASK-746-generalized-do-notation-spec-plan-packet.md) | Promote DESIGN-031 into SPEC-054/PLAN-101 and register Phase 105 | Docs/Planning | 3 | ✅ Complete |
 | [TASK-747](tasks/TASK-747-do-block-surface-ast-and-parser-substrate.md) | Add `DoBlock` surface AST and parser substrate for `do:K` | Substrate | 6 | ✅ Complete |
-| [TASK-748](tasks/TASK-748-do-target-kinding-and-dictionary-resolution.md) | Resolve do targets, target kind, and Act/Proc builtin dictionaries | Substrate | 7 | 📝 Planned |
+| [TASK-748](tasks/TASK-748-do-target-kinding-and-dictionary-resolution.md) | Resolve do targets, target kind, and Act/Proc builtin dictionaries | Substrate | 7 | ✅ Complete |
 | [TASK-749](tasks/TASK-749-typed-do-elaboration-and-lowering.md) | Type-check `let`/`<-`/`return` and lower after typed elaboration | Semantic | 8 | 📝 Planned |
 | [TASK-750](tasks/TASK-750-act-block-compatibility-and-migration.md) | Route `act {}` through generalized do compatibility and legacy warnings | Semantic | 6 | 📝 Planned |
 | [TASK-751](tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Validate `do:Proc`, explicit `proc::from_act`, and tower/failure behavior | Semantic | 7 | 📝 Planned |

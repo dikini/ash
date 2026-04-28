@@ -628,10 +628,13 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             }
         }
 
-        Expr::DoBlock { span, .. } => CheckResult::error(ConstructorError::UnsupportedExpression {
-            kind: "generalized do-block type checking is not implemented (TASK-747 parser substrate only)".to_string(),
-            span: *span,
-        }),
+        Expr::DoBlock { target, span, .. } => match crate::do_target::resolve_do_target(env, target) {
+            Ok(_dictionary) => CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "generalized do-block statement type checking and typed elaboration are not implemented (TASK-749)".to_string(),
+                span: *span,
+            }),
+            Err(err) => CheckResult::error(err),
+        },
 
         Expr::ActBlock { stmts, span, .. } => {
             let mut block_env = env.clone();

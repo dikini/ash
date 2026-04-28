@@ -1,6 +1,6 @@
 # TASK-748: Do-Target Kinding and Dictionary Resolution
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,7 +16,7 @@ Add typechecker support for resolving `do:K` targets and MVP Act/Proc builtin di
 ## Dependencies
 
 - ✅ TASK-746.
-- 📝 TASK-747 parser/surface substrate.
+- ✅ TASK-747 parser/surface substrate.
 
 ## Requirements
 
@@ -87,11 +87,21 @@ cargo fmt --check
 
 ## Verification Steps
 
-- [ ] Target resolution tests pass.
-- [ ] Unknown and wrong-kind diagnostics are tested.
-- [ ] No user-defined `Monad<M>` support is overclaimed.
-- [ ] No Phase 104 files are touched.
-- [ ] Independent review confirms dictionary shape can migrate to real `Monad<K>` evidence later.
+- [x] Target resolution tests pass.
+- [x] Unknown and wrong-kind diagnostics are tested.
+- [x] No user-defined `Monad<M>` support is overclaimed.
+- [x] No Phase 104 files are touched.
+- [x] Independent review confirmed dictionary shape can migrate to real `Monad<K>` evidence later after fixes for AST-only type kinding and hidden Act operation evidence.
+
+## Completion Notes
+
+- Added a private typechecker `do_target` substrate for resolving `DoTarget` to an MVP hidden dictionary.
+- Accepted `Act` and `Proc` as the only MVP targets.
+- Represented Act sequencing operations as hidden compiler evidence rather than ordinary lexical/value-env names.
+- Represented Proc sequencing operations as existing ordinary `proc::unit` / `proc::bind` evidence.
+- Added kind diagnostics for proper types, unknown-target diagnostics, and explicit deferred diagnostics for `Result<_, E>` and explicit target arguments.
+- Added resolver-level and `check_expr` integration coverage proving valid targets reach the TASK-749 typed-elaboration boundary while invalid targets report target-resolution diagnostics.
+- Fixed resolver kinding to use AST `TypeDef` parameter arity when a known type has not yet been converted into `TypeInfo`.
 
 ## Dependencies for Next Task
 

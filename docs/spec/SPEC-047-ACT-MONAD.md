@@ -46,14 +46,38 @@ Out of scope (deferred):
 
 ### 2.1 Act Block Expression
 
-```
-act_expr ::= "act" "{" act_stmt* "}"
+SPEC-054 now owns the generalized/new Act block grammar. In current Phase 105 syntax,
+expression-level `act { ... }` is sugar for `do:Act { ... }` and uses the typed-do statement forms:
 
-act_stmt ::= IDENTIFIER "=" expr ";"   -- bind or inline
-           | "ret" expr ";"             -- unit (return)
+```ash
+act {
+    x <- act::unit(1);
+    return x
+}
 ```
 
-An `act {}` block is an expression that evaluates to a value of type `Act<A>`. It may appear anywhere an expression is expected: in fn bodies, as arguments, in let-bindings, inside other act blocks.
+This is equivalent to:
+
+```ash
+do:Act {
+    x <- act::unit(1);
+    return x
+}
+```
+
+For migration compatibility only, the legacy SPEC-047 statement grammar remains accepted temporarily:
+
+```
+legacy_act_expr ::= "act" "{" legacy_act_stmt* "}"
+
+legacy_act_stmt ::= IDENTIFIER "=" expr ";"   -- legacy ambiguous bind or inline
+                  | "ret" expr ";"             -- legacy unit/return
+```
+
+Implementations should carry migration diagnostics for legacy `IDENTIFIER = expr;` and `ret expr;`
+forms and direct users to `x <- expr;` / `let x = expr;` plus final `return expr` without a trailing
+semicolon. Workflow-level `act provider:action ...` syntax remains separate and is not governed by
+this expression grammar.
 
 ### 2.2 Effectful Function Declaration
 

@@ -12,7 +12,7 @@
 
 ## Phase 105: Generalized Typed Do-Notation
 
-**Status:** 🟢 In Progress (TASK-747 parser/surface substrate, TASK-748 target/dictionary resolution, and TASK-749 typed elaboration complete; TASK-750 Act compatibility next)
+**Status:** 🟢 In Progress (TASK-747 parser/surface substrate, TASK-748 target/dictionary resolution, TASK-749 typed elaboration, and TASK-750 Act compatibility complete; TASK-751 Proc/tower integration next)
 **Spec:** [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md)
 **Design:** [DESIGN-031](../design/DESIGN-031-GENERALIZED-DO-NOTATION.md)
 **Depends on:** Phase 104 closeout for normal implementation sequencing; Phase 97 `Act`, Phase 98 `Proc`, Phase 99 `proc::from_act`.
@@ -25,7 +25,7 @@
 | [TASK-747](tasks/TASK-747-do-block-surface-ast-and-parser-substrate.md) | Add `DoBlock` surface AST and parser substrate for `do:K` | Substrate | 6 | ✅ Complete |
 | [TASK-748](tasks/TASK-748-do-target-kinding-and-dictionary-resolution.md) | Resolve do targets, target kind, and Act/Proc builtin dictionaries | Substrate | 7 | ✅ Complete |
 | [TASK-749](tasks/TASK-749-typed-do-elaboration-and-lowering.md) | Type-check `let`/`<-`/`return` and lower after typed elaboration | Semantic | 8 | ✅ Complete |
-| [TASK-750](tasks/TASK-750-act-block-compatibility-and-migration.md) | Route `act {}` through generalized do compatibility and legacy warnings | Semantic | 6 | 📝 Planned |
+| [TASK-750](tasks/TASK-750-act-block-compatibility-and-migration.md) | Route `act {}` through generalized do compatibility and legacy diagnostic carrier | Semantic | 6 | ✅ Complete |
 | [TASK-751](tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Validate `do:Proc`, explicit `proc::from_act`, and tower/failure behavior | Semantic | 7 | 📝 Planned |
 | [TASK-752](tasks/TASK-752-do-notation-diagnostics.md) | Add focused do-notation diagnostics and migration warnings | Semantic | 5 | 📝 Planned |
 | [TASK-753](tasks/TASK-753-do-notation-docs-examples-closeout.md) | Update docs/examples and perform Phase 105 closeout audit | Docs/Planning | 4 | 📝 Planned |

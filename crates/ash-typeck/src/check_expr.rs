@@ -643,89 +643,116 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             span,
         } => check_do_block(env, target, stmts, *span),
 
-        Expr::ActBlock { stmts, span, .. } => {
-            let mut block_env = env.clone();
-            let mut substitution = Substitution::new();
-            let mut errors: Vec<ConstructorError> = Vec::new();
+        Expr::ActBlock { stmts, span, .. } => check_legacy_act_block(env, stmts, *span),
+    }
+}
 
-            // Enforce the same structural contract as lower_act_block:
-            // non-empty, return must be last.
-            if stmts.is_empty() {
-                return CheckResult::error(ConstructorError::UnsupportedExpression {
-                    kind: "empty act block".to_string(),
-                    span: *span,
-                });
-            }
+/// Return compatibility migration diagnostics for legacy `act { ... }` syntax.
+///
+/// This is a durable diagnostic carrier used until the repository has a
+/// warning-emission path. New-form `act { ... }` parses as `DoBlock` and does
+/// not produce these legacy diagnostics.
+pub fn legacy_act_migration_diagnostics(expr: &Expr) -> Vec<String> {
+    let Expr::ActBlock { stmts, .. } = expr else {
+        return Vec::new();
+    };
 
-            let last = stmts.last().unwrap();
-            if !matches!(last, ActStmt::Return { .. }) {
-                return CheckResult::error(ConstructorError::UnsupportedExpression {
-                    kind: "act block must end with a return statement".to_string(),
-                    span: *span,
-                });
-            }
-
-            // Verify no Return appears before the last statement
-            for (i, stmt) in stmts.iter().enumerate() {
-                if matches!(stmt, ActStmt::Return { .. }) && i + 1 < stmts.len() {
-                    return CheckResult::error(ConstructorError::UnsupportedExpression {
-                        kind: "return must be the last statement in an act block".to_string(),
-                        span: *span,
-                    });
-                }
-            }
-
-            let mut return_ty = Type::Null;
-
-            for stmt in stmts {
-                match stmt {
-                    ash_parser::surface::ActStmt::Bind { name, value, .. } => {
-                        let value_result = check_expr(&block_env, value);
-                        substitution = substitution.compose(&value_result.substitution);
-                        if !value_result.is_ok() {
-                            errors.extend(value_result.errors);
-                            continue;
-                        }
-
-                        let value_ty = substitution.apply(&value_result.ty);
-                        let bound_ty = match &value_ty {
-                            Type::Constructor { name, args, .. }
-                                if name.name == "Act" && args.len() == 1 =>
-                            {
-                                args[0].clone()
-                            }
-                            _ => value_ty,
-                        };
-                        block_env.bind_variable(name.as_ref(), bound_ty);
-                    }
-                    ash_parser::surface::ActStmt::Return { value, .. } => {
-                        let value_result = check_expr(&block_env, value);
-                        substitution = substitution.compose(&value_result.substitution);
-                        if !value_result.is_ok() {
-                            errors.extend(value_result.errors);
-                            continue;
-                        }
-
-                        return_ty = substitution.apply(&value_result.ty);
-                    }
-                }
-            }
-
-            if !errors.is_empty() {
-                return CheckResult {
-                    ty: Type::Var(TypeVar::fresh()),
-                    substitution,
-                    errors,
-                };
-            }
-
-            CheckResult::success(Type::Constructor {
-                name: crate::QualifiedName::root("Act"),
-                args: vec![return_ty],
-                kind: crate::Kind::Type,
-            })
+    let mut diagnostics = Vec::new();
+    for stmt in stmts {
+        match stmt {
+            ActStmt::Bind { name, .. } => diagnostics.push(format!(
+                "legacy act bind `{name} = ...;` is deprecated; use `{name} <- ...;` for Act binds or `let {name} = ...;` for pure bindings"
+            )),
+            ActStmt::Return { .. } => diagnostics.push(
+                "legacy act return `ret ...;` is deprecated; use `return ...` without a trailing semicolon"
+                    .to_string(),
+            ),
         }
     }
+    diagnostics
+}
+
+fn check_legacy_act_block(env: &TypeEnv, stmts: &[ActStmt], span: Span) -> CheckResult {
+    let mut block_env = env.clone();
+    let mut substitution = Substitution::new();
+    let mut errors: Vec<ConstructorError> = Vec::new();
+
+    // Enforce the same structural contract as lower_act_block:
+    // non-empty, return must be last.
+    if stmts.is_empty() {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "empty act block".to_string(),
+            span,
+        });
+    }
+
+    let last = stmts.last().unwrap();
+    if !matches!(last, ActStmt::Return { .. }) {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "act block must end with a return statement".to_string(),
+            span,
+        });
+    }
+
+    // Verify no Return appears before the last statement
+    for (i, stmt) in stmts.iter().enumerate() {
+        if matches!(stmt, ActStmt::Return { .. }) && i + 1 < stmts.len() {
+            return CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "return must be the last statement in an act block".to_string(),
+                span,
+            });
+        }
+    }
+
+    let mut return_ty = Type::Null;
+
+    for stmt in stmts {
+        match stmt {
+            ActStmt::Bind { name, value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+
+                let value_ty = substitution.apply(&value_result.ty);
+                let bound_ty = match &value_ty {
+                    Type::Constructor { name, args, .. }
+                        if name.name == "Act" && args.len() == 1 =>
+                    {
+                        args[0].clone()
+                    }
+                    _ => value_ty,
+                };
+                block_env.bind_variable(name.as_ref(), bound_ty);
+            }
+            ActStmt::Return { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+
+                return_ty = substitution.apply(&value_result.ty);
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        };
+    }
+
+    CheckResult::success(Type::Constructor {
+        name: crate::QualifiedName::root("Act"),
+        args: vec![return_ty],
+        kind: crate::Kind::Type,
+    })
 }
 
 /// Type-check and elaborate a generalized do-block into core dictionary calls.

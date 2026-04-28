@@ -203,6 +203,10 @@ pub(crate) fn parse_act_block_expr(input: &mut ParseInput) -> ModalResult<Expr> 
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
+    if act_block_uses_do_grammar(input) {
+        return parse_act_block_as_do_block(input, &start_pos);
+    }
+
     let mut stmts = Vec::new();
 
     // Parse statements until closing }
@@ -245,6 +249,51 @@ pub(crate) fn parse_act_block_expr(input: &mut ParseInput) -> ModalResult<Expr> 
     let span = span_from(&start_pos, &input.state.pos);
 
     Ok(Expr::ActBlock { stmts, span })
+}
+
+fn act_block_uses_do_grammar(input: &ParseInput) -> bool {
+    let mut lookahead = input.clone();
+    while !lookahead.input.starts_with('}') {
+        if parse_do_stmt(&mut lookahead).is_err() {
+            return false;
+        }
+        skip_whitespace_and_comments(&mut lookahead);
+    }
+    true
+}
+
+fn parse_act_block_as_do_block(input: &mut ParseInput, start_pos: &Position) -> ModalResult<Expr> {
+    let target_span = Span {
+        start: start_pos.offset,
+        end: start_pos.offset,
+        line: start_pos.line,
+        column: start_pos.column,
+    };
+    let target = DoTarget {
+        name: "Act".into(),
+        args: Vec::new(),
+        span: target_span,
+    };
+
+    let mut stmts = Vec::new();
+    while !input.input.starts_with('}') {
+        let stmt = parse_do_stmt(input)?;
+        let is_return = matches!(stmt, DoStmt::Return { .. });
+        stmts.push(stmt);
+        skip_whitespace_and_comments(input);
+        if is_return {
+            break;
+        }
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+    let span = span_from(start_pos, &input.state.pos);
+
+    Ok(Expr::DoBlock {
+        target,
+        stmts,
+        span,
+    })
 }
 
 /// Parse an expression (entry point).
@@ -1676,16 +1725,65 @@ mod tests {
     }
 
     #[test]
+    fn test_new_act_block_sugar_parses_as_do_act() {
+        let mut input = test_input("act { x <- act::unit(1); return x }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::DoBlock { target, stmts, .. } => {
+                assert_eq!(target.name.as_ref(), "Act");
+                assert_eq!(stmts.len(), 2);
+                assert!(matches!(
+                    &stmts[0],
+                    DoStmt::Bind { name, value, .. }
+                        if name.as_ref() == "x"
+                            && matches!(value.as_ref(), Expr::Call { module: Some(module), func, .. } if module.as_ref() == "act" && func.as_ref() == "unit")
+                ));
+                assert!(matches!(
+                    &stmts[1],
+                    DoStmt::Return { value, .. }
+                        if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
+                ));
+            }
+            other => panic!("expected act sugar to parse as DoBlock, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_act_block_sugar_rejects_trailing_statement_after_return() {
+        let mut input = test_input("act { return x; y <- act::unit(1) }");
+        let result = parse_act_block_expr(&mut input);
+        assert!(
+            result.is_err(),
+            "new-form act sugar must not silently fall back to legacy parsing after final return: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_new_act_block_sugar_rejects_return_trailing_semicolon() {
+        let mut input = test_input("act { return x; }");
+        let result = parse_act_block_expr(&mut input);
+        assert!(
+            result.is_err(),
+            "new-form act sugar should reject legacy-style semicolon after return: {result:?}"
+        );
+    }
+
+    #[test]
     fn test_legacy_act_block_still_parses() {
-        let mut input = test_input("act { ret 1; }");
+        let mut input = test_input("act { x = 1; ret x; }");
         let result = expr(&mut input).unwrap();
         match result {
             Expr::ActBlock { stmts, .. } => {
-                assert_eq!(stmts.len(), 1);
+                assert_eq!(stmts.len(), 2);
                 assert!(matches!(
                     &stmts[0],
+                    ActStmt::Bind { name, value, .. }
+                        if name.as_ref() == "x" && matches!(value.as_ref(), Expr::Literal(Literal::Int(1)))
+                ));
+                assert!(matches!(
+                    &stmts[1],
                     ActStmt::Return { value, .. }
-                        if matches!(value.as_ref(), Expr::Literal(Literal::Int(1)))
+                        if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
                 ));
             }
             other => panic!("expected legacy ActBlock, got {other:?}"),

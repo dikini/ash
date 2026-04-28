@@ -246,11 +246,21 @@ fn test_act_without_brace_does_not_parse_as_expression() {
     let result = ash_parser::parse_expr::expr(&mut input);
     // It should either fail or parse as something other than ActBlock
     if let Ok(parsed) = result {
-        // If it parsed, it must NOT be an ActBlock
+        // If it parsed, it must NOT be an expression-level act block carrier.
         assert!(
-            !matches!(parsed, Expr::ActBlock { .. }),
-            "workflow-level act should not parse as ActBlock expression"
+            !matches!(parsed, Expr::ActBlock { .. } | Expr::DoBlock { .. }),
+            "workflow-level act should not parse as an act/do expression"
         );
     }
     // If it failed to parse entirely, that's also correct
+}
+
+#[test]
+fn test_act_with_malformed_new_form_does_not_parse_as_complete_expression() {
+    let mut input = ash_parser::new_input("act { return x; }");
+    let _ = ash_parser::parse_expr::expr(&mut input);
+    assert!(
+        !input.input.trim().is_empty(),
+        "malformed new-form act sugar should not be consumed as a complete expression"
+    );
 }

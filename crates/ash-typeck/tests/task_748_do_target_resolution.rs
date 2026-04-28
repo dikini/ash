@@ -6,6 +6,7 @@ use ash_parser::surface::Expr;
 use ash_typeck::check_expr::check_expr;
 use ash_typeck::error::ConstructorError;
 use ash_typeck::type_env::TypeEnv;
+use ash_typeck::{Kind, QualifiedName, Type};
 use winnow::prelude::*;
 
 fn parse_expr_source(source: &str) -> Expr {
@@ -36,24 +37,34 @@ fn first_unsupported(source: &str) -> String {
         })
 }
 
+fn computation_type(name: &str, inner: Type) -> Type {
+    Type::Constructor {
+        name: QualifiedName::root(name),
+        args: vec![inner],
+        kind: Kind::Type,
+    }
+}
+
 #[test]
 fn check_expr_resolves_act_target_before_typed_elaboration_boundary() {
-    let message = first_unsupported("do:Act { return 1 }");
-
-    assert!(
-        message.contains("statement type checking") && message.contains("TASK-749"),
-        "{message}"
+    let result = check_expr(
+        &TypeEnv::with_builtin_types(),
+        &parse_expr_source("do:Act { return 1 }"),
     );
+
+    assert!(result.is_ok(), "do:Act should now type-check: {result:?}");
+    assert_eq!(result.ty, computation_type("Act", Type::Int));
 }
 
 #[test]
 fn check_expr_resolves_proc_target_before_typed_elaboration_boundary() {
-    let message = first_unsupported("do:Proc { return 1 }");
-
-    assert!(
-        message.contains("statement type checking") && message.contains("TASK-749"),
-        "{message}"
+    let result = check_expr(
+        &TypeEnv::with_builtin_types(),
+        &parse_expr_source("do:Proc { return 1 }"),
     );
+
+    assert!(result.is_ok(), "do:Proc should now type-check: {result:?}");
+    assert_eq!(result.ty, computation_type("Proc", Type::Int));
 }
 
 #[test]

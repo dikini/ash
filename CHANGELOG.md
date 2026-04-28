@@ -8,6 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-761 / Phase 107: repaired std module-loader coverage for multiline ordinary imports and importable module roots, moving `std/src/llm/dispatch.ash` and `std/src/io/mod.ash` into the CLI corpus expected-pass set and raising the std baseline to 33/39 pass.
 - TASK-760 / Phase 107: added CLI-level `ash check` corpus baseline harnesses for `std/src/**/*.ash` and `examples/**/*.ash`, explicitly classifying expected-pass, expected-fail-with-reason, and reference-only files while recording the current 31/39 std and 19/36 example pass baselines through the same command path users run.
 
 - Phase 107 planning packet for stdlib and example corpus repair: documented the `ash-cli check` failure baseline, root-cause buckets, execution order, and TASK-760 through TASK-766 remediation tasks for std module/import fixes, parser comment/diagnostic improvements, and example corpus policy/canonicalization.

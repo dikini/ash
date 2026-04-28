@@ -10,8 +10,8 @@ struct ExpectedFailure {
 }
 
 const EXPECTED_STD_FILES: usize = 39;
-const EXPECTED_STD_PASSING: usize = 31;
-const EXPECTED_STD_FAILING: usize = 8;
+const EXPECTED_STD_PASSING: usize = 33;
+const EXPECTED_STD_FAILING: usize = 6;
 
 const EXPECTED_PASS: &[&str] = &[
     "std/src/act.ash",
@@ -20,11 +20,13 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/io/dir.ash",
     "std/src/io/fs.ash",
     "std/src/io/meta.ash",
+    "std/src/io/mod.ash",
     "std/src/io/path.ash",
     "std/src/io/stdio.ash",
     "std/src/json.ash",
     "std/src/lib.ash",
     "std/src/list.ash",
+    "std/src/llm/dispatch.ash",
     "std/src/llm/mod.ash",
     "std/src/llm/openai.ash",
     "std/src/llm/prompt.ash",
@@ -49,16 +51,8 @@ const EXPECTED_PASS: &[&str] = &[
 
 const EXPECTED_FAIL: &[ExpectedFailure] = &[
     ExpectedFailure {
-        path: "std/src/io/mod.ash",
-        reason: "module-root pub mod/pub use re-export handling fails through the CLI check path",
-    },
-    ExpectedFailure {
         path: "std/src/llm/conversation.ash",
         reason: "workflow export visibility/importability cannot resolve dispatch::complete",
-    },
-    ExpectedFailure {
-        path: "std/src/llm/dispatch.ash",
-        reason: "module import pre-scan handles multiline use items line-by-line",
     },
     ExpectedFailure {
         path: "std/src/llm/loading.ash",

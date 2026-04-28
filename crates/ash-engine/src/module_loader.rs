@@ -36,6 +36,44 @@ pub struct LoadedOrdinaryFile {
     pub imported_callables: HashMap<String, InlineCallable>,
 }
 
+/// Check whether a source file is a valid importable module surface.
+///
+/// # Errors
+///
+/// Returns [`EngineError`] if module exports cannot be collected.
+pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
+    let source = std::fs::read_to_string(path)?;
+    let contains_workflow = source_contains_workflow_keyword(&source);
+    let mut cache = HashMap::new();
+    let mut visiting = HashSet::new();
+    let exports = collect_module_exports(path, &mut cache, &mut visiting).map_err(|error| {
+        EngineError::Parse(format!(
+            "in '{}': failed to collect module exports: {error}",
+            path.display()
+        ))
+    })?;
+    if contains_workflow
+        && exports.type_defs.is_empty()
+        && exports.constructor_defs.is_empty()
+        && exports.callables.is_empty()
+        && exports.child_modules.is_empty()
+    {
+        return Err(EngineError::Parse(format!(
+            "in '{}': workflow module contains no importable exports",
+            path.display()
+        )));
+    }
+    Ok(())
+}
+
+fn source_contains_workflow_keyword(source: &str) -> bool {
+    source.lines().any(|line| {
+        let code = line.split("--").next().unwrap_or_default();
+        code.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+            .any(|token| token == "workflow")
+    })
+}
+
 /// Whether a callable carries an Ash-level body or is bodyless (builtin).
 #[derive(Debug, Clone)]
 pub enum CallableKind {
@@ -203,7 +241,8 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
     let mut kept_lines = Vec::new();
     let mut seen_non_import = false;
 
-    for line in source.lines() {
+    let mut lines = source.lines();
+    while let Some(line) = lines.next() {
         let trimmed = line.trim();
         if !seen_non_import && is_skippable_prelude_line(trimmed) {
             kept_lines.push(line.to_string());
@@ -211,7 +250,15 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
         }
 
         if !seen_non_import && trimmed.starts_with("use ") {
-            imports.push(parse_ordinary_import(trimmed)?);
+            let mut snippet = line.to_string();
+            while !snippet.contains(';') {
+                let Some(next_line) = lines.next() else {
+                    break;
+                };
+                snippet.push('\n');
+                snippet.push_str(next_line);
+            }
+            imports.push(parse_ordinary_import(snippet.trim())?);
             continue;
         }
 
@@ -591,11 +638,9 @@ pub(crate) fn collect_module_exports(
 
     // Check regular `use` imports for cycles (e.g. a.ash has `use b::{X}`,
     // b.ash has `use a::{Y}` -- both reference each other).
-    for line in source.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("use ")
-            && !trimmed.starts_with("pub use ")
-            && let Ok(import_spec) = parse_ordinary_import(trimmed)
+    for snippet in extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("use ")) {
+        let trimmed = snippet.trim();
+        if let Ok(import_spec) = parse_ordinary_import(trimmed)
             && let Some(target_path) =
                 resolve_module_path(&import_spec.module_segments, &search_roots(module_root))
         {
@@ -784,15 +829,15 @@ fn insert_type_export_with_name(
     name: &str,
     type_def: CoreTypeDef,
 ) -> Result<(), EngineError> {
-    if exports
-        .type_defs
-        .insert(name.to_string(), type_def)
-        .is_some()
-    {
+    if let Some(existing) = exports.type_defs.get(name) {
+        if existing == &type_def {
+            return Ok(());
+        }
         return Err(EngineError::Configuration(format!(
             "duplicate exported type '{name}'"
         )));
     }
+    exports.type_defs.insert(name.to_string(), type_def);
     Ok(())
 }
 
@@ -801,15 +846,15 @@ fn insert_constructor_export_with_name(
     name: &str,
     type_def: CoreTypeDef,
 ) -> Result<(), EngineError> {
-    if exports
-        .constructor_defs
-        .insert(name.to_string(), type_def)
-        .is_some()
-    {
+    if let Some(existing) = exports.constructor_defs.get(name) {
+        if existing == &type_def {
+            return Ok(());
+        }
         return Err(EngineError::Configuration(format!(
             "duplicate exported constructor '{name}'"
         )));
     }
+    exports.constructor_defs.insert(name.to_string(), type_def);
     Ok(())
 }
 
@@ -818,24 +863,87 @@ fn insert_callable_export(
     name: &str,
     callable: InlineCallable,
 ) -> Result<(), EngineError> {
-    if exports
-        .callables
-        .insert(name.to_string(), callable)
-        .is_some()
-    {
+    if let Some(existing) = exports.callables.get(name) {
+        if existing.exported_name == callable.exported_name {
+            return Ok(());
+        }
         return Err(EngineError::Configuration(format!(
             "duplicate exported callable '{name}'"
         )));
     }
+    exports.callables.insert(name.to_string(), callable);
     Ok(())
 }
 
 fn parse_type_def_snippet(snippet: &str) -> Result<CoreTypeDef, EngineError> {
+    if let Some(type_def) = parse_simple_type_alias_snippet(snippet) {
+        return Ok(type_def);
+    }
+
     let mut input = new_input(snippet.trim());
     let parsed = parse_type_def
         .parse_next(&mut input)
         .map_err(|error| EngineError::Parse(format!("{error}")))?;
     Ok(convert_type_def(&parsed))
+}
+
+fn parse_simple_type_alias_snippet(snippet: &str) -> Option<CoreTypeDef> {
+    let trimmed = snippet.trim().strip_suffix(';')?.trim();
+    let rest = trimmed.strip_prefix("pub type ")?.trim();
+    let (name, target) = rest.split_once('=')?;
+    let name = name.trim();
+    let target = target.trim();
+
+    let (name, params) = if let Some((base, params_text)) = name.split_once('<') {
+        let params_text = params_text.strip_suffix('>')?;
+        (
+            base.trim(),
+            params_text
+                .split(',')
+                .map(str::trim)
+                .filter(|param| !param.is_empty())
+                .map(ToOwned::to_owned)
+                .collect(),
+        )
+    } else {
+        (name, Vec::new())
+    };
+
+    if name.is_empty() || target.is_empty() || target.contains('{') || target.contains('|') {
+        return None;
+    }
+
+    Some(CoreTypeDef {
+        name: name.to_string(),
+        params,
+        body: CoreTypeBody::Alias(convert_simple_type_expr(target)?),
+        visibility: CoreVisibility::Public,
+        builtin: false,
+    })
+}
+
+fn convert_simple_type_expr(text: &str) -> Option<CoreTypeExpr> {
+    let text = text.trim();
+    if let Some((name, args_text)) = text.split_once('<') {
+        let args_text = args_text.strip_suffix('>')?;
+        let args = args_text
+            .split(',')
+            .map(convert_simple_type_expr)
+            .collect::<Option<Vec<_>>>()?;
+        return Some(CoreTypeExpr::Constructor {
+            name: name.trim().to_string(),
+            args,
+        });
+    }
+
+    if text
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == ':')
+    {
+        Some(CoreTypeExpr::Named(text.to_string()))
+    } else {
+        None
+    }
 }
 
 fn parse_workflow_callable(snippet: &str) -> Result<Option<ImportedCallableExport>, EngineError> {

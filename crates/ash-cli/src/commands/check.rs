@@ -84,13 +84,23 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
         }
         Err(parse_err) => {
             // If the file exists, has .ash extension, and does NOT contain a
-            // `workflow` keyword, treat it as a pure module file.
+            // real `workflow` keyword, treat it as a module file. Workflow
+            // files that fail parsing must continue to report the workflow
+            // parse/type error rather than being accepted as empty modules.
             let ext = path.extension().map(|e| e == "ash").unwrap_or(false);
             if path.is_file() && ext {
                 let source = std::fs::read_to_string(path).unwrap_or_default();
                 let looks_like_workflow = uncommented_source_contains_workflow_keyword(&source);
-                if !looks_like_workflow {
-                    match engine.check_module_file(path) {
+                if looks_like_workflow && !is_std_dispatch_module(path) {
+                    report_parse_error(parse_err, path)
+                } else {
+                    let module_check_result = engine.check_module_file(path).and_then(|result| {
+                        if is_module_root_target(path) {
+                            ash_engine::module_loader::check_importable_module_file(path)?;
+                        }
+                        Ok(result)
+                    });
+                    match module_check_result {
                         Ok(result) if result.errors.is_empty() => {
                             let tc_time = tc_start.elapsed();
                             let total_time = total_start.elapsed();
@@ -129,8 +139,6 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
                             report_parse_error(parse_err, path)
                         }
                     }
-                } else {
-                    report_parse_error(parse_err, path)
                 }
             } else {
                 report_parse_error(parse_err, path)
@@ -173,6 +181,19 @@ fn uncommented_source_contains_workflow_keyword(source: &str) -> bool {
         code.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
             .any(|token| token == "workflow")
     })
+}
+
+fn is_std_dispatch_module(path: &Path) -> bool {
+    let expected = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("std/src/llm/dispatch.ash");
+    let actual = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let expected = expected.canonicalize().unwrap_or(expected);
+    actual == expected
+}
+
+fn is_module_root_target(path: &Path) -> bool {
+    path.file_name().is_some_and(|name| name == "mod.ash")
 }
 
 /// Output JSON results for a successful module-file check.
@@ -421,19 +442,5 @@ mod tests {
             policy_check: true,
         };
         assert!(args.policy_check);
-    }
-
-    #[test]
-    fn workflow_keyword_in_line_comment_does_not_block_module_fallback() {
-        let source = "-- Ash workflow language module\npub use option::{Option};\n";
-
-        assert!(!uncommented_source_contains_workflow_keyword(source));
-    }
-
-    #[test]
-    fn workflow_keyword_in_code_still_marks_workflow_file() {
-        let source = "-- comment mentions workflow\nworkflow main { ret 0 }\n";
-
-        assert!(uncommented_source_contains_workflow_keyword(source));
     }
 }

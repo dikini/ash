@@ -89,6 +89,40 @@ async fn sibling_module_type_import_resolves() {
     );
 }
 
+#[tokio::test]
+async fn multiline_nested_ordinary_import_resolves_before_workflow_body() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(
+        &dir.join("types.ash"),
+        "\
+        pub type A = A { value: Int };\n\
+        pub type B = B { label: String };\n\
+        ",
+    );
+    write(
+        &dir.join("main.ash"),
+        "\
+        use types::{\n\
+            A,\n\
+            B\n\
+        };\n\
+        \n\
+        workflow main() -> A { ret A { value: 7 }; }\n\
+        ",
+    );
+
+    let engine = build_engine();
+    let result = engine.run_file(dir.join("main.ash")).await;
+
+    assert!(
+        result.is_ok(),
+        "multiline ordinary import should resolve before workflow parsing, got: {:?}",
+        result.err()
+    );
+}
+
 // ── 2. Nested multi-file modules ───────────────────────────────────────
 
 /// Project layout:

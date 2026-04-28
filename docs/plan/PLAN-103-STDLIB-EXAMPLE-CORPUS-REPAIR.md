@@ -22,7 +22,7 @@ Fresh `ash check` sweeps in the Phase 107 worktree found:
 
 | Corpus | Files | Passing | Failing |
 |--------|-------|---------|---------|
-| `std/src/**/*.ash` | 39 | 31 | 8 |
+| `std/src/**/*.ash` | 39 | 33 | 6 |
 | `examples/**/*.ash` | 36 | 19 | 17 |
 
 Passing modern syntax examples include all Phase 105 and Phase 106 examples. The broken corpus is not a Phase 105/106 regression by itself; failures cluster around std module/import resolution and older example syntax.
@@ -47,7 +47,7 @@ Passing modern syntax examples include all Phase 105 and Phase 106 examples. The
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-760](tasks/TASK-760-cli-corpus-baseline-harness.md) | Add std/example `ash check` corpus harness and baseline classification | Test/Scaffold | 4 | ✅ Complete |
-| [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Fix multiline imports and module-root re-export checking | Substrate | 6 | 📝 Planned |
+| [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Fix multiline imports and module-root re-export checking | Substrate | 6 | ✅ Complete |
 | [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Fix workflow export visibility plus relative/super imports | Substrate | 6 | 📝 Planned |
 | [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Repair `runtime::Args` and `llm/loading.ash` std import surfaces | Semantic | 5 | 📝 Planned |
 | [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Add `//` comment support and targeted parse diagnostics for common stale syntax | Parser/DX | 6 | 📝 Planned |

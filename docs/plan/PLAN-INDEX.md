@@ -281,7 +281,7 @@ Update this section as tasks complete:
 | 80 | 10 | 10 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
-| 107 | 7 | 1 | 🚧 In Progress |
+| 107 | 7 | 2 | 🚧 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -383,7 +383,7 @@ Update this section as tasks complete:
 | 80 | 10 | 10 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
-| 107 | 7 | 1 | 🚧 In Progress |
+| 107 | 7 | 2 | 🚧 In Progress |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3044,7 +3044,7 @@ Repair the post-Phase-106 `ash check` corpus for standard library modules and ex
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-760](tasks/TASK-760-cli-corpus-baseline-harness.md) | CLI corpus baseline harness | 4 | ✅ Complete |
-| [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Stdlib multiline imports and module roots | 6 | 📝 Planned |
+| [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Stdlib multiline imports and module roots | 6 | ✅ Complete |
 | [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Stdlib workflow exports and relative imports | 6 | 📝 Planned |
 | [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Runtime Args and LLM loading imports | 5 | 📝 Planned |
 | [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Parser comments and diagnostics | 6 | 📝 Planned |

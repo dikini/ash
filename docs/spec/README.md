@@ -42,6 +42,7 @@ This directory contains the canonical specifications for the Ash workflow langua
 | SPEC-051 | Workflow Semantics | Draft | Workflow as governance above `Proc`: admission, roles/capabilities, `requires`/`ensures`, obligations, reporting, `WorkflowFailure`, and lower-failure reinterpretation |
 | [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) | Capability Interfaces and Implementations | Draft | Stateless capability interfaces, Ash-defined implementation recipes, binding-time selection, module visibility, conformance, derived implementations, and runtime invocation boundaries |
 | [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) | Runtime Resources and Authority Provenance | Draft | Resource types, resource instances, resource bindings, host/internal/derived authority provenance, lifecycle, split/join policy, and resource-backed operation evidence |
+| [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md) | Generalized Typed Do-Notation | Draft | Explicit `do:K` computation blocks, MVP Act/Proc Monad-shaped dictionaries, typed elaboration, Act migration, tower/failure behavior, and diagnostics |
 
 ## Deprecated Specifications
 

@@ -2966,3 +2966,35 @@ Execute Ash-defined capability implementation bodies and prove the model with ad
 - D2: Runtime admission distinguishes host, internal, and derived authority provenance.
 - D3: Derived implementations may narrow/decorate authority but must not widen beyond declared dependencies.
 
+## Phase 105: Generalized Typed Do-Notation
+
+**Priority:** Medium (post-Phase-104 language ergonomics over the completed Act/Proc substrate)
+**Status:** 📝 Planned (TASK-746 docs/spec/plan packet complete; implementation waits for active Phase 104 closeout unless explicitly authorized)
+**Spec:** [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md)
+**Design:** [DESIGN-031](../design/DESIGN-031-GENERALIZED-DO-NOTATION.md)
+**Plan:** [docs/plan/PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md](PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md)
+
+Promote explicit typed `do:K` notation for computation constructors. Phase 105 introduces a target-carrying `DoBlock` surface node, Act/Proc MVP dictionaries shaped like future `Monad<K>` evidence, typed `let`/`<-`/`return` elaboration, `act { ... }` compatibility migration, `do:Proc` tower validation, and diagnostics. It intentionally does not implement user-defined higher-kinded `Monad<M>`, `do:Result<_, E>`, pure `Option`/`List` targets, pattern binds, or workflow do-targets.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-746](tasks/TASK-746-generalized-do-notation-spec-plan-packet.md) | Generalized do-notation spec/plan packet | 3 | ✅ Complete |
+| [TASK-747](tasks/TASK-747-do-block-surface-ast-and-parser-substrate.md) | Do-block surface AST and parser substrate | 6 | 📝 Planned |
+| [TASK-748](tasks/TASK-748-do-target-kinding-and-dictionary-resolution.md) | Do-target kinding and dictionary resolution | 7 | 📝 Planned |
+| [TASK-749](tasks/TASK-749-typed-do-elaboration-and-lowering.md) | Typed do elaboration and lowering | 8 | 📝 Planned |
+| [TASK-750](tasks/TASK-750-act-block-compatibility-and-migration.md) | Act-block compatibility and migration | 6 | 📝 Planned |
+| [TASK-751](tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Proc do integration and tower behavior | 7 | 📝 Planned |
+| [TASK-752](tasks/TASK-752-do-notation-diagnostics.md) | Do-notation diagnostics | 5 | 📝 Planned |
+| [TASK-753](tasks/TASK-753-do-notation-docs-examples-closeout.md) | Do-notation docs, examples, and closeout | 4 | 📝 Planned |
+
+**Track A (Spec + Surface):** 9h. Promote DESIGN-031 to SPEC-054/PLAN-101, then add target-preserving parser and surface AST substrate without parser-only lowering.
+**Track B (Type/Elaboration):** 15h. Resolve Act/Proc targets and Monad-shaped builtin dictionaries, then type-check and elaborate `let`/`<-`/`return` through the selected target.
+**Track C (Compatibility + Tower):** 18h. Route `act { ... }` through generalized do compatibility, validate `do:Proc`, preserve explicit `proc::from_act`, and harden diagnostics.
+**Track D (Closeout):** 4h. Update examples/docs/changelog and run full verification.
+
+**Decision gates:**
+- D1: Phase 105 is scheduled after active Phase 104 by default; no capability implementation execution, authority admission, CLI binding, or resource split/join semantics are redefined here.
+- D2: MVP targets are `Act` and `Proc`; full user-defined `Monad<M>`, constructor holes, pure `Option`/`List` targets, and workflow do-targets are deferred.
+- D3: `do:K` does not import target-specific ordinary operations; operations like `proc::par` remain ordinary scoped names.
+- D4: No implicit lifts across the tower; `Act<A>` enters `Proc` only through explicit `proc::from_act`.
+

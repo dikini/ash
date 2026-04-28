@@ -1,8 +1,8 @@
 # DESIGN-031: Generalized Typed Do-Notation
 
-**Status:** Draft
+**Status:** Promoted to [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md) / [PLAN-101](../plan/PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md)
 **Date:** 2026-04-28
-**Related:** SPEC-047, SPEC-048, SPEC-049, SPEC-050, DESIGN-030
+**Related:** SPEC-047, SPEC-048, SPEC-049, SPEC-050, SPEC-054, PLAN-101, DESIGN-030
 
 ## 1. Summary
 
@@ -353,14 +353,17 @@ Deferred from MVP:
 - SMT/Z3-assisted law checking.
 - Workflow do-targets.
 
-## 16. Spec and Plan Starting Points
+## 16. Promotion Notes
 
-A future spec/plan should resolve these implementation questions first:
+This design note is now promoted into:
 
-1. What is the minimal type-system work needed for `M : * -> *` interface parameters?
-2. Can `Monad<M>` be implemented directly in Ash for `Act` and `Proc`, or is a temporary Rust builtin dictionary required?
-3. What exact surface AST node represents `do:K` before typed elaboration?
-4. Which phase owns typed do elaboration and source-span preservation?
-5. How does the existing `act { ... }` implementation migrate to `do:Act { ... }`?
-6. Which diagnostics are MVP-blocking versus follow-up lint warnings?
-7. Is hole syntax for `do:Result<_, E>` in the first implementation slice or reserved only in syntax/design?
+- [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), which owns the normative `do:K` syntax, MVP Act/Proc target rules, typed elaboration semantics, diagnostics, tower/failure behavior, and legacy `act { ... }` migration contract.
+- [PLAN-101](../plan/PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md), which schedules Phase 105 after the active Phase 104 capability/resource implementation work and breaks implementation into TASK-746 through TASK-753.
+
+Resolved planning positions:
+
+1. Full `M : * -> *` user-defined `Monad<M>` support remains the design target, but Phase 105 uses Act/Proc builtin dictionaries shaped like future Monad evidence.
+2. The first implementation slice does not implement `do:Result<_, E>` holes, pure `Option`/`List` targets, pattern binds, law syntax, or workflow do-targets.
+3. The parser must preserve a target-carrying `DoBlock` surface node until type-directed elaboration; parser-only lowering to unqualified `unit`/`bind` is explicitly non-normative for generalized do.
+4. `act { ... }` migration is planned as compatibility sugar for `do:Act`, with legacy `x = ...; ret ...;` accepted only temporarily or migrated under explicit compatibility tests.
+5. Phase 105 must not redefine Phase 104's Ash-defined capability implementation execution, authority admission, CLI binding configuration, or resource split/join semantics.

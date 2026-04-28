@@ -892,6 +892,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30),
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec!["hello".to_string()],
         };
 
@@ -913,6 +915,8 @@ mod tests {
             format: RunOutputFormat::Json,
             dry_run: true,
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -926,7 +930,18 @@ mod tests {
 
     #[test]
     fn test_build_engine_default_capabilities() {
-        let result = build_engine(&[]);
+        let args = RunArgs {
+            path: "test.ash".to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            program_args: vec![],
+        };
+        let result = build_engine(&args);
         assert!(
             result.is_ok(),
             "Engine should build with default capabilities"
@@ -959,6 +974,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -983,6 +1000,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -1023,6 +1042,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -1057,6 +1078,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30), // 30 second timeout
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -1093,6 +1116,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: None, // No timeout
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 

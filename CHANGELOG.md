@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-745 / Phase 104: finalized the capability/resource implementation program closeout by reconciling SPEC-052, SPEC-053, PLAN-100, PLAN-INDEX, task status, changelog, and verification evidence while preserving the honest boundary between checkable source declaration packets, runtime API execution tests, and deferred source-level `ash run` lowering; also reconciled stale `ash-cli` run-command test fixtures and the lexer keyword proptest generator issues surfaced by broad workspace verification.
+
 - TASK-744 / Phase 104: added standard internal `WorkflowKV` and `FrozenClock` runtime API pilots in `ash-interp`, including constructor-only pilot requests, internal resource admission with explicit derived authority, deterministic Ash-defined implementation bodies, host-to-internal substitution coverage, explicit-admission boundary tests, and collision rejection for pre-registered reserved standard pilot bodies without claiming mutable KV storage or source-level run lowering.
 
 - TASK-743 / Phase 104: added a minimal host-facing engine/CLI configuration surface for selecting Ash-defined capability implementations and runtime resource initializers, including builder APIs, read-only engine inspection, validation-only unknown-name rejection against source declarations, `ash run --capability-impl BINDING=IMPLEMENTATION`, `ash run --resource-init RESOURCE=INITIALIZER`, SPEC-005-compatible diagnostics, and default provider wiring regression coverage without lowering source declarations into runtime admissions.

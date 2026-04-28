@@ -69,9 +69,11 @@ Tasks:
 
 ## Phase 104: Ash-Defined Capability Implementations and Pilot DX
 
-**Status:** 📝 Planned.
+**Status:** ✅ Complete.
 
 Execute Ash-defined capability implementation bodies and prove the model with mock/replay/internal-resource pilots.
+
+Phase 104 landed the runtime API and CLI/engine selection surfaces needed for capability-substitution pilots. The shipped slice remains intentionally honest about current boundaries: declaration examples are `ash check`-covered packets, runtime behavior is covered by Rust API tests, and source-level `ash run` lowering of resource/binding declarations is deferred.
 
 Tasks:
 

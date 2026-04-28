@@ -8,6 +8,7 @@ use proptest::prelude::*;
 
 // List of all keywords to test that they are not treated as identifiers
 const KEYWORDS: &[&str] = &[
+    "fn",
     "workflow",
     "capability",
     "policy",

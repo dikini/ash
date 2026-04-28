@@ -2943,7 +2943,7 @@ Introduce runtime resource instance carriers, resource lifecycle/access/split me
 ## Phase 104: Ash-Defined Capability Implementations and Pilot DX
 
 **Priority:** Medium (developer-facing proof of the new model)
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Spec:** [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), [SPEC-005](../spec/SPEC-005-CLI.md), [SPEC-010](../spec/SPEC-010-EMBEDDING.md)
 **Plan:** [docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md](PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md)
 
@@ -2955,7 +2955,7 @@ Execute Ash-defined capability implementation bodies and prove the model with ad
 | [TASK-742](tasks/TASK-742-adapter-mock-replay-capability-examples.md) | Adapter, mock, and replay capability examples | 5 | ✅ Complete |
 | [TASK-743](tasks/TASK-743-cli-engine-capability-binding-configuration-surface.md) | CLI/engine capability binding configuration surface | 6 | ✅ Complete |
 | [TASK-744](tasks/TASK-744-standard-internal-kv-and-test-clock-pilots.md) | Standard internal KV and test-clock pilots | 7 | ✅ Complete |
-| [TASK-745](tasks/TASK-745-capability-resource-final-docs-examples-verification.md) | Final docs, examples, and verification closeout | 5 | 📝 Planned |
+| [TASK-745](tasks/TASK-745-capability-resource-final-docs-examples-verification.md) | Final docs, examples, and verification closeout | 5 | ✅ Complete |
 
 **Track A (Execution):** 8h. Route implementation operation bodies through the effectful runtime with explicit dependency scope.
 **Track B (DX Pilots):** 18h. Add examples and host configuration surfaces for substitution, mock/replay, and internal resources.

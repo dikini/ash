@@ -40,8 +40,8 @@ This directory contains the canonical specifications for the Ash workflow langua
 | SPEC-049 | Process Runtime Semantics | Draft | Runtime semantics for process identities, affine/linear handles, child environment projection, `yield`, async `par`, `await`, `join`, and `gather` |
 | SPEC-050 | Operational Bottom and Scoped Handling | Draft | Operational failure as tower/entity-indexed bottom, `fail`, `with_error`, process-observation failure, aggregation, and workflow-boundary reinterpretation hooks |
 | SPEC-051 | Workflow Semantics | Draft | Workflow as governance above `Proc`: admission, roles/capabilities, `requires`/`ensures`, obligations, reporting, `WorkflowFailure`, and lower-failure reinterpretation |
-| [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) | Capability Interfaces and Implementations | Draft | Stateless capability interfaces, Ash-defined implementation recipes, binding-time selection, module visibility, conformance, derived implementations, and runtime invocation boundaries |
-| [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) | Runtime Resources and Authority Provenance | Draft | Resource types, resource instances, resource bindings, host/internal/derived authority provenance, lifecycle, split/join policy, and resource-backed operation evidence |
+| [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) | Capability Interfaces and Implementations | Draft | Stateless capability interfaces, Ash-defined implementation recipes, binding-time selection, module visibility, conformance, derived implementations, and Phase 104 runtime API invocation pilots |
+| [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) | Runtime Resources and Authority Provenance | Draft | Resource types, resource instances, resource bindings, host/internal/derived authority provenance, lifecycle, split/join policy, resource-backed operation evidence, and Phase 104 internal-resource pilots |
 
 ## Deprecated Specifications
 

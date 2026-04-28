@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-757 / Phase 106: added typed comprehension checking and `elaborate_typed_comprehension`, requiring explicit MVP targets and normalizing qualifiers to the existing generalized typed-do checker/elaborator so Act/Proc comprehensions synthesize `K<A>` and produce the same dictionary-call core shape as equivalent `do:K` blocks. Added coverage for Act/Proc equivalence, pure `<-` rejection, constructor mismatch and `proc::from_act` behavior, wrong-kind/missing-dictionary targets, and missing target annotations.
+
 - TASK-756 / Phase 106: wired comprehension lowering and visitor boundaries across parser, typechecker name/capability/diagnostic/precondition paths, lint policy traversal, REPL AST rendering, and purity handling. Parser-only lowering and direct type checking now reject comprehensions pending typed elaboration, while purity mirrors the existing `DoBlock` deferral boundary.
 
 - TASK-755 / Phase 106: added source-fidelity bracket comprehension parser substrate with `Expr::Comprehension`, qualifier carriers for `x <- expr`, `_ <- expr`, and `let x = expr`, optional comprehension-specific `: K` targets, parser-state/list/index non-regression coverage, and a parser-only lowering rejection boundary pending typed elaboration.

@@ -13,7 +13,8 @@ use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef}
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
-    ActStmt, BinaryOp, DoStmt, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
+    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm,
+    Pattern as SurfacePattern, UnaryOp,
 };
 use ash_parser::token::Span;
 use std::collections::HashSet;
@@ -644,13 +645,12 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         } => check_do_block(env, target, stmts, *span),
 
         Expr::ActBlock { stmts, span, .. } => check_legacy_act_block(env, stmts, *span),
-        Expr::Comprehension { span, .. } => {
-            CheckResult::error(ConstructorError::UnsupportedExpression {
-                kind: "comprehension requires typed do elaboration before type checking"
-                    .to_string(),
-                span: *span,
-            })
-        }
+        Expr::Comprehension {
+            target,
+            result,
+            qualifiers,
+            span,
+        } => check_comprehension(env, target.as_ref(), result, qualifiers, *span),
     }
 }
 
@@ -1024,7 +1024,41 @@ pub fn elaborate_typed_do_block(
         }]);
     };
 
-    let check = check_do_block(env, target, stmts, *span);
+    elaborate_typed_do_parts(env, target, stmts, *span)
+}
+
+/// Type-check and elaborate a bracket comprehension through generalized typed do semantics.
+pub fn elaborate_typed_comprehension(
+    env: &TypeEnv,
+    expr: &Expr,
+) -> Result<DoElaborationResult, Vec<ConstructorError>> {
+    let Expr::Comprehension {
+        target,
+        result,
+        qualifiers,
+        span,
+    } = expr
+    else {
+        return Err(vec![ConstructorError::UnsupportedExpression {
+            kind: "typed comprehension elaboration requires a comprehension expression".to_string(),
+            span: get_expr_span(expr),
+        }]);
+    };
+
+    let Some(target) = target.as_ref() else {
+        return Err(vec![missing_comprehension_target_error(*span)]);
+    };
+    let stmts = comprehension_do_stmts(result, qualifiers, *span)?;
+    elaborate_typed_do_parts(env, target, &stmts, *span)
+}
+
+fn elaborate_typed_do_parts(
+    env: &TypeEnv,
+    target: &ash_parser::surface::DoTarget,
+    stmts: &[DoStmt],
+    span: Span,
+) -> Result<DoElaborationResult, Vec<ConstructorError>> {
+    let check = check_do_block(env, target, stmts, span);
     if !check.is_ok() {
         return Err(check.errors);
     }
@@ -1035,6 +1069,76 @@ pub fn elaborate_typed_do_block(
         expr: core,
         ty: check.ty,
     })
+}
+
+fn missing_comprehension_target_error(span: Span) -> ConstructorError {
+    ConstructorError::UnsupportedExpression {
+        kind: "comprehension MVP requires an explicit target annotation such as `[x | x <- xs]: Act`; target inference is deferred".to_string(),
+        span,
+    }
+}
+
+fn check_comprehension(
+    env: &TypeEnv,
+    target: Option<&ash_parser::surface::DoTarget>,
+    result: &Expr,
+    qualifiers: &[ComprehensionQualifier],
+    span: Span,
+) -> CheckResult {
+    let Some(target) = target else {
+        return CheckResult::error(missing_comprehension_target_error(span));
+    };
+
+    let stmts = match comprehension_do_stmts(result, qualifiers, span) {
+        Ok(stmts) => stmts,
+        Err(errors) => {
+            return CheckResult {
+                ty: Type::Var(TypeVar::fresh()),
+                substitution: Substitution::new(),
+                errors,
+            };
+        }
+    };
+    check_do_block(env, target, &stmts, span)
+}
+
+fn comprehension_do_stmts(
+    result: &Expr,
+    qualifiers: &[ComprehensionQualifier],
+    span: Span,
+) -> Result<Vec<DoStmt>, Vec<ConstructorError>> {
+    if qualifiers.is_empty() {
+        return Err(vec![ConstructorError::UnsupportedExpression {
+            kind: "comprehension must contain at least one qualifier".to_string(),
+            span,
+        }]);
+    }
+
+    let mut stmts = Vec::with_capacity(qualifiers.len() + 1);
+    for qualifier in qualifiers {
+        stmts.push(match qualifier {
+            ComprehensionQualifier::Let { name, value, span } => DoStmt::Let {
+                name: name.clone(),
+                value: value.clone(),
+                span: *span,
+            },
+            ComprehensionQualifier::Bind { name, value, span } => DoStmt::Bind {
+                name: name.clone(),
+                value: value.clone(),
+                span: *span,
+            },
+            ComprehensionQualifier::DiscardBind { value, span } => DoStmt::Bind {
+                name: "_".into(),
+                value: value.clone(),
+                span: *span,
+            },
+        });
+    }
+    stmts.push(DoStmt::Return {
+        value: Box::new(result.clone()),
+        span,
+    });
+    Ok(stmts)
 }
 
 fn elaborate_do_stmts(

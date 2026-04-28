@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-760 / Phase 107: added CLI-level `ash check` corpus baseline harnesses for `std/src/**/*.ash` and `examples/**/*.ash`, explicitly classifying expected-pass, expected-fail-with-reason, and reference-only files while recording the current 31/39 std and 19/36 example pass baselines through the same command path users run.
+
 - Phase 107 planning packet for stdlib and example corpus repair: documented the `ash-cli check` failure baseline, root-cause buckets, execution order, and TASK-760 through TASK-766 remediation tasks for std module/import fixes, parser comment/diagnostic improvements, and example corpus policy/canonicalization.
 
 - Phase 106 / SPEC-055: completed the explicit-target monad comprehension MVP. Bracket comprehensions now parse as source-fidelity surface AST, reject parser-only lowering, participate in cross-crate visitors, type-check/elaborate through the generalized typed-do Act/Proc dictionary path, and provide comprehension-specific diagnostics. Target inference, guards/filtering, pattern binders, user-defined Monad dictionaries, and pure List/Option/Result dictionaries remain deferred.

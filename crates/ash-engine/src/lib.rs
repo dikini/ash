@@ -42,7 +42,7 @@ use ash_interp::{
     RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
 };
 use ash_parser::surface::Type as SurfaceType;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// The central engine for all Ash operations
 ///
@@ -85,6 +85,10 @@ pub struct Engine {
     /// Runtime-owned state that persists across related executions.
     /// Providers configured via `EngineBuilder` are passed to `RuntimeState` during build.
     runtime_state: RuntimeState,
+    /// Host-selected capability implementation recipes keyed by binding name.
+    capability_implementation_selections: HashMap<String, String>,
+    /// Host-selected resource initializers keyed by resource type/name.
+    resource_initializer_selections: HashMap<String, String>,
 }
 
 /// A workflow handle that carries its internal ID for type checking
@@ -746,6 +750,67 @@ impl Engine {
     #[must_use]
     pub fn has_provider(&self, name: &str) -> bool {
         self.runtime_state.has_provider(name)
+    }
+
+    /// Return the selected Ash-defined implementation for a host binding name.
+    #[must_use]
+    pub fn capability_implementation_selection(&self, binding: &str) -> Option<&str> {
+        self.capability_implementation_selections
+            .get(binding)
+            .map(String::as_str)
+    }
+
+    /// Return the number of configured capability implementation selections.
+    #[must_use]
+    pub fn capability_implementation_selection_count(&self) -> usize {
+        self.capability_implementation_selections.len()
+    }
+
+    /// Return the selected initializer for a resource type/name.
+    #[must_use]
+    pub fn resource_initializer_selection(&self, resource: &str) -> Option<&str> {
+        self.resource_initializer_selections
+            .get(resource)
+            .map(String::as_str)
+    }
+
+    /// Return the number of configured resource initializer selections.
+    #[must_use]
+    pub fn resource_initializer_selection_count(&self) -> usize {
+        self.resource_initializer_selections.len()
+    }
+
+    /// Validate host-facing capability/resource configuration against a source module.
+    ///
+    /// This is intentionally validation-only: TASK-743 exposes names selected by a
+    /// host and rejects unknown source names without lowering source declarations
+    /// into runtime admissions.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Configuration` when a selected capability implementation
+    /// or resource initializer target is not declared by the provided source.
+    pub fn validate_configuration_for_source(&self, source: &str) -> Result<(), EngineError> {
+        let implementations = declared_capability_implementation_names(source);
+        let resources = declared_resource_type_names(source);
+
+        for implementation in self.capability_implementation_selections.values() {
+            if !implementations.contains(implementation) {
+                return Err(EngineError::Configuration(format!(
+                    "unknown capability implementation '{implementation}'"
+                )));
+            }
+        }
+
+        for resource in self.resource_initializer_selections.keys() {
+            if !resources.contains(resource) {
+                return Err(EngineError::Configuration(format!(
+                    "unknown resource initializer target '{resource}'"
+                )));
+            }
+        }
+
+        Ok(())
     }
 
     fn runtime_stdlib_type_defs(&self) -> Result<Vec<ash_core::ast::TypeDef>, EngineError> {
@@ -1704,6 +1769,10 @@ pub struct EngineBuilder {
         String,
         std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
     >,
+    /// Host-selected capability implementation recipes keyed by binding name.
+    capability_implementation_selections: Vec<(String, String)>,
+    /// Host-selected resource initializers keyed by resource type/name.
+    resource_initializer_selections: Vec<(String, String)>,
 }
 
 impl EngineBuilder {
@@ -1761,6 +1830,14 @@ impl EngineBuilder {
 
         // Build the RuntimeState with the unified providers
         let runtime_state = RuntimeState::new().with_providers(providers);
+        let capability_implementation_selections = selections_to_map(
+            self.capability_implementation_selections,
+            "capability implementation selection",
+        )?;
+        let resource_initializer_selections = selections_to_map(
+            self.resource_initializer_selections,
+            "resource initializer selection",
+        )?;
 
         Ok(Engine {
             surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
@@ -1769,6 +1846,8 @@ impl EngineBuilder {
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state,
+            capability_implementation_selections,
+            resource_initializer_selections,
         })
     }
 
@@ -1865,6 +1944,30 @@ impl EngineBuilder {
         self
     }
 
+    /// Select an Ash-defined capability implementation recipe for a host binding name.
+    #[must_use]
+    pub fn with_capability_implementation(
+        mut self,
+        binding: impl Into<String>,
+        implementation: impl Into<String>,
+    ) -> Self {
+        self.capability_implementation_selections
+            .push((binding.into(), implementation.into()));
+        self
+    }
+
+    /// Select a host resource initializer for a named resource type.
+    #[must_use]
+    pub fn with_resource_initializer(
+        mut self,
+        resource: impl Into<String>,
+        initializer: impl Into<String>,
+    ) -> Self {
+        self.resource_initializer_selections
+            .push((resource.into(), initializer.into()));
+        self
+    }
+
     /// Configure LLM capabilities with the given provider configurations
     ///
     /// Registers an `LlmProvider` that supports multi-provider routing for OpenAI-compatible APIs.
@@ -1905,6 +2008,48 @@ impl EngineBuilder {
         }
         self
     }
+}
+
+fn selections_to_map(
+    selections: Vec<(String, String)>,
+    label: &str,
+) -> Result<HashMap<String, String>, EngineError> {
+    let mut map = HashMap::new();
+    for (key, value) in selections {
+        if key.trim().is_empty() || value.trim().is_empty() {
+            return Err(EngineError::Configuration(format!(
+                "invalid {label}: names must be non-empty"
+            )));
+        }
+        if map.insert(key.clone(), value).is_some() {
+            return Err(EngineError::Configuration(format!(
+                "duplicate {label} for '{key}'"
+            )));
+        }
+    }
+    Ok(map)
+}
+
+fn declared_capability_implementation_names(source: &str) -> HashSet<String> {
+    declared_names_after_marker(source, &["pub", "capability", "impl"])
+}
+
+fn declared_resource_type_names(source: &str) -> HashSet<String> {
+    declared_names_after_marker(source, &["pub", "resource", "type"])
+}
+
+fn declared_names_after_marker(source: &str, marker: &[&str]) -> HashSet<String> {
+    let words: Vec<&str> = source
+        .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .filter(|word| !word.is_empty())
+        .collect();
+    let mut names = HashSet::new();
+    for window in words.windows(marker.len() + 1) {
+        if window.starts_with(marker) {
+            names.insert(window[marker.len()].to_string());
+        }
+    }
+    names
 }
 
 /// Bind imported callable type signatures into a type environment.

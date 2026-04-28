@@ -1,6 +1,6 @@
 # TASK-743: Add a minimal host-facing configuration surface for selecting capability implementations and resource initializers.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -67,11 +67,26 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+## Implementation Evidence
+
+- Added engine builder APIs for host-selected capability implementation recipes and resource initializers:
+  - `EngineBuilder::with_capability_implementation(binding, implementation)`
+  - `EngineBuilder::with_resource_initializer(resource, initializer)`
+  - read-only `Engine` inspection methods for both selection maps.
+- Added validation-only `Engine::validate_configuration_for_source`, which rejects unknown selected implementation/resource target names without lowering source declarations into runtime admissions or creating ambient authority.
+- Added `ash run --capability-impl BINDING=IMPLEMENTATION` and `ash run --resource-init RESOURCE=INITIALIZER` entry points.
+- Preserved existing default provider wiring for stdio/fs/dir/meta while carrying host selections.
+
+## Verification Evidence
+
+- `cargo test -p ash-engine --test task_743_configuration_surface`
+- `cargo test -p ash-cli --test task_743_configuration_surface`
 
 ## Dependencies for Next Task
 

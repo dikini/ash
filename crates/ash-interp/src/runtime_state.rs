@@ -67,6 +67,92 @@ impl ImplementationOperationBody {
     }
 }
 
+/// Standard internal resource pilot that Phase 104 can admit without host authority.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum StandardPilotResource {
+    /// Workflow-local opaque key/value resource pilot.
+    WorkflowKv,
+    /// Deterministic frozen/test clock resource pilot.
+    FrozenClock,
+}
+
+impl StandardPilotResource {
+    /// Static runtime resource type identifier used by this pilot.
+    #[must_use]
+    pub fn resource_type_id(self) -> ResourceTypeId {
+        match self {
+            Self::WorkflowKv => ResourceTypeId::new("WorkflowKV"),
+            Self::FrozenClock => ResourceTypeId::new("FrozenClock"),
+        }
+    }
+
+    fn provenance_note(self) -> &'static str {
+        match self {
+            Self::WorkflowKv => "standard WorkflowKV pilot admitted by runtime",
+            Self::FrozenClock => "standard FrozenClock pilot admitted by runtime",
+        }
+    }
+}
+
+/// Host-facing request to admit one standard internal capability/resource pilot.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StandardInternalPilot {
+    binding_name: String,
+    resource_name: String,
+    resource: StandardPilotResource,
+    interface: CapabilityInterfaceId,
+    implementation: CapabilityImplementationId,
+    operation: String,
+    fixture: Value,
+}
+
+impl StandardInternalPilot {
+    /// Create the standard WorkflowKV pilot.
+    #[must_use]
+    pub fn workflow_kv(
+        binding_name: impl Into<String>,
+        resource_name: impl Into<String>,
+        fixture: Value,
+    ) -> Self {
+        Self {
+            binding_name: binding_name.into(),
+            resource_name: resource_name.into(),
+            resource: StandardPilotResource::WorkflowKv,
+            interface: CapabilityInterfaceId::new("KeyValue"),
+            implementation: CapabilityImplementationId::new("__ash_standard_pilot.WorkflowKV"),
+            operation: "get".to_string(),
+            fixture,
+        }
+    }
+
+    /// Create the standard FrozenClock/TestClock pilot.
+    #[must_use]
+    pub fn frozen_clock(
+        binding_name: impl Into<String>,
+        resource_name: impl Into<String>,
+        frozen_epoch_millis: i64,
+    ) -> Self {
+        Self {
+            binding_name: binding_name.into(),
+            resource_name: resource_name.into(),
+            resource: StandardPilotResource::FrozenClock,
+            interface: CapabilityInterfaceId::new("Clock"),
+            implementation: CapabilityImplementationId::new("__ash_standard_pilot.FrozenClock"),
+            operation: "epoch_millis".to_string(),
+            fixture: Value::Int(frozen_epoch_millis),
+        }
+    }
+}
+
+/// Identity pair returned by standard internal pilot admission.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StandardPilotBinding {
+    /// Admitted implementation-backed binding id.
+    pub binding_id: CapabilityBindingId,
+    /// Admitted internal resource id that backs the binding authority.
+    pub resource_id: ResourceId,
+}
+
 /// Wrapper that adapts an `Arc<dyn CapabilityProvider>` to work as a `Box<dyn CapabilityProvider>`.
 ///
 /// This is used internally by `RuntimeState` to create a `CapabilityContext` from
@@ -980,6 +1066,103 @@ impl RuntimeState {
             .await
             .get(&(implementation.clone(), operation.to_string()))
             .cloned()
+    }
+
+    /// Admit one standard internal pilot resource and its implementation-backed binding.
+    ///
+    /// The pilot creates an internal runtime-owned resource, registers a deterministic
+    /// Ash-defined implementation operation body backed by an inert config value, and then
+    /// admits an implementation binding whose authority derives only from the explicit resource
+    /// dependency. It does not expose the resource as a first-class Ash value and does not perform
+    /// ambient capability/resource lookup.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if interface operation validation, implementation body registration, or
+    /// implementation binding admission fails.
+    pub async fn admit_standard_internal_pilot(
+        &self,
+        pilot: StandardInternalPilot,
+    ) -> ExecResult<StandardPilotBinding> {
+        if self
+            .capability_interface_operations(&pilot.interface)
+            .await
+            .is_none()
+        {
+            self.register_capability_interface_operations(
+                pilot.interface.clone(),
+                [pilot.operation.as_str()],
+            )
+            .await?;
+        }
+
+        if self
+            .implementation_operation_body(&pilot.implementation, &pilot.operation)
+            .await
+            .is_some()
+        {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "standard internal pilot body {}.{} is already registered",
+                pilot.implementation.as_str(),
+                pilot.operation
+            )));
+        }
+
+        let params = match pilot.resource {
+            StandardPilotResource::WorkflowKv => vec!["__ash_standard_pilot_arg"],
+            StandardPilotResource::FrozenClock => Vec::new(),
+        };
+        self.register_implementation_operation_body(
+            pilot.implementation.clone(),
+            pilot.operation.clone(),
+            ImplementationOperationBody::new(
+                params,
+                Expr::Variable {
+                    name: "__ash_standard_pilot_fixture".to_string(),
+                    span: Default::default(),
+                },
+            ),
+        )
+        .await?;
+
+        let resource_id = ResourceId::new();
+        let resource = ResourceInstance::new(
+            resource_id,
+            pilot.resource.resource_type_id(),
+            ResourceOwner::Workflow(WorkflowId::new()),
+        )
+        .with_lifecycle(ResourceLifecycle::Admitted)
+        .with_provenance(ResourceProvenance::internal(
+            pilot.resource.provenance_note(),
+        ));
+        self.register_resource_instance(resource).await;
+
+        let mut resources = HashMap::new();
+        resources.insert(pilot.resource_name.clone(), resource_id);
+        let binding_id = self
+            .admit_implementation_binding(
+                ImplementationBindingAdmission::new(
+                    pilot.binding_name,
+                    pilot.interface,
+                    pilot.implementation,
+                )
+                .with_dependency(ImplementationBindingDependencySource::resource(
+                    pilot.resource_name,
+                    pilot.resource.resource_type_id(),
+                ))
+                .with_dependency(ImplementationBindingDependencySource::config(
+                    "__ash_standard_pilot_fixture",
+                    pilot.fixture,
+                ))
+                .with_requested_operations([pilot.operation]),
+                &resources,
+            )
+            .await?;
+
+        Ok(StandardPilotBinding {
+            binding_id,
+            resource_id,
+        })
     }
 
     /// Admit one implementation-backed capability binding from explicit dependency source names.

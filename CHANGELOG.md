@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-744 / Phase 104: added standard internal `WorkflowKV` and `FrozenClock` runtime API pilots in `ash-interp`, including constructor-only pilot requests, internal resource admission with explicit derived authority, deterministic Ash-defined implementation bodies, host-to-internal substitution coverage, explicit-admission boundary tests, and collision rejection for pre-registered reserved standard pilot bodies without claiming mutable KV storage or source-level run lowering.
+
 - TASK-743 / Phase 104: added a minimal host-facing engine/CLI configuration surface for selecting Ash-defined capability implementations and runtime resource initializers, including builder APIs, read-only engine inspection, validation-only unknown-name rejection against source declarations, `ash run --capability-impl BINDING=IMPLEMENTATION`, `ash run --resource-init RESOURCE=INITIALIZER`, SPEC-005-compatible diagnostics, and default provider wiring regression coverage without lowering source declarations into runtime admissions.
 
 - TASK-742 / Phase 104: added checkable Phase 104 capability implementation examples for mock/internal KV, logging/cache adapter, and recording/replay sketch patterns; documented the current source-level `ash check` versus runtime API execution boundary; added CLI conformance coverage for the examples and executable `ash-interp` runtime API tests proving host/mock substitution, adapter invocation of an inner capability dependency, and a recording-envelope pilot without claiming persistent replay.

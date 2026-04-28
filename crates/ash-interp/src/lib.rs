@@ -102,7 +102,8 @@ pub use role_runtime::{
 pub use runtime_outcome_state::RuntimeOutcomeState;
 pub use runtime_state::{
     ImplementationBindingAdmission, ImplementationBindingDependencySource,
-    ImplementationOperationBody, RuntimeState, WorkflowOwnedResourceAdmission,
+    ImplementationOperationBody, RuntimeState, StandardInternalPilot, StandardPilotBinding,
+    StandardPilotResource, WorkflowOwnedResourceAdmission,
 };
 pub use stream::{
     BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,

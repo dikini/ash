@@ -1,6 +1,6 @@
 # TASK-744: Add standard internal KV and test-clock pilot resources to validate internal authority creation.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -67,11 +67,18 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+## Completion Notes
+
+- Added `ash-interp` runtime API pilots for standard internal `WorkflowKV` and `FrozenClock` resources.
+- Pilot admission creates internal runtime-owned resources, deterministic Ash-defined implementation bodies, and implementation-backed bindings whose authority derives from explicit resource dependencies.
+- Tests prove host-backed to internal WorkflowKV substitution, explicit admission boundaries, deterministic FrozenClock execution without a host time provider, and rejection of pre-registered internal-body collisions.
+- This remains an honest runtime API pilot: mutable first-class KV resource state and source-level `ash run` lowering/admission are intentionally not claimed by this task.
 
 ## Dependencies for Next Task
 

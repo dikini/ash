@@ -55,7 +55,9 @@ pub(crate) fn resolve_do_target(
     let (qualified, type_info) =
         env.resolve_type(target_name)
             .map_err(|_| ConstructorError::UnsupportedExpression {
-                kind: format!("unknown do target '{target_name}'"),
+                kind: format!(
+                    "unknown do target '{target_name}'; use a registered computation constructor such as Act or Proc"
+                ),
                 span: target.span,
             })?;
 

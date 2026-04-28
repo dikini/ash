@@ -12,7 +12,7 @@
 
 ## Phase 105: Generalized Typed Do-Notation
 
-**Status:** 🟢 In Progress (TASK-747 parser/surface substrate, TASK-748 target/dictionary resolution, TASK-749 typed elaboration, TASK-750 Act compatibility, and TASK-751 Proc/tower integration complete; TASK-752 diagnostics next)
+**Status:** 🟢 In Progress (TASK-747 parser/surface substrate, TASK-748 target/dictionary resolution, TASK-749 typed elaboration, TASK-750 Act compatibility, TASK-751 Proc/tower integration, and TASK-752 diagnostics complete; TASK-753 closeout next)
 **Spec:** [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md)
 **Design:** [DESIGN-031](../design/DESIGN-031-GENERALIZED-DO-NOTATION.md)
 **Depends on:** Phase 104 closeout for normal implementation sequencing; Phase 97 `Act`, Phase 98 `Proc`, Phase 99 `proc::from_act`.
@@ -27,7 +27,7 @@
 | [TASK-749](tasks/TASK-749-typed-do-elaboration-and-lowering.md) | Type-check `let`/`<-`/`return` and lower after typed elaboration | Semantic | 8 | ✅ Complete |
 | [TASK-750](tasks/TASK-750-act-block-compatibility-and-migration.md) | Route `act {}` through generalized do compatibility and legacy diagnostic carrier | Semantic | 6 | ✅ Complete |
 | [TASK-751](tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Validate `do:Proc`, explicit `proc::from_act`, and tower/failure behavior | Semantic | 7 | ✅ Complete |
-| [TASK-752](tasks/TASK-752-do-notation-diagnostics.md) | Add focused do-notation diagnostics and migration warnings | Semantic | 5 | 📝 Planned |
+| [TASK-752](tasks/TASK-752-do-notation-diagnostics.md) | Add focused do-notation diagnostics and migration warnings | Semantic | 5 | ✅ Complete |
 | [TASK-753](tasks/TASK-753-do-notation-docs-examples-closeout.md) | Update docs/examples and perform Phase 105 closeout audit | Docs/Planning | 4 | 📝 Planned |
 
 Estimated total: 46 hours.

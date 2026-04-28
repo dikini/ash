@@ -503,7 +503,7 @@ Task summary:
 | [TASK-749](../plan/tasks/TASK-749-typed-do-elaboration-and-lowering.md) | Type and elaborate do blocks to target `return`/`bind` calls | Complete |
 | [TASK-750](../plan/tasks/TASK-750-act-block-compatibility-and-migration.md) | Migrate new-form `act {}` onto generalized grammar and preserve legacy carrier diagnostics | Complete |
 | [TASK-751](../plan/tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Validate `do:Proc`, explicit `from_act`, and tower behavior | Complete |
-| [TASK-752](../plan/tasks/TASK-752-do-notation-diagnostics.md) | Implement targeted diagnostics and migration warnings | Planned |
+| [TASK-752](../plan/tasks/TASK-752-do-notation-diagnostics.md) | Implement targeted diagnostics and migration warnings | Complete |
 | [TASK-753](../plan/tasks/TASK-753-do-notation-docs-examples-closeout.md) | Update examples/docs and close out Phase 105 | Planned |
 
 ## 16. Deferred Extensions

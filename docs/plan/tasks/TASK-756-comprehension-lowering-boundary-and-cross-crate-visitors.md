@@ -1,6 +1,6 @@
 # TASK-756: Comprehension Lowering Boundary and Cross-Crate Visitors
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -38,9 +38,9 @@ Wire all non-typechecking visitors for the new comprehension surface node and en
 
 ## Verification Checklist
 
-- [ ] Lowerer rejection test passes.
-- [ ] Affected crates compile without non-exhaustive matches.
-- [ ] Existing `Expr::DoBlock` lowering rejection still passes.
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo check -p ash-parser -p ash-typeck -p ash-lint -p ash-repl` passes.
-- [ ] Independent review confirms no semantic lowering was added and purity handling remains consistent with the Phase 105 DoBlock boundary.
+- [x] Lowerer rejection test passes.
+- [x] Affected crates compile without non-exhaustive matches.
+- [x] Existing `Expr::DoBlock` lowering rejection still passes.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo check -p ash-parser -p ash-typeck -p ash-lint -p ash-repl` passes.
+- [x] Independent review confirms no semantic lowering was added and purity handling remains consistent with the Phase 105 DoBlock boundary.

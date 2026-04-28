@@ -3004,7 +3004,7 @@ Promote explicit typed `do:K` notation for computation constructors. Phase 105 i
 ## Phase 106: Monad Comprehension Syntax
 
 **Priority:** Medium (post-Phase-105 syntax ergonomics over the completed typed-do substrate)
-**Status:** 🚧 In Progress (TASK-754 and TASK-755 complete; TASK-756 through TASK-759 planned)
+**Status:** 🚧 In Progress (TASK-754 through TASK-756 complete; TASK-757 through TASK-759 planned)
 **Spec:** [SPEC-055](../spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md)
 **Design:** [DESIGN-032](../design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md)
 **Plan:** [docs/plan/PLAN-102-MONAD-COMPREHENSION-SYNTAX.md](PLAN-102-MONAD-COMPREHENSION-SYNTAX.md)
@@ -3015,7 +3015,7 @@ Promote bracket comprehension syntax as a container-view spelling of generalized
 |------|-------------|------------|--------|
 | [TASK-754](tasks/TASK-754-monad-comprehension-spec-plan-packet.md) | Monad comprehension spec/plan packet | 3 | ✅ Complete |
 | [TASK-755](tasks/TASK-755-comprehension-surface-ast-and-parser.md) | Comprehension surface AST and parser | 7 | ✅ Complete |
-| [TASK-756](tasks/TASK-756-comprehension-lowering-boundary-and-cross-crate-visitors.md) | Lowering boundary and cross-crate visitors | 5 | 📝 Planned |
+| [TASK-756](tasks/TASK-756-comprehension-lowering-boundary-and-cross-crate-visitors.md) | Lowering boundary and cross-crate visitors | 5 | ✅ Complete |
 | [TASK-757](tasks/TASK-757-comprehension-typed-elaboration.md) | Comprehension typed elaboration | 8 | 📝 Planned |
 | [TASK-758](tasks/TASK-758-comprehension-diagnostics.md) | Comprehension diagnostics | 5 | 📝 Planned |
 | [TASK-759](tasks/TASK-759-monad-comprehension-docs-examples-closeout.md) | Comprehension docs, examples, and closeout | 4 | 📝 Planned |

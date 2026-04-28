@@ -479,6 +479,20 @@ fn contains_policy(expr: &Expr) -> bool {
             };
             contains_policy(value)
         }),
+        Expr::Comprehension {
+            result, qualifiers, ..
+        } => {
+            qualifiers.iter().any(|qualifier| {
+                let value = match qualifier {
+                    ash_parser::surface::ComprehensionQualifier::Let { value, .. }
+                    | ash_parser::surface::ComprehensionQualifier::Bind { value, .. }
+                    | ash_parser::surface::ComprehensionQualifier::DiscardBind { value, .. } => {
+                        value
+                    }
+                };
+                contains_policy(value)
+            }) || contains_policy(result)
+        }
     }
 }
 

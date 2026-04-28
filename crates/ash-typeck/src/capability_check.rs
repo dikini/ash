@@ -824,6 +824,21 @@ impl CapabilityChecker {
                 }
                 Ok(())
             }
+
+            Expr::Comprehension {
+                result, qualifiers, ..
+            } => {
+                use ash_parser::surface::ComprehensionQualifier;
+                for qualifier in qualifiers {
+                    let value = match qualifier {
+                        ComprehensionQualifier::Let { value, .. }
+                        | ComprehensionQualifier::Bind { value, .. }
+                        | ComprehensionQualifier::DiscardBind { value, .. } => value,
+                    };
+                    self.verify_expr(value)?;
+                }
+                self.verify_expr(result)
+            }
         }
     }
 

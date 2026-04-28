@@ -644,6 +644,13 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         } => check_do_block(env, target, stmts, *span),
 
         Expr::ActBlock { stmts, span, .. } => check_legacy_act_block(env, stmts, *span),
+        Expr::Comprehension { span, .. } => {
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "comprehension requires typed do elaboration before type checking"
+                    .to_string(),
+                span: *span,
+            })
+        }
     }
 }
 
@@ -716,6 +723,20 @@ fn collect_do_notation_diagnostics(env: &TypeEnv, expr: &Expr, diagnostics: &mut
             }
         }
         Expr::ActBlock { .. } => {}
+        Expr::Comprehension {
+            result, qualifiers, ..
+        } => {
+            use ash_parser::surface::ComprehensionQualifier;
+            for qualifier in qualifiers {
+                let value = match qualifier {
+                    ComprehensionQualifier::Let { value, .. }
+                    | ComprehensionQualifier::Bind { value, .. }
+                    | ComprehensionQualifier::DiscardBind { value, .. } => value,
+                };
+                collect_do_notation_diagnostics(env, value, diagnostics);
+            }
+            collect_do_notation_diagnostics(env, result, diagnostics);
+        }
         Expr::Call { args, .. } => {
             for arg in args {
                 collect_do_notation_diagnostics(env, arg, diagnostics);
@@ -1343,6 +1364,7 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::FnApply { span, .. } => *span,
         Expr::ActBlock { span, .. } => *span,
         Expr::DoBlock { span, .. } => *span,
+        Expr::Comprehension { span, .. } => *span,
     }
 }
 

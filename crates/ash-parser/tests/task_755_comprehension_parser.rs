@@ -1,4 +1,5 @@
 use ash_parser::input::new_input;
+use ash_parser::lower::{LoweringError, lower_expr};
 use ash_parser::parse_expr::expr;
 use ash_parser::surface::{ComprehensionQualifier, Expr, Literal};
 
@@ -151,4 +152,16 @@ fn malformed_comprehension_attempt_does_not_corrupt_subsequent_parse() {
 
     let parsed = parse_expr("[1, 2]");
     assert!(matches!(parsed, Expr::Literal(Literal::List(elements)) if elements.len() == 2));
+}
+
+#[test]
+fn parser_only_lowering_rejects_comprehension() {
+    let parsed = parse_expr("[x | x <- xs]: List");
+    let err = lower_expr(&parsed).expect_err("comprehension lowering must be deferred");
+
+    assert!(matches!(
+        err,
+        LoweringError::ExprNotLowerable { kind }
+            if kind.contains("comprehension requires typed do elaboration")
+    ));
 }

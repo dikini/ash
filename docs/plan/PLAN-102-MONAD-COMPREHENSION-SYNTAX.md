@@ -23,7 +23,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-754](tasks/TASK-754-monad-comprehension-spec-plan-packet.md) | Promote DESIGN-032 into SPEC-055/PLAN-102 and register Phase 106 | Docs/Planning | 3 | ✅ Complete |
 | [TASK-755](tasks/TASK-755-comprehension-surface-ast-and-parser.md) | Add comprehension surface AST and parser support for `[result | qualifiers]: K` | Substrate | 7 | ✅ Complete |
-| [TASK-756](tasks/TASK-756-comprehension-lowering-boundary-and-cross-crate-visitors.md) | Wire non-typechecking visitors and enforce parser-only lowering rejection | Substrate | 5 | 📝 Planned |
+| [TASK-756](tasks/TASK-756-comprehension-lowering-boundary-and-cross-crate-visitors.md) | Wire non-typechecking visitors and enforce parser-only lowering rejection | Substrate | 5 | ✅ Complete |
 | [TASK-757](tasks/TASK-757-comprehension-typed-elaboration.md) | Reuse typed-do target resolution and elaboration for comprehensions | Semantic | 8 | 📝 Planned |
 | [TASK-758](tasks/TASK-758-comprehension-diagnostics.md) | Add comprehension-specific diagnostics and non-fatal teaching diagnostics | Semantic | 5 | 📝 Planned |
 | [TASK-759](tasks/TASK-759-monad-comprehension-docs-examples-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | 📝 Planned |

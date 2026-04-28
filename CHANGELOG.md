@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-756 / Phase 106: wired comprehension lowering and visitor boundaries across parser, typechecker name/capability/diagnostic/precondition paths, lint policy traversal, REPL AST rendering, and purity handling. Parser-only lowering and direct type checking now reject comprehensions pending typed elaboration, while purity mirrors the existing `DoBlock` deferral boundary.
+
 - TASK-755 / Phase 106: added source-fidelity bracket comprehension parser substrate with `Expr::Comprehension`, qualifier carriers for `x <- expr`, `_ <- expr`, and `let x = expr`, optional comprehension-specific `: K` targets, parser-state/list/index non-regression coverage, and a parser-only lowering rejection boundary pending typed elaboration.
 
 - [SPEC-055](docs/spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md), [PLAN-102](docs/plan/PLAN-102-MONAD-COMPREHENSION-SYNTAX.md), and [TASK-754](docs/plan/tasks/TASK-754-monad-comprehension-spec-plan-packet.md) through [TASK-759](docs/plan/tasks/TASK-759-monad-comprehension-docs-examples-closeout.md): promoted [DESIGN-032](docs/design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md) into a tracked Phase 106 packet for bracket comprehension syntax as a container-view spelling of SPEC-054 generalized typed do-notation, with explicit-target MVP planning, parser/typechecker/lowering/diagnostic tasks, and honest deferrals for target inference, pure List/Option/Result dictionaries, guards, pattern binders, and applicative/parallel comprehensions.

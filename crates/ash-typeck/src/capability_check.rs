@@ -811,6 +811,19 @@ impl CapabilityChecker {
                 }
                 Ok(())
             }
+
+            Expr::DoBlock { stmts, .. } => {
+                use ash_parser::surface::DoStmt;
+                for stmt in stmts {
+                    let value = match stmt {
+                        DoStmt::Let { value, .. }
+                        | DoStmt::Bind { value, .. }
+                        | DoStmt::Return { value, .. } => value,
+                    };
+                    self.verify_expr(value)?;
+                }
+                Ok(())
+            }
         }
     }
 

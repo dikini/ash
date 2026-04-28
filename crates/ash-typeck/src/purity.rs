@@ -332,6 +332,10 @@ fn check_purity_recursive(
                 check_purity_recursive(env, value, allow_effects, errors);
             }
         }
+        Expr::DoBlock { .. } => {
+            // TASK-747 only adds parser substrate. Typed do-block effect/purity
+            // semantics are intentionally unsupported until typed elaboration.
+        }
     }
 }
 

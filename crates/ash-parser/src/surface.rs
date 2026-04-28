@@ -1006,6 +1006,53 @@ pub enum ActStmt {
     },
 }
 
+/// Target kind for a generalized `do:K { ... }` block.
+///
+/// This is parser-surface substrate only. Later typed elaboration resolves the
+/// target and interprets any type arguments.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DoTarget {
+    /// Target constructor name, e.g. `Act` or `Proc`.
+    pub name: Name,
+    /// Optional target type arguments, e.g. `K<T>`.
+    pub args: Vec<Type>,
+    /// Source span covering the target head.
+    pub span: Span,
+}
+
+/// A statement inside a generalized `do:K { ... }` block.
+///
+/// Surface-only parser substrate. These statements are not lowered in
+/// TASK-747; typed elaboration is responsible for assigning semantics later.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DoStmt {
+    /// Pure let statement: `let name = expr;`.
+    Let {
+        /// Binding name.
+        name: Name,
+        /// Bound expression.
+        value: Box<Expr>,
+        /// Source span covering the whole statement.
+        span: Span,
+    },
+    /// Monadic bind statement: `name <- expr;`.
+    Bind {
+        /// Binding name.
+        name: Name,
+        /// Bound expression.
+        value: Box<Expr>,
+        /// Source span covering the whole statement.
+        span: Span,
+    },
+    /// Final return statement: `return expr`.
+    Return {
+        /// Returned expression.
+        value: Box<Expr>,
+        /// Source span covering the return statement.
+        span: Span,
+    },
+}
+
 /// Expression types.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -1180,6 +1227,18 @@ pub enum Expr {
         /// Statements inside the act block
         stmts: Vec<ActStmt>,
         /// Source span
+        span: Span,
+    },
+    /// Generalized typed do-block: `do:K { stmt; ...; return expr }`.
+    ///
+    /// Surface-only substrate for SPEC-054. This must not lower until typed
+    /// elaboration is implemented in later tasks.
+    DoBlock {
+        /// Target kind after `do:`.
+        target: DoTarget,
+        /// Statements inside the do block.
+        stmts: Vec<DoStmt>,
+        /// Source span covering the whole block.
         span: Span,
     },
 }
@@ -1601,6 +1660,7 @@ impl Spanned for Expr {
             Expr::FnDef { span, .. } => *span,
             Expr::FnApply { span, .. } => *span,
             Expr::ActBlock { span, .. } => *span,
+            Expr::DoBlock { span, .. } => *span,
         }
     }
 }

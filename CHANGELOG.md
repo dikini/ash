@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-747 / Phase 105: added generalized `do:K { ... }` parser-surface substrate with `DoTarget`, `DoStmt`, and `Expr::DoBlock`, focused parser tests for `let`/`<-`/`return`, precedence participation, parser-state restoration on malformed blocks, legacy `act { ret ...; }` preservation, and explicit unsupported lowering/typechecking boundaries pending target resolution and typed elaboration.
+
 - [DESIGN-032](docs/design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md): drafted Monad comprehension syntax as a container-view surface for generalized do-notation, covering `[result | qualifiers]`, optional postfix target annotation, shared `Monad<K>` elaboration, qualifier forms, guard deferral, tower behavior, diagnostics, and MVP exclusions.
 - [SPEC-054](docs/spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), [PLAN-101](docs/plan/PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md), and [TASK-746](docs/plan/tasks/TASK-746-generalized-do-notation-spec-plan-packet.md) through [TASK-753](docs/plan/tasks/TASK-753-do-notation-docs-examples-closeout.md): promoted [DESIGN-031](docs/design/DESIGN-031-GENERALIZED-DO-NOTATION.md) into a Phase 105 generalized typed do-notation packet covering explicit `do:K` syntax, MVP Act/Proc Monad-shaped dictionaries, typed `let`/`<-`/`return` elaboration, `act { ... }` compatibility migration, tower/failure behavior, diagnostics, and explicit non-interference with active Phase 104 capability/resource implementation work.
 

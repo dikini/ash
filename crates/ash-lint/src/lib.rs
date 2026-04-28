@@ -471,6 +471,14 @@ fn contains_policy(expr: &Expr) -> bool {
             };
             contains_policy(value)
         }),
+        Expr::DoBlock { stmts, .. } => stmts.iter().any(|stmt| {
+            let value = match stmt {
+                ash_parser::surface::DoStmt::Let { value, .. }
+                | ash_parser::surface::DoStmt::Bind { value, .. }
+                | ash_parser::surface::DoStmt::Return { value, .. } => value,
+            };
+            contains_policy(value)
+        }),
     }
 }
 

@@ -732,6 +732,21 @@ impl NameResolver {
                     self.resolve_expr(value);
                 }
             }
+
+            Expr::DoBlock { stmts, .. } => {
+                for stmt in stmts {
+                    match stmt {
+                        ash_parser::surface::DoStmt::Let { name, value, .. }
+                        | ash_parser::surface::DoStmt::Bind { name, value, .. } => {
+                            self.resolve_expr(value);
+                            self.bind(name.as_ref());
+                        }
+                        ash_parser::surface::DoStmt::Return { value, .. } => {
+                            self.resolve_expr(value);
+                        }
+                    }
+                }
+            }
         }
     }
 

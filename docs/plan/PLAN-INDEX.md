@@ -2969,7 +2969,7 @@ Execute Ash-defined capability implementation bodies and prove the model with ad
 ## Phase 105: Generalized Typed Do-Notation
 
 **Priority:** Medium (post-Phase-104 language ergonomics over the completed Act/Proc substrate)
-**Status:** 🟢 In Progress (TASK-747 parser/surface substrate, TASK-748 target/dictionary resolution, TASK-749 typed elaboration, TASK-750 Act compatibility, TASK-751 Proc/tower integration, and TASK-752 diagnostics complete; TASK-753 closeout next)
+**Status:** ✅ Complete (TASK-747 through TASK-753 complete)
 **Spec:** [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md)
 **Design:** [DESIGN-031](../design/DESIGN-031-GENERALIZED-DO-NOTATION.md)
 **Plan:** [docs/plan/PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md](PLAN-101-GENERALIZED-TYPED-DO-NOTATION.md)
@@ -2985,7 +2985,7 @@ Promote explicit typed `do:K` notation for computation constructors. Phase 105 i
 | [TASK-750](tasks/TASK-750-act-block-compatibility-and-migration.md) | Act-block compatibility and migration diagnostics | 6 | ✅ Complete |
 | [TASK-751](tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Proc do integration and tower behavior | 7 | ✅ Complete |
 | [TASK-752](tasks/TASK-752-do-notation-diagnostics.md) | Do-notation diagnostics | 5 | ✅ Complete |
-| [TASK-753](tasks/TASK-753-do-notation-docs-examples-closeout.md) | Do-notation docs, examples, and closeout | 4 | 📝 Planned |
+| [TASK-753](tasks/TASK-753-do-notation-docs-examples-closeout.md) | Do-notation docs, examples, and closeout | 4 | ✅ Complete |
 
 **Track A (Spec + Surface):** 9h. Promote DESIGN-031 to SPEC-054/PLAN-101, then add target-preserving parser and surface AST substrate without parser-only lowering.
 **Track B (Type/Elaboration):** 15h. Resolve Act/Proc targets and Monad-shaped builtin dictionaries, then type-check and elaborate `let`/`<-`/`return` through the selected target.

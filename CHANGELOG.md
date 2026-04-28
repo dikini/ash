@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-753 / Phase 105: closed out generalized typed do-notation with Phase 105 examples for `do:Act`, new-form `act { ... }`, explicit `proc::from_act(...)`, and legacy Act migration; reconciled SPEC-047/SPEC-054, PLAN-101, PLAN-INDEX, and task status surfaces for Phase 105 completion.
+
 - TASK-752 / Phase 105: added focused generalized do-notation diagnostic coverage and teaching-oriented wording for all SPEC-054 §13 families, including unknown/wrong-kind/unsupported targets, pure `<-` RHS, wrong constructor `<-` RHS with `proc::from_act` hints, monadic `let` warning carrier support, missing/early returns, trailing-semicolon parser regressions, legacy `ret`/legacy `act` bind migration diagnostics, and preserved spans.
 
 - TASK-751 / Phase 105: validated `do:Proc` integration and tower behavior with focused Proc return/bind, `proc::from_act(do:Act { ... })`, raw `do:Act` rejection, ordinary-scope-only `proc::par`, `Proc<Act<A>>` non-flattening, operational-bottom, `proc::from_act`, and resource split/join regression coverage. The implementation reuses existing `proc::unit`/`proc::bind`, `proc::from_act`, `fail`/`with_error`, and Proc runtime/resource APIs without changing Phase 104 runtime/authority semantics; direct source-level execution of typed `DoBlock` remains through the typechecker elaboration boundary.

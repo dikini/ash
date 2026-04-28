@@ -1,6 +1,6 @@
 # SPEC-054: Generalized Typed Do-Notation
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 105)
 **Date:** 2026-04-28
 **Promotes:** [DESIGN-031](../design/DESIGN-031-GENERALIZED-DO-NOTATION.md)
 **Related:** [SPEC-002](SPEC-002-SURFACE.md), [SPEC-003](SPEC-003-TYPE-SYSTEM.md), [SPEC-004](SPEC-004-SEMANTICS.md), [SPEC-027](SPEC-027-PURE-FUNCTIONS.md), [SPEC-031](SPEC-031-FIRST-CLASS-FUNCTIONS.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md)
@@ -46,7 +46,7 @@ The explicit `do:K` annotation preserves Ash's design preference for minimal sur
 
 ## 3. Implementation Baseline and Phase-105 Progress
 
-This section records the implementation boundary that motivated the spec and the Phase 105 slices implemented so far.
+This section records the implementation boundary that motivated the spec and the Phase 105 MVP now implemented.
 
 Pre-Phase-105 baseline:
 
@@ -55,18 +55,19 @@ Pre-Phase-105 baseline:
 3. The parser lowerer handled `Expr::ActBlock` in `crates/ash-parser/src/lower.rs` by lowering to unqualified `unit`/`bind` calls and deciding whether a RHS was Act-like with syntactic heuristics.
 4. The type checker handled `Expr::ActBlock` in `crates/ash-typeck/src/check_expr.rs` by always synthesizing `Act<A>`. It unwrapped `Act<A>` RHS values for binds and otherwise treated the RHS as pure.
 
-Implemented Phase-105 slices:
+Implemented Phase-105 MVP slices:
 
 1. `do:K { ... }` parses into target-carrying `Expr::DoBlock` with `DoTarget` and `DoStmt::{Let, Bind, Return}`.
 2. New-form expression `act { ... }` blocks that use generalized do grammar parse as `Expr::DoBlock` with target `Act`; legacy `act { x = ...; ret ...; }` remains an `Expr::ActBlock` compatibility carrier.
 3. Raw parser-surface `lower_expr(Expr::DoBlock)` explicitly rejects until callers use typechecker-owned typed elaboration.
 4. The type checker resolves MVP `Act` and `Proc` targets through hidden/builtin dictionary evidence, checks `let`/`<-`/`return` statements left-to-right, and exposes `elaborate_typed_do_block` for dictionary-directed core lowering.
 5. Legacy `Expr::ActBlock` typechecking remains supported for compatibility and exposes a standalone migration-diagnostic carrier until a general warning pipeline is wired in.
+6. Focused parser/typechecker tests cover the diagnostic families in §13, including target resolution errors, bind/return shape errors, migration hints, and the expression/workflow `act` ambiguity boundary.
 Remaining constraints:
 
 1. The current kind system has `Kind::Type` and `Kind::Arrow`, but interface/type-parameter syntax and impl heads do not yet support constructor-kinded parameters such as `M : * -> *`.
 2. `Act`, `Proc`, and `P` are registered as builtin public type definitions in `TypeEnv`, and `proc::unit`, `proc::bind`, `proc::from_act`, `proc::par`, `proc::await`, `proc::join`, and related operations exist as ordinary library/builtin values.
-3. Phase 104 is active/in-flight for Ash-defined capability implementation bodies and pilot DX. Generalized do-notation implementation is scheduled as Phase 105 and must not redefine Phase 104 capability implementation execution, authority admission, CLI binding configuration, or resource split/join work.
+3. Phase 105 does not redefine Phase 104 capability implementation execution, authority admission, CLI binding configuration, or resource split/join work.
 
 ## 4. Scope
 
@@ -504,7 +505,7 @@ Task summary:
 | [TASK-750](../plan/tasks/TASK-750-act-block-compatibility-and-migration.md) | Migrate new-form `act {}` onto generalized grammar and preserve legacy carrier diagnostics | Complete |
 | [TASK-751](../plan/tasks/TASK-751-proc-do-integration-and-tower-behavior.md) | Validate `do:Proc`, explicit `from_act`, and tower behavior | Complete |
 | [TASK-752](../plan/tasks/TASK-752-do-notation-diagnostics.md) | Implement targeted diagnostics and migration warnings | Complete |
-| [TASK-753](../plan/tasks/TASK-753-do-notation-docs-examples-closeout.md) | Update examples/docs and close out Phase 105 | Planned |
+| [TASK-753](../plan/tasks/TASK-753-do-notation-docs-examples-closeout.md) | Update examples/docs and close out Phase 105 | Complete |
 
 ## 16. Deferred Extensions
 

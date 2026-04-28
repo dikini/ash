@@ -9,7 +9,7 @@
 
 Introduce `Act<A>` as a first-class type constructor in the expression layer, adding a composable effectful-computation model that interoperates with the existing workflow runtime. An `Act<A>` value is a suspended computation that, given an environment of capability providers, policies, and provenance, may produce a value of type `A` alongside an accumulated effect log, or fail with an error.
 
-The core friction resolved: `act` currently exists only as a `Workflow` node. You cannot call a capability from inside an expression, and you cannot compose effectful operations as first-class values. The `act {}` block lifts effectful computation into the expression layer while preserving all governance properties (sequential ordering, provenance, policy checking, audit trail).
+The core friction resolved by Phase 97/105: `act` no longer exists only as a `Workflow` node. Expression-level `act { ... }` sugar lifts effectful computation into the expression layer while preserving all governance properties (sequential ordering, provenance, policy checking, audit trail).
 
 ### 1.1 Design Principles
 
@@ -84,8 +84,8 @@ this expression grammar.
 ```ash
 fn read(path: String) -> Act<String> {
     act {
-        result = invoke("Fs", "read", [path]);
-        ret result;
+        result <- invoke("Fs", "read", [path]);
+        return result
     }
 }
 ```
@@ -94,12 +94,12 @@ The return type `Act<String>` distinguishes this from a pure function. The body 
 
 ### 2.3 Bind Desugaring
 
-```
+```ash
 act {
-    x = read(path);        -- bind (RHS : Act<String>, x : String)
-    n = len(x);            -- inline (RHS : Int, pure substitution)
-    y = parse(x);          -- bind (RHS : Act<Value>, y : Value)
-    ret (x, n, y);         -- unit
+    x <- read(path);        -- bind (RHS : Act<String>, x : String)
+    let n = len(x);         -- ordinary pure lexical binding
+    y <- parse(x);          -- bind (RHS : Act<Value>, y : Value)
+    return (x, n, y)        -- unit
 }
 ```
 
@@ -111,7 +111,7 @@ bind(read(path), |x|
     unit((x, len(x), y))))
 ```
 
-Note: `n` does not appear in the desugared form. `len(x)` is inlined directly. Pure bindings are syntactic convenience, not monadic operations.
+Note: `let n = len(x);` remains an ordinary lexical binding and does not introduce a monadic step.
 
 ### 2.4 Invoke Expression
 
@@ -186,9 +186,10 @@ The block keyword is `act` — consistent with existing workflow `act` syntax an
 ### 3.1 Core IR Boundary
 
 Phase 97 does not require adding `ActBlock`, `ActStmt`, or `Invoke` to the canonical core IR.
-Expression-level `act { ... }` is a surface construct that lowers into existing core expression
+Expression-level `act { ... }` is now either generalized typed-do sugar (`Expr::DoBlock`
+targeting `Act`) or a legacy migration carrier (`Expr::ActBlock`). New-form blocks lower only after
+typechecker-owned typed elaboration; the legacy carrier still lowers into existing core expression
 forms such as `Expr::Call`, `Expr::FnDef`, and `Expr::FnApply`.
-
 This keeps the initial implementation additive and minimizes churn in `ash-core`.
 
 ### 3.2 TypeExpr Addition
@@ -209,9 +210,9 @@ No new `TypeExpr` variant needed. `Act<A>` parses as `TypeExpr::Constructor { na
 
 ## 4. Surface AST Changes
 
-### 4.1 New Expression Variants in `surface.rs`
+### 4.1 Expression Variants in `surface.rs`
 
-Add to `Expr` enum:
+Phase 97 added the legacy compatibility carrier:
 
 ```rust
 ActBlock {
@@ -231,16 +232,16 @@ pub enum ActStmt {
 }
 ```
 
-`ActStmt` is a parser/lowering carrier only in Phase 97. It does not need to survive into the core
-IR.
+`ActStmt` is now a migration carrier only. SPEC-054 owns the generalized `Expr::DoBlock` surface
+node for new `act { ... }` and explicit `do:K { ... }` grammar.
 
 ### 4.3 Dual-Context `act` Keyword
 
-The keyword `act` currently dispatches to `act_stmt()` in `parse_workflow.rs` producing `Workflow::Act`. After this spec, `act` also dispatches in expression context producing `Expr::ActBlock`.
+The keyword `act` dispatches to `act_stmt()` in `parse_workflow.rs` in workflow context, producing `Workflow::Act`. In expression context, `act { ... }` now dispatches through the generalized typed-do grammar when it uses `let`/`<-`/`return`, with the legacy `Expr::ActBlock` path retained only for migration syntax.
 
 Parser dispatch rule:
 - In workflow context: `act <action_ref> [where ...] [as ...] [then ...]` → `Workflow::Act` (unchanged)
-- In expression context: `act { ... }` → `Expr::ActBlock` (new)
+- In expression context: new-form `act { ... }` → `Expr::DoBlock` with target `Act`; legacy migration form → `Expr::ActBlock`
 
 The distinguishing token is `{` after `act`. Workflow `act` never uses `{` (it uses `provider:action(args)`).
 
@@ -267,23 +268,23 @@ fn f(x: A) -> B         -- body must not contain act {} blocks or invoke
 fn f(x: A) -> Act<B>    -- body may contain act {} blocks and invoke
 ```
 
-Implementation: during `check_expr`, if the enclosing function has pure return type (`B`, not `Act<B>`), reject `Expr::ActBlock` and expression-level `invoke(...)` calls with a type error.
+Implementation: during `check_expr`, if the enclosing function has pure return type (`B`, not `Act<B>`), reject effectful `Expr::DoBlock`/legacy `Expr::ActBlock` and expression-level `invoke(...)` calls with a type error.
 
 ### 5.3 Act Block Typing
 
 ```
 Γ ⊢ e : Act a     Γ, x : a ⊢ rest : Act b
 ─────────────────────────────────────────────  (ACT-BIND)
-Γ ⊢ act { x = e; rest } : Act b
+Γ ⊢ act { x <- e; rest } : Act b
 
 Γ ⊢ e : a         Γ, x : a ⊢ rest : Act b
 ─────────────────────────────────────────────  (ACT-PURE-BIND)
-Γ ⊢ act { x = e; rest } : Act b
-  (e is inlined; no monadic step)
+Γ ⊢ act { let x = e; rest } : Act b
+  (ordinary lexical binding; no monadic step)
 
 Γ ⊢ e : a
 ──────────────  (ACT-RETURN)
-Γ ⊢ act { ret e } : Act a
+Γ ⊢ act { return e } : Act a
 ```
 
 ### 5.4 Invoke Typing
@@ -318,7 +319,8 @@ existing `Type::Fn(...)` / `Type::Fun(...)` split:
 
 ### 6.1 New Expr Lowering
 
-In `crates/ash-parser/src/lower.rs`, add a match arm for:
+In Phase 105, raw parser lowering for new generalized `Expr::DoBlock` rejects and callers must use
+typechecker-owned typed elaboration. The legacy compatibility carrier still lowers through:
 
 - `SurfaceExpr::ActBlock { stmts, .. }` → desugared nested core expressions using existing
   `CoreExpr::Call`, `CoreExpr::FnDef`, and `CoreExpr::FnApply`.
@@ -328,14 +330,14 @@ through the existing `Expr::Call { func: "invoke", .. }` path.
 
 ### 6.2 ActBlock Desugaring
 
-The lowerer transforms `ActBlock` into nested `bind`/`unit` calls:
+The legacy lowerer transforms `ActBlock` into nested `bind`/`unit` calls:
 
 ```rust
 fn lower_act_block(stmts: Vec<ActStmt>) -> CoreExpr {
     match stmts.as_slice() {
         [] => panic!("empty act block"),
         [ActStmt::Return { value, .. }] => {
-            // act { ret e } => unit(e) => call("unit", [e])
+            // legacy act { ret e; } => unit(e) => call("unit", [e])
             CoreExpr::Call { func: "unit".into(), module: None, arguments: vec![lower_expr(value)] }
         }
         [ActStmt::Bind { name, value, .. }, rest @ ..] => {
@@ -359,14 +361,14 @@ fn lower_act_block(stmts: Vec<ActStmt>) -> CoreExpr {
 }
 ```
 
-**Optimization note:** Pure bindings (`n = len(x)`) will produce `bind(unit(len(x)), |n| rest)` which is correct by the left-identity monad law: `bind(unit(a), f) = f(a)`. A future optimization pass can eliminate the intermediate `unit`/`bind` pair.
+**Migration note:** new syntax uses `let n = len(x);` for pure lexical binding rather than legacy
+`n = len(x);` heuristics.
 
 ## 7. Interpreter Changes
 
 ### 7.1 ActBlock Evaluation
 
-Because `ActBlock` lowers away before core evaluation, `eval_expr` does not require a dedicated
-`Expr::ActBlock` arm in Phase 97. The evaluator sees only the desugared core expression forms.
+Because typed-do elaboration or legacy lowering removes expression-level Act block syntax before core evaluation, `eval_expr` does not require a dedicated `Expr::DoBlock`/`Expr::ActBlock` arm. The evaluator sees only the elaborated/desugared core expression forms.
 
 Operationally, an expression-level `Act<A>` value is realized as a closure-shaped runtime value that
 threads an internal `ActEnv`.
@@ -420,7 +422,7 @@ Normative design direction:
 - workflow syntax may add metadata, authority/role context, provenance/policy framing, and orchestration conveniences
 - workflows should not introduce a second competing sequencing foundation
 
-In Phase 97, workflow execution still operates at the workflow level with direct capability dispatch for practical implementation reasons. Expression-level `act {}` interoperates with that runtime, but does not yet replace workflow execution wholesale.
+Workflow execution still operates at the workflow level with direct capability dispatch for practical implementation reasons. Expression-level `act {}` interoperates with that runtime, but does not replace workflow execution wholesale.
 
 Bridge: when workflow-level execution encounters an expression-level `Act<A>` value, the runtime may apply it with the current `ActEnv`.
 
@@ -450,11 +452,11 @@ When executing a workflow that contains expression-level `Act` values, construct
 
 ### 9.1 ActBlock in Workflow Context
 
-The desugarer already handles workflow-level `act`. For expression-level `act {}` blocks inside workflow bodies (e.g., inside `Orient` expressions), no special desugaring is needed — the act block is an expression that produces a closure value.
+The desugarer already handles workflow-level `act`. For expression-level `act {}` blocks inside workflow bodies (e.g., inside `Orient` expressions), the expression must pass through the same typed-do elaboration or legacy migration lowering boundary as any other expression-level Act block.
 
 ### 9.2 ActBlock in Fn Context
 
-Inside `fn` bodies, `act {}` blocks are expressions. The desugarer treats them like any other expression.
+Inside `fn` bodies, `act {}` blocks are expressions. New-form blocks are typed-do sugar targeting `Act`; legacy blocks are accepted only as migration carriers.
 
 ## 10. Changes by Spec Amendment
 

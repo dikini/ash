@@ -12,8 +12,10 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
+    CapabilityImplementationDef, CapabilityImplementationDependency,
+    CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
-    InterfaceMethodSig, Type as SurfaceType,
+    InterfaceMethodSig, ResourceTypeDef, Type as SurfaceType,
 };
 use ash_parser::token::Span;
 use std::collections::{HashMap, HashSet};
@@ -226,6 +228,158 @@ pub struct CapabilityInterfaceInfo {
     pub operations: HashMap<String, CapabilityOperationInfo>,
 }
 
+/// Internal representation of a resource type declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResourceTypeInfo {
+    /// Resource type name.
+    pub name: String,
+    /// Metadata fields carried by resource instances.
+    pub fields: Vec<(String, Type)>,
+}
+
+/// Static authority provenance category for capability/resource metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AuthorityProvenanceKind {
+    /// Authority supplied by host/runtime admission outside Ash-defined recipes.
+    ///
+    /// The static checker does not infer this category for Ash-defined
+    /// `capability impl` recipes; host authority must be attached by a future
+    /// runtime admission/provider path.
+    Host,
+    /// Authority over Ash-owned resources allocated or admitted explicitly.
+    Internal,
+    /// Authority derived from declared capability/resource dependencies.
+    Derived,
+    /// No static authority source is required by the recipe.
+    NoAuthority,
+}
+
+/// Kind of dependency that participates in authority provenance metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ProvenanceSourceKind {
+    /// Resource dependency source.
+    Resource,
+    /// Capability dependency source.
+    Capability,
+    /// Config dependency metadata; not itself an authority source.
+    Config,
+}
+
+/// Static implementation-level authority source metadata.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImplementationAuthoritySourceInfo {
+    /// Source kind.
+    pub kind: ProvenanceSourceKind,
+    /// Declared dependency name.
+    pub dependency_name: String,
+    /// Resource type, capability interface, or config type target.
+    pub target_name: String,
+}
+
+/// Workflow-owned resource provenance metadata for runtime admission.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResourceBindingProvenanceInfo {
+    /// Workflow resource binding name.
+    pub name: String,
+    /// Registered resource type name.
+    pub resource_type: String,
+    /// Static authority category for this resource binding.
+    pub authority: AuthorityProvenanceKind,
+}
+
+/// Workflow capability-binding provenance source metadata for runtime admission.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BindingProvenanceSourceInfo {
+    /// Source kind.
+    pub kind: ProvenanceSourceKind,
+    /// Declared dependency name in the selected implementation recipe.
+    pub dependency_name: String,
+    /// Concrete workflow binding/resource/config expression name where available.
+    pub binding_name: String,
+    /// Resource type, capability interface, or config type target.
+    pub target_name: String,
+}
+
+/// Workflow capability-binding provenance metadata for runtime admission.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CapabilityBindingProvenanceInfo {
+    /// Workflow capability binding name.
+    pub name: String,
+    /// Annotated capability interface name.
+    pub interface: String,
+    /// Selected implementation recipe name.
+    pub implementation: String,
+    /// Static authority category for this admitted binding.
+    pub authority: AuthorityProvenanceKind,
+    /// Concrete provenance source links.
+    pub sources: Vec<BindingProvenanceSourceInfo>,
+}
+
+/// Workflow-admitted capability binding metadata for static operation resolution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CapabilityBindingInfo {
+    /// Workflow binding name.
+    pub name: String,
+    /// Capability interface admitted for this binding.
+    pub interface: String,
+    /// Implementation recipe selected by the workflow header.
+    pub implementation: String,
+    /// Static authority category for this binding.
+    pub authority: AuthorityProvenanceKind,
+}
+
+/// Workflow-level authority provenance metadata for runtime admission.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AuthorityProvenanceReport {
+    /// Workflow-owned resource bindings.
+    pub resource_bindings: Vec<ResourceBindingProvenanceInfo>,
+    /// Workflow-used capability bindings.
+    pub capability_bindings: Vec<CapabilityBindingProvenanceInfo>,
+}
+
+/// Internal representation of a capability implementation dependency.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityImplementationDependencyInfo {
+    /// Dependency kind declared by the implementation recipe.
+    pub kind: CapabilityImplementationDependencyKind,
+    /// Binding name visible to operation bodies.
+    pub name: String,
+    /// Lowered dependency type.
+    pub ty: Type,
+    /// Resource type or capability interface target for metadata dependencies.
+    pub target_name: Option<String>,
+}
+
+/// Internal representation of a capability implementation operation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityImplementationOperationInfo {
+    /// Operation effect mode.
+    pub mode: CapabilityOperationMode,
+    /// Declared parameter names in source order.
+    pub param_names: Vec<String>,
+    /// Declared parameter types in source order.
+    pub params: Vec<Type>,
+    /// Declared return type.
+    pub return_type: Type,
+}
+
+/// Internal representation of a capability implementation recipe.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapabilityImplementationInfo {
+    /// Implementation recipe name.
+    pub name: String,
+    /// Target capability interface name.
+    pub interface: String,
+    /// Explicit dependencies available to operation bodies.
+    pub dependencies: Vec<CapabilityImplementationDependencyInfo>,
+    /// Operations implemented by this recipe.
+    pub operations: HashMap<String, CapabilityImplementationOperationInfo>,
+    /// Static authority provenance classification inferred from declared dependencies.
+    pub authority_provenance: AuthorityProvenanceKind,
+    /// Static authority/config source metadata inferred from declared dependencies.
+    pub authority_sources: Vec<ImplementationAuthoritySourceInfo>,
+}
+
 /// Internal representation of a where-bound for type checking.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhereBound {
@@ -397,6 +551,56 @@ fn surface_type_to_type(
             })
         }
     }
+}
+
+fn surface_type_name(ty: &SurfaceType) -> Option<String> {
+    match ty {
+        SurfaceType::Name(name) => Some(name.to_string()),
+        SurfaceType::Capability(name) => Some(name.to_string()),
+        _ => None,
+    }
+}
+
+fn provenance_source_kind(kind: CapabilityImplementationDependencyKind) -> ProvenanceSourceKind {
+    match kind {
+        CapabilityImplementationDependencyKind::Resource => ProvenanceSourceKind::Resource,
+        CapabilityImplementationDependencyKind::Capability => ProvenanceSourceKind::Capability,
+        CapabilityImplementationDependencyKind::Config => ProvenanceSourceKind::Config,
+    }
+}
+
+fn classify_authority_provenance(
+    dependencies: &[CapabilityImplementationDependencyInfo],
+) -> AuthorityProvenanceKind {
+    if dependencies
+        .iter()
+        .any(|dep| dep.kind == CapabilityImplementationDependencyKind::Capability)
+    {
+        AuthorityProvenanceKind::Derived
+    } else if dependencies
+        .iter()
+        .any(|dep| dep.kind == CapabilityImplementationDependencyKind::Resource)
+    {
+        AuthorityProvenanceKind::Internal
+    } else {
+        AuthorityProvenanceKind::NoAuthority
+    }
+}
+
+fn implementation_authority_sources(
+    dependencies: &[CapabilityImplementationDependencyInfo],
+) -> Vec<ImplementationAuthoritySourceInfo> {
+    dependencies
+        .iter()
+        .map(|dependency| ImplementationAuthoritySourceInfo {
+            kind: provenance_source_kind(dependency.kind),
+            dependency_name: dependency.name.clone(),
+            target_name: dependency
+                .target_name
+                .clone()
+                .unwrap_or_else(|| dependency.ty.to_string()),
+        })
+        .collect()
 }
 
 fn resolve_associated_types_for_interface(
@@ -606,6 +810,12 @@ pub struct TypeEnv {
     pub(crate) interfaces: HashMap<String, InterfaceInfo>,
     /// Registered capability interfaces by name.
     capability_interfaces: HashMap<String, CapabilityInterfaceInfo>,
+    /// Registered resource types by name.
+    resource_types: HashMap<String, ResourceTypeInfo>,
+    /// Registered capability implementation recipes by name.
+    capability_implementations: HashMap<String, CapabilityImplementationInfo>,
+    /// Workflow-admitted capability bindings by local binding name.
+    capability_bindings: HashMap<String, CapabilityBindingInfo>,
     /// Registered closed-world impls.
     impls: Vec<ImplScheme>,
     /// Interface bounds attached to workflow type variables.
@@ -627,6 +837,14 @@ pub struct TypeEnv {
     /// `Type::Fun(params, ret, effect)` rather than the pure `Type::Fn(params, ret)`.
     /// `None` means we are in a pure-fn or module-level context.
     workflow_effect: Option<ash_core::Effect>,
+    /// True when type-checking a capability implementation operation body.
+    ///
+    /// Implementation bodies intentionally receive a stripped environment so
+    /// they cannot use ambient variables, functions, capability symbols, or
+    /// provider-style authority. This flag closes expression-level intrinsic
+    /// escape hatches such as `invoke(...)` that bypass ordinary environment
+    /// lookup.
+    capability_implementation_body: bool,
 }
 
 impl TypeEnv {
@@ -690,6 +908,9 @@ impl TypeEnv {
             transparent_aliases: HashSet::with_capacity(4),
             interfaces: HashMap::with_capacity(4),
             capability_interfaces: HashMap::with_capacity(4),
+            resource_types: HashMap::with_capacity(4),
+            capability_implementations: HashMap::with_capacity(4),
+            capability_bindings: HashMap::with_capacity(4),
             impls: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
@@ -698,6 +919,7 @@ impl TypeEnv {
             parent: None,
             providers: HashSet::new(),
             workflow_effect: None,
+            capability_implementation_body: false,
         }
     }
 
@@ -894,6 +1116,68 @@ impl TypeEnv {
         ))
     }
 
+    /// Register a resource type declaration.
+    pub fn register_resource_type(&mut self, def: &ResourceTypeDef) -> Result<(), TypeEnvError> {
+        let resource_name = def.name.to_string();
+        if self.resource_types.contains_key(&resource_name) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("resource type '{resource_name}' is already defined"),
+                def.span,
+            ));
+        }
+
+        let mut field_names = HashSet::with_capacity(def.fields.len());
+        for field in &def.fields {
+            let field_name = field.name.to_string();
+            if !field_names.insert(field_name.clone()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "resource type '{resource_name}' defines duplicate field '{field_name}'"
+                    ),
+                    field.span,
+                ));
+            }
+        }
+
+        let param_mapping = HashMap::new();
+        let fields = def
+            .fields
+            .iter()
+            .map(|field| {
+                surface_type_to_type(&field.ty, &param_mapping, self)
+                    .map(|ty| (field.name.to_string(), ty))
+                    .map_err(|error| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "resource type '{resource_name}' field '{}' has invalid ordinary type: {error}",
+                                field.name
+                            ),
+                            field.span,
+                        )
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.resource_types.insert(
+            resource_name.clone(),
+            ResourceTypeInfo {
+                name: resource_name,
+                fields,
+            },
+        );
+        Ok(())
+    }
+
+    /// Check if a resource type is registered.
+    pub fn has_resource_type(&self, name: &str) -> bool {
+        self.resource_types.contains_key(name)
+    }
+
+    /// Look up a registered resource type.
+    pub fn lookup_resource_type(&self, name: &str) -> Option<&ResourceTypeInfo> {
+        self.resource_types.get(name)
+    }
+
     /// Register a capability interface declaration.
     pub fn register_capability_interface(
         &mut self,
@@ -935,6 +1219,379 @@ impl TypeEnv {
         );
 
         Ok(())
+    }
+
+    /// True if this environment is currently type-checking a capability implementation body.
+    #[must_use]
+    pub fn is_capability_implementation_body(&self) -> bool {
+        self.capability_implementation_body
+    }
+
+    /// Register a capability implementation recipe and validate conformance to its interface.
+    pub fn register_capability_implementation(
+        &mut self,
+        def: &CapabilityImplementationDef,
+    ) -> Result<(), TypeEnvError> {
+        let implementation_name = def.name.to_string();
+        if self
+            .capability_implementations
+            .contains_key(&implementation_name)
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("capability implementation '{implementation_name}' is already defined"),
+                def.span,
+            ));
+        }
+
+        let interface_name = def.interface.to_string();
+        let interface = self
+            .capability_interfaces
+            .get(&interface_name)
+            .cloned()
+            .ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation '{implementation_name}' targets unknown capability interface '{interface_name}'"
+                    ),
+                    def.span,
+                )
+            })?;
+
+        let mut operation_names = HashSet::with_capacity(def.operations.len());
+        for operation in &def.operations {
+            let operation_name = operation.name.to_string();
+            if !operation_names.insert(operation_name.clone()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation '{implementation_name}' defines duplicate operation '{operation_name}'"
+                    ),
+                    operation.span,
+                ));
+            }
+        }
+
+        for operation_name in interface.operations.keys() {
+            if !operation_names.contains(operation_name) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation '{implementation_name}' is missing required operation '{operation_name}' for interface '{interface_name}'"
+                    ),
+                    def.span,
+                ));
+            }
+        }
+
+        for operation_name in &operation_names {
+            if !interface.operations.contains_key(operation_name) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation '{implementation_name}' defines extra operation '{operation_name}' not present in interface '{interface_name}'"
+                    ),
+                    def.span,
+                ));
+            }
+        }
+
+        let dependencies = def
+            .dependencies
+            .iter()
+            .map(|dependency| self.convert_capability_implementation_dependency(dependency))
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut dependency_names = HashSet::with_capacity(dependencies.len());
+        for dependency in &dependencies {
+            if !dependency_names.insert(dependency.name.clone()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation '{implementation_name}' defines duplicate dependency '{}'",
+                        dependency.name
+                    ),
+                    def.span,
+                ));
+            }
+        }
+
+        let mut operations = HashMap::with_capacity(def.operations.len());
+        for operation in &def.operations {
+            let operation_name = operation.name.to_string();
+            let expected = interface.operations.get(&operation_name).ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation '{implementation_name}' defines extra operation '{operation_name}' not present in interface '{interface_name}'"
+                    ),
+                    operation.span,
+                )
+            })?;
+            let operation_info = self.convert_capability_implementation_operation(operation)?;
+
+            if operation_info.mode != expected.mode {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation operation '{implementation_name}::{operation_name}' mode mismatch: expected {:?}, found {:?}",
+                        expected.mode, operation_info.mode
+                    ),
+                    operation.span,
+                ));
+            }
+
+            if operation_info.params.len() != expected.params.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation operation '{implementation_name}::{operation_name}' arity mismatch: expected {} parameters, found {}",
+                        expected.params.len(),
+                        operation_info.params.len()
+                    ),
+                    operation.span,
+                ));
+            }
+
+            for (index, (expected_param, actual_param)) in expected
+                .params
+                .iter()
+                .zip(operation_info.params.iter())
+                .enumerate()
+            {
+                if expected_param != actual_param {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "capability implementation operation '{implementation_name}::{operation_name}' parameter {index} type mismatch: expected {expected_param}, found {actual_param}"
+                        ),
+                        operation.span,
+                    ));
+                }
+            }
+
+            if operation_info.return_type != expected.return_type {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation operation '{implementation_name}::{operation_name}' return type mismatch: expected {}, found {}",
+                        expected.return_type, operation_info.return_type
+                    ),
+                    operation.span,
+                ));
+            }
+
+            for param_name in &operation_info.param_names {
+                if dependency_names.contains(param_name) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "capability implementation operation '{implementation_name}::{operation_name}' parameter '{param_name}' collides with a declared dependency name"
+                        ),
+                        operation.span,
+                    ));
+                }
+            }
+
+            self.validate_capability_implementation_operation_body(
+                &implementation_name,
+                operation,
+                &operation_info,
+                &dependencies,
+            )?;
+
+            operations.insert(operation_name, operation_info);
+        }
+
+        let authority_provenance = classify_authority_provenance(&dependencies);
+        let authority_sources = implementation_authority_sources(&dependencies);
+
+        self.capability_implementations.insert(
+            implementation_name.clone(),
+            CapabilityImplementationInfo {
+                name: implementation_name,
+                interface: interface_name,
+                dependencies,
+                operations,
+                authority_provenance,
+                authority_sources,
+            },
+        );
+
+        Ok(())
+    }
+
+    fn convert_capability_implementation_dependency(
+        &self,
+        dependency: &CapabilityImplementationDependency,
+    ) -> Result<CapabilityImplementationDependencyInfo, TypeEnvError> {
+        let name = dependency.name.to_string();
+        let target_name = surface_type_name(&dependency.ty).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "{:?} dependency '{name}' must name a single target type or interface",
+                    dependency.kind
+                ),
+                dependency.span,
+            )
+        })?;
+
+        match dependency.kind {
+            CapabilityImplementationDependencyKind::Resource => {
+                if !self.has_resource_type(&target_name) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "resource dependency '{name}' references unknown resource type '{target_name}'"
+                        ),
+                        dependency.span,
+                    ));
+                }
+                Ok(CapabilityImplementationDependencyInfo {
+                    kind: dependency.kind,
+                    name,
+                    ty: Type::Constructor {
+                        name: QualifiedName::root(target_name.clone()),
+                        args: vec![],
+                        kind: Kind::Type,
+                    },
+                    target_name: Some(target_name),
+                })
+            }
+            CapabilityImplementationDependencyKind::Capability => {
+                if !self.has_capability_interface(&target_name) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "capability dependency '{name}' references unknown capability interface '{target_name}'"
+                        ),
+                        dependency.span,
+                    ));
+                }
+                Ok(CapabilityImplementationDependencyInfo {
+                    kind: dependency.kind,
+                    name,
+                    ty: Type::Cap {
+                        name: Box::from(target_name.as_str()),
+                        effect: ash_core::Effect::Operational,
+                    },
+                    target_name: Some(target_name),
+                })
+            }
+            CapabilityImplementationDependencyKind::Config => {
+                let param_mapping = HashMap::new();
+                let ty = surface_type_to_type(&dependency.ty, &param_mapping, self)?;
+                Ok(CapabilityImplementationDependencyInfo {
+                    kind: dependency.kind,
+                    name,
+                    ty,
+                    target_name: None,
+                })
+            }
+        }
+    }
+
+    fn convert_capability_implementation_operation(
+        &self,
+        operation: &CapabilityImplementationOperation,
+    ) -> Result<CapabilityImplementationOperationInfo, TypeEnvError> {
+        let param_mapping = HashMap::new();
+        let param_names = operation
+            .params
+            .iter()
+            .map(|param| param.name.to_string())
+            .collect();
+        let params = operation
+            .params
+            .iter()
+            .map(|param| surface_type_to_type(&param.ty, &param_mapping, self))
+            .collect::<Result<Vec<_>, _>>()?;
+        let return_type = surface_type_to_type(&operation.return_type, &param_mapping, self)?;
+        Ok(CapabilityImplementationOperationInfo {
+            mode: operation.mode,
+            param_names,
+            params,
+            return_type,
+        })
+    }
+
+    fn validate_capability_implementation_operation_body(
+        &self,
+        implementation_name: &str,
+        operation: &CapabilityImplementationOperation,
+        operation_info: &CapabilityImplementationOperationInfo,
+        dependencies: &[CapabilityImplementationDependencyInfo],
+    ) -> Result<(), TypeEnvError> {
+        let mut body_env = self.capability_implementation_body_env(operation_info.mode);
+        for dependency in dependencies {
+            if !matches!(
+                dependency.kind,
+                CapabilityImplementationDependencyKind::Config
+            ) {
+                continue;
+            }
+            body_env.bind_variable(&dependency.name, dependency.ty.clone());
+        }
+        for (param_name, param_type) in operation_info
+            .param_names
+            .iter()
+            .zip(operation_info.params.iter())
+        {
+            body_env.bind_variable(param_name, param_type.clone());
+        }
+
+        let body_result = crate::check_expr::check_expr(&body_env, &operation.body);
+        if !body_result.is_ok() {
+            let reason = body_result
+                .errors
+                .into_iter()
+                .next()
+                .map(|error| error.to_string())
+                .unwrap_or_else(|| {
+                    format!(
+                        "failed to typecheck body for capability implementation operation '{}::{}'",
+                        implementation_name, operation.name
+                    )
+                });
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "invalid capability implementation operation body for '{}::{}': {}",
+                    implementation_name, operation.name, reason
+                ),
+                operation.span,
+            ));
+        }
+
+        let actual_return_ty = body_result.substitution.apply(&body_result.ty);
+        unify(&operation_info.return_type, &actual_return_ty)
+            .map(|_| ())
+            .map_err(|_| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "capability implementation operation body '{}::{}' must return {}, found {}",
+                        implementation_name,
+                        operation.name,
+                        operation_info.return_type,
+                        actual_return_ty
+                    ),
+                    operation.span,
+                )
+            })
+    }
+
+    fn capability_implementation_body_env(&self, mode: CapabilityOperationMode) -> Self {
+        let mut body_env = Self {
+            ast_types: self.ast_types.clone(),
+            type_info: self.type_info.clone(),
+            constructors: self.constructors.clone(),
+            transparent_aliases: self.transparent_aliases.clone(),
+            interfaces: self.interfaces.clone(),
+            capability_interfaces: self.capability_interfaces.clone(),
+            resource_types: self.resource_types.clone(),
+            capability_implementations: self.capability_implementations.clone(),
+            capability_bindings: HashMap::new(),
+            impls: self.impls.clone(),
+            type_var_interface_bounds: self.type_var_interface_bounds.clone(),
+            variables: HashMap::with_capacity(10),
+            fn_contracts: HashMap::new(),
+            capability_symbols: HashSet::new(),
+            parent: None,
+            providers: self.providers.clone(),
+            workflow_effect: None,
+            capability_implementation_body: true,
+        };
+        let effect = match mode {
+            CapabilityOperationMode::Observe => ash_core::Effect::Epistemic,
+            CapabilityOperationMode::Execute => ash_core::Effect::Operational,
+        };
+        body_env.set_workflow_effect(effect);
+        body_env
     }
 
     /// Register a closed-world interface impl.
@@ -1638,6 +2295,9 @@ impl TypeEnv {
             transparent_aliases: self.transparent_aliases.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
+            resource_types: self.resource_types.clone(),
+            capability_implementations: self.capability_implementations.clone(),
+            capability_bindings: self.capability_bindings.clone(),
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
@@ -1646,6 +2306,7 @@ impl TypeEnv {
             parent: Some(Box::new(self.clone())),
             providers: self.providers.clone(),
             workflow_effect: self.workflow_effect,
+            capability_implementation_body: self.capability_implementation_body,
         }
     }
 
@@ -1678,6 +2339,42 @@ impl TypeEnv {
         self.capability_interfaces
             .get(interface)
             .and_then(|info| info.operations.get(operation))
+    }
+
+    /// Check if a capability implementation is registered.
+    pub fn has_capability_implementation(&self, name: &str) -> bool {
+        self.capability_implementations.contains_key(name)
+    }
+
+    /// Look up a registered capability implementation.
+    pub fn lookup_capability_implementation(
+        &self,
+        name: &str,
+    ) -> Option<&CapabilityImplementationInfo> {
+        self.capability_implementations.get(name)
+    }
+
+    /// Register a workflow-admitted capability binding for operation-call resolution.
+    pub fn register_capability_binding(&mut self, binding: CapabilityBindingInfo) {
+        self.capability_bindings
+            .insert(binding.name.clone(), binding);
+    }
+
+    /// Look up a workflow-admitted capability binding by local binding name.
+    pub fn lookup_capability_binding(&self, name: &str) -> Option<&CapabilityBindingInfo> {
+        self.capability_bindings
+            .get(name)
+            .or_else(|| self.parent.as_ref()?.lookup_capability_binding(name))
+    }
+
+    /// Check whether a workflow-admitted capability binding exists.
+    pub fn has_capability_binding(&self, name: &str) -> bool {
+        self.lookup_capability_binding(name).is_some()
+    }
+
+    /// Return local workflow-admitted capability binding names.
+    pub fn capability_binding_names(&self) -> Vec<String> {
+        self.capability_bindings.keys().cloned().collect()
     }
 
     /// Return all registered impl schemes.

@@ -74,7 +74,12 @@ pub use runtime_verification::{
     StaticPolicyValidator, VerificationError, VerificationResult, VerificationWarning,
 };
 pub use solver::{Solver, TypeError};
-pub use type_env::{StoredFnContract, TypeEnv};
+pub use type_env::{
+    AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
+    CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo,
+    ProvenanceSourceKind, ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract,
+    TypeEnv,
+};
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
 
@@ -1984,6 +1989,228 @@ fn check_function_def_in_env(
         })
 }
 
+fn workflow_header_type_name(ty: &ash_parser::surface::Type) -> Option<String> {
+    match ty {
+        ash_parser::surface::Type::Name(name) | ash_parser::surface::Type::Capability(name) => {
+            Some(name.to_string())
+        }
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone)]
+struct WorkflowBindingAuthoritySummary {
+    interface: String,
+}
+
+fn config_binding_name(arg: &ash_parser::surface::Expr) -> String {
+    match arg {
+        ash_parser::surface::Expr::Variable { name, .. } => name.to_string(),
+        _ => "<config-expression>".to_string(),
+    }
+}
+
+fn validate_workflow_resource_and_binding_headers(
+    env: &TypeEnv,
+    workflow_env: &mut TypeEnv,
+    workflow: &ash_parser::surface::WorkflowDef,
+) -> Result<AuthorityProvenanceReport, TypeCheckError> {
+    let mut provenance = AuthorityProvenanceReport::default();
+    let mut owned_resources = std::collections::HashMap::new();
+    for owned in &workflow.owned_resources {
+        let name = owned.name.to_string();
+        if owned_resources.contains_key(&name) {
+            return Err(TypeCheckError::TypeError(format!(
+                "duplicate owned resource '{name}' in workflow '{}'",
+                workflow.name
+            )));
+        }
+        let resource_type = workflow_header_type_name(&owned.ty).ok_or_else(|| {
+            TypeCheckError::TypeError(format!(
+                "owned resource '{name}' must name a registered resource type"
+            ))
+        })?;
+        if !env.has_resource_type(&resource_type) {
+            return Err(TypeCheckError::TypeError(format!(
+                "owned resource '{name}' references unknown resource type '{resource_type}'"
+            )));
+        }
+        provenance
+            .resource_bindings
+            .push(ResourceBindingProvenanceInfo {
+                name: name.clone(),
+                resource_type: resource_type.clone(),
+                authority: AuthorityProvenanceKind::Internal,
+            });
+        owned_resources.insert(name, resource_type);
+    }
+
+    let mut used_bindings: std::collections::HashMap<String, WorkflowBindingAuthoritySummary> =
+        std::collections::HashMap::new();
+    for binding in &workflow.used_bindings {
+        let binding_name = binding.name.to_string();
+        if used_bindings.contains_key(&binding_name) {
+            return Err(TypeCheckError::TypeError(format!(
+                "duplicate used binding '{binding_name}' in workflow '{}'",
+                workflow.name
+            )));
+        }
+        let interface_name = workflow_header_type_name(&binding.interface).ok_or_else(|| {
+            TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' must annotate a capability interface"
+            ))
+        })?;
+        if !env.has_capability_interface(&interface_name) {
+            return Err(TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' references unknown capability interface '{interface_name}'"
+            )));
+        }
+
+        let ash_parser::surface::Expr::Call {
+            module: None,
+            func,
+            args,
+            ..
+        } = &binding.implementation
+        else {
+            return Err(TypeCheckError::TypeError(format!(
+                "unsupported uses implementation expression for binding '{binding_name}': expected unqualified implementation call"
+            )));
+        };
+
+        let implementation_name = func.to_string();
+        let implementation = env.lookup_capability_implementation(&implementation_name).ok_or_else(|| {
+            TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' references unknown implementation '{implementation_name}'"
+            ))
+        })?;
+        if implementation.interface != interface_name {
+            return Err(TypeCheckError::TypeError(format!(
+                "implementation '{implementation_name}' targets '{}' not '{interface_name}' for binding '{binding_name}'",
+                implementation.interface
+            )));
+        }
+        if implementation.dependencies.len() != args.len() {
+            return Err(TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' dependency arity mismatch for implementation '{implementation_name}': expected {}, found {}",
+                implementation.dependencies.len(),
+                args.len()
+            )));
+        }
+
+        let mut sources = Vec::with_capacity(implementation.dependencies.len());
+        for (dependency, arg) in implementation.dependencies.iter().zip(args.iter()) {
+            match dependency.kind {
+                ash_parser::surface::CapabilityImplementationDependencyKind::Resource => {
+                    let ash_parser::surface::Expr::Variable { name, .. } = arg else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "resource dependency '{}' for binding '{binding_name}' must be an owned resource variable",
+                            dependency.name
+                        )));
+                    };
+                    let Some(actual_resource_type) = owned_resources.get(name.as_ref()) else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "resource dependency '{}' for binding '{binding_name}' must reference workflow owned resource '{}'; no matching owned resource found",
+                            dependency.name, name
+                        )));
+                    };
+                    let expected = dependency.target_name.as_deref().unwrap_or_default();
+                    if actual_resource_type != expected {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "resource dependency '{}' for binding '{binding_name}' expected resource type '{expected}', found '{actual_resource_type}'",
+                            dependency.name
+                        )));
+                    }
+                    sources.push(BindingProvenanceSourceInfo {
+                        kind: ProvenanceSourceKind::Resource,
+                        dependency_name: dependency.name.clone(),
+                        binding_name: name.to_string(),
+                        target_name: expected.to_string(),
+                    });
+                }
+                ash_parser::surface::CapabilityImplementationDependencyKind::Capability => {
+                    let ash_parser::surface::Expr::Variable { name, .. } = arg else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "capability dependency '{}' for binding '{binding_name}' must be an earlier used binding variable",
+                            dependency.name
+                        )));
+                    };
+                    let Some(actual_binding) = used_bindings.get(name.as_ref()) else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "capability dependency '{}' for binding '{binding_name}' must reference earlier used binding '{}'; no matching earlier used binding found",
+                            dependency.name, name
+                        )));
+                    };
+                    let expected = dependency.target_name.as_deref().unwrap_or_default();
+                    if actual_binding.interface != expected {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "capability dependency '{}' for binding '{binding_name}' expected interface '{expected}', found '{}'",
+                            dependency.name, actual_binding.interface
+                        )));
+                    }
+                    sources.push(BindingProvenanceSourceInfo {
+                        kind: ProvenanceSourceKind::Capability,
+                        dependency_name: dependency.name.clone(),
+                        binding_name: name.to_string(),
+                        target_name: expected.to_string(),
+                    });
+                }
+                ash_parser::surface::CapabilityImplementationDependencyKind::Config => {
+                    let actual_ty = infer_surface_expr_type(workflow_env, arg)?;
+                    crate::types::unify(&dependency.ty, &actual_ty).map_err(|_| {
+                        TypeCheckError::TypeError(format!(
+                            "config dependency '{}' for binding '{binding_name}' expected {}, found {}",
+                            dependency.name, dependency.ty, actual_ty
+                        ))
+                    })?;
+                    sources.push(BindingProvenanceSourceInfo {
+                        kind: ProvenanceSourceKind::Config,
+                        dependency_name: dependency.name.clone(),
+                        binding_name: config_binding_name(arg),
+                        target_name: dependency.ty.to_string(),
+                    });
+                }
+            }
+        }
+
+        if implementation.authority_provenance == AuthorityProvenanceKind::Derived
+            && !sources
+                .iter()
+                .any(|source| source.kind == ProvenanceSourceKind::Capability)
+        {
+            return Err(TypeCheckError::TypeError(format!(
+                "derived binding '{binding_name}' for implementation '{implementation_name}' has no declared capability authority source"
+            )));
+        }
+
+        let capability_binding_info = CapabilityBindingInfo {
+            name: binding_name.clone(),
+            interface: interface_name.clone(),
+            implementation: implementation_name.clone(),
+            authority: implementation.authority_provenance,
+        };
+
+        provenance
+            .capability_bindings
+            .push(CapabilityBindingProvenanceInfo {
+                name: binding_name.clone(),
+                interface: interface_name.clone(),
+                implementation: implementation_name,
+                authority: implementation.authority_provenance,
+                sources,
+            });
+        workflow_env.register_capability_binding(capability_binding_info);
+        used_bindings.insert(
+            binding_name,
+            WorkflowBindingAuthoritySummary {
+                interface: interface_name,
+            },
+        );
+    }
+
+    Ok(provenance)
+}
+
 /// Type-check a workflow definition against an explicitly prepared type environment.
 pub fn type_check_workflow_def_in_env(
     env: &TypeEnv,
@@ -2035,6 +2262,9 @@ pub fn type_check_workflow_def_in_env(
         workflow_env.bind_variable(name, ty.clone());
     }
 
+    let authority_provenance =
+        validate_workflow_resource_and_binding_headers(env, &mut workflow_env, workflow)?;
+
     reject_unsupported_mvp_workflow_features(&workflow.body)?;
 
     // SPEC-031 §4.8: Mark this as a workflow context so that Expr::FnDef
@@ -2080,8 +2310,10 @@ pub fn type_check_workflow_def_in_env(
         })?;
     }
 
-    let mut result = type_check_workflow(&workflow.body, Some(&param_bindings))?;
+    let mut result =
+        type_check_workflow_in_env(Some(&workflow_env), &workflow.body, Some(&param_bindings))?;
     result.function_contracts = env.function_contracts();
+    result.authority_provenance = authority_provenance;
     Ok(result)
 }
 
@@ -2116,6 +2348,22 @@ pub fn type_check_program_in_env(
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::CapabilityInterface(interface) = definition {
             env.register_capability_interface(interface)
+                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+        }
+    }
+
+    for definition in &program.definitions {
+        if let ash_parser::surface::Definition::ResourceType(resource_type) = definition {
+            env.register_resource_type(resource_type)
+                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+        }
+    }
+
+    for definition in &program.definitions {
+        if let ash_parser::surface::Definition::CapabilityImplementation(implementation) =
+            definition
+        {
+            env.register_capability_implementation(implementation)
                 .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
         }
     }
@@ -2198,6 +2446,15 @@ pub fn type_check_workflow_in_env(
         }
     }
 
+    // Inject workflow capability binding names into the resolver as admitted
+    // non-first-class names. They are typechecked through `TypeEnv` metadata,
+    // not exposed as ordinary expression variables.
+    if let Some(env) = type_env {
+        for name in env.capability_binding_names() {
+            resolver.bind(name);
+        }
+    }
+
     resolver
         .resolve_workflow(workflow)
         .map_err(|e| TypeCheckError::ResolutionError(format!("{:?}", e)))?;
@@ -2237,6 +2494,7 @@ pub fn type_check_workflow_in_env(
         effect: inferred_effect,
         obligation_status: obligation_result,
         function_contracts: std::collections::HashMap::new(),
+        authority_provenance: AuthorityProvenanceReport::default(),
     })
 }
 
@@ -2272,6 +2530,8 @@ pub struct TypeCheckResult {
     pub obligation_status: ObligationCheckResult,
     /// Lowered pure-function contract boundaries available to runtime consumers.
     pub function_contracts: std::collections::HashMap<String, StoredFnContract>,
+    /// Static authority provenance metadata available to runtime admission consumers.
+    pub authority_provenance: AuthorityProvenanceReport,
 }
 
 impl TypeCheckResult {

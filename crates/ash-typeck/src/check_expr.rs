@@ -194,6 +194,13 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 .unwrap_or_else(|| func.to_string());
 
             if module.is_none() && func.as_ref() == "invoke" {
+                if env.is_capability_implementation_body() {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: "Call (invoke): direct invoke is not allowed in capability implementation bodies; declare capability/resource dependencies instead".to_string(),
+                        span: *span,
+                    });
+                }
+
                 if arg_types.len() != 3 {
                     return CheckResult::error(ConstructorError::UnsupportedExpression {
                         kind: format!(
@@ -566,6 +573,10 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         }
 
         Expr::FnApply { func, args, span } => {
+            if let Some(result) = check_capability_binding_operation_call(env, func, args, *span) {
+                return result;
+            }
+
             let func_result = check_expr(env, func);
             let mut errors = func_result.errors.clone();
             let mut substitution = func_result.substitution.clone();
@@ -700,6 +711,101 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             })
         }
     }
+}
+
+fn check_capability_binding_operation_call(
+    env: &TypeEnv,
+    func: &Expr,
+    args: &[Expr],
+    span: Span,
+) -> Option<CheckResult> {
+    let Expr::FieldAccess { base, field, .. } = func else {
+        return None;
+    };
+    let Expr::Variable { name, .. } = base.as_ref() else {
+        return None;
+    };
+    let binding_name = name.as_ref();
+    let Some(binding) = env.lookup_capability_binding(binding_name) else {
+        if env.lookup_variable(binding_name).is_some() {
+            return None;
+        }
+        return Some(CheckResult::error(
+            ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "unadmitted capability binding '{binding_name}' used for operation '{}'; declare it in the workflow uses header",
+                    field
+                ),
+                span,
+            },
+        ));
+    };
+    let Some(operation) = env.lookup_capability_operation(&binding.interface, field.as_ref())
+    else {
+        return Some(CheckResult::error(
+            ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "capability binding '{binding_name}' for interface '{}' has no operation '{}'",
+                    binding.interface, field
+                ),
+                span,
+            },
+        ));
+    };
+
+    if operation.params.len() != args.len() {
+        return Some(CheckResult::error(
+            ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "capability binding '{binding_name}' operation '{}' arity mismatch: expected {}, found {}",
+                    field,
+                    operation.params.len(),
+                    args.len()
+                ),
+                span,
+            },
+        ));
+    }
+
+    let mut substitution = Substitution::new();
+    let mut errors = Vec::new();
+    for (idx, (arg, expected_ty)) in args.iter().zip(operation.params.iter()).enumerate() {
+        let arg_result = check_expr(env, arg);
+        substitution = substitution.compose(&arg_result.substitution);
+        errors.extend(arg_result.errors);
+        if !errors.is_empty() {
+            continue;
+        }
+        let actual_ty = substitution.apply(&arg_result.ty);
+        let expected_ty = substitution.apply(expected_ty);
+        match unify(&expected_ty, &actual_ty) {
+            Ok(sub) => substitution = substitution.compose(&sub),
+            Err(_) => errors.push(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "capability binding '{binding_name}' operation '{}' argument {} expected {}, found {}",
+                    field,
+                    idx + 1,
+                    expected_ty,
+                    actual_ty
+                ),
+                span: get_expr_span(arg),
+            }),
+        }
+    }
+
+    if !errors.is_empty() {
+        return Some(CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        });
+    }
+
+    Some(CheckResult {
+        ty: substitution.apply(&operation.return_type),
+        substitution,
+        errors: Vec::new(),
+    })
 }
 
 /// Get the span from an expression

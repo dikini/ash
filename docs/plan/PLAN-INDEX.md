@@ -2899,7 +2899,7 @@ Add parser and surface AST substrate for `capability interface`, `capability imp
 ## Phase 102: Static Semantics and Binding-Time Type Contracts
 
 **Priority:** High (static safety before runtime admission)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), [SPEC-003](../spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-017](../spec/SPEC-017-CAPABILITY-INTEGRATION.md)
 **Plan:** [docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md](PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md)
 
@@ -2908,11 +2908,11 @@ Type-check capability interface operation environments, implementation conforman
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-729](tasks/TASK-729-capability-interface-operation-signature-environments.md) | Capability interface operation signature environments | 5 | ✅ Complete |
-| [TASK-730](tasks/TASK-730-capability-implementation-conformance-checking.md) | Capability implementation conformance checking | 7 | 📝 Planned |
-| [TASK-731](tasks/TASK-731-resource-type-and-binding-typechecking.md) | Resource type and binding typechecking | 6 | 📝 Planned |
-| [TASK-732](tasks/TASK-732-authority-provenance-static-validation.md) | Authority provenance static validation | 5 | 📝 Planned |
-| [TASK-733](tasks/TASK-733-module-owned-capability-binding-resolution.md) | Module-owned capability binding resolution | 6 | 📝 Planned |
-| [TASK-734](tasks/TASK-734-typechecker-integration-and-negative-tests.md) | Typechecker integration and negative tests | 5 | 📝 Planned |
+| [TASK-730](tasks/TASK-730-capability-implementation-conformance-checking.md) | Capability implementation conformance checking | 7 | ✅ Complete |
+| [TASK-731](tasks/TASK-731-resource-type-and-binding-typechecking.md) | Resource type and binding typechecking | 6 | ✅ Complete |
+| [TASK-732](tasks/TASK-732-authority-provenance-static-validation.md) | Authority provenance static validation | 5 | ✅ Complete |
+| [TASK-733](tasks/TASK-733-module-owned-capability-binding-resolution.md) | Module-owned capability binding resolution | 6 | ✅ Complete |
+| [TASK-734](tasks/TASK-734-typechecker-integration-and-negative-tests.md) | Typechecker integration and negative tests | 5 | ✅ Complete |
 
 **Track A (Interfaces + Implementations):** 12h. Build operation signature environments and check implementation recipes against target interfaces.
 **Track B (Resources + Authority):** 11h. Validate resource requirements, binding clauses, and statically visible authority provenance.

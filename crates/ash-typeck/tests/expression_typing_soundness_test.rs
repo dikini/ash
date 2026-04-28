@@ -304,6 +304,43 @@ fn test_record_field_access_on_non_record_base_reports_explicit_error() {
 }
 
 #[test]
+fn test_direct_record_callable_field_invocation_typechecks_via_fnapply() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable(
+        "env",
+        Type::Record(vec![(
+            "check".into(),
+            Type::Fn(vec![Type::String], Box::new(Type::Bool)),
+        )]),
+    );
+    env.bind_variable("policy", Type::String);
+
+    let expr = Expr::FnApply {
+        func: Box::new(Expr::FieldAccess {
+            base: Box::new(Expr::Variable {
+                name: "env".into(),
+                span: test_span(),
+            }),
+            field: "check".into(),
+            span: test_span(),
+        }),
+        args: vec![Expr::Variable {
+            name: "policy".into(),
+            span: test_span(),
+        }],
+        span: test_span(),
+    };
+
+    let result = check_expr(&env, &expr);
+    assert!(
+        result.is_ok(),
+        "direct record callable field invocation should typecheck, got errors: {:?}",
+        result.errors
+    );
+    assert_eq!(result.ty, Type::Bool);
+}
+
+#[test]
 fn test_projected_callable_invocation_typechecks_via_fnapply() {
     let mut env = TypeEnv::with_builtin_types();
     env.bind_variable(

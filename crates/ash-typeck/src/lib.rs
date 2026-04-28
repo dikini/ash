@@ -76,8 +76,9 @@ pub use runtime_verification::{
 pub use solver::{Solver, TypeError};
 pub use type_env::{
     AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
-    CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo, ProvenanceSourceKind,
-    ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract, TypeEnv,
+    CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo,
+    ProvenanceSourceKind, ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract,
+    TypeEnv,
 };
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
@@ -2011,7 +2012,7 @@ fn config_binding_name(arg: &ash_parser::surface::Expr) -> String {
 
 fn validate_workflow_resource_and_binding_headers(
     env: &TypeEnv,
-    workflow_env: &TypeEnv,
+    workflow_env: &mut TypeEnv,
     workflow: &ash_parser::surface::WorkflowDef,
 ) -> Result<AuthorityProvenanceReport, TypeCheckError> {
     let mut provenance = AuthorityProvenanceReport::default();
@@ -2182,6 +2183,13 @@ fn validate_workflow_resource_and_binding_headers(
             )));
         }
 
+        let capability_binding_info = CapabilityBindingInfo {
+            name: binding_name.clone(),
+            interface: interface_name.clone(),
+            implementation: implementation_name.clone(),
+            authority: implementation.authority_provenance,
+        };
+
         provenance
             .capability_bindings
             .push(CapabilityBindingProvenanceInfo {
@@ -2191,6 +2199,7 @@ fn validate_workflow_resource_and_binding_headers(
                 authority: implementation.authority_provenance,
                 sources,
             });
+        workflow_env.register_capability_binding(capability_binding_info);
         used_bindings.insert(
             binding_name,
             WorkflowBindingAuthoritySummary {
@@ -2254,7 +2263,7 @@ pub fn type_check_workflow_def_in_env(
     }
 
     let authority_provenance =
-        validate_workflow_resource_and_binding_headers(env, &workflow_env, workflow)?;
+        validate_workflow_resource_and_binding_headers(env, &mut workflow_env, workflow)?;
 
     reject_unsupported_mvp_workflow_features(&workflow.body)?;
 
@@ -2301,7 +2310,8 @@ pub fn type_check_workflow_def_in_env(
         })?;
     }
 
-    let mut result = type_check_workflow(&workflow.body, Some(&param_bindings))?;
+    let mut result =
+        type_check_workflow_in_env(Some(&workflow_env), &workflow.body, Some(&param_bindings))?;
     result.function_contracts = env.function_contracts();
     result.authority_provenance = authority_provenance;
     Ok(result)
@@ -2432,6 +2442,15 @@ pub fn type_check_workflow_in_env(
     // Inject imported callable names into the resolver
     if let Some(env) = type_env {
         for name in env.variable_names() {
+            resolver.bind(name);
+        }
+    }
+
+    // Inject workflow capability binding names into the resolver as admitted
+    // non-first-class names. They are typechecked through `TypeEnv` metadata,
+    // not exposed as ordinary expression variables.
+    if let Some(env) = type_env {
+        for name in env.capability_binding_names() {
             resolver.bind(name);
         }
     }

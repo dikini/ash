@@ -315,6 +315,19 @@ pub struct CapabilityBindingProvenanceInfo {
     pub sources: Vec<BindingProvenanceSourceInfo>,
 }
 
+/// Workflow-admitted capability binding metadata for static operation resolution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CapabilityBindingInfo {
+    /// Workflow binding name.
+    pub name: String,
+    /// Capability interface admitted for this binding.
+    pub interface: String,
+    /// Implementation recipe selected by the workflow header.
+    pub implementation: String,
+    /// Static authority category for this binding.
+    pub authority: AuthorityProvenanceKind,
+}
+
 /// Workflow-level authority provenance metadata for runtime admission.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AuthorityProvenanceReport {
@@ -801,6 +814,8 @@ pub struct TypeEnv {
     resource_types: HashMap<String, ResourceTypeInfo>,
     /// Registered capability implementation recipes by name.
     capability_implementations: HashMap<String, CapabilityImplementationInfo>,
+    /// Workflow-admitted capability bindings by local binding name.
+    capability_bindings: HashMap<String, CapabilityBindingInfo>,
     /// Registered closed-world impls.
     impls: Vec<ImplScheme>,
     /// Interface bounds attached to workflow type variables.
@@ -895,6 +910,7 @@ impl TypeEnv {
             capability_interfaces: HashMap::with_capacity(4),
             resource_types: HashMap::with_capacity(4),
             capability_implementations: HashMap::with_capacity(4),
+            capability_bindings: HashMap::with_capacity(4),
             impls: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
@@ -1559,6 +1575,7 @@ impl TypeEnv {
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),
             capability_implementations: self.capability_implementations.clone(),
+            capability_bindings: HashMap::new(),
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
@@ -2280,6 +2297,7 @@ impl TypeEnv {
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),
             capability_implementations: self.capability_implementations.clone(),
+            capability_bindings: self.capability_bindings.clone(),
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
@@ -2334,6 +2352,29 @@ impl TypeEnv {
         name: &str,
     ) -> Option<&CapabilityImplementationInfo> {
         self.capability_implementations.get(name)
+    }
+
+    /// Register a workflow-admitted capability binding for operation-call resolution.
+    pub fn register_capability_binding(&mut self, binding: CapabilityBindingInfo) {
+        self.capability_bindings
+            .insert(binding.name.clone(), binding);
+    }
+
+    /// Look up a workflow-admitted capability binding by local binding name.
+    pub fn lookup_capability_binding(&self, name: &str) -> Option<&CapabilityBindingInfo> {
+        self.capability_bindings
+            .get(name)
+            .or_else(|| self.parent.as_ref()?.lookup_capability_binding(name))
+    }
+
+    /// Check whether a workflow-admitted capability binding exists.
+    pub fn has_capability_binding(&self, name: &str) -> bool {
+        self.lookup_capability_binding(name).is_some()
+    }
+
+    /// Return local workflow-admitted capability binding names.
+    pub fn capability_binding_names(&self) -> Vec<String> {
+        self.capability_bindings.keys().cloned().collect()
     }
 
     /// Return all registered impl schemes.

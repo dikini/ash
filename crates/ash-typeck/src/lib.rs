@@ -2121,6 +2121,15 @@ pub fn type_check_program_in_env(
     }
 
     for definition in &program.definitions {
+        if let ash_parser::surface::Definition::CapabilityImplementation(implementation) =
+            definition
+        {
+            env.register_capability_implementation(implementation)
+                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+        }
+    }
+
+    for definition in &program.definitions {
         if let ash_parser::surface::Definition::Impl(implementation) = definition {
             env.register_impl(implementation)
                 .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;

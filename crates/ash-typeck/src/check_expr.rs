@@ -194,6 +194,13 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 .unwrap_or_else(|| func.to_string());
 
             if module.is_none() && func.as_ref() == "invoke" {
+                if env.is_capability_implementation_body() {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: "Call (invoke): direct invoke is not allowed in capability implementation bodies; declare capability/resource dependencies instead".to_string(),
+                        span: *span,
+                    });
+                }
+
                 if arg_types.len() != 3 {
                     return CheckResult::error(ConstructorError::UnsupportedExpression {
                         kind: format!(

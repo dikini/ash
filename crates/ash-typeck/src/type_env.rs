@@ -15,7 +15,7 @@ use ash_parser::surface::{
     CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
-    InterfaceMethodSig, Type as SurfaceType,
+    InterfaceMethodSig, ResourceTypeDef, Type as SurfaceType,
 };
 use ash_parser::token::Span;
 use std::collections::{HashMap, HashSet};
@@ -228,6 +228,15 @@ pub struct CapabilityInterfaceInfo {
     pub operations: HashMap<String, CapabilityOperationInfo>,
 }
 
+/// Internal representation of a resource type declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResourceTypeInfo {
+    /// Resource type name.
+    pub name: String,
+    /// Metadata fields carried by resource instances.
+    pub fields: Vec<(String, Type)>,
+}
+
 /// Internal representation of a capability implementation dependency.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapabilityImplementationDependencyInfo {
@@ -237,6 +246,8 @@ pub struct CapabilityImplementationDependencyInfo {
     pub name: String,
     /// Lowered dependency type.
     pub ty: Type,
+    /// Resource type or capability interface target for metadata dependencies.
+    pub target_name: Option<String>,
 }
 
 /// Internal representation of a capability implementation operation.
@@ -435,6 +446,14 @@ fn surface_type_to_type(
                 name: name.to_string(),
             })
         }
+    }
+}
+
+fn surface_type_name(ty: &SurfaceType) -> Option<String> {
+    match ty {
+        SurfaceType::Name(name) => Some(name.to_string()),
+        SurfaceType::Capability(name) => Some(name.to_string()),
+        _ => None,
     }
 }
 
@@ -645,6 +664,8 @@ pub struct TypeEnv {
     pub(crate) interfaces: HashMap<String, InterfaceInfo>,
     /// Registered capability interfaces by name.
     capability_interfaces: HashMap<String, CapabilityInterfaceInfo>,
+    /// Registered resource types by name.
+    resource_types: HashMap<String, ResourceTypeInfo>,
     /// Registered capability implementation recipes by name.
     capability_implementations: HashMap<String, CapabilityImplementationInfo>,
     /// Registered closed-world impls.
@@ -739,6 +760,7 @@ impl TypeEnv {
             transparent_aliases: HashSet::with_capacity(4),
             interfaces: HashMap::with_capacity(4),
             capability_interfaces: HashMap::with_capacity(4),
+            resource_types: HashMap::with_capacity(4),
             capability_implementations: HashMap::with_capacity(4),
             impls: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
@@ -943,6 +965,68 @@ impl TypeEnv {
                 return_type,
             },
         ))
+    }
+
+    /// Register a resource type declaration.
+    pub fn register_resource_type(&mut self, def: &ResourceTypeDef) -> Result<(), TypeEnvError> {
+        let resource_name = def.name.to_string();
+        if self.resource_types.contains_key(&resource_name) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("resource type '{resource_name}' is already defined"),
+                def.span,
+            ));
+        }
+
+        let mut field_names = HashSet::with_capacity(def.fields.len());
+        for field in &def.fields {
+            let field_name = field.name.to_string();
+            if !field_names.insert(field_name.clone()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "resource type '{resource_name}' defines duplicate field '{field_name}'"
+                    ),
+                    field.span,
+                ));
+            }
+        }
+
+        let param_mapping = HashMap::new();
+        let fields = def
+            .fields
+            .iter()
+            .map(|field| {
+                surface_type_to_type(&field.ty, &param_mapping, self)
+                    .map(|ty| (field.name.to_string(), ty))
+                    .map_err(|error| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "resource type '{resource_name}' field '{}' has invalid ordinary type: {error}",
+                                field.name
+                            ),
+                            field.span,
+                        )
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.resource_types.insert(
+            resource_name.clone(),
+            ResourceTypeInfo {
+                name: resource_name,
+                fields,
+            },
+        );
+        Ok(())
+    }
+
+    /// Check if a resource type is registered.
+    pub fn has_resource_type(&self, name: &str) -> bool {
+        self.resource_types.contains_key(name)
+    }
+
+    /// Look up a registered resource type.
+    pub fn lookup_resource_type(&self, name: &str) -> Option<&ResourceTypeInfo> {
+        self.resource_types.get(name)
     }
 
     /// Register a capability interface declaration.
@@ -1175,13 +1259,68 @@ impl TypeEnv {
         &self,
         dependency: &CapabilityImplementationDependency,
     ) -> Result<CapabilityImplementationDependencyInfo, TypeEnvError> {
-        let param_mapping = HashMap::new();
-        let ty = surface_type_to_type(&dependency.ty, &param_mapping, self)?;
-        Ok(CapabilityImplementationDependencyInfo {
-            kind: dependency.kind,
-            name: dependency.name.to_string(),
-            ty,
-        })
+        let name = dependency.name.to_string();
+        let target_name = surface_type_name(&dependency.ty).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "{:?} dependency '{name}' must name a single target type or interface",
+                    dependency.kind
+                ),
+                dependency.span,
+            )
+        })?;
+
+        match dependency.kind {
+            CapabilityImplementationDependencyKind::Resource => {
+                if !self.has_resource_type(&target_name) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "resource dependency '{name}' references unknown resource type '{target_name}'"
+                        ),
+                        dependency.span,
+                    ));
+                }
+                Ok(CapabilityImplementationDependencyInfo {
+                    kind: dependency.kind,
+                    name,
+                    ty: Type::Constructor {
+                        name: QualifiedName::root(target_name.clone()),
+                        args: vec![],
+                        kind: Kind::Type,
+                    },
+                    target_name: Some(target_name),
+                })
+            }
+            CapabilityImplementationDependencyKind::Capability => {
+                if !self.has_capability_interface(&target_name) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "capability dependency '{name}' references unknown capability interface '{target_name}'"
+                        ),
+                        dependency.span,
+                    ));
+                }
+                Ok(CapabilityImplementationDependencyInfo {
+                    kind: dependency.kind,
+                    name,
+                    ty: Type::Cap {
+                        name: Box::from(target_name.as_str()),
+                        effect: ash_core::Effect::Operational,
+                    },
+                    target_name: Some(target_name),
+                })
+            }
+            CapabilityImplementationDependencyKind::Config => {
+                let param_mapping = HashMap::new();
+                let ty = surface_type_to_type(&dependency.ty, &param_mapping, self)?;
+                Ok(CapabilityImplementationDependencyInfo {
+                    kind: dependency.kind,
+                    name,
+                    ty,
+                    target_name: None,
+                })
+            }
+        }
     }
 
     fn convert_capability_implementation_operation(
@@ -1280,6 +1419,7 @@ impl TypeEnv {
             transparent_aliases: self.transparent_aliases.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
+            resource_types: self.resource_types.clone(),
             capability_implementations: self.capability_implementations.clone(),
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
@@ -2000,6 +2140,7 @@ impl TypeEnv {
             transparent_aliases: self.transparent_aliases.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
+            resource_types: self.resource_types.clone(),
             capability_implementations: self.capability_implementations.clone(),
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),

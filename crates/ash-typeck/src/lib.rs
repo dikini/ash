@@ -74,7 +74,7 @@ pub use runtime_verification::{
     StaticPolicyValidator, VerificationError, VerificationResult, VerificationWarning,
 };
 pub use solver::{Solver, TypeError};
-pub use type_env::{StoredFnContract, TypeEnv};
+pub use type_env::{ResourceTypeInfo, StoredFnContract, TypeEnv};
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
 
@@ -1984,6 +1984,157 @@ fn check_function_def_in_env(
         })
 }
 
+fn workflow_header_type_name(ty: &ash_parser::surface::Type) -> Option<String> {
+    match ty {
+        ash_parser::surface::Type::Name(name) | ash_parser::surface::Type::Capability(name) => {
+            Some(name.to_string())
+        }
+        _ => None,
+    }
+}
+
+fn validate_workflow_resource_and_binding_headers(
+    env: &TypeEnv,
+    workflow_env: &TypeEnv,
+    workflow: &ash_parser::surface::WorkflowDef,
+) -> Result<(), TypeCheckError> {
+    let mut owned_resources = std::collections::HashMap::new();
+    for owned in &workflow.owned_resources {
+        let name = owned.name.to_string();
+        if owned_resources.contains_key(&name) {
+            return Err(TypeCheckError::TypeError(format!(
+                "duplicate owned resource '{name}' in workflow '{}'",
+                workflow.name
+            )));
+        }
+        let resource_type = workflow_header_type_name(&owned.ty).ok_or_else(|| {
+            TypeCheckError::TypeError(format!(
+                "owned resource '{name}' must name a registered resource type"
+            ))
+        })?;
+        if !env.has_resource_type(&resource_type) {
+            return Err(TypeCheckError::TypeError(format!(
+                "owned resource '{name}' references unknown resource type '{resource_type}'"
+            )));
+        }
+        owned_resources.insert(name, resource_type);
+    }
+
+    let mut used_bindings: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    for binding in &workflow.used_bindings {
+        let binding_name = binding.name.to_string();
+        if used_bindings.contains_key(&binding_name) {
+            return Err(TypeCheckError::TypeError(format!(
+                "duplicate used binding '{binding_name}' in workflow '{}'",
+                workflow.name
+            )));
+        }
+        let interface_name = workflow_header_type_name(&binding.interface).ok_or_else(|| {
+            TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' must annotate a capability interface"
+            ))
+        })?;
+        if !env.has_capability_interface(&interface_name) {
+            return Err(TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' references unknown capability interface '{interface_name}'"
+            )));
+        }
+
+        let ash_parser::surface::Expr::Call {
+            module: None,
+            func,
+            args,
+            ..
+        } = &binding.implementation
+        else {
+            return Err(TypeCheckError::TypeError(format!(
+                "unsupported uses implementation expression for binding '{binding_name}': expected unqualified implementation call"
+            )));
+        };
+
+        let implementation_name = func.to_string();
+        let implementation = env.lookup_capability_implementation(&implementation_name).ok_or_else(|| {
+            TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' references unknown implementation '{implementation_name}'"
+            ))
+        })?;
+        if implementation.interface != interface_name {
+            return Err(TypeCheckError::TypeError(format!(
+                "implementation '{implementation_name}' targets '{}' not '{interface_name}' for binding '{binding_name}'",
+                implementation.interface
+            )));
+        }
+        if implementation.dependencies.len() != args.len() {
+            return Err(TypeCheckError::TypeError(format!(
+                "used binding '{binding_name}' dependency arity mismatch for implementation '{implementation_name}': expected {}, found {}",
+                implementation.dependencies.len(),
+                args.len()
+            )));
+        }
+
+        for (dependency, arg) in implementation.dependencies.iter().zip(args.iter()) {
+            match dependency.kind {
+                ash_parser::surface::CapabilityImplementationDependencyKind::Resource => {
+                    let ash_parser::surface::Expr::Variable { name, .. } = arg else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "resource dependency '{}' for binding '{binding_name}' must be an owned resource variable",
+                            dependency.name
+                        )));
+                    };
+                    let Some(actual_resource_type) = owned_resources.get(name.as_ref()) else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "resource dependency '{}' for binding '{binding_name}' must reference workflow owned resource '{}'; no matching owned resource found",
+                            dependency.name, name
+                        )));
+                    };
+                    let expected = dependency.target_name.as_deref().unwrap_or_default();
+                    if actual_resource_type != expected {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "resource dependency '{}' for binding '{binding_name}' expected resource type '{expected}', found '{actual_resource_type}'",
+                            dependency.name
+                        )));
+                    }
+                }
+                ash_parser::surface::CapabilityImplementationDependencyKind::Capability => {
+                    let ash_parser::surface::Expr::Variable { name, .. } = arg else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "capability dependency '{}' for binding '{binding_name}' must be an earlier used binding variable",
+                            dependency.name
+                        )));
+                    };
+                    let Some(actual_interface) = used_bindings.get(name.as_ref()) else {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "capability dependency '{}' for binding '{binding_name}' must reference earlier used binding '{}'; no matching earlier used binding found",
+                            dependency.name, name
+                        )));
+                    };
+                    let expected = dependency.target_name.as_deref().unwrap_or_default();
+                    if actual_interface != expected {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "capability dependency '{}' for binding '{binding_name}' expected interface '{expected}', found '{actual_interface}'",
+                            dependency.name
+                        )));
+                    }
+                }
+                ash_parser::surface::CapabilityImplementationDependencyKind::Config => {
+                    let actual_ty = infer_surface_expr_type(workflow_env, arg)?;
+                    crate::types::unify(&dependency.ty, &actual_ty).map_err(|_| {
+                        TypeCheckError::TypeError(format!(
+                            "config dependency '{}' for binding '{binding_name}' expected {}, found {}",
+                            dependency.name, dependency.ty, actual_ty
+                        ))
+                    })?;
+                }
+            }
+        }
+
+        used_bindings.insert(binding_name, interface_name);
+    }
+
+    Ok(())
+}
+
 /// Type-check a workflow definition against an explicitly prepared type environment.
 pub fn type_check_workflow_def_in_env(
     env: &TypeEnv,
@@ -2034,6 +2185,8 @@ pub fn type_check_workflow_def_in_env(
     for (name, ty) in &param_bindings {
         workflow_env.bind_variable(name, ty.clone());
     }
+
+    validate_workflow_resource_and_binding_headers(env, &workflow_env, workflow)?;
 
     reject_unsupported_mvp_workflow_features(&workflow.body)?;
 
@@ -2116,6 +2269,13 @@ pub fn type_check_program_in_env(
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::CapabilityInterface(interface) = definition {
             env.register_capability_interface(interface)
+                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+        }
+    }
+
+    for definition in &program.definitions {
+        if let ash_parser::surface::Definition::ResourceType(resource_type) = definition {
+            env.register_resource_type(resource_type)
                 .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
         }
     }

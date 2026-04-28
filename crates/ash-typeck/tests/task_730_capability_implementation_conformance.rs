@@ -2,7 +2,8 @@ use ash_parser::surface::{
     BuiltinFnDef, CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, Definition, Expr,
-    FnDef, Literal, Param, Program, Type as SurfaceType, Visibility, Workflow, WorkflowDef,
+    FnDef, Literal, Param, Program, ResourceTypeDef, Type as SurfaceType, Visibility, Workflow,
+    WorkflowDef,
 };
 use ash_parser::token::Span;
 use ash_typeck::Type;
@@ -717,7 +718,7 @@ fn builtin_function_is_not_ambient_authority_for_operation_body() {
 }
 
 #[test]
-fn resource_dependencies_are_metadata_not_body_values_until_task_731() {
+fn resource_dependencies_are_metadata_not_body_values() {
     let counter = interface(
         "Counter",
         vec![operation_sig(
@@ -728,13 +729,20 @@ fn resource_dependencies_are_metadata_not_body_values_until_task_731() {
         )],
     );
     let mut env = TypeEnv::with_builtin_types();
+    env.register_resource_type(&ResourceTypeDef {
+        visibility: Visibility::Public,
+        name: "ResourceStore".into(),
+        fields: vec![],
+        span: span(),
+    })
+    .expect("fixture resource type should register");
     env.register_capability_interface(&counter)
         .expect("fixture interface should register");
 
     let implementation = implementation(
         "ResourceCounter",
         "Counter",
-        vec![resource_dep("store", ty("String"))],
+        vec![resource_dep("store", ty("ResourceStore"))],
         vec![impl_op(
             CapabilityOperationMode::Observe,
             "limit",

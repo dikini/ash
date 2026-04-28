@@ -2933,7 +2933,7 @@ Introduce runtime resource instance carriers, resource lifecycle/access/split me
 | [TASK-736](tasks/TASK-736-capability-binding-admission-api.md) | Capability binding admission API | 6 | ✅ Complete |
 | [TASK-737](tasks/TASK-737-internal-authority-allocation-and-resource-admission.md) | Internal authority allocation and resource admission | 7 | ✅ Complete |
 | [TASK-738](tasks/TASK-738-derived-authority-non-widening-runtime-checks.md) | Derived authority non-widening runtime checks | 6 | ✅ Complete |
-| [TASK-739](tasks/TASK-739-proc-resource-split-join-policy-enforcement.md) | Proc resource split/join policy enforcement | 7 | 📝 Planned |
+| [TASK-739](tasks/TASK-739-proc-resource-split-join-policy-enforcement.md) | Proc resource split/join policy enforcement | 7 | ✅ Complete |
 | [TASK-740](tasks/TASK-740-runtime-resource-binding-integration-tests.md) | Runtime resource/binding integration tests | 5 | 📝 Planned |
 
 **Track A (Resource Runtime):** 13h. Add resource identity/lifecycle carriers and allocation/admission.

@@ -2,7 +2,9 @@
 //!
 //! Evaluates expressions in a runtime context, producing values.
 
-use ash_core::runtime::{EffectScopeId, OperationalFailure, ProcessId, ProcessTerminalState};
+use ash_core::runtime::{
+    EffectScopeId, FailureEvidence, OperationalFailure, ProcessId, ProcessTerminalState,
+};
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
 use futures::future::join_all;
@@ -44,6 +46,18 @@ fn operational_eval_error_for_message_with_attribution(
         tower,
         entity,
     )))
+}
+
+fn operational_eval_error_for_resource_policy(
+    violation: crate::runtime_state::ResourceSplitJoinViolation,
+    ctx: &Context,
+) -> EvalError {
+    let mut failure = operational_failure_for_payload(Value::String(violation.to_string()), ctx);
+    failure.evidence = FailureEvidence {
+        notes: violation.evidence_notes(),
+        provenance: violation.evidence_provenance(),
+    };
+    EvalError::OperationalFailure(Box::new(failure))
 }
 
 fn call_context_from_env(
@@ -197,7 +211,7 @@ fn aggregate_wait_all_failure(
 async fn observe_terminal_processes_wait_all_async(
     handles: &[ash_core::ProcessHandle],
     runtime_ctx: &Context,
-    observer_name: &str,
+    observer_name: &'static str,
 ) -> EvalResult<Vec<Value>> {
     for handle in handles {
         if !handle.try_consume() {
@@ -229,6 +243,24 @@ async fn observe_terminal_processes_wait_all_async(
     }
 
     if failures.is_empty() {
+        if let Some(parent_identity) = runtime_ctx.process_identity() {
+            let child_process_ids = handles
+                .iter()
+                .map(|handle| handle.process_id)
+                .collect::<Vec<_>>();
+            if let Some(runtime_state) = runtime_ctx.runtime_state() {
+                runtime_state
+                    .apply_process_resource_join(
+                        parent_identity.process_id,
+                        &child_process_ids,
+                        observer_name,
+                    )
+                    .await
+                    .map_err(|violation| {
+                        operational_eval_error_for_resource_policy(violation, runtime_ctx)
+                    })?;
+            }
+        }
         Ok(successes)
     } else {
         Err(aggregate_wait_all_failure(
@@ -344,6 +376,7 @@ async fn spawn_proc_child_runner(
 async fn admit_proc_children_async(
     parent_ctx: &Context,
     child_procs: Vec<Value>,
+    operation_name: &'static str,
 ) -> EvalResult<Vec<ash_core::ProcessHandle>> {
     let runtime_state = parent_ctx
         .runtime_state()
@@ -365,6 +398,7 @@ async fn admit_proc_children_async(
         child_ctx: Context,
     }
 
+    let child_count = child_procs.len();
     let base_child_index = runtime_state
         .process_children(parent_identity.process_id)
         .await
@@ -387,6 +421,11 @@ async fn admit_proc_children_async(
             child_ctx,
         });
     }
+
+    runtime_state
+        .apply_process_resource_split(parent_identity.process_id, child_count, operation_name)
+        .await
+        .map_err(|violation| operational_eval_error_for_resource_policy(violation, parent_ctx))?;
 
     runtime_state
         .register_child_processes_batch(
@@ -441,7 +480,8 @@ async fn maybe_execute_proc_admission_capture_async(
 ) -> EvalResult<Value> {
     match value {
         Value::ProcParCapture { left, right } => {
-            let handles = admit_proc_children_async(runtime_ctx, vec![*left, *right]).await?;
+            let handles =
+                admit_proc_children_async(runtime_ctx, vec![*left, *right], "par").await?;
             Ok(Value::List(Box::new(
                 handles.into_iter().map(Value::ProcessHandle).collect(),
             )))
@@ -454,7 +494,7 @@ async fn maybe_execute_proc_admission_capture_async(
                 ensure_proc_closure(&mapped)?;
                 child_procs.push(mapped);
             }
-            let handles = admit_proc_children_async(runtime_ctx, child_procs).await?;
+            let handles = admit_proc_children_async(runtime_ctx, child_procs, "scatter").await?;
             Ok(Value::List(Box::new(
                 handles.into_iter().map(Value::ProcessHandle).collect(),
             )))

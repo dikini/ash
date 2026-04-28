@@ -10,7 +10,8 @@ use ash_core::capability::CapabilityError;
 use ash_core::runtime::{
     CapabilityBinding, CapabilityBindingDependency, CapabilityBindingId, CapabilityBindingKind,
     CapabilityImplementationId, CapabilityInterfaceId, ProcessId, ProcessTerminalState, ResourceId,
-    ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance, ResourceTypeId,
+    ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance,
+    ResourceSplitJoinPolicy, ResourceTypeId,
 };
 use ash_core::{ControlLink, Effect, Value, Workflow, WorkflowId};
 
@@ -216,6 +217,79 @@ impl WorkflowOwnedResourceAdmission {
         }
     }
 }
+
+/// Runtime resource split/join policy violation with the offending resource metadata attached.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResourceSplitJoinViolation {
+    /// Process that attempted the split/join operation.
+    pub process_id: ProcessId,
+    /// Operation being checked, such as `par`, `scatter`, `join`, or `gather`.
+    pub operation: &'static str,
+    /// Resource whose policy rejected the operation.
+    pub resource: ResourceInstance,
+    /// Human-readable rejection reason.
+    pub reason: String,
+}
+
+impl ResourceSplitJoinViolation {
+    fn new(
+        process_id: ProcessId,
+        operation: &'static str,
+        resource: ResourceInstance,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self {
+            process_id,
+            operation,
+            resource,
+            reason: reason.into(),
+        }
+    }
+
+    /// Render policy evidence notes suitable for an operational failure carrier.
+    #[must_use]
+    pub fn evidence_notes(&self) -> Vec<String> {
+        vec![
+            format!("resource policy violation during proc::{}", self.operation),
+            format!("process: {:?}", self.process_id),
+            format!("resource id: {:?}", self.resource.id),
+            format!("resource type: {:?}", self.resource.type_id),
+            format!("resource owner: {:?}", self.resource.owner),
+            format!("resource lifecycle: {:?}", self.resource.lifecycle),
+            format!(
+                "resource split/join policy: {:?}",
+                self.resource.split_join_policy
+            ),
+            self.reason.clone(),
+        ]
+    }
+
+    /// Render policy provenance suitable for an operational failure carrier.
+    #[must_use]
+    pub fn evidence_provenance(&self) -> Vec<String> {
+        vec![format!(
+            "resource provenance: {:?}",
+            self.resource.provenance
+        )]
+    }
+}
+
+impl std::fmt::Display for ResourceSplitJoinViolation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "resource {:?} of type {:?} with policy {:?} rejected proc::{} for process {:?}: {}",
+            self.resource.id,
+            self.resource.type_id,
+            self.resource.split_join_policy,
+            self.operation,
+            self.process_id,
+            self.reason
+        )
+    }
+}
+
+impl std::error::Error for ResourceSplitJoinViolation {}
 
 /// Explicit source-name dependency metadata for implementation binding admission.
 #[derive(Debug, Clone, PartialEq)]
@@ -1238,6 +1312,154 @@ impl RuntimeState {
             .filter(|instance| instance.owner == owner && instance.type_id == type_id)
             .cloned()
             .collect()
+    }
+
+    /// Return all resource instances owned by one runtime owner scope.
+    pub async fn resource_instances_for_owner(
+        &self,
+        owner: ResourceOwner,
+    ) -> Vec<ResourceInstance> {
+        self.resource_instances
+            .lock()
+            .await
+            .values()
+            .filter(|instance| instance.owner == owner)
+            .cloned()
+            .collect()
+    }
+
+    /// Check and record process resource policy before a Proc split admits children.
+    pub async fn apply_process_resource_split(
+        &self,
+        parent_process_id: ProcessId,
+        child_count: usize,
+        operation: &'static str,
+    ) -> Result<(), ResourceSplitJoinViolation> {
+        if child_count == 0 {
+            return Ok(());
+        }
+
+        let mut instances = self.resource_instances.lock().await;
+        let mut parent_resource_ids = instances
+            .iter()
+            .filter_map(|(id, instance)| {
+                (instance.owner == ResourceOwner::Process(parent_process_id)).then_some(*id)
+            })
+            .collect::<Vec<_>>();
+        parent_resource_ids.sort_by_key(|id| id.0);
+
+        for resource_id in &parent_resource_ids {
+            let instance = instances
+                .get(resource_id)
+                .expect("resource id collected from map must still exist");
+            match instance.split_join_policy {
+                ResourceSplitJoinPolicy::ReadOnlyShare
+                | ResourceSplitJoinPolicy::CommunicationOnly
+                | ResourceSplitJoinPolicy::Mergeable => {}
+                ResourceSplitJoinPolicy::NonShareable => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "non-shareable resource cannot cross a process split",
+                    ));
+                }
+                ResourceSplitJoinPolicy::BranchLocalClone => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "branch-local clone resource has no runtime clone implementation in the MVP",
+                    ));
+                }
+                ResourceSplitJoinPolicy::LinearMove => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "linear-move resource requires an explicit destination child in the MVP",
+                    ));
+                }
+            }
+        }
+
+        for resource_id in parent_resource_ids {
+            if let Some(instance) = instances.get_mut(&resource_id)
+                && matches!(
+                    instance.split_join_policy,
+                    ResourceSplitJoinPolicy::ReadOnlyShare
+                        | ResourceSplitJoinPolicy::CommunicationOnly
+                        | ResourceSplitJoinPolicy::Mergeable
+                )
+            {
+                instance.lifecycle = ResourceLifecycle::Splitting;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Apply parent-owned resource merge policy after `join`/`gather` observes child success.
+    pub async fn apply_process_resource_join(
+        &self,
+        parent_process_id: ProcessId,
+        child_process_ids: &[ProcessId],
+        operation: &'static str,
+    ) -> Result<(), ResourceSplitJoinViolation> {
+        if child_process_ids.is_empty() {
+            return Ok(());
+        }
+
+        let mut instances = self.resource_instances.lock().await;
+        let mut parent_resource_ids = instances
+            .iter()
+            .filter_map(|(id, instance)| {
+                (instance.owner == ResourceOwner::Process(parent_process_id)
+                    && instance.lifecycle == ResourceLifecycle::Splitting)
+                    .then_some(*id)
+            })
+            .collect::<Vec<_>>();
+        parent_resource_ids.sort_by_key(|id| id.0);
+
+        for resource_id in &parent_resource_ids {
+            let instance = instances
+                .get(resource_id)
+                .expect("resource id collected from map must still exist");
+            match instance.split_join_policy {
+                ResourceSplitJoinPolicy::Mergeable => {}
+                ResourceSplitJoinPolicy::ReadOnlyShare
+                | ResourceSplitJoinPolicy::CommunicationOnly => {}
+                ResourceSplitJoinPolicy::NonShareable
+                | ResourceSplitJoinPolicy::BranchLocalClone
+                | ResourceSplitJoinPolicy::LinearMove => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "split resource cannot be joined by the MVP merge policy",
+                    ));
+                }
+            }
+        }
+
+        for resource_id in parent_resource_ids {
+            if let Some(instance) = instances.get_mut(&resource_id) {
+                match instance.split_join_policy {
+                    ResourceSplitJoinPolicy::Mergeable => {
+                        instance.lifecycle = ResourceLifecycle::Joined;
+                    }
+                    ResourceSplitJoinPolicy::ReadOnlyShare
+                    | ResourceSplitJoinPolicy::CommunicationOnly => {
+                        instance.lifecycle = ResourceLifecycle::Active;
+                    }
+                    ResourceSplitJoinPolicy::NonShareable
+                    | ResourceSplitJoinPolicy::BranchLocalClone
+                    | ResourceSplitJoinPolicy::LinearMove => {}
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Return the number of registered resource instances.

@@ -74,7 +74,11 @@ pub use runtime_verification::{
     StaticPolicyValidator, VerificationError, VerificationResult, VerificationWarning,
 };
 pub use solver::{Solver, TypeError};
-pub use type_env::{ResourceTypeInfo, StoredFnContract, TypeEnv};
+pub use type_env::{
+    AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
+    CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo, ProvenanceSourceKind,
+    ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract, TypeEnv,
+};
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
 
@@ -1993,11 +1997,24 @@ fn workflow_header_type_name(ty: &ash_parser::surface::Type) -> Option<String> {
     }
 }
 
+#[derive(Debug, Clone)]
+struct WorkflowBindingAuthoritySummary {
+    interface: String,
+}
+
+fn config_binding_name(arg: &ash_parser::surface::Expr) -> String {
+    match arg {
+        ash_parser::surface::Expr::Variable { name, .. } => name.to_string(),
+        _ => "<config-expression>".to_string(),
+    }
+}
+
 fn validate_workflow_resource_and_binding_headers(
     env: &TypeEnv,
     workflow_env: &TypeEnv,
     workflow: &ash_parser::surface::WorkflowDef,
-) -> Result<(), TypeCheckError> {
+) -> Result<AuthorityProvenanceReport, TypeCheckError> {
+    let mut provenance = AuthorityProvenanceReport::default();
     let mut owned_resources = std::collections::HashMap::new();
     for owned in &workflow.owned_resources {
         let name = owned.name.to_string();
@@ -2017,10 +2034,17 @@ fn validate_workflow_resource_and_binding_headers(
                 "owned resource '{name}' references unknown resource type '{resource_type}'"
             )));
         }
+        provenance
+            .resource_bindings
+            .push(ResourceBindingProvenanceInfo {
+                name: name.clone(),
+                resource_type: resource_type.clone(),
+                authority: AuthorityProvenanceKind::Internal,
+            });
         owned_resources.insert(name, resource_type);
     }
 
-    let mut used_bindings: std::collections::HashMap<String, String> =
+    let mut used_bindings: std::collections::HashMap<String, WorkflowBindingAuthoritySummary> =
         std::collections::HashMap::new();
     for binding in &workflow.used_bindings {
         let binding_name = binding.name.to_string();
@@ -2073,6 +2097,7 @@ fn validate_workflow_resource_and_binding_headers(
             )));
         }
 
+        let mut sources = Vec::with_capacity(implementation.dependencies.len());
         for (dependency, arg) in implementation.dependencies.iter().zip(args.iter()) {
             match dependency.kind {
                 ash_parser::surface::CapabilityImplementationDependencyKind::Resource => {
@@ -2095,6 +2120,12 @@ fn validate_workflow_resource_and_binding_headers(
                             dependency.name
                         )));
                     }
+                    sources.push(BindingProvenanceSourceInfo {
+                        kind: ProvenanceSourceKind::Resource,
+                        dependency_name: dependency.name.clone(),
+                        binding_name: name.to_string(),
+                        target_name: expected.to_string(),
+                    });
                 }
                 ash_parser::surface::CapabilityImplementationDependencyKind::Capability => {
                     let ash_parser::surface::Expr::Variable { name, .. } = arg else {
@@ -2103,19 +2134,25 @@ fn validate_workflow_resource_and_binding_headers(
                             dependency.name
                         )));
                     };
-                    let Some(actual_interface) = used_bindings.get(name.as_ref()) else {
+                    let Some(actual_binding) = used_bindings.get(name.as_ref()) else {
                         return Err(TypeCheckError::TypeError(format!(
                             "capability dependency '{}' for binding '{binding_name}' must reference earlier used binding '{}'; no matching earlier used binding found",
                             dependency.name, name
                         )));
                     };
                     let expected = dependency.target_name.as_deref().unwrap_or_default();
-                    if actual_interface != expected {
+                    if actual_binding.interface != expected {
                         return Err(TypeCheckError::TypeError(format!(
-                            "capability dependency '{}' for binding '{binding_name}' expected interface '{expected}', found '{actual_interface}'",
-                            dependency.name
+                            "capability dependency '{}' for binding '{binding_name}' expected interface '{expected}', found '{}'",
+                            dependency.name, actual_binding.interface
                         )));
                     }
+                    sources.push(BindingProvenanceSourceInfo {
+                        kind: ProvenanceSourceKind::Capability,
+                        dependency_name: dependency.name.clone(),
+                        binding_name: name.to_string(),
+                        target_name: expected.to_string(),
+                    });
                 }
                 ash_parser::surface::CapabilityImplementationDependencyKind::Config => {
                     let actual_ty = infer_surface_expr_type(workflow_env, arg)?;
@@ -2125,14 +2162,44 @@ fn validate_workflow_resource_and_binding_headers(
                             dependency.name, dependency.ty, actual_ty
                         ))
                     })?;
+                    sources.push(BindingProvenanceSourceInfo {
+                        kind: ProvenanceSourceKind::Config,
+                        dependency_name: dependency.name.clone(),
+                        binding_name: config_binding_name(arg),
+                        target_name: dependency.ty.to_string(),
+                    });
                 }
             }
         }
 
-        used_bindings.insert(binding_name, interface_name);
+        if implementation.authority_provenance == AuthorityProvenanceKind::Derived
+            && !sources
+                .iter()
+                .any(|source| source.kind == ProvenanceSourceKind::Capability)
+        {
+            return Err(TypeCheckError::TypeError(format!(
+                "derived binding '{binding_name}' for implementation '{implementation_name}' has no declared capability authority source"
+            )));
+        }
+
+        provenance
+            .capability_bindings
+            .push(CapabilityBindingProvenanceInfo {
+                name: binding_name.clone(),
+                interface: interface_name.clone(),
+                implementation: implementation_name,
+                authority: implementation.authority_provenance,
+                sources,
+            });
+        used_bindings.insert(
+            binding_name,
+            WorkflowBindingAuthoritySummary {
+                interface: interface_name,
+            },
+        );
     }
 
-    Ok(())
+    Ok(provenance)
 }
 
 /// Type-check a workflow definition against an explicitly prepared type environment.
@@ -2186,7 +2253,8 @@ pub fn type_check_workflow_def_in_env(
         workflow_env.bind_variable(name, ty.clone());
     }
 
-    validate_workflow_resource_and_binding_headers(env, &workflow_env, workflow)?;
+    let authority_provenance =
+        validate_workflow_resource_and_binding_headers(env, &workflow_env, workflow)?;
 
     reject_unsupported_mvp_workflow_features(&workflow.body)?;
 
@@ -2235,6 +2303,7 @@ pub fn type_check_workflow_def_in_env(
 
     let mut result = type_check_workflow(&workflow.body, Some(&param_bindings))?;
     result.function_contracts = env.function_contracts();
+    result.authority_provenance = authority_provenance;
     Ok(result)
 }
 
@@ -2406,6 +2475,7 @@ pub fn type_check_workflow_in_env(
         effect: inferred_effect,
         obligation_status: obligation_result,
         function_contracts: std::collections::HashMap::new(),
+        authority_provenance: AuthorityProvenanceReport::default(),
     })
 }
 
@@ -2441,6 +2511,8 @@ pub struct TypeCheckResult {
     pub obligation_status: ObligationCheckResult,
     /// Lowered pure-function contract boundaries available to runtime consumers.
     pub function_contracts: std::collections::HashMap<String, StoredFnContract>,
+    /// Static authority provenance metadata available to runtime admission consumers.
+    pub authority_provenance: AuthorityProvenanceReport,
 }
 
 impl TypeCheckResult {

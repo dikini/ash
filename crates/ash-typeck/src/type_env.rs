@@ -237,6 +237,93 @@ pub struct ResourceTypeInfo {
     pub fields: Vec<(String, Type)>,
 }
 
+/// Static authority provenance category for capability/resource metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AuthorityProvenanceKind {
+    /// Authority supplied by host/runtime admission outside Ash-defined recipes.
+    ///
+    /// The static checker does not infer this category for Ash-defined
+    /// `capability impl` recipes; host authority must be attached by a future
+    /// runtime admission/provider path.
+    Host,
+    /// Authority over Ash-owned resources allocated or admitted explicitly.
+    Internal,
+    /// Authority derived from declared capability/resource dependencies.
+    Derived,
+    /// No static authority source is required by the recipe.
+    NoAuthority,
+}
+
+/// Kind of dependency that participates in authority provenance metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ProvenanceSourceKind {
+    /// Resource dependency source.
+    Resource,
+    /// Capability dependency source.
+    Capability,
+    /// Config dependency metadata; not itself an authority source.
+    Config,
+}
+
+/// Static implementation-level authority source metadata.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImplementationAuthoritySourceInfo {
+    /// Source kind.
+    pub kind: ProvenanceSourceKind,
+    /// Declared dependency name.
+    pub dependency_name: String,
+    /// Resource type, capability interface, or config type target.
+    pub target_name: String,
+}
+
+/// Workflow-owned resource provenance metadata for runtime admission.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResourceBindingProvenanceInfo {
+    /// Workflow resource binding name.
+    pub name: String,
+    /// Registered resource type name.
+    pub resource_type: String,
+    /// Static authority category for this resource binding.
+    pub authority: AuthorityProvenanceKind,
+}
+
+/// Workflow capability-binding provenance source metadata for runtime admission.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BindingProvenanceSourceInfo {
+    /// Source kind.
+    pub kind: ProvenanceSourceKind,
+    /// Declared dependency name in the selected implementation recipe.
+    pub dependency_name: String,
+    /// Concrete workflow binding/resource/config expression name where available.
+    pub binding_name: String,
+    /// Resource type, capability interface, or config type target.
+    pub target_name: String,
+}
+
+/// Workflow capability-binding provenance metadata for runtime admission.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CapabilityBindingProvenanceInfo {
+    /// Workflow capability binding name.
+    pub name: String,
+    /// Annotated capability interface name.
+    pub interface: String,
+    /// Selected implementation recipe name.
+    pub implementation: String,
+    /// Static authority category for this admitted binding.
+    pub authority: AuthorityProvenanceKind,
+    /// Concrete provenance source links.
+    pub sources: Vec<BindingProvenanceSourceInfo>,
+}
+
+/// Workflow-level authority provenance metadata for runtime admission.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AuthorityProvenanceReport {
+    /// Workflow-owned resource bindings.
+    pub resource_bindings: Vec<ResourceBindingProvenanceInfo>,
+    /// Workflow-used capability bindings.
+    pub capability_bindings: Vec<CapabilityBindingProvenanceInfo>,
+}
+
 /// Internal representation of a capability implementation dependency.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapabilityImplementationDependencyInfo {
@@ -274,6 +361,10 @@ pub struct CapabilityImplementationInfo {
     pub dependencies: Vec<CapabilityImplementationDependencyInfo>,
     /// Operations implemented by this recipe.
     pub operations: HashMap<String, CapabilityImplementationOperationInfo>,
+    /// Static authority provenance classification inferred from declared dependencies.
+    pub authority_provenance: AuthorityProvenanceKind,
+    /// Static authority/config source metadata inferred from declared dependencies.
+    pub authority_sources: Vec<ImplementationAuthoritySourceInfo>,
 }
 
 /// Internal representation of a where-bound for type checking.
@@ -455,6 +546,48 @@ fn surface_type_name(ty: &SurfaceType) -> Option<String> {
         SurfaceType::Capability(name) => Some(name.to_string()),
         _ => None,
     }
+}
+
+fn provenance_source_kind(kind: CapabilityImplementationDependencyKind) -> ProvenanceSourceKind {
+    match kind {
+        CapabilityImplementationDependencyKind::Resource => ProvenanceSourceKind::Resource,
+        CapabilityImplementationDependencyKind::Capability => ProvenanceSourceKind::Capability,
+        CapabilityImplementationDependencyKind::Config => ProvenanceSourceKind::Config,
+    }
+}
+
+fn classify_authority_provenance(
+    dependencies: &[CapabilityImplementationDependencyInfo],
+) -> AuthorityProvenanceKind {
+    if dependencies
+        .iter()
+        .any(|dep| dep.kind == CapabilityImplementationDependencyKind::Capability)
+    {
+        AuthorityProvenanceKind::Derived
+    } else if dependencies
+        .iter()
+        .any(|dep| dep.kind == CapabilityImplementationDependencyKind::Resource)
+    {
+        AuthorityProvenanceKind::Internal
+    } else {
+        AuthorityProvenanceKind::NoAuthority
+    }
+}
+
+fn implementation_authority_sources(
+    dependencies: &[CapabilityImplementationDependencyInfo],
+) -> Vec<ImplementationAuthoritySourceInfo> {
+    dependencies
+        .iter()
+        .map(|dependency| ImplementationAuthoritySourceInfo {
+            kind: provenance_source_kind(dependency.kind),
+            dependency_name: dependency.name.clone(),
+            target_name: dependency
+                .target_name
+                .clone()
+                .unwrap_or_else(|| dependency.ty.to_string()),
+        })
+        .collect()
 }
 
 fn resolve_associated_types_for_interface(
@@ -1242,6 +1375,9 @@ impl TypeEnv {
             operations.insert(operation_name, operation_info);
         }
 
+        let authority_provenance = classify_authority_provenance(&dependencies);
+        let authority_sources = implementation_authority_sources(&dependencies);
+
         self.capability_implementations.insert(
             implementation_name.clone(),
             CapabilityImplementationInfo {
@@ -1249,6 +1385,8 @@ impl TypeEnv {
                 interface: interface_name,
                 dependencies,
                 operations,
+                authority_provenance,
+                authority_sources,
             },
         );
 

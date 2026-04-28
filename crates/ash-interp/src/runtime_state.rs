@@ -9,9 +9,10 @@ use tokio::sync::Mutex as AsyncMutex;
 use ash_core::capability::CapabilityError;
 use ash_core::runtime::{
     CapabilityBinding, CapabilityBindingDependency, CapabilityBindingId, CapabilityBindingKind,
-    ProcessId, ProcessTerminalState, ResourceId, ResourceInstance, ResourceOwner, ResourceTypeId,
+    CapabilityImplementationId, CapabilityInterfaceId, ProcessId, ProcessTerminalState, ResourceId,
+    ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance, ResourceTypeId,
 };
-use ash_core::{ControlLink, Effect, Value, Workflow};
+use ash_core::{ControlLink, Effect, Value, Workflow, WorkflowId};
 
 use crate::capability::CapabilityProvider;
 use crate::control_link::{
@@ -194,6 +195,115 @@ pub struct RegisteredCallableWorkflow {
     pub arity: usize,
     /// Parameter names in declaration order, used to bind call-site arguments.
     pub params: Vec<String>,
+}
+
+/// Explicit metadata for admitting one resource owned by a workflow `owns` clause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowOwnedResourceAdmission {
+    /// Workflow-local owned resource name.
+    pub name: String,
+    /// Static resource type identifier.
+    pub type_id: ResourceTypeId,
+}
+
+impl WorkflowOwnedResourceAdmission {
+    /// Create owned resource admission metadata from a workflow-local name and resource type.
+    #[must_use]
+    pub fn new(name: impl Into<String>, type_id: ResourceTypeId) -> Self {
+        Self {
+            name: name.into(),
+            type_id,
+        }
+    }
+}
+
+/// Explicit source-name dependency metadata for implementation binding admission.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ImplementationBindingDependencySource {
+    /// Dependency on a workflow-owned resource source by explicit source name.
+    Resource {
+        name: String,
+        type_id: ResourceTypeId,
+    },
+    /// Dependency on a previously admitted capability binding by explicit runtime binding name.
+    Capability {
+        name: String,
+        source_binding_name: String,
+        interface: CapabilityInterfaceId,
+    },
+    /// Inert configuration value dependency.
+    Config { name: String, value: Value },
+}
+
+impl ImplementationBindingDependencySource {
+    /// Create a resource dependency source.
+    #[must_use]
+    pub fn resource(name: impl Into<String>, type_id: ResourceTypeId) -> Self {
+        Self::Resource {
+            name: name.into(),
+            type_id,
+        }
+    }
+
+    /// Create a capability dependency source.
+    #[must_use]
+    pub fn capability(
+        name: impl Into<String>,
+        source_binding_name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+    ) -> Self {
+        Self::Capability {
+            name: name.into(),
+            source_binding_name: source_binding_name.into(),
+            interface,
+        }
+    }
+
+    /// Create a config dependency source.
+    #[must_use]
+    pub fn config(name: impl Into<String>, value: Value) -> Self {
+        Self::Config {
+            name: name.into(),
+            value,
+        }
+    }
+}
+
+/// Explicit metadata for admitting an Ash-defined implementation capability binding.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplementationBindingAdmission {
+    /// Runtime binding name.
+    pub name: String,
+    /// Static interface identifier this binding satisfies.
+    pub interface: CapabilityInterfaceId,
+    /// Static implementation identifier.
+    pub implementation: CapabilityImplementationId,
+    /// Explicit source-name dependencies.
+    pub dependencies: Vec<ImplementationBindingDependencySource>,
+}
+
+impl ImplementationBindingAdmission {
+    /// Create implementation binding admission metadata with no dependencies.
+    #[must_use]
+    pub fn new(
+        name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+        implementation: CapabilityImplementationId,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            interface,
+            implementation,
+            dependencies: Vec::new(),
+        }
+    }
+
+    /// Append one dependency source.
+    #[must_use]
+    pub fn with_dependency(mut self, dependency: ImplementationBindingDependencySource) -> Self {
+        self.dependencies.push(dependency);
+        self
+    }
 }
 
 #[derive(Clone, Default)]
@@ -527,6 +637,106 @@ impl RuntimeState {
         }
 
         CapabilityContext::with_registry(registry)
+    }
+
+    /// Admit workflow-owned resources from explicit `owns` metadata.
+    ///
+    /// Returned resource ids are keyed only by the explicit workflow-local resource names supplied
+    /// by the caller; this API does not perform ambient resource lookup.
+    pub async fn admit_workflow_owned_resources(
+        &self,
+        workflow_id: WorkflowId,
+        resources: Vec<WorkflowOwnedResourceAdmission>,
+    ) -> ExecResult<HashMap<String, ResourceId>> {
+        let mut seen_names = HashSet::new();
+        for resource in &resources {
+            if !seen_names.insert(resource.name.clone()) {
+                return Err(ExecError::InvalidRuntimeState(format!(
+                    "duplicate owned resource name '{}'",
+                    resource.name
+                )));
+            }
+        }
+
+        let mut admitted = HashMap::new();
+        let mut instances = Vec::with_capacity(resources.len());
+        for resource in resources {
+            let id = ResourceId::new();
+            let type_name = resource.type_id.as_str().to_string();
+            let instance =
+                ResourceInstance::new(id, resource.type_id, ResourceOwner::Workflow(workflow_id))
+                    .with_lifecycle(ResourceLifecycle::Admitted)
+                    .with_provenance(ResourceProvenance::internal(format!(
+                        "workflow owns {}: {type_name}",
+                        resource.name
+                    )));
+            admitted.insert(resource.name, id);
+            instances.push(instance);
+        }
+
+        let mut registry = self.resource_instances.lock().await;
+        for instance in instances {
+            registry.insert(instance.id, instance);
+        }
+        Ok(admitted)
+    }
+
+    /// Admit one implementation-backed capability binding from explicit dependency source names.
+    ///
+    /// Resource dependencies are resolved only from `resource_sources`, and capability dependencies
+    /// are resolved only by previously admitted binding names. The resulting binding is admitted via
+    /// [`Self::admit_capability_binding`] so existing dependency validation remains authoritative.
+    pub async fn admit_implementation_binding(
+        &self,
+        admission: ImplementationBindingAdmission,
+        resource_sources: &HashMap<String, ResourceId>,
+    ) -> ExecResult<CapabilityBindingId> {
+        let mut dependencies = Vec::with_capacity(admission.dependencies.len());
+        for dependency in admission.dependencies {
+            match dependency {
+                ImplementationBindingDependencySource::Resource { name, type_id } => {
+                    let Some(resource_id) = resource_sources.get(&name).copied() else {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing resource dependency source '{name}'"
+                        )));
+                    };
+                    dependencies.push(CapabilityBindingDependency::Resource {
+                        name,
+                        resource_id,
+                        type_id,
+                    });
+                }
+                ImplementationBindingDependencySource::Capability {
+                    name,
+                    source_binding_name,
+                    interface,
+                } => {
+                    let Some(binding) = self.capability_binding_by_name(&source_binding_name).await
+                    else {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing capability dependency source '{source_binding_name}'"
+                        )));
+                    };
+                    dependencies.push(CapabilityBindingDependency::Capability {
+                        name,
+                        binding_id: binding.id,
+                        interface,
+                    });
+                }
+                ImplementationBindingDependencySource::Config { name, value } => {
+                    dependencies.push(CapabilityBindingDependency::Config { name, value });
+                }
+            }
+        }
+
+        let binding = CapabilityBinding::implementation(
+            CapabilityBindingId::new(),
+            admission.name,
+            admission.interface,
+            admission.implementation,
+            dependencies,
+        );
+        self.admit_capability_binding(binding).await
     }
 
     /// Admit one host- or implementation-backed capability binding into runtime state.

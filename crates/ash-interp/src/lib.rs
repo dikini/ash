@@ -100,7 +100,10 @@ pub use role_runtime::{
     CapabilityError, CapabilityGrant, RoleError, RoleRegistry, RuntimeCapabilitySet,
 };
 pub use runtime_outcome_state::RuntimeOutcomeState;
-pub use runtime_state::RuntimeState;
+pub use runtime_state::{
+    ImplementationBindingAdmission, ImplementationBindingDependencySource, RuntimeState,
+    WorkflowOwnedResourceAdmission,
+};
 pub use stream::{
     BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,
     MockSendableProvider, MockStreamProvider, SendableRegistry, SendableStreamProvider,

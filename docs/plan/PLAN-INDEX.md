@@ -281,6 +281,7 @@ Update this section as tasks complete:
 | 80 | 10 | 10 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
+| 107 | 7 | 0 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -382,6 +383,7 @@ Update this section as tasks complete:
 | 80 | 10 | 10 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
+| 107 | 7 | 0 | 📝 Planned |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3030,4 +3032,26 @@ Promote bracket comprehension syntax as a container-view spelling of generalized
 - D2: MVP comprehensions require explicit targets unless target inference is implemented with focused tests.
 - D3: Pure `List`, `Option`, and `Result<_, E>` examples remain deferred until their Monad dictionaries and constructor-hole support exist.
 - D4: No bare boolean guards, pattern binders, implicit imports, or implicit tower lifts in Phase 106.
+
+## Phase 107: Stdlib and Example Corpus Repair
+
+**Priority:** High (remediation phase; broken std/examples block reliable language DX)
+**Status:** 📝 Planned
+**Plan:** [docs/plan/PLAN-103-STDLIB-EXAMPLE-CORPUS-REPAIR.md](PLAN-103-STDLIB-EXAMPLE-CORPUS-REPAIR.md)
+
+Repair the post-Phase-106 `ash check` corpus for standard library modules and examples. The phase locks the CLI-check baseline, fixes std module/import resolution gaps, improves comment/diagnostic support, canonicalizes small examples, and explicitly classifies large historical/reference examples as conformance or reference-only.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-760](tasks/TASK-760-cli-corpus-baseline-harness.md) | CLI corpus baseline harness | 4 | 📝 Planned |
+| [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Stdlib multiline imports and module roots | 6 | 📝 Planned |
+| [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Stdlib workflow exports and relative imports | 6 | 📝 Planned |
+| [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Runtime Args and LLM loading imports | 5 | 📝 Planned |
+| [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Parser comments and diagnostics | 6 | 📝 Planned |
+| [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small examples | 6 | 📝 Planned |
+| [TASK-766](tasks/TASK-766-reference-example-policy-and-closeout.md) | Reference example policy and closeout | 6 | 📝 Planned |
+
+**Investigation baseline:** `std/src/**/*.ash` = 31/39 passing, `examples/**/*.ash` = 19/36 passing through `ash-cli check`.
+
+**Execution order:** TASK-760 first; TASK-761/TASK-762 before std import repairs; TASK-764 before broad example rewrites; TASK-766 closes corpus policy and verification.
 

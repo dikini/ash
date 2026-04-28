@@ -3,7 +3,8 @@
 //! Evaluates expressions in a runtime context, producing values.
 
 use ash_core::runtime::{
-    EffectScopeId, FailureEvidence, OperationalFailure, ProcessId, ProcessTerminalState,
+    CapabilityBindingKind, EffectScopeId, FailureEvidence, OperationalFailure, ProcessId,
+    ProcessTerminalState,
 };
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
@@ -925,7 +926,7 @@ pub fn dispatch_builtin(
 ///
 /// Phase 97 keeps this as a closure-shaped value so the runtime can thread an
 /// internal Act-style environment without adding a new AST node.
-fn runtime_invoke(args: &[Value]) -> EvalResult<Value> {
+fn runtime_invoke(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     if args.len() != 3 {
         return Err(EvalError::WrongArity {
             expected: 3,
@@ -976,12 +977,19 @@ fn runtime_invoke(args: &[Value]) -> EvalResult<Value> {
     Ok(Value::Closure {
         params: vec![("__act_env".to_string(), None)],
         body: Box::new(body),
-        env: std::sync::Arc::new(ash_core::env_frame::EnvFrame::new()),
+        env: ctx.to_env_frame(),
     })
 }
 
 fn act_result(value: Value) -> Value {
     Value::List(Box::new(vec![Value::ActEnvToken, value]))
+}
+
+fn matches_normalized_act_result(value: &Value) -> bool {
+    let Value::List(items) = value else {
+        return false;
+    };
+    items.len() == 2 && matches!(items[0], Value::ActEnvToken)
 }
 
 fn runtime_proc_unit(args: &[Value], ctx: &Context) -> EvalResult<Value> {
@@ -1881,7 +1889,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     return runtime_bind(&args, ctx);
                 }
                 if module.is_none() && func == "invoke" {
-                    return runtime_invoke(&args);
+                    return runtime_invoke(&args, ctx);
                 }
                 if module.is_none() && func == "policy_check" {
                     return runtime_policy_check(&args, ctx);
@@ -2183,15 +2191,138 @@ async fn maybe_execute_invoke_capture_async(
             EvalError::ExecutionFailed("invoke capture missing list args".to_string())
         })?;
 
+    let provider = if let Some(Value::String(source_binding_name)) = runtime_ctx
+        .get(&format!("__ash_capability_dependency_alias:{provider}"))
+        .cloned()
+    {
+        source_binding_name
+    } else {
+        provider
+    };
+
     let act_env = runtime_ctx.act_env().ok_or_else(|| {
         EvalError::ExecutionFailed("invoke capture missing hidden runtime ActEnv".to_string())
     })?;
+
+    if let Some(runtime_state) = runtime_ctx.runtime_state()
+        && let Some(binding) = runtime_state.capability_binding_by_name(&provider).await
+        && runtime_ctx
+            .admitted_capability_bindings()
+            .contains(&binding.id)
+        && let CapabilityBindingKind::Implementation { implementation } = &binding.kind
+    {
+        return execute_implementation_operation_body_async(
+            runtime_state.as_ref(),
+            &binding,
+            implementation.clone(),
+            &action,
+            args,
+            runtime_ctx,
+            act_env,
+        )
+        .await;
+    }
+
     let invoked = act_env
         .capability_ctx
         .execute(&provider, &action, &args)
         .await
         .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
     Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
+}
+
+async fn execute_implementation_operation_body_async(
+    runtime_state: &crate::runtime_state::RuntimeState,
+    binding: &ash_core::CapabilityBinding,
+    implementation: ash_core::CapabilityImplementationId,
+    action: &str,
+    args: Vec<Value>,
+    runtime_ctx: &Context,
+    outer_act_env: std::sync::Arc<crate::act_env::ActEnv>,
+) -> EvalResult<Value> {
+    let body = runtime_state
+        .implementation_operation_body(&implementation, action)
+        .await
+        .ok_or_else(|| {
+            operational_eval_error_for_message(
+                format!(
+                    "no Ash-defined operation body registered for implementation {} operation {action}",
+                    implementation.as_str()
+                ),
+                runtime_ctx,
+            )
+        })?;
+
+    if body.params.len() != args.len() {
+        return Err(operational_eval_error_for_message(
+            format!(
+                "Ash-defined operation body {}.{} expected {} arguments but received {}",
+                binding.name,
+                action,
+                body.params.len(),
+                args.len()
+            ),
+            runtime_ctx,
+        ));
+    }
+
+    let (capability_ctx, mut dependency_values, mut dependency_bindings) = runtime_state
+        .implementation_binding_dependency_context(binding)
+        .await
+        .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
+
+    let mut admitted_bindings = runtime_ctx.admitted_capability_bindings().to_vec();
+    admitted_bindings.append(&mut dependency_bindings);
+    admitted_bindings.sort_unstable_by_key(|binding_id| binding_id.0);
+    admitted_bindings.dedup();
+
+    let mut body_ctx = Context::new()
+        .inherit_runtime_metadata_from(runtime_ctx)
+        .with_runtime_state_arc(std::sync::Arc::new(runtime_state.clone()))
+        .with_admitted_capability_bindings(admitted_bindings)
+        .with_act_env(crate::act_env::ActEnv::new(
+            capability_ctx,
+            outer_act_env.policies.clone(),
+            outer_act_env.provenance.clone(),
+        ));
+    for (name, value) in dependency_values.drain() {
+        body_ctx.set(name, value);
+    }
+    for (name, value) in body.params.iter().cloned().zip(args) {
+        body_ctx.set(name, value);
+    }
+
+    let value = eval_expr_force_async(&body.body, &body_ctx)
+        .await
+        .map_err(|err| {
+            operational_eval_error_for_message(
+                format!(
+                    "Ash-defined operation body {}.{} failed: {err}",
+                    binding.name, action
+                ),
+                runtime_ctx,
+            )
+        })?;
+    let value = if body.returns_act {
+        let mut call_ctx = body_ctx.clone();
+        call_ctx.set("__ash_operation_body_act".to_string(), value);
+        eval_expr_force_async(
+            &Expr::Call {
+                func: "__ash_operation_body_act".to_string(),
+                module: None,
+                arguments: vec![Expr::Literal(Value::ActEnvToken)],
+            },
+            &call_ctx,
+        )
+        .await?
+    } else {
+        value
+    };
+    if matches_normalized_act_result(&value) {
+        Ok(value)
+    } else {
+        Ok(Value::List(Box::new(vec![Value::ActEnvToken, value])))
+    }
 }
 
 pub async fn eval_expr_async(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
@@ -2416,7 +2547,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             }
 
             if module.is_none() && func == "invoke" {
-                return runtime_invoke(&args);
+                return runtime_invoke(&args, ctx);
             }
 
             if module.is_none() && func == "policy_check" {

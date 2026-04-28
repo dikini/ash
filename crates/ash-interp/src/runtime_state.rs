@@ -13,7 +13,7 @@ use ash_core::runtime::{
     ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance,
     ResourceSplitJoinPolicy, ResourceTypeId,
 };
-use ash_core::{ControlLink, Effect, Value, Workflow, WorkflowId};
+use ash_core::{ControlLink, Effect, Expr, Value, Workflow, WorkflowId};
 
 use crate::capability::CapabilityProvider;
 use crate::control_link::{
@@ -32,6 +32,40 @@ use crate::yield_state::SuspendedYields;
 use std::time::Duration;
 
 pub(crate) const SPAWNED_CHILD_CONTROL_BINDING: &str = "__ash_spawn_control_link";
+
+/// Runtime-registered executable body for one Ash-defined capability implementation operation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplementationOperationBody {
+    /// Operation parameter names, in positional invocation order.
+    pub params: Vec<String>,
+    /// Core expression body to evaluate in an effectful runtime context.
+    pub body: Expr,
+    /// Whether a returned closure should be forced as an `Act` body with the hidden `ActEnv` token.
+    pub returns_act: bool,
+}
+
+impl ImplementationOperationBody {
+    /// Create a runtime operation body from positional parameter names and a core expression.
+    #[must_use]
+    pub fn new<I, S>(params: I, body: Expr) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self {
+            params: params.into_iter().map(Into::into).collect(),
+            body,
+            returns_act: false,
+        }
+    }
+
+    /// Mark this operation body as returning an effectful `Act` closure.
+    #[must_use]
+    pub fn returns_act(mut self) -> Self {
+        self.returns_act = true;
+        self
+    }
+}
 
 /// Wrapper that adapts an `Arc<dyn CapabilityProvider>` to work as a `Box<dyn CapabilityProvider>`.
 ///
@@ -105,12 +139,21 @@ impl ProviderAdmissionSurface {
 #[derive(Debug)]
 struct ProjectedProviderWrapper {
     inner: Arc<dyn CapabilityProvider>,
+    projected_name: String,
     surface: ProviderAdmissionSurface,
 }
 
 impl ProjectedProviderWrapper {
-    fn new(inner: Arc<dyn CapabilityProvider>, surface: ProviderAdmissionSurface) -> Self {
-        Self { inner, surface }
+    fn new(
+        inner: Arc<dyn CapabilityProvider>,
+        projected_name: String,
+        surface: ProviderAdmissionSurface,
+    ) -> Self {
+        Self {
+            inner,
+            projected_name,
+            surface,
+        }
     }
 }
 
@@ -143,7 +186,7 @@ impl ash_core::capability::CapabilityProvider for ArcProviderWrapper {
 #[async_trait]
 impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
     fn name(&self) -> &str {
-        self.inner.name()
+        &self.projected_name
     }
 
     fn effect(&self) -> Effect {
@@ -407,6 +450,8 @@ pub struct RuntimeState {
     capability_bindings: Arc<AsyncMutex<HashMap<CapabilityBindingId, CapabilityBinding>>>,
     capability_interface_operations:
         Arc<AsyncMutex<HashMap<CapabilityInterfaceId, HashSet<String>>>>,
+    implementation_operation_bodies:
+        Arc<AsyncMutex<HashMap<(CapabilityImplementationId, String), ImplementationOperationBody>>>,
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
@@ -447,6 +492,81 @@ impl std::fmt::Debug for RuntimeState {
 }
 
 impl RuntimeState {
+    pub(crate) async fn implementation_binding_dependency_context(
+        &self,
+        binding: &CapabilityBinding,
+    ) -> ExecResult<(
+        crate::capability::CapabilityContext,
+        HashMap<String, Value>,
+        Vec<CapabilityBindingId>,
+    )> {
+        use crate::capability::{CapabilityContext, CapabilityRegistry};
+
+        let mut values = HashMap::new();
+        let mut registry = CapabilityRegistry::new();
+        let mut admitted_capability_dependencies = Vec::new();
+
+        for dependency in &binding.dependencies {
+            match dependency {
+                CapabilityBindingDependency::Capability {
+                    name, binding_id, ..
+                } => {
+                    let source = self.capability_binding(*binding_id).await.ok_or_else(|| {
+                        ExecError::InvalidRuntimeState(format!(
+                            "capability dependency '{name}' references unknown binding {binding_id:?}"
+                        ))
+                    })?;
+                    values.insert(name.clone(), Value::String(name.clone()));
+                    admitted_capability_dependencies.push(*binding_id);
+
+                    let CapabilityBindingKind::HostProvider {
+                        provider_name,
+                        admitted_capabilities,
+                    } = &source.kind
+                    else {
+                        values.insert(
+                            format!("__ash_capability_dependency_alias:{name}"),
+                            Value::String(source.name.clone()),
+                        );
+                        continue;
+                    };
+
+                    let providers = self
+                        .providers
+                        .lock()
+                        .expect("provider registry mutex poisoned");
+                    let provider = providers
+                        .get(provider_name)
+                        .ok_or_else(|| ExecError::CapabilityNotAvailable(provider_name.clone()))?;
+                    let surface = ProviderAdmissionSurface::from_capabilities(
+                        provider_name,
+                        admitted_capabilities,
+                    )
+                    .ok_or_else(|| {
+                        ExecError::InvalidRuntimeState(format!(
+                            "capability dependency '{name}' exposes no admitted provider surface"
+                        ))
+                    })?;
+                    registry.register(Box::new(ProjectedProviderWrapper::new(
+                        provider.clone(),
+                        name.clone(),
+                        surface,
+                    )));
+                }
+                CapabilityBindingDependency::Resource { .. } => {}
+                CapabilityBindingDependency::Config { name, value } => {
+                    values.insert(name.clone(), value.clone());
+                }
+            }
+        }
+
+        Ok((
+            CapabilityContext::with_registry(registry),
+            values,
+            admitted_capability_dependencies,
+        ))
+    }
+
     /// Create a new empty runtime state.
     pub fn new() -> Self {
         Self {
@@ -460,6 +580,7 @@ impl RuntimeState {
             resource_instances: Arc::new(AsyncMutex::new(HashMap::new())),
             capability_bindings: Arc::new(AsyncMutex::new(HashMap::new())),
             capability_interface_operations: Arc::new(AsyncMutex::new(HashMap::new())),
+            implementation_operation_bodies: Arc::new(AsyncMutex::new(HashMap::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
         }
@@ -727,7 +848,11 @@ impl RuntimeState {
                 continue;
             };
 
-            let wrapper = Box::new(ProjectedProviderWrapper::new(provider.clone(), surface));
+            let wrapper = Box::new(ProjectedProviderWrapper::new(
+                provider.clone(),
+                name.clone(),
+                surface,
+            ));
             registry.register(wrapper);
         }
 
@@ -821,6 +946,39 @@ impl RuntimeState {
             .lock()
             .await
             .get(interface)
+            .cloned()
+    }
+
+    /// Register one callable Ash-defined implementation operation body.
+    pub async fn register_implementation_operation_body(
+        &self,
+        implementation: CapabilityImplementationId,
+        operation: impl Into<String>,
+        body: ImplementationOperationBody,
+    ) -> ExecResult<()> {
+        let key = (implementation, operation.into());
+        let mut bodies = self.implementation_operation_bodies.lock().await;
+        if bodies.contains_key(&key) {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "implementation operation body for {}.{} already registered",
+                key.0.as_str(),
+                key.1
+            )));
+        }
+        bodies.insert(key, body);
+        Ok(())
+    }
+
+    /// Look up one registered Ash-defined implementation operation body.
+    pub async fn implementation_operation_body(
+        &self,
+        implementation: &CapabilityImplementationId,
+        operation: &str,
+    ) -> Option<ImplementationOperationBody> {
+        self.implementation_operation_bodies
+            .lock()
+            .await
+            .get(&(implementation.clone(), operation.to_string()))
             .cloned()
     }
 
@@ -1128,6 +1286,7 @@ impl RuntimeState {
             };
             registry.register(Box::new(ProjectedProviderWrapper::new(
                 provider.clone(),
+                provider_name.clone(),
                 surface,
             )));
         }

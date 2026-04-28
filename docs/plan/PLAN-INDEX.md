@@ -2943,7 +2943,7 @@ Introduce runtime resource instance carriers, resource lifecycle/access/split me
 ## Phase 104: Ash-Defined Capability Implementations and Pilot DX
 
 **Priority:** Medium (developer-facing proof of the new model)
-**Status:** 📝 Planned
+**Status:** 🚧 In Progress
 **Spec:** [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), [SPEC-005](../spec/SPEC-005-CLI.md), [SPEC-010](../spec/SPEC-010-EMBEDDING.md)
 **Plan:** [docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md](PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md)
 
@@ -2951,7 +2951,7 @@ Execute Ash-defined capability implementation bodies and prove the model with ad
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
-| [TASK-741](tasks/TASK-741-execute-ash-defined-capability-implementation-bodies.md) | Execute Ash-defined capability implementation bodies | 8 | 📝 Planned |
+| [TASK-741](tasks/TASK-741-execute-ash-defined-capability-implementation-bodies.md) | Execute Ash-defined capability implementation bodies | 8 | ✅ Complete |
 | [TASK-742](tasks/TASK-742-adapter-mock-replay-capability-examples.md) | Adapter, mock, and replay capability examples | 5 | 📝 Planned |
 | [TASK-743](tasks/TASK-743-cli-engine-capability-binding-configuration-surface.md) | CLI/engine capability binding configuration surface | 6 | 📝 Planned |
 | [TASK-744](tasks/TASK-744-standard-internal-kv-and-test-clock-pilots.md) | Standard internal KV and test-clock pilots | 7 | 📝 Planned |

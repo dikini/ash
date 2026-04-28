@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Phase 106 / SPEC-055: completed the explicit-target monad comprehension MVP. Bracket comprehensions now parse as source-fidelity surface AST, reject parser-only lowering, participate in cross-crate visitors, type-check/elaborate through the generalized typed-do Act/Proc dictionary path, and provide comprehension-specific diagnostics. Target inference, guards/filtering, pattern binders, user-defined Monad dictionaries, and pure List/Option/Result dictionaries remain deferred.
+
+- TASK-759 / Phase 106: completed monad comprehension closeout with explicit-target Act/Proc examples, deferred pure List/Option/Result example notes, and reconciled DESIGN-032, SPEC-055, spec index, PLAN-102, PLAN-INDEX, and task-status surfaces to reflect the implemented MVP.
+
 - TASK-758 / Phase 106: added comprehension-specific hard-error context and non-fatal teaching diagnostics for explicit-target, wrong-kind, missing-dictionary, pure `<-`, wrong-constructor, `let`-bound monadic value, and bare-boolean-qualifier cases, while preserving existing SPEC-054 do-notation diagnostics and avoiding claims of target inference, guard semantics, or pure List/Option/Result dictionaries.
 
 - TASK-757 / Phase 106: added typed comprehension checking and `elaborate_typed_comprehension`, requiring explicit MVP targets and normalizing qualifiers to the existing generalized typed-do checker/elaborator so Act/Proc comprehensions synthesize `K<A>` and produce the same dictionary-call core shape as equivalent `do:K` blocks. Added coverage for Act/Proc equivalence, pure `<-` rejection, constructor mismatch and `proc::from_act` behavior, wrong-kind/missing-dictionary targets, and missing target annotations.

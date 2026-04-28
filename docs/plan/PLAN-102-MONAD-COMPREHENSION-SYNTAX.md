@@ -12,7 +12,7 @@
 
 ## Phase 106: Monad Comprehension Syntax
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Spec:** [SPEC-055](../spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md)
 **Design:** [DESIGN-032](../design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md)
 **Depends on:** Phase 105 / [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), especially target-preserving `DoBlock` parsing, MVP Act/Proc dictionaries, typed elaboration, and diagnostics.
@@ -25,8 +25,8 @@
 | [TASK-755](tasks/TASK-755-comprehension-surface-ast-and-parser.md) | Add comprehension surface AST and parser support for `[result | qualifiers]: K` | Substrate | 7 | ✅ Complete |
 | [TASK-756](tasks/TASK-756-comprehension-lowering-boundary-and-cross-crate-visitors.md) | Wire non-typechecking visitors and enforce parser-only lowering rejection | Substrate | 5 | ✅ Complete |
 | [TASK-757](tasks/TASK-757-comprehension-typed-elaboration.md) | Reuse typed-do target resolution and elaboration for comprehensions | Semantic | 8 | ✅ Complete |
-| [TASK-758](tasks/TASK-758-comprehension-diagnostics.md) | Add comprehension-specific diagnostics and non-fatal teaching diagnostics | Semantic | 5 | 📝 Planned |
-| [TASK-759](tasks/TASK-759-monad-comprehension-docs-examples-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | 📝 Planned |
+| [TASK-758](tasks/TASK-758-comprehension-diagnostics.md) | Add comprehension-specific diagnostics and non-fatal teaching diagnostics | Semantic | 5 | ✅ Complete |
+| [TASK-759](tasks/TASK-759-monad-comprehension-docs-examples-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | ✅ Complete |
 
 Estimated total: 32 hours.
 

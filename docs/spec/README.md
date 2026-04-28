@@ -43,7 +43,7 @@ This directory contains the canonical specifications for the Ash workflow langua
 | [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) | Capability Interfaces and Implementations | Draft | Stateless capability interfaces, Ash-defined implementation recipes, binding-time selection, module visibility, conformance, derived implementations, and Phase 104 runtime API invocation pilots |
 | [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) | Runtime Resources and Authority Provenance | Draft | Resource types, resource instances, resource bindings, host/internal/derived authority provenance, lifecycle, split/join policy, resource-backed operation evidence, and Phase 104 internal-resource pilots |
 | [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md) | Generalized Typed Do-Notation | Implemented MVP | Explicit `do:K` computation blocks, MVP Act/Proc Monad-shaped dictionaries, typed elaboration, Act migration, tower/failure behavior, and diagnostics |
-| [SPEC-055](SPEC-055-MONAD-COMPREHENSION-SYNTAX.md) | Monad Comprehension Syntax | Draft | Bracket comprehension syntax `[result | qualifiers]: K` as a container-view spelling of generalized typed do-notation, sharing target resolution, typed elaboration, tower rules, and diagnostics with SPEC-054 |
+| [SPEC-055](SPEC-055-MONAD-COMPREHENSION-SYNTAX.md) | Monad Comprehension Syntax | Implemented MVP | Explicit-target bracket comprehension syntax `[result | qualifiers]: K` as a container-view spelling of generalized typed do-notation for MVP Act/Proc targets; parser-surface fidelity, typed-do elaboration reuse, tower rules, and diagnostics are implemented, while inference, guards, and pure List/Option/Result dictionaries are deferred |
 
 ## Deprecated Specifications
 

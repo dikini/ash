@@ -76,17 +76,32 @@ fn implementation_capability_binding_carrier_keeps_dependency_records_only() {
         binding.dependencies,
         vec![dependency, capability_dep, config_dep]
     );
-    assert_eq!(
-        binding.authority,
+    match binding.authority {
         CapabilityAuthorityProvenance::DerivedAuthority {
-            dependency_names: vec![
-                "store".to_string(),
-                "clock".to_string(),
-                "prefix".to_string()
-            ],
-            notes: vec![
-                "implementation binding derives only from admitted dependencies".to_string()
-            ],
+            dependency_names,
+            notes,
+        } => {
+            assert_eq!(
+                dependency_names,
+                vec![
+                    "store".to_string(),
+                    "clock".to_string(),
+                    "prefix".to_string()
+                ]
+            );
+            let notes_text = notes.join("\n");
+            assert!(
+                notes_text
+                    .contains("implementation binding derives only from admitted dependencies")
+            );
+            assert!(notes_text.contains(&format!(
+                "resource store: id={} type=KvStore",
+                resource_id.0
+            )));
+            assert!(notes_text.contains("capability clock: binding="));
+            assert!(notes_text.contains("interface=Clock"));
+            assert!(notes_text.contains("config prefix: inert dependency"));
         }
-    );
+        other => panic!("expected derived authority provenance, got {other:?}"),
+    }
 }

@@ -280,6 +280,8 @@ pub struct ImplementationBindingAdmission {
     pub implementation: CapabilityImplementationId,
     /// Explicit source-name dependencies.
     pub dependencies: Vec<ImplementationBindingDependencySource>,
+    /// Metadata-only operation names the implementation asks to expose.
+    pub requested_operations: Vec<String>,
 }
 
 impl ImplementationBindingAdmission {
@@ -295,6 +297,7 @@ impl ImplementationBindingAdmission {
             interface,
             implementation,
             dependencies: Vec::new(),
+            requested_operations: Vec::new(),
         }
     }
 
@@ -302,6 +305,17 @@ impl ImplementationBindingAdmission {
     #[must_use]
     pub fn with_dependency(mut self, dependency: ImplementationBindingDependencySource) -> Self {
         self.dependencies.push(dependency);
+        self
+    }
+
+    /// Attach the metadata-only operation names this implementation requests to expose.
+    #[must_use]
+    pub fn with_requested_operations<I, S>(mut self, operations: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.requested_operations = operations.into_iter().map(Into::into).collect();
         self
     }
 }
@@ -317,6 +331,8 @@ pub struct RuntimeState {
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
     resource_instances: Arc<AsyncMutex<HashMap<ResourceId, ResourceInstance>>>,
     capability_bindings: Arc<AsyncMutex<HashMap<CapabilityBindingId, CapabilityBinding>>>,
+    capability_interface_operations:
+        Arc<AsyncMutex<HashMap<CapabilityInterfaceId, HashSet<String>>>>,
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
@@ -343,6 +359,10 @@ impl std::fmt::Debug for RuntimeState {
                 "capability_bindings",
                 &"<HashMap<CapabilityBindingId, CapabilityBinding>>",
             )
+            .field(
+                "capability_interface_operations",
+                &"<HashMap<CapabilityInterfaceId, HashSet<String>>>",
+            )
             .field("last_execution_record", &self.last_execution_record)
             .field(
                 "providers",
@@ -365,6 +385,7 @@ impl RuntimeState {
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
             resource_instances: Arc::new(AsyncMutex::new(HashMap::new())),
             capability_bindings: Arc::new(AsyncMutex::new(HashMap::new())),
+            capability_interface_operations: Arc::new(AsyncMutex::new(HashMap::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
         }
@@ -681,6 +702,54 @@ impl RuntimeState {
         Ok(admitted)
     }
 
+    /// Register the canonical runtime operation surface for one capability interface.
+    ///
+    /// This metadata is normally sourced from already typechecked capability-interface declarations.
+    /// Runtime admission uses it as the authority for metadata-only non-widening checks instead of
+    /// trusting caller-supplied operation lists on individual implementation binding admissions.
+    pub async fn register_capability_interface_operations<I, S>(
+        &self,
+        interface: CapabilityInterfaceId,
+        operations: I,
+    ) -> ExecResult<()>
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let operations = operations
+            .into_iter()
+            .map(Into::into)
+            .collect::<HashSet<_>>();
+        if operations.is_empty() {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "capability interface {} must declare at least one operation",
+                interface.as_str()
+            )));
+        }
+
+        let mut interfaces = self.capability_interface_operations.lock().await;
+        if interfaces.contains_key(&interface) {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "capability interface {} operation surface already registered",
+                interface.as_str()
+            )));
+        }
+        interfaces.insert(interface, operations);
+        Ok(())
+    }
+
+    /// Return the registered operation surface for one capability interface.
+    pub async fn capability_interface_operations(
+        &self,
+        interface: &CapabilityInterfaceId,
+    ) -> Option<HashSet<String>> {
+        self.capability_interface_operations
+            .lock()
+            .await
+            .get(interface)
+            .cloned()
+    }
+
     /// Admit one implementation-backed capability binding from explicit dependency source names.
     ///
     /// Resource dependencies are resolved only from `resource_sources`, and capability dependencies
@@ -691,6 +760,28 @@ impl RuntimeState {
         admission: ImplementationBindingAdmission,
         resource_sources: &HashMap<String, ResourceId>,
     ) -> ExecResult<CapabilityBindingId> {
+        if !admission.requested_operations.is_empty() {
+            let Some(registered_operations) = self
+                .capability_interface_operations(&admission.interface)
+                .await
+            else {
+                return Err(ExecError::InvalidRuntimeState(format!(
+                    "cannot validate requested operations for unregistered interface {}",
+                    admission.interface.as_str()
+                )));
+            };
+            let allowed_operations: HashSet<&str> =
+                registered_operations.iter().map(String::as_str).collect();
+            for operation in &admission.requested_operations {
+                if !allowed_operations.contains(operation.as_str()) {
+                    return Err(ExecError::InvalidRuntimeState(format!(
+                        "requested operation '{operation}' is outside registered interface {}",
+                        admission.interface.as_str()
+                    )));
+                }
+            }
+        }
+
         let mut dependencies = Vec::with_capacity(admission.dependencies.len());
         for dependency in admission.dependencies {
             match dependency {
@@ -736,6 +827,21 @@ impl RuntimeState {
             admission.implementation,
             dependencies,
         );
+        let binding = admission
+            .requested_operations
+            .iter()
+            .fold(binding, |binding, operation| {
+                let source_names = binding
+                    .dependencies
+                    .iter()
+                    .filter(|dependency| dependency.carries_authority())
+                    .map(|dependency| dependency.name().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                binding.with_authority_note(format!(
+                    "operation {operation} derives from {source_names}"
+                ))
+            });
         self.admit_capability_binding(binding).await
     }
 
@@ -757,6 +863,16 @@ impl RuntimeState {
                 }
             }
             CapabilityBindingKind::Implementation { .. } => {
+                if !binding
+                    .dependencies
+                    .iter()
+                    .any(CapabilityBindingDependency::carries_authority)
+                {
+                    return Err(ExecError::InvalidRuntimeState(
+                        "implementation capability binding must derive authority from at least one resource or capability dependency"
+                            .to_string(),
+                    ));
+                }
                 self.validate_capability_binding_dependencies(&binding.dependencies)
                     .await?;
             }

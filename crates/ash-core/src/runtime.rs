@@ -384,6 +384,38 @@ impl CapabilityBindingDependency {
             | Self::Config { name, .. } => name,
         }
     }
+
+    /// Return true when this dependency can carry runtime authority.
+    #[must_use]
+    pub fn carries_authority(&self) -> bool {
+        matches!(self, Self::Resource { .. } | Self::Capability { .. })
+    }
+
+    /// Render one audit/provenance note preserving stable source identity.
+    #[must_use]
+    pub fn provenance_note(&self) -> String {
+        match self {
+            Self::Resource {
+                name,
+                resource_id,
+                type_id,
+            } => format!(
+                "resource {name}: id={} type={}",
+                resource_id.0,
+                type_id.as_str()
+            ),
+            Self::Capability {
+                name,
+                binding_id,
+                interface,
+            } => format!(
+                "capability {name}: binding={} interface={}",
+                binding_id.0,
+                interface.as_str()
+            ),
+            Self::Config { name, .. } => format!("config {name}: inert dependency"),
+        }
+    }
 }
 
 /// Runtime shape of an admitted capability binding.
@@ -455,6 +487,13 @@ impl CapabilityBinding {
             .iter()
             .map(|dependency| dependency.name().to_string())
             .collect();
+        let mut notes =
+            vec!["implementation binding derives only from admitted dependencies".to_string()];
+        notes.extend(
+            dependencies
+                .iter()
+                .map(CapabilityBindingDependency::provenance_note),
+        );
         Self {
             id,
             name: name.into(),
@@ -463,11 +502,21 @@ impl CapabilityBinding {
             dependencies,
             authority: CapabilityAuthorityProvenance::DerivedAuthority {
                 dependency_names,
-                notes: vec![
-                    "implementation binding derives only from admitted dependencies".to_string(),
-                ],
+                notes,
             },
         }
+    }
+
+    /// Add one authority-provenance audit note.
+    #[must_use]
+    pub fn with_authority_note(mut self, note: impl Into<String>) -> Self {
+        match &mut self.authority {
+            CapabilityAuthorityProvenance::HostAuthority { notes }
+            | CapabilityAuthorityProvenance::DerivedAuthority { notes, .. } => {
+                notes.push(note.into())
+            }
+        }
+        self
     }
 }
 

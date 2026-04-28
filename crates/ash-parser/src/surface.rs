@@ -1053,6 +1053,39 @@ pub enum DoStmt {
     },
 }
 
+/// A qualifier inside a bracket comprehension expression.
+///
+/// Surface-only parser substrate for SPEC-055. These mirror the non-return
+/// statement forms accepted by generalized typed do-notation.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ComprehensionQualifier {
+    /// Monadic bind qualifier: `name <- expr`.
+    Bind {
+        /// Binding name.
+        name: Name,
+        /// Bound expression.
+        value: Box<Expr>,
+        /// Source span covering the whole qualifier.
+        span: Span,
+    },
+    /// Discarding monadic bind qualifier: `_ <- expr`.
+    DiscardBind {
+        /// Bound expression.
+        value: Box<Expr>,
+        /// Source span covering the whole qualifier.
+        span: Span,
+    },
+    /// Pure let qualifier: `let name = expr`.
+    Let {
+        /// Binding name.
+        name: Name,
+        /// Bound expression.
+        value: Box<Expr>,
+        /// Source span covering the whole qualifier.
+        span: Span,
+    },
+}
+
 /// Expression types.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -1239,6 +1272,20 @@ pub enum Expr {
         /// Statements inside the do block.
         stmts: Vec<DoStmt>,
         /// Source span covering the whole block.
+        span: Span,
+    },
+    /// Bracket comprehension expression: `[result | qualifiers]: K`.
+    ///
+    /// Surface-only substrate for SPEC-055. This must not lower until typed
+    /// elaboration normalizes it through generalized typed do-notation.
+    Comprehension {
+        /// Result expression before `|`.
+        result: Box<Expr>,
+        /// Comma-separated qualifier list after `|`; parser requires non-empty.
+        qualifiers: Vec<ComprehensionQualifier>,
+        /// Optional comprehension-specific target annotation after `]`.
+        target: Option<DoTarget>,
+        /// Source span covering the whole comprehension and target annotation.
         span: Span,
     },
 }
@@ -1661,6 +1708,7 @@ impl Spanned for Expr {
             Expr::FnApply { span, .. } => *span,
             Expr::ActBlock { span, .. } => *span,
             Expr::DoBlock { span, .. } => *span,
+            Expr::Comprehension { span, .. } => *span,
         }
     }
 }

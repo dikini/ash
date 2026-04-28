@@ -9,11 +9,11 @@ use crate::exhaustiveness::{Coverage, check_exhaustive};
 use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo};
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
-use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
+use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
-    ActStmt, BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
+    ActStmt, BinaryOp, DoStmt, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
 };
 use ash_parser::token::Span;
 use std::collections::HashSet;
@@ -27,6 +27,15 @@ pub struct CheckResult {
     pub substitution: Substitution,
     /// Any errors encountered
     pub errors: Vec<ConstructorError>,
+}
+
+/// Result of type-directed generalized do-block elaboration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DoElaborationResult {
+    /// Lowered core expression produced from resolved dictionary evidence.
+    pub expr: CoreExpr,
+    /// The checked computation type, e.g. `Act<T>` or `Proc<T>`.
+    pub ty: Type,
 }
 
 impl CheckResult {
@@ -628,13 +637,11 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             }
         }
 
-        Expr::DoBlock { target, span, .. } => match crate::do_target::resolve_do_target(env, target) {
-            Ok(_dictionary) => CheckResult::error(ConstructorError::UnsupportedExpression {
-                kind: "generalized do-block statement type checking and typed elaboration are not implemented (TASK-749)".to_string(),
-                span: *span,
-            }),
-            Err(err) => CheckResult::error(err),
-        },
+        Expr::DoBlock {
+            target,
+            stmts,
+            span,
+        } => check_do_block(env, target, stmts, *span),
 
         Expr::ActBlock { stmts, span, .. } => {
             let mut block_env = env.clone();
@@ -718,6 +725,248 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 kind: crate::Kind::Type,
             })
         }
+    }
+}
+
+/// Type-check and elaborate a generalized do-block into core dictionary calls.
+///
+/// This is the typed lowering boundary for `Expr::DoBlock`: raw parser lowering
+/// rejects `DoBlock`, and callers that need core expressions must come through
+/// this function after do-target resolution and statement checking.
+pub fn elaborate_typed_do_block(
+    env: &TypeEnv,
+    expr: &Expr,
+) -> Result<DoElaborationResult, Vec<ConstructorError>> {
+    let Expr::DoBlock {
+        target,
+        stmts,
+        span,
+    } = expr
+    else {
+        return Err(vec![ConstructorError::UnsupportedExpression {
+            kind: "typed do elaboration requires a do block expression".to_string(),
+            span: get_expr_span(expr),
+        }]);
+    };
+
+    let check = check_do_block(env, target, stmts, *span);
+    if !check.is_ok() {
+        return Err(check.errors);
+    }
+
+    let dictionary = crate::do_target::resolve_do_target(env, target).map_err(|err| vec![err])?;
+    let core = elaborate_do_stmts(stmts, &dictionary).map_err(|err| vec![err])?;
+    Ok(DoElaborationResult {
+        expr: core,
+        ty: check.ty,
+    })
+}
+
+fn elaborate_do_stmts(
+    stmts: &[DoStmt],
+    dictionary: &crate::do_target::DoDictionary,
+) -> Result<CoreExpr, ConstructorError> {
+    match stmts {
+        [] => Err(ConstructorError::UnsupportedExpression {
+            kind: "empty do block".to_string(),
+            span: Span::default(),
+        }),
+        [DoStmt::Return { value, .. }] => Ok(dictionary_call(
+            &dictionary.return_op,
+            vec![elaborate_surface_expr(value)?],
+        )),
+        [DoStmt::Let { name, value, .. }, rest @ ..] => Ok(CoreExpr::Let {
+            pattern: CorePattern::Variable {
+                name: name.to_string(),
+                span: ash_core::Span::default(),
+            },
+            expr: Box::new(elaborate_surface_expr(value)?),
+            body: Box::new(elaborate_do_stmts(rest, dictionary)?),
+            span: ash_core::Span::default(),
+        }),
+        [DoStmt::Bind { name, value, .. }, rest @ ..] => {
+            let continuation = CoreExpr::FnDef {
+                params: vec![(name.to_string(), None)],
+                return_type: None,
+                body: Box::new(elaborate_do_stmts(rest, dictionary)?),
+            };
+            Ok(dictionary_call(
+                &dictionary.bind_op,
+                vec![elaborate_surface_expr(value)?, continuation],
+            ))
+        }
+        [stmt, ..] => Err(ConstructorError::UnsupportedExpression {
+            kind: "invalid do statement sequence (return must be last)".to_string(),
+            span: do_stmt_span(stmt),
+        }),
+    }
+}
+
+fn dictionary_call(op: &crate::do_target::DoDictionaryOp, arguments: Vec<CoreExpr>) -> CoreExpr {
+    match op {
+        crate::do_target::DoDictionaryOp::HiddenActReturn => CoreExpr::Call {
+            func: "unit".to_string(),
+            module: None,
+            arguments,
+        },
+        crate::do_target::DoDictionaryOp::HiddenActBind => CoreExpr::Call {
+            func: "bind".to_string(),
+            module: None,
+            arguments,
+        },
+        crate::do_target::DoDictionaryOp::Ordinary(name) => CoreExpr::Call {
+            func: name.name.clone(),
+            module: (!name.module.is_empty()).then(|| name.module.join("::")),
+            arguments,
+        },
+    }
+}
+
+fn elaborate_surface_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
+    ash_parser::lower_expr(expr).map_err(|err| ConstructorError::UnsupportedExpression {
+        kind: format!("failed to lower do-block subexpression after typed elaboration: {err}"),
+        span: get_expr_span(expr),
+    })
+}
+
+fn check_do_block(
+    env: &TypeEnv,
+    target: &ash_parser::surface::DoTarget,
+    stmts: &[DoStmt],
+    span: Span,
+) -> CheckResult {
+    let dictionary = match crate::do_target::resolve_do_target(env, target) {
+        Ok(dictionary) => dictionary,
+        Err(err) => return CheckResult::error(err),
+    };
+
+    if stmts.is_empty() {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "empty do block".to_string(),
+            span,
+        });
+    }
+
+    for (index, stmt) in stmts.iter().enumerate() {
+        if matches!(stmt, DoStmt::Return { .. }) && index + 1 < stmts.len() {
+            return CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "return must be the last statement in a do block".to_string(),
+                span: do_stmt_span(stmt),
+            });
+        }
+    }
+
+    if !matches!(stmts.last(), Some(DoStmt::Return { .. })) {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "do block must end with a return statement".to_string(),
+            span,
+        });
+    }
+
+    let mut block_env = env.clone();
+    let mut substitution = Substitution::new();
+    let mut errors: Vec<ConstructorError> = Vec::new();
+    let mut return_ty = Type::Null;
+
+    for stmt in stmts {
+        match stmt {
+            DoStmt::Let { name, value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+                let value_ty = substitution.apply(&value_result.ty);
+                block_env.bind_variable(name.as_ref(), value_ty);
+            }
+            DoStmt::Bind { name, value, span } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+
+                let value_ty = substitution.apply(&value_result.ty);
+                match monadic_inner_type(&value_ty, &dictionary.value_constructor) {
+                    Some(bound_ty) => block_env.bind_variable(name.as_ref(), bound_ty),
+                    None => errors.push(do_bind_type_error(
+                        target.name.as_ref(),
+                        &dictionary.value_constructor,
+                        &value_ty,
+                        *span,
+                    )),
+                }
+            }
+            DoStmt::Return { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+                return_ty = substitution.apply(&value_result.ty);
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        };
+    }
+
+    CheckResult {
+        ty: Type::Constructor {
+            name: dictionary.value_constructor,
+            args: vec![return_ty],
+            kind: crate::Kind::Type,
+        },
+        substitution,
+        errors: Vec::new(),
+    }
+}
+
+fn do_stmt_span(stmt: &DoStmt) -> Span {
+    match stmt {
+        DoStmt::Let { span, .. } | DoStmt::Bind { span, .. } | DoStmt::Return { span, .. } => *span,
+    }
+}
+
+fn monadic_inner_type(ty: &Type, constructor: &crate::QualifiedName) -> Option<Type> {
+    match ty {
+        Type::Constructor { name, args, .. } if name == constructor && args.len() == 1 => {
+            Some(args[0].clone())
+        }
+        _ => None,
+    }
+}
+
+fn do_bind_type_error(
+    target_name: &str,
+    expected_constructor: &crate::QualifiedName,
+    actual_ty: &Type,
+    span: Span,
+) -> ConstructorError {
+    let hint = match actual_ty {
+        Type::Constructor { name, args, .. } if args.len() == 1 && name != expected_constructor => {
+            if target_name == "Proc" && name.name == "Act" {
+                " use proc::from_act for an explicit Act-to-Proc lift."
+            } else {
+                " use an explicit lift for cross-constructor sequencing."
+            }
+        }
+        _ => " pure expressions cannot be used with <-; use let for ordinary bindings.",
+    };
+
+    ConstructorError::UnsupportedExpression {
+        kind: format!(
+            "do:{target_name} bind RHS for <- must have type {expected_constructor}<T>, found {actual_ty};{hint}"
+        ),
+        span,
     }
 }
 

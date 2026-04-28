@@ -1,6 +1,6 @@
 # TASK-749: Typed Do Elaboration and Lowering
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,8 +15,8 @@ Type-check generalized do-block statements and lower them only after typed elabo
 
 ## Dependencies
 
-- 📝 TASK-747: surface AST/parser substrate.
-- 📝 TASK-748: do-target dictionary resolution.
+- ✅ TASK-747: surface AST/parser substrate.
+- ✅ TASK-748: do-target dictionary resolution.
 
 ## Requirements
 
@@ -73,11 +73,19 @@ cargo fmt --check
 
 ## Verification Steps
 
-- [ ] Positive Act/Proc type tests pass.
-- [ ] Negative wrong-constructor and pure-RHS tests pass.
-- [ ] Lowering is demonstrably type-directed for `DoBlock`.
-- [ ] Legacy `ActBlock` behavior remains unchanged until TASK-750.
-- [ ] Independent review confirms no parser-only lowering regression.
+- [x] Positive Act/Proc type tests pass.
+- [x] Negative wrong-constructor and pure-RHS tests pass.
+- [x] Lowering is demonstrably type-directed for `DoBlock`.
+- [x] Legacy `ActBlock` behavior remains unchanged until TASK-750.
+- [x] Independent review confirms no parser-only lowering regression.
+
+## Completion Notes
+
+- `check_expr` now type-checks `DoBlock` statements left-to-right and returns `Act<T>` / `Proc<T>` for valid MVP targets.
+- `elaborate_typed_do_block` is the typed lowering boundary: it reuses resolved TASK-748 dictionary evidence and emits core `unit` / `bind` calls only after successful type checking.
+- Raw parser-surface `lower_expr(Expr::DoBlock)` rejects with an explicit typed-elaboration-required error to prevent parser-only lowering from bypassing target/dictionary checks.
+- Bind RHS constructor matching uses full `QualifiedName` identity, not just the constructor base name.
+- The Act compatibility/migration path remains deferred to TASK-750.
 
 ## Dependencies for Next Task
 

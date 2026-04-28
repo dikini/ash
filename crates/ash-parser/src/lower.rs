@@ -1617,10 +1617,9 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
 
         Expr::ActBlock { stmts, .. } => lower_act_block(stmts),
 
-        Expr::DoBlock { .. } => Err(LoweringError::UnsupportedFeature(
-            "generalized do-block lowering is not implemented (TASK-747 parser substrate only)"
-                .to_string(),
-        )),
+        Expr::DoBlock { .. } => Err(LoweringError::ExprNotLowerable {
+            kind: "generic do block requires typed do elaboration before lowering",
+        }),
     }
 }
 
@@ -2031,7 +2030,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lower_do_block_is_explicitly_unsupported() {
+    fn test_lower_do_block_act_return_rejects_parser_only_lowering() {
         let surface = SurfaceExpr::DoBlock {
             target: DoTarget {
                 name: "Act".into(),
@@ -2045,11 +2044,49 @@ mod tests {
             span: Span::default(),
         };
 
-        let err = lower_expr(&surface).expect_err("TASK-747 must not lower DoBlock");
-        assert!(
-            matches!(err, LoweringError::UnsupportedFeature(ref message) if message.contains("TASK-747 parser substrate only")),
-            "expected explicit unsupported-feature boundary, got {err:?}"
-        );
+        let err =
+            lower_expr(&surface).expect_err("generic do block must require typed elaboration");
+        assert!(matches!(
+            err,
+            LoweringError::ExprNotLowerable { kind }
+                if kind.contains("typed do elaboration")
+        ));
+    }
+
+    #[test]
+    fn test_lower_do_block_proc_bind_rejects_parser_only_lowering() {
+        let surface = SurfaceExpr::DoBlock {
+            target: DoTarget {
+                name: "Proc".into(),
+                args: vec![],
+                span: Span::default(),
+            },
+            stmts: vec![
+                DoStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(SurfaceExpr::Call {
+                        func: "unit".into(),
+                        module: Some("proc".into()),
+                        args: vec![int_expr(1)],
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+                DoStmt::Return {
+                    value: Box::new(var_expr("x")),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+
+        let err =
+            lower_expr(&surface).expect_err("generic do block must require typed elaboration");
+        assert!(matches!(
+            err,
+            LoweringError::ExprNotLowerable { kind }
+                if kind.contains("typed do elaboration")
+        ));
     }
 
     #[test]

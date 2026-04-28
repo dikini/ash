@@ -1,6 +1,6 @@
 # TASK-747: Do-Block Surface AST and Parser Substrate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Add parser and surface AST substrate for generalized `do:K { ... }` blocks witho
 ## Dependencies
 
 - ✅ TASK-746: spec/plan packet.
-- 📝 Phase 104 closeout, unless user authorizes isolated parser-only work.
+- ✅ Phase 104 closeout complete; Phase 105 implementation authorized in a dedicated worktree.
 
 ## Requirements
 
@@ -86,11 +86,19 @@ Expected: new do parser tests pass and existing act parser tests still pass.
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-parser do_block -- --nocapture` passes.
-- [ ] Existing `act_block` parser/lowering tests still pass.
-- [ ] `cargo fmt --check` passes.
-- [ ] No parser lowering of `DoBlock` happens in this task.
-- [ ] Independent review confirms Phase 104 code paths were not touched.
+- [x] `cargo test -p ash-parser do_block -- --nocapture` passes.
+- [x] Existing `act_block` parser/lowering tests still pass.
+- [x] `cargo fmt --check` passes.
+- [x] No parser lowering of `DoBlock` happens in this task; `lower_expr` returns an explicit unsupported-feature error.
+- [x] Independent review completed; blockers around parser-state restoration and expression-precedence integration were fixed.
+
+## Completion Notes
+
+- Added `DoTarget`, `DoStmt`, and `Expr::DoBlock` parser-surface carriers.
+- Added `do:K { ... }` parsing for `let`, `<-`, and final `return` statements.
+- Integrated do-blocks as primary expressions so they participate in ordinary binary and pipe precedence.
+- Preserved legacy `act { ret ...; }` parsing and act-block lowering behavior for TASK-750 compatibility work.
+- Added explicit unsupported boundaries for generic lowering and type checking until TASK-748/TASK-749 provide target resolution and typed elaboration.
 
 ## Dependencies for Next Task
 

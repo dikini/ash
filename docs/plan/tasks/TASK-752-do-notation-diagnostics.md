@@ -1,6 +1,6 @@
 # TASK-752: Do-Notation Diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,9 +13,9 @@ Implement targeted diagnostics and migration warnings for generalized do-notatio
 
 ## Dependencies
 
-- 📝 TASK-749: typed do elaboration.
-- 📝 TASK-750: Act migration.
-- 📝 TASK-751: Proc tower integration.
+- ✅ TASK-749: typed do elaboration.
+- ✅ TASK-750: Act migration.
+- ✅ TASK-751: Proc tower integration.
 
 ## Requirements
 
@@ -72,11 +72,18 @@ Run focused CLI/check tests if the existing CLI exposes parser/type diagnostics 
 
 ## Verification Steps
 
-- [ ] Every SPEC-054 §13 diagnostic family has a test.
-- [ ] Hints do not mention unavailable syntax except where explicitly future/deferred.
-- [ ] Diagnostics preserve source spans.
-- [ ] `cargo test --workspace do_diagnostic -- --nocapture` or equivalent passes.
-- [ ] Independent review checks diagnostic wording for accuracy and no overclaiming.
+- [x] Every SPEC-054 §13 diagnostic family has a test.
+- [x] Hints do not mention unavailable syntax except where explicitly future/deferred.
+- [x] Diagnostics preserve source spans.
+- [x] `cargo test -p ash-typeck --test task_752_do_diagnostics -- --nocapture` passes.
+- [x] Independent review checks diagnostic wording for accuracy and no overclaiming.
+
+## Completion Notes
+
+- Added `crates/ash-typeck/tests/task_752_do_diagnostics.rs` to cover SPEC-054 §13 diagnostic families with substring/golden-style assertions.
+- Tightened unknown-target wording to include a recovery hint for registered computation constructors.
+- Added `do_notation_diagnostics` support for warning-like teaching diagnostics, including monadic values bound with `let` and legacy `act { ... }` migration diagnostics, while keeping hard errors in `check_expr`.
+- Reused TASK-750 parser regressions for malformed new-form `act { return ...; }` trailing semicolon and expression/workflow `act` ambiguity.
 
 ## Dependencies for Next Task
 

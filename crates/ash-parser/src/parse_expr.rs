@@ -11,8 +11,8 @@ use crate::input::{ParseInput, Position};
 use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
-    ActStmt, BinaryOp, BlockStmt, ConstructorPayload, Expr, Literal, MatchArm, Name, Pattern,
-    UnaryOp,
+    ActStmt, BinaryOp, BlockStmt, ConstructorPayload, DoStmt, DoTarget, Expr, Literal, MatchArm,
+    Name, Pattern, Type, UnaryOp,
 };
 use crate::token::Span;
 
@@ -26,6 +26,149 @@ fn input_starts_with_keyword(input: &ParseInput, word: &str) -> bool {
         .chars()
         .next()
         .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+}
+
+/// Try to parse a generalized do block expression: `do:K { ... }`.
+pub(crate) fn parse_do_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    if !input_starts_with_keyword(input, "do") {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    let start_pos = input.state.pos;
+    let _ = keyword("do").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let target_start = input.state.pos;
+    let target_name: Name = identifier(input)?.into();
+    skip_whitespace_and_comments(input);
+    let target_args = parse_do_target_args(input)?;
+    let target_span = span_from(&target_start, &input.state.pos);
+    let target = DoTarget {
+        name: target_name,
+        args: target_args,
+        span: target_span,
+    };
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut stmts = Vec::new();
+    while !input.input.starts_with('}') {
+        let stmt = parse_do_stmt(input)?;
+        let is_return = matches!(stmt, DoStmt::Return { .. });
+        stmts.push(stmt);
+        skip_whitespace_and_comments(input);
+        if is_return {
+            break;
+        }
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+    let span = span_from(&start_pos, &input.state.pos);
+
+    Ok(Expr::DoBlock {
+        target,
+        stmts,
+        span,
+    })
+}
+
+fn parse_do_target_args(input: &mut ParseInput) -> ModalResult<Vec<Type>> {
+    if !input.input.starts_with('<') {
+        return Ok(Vec::new());
+    }
+
+    let _ = literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut args = Vec::new();
+    if input.input.starts_with('>') {
+        let _ = literal_str(">").parse_next(input)?;
+        return Ok(args);
+    }
+
+    loop {
+        args.push(parse_do_type(input)?);
+        skip_whitespace_and_comments(input);
+        if !input.input.starts_with(',') {
+            break;
+        }
+        let _ = literal_str(",").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str(">").parse_next(input)?;
+    Ok(args)
+}
+
+fn parse_do_type(input: &mut ParseInput) -> ModalResult<Type> {
+    let name: Name = identifier(input)?.into();
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with('<') {
+        let args = parse_do_target_args(input)?;
+        Ok(Type::Constructor { name, args })
+    } else {
+        Ok(Type::Name(name))
+    }
+}
+
+fn parse_do_stmt(input: &mut ParseInput) -> ModalResult<DoStmt> {
+    let stmt_start = input.state.pos;
+
+    if input_starts_with_keyword(input, "let") {
+        let _ = keyword("let").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let name: Name = identifier(input)?.into();
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("=").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let value = expr(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(";").parse_next(input)?;
+        let span = span_from(&stmt_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        return Ok(DoStmt::Let {
+            name,
+            value: Box::new(value),
+            span,
+        });
+    }
+
+    if input_starts_with_keyword(input, "return") {
+        let _ = keyword("return").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let value = expr(input)?;
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(';') {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+        let span = span_from(&stmt_start, &input.state.pos);
+        return Ok(DoStmt::Return {
+            value: Box::new(value),
+            span,
+        });
+    }
+
+    let name: Name = identifier(input)?.into();
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("<-").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let value = expr(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+    let span = span_from(&stmt_start, &input.state.pos);
+    skip_whitespace_and_comments(input);
+    Ok(DoStmt::Bind {
+        name,
+        value: Box::new(value),
+        span,
+    })
 }
 
 /// Try to parse an act block expression: `act { stmt; stmt; ... }`. SPEC-047 §2.1
@@ -59,6 +202,10 @@ pub(crate) fn parse_act_block_expr(input: &mut ParseInput) -> ModalResult<Expr> 
     skip_whitespace_and_comments(input);
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
+
+    if act_block_uses_do_grammar(input) {
+        return parse_act_block_as_do_block(input, &start_pos);
+    }
 
     let mut stmts = Vec::new();
 
@@ -104,6 +251,51 @@ pub(crate) fn parse_act_block_expr(input: &mut ParseInput) -> ModalResult<Expr> 
     Ok(Expr::ActBlock { stmts, span })
 }
 
+fn act_block_uses_do_grammar(input: &ParseInput) -> bool {
+    let mut lookahead = input.clone();
+    while !lookahead.input.starts_with('}') {
+        if parse_do_stmt(&mut lookahead).is_err() {
+            return false;
+        }
+        skip_whitespace_and_comments(&mut lookahead);
+    }
+    true
+}
+
+fn parse_act_block_as_do_block(input: &mut ParseInput, start_pos: &Position) -> ModalResult<Expr> {
+    let target_span = Span {
+        start: start_pos.offset,
+        end: start_pos.offset,
+        line: start_pos.line,
+        column: start_pos.column,
+    };
+    let target = DoTarget {
+        name: "Act".into(),
+        args: Vec::new(),
+        span: target_span,
+    };
+
+    let mut stmts = Vec::new();
+    while !input.input.starts_with('}') {
+        let stmt = parse_do_stmt(input)?;
+        let is_return = matches!(stmt, DoStmt::Return { .. });
+        stmts.push(stmt);
+        skip_whitespace_and_comments(input);
+        if is_return {
+            break;
+        }
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+    let span = span_from(start_pos, &input.state.pos);
+
+    Ok(Expr::DoBlock {
+        target,
+        stmts,
+        span,
+    })
+}
+
 /// Parse an expression (entry point).
 ///
 /// This handles the full expression grammar with proper precedence.
@@ -119,10 +311,6 @@ pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
     // Try if-let first (before other expressions to avoid conflicts with 'if')
     if let Ok(if_let) = parse_if_let_expr(input) {
         return Ok(if_let);
-    }
-    // Try act block expression: act { ... }  (SPEC-047 §2.1)
-    if let Ok(act_block) = parse_act_block_expr(input) {
-        return Ok(act_block);
     }
     pipe_expr(input)
 }
@@ -939,6 +1127,20 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         });
     }
 
+    // Try generalized do block expression: do:K { ... } (SPEC-054 substrate)
+    {
+        let saved = input.clone();
+        if let Ok(do_block) = parse_do_block_expr(input) {
+            return Ok(do_block);
+        }
+        *input = saved;
+    }
+
+    // Try act block expression: act { ... }  (SPEC-047 §2.1)
+    if let Ok(act_block) = parse_act_block_expr(input) {
+        return Ok(act_block);
+    }
+
     // Try identifier/variable (and potential field access/call)
     let (name, name_span) = expr_name_with_span(input)?;
     let name_str: Name = name.into();
@@ -1390,6 +1592,202 @@ mod tests {
 
     fn test_input(s: &str) -> ParseInput<'_> {
         crate::input::new_input(s)
+    }
+
+    #[test]
+    fn test_do_block_parses_act_return() {
+        let mut input = test_input("do:Act { return 1 }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::DoBlock {
+                target,
+                stmts,
+                span,
+            } => {
+                assert_eq!(target.name.as_ref(), "Act");
+                assert!(target.args.is_empty());
+                assert!(target.span.start >= span.start);
+                assert!(target.span.end <= span.end);
+                assert!(target.span.end > target.span.start);
+                assert_eq!(stmts.len(), 1);
+                match &stmts[0] {
+                    crate::surface::DoStmt::Return { value, span } => {
+                        assert!(span.end > span.start);
+                        assert!(matches!(value.as_ref(), Expr::Literal(Literal::Int(1))));
+                    }
+                    other => panic!("expected do return statement, got {other:?}"),
+                }
+            }
+            other => panic!("expected DoBlock, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_do_block_parses_proc_bind_then_return() {
+        let mut input = test_input("do:Proc { x <- proc::unit(1); return x }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::DoBlock { target, stmts, .. } => {
+                assert_eq!(target.name.as_ref(), "Proc");
+                assert_eq!(stmts.len(), 2);
+                match &stmts[0] {
+                    crate::surface::DoStmt::Bind { name, value, span } => {
+                        assert_eq!(name.as_ref(), "x");
+                        assert!(span.end > span.start);
+                        assert!(
+                            matches!(value.as_ref(), Expr::Call { module: Some(module), func, args, .. } if module.as_ref() == "proc" && func.as_ref() == "unit" && args.len() == 1)
+                        );
+                    }
+                    other => panic!("expected do bind statement, got {other:?}"),
+                }
+                assert!(matches!(
+                    &stmts[1],
+                    crate::surface::DoStmt::Return { value, .. }
+                        if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
+                ));
+            }
+            other => panic!("expected DoBlock, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_do_block_parses_let_then_return() {
+        let mut input = test_input("do:Act { let x = 1; return x }");
+        let result = expr(&mut input).unwrap();
+
+        match result {
+            Expr::DoBlock { target, stmts, .. } => {
+                assert_eq!(target.name.as_ref(), "Act");
+                assert_eq!(stmts.len(), 2);
+                match &stmts[0] {
+                    crate::surface::DoStmt::Let { name, value, span } => {
+                        assert_eq!(name.as_ref(), "x");
+                        assert!(span.end > span.start);
+                        assert!(matches!(value.as_ref(), Expr::Literal(Literal::Int(1))));
+                    }
+                    other => panic!("expected do let statement, got {other:?}"),
+                }
+                assert!(matches!(
+                    &stmts[1],
+                    crate::surface::DoStmt::Return { value, .. }
+                        if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
+                ));
+            }
+            other => panic!("expected DoBlock, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_do_block_rejects_trailing_semicolon_after_return() {
+        let mut input = test_input("do:Act { return 1; }");
+        let result = expr(&mut input);
+        assert!(
+            result.is_err(),
+            "expected trailing semicolon after do return to be rejected, got {result:?}"
+        );
+        assert_eq!(
+            input.input.to_string(),
+            "do:Act { return 1; }",
+            "failed do-block parse should not leave input partially consumed"
+        );
+    }
+
+    #[test]
+    fn test_do_block_participates_in_binary_precedence() {
+        let mut input = test_input("do:Act { return 1 } == expected");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Binary { left, right, .. } => {
+                assert!(matches!(left.as_ref(), Expr::DoBlock { .. }));
+                assert!(matches!(
+                    right.as_ref(),
+                    Expr::Variable { name, .. } if name.as_ref() == "expected"
+                ));
+            }
+            other => panic!("expected binary expression with do-block lhs, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_do_block_participates_in_pipe_precedence() {
+        let mut input = test_input("do:Act { return 1 } |> consume");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::Call { func, args, .. } => {
+                assert_eq!(func.as_ref(), "consume");
+                assert_eq!(args.len(), 1);
+                assert!(matches!(&args[0], Expr::DoBlock { .. }));
+            }
+            other => panic!("expected piped call from do-block, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_act_block_sugar_parses_as_do_act() {
+        let mut input = test_input("act { x <- act::unit(1); return x }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::DoBlock { target, stmts, .. } => {
+                assert_eq!(target.name.as_ref(), "Act");
+                assert_eq!(stmts.len(), 2);
+                assert!(matches!(
+                    &stmts[0],
+                    DoStmt::Bind { name, value, .. }
+                        if name.as_ref() == "x"
+                            && matches!(value.as_ref(), Expr::Call { module: Some(module), func, .. } if module.as_ref() == "act" && func.as_ref() == "unit")
+                ));
+                assert!(matches!(
+                    &stmts[1],
+                    DoStmt::Return { value, .. }
+                        if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
+                ));
+            }
+            other => panic!("expected act sugar to parse as DoBlock, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_new_act_block_sugar_rejects_trailing_statement_after_return() {
+        let mut input = test_input("act { return x; y <- act::unit(1) }");
+        let result = parse_act_block_expr(&mut input);
+        assert!(
+            result.is_err(),
+            "new-form act sugar must not silently fall back to legacy parsing after final return: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_new_act_block_sugar_rejects_return_trailing_semicolon() {
+        let mut input = test_input("act { return x; }");
+        let result = parse_act_block_expr(&mut input);
+        assert!(
+            result.is_err(),
+            "new-form act sugar should reject legacy-style semicolon after return: {result:?}"
+        );
+    }
+
+    #[test]
+    fn test_legacy_act_block_still_parses() {
+        let mut input = test_input("act { x = 1; ret x; }");
+        let result = expr(&mut input).unwrap();
+        match result {
+            Expr::ActBlock { stmts, .. } => {
+                assert_eq!(stmts.len(), 2);
+                assert!(matches!(
+                    &stmts[0],
+                    ActStmt::Bind { name, value, .. }
+                        if name.as_ref() == "x" && matches!(value.as_ref(), Expr::Literal(Literal::Int(1)))
+                ));
+                assert!(matches!(
+                    &stmts[1],
+                    ActStmt::Return { value, .. }
+                        if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
+                ));
+            }
+            other => panic!("expected legacy ActBlock, got {other:?}"),
+        }
     }
 
     #[test]

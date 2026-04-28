@@ -9,11 +9,11 @@ use crate::exhaustiveness::{Coverage, check_exhaustive};
 use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo};
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
-use ash_core::ast::{Pattern as CorePattern, TypeBody, TypeDef};
+use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
-    ActStmt, BinaryOp, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
+    ActStmt, BinaryOp, DoStmt, Expr, Literal, MatchArm, Pattern as SurfacePattern, UnaryOp,
 };
 use ash_parser::token::Span;
 use std::collections::HashSet;
@@ -27,6 +27,15 @@ pub struct CheckResult {
     pub substitution: Substitution,
     /// Any errors encountered
     pub errors: Vec<ConstructorError>,
+}
+
+/// Result of type-directed generalized do-block elaboration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DoElaborationResult {
+    /// Lowered core expression produced from resolved dictionary evidence.
+    pub expr: CoreExpr,
+    /// The checked computation type, e.g. `Act<T>` or `Proc<T>`.
+    pub ty: Type,
 }
 
 impl CheckResult {
@@ -628,88 +637,590 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             }
         }
 
-        Expr::ActBlock { stmts, span, .. } => {
-            let mut block_env = env.clone();
-            let mut substitution = Substitution::new();
-            let mut errors: Vec<ConstructorError> = Vec::new();
+        Expr::DoBlock {
+            target,
+            stmts,
+            span,
+        } => check_do_block(env, target, stmts, *span),
 
-            // Enforce the same structural contract as lower_act_block:
-            // non-empty, return must be last.
-            if stmts.is_empty() {
-                return CheckResult::error(ConstructorError::UnsupportedExpression {
-                    kind: "empty act block".to_string(),
-                    span: *span,
-                });
-            }
+        Expr::ActBlock { stmts, span, .. } => check_legacy_act_block(env, stmts, *span),
+    }
+}
 
-            let last = stmts.last().unwrap();
-            if !matches!(last, ActStmt::Return { .. }) {
-                return CheckResult::error(ConstructorError::UnsupportedExpression {
-                    kind: "act block must end with a return statement".to_string(),
-                    span: *span,
-                });
-            }
+/// Return compatibility migration diagnostics for legacy `act { ... }` syntax.
+///
+/// This is a durable diagnostic carrier used until the repository has a
+/// warning-emission path. New-form `act { ... }` parses as `DoBlock` and does
+/// not produce these legacy diagnostics.
+pub fn legacy_act_migration_diagnostics(expr: &Expr) -> Vec<String> {
+    let Expr::ActBlock { stmts, .. } = expr else {
+        return Vec::new();
+    };
 
-            // Verify no Return appears before the last statement
-            for (i, stmt) in stmts.iter().enumerate() {
-                if matches!(stmt, ActStmt::Return { .. }) && i + 1 < stmts.len() {
-                    return CheckResult::error(ConstructorError::UnsupportedExpression {
-                        kind: "return must be the last statement in an act block".to_string(),
-                        span: *span,
-                    });
-                }
-            }
-
-            let mut return_ty = Type::Null;
-
-            for stmt in stmts {
-                match stmt {
-                    ash_parser::surface::ActStmt::Bind { name, value, .. } => {
-                        let value_result = check_expr(&block_env, value);
-                        substitution = substitution.compose(&value_result.substitution);
-                        if !value_result.is_ok() {
-                            errors.extend(value_result.errors);
-                            continue;
-                        }
-
-                        let value_ty = substitution.apply(&value_result.ty);
-                        let bound_ty = match &value_ty {
-                            Type::Constructor { name, args, .. }
-                                if name.name == "Act" && args.len() == 1 =>
-                            {
-                                args[0].clone()
-                            }
-                            _ => value_ty,
-                        };
-                        block_env.bind_variable(name.as_ref(), bound_ty);
-                    }
-                    ash_parser::surface::ActStmt::Return { value, .. } => {
-                        let value_result = check_expr(&block_env, value);
-                        substitution = substitution.compose(&value_result.substitution);
-                        if !value_result.is_ok() {
-                            errors.extend(value_result.errors);
-                            continue;
-                        }
-
-                        return_ty = substitution.apply(&value_result.ty);
-                    }
-                }
-            }
-
-            if !errors.is_empty() {
-                return CheckResult {
-                    ty: Type::Var(TypeVar::fresh()),
-                    substitution,
-                    errors,
-                };
-            }
-
-            CheckResult::success(Type::Constructor {
-                name: crate::QualifiedName::root("Act"),
-                args: vec![return_ty],
-                kind: crate::Kind::Type,
-            })
+    let mut diagnostics = Vec::new();
+    for stmt in stmts {
+        match stmt {
+            ActStmt::Bind { name, .. } => diagnostics.push(format!(
+                "legacy act bind `{name} = ...;` is deprecated; use `{name} <- ...;` for Act binds or `let {name} = ...;` for pure bindings"
+            )),
+            ActStmt::Return { .. } => diagnostics.push(
+                "legacy act return `ret ...;` is deprecated; use `return ...` without a trailing semicolon"
+                    .to_string(),
+            ),
         }
+    }
+    diagnostics
+}
+
+/// Return non-fatal generalized do-notation diagnostics for warning-like cases.
+///
+/// Error diagnostics still flow through [`check_expr`]. This helper is a durable
+/// carrier for teaching-oriented migration warnings until the compiler has a
+/// unified warning emission pipeline.
+pub fn do_notation_diagnostics(env: &TypeEnv, expr: &Expr) -> Vec<String> {
+    let mut diagnostics = legacy_act_migration_diagnostics(expr);
+    collect_do_notation_diagnostics(env, expr, &mut diagnostics);
+    diagnostics
+}
+
+fn collect_do_notation_diagnostics(env: &TypeEnv, expr: &Expr, diagnostics: &mut Vec<String>) {
+    match expr {
+        Expr::DoBlock { target, stmts, .. } => {
+            if let Ok(dictionary) = crate::do_target::resolve_do_target(env, target) {
+                let mut block_env = env.clone();
+                let mut substitution = Substitution::new();
+                for stmt in stmts {
+                    match stmt {
+                        DoStmt::Let { name, value, .. } => {
+                            let value_result = check_expr(&block_env, value);
+                            substitution = substitution.compose(&value_result.substitution);
+                            let value_ty = diagnostic_expr_type(&block_env, value, &substitution);
+                            if let Some(value_ty) = value_ty {
+                                if monadic_inner_type(&value_ty, &dictionary.value_constructor)
+                                    .is_some()
+                                {
+                                    diagnostics.push(format!(
+                                        "do:{} let `{name}` binds monadic value {value_ty} without sequencing; use `{name} <- ...` to bind the produced value, or keep `let` only when you intentionally want the computation value itself",
+                                        target.name.as_ref()
+                                    ));
+                                }
+                                block_env.bind_variable(name.as_ref(), value_ty);
+                            }
+                            collect_do_notation_diagnostics(&block_env, value, diagnostics);
+                        }
+                        DoStmt::Bind { value, .. } | DoStmt::Return { value, .. } => {
+                            collect_do_notation_diagnostics(&block_env, value, diagnostics);
+                        }
+                    }
+                }
+            }
+        }
+        Expr::ActBlock { .. } => {}
+        Expr::Call { args, .. } => {
+            for arg in args {
+                collect_do_notation_diagnostics(env, arg, diagnostics);
+            }
+        }
+        Expr::Binary { left, right, .. }
+        | Expr::IndexAccess {
+            base: left,
+            index: right,
+            ..
+        } => {
+            collect_do_notation_diagnostics(env, left, diagnostics);
+            collect_do_notation_diagnostics(env, right, diagnostics);
+        }
+        Expr::Unary { operand, .. }
+        | Expr::Fail {
+            payload: operand, ..
+        } => {
+            collect_do_notation_diagnostics(env, operand, diagnostics);
+        }
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            for statement in statements {
+                match statement {
+                    ash_parser::surface::BlockStmt::Let { expr, .. } => {
+                        collect_do_notation_diagnostics(env, expr, diagnostics);
+                    }
+                }
+            }
+            if let Some(tail_expr) = tail_expr {
+                collect_do_notation_diagnostics(env, tail_expr, diagnostics);
+            }
+        }
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            collect_do_notation_diagnostics(env, condition, diagnostics);
+            collect_do_notation_diagnostics(env, then_branch, diagnostics);
+            if let Some(else_branch) = else_branch {
+                collect_do_notation_diagnostics(env, else_branch, diagnostics);
+            }
+        }
+        Expr::Match {
+            scrutinee, arms, ..
+        } => {
+            collect_do_notation_diagnostics(env, scrutinee, diagnostics);
+            for arm in arms {
+                collect_do_notation_diagnostics(env, &arm.body, diagnostics);
+            }
+        }
+        Expr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            collect_do_notation_diagnostics(env, expr, diagnostics);
+            collect_do_notation_diagnostics(env, then_branch, diagnostics);
+            collect_do_notation_diagnostics(env, else_branch, diagnostics);
+        }
+        Expr::FieldAccess { base, .. } => collect_do_notation_diagnostics(env, base, diagnostics),
+        Expr::FnDef { body, .. } => collect_do_notation_diagnostics(env, body, diagnostics),
+        Expr::FnApply { func, args, .. } => {
+            collect_do_notation_diagnostics(env, func, diagnostics);
+            for arg in args {
+                collect_do_notation_diagnostics(env, arg, diagnostics);
+            }
+        }
+        Expr::Constructor {
+            fields, payload, ..
+        } => {
+            for (_, value) in fields {
+                collect_do_notation_diagnostics(env, value, diagnostics);
+            }
+            if let ash_parser::surface::ConstructorPayload::Tuple(items) = payload {
+                for item in items {
+                    collect_do_notation_diagnostics(env, item, diagnostics);
+                }
+            }
+        }
+        Expr::WithError { body, arms, .. } => {
+            collect_do_notation_diagnostics(env, body, diagnostics);
+            for arm in arms {
+                collect_do_notation_diagnostics(env, &arm.body, diagnostics);
+            }
+        }
+        Expr::Policy(policy) => collect_policy_do_notation_diagnostics(env, policy, diagnostics),
+        Expr::Literal(_)
+        | Expr::Variable { .. }
+        | Expr::CheckObligation { .. }
+        | Expr::Panic { .. } => {}
+    }
+}
+
+fn diagnostic_expr_type(env: &TypeEnv, expr: &Expr, substitution: &Substitution) -> Option<Type> {
+    if let Some(ty) = diagnostic_dictionary_call_type(env, expr, substitution) {
+        return Some(ty);
+    }
+
+    let result = check_expr(env, expr);
+    result.is_ok().then(|| substitution.apply(&result.ty))
+}
+
+fn diagnostic_dictionary_call_type(
+    env: &TypeEnv,
+    expr: &Expr,
+    substitution: &Substitution,
+) -> Option<Type> {
+    let Expr::Call {
+        module: Some(module),
+        func,
+        args,
+        ..
+    } = expr
+    else {
+        return None;
+    };
+
+    if args.len() != 1 || func.as_ref() != "unit" {
+        return None;
+    }
+
+    let constructor = match module.as_ref() {
+        "act" => crate::QualifiedName::root("Act"),
+        "proc" => crate::QualifiedName::root("Proc"),
+        _ => return None,
+    };
+
+    let inner = check_expr(env, &args[0]);
+    inner.is_ok().then(|| Type::Constructor {
+        name: constructor,
+        args: vec![substitution.apply(&inner.ty)],
+        kind: crate::Kind::Type,
+    })
+}
+
+fn collect_policy_do_notation_diagnostics(
+    env: &TypeEnv,
+    policy: &ash_parser::surface::PolicyExpr,
+    diagnostics: &mut Vec<String>,
+) {
+    match policy {
+        ash_parser::surface::PolicyExpr::ForAll { items, body, .. }
+        | ash_parser::surface::PolicyExpr::Exists { items, body, .. } => {
+            collect_do_notation_diagnostics(env, items, diagnostics);
+            collect_policy_do_notation_diagnostics(env, body, diagnostics);
+        }
+        ash_parser::surface::PolicyExpr::MethodCall { receiver, args, .. } => {
+            collect_policy_do_notation_diagnostics(env, receiver, diagnostics);
+            for arg in args {
+                collect_do_notation_diagnostics(env, arg, diagnostics);
+            }
+        }
+        ash_parser::surface::PolicyExpr::Call { args, .. } => {
+            for arg in args {
+                collect_do_notation_diagnostics(env, arg, diagnostics);
+            }
+        }
+        ash_parser::surface::PolicyExpr::And(items)
+        | ash_parser::surface::PolicyExpr::Or(items)
+        | ash_parser::surface::PolicyExpr::Sequential(items)
+        | ash_parser::surface::PolicyExpr::Concurrent(items) => {
+            for item in items {
+                collect_policy_do_notation_diagnostics(env, item, diagnostics);
+            }
+        }
+        ash_parser::surface::PolicyExpr::Not(item) => {
+            collect_policy_do_notation_diagnostics(env, item, diagnostics);
+        }
+        ash_parser::surface::PolicyExpr::Implies(left, right) => {
+            collect_policy_do_notation_diagnostics(env, left, diagnostics);
+            collect_policy_do_notation_diagnostics(env, right, diagnostics);
+        }
+        ash_parser::surface::PolicyExpr::Var { .. } => {}
+    }
+}
+
+fn check_legacy_act_block(env: &TypeEnv, stmts: &[ActStmt], span: Span) -> CheckResult {
+    let mut block_env = env.clone();
+    let mut substitution = Substitution::new();
+    let mut errors: Vec<ConstructorError> = Vec::new();
+
+    // Enforce the same structural contract as lower_act_block:
+    // non-empty, return must be last.
+    if stmts.is_empty() {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "empty act block".to_string(),
+            span,
+        });
+    }
+
+    let last = stmts.last().unwrap();
+    if !matches!(last, ActStmt::Return { .. }) {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "act block must end with a return statement".to_string(),
+            span,
+        });
+    }
+
+    // Verify no Return appears before the last statement
+    for (i, stmt) in stmts.iter().enumerate() {
+        if matches!(stmt, ActStmt::Return { .. }) && i + 1 < stmts.len() {
+            return CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "return must be the last statement in an act block".to_string(),
+                span,
+            });
+        }
+    }
+
+    let mut return_ty = Type::Null;
+
+    for stmt in stmts {
+        match stmt {
+            ActStmt::Bind { name, value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+
+                let value_ty = substitution.apply(&value_result.ty);
+                let bound_ty = match &value_ty {
+                    Type::Constructor { name, args, .. }
+                        if name.name == "Act" && args.len() == 1 =>
+                    {
+                        args[0].clone()
+                    }
+                    _ => value_ty,
+                };
+                block_env.bind_variable(name.as_ref(), bound_ty);
+            }
+            ActStmt::Return { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+
+                return_ty = substitution.apply(&value_result.ty);
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        };
+    }
+
+    CheckResult::success(Type::Constructor {
+        name: crate::QualifiedName::root("Act"),
+        args: vec![return_ty],
+        kind: crate::Kind::Type,
+    })
+}
+
+/// Type-check and elaborate a generalized do-block into core dictionary calls.
+///
+/// This is the typed lowering boundary for `Expr::DoBlock`: raw parser lowering
+/// rejects `DoBlock`, and callers that need core expressions must come through
+/// this function after do-target resolution and statement checking.
+pub fn elaborate_typed_do_block(
+    env: &TypeEnv,
+    expr: &Expr,
+) -> Result<DoElaborationResult, Vec<ConstructorError>> {
+    let Expr::DoBlock {
+        target,
+        stmts,
+        span,
+    } = expr
+    else {
+        return Err(vec![ConstructorError::UnsupportedExpression {
+            kind: "typed do elaboration requires a do block expression".to_string(),
+            span: get_expr_span(expr),
+        }]);
+    };
+
+    let check = check_do_block(env, target, stmts, *span);
+    if !check.is_ok() {
+        return Err(check.errors);
+    }
+
+    let dictionary = crate::do_target::resolve_do_target(env, target).map_err(|err| vec![err])?;
+    let core = elaborate_do_stmts(stmts, &dictionary).map_err(|err| vec![err])?;
+    Ok(DoElaborationResult {
+        expr: core,
+        ty: check.ty,
+    })
+}
+
+fn elaborate_do_stmts(
+    stmts: &[DoStmt],
+    dictionary: &crate::do_target::DoDictionary,
+) -> Result<CoreExpr, ConstructorError> {
+    match stmts {
+        [] => Err(ConstructorError::UnsupportedExpression {
+            kind: "empty do block".to_string(),
+            span: Span::default(),
+        }),
+        [DoStmt::Return { value, .. }] => Ok(dictionary_call(
+            &dictionary.return_op,
+            vec![elaborate_surface_expr(value)?],
+        )),
+        [DoStmt::Let { name, value, .. }, rest @ ..] => Ok(CoreExpr::Let {
+            pattern: CorePattern::Variable {
+                name: name.to_string(),
+                span: ash_core::Span::default(),
+            },
+            expr: Box::new(elaborate_surface_expr(value)?),
+            body: Box::new(elaborate_do_stmts(rest, dictionary)?),
+            span: ash_core::Span::default(),
+        }),
+        [DoStmt::Bind { name, value, .. }, rest @ ..] => {
+            let continuation = CoreExpr::FnDef {
+                params: vec![(name.to_string(), None)],
+                return_type: None,
+                body: Box::new(elaborate_do_stmts(rest, dictionary)?),
+            };
+            Ok(dictionary_call(
+                &dictionary.bind_op,
+                vec![elaborate_surface_expr(value)?, continuation],
+            ))
+        }
+        [stmt, ..] => Err(ConstructorError::UnsupportedExpression {
+            kind: "invalid do statement sequence (return must be last)".to_string(),
+            span: do_stmt_span(stmt),
+        }),
+    }
+}
+
+fn dictionary_call(op: &crate::do_target::DoDictionaryOp, arguments: Vec<CoreExpr>) -> CoreExpr {
+    match op {
+        crate::do_target::DoDictionaryOp::HiddenActReturn => CoreExpr::Call {
+            func: "unit".to_string(),
+            module: None,
+            arguments,
+        },
+        crate::do_target::DoDictionaryOp::HiddenActBind => CoreExpr::Call {
+            func: "bind".to_string(),
+            module: None,
+            arguments,
+        },
+        crate::do_target::DoDictionaryOp::Ordinary(name) => CoreExpr::Call {
+            func: name.name.clone(),
+            module: (!name.module.is_empty()).then(|| name.module.join("::")),
+            arguments,
+        },
+    }
+}
+
+fn elaborate_surface_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
+    ash_parser::lower_expr(expr).map_err(|err| ConstructorError::UnsupportedExpression {
+        kind: format!("failed to lower do-block subexpression after typed elaboration: {err}"),
+        span: get_expr_span(expr),
+    })
+}
+
+fn check_do_block(
+    env: &TypeEnv,
+    target: &ash_parser::surface::DoTarget,
+    stmts: &[DoStmt],
+    span: Span,
+) -> CheckResult {
+    let dictionary = match crate::do_target::resolve_do_target(env, target) {
+        Ok(dictionary) => dictionary,
+        Err(err) => return CheckResult::error(err),
+    };
+
+    if stmts.is_empty() {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "empty do block".to_string(),
+            span,
+        });
+    }
+
+    for (index, stmt) in stmts.iter().enumerate() {
+        if matches!(stmt, DoStmt::Return { .. }) && index + 1 < stmts.len() {
+            return CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "return must be the last statement in a do block".to_string(),
+                span: do_stmt_span(stmt),
+            });
+        }
+    }
+
+    if !matches!(stmts.last(), Some(DoStmt::Return { .. })) {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "do block must end with a return statement".to_string(),
+            span,
+        });
+    }
+
+    let mut block_env = env.clone();
+    let mut substitution = Substitution::new();
+    let mut errors: Vec<ConstructorError> = Vec::new();
+    let mut return_ty = Type::Null;
+
+    for stmt in stmts {
+        match stmt {
+            DoStmt::Let { name, value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+                let value_ty = substitution.apply(&value_result.ty);
+                block_env.bind_variable(name.as_ref(), value_ty);
+            }
+            DoStmt::Bind { name, value, span } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+
+                let value_ty = substitution.apply(&value_result.ty);
+                match monadic_inner_type(&value_ty, &dictionary.value_constructor) {
+                    Some(bound_ty) => block_env.bind_variable(name.as_ref(), bound_ty),
+                    None => errors.push(do_bind_type_error(
+                        target.name.as_ref(),
+                        &dictionary.value_constructor,
+                        &value_ty,
+                        *span,
+                    )),
+                }
+            }
+            DoStmt::Return { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+                return_ty = substitution.apply(&value_result.ty);
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        };
+    }
+
+    CheckResult {
+        ty: Type::Constructor {
+            name: dictionary.value_constructor,
+            args: vec![return_ty],
+            kind: crate::Kind::Type,
+        },
+        substitution,
+        errors: Vec::new(),
+    }
+}
+
+fn do_stmt_span(stmt: &DoStmt) -> Span {
+    match stmt {
+        DoStmt::Let { span, .. } | DoStmt::Bind { span, .. } | DoStmt::Return { span, .. } => *span,
+    }
+}
+
+fn monadic_inner_type(ty: &Type, constructor: &crate::QualifiedName) -> Option<Type> {
+    match ty {
+        Type::Constructor { name, args, .. } if name == constructor && args.len() == 1 => {
+            Some(args[0].clone())
+        }
+        _ => None,
+    }
+}
+
+fn do_bind_type_error(
+    target_name: &str,
+    expected_constructor: &crate::QualifiedName,
+    actual_ty: &Type,
+    span: Span,
+) -> ConstructorError {
+    let hint = match actual_ty {
+        Type::Constructor { name, args, .. } if args.len() == 1 && name != expected_constructor => {
+            if target_name == "Proc" && name.name == "Act" {
+                " use proc::from_act for an explicit Act-to-Proc lift."
+            } else {
+                " use an explicit lift for cross-constructor sequencing."
+            }
+        }
+        _ => " pure expressions cannot be used with <-; use let for ordinary bindings.",
+    };
+
+    ConstructorError::UnsupportedExpression {
+        kind: format!(
+            "do:{target_name} bind RHS for <- must have type {expected_constructor}<T>, found {actual_ty};{hint}"
+        ),
+        span,
     }
 }
 
@@ -831,6 +1342,7 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::FnDef { span, .. } => *span,
         Expr::FnApply { span, .. } => *span,
         Expr::ActBlock { span, .. } => *span,
+        Expr::DoBlock { span, .. } => *span,
     }
 }
 

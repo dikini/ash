@@ -1,6 +1,6 @@
 # TASK-751: Proc Do Integration and Tower Behavior
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,8 +15,8 @@ Validate `do:Proc` end to end and enforce tower behavior: sequential Proc bind, 
 
 ## Dependencies
 
-- 📝 TASK-749: typed do elaboration.
-- 📝 TASK-750: Act compatibility migration.
+- ✅ TASK-749: typed do elaboration.
+- ✅ TASK-750: Act compatibility migration.
 - ✅ Phase 99: `proc::from_act` embedding boundary.
 - ✅/🟢 Phase 104 closeout for normal sequencing.
 
@@ -74,12 +74,20 @@ cargo fmt --check
 
 ## Verification Steps
 
-- [ ] Proc do positive tests pass.
-- [ ] No implicit Act-to-Proc lift exists.
-- [ ] No implicit target-specific imports exist.
-- [ ] Operational failure remains bottom.
-- [ ] Existing Proc/resource split/join tests pass.
-- [ ] Independent review confirms Phase 104 runtime authority semantics were not changed.
+- [x] Proc do positive tests pass.
+- [x] No implicit Act-to-Proc lift exists.
+- [x] No implicit target-specific imports exist.
+- [x] Operational failure remains bottom.
+- [x] Existing Proc/resource split/join tests pass.
+- [x] Independent review confirms Phase 104 runtime authority semantics were not changed.
+
+## Completion Notes
+
+- Added focused typechecker coverage for `do:Proc { return v }`, sequential `do:Proc` bind, explicit `proc::from_act(do:Act { ... })`, raw `do:Act` RHS rejection with the `proc::from_act` hint, and no implicit unqualified `par` import unless `par` is bound through ordinary scope rules.
+- Kept `Proc<Act<A>>` non-flattening covered by `task_719_proc_from_act_types.rs` and reran the focused `proc::from_act` verification.
+- Reused existing `proc::unit`/`proc::bind` typed elaboration and runtime APIs; no Phase 104 authority/resource runtime semantics were changed.
+- Added operational-bottom runtime regression coverage through the existing core Proc APIs (`proc::unit`/`proc::bind`) because there is not yet a direct source-level interpreter path that executes typechecker-owned `Expr::DoBlock` elaboration end to end. The regression proves `fail` forced inside Proc sequencing raises structured `TowerLevel::Proc` operational failure and is only converted to a value by explicit `with_error` handling.
+- Verification run included focused typed-do, `proc::from_act`, operational bottom, Proc runtime, and Proc resource split/join tests plus workspace formatting/checking/clippy commands documented in the final task summary.
 
 ## Dependencies for Next Task
 

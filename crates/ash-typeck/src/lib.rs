@@ -18,6 +18,7 @@ pub mod check_pattern;
 pub mod constraint_checking;
 pub mod constraints;
 pub mod diagnostic;
+pub(crate) mod do_target;
 pub mod effect;
 pub mod effective_caps;
 pub mod error;
@@ -677,6 +678,10 @@ fn validate_interface_calls_in_expr(
             }
             Ok(())
         }
+        ash_parser::surface::Expr::DoBlock { .. } => Err(TypeCheckError::TypeError(
+            "generalized do-block type checking is not implemented (TASK-747 parser substrate only)"
+                .to_string(),
+        )),
     }
 }
 
@@ -1841,6 +1846,10 @@ fn validate_fn_call_preconditions_expr(
             }
             Ok(())
         }
+        ash_parser::surface::Expr::DoBlock { .. } => Err(TypeCheckError::TypeError(
+            "generalized do-block type checking is not implemented (TASK-747 parser substrate only)"
+                .to_string(),
+        )),
     }
 }
 

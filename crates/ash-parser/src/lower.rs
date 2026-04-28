@@ -1616,6 +1616,10 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         }
 
         Expr::ActBlock { stmts, .. } => lower_act_block(stmts),
+
+        Expr::DoBlock { .. } => Err(LoweringError::ExprNotLowerable {
+            kind: "generic do block requires typed do elaboration before lowering",
+        }),
     }
 }
 
@@ -1671,6 +1675,7 @@ fn lower_act_block(stmts: &[crate::surface::ActStmt]) -> Result<CoreExpr, Loweri
 fn is_act_like_surface_expr(expr: &Expr) -> bool {
     match expr {
         Expr::ActBlock { .. } => true,
+        Expr::DoBlock { .. } => false,
         Expr::Call { func, module, .. } if module.is_none() => {
             matches!(
                 func.as_ref(),
@@ -2002,9 +2007,9 @@ fn lower_effect_type(effect: EffectType) -> Effect {
 mod tests {
     use super::*;
     use crate::surface::{
-        ActStmt, BinaryOp, Contract as SurfaceContract, EffectType, EnsuresClause,
-        Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern, Requirement as SurfaceRequirement,
-        RoleDef, Workflow as SurfaceWorkflow,
+        ActStmt, BinaryOp, Contract as SurfaceContract, DoStmt, DoTarget, EffectType,
+        EnsuresClause, Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern,
+        Requirement as SurfaceRequirement, RoleDef, Workflow as SurfaceWorkflow,
     };
     use crate::token::Span;
     use std::collections::HashSet;
@@ -2022,6 +2027,66 @@ mod tests {
             name: name.into(),
             span: crate::token::Span::default(),
         }
+    }
+
+    #[test]
+    fn test_lower_do_block_act_return_rejects_parser_only_lowering() {
+        let surface = SurfaceExpr::DoBlock {
+            target: DoTarget {
+                name: "Act".into(),
+                args: vec![],
+                span: Span::default(),
+            },
+            stmts: vec![DoStmt::Return {
+                value: Box::new(int_expr(1)),
+                span: Span::default(),
+            }],
+            span: Span::default(),
+        };
+
+        let err =
+            lower_expr(&surface).expect_err("generic do block must require typed elaboration");
+        assert!(matches!(
+            err,
+            LoweringError::ExprNotLowerable { kind }
+                if kind.contains("typed do elaboration")
+        ));
+    }
+
+    #[test]
+    fn test_lower_do_block_proc_bind_rejects_parser_only_lowering() {
+        let surface = SurfaceExpr::DoBlock {
+            target: DoTarget {
+                name: "Proc".into(),
+                args: vec![],
+                span: Span::default(),
+            },
+            stmts: vec![
+                DoStmt::Bind {
+                    name: "x".into(),
+                    value: Box::new(SurfaceExpr::Call {
+                        func: "unit".into(),
+                        module: Some("proc".into()),
+                        args: vec![int_expr(1)],
+                        span: Span::default(),
+                    }),
+                    span: Span::default(),
+                },
+                DoStmt::Return {
+                    value: Box::new(var_expr("x")),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+
+        let err =
+            lower_expr(&surface).expect_err("generic do block must require typed elaboration");
+        assert!(matches!(
+            err,
+            LoweringError::ExprNotLowerable { kind }
+                if kind.contains("typed do elaboration")
+        ));
     }
 
     #[test]

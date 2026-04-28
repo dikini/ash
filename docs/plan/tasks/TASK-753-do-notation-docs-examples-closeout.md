@@ -1,6 +1,6 @@
 # TASK-753: Do-Notation Docs, Examples, and Closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,7 +16,7 @@ Close out Phase 105 by updating specs, examples, changelog, and plan status, the
 
 ## Dependencies
 
-- 📝 TASK-747 through TASK-752 complete.
+- ✅ TASK-747 through TASK-752 complete.
 
 ## Requirements
 
@@ -73,11 +73,18 @@ Spawn a fresh subagent to verify:
 
 ## Verification Steps
 
-- [ ] Full cargo verification passes.
-- [ ] SPEC/docs/examples/changelog are updated.
-- [ ] PLAN-INDEX Phase 105 statuses are honest.
-- [ ] Independent review returns VERIFIED or all findings are resolved.
-- [ ] Final git diff contains only Phase 105 intended changes.
+- [x] Full cargo verification passes.
+- [x] SPEC/docs/examples/changelog are updated.
+- [x] PLAN-INDEX Phase 105 statuses are honest.
+- [x] Independent review returns VERIFIED or all findings are resolved.
+- [x] Final git diff contains only Phase 105 intended changes.
+
+## Completion Notes
+
+- Added Phase 105 examples under `examples/07-phase105/` covering explicit `do:Act`, new-form `act { ... }` sugar, explicit `proc::from_act(...)`, and legacy Act migration.
+- Reconciled SPEC-047 to point new expression-level Act grammar at SPEC-054 and to keep legacy `ActBlock` as a migration carrier.
+- Reconciled SPEC-054, docs/spec README, PLAN-101, PLAN-INDEX, and CHANGELOG status surfaces for Phase 105 closeout.
+- Full verification passed: `cargo fmt --check && cargo test --workspace && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo doc --workspace --no-deps`.
 
 ## Dependencies for Next Task
 

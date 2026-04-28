@@ -260,6 +260,28 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::DoBlock { target, stmts, .. } => {
+            let mut out = String::from("DoBlock {\n");
+            push_field(&mut out, 2, "target", &format!("{:?}", target.name));
+            push_field(
+                &mut out,
+                2,
+                "stmts",
+                &render_list(stmts.iter().map(|stmt| match stmt {
+                    ash_parser::surface::DoStmt::Let { name, value, .. } => {
+                        format!("Let({name:?}, {})", render_expr(value))
+                    }
+                    ash_parser::surface::DoStmt::Bind { name, value, .. } => {
+                        format!("Bind({name:?}, {})", render_expr(value))
+                    }
+                    ash_parser::surface::DoStmt::Return { value, .. } => {
+                        format!("Return({})", render_expr(value))
+                    }
+                })),
+            );
+            out.push('}');
+            out
+        }
     }
 }
 

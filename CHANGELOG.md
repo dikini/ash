@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [SPEC-055](docs/spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md), [PLAN-102](docs/plan/PLAN-102-MONAD-COMPREHENSION-SYNTAX.md), and [TASK-754](docs/plan/tasks/TASK-754-monad-comprehension-spec-plan-packet.md) through [TASK-759](docs/plan/tasks/TASK-759-monad-comprehension-docs-examples-closeout.md): promoted [DESIGN-032](docs/design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md) into a tracked Phase 106 packet for bracket comprehension syntax as a container-view spelling of SPEC-054 generalized typed do-notation, with explicit-target MVP planning, parser/typechecker/lowering/diagnostic tasks, and honest deferrals for target inference, pure List/Option/Result dictionaries, guards, pattern binders, and applicative/parallel comprehensions.
+
 - TASK-753 / Phase 105: closed out generalized typed do-notation with Phase 105 examples for `do:Act`, new-form `act { ... }`, explicit `proc::from_act(...)`, and legacy Act migration; reconciled SPEC-047/SPEC-054, PLAN-101, PLAN-INDEX, and task status surfaces for Phase 105 completion.
 
 - TASK-752 / Phase 105: added focused generalized do-notation diagnostic coverage and teaching-oriented wording for all SPEC-054 §13 families, including unknown/wrong-kind/unsupported targets, pure `<-` RHS, wrong constructor `<-` RHS with `proc::from_act` hints, monadic `let` warning carrier support, missing/early returns, trailing-semicolon parser regressions, legacy `ret`/legacy `act` bind migration diagnostics, and preserved spans.

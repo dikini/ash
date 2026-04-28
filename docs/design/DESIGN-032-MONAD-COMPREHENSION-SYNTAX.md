@@ -2,7 +2,9 @@
 
 **Status:** Draft
 **Date:** 2026-04-28
-**Related:** DESIGN-031, SPEC-054, PLAN-101
+**Related:** DESIGN-031, SPEC-054, SPEC-055, PLAN-101, PLAN-102
+
+**Promoted by:** [SPEC-055](../spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md) and [PLAN-102](../plan/PLAN-102-MONAD-COMPREHENSION-SYNTAX.md)
 
 ## 1. Summary
 
@@ -71,7 +73,7 @@ Comprehension syntax supports:
 [result | qualifiers]      // inferred target, if possible
 ```
 
-The postfix annotation follows the ordinary `expr: Type` pattern. It is used because bracket comprehension is mixfix syntax and has no clean prefix target slot.
+The postfix annotation is comprehension-specific target syntax. It is intentionally shaped like a type ascription, but the current parser should not assume a general expression-level `expr: Type` annotation exists. The postfix slot is used because bracket comprehension is mixfix syntax and has no clean prefix target slot.
 
 Target resolution uses the same mechanism as generalized do-notation:
 

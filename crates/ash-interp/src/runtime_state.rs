@@ -8,6 +8,7 @@ use tokio::sync::Mutex as AsyncMutex;
 
 use ash_core::capability::CapabilityError;
 use ash_core::runtime::{
+    CapabilityBinding, CapabilityBindingDependency, CapabilityBindingId, CapabilityBindingKind,
     ProcessId, ProcessTerminalState, ResourceId, ResourceInstance, ResourceOwner, ResourceTypeId,
 };
 use ash_core::{ControlLink, Effect, Value, Workflow};
@@ -205,6 +206,7 @@ pub struct RuntimeState {
     callable_workflows: Arc<AsyncMutex<HashMap<String, RegisteredCallableWorkflow>>>,
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
     resource_instances: Arc<AsyncMutex<HashMap<ResourceId, ResourceInstance>>>,
+    capability_bindings: Arc<AsyncMutex<HashMap<CapabilityBindingId, CapabilityBinding>>>,
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
@@ -227,6 +229,10 @@ impl std::fmt::Debug for RuntimeState {
                 "resource_instances",
                 &"<HashMap<ResourceId, ResourceInstance>>",
             )
+            .field(
+                "capability_bindings",
+                &"<HashMap<CapabilityBindingId, CapabilityBinding>>",
+            )
             .field("last_execution_record", &self.last_execution_record)
             .field(
                 "providers",
@@ -248,6 +254,7 @@ impl RuntimeState {
             callable_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
             resource_instances: Arc::new(AsyncMutex::new(HashMap::new())),
+            capability_bindings: Arc::new(AsyncMutex::new(HashMap::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
         }
@@ -520,6 +527,212 @@ impl RuntimeState {
         }
 
         CapabilityContext::with_registry(registry)
+    }
+
+    /// Admit one host- or implementation-backed capability binding into runtime state.
+    ///
+    /// Host bindings require an already-registered provider. Implementation bindings store
+    /// dependency metadata only and require resource/capability dependencies to have been admitted
+    /// explicitly beforehand.
+    pub async fn admit_capability_binding(
+        &self,
+        binding: CapabilityBinding,
+    ) -> ExecResult<CapabilityBindingId> {
+        Self::validate_capability_binding_authority(&binding)?;
+
+        match &binding.kind {
+            CapabilityBindingKind::HostProvider { provider_name, .. } => {
+                if !self.has_provider(provider_name) {
+                    return Err(ExecError::CapabilityNotAvailable(provider_name.clone()));
+                }
+            }
+            CapabilityBindingKind::Implementation { .. } => {
+                self.validate_capability_binding_dependencies(&binding.dependencies)
+                    .await?;
+            }
+        }
+
+        let id = binding.id;
+        let mut bindings = self.capability_bindings.lock().await;
+        if bindings.contains_key(&id) {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "duplicate capability binding id {id:?}"
+            )));
+        }
+        if bindings
+            .values()
+            .any(|existing| existing.name == binding.name)
+        {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "duplicate capability binding name '{}'",
+                binding.name
+            )));
+        }
+        bindings.insert(id, binding);
+        Ok(id)
+    }
+
+    /// Validate that a binding kind and authority provenance agree.
+    fn validate_capability_binding_authority(binding: &CapabilityBinding) -> ExecResult<()> {
+        match (&binding.kind, &binding.authority) {
+            (
+                CapabilityBindingKind::HostProvider { .. },
+                ash_core::CapabilityAuthorityProvenance::HostAuthority { .. },
+            ) => Ok(()),
+            (
+                CapabilityBindingKind::Implementation { .. },
+                ash_core::CapabilityAuthorityProvenance::DerivedAuthority { .. },
+            ) => Ok(()),
+            (CapabilityBindingKind::HostProvider { .. }, _) => Err(ExecError::InvalidRuntimeState(
+                "host capability binding must carry host authority provenance".to_string(),
+            )),
+            (CapabilityBindingKind::Implementation { .. }, _) => {
+                Err(ExecError::InvalidRuntimeState(
+                    "implementation capability binding must carry derived authority provenance"
+                        .to_string(),
+                ))
+            }
+        }
+    }
+
+    async fn validate_capability_binding_dependencies(
+        &self,
+        dependencies: &[CapabilityBindingDependency],
+    ) -> ExecResult<()> {
+        let bindings = self.capability_bindings.lock().await;
+        let resources = self.resource_instances.lock().await;
+
+        for dependency in dependencies {
+            match dependency {
+                CapabilityBindingDependency::Resource {
+                    name,
+                    resource_id,
+                    type_id,
+                } => match resources.get(resource_id) {
+                    Some(resource) if &resource.type_id == type_id => {}
+                    Some(_) => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "resource dependency '{name}' has mismatched type"
+                        )));
+                    }
+                    None => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing resource dependency '{name}'"
+                        )));
+                    }
+                },
+                CapabilityBindingDependency::Capability {
+                    name,
+                    binding_id,
+                    interface,
+                } => match bindings.get(binding_id) {
+                    Some(binding) if &binding.interface == interface => {}
+                    Some(_) => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "capability dependency '{name}' has mismatched interface"
+                        )));
+                    }
+                    None => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing capability dependency '{name}'"
+                        )));
+                    }
+                },
+                CapabilityBindingDependency::Config { .. } => {}
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Look up one admitted capability binding by identity.
+    pub async fn capability_binding(
+        &self,
+        binding_id: CapabilityBindingId,
+    ) -> Option<CapabilityBinding> {
+        self.capability_bindings
+            .lock()
+            .await
+            .get(&binding_id)
+            .cloned()
+    }
+
+    /// Look up one admitted capability binding by runtime binding name.
+    pub async fn capability_binding_by_name(&self, name: &str) -> Option<CapabilityBinding> {
+        self.capability_bindings
+            .lock()
+            .await
+            .values()
+            .find(|binding| binding.name == name)
+            .cloned()
+    }
+
+    /// Return true if a capability binding has been explicitly admitted.
+    pub async fn has_capability_binding(&self, binding_id: CapabilityBindingId) -> bool {
+        self.capability_bindings
+            .lock()
+            .await
+            .contains_key(&binding_id)
+    }
+
+    /// Return the number of admitted capability bindings.
+    pub async fn capability_binding_count(&self) -> usize {
+        self.capability_bindings.lock().await.len()
+    }
+
+    /// Create a capability context from explicit admitted binding identities.
+    ///
+    /// Host-provider bindings project their admitted provider/action surface into the existing
+    /// `CapabilityContext` compatibility layer. Implementation bindings remain metadata-only and do
+    /// not register executable providers.
+    pub async fn create_capability_context_for_bindings(
+        &self,
+        binding_ids: &[CapabilityBindingId],
+    ) -> ExecResult<crate::capability::CapabilityContext> {
+        use crate::capability::{CapabilityContext, CapabilityRegistry};
+
+        let bindings = self.capability_bindings.lock().await;
+        let mut projected_surfaces: Vec<(String, Vec<String>)> = Vec::new();
+
+        for binding_id in binding_ids {
+            let Some(binding) = bindings.get(binding_id) else {
+                return Err(ExecError::InvalidRuntimeState(format!(
+                    "unadmitted capability binding {binding_id:?}"
+                )));
+            };
+
+            if let CapabilityBindingKind::HostProvider {
+                provider_name,
+                admitted_capabilities,
+            } = &binding.kind
+            {
+                projected_surfaces.push((provider_name.clone(), admitted_capabilities.clone()));
+            }
+        }
+        drop(bindings);
+
+        let providers = self
+            .providers
+            .lock()
+            .expect("provider registry mutex poisoned");
+        let mut registry = CapabilityRegistry::new();
+
+        for (provider_name, admitted_capabilities) in projected_surfaces {
+            let Some(provider) = providers.get(&provider_name) else {
+                return Err(ExecError::CapabilityNotAvailable(provider_name));
+            };
+            let Some(surface) =
+                ProviderAdmissionSurface::from_capabilities(&provider_name, &admitted_capabilities)
+            else {
+                continue;
+            };
+            registry.register(Box::new(ProjectedProviderWrapper::new(
+                provider.clone(),
+                surface,
+            )));
+        }
+
+        Ok(CapabilityContext::with_registry(registry))
     }
 
     pub(crate) fn control_registry(&self) -> Arc<AsyncMutex<ControlLinkRegistry>> {

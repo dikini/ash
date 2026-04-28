@@ -265,6 +265,212 @@ impl ResourceInstance {
     }
 }
 
+/// A unique identifier for one admitted runtime capability binding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CapabilityBindingId(pub Uuid);
+
+impl CapabilityBindingId {
+    /// Create a fresh capability binding identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for CapabilityBindingId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Stable runtime identifier for an Ash capability interface declaration.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CapabilityInterfaceId(String);
+
+impl CapabilityInterfaceId {
+    /// Create a capability interface identifier from a static interface name.
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
+
+    /// Borrow the interface name carried by this identifier.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&str> for CapabilityInterfaceId {
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for CapabilityInterfaceId {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Stable runtime identifier for an Ash-defined capability implementation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CapabilityImplementationId(String);
+
+impl CapabilityImplementationId {
+    /// Create a capability implementation identifier from a static implementation name.
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
+
+    /// Borrow the implementation name carried by this identifier.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&str> for CapabilityImplementationId {
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for CapabilityImplementationId {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Runtime provenance for an admitted capability binding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CapabilityAuthorityProvenance {
+    /// Authority over an external/host capability admitted by the host runtime.
+    HostAuthority { notes: Vec<String> },
+    /// Authority derived from explicitly admitted dependencies.
+    DerivedAuthority {
+        dependency_names: Vec<String>,
+        notes: Vec<String>,
+    },
+}
+
+/// Dependency metadata for an implementation-backed capability binding.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CapabilityBindingDependency {
+    /// Dependency on one environment-owned runtime resource instance.
+    Resource {
+        name: String,
+        resource_id: ResourceId,
+        type_id: ResourceTypeId,
+    },
+    /// Dependency on another explicitly admitted capability binding.
+    Capability {
+        name: String,
+        binding_id: CapabilityBindingId,
+        interface: CapabilityInterfaceId,
+    },
+    /// Inert configuration value dependency.
+    Config { name: String, value: Value },
+}
+
+impl CapabilityBindingDependency {
+    /// Borrow the dependency name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Resource { name, .. }
+            | Self::Capability { name, .. }
+            | Self::Config { name, .. } => name,
+        }
+    }
+}
+
+/// Runtime shape of an admitted capability binding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CapabilityBindingKind {
+    /// Binding backed by an existing host provider registry entry.
+    HostProvider {
+        provider_name: String,
+        admitted_capabilities: Vec<String>,
+    },
+    /// Binding backed by Ash-defined implementation metadata only.
+    Implementation {
+        implementation: CapabilityImplementationId,
+    },
+}
+
+/// Identity-bearing runtime carrier for an admitted capability binding.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CapabilityBinding {
+    /// Stable binding identity for the lifetime of the admission record.
+    pub id: CapabilityBindingId,
+    /// Runtime binding name selected by workflow/process/run headers.
+    pub name: String,
+    /// Static interface identifier this binding is meant to satisfy.
+    pub interface: CapabilityInterfaceId,
+    /// Backing kind metadata.
+    pub kind: CapabilityBindingKind,
+    /// Explicit dependency records for implementation-backed bindings.
+    pub dependencies: Vec<CapabilityBindingDependency>,
+    /// Authority provenance metadata.
+    pub authority: CapabilityAuthorityProvenance,
+}
+
+impl CapabilityBinding {
+    /// Create a host-provider binding carrier.
+    #[must_use]
+    pub fn host_provider(
+        id: CapabilityBindingId,
+        name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+        provider_name: impl Into<String>,
+        admitted_capabilities: Vec<String>,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            interface,
+            kind: CapabilityBindingKind::HostProvider {
+                provider_name: provider_name.into(),
+                admitted_capabilities,
+            },
+            dependencies: Vec::new(),
+            authority: CapabilityAuthorityProvenance::HostAuthority {
+                notes: vec!["host provider admitted by runtime".to_string()],
+            },
+        }
+    }
+
+    /// Create an implementation-backed binding carrier.
+    #[must_use]
+    pub fn implementation(
+        id: CapabilityBindingId,
+        name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+        implementation: CapabilityImplementationId,
+        dependencies: Vec<CapabilityBindingDependency>,
+    ) -> Self {
+        let dependency_names = dependencies
+            .iter()
+            .map(|dependency| dependency.name().to_string())
+            .collect();
+        Self {
+            id,
+            name: name.into(),
+            interface,
+            kind: CapabilityBindingKind::Implementation { implementation },
+            dependencies,
+            authority: CapabilityAuthorityProvenance::DerivedAuthority {
+                dependency_names,
+                notes: vec![
+                    "implementation binding derives only from admitted dependencies".to_string(),
+                ],
+            },
+        }
+    }
+}
+
 /// A unique identifier for one runtime execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RunId(pub Uuid);
@@ -655,8 +861,19 @@ pub struct WorkflowAdmissionContext {
     pub active_role: Option<String>,
     /// Capability surface admitted to the workflow boundary.
     pub admitted_capabilities: Vec<String>,
+    /// Explicit capability binding identities admitted to the workflow boundary.
+    pub admitted_capability_bindings: Vec<CapabilityBindingId>,
     /// Evidence used to satisfy admission-time `requires` checks.
     pub requires_evidence: Vec<String>,
+}
+
+impl WorkflowAdmissionContext {
+    /// Return a new admission context with one explicit admitted capability binding identity.
+    #[must_use]
+    pub fn with_admitted_capability_binding(mut self, binding_id: CapabilityBindingId) -> Self {
+        self.admitted_capability_bindings.push(binding_id);
+        self
+    }
 }
 
 /// Structured workflow contract evidence status.

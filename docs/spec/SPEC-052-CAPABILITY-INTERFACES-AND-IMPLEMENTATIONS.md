@@ -301,6 +301,12 @@ Implementations must report distinct diagnostics or runtime failures for:
 - TASK-733: Add module-owned capability binding resolution.
 - TASK-736: Add runtime capability binding admission API.
 - TASK-741: Execute Ash-defined capability implementation bodies.
+- TASK-742: Add adapter, mock, and replay capability implementation examples.
+- TASK-743: Add CLI/engine capability binding configuration selection.
+
+### 12.1 Implementation Status Note
+
+As of Phase 104, Ash-defined implementation bodies can execute through the runtime API after explicit admission, and example declaration packets are covered by `ash check`. Full source-level lowering from declaration packets to executable `ash run` admissions remains deferred; host embeddings select implementations and resource initializers through the engine/CLI configuration surface.
 
 ## 13. Deferred Questions
 

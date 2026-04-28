@@ -300,6 +300,11 @@ Failures from resource-backed operations use SPEC-050 operational-failure semant
 - TASK-738: Add derived authority non-widening runtime checks.
 - TASK-739: Add Proc environment split/join resource policy enforcement.
 - TASK-740: Add runtime resource/capability integration tests.
+- TASK-744: Add standard internal WorkflowKV and FrozenClock/TestClock runtime API pilots.
+
+### 12.1 Implementation Status Note
+
+As of Phase 104, runtime resources remain environment-owned metadata and authority carriers. The standard WorkflowKV and FrozenClock pilots admit constructor-only internal resources and derived implementation-backed bindings through the runtime API; they do not introduce first-class `ResourceRef<T>` values, persistence/checkpointing, or source-level `ash run` lowering for resource declarations.
 
 ## 13. Deferred Questions
 

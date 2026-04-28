@@ -81,6 +81,14 @@ pub struct RunArgs {
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
 
+    /// Select an Ash-defined capability implementation for a host binding (`BINDING=IMPLEMENTATION`).
+    #[arg(long = "capability-impl", value_name = "BINDING=IMPLEMENTATION")]
+    pub capability_impl: Vec<String>,
+
+    /// Select a host resource initializer for a resource type (`RESOURCE=INITIALIZER`).
+    #[arg(long = "resource-init", value_name = "RESOURCE=INITIALIZER")]
+    pub resource_init: Vec<String>,
+
     /// Runtime arguments passed to the entry workflow after `--`
     #[arg(last = true, value_name = "ARGS")]
     pub program_args: Vec<String>,
@@ -102,14 +110,22 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     let path = Path::new(&args.path);
 
     // Build engine with default capabilities
-    let engine = build_engine(&args.program_args).context("Failed to build engine")?;
+    let engine = build_engine(args).context("Failed to build engine")?;
     let source =
         std::fs::read_to_string(path).map_err(|error| classify_run_read_error(path, error))?;
+    engine
+        .validate_configuration_for_source(&source)
+        .map_err(classify_engine_error)?;
     let source_kind = classify_workflow_source(&source);
     let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
 
     // Dry-run mode: parse and check only
     if args.dry_run {
+        if is_module_only_source(&source) {
+            println!("Dry run successful");
+            return Ok(RunOutcome::completed());
+        }
+
         let mut workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
             .map_err(classify_engine_error)?;
         engine
@@ -206,18 +222,44 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
 /// Build an engine with default capabilities
 ///
 /// Adds stdio and fs capabilities by default.
-fn build_engine(program_args: &[String]) -> Result<ash_engine::Engine, ash_engine::EngineError> {
+fn build_engine(args: &RunArgs) -> Result<ash_engine::Engine, ash_engine::EngineError> {
     let mut builder = ash_engine::Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities();
 
-    for (index, value) in program_args.iter().enumerate() {
+    for selection in &args.capability_impl {
+        let (binding, implementation) = parse_name_pair(selection, "--capability-impl")?;
+        builder = builder.with_capability_implementation(binding, implementation);
+    }
+
+    for selection in &args.resource_init {
+        let (resource, initializer) = parse_name_pair(selection, "--resource-init")?;
+        builder = builder.with_resource_initializer(resource, initializer);
+    }
+
+    for (index, value) in args.program_args.iter().enumerate() {
         let provider = Arc::new(RuntimeArgProvider::new(index, value));
         let provider_name = provider.name.clone();
         builder = builder.with_custom_provider(&provider_name, provider);
     }
 
     builder.build()
+}
+
+fn parse_name_pair(value: &str, flag: &str) -> Result<(String, String), ash_engine::EngineError> {
+    let Some((left, right)) = value.split_once('=') else {
+        return Err(EngineError::Configuration(format!(
+            "{flag} expects NAME=NAME, got '{value}'"
+        )));
+    };
+    let left = left.trim();
+    let right = right.trim();
+    if left.is_empty() || right.is_empty() {
+        return Err(EngineError::Configuration(format!(
+            "{flag} expects NAME=NAME with non-empty names, got '{value}'"
+        )));
+    }
+    Ok((left.to_string(), right.to_string()))
 }
 
 #[derive(Debug)]
@@ -453,6 +495,13 @@ pub fn classify_run_cli_error(error: anyhow::Error) -> CliError {
         || lower.contains("invalid runtime exit code")
     {
         CliError::general(message)
+    } else if lower.contains("failed to build engine") {
+        let mut detail = message;
+        for cause in error.chain().skip(1) {
+            detail.push_str(": ");
+            detail.push_str(&cause.to_string());
+        }
+        CliError::general(detail)
     } else {
         CliError::from(error)
     }
@@ -636,6 +685,18 @@ fn parse_runnable_workflow(
             engine.parse_entry_source(source)
         }
     }
+}
+
+fn is_module_only_source(source: &str) -> bool {
+    let (tokens, _errors) = lex_with_recovery(source);
+    tokens.iter().any(|token| {
+        matches!(
+            token.kind,
+            TokenKind::Capability | TokenKind::Policy | TokenKind::Role
+        )
+    }) && !tokens
+        .iter()
+        .any(|token| matches!(token.kind, TokenKind::Workflow))
 }
 
 fn should_use_entry_bootstrap(source_kind: WorkflowSourceKind) -> bool {
@@ -831,6 +892,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30),
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec!["hello".to_string()],
         };
 
@@ -852,6 +915,8 @@ mod tests {
             format: RunOutputFormat::Json,
             dry_run: true,
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -865,7 +930,18 @@ mod tests {
 
     #[test]
     fn test_build_engine_default_capabilities() {
-        let result = build_engine(&[]);
+        let args = RunArgs {
+            path: "test.ash".to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            program_args: vec![],
+        };
+        let result = build_engine(&args);
         assert!(
             result.is_ok(),
             "Engine should build with default capabilities"
@@ -898,6 +974,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -922,6 +1000,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -962,6 +1042,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: true, // Enable dry-run
             timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -996,6 +1078,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: Some(30), // 30 second timeout
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 
@@ -1032,6 +1116,8 @@ mod tests {
             format: RunOutputFormat::Text,
             dry_run: false,
             timeout: None, // No timeout
+            capability_impl: vec![],
+            resource_init: vec![],
             program_args: vec![],
         };
 

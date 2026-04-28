@@ -10,7 +10,8 @@ examples/
 ├── 02-control-flow/    # Control flow patterns
 ├── 03-policies/        # Policy and governance
 ├── 04-real-world/      # Real-world applications
-└── 05-phase98/         # Proc/failure/workflow-boundary conformance examples
+├── 05-phase98/         # Proc/failure/workflow-boundary conformance examples
+└── 06-capability-implementations/ # Capability interface/impl/resource examples
 ```
 
 ## Quick Start
@@ -57,6 +58,13 @@ dot -Tpng workflow.dot -o workflow.png
 - **04-workflow-boundary-reporting.ash**: ordinary workflow source used by engine admission/report tests to exercise `WorkflowBoundaryOutcome` / compatibility wrappers
 
 workflow boundary reporting currently requires the engine admission API rather than a standalone CLI/report surface. TASK-717 therefore keeps the reporting assertion in engine admission/report tests and uses `04-workflow-boundary-reporting.ash` as the source-level workflow input for that path.
+
+### 06 - Capability Implementations
+- **01-mock-internal-kv.ash**: mock/internal key-value implementation packet for `ash check`
+- **02-caching-kv-adapter.ash**: derived logging/cache adapter pattern over another admitted `KeyValue` capability
+- **03-recording-replay-sketch.ash**: record/replay capability substitution sketch backed by replay-log authority
+
+These Phase 104 source examples are checkable declaration packets. Runtime execution coverage for the same substitution/adapter/replay patterns is currently provided by `ash-interp` API tests because standalone `ash run` lowering from source-level capability implementation declarations into runtime admissions is not complete yet.
 
 ## Canonical ADT Helper Surface
 

@@ -1,6 +1,6 @@
 # TASK-745: Finalize docs, examples, changelog, and verification for the capability interface/resource implementation program.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -68,11 +68,18 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
+
+## Completion Notes
+
+- Updated SPEC-052 and SPEC-053 with Phase 104 implementation-status notes and corrected current constraints.
+- Reconciled PLAN-100 and PLAN-INDEX status for the completed Phase 104 task train.
+- Preserved the documented boundary that Phase 104 examples are `ash check`-covered declaration packets while executable behavior is proven through runtime API tests.
+- Full workspace verification was run as the final closeout gate before commit.
 
 ## Dependencies for Next Task
 

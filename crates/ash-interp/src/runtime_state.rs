@@ -13,7 +13,7 @@ use ash_core::runtime::{
     ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance,
     ResourceSplitJoinPolicy, ResourceTypeId,
 };
-use ash_core::{ControlLink, Effect, Value, Workflow, WorkflowId};
+use ash_core::{ControlLink, Effect, Expr, Value, Workflow, WorkflowId};
 
 use crate::capability::CapabilityProvider;
 use crate::control_link::{
@@ -32,6 +32,126 @@ use crate::yield_state::SuspendedYields;
 use std::time::Duration;
 
 pub(crate) const SPAWNED_CHILD_CONTROL_BINDING: &str = "__ash_spawn_control_link";
+
+/// Runtime-registered executable body for one Ash-defined capability implementation operation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplementationOperationBody {
+    /// Operation parameter names, in positional invocation order.
+    pub params: Vec<String>,
+    /// Core expression body to evaluate in an effectful runtime context.
+    pub body: Expr,
+    /// Whether a returned closure should be forced as an `Act` body with the hidden `ActEnv` token.
+    pub returns_act: bool,
+}
+
+impl ImplementationOperationBody {
+    /// Create a runtime operation body from positional parameter names and a core expression.
+    #[must_use]
+    pub fn new<I, S>(params: I, body: Expr) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self {
+            params: params.into_iter().map(Into::into).collect(),
+            body,
+            returns_act: false,
+        }
+    }
+
+    /// Mark this operation body as returning an effectful `Act` closure.
+    #[must_use]
+    pub fn returns_act(mut self) -> Self {
+        self.returns_act = true;
+        self
+    }
+}
+
+/// Standard internal resource pilot that Phase 104 can admit without host authority.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum StandardPilotResource {
+    /// Workflow-local opaque key/value resource pilot.
+    WorkflowKv,
+    /// Deterministic frozen/test clock resource pilot.
+    FrozenClock,
+}
+
+impl StandardPilotResource {
+    /// Static runtime resource type identifier used by this pilot.
+    #[must_use]
+    pub fn resource_type_id(self) -> ResourceTypeId {
+        match self {
+            Self::WorkflowKv => ResourceTypeId::new("WorkflowKV"),
+            Self::FrozenClock => ResourceTypeId::new("FrozenClock"),
+        }
+    }
+
+    fn provenance_note(self) -> &'static str {
+        match self {
+            Self::WorkflowKv => "standard WorkflowKV pilot admitted by runtime",
+            Self::FrozenClock => "standard FrozenClock pilot admitted by runtime",
+        }
+    }
+}
+
+/// Host-facing request to admit one standard internal capability/resource pilot.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StandardInternalPilot {
+    binding_name: String,
+    resource_name: String,
+    resource: StandardPilotResource,
+    interface: CapabilityInterfaceId,
+    implementation: CapabilityImplementationId,
+    operation: String,
+    fixture: Value,
+}
+
+impl StandardInternalPilot {
+    /// Create the standard WorkflowKV pilot.
+    #[must_use]
+    pub fn workflow_kv(
+        binding_name: impl Into<String>,
+        resource_name: impl Into<String>,
+        fixture: Value,
+    ) -> Self {
+        Self {
+            binding_name: binding_name.into(),
+            resource_name: resource_name.into(),
+            resource: StandardPilotResource::WorkflowKv,
+            interface: CapabilityInterfaceId::new("KeyValue"),
+            implementation: CapabilityImplementationId::new("__ash_standard_pilot.WorkflowKV"),
+            operation: "get".to_string(),
+            fixture,
+        }
+    }
+
+    /// Create the standard FrozenClock/TestClock pilot.
+    #[must_use]
+    pub fn frozen_clock(
+        binding_name: impl Into<String>,
+        resource_name: impl Into<String>,
+        frozen_epoch_millis: i64,
+    ) -> Self {
+        Self {
+            binding_name: binding_name.into(),
+            resource_name: resource_name.into(),
+            resource: StandardPilotResource::FrozenClock,
+            interface: CapabilityInterfaceId::new("Clock"),
+            implementation: CapabilityImplementationId::new("__ash_standard_pilot.FrozenClock"),
+            operation: "epoch_millis".to_string(),
+            fixture: Value::Int(frozen_epoch_millis),
+        }
+    }
+}
+
+/// Identity pair returned by standard internal pilot admission.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StandardPilotBinding {
+    /// Admitted implementation-backed binding id.
+    pub binding_id: CapabilityBindingId,
+    /// Admitted internal resource id that backs the binding authority.
+    pub resource_id: ResourceId,
+}
 
 /// Wrapper that adapts an `Arc<dyn CapabilityProvider>` to work as a `Box<dyn CapabilityProvider>`.
 ///
@@ -105,12 +225,21 @@ impl ProviderAdmissionSurface {
 #[derive(Debug)]
 struct ProjectedProviderWrapper {
     inner: Arc<dyn CapabilityProvider>,
+    projected_name: String,
     surface: ProviderAdmissionSurface,
 }
 
 impl ProjectedProviderWrapper {
-    fn new(inner: Arc<dyn CapabilityProvider>, surface: ProviderAdmissionSurface) -> Self {
-        Self { inner, surface }
+    fn new(
+        inner: Arc<dyn CapabilityProvider>,
+        projected_name: String,
+        surface: ProviderAdmissionSurface,
+    ) -> Self {
+        Self {
+            inner,
+            projected_name,
+            surface,
+        }
     }
 }
 
@@ -143,7 +272,7 @@ impl ash_core::capability::CapabilityProvider for ArcProviderWrapper {
 #[async_trait]
 impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
     fn name(&self) -> &str {
-        self.inner.name()
+        &self.projected_name
     }
 
     fn effect(&self) -> Effect {
@@ -407,6 +536,8 @@ pub struct RuntimeState {
     capability_bindings: Arc<AsyncMutex<HashMap<CapabilityBindingId, CapabilityBinding>>>,
     capability_interface_operations:
         Arc<AsyncMutex<HashMap<CapabilityInterfaceId, HashSet<String>>>>,
+    implementation_operation_bodies:
+        Arc<AsyncMutex<HashMap<(CapabilityImplementationId, String), ImplementationOperationBody>>>,
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
@@ -447,6 +578,81 @@ impl std::fmt::Debug for RuntimeState {
 }
 
 impl RuntimeState {
+    pub(crate) async fn implementation_binding_dependency_context(
+        &self,
+        binding: &CapabilityBinding,
+    ) -> ExecResult<(
+        crate::capability::CapabilityContext,
+        HashMap<String, Value>,
+        Vec<CapabilityBindingId>,
+    )> {
+        use crate::capability::{CapabilityContext, CapabilityRegistry};
+
+        let mut values = HashMap::new();
+        let mut registry = CapabilityRegistry::new();
+        let mut admitted_capability_dependencies = Vec::new();
+
+        for dependency in &binding.dependencies {
+            match dependency {
+                CapabilityBindingDependency::Capability {
+                    name, binding_id, ..
+                } => {
+                    let source = self.capability_binding(*binding_id).await.ok_or_else(|| {
+                        ExecError::InvalidRuntimeState(format!(
+                            "capability dependency '{name}' references unknown binding {binding_id:?}"
+                        ))
+                    })?;
+                    values.insert(name.clone(), Value::String(name.clone()));
+                    admitted_capability_dependencies.push(*binding_id);
+
+                    let CapabilityBindingKind::HostProvider {
+                        provider_name,
+                        admitted_capabilities,
+                    } = &source.kind
+                    else {
+                        values.insert(
+                            format!("__ash_capability_dependency_alias:{name}"),
+                            Value::String(source.name.clone()),
+                        );
+                        continue;
+                    };
+
+                    let providers = self
+                        .providers
+                        .lock()
+                        .expect("provider registry mutex poisoned");
+                    let provider = providers
+                        .get(provider_name)
+                        .ok_or_else(|| ExecError::CapabilityNotAvailable(provider_name.clone()))?;
+                    let surface = ProviderAdmissionSurface::from_capabilities(
+                        provider_name,
+                        admitted_capabilities,
+                    )
+                    .ok_or_else(|| {
+                        ExecError::InvalidRuntimeState(format!(
+                            "capability dependency '{name}' exposes no admitted provider surface"
+                        ))
+                    })?;
+                    registry.register(Box::new(ProjectedProviderWrapper::new(
+                        provider.clone(),
+                        name.clone(),
+                        surface,
+                    )));
+                }
+                CapabilityBindingDependency::Resource { .. } => {}
+                CapabilityBindingDependency::Config { name, value } => {
+                    values.insert(name.clone(), value.clone());
+                }
+            }
+        }
+
+        Ok((
+            CapabilityContext::with_registry(registry),
+            values,
+            admitted_capability_dependencies,
+        ))
+    }
+
     /// Create a new empty runtime state.
     pub fn new() -> Self {
         Self {
@@ -460,6 +666,7 @@ impl RuntimeState {
             resource_instances: Arc::new(AsyncMutex::new(HashMap::new())),
             capability_bindings: Arc::new(AsyncMutex::new(HashMap::new())),
             capability_interface_operations: Arc::new(AsyncMutex::new(HashMap::new())),
+            implementation_operation_bodies: Arc::new(AsyncMutex::new(HashMap::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
         }
@@ -727,7 +934,11 @@ impl RuntimeState {
                 continue;
             };
 
-            let wrapper = Box::new(ProjectedProviderWrapper::new(provider.clone(), surface));
+            let wrapper = Box::new(ProjectedProviderWrapper::new(
+                provider.clone(),
+                name.clone(),
+                surface,
+            ));
             registry.register(wrapper);
         }
 
@@ -822,6 +1033,136 @@ impl RuntimeState {
             .await
             .get(interface)
             .cloned()
+    }
+
+    /// Register one callable Ash-defined implementation operation body.
+    pub async fn register_implementation_operation_body(
+        &self,
+        implementation: CapabilityImplementationId,
+        operation: impl Into<String>,
+        body: ImplementationOperationBody,
+    ) -> ExecResult<()> {
+        let key = (implementation, operation.into());
+        let mut bodies = self.implementation_operation_bodies.lock().await;
+        if bodies.contains_key(&key) {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "implementation operation body for {}.{} already registered",
+                key.0.as_str(),
+                key.1
+            )));
+        }
+        bodies.insert(key, body);
+        Ok(())
+    }
+
+    /// Look up one registered Ash-defined implementation operation body.
+    pub async fn implementation_operation_body(
+        &self,
+        implementation: &CapabilityImplementationId,
+        operation: &str,
+    ) -> Option<ImplementationOperationBody> {
+        self.implementation_operation_bodies
+            .lock()
+            .await
+            .get(&(implementation.clone(), operation.to_string()))
+            .cloned()
+    }
+
+    /// Admit one standard internal pilot resource and its implementation-backed binding.
+    ///
+    /// The pilot creates an internal runtime-owned resource, registers a deterministic
+    /// Ash-defined implementation operation body backed by an inert config value, and then
+    /// admits an implementation binding whose authority derives only from the explicit resource
+    /// dependency. It does not expose the resource as a first-class Ash value and does not perform
+    /// ambient capability/resource lookup.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if interface operation validation, implementation body registration, or
+    /// implementation binding admission fails.
+    pub async fn admit_standard_internal_pilot(
+        &self,
+        pilot: StandardInternalPilot,
+    ) -> ExecResult<StandardPilotBinding> {
+        if self
+            .capability_interface_operations(&pilot.interface)
+            .await
+            .is_none()
+        {
+            self.register_capability_interface_operations(
+                pilot.interface.clone(),
+                [pilot.operation.as_str()],
+            )
+            .await?;
+        }
+
+        if self
+            .implementation_operation_body(&pilot.implementation, &pilot.operation)
+            .await
+            .is_some()
+        {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "standard internal pilot body {}.{} is already registered",
+                pilot.implementation.as_str(),
+                pilot.operation
+            )));
+        }
+
+        let params = match pilot.resource {
+            StandardPilotResource::WorkflowKv => vec!["__ash_standard_pilot_arg"],
+            StandardPilotResource::FrozenClock => Vec::new(),
+        };
+        self.register_implementation_operation_body(
+            pilot.implementation.clone(),
+            pilot.operation.clone(),
+            ImplementationOperationBody::new(
+                params,
+                Expr::Variable {
+                    name: "__ash_standard_pilot_fixture".to_string(),
+                    span: Default::default(),
+                },
+            ),
+        )
+        .await?;
+
+        let resource_id = ResourceId::new();
+        let resource = ResourceInstance::new(
+            resource_id,
+            pilot.resource.resource_type_id(),
+            ResourceOwner::Workflow(WorkflowId::new()),
+        )
+        .with_lifecycle(ResourceLifecycle::Admitted)
+        .with_provenance(ResourceProvenance::internal(
+            pilot.resource.provenance_note(),
+        ));
+        self.register_resource_instance(resource).await;
+
+        let mut resources = HashMap::new();
+        resources.insert(pilot.resource_name.clone(), resource_id);
+        let binding_id = self
+            .admit_implementation_binding(
+                ImplementationBindingAdmission::new(
+                    pilot.binding_name,
+                    pilot.interface,
+                    pilot.implementation,
+                )
+                .with_dependency(ImplementationBindingDependencySource::resource(
+                    pilot.resource_name,
+                    pilot.resource.resource_type_id(),
+                ))
+                .with_dependency(ImplementationBindingDependencySource::config(
+                    "__ash_standard_pilot_fixture",
+                    pilot.fixture,
+                ))
+                .with_requested_operations([pilot.operation]),
+                &resources,
+            )
+            .await?;
+
+        Ok(StandardPilotBinding {
+            binding_id,
+            resource_id,
+        })
     }
 
     /// Admit one implementation-backed capability binding from explicit dependency source names.
@@ -1128,6 +1469,7 @@ impl RuntimeState {
             };
             registry.register(Box::new(ProjectedProviderWrapper::new(
                 provider.clone(),
+                provider_name.clone(),
                 surface,
             )));
         }

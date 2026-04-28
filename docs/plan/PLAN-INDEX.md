@@ -280,6 +280,7 @@ Update this section as tasks complete:
 | 79 | 6 | 6 | ✅ Complete |
 | 80 | 10 | 10 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
+| 106 | 6 | 1 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -380,6 +381,7 @@ Update this section as tasks complete:
 | 79 | 6 | 6 | ✅ Complete |
 | 80 | 10 | 10 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
+| 106 | 6 | 1 | 📝 Planned |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -2997,4 +2999,35 @@ Promote explicit typed `do:K` notation for computation constructors. Phase 105 i
 - D2: MVP targets are `Act` and `Proc`; full user-defined `Monad<M>`, constructor holes, pure `Option`/`List` targets, and workflow do-targets are deferred.
 - D3: `do:K` does not import target-specific ordinary operations; operations like `proc::par` remain ordinary scoped names.
 - D4: No implicit lifts across the tower; `Act<A>` enters `Proc` only through explicit `proc::from_act`.
+
+
+## Phase 106: Monad Comprehension Syntax
+
+**Priority:** Medium (post-Phase-105 syntax ergonomics over the completed typed-do substrate)
+**Status:** 📝 Planned (TASK-754 complete; TASK-755 through TASK-759 planned)
+**Spec:** [SPEC-055](../spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md)
+**Design:** [DESIGN-032](../design/DESIGN-032-MONAD-COMPREHENSION-SYNTAX.md)
+**Plan:** [docs/plan/PLAN-102-MONAD-COMPREHENSION-SYNTAX.md](PLAN-102-MONAD-COMPREHENSION-SYNTAX.md)
+
+Promote bracket comprehension syntax as a container-view spelling of generalized typed do-notation. Phase 106 adds a source-fidelity comprehension surface node, explicit-target parser support, parser-only lowering rejection, typed elaboration through the Phase 105 do machinery, comprehension-specific diagnostics, and examples. It intentionally does not implement target inference, pure `List`/`Option`/`Result` Monad dictionaries, one-hole `Result<_, E>` targets, pattern binders, bare boolean guards, applicative/zip/parallel comprehensions, or workflow comprehension targets.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-754](tasks/TASK-754-monad-comprehension-spec-plan-packet.md) | Monad comprehension spec/plan packet | 3 | ✅ Complete |
+| [TASK-755](tasks/TASK-755-comprehension-surface-ast-and-parser.md) | Comprehension surface AST and parser | 7 | 📝 Planned |
+| [TASK-756](tasks/TASK-756-comprehension-lowering-boundary-and-cross-crate-visitors.md) | Lowering boundary and cross-crate visitors | 5 | 📝 Planned |
+| [TASK-757](tasks/TASK-757-comprehension-typed-elaboration.md) | Comprehension typed elaboration | 8 | 📝 Planned |
+| [TASK-758](tasks/TASK-758-comprehension-diagnostics.md) | Comprehension diagnostics | 5 | 📝 Planned |
+| [TASK-759](tasks/TASK-759-monad-comprehension-docs-examples-closeout.md) | Comprehension docs, examples, and closeout | 4 | 📝 Planned |
+
+**Track A (Spec + Surface):** 10h. Promote DESIGN-032 to SPEC-055/PLAN-102, then add parser and surface AST substrate without parser-only semantic lowering.
+**Track B (Integration Boundary):** 5h. Update lowerer/visitor-style surfaces so the new node is explicit and non-semantic outside type checking.
+**Track C (Type/Diagnostics):** 13h. Reuse SPEC-054 target resolution and typed-do elaboration for comprehensions, then harden diagnostics.
+**Track D (Closeout):** 4h. Add examples/docs/changelog and run full verification.
+
+**Decision gates:**
+- D1: Comprehensions are syntax over SPEC-054 typed do; they must not fork target resolution, dictionary evidence, tower behavior, or operational `fail` semantics.
+- D2: MVP comprehensions require explicit targets unless target inference is implemented with focused tests.
+- D3: Pure `List`, `Option`, and `Result<_, E>` examples remain deferred until their Monad dictionaries and constructor-hole support exist.
+- D4: No bare boolean guards, pattern binders, implicit imports, or implicit tower lifts in Phase 106.
 

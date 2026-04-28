@@ -54,7 +54,7 @@ Tasks:
 
 ## Phase 103: Runtime Resource and Binding Substrate
 
-**Status:** 📝 Planned.
+**Status:** ✅ Complete.
 
 Introduce runtime resource instance carriers, capability binding admission, internal authority allocation, derived-authority non-widening checks, and Proc resource split/join policy enforcement.
 

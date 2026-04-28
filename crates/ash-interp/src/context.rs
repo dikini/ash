@@ -2,7 +2,9 @@
 //!
 //! Provides nested scope management for the interpreter.
 
-use ash_core::runtime::{EffectScopeId, FailureEntity, LexicalFrameId, TowerLevel};
+use ash_core::runtime::{
+    CapabilityBindingId, EffectScopeId, FailureEntity, LexicalFrameId, TowerLevel,
+};
 use ash_core::{Name, Value};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -34,6 +36,8 @@ pub struct Context {
     current_tower: TowerLevel,
     /// Current effect scope identity when executing effectful/Act code.
     effect_scope_id: Option<EffectScopeId>,
+    /// Hidden admitted capability binding identities selected by workflow/process/run headers.
+    admitted_capability_bindings: Vec<CapabilityBindingId>,
     /// Pure-context nesting depth for SPEC-031 three-vertex boundary enforcement.
     ///
     /// 0 = not in a pure context.  >0 = inside `pure_depth` layers of pure-fn calls.
@@ -61,6 +65,7 @@ impl Clone for Context {
             lexical_frame_id: self.lexical_frame_id,
             current_tower: self.current_tower,
             effect_scope_id: self.effect_scope_id,
+            admitted_capability_bindings: self.admitted_capability_bindings.clone(),
             pure_depth: self.pure_depth,
         }
     }
@@ -87,6 +92,7 @@ impl Context {
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: TowerLevel::Pure,
             effect_scope_id: None,
+            admitted_capability_bindings: Vec::new(),
             pure_depth: 0,
         }
     }
@@ -154,6 +160,7 @@ impl Context {
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: self.current_tower,
             effect_scope_id: self.effect_scope_id,
+            admitted_capability_bindings: self.admitted_capability_bindings.clone(),
             pure_depth: self.pure_depth,
         }
     }
@@ -172,6 +179,7 @@ impl Context {
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: TowerLevel::Pure,
             effect_scope_id: None,
+            admitted_capability_bindings: Vec::new(),
             pure_depth: 0,
         }
     }
@@ -268,6 +276,21 @@ impl Context {
         self.runtime_state.clone()
     }
 
+    /// Return admitted capability binding identities visible to this runtime context.
+    pub fn admitted_capability_bindings(&self) -> &[CapabilityBindingId] {
+        &self.admitted_capability_bindings
+    }
+
+    /// Attach admitted capability binding identities selected by workflow/process/run headers.
+    #[must_use]
+    pub fn with_admitted_capability_bindings(
+        mut self,
+        admitted_capability_bindings: Vec<CapabilityBindingId>,
+    ) -> Self {
+        self.admitted_capability_bindings = admitted_capability_bindings;
+        self
+    }
+
     /// Return the current semantic-tower attribution and identity for `fail`.
     pub(crate) fn current_failure_attribution(&self) -> (TowerLevel, FailureEntity) {
         match self.current_tower {
@@ -300,6 +323,7 @@ impl Context {
     pub(crate) fn inherit_runtime_metadata_from(mut self, parent: &Context) -> Self {
         self.process_identity = parent.process_identity;
         self.runtime_state = parent.runtime_state.clone();
+        self.admitted_capability_bindings = parent.admitted_capability_bindings.clone();
         self.current_tower = parent.current_tower;
         self.effect_scope_id = parent.effect_scope_id;
         self
@@ -405,6 +429,7 @@ impl Context {
             lexical_frame_id: LexicalFrameId::new(),
             current_tower: TowerLevel::Proc,
             effect_scope_id: None,
+            admitted_capability_bindings: self.admitted_capability_bindings.clone(),
             pure_depth: self.pure_depth,
         }
     }

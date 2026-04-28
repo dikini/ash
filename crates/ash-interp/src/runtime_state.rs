@@ -7,8 +7,13 @@ use async_trait::async_trait;
 use tokio::sync::Mutex as AsyncMutex;
 
 use ash_core::capability::CapabilityError;
-use ash_core::runtime::{ProcessId, ProcessTerminalState};
-use ash_core::{ControlLink, Effect, Value, Workflow};
+use ash_core::runtime::{
+    CapabilityBinding, CapabilityBindingDependency, CapabilityBindingId, CapabilityBindingKind,
+    CapabilityImplementationId, CapabilityInterfaceId, ProcessId, ProcessTerminalState, ResourceId,
+    ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance,
+    ResourceSplitJoinPolicy, ResourceTypeId,
+};
+use ash_core::{ControlLink, Effect, Value, Workflow, WorkflowId};
 
 use crate::capability::CapabilityProvider;
 use crate::control_link::{
@@ -193,6 +198,202 @@ pub struct RegisteredCallableWorkflow {
     pub params: Vec<String>,
 }
 
+/// Explicit metadata for admitting one resource owned by a workflow `owns` clause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowOwnedResourceAdmission {
+    /// Workflow-local owned resource name.
+    pub name: String,
+    /// Static resource type identifier.
+    pub type_id: ResourceTypeId,
+}
+
+impl WorkflowOwnedResourceAdmission {
+    /// Create owned resource admission metadata from a workflow-local name and resource type.
+    #[must_use]
+    pub fn new(name: impl Into<String>, type_id: ResourceTypeId) -> Self {
+        Self {
+            name: name.into(),
+            type_id,
+        }
+    }
+}
+
+/// Runtime resource split/join policy violation with the offending resource metadata attached.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResourceSplitJoinViolation {
+    /// Process that attempted the split/join operation.
+    pub process_id: ProcessId,
+    /// Operation being checked, such as `par`, `scatter`, `join`, or `gather`.
+    pub operation: &'static str,
+    /// Resource whose policy rejected the operation.
+    pub resource: ResourceInstance,
+    /// Human-readable rejection reason.
+    pub reason: String,
+}
+
+impl ResourceSplitJoinViolation {
+    fn new(
+        process_id: ProcessId,
+        operation: &'static str,
+        resource: ResourceInstance,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self {
+            process_id,
+            operation,
+            resource,
+            reason: reason.into(),
+        }
+    }
+
+    /// Render policy evidence notes suitable for an operational failure carrier.
+    #[must_use]
+    pub fn evidence_notes(&self) -> Vec<String> {
+        vec![
+            format!("resource policy violation during proc::{}", self.operation),
+            format!("process: {:?}", self.process_id),
+            format!("resource id: {:?}", self.resource.id),
+            format!("resource type: {:?}", self.resource.type_id),
+            format!("resource owner: {:?}", self.resource.owner),
+            format!("resource lifecycle: {:?}", self.resource.lifecycle),
+            format!(
+                "resource split/join policy: {:?}",
+                self.resource.split_join_policy
+            ),
+            self.reason.clone(),
+        ]
+    }
+
+    /// Render policy provenance suitable for an operational failure carrier.
+    #[must_use]
+    pub fn evidence_provenance(&self) -> Vec<String> {
+        vec![format!(
+            "resource provenance: {:?}",
+            self.resource.provenance
+        )]
+    }
+}
+
+impl std::fmt::Display for ResourceSplitJoinViolation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "resource {:?} of type {:?} with policy {:?} rejected proc::{} for process {:?}: {}",
+            self.resource.id,
+            self.resource.type_id,
+            self.resource.split_join_policy,
+            self.operation,
+            self.process_id,
+            self.reason
+        )
+    }
+}
+
+impl std::error::Error for ResourceSplitJoinViolation {}
+
+/// Explicit source-name dependency metadata for implementation binding admission.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ImplementationBindingDependencySource {
+    /// Dependency on a workflow-owned resource source by explicit source name.
+    Resource {
+        name: String,
+        type_id: ResourceTypeId,
+    },
+    /// Dependency on a previously admitted capability binding by explicit runtime binding name.
+    Capability {
+        name: String,
+        source_binding_name: String,
+        interface: CapabilityInterfaceId,
+    },
+    /// Inert configuration value dependency.
+    Config { name: String, value: Value },
+}
+
+impl ImplementationBindingDependencySource {
+    /// Create a resource dependency source.
+    #[must_use]
+    pub fn resource(name: impl Into<String>, type_id: ResourceTypeId) -> Self {
+        Self::Resource {
+            name: name.into(),
+            type_id,
+        }
+    }
+
+    /// Create a capability dependency source.
+    #[must_use]
+    pub fn capability(
+        name: impl Into<String>,
+        source_binding_name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+    ) -> Self {
+        Self::Capability {
+            name: name.into(),
+            source_binding_name: source_binding_name.into(),
+            interface,
+        }
+    }
+
+    /// Create a config dependency source.
+    #[must_use]
+    pub fn config(name: impl Into<String>, value: Value) -> Self {
+        Self::Config {
+            name: name.into(),
+            value,
+        }
+    }
+}
+
+/// Explicit metadata for admitting an Ash-defined implementation capability binding.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplementationBindingAdmission {
+    /// Runtime binding name.
+    pub name: String,
+    /// Static interface identifier this binding satisfies.
+    pub interface: CapabilityInterfaceId,
+    /// Static implementation identifier.
+    pub implementation: CapabilityImplementationId,
+    /// Explicit source-name dependencies.
+    pub dependencies: Vec<ImplementationBindingDependencySource>,
+    /// Metadata-only operation names the implementation asks to expose.
+    pub requested_operations: Vec<String>,
+}
+
+impl ImplementationBindingAdmission {
+    /// Create implementation binding admission metadata with no dependencies.
+    #[must_use]
+    pub fn new(
+        name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+        implementation: CapabilityImplementationId,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            interface,
+            implementation,
+            dependencies: Vec::new(),
+            requested_operations: Vec::new(),
+        }
+    }
+
+    /// Append one dependency source.
+    #[must_use]
+    pub fn with_dependency(mut self, dependency: ImplementationBindingDependencySource) -> Self {
+        self.dependencies.push(dependency);
+        self
+    }
+
+    /// Attach the metadata-only operation names this implementation requests to expose.
+    #[must_use]
+    pub fn with_requested_operations<I, S>(mut self, operations: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.requested_operations = operations.into_iter().map(Into::into).collect();
+        self
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct RuntimeState {
     control_registry: Arc<AsyncMutex<ControlLinkRegistry>>,
@@ -202,6 +403,10 @@ pub struct RuntimeState {
     child_workflows: Arc<AsyncMutex<HashMap<String, Workflow>>>,
     callable_workflows: Arc<AsyncMutex<HashMap<String, RegisteredCallableWorkflow>>>,
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
+    resource_instances: Arc<AsyncMutex<HashMap<ResourceId, ResourceInstance>>>,
+    capability_bindings: Arc<AsyncMutex<HashMap<CapabilityBindingId, CapabilityBinding>>>,
+    capability_interface_operations:
+        Arc<AsyncMutex<HashMap<CapabilityInterfaceId, HashSet<String>>>>,
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
@@ -220,6 +425,18 @@ impl std::fmt::Debug for RuntimeState {
                 &"<HashMap<String, RegisteredCallableWorkflow>>",
             )
             .field("process_registry", &self.process_registry)
+            .field(
+                "resource_instances",
+                &"<HashMap<ResourceId, ResourceInstance>>",
+            )
+            .field(
+                "capability_bindings",
+                &"<HashMap<CapabilityBindingId, CapabilityBinding>>",
+            )
+            .field(
+                "capability_interface_operations",
+                &"<HashMap<CapabilityInterfaceId, HashSet<String>>>",
+            )
             .field("last_execution_record", &self.last_execution_record)
             .field(
                 "providers",
@@ -240,6 +457,9 @@ impl RuntimeState {
             child_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             callable_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
+            resource_instances: Arc::new(AsyncMutex::new(HashMap::new())),
+            capability_bindings: Arc::new(AsyncMutex::new(HashMap::new())),
+            capability_interface_operations: Arc::new(AsyncMutex::new(HashMap::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
         }
@@ -514,6 +734,407 @@ impl RuntimeState {
         CapabilityContext::with_registry(registry)
     }
 
+    /// Admit workflow-owned resources from explicit `owns` metadata.
+    ///
+    /// Returned resource ids are keyed only by the explicit workflow-local resource names supplied
+    /// by the caller; this API does not perform ambient resource lookup.
+    pub async fn admit_workflow_owned_resources(
+        &self,
+        workflow_id: WorkflowId,
+        resources: Vec<WorkflowOwnedResourceAdmission>,
+    ) -> ExecResult<HashMap<String, ResourceId>> {
+        let mut seen_names = HashSet::new();
+        for resource in &resources {
+            if !seen_names.insert(resource.name.clone()) {
+                return Err(ExecError::InvalidRuntimeState(format!(
+                    "duplicate owned resource name '{}'",
+                    resource.name
+                )));
+            }
+        }
+
+        let mut admitted = HashMap::new();
+        let mut instances = Vec::with_capacity(resources.len());
+        for resource in resources {
+            let id = ResourceId::new();
+            let type_name = resource.type_id.as_str().to_string();
+            let instance =
+                ResourceInstance::new(id, resource.type_id, ResourceOwner::Workflow(workflow_id))
+                    .with_lifecycle(ResourceLifecycle::Admitted)
+                    .with_provenance(ResourceProvenance::internal(format!(
+                        "workflow owns {}: {type_name}",
+                        resource.name
+                    )));
+            admitted.insert(resource.name, id);
+            instances.push(instance);
+        }
+
+        let mut registry = self.resource_instances.lock().await;
+        for instance in instances {
+            registry.insert(instance.id, instance);
+        }
+        Ok(admitted)
+    }
+
+    /// Register the canonical runtime operation surface for one capability interface.
+    ///
+    /// This metadata is normally sourced from already typechecked capability-interface declarations.
+    /// Runtime admission uses it as the authority for metadata-only non-widening checks instead of
+    /// trusting caller-supplied operation lists on individual implementation binding admissions.
+    pub async fn register_capability_interface_operations<I, S>(
+        &self,
+        interface: CapabilityInterfaceId,
+        operations: I,
+    ) -> ExecResult<()>
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let operations = operations
+            .into_iter()
+            .map(Into::into)
+            .collect::<HashSet<_>>();
+        if operations.is_empty() {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "capability interface {} must declare at least one operation",
+                interface.as_str()
+            )));
+        }
+
+        let mut interfaces = self.capability_interface_operations.lock().await;
+        if interfaces.contains_key(&interface) {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "capability interface {} operation surface already registered",
+                interface.as_str()
+            )));
+        }
+        interfaces.insert(interface, operations);
+        Ok(())
+    }
+
+    /// Return the registered operation surface for one capability interface.
+    pub async fn capability_interface_operations(
+        &self,
+        interface: &CapabilityInterfaceId,
+    ) -> Option<HashSet<String>> {
+        self.capability_interface_operations
+            .lock()
+            .await
+            .get(interface)
+            .cloned()
+    }
+
+    /// Admit one implementation-backed capability binding from explicit dependency source names.
+    ///
+    /// Resource dependencies are resolved only from `resource_sources`, and capability dependencies
+    /// are resolved only by previously admitted binding names. The resulting binding is admitted via
+    /// [`Self::admit_capability_binding`] so existing dependency validation remains authoritative.
+    pub async fn admit_implementation_binding(
+        &self,
+        admission: ImplementationBindingAdmission,
+        resource_sources: &HashMap<String, ResourceId>,
+    ) -> ExecResult<CapabilityBindingId> {
+        if !admission.requested_operations.is_empty() {
+            let Some(registered_operations) = self
+                .capability_interface_operations(&admission.interface)
+                .await
+            else {
+                return Err(ExecError::InvalidRuntimeState(format!(
+                    "cannot validate requested operations for unregistered interface {}",
+                    admission.interface.as_str()
+                )));
+            };
+            let allowed_operations: HashSet<&str> =
+                registered_operations.iter().map(String::as_str).collect();
+            for operation in &admission.requested_operations {
+                if !allowed_operations.contains(operation.as_str()) {
+                    return Err(ExecError::InvalidRuntimeState(format!(
+                        "requested operation '{operation}' is outside registered interface {}",
+                        admission.interface.as_str()
+                    )));
+                }
+            }
+        }
+
+        let mut dependencies = Vec::with_capacity(admission.dependencies.len());
+        for dependency in admission.dependencies {
+            match dependency {
+                ImplementationBindingDependencySource::Resource { name, type_id } => {
+                    let Some(resource_id) = resource_sources.get(&name).copied() else {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing resource dependency source '{name}'"
+                        )));
+                    };
+                    dependencies.push(CapabilityBindingDependency::Resource {
+                        name,
+                        resource_id,
+                        type_id,
+                    });
+                }
+                ImplementationBindingDependencySource::Capability {
+                    name,
+                    source_binding_name,
+                    interface,
+                } => {
+                    let Some(binding) = self.capability_binding_by_name(&source_binding_name).await
+                    else {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing capability dependency source '{source_binding_name}'"
+                        )));
+                    };
+                    dependencies.push(CapabilityBindingDependency::Capability {
+                        name,
+                        binding_id: binding.id,
+                        interface,
+                    });
+                }
+                ImplementationBindingDependencySource::Config { name, value } => {
+                    dependencies.push(CapabilityBindingDependency::Config { name, value });
+                }
+            }
+        }
+
+        let binding = CapabilityBinding::implementation(
+            CapabilityBindingId::new(),
+            admission.name,
+            admission.interface,
+            admission.implementation,
+            dependencies,
+        );
+        let binding = admission
+            .requested_operations
+            .iter()
+            .fold(binding, |binding, operation| {
+                let source_names = binding
+                    .dependencies
+                    .iter()
+                    .filter(|dependency| dependency.carries_authority())
+                    .map(|dependency| dependency.name().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                binding.with_authority_note(format!(
+                    "operation {operation} derives from {source_names}"
+                ))
+            });
+        self.admit_capability_binding(binding).await
+    }
+
+    /// Admit one host- or implementation-backed capability binding into runtime state.
+    ///
+    /// Host bindings require an already-registered provider. Implementation bindings store
+    /// dependency metadata only and require resource/capability dependencies to have been admitted
+    /// explicitly beforehand.
+    pub async fn admit_capability_binding(
+        &self,
+        binding: CapabilityBinding,
+    ) -> ExecResult<CapabilityBindingId> {
+        Self::validate_capability_binding_authority(&binding)?;
+
+        match &binding.kind {
+            CapabilityBindingKind::HostProvider { provider_name, .. } => {
+                if !self.has_provider(provider_name) {
+                    return Err(ExecError::CapabilityNotAvailable(provider_name.clone()));
+                }
+            }
+            CapabilityBindingKind::Implementation { .. } => {
+                if !binding
+                    .dependencies
+                    .iter()
+                    .any(CapabilityBindingDependency::carries_authority)
+                {
+                    return Err(ExecError::InvalidRuntimeState(
+                        "implementation capability binding must derive authority from at least one resource or capability dependency"
+                            .to_string(),
+                    ));
+                }
+                self.validate_capability_binding_dependencies(&binding.dependencies)
+                    .await?;
+            }
+        }
+
+        let id = binding.id;
+        let mut bindings = self.capability_bindings.lock().await;
+        if bindings.contains_key(&id) {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "duplicate capability binding id {id:?}"
+            )));
+        }
+        if bindings
+            .values()
+            .any(|existing| existing.name == binding.name)
+        {
+            return Err(ExecError::InvalidRuntimeState(format!(
+                "duplicate capability binding name '{}'",
+                binding.name
+            )));
+        }
+        bindings.insert(id, binding);
+        Ok(id)
+    }
+
+    /// Validate that a binding kind and authority provenance agree.
+    fn validate_capability_binding_authority(binding: &CapabilityBinding) -> ExecResult<()> {
+        match (&binding.kind, &binding.authority) {
+            (
+                CapabilityBindingKind::HostProvider { .. },
+                ash_core::CapabilityAuthorityProvenance::HostAuthority { .. },
+            ) => Ok(()),
+            (
+                CapabilityBindingKind::Implementation { .. },
+                ash_core::CapabilityAuthorityProvenance::DerivedAuthority { .. },
+            ) => Ok(()),
+            (CapabilityBindingKind::HostProvider { .. }, _) => Err(ExecError::InvalidRuntimeState(
+                "host capability binding must carry host authority provenance".to_string(),
+            )),
+            (CapabilityBindingKind::Implementation { .. }, _) => {
+                Err(ExecError::InvalidRuntimeState(
+                    "implementation capability binding must carry derived authority provenance"
+                        .to_string(),
+                ))
+            }
+        }
+    }
+
+    async fn validate_capability_binding_dependencies(
+        &self,
+        dependencies: &[CapabilityBindingDependency],
+    ) -> ExecResult<()> {
+        let bindings = self.capability_bindings.lock().await;
+        let resources = self.resource_instances.lock().await;
+
+        for dependency in dependencies {
+            match dependency {
+                CapabilityBindingDependency::Resource {
+                    name,
+                    resource_id,
+                    type_id,
+                } => match resources.get(resource_id) {
+                    Some(resource) if &resource.type_id == type_id => {}
+                    Some(_) => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "resource dependency '{name}' has mismatched type"
+                        )));
+                    }
+                    None => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing resource dependency '{name}'"
+                        )));
+                    }
+                },
+                CapabilityBindingDependency::Capability {
+                    name,
+                    binding_id,
+                    interface,
+                } => match bindings.get(binding_id) {
+                    Some(binding) if &binding.interface == interface => {}
+                    Some(_) => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "capability dependency '{name}' has mismatched interface"
+                        )));
+                    }
+                    None => {
+                        return Err(ExecError::InvalidRuntimeState(format!(
+                            "missing capability dependency '{name}'"
+                        )));
+                    }
+                },
+                CapabilityBindingDependency::Config { .. } => {}
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Look up one admitted capability binding by identity.
+    pub async fn capability_binding(
+        &self,
+        binding_id: CapabilityBindingId,
+    ) -> Option<CapabilityBinding> {
+        self.capability_bindings
+            .lock()
+            .await
+            .get(&binding_id)
+            .cloned()
+    }
+
+    /// Look up one admitted capability binding by runtime binding name.
+    pub async fn capability_binding_by_name(&self, name: &str) -> Option<CapabilityBinding> {
+        self.capability_bindings
+            .lock()
+            .await
+            .values()
+            .find(|binding| binding.name == name)
+            .cloned()
+    }
+
+    /// Return true if a capability binding has been explicitly admitted.
+    pub async fn has_capability_binding(&self, binding_id: CapabilityBindingId) -> bool {
+        self.capability_bindings
+            .lock()
+            .await
+            .contains_key(&binding_id)
+    }
+
+    /// Return the number of admitted capability bindings.
+    pub async fn capability_binding_count(&self) -> usize {
+        self.capability_bindings.lock().await.len()
+    }
+
+    /// Create a capability context from explicit admitted binding identities.
+    ///
+    /// Host-provider bindings project their admitted provider/action surface into the existing
+    /// `CapabilityContext` compatibility layer. Implementation bindings remain metadata-only and do
+    /// not register executable providers.
+    pub async fn create_capability_context_for_bindings(
+        &self,
+        binding_ids: &[CapabilityBindingId],
+    ) -> ExecResult<crate::capability::CapabilityContext> {
+        use crate::capability::{CapabilityContext, CapabilityRegistry};
+
+        let bindings = self.capability_bindings.lock().await;
+        let mut projected_surfaces: Vec<(String, Vec<String>)> = Vec::new();
+
+        for binding_id in binding_ids {
+            let Some(binding) = bindings.get(binding_id) else {
+                return Err(ExecError::InvalidRuntimeState(format!(
+                    "unadmitted capability binding {binding_id:?}"
+                )));
+            };
+
+            if let CapabilityBindingKind::HostProvider {
+                provider_name,
+                admitted_capabilities,
+            } = &binding.kind
+            {
+                projected_surfaces.push((provider_name.clone(), admitted_capabilities.clone()));
+            }
+        }
+        drop(bindings);
+
+        let providers = self
+            .providers
+            .lock()
+            .expect("provider registry mutex poisoned");
+        let mut registry = CapabilityRegistry::new();
+
+        for (provider_name, admitted_capabilities) in projected_surfaces {
+            let Some(provider) = providers.get(&provider_name) else {
+                return Err(ExecError::CapabilityNotAvailable(provider_name));
+            };
+            let Some(surface) =
+                ProviderAdmissionSurface::from_capabilities(&provider_name, &admitted_capabilities)
+            else {
+                continue;
+            };
+            registry.register(Box::new(ProjectedProviderWrapper::new(
+                provider.clone(),
+                surface,
+            )));
+        }
+
+        Ok(CapabilityContext::with_registry(registry))
+    }
+
     pub(crate) fn control_registry(&self) -> Arc<AsyncMutex<ControlLinkRegistry>> {
         self.control_registry.clone()
     }
@@ -645,6 +1266,205 @@ impl RuntimeState {
             .lock()
             .await
             .children_of(parent_process_id)
+    }
+
+    /// Register or replace one runtime-owned resource instance by stable identity.
+    ///
+    /// This stores environment-owned resource metadata only; it does not expose resources as
+    /// first-class [`Value`] handles or execute resource-backed capability operations.
+    pub async fn register_resource_instance(&self, instance: ResourceInstance) {
+        self.resource_instances
+            .lock()
+            .await
+            .insert(instance.id, instance);
+    }
+
+    /// Look up one runtime-owned resource instance by identity.
+    pub async fn resource_instance(&self, resource_id: ResourceId) -> Option<ResourceInstance> {
+        self.resource_instances
+            .lock()
+            .await
+            .get(&resource_id)
+            .cloned()
+    }
+
+    /// Return true if a resource instance with `resource_id` is registered.
+    pub async fn has_resource_instance(&self, resource_id: ResourceId) -> bool {
+        self.resource_instances
+            .lock()
+            .await
+            .contains_key(&resource_id)
+    }
+
+    /// Return resource instances matching one owner scope and resource type identifier.
+    ///
+    /// Runtime resource lookup remains scoped by owner to avoid ambient type-only discovery across
+    /// unrelated runs, workflows, processes, effect scopes, or test scopes.
+    pub async fn resource_instances_for_owner_by_type(
+        &self,
+        owner: ResourceOwner,
+        type_id: ResourceTypeId,
+    ) -> Vec<ResourceInstance> {
+        self.resource_instances
+            .lock()
+            .await
+            .values()
+            .filter(|instance| instance.owner == owner && instance.type_id == type_id)
+            .cloned()
+            .collect()
+    }
+
+    /// Return all resource instances owned by one runtime owner scope.
+    pub async fn resource_instances_for_owner(
+        &self,
+        owner: ResourceOwner,
+    ) -> Vec<ResourceInstance> {
+        self.resource_instances
+            .lock()
+            .await
+            .values()
+            .filter(|instance| instance.owner == owner)
+            .cloned()
+            .collect()
+    }
+
+    /// Check and record process resource policy before a Proc split admits children.
+    pub async fn apply_process_resource_split(
+        &self,
+        parent_process_id: ProcessId,
+        child_count: usize,
+        operation: &'static str,
+    ) -> Result<(), ResourceSplitJoinViolation> {
+        if child_count == 0 {
+            return Ok(());
+        }
+
+        let mut instances = self.resource_instances.lock().await;
+        let mut parent_resource_ids = instances
+            .iter()
+            .filter_map(|(id, instance)| {
+                (instance.owner == ResourceOwner::Process(parent_process_id)).then_some(*id)
+            })
+            .collect::<Vec<_>>();
+        parent_resource_ids.sort_by_key(|id| id.0);
+
+        for resource_id in &parent_resource_ids {
+            let instance = instances
+                .get(resource_id)
+                .expect("resource id collected from map must still exist");
+            match instance.split_join_policy {
+                ResourceSplitJoinPolicy::ReadOnlyShare
+                | ResourceSplitJoinPolicy::CommunicationOnly
+                | ResourceSplitJoinPolicy::Mergeable => {}
+                ResourceSplitJoinPolicy::NonShareable => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "non-shareable resource cannot cross a process split",
+                    ));
+                }
+                ResourceSplitJoinPolicy::BranchLocalClone => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "branch-local clone resource has no runtime clone implementation in the MVP",
+                    ));
+                }
+                ResourceSplitJoinPolicy::LinearMove => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "linear-move resource requires an explicit destination child in the MVP",
+                    ));
+                }
+            }
+        }
+
+        for resource_id in parent_resource_ids {
+            if let Some(instance) = instances.get_mut(&resource_id)
+                && matches!(
+                    instance.split_join_policy,
+                    ResourceSplitJoinPolicy::ReadOnlyShare
+                        | ResourceSplitJoinPolicy::CommunicationOnly
+                        | ResourceSplitJoinPolicy::Mergeable
+                )
+            {
+                instance.lifecycle = ResourceLifecycle::Splitting;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Apply parent-owned resource merge policy after `join`/`gather` observes child success.
+    pub async fn apply_process_resource_join(
+        &self,
+        parent_process_id: ProcessId,
+        child_process_ids: &[ProcessId],
+        operation: &'static str,
+    ) -> Result<(), ResourceSplitJoinViolation> {
+        if child_process_ids.is_empty() {
+            return Ok(());
+        }
+
+        let mut instances = self.resource_instances.lock().await;
+        let mut parent_resource_ids = instances
+            .iter()
+            .filter_map(|(id, instance)| {
+                (instance.owner == ResourceOwner::Process(parent_process_id)
+                    && instance.lifecycle == ResourceLifecycle::Splitting)
+                    .then_some(*id)
+            })
+            .collect::<Vec<_>>();
+        parent_resource_ids.sort_by_key(|id| id.0);
+
+        for resource_id in &parent_resource_ids {
+            let instance = instances
+                .get(resource_id)
+                .expect("resource id collected from map must still exist");
+            match instance.split_join_policy {
+                ResourceSplitJoinPolicy::Mergeable => {}
+                ResourceSplitJoinPolicy::ReadOnlyShare
+                | ResourceSplitJoinPolicy::CommunicationOnly => {}
+                ResourceSplitJoinPolicy::NonShareable
+                | ResourceSplitJoinPolicy::BranchLocalClone
+                | ResourceSplitJoinPolicy::LinearMove => {
+                    return Err(ResourceSplitJoinViolation::new(
+                        parent_process_id,
+                        operation,
+                        instance.clone(),
+                        "split resource cannot be joined by the MVP merge policy",
+                    ));
+                }
+            }
+        }
+
+        for resource_id in parent_resource_ids {
+            if let Some(instance) = instances.get_mut(&resource_id) {
+                match instance.split_join_policy {
+                    ResourceSplitJoinPolicy::Mergeable => {
+                        instance.lifecycle = ResourceLifecycle::Joined;
+                    }
+                    ResourceSplitJoinPolicy::ReadOnlyShare
+                    | ResourceSplitJoinPolicy::CommunicationOnly => {
+                        instance.lifecycle = ResourceLifecycle::Active;
+                    }
+                    ResourceSplitJoinPolicy::NonShareable
+                    | ResourceSplitJoinPolicy::BranchLocalClone
+                    | ResourceSplitJoinPolicy::LinearMove => {}
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Return the number of registered resource instances.
+    pub async fn resource_instance_count(&self) -> usize {
+        self.resource_instances.lock().await.len()
     }
 
     /// Return the live control-link state for a workflow identity, if registered.

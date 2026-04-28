@@ -29,6 +29,7 @@ fn workflow_boundary_failure_outcome_preserves_process_causes_and_admission_meta
     let admission = WorkflowAdmissionContext {
         active_role: Some("approver".to_string()),
         admitted_capabilities: vec!["payments.charge".to_string()],
+        admitted_capability_bindings: Vec::new(),
         requires_evidence: vec!["request signature verified".to_string()],
     };
     let failure = WorkflowFailure::new(
@@ -82,6 +83,7 @@ fn workflow_boundary_success_outcome_can_be_reported_without_external_sink() {
     let admission = WorkflowAdmissionContext {
         active_role: None,
         admitted_capabilities: vec![],
+        admitted_capability_bindings: Vec::new(),
         requires_evidence: vec!["host admission".to_string()],
     };
 

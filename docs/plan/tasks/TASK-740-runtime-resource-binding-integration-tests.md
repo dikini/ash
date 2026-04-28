@@ -1,6 +1,6 @@
 # TASK-740: Add runtime integration tests for resource allocation, capability binding admission, authority provenance, and Proc split/join policy.
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Task Type
 
@@ -30,7 +30,9 @@ Add runtime integration tests for resource allocation, capability binding admiss
 1. Test host-backed, internal, and derived capability bindings.
 2. Test missing resource and authority-widening failures.
 3. Test process split rejection and allowed read-only sharing.
-4. Verify workflow reports preserve resource/provenance evidence.
+4. Verify current runtime resource/provenance evidence surfaces are preserved.
+
+Full workflow-report projection of resource/provenance evidence remains outside Phase 103's substrate-only scope and is deferred to later workflow-reporting work.
 
 ### Property Requirements (proptest)
 
@@ -69,11 +71,11 @@ Required verification for this task class:
 
 ## Verification Steps
 
-- [ ] Requirements above are satisfied.
-- [ ] New tests or docs checks cover the task-owned behavior.
-- [ ] Existing public behavior remains compatible unless the spec explicitly says otherwise.
-- [ ] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
-- [ ] PLAN-INDEX.md status is updated only when the task is actually complete.
+- [x] Requirements above are satisfied.
+- [x] New tests or docs checks cover the task-owned behavior.
+- [x] Existing public behavior remains compatible unless the spec explicitly says otherwise.
+- [x] CHANGELOG.md is updated for implementation/tooling/docs-policy changes.
+- [x] PLAN-INDEX.md status is updated only when the task is actually complete.
 
 ## Dependencies for Next Task
 

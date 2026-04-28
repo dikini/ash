@@ -2921,7 +2921,7 @@ Type-check capability interface operation environments, implementation conforman
 ## Phase 103: Runtime Resource and Binding Substrate
 
 **Priority:** High (runtime substrate for internal and derived authority)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), [SPEC-049](../spec/SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-051](../spec/SPEC-051-WORKFLOW-SEMANTICS.md)
 **Plan:** [docs/plan/PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md](PLAN-100-CAPABILITY-INTERFACES-RESOURCES.md)
 
@@ -2929,12 +2929,12 @@ Introduce runtime resource instance carriers, resource lifecycle/access/split me
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
-| [TASK-735](tasks/TASK-735-runtime-resource-instance-carriers.md) | Runtime resource instance carriers | 6 | 📝 Planned |
-| [TASK-736](tasks/TASK-736-capability-binding-admission-api.md) | Capability binding admission API | 6 | 📝 Planned |
-| [TASK-737](tasks/TASK-737-internal-authority-allocation-and-resource-admission.md) | Internal authority allocation and resource admission | 7 | 📝 Planned |
-| [TASK-738](tasks/TASK-738-derived-authority-non-widening-runtime-checks.md) | Derived authority non-widening runtime checks | 6 | 📝 Planned |
-| [TASK-739](tasks/TASK-739-proc-resource-split-join-policy-enforcement.md) | Proc resource split/join policy enforcement | 7 | 📝 Planned |
-| [TASK-740](tasks/TASK-740-runtime-resource-binding-integration-tests.md) | Runtime resource/binding integration tests | 5 | 📝 Planned |
+| [TASK-735](tasks/TASK-735-runtime-resource-instance-carriers.md) | Runtime resource instance carriers | 6 | ✅ Complete |
+| [TASK-736](tasks/TASK-736-capability-binding-admission-api.md) | Capability binding admission API | 6 | ✅ Complete |
+| [TASK-737](tasks/TASK-737-internal-authority-allocation-and-resource-admission.md) | Internal authority allocation and resource admission | 7 | ✅ Complete |
+| [TASK-738](tasks/TASK-738-derived-authority-non-widening-runtime-checks.md) | Derived authority non-widening runtime checks | 6 | ✅ Complete |
+| [TASK-739](tasks/TASK-739-proc-resource-split-join-policy-enforcement.md) | Proc resource split/join policy enforcement | 7 | ✅ Complete |
+| [TASK-740](tasks/TASK-740-runtime-resource-binding-integration-tests.md) | Runtime resource/binding integration tests | 5 | ✅ Complete |
 
 **Track A (Resource Runtime):** 13h. Add resource identity/lifecycle carriers and allocation/admission.
 **Track B (Capability Admission):** 12h. Admit host/internal/derived capability bindings with provenance.

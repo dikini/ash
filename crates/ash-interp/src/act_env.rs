@@ -64,6 +64,19 @@ impl ActEnv {
         Self::new(capability_ctx, policies, provenance)
     }
 
+    /// Construct an Act environment from explicitly admitted capability bindings.
+    pub async fn from_runtime_state_with_admitted_bindings(
+        runtime_state: &RuntimeState,
+        binding_ids: &[ash_core::CapabilityBindingId],
+        policies: PolicyEvaluator,
+        provenance: Provenance,
+    ) -> crate::ExecResult<Self> {
+        let capability_ctx = runtime_state
+            .create_capability_context_for_bindings(binding_ids)
+            .await?;
+        Ok(Self::new(capability_ctx, policies, provenance))
+    }
+
     /// Replace the accumulated effect log.
     pub fn with_effects(mut self, effects: Vec<Effect>) -> Self {
         self.effects = effects;

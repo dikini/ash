@@ -8,6 +8,518 @@ use crate::{Value, WorkflowId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// A unique identifier for one concrete runtime resource instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ResourceId(pub Uuid);
+
+impl ResourceId {
+    /// Create a fresh resource instance identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for ResourceId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Stable runtime identifier for an Ash resource type declaration.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ResourceTypeId(String);
+
+impl ResourceTypeId {
+    /// Create a resource type identifier from a static/type-checker resource type name.
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
+
+    /// Borrow the resource type name carried by this identifier.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&str> for ResourceTypeId {
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for ResourceTypeId {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Runtime owner scope for a resource instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ResourceOwner {
+    /// Resource admitted for the whole run.
+    Run(RunId),
+    /// Resource owned by one workflow execution.
+    Workflow(WorkflowId),
+    /// Resource owned by one process.
+    Process(ProcessId),
+    /// Resource owned by one effectful/Act scope.
+    EffectScope(EffectScopeId),
+    /// Resource owned by one test harness execution.
+    Test(TestId),
+}
+
+/// A unique identifier for one runtime test harness scope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TestId(pub Uuid);
+
+impl TestId {
+    /// Create a fresh test scope identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for TestId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Current lifecycle state of a runtime resource instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ResourceLifecycle {
+    /// Instance identity exists before admission to an execution scope.
+    Allocated,
+    /// Instance has been admitted to an owner scope.
+    Admitted,
+    /// Instance is active and available for later resource-backed operations.
+    Active,
+    /// Instance is being projected across a process split.
+    Splitting,
+    /// Split instance state has been joined.
+    Joined,
+    /// Instance has been released by or from its owner scope.
+    Released,
+    /// Instance reached a failed terminal resource state.
+    Failed,
+}
+
+impl ResourceLifecycle {
+    /// Return true for terminal resource lifecycle states.
+    #[must_use]
+    pub fn is_terminal(self) -> bool {
+        matches!(self, Self::Released | Self::Failed)
+    }
+}
+
+/// MVP access policy categories for a resource instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AccessPolicy {
+    /// Resource may be observed but not mutated.
+    ReadOnly,
+    /// Resource may be mutated by an admitted resource-backed operation.
+    ReadWrite,
+    /// Resource requires exclusive access by one owner/user at a time.
+    Exclusive,
+}
+
+/// MVP process split/join/share/move policy categories for a resource instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ResourceSplitJoinPolicy {
+    /// Branches may share immutable/read-only access.
+    ReadOnlyShare,
+    /// Each branch receives isolated cloned state.
+    BranchLocalClone,
+    /// One branch receives ownership; others do not.
+    LinearMove,
+    /// Branch states can be joined by a later merge operation.
+    Mergeable,
+    /// Resource cannot cross a process split.
+    NonShareable,
+    /// Resource is accessed only through message/handle protocols.
+    CommunicationOnly,
+}
+
+/// Minimal opaque runtime-owned resource state descriptor.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ResourceRuntimeState {
+    /// No runtime state payload is attached yet.
+    #[default]
+    Empty,
+    /// Opaque host/runtime descriptor for state stored outside first-class Ash values.
+    Opaque(String),
+}
+
+impl ResourceRuntimeState {
+    /// Create an opaque state descriptor.
+    #[must_use]
+    pub fn opaque(descriptor: impl Into<String>) -> Self {
+        Self::Opaque(descriptor.into())
+    }
+}
+
+/// Runtime provenance category and notes for a resource instance.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ResourceProvenance {
+    /// Authority over an external/host resource admitted by the host runtime.
+    HostAuthority { notes: Vec<String> },
+    /// Authority over an Ash-created internal resource.
+    InternalAuthority { notes: Vec<String> },
+    /// Authority derived from declared dependencies.
+    DerivedAuthority {
+        sources: Vec<ResourceId>,
+        notes: Vec<String>,
+    },
+}
+
+impl ResourceProvenance {
+    /// Construct internal authority provenance with one note.
+    #[must_use]
+    pub fn internal(note: impl Into<String>) -> Self {
+        Self::InternalAuthority {
+            notes: vec![note.into()],
+        }
+    }
+}
+
+impl Default for ResourceProvenance {
+    fn default() -> Self {
+        Self::InternalAuthority { notes: Vec::new() }
+    }
+}
+
+/// Concrete identity-bearing runtime resource instance carrier.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResourceInstance {
+    /// Stable identity for the lifetime of the resource instance.
+    pub id: ResourceId,
+    /// Static resource type identifier.
+    pub type_id: ResourceTypeId,
+    /// Runtime owner scope metadata.
+    pub owner: ResourceOwner,
+    /// Runtime-owned state descriptor; not a first-class Ash [`Value`].
+    pub state: ResourceRuntimeState,
+    /// Current lifecycle state.
+    pub lifecycle: ResourceLifecycle,
+    /// Access discipline metadata.
+    pub access_policy: AccessPolicy,
+    /// Process split/join/share/move policy metadata.
+    pub split_join_policy: ResourceSplitJoinPolicy,
+    /// Authority provenance metadata.
+    pub provenance: ResourceProvenance,
+}
+
+impl ResourceInstance {
+    /// Create a resource instance with conservative default metadata.
+    #[must_use]
+    pub fn new(id: ResourceId, type_id: ResourceTypeId, owner: ResourceOwner) -> Self {
+        Self {
+            id,
+            type_id,
+            owner,
+            state: ResourceRuntimeState::default(),
+            lifecycle: ResourceLifecycle::Allocated,
+            access_policy: AccessPolicy::Exclusive,
+            split_join_policy: ResourceSplitJoinPolicy::NonShareable,
+            provenance: ResourceProvenance::default(),
+        }
+    }
+
+    /// Attach runtime-owned state metadata.
+    #[must_use]
+    pub fn with_state(mut self, state: ResourceRuntimeState) -> Self {
+        self.state = state;
+        self
+    }
+
+    /// Attach lifecycle metadata.
+    #[must_use]
+    pub fn with_lifecycle(mut self, lifecycle: ResourceLifecycle) -> Self {
+        self.lifecycle = lifecycle;
+        self
+    }
+
+    /// Attach access policy metadata.
+    #[must_use]
+    pub fn with_access_policy(mut self, access_policy: AccessPolicy) -> Self {
+        self.access_policy = access_policy;
+        self
+    }
+
+    /// Attach split/join policy metadata.
+    #[must_use]
+    pub fn with_split_join_policy(mut self, split_join_policy: ResourceSplitJoinPolicy) -> Self {
+        self.split_join_policy = split_join_policy;
+        self
+    }
+
+    /// Attach authority provenance metadata.
+    #[must_use]
+    pub fn with_provenance(mut self, provenance: ResourceProvenance) -> Self {
+        self.provenance = provenance;
+        self
+    }
+}
+
+/// A unique identifier for one admitted runtime capability binding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CapabilityBindingId(pub Uuid);
+
+impl CapabilityBindingId {
+    /// Create a fresh capability binding identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for CapabilityBindingId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Stable runtime identifier for an Ash capability interface declaration.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CapabilityInterfaceId(String);
+
+impl CapabilityInterfaceId {
+    /// Create a capability interface identifier from a static interface name.
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
+
+    /// Borrow the interface name carried by this identifier.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&str> for CapabilityInterfaceId {
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for CapabilityInterfaceId {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Stable runtime identifier for an Ash-defined capability implementation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CapabilityImplementationId(String);
+
+impl CapabilityImplementationId {
+    /// Create a capability implementation identifier from a static implementation name.
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
+
+    /// Borrow the implementation name carried by this identifier.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&str> for CapabilityImplementationId {
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for CapabilityImplementationId {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Runtime provenance for an admitted capability binding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CapabilityAuthorityProvenance {
+    /// Authority over an external/host capability admitted by the host runtime.
+    HostAuthority { notes: Vec<String> },
+    /// Authority derived from explicitly admitted dependencies.
+    DerivedAuthority {
+        dependency_names: Vec<String>,
+        notes: Vec<String>,
+    },
+}
+
+/// Dependency metadata for an implementation-backed capability binding.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CapabilityBindingDependency {
+    /// Dependency on one environment-owned runtime resource instance.
+    Resource {
+        name: String,
+        resource_id: ResourceId,
+        type_id: ResourceTypeId,
+    },
+    /// Dependency on another explicitly admitted capability binding.
+    Capability {
+        name: String,
+        binding_id: CapabilityBindingId,
+        interface: CapabilityInterfaceId,
+    },
+    /// Inert configuration value dependency.
+    Config { name: String, value: Value },
+}
+
+impl CapabilityBindingDependency {
+    /// Borrow the dependency name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Resource { name, .. }
+            | Self::Capability { name, .. }
+            | Self::Config { name, .. } => name,
+        }
+    }
+
+    /// Return true when this dependency can carry runtime authority.
+    #[must_use]
+    pub fn carries_authority(&self) -> bool {
+        matches!(self, Self::Resource { .. } | Self::Capability { .. })
+    }
+
+    /// Render one audit/provenance note preserving stable source identity.
+    #[must_use]
+    pub fn provenance_note(&self) -> String {
+        match self {
+            Self::Resource {
+                name,
+                resource_id,
+                type_id,
+            } => format!(
+                "resource {name}: id={} type={}",
+                resource_id.0,
+                type_id.as_str()
+            ),
+            Self::Capability {
+                name,
+                binding_id,
+                interface,
+            } => format!(
+                "capability {name}: binding={} interface={}",
+                binding_id.0,
+                interface.as_str()
+            ),
+            Self::Config { name, .. } => format!("config {name}: inert dependency"),
+        }
+    }
+}
+
+/// Runtime shape of an admitted capability binding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CapabilityBindingKind {
+    /// Binding backed by an existing host provider registry entry.
+    HostProvider {
+        provider_name: String,
+        admitted_capabilities: Vec<String>,
+    },
+    /// Binding backed by Ash-defined implementation metadata only.
+    Implementation {
+        implementation: CapabilityImplementationId,
+    },
+}
+
+/// Identity-bearing runtime carrier for an admitted capability binding.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CapabilityBinding {
+    /// Stable binding identity for the lifetime of the admission record.
+    pub id: CapabilityBindingId,
+    /// Runtime binding name selected by workflow/process/run headers.
+    pub name: String,
+    /// Static interface identifier this binding is meant to satisfy.
+    pub interface: CapabilityInterfaceId,
+    /// Backing kind metadata.
+    pub kind: CapabilityBindingKind,
+    /// Explicit dependency records for implementation-backed bindings.
+    pub dependencies: Vec<CapabilityBindingDependency>,
+    /// Authority provenance metadata.
+    pub authority: CapabilityAuthorityProvenance,
+}
+
+impl CapabilityBinding {
+    /// Create a host-provider binding carrier.
+    #[must_use]
+    pub fn host_provider(
+        id: CapabilityBindingId,
+        name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+        provider_name: impl Into<String>,
+        admitted_capabilities: Vec<String>,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            interface,
+            kind: CapabilityBindingKind::HostProvider {
+                provider_name: provider_name.into(),
+                admitted_capabilities,
+            },
+            dependencies: Vec::new(),
+            authority: CapabilityAuthorityProvenance::HostAuthority {
+                notes: vec!["host provider admitted by runtime".to_string()],
+            },
+        }
+    }
+
+    /// Create an implementation-backed binding carrier.
+    #[must_use]
+    pub fn implementation(
+        id: CapabilityBindingId,
+        name: impl Into<String>,
+        interface: CapabilityInterfaceId,
+        implementation: CapabilityImplementationId,
+        dependencies: Vec<CapabilityBindingDependency>,
+    ) -> Self {
+        let dependency_names = dependencies
+            .iter()
+            .map(|dependency| dependency.name().to_string())
+            .collect();
+        let mut notes =
+            vec!["implementation binding derives only from admitted dependencies".to_string()];
+        notes.extend(
+            dependencies
+                .iter()
+                .map(CapabilityBindingDependency::provenance_note),
+        );
+        Self {
+            id,
+            name: name.into(),
+            interface,
+            kind: CapabilityBindingKind::Implementation { implementation },
+            dependencies,
+            authority: CapabilityAuthorityProvenance::DerivedAuthority {
+                dependency_names,
+                notes,
+            },
+        }
+    }
+
+    /// Add one authority-provenance audit note.
+    #[must_use]
+    pub fn with_authority_note(mut self, note: impl Into<String>) -> Self {
+        match &mut self.authority {
+            CapabilityAuthorityProvenance::HostAuthority { notes }
+            | CapabilityAuthorityProvenance::DerivedAuthority { notes, .. } => {
+                notes.push(note.into())
+            }
+        }
+        self
+    }
+}
+
 /// A unique identifier for one runtime execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RunId(pub Uuid);
@@ -398,8 +910,19 @@ pub struct WorkflowAdmissionContext {
     pub active_role: Option<String>,
     /// Capability surface admitted to the workflow boundary.
     pub admitted_capabilities: Vec<String>,
+    /// Explicit capability binding identities admitted to the workflow boundary.
+    pub admitted_capability_bindings: Vec<CapabilityBindingId>,
     /// Evidence used to satisfy admission-time `requires` checks.
     pub requires_evidence: Vec<String>,
+}
+
+impl WorkflowAdmissionContext {
+    /// Return a new admission context with one explicit admitted capability binding identity.
+    #[must_use]
+    pub fn with_admitted_capability_binding(mut self, binding_id: CapabilityBindingId) -> Self {
+        self.admitted_capability_bindings.push(binding_id);
+        self
+    }
 }
 
 /// Structured workflow contract evidence status.

@@ -1280,6 +1280,7 @@ impl Engine {
             let admission = WorkflowAdmissionContext {
                 active_role: Some(active_role.to_string()),
                 admitted_capabilities: request.required_capabilities.clone(),
+                admitted_capability_bindings: Vec::new(),
                 requires_evidence: Vec::new(),
             };
             let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
@@ -1310,6 +1311,7 @@ impl Engine {
         let admission = WorkflowAdmissionContext {
             active_role: admitted_role_name(&request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
+            admitted_capability_bindings: Vec::new(),
             requires_evidence: Vec::new(),
         };
         let ensures_evidence = build_pending_ensures_evidence(&request.ensures);

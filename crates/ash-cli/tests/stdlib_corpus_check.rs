@@ -10,8 +10,8 @@ struct ExpectedFailure {
 }
 
 const EXPECTED_STD_FILES: usize = 39;
-const EXPECTED_STD_PASSING: usize = 33;
-const EXPECTED_STD_FAILING: usize = 6;
+const EXPECTED_STD_PASSING: usize = 34;
+const EXPECTED_STD_FAILING: usize = 5;
 
 const EXPECTED_PASS: &[&str] = &[
     "std/src/act.ash",
@@ -27,6 +27,7 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/lib.ash",
     "std/src/list.ash",
     "std/src/llm/dispatch.ash",
+    "std/src/llm/loading.ash",
     "std/src/llm/mod.ash",
     "std/src/llm/openai.ash",
     "std/src/llm/prompt.ash",
@@ -53,10 +54,6 @@ const EXPECTED_FAIL: &[ExpectedFailure] = &[
     ExpectedFailure {
         path: "std/src/llm/conversation.ash",
         reason: "workflow export visibility/importability cannot resolve dispatch::complete",
-    },
-    ExpectedFailure {
-        path: "std/src/llm/loading.ash",
-        reason: "imports path/fs from the wrong nested std module surface",
     },
     ExpectedFailure {
         path: "std/src/llm/router.ash",
@@ -177,4 +174,20 @@ fn stdlib_corpus_cli_check_baseline_is_classified_and_honest() {
     );
     assert_eq!(passed, EXPECTED_STD_PASSING);
     assert_eq!(failed, EXPECTED_STD_FAILING);
+}
+
+#[test]
+fn task_763_runtime_args_and_llm_loading_repair_targets_stay_checkable() {
+    let repo = repo_root();
+    for relative in [
+        "examples/entrypoint_args.ash",
+        "std/src/llm/loading.ash",
+        "std/src/runtime/mod.ash",
+    ] {
+        let (success, stdout, stderr) = run_ash_check(&repo, relative);
+        assert!(
+            success,
+            "TASK-763 target failed `ash check`: {relative}\nstdout={stdout}\nstderr={stderr}"
+        );
+    }
 }

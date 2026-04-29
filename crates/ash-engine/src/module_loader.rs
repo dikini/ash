@@ -68,10 +68,20 @@ pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
 
 fn source_contains_workflow_keyword(source: &str) -> bool {
     source.lines().any(|line| {
-        let code = line.split("--").next().unwrap_or_default();
+        let code = strip_line_comment(line);
         code.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
             .any(|token| token == "workflow")
     })
+}
+
+fn strip_line_comment(line: &str) -> &str {
+    let dash = line.find("--");
+    let slash = line.find("//");
+    match (dash, slash) {
+        (Some(a), Some(b)) => &line[..a.min(b)],
+        (Some(i), None) | (None, Some(i)) => &line[..i],
+        (None, None) => line,
+    }
 }
 
 /// Whether a callable carries an Ash-level body or is bodyless (builtin).
@@ -416,7 +426,11 @@ pub fn count_pub_fn_snippets(source: &str) -> (usize, Vec<PubFnDiagnostic>) {
 }
 
 fn is_skippable_prelude_line(line: &str) -> bool {
-    line.is_empty() || line.starts_with("--") || line.starts_with("/*") || line.starts_with('*')
+    line.is_empty()
+        || line.starts_with("--")
+        || line.starts_with("//")
+        || line.starts_with("/*")
+        || line.starts_with('*')
 }
 
 fn import_needs_more_lines(snippet: &str) -> bool {

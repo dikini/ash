@@ -8,6 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-764 / Phase 107: added parser support for `//` line comments anywhere normal whitespace/comments are skipped and CLI diagnostics for common stale syntax shapes (`if ... {`, `for ... in ... {`, `decide ... else`, `observe ... with`, and `with role:`), while preserving the honest std 34/39 and example 20/36 corpus baselines.
 - TASK-763 / Phase 107: repaired `std/src/llm/loading.ash` to use checkable std import surfaces and current workflow body syntax, kept `runtime::Args`/`RuntimeError` re-export checks pinned, and raised the std corpus baseline to 34/39 while preserving `examples/entrypoint_args.ash` in the example expected-pass corpus.
 - TASK-762 / Phase 107: added std-style relative import normalization for `super::`, `self::`, and `crate::` paths and exports plain workflow signatures from std modules, allowing legacy-body workflows such as `llm::dispatch::complete_with_tools` to be imported by name while preserving the honest 33/39 std baseline and moving `examples/entrypoint_args.ash` into the example expected-pass corpus.
 - TASK-761 / Phase 107: repaired std module-loader coverage for multiline ordinary imports and importable module roots, moving `std/src/llm/dispatch.ash` and `std/src/io/mod.ash` into the CLI corpus expected-pass set and raising the std baseline to 33/39 pass.

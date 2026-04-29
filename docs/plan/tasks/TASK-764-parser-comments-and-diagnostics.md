@@ -1,6 +1,6 @@
 # TASK-764: Parser Comments and Diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Align parser behavior with documented comment syntax by supporting `//` line com
 
 ## Dependencies
 
-- 📝 TASK-760: CLI Corpus Baseline Harness
+- ✅ TASK-760: CLI Corpus Baseline Harness
 
 ## Requirements
 
@@ -34,16 +34,23 @@ Align parser behavior with documented comment syntax by supporting `//` line com
 
 ## TDD Steps
 
-1. Add failing parser tests for `//` comments at file start, inside workflow, and trailing after statements.
-2. Add failing CLI diagnostic tests asserting targeted invalid syntax does not render only `ContextError`.
-3. Implement comment support.
-4. Improve targeted parse error rendering without broad grammar relaxation.
-5. Re-run example failures to see which move from comment failure to true syntax drift.
+1. ✅ Add failing parser tests for `//` comments at file start, inside workflow, and trailing after statements.
+2. ✅ Add failing CLI diagnostic tests asserting targeted invalid syntax does not render only `ContextError`.
+3. ✅ Implement comment support.
+4. ✅ Improve targeted parse error rendering without broad grammar relaxation.
+5. ✅ Re-run example failures to see which move from comment failure to true syntax drift.
+
+## Outcome
+
+- `//` is now accepted as a line-comment prefix by the parser whitespace/comment skippers, including in workflow bodies and trailing after statements.
+- The ordinary-file loader also treats leading `//` comment lines as prelude comments rather than the first non-import line.
+- `ash check` now replaces raw `ContextError` output with targeted stale-syntax diagnostics for the TASK-764 cases: `if condition { ... }`, `for item in items { ... }`, `decide ... else`, `observe ... with`, and `with role:`. These diagnostics explicitly say the syntax is unsupported rather than accepting it.
+- Corpus baselines remain honest after the diagnostic/comment change: std remains `34/39`, examples remain `20/36`.
 
 ## Verification Checklist
 
-- [ ] `cargo test -p ash-parser --test comment_syntax -- --nocapture` passes.
-- [ ] `cargo test -p ash-cli --test check_parse_diagnostics -- --nocapture` passes.
-- [ ] Existing parser tests pass.
-- [ ] `cargo clippy -p ash-parser -p ash-cli --all-targets --all-features -- -D warnings` passes.
-- [ ] Independent review confirms diagnostics do not claim unsupported syntax is valid.
+- [x] `cargo test -p ash-parser --test comment_syntax -- --nocapture` passes.
+- [x] `cargo test -p ash-cli --test check_parse_diagnostics -- --nocapture` passes.
+- [x] Existing parser tests pass via `cargo test -p ash-parser --lib -- --nocapture`.
+- [x] `cargo clippy -p ash-parser -p ash-cli --all-targets --all-features -- -D warnings` passes as part of `cargo clippy -p ash-parser -p ash-engine -p ash-cli --all-targets --all-features -- -D warnings`.
+- [x] Independent review confirms diagnostics do not claim unsupported syntax is valid.

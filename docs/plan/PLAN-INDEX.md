@@ -3048,7 +3048,7 @@ Repair the post-Phase-106 `ash check` corpus for standard library modules and ex
 | [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Stdlib workflow exports and relative imports | 6 | ✅ Complete |
 | [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Runtime Args and LLM loading imports | 5 | ✅ Complete |
 | [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Parser comments and diagnostics | 6 | ✅ Complete |
-| [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small examples | 6 | 📝 Planned |
+| [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small examples | 6 | ✅ Complete |
 | [TASK-766](tasks/TASK-766-reference-example-policy-and-closeout.md) | Reference example policy and closeout | 6 | 📝 Planned |
 
 **Investigation baseline:** `std/src/**/*.ash` = 31/39 passing, `examples/**/*.ash` = 19/36 passing through `ash-cli check`.

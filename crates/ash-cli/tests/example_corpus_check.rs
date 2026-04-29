@@ -10,14 +10,21 @@ struct ExpectedFailure {
 }
 
 const EXPECTED_EXAMPLE_FILES: usize = 36;
-const EXPECTED_EXAMPLE_PASSING: usize = 20;
-const EXPECTED_EXAMPLE_FAILING: usize = 16;
+const EXPECTED_EXAMPLE_PASSING: usize = 27;
+const EXPECTED_EXAMPLE_FAILING: usize = 9;
 
 const EXPECTED_PASS: &[&str] = &[
     "examples/01-basics/01-hello-world.ash",
     "examples/01-basics/02-variables.ash",
     "examples/01-basics/03-expressions.ash",
     "examples/01-basics/04-observe.ash",
+    "examples/02-control-flow/01-conditionals.ash",
+    "examples/02-control-flow/02-foreach.ash",
+    "examples/02-control-flow/03-sequential.ash",
+    "examples/02-control-flow/04-sequential.ash",
+    "examples/03-io/directory_listing.ash",
+    "examples/03-io/file_read_write.ash",
+    "examples/03-io/path_operations.ash",
     "examples/05-phase98/01-fail-with-error.ash",
     "examples/05-phase98/02-proc-par-await-join.ash",
     "examples/05-phase98/03-proc-scatter-gather.ash",
@@ -37,34 +44,6 @@ const EXPECTED_PASS: &[&str] = &[
 ];
 
 const EXPECTED_FAIL: &[ExpectedFailure] = &[
-    ExpectedFailure {
-        path: "examples/02-control-flow/01-conditionals.ash",
-        reason: "historical if-block syntax is not accepted by the current parser",
-    },
-    ExpectedFailure {
-        path: "examples/02-control-flow/02-foreach.ash",
-        reason: "historical foreach/for syntax is not accepted by the current parser",
-    },
-    ExpectedFailure {
-        path: "examples/02-control-flow/03-sequential.ash",
-        reason: "historical sequential workflow syntax is not accepted by the current parser",
-    },
-    ExpectedFailure {
-        path: "examples/02-control-flow/04-sequential.ash",
-        reason: "historical sequential workflow syntax is not accepted by the current parser",
-    },
-    ExpectedFailure {
-        path: "examples/03-io/directory_listing.ash",
-        reason: "older IO example uses stale comments and action forms outside current syntax",
-    },
-    ExpectedFailure {
-        path: "examples/03-io/file_read_write.ash",
-        reason: "older IO example uses stale comments and action forms outside current syntax",
-    },
-    ExpectedFailure {
-        path: "examples/03-io/path_operations.ash",
-        reason: "older IO example uses stale comments and action forms outside current syntax",
-    },
     ExpectedFailure {
         path: "examples/03-policies/01-role-based.ash",
         reason: "historical policy sketch syntax is not accepted by the current parser",

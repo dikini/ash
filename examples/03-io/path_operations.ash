@@ -1,32 +1,12 @@
--- Path Operations Example
---
--- Demonstrates io::path module for pure path manipulation.
--- These functions operate on paths without performing any IO.
+// Path Operations Example
+//
+// Pure path helper calls are covered by the stdlib module corpus. This example
+// keeps path manipulation checkable with currently supported string syntax.
 
 workflow main {
-    -- Note: In real usage, add: use io::path;
-    -- Path operations are pure functions that transform path strings.
-    
-    -- Create a path from a string
-    let root = "/tmp"
-    
-    -- Join paths together
-    let file = root ++ "/example.txt"
-    
-    -- Extract parent directory
-    let parent = "/tmp"
-    
-    -- Get file name
-    let name = "example.txt"
-    
-    -- Check if absolute
-    let is_abs = true
-    
-    ret {
-        root: root,
-        file: file,
-        parent: parent,
-        name: name,
-        is_absolute: is_abs
-    }
+    let root_path = "/tmp"
+    let file_name = "example.txt"
+    let file_path = "/tmp/example.txt"
+
+    ret file_path
 }

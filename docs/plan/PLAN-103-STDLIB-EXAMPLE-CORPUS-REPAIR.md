@@ -51,7 +51,7 @@ Passing modern syntax examples include all Phase 105 and Phase 106 examples. The
 | [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Fix workflow export visibility plus relative/super imports | Substrate | 6 | ✅ Complete |
 | [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Repair `runtime::Args` and `llm/loading.ash` std import surfaces | Semantic | 5 | ✅ Complete |
 | [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Add `//` comment support and targeted parse diagnostics for common stale syntax | Parser/DX | 6 | ✅ Complete |
-| [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small control-flow and IO examples to current syntax | Examples | 6 | 📝 Planned |
+| [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small control-flow and IO examples to current syntax | Examples | 6 | ✅ Complete |
 | [TASK-766](tasks/TASK-766-reference-example-policy-and-closeout.md) | Decide/canonicalize/mark large reference examples and close Phase 107 | Docs/Examples | 6 | 📝 Planned |
 
 Estimated total: 39 hours.

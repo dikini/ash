@@ -123,6 +123,33 @@ async fn multiline_nested_ordinary_import_resolves_before_workflow_body() {
     );
 }
 
+#[tokio::test]
+async fn semicolonless_ordinary_imports_do_not_swallow_workflow_body() {
+    let temp = TempDir::new().expect("tempdir");
+    let dir = temp.path();
+
+    write(&dir.join("types.ash"), "pub type A = A { value: Int };");
+    write(&dir.join("extra.ash"), "pub type B = B { label: String };");
+    write(
+        &dir.join("main.ash"),
+        "\
+        use types::A\n\
+        use extra::B\n\
+        \n\
+        workflow main() -> A { ret A { value: 7 }; }\n\
+        ",
+    );
+
+    let engine = build_engine();
+    let result = engine.run_file(dir.join("main.ash")).await;
+
+    assert!(
+        result.is_ok(),
+        "semicolonless ordinary imports should remain line-delimited, got: {:?}",
+        result.err()
+    );
+}
+
 // ── 2. Nested multi-file modules ───────────────────────────────────────
 
 /// Project layout:

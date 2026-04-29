@@ -251,7 +251,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
 
         if !seen_non_import && trimmed.starts_with("use ") {
             let mut snippet = line.to_string();
-            while !snippet.contains(';') {
+            while import_needs_more_lines(&snippet) {
                 let Some(next_line) = lines.next() else {
                     break;
                 };
@@ -403,6 +403,10 @@ pub fn count_pub_fn_snippets(source: &str) -> (usize, Vec<PubFnDiagnostic>) {
 
 fn is_skippable_prelude_line(line: &str) -> bool {
     line.is_empty() || line.starts_with("--") || line.starts_with("/*") || line.starts_with('*')
+}
+
+fn import_needs_more_lines(snippet: &str) -> bool {
+    snippet.contains("::{") && !snippet.contains('}') && !snippet.contains(';')
 }
 
 fn parse_ordinary_import(line: &str) -> Result<ImportSpec, EngineError> {
@@ -638,7 +642,7 @@ pub(crate) fn collect_module_exports(
 
     // Check regular `use` imports for cycles (e.g. a.ash has `use b::{X}`,
     // b.ash has `use a::{Y}` -- both reference each other).
-    for snippet in extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("use ")) {
+    for snippet in extract_import_snippets(&source) {
         let trimmed = snippet.trim();
         if let Ok(import_spec) = parse_ordinary_import(trimmed)
             && let Some(target_path) =
@@ -1110,6 +1114,37 @@ fn resolve_child_module(module_root: &Path, name: &str) -> Result<PathBuf, Engin
         file_candidate.display(),
         mod_candidate.display()
     )))
+}
+
+fn extract_import_snippets(source: &str) -> Vec<String> {
+    let lines: Vec<&str> = source.lines().collect();
+    let mut snippets = Vec::new();
+    let mut index = 0usize;
+
+    while index < lines.len() {
+        let trimmed = lines[index].trim_start();
+        if trimmed.starts_with("--") || trimmed.starts_with("pub use ") {
+            index += 1;
+            continue;
+        }
+
+        if trimmed.starts_with("use ") {
+            let mut snippet = lines[index].to_string();
+            while import_needs_more_lines(&snippet) {
+                index += 1;
+                if index >= lines.len() {
+                    break;
+                }
+                snippet.push('\n');
+                snippet.push_str(lines[index]);
+            }
+            snippets.push(snippet);
+        }
+
+        index += 1;
+    }
+
+    snippets
 }
 
 fn extract_semicolon_snippets<F>(source: &str, predicate: F) -> Vec<String>

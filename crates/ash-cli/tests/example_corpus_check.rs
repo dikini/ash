@@ -10,8 +10,8 @@ struct ExpectedFailure {
 }
 
 const EXPECTED_EXAMPLE_FILES: usize = 36;
-const EXPECTED_EXAMPLE_PASSING: usize = 19;
-const EXPECTED_EXAMPLE_FAILING: usize = 17;
+const EXPECTED_EXAMPLE_PASSING: usize = 20;
+const EXPECTED_EXAMPLE_FAILING: usize = 16;
 
 const EXPECTED_PASS: &[&str] = &[
     "examples/01-basics/01-hello-world.ash",
@@ -32,6 +32,7 @@ const EXPECTED_PASS: &[&str] = &[
     "examples/08-phase106/02-proc-comprehension-from-act.ash",
     "examples/08-phase106/03-deferred-pure-targets.ash",
     "examples/code_review.ash",
+    "examples/entrypoint_args.ash",
     "examples/entrypoint_minimal.ash",
 ];
 
@@ -79,10 +80,6 @@ const EXPECTED_FAIL: &[ExpectedFailure] = &[
     ExpectedFailure {
         path: "examples/04-real-world/customer-support.ash",
         reason: "older real-world sketch uses historical workflow/policy syntax",
-    },
-    ExpectedFailure {
-        path: "examples/entrypoint_args.ash",
-        reason: "runtime::Args re-export/import drift prevents CLI check success",
     },
     ExpectedFailure {
         path: "examples/multi_agent_research.ash",

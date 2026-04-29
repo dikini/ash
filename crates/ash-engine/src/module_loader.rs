@@ -227,6 +227,7 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
 /// Returns [`EngineError`] if the workflow file cannot be read, an import
 /// cannot be resolved, or an imported module cannot be parsed into the
 /// supported type/callable subset.
+#[allow(clippy::too_many_lines)]
 pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError> {
     let source = std::fs::read_to_string(path)?;
     let canonical_entry = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
@@ -249,7 +250,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
             continue;
         }
 
-        if !seen_non_import && trimmed.starts_with("use ") {
+        if !seen_non_import && (trimmed.starts_with("use ") || trimmed.starts_with("pub use ")) {
             let mut snippet = line.to_string();
             while import_needs_more_lines(&snippet) {
                 let Some(next_line) = lines.next() else {
@@ -263,21 +264,34 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
         }
 
         seen_non_import = true;
-        kept_lines.push(line.to_string());
+        if let Some(rest) = line.trim_start().strip_prefix("pub workflow ") {
+            let indent_len = line.len() - line.trim_start().len();
+            kept_lines.push(format!("{}workflow {rest}", &line[..indent_len]));
+        } else {
+            kept_lines.push(line.to_string());
+        }
     }
 
     let mut imported_type_defs = Vec::new();
     let mut imported_type_names = HashSet::new();
     let mut imported_callables = HashMap::new();
 
+    let crate_root = discover_crate_root(entry_root);
     for import in imports {
-        let module_path = resolve_module_path(&import.module_segments, &search_roots(entry_root))
-            .ok_or_else(|| {
-            EngineError::Parse(format!(
-                "module '{}' not found",
-                import.module_segments.join("::")
-            ))
-        })?;
+        let absolute_roots = search_roots(entry_root);
+        let (module_segments, search_roots) = normalize_import_resolution(
+            &import.module_segments,
+            entry_root,
+            crate_root.as_deref(),
+            &absolute_roots,
+        );
+        let module_path =
+            resolve_module_path(&module_segments, &search_roots).ok_or_else(|| {
+                EngineError::Parse(format!(
+                    "module '{}' not found",
+                    import.module_segments.join("::")
+                ))
+            })?;
         let exports = collect_module_exports(&module_path, &mut module_cache, &mut visiting)?;
 
         for selection in import.selections {
@@ -290,7 +304,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                     }
                     for (k, mut v) in exports.callables.clone() {
                         if let CallableKind::Builtin { ref mut module } = v.kind {
-                            *module = import.module_segments.join("::");
+                            *module = module_segments.join("::");
                         }
                         imported_callables.insert(k, v);
                     }
@@ -318,7 +332,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                         let mut callable = callable.clone();
                         callable.exported_name.clone_from(&exported_name);
                         if let CallableKind::Builtin { ref mut module } = callable.kind {
-                            *module = import.module_segments.join("::");
+                            *module = module_segments.join("::");
                         }
                         imported_callables.insert(exported_name, callable);
                     } else {
@@ -414,10 +428,21 @@ fn parse_ordinary_import(line: &str) -> Result<ImportSpec, EngineError> {
         return parse_versioned_import(line);
     }
 
-    let normalized = if line.trim_end().ends_with(';') {
-        line.to_string()
-    } else {
-        format!("{line};")
+    let normalized = {
+        let trimmed_line = line.trim_start();
+        let import_line = trimmed_line.strip_prefix("pub use ").map_or_else(
+            || line.to_string(),
+            |rest| {
+                let prefix_len = line.len() - trimmed_line.len();
+                let prefix = &line[..prefix_len];
+                format!("{prefix}use {rest}")
+            },
+        );
+        if import_line.trim_end().ends_with(';') {
+            import_line
+        } else {
+            format!("{import_line};")
+        }
     };
     let mut input = new_input(&normalized);
     let use_stmt = parse_use
@@ -566,6 +591,7 @@ fn convert_use_statement(use_stmt: ash_parser::use_tree::Use) -> ImportSpec {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn collect_module_exports(
     path: &Path,
     cache: &mut HashMap<PathBuf, ModuleExports>,
@@ -595,6 +621,10 @@ pub(crate) fn collect_module_exports(
         insert_type_export(&mut exports, &type_def)?;
     }
 
+    for name in extract_public_capability_names(&source) {
+        insert_type_export(&mut exports, &capability_type_identity(&name))?;
+    }
+
     for snippet in
         extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub builtin fn "))
     {
@@ -608,8 +638,13 @@ pub(crate) fn collect_module_exports(
         }
     }
 
-    for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("workflow ")) {
+    for snippet in extract_braced_snippets(&source, is_workflow_export_start) {
         if let Ok(Some(callable)) = parse_workflow_callable(&snippet) {
+            let mut callable = callable.callable;
+            callable.effectful_names.clone_from(&module_effectful_names);
+            let exported_name = callable.exported_name.clone();
+            insert_callable_export(&mut exports, &exported_name, callable)?;
+        } else if let Some(callable) = parse_workflow_signature_callable(&snippet) {
             let mut callable = callable.callable;
             callable.effectful_names.clone_from(&module_effectful_names);
             let exported_name = callable.exported_name.clone();
@@ -642,20 +677,27 @@ pub(crate) fn collect_module_exports(
 
     // Check regular `use` imports for cycles (e.g. a.ash has `use b::{X}`,
     // b.ash has `use a::{Y}` -- both reference each other).
+    let crate_root = discover_crate_root(module_root);
     for snippet in extract_import_snippets(&source) {
         let trimmed = snippet.trim();
-        if let Ok(import_spec) = parse_ordinary_import(trimmed)
-            && let Some(target_path) =
-                resolve_module_path(&import_spec.module_segments, &search_roots(module_root))
-        {
-            let target_canonical = target_path
-                .canonicalize()
-                .unwrap_or_else(|_| target_path.clone());
-            if visiting.contains(&target_canonical) {
-                return Err(EngineError::Parse(format!(
-                    "cyclic import detected: '{}'",
-                    target_path.display()
-                )));
+        if let Ok(import_spec) = parse_ordinary_import(trimmed) {
+            let absolute_roots = search_roots(module_root);
+            let (module_segments, search_roots) = normalize_import_resolution(
+                &import_spec.module_segments,
+                module_root,
+                crate_root.as_deref(),
+                &absolute_roots,
+            );
+            if let Some(target_path) = resolve_module_path(&module_segments, &search_roots) {
+                let target_canonical = target_path
+                    .canonicalize()
+                    .unwrap_or_else(|_| target_path.clone());
+                if visiting.contains(&target_canonical) {
+                    return Err(EngineError::Parse(format!(
+                        "cyclic import detected: '{}'",
+                        target_path.display()
+                    )));
+                }
             }
         }
     }
@@ -712,14 +754,20 @@ fn resolve_use_target(
         | ash_parser::use_tree::UsePath::Nested(path, _) => path.segments.clone(),
     };
 
-    resolve_module_path(
-        &module_segments
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect::<Vec<_>>(),
-        &search_roots(module_root),
-    )
-    .ok_or_else(|| {
+    let module_segments = module_segments
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect::<Vec<_>>();
+    let absolute_roots = search_roots(module_root);
+    let crate_root = discover_crate_root(module_root);
+    let (module_segments, search_roots) = normalize_import_resolution(
+        &module_segments,
+        module_root,
+        crate_root.as_deref(),
+        &absolute_roots,
+    );
+
+    resolve_module_path(&module_segments, &search_roots).ok_or_else(|| {
         EngineError::Parse(format!(
             "module '{}' not found (searched from '{}')",
             segments
@@ -879,6 +927,31 @@ fn insert_callable_export(
     Ok(())
 }
 
+fn extract_public_capability_names(source: &str) -> Vec<String> {
+    extract_semicolon_snippets(source, |trimmed| trimmed.starts_with("pub capability "))
+        .into_iter()
+        .filter_map(|snippet| {
+            snippet
+                .trim()
+                .strip_prefix("pub capability ")
+                .and_then(|rest| rest.split(':').next())
+                .map(str::trim)
+                .filter(|name| !name.is_empty())
+                .map(ToOwned::to_owned)
+        })
+        .collect()
+}
+
+fn capability_type_identity(name: &str) -> CoreTypeDef {
+    CoreTypeDef {
+        name: name.to_string(),
+        params: Vec::new(),
+        body: CoreTypeBody::Struct(vec![]),
+        visibility: CoreVisibility::Public,
+        builtin: true,
+    }
+}
+
 fn parse_type_def_snippet(snippet: &str) -> Result<CoreTypeDef, EngineError> {
     if let Some(type_def) = parse_simple_type_alias_snippet(snippet) {
         return Ok(type_def);
@@ -950,8 +1023,154 @@ fn convert_simple_type_expr(text: &str) -> Option<CoreTypeExpr> {
     }
 }
 
+fn is_workflow_export_start(trimmed: &str) -> bool {
+    starts_with_keyword(trimmed, "workflow") || starts_with_keyword(trimmed, "pub workflow")
+}
+
+fn starts_with_keyword(text: &str, keyword: &str) -> bool {
+    text.strip_prefix(keyword).is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_some_and(|ch| ch.is_whitespace() || ch == '(')
+    })
+}
+
+fn parse_workflow_signature_callable(snippet: &str) -> Option<ImportedCallableExport> {
+    let trimmed = snippet.trim();
+    let rest = trimmed
+        .strip_prefix("pub workflow ")
+        .or_else(|| trimmed.strip_prefix("workflow "))?;
+    let (name_text, after_name) = rest.split_once('(')?;
+    let name = name_text.trim();
+    if name.is_empty() {
+        return None;
+    }
+    let (params_text, after_params) = split_balanced_prefix(after_name, '(', ')')?;
+    let params = parse_workflow_signature_params(params_text)?;
+    let return_type = parse_workflow_signature_return_type(after_params)?;
+    let body = workflow_signature_expr_for_body_text(snippet);
+    let fn_def = ash_parser::surface::FnDef {
+        visibility: ash_parser::surface::Visibility::Public,
+        name: name.into(),
+        type_params: Vec::new(),
+        params,
+        return_type: Some(return_type),
+        contract: None,
+        body: body.clone(),
+        span: ash_parser::token::Span::default(),
+    };
+
+    Some(ImportedCallableExport {
+        callable: InlineCallable {
+            exported_name: name.to_string(),
+            params: fn_def
+                .params
+                .iter()
+                .map(|param| param.name.to_string())
+                .collect(),
+            effectful_names: HashSet::new(),
+            kind: CallableKind::User { body },
+            signature: Some(CallableSignature::Function(fn_def)),
+        },
+    })
+}
+
+fn split_balanced_prefix(text: &str, open: char, close: char) -> Option<(&str, &str)> {
+    let mut depth = 1usize;
+    for (index, ch) in text.char_indices() {
+        match ch {
+            ch if ch == open => depth += 1,
+            ch if ch == close => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some((&text[..index], &text[index + ch.len_utf8()..]));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn parse_workflow_signature_params(text: &str) -> Option<Vec<ash_parser::surface::Param>> {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return Some(Vec::new());
+    }
+
+    trimmed
+        .split(',')
+        .map(|param| {
+            let (name, ty) = param.split_once(':')?;
+            Some(ash_parser::surface::Param {
+                name: name.trim().into(),
+                ty: parse_workflow_signature_type(ty.trim())?,
+            })
+        })
+        .collect()
+}
+
+fn parse_workflow_signature_return_type(text: &str) -> Option<ash_parser::surface::Type> {
+    let after_arrow = text.trim_start().strip_prefix("->")?;
+    let ty_text = after_arrow.split_once('{')?.0.trim();
+    parse_workflow_signature_type(ty_text)
+}
+
+fn parse_workflow_signature_type(text: &str) -> Option<ash_parser::surface::Type> {
+    let text = text.trim();
+    if text.is_empty() {
+        return None;
+    }
+    if let Some(inner) = text.strip_prefix("cap ") {
+        return Some(ash_parser::surface::Type::Capability(inner.trim().into()));
+    }
+    if let Some((name, args_text)) = text.split_once('<') {
+        let args_text = args_text.strip_suffix('>')?;
+        let args = split_top_level_commas(args_text)
+            .into_iter()
+            .map(parse_workflow_signature_type)
+            .collect::<Option<Vec<_>>>()?;
+        return Some(ash_parser::surface::Type::Constructor {
+            name: name.trim().into(),
+            args,
+        });
+    }
+    Some(ash_parser::surface::Type::Name(text.into()))
+}
+
+fn split_top_level_commas(text: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    for (index, ch) in text.char_indices() {
+        match ch {
+            '<' => depth += 1,
+            '>' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                parts.push(text[start..index].trim());
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(text[start..].trim());
+    parts
+}
+
+const fn workflow_signature_expr_for_body_text(_snippet: &str) -> Expr {
+    Expr::Literal(ash_parser::surface::Literal::Null)
+}
+
 fn parse_workflow_callable(snippet: &str) -> Result<Option<ImportedCallableExport>, EngineError> {
-    let mut input = new_input(snippet.trim());
+    let trimmed = snippet.trim();
+    let mut normalized = String::new();
+    let workflow_source = trimmed
+        .strip_prefix("pub workflow ")
+        .map_or(trimmed, |rest| {
+            normalized = format!("workflow {rest}");
+            normalized.as_str()
+        });
+    let mut input = new_input(workflow_source);
     let parsed = workflow_def
         .parse_next(&mut input)
         .map_err(|error| EngineError::Parse(format!("{error}")))?;
@@ -1059,17 +1278,32 @@ struct ImportedCallableExport {
     callable: InlineCallable,
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn extract_callable_from_workflow(
     workflow: WorkflowDef,
 ) -> Result<Option<ImportedCallableExport>, EngineError> {
     let WorkflowDef {
-        name, params, body, ..
+        name,
+        params,
+        declared_return_type,
+        body,
+        span,
+        ..
     } = workflow;
 
-    let Workflow::Ret { expr, .. } = body else {
-        return Err(EngineError::Parse(format!(
-            "imported callable '{name}' must use a single ret expression"
-        )));
+    let (expr, signature) = match body {
+        Workflow::Ret { expr, .. } => (expr, None),
+        other => {
+            let fn_def = workflow_signature_from_parts(
+                name.clone(),
+                params.clone(),
+                declared_return_type,
+                &other,
+                span,
+            );
+            let expr = workflow_signature_expr(&fn_def);
+            (expr, Some(CallableSignature::Function(fn_def)))
+        }
     };
 
     Ok(Some(ImportedCallableExport {
@@ -1081,11 +1315,73 @@ fn extract_callable_from_workflow(
                 .collect(),
             effectful_names: HashSet::new(),
             kind: CallableKind::User { body: expr },
-            signature: None,
+            signature,
         },
     }))
 }
 
+fn workflow_signature_from_parts(
+    name: ash_parser::surface::Name,
+    params: Vec<ash_parser::surface::Parameter>,
+    return_type: Option<ash_parser::surface::Type>,
+    body: &Workflow,
+    span: ash_parser::token::Span,
+) -> ash_parser::surface::FnDef {
+    ash_parser::surface::FnDef {
+        visibility: ash_parser::surface::Visibility::Public,
+        name,
+        type_params: Vec::new(),
+        params: params
+            .into_iter()
+            .map(|param| ash_parser::surface::Param {
+                name: param.name,
+                ty: param.ty,
+            })
+            .collect(),
+        return_type,
+        contract: None,
+        body: workflow_signature_expr_for_body(body),
+        span,
+    }
+}
+
+fn workflow_signature_expr(fn_def: &ash_parser::surface::FnDef) -> Expr {
+    fn_def.body.clone()
+}
+
+fn workflow_signature_expr_for_body(body: &Workflow) -> Expr {
+    let span = workflow_span(body);
+    Expr::Variable {
+        name: "__imported_workflow_body_not_inlined".into(),
+        span,
+    }
+}
+
+const fn workflow_span(workflow: &Workflow) -> ash_parser::token::Span {
+    match workflow {
+        Workflow::Observe { span, .. }
+        | Workflow::Orient { span, .. }
+        | Workflow::Propose { span, .. }
+        | Workflow::Decide { span, .. }
+        | Workflow::Check { span, .. }
+        | Workflow::Oblige { span, .. }
+        | Workflow::Act { span, .. }
+        | Workflow::Let { span, .. }
+        | Workflow::If { span, .. }
+        | Workflow::For { span, .. }
+        | Workflow::With { span, .. }
+        | Workflow::Maybe { span, .. }
+        | Workflow::Must { span, .. }
+        | Workflow::Seq { span, .. }
+        | Workflow::Done { span, .. }
+        | Workflow::Ret { span, .. }
+        | Workflow::Set { span, .. }
+        | Workflow::Send { span, .. }
+        | Workflow::Receive { span, .. }
+        | Workflow::Yield { span, .. }
+        | Workflow::Resume { span, .. } => *span,
+    }
+}
 fn extract_pub_mod_declarations(source: &str) -> Vec<String> {
     extract_semicolon_snippets(source, |trimmed| trimmed.starts_with("pub mod "))
         .iter()
@@ -1250,6 +1546,107 @@ fn resolve_module_path(module_segments: &[String], search_roots: &[PathBuf]) -> 
         }
     }
     None
+}
+
+fn normalize_import_resolution(
+    module_segments: &[String],
+    importing_dir: &Path,
+    crate_root: Option<&Path>,
+    absolute_roots: &[PathBuf],
+) -> (Vec<String>, Vec<PathBuf>) {
+    let Some(first) = module_segments.first().map(String::as_str) else {
+        return (Vec::new(), absolute_roots.to_vec());
+    };
+
+    match first {
+        "self" => (
+            module_segments[1..].to_vec(),
+            vec![importing_dir.to_path_buf()],
+        ),
+        "super" => {
+            let mut root = importing_dir.to_path_buf();
+            let mut roots = vec![root.clone()];
+            let mut index = 0usize;
+            while module_segments
+                .get(index)
+                .is_some_and(|segment| segment == "super")
+            {
+                root.pop();
+                roots.push(root.clone());
+                index += 1;
+            }
+            (module_segments[index..].to_vec(), roots)
+        }
+        "crate" => (
+            module_segments[1..].to_vec(),
+            crate_import_roots(importing_dir, crate_root),
+        ),
+        _ => (module_segments.to_vec(), absolute_roots.to_vec()),
+    }
+}
+
+fn crate_import_roots(importing_dir: &Path, crate_root: Option<&Path>) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    let mut current = Some(importing_dir);
+    while let Some(path) = current {
+        roots.push(path.to_path_buf());
+        current = path.parent();
+    }
+
+    if let Some(root) = crate_root
+        && !roots.iter().any(|candidate| candidate == root)
+    {
+        roots.push(root.to_path_buf());
+    }
+
+    roots
+}
+
+fn discover_crate_root(importing_dir: &Path) -> Option<PathBuf> {
+    let mut current = importing_dir;
+    let mut best = None;
+
+    loop {
+        if is_ash_module_root(current, importing_dir) {
+            best = Some(current.to_path_buf());
+        }
+
+        let Some(parent) = current.parent() else {
+            break;
+        };
+        current = parent;
+    }
+
+    best.or_else(|| fallback_std_module_root(importing_dir))
+}
+
+fn fallback_std_module_root(importing_dir: &Path) -> Option<PathBuf> {
+    let std_root = builtin_stdlib_root().canonicalize().ok()?;
+    let importing_dir = importing_dir.canonicalize().ok()?;
+    if importing_dir.starts_with(&std_root) {
+        Some(std_root)
+    } else {
+        None
+    }
+}
+
+fn is_ash_module_root(path: &Path, importing_dir: &Path) -> bool {
+    if path.join("mod.ash").is_file() {
+        return true;
+    }
+
+    path != importing_dir && contains_ash_files(path)
+}
+
+fn contains_ash_files(path: &Path) -> bool {
+    std::fs::read_dir(path).is_ok_and(|entries| {
+        entries.flatten().any(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "ash")
+        })
+    })
 }
 
 fn search_roots(root: &Path) -> Vec<PathBuf> {

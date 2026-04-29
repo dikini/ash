@@ -3045,7 +3045,7 @@ Repair the post-Phase-106 `ash check` corpus for standard library modules and ex
 |------|-------------|------------|--------|
 | [TASK-760](tasks/TASK-760-cli-corpus-baseline-harness.md) | CLI corpus baseline harness | 4 | ✅ Complete |
 | [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Stdlib multiline imports and module roots | 6 | ✅ Complete |
-| [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Stdlib workflow exports and relative imports | 6 | 📝 Planned |
+| [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Stdlib workflow exports and relative imports | 6 | ✅ Complete |
 | [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Runtime Args and LLM loading imports | 5 | 📝 Planned |
 | [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Parser comments and diagnostics | 6 | 📝 Planned |
 | [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small examples | 6 | 📝 Planned |

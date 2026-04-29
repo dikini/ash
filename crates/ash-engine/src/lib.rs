@@ -1024,7 +1024,7 @@ impl Engine {
                     });
                 }
 
-                // Single workflow, no trailing input — original fast path
+                // Single workflow, no trailing input — original fast path.
                 let core = lower_workflow(&def)
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(def);
@@ -1105,8 +1105,11 @@ impl Engine {
             .ok_or_else(|| EngineError::Type("workflow not found in cache".to_string()))?;
 
         if let Some(program) = self.get_surface_program(workflow.id) {
-            // Build type environment with imported callable signatures
+            // Build type environment with imported types and callable signatures.
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
+            let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
+            imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
+            register_imported_type_defs(&mut type_env, imported_type_defs)?;
             bind_imported_callable_types(&mut type_env, workflow)?;
 
             match ash_typeck::type_check_program_in_env(&type_env, &program) {
@@ -1168,25 +1171,7 @@ impl Engine {
         imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
 
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
-        // Pre-declare all imported type names so sibling cross-references resolve
-        for imported_type in &imported_type_defs {
-            if !type_env.has_type(&imported_type.name) {
-                type_env.declare_type_name(&imported_type.name);
-            }
-        }
-        // Now register all type identities (upgrades placeholders to full definitions)
-        for imported_type in imported_type_defs {
-            if !type_env.has_full_type(&imported_type.name) {
-                type_env
-                    .register_type_identity(&imported_type)
-                    .map_err(|error| EngineError::Type(error.to_string()))?;
-            }
-            if matches!(imported_type.visibility, ash_core::ast::Visibility::Public) {
-                type_env
-                    .expose_type_representation(&imported_type.name)
-                    .map_err(|error| EngineError::Type(error.to_string()))?;
-            }
-        }
+        register_imported_type_defs(&mut type_env, imported_type_defs)?;
         // Register imported callable signatures
         bind_imported_callable_types(&mut type_env, workflow)?;
 
@@ -1634,6 +1619,31 @@ impl Engine {
         self.bootstrap_entry_source(&source).await
     }
 }
+
+fn register_imported_type_defs(
+    type_env: &mut ash_typeck::TypeEnv,
+    imported_type_defs: Vec<ash_core::ast::TypeDef>,
+) -> Result<(), EngineError> {
+    for imported_type in &imported_type_defs {
+        if !type_env.has_type(&imported_type.name) {
+            type_env.declare_type_name(&imported_type.name);
+        }
+    }
+    for imported_type in imported_type_defs {
+        if !type_env.has_full_type(&imported_type.name) {
+            type_env
+                .register_type_identity(&imported_type)
+                .map_err(|error| EngineError::Type(error.to_string()))?;
+        }
+        if matches!(imported_type.visibility, ash_core::ast::Visibility::Public) {
+            type_env
+                .expose_type_representation(&imported_type.name)
+                .map_err(|error| EngineError::Type(error.to_string()))?;
+        }
+    }
+    Ok(())
+}
+
 fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> {
     match ty {
         SurfaceType::Name(name) => match name.as_ref() {

@@ -11,7 +11,8 @@ struct ExpectedFailure {
 
 const EXPECTED_EXAMPLE_FILES: usize = 36;
 const EXPECTED_EXAMPLE_PASSING: usize = 27;
-const EXPECTED_EXAMPLE_FAILING: usize = 9;
+const EXPECTED_EXAMPLE_FAILING: usize = 0;
+const EXPECTED_EXAMPLE_REFERENCE_ONLY: usize = 9;
 
 const EXPECTED_PASS: &[&str] = &[
     "examples/01-basics/01-hello-world.ash",
@@ -43,7 +44,9 @@ const EXPECTED_PASS: &[&str] = &[
     "examples/entrypoint_minimal.ash",
 ];
 
-const EXPECTED_FAIL: &[ExpectedFailure] = &[
+const EXPECTED_FAIL: &[ExpectedFailure] = &[];
+
+const REFERENCE_ONLY: &[ExpectedFailure] = &[
     ExpectedFailure {
         path: "examples/03-policies/01-role-based.ash",
         reason: "historical policy sketch syntax is not accepted by the current parser",
@@ -82,8 +85,6 @@ const EXPECTED_FAIL: &[ExpectedFailure] = &[
     },
 ];
 
-const REFERENCE_ONLY: &[&str] = &[];
-
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -116,7 +117,7 @@ fn sorted_classified_files() -> Vec<&'static str> {
     let mut files = Vec::new();
     files.extend_from_slice(EXPECTED_PASS);
     files.extend(EXPECTED_FAIL.iter().map(|failure| failure.path));
-    files.extend_from_slice(REFERENCE_ONLY);
+    files.extend(REFERENCE_ONLY.iter().map(|reference| reference.path));
     files.sort_unstable();
     files
 }
@@ -144,7 +145,7 @@ fn example_corpus_cli_check_baseline_is_classified_and_honest() {
     assert_eq!(discovered.len(), EXPECTED_EXAMPLE_FILES);
     assert_eq!(EXPECTED_PASS.len(), EXPECTED_EXAMPLE_PASSING);
     assert_eq!(EXPECTED_FAIL.len(), EXPECTED_EXAMPLE_FAILING);
-    assert_eq!(REFERENCE_ONLY.len(), 0);
+    assert_eq!(REFERENCE_ONLY.len(), EXPECTED_EXAMPLE_REFERENCE_ONLY);
     assert_eq!(classified, discovered);
 
     for failure in EXPECTED_FAIL {
@@ -152,6 +153,25 @@ fn example_corpus_cli_check_baseline_is_classified_and_honest() {
             !failure.reason.trim().is_empty(),
             "{} must carry an expected-fail reason",
             failure.path
+        );
+    }
+
+    for reference in REFERENCE_ONLY {
+        assert!(
+            !reference.reason.trim().is_empty(),
+            "{} must carry a reference-only reason",
+            reference.path
+        );
+
+        let source = std::fs::read_to_string(repo.join(reference.path))
+            .unwrap_or_else(|err| panic!("read reference-only example {}: {err}", reference.path));
+        assert!(
+            source
+                .lines()
+                .take(5)
+                .any(|line| line.contains("REFERENCE-ONLY")),
+            "{} must start with a visible REFERENCE-ONLY marker",
+            reference.path
         );
     }
 
@@ -191,10 +211,20 @@ fn example_corpus_cli_check_baseline_is_classified_and_honest() {
         failed += 1;
     }
 
+    for reference in REFERENCE_ONLY {
+        let (success, stdout, stderr) = run_ash_check(&repo, reference.path);
+        assert!(
+            !success,
+            "reference-only example unexpectedly passed `ash check`: {}\nreason={}\nstdout={}\nstderr={}",
+            reference.path, reference.reason, stdout, stderr
+        );
+    }
+
     println!(
         "TASK-760 examples corpus baseline: files={EXPECTED_EXAMPLE_FILES}, pass={passed}, fail={failed}, reference_only={}",
         REFERENCE_ONLY.len()
     );
     assert_eq!(passed, EXPECTED_EXAMPLE_PASSING);
     assert_eq!(failed, EXPECTED_EXAMPLE_FAILING);
+    assert_eq!(REFERENCE_ONLY.len(), EXPECTED_EXAMPLE_REFERENCE_ONLY);
 }

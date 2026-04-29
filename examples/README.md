@@ -2,6 +2,11 @@
 
 This directory contains example workflows demonstrating the Ash workflow language features, from basic concepts to real-world applications.
 
+Phase 107 classifies examples into two explicit categories:
+
+- **Executable conformance examples** are included in the CLI corpus expected-pass set and must pass `ash check`.
+- **Reference-only sketches** are preserved as historical or scenario-design material. They carry a visible `REFERENCE-ONLY` marker near the top of the file, are excluded from executable conformance counts, and are not promises of current parser syntax.
+
 ## Directory Structure
 
 ```
@@ -16,13 +21,13 @@ examples/
 
 ## Quick Start
 
-Each example can be run using the Ash CLI:
+For executable conformance examples, use the Ash CLI:
 
 ```bash
-# Type check an example
+# Type check a conformance example
 ash check examples/01-basics/01-hello-world.ash
 
-# Run an example
+# Run an executable conformance example when its runtime providers are available
 ash run examples/01-basics/01-hello-world.ash
 
 # Generate visualization

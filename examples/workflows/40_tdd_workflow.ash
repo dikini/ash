@@ -1,3 +1,4 @@
+-- REFERENCE-ONLY: Historical TDD process template; excluded from the Phase 107 executable example corpus until the long-form role/policy/obligation workflow surface is current-syntax checkable.
 -- TDD Workflow Example
 -- Demonstrates: complex multi-role workflow, obligation tracking, iterative development cycles
 -- Reference-oriented workflow template; canonical role and approval contracts live in `docs/spec/`.

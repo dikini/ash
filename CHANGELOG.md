@@ -8,6 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- TASK-766 / Phase 107: established the reference-only example policy for large historical sketches, requiring visible `REFERENCE-ONLY` file markers and harness classification for every example file; Phase 107 closes with std corpus 34/39 pass plus 5 expected failures, and examples corpus 27/36 pass plus 9 reference-only sketches.
 - TASK-765 / Phase 107: canonicalized the small control-flow and IO examples to the current checkable Ash subset, moving seven examples into the expected-pass corpus and raising the example baseline to 27/36 while documenting deferred executable IO/provider behavior in-file.
 - TASK-764 / Phase 107: added parser support for `//` line comments anywhere normal whitespace/comments are skipped and CLI diagnostics for common stale syntax shapes (`if ... {`, `for ... in ... {`, `decide ... else`, `observe ... with`, and `with role:`), while preserving the honest std 34/39 and example 20/36 corpus baselines.
 - TASK-763 / Phase 107: repaired `std/src/llm/loading.ash` to use checkable std import surfaces and current workflow body syntax, kept `runtime::Args`/`RuntimeError` re-export checks pinned, and raised the std corpus baseline to 34/39 while preserving `examples/entrypoint_args.ash` in the example expected-pass corpus.

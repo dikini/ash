@@ -1,3 +1,4 @@
+// REFERENCE-ONLY: Historical real-world scenario sketch; excluded from the Phase 107 executable example corpus until the full OODA/policy workflow surface is current-syntax checkable.
 // Customer Support Ticket Workflow
 //
 // A real-world workflow for processing customer support tickets

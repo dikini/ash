@@ -1,6 +1,6 @@
 # TASK-766: Reference Example Policy and Closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,12 +13,12 @@ Decide and apply a corpus policy for large historical/reference examples that us
 
 ## Dependencies
 
-- 📝 TASK-760: CLI Corpus Baseline Harness
-- 📝 TASK-761: Stdlib Multiline Imports and Module Roots
-- 📝 TASK-762: Stdlib Workflow Exports and Relative Imports
-- 📝 TASK-763: Runtime Args and LLM Loading Imports
-- 📝 TASK-764: Parser Comments and Diagnostics
-- 📝 TASK-765: Canonicalize Small Examples
+- ✅ TASK-760: CLI Corpus Baseline Harness
+- ✅ TASK-761: Stdlib Multiline Imports and Module Roots
+- ✅ TASK-762: Stdlib Workflow Exports and Relative Imports
+- ✅ TASK-763: Runtime Args and LLM Loading Imports
+- ✅ TASK-764: Parser Comments and Diagnostics
+- ✅ TASK-765: Canonicalize Small Examples
 
 ## Requirements
 
@@ -29,7 +29,11 @@ Decide and apply a corpus policy for large historical/reference examples that us
 5. Produce a final std/example corpus report with exact pass/fail or pass/reference-only counts.
 6. Update PLAN-103, PLAN-INDEX, task files, and CHANGELOG for phase closeout.
 
-## Candidate Files
+## Outcome
+
+TASK-766 keeps the large historical examples as reference/design sketches instead of forcing broad parser relaxations or reducing them into misleading small placeholders.
+
+Reference-only examples now carry visible `REFERENCE-ONLY` markers in the first five lines and are classified by `crates/ash-cli/tests/example_corpus_check.rs`:
 
 - `examples/03-policies/01-role-based.ash`
 - `examples/03-policies/02-time-based.ash`
@@ -41,22 +45,31 @@ Decide and apply a corpus policy for large historical/reference examples that us
 - `examples/workflows/40_tdd_workflow.ash`
 - `examples/workflows/40a_tdd_concrete_example.ash`
 
-## TDD Steps
+The examples README files now document the executable conformance vs reference-only distinction. The harness requires every `examples/**/*.ash` file to be either expected-pass, expected-fail, or reference-only and verifies reference-only files have a visible marker.
 
-1. Extend the corpus harness to require every example file be either expected-pass or explicitly reference-only.
-2. Watch it fail for unclassified files.
-3. Canonicalize or mark/move each candidate.
-4. Re-run corpus harness and all individual affected checks.
-5. Complete docs/status/changelog reconciliation.
+Final Phase 107 corpus state:
+
+| Corpus | Files | Passing | Expected failing | Reference-only |
+|--------|-------|---------|------------------|----------------|
+| `std/src/**/*.ash` | 39 | 34 | 5 | 0 |
+| `examples/**/*.ash` | 36 | 27 | 0 | 9 |
+
+Remaining std expected failures are accepted as explicitly documented follow-up gaps:
+
+- `std/src/llm/conversation.ash`
+- `std/src/llm/router.ash`
+- `std/src/llm/supervised.ash`
+- `std/src/llm/tool_agent.ash`
+- `std/src/runtime/supervisor.ash`
 
 ## Verification Checklist
 
-- [ ] Every `examples/**/*.ash` file is classified by the corpus harness.
-- [ ] All conformance examples pass `ash check`.
-- [ ] Reference-only examples are clearly labeled and excluded by documented policy.
-- [ ] All `std/src/**/*.ash` files pass `ash check`, or any remaining exceptions are explicitly justified and accepted by the plan.
-- [ ] `cargo test --workspace` passes.
-- [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` passes.
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo doc --workspace --no-deps` passes.
-- [ ] Independent phase audit completed and blockers addressed.
+- [x] Every `examples/**/*.ash` file is classified by the corpus harness.
+- [x] All conformance examples pass `ash check`.
+- [x] Reference-only examples are clearly labeled and excluded by documented policy.
+- [x] All `std/src/**/*.ash` files pass `ash check`, or any remaining exceptions are explicitly justified and accepted by the plan.
+- [x] `cargo test --workspace` passes.
+- [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` passes.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo doc --workspace --no-deps` passes.
+- [x] Independent phase audit completed and blockers addressed.

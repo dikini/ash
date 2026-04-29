@@ -1,3 +1,4 @@
+-- REFERENCE-ONLY: Historical concrete TDD process sketch; excluded from the Phase 107 executable example corpus until the long-form role/policy/obligation workflow surface is current-syntax checkable.
 -- Concrete TDD Example: Implementing a Stack
 -- 
 -- This workflow demonstrates TDD with a concrete example - implementing

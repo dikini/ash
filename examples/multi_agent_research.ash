@@ -1,3 +1,4 @@
+-- REFERENCE-ONLY: Historical multi-role workflow sketch; excluded from the Phase 107 executable example corpus until role blocks, observe-with, and policy/obligation forms are current-syntax checkable.
 -- Multi-Agent Research Workflow
 -- Demonstrates: parallel deliberation, synthesis, collaboration
 -- Reference-oriented example; use `docs/spec/` for the canonical current surface contract.

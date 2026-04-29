@@ -1,3 +1,4 @@
+// REFERENCE-ONLY: Historical policy sketch; excluded from the Phase 107 executable example corpus until role/policy declarations, temporal policies, and legacy workflow forms are current-syntax checkable.
 // Time-Based Policies
 //
 // This workflow demonstrates time-based access control and scheduling.

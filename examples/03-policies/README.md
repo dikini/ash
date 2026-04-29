@@ -1,9 +1,8 @@
 # Policy Examples
 
-This directory demonstrates policy and governance features in Ash.
+This directory preserves policy and governance scenario sketches.
 
-These files illustrate policy patterns. Where an example uses a broader scenario-oriented style,
-read it as reference material rather than as the canonical surface-syntax contract.
+Phase 107 classifies both `.ash` files here as **reference-only** rather than executable conformance examples. They document historical role/policy ideas, but they still use legacy declarations and workflow forms that are outside the current parser/typechecker surface. They are therefore excluded from the executable example corpus until the policy surface is re-canonicalized.
 
 ## Files
 

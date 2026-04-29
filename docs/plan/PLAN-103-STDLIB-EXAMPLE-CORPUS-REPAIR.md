@@ -12,7 +12,7 @@
 
 ## Phase 107: Stdlib and Example Corpus Repair
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Depends on:** Phase 105 generalized typed do notation, Phase 106 monad comprehension syntax, existing std module loader.
 **Investigation baseline:** 2026-04-28 on `34f083f`.
 
@@ -52,7 +52,18 @@ Passing modern syntax examples include all Phase 105 and Phase 106 examples. The
 | [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Repair `runtime::Args` and `llm/loading.ash` std import surfaces | Semantic | 5 | ✅ Complete |
 | [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Add `//` comment support and targeted parse diagnostics for common stale syntax | Parser/DX | 6 | ✅ Complete |
 | [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small control-flow and IO examples to current syntax | Examples | 6 | ✅ Complete |
-| [TASK-766](tasks/TASK-766-reference-example-policy-and-closeout.md) | Decide/canonicalize/mark large reference examples and close Phase 107 | Docs/Examples | 6 | 📝 Planned |
+| [TASK-766](tasks/TASK-766-reference-example-policy-and-closeout.md) | Decide/canonicalize/mark large reference examples and close Phase 107 | Docs/Examples | 6 | ✅ Complete |
+
+### Final Corpus State
+
+Phase 107 closes with every `examples/**/*.ash` file classified by the CLI corpus harness:
+
+| Corpus | Files | Passing | Expected failing | Reference-only |
+|--------|-------|---------|------------------|----------------|
+| `std/src/**/*.ash` | 39 | 34 | 5 | 0 |
+| `examples/**/*.ash` | 36 | 27 | 0 | 9 |
+
+The remaining std expected failures are the known LLM consumer and runtime supervisor semantic/parser gaps. The nine reference-only examples are large historical sketches marked in-file with `REFERENCE-ONLY` and excluded from executable conformance counts until their role/policy/OODA surfaces are re-canonicalized.
 
 Estimated total: 39 hours.
 

@@ -1,3 +1,4 @@
+-- REFERENCE-ONLY: Historical OODA/policy workflow sketch; excluded from the Phase 107 executable example corpus until observe-with, act-with, and legacy block conditionals are current-syntax checkable.
 -- Simple Temperature Monitoring Workflow
 -- Demonstrates: capabilities, policies, OODA pattern, control flow
 

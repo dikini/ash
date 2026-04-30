@@ -40,13 +40,13 @@ Close Phase 108 with examples, documentation reconciliation, changelog, and inde
 
 ## Completion Notes
 
-TASK-779 closes Phase 108 with executable examples for the supported `do:Workflow` MVP and reference-only examples for first-class algebra/comprehension spellings whose semantics are covered by lower-layer tests but whose source-file `parse_file` path still needs typed-elaboration-before-lowering follow-up.
+TASK-779 closes Phase 108 with executable examples for the supported `do:Workflow` and `[...]: Workflow` MVP surfaces and reference-only examples for first-class algebra/lift spellings whose semantics are covered by lower-layer tests but whose source-file `parse_file` path still needs typed-elaboration-before-lowering follow-up.
 
 Added examples under `examples/09-phase108/`:
 
-- executable `do:Workflow` unit and contract-statement examples;
+- executable `do:Workflow` unit, contract-statement, and `[...]: Workflow` comprehension examples;
 - reference-only `workflow::unit` / `bind` / `then` and `workflow::requires` / `workflow::ensures` intrinsic examples;
-- reference-only explicit lower-tower lift and `[...]: Workflow` examples;
+- reference-only explicit lower-tower lift examples;
 - a deprecated legacy workflow declaration paired with a first-class rewrite and warning expectation.
 
 Deferred behavior remains explicit: no implicit lower-tower lifts, dynamic admission, workflow handles, or workflow-level parallel operators in Phase 108.

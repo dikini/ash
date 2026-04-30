@@ -9,10 +9,10 @@ struct ExpectedFailure {
     reason: &'static str,
 }
 
-const EXPECTED_EXAMPLE_FILES: usize = 36;
-const EXPECTED_EXAMPLE_PASSING: usize = 27;
+const EXPECTED_EXAMPLE_FILES: usize = 42;
+const EXPECTED_EXAMPLE_PASSING: usize = 31;
 const EXPECTED_EXAMPLE_FAILING: usize = 0;
-const EXPECTED_EXAMPLE_REFERENCE_ONLY: usize = 9;
+const EXPECTED_EXAMPLE_REFERENCE_ONLY: usize = 11;
 
 const EXPECTED_PASS: &[&str] = &[
     "examples/01-basics/01-hello-world.ash",
@@ -39,6 +39,10 @@ const EXPECTED_PASS: &[&str] = &[
     "examples/08-phase106/01-act-comprehension.ash",
     "examples/08-phase106/02-proc-comprehension-from-act.ash",
     "examples/08-phase106/03-deferred-pure-targets.ash",
+    "examples/09-phase108/01-do-workflow-unit.ash",
+    "examples/09-phase108/02-do-workflow-contract-statements.ash",
+    "examples/09-phase108/05-workflow-comprehension.ash",
+    "examples/09-phase108/06-legacy-workflow-migration-warning.ash",
     "examples/code_review.ash",
     "examples/entrypoint_args.ash",
     "examples/entrypoint_minimal.ash",
@@ -62,6 +66,14 @@ const REFERENCE_ONLY: &[ExpectedFailure] = &[
     ExpectedFailure {
         path: "examples/04-real-world/customer-support.ash",
         reason: "older real-world sketch uses historical workflow/policy syntax",
+    },
+    ExpectedFailure {
+        path: "examples/09-phase108/03-workflow-algebra-intrinsics.reference.ash",
+        reason: "workflow algebra intrinsic source-file examples remain reference-only until full parse_file elaboration is available",
+    },
+    ExpectedFailure {
+        path: "examples/09-phase108/04-workflow-explicit-lifts.reference.ash",
+        reason: "explicit lower-tower Workflow lift examples remain reference-only until full source-file first-class workflow expression elaboration is available",
     },
     ExpectedFailure {
         path: "examples/multi_agent_research.ash",
@@ -182,10 +194,14 @@ fn example_corpus_cli_check_baseline_is_classified_and_honest() {
         "examples/08-phase106/01-act-comprehension.ash",
         "examples/08-phase106/02-proc-comprehension-from-act.ash",
         "examples/08-phase106/03-deferred-pure-targets.ash",
+        "examples/09-phase108/01-do-workflow-unit.ash",
+        "examples/09-phase108/02-do-workflow-contract-statements.ash",
+        "examples/09-phase108/05-workflow-comprehension.ash",
+        "examples/09-phase108/06-legacy-workflow-migration-warning.ash",
     ] {
         assert!(
             EXPECTED_PASS.contains(&required_phase_example),
-            "Phase 105/106 example must remain in expected-pass corpus: {required_phase_example}"
+            "Phase 105/106/108 example must remain in expected-pass corpus: {required_phase_example}"
         );
     }
 

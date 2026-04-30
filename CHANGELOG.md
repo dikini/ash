@@ -8,7 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- [TASK-779](docs/plan/tasks/TASK-779-first-class-workflow-closeout.md): closed Phase 108 with first-class Workflow examples under `examples/09-phase108/`, marking currently executable `do:Workflow` examples separately from reference-only algebra/comprehension spellings and documenting deferred dynamic admission, handles, implicit lifts, and workflow-level parallelism.
+- [TASK-779](docs/plan/tasks/TASK-779-first-class-workflow-closeout.md): closed Phase 108 with first-class Workflow examples under `examples/09-phase108/`, marking executable `do:Workflow`, `[...]: Workflow`, and legacy-migration examples separately from reference-only algebra/lift spellings and documenting deferred dynamic admission, handles, implicit lifts, and workflow-level parallelism.
 
 - [TASK-777](docs/plan/tasks/TASK-777-workflow-contract-summary-import-export.md): added supported-subset public summary export for first-class `pub fn ... -> Workflow<A>` definitions whose body is a `do:Workflow` contract-statement expression, preserving public `requires:` / `ensures:` events and obligations at module boundaries while leaving unsupported Workflow-returning function bodies opaque instead of fabricating summaries.
 

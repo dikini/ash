@@ -89,7 +89,7 @@ These Phase 104 source examples are checkable declaration packets. Runtime execu
 - **02-do-workflow-contract-statements.ash**: `requires:` / `ensures:` statements in `do:Workflow`
 - **03-workflow-algebra-intrinsics.reference.ash**: reference-only `workflow::unit` / `bind` / `then` and contract intrinsic call spelling
 - **04-workflow-explicit-lifts.reference.ash**: reference-only explicit `workflow::from_proc` / `workflow::from_act` lifts
-- **05-workflow-comprehension.reference.ash**: reference-only `[...]: Workflow` spelling
+- **05-workflow-comprehension.ash**: executable `[...]: Workflow` spelling
 - **06-legacy-workflow-migration-warning.ash**: deprecated legacy declaration paired with a first-class rewrite
 
 ## Canonical ADT Helper Surface

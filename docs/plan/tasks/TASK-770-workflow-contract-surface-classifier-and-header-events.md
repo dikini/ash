@@ -26,16 +26,17 @@ Add the parser/surface substrate for first-class workflow contract syntax and de
 4. Typechecking in later tasks rejects these statements outside `do:Workflow`; this parser task must not change `do:Act`, `do:Proc`, or comprehension grammar behavior.
 5. Extend `crates/ash-parser/src/surface.rs::WorkflowDef` with a source-ordered `header_events: Vec<WorkflowHeaderEvent>` or equivalent. Existing `plays_roles`, `capabilities`, `owned_resources`, `used_bindings`, and `contract` fields may remain as compatibility/derived views.
 6. Extend `crates/ash-parser/src/parse_workflow.rs` so `workflow_def`, `parse_plays_roles`, `parse_workflow_header_clauses`, and `parse_opt_contract` preserve exact source order in `WorkflowHeaderEvent`. This likely requires a unified header-event collection loop rather than only the current phase-separated parse order.
-7. Define/implement a classifier skeleton over raw `Expr` with a mapping table matching SPEC-056:
+7. Keep `ash-parser` ownership limited to raw surface carriers: `DoStmt` raw `requires:` / `ensures:` expressions, `WorkflowHeaderEvent` raw clauses, spans, source order, and origin. Semantic `WorkflowForm`, `WorkflowContract`, coverage, and executable metadata are owned by later layers/shared `ash-core` carriers, not parser AST.
+8. Define/implement a classifier skeleton over raw `Expr` with a mapping table matching SPEC-056:
    - `role(name)` -> `Requirement::HasRole(name)`.
    - `any_role([a, b, ...])` -> implemented OR-role requirement carrier, not two AND requirements.
    - bare identifiers in role lists -> symbolic role refs, not lexical variables.
    - arithmetic/boolean legacy predicates -> current compatible precondition/arithmetic carrier.
    - legacy capability/resource/binding headers -> header events preserving current semantics.
    - `ensures` expressions over `result` -> open postconditions with delayed result binder.
-8. Add `AnyRole` / role-policy carrier to the parser/core contract model where needed so accepted `any_role` syntax has real semantics.
-9. Update cross-crate visitors that exhaustively match `DoStmt` enough to compile or explicitly fail closed in later tasks; do not silently erase contract statements.
-10. Update all `WorkflowDef` constructors/tests and exhaustive matches affected by `header_events`, with focused `cargo check` coverage.
+9. Add `AnyRole` / role-policy carrier to the parser/core contract model where needed so accepted `any_role` syntax has real semantics.
+10. Update cross-crate visitors that exhaustively match `DoStmt` enough to compile or explicitly fail closed in later tasks; do not silently erase contract statements.
+11. Update all `WorkflowDef` constructors/tests and exhaustive matches affected by `header_events`, with focused `cargo check` coverage.
 
 ## TDD Steps
 
@@ -51,6 +52,7 @@ Add the parser/surface substrate for first-class workflow contract syntax and de
 
 - [ ] `requires: expr;` and `ensures: expr;` parse inside do blocks with spans preserved.
 - [ ] Source-ordered `WorkflowHeaderEvent`s preserve legacy declaration header order.
+- [ ] Parser additions remain raw surface carriers and do not own semantic WorkflowForm/coverage/runtime metadata.
 - [ ] Existing legacy aggregate fields remain available or are derived without behavior loss.
 - [ ] `any_role([...])` has a real OR-role semantic carrier.
 - [ ] Contract statement nodes are not silently erased by visitors/lowering.

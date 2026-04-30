@@ -24,7 +24,7 @@ WorkflowContract<A> = AdmissionEnvelope + ContractPlan<A>
 This spec defines the first implementation slice for first-class workflows:
 
 1. `Workflow<A>` as a public type constructor.
-2. A `workflow` library namespace with Monad-shaped operations analogous to `proc`.
+2. A compiler-known qualified `workflow` namespace with Monad-shaped operations analogous to `proc`.
 3. Compiler-known `do:Workflow` target resolution through the existing SPEC-054 typed-do machinery.
 4. `[...]: Workflow` comprehensions through the existing SPEC-055 comprehension machinery.
 5. A blocking workflow-form/projection semantic gate: `WorkflowForm`, stable node/alignment identities, projection events, staged `ContractPlan`, obligation vocabulary, and equality strata.
@@ -130,11 +130,13 @@ Contract/evidence details remain internal semantic and implementation carriers.
 
 ### 5.2 Workflow namespace
 
-The workflow library namespace is:
+The workflow namespace is:
 
 ```text
 workflow
 ```
+
+First-slice `workflow::...` names are compiler-known qualified builtins registered in the same namespace style as the existing `proc::...` builtins. They are not implicitly imported as unqualified names by `do:Workflow`, and this spec does not require an ordinary Ash stdlib module implementation before the compiler-known surface exists. A future stdlib/module-backed implementation may provide the same exports, but it must preserve the public qualified names and module summary behavior described in §11.
 
 Required first-slice operations:
 
@@ -149,6 +151,12 @@ workflow::ensures   : OpenPostcondition -> Workflow<Unit>
 ```
 
 Notation note: the `Fn(A) -> Workflow<B>` shape is specification notation. The implementation may reuse the existing typed-do continuation representation used for `Act`/`Proc` elaboration.
+
+Qualified builtin resolution requirements:
+
+- `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` resolve only as compiler-known qualified names in the first slice.
+- Unqualified `unit`, `bind`, `then`, `from_proc`, `from_act`, `requires`, or `ensures` are not introduced by selecting `do:Workflow` and must resolve only if the user has explicitly defined or imported ordinary names with those spellings.
+- The compiler-known `workflow` namespace must coexist with any future stdlib/module backing without changing the accepted qualified surface or silently exposing unqualified operations.
 
 
 ### 5.2.1 Contract argument surface and opacity
@@ -192,7 +200,7 @@ PostExpr     ::= Expr parsed in postcondition context with delayed result bindin
 
 The direct-call spelling is an intrinsic elaboration rule, not evidence that `Requirement` or `OpenPostcondition` are first-class values. A call expression whose callee resolves exactly to compiler-known `workflow::requires` or `workflow::ensures` in a Workflow construction context captures its argument expression as a contract argument before ordinary value typing of that parameter. Passing a variable of type `Requirement`, storing a `Requirement` in a record, returning one from a function, partially applying/taking `workflow::requires` as a value, or pattern-matching on one remains out of scope.
 
-Allowed intrinsic-call contexts are intentionally narrow: RHS of `<-` / `_ <-` inside `do:Workflow`, Workflow comprehension qualifier RHS after SPEC-055 normalization, compiler-known `workflow::bind` / `workflow::then` composition, and internal legacy declaration translation. Calls outside a Workflow construction context reject with an opaque intrinsic-parameter diagnostic rather than producing source-level contract values.
+Allowed intrinsic-call contexts are Workflow construction contexts: RHS of `<-` / `_ <-` inside `do:Workflow`, Workflow comprehension qualifier RHS after SPEC-055 normalization, compiler-known workflow algebra composition, checked initialization/composition of named/local/imported `Workflow` values, and internal legacy declaration translation. Calls outside a Workflow construction context reject with an opaque intrinsic-parameter diagnostic rather than producing source-level contract values.
 
 ### 5.2.2 Conservative contract name resolution
 
@@ -410,13 +418,15 @@ The first implementation slice uses a closed core grammar:
 ```text
 WorkflowForm<A> ::=
     Unit(expr : A)
-  | Bind(form : WorkflowForm<A>, binder, cont : WorkflowForm<B>)
+  | Bind(form : WorkflowForm<A>, binder, body : binder-scoped WorkflowForm<B>)
   | FromProc(proc : Proc<A>)
   | FromAct(act : Act<A>)
   | Requires(requirement : Requirement)
   | Ensures(postcondition : OpenPostcondition)
   | Scope(scope : WorkflowScope, form : WorkflowForm<A>)
 ```
+
+The `Bind` continuation/body is binder-scoped and may be value-dependent: the suffix form is checked under a scope extended by the binder produced by the left-hand workflow. Specification notation writes it as a `WorkflowForm<B>` body, but implementations may represent it as a typed continuation artifact, delayed elaboration node, or equivalent non-runtime closure. It must not be treated as an already-closed form whose contract/check projections have been detached from binder scope.
 
 `Then(w1, w2)` is derived syntax:
 
@@ -522,6 +532,16 @@ Bind(Requires(R), _, w) != w
 ```
 
 at the `WorkflowForm` level. Monad laws for `Workflow` hold only up to contract-plan/projection equivalence, not by early erasure of governance nodes.
+
+### 6.2.5 Crate ownership and dependency boundaries
+
+Phase 108 carrier ownership is normative and must avoid dependency cycles:
+
+- `ash-core` owns shared semantic/runtime carrier definitions used across crates, including `WorkflowForm`, `WorkflowNodeId`, `ProjectionEvent`, `WorkflowContract`, `AdmissionEnvelope`, `ContractPlan`, `CoverageEvidence`, `CoverageError`, `WorkflowContractSummary`, lower Proc/Act contract summary carriers needed by workflow coverage, and public workflow summary/source-anchor types. The exact Rust module names may differ, but these shared carriers must be available without depending on parser or typechecker internals.
+- `ash-parser` owns raw surface carriers only: source-fidelity `DoStmt` forms for raw `requires:` / `ensures:` statements and `WorkflowHeaderEvent` raw clauses/spans/origin/order. It must not own semantic `WorkflowForm`, coverage, or executable workflow metadata.
+- `ash-typeck` builds `WorkflowTypedArtifact` using `ash-core` carriers. Typechecker-private elaboration helpers may exist, but `ash-engine` and `ash-interp` must not require typeck-private structs to import summaries, lower executable metadata, or run workflows.
+- `ash-engine` serializes, imports, and exports public workflow summaries using `ash-core` summary types. It may coordinate typechecking and module loading, but it must not serialize parser ASTs or typeck-private artifacts as the public contract-summary format.
+- `ash-interp` consumes executable projection/runtime metadata derived from `ash-core` workflow carriers. It must not depend on parser ASTs, raw `WorkflowHeaderEvent`s, or typeck-private `WorkflowTypedArtifact` internals at runtime.
 
 ### 6.3 Contract layers
 
@@ -688,11 +708,13 @@ This rule prevents `from_proc` from becoming an authority-smuggling operation wh
 workflow::from_act : Act<A> -> Workflow<A>
 ```
 
-`from_act` is equivalent to explicit Act-to-Proc embedding followed by workflow lift:
+`from_act` is equivalent to explicit Act-to-Proc embedding followed by workflow lift, or to a distinct `FromAct` form whose projections are equivalent:
 
 ```text
 workflow::from_act(a) = workflow::from_proc(proc::from_act(a))
 ```
+
+In either representation, `from_act(a)` preserves the lower Act/Proc summary and emits delayed lower-summary coverage obligations. It must not become an authority-smuggling operation or a metadata-free `proc::unit` wrapper.
 
 No implicit lift from `Act<A>` to `Workflow<A>` exists in `do:Workflow` or `[...]: Workflow`.
 
@@ -893,6 +915,47 @@ workflow::bind(workflow::requires(role(analyst)), λ_.
 
 Modulo spans/origin metadata, ordinary bind/return checking is the same path used for Act/Proc targets. The difference is that workflow contract-injection forms contribute non-Proc projected events that remain present for zipper interpretation and later verification/lowering.
 
+### 8.4 Workflow-aware ordinary expression elaboration
+
+Workflow construction contexts are not limited to `do` statements. In any context where the compiler is constructing a `WorkflowForm` -- `do:Workflow`, `[...]: Workflow` after SPEC-055 normalization, compiler-known workflow algebra composition, legacy declaration translation, and checked initialization of named/local/imported `Workflow` values -- ordinary calls whose callee resolves exactly to a compiler-known workflow algebra builtin must be handled by a `WorkflowForm`-aware expression elaborator.
+
+Normative elaboration rules:
+
+```text
+workflow::unit(e)
+  => Unit(e)
+
+workflow::bind(w, f)
+  => Bind(form(w), binder, form(f binder))
+     or reject if the continuation cannot be checked under binder scope
+     to yield a WorkflowForm
+
+workflow::then(w1, w2)
+  => Bind(form(w1), _, form(w2))
+
+workflow::from_proc(p)
+  => FromProc(p) plus lower Proc summary obligations
+
+workflow::from_act(a)
+  => FromAct(a) plus lower Act summary obligations
+     or an equivalent FromProc(proc::from_act(a)) form plus the same obligations
+
+workflow::requires(R)
+  => Requires(classify_contract_expr(R))
+
+workflow::ensures(Q)
+  => Ensures(open_postcondition(Q))
+```
+
+This elaborator owns all seven first-slice compiler-known qualified builtins: `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures`. It must preserve or reconstruct `WorkflowForm` artifacts for ordinary compiler-known calls rather than lowering them only to CoreExpr dictionary calls.
+
+Named, local, and imported values of type `Workflow<A>` are usable in workflow algebra composition only if they carry or reference one of:
+
+- a live `WorkflowTypedArtifact` in the current compilation unit; or
+- a public `WorkflowContractSummary<A>` / workflow summary imported from module metadata with sufficient contract, admission, failure/report/provenance, and public alignment-anchor information.
+
+A `Workflow<A>` value whose form/summary is absent is opaque for first-class composition. Binding it, sequencing it, lifting it into another `WorkflowForm`, or exporting a composed summary from it must reject with an opaque-summary diagnostic rather than silently treating the value as a metadata-free Proc wrapper.
+
 ## 9. Comprehension Integration
 
 SPEC-055 bracket comprehensions become valid for explicit `Workflow` targets:
@@ -978,7 +1041,7 @@ public source-origin / alignment anchors without exposing private body node ids
 
 Private internal body details need not be exported, but the exported summary must be strong enough for downstream `do:Workflow` and `[...]: Workflow` checking.
 
-Imported workflow values without a contract summary must be rejected for first-class composition or treated as opaque values that cannot be safely bound under `Workflow` until a summary exists.
+Imported workflow values without a contract summary must be rejected for first-class composition or treated as opaque values that cannot be safely bound under `Workflow` until a summary exists. If a future stdlib module backs compiler-known `workflow::...` builtins with ordinary exports, module metadata must preserve those qualified exports and their intrinsic markers/summaries so importing `workflow` does not weaken the compiler-known namespace rules or expose unqualified operations implicitly.
 
 ## 12. Diagnostics
 
@@ -1035,17 +1098,20 @@ Implementation must include tests for:
 11. `do:Workflow` binds only `Workflow<A>` RHS values.
 12. `do:Workflow` rejects `Proc<A>` and `Act<A>` RHS values without explicit lifts.
 13. `workflow::from_proc` and `workflow::from_act` allow explicit lifts where lower summaries exist and emit delayed coverage obligations.
-14. `workflow::unit`, `workflow::bind`, and `workflow::then` derive executable Proc/runtime projections through existing Proc/workflow boundaries.
+14. `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, and `workflow::from_act` elaborate through the WorkflowForm-aware expression elaborator and produce/preserve `Unit`, binder-scoped `Bind`, `FromProc`, and `FromAct` (or equivalent `FromProc(proc::from_act(...))`) artifacts with lower-summary obligations.
 15. `requires` and `ensures` in a workflow block lower to preserved `workflow::requires` / `workflow::ensures` workflow forms.
-16. `requires` may refine continuation checking context but produces coverage obligations that must be proven later.
-17. `ensures` targets the successful result boundary of the suffix workflow and typechecks under `result : A`.
-18. Deprecated legacy workflow declarations emit a warning and translate to the same `WorkflowForm` path as new first-class workflow expressions.
-19. `legacy_body_as_proc_summary` preserves lower Proc/failure/authority/provenance summaries or rejects conservatively when it cannot.
-20. Typed elaboration of `do:Workflow` produces a `WorkflowTypedArtifact` with nested workflow-form `Bind` / `Unit` shape without erasing neutral-Proc contract-injection nodes.
-21. `[result | x <- wf]: Workflow` elaborates equivalently to `do:Workflow` and the same `WorkflowForm` / projection alignment.
-22. Coverage/obligation failures produce component-specific diagnostics.
-23. Imported workflow summaries are preserved across module boundaries or rejected if absent.
-24. Existing `do:Act`, `do:Proc`, Act blocks, and Act/Proc comprehensions remain unchanged.
+16. Qualified `workflow::...` names resolve in the same compiler-known builtin namespace style as qualified `proc::...` names.
+17. Unqualified `unit`, `bind`, `then`, `from_proc`, `from_act`, `requires`, and `ensures` are not implicitly imported by selecting `do:Workflow`.
+18. Named/local/imported `Workflow` values without a live `WorkflowTypedArtifact` or public workflow summary reject as opaque when bound or sequenced.
+19. `requires` may refine continuation checking context but produces coverage obligations that must be proven later.
+20. `ensures` targets the successful result boundary of the suffix workflow and typechecks under `result : A`.
+21. Deprecated legacy workflow declarations emit a warning and translate to the same `WorkflowForm` path as new first-class workflow expressions.
+22. `legacy_body_as_proc_summary` preserves lower Proc/failure/authority/provenance summaries or rejects conservatively when it cannot.
+23. Typed elaboration of `do:Workflow` produces a `WorkflowTypedArtifact` with nested workflow-form `Bind` / `Unit` shape without erasing neutral-Proc contract-injection nodes.
+24. `[result | x <- wf]: Workflow` elaborates equivalently to `do:Workflow` and the same `WorkflowForm` / projection alignment.
+25. Coverage/obligation failures produce component-specific diagnostics.
+26. Imported workflow summaries are preserved across module boundaries or rejected if absent.
+27. Existing `do:Act`, `do:Proc`, Act blocks, and Act/Proc comprehensions remain unchanged.
 
 ## 15. Non-Interference
 
@@ -1079,6 +1145,7 @@ Deferred follow-on specs should address:
 ### 2026-04-30
 
 - Hardened the draft around a blocking workflow-form/projection semantic gate before implementation: closed first-slice `WorkflowForm` grammar, node/alignment identity, projection events, staged `ContractPlan`, obligation handoff, `requires` refinement, `ensures` suffix-result targeting, delayed `from_proc`/`from_act` coverage obligations, and equality strata.
+- Clarified Phase 108 review ownership for Workflow algebra expression elaboration, crate carrier boundaries, and namespace exports: all compiler-known ordinary calls to `workflow::unit` / `bind` / `then` / `from_proc` / `from_act` / `requires` / `ensures` in Workflow construction contexts preserve `WorkflowForm` artifacts; `Bind` continuations are binder-scoped; shared carriers live in `ash-core`; parser/typeck/engine/interp dependency boundaries are explicit; and first-slice `workflow::...` names are qualified compiler-known builtins rather than implicit unqualified stdlib imports.
 - Added conservative, legacy-compatible `requires:` / `ensures:` contract-expression grammar; clarified `workflow::requires` / `workflow::ensures` as compiler-known intrinsic operations over non-denotable contract argument classes; specified source-ordered legacy `WorkflowHeaderEvent`s, concrete classifier mapping including `any_role` OR semantics, WorkflowForm-preserving typed-do artifacts, executable lowering/runtime projection ownership, explicit legacy-body adapter behavior, deprecation warning plumbing, and same-`WorkflowForm` translation for deprecated workflow declarations.
 
 ### 2026-04-29

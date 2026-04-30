@@ -9,7 +9,7 @@
 - [TASK-770](TASK-770-workflow-contract-surface-classifier-and-header-events.md)
 - [TASK-771](TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md)
 - [TASK-772](TASK-772-workflow-form-preserving-do-target.md)
-- [TASK-773](TASK-773-workflow-contract-intrinsic-call-elaboration.md)
+- [TASK-773](TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md)
 - [TASK-774](TASK-774-workflow-lowering-runtime-projection.md)
 
 ## Objective
@@ -21,14 +21,14 @@ Deprecate the current workflow declaration surface while preserving its semantic
 - 📝 TASK-770: source-ordered header events and classifier.
 - 📝 TASK-771: Workflow type and operations.
 - 📝 TASK-772: WorkflowForm-preserving artifact.
-- 📝 TASK-773: intrinsic contract injection equivalence.
+- 📝 TASK-773: Workflow algebra and contract intrinsic call equivalence.
 - 📝 TASK-774: executable Workflow lowering/runtime projection.
 
 ## Requirements
 
 1. Deprecated legacy workflow declarations remain accepted during the migration window.
 2. Emit `[NEW] DeprecatedLegacyWorkflowDeclaration` exactly once per legacy workflow declaration, with declaration span and a rewrite hint to a named `Workflow<A>` value or `do:Workflow` expression.
-3. Define and implement warning plumbing through a diagnostics-capable parser/typechecker/engine/CLI path. Warnings must not fail `ash check` when no errors exist.
+3. Audit the existing non-fatal warning carrier/API before emitting `[NEW] DeprecatedLegacyWorkflowDeclaration`. Extend parser/typechecker/engine/CLI warning plumbing as needed so warnings are collected, surfaced by `ash check`, and do not fail `ash check` when no errors exist.
 4. Translate `WorkflowDef.header_events` in source order into leading `Requires` / `Ensures` / admission/resource WorkflowForm events.
 5. `ensures:` header events attach to the successful result boundary of the translated body suffix.
 6. `any_role([...])` remains a single OR-role requirement event, never multiple AND requirements.
@@ -41,18 +41,20 @@ Deprecate the current workflow declaration surface while preserving its semantic
 
 ## TDD Steps
 
-1. Write warning tests for a minimal legacy workflow declaration.
-2. Write source-order translation tests for mixed header clauses.
-3. Write equivalence tests pairing a legacy declaration with a first-class `do:Workflow` expression.
-4. Write `ensures` suffix-target tests for translated legacy declarations.
-5. Write `any_role` legacy translation tests proving OR semantics.
-6. Write adapter rejection tests for unsupported/opaque legacy bodies.
-7. Implement warning plumbing, header-event translation, and adapter contract.
-8. Run focused parser/typechecker/engine/CLI diagnostics tests.
+1. Audit current warning/diagnostic carriers and write or update a warning-pipeline smoke test proving non-fatal warnings flow to `ash check` without failure.
+2. Write warning tests for a minimal legacy workflow declaration.
+3. Write source-order translation tests for mixed header clauses.
+4. Write equivalence tests pairing a legacy declaration with a first-class `do:Workflow` expression.
+5. Write `ensures` suffix-target tests for translated legacy declarations.
+6. Write `any_role` legacy translation tests proving OR semantics.
+7. Write adapter rejection tests for unsupported/opaque legacy bodies.
+8. Implement warning plumbing, header-event translation, and adapter contract.
+9. Run focused parser/typechecker/engine/CLI diagnostics tests.
 
 ## Verification
 
 - [ ] Deprecated declarations warn but do not error solely because of deprecation.
+- [ ] Warning carrier/API support has been audited or extended, and `ash check` surfaces deprecation warnings without failing when no errors exist.
 - [ ] Legacy declarations lower to the same WorkflowForm path as first-class workflows.
 - [ ] Source-ordered header events are preserved in translation.
 - [ ] Legacy body summaries enter through `FromProc(...)` with lower coverage obligations.

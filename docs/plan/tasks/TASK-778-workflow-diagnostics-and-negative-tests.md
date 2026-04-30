@@ -15,9 +15,9 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 ## Dependencies
 
 - 📝 TASK-770: Workflow contract surface, classifier, and header events.
-- 📝 TASK-771: Workflow type, stdlib operations, and intrinsic parameters.
+- 📝 TASK-771: Workflow type, qualified builtins, shared carriers, and intrinsic parameters.
 - 📝 TASK-772: WorkflowForm-preserving Workflow do target.
-- 📝 TASK-773: Workflow contract intrinsic call elaboration.
+- 📝 TASK-773: Workflow algebra and contract intrinsic call elaboration.
 - 📝 TASK-774: Workflow lowering and runtime projection.
 - 📝 TASK-775: Legacy workflow translation and deprecation.
 - 📝 TASK-776: Workflow comprehension target.
@@ -37,14 +37,16 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 10. Add opaque imported summary diagnostics.
 11. Ensure parser-only lowering errors remain clear for workflow do/comprehension nodes.
 12. Add shape diagnostics/tests proving neutral Proc-projection nodes are not erased before evidence-preserving optimization.
-13. Add deprecation warning tests for legacy workflow declarations and rewrite hints.
+13. Audit and, if necessary, extend the non-fatal warning carrier/API before asserting deprecation-warning behavior. `DeprecatedLegacyWorkflowDeclaration` must flow to `ash check` output without making the command fail when no errors exist.
+14. Add deprecation warning tests for legacy workflow declarations and rewrite hints.
 
 ## TDD Steps
 
-1. Write focused diagnostic tests for every SPEC-056 diagnostic family.
-2. Implement diagnostic wording and spans.
-3. Run full affected typechecker/parser/engine diagnostic tests.
-4. Run Act/Proc diagnostic regression tests.
+1. Audit current parser/typechecker/engine/CLI warning carriers and add a warning-pipeline smoke test if coverage is missing.
+2. Write focused diagnostic tests for every SPEC-056 diagnostic family.
+3. Implement diagnostic wording, warning severity, and spans.
+4. Run full affected typechecker/parser/engine/CLI diagnostic tests.
+5. Run Act/Proc diagnostic regression tests.
 
 ## Verification
 
@@ -55,6 +57,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 - [ ] `requires` refinement failures distinguish assumed availability from proven admission.
 - [ ] `ensures` target/type failures identify the suffix result boundary.
 - [ ] Deprecated legacy workflow declarations emit warnings with rewrite hints.
+- [ ] `DeprecatedLegacyWorkflowDeclaration` reaches `ash check` as a non-fatal warning when no errors exist.
 - [ ] Neutral-Proc contract nodes are not silently erased before evidence-preserving optimization.
 - [ ] Act/Proc diagnostics do not regress.
 - [ ] CHANGELOG.md updated.

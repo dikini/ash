@@ -616,9 +616,9 @@ Likely updates:
 
 - TASK-769 owns `WorkflowForm`, node ids, projections, staged `ContractPlan`, obligation handoff, non-denotable contract argument semantics, WorkflowForm-preserving typed-do artifacts, the legacy-body adapter contract, first-slice contract syntax decisions, and equality strata.
 - TASK-770 owns `requires:` / `ensures:` do-statement parsing, source-ordered `WorkflowHeaderEvent`s, conservative contract-expression name resolution, the classifier mapping table, and implemented legacy-compatible role semantics such as `any_role` OR.
-- TASK-771 owns public `Workflow<A>`, internal carriers derived from `WorkflowForm`, workflow operations, and non-denotable intrinsic parameter classes for contract arguments.
+- TASK-771 owns public `Workflow<A>`, shared `ash-core` carriers derived from `WorkflowForm`, qualified compiler-known workflow operations, and non-denotable intrinsic parameter classes for contract arguments.
 - TASK-772 consumes TASK-770's contract-injection statement syntax through a WorkflowForm-preserving typed-do artifact.
-- TASK-773 owns direct intrinsic-call elaboration for `workflow::requires` / `workflow::ensures` after TASK-771/TASK-772 exist.
+- TASK-773 owns WorkflowForm-aware ordinary expression elaboration for all compiler-known first-slice `workflow::...` algebra/contract calls after TASK-771/TASK-772 exist.
 - TASK-774 owns executable Workflow lowering/runtime projection through existing Proc/workflow boundaries and proves contract-injection metadata is not dead.
 - TASK-775 owns deprecated legacy declaration warning plumbing, source-ordered header translation, and `legacy_body_as_proc_summary` compatibility lowering.
 - TASK-778 includes preservation/no-erasure diagnostics/tests plus legacy-declaration deprecation warnings.

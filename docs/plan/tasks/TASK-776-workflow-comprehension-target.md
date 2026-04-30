@@ -17,7 +17,7 @@ Enable explicit-target workflow comprehensions `[result | qualifiers]: Workflow`
 ## Dependencies
 
 - 📝 TASK-772: WorkflowForm-preserving Workflow do target.
-- 📝 TASK-773: Workflow contract intrinsic call elaboration, if direct intrinsic calls are used in comprehension tests.
+- 📝 TASK-773: Workflow algebra and contract intrinsic call elaboration, if direct workflow algebra calls are used in comprehension tests.
 - 📝 TASK-774: executable Workflow lowering/runtime projection for execution tests.
 
 ## Requirements

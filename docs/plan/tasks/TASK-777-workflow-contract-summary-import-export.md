@@ -33,8 +33,9 @@ Public workflow summaries are shared semantic/module carriers owned by `ash-core
 5. Reject imported workflow/proc/act values used in first-class workflow composition if required summaries are absent.
 6. Add tests covering imported workflow values in `do:Workflow` and `[...]: Workflow`.
 7. Ensure summaries for deprecated legacy workflow declarations and equivalent first-class workflow expressions expose equivalent public contract events.
-8. If a future stdlib module backs compiler-known qualified builtins for `workflow::...` operations, preserve qualified workflow exports and intrinsic markers through module summaries without making unqualified `unit` / `bind` / `requires` / `ensures` implicit imports.
-9. Do not expose private body internals unnecessarily.
+8. If a future stdlib module backs compiler-known qualified builtins for `workflow::...` operations, preserve qualified workflow exports and intrinsic markers through module summaries without making unqualified `unit`, `bind`, `then`, `from_proc`, `from_act`, `requires`, or `ensures` implicit imports.
+9. Audit Cargo dependency boundaries for module-summary propagation. Record whether this slice only enforces public API boundaries through `ash-core` summary types or also removes any direct parser/typeck-private dependency from engine/import/export paths.
+10. Do not expose private body internals unnecessarily.
 
 ## TDD Steps
 
@@ -42,8 +43,9 @@ Public workflow summaries are shared semantic/module carriers owned by `ash-core
 2. Write failing negative test for opaque/missing summary.
 3. Write legacy-vs-first-class export equivalence tests.
 4. Write export tests proving future/backing `workflow::...` qualified exports, if present, retain intrinsic markers and do not imply unqualified imports.
-5. Implement summary propagation through `ash-core`/engine/typechecker carriers.
-6. Run module import/export tests.
+5. Audit Cargo dependency boundaries for the module-summary path and decide whether this task performs API-boundary cleanup only or actual dependency removal.
+6. Implement summary propagation through `ash-core`/engine/typechecker carriers.
+7. Run module import/export tests.
 
 ## Verification
 
@@ -52,6 +54,7 @@ Public workflow summaries are shared semantic/module carriers owned by `ash-core
 - [ ] Public summaries are represented with `ash-core` types and serialized/imported by `ash-engine` without parser AST or typeck-private struct dependencies.
 - [ ] Public alignment/source-origin summaries survive without exposing private node ids.
 - [ ] Qualified workflow exports remain preservable if future stdlib backing is added, without implicit unqualified operation imports.
+- [ ] Cargo dependency boundaries for summary propagation are audited, with API-boundary cleanup vs dependency-removal scope recorded.
 - [ ] Deprecated legacy and equivalent first-class workflows export equivalent public contract summaries.
 - [ ] Missing summaries produce diagnostics.
 - [ ] Private body details are not required in public summaries.

@@ -33,6 +33,7 @@ Make first-class Workflow values executable through the existing Proc/workflow b
 7. Simple first-class workflow values created by `do:Workflow` must either run through the existing workflow boundary or fail at a named, tested execution boundary with a diagnostic that states Phase 108 is still check/lowering-only for the unsupported case.
 8. Prefer executable behavior whenever the legacy workflow semantics can already execute the same shape. Do not defer execution of shapes that the existing legacy workflow path can run.
 9. Add affected `ash-interp` / `ash-engine` / typechecker tests or explicit non-execution diagnostic tests.
+10. Audit Cargo dependency boundaries for the chosen implementation shape. If `ash-engine` / `ash-interp` already depend broadly enough for implementation, document that this task enforces API-boundary cleanup rather than immediate dependency removal; if new dependencies would be needed, route shared carriers through `ash-core` instead of adding parser/typeck-private runtime dependencies.
 
 ## TDD Steps
 
@@ -43,13 +44,15 @@ Make first-class Workflow values executable through the existing Proc/workflow b
 5. Write tests proving `requires` / `ensures` nodes remain present in runtime/projection metadata after lowering.
 6. Write a simple `do:Workflow { return x }` run/lowering test through the existing workflow boundary, or a named-boundary diagnostic test if execution is still impossible for a documented reason.
 7. Write regression tests proving legacy executable workflow shapes are not made less executable by the new path.
-8. Implement lowering/runtime projection and diagnostics.
-9. Run focused affected `ash-typeck`, `ash-interp`, and/or `ash-engine` tests.
+8. Audit Cargo dependency boundaries and record whether this slice performs API-boundary cleanup only or actual dependency removal between `ash-engine`, `ash-interp`, `ash-parser`, and `ash-typeck`.
+9. Implement lowering/runtime projection and diagnostics.
+10. Run focused affected `ash-typeck`, `ash-interp`, and/or `ash-engine` tests.
 
 ## Verification
 
 - [ ] `workflow::unit`, `workflow::bind`, and `workflow::then` have executable Proc projections.
 - [ ] Runtime/lowering boundaries use `ash-core` carriers/public summaries and do not require parser ASTs or typeck-private structs.
+- [ ] Cargo dependency boundaries are audited, and the task records whether it performed API-boundary cleanup only or actual dependency removal.
 - [ ] Explicit lower-carrier lifts preserve summaries and coverage obligations.
 - [ ] Contract-injection nodes survive lowering into metadata/obligations.
 - [ ] First-class Workflow execution matches existing legacy semantics where legacy execution already exists.

@@ -11,7 +11,7 @@
 
 ## Objective
 
-Turn SPEC-056's first-class workflow model into an implementation-grade semantic gate before Rust carrier work: define `WorkflowForm`, projection events, source-order legacy header events, staged contract plans, obligations, WorkflowForm-preserving typed-do artifacts, and the legacy-body adapter contract.
+Validate and freeze SPEC-056's first-class workflow model as an implementation-grade semantic gate before Rust carrier work. This task does not re-create the already-landed draft packet; it confirms that the downstream implementation may rely on stable definitions for `WorkflowForm`, projection events, source-order legacy header events, staged contract plans, obligations, WorkflowForm-preserving typed-do artifacts, and the legacy-body adapter contract.
 
 ## Requirements
 
@@ -38,10 +38,10 @@ This is a docs/spec gate. It should cite the live implementation surfaces that l
 
 ## TDD / Documentation Steps
 
-1. Write SPEC-056 schema sections for all carriers named above.
-2. Add a classifier mapping table and adapter contract to SPEC-056.
-3. Update PLAN-104 task ordering so code tasks depend on this gate.
-4. Update TASK-770 through TASK-779 references to this gate.
+1. Re-read SPEC-056 schema sections for all carriers named above and patch any remaining blocker before code tasks begin.
+2. Confirm the classifier mapping table and adapter contract are implementation-grade and cite live substrate names where possible.
+3. Confirm PLAN-104 task ordering still makes code tasks depend on this gate.
+4. Confirm TASK-770 through TASK-779 references to this gate remain accurate after any task renumbering or split.
 5. Run markdown link and task-structure verification.
 
 ## Verification

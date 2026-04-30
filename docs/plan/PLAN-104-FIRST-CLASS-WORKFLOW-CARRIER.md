@@ -83,6 +83,7 @@ Remaining after TASK-768: 73 hours.
 16. Compiler-known ordinary calls to all seven first-slice `workflow::...` operations in Workflow construction contexts must produce or preserve `WorkflowForm` artifacts; named/local/imported Workflow values without live artifacts or public summaries reject as opaque for bind/then/use.
 17. Qualified `workflow::...` names resolve in the Proc-like compiler-known builtin namespace; selecting `do:Workflow` does not implicitly import unqualified `unit`, `bind`, `then`, `from_proc`, `from_act`, `requires`, or `ensures`.
 18. `ash-core` owns shared workflow semantic/runtime carriers; `ash-parser` owns raw surface carriers only; `ash-typeck`, `ash-engine`, and `ash-interp` must exchange public `ash-core` carriers/summaries rather than private parser/typeck structs.
+19. Runtime-lowering and module-summary tasks must audit Cargo dependency boundaries and state whether their slice performs API-boundary cleanup only or actual dependency removal.
 
 ## Verification Strategy
 
@@ -100,7 +101,8 @@ Every implementation task must include:
 10. `cargo fmt --check`;
 11. focused `cargo test -p ash-typeck`, `cargo test -p ash-parser`, `cargo test -p ash-interp`, or affected crates as appropriate;
 12. affected-crate `cargo clippy --all-targets --all-features -- -D warnings`;
-13. independent subagent verification before marking a task complete.
+13. Cargo dependency-boundary audit for tasks that move workflow carriers across runtime, engine, typechecker, or parser crate boundaries;
+14. independent subagent verification before marking a task complete.
 
 ## Deferred Follow-on Phase Candidates
 

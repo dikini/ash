@@ -12,14 +12,14 @@
 
 Ash adds `Workflow<A>` as a first-class computation constructor and monadic target.
 
-The semantic model is:
+The semantic model is a synchronized product, not a sum or pair of independently maintained artifacts:
 
 ```text
-Workflow<A> = WorkflowContract<A> + Proc<A>
+Workflow<A> = synchronized_product(Proc<A>, WorkflowContract<A>) via WorkflowForm<A>
 WorkflowContract<A> = AdmissionEnvelope + ContractPlan<A>
 ```
 
-`Proc<A>` owns the process computation. `Workflow<A>` owns the governed version of that computation: admission envelope, staged contract plan, coverage evidence, failure/reporting boundary, and provenance obligations.
+`Proc<A>` owns the process computation. `WorkflowContract<A>` owns the governance projection: admission envelope, staged contract plan, coverage evidence, failure/reporting boundary, and provenance obligations. `Workflow<A>` is the aligned carrier whose projections are derived from the same preserved `WorkflowForm<A>`.
 
 This spec defines the first implementation slice for first-class workflows:
 
@@ -1145,7 +1145,7 @@ Deferred follow-on specs should address:
 ### 2026-04-30
 
 - Hardened the draft around a blocking workflow-form/projection semantic gate before implementation: closed first-slice `WorkflowForm` grammar, node/alignment identity, projection events, staged `ContractPlan`, obligation handoff, `requires` refinement, `ensures` suffix-result targeting, delayed `from_proc`/`from_act` coverage obligations, and equality strata.
-- Clarified Phase 108 review ownership for Workflow algebra expression elaboration, crate carrier boundaries, and namespace exports: all compiler-known ordinary calls to `workflow::unit` / `bind` / `then` / `from_proc` / `from_act` / `requires` / `ensures` in Workflow construction contexts preserve `WorkflowForm` artifacts; `Bind` continuations are binder-scoped; shared carriers live in `ash-core`; parser/typeck/engine/interp dependency boundaries are explicit; and first-slice `workflow::...` names are qualified compiler-known builtins rather than implicit unqualified stdlib imports.
+- Clarified Phase 108 review ownership for Workflow algebra expression elaboration, crate carrier boundaries, and namespace exports: all compiler-known ordinary calls to `workflow::unit` / `bind` / `then` / `from_proc` / `from_act` / `requires` / `ensures` in Workflow construction contexts preserve `WorkflowForm` artifacts; `Bind` continuations are binder-scoped; shared carriers live in `ash-core`; parser/typeck/engine/interp dependency boundaries are explicit; first-slice `workflow::...` names are qualified compiler-known builtins rather than implicit unqualified stdlib imports; and the summary now states `Workflow<A>` as a synchronized product via `WorkflowForm` rather than an ambiguous `+` expression.
 - Added conservative, legacy-compatible `requires:` / `ensures:` contract-expression grammar; clarified `workflow::requires` / `workflow::ensures` as compiler-known intrinsic operations over non-denotable contract argument classes; specified source-ordered legacy `WorkflowHeaderEvent`s, concrete classifier mapping including `any_role` OR semantics, WorkflowForm-preserving typed-do artifacts, executable lowering/runtime projection ownership, explicit legacy-body adapter behavior, deprecation warning plumbing, and same-`WorkflowForm` translation for deprecated workflow declarations.
 
 ### 2026-04-29

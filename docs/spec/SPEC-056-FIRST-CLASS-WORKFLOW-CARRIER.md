@@ -27,9 +27,10 @@ This spec defines the first implementation slice for first-class workflows:
 2. A `workflow` library namespace with Monad-shaped operations analogous to `proc`.
 3. Compiler-known `do:Workflow` target resolution through the existing SPEC-054 typed-do machinery.
 4. `[...]: Workflow` comprehensions through the existing SPEC-055 comprehension machinery.
-5. Internal coverage/evidence carriers sufficient to prove that a workflow contract governs its body.
-6. Structure-preserving workflow forms whose Proc and Contract projections are interpreted by a zipper over aligned events.
-7. Sequential workflow composition first: `unit`, `bind`, `then`, explicit lifts from `Proc`/`Act`, and initial contract-injection forms such as `requires` and `ensures`.
+5. A blocking workflow-form/projection semantic gate: `WorkflowForm`, stable node/alignment identities, projection events, staged `ContractPlan`, obligation vocabulary, and equality strata.
+6. Internal coverage/evidence carriers sufficient to prove that a workflow contract governs its body.
+7. Structure-preserving workflow forms whose Proc and Contract projections are interpreted by a zipper over aligned events.
+8. Sequential workflow composition first: `unit`, `bind`, `then`, explicit lifts from `Proc`/`Act`, and initial contract-injection forms such as `requires` and `ensures`.
 
 This spec intentionally does not make parallel workflow handles, dynamic admission, or user-defined contract components part of the first implementation slice.
 
@@ -85,6 +86,7 @@ In scope for the first implementation slice:
   - `workflow::from_act`
   - `workflow::requires`
   - `workflow::ensures`
+- Closed first-slice `WorkflowForm` grammar, projection-event vocabulary, alignment identity model, staged `ContractPlan`, obligation vocabulary, and equality strata before Rust carrier implementation begins.
 - Compiler-known `Workflow` typed-do dictionary.
 - `do:Workflow { ... }` typed elaboration.
 - `[...]: Workflow` comprehension typed elaboration.
@@ -138,7 +140,7 @@ Required first-slice operations:
 
 ```text
 workflow::unit      : A -> Workflow<A>
-workflow::bind      : Workflow<A> -> Fn(A) -> Workflow<B> -> Workflow<B>
+workflow::bind      : Workflow<A> -> (A -> Workflow<B>) -> Workflow<B>
 workflow::then      : Workflow<A> -> Workflow<B> -> Workflow<B>
 workflow::from_proc : Proc<A> -> Workflow<A>
 workflow::from_act  : Act<A> -> Workflow<A>
@@ -224,6 +226,126 @@ zip(E_proc(p), E_contract(p), E_check(p), E_resource(p), ...)
 A form may be neutral in one projection and non-neutral in another. For example, a `requires` form may have an identity/unit `Proc` projection while still contributing a precondition event, failure behavior, and provenance obligation in other projections.
 
 Workflow-algebra lowering must preserve nodes whose non-`Proc` projections are non-neutral. Static discharge, dynamic residualization, and no-op elimination belong to later type/constraint checking, verification, and runtime-lowering phases.
+
+### 6.2.1 First-slice `WorkflowForm` grammar
+
+The first implementation slice uses a closed core grammar:
+
+```text
+WorkflowForm<A> ::=
+    Unit(expr : A)
+  | Bind(form : WorkflowForm<A>, binder, cont : WorkflowForm<B>)
+  | FromProc(proc : Proc<A>)
+  | FromAct(act : Act<A>)
+  | Requires(requirement : Requirement)
+  | Ensures(postcondition : OpenPostcondition)
+  | Scope(scope : WorkflowScope, form : WorkflowForm<A>)
+```
+
+`Then(w1, w2)` is derived syntax:
+
+```text
+Then(w1, w2) = Bind(w1, _, w2)
+```
+
+`Fail` and `WithError` are not first-slice primitive workflow-form nodes. They remain operational-bottom and scoped-failure behavior inherited from SPEC-050/SPEC-051 through the Proc/failure projections. A future spec may add explicit workflow failure forms only if workflow-specific routing cannot be represented by projected events.
+
+`WorkflowForm` is the semantic source of truth. Carrier records such as `{ contract, body, evidence }` are implementation views derived from the preserved form, not independently maintained artifacts.
+
+### 6.2.2 Projection events and alignment identity
+
+Every workflow-form node has a stable synthetic identity:
+
+```text
+WorkflowNodeId
+```
+
+Every projected event carries at least:
+
+```text
+ProjectionEvent = {
+  node       : WorkflowNodeId,
+  projection : ProjectionKind,
+  kind       : EventKind,
+  origin     : SourceOrigin,
+}
+
+ProjectionKind ::= Proc | Contract | Check | AuthorityResource | Failure | Reporting | Provenance
+AlignmentKey   ::= WorkflowNodeId × ProjectionKind
+```
+
+`SourceOrigin` must distinguish:
+
+```text
+SourceOrigin ::= SourceSpan(span)
+               | Synthetic(parent_span, reason)
+               | ImportedSummary(module, public_anchor)
+```
+
+The zipper is over the structured `WorkflowForm`, not over a permanently linear stream. Sequential forms may be traversed linearly in the first slice, but the representation must not exclude future branch forms such as workflow-level `par` or `scatter`.
+
+A node may emit zero, one, or multiple events per projection. Neutral events are explicit when required for alignment, diagnostics, or evidence preservation.
+
+### 6.2.3 Staged `ContractPlan` and obligation handoff
+
+`WorkflowContract<A>` contains a staged `ContractPlan<A>` aligned with `WorkflowForm`:
+
+```text
+ContractPlan<A> ::=
+    EmptyContract(A)
+  | BindContract(C1 : ContractPlan<A>, binder, C2 : ContractPlan<B>)
+  | RequirementContract(node, Requirement)
+  | EnsuresContract(node, OpenPostcondition, target)
+  | LowerProcContract(node, ProcContractSummary<A>)
+  | LowerActContract(node, ActContractSummary<A>)
+  | ScopeContract(scope, ContractPlan<A>)
+```
+
+The type/constraint handoff judgment is:
+
+```text
+Γ ⊢ᴡ form : Workflow<A> ▷ C, Ω
+```
+
+where `C` is a staged `ContractPlan<A>` and `Ω` is an obligation set. Typechecking constructs and classifies obligations; coverage/verification discharges them later into `CoverageEvidence` or diagnostics.
+
+First-slice obligation classes include:
+
+```text
+RequirementMustHold(node, Requirement)
+RequirementRefinementCovered(node, Requirement)
+OpenPostconditionTarget(node, OpenPostcondition, target_type)
+LowerProcCovered(node, ProcContractSummary<A>)
+LowerActCovered(node, ActContractSummary<A>)
+RequiredCapabilityCovered(node, CapabilityRef, Mode)
+ResourceAvailable(node, ResourceRef, AccessMode)
+FailureRouteDefined(node, FailureEventKind)
+ProvenanceRecordable(node, ProvenanceEventKind)
+OpaqueSummaryRejected(node, imported_name)
+```
+
+`CoverageEvidence` is produced by solving or residualizing these obligations. A first-slice implementation may residualize checks into runtime gates where existing workflow boundary semantics permit it, but it must not silently drop obligations.
+
+### 6.2.4 Equality and normalization strata
+
+Workflow equality has three distinct strata:
+
+1. `WorkflowForm` equality is source/projection-preserving. `Requires` and `Ensures` nodes are not erased, even when their Proc projection is neutral.
+2. Proc-projection equality may identify forms whose only differences are neutral governance nodes:
+
+   ```text
+   proc(Bind(Requires(R), _, w)) ≈ proc(w)
+   ```
+
+3. Optimized runtime equality may erase already-discharged neutral executable checks only when the pass preserves or commits the corresponding coverage/provenance/report evidence.
+
+Therefore:
+
+```text
+Bind(Requires(R), _, w) != w
+```
+
+at the `WorkflowForm` level. Monad laws for `Workflow` hold only up to contract-plan/projection equivalence, not by early erasure of governance nodes.
 
 ### 6.3 Contract layers
 
@@ -367,20 +489,22 @@ Semantics:
 body(workflow::from_proc(p)) = p
 ```
 
-The contract is inferred from `p`:
+The contract contribution is inferred from `p` and preserved as a delayed coverage obligation:
 
 ```text
-Γ ⊢ᴾ p : Proc<A> ▷ C_body
-EmptyHeader ⊒cov C_body ⇓ E_coverage
+Γ ⊢ᴾ p : Proc<A> ▷ C_p
+Γ ⊢ᴡ FromProc(p) : Workflow<A> ▷ LowerProcContract(node, C_p), { LowerProcCovered(node, C_p) }
 ```
 
 First-slice rule:
 
-- If `p` requires authority/resources/checks not covered by the empty/default header, `from_proc(p)` is rejected unless the implementation has an enclosing workflow declaration/header that can provide coverage.
-- Source-visible pure/proc computations with no extra authority requirements may lift directly.
+- `from_proc(p)` does not require immediate `EmptyHeader ⊒cov C_p` coverage at the local expression site.
+- Enclosing/composed workflow contracts, including preceding `requires` nodes in the same `WorkflowForm`, may cover the lower Proc requirements when final coverage is checked.
+- Dynamic admission remains forbidden: `C_p` and its admission envelope must be statically available as a lower Proc summary, or the lift is rejected as opaque.
+- Source-visible pure/proc computations with no extra authority requirements may discharge their obligations immediately.
 - Proc values imported without summaries require exported contract summaries before they can be lifted in a checked way.
 
-This rule prevents `from_proc` from becoming an authority-smuggling operation.
+This rule prevents `from_proc` from becoming an authority-smuggling operation while preserving useful staged composition such as `requires capability.store.read; x <- workflow::from_proc(store_proc);`.
 
 ### 7.5 `workflow::from_act`
 
@@ -410,22 +534,47 @@ workflow::ensures  : OpenPostcondition -> Workflow<Unit>
 `requires` projection sketch:
 
 ```text
+Requirement ::=
+    RoleRequirement(RoleRef)
+  | CapabilityRequirement(CapabilityRef, Mode)
+  | ResourceRequirement(ResourceRef, AccessMode)
+  | Precondition(CheckExpr)
+  | PolicyRequirement(PolicyRef)
+
 proc(workflow::requires(R))       = proc::unit(())
-contract(workflow::requires(R))   = ContractEvent::Requires(R)
-checks(workflow::requires(R))     = establish R at this workflow position
-failure(workflow::requires(R))    = precondition/admission failure if R is not discharged
+contract(workflow::requires(R))   = RequirementContract(node, R)
+checks(workflow::requires(R))     = establish/check R at this workflow position
+failure(workflow::requires(R))    = precondition/admission/coverage failure if R is not discharged
 provenance(workflow::requires(R)) = record R and its discharge method/result
 ```
+
+A requirement may refine the continuation checking environment. For example, `requires capability.store.read;` may allow a following `workflow::from_act(store.get(k))` or `workflow::from_proc(store_proc)` to be checked under a provisional capability assumption.
+
+This refinement is not authority creation. The final coverage/admission pass must prove that the refined role/capability/resource/policy/precondition is actually admitted or derivable. If the assumption cannot be proven, checking fails with a component-specific coverage diagnostic.
 
 `ensures` projection sketch:
 
 ```text
 proc(workflow::ensures(Q))       = proc::unit(())
-contract(workflow::ensures(Q))   = ContractEvent::Ensures(Q)
+contract(workflow::ensures(Q))   = EnsuresContract(node, Q, unresolved_target)
 checks(workflow::ensures(Q))     = postcondition obligation whose target is resolved by contract bind/zipper semantics
-failure(workflow::ensures(Q))    = postcondition failure if the obligation is not satisfied
+failure(workflow::ensures(Q))    = postcondition failure if the obligation is not satisfied on successful completion
 provenance(workflow::ensures(Q)) = record Q, target, and discharge method/result
 ```
+
+Target rule:
+
+```text
+Bind(Ensures(Q), _, rest : Workflow<A>)
+```
+
+resolves `Q` under a distinguished binder:
+
+```text
+result : A
+```
+
+and attaches `Q` to the successful result boundary of `rest`. If `rest` fails before producing a normal `A`, the postcondition is not checked as a successful-result postcondition; failure projection handles that path. Nested `ensures` forms stack in source order over their respective suffix workflow forms.
 
 This spec does not require `requires` or `ensures` to lower immediately to executable checks. They are preserved as workflow-form events. Type/constraint checking and verification later determine whether each event is statically discharged, rejected, or residualized into a dynamic runtime check/gate.
 
@@ -496,9 +645,31 @@ y <- workflow::from_act(some_act());
 
 ### 8.3 Typed elaboration
 
-Typed elaboration must reuse SPEC-054's nested bind/return lowering path.
+Typed elaboration must reuse SPEC-054's nested bind/return checking path, but the target artifact for `Workflow` is a preserved `WorkflowForm` before any evidence-preserving optimization.
 
-Conceptual lowering:
+Workflow block statements lower as follows:
+
+```text
+return e
+  => Unit(e)
+
+x <- e; rest
+  => Bind(elaborateWorkflow(e), x, elaborateWorkflow(rest))
+
+_ <- e; rest
+  => Bind(elaborateWorkflow(e), _, elaborateWorkflow(rest))
+
+let x = e; rest
+  => pure lexical binding of x while elaborating rest
+
+requires R; rest
+  => Bind(Requires(R), _, elaborateWorkflow(rest))
+
+ensures Q; rest
+  => Bind(Ensures(Q), _, elaborateWorkflow(rest))
+```
+
+Conceptual source:
 
 ```ash
 do:Workflow {
@@ -513,6 +684,16 @@ do:Workflow {
 elaborates to the same workflow-form skeleton as:
 
 ```text
+Bind(Requires(role.analyst), _,
+  Bind(Ensures(open(result.valid)), _,
+    Bind(a, x,
+      Bind(b(x), y,
+        Unit(f(x, y))))))
+```
+
+and has the same Proc-projection shape as the dictionary expression:
+
+```text
 workflow::bind(workflow::requires(role.analyst), λ_.
   workflow::bind(workflow::ensures(open(result.valid)), λ_.
     workflow::bind(a, λx.
@@ -520,7 +701,7 @@ workflow::bind(workflow::requires(role.analyst), λ_.
         workflow::unit(f(x, y))))))
 ```
 
-Modulo spans/origin metadata, ordinary bind/return lowering is the same shape used for Act/Proc targets. The difference is that workflow contract-injection forms contribute non-Proc projected events that remain present for zipper interpretation and later verification/lowering.
+Modulo spans/origin metadata, ordinary bind/return checking is the same path used for Act/Proc targets. The difference is that workflow contract-injection forms contribute non-Proc projected events that remain present for zipper interpretation and later verification/lowering.
 
 ## 9. Comprehension Integration
 
@@ -530,7 +711,7 @@ SPEC-055 bracket comprehensions become valid for explicit `Workflow` targets:
 [result | x <- wf1, y <- wf2(x)]: Workflow
 ```
 
-They normalize through the existing comprehension-to-do path:
+They normalize through the existing comprehension-to-do path and then through the same workflow-form builder used by `do:Workflow`:
 
 ```ash
 do:Workflow {
@@ -587,8 +768,10 @@ parameter names and types
 return type A
 public type Workflow<A>
 public HeaderContract / TotalContract summary sufficient for coverage checking
+public staged WorkflowContractSummary<A> sufficient for bind/then composition
 admission envelope summary
 exported failure/report/provenance summary
+public source-origin / alignment anchors without exposing private body node ids
 ```
 
 Private internal body details need not be exported, but the exported summary must be strong enough for downstream `do:Workflow` and `[...]: Workflow` checking.
@@ -604,10 +787,13 @@ The first implementation slice must add or adapt diagnostics for:
 3. Missing `Workflow` dictionary: internal compiler error or unsupported-target diagnostic until implemented.
 4. Wrong `<-` RHS in `do:Workflow`: expected `Workflow<A>`, found `Act<A>`/`Proc<A>`/pure `A`.
 5. Explicit lift hint: suggest `workflow::from_proc(...)` or `workflow::from_act(...)` where applicable.
-6. Coverage failure: declared/enclosing contract does not cover inferred body contract.
-7. Opaque imported workflow/proc/act lacks required contract summary.
-8. Dynamic admission required but forbidden by this spec.
-9. Parser-only lowering attempted for `do:Workflow` or `[...]: Workflow`.
+6. Coverage/obligation failure: declared/enclosing contract does not cover inferred body/lower Proc/lower Act contract obligation.
+7. `requires` refinement failure: a requirement refined the continuation checking environment but final coverage/admission cannot prove it.
+8. `ensures` target/type failure: an open postcondition cannot be resolved against the successful result type of its suffix workflow.
+9. Opaque imported workflow/proc/act lacks required contract summary.
+10. Dynamic admission required but forbidden by this spec.
+11. Parser-only lowering attempted for `do:Workflow` or `[...]: Workflow`.
+12. Evidence-preserving optimization violation: a neutral Proc-projection governance node was erased before its coverage/provenance/report evidence was preserved.
 
 Diagnostics should state expected shape, found type, relevant contract/evidence component, and one likely fix.
 
@@ -622,7 +808,7 @@ Runtime/lowering requirements for the first slice:
 - `workflow::bind` must sequence the underlying Proc bodies via `proc::bind` and preserve contract/evidence staging.
 - `workflow::unit` may reuse `proc::unit` for the body.
 - `workflow::requires` and `workflow::ensures` must preserve their workflow-form nodes and non-Proc projected events through workflow-algebra lowering.
-- `workflow::from_proc` and `workflow::from_act` must not bypass workflow admission/coverage.
+- `workflow::from_proc` and `workflow::from_act` must not bypass workflow admission/coverage. They preserve lower summaries and emit delayed coverage obligations rather than requiring local empty-header discharge when the enclosing/composed workflow may cover them.
 
 Static discharge of requirements, dynamic residualization of checks, and erasure of neutral `Proc`-projection nodes are type/constraint-checking and runtime-lowering concerns. They must not happen before the workflow-form/projection alignment has been constructed.
 
@@ -632,18 +818,22 @@ This spec does not require a new scheduler, new process runtime, new workflow te
 
 Implementation must include tests for:
 
-1. TypeEnv registers `Workflow` as a builtin unary constructor.
-2. `Workflow` do target resolves with a workflow dictionary.
-3. `do:Workflow { return x }` synthesizes `Workflow<A>`.
-4. `do:Workflow` binds only `Workflow<A>` RHS values.
-5. `do:Workflow` rejects `Proc<A>` and `Act<A>` RHS values without explicit lifts.
-6. `workflow::from_proc` and `workflow::from_act` allow explicit lifts where coverage permits.
-7. `requires` and `ensures` in a workflow block lower to preserved `workflow::requires` / `workflow::ensures` workflow forms.
-8. Typed elaboration of `do:Workflow` produces nested workflow-form `bind` / `unit` shape without erasing neutral-Proc contract-injection nodes.
-9. `[result | x <- wf]: Workflow` elaborates equivalently to `do:Workflow`.
-10. Coverage failures produce component-specific diagnostics.
-11. Imported workflow summaries are preserved across module boundaries or rejected if absent.
-12. Existing `do:Act`, `do:Proc`, Act blocks, and Act/Proc comprehensions remain unchanged.
+1. `WorkflowForm` grammar preserves `Unit`, `Bind`, `FromProc`, `FromAct`, `Requires`, `Ensures`, and `Scope` nodes with stable `WorkflowNodeId`s.
+2. Projection events carry node id, projection kind, event kind, and source-origin metadata, including synthetic and imported-summary origins.
+3. TypeEnv registers `Workflow` as a builtin unary constructor.
+4. `Workflow` do target resolves with a workflow dictionary.
+5. `do:Workflow { return x }` synthesizes `Workflow<A>`.
+6. `do:Workflow` binds only `Workflow<A>` RHS values.
+7. `do:Workflow` rejects `Proc<A>` and `Act<A>` RHS values without explicit lifts.
+8. `workflow::from_proc` and `workflow::from_act` allow explicit lifts where lower summaries exist and emit delayed coverage obligations.
+9. `requires` and `ensures` in a workflow block lower to preserved `workflow::requires` / `workflow::ensures` workflow forms.
+10. `requires` may refine continuation checking context but produces coverage obligations that must be proven later.
+11. `ensures` targets the successful result boundary of the suffix workflow and typechecks under `result : A`.
+12. Typed elaboration of `do:Workflow` produces nested workflow-form `Bind` / `Unit` shape without erasing neutral-Proc contract-injection nodes.
+13. `[result | x <- wf]: Workflow` elaborates equivalently to `do:Workflow` and the same `WorkflowForm` / projection alignment.
+14. Coverage/obligation failures produce component-specific diagnostics.
+15. Imported workflow summaries are preserved across module boundaries or rejected if absent.
+16. Existing `do:Act`, `do:Proc`, Act blocks, and Act/Proc comprehensions remain unchanged.
 
 ## 15. Non-Interference
 
@@ -672,6 +862,10 @@ Deferred follow-on specs should address:
 - Formatter and LSP enhancements for `do:Workflow` and `[...]: Workflow` examples.
 
 ## 17. Changelog
+
+### 2026-04-30
+
+- Hardened the draft around a blocking workflow-form/projection semantic gate before implementation: closed first-slice `WorkflowForm` grammar, node/alignment identity, projection events, staged `ContractPlan`, obligation handoff, `requires` refinement, `ensures` suffix-result targeting, delayed `from_proc`/`from_act` coverage obligations, and equality strata.
 
 ### 2026-04-29
 

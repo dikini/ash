@@ -14,11 +14,12 @@ Enable explicit-target workflow comprehensions `[result | qualifiers]: Workflow`
 
 ## Requirements
 
-1. Accept `Workflow` as a comprehension target after TASK-771.
-2. Normalize workflow comprehensions to equivalent `do:Workflow` blocks.
-3. Preserve source spans and origin metadata.
-4. Reject `Act<A>`/`Proc<A>` qualifier RHS values without explicit lifts.
-5. Do not add guards, pattern binders, target inference, or applicative semantics.
+1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md), [TASK-770](TASK-770-workflow-type-and-stdlib-operations.md), and [TASK-771](TASK-771-workflow-do-target-dictionary.md).
+2. Accept `Workflow` as a comprehension target after TASK-771.
+3. Normalize workflow comprehensions to equivalent `do:Workflow` blocks before workflow-form construction.
+4. Preserve source spans, origin metadata, and `WorkflowNodeId` alignment through the comprehension-to-do normalization.
+5. Reject `Act<A>`/`Proc<A>` qualifier RHS values without explicit lifts.
+6. Do not add guards, pattern binders, target inference, or applicative semantics.
 
 ## TDD Steps
 
@@ -31,7 +32,7 @@ Enable explicit-target workflow comprehensions `[result | qualifiers]: Workflow`
 ## Verification
 
 - [ ] `[...]: Workflow` type-checks for workflow qualifiers.
-- [ ] Elaboration shape matches `do:Workflow`.
+- [ ] Elaboration shape matches `do:Workflow` and produces the same `WorkflowForm` / projection-event alignment.
 - [ ] Negative tower mismatch diagnostics work.
 - [ ] Existing Act/Proc comprehensions still pass.
 - [ ] CHANGELOG.md updated.

@@ -1,6 +1,6 @@
 # NOTE-010: Workflow Form Pre-Typecheck Question Backlog
 
-**Status:** Exploratory / Q&A backlog
+**Status:** Exploratory / Q&A backlog with initial decisions
 **Date:** 2026-04-29
 **Related:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md), [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md), [PLAN-104](../plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
 
@@ -34,6 +34,23 @@ Surface workflow syntax -> WorkflowForm<A>
 and the Proc, Contract, check, resource, failure, reporting, and provenance dimensions are projections over that same form. The reference interpreter is a zipper over aligned projected steps/events.
 
 Static discharge, dynamic residualization, simplification, no-op erasure, and proof search are later typechecking/verification/lowering concerns. Pre-typecheck lowering must preserve structure.
+
+## Initial Decision Pass: 2026-04-30
+
+The following decisions are now promoted into SPEC-056 and should be treated as the current baseline for Phase 108 planning:
+
+1. `WorkflowForm` is primary. Carrier records such as `{ body, contract, evidence }` are implementation views derived from the preserved form, not independent artifacts.
+2. First-slice `WorkflowForm` grammar is `Unit`, `Bind`, `FromProc`, `FromAct`, `Requires`, `Ensures`, and `Scope`. `Then` is derived from `Bind`; `Fail` and `WithError` remain inherited lower failure behavior for now.
+3. Stable alignment uses `WorkflowNodeId`, `ProjectionKind`, `ProjectionEvent`, and `AlignmentKey = WorkflowNodeId × ProjectionKind`. Events carry source-origin metadata for source spans, synthetic desugarings, and imported summaries.
+4. `ContractPlan<A>` is staged and aligned with `WorkflowForm`, including dependent `BindContract` frames and lower Proc/Act summary nodes.
+5. `requires` is classified into role, capability, resource, precondition, and policy requirements. It may refine continuation checking context, but it never manufactures authority; final coverage/admission must prove the refined assumption.
+6. `ensures` targets the successful result boundary of the suffix workflow. In `Bind(Ensures(Q), _, rest : Workflow<A>)`, `Q` is checked under `result : A`; if `rest` fails before producing `A`, failure projection handles that path instead.
+7. `workflow::from_proc` and `workflow::from_act` preserve lower summaries and emit delayed coverage obligations. They do not require immediate empty-header coverage at the local expression site when an enclosing/composed workflow contract can cover the obligation.
+8. Typechecking hands off staged contract and obligations using `Γ ⊢ᴡ form : Workflow<A> ▷ C, Ω`; coverage/verification later discharges `Ω` into `CoverageEvidence` or diagnostics.
+9. `do:Workflow` and `[...]: Workflow` lower through the same workflow-form builder. Comprehensions first normalize through the SPEC-055 do path.
+10. Equality has strata: `WorkflowForm` equality preserves governance nodes; Proc-projection equality may see them as neutral; optimized runtime equality may erase only after evidence is preserved.
+
+Remaining questions below are retained as refinement prompts. Items already answered by this decision pass should be read as historical context unless they expose additional implementation details not yet covered by SPEC-056.
 
 ## Q&A Method
 
@@ -596,8 +613,8 @@ SPEC-056 has moved toward `WorkflowForm`, projection events, and contract-inject
 
 Likely updates:
 
-- TASK-769 should include `WorkflowForm`, node ids, projections, and alignment evidence.
-- TASK-770 should include `workflow::requires` and `workflow::ensures`.
+- TASK-769 now owns `WorkflowForm`, node ids, projections, staged `ContractPlan`, obligation handoff, and equality strata.
+- TASK-770 owns public `Workflow<A>`, internal carriers derived from `WorkflowForm`, and `workflow::requires` / `workflow::ensures` operations.
 - TASK-771 should include workflow block contract-injection statements.
 - TASK-774 should include preservation/no-erasure diagnostics/tests.
 

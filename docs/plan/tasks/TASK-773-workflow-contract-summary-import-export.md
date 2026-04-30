@@ -14,11 +14,13 @@ Preserve enough workflow type and contract summary metadata across modules for f
 
 ## Requirements
 
-1. Audit current module export/import carriers for workflow signatures and metadata loss.
-2. Extend carriers to preserve workflow parameter types, return type, public `Workflow<A>` type, admission envelope summary, and failure/report/provenance summary.
-3. Reject imported workflow values used in first-class composition if required summaries are absent.
-4. Add tests covering imported workflow values in `do:Workflow` and `[...]: Workflow`.
-5. Do not expose private body internals unnecessarily.
+1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md).
+2. Audit current module export/import carriers for workflow signatures and metadata loss.
+3. Extend carriers to preserve workflow parameter types, return type, public `Workflow<A>` type, public staged `WorkflowContractSummary<A>`, admission envelope summary, and failure/report/provenance summary.
+4. Preserve public alignment boundaries and source-origin diagnostics without exposing private body internals or private `WorkflowNodeId`s.
+5. Reject imported workflow/proc/act values used in first-class workflow composition if required summaries are absent.
+6. Add tests covering imported workflow values in `do:Workflow` and `[...]: Workflow`.
+7. Do not expose private body internals unnecessarily.
 
 ## TDD Steps
 
@@ -30,7 +32,8 @@ Preserve enough workflow type and contract summary metadata across modules for f
 ## Verification
 
 - [ ] Imported workflows preserve `Workflow<A>` type.
-- [ ] Imported workflow summaries support coverage checking.
+- [ ] Imported workflow summaries support coverage checking and staged contract composition.
+- [ ] Public alignment/source-origin summaries survive without exposing private node ids.
 - [ ] Missing summaries produce diagnostics.
 - [ ] Private body details are not required in public summaries.
 - [ ] CHANGELOG.md updated.

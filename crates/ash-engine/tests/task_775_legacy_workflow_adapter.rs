@@ -1,9 +1,10 @@
 #![allow(missing_docs)]
 
 use ash_core::workflow_carrier::{
-    ContractPlan, ProjectionEventKind, WorkflowForm, lower_workflow_form,
+    ContractPlan, OpenPostcondition, ProcContractSummary, ProcLowerSummary, ProjectionEventKind,
+    WorkflowBinder, WorkflowForm, WorkflowNodeId, lower_workflow_form,
 };
-use ash_core::workflow_contract::{ArithConstraint, PostPredicate, Requirement};
+use ash_core::workflow_contract::{ArithConstraint, PostPredicate, Requirement, RolePolicy};
 use ash_engine::legacy_workflow_adapter::{
     LegacyWorkflowAdapterError, UnsupportedLegacyBodyConstruct,
     legacy_workflow_def_to_workflow_form, legacy_workflow_source_origin,
@@ -48,6 +49,25 @@ fn contains_body_placeholder(form: &WorkflowForm<()>) -> bool {
         WorkflowForm::Scope { body, .. } => contains_body_placeholder(body),
         _ => false,
     }
+}
+
+fn public_contract_event_kinds(form: &WorkflowForm<()>) -> Vec<ProjectionEventKind> {
+    lower_workflow_form(
+        form,
+        ash_core::workflow_carrier::SourceOrigin::Synthetic {
+            parent_span: None,
+            reason: "test equivalence".to_string(),
+        },
+    )
+    .projection_events
+    .into_iter()
+    .filter_map(|event| match event.kind {
+        ProjectionEventKind::Requires { .. } | ProjectionEventKind::Ensures { .. } => {
+            Some(event.kind)
+        }
+        _ => None,
+    })
+    .collect()
 }
 
 #[test]
@@ -165,4 +185,50 @@ fn legacy_body_adapter_rejects_opaque_receive_construct_with_diagnostic() {
             ..
         }
     ));
+}
+
+#[test]
+fn legacy_and_first_class_forms_produce_equivalent_public_contract_events() {
+    let workflow = parse_workflow(
+        "workflow equivalent requires: any_role([Reviewer, Approver]) ensures: result >= 1 { done }",
+    );
+
+    let legacy_form =
+        legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
+    let first_class_form = WorkflowForm::Bind {
+        node: WorkflowNodeId(10),
+        source: Box::new(WorkflowForm::Requires {
+            node: WorkflowNodeId(11),
+            requirement: Requirement::AnyRole(RolePolicy {
+                roles: vec!["Reviewer".to_string(), "Approver".to_string()],
+            }),
+        }),
+        binder: WorkflowBinder::Ignored,
+        next: Box::new(WorkflowForm::Bind {
+            node: WorkflowNodeId(12),
+            source: Box::new(WorkflowForm::Ensures {
+                node: WorkflowNodeId(13),
+                postcondition: OpenPostcondition {
+                    predicate: PostPredicate::ResultSatisfies(ArithConstraint::Gte(1)),
+                },
+            }),
+            binder: WorkflowBinder::Ignored,
+            next: Box::new(WorkflowForm::FromProc {
+                node: WorkflowNodeId(14),
+                summary: ProcLowerSummary {
+                    coverage_obligation_nodes: Vec::new(),
+                    contract_summary: Some(ProcContractSummary {
+                        obligations: Vec::new(),
+                        public_anchor: Some("first_class_body".to_string()),
+                    }),
+                },
+            }),
+        }),
+    };
+
+    assert_eq!(
+        public_contract_event_kinds(&legacy_form),
+        public_contract_event_kinds(&first_class_form),
+        "legacy header translation and first-class workflow forms must expose equivalent public contract event sequences modulo source/body metadata"
+    );
 }

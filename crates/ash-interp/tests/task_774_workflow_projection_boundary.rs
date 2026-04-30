@@ -40,12 +40,11 @@ fn ignored_bind_projection_executes_non_dependent_then_sequence() {
 }
 
 #[test]
-fn named_bind_projection_fails_at_named_phase_108_boundary() {
+fn bind_projection_propagates_unsupported_source_boundary() {
     let projection = WorkflowProcProjection::Bind {
         node: WorkflowNodeId(3),
-        source: Box::new(WorkflowProcProjection::Unit {
+        source: Box::new(WorkflowProcProjection::Neutral {
             node: WorkflowNodeId(1),
-            value: Value::Int(1),
         }),
         binder: ash_core::workflow_carrier::WorkflowBinder::Named("x".to_string()),
         next: Box::new(WorkflowProcProjection::Unit {
@@ -59,9 +58,36 @@ fn named_bind_projection_fails_at_named_phase_108_boundary() {
     assert!(matches!(error, ExecError::InvalidRuntimeState(_)));
     let message = error.to_string();
     assert!(message.contains("FirstClassWorkflowProjectionExecutionUnsupported"));
-    assert!(message.contains("Phase 108 is still check/lowering-only"));
-    assert!(message.contains("bind"));
-    assert!(message.contains("node 3"));
+    assert!(message.contains("neutral governance node"));
+    assert!(message.contains("node 1"));
+}
+
+#[test]
+fn named_and_synthetic_bind_projections_execute_materialized_continuations() {
+    let cases = [
+        ash_core::workflow_carrier::WorkflowBinder::Named("x".to_string()),
+        ash_core::workflow_carrier::WorkflowBinder::Synthetic("_wf".to_string()),
+    ];
+
+    for binder in cases {
+        let projection = WorkflowProcProjection::Bind {
+            node: WorkflowNodeId(10),
+            source: Box::new(WorkflowProcProjection::Unit {
+                node: WorkflowNodeId(1),
+                value: Value::Int(1),
+            }),
+            binder,
+            next: Box::new(WorkflowProcProjection::Unit {
+                node: WorkflowNodeId(2),
+                value: Value::Int(2),
+            }),
+        };
+
+        let value = execute_workflow_proc_projection(&projection)
+            .expect("materialized bind projection should sequence source then next");
+
+        assert_eq!(value, Value::Int(2));
+    }
 }
 
 #[test]

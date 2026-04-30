@@ -1,8 +1,9 @@
 use ash_core::workflow_carrier::{
-    ActLowerSummary, AlignmentKey, CoverageError, ProcContractSummary, ProcLowerSummary,
-    ProjectionKind, SourceOrigin, WorkflowBinder, WorkflowForm, WorkflowNodeId, WorkflowObligation,
-    lower_workflow_form,
+    ActLowerSummary, AlignmentKey, CoverageError, OpenPostcondition, ProcContractSummary,
+    ProcLowerSummary, ProjectionKind, SourceOrigin, WorkflowBinder, WorkflowForm, WorkflowNodeId,
+    WorkflowObligation, lower_workflow_form,
 };
+use ash_core::workflow_contract::{ArithConstraint, PostPredicate, Requirement};
 
 fn origin() -> SourceOrigin {
     SourceOrigin::Synthetic {
@@ -132,5 +133,92 @@ fn coverage_errors_name_failed_evidence_component_and_projection() {
     assert!(
         opaque.to_string().contains("external::opaque_workflow"),
         "opaque summary diagnostic should name imported summary: {opaque}"
+    );
+}
+
+#[test]
+fn requirement_and_postcondition_obligations_distinguish_proof_boundaries() {
+    let requirement = Requirement::HasRole("Reviewer".to_string());
+    let must_hold = WorkflowObligation::RequirementMustHold {
+        node: WorkflowNodeId(101),
+        requirement: requirement.clone(),
+    };
+
+    assert_eq!(must_hold.evidence_component(), "obligations");
+    assert_eq!(
+        must_hold.diagnostic_label(),
+        "workflow requirement coverage"
+    );
+    let must_hold_message = must_hold.diagnostic_message();
+    assert!(
+        must_hold_message.contains("must be proven"),
+        "{must_hold_message}"
+    );
+    assert!(
+        must_hold_message.contains("admission"),
+        "{must_hold_message}"
+    );
+    assert!(
+        must_hold_message.contains("obligations evidence"),
+        "{must_hold_message}"
+    );
+    assert!(
+        must_hold_message.contains("node 101"),
+        "{must_hold_message}"
+    );
+
+    let refinement = WorkflowObligation::RequirementRefinementCovered {
+        node: WorkflowNodeId(102),
+        requirement,
+    };
+    assert_eq!(
+        refinement.diagnostic_label(),
+        "requirement refinement coverage"
+    );
+    let refinement_message = refinement.diagnostic_message();
+    assert!(
+        refinement_message.contains("assumed"),
+        "{refinement_message}"
+    );
+    assert!(
+        refinement_message.contains("refines checking context"),
+        "{refinement_message}"
+    );
+    assert!(
+        refinement_message.contains("not final proof"),
+        "{refinement_message}"
+    );
+    assert!(
+        refinement_message.contains("node 102"),
+        "{refinement_message}"
+    );
+
+    let postcondition = WorkflowObligation::OpenPostconditionTarget {
+        node: WorkflowNodeId(103),
+        postcondition: OpenPostcondition {
+            predicate: PostPredicate::ResultSatisfies(ArithConstraint::Gte(1)),
+        },
+        target_type: "WorkflowResult".to_string(),
+    };
+    assert_eq!(
+        postcondition.diagnostic_label(),
+        "open postcondition target coverage"
+    );
+    let postcondition_message = postcondition.diagnostic_message();
+    assert!(
+        postcondition_message.contains("successful result boundary"),
+        "{postcondition_message}"
+    );
+    assert!(
+        postcondition_message.contains("WorkflowResult"),
+        "{postcondition_message}"
+    );
+    assert!(
+        postcondition_message.contains("obligations evidence"),
+        "{postcondition_message}"
+    );
+    assert!(
+        postcondition_message.contains("node 103"),
+        "{postcondition_message}"
     );
 }

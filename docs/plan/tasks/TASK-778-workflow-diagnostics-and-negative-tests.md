@@ -55,8 +55,8 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 - [ ] Lift hints are present where applicable.
 - [ ] Contract statement misuse and intrinsic parameter misuse diagnostics are covered.
 - [x] Contract-expression classification failures cover empty `any_role`, invalid role-policy entries, and non-`result` `workflow ensures` targets with stable Requirement/OpenPostcondition wording.
-- [ ] `requires` refinement failures distinguish assumed availability from proven admission.
-- [ ] `ensures` target/type failures identify the suffix result boundary.
+- [x] `requires` refinement failures distinguish assumed availability from proven admission at the carrier diagnostic boundary.
+- [x] `ensures` target/type failures identify the successful-result suffix boundary at the carrier diagnostic boundary.
 - [x] Deprecated legacy workflow declarations emit warnings with rewrite hints in `ash check` human and JSON output.
 - [x] `DeprecatedLegacyWorkflowDeclaration` reaches `ash check` as a non-fatal warning when no errors exist.
 - [ ] Neutral-Proc contract nodes are not silently erased before evidence-preserving optimization.
@@ -74,5 +74,6 @@ Implemented the current TASK-778 diagnostic slices:
 - Headerless legacy workflow declarations and declarations with multiple legacy header events both produce one declaration-level warning.
 - JSON warning output now uses the workflow declaration span as its diagnostic anchor.
 - Coverage and obligation carriers now expose stable evidence-component labels/messages for lower Proc/Act obligations, missing projection events, and opaque imported summary rejections.
+- Carrier diagnostics for `RequirementMustHold`, `RequirementRefinementCovered`, and `OpenPostconditionTarget` now distinguish final admission proof, requires-assumption/refinement coverage, and successful-result postcondition target boundaries.
 
-Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, coverage/admission proof diagnostics beyond this carrier-label slice, `requires`/`ensures` proof/target diagnostics beyond the classifier target checks above, neutral projection preservation, and Act/Proc diagnostic regression coverage.
+Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, source/typechecker-level admission proof validation beyond this carrier-label slice, neutral projection preservation, and Act/Proc diagnostic regression coverage.

@@ -385,17 +385,17 @@ impl WorkflowObligation {
     pub fn diagnostic_message(&self) -> String {
         match self {
             Self::RequirementMustHold { node, .. } => format!(
-                "workflow requirement must be proven by obligations evidence at node {}",
+                "workflow requirement must be proven by final admission obligations evidence at node {}",
                 node.0
             ),
             Self::RequirementRefinementCovered { node, .. } => format!(
-                "requirement refinement must be covered by obligations evidence at node {}",
+                "requirement assumed by requires refines checking context but is not final proof; it must be covered by obligations evidence at node {}",
                 node.0
             ),
             Self::OpenPostconditionTarget {
                 node, target_type, ..
             } => format!(
-                "open postcondition target `{target_type}` must be covered by obligations evidence at node {}",
+                "open postcondition target `{target_type}` must be tied to the successful result boundary and covered by obligations evidence at node {}",
                 node.0
             ),
             Self::LowerProcCovered { node, summary } => lower_contract_message(

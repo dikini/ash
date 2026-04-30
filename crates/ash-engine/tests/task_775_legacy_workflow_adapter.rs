@@ -77,7 +77,7 @@ fn public_contract_event_kinds(form: &WorkflowForm<()>) -> Vec<ProjectionEventKi
 #[test]
 fn legacy_header_events_lower_in_source_order_with_any_role_or_semantics() {
     let workflow = parse_workflow(
-        "workflow guarded requires: any_role([Reviewer, Approver]) ensures: result > 0 requires: role(Auditor) { done }",
+        "workflow guarded plays role(Admin) requires: any_role([Reviewer, Approver]) ensures: result > 0 requires: role(Auditor) { done }",
     );
 
     let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
@@ -100,6 +100,7 @@ fn legacy_header_events_lower_in_source_order_with_any_role_or_semantics() {
     assert_eq!(
         contract_events,
         vec![
+            "requires:HasRole(\"Admin\")",
             "requires:AnyRole(RolePolicy { roles: [\"Reviewer\", \"Approver\"] })",
             "ensures:OpenPostcondition { predicate: ResultSatisfies(Gt(0)) }",
             "requires:HasRole(\"Auditor\")",
@@ -109,10 +110,14 @@ fn legacy_header_events_lower_in_source_order_with_any_role_or_semantics() {
 
     assert!(matches!(
         &lowered.contract.admission.requirements[0],
+        Requirement::HasRole(role) if role == "Admin"
+    ));
+    assert!(matches!(
+        &lowered.contract.admission.requirements[1],
         Requirement::AnyRole(policy) if policy.roles == ["Reviewer", "Approver"]
     ));
     assert_eq!(
-        lowered.contract.admission.requirements[1],
+        lowered.contract.admission.requirements[2],
         Requirement::HasRole("Auditor".to_string())
     );
 }

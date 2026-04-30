@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): extended the conservative legacy workflow adapter to lower `plays role(...)` header events into the same admission `WorkflowForm::Requires(HasRole(...))` path as explicit `requires: role(...)`, preserving source order with contract headers.
+
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): extended `ash-core::workflow_carrier::ProcLowerSummary` with typed optional failure, resource-authority, provenance, and source-origin summary fields; the `ash-engine` legacy body adapter now populates explicit conservative summaries for supported body `FromProc` nodes while keeping receive/yield/resume rejection behavior covered.
 
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): strengthened the conservative legacy workflow body adapter so supported legacy body shapes enter `FromProc` with aligned `coverage_obligation_nodes` / `ProcContractSummary.obligations` and a workflow-specific `legacy_body_as_proc_summary:<name>` anchor; stream receive and yield/resume bodies now reject with explicit `UnsupportedBody` diagnostics instead of being represented as obligation-free opaque summaries. Added supported-subset equivalence coverage proving legacy `requires:` / `ensures:` headers and a manually constructed first-class WorkflowForm expose the same public contract event sequence modulo source/body metadata. Full Proc/failure/provenance body summaries remain deferred.

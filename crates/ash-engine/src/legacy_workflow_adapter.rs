@@ -109,8 +109,13 @@ pub fn legacy_workflow_def_to_workflow_form(
                     })?,
                 },
             },
-            WorkflowHeaderEvent::PlaysRole(_)
-            | WorkflowHeaderEvent::Capabilities(_)
+            WorkflowHeaderEvent::PlaysRole(role) => WorkflowForm::Requires {
+                node,
+                requirement: ash_core::workflow_contract::Requirement::HasRole(
+                    role.name.to_string(),
+                ),
+            },
+            WorkflowHeaderEvent::Capabilities(_)
             | WorkflowHeaderEvent::Owns(_)
             | WorkflowHeaderEvent::Uses(_) => continue,
         };

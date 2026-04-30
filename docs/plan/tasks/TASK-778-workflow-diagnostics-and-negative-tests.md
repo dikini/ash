@@ -53,7 +53,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 - [x] Diagnostics state expected type/constructor and found type for generalized `do` target unknown/wrong-kind cases.
 - [x] Coverage/obligation errors mention the failed evidence component.
 - [ ] Lift hints are present where applicable.
-- [ ] Contract statement misuse and intrinsic parameter misuse diagnostics are covered.
+- [x] Contract statement misuse and intrinsic parameter misuse diagnostics are covered for first-class `workflow::requires` / `workflow::ensures` call misuse outside `do:Workflow`.
 - [x] Contract-expression classification failures cover empty `any_role`, invalid role-policy entries, and non-`result` `workflow ensures` targets with stable Requirement/OpenPostcondition wording.
 - [x] `requires` refinement failures distinguish assumed availability from proven admission at the carrier diagnostic boundary.
 - [x] `ensures` target/type failures identify the successful-result suffix boundary at the carrier diagnostic boundary.
@@ -75,5 +75,6 @@ Implemented the current TASK-778 diagnostic slices:
 - JSON warning output now uses the workflow declaration span as its diagnostic anchor.
 - Coverage and obligation carriers now expose stable evidence-component labels/messages for lower Proc/Act obligations, missing projection events, and opaque imported summary rejections.
 - Carrier diagnostics for `RequirementMustHold`, `RequirementRefinementCovered`, and `OpenPostconditionTarget` now distinguish final admission proof, requires-assumption/refinement coverage, and successful-result postcondition target boundaries.
+- First-class `workflow::requires` / `workflow::ensures` call misuse outside `do:Workflow` now reports stable contract-only intrinsic diagnostics naming the qualified intrinsic, non-denotable Requirement/OpenPostcondition parameter class, arity failures, and open-result Workflow result-boundary requirements.
 
-Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, source/typechecker-level admission proof validation beyond this carrier-label slice, neutral projection preservation, and Act/Proc diagnostic regression coverage.
+Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, source/typechecker-level admission proof validation beyond this carrier-label slice, neutral projection preservation, lift-hint coverage, and Act/Proc diagnostic regression coverage.

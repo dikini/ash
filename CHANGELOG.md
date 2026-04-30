@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added stable contract-only intrinsic misuse diagnostics for first-class `workflow::requires` / `workflow::ensures` calls outside `do:Workflow`, naming the qualified intrinsic, non-denotable Requirement/OpenPostcondition parameter class, arity failures, and open-result Workflow result-boundary requirements.
+
 - [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added stable coverage/obligation evidence-component diagnostics on `ash-core` workflow carriers, including lower Proc/Act obligation labels/messages, final-admission versus requires-refinement proof boundary messages, successful-result OpenPostcondition target messages, and `CoverageError` display output for missing projection events and opaque imported summaries.
 
 - [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added stable workflow contract classifier diagnostics for unsupported `workflow requires` / `workflow ensures` expressions, including empty `any_role`, invalid role-policy entries, and non-`result` OpenPostcondition targets.

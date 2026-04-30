@@ -6,7 +6,7 @@
 
 use crate::error::ConstructorError;
 use crate::exhaustiveness::{Coverage, check_exhaustive};
-use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo};
+use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo, WorkflowIntrinsic};
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
@@ -199,30 +199,71 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             span,
         } => {
             if module.as_deref() == Some("workflow") {
-                match func.as_ref() {
-                    "requires" if args.len() == 1 => {
-                        if let Err(err) = validate_requirement_expr(env, &args[0]) {
-                            return CheckResult::error(err);
+                let qualified_intrinsic = format!("workflow::{func}");
+                if let Some(intrinsic) = env.lookup_workflow_intrinsic(&qualified_intrinsic) {
+                    let has_workflow_intrinsic_context = env
+                        .lookup_variable("__workflow_intrinsic_context")
+                        .is_some();
+                    match func.as_ref() {
+                        "requires" => {
+                            if args.len() != 1 {
+                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                    &intrinsic,
+                                    format!("expects 1 arguments, found {}", args.len()),
+                                    *span,
+                                ));
+                            }
+                            if let Err(err) = validate_requirement_expr(env, &args[0]) {
+                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                    &intrinsic,
+                                    err.to_string(),
+                                    *span,
+                                ));
+                            }
+                            if !has_workflow_intrinsic_context {
+                                return CheckResult::error(workflow_intrinsic_context_misuse_error(
+                                    &intrinsic,
+                                    "requires refines Workflow contract context and does not produce a denotable value".to_string(),
+                                    *span,
+                                ));
+                            }
+                            return CheckResult::success(intrinsic.result_type().clone());
                         }
-                        return CheckResult::success(workflow_null_type());
+                        "ensures" => {
+                            if args.len() != 1 {
+                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                    &intrinsic,
+                                    format!("expects 1 arguments, found {}", args.len()),
+                                    *span,
+                                ));
+                            }
+                            if !has_workflow_intrinsic_context
+                                && expr_mentions_variable(&args[0], "result")
+                            {
+                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                    &intrinsic,
+                                    "open result postcondition mentions `result` but has no Workflow result boundary".to_string(),
+                                    *span,
+                                ));
+                            }
+                            if let Err(err) = validate_postcondition_expr(&args[0]) {
+                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                    &intrinsic,
+                                    err.to_string(),
+                                    *span,
+                                ));
+                            }
+                            if !has_workflow_intrinsic_context {
+                                return CheckResult::error(workflow_intrinsic_context_misuse_error(
+                                    &intrinsic,
+                                    "ensures targets the Workflow result boundary and does not produce a denotable value".to_string(),
+                                    *span,
+                                ));
+                            }
+                            return CheckResult::success(intrinsic.result_type().clone());
+                        }
+                        _ => {}
                     }
-                    "ensures" if args.len() == 1 => {
-                        if env
-                            .lookup_variable("__workflow_intrinsic_context")
-                            .is_none()
-                            && expr_mentions_variable(&args[0], "result")
-                        {
-                            return CheckResult::error(ConstructorError::UnsupportedExpression {
-                                kind: "standalone workflow::ensures with open result postcondition requires a surrounding Workflow result target".to_string(),
-                                span: *span,
-                            });
-                        }
-                        if let Err(err) = validate_postcondition_expr(&args[0]) {
-                            return CheckResult::error(err);
-                        }
-                        return CheckResult::success(workflow_null_type());
-                    }
-                    _ => {}
                 }
             }
 
@@ -1827,6 +1868,36 @@ fn classify_postcondition(expr: &Expr) -> Result<OpenPostcondition, ConstructorE
         })
 }
 
+fn workflow_intrinsic_misuse_error(
+    intrinsic: &WorkflowIntrinsic,
+    reason: String,
+    span: Span,
+) -> ConstructorError {
+    ConstructorError::UnsupportedExpression {
+        kind: format!(
+            "{} misuse: {} parameter class is non-denotable and contract-only; use inside do:Workflow contract syntax. {reason}",
+            intrinsic.qualified_name,
+            intrinsic.parameter_class().as_str(),
+        ),
+        span,
+    }
+}
+
+fn workflow_intrinsic_context_misuse_error(
+    intrinsic: &WorkflowIntrinsic,
+    reason: String,
+    span: Span,
+) -> ConstructorError {
+    ConstructorError::UnsupportedExpression {
+        kind: format!(
+            "{} misuse: {} parameter class is non-denotable and contract-only outside do:Workflow; {reason}",
+            intrinsic.qualified_name,
+            intrinsic.parameter_class().as_str(),
+        ),
+        span,
+    }
+}
+
 #[allow(clippy::collapsible_if)]
 fn validate_requirement_expr(env: &TypeEnv, expr: &Expr) -> Result<(), ConstructorError> {
     let requirement = classify_requirement(expr)?;
@@ -2105,14 +2176,6 @@ fn monadic_inner_type(ty: &Type, constructor: &crate::QualifiedName) -> Option<T
             Some(args[0].clone())
         }
         _ => None,
-    }
-}
-
-fn workflow_null_type() -> Type {
-    Type::Constructor {
-        name: crate::QualifiedName::root("Workflow"),
-        args: vec![Type::Null],
-        kind: crate::Kind::Type,
     }
 }
 

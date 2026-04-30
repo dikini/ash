@@ -21,7 +21,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 - 📝 TASK-774: Workflow lowering and runtime projection.
 - 📝 TASK-775: Legacy workflow translation and deprecation.
 - ✅ TASK-776: Workflow comprehension target.
-- 📝 TASK-777: Workflow contract summary import/export.
+- 🚧 TASK-777: Workflow contract summary import/export has a partial substrate slice; richer export summaries and module-boundary equivalence remain follow-up work.
 
 ## Requirements
 

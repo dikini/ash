@@ -12,6 +12,10 @@ use ash_core::ast::{
     VariantDef as CoreVariantDef, VariantPayload as CoreVariantPayload,
     Visibility as CoreVisibility,
 };
+use ash_core::workflow_carrier::{
+    CoverageEvidence, ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary,
+    SourceOrigin, WorkflowNodeId,
+};
 use ash_parser::input::new_input;
 use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
 use ash_parser::parse_type_def::{
@@ -121,6 +125,8 @@ pub struct InlineCallable {
     pub kind: CallableKind,
     /// Full declared type signature for imported callables.
     pub signature: Option<CallableSignature>,
+    /// Public first-class workflow summary for imported `Workflow<A>` exports.
+    pub workflow_summary: Option<PublicWorkflowSummary>,
 }
 
 /// Declared signature preserved for imported callables.
@@ -657,11 +663,25 @@ pub(crate) fn collect_module_exports(
             let mut callable = callable.callable;
             callable.effectful_names.clone_from(&module_effectful_names);
             let exported_name = callable.exported_name.clone();
+            if let Some(summary) = callable.workflow_summary.as_mut() {
+                stamp_workflow_summary_import_origin(
+                    summary,
+                    module_path_text(path.as_path()),
+                    &exported_name,
+                );
+            }
             insert_callable_export(&mut exports, &exported_name, callable)?;
         } else if let Some(callable) = parse_workflow_signature_callable(&snippet) {
             let mut callable = callable.callable;
             callable.effectful_names.clone_from(&module_effectful_names);
             let exported_name = callable.exported_name.clone();
+            if let Some(summary) = callable.workflow_summary.as_mut() {
+                stamp_workflow_summary_import_origin(
+                    summary,
+                    module_path_text(path.as_path()),
+                    &exported_name,
+                );
+            }
             insert_callable_export(&mut exports, &exported_name, callable)?;
         }
         // Silently skip workflows that fail to parse during module export collection.
@@ -1085,6 +1105,7 @@ fn parse_workflow_signature_callable(snippet: &str) -> Option<ImportedCallableEx
             effectful_names: HashSet::new(),
             kind: CallableKind::User { body },
             signature: Some(CallableSignature::Function(fn_def)),
+            workflow_summary: None,
         },
     })
 }
@@ -1219,6 +1240,7 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
                 body: function.body.clone(),
             },
             signature: Some(CallableSignature::Function(function)),
+            workflow_summary: None,
         },
     }))
 }
@@ -1283,6 +1305,7 @@ fn parse_builtin_fn_callable(
             effectful_names: HashSet::new(),
             kind: CallableKind::Builtin { module },
             signature: Some(CallableSignature::Builtin(builtin)),
+            workflow_summary: None,
         },
     }))
 }
@@ -1330,8 +1353,45 @@ fn extract_callable_from_workflow(
             effectful_names: HashSet::new(),
             kind: CallableKind::User { body: expr },
             signature,
+            workflow_summary: Some(public_workflow_summary(name.as_ref())),
         },
     }))
+}
+
+fn public_workflow_summary(anchor: &str) -> PublicWorkflowSummary {
+    PublicWorkflowSummary {
+        node_count: 1,
+        projection_events: vec![ProjectionEvent {
+            node: WorkflowNodeId(0),
+            projection: ProjectionKind::Contract,
+            origin: SourceOrigin::ImportedSummary {
+                module: String::new(),
+                public_anchor: anchor.to_string(),
+            },
+            kind: ProjectionEventKind::Neutral,
+        }],
+        coverage: CoverageEvidence::default(),
+    }
+}
+
+fn module_path_text(path: &Path) -> &str {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or_default()
+}
+
+fn stamp_workflow_summary_import_origin(
+    summary: &mut PublicWorkflowSummary,
+    module: &str,
+    public_anchor: &str,
+) {
+    let origin = SourceOrigin::ImportedSummary {
+        module: module.to_string(),
+        public_anchor: public_anchor.to_string(),
+    };
+    for event in &mut summary.projection_events {
+        event.origin = origin.clone();
+    }
 }
 
 fn workflow_signature_from_parts(

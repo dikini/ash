@@ -889,6 +889,8 @@ pub struct TypeEnv {
     variables: HashMap<String, crate::types::Type>,
     /// Compiler-known workflow intrinsics whose parameters are not source-denotable types.
     workflow_intrinsics: HashMap<String, WorkflowIntrinsic>,
+    /// Public Workflow summaries imported from module metadata by binding name.
+    public_workflow_summaries: HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
     /// Lowered pure-function contracts kept at the type/runtime boundary.
     fn_contracts: HashMap<String, StoredFnContract>,
     /// Capability symbols known to be capability targets, not pure functions.
@@ -982,6 +984,7 @@ impl TypeEnv {
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: HashMap::with_capacity(2),
+            public_workflow_summaries: HashMap::with_capacity(2),
             fn_contracts: HashMap::with_capacity(10),
             capability_symbols: HashSet::with_capacity(8),
             parent: None,
@@ -1648,6 +1651,7 @@ impl TypeEnv {
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),
+            public_workflow_summaries: HashMap::new(),
             fn_contracts: HashMap::new(),
             capability_symbols: HashSet::new(),
             parent: None,
@@ -2369,6 +2373,31 @@ impl TypeEnv {
         })
     }
 
+    /// Bind a public Workflow summary imported from module metadata.
+    pub fn bind_public_workflow_summary(
+        &mut self,
+        name: &str,
+        summary: ash_core::workflow_carrier::PublicWorkflowSummary,
+    ) {
+        self.public_workflow_summaries
+            .insert(name.to_string(), summary);
+    }
+
+    /// Look up a public Workflow summary by local or qualified binding name.
+    pub fn lookup_public_workflow_summary(
+        &self,
+        name: &str,
+    ) -> Option<ash_core::workflow_carrier::PublicWorkflowSummary> {
+        self.public_workflow_summaries
+            .get(name)
+            .cloned()
+            .or_else(|| {
+                self.parent
+                    .as_ref()
+                    .and_then(|parent| parent.lookup_public_workflow_summary(name))
+            })
+    }
+
     /// Return the names of all bound variables (used for name resolution of imported callables).
     pub fn variable_names(&self) -> impl Iterator<Item = String> + '_ {
         self.variables.keys().cloned()
@@ -2469,6 +2498,7 @@ impl TypeEnv {
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),
+            public_workflow_summaries: self.public_workflow_summaries.clone(),
             fn_contracts: self.fn_contracts.clone(),
             capability_symbols: self.capability_symbols.clone(),
             parent: Some(Box::new(self.clone())),

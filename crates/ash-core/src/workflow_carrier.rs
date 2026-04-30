@@ -75,6 +75,10 @@ pub enum WorkflowForm<A> {
         node: WorkflowNodeId,
         summary: ActLowerSummary,
     },
+    ImportedSummary {
+        node: WorkflowNodeId,
+        summary: PublicWorkflowSummary,
+    },
     Requires {
         node: WorkflowNodeId,
         requirement: Requirement,
@@ -557,6 +561,14 @@ impl WorkflowFormLowering {
                     summary: summary.clone(),
                 }
             }
+            WorkflowForm::ImportedSummary { node, summary } => {
+                self.projection_events
+                    .extend(summary.projection_events.iter().cloned());
+                self.coverage
+                    .obligations
+                    .extend(summary.coverage.obligations.iter().cloned());
+                WorkflowProcProjection::Neutral { node: *node }
+            }
             WorkflowForm::Requires { node, requirement } => {
                 self.event(
                     *node,
@@ -677,6 +689,9 @@ impl WorkflowFormLowering {
             WorkflowForm::FromAct { node, summary } => ContractPlan::LowerActContract {
                 node: *node,
                 summary: summary.contract_summary.clone().unwrap_or_default(),
+            },
+            WorkflowForm::ImportedSummary { .. } => ContractPlan::EmptyContract {
+                result_marker: None,
             },
             WorkflowForm::Requires { node, requirement } => ContractPlan::RequirementContract {
                 node: *node,

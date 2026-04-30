@@ -1,6 +1,6 @@
 # TASK-777: Workflow Contract Summary Import/Export
 
-## Status: 📝 Planned
+## Status: 🚧 Partial
 
 ## References
 
@@ -49,13 +49,29 @@ Public workflow summaries are shared semantic/module carriers owned by `ash-core
 
 ## Verification
 
-- [ ] Imported workflows preserve `Workflow<A>` type.
-- [ ] Imported workflow summaries support coverage checking and staged contract composition.
-- [ ] Public summaries are represented with `ash-core` types and serialized/imported by `ash-engine` without parser AST or typeck-private struct dependencies.
-- [ ] Public alignment/source-origin summaries survive without exposing private node ids.
+- [x] Imported workflows preserve `Workflow<A>` type in the typechecker when paired with public summary metadata.
+- [x] Imported workflow summaries support staged composition in `do:Workflow` and `[...]: Workflow` by recovering `WorkflowForm::ImportedSummary` from `TypeEnv`.
+- [x] Public summaries are represented with `ash-core` types and imported by `ash-engine` without exposing typeck-private `WorkflowTypedArtifact` structs.
+- [x] Public alignment/source-origin summaries survive as `SourceOrigin::ImportedSummary` without requiring private body internals.
 - [ ] Qualified workflow exports remain preservable if future stdlib backing is added, without implicit unqualified operation imports.
-- [ ] Cargo dependency boundaries for summary propagation are audited, with API-boundary cleanup vs dependency-removal scope recorded.
+- [x] Cargo dependency boundaries for summary propagation are audited; this slice enforces public API boundaries through `ash-core` summary types and does not remove existing engine parser/typechecker dependencies.
 - [ ] Deprecated legacy and equivalent first-class workflows export equivalent public contract summaries.
-- [ ] Missing summaries produce diagnostics.
-- [ ] Private body details are not required in public summaries.
-- [ ] CHANGELOG.md updated.
+- [x] Missing summaries produce diagnostics.
+- [x] Private body details are not required in public summaries.
+- [x] CHANGELOG.md updated.
+
+## Partial Slice Notes
+
+Implemented the first import/export substrate slice:
+
+- `ash-core` now has `WorkflowForm::ImportedSummary`, and lowering preserves imported public projection events / coverage obligations while projecting the imported opaque body as neutral rather than fabricating private internals.
+- `ash-typeck::TypeEnv` stores `PublicWorkflowSummary` values and `do:Workflow` / `[...]: Workflow` artifact construction can recover imported summary-backed `WorkflowForm` nodes for imported variables and calls.
+- `ash-engine` carries public workflow summaries from `module_loader::InlineCallable` into `Workflow.imported_workflow_summaries` and binds them into the type environment during checking.
+- Tests cover typechecker composition from imported summaries, missing-summary rejection, and engine-level module import/export of public workflow summary origins.
+
+Deferred follow-up work remains for full task completion:
+
+- Derive rich public summaries from exported workflow bodies / legacy adapters instead of the current minimal neutral export summary.
+- Add engine end-to-end `do:Workflow` / comprehension import tests after typed workflow expressions can be elaborated before core lowering in `parse_file`.
+- Add legacy-vs-first-class public contract-summary equivalence tests at the module export boundary.
+- Add future `workflow::...` backing-module preservation tests if/when such a stdlib module exists.

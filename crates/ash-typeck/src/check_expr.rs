@@ -12,8 +12,8 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
 use ash_core::workflow_carrier::{
     ActLowerSummary, ContractPlan, OpenPostcondition, PostconditionTarget, ProcLowerSummary,
-    ProjectionEvent, ProjectionEventKind, ProjectionKind, SourceOrigin, WorkflowBinder,
-    WorkflowNodeId, WorkflowObligation,
+    ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary, SourceOrigin,
+    WorkflowBinder, WorkflowNodeId, WorkflowObligation,
 };
 use ash_core::workflow_contract::Requirement;
 use ash_parser::lower_pattern;
@@ -1129,7 +1129,7 @@ fn elaborate_typed_do_parts(
     let dictionary = crate::do_target::resolve_do_target(env, target).map_err(|err| vec![err])?;
     let core = elaborate_do_stmts(stmts, &dictionary).map_err(|err| vec![err])?;
     let workflow_artifact = if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow {
-        Some(build_workflow_artifact(stmts).map_err(|err| vec![err])?)
+        Some(build_workflow_artifact(env, stmts).map_err(|err| vec![err])?)
     } else {
         None
     };
@@ -1385,8 +1385,11 @@ fn elaborate_do_stmts(
     }
 }
 
-fn build_workflow_artifact(stmts: &[DoStmt]) -> Result<WorkflowTypedArtifact, ConstructorError> {
-    let mut builder = WorkflowArtifactBuilder::default();
+fn build_workflow_artifact(
+    env: &TypeEnv,
+    stmts: &[DoStmt],
+) -> Result<WorkflowTypedArtifact, ConstructorError> {
+    let mut builder = WorkflowArtifactBuilder::new(env);
     let form = builder.form_from_stmts(stmts)?;
     let contract_plan = builder.contract_plan(&form);
     Ok(WorkflowTypedArtifact {
@@ -1398,8 +1401,8 @@ fn build_workflow_artifact(stmts: &[DoStmt]) -> Result<WorkflowTypedArtifact, Co
     })
 }
 
-#[derive(Default)]
 struct WorkflowArtifactBuilder {
+    env: TypeEnv,
     next_node: u64,
     events: Vec<ProjectionEvent>,
     obligations: Vec<WorkflowObligation>,
@@ -1407,6 +1410,16 @@ struct WorkflowArtifactBuilder {
 }
 
 impl WorkflowArtifactBuilder {
+    fn new(env: &TypeEnv) -> Self {
+        Self {
+            env: env.clone(),
+            next_node: 0,
+            events: Vec::new(),
+            obligations: Vec::new(),
+            local_artifacts: HashMap::new(),
+        }
+    }
+
     fn node(&mut self) -> WorkflowNodeId {
         let node = WorkflowNodeId(self.next_node);
         self.next_node += 1;
@@ -1427,6 +1440,18 @@ impl WorkflowArtifactBuilder {
             origin: Self::origin(),
             kind,
         });
+    }
+
+    fn push_imported_summary(&mut self, summary: &PublicWorkflowSummary) -> WorkflowForm {
+        self.events
+            .extend(summary.projection_events.iter().cloned());
+        self.obligations
+            .extend(summary.coverage.obligations.iter().cloned());
+        let node = self.node();
+        WorkflowForm::ImportedSummary {
+            node,
+            summary: summary.clone(),
+        }
     }
 
     fn form_from_stmts(&mut self, stmts: &[DoStmt]) -> Result<WorkflowForm, ConstructorError> {
@@ -1560,7 +1585,13 @@ impl WorkflowArtifactBuilder {
         value: &Expr,
     ) -> Result<Option<WorkflowForm>, ConstructorError> {
         if let Expr::Variable { name, .. } = value {
-            return Ok(self.local_artifacts.get(name.as_ref()).cloned());
+            if let Some(form) = self.local_artifacts.get(name.as_ref()).cloned() {
+                return Ok(Some(form));
+            }
+            if let Some(summary) = self.env.lookup_public_workflow_summary(name.as_ref()) {
+                return Ok(Some(self.push_imported_summary(&summary)));
+            }
+            return Ok(None);
         }
 
         if let Expr::DoBlock { target, stmts, .. } = value {
@@ -1577,6 +1608,13 @@ impl WorkflowArtifactBuilder {
                 .as_ref()
                 .is_none_or(|module| module.as_ref() != "workflow")
             {
+                let summary_name = module
+                    .as_ref()
+                    .map(|module| format!("{}::{}", module, func))
+                    .unwrap_or_else(|| func.to_string());
+                if let Some(summary) = self.env.lookup_public_workflow_summary(&summary_name) {
+                    return Ok(Some(self.push_imported_summary(&summary)));
+                }
                 return Ok(None);
             }
 
@@ -1754,6 +1792,9 @@ impl WorkflowArtifactBuilder {
             WorkflowForm::FromAct { node, summary } => ContractPlan::LowerActContract {
                 node: *node,
                 summary: summary.contract_summary.clone().unwrap_or_default(),
+            },
+            WorkflowForm::ImportedSummary { .. } => ContractPlan::EmptyContract {
+                result_marker: None,
             },
             _ => ContractPlan::EmptyContract {
                 result_marker: None,
@@ -1946,7 +1987,7 @@ fn check_do_block(
                 if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
                     && monadic_inner_type(&value_ty, &dictionary.value_constructor).is_some()
                 {
-                    if workflow_expr_has_live_artifact(value, &live_workflow_bindings) {
+                    if workflow_expr_has_live_artifact(&block_env, value, &live_workflow_bindings) {
                         live_workflow_bindings.insert(name.to_string());
                     } else {
                         live_workflow_bindings.remove(name.as_ref());
@@ -1970,7 +2011,11 @@ fn check_do_block(
                 match monadic_inner_type(&value_ty, &dictionary.value_constructor) {
                     Some(bound_ty) => {
                         if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
-                            && !workflow_expr_has_live_artifact(value, &live_workflow_bindings)
+                            && !workflow_expr_has_live_artifact(
+                                &block_env,
+                                value,
+                                &live_workflow_bindings,
+                            )
                         {
                             errors.push(workflow_opaque_artifact_error(*span, "bind RHS for <-"));
                         } else {
@@ -2089,7 +2134,11 @@ fn expr_mentions_variable(expr: &Expr, target: &str) -> bool {
     }
 }
 
-fn workflow_expr_has_live_artifact(expr: &Expr, live_bindings: &HashSet<String>) -> bool {
+fn workflow_expr_has_live_artifact(
+    env: &TypeEnv,
+    expr: &Expr,
+    live_bindings: &HashSet<String>,
+) -> bool {
     match expr {
         Expr::DoBlock { target, .. } => target.name.as_ref() == "Workflow",
         Expr::Call {
@@ -2099,23 +2148,30 @@ fn workflow_expr_has_live_artifact(expr: &Expr, live_bindings: &HashSet<String>)
                 .as_ref()
                 .is_none_or(|module| module.as_ref() != "workflow")
             {
-                return false;
+                let summary_name = module
+                    .as_ref()
+                    .map(|module| format!("{}::{}", module, func))
+                    .unwrap_or_else(|| func.to_string());
+                return env.lookup_public_workflow_summary(&summary_name).is_some();
             }
             match func.as_ref() {
                 "unit" | "requires" | "ensures" => true,
                 "from_proc" | "from_act" => true,
                 "bind" if args.len() == 2 => {
-                    workflow_expr_has_live_artifact(&args[0], live_bindings)
-                        && matches!(&args[1], Expr::FnDef { body, .. } if workflow_expr_has_live_artifact(body, live_bindings))
+                    workflow_expr_has_live_artifact(env, &args[0], live_bindings)
+                        && matches!(&args[1], Expr::FnDef { body, .. } if workflow_expr_has_live_artifact(env, body, live_bindings))
                 }
                 "then" if args.len() == 2 => {
-                    workflow_expr_has_live_artifact(&args[0], live_bindings)
-                        && workflow_expr_has_live_artifact(&args[1], live_bindings)
+                    workflow_expr_has_live_artifact(env, &args[0], live_bindings)
+                        && workflow_expr_has_live_artifact(env, &args[1], live_bindings)
                 }
                 _ => false,
             }
         }
-        Expr::Variable { name, .. } => live_bindings.contains(name.as_ref()),
+        Expr::Variable { name, .. } => {
+            live_bindings.contains(name.as_ref())
+                || env.lookup_public_workflow_summary(name.as_ref()).is_some()
+        }
         _ => false,
     }
 }

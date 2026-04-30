@@ -115,6 +115,9 @@ pub struct Workflow {
     /// produce the proper polymorphic type instead of an arity-only synthetic.
     pub imported_builtin_signatures:
         std::collections::HashMap<String, ash_parser::surface::BuiltinFnDef>,
+    /// Public first-class workflow summaries for imported `Workflow<A>` callables.
+    pub imported_workflow_summaries:
+        std::collections::HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
     /// Non-fatal diagnostics collected while accepting this workflow.
     pub warnings: Vec<WorkflowWarning>,
 }
@@ -1018,6 +1021,7 @@ impl Engine {
             imported_param_counts,
             imported_fn_signatures,
             imported_builtin_signatures,
+            imported_workflow_summaries,
         ) = build_imported_closures(imported_callables);
 
         let mut input = new_input(source);
@@ -1056,6 +1060,7 @@ impl Engine {
                         imported_param_counts: local_param_counts,
                         imported_fn_signatures,
                         imported_builtin_signatures,
+                        imported_workflow_summaries,
                         warnings,
                     });
                 }
@@ -1073,6 +1078,7 @@ impl Engine {
                     imported_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    imported_workflow_summaries,
                     warnings,
                 })
             }
@@ -1098,6 +1104,7 @@ impl Engine {
                     imported_param_counts: local_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    imported_workflow_summaries,
                     warnings,
                 })
             }
@@ -2160,6 +2167,9 @@ fn bind_imported_callable_types(
         let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
         type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
     }
+    for (name, summary) in &workflow.imported_workflow_summaries {
+        type_env.bind_public_workflow_summary(name, summary.clone());
+    }
     Ok(())
 }
 
@@ -2169,6 +2179,7 @@ type ImportedClosureBindings = (
     HashMap<String, usize>,
     HashMap<String, ash_parser::surface::FnDef>,
     HashMap<String, ash_parser::surface::BuiltinFnDef>,
+    HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
 );
 
 /// Convert imported callables to `Value::Closure` for runtime binding.
@@ -2199,6 +2210,7 @@ fn build_imported_closures(
     let mut param_counts = HashMap::new();
     let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
+    let mut workflow_summaries = HashMap::new();
     let mut specs = Vec::new();
 
     for (name, callable) in imported_callables {
@@ -2215,6 +2227,10 @@ fn build_imported_closures(
                     builtin_signatures.insert(name.clone(), builtin.clone());
                 }
             }
+        }
+
+        if let Some(summary) = &callable.workflow_summary {
+            workflow_summaries.insert(name.clone(), summary.clone());
         }
 
         let body_expr = match &callable.kind {
@@ -2297,7 +2313,13 @@ fn build_imported_closures(
         closures.insert(spec.name, closure);
     }
 
-    (closures, param_counts, fn_signatures, builtin_signatures)
+    (
+        closures,
+        param_counts,
+        fn_signatures,
+        builtin_signatures,
+        workflow_summaries,
+    )
 }
 
 #[cfg(test)]
@@ -2982,10 +3004,11 @@ mod tests {
                     body: effectful_act_block_body("read"),
                 },
                 signature: None,
+                workflow_summary: None,
             },
         );
 
-        let (closures, _, _, _) = build_imported_closures(&imported_callables);
+        let (closures, _, _, _, _) = build_imported_closures(&imported_callables);
         let closure = closures
             .get("demo")
             .expect("imported callable should lower into a closure");
@@ -3031,6 +3054,7 @@ mod tests {
             imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
             imported_fn_signatures: HashMap::from([(String::from("bind"), function)]),
             imported_builtin_signatures: HashMap::new(),
+            imported_workflow_summaries: HashMap::new(),
             warnings: Vec::new(),
         };
 

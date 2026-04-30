@@ -3078,7 +3078,7 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 | [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Workflow lowering and runtime projection | 6 | ✅ Complete |
 | [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Legacy workflow translation and deprecation | 8 | ✅ Complete |
 | [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Workflow comprehension target | 5 | ✅ Complete |
-| [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | 📝 Planned |
+| [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | 🚧 Partial |
 | [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 6 | 📝 Planned |
 | [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | First-class workflow closeout | 4 | 📝 Planned |
 

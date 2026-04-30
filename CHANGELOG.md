@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added stable workflow contract classifier diagnostics for unsupported `workflow requires` / `workflow ensures` expressions, including empty `any_role`, invalid role-policy entries, and non-`result` OpenPostcondition targets.
+
 - [TASK-777](docs/plan/tasks/TASK-777-workflow-contract-summary-import-export.md): enriched exported public workflow summaries in the engine module loader by lowering importable legacy workflow definitions through the shared WorkflowForm path so public `requires:` / `ensures:` contract events survive import with imported-summary origins.
 
 - [TASK-777](docs/plan/tasks/TASK-777-workflow-contract-summary-import-export.md): added minimal typechecker/core support for public imported Workflow summaries, letting `do:Workflow` and `[...]: Workflow` recover a `WorkflowForm::ImportedSummary` from `TypeEnv` metadata while preserving imported summary projection origins/events and continuing to reject opaque `Workflow<T>` imports without summaries.

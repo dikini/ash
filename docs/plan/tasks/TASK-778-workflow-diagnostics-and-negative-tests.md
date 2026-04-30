@@ -30,7 +30,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 3. Add explicit-lift hints for `workflow::from_proc` and `workflow::from_act`.
 4. Add diagnostics for contract statements outside `do:Workflow`.
 5. Add diagnostics for ordinary first-class misuse of non-denotable `Requirement` / `OpenPostcondition` classes.
-6. Add diagnostics for contract-expression classification failures, including unresolved role-policy or empty `any_role([])` failures.
+6. Add diagnostics for contract-expression classification failures, including unresolved role-policy or empty `any_role([])` failures. Current slice covers stable `workflow requires` / `workflow ensures` classifier wording for empty `any_role`, invalid role-policy entries, and non-`result` postcondition targets.
 7. Add coverage/obligation diagnostics with evidence component labels, including lower Proc/Act coverage obligations emitted by `from_proc` / `from_act`.
 8. Add diagnostics for `requires` assumptions that refine checking context but cannot be proven by final coverage/admission.
 9. Add diagnostics for unresolved `ensures` result targets or postconditions whose suffix result type is incompatible.
@@ -54,6 +54,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 - [ ] Coverage/obligation errors mention the failed evidence component.
 - [ ] Lift hints are present where applicable.
 - [ ] Contract statement misuse and intrinsic parameter misuse diagnostics are covered.
+- [x] Contract-expression classification failures cover empty `any_role`, invalid role-policy entries, and non-`result` `workflow ensures` targets with stable Requirement/OpenPostcondition wording.
 - [ ] `requires` refinement failures distinguish assumed availability from proven admission.
 - [ ] `ensures` target/type failures identify the suffix result boundary.
 - [x] Deprecated legacy workflow declarations emit warnings with rewrite hints in `ash check` human and JSON output.
@@ -66,10 +67,11 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 
 Implemented the current TASK-778 diagnostic slices:
 
+- Stable workflow contract classifier diagnostics now identify Requirement/OpenPostcondition classification failures for empty `any_role`, invalid role-policy entries, and non-`result` `workflow ensures` targets.
 - Generalized `do` target diagnostics now name stale/missing dictionary states against the current accepted constructors: `Act`, `Proc`, and `Workflow`.
 - `ash check` now has CLI-level regression coverage proving deprecated legacy workflow declarations emit non-fatal warnings in both human and JSON output.
 - Legacy workflow deprecation diagnostics now use the stable `DeprecatedLegacyWorkflowDeclaration` code instead of the provisional `[NEW] ...` spelling.
 - Headerless legacy workflow declarations and declarations with multiple legacy header events both produce one declaration-level warning.
 - JSON warning output now uses the workflow declaration span as its diagnostic anchor.
 
-Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, contract-expression classification failures, coverage/obligation component labels, `requires`/`ensures` proof/target diagnostics, neutral projection preservation, and Act/Proc diagnostic regression coverage.
+Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, coverage/obligation component labels, `requires`/`ensures` proof/target diagnostics beyond the classifier target checks above, neutral projection preservation, and Act/Proc diagnostic regression coverage.

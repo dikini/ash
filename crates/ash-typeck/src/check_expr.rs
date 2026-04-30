@@ -1806,7 +1806,10 @@ impl WorkflowArtifactBuilder {
 fn classify_requirement(expr: &Expr) -> Result<Requirement, ConstructorError> {
     workflow_contract_classifier::classify_requirement(expr).map_err(|err| {
         ConstructorError::UnsupportedExpression {
-            kind: format!("unsupported workflow requires contract expression: {err:?}"),
+            kind: format!(
+                "unsupported workflow requires contract expression: {}",
+                err.requirement_message()
+            ),
             span: get_expr_span(expr),
         }
     })
@@ -1816,7 +1819,10 @@ fn classify_postcondition(expr: &Expr) -> Result<OpenPostcondition, ConstructorE
     workflow_contract_classifier::classify_postcondition(expr)
         .map(|predicate| OpenPostcondition { predicate })
         .map_err(|err| ConstructorError::UnsupportedExpression {
-            kind: format!("unsupported workflow ensures contract expression: {err:?}"),
+            kind: format!(
+                "unsupported workflow ensures contract expression: {}",
+                err.postcondition_message()
+            ),
             span: get_expr_span(expr),
         })
 }

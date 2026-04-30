@@ -1,4 +1,5 @@
 use ash_core::workflow_contract::{ArithConstraint, PostPredicate, Requirement, RolePolicy};
+use std::fmt;
 
 use crate::surface::{BinaryOp, Expr, Literal};
 
@@ -6,6 +7,55 @@ use crate::surface::{BinaryOp, Expr, Literal};
 pub enum ContractClassificationError {
     UnsupportedExpression,
     EmptyAnyRole,
+    InvalidAnyRoleEntry,
+    NonResultPostconditionTarget,
+}
+
+impl ContractClassificationError {
+    pub fn requirement_message(&self) -> &'static str {
+        match self {
+            Self::UnsupportedExpression => {
+                "Requirement classifier could not classify this workflow requires contract expression; supported forms include role(name), any_role([role_name, ...]), and simple arithmetic predicates"
+            }
+            Self::EmptyAnyRole => {
+                "Requirement any_role role policy is empty; any_role requires at least one role"
+            }
+            Self::InvalidAnyRoleEntry => {
+                "Requirement any_role role policy entries must be role name identifiers or string literals"
+            }
+            Self::NonResultPostconditionTarget => {
+                "Requirement classifier could not classify this workflow requires contract expression"
+            }
+        }
+    }
+
+    pub fn postcondition_message(&self) -> &'static str {
+        match self {
+            Self::NonResultPostconditionTarget => {
+                "OpenPostcondition for workflow ensures must target result; Workflow result postconditions currently require predicates over result"
+            }
+            Self::UnsupportedExpression => {
+                "OpenPostcondition classifier could not classify this workflow ensures contract expression; Workflow result postconditions currently require a supported predicate over result"
+            }
+            Self::EmptyAnyRole => {
+                "OpenPostcondition classifier could not classify this workflow ensures contract expression; Workflow result postconditions currently require a supported predicate over result"
+            }
+            Self::InvalidAnyRoleEntry => {
+                "OpenPostcondition classifier could not classify this workflow ensures contract expression; Workflow result postconditions currently require a supported predicate over result"
+            }
+        }
+    }
+}
+
+impl fmt::Display for ContractClassificationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::UnsupportedExpression => "unsupported contract expression",
+            Self::EmptyAnyRole => "any_role role policy is empty; expected at least one role",
+            Self::InvalidAnyRoleEntry => "any_role role policy entry is not a role name",
+            Self::NonResultPostconditionTarget => "OpenPostcondition target is not result",
+        })
+    }
 }
 
 pub fn classify_requirement(expr: &Expr) -> Result<Requirement, ContractClassificationError> {
@@ -26,6 +76,7 @@ pub fn classify_postcondition(expr: &Expr) -> Result<PostPredicate, ContractClas
         Some((var, constraint)) if var == "result" => {
             Ok(PostPredicate::ResultSatisfies(constraint))
         }
+        Some(_) => Err(ContractClassificationError::NonResultPostconditionTarget),
         _ => Err(ContractClassificationError::UnsupportedExpression),
     }
 }
@@ -67,7 +118,7 @@ fn classify_any_role_call(expr: &Expr) -> Result<Option<Vec<String>>, ContractCl
     }
     let mut roles = Vec::with_capacity(items.len());
     for item in items {
-        roles.push(symbolic_name(item).ok_or(ContractClassificationError::UnsupportedExpression)?);
+        roles.push(symbolic_name(item).ok_or(ContractClassificationError::InvalidAnyRoleEntry)?);
     }
     Ok(Some(roles))
 }

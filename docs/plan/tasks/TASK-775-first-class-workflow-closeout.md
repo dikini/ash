@@ -13,16 +13,19 @@ Close Phase 108 with examples, documentation reconciliation, changelog, and inde
 
 ## Requirements
 
-1. Add first-class workflow examples for `workflow::unit`/`bind`, `do:Workflow`, explicit lifts, and `[...]: Workflow`.
+1. Add first-class workflow examples for `workflow::unit`/`bind`, `workflow::requires` / `workflow::ensures`, `requires:` / `ensures:` in `do:Workflow`, explicit lifts, and `[...]: Workflow`.
 2. Mark deferred parallel/dynamic-admission/handle behavior honestly.
 3. Update docs/spec/README.md, PLAN-INDEX.md, PLAN-104, and task statuses.
 4. Update CHANGELOG.md.
 5. Run full affected verification and independent subagent review.
 6. Ensure no examples imply implicit Act/Proc lifts or workflow parallel semantics.
+7. Include one deprecated legacy workflow declaration example only as a migration/compatibility warning example, paired with the equivalent first-class workflow expression.
 
 ## Verification
 
 - [ ] Examples parse/check as expected or are explicitly marked reference-only.
+- [ ] Contract-injection examples cover both statement-form and intrinsic-call spelling.
+- [ ] Deprecated legacy declaration example emits a warning and has an equivalent first-class rewrite.
 - [ ] Documentation status surfaces are reconciled.
 - [ ] `cargo fmt --check` passes.
 - [ ] Affected `cargo test` suites pass.

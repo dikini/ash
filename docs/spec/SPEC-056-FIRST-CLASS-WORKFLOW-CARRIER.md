@@ -6,7 +6,7 @@
 **Builds on:** [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), [SPEC-055](SPEC-055-MONAD-COMPREHENSION-SYNTAX.md)
 **Related:** [SPEC-003](SPEC-003-TYPE-SYSTEM.md), [SPEC-004](SPEC-004-SEMANTICS.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md)
 **Plan:** [PLAN-104](../plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
-**Implementation Tasks:** [TASK-768](../plan/tasks/TASK-768-first-class-workflow-spec-plan-packet.md) through [TASK-775](../plan/tasks/TASK-775-first-class-workflow-closeout.md)
+**Implementation Tasks:** [TASK-768](../plan/tasks/TASK-768-first-class-workflow-spec-plan-packet.md) through [TASK-776](../plan/tasks/TASK-776-workflow-contract-syntax-and-legacy-translation.md)
 
 ## 1. Summary
 
@@ -98,7 +98,7 @@ Out of scope for the first implementation slice:
 
 - User-defined `Monad<M>` implementations.
 - Public type parameterization such as `Workflow<C, A>`.
-- Public construction of arbitrary contract values by user syntax.
+- Public construction of arbitrary contract values by user syntax, except compiler-known opaque contract arguments accepted by `workflow::requires`, `workflow::ensures`, and their statement-form sugar.
 - Dynamic admission.
 - Workflow parallel/applicative syntax beyond existing sequential do/comprehension bind.
 - `WorkflowHandle<A>` as a public surface type.
@@ -149,6 +149,118 @@ workflow::ensures   : OpenPostcondition -> Workflow<Unit>
 ```
 
 Notation note: the `Fn(A) -> Workflow<B>` shape is specification notation. The implementation may reuse the existing typed-do continuation representation used for `Act`/`Proc` elaboration.
+
+
+### 5.2.1 Contract argument surface and opacity
+
+`Requirement` and `OpenPostcondition` are compiler-known opaque contract argument classes, not ordinary user-constructible public data types in the first slice.
+
+`workflow::requires` and `workflow::ensures` are public workflow-algebra operations, but their arguments are accepted through special typed elaboration of contract-expression syntax. This allows users and migrated legacy declarations to express the same contracts as today without exposing arbitrary contract-value construction.
+
+Permitted first-slice source forms are:
+
+```ash
+// Preferred first-class workflow statement forms inside do:Workflow.
+requires: contract_expr;
+ensures: post_expr;
+
+// Direct intrinsic-call spelling for expression-level composition.
+_ <- workflow::requires(contract_expr);
+_ <- workflow::ensures(post_expr);
+```
+
+The statement forms intentionally keep the legacy `requires:` / `ensures:` colon spelling. The semicolon is required inside `do:Workflow` because these are statements. Legacy workflow declaration headers keep their existing no-semicolon header position.
+
+First-slice grammar, in specification notation:
+
+```text
+WorkflowDoStmt ::=
+    let name = Expr ;
+  | name <- Expr ;
+  | _ <- Expr ;
+  | requires : ContractExpr ;
+  | ensures  : PostExpr ;
+  | return Expr
+
+ContractExpr ::= Expr parsed in contract-expression context
+PostExpr     ::= Expr parsed in postcondition context with delayed result binding
+```
+
+`ContractExpr` / `PostExpr` initially reuse the ordinary expression parser and are classified after parsing. This is deliberate compatibility with existing `requires: <expr>` / `ensures: <expr>` declarations. The parser should preserve the expression and source span; the workflow-form builder classifies it into `Requirement` / `OpenPostcondition` events.
+
+The direct-call spelling is an intrinsic elaboration rule, not evidence that `Requirement` or `OpenPostcondition` are first-class values. A call expression whose callee resolves to `workflow::requires` or `workflow::ensures` in Workflow target context captures its argument expression as a contract argument before ordinary value typing of that parameter. Passing a variable of type `Requirement`, storing a `Requirement` in a record, returning one from a function, or pattern-matching on one remains out of scope.
+
+### 5.2.2 Conservative contract name resolution
+
+Contract expressions are resolved conservatively to preserve legacy behavior. The first-slice resolver must not introduce new ambient authority or new dot-path contract namespaces.
+
+Resolution order for `ContractExpr` is:
+
+1. Preserve the parsed ordinary `Expr` and its lexical scope. Ordinary names in arithmetic/boolean predicates resolve exactly as they do in existing workflow/function contracts.
+2. In contract-expression context only, recognize legacy contract helper calls such as:
+
+   ```ash
+   role(admin)
+   any_role([admin, manager])
+   ```
+
+   These classify to role requirements or role-policy predicates using the same names and spans as the legacy workflow contract path. Bare identifiers inside the role list are symbolic role names in this context, matching the examples already present in the corpus.
+3. Preserve the existing legacy/core contract vocabulary underneath the new form. The first-slice classifier must be able to produce the same semantic contract cases as the current implementation, including `Requirement::HasRole`, `Requirement::HasCapability`, arithmetic/precondition requirements, and postcondition predicates equivalent to `PostPredicate::Eq`, `PostPredicate::ResultSatisfies`, and `PostPredicate::StateAssertion` where the live legacy path can already express them.
+4. Existing legacy/core contract variants such as capability requirements remain representable internally. If a current parser/import/API path already produces them, the workflow-form builder must preserve them. New user-facing capability/resource/policy contract syntax beyond legacy-compatible expressions is deferred unless it is already accepted by the live parser.
+5. The distinguished name `result` is special only in `PostExpr` target resolution. Before the suffix workflow result type is known, it is an open binder, not an ordinary unresolved variable. When `Bind(Ensures(Q), _, rest : Workflow<A>)` is checked, `result : A` is inserted only for checking `Q` against the successful result boundary of `rest`.
+
+Examples accepted by compatibility grammar:
+
+```ash
+requires: role(admin);
+requires: any_role([admin, maintainer]);
+requires: input_size > 0;
+ensures: result > 0;
+ensures: result.valid;      // only if ordinary field access exists at that implementation point
+```
+
+If an expression parses but cannot be classified or typechecked as a contract expression, checking must fail with a contract-expression diagnostic; it must not fall back to ordinary value construction of a `Requirement`.
+
+### 5.2.3 Legacy workflow declaration deprecation and translation
+
+The current workflow declaration form remains accepted for compatibility but is deprecated once this spec is implemented. Using it must produce a warning, not an error, in the first migration window.
+
+Legacy source form:
+
+```ash
+workflow name(params) -> A
+  plays role(R)
+  capabilities: [...]
+  owns ...
+  uses ...
+  requires: R1
+  ensures: Q1
+{
+  legacy_workflow_body
+}
+```
+
+is translated before type/constraint checking to the same `WorkflowForm` implementation path as first-class workflow expressions:
+
+```text
+Scope(name,
+  Bind(Requires(role/header-derived requirements), _,
+  Bind(Requires(R1), _,
+  Bind(Ensures(Q1), _,
+    FromProc(legacy_body_as_proc_summary)))))
+```
+
+The exact number and order of leading `Requires` nodes follows source order for `plays role`, capability/resource/admission headers, and explicit `requires:` clauses. Legacy `ensures:` clauses become leading `Ensures` nodes whose targets are resolved against the successful result boundary of the translated body.
+
+Important compatibility rule:
+
+- First-class `do:Workflow` statement forms and deprecated workflow declarations are different source surfaces.
+- After parsing and deprecation-warning emission, both lower to `WorkflowForm` and use the identical workflow-form projection, obligation, coverage, lowering, and runtime boundary implementation.
+- New implementation work must not add a second semantic path for legacy declarations.
+
+Initial compatibility may translate the legacy syntax-heavy body through the existing workflow-body-to-Proc adapter and wrap it as `FromProc(legacy_body_as_proc_summary)`. Follow-on work may progressively desugar individual legacy workflow statements into ordinary workflow algebra operations, but that must preserve the same `WorkflowForm` boundary.
+
+Required warning family: `[NEW] DeprecatedLegacyWorkflowDeclaration`, emitted with the workflow declaration span and a fix hint to rewrite as a named `Workflow<A>` value or `do:Workflow` expression once the new surface is available.
 
 ### 5.3 Algebraic intent
 
@@ -504,7 +616,7 @@ First-slice rule:
 - Source-visible pure/proc computations with no extra authority requirements may discharge their obligations immediately.
 - Proc values imported without summaries require exported contract summaries before they can be lifted in a checked way.
 
-This rule prevents `from_proc` from becoming an authority-smuggling operation while preserving useful staged composition such as `requires capability.store.read; x <- workflow::from_proc(store_proc);`.
+This rule prevents `from_proc` from becoming an authority-smuggling operation while preserving useful staged composition such as `requires: role(admin); x <- workflow::from_proc(admin_proc);`.
 
 ### 7.5 `workflow::from_act`
 
@@ -548,7 +660,7 @@ failure(workflow::requires(R))    = precondition/admission/coverage failure if R
 provenance(workflow::requires(R)) = record R and its discharge method/result
 ```
 
-A requirement may refine the continuation checking environment. For example, `requires capability.store.read;` may allow a following `workflow::from_act(store.get(k))` or `workflow::from_proc(store_proc)` to be checked under a provisional capability assumption.
+A requirement may refine the continuation checking environment. For example, `requires: role(admin);` may allow a following `workflow::from_proc(admin_proc)` to be checked under a provisional role/admission assumption.
 
 This refinement is not authority creation. The final coverage/admission pass must prove that the refined role/capability/resource/policy/precondition is actually admitted or derivable. If the assumption cannot be proven, checking fails with a component-specific coverage diagnostic.
 
@@ -618,12 +730,14 @@ _ <- workflow_expr;     // explicit ignored workflow action
 return result_expr      // final result wrapped by workflow::unit
 ```
 
-Workflow blocks additionally admit contract-injection statements as syntax for ordinary `Workflow<Unit>` forms:
+Workflow blocks additionally admit contract-injection statements as syntax for opaque contract arguments to ordinary `Workflow<Unit>` forms:
 
 ```text
-requires requirement;       // lowers as _ <- workflow::requires(requirement);
-ensures postcondition;      // lowers as _ <- workflow::ensures(open_postcondition);
+requires: requirement_expr;       // lowers as _ <- workflow::requires(requirement_expr);
+ensures: postcondition_expr;      // lowers as _ <- workflow::ensures(open(postcondition_expr));
 ```
+
+The colon is required for compatibility with the legacy workflow declaration contract grammar. The semicolon is required because these are `do:Workflow` statements.
 
 These statements preserve their workflow-form nodes during algebraic lowering. Their `Proc` projection may be neutral, but their contract/check/failure/provenance projections are not erased at this stage.
 
@@ -662,19 +776,19 @@ _ <- e; rest
 let x = e; rest
   => pure lexical binding of x while elaborating rest
 
-requires R; rest
-  => Bind(Requires(R), _, elaborateWorkflow(rest))
+requires: R; rest
+  => Bind(Requires(classify_contract_expr(R)), _, elaborateWorkflow(rest))
 
-ensures Q; rest
-  => Bind(Ensures(Q), _, elaborateWorkflow(rest))
+ensures: Q; rest
+  => Bind(Ensures(open_postcondition(Q)), _, elaborateWorkflow(rest))
 ```
 
 Conceptual source:
 
 ```ash
 do:Workflow {
-    requires role.analyst;
-    ensures result.valid;
+    requires: role(analyst);
+    ensures: result.valid;
     x <- a;
     y <- b(x);
     return f(x, y)
@@ -684,7 +798,7 @@ do:Workflow {
 elaborates to the same workflow-form skeleton as:
 
 ```text
-Bind(Requires(role.analyst), _,
+Bind(Requires(role(analyst)), _,
   Bind(Ensures(open(result.valid)), _,
     Bind(a, x,
       Bind(b(x), y,
@@ -694,7 +808,7 @@ Bind(Requires(role.analyst), _,
 and has the same Proc-projection shape as the dictionary expression:
 
 ```text
-workflow::bind(workflow::requires(role.analyst), λ_.
+workflow::bind(workflow::requires(role(analyst)), λ_.
   workflow::bind(workflow::ensures(open(result.valid)), λ_.
     workflow::bind(a, λx.
       workflow::bind(b(x), λy.
@@ -732,7 +846,7 @@ All SPEC-055 MVP restrictions still apply:
 
 ## 10. Workflow Declarations and First-Class Values
 
-Existing workflow declarations remain valid.
+Existing workflow declarations remain valid but become deprecated compatibility syntax when this spec is implemented. The compiler must emit a deprecation warning for the legacy declaration surface and then translate it into the same `WorkflowForm` implementation path used by first-class workflow expressions.
 
 This spec adds a semantic interpretation:
 
@@ -740,7 +854,7 @@ This spec adds a semantic interpretation:
 workflow declaration = named/scoped/exported Workflow<A> expression plus host/runtime entrypoint metadata
 ```
 
-A declaration body is target-typed as a workflow block and lowers to a `WorkflowForm<A>` / `Workflow<A>` value. Header-like clauses such as `requires` and `ensures` are contract-injection workflow forms in that block, not a separate semantic island.
+A new-style declaration body is target-typed as a workflow block and lowers to a `WorkflowForm<A>` / `Workflow<A>` value. Header-like clauses such as `requires:` and `ensures:` are contract-injection workflow forms in that block, not a separate semantic island.
 
 Conceptual declaration rule for new-style bodies:
 
@@ -754,7 +868,19 @@ C_total = Scope(name, C_expr)
 
 The declaration exports a workflow summary sufficient for imported callers to type-check uses of the named workflow as a `Workflow<A>` value.
 
-Where compatibility requires parsing a legacy proc-only body, the implementation may elaborate it through an explicit synthetic workflow form whose contract projection is inferred from the proc body. That compatibility path must still preserve the resulting workflow-form/projection alignment before later checking or optimization.
+Legacy declaration compatibility rule:
+
+```text
+legacy workflow header/body
+  ⇝ warning DeprecatedLegacyWorkflowDeclaration
+  ⇝ Scope(name, leading_contract_events ⋄ translated_body_form)
+```
+
+`leading_contract_events` is constructed in source order from legacy `plays role(...)`, capability/resource/admission headers, `requires: <expr>`, and `ensures: <expr>` clauses. The explicit `requires:` and `ensures:` expressions are parsed/classified by the same contract-expression rules used for `do:Workflow` statement forms and `workflow::requires` / `workflow::ensures` intrinsic calls.
+
+The first compatibility implementation may translate the legacy syntax-heavy body through an existing legacy workflow-body-to-Proc adapter and wrap it as `FromProc(legacy_body_as_proc_summary)`. That adapter is a compatibility boundary only; it must still feed the same `WorkflowForm` projection, obligation, coverage, lowering, and runtime boundary implementation. New code must not add a parallel semantic path for deprecated declarations.
+
+Future phases may progressively desugar individual legacy workflow body statements into ordinary workflow algebra operations. Such desugaring is a refactoring of the translation boundary, not a semantic change.
 
 ## 11. Module Export and Import Requirements
 
@@ -794,6 +920,8 @@ The first implementation slice must add or adapt diagnostics for:
 10. Dynamic admission required but forbidden by this spec.
 11. Parser-only lowering attempted for `do:Workflow` or `[...]: Workflow`.
 12. Evidence-preserving optimization violation: a neutral Proc-projection governance node was erased before its coverage/provenance/report evidence was preserved.
+13. Deprecated legacy workflow declaration: accepted compatibility syntax translated to `WorkflowForm`, with warning `[NEW] DeprecatedLegacyWorkflowDeclaration` and a rewrite hint.
+14. Public contract-value misuse: attempts to store/pass/return `Requirement` or `OpenPostcondition` as ordinary values must state that these are opaque compiler-known contract arguments in the first slice.
 
 Diagnostics should state expected shape, found type, relevant contract/evidence component, and one likely fix.
 
@@ -820,20 +948,24 @@ Implementation must include tests for:
 
 1. `WorkflowForm` grammar preserves `Unit`, `Bind`, `FromProc`, `FromAct`, `Requires`, `Ensures`, and `Scope` nodes with stable `WorkflowNodeId`s.
 2. Projection events carry node id, projection kind, event kind, and source-origin metadata, including synthetic and imported-summary origins.
-3. TypeEnv registers `Workflow` as a builtin unary constructor.
-4. `Workflow` do target resolves with a workflow dictionary.
-5. `do:Workflow { return x }` synthesizes `Workflow<A>`.
-6. `do:Workflow` binds only `Workflow<A>` RHS values.
-7. `do:Workflow` rejects `Proc<A>` and `Act<A>` RHS values without explicit lifts.
-8. `workflow::from_proc` and `workflow::from_act` allow explicit lifts where lower summaries exist and emit delayed coverage obligations.
-9. `requires` and `ensures` in a workflow block lower to preserved `workflow::requires` / `workflow::ensures` workflow forms.
-10. `requires` may refine continuation checking context but produces coverage obligations that must be proven later.
-11. `ensures` targets the successful result boundary of the suffix workflow and typechecks under `result : A`.
-12. Typed elaboration of `do:Workflow` produces nested workflow-form `Bind` / `Unit` shape without erasing neutral-Proc contract-injection nodes.
-13. `[result | x <- wf]: Workflow` elaborates equivalently to `do:Workflow` and the same `WorkflowForm` / projection alignment.
-14. Coverage/obligation failures produce component-specific diagnostics.
-15. Imported workflow summaries are preserved across module boundaries or rejected if absent.
-16. Existing `do:Act`, `do:Proc`, Act blocks, and Act/Proc comprehensions remain unchanged.
+3. Parser/surface AST accepts `requires: expr;` and `ensures: expr;` statement forms in `do:Workflow` without changing `do:Act` / `do:Proc` semantics.
+4. Contract-expression classification can produce all current legacy/core contract cases expressible today, including role, capability, arithmetic/precondition, and postcondition predicate cases.
+5. Direct intrinsic calls `workflow::requires(expr)` and `workflow::ensures(expr)` elaborate to the same contract events as the statement forms.
+6. TypeEnv registers `Workflow` as a builtin unary constructor.
+7. `Workflow` do target resolves with a workflow dictionary.
+8. `do:Workflow { return x }` synthesizes `Workflow<A>`.
+9. `do:Workflow` binds only `Workflow<A>` RHS values.
+10. `do:Workflow` rejects `Proc<A>` and `Act<A>` RHS values without explicit lifts.
+11. `workflow::from_proc` and `workflow::from_act` allow explicit lifts where lower summaries exist and emit delayed coverage obligations.
+12. `requires` and `ensures` in a workflow block lower to preserved `workflow::requires` / `workflow::ensures` workflow forms.
+13. `requires` may refine continuation checking context but produces coverage obligations that must be proven later.
+14. `ensures` targets the successful result boundary of the suffix workflow and typechecks under `result : A`.
+15. Deprecated legacy workflow declarations emit a warning and translate to the same `WorkflowForm` path as new first-class workflow expressions.
+16. Typed elaboration of `do:Workflow` produces nested workflow-form `Bind` / `Unit` shape without erasing neutral-Proc contract-injection nodes.
+17. `[result | x <- wf]: Workflow` elaborates equivalently to `do:Workflow` and the same `WorkflowForm` / projection alignment.
+18. Coverage/obligation failures produce component-specific diagnostics.
+19. Imported workflow summaries are preserved across module boundaries or rejected if absent.
+20. Existing `do:Act`, `do:Proc`, Act blocks, and Act/Proc comprehensions remain unchanged.
 
 ## 15. Non-Interference
 
@@ -852,6 +984,7 @@ Workflow target support is an additional dictionary target over existing typed-d
 
 Deferred follow-on specs should address:
 
+- Full coverage solving/proof search and dynamic residualization beyond the conservative Phase 108 checker.
 - Additional workflow contract forms for admission, reporting, provenance policies, and failure policies beyond the initial `requires` / `ensures` forms.
 - `WorkflowHandle<A>` and handle-latent obligation lifecycle.
 - Workflow-level `par`, `spawn`, `scatter`, `cancel`, `await`, `join`, and `gather`.
@@ -866,6 +999,7 @@ Deferred follow-on specs should address:
 ### 2026-04-30
 
 - Hardened the draft around a blocking workflow-form/projection semantic gate before implementation: closed first-slice `WorkflowForm` grammar, node/alignment identity, projection events, staged `ContractPlan`, obligation handoff, `requires` refinement, `ensures` suffix-result targeting, delayed `from_proc`/`from_act` coverage obligations, and equality strata.
+- Added conservative, legacy-compatible `requires:` / `ensures:` contract-expression grammar; clarified `workflow::requires` / `workflow::ensures` as compiler-known intrinsic operations over opaque contract arguments; and specified that legacy workflow declarations are deprecated with warnings but translate into the same `WorkflowForm` implementation path.
 
 ### 2026-04-29
 

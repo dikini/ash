@@ -14,7 +14,7 @@ Enable explicit-target workflow comprehensions `[result | qualifiers]: Workflow`
 
 ## Requirements
 
-1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md), [TASK-770](TASK-770-workflow-type-and-stdlib-operations.md), and [TASK-771](TASK-771-workflow-do-target-dictionary.md).
+1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md), [TASK-776](TASK-776-workflow-contract-syntax-and-legacy-translation.md), [TASK-770](TASK-770-workflow-type-and-stdlib-operations.md), and [TASK-771](TASK-771-workflow-do-target-dictionary.md).
 2. Accept `Workflow` as a comprehension target after TASK-771.
 3. Normalize workflow comprehensions to equivalent `do:Workflow` blocks before workflow-form construction.
 4. Preserve source spans, origin metadata, and `WorkflowNodeId` alignment through the comprehension-to-do normalization.

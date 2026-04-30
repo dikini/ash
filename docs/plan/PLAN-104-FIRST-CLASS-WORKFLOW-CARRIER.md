@@ -4,7 +4,7 @@
 
 **Goal:** Implement [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md) by adding `Workflow<A>` as a first-class computation constructor with a Monad-shaped workflow dictionary, enabling `do:Workflow` blocks and `[...]: Workflow` comprehensions through existing SPEC-054/SPEC-055 infrastructure.
 
-**Architecture:** Phase 108 is workflow-form/projection-first. Before adding Rust carriers or public library operations, it hardens the structure-preserving `WorkflowForm` grammar, projection-event/alignment model, staged `ContractPlan`, obligation vocabulary, and `requires`/`ensures` semantics. Implementation then derives internal carriers from that preserved form, registers `Workflow` as a builtin unary computation constructor, adds `workflow::unit`/`bind`/`then`/`from_proc`/`from_act`/`requires`/`ensures`, and reuses the existing typed-do and comprehension elaboration path. The phase is sequential-workflow-only: workflow handles, parallel workflow operators, dynamic admission, and richer contract/admission/reporting combinators are deferred.
+**Architecture:** Phase 108 is workflow-form/projection-first. Before adding Rust carriers or public library operations, it hardens the structure-preserving `WorkflowForm` grammar, projection-event/alignment model, staged `ContractPlan`, obligation vocabulary, and `requires`/`ensures` semantics. Implementation then adds the legacy-compatible contract syntax bridge, derives internal carriers from that preserved form, registers `Workflow` as a builtin unary computation constructor, adds `workflow::unit`/`bind`/`then`/`from_proc`/`from_act`/`requires`/`ensures`, and reuses the existing typed-do and comprehension elaboration path. The phase is sequential-workflow-only: workflow handles, parallel workflow operators, dynamic admission, and richer contract/admission/reporting combinators are deferred.
 
 **Tech Stack:** Rust 2024, `ash-core`, `ash-parser`, `ash-typeck`, `ash-engine`, `ash-interp`, `ash-stdlib`, existing `DoTarget`/`DoDictionary` infrastructure, Proc runtime substrate, workflow admission/report carriers, capability/resource provenance substrate.
 
@@ -23,6 +23,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | Promote DESIGN-033 into SPEC-056/PLAN-104 and register Phase 108 | Docs/Planning | 4 | ✅ Complete |
 | [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Define `WorkflowForm`, projections, alignment ids, staged contracts, and obligations | Docs/Semantics | 6 | 📝 Planned |
+| [TASK-776](tasks/TASK-776-workflow-contract-syntax-and-legacy-translation.md) | Add workflow contract syntax, opaque intrinsic calls, and legacy declaration translation | Parser/Semantics | 6 | 📝 Planned |
 | [TASK-770](tasks/TASK-770-workflow-type-and-stdlib-operations.md) | Register public `Workflow<A>` type, internal carriers, and `workflow` stdlib operations | Substrate | 9 | 📝 Planned |
 | [TASK-771](tasks/TASK-771-workflow-do-target-dictionary.md) | Add `Workflow` typed-do dictionary and `do:Workflow` checking/elaboration | Semantic | 8 | 📝 Planned |
 | [TASK-772](tasks/TASK-772-workflow-comprehension-target.md) | Enable `[...]: Workflow` comprehensions through SPEC-055 path | Semantic | 5 | 📝 Planned |
@@ -30,14 +31,15 @@
 | [TASK-774](tasks/TASK-774-workflow-diagnostics-and-negative-tests.md) | Add diagnostics for workflow target, explicit lifts, coverage, and opaque summaries | Semantic | 5 | 📝 Planned |
 | [TASK-775](tasks/TASK-775-first-class-workflow-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | 📝 Planned |
 
-Estimated total: 50 hours.
+Estimated total: 54 hours.
 
 ## Tracks
 
-### Track A: Workflow Form and Semantic Substrate
+### Track A: Workflow Form, Contract Syntax, and Semantic Substrate
 
 - TASK-768 creates the normative packet and Phase 108 traceability.
 - TASK-769 is a blocking semantic gate. It defines `WorkflowForm`, `WorkflowNodeId`, projection events, staged `ContractPlan`, obligation vocabulary, `requires`/`ensures` semantics, delayed lower-Proc coverage obligations, and equality/normalization strata before implementation adds Rust carriers.
+- TASK-776 adds the required surface bridge: `requires:` / `ensures:` do statements, opaque intrinsic-call elaboration for `workflow::requires` / `workflow::ensures`, conservative legacy-compatible contract-expression name resolution, and deprecated legacy workflow declaration translation to the same `WorkflowForm` path.
 - TASK-770 derives internal `WorkflowContract`, `AdmissionEnvelope`, `ContractPlan`, and `CoverageEvidence` carriers from the preserved workflow form while registering the public type/library surface.
 
 ### Track B: Public Carrier and Library Surface
@@ -72,6 +74,7 @@ Estimated total: 50 hours.
 10. Runtime scheduling, process handles, and workflow boundary terminal states must not be redefined.
 11. Imported workflow/proc/act values used under `Workflow` must have sufficient summaries or be rejected.
 12. Coverage/evidence is operationally significant: do not implement it as a dead placeholder with no diagnostics or runtime projection path.
+13. Deprecated legacy workflow declarations must warn and translate into the same `WorkflowForm` path as first-class workflow expressions. New implementation work must not maintain a separate legacy runtime/typechecking semantic path.
 
 ## Verification Strategy
 
@@ -80,18 +83,20 @@ Every implementation task must include:
 1. focused parser/typechecker/runtime tests for its changed layer;
 2. regression checks proving `do:Act`, `do:Proc`, and Act/Proc comprehensions remain unchanged;
 3. positive tests for `Workflow<A>` type registration and workflow operations;
-4. positive tests for `do:Workflow` and `[...]: Workflow` equivalence;
-5. negative tests for implicit Act/Proc lifts and missing workflow summaries;
+4. positive tests for `requires:` / `ensures:` statement forms, `workflow::requires` / `workflow::ensures` intrinsic calls, `do:Workflow`, and `[...]: Workflow` equivalence;
+5. negative tests for implicit Act/Proc lifts, opaque contract argument misuse, and missing workflow summaries;
 6. coverage/evidence diagnostics for rejected contracts or opaque imported values;
-7. `cargo fmt --check`;
-8. focused `cargo test -p ash-typeck`, `cargo test -p ash-parser`, `cargo test -p ash-interp`, or affected crates as appropriate;
-9. affected-crate `cargo clippy --all-targets --all-features -- -D warnings`;
-10. independent subagent verification before marking a task complete.
+7. legacy workflow declaration deprecation-warning tests and equivalent `WorkflowForm` translation tests;
+8. `cargo fmt --check`;
+9. focused `cargo test -p ash-typeck`, `cargo test -p ash-parser`, `cargo test -p ash-interp`, or affected crates as appropriate;
+10. affected-crate `cargo clippy --all-targets --all-features -- -D warnings`;
+11. independent subagent verification before marking a task complete.
 
 ## Deferred Follow-on Phase Candidates
 
 Later phases should own:
 
+- full coverage solving beyond the conservative Phase 108 checker, including proof search, dynamic residualization, and richer admission planning;
 - richer workflow contract/admission/reporting combinators beyond first-slice `requires` and `ensures` (`admit`, `report`, policy bundles, public reflection);
 - `WorkflowHandle<A>` and handle-latent obligation lifecycle;
 - workflow-level `par`, `spawn`, `scatter`, `cancel`, `await`, `join`, and `gather`;
@@ -118,14 +123,15 @@ Phase 108 also builds on Proc/runtime/capability/resource substrates. It must no
 Phase 108 is complete when:
 
 - [ ] SPEC-056 is registered in docs/spec/README.md.
-- [ ] PLAN-104 and TASK-768 through TASK-775 are registered in PLAN-INDEX.md.
+- [ ] PLAN-104 and TASK-768 through TASK-776 are registered in PLAN-INDEX.md.
 - [ ] `Workflow<A>` is a public builtin unary type constructor.
 - [ ] `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` exist and type-check.
 - [ ] `Workflow` resolves as a SPEC-054 do target.
 - [ ] `do:Workflow` type-checks and elaborates through `workflow::bind`/`workflow::unit`.
 - [ ] `[...]: Workflow` comprehensions elaborate through the same path.
 - [ ] Implicit Act/Proc-to-Workflow lifts are rejected with explicit-lift hints.
-- [ ] Workflow contract/coverage evidence exists and is used by diagnostics and lowering/runtime projection where applicable.
+- [ ] Workflow contract/coverage evidence exists and is used by diagnostics and lowering/runtime projection where applicable; non-dischargeable or opaque obligations are conservatively rejected rather than silently accepted.
 - [ ] Imported workflow summaries are preserved or missing summaries are rejected.
+- [ ] Deprecated legacy workflow declarations warn and translate to the same `WorkflowForm` path as equivalent first-class workflow expressions.
 - [ ] Examples and docs state deferred parallel/dynamic-admission behavior honestly.
 - [ ] Full verification and independent review pass.

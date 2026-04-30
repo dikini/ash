@@ -49,6 +49,8 @@ The following decisions are now promoted into SPEC-056 and should be treated as 
 8. Typechecking hands off staged contract and obligations using `Γ ⊢ᴡ form : Workflow<A> ▷ C, Ω`; coverage/verification later discharges `Ω` into `CoverageEvidence` or diagnostics.
 9. `do:Workflow` and `[...]: Workflow` lower through the same workflow-form builder. Comprehensions first normalize through the SPEC-055 do path.
 10. Equality has strata: `WorkflowForm` equality preserves governance nodes; Proc-projection equality may see them as neutral; optimized runtime equality may erase only after evidence is preserved.
+11. First-slice workflow contract syntax uses legacy-compatible colon forms inside `do:Workflow`: `requires: expr;` and `ensures: expr;`. Direct calls to `workflow::requires(expr)` and `workflow::ensures(expr)` are compiler-known intrinsic elaborations, not evidence that `Requirement` or `OpenPostcondition` are ordinary first-class value types.
+12. The current workflow declaration surface remains accepted but becomes deprecated. It must warn, then translate its role/capability/resource/`requires:`/`ensures:` clauses and body into the same `WorkflowForm` path used by first-class workflow expressions.
 
 Remaining questions below are retained as refinement prompts. Items already answered by this decision pass should be read as historical context unless they expose additional implementation details not yet covered by SPEC-056.
 
@@ -197,16 +199,15 @@ ContractPlan first-slice constructors and algebra = ...
 Examples:
 
 ```ash
-requires role.analyst;
-requires capability.store.read;
-requires input.size > 0;
+requires: role(analyst);
+requires: input_size > 0;
 ```
 
 Questions:
 
 - Is there one `Requirement` type or several typed requirement classes?
 - Does `requires` only check an existing fact, or can it refine/introduce availability in the following environment?
-- If `requires capability.store.read;` appears before `workflow::from_act(store.get(k))`, does the requirement make `store` available for checking the continuation, or merely assert it should already be available?
+- If `requires: role(admin);` appears before `workflow::from_proc(admin_proc)`, does the requirement make admin availability provisional for checking the continuation, or merely assert it should already be available?
 - Which projections does each requirement kind produce?
 
 Candidate classification:
@@ -233,7 +234,7 @@ requires projection and environment-refinement semantics = ...
 Example:
 
 ```ash
-ensures result.valid;
+ensures: result.valid;
 x <- w;
 f(x)
 ```
@@ -267,7 +268,7 @@ Workflow bind can depend on runtime values:
 
 ```ash
 x <- fetch_user(id);
-requires x.active;
+requires: x.active;
 process(x)
 ```
 
@@ -337,7 +338,7 @@ Questions:
 
 - Are `requires` / `ensures` valid in any `do:Workflow`, or only workflow declarations?
 - Can users write `_ <- workflow::requires(R);` explicitly?
-- Is `requires R;` always sugar for `_ <- workflow::requires(R);`?
+- Is `requires: R;` always sugar for `_ <- workflow::requires(R);`?
 - Are bare workflow expression statements allowed, or only explicit `_ <- action;`?
 - Should `workflow_1(input);` require `Workflow<Unit>` or allow discarding `Workflow<A>`?
 
@@ -352,14 +353,14 @@ Workflow block statement forms and lowering = ...
 Examples:
 
 ```ash
-requires role.analyst;
-requires capability.store.read;
-ensures result.valid;
+requires: role(analyst);
+requires: input_size > 0;
+ensures: result.valid;
 ```
 
 Questions:
 
-- Are `role.analyst` and `capability.store.read` ordinary lexical/module values?
+- Are `role(name)` and legacy capability/resource contract forms ordinary lexical/module values, helper syntax, or symbolic references?
 - Are they special contract namespace paths?
 - Are roles/capabilities/resources first-class values or symbolic references?
 - Is `result` a special open binder or an ordinary unresolved name?
@@ -613,15 +614,16 @@ SPEC-056 has moved toward `WorkflowForm`, projection events, and contract-inject
 
 Likely updates:
 
-- TASK-769 now owns `WorkflowForm`, node ids, projections, staged `ContractPlan`, obligation handoff, and equality strata.
+- TASK-769 now owns `WorkflowForm`, node ids, projections, staged `ContractPlan`, obligation handoff, first-slice contract syntax decisions, and equality strata.
+- TASK-776 owns `requires:` / `ensures:` do-statement parsing, opaque intrinsic-call elaboration for `workflow::requires` / `workflow::ensures`, conservative contract-expression name resolution, and deprecated legacy declaration translation.
 - TASK-770 owns public `Workflow<A>`, internal carriers derived from `WorkflowForm`, and `workflow::requires` / `workflow::ensures` operations.
-- TASK-771 should include workflow block contract-injection statements.
-- TASK-774 should include preservation/no-erasure diagnostics/tests.
+- TASK-771 should consume TASK-776's contract-injection statement syntax through the typed-do workflow dictionary.
+- TASK-774 should include preservation/no-erasure diagnostics/tests plus legacy-declaration deprecation warnings.
 
 Decision target:
 
 ```text
-PLAN-104 / TASK-769..775 realignment patch scope = ...
+PLAN-104 / TASK-769..776 realignment patch scope = ...
 ```
 
 ### 23. Which reusable skills/memories need drift correction?
@@ -653,9 +655,9 @@ Use this order for a future session:
 6. ensures semantics
 7. contract::bind dependency/staging
 8. zipper transition state
-9. workflow block grammar/lowering
+9. workflow contract syntax and block lowering
 10. contract name resolution
-11. workflow declaration/header representation
+11. deprecated workflow declaration/header translation
 12. OpenPostcondition representation
 13. module export/import summaries
 14. Scope form semantics
@@ -682,7 +684,7 @@ ContractPlan first-slice algebra
 requires / ensures projection rules
 contract::bind staging rules
 zipper transition rules
-workflow block lowering rules
+workflow contract syntax / block lowering / legacy declaration translation rules
 obligation vocabulary handoff to typechecking/verification
 ```
 

@@ -52,7 +52,8 @@ Add the semantic gate that must precede first-class workflow implementation: a s
     - Proc-projection equality may treat `Requires`/`Ensures` as neutral in the Proc dimension;
     - runtime optimization equality may erase discharged neutral executable nodes only while preserving evidence.
 13. Define lowering from `do:Workflow` statements and `[...]: Workflow` comprehensions into `WorkflowForm`; comprehensions must first normalize through SPEC-055's do path and then use the same workflow-form builder.
-14. Record the decisions in SPEC-056 and realign NOTE-010 so the remaining questions are follow-up refinements, not blockers for implementation.
+14. Record that first-slice contract syntax uses legacy-compatible `requires: expr;` / `ensures: expr;` statement forms, opaque intrinsic calls for `workflow::requires(expr)` / `workflow::ensures(expr)`, and deprecated legacy workflow declaration translation through the same `WorkflowForm` path.
+15. Record the decisions in SPEC-056 and realign NOTE-010 so the remaining questions are follow-up refinements, not blockers for implementation.
 
 ## TDD / Documentation Steps
 
@@ -71,6 +72,7 @@ Add the semantic gate that must precede first-class workflow implementation: a s
 - [ ] SPEC-056 states `requires` may refine checking context but cannot manufacture authority.
 - [ ] SPEC-056 states `ensures` targets the successful result boundary of the suffix workflow.
 - [ ] SPEC-056 states `from_proc` / `from_act` emit coverage obligations and do not require immediate `EmptyHeader` coverage at the expression site.
+- [ ] SPEC-056 states first-slice `requires:` / `ensures:` grammar and legacy declaration translation use the same `WorkflowForm` path.
 - [ ] PLAN-104 marks TASK-769 as a blocking semantic gate before carrier/type/library implementation.
 - [ ] TASK-770 through TASK-774 reference the semantic gate where relevant.
 - [ ] `git diff --check` passes.

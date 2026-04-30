@@ -14,10 +14,10 @@ Register public `Workflow<A>`, add internal carrier scaffolding derived from TAS
 
 ## Requirements
 
-1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md); do not implement carriers until the workflow-form/projection/obligation model is hardened.
+1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md) and [TASK-776](TASK-776-workflow-contract-syntax-and-legacy-translation.md); do not implement carriers until the workflow-form/projection/obligation model and contract syntax bridge are hardened.
 2. Register `Workflow` as a builtin unary public type constructor.
 3. Add internal Rust carriers for `WorkflowContract`, `AdmissionEnvelope`, `ContractPlan`, `CoverageEvidence`, and `CoverageError`, derived from or aligned with `WorkflowForm` rather than stored as an unrelated metadata wrapper.
-4. Add or expose `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` with signatures from SPEC-056.
+4. Add or expose `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` with signatures from SPEC-056. Treat `Requirement` and `OpenPostcondition` as compiler-known intrinsic parameter classes, not ordinary user-constructible value types.
 5. Ensure `workflow::from_act(a)` is equivalent to `workflow::from_proc(proc::from_act(a))` and emits the same delayed lower-contract coverage obligations.
 6. Preserve explicit tower boundaries: no implicit Act/Proc-to-Workflow conversion.
 7. Add typechecker tests for positive and negative call shapes.

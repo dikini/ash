@@ -3064,12 +3064,13 @@ Repair the post-Phase-106 `ash check` corpus for standard library modules and ex
 **Design:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md)
 **Plan:** [docs/plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md](PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
 
-Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phase 108 now starts with a blocking workflow-form/projection semantic gate: `WorkflowForm`, node/alignment ids, projection events, staged `ContractPlan`, obligations, `requires`/`ensures`, and equality strata must be specified before Rust carriers and public operations are implemented. The implementation then adds the public `Workflow<A>` type constructor, internal workflow contract/coverage/evidence substrate derived from the preserved form, `workflow::unit`/`bind`/`then`/`from_proc`/`from_act`/`requires`/`ensures`, a compiler-known `Workflow` typed-do dictionary, `[...]: Workflow` comprehension integration, modular workflow contract summaries, and diagnostics. The phase is sequential-workflow-only: dynamic admission, workflow handles, workflow-level parallel operators, and richer public contract/admission/reporting combinators are deferred.
+Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phase 108 now starts with a blocking workflow-form/projection semantic gate: `WorkflowForm`, node/alignment ids, projection events, staged `ContractPlan`, obligations, `requires`/`ensures`, and equality strata must be specified before Rust carriers and public operations are implemented. The implementation then adds legacy-compatible `requires:` / `ensures:` contract syntax, deprecated legacy workflow declaration translation to the same `WorkflowForm` path, the public `Workflow<A>` type constructor, internal workflow contract/coverage/evidence substrate derived from the preserved form, `workflow::unit`/`bind`/`then`/`from_proc`/`from_act`/`requires`/`ensures`, a compiler-known `Workflow` typed-do dictionary, `[...]: Workflow` comprehension integration, modular workflow contract summaries, and diagnostics. The phase is sequential-workflow-only: dynamic admission, workflow handles, workflow-level parallel operators, and richer public contract/admission/reporting combinators are deferred.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | First-class workflow spec/plan packet | 4 | ✅ Complete |
 | [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, and obligation semantics | 6 | 📝 Planned |
+| [TASK-776](tasks/TASK-776-workflow-contract-syntax-and-legacy-translation.md) | Workflow contract syntax and legacy declaration translation | 6 | 📝 Planned |
 | [TASK-770](tasks/TASK-770-workflow-type-and-stdlib-operations.md) | Workflow type, carrier, and stdlib operations | 9 | 📝 Planned |
 | [TASK-771](tasks/TASK-771-workflow-do-target-dictionary.md) | Workflow do target dictionary | 8 | 📝 Planned |
 | [TASK-772](tasks/TASK-772-workflow-comprehension-target.md) | Workflow comprehension target | 5 | 📝 Planned |
@@ -3077,7 +3078,7 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 | [TASK-774](tasks/TASK-774-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 5 | 📝 Planned |
 | [TASK-775](tasks/TASK-775-first-class-workflow-closeout.md) | First-class workflow closeout | 4 | 📝 Planned |
 
-**Track A (Workflow Form + Evidence):** 10h. Promote DESIGN-033 to SPEC-056/PLAN-104 and harden the workflow-form/projection/obligation semantics before implementation.
+**Track A (Workflow Form + Syntax + Evidence):** 16h. Promote DESIGN-033 to SPEC-056/PLAN-104, harden the workflow-form/projection/obligation semantics, and add the legacy-compatible contract syntax/deprecation bridge before implementation.
 **Track B (Public Surface + Carrier):** 17h. Add public `Workflow<A>`, internal carriers derived from `WorkflowForm`, workflow operations, and the typed-do dictionary.
 **Track C (Comprehension + Modules + Diagnostics):** 17h. Enable `[...]: Workflow`, preserve summaries across imports, and harden diagnostics.
 **Track D (Closeout):** 4h. Add examples, reconcile docs/changelog, and run final verification.
@@ -3087,3 +3088,4 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 - D2: Workflow target support reuses SPEC-054/SPEC-055 typed-do/comprehension infrastructure and does not fork lowering.
 - D3: No implicit Act/Proc-to-Workflow lifts; use `workflow::from_act` and `workflow::from_proc` explicitly.
 - D4: Dynamic admission, workflow handles, and workflow-level parallel operators are deferred.
+- D5: Deprecated legacy workflow declarations warn and translate into the same `WorkflowForm` implementation path; no separate legacy semantic path remains underneath.

@@ -13,13 +13,13 @@ Add `Workflow` as a compiler-known typed-do target using the existing SPEC-054 d
 
 ## Requirements
 
-1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md) and [TASK-770](TASK-770-workflow-type-and-stdlib-operations.md).
+1. Depend on [TASK-769](TASK-769-workflow-form-projection-semantics.md), [TASK-776](TASK-776-workflow-contract-syntax-and-legacy-translation.md), and [TASK-770](TASK-770-workflow-type-and-stdlib-operations.md).
 2. Extend do-target resolution so `Workflow` resolves as kind `* -> *`.
 3. Add a workflow `DoDictionary` using `workflow::unit` and `workflow::bind`.
 4. Add a workflow tower level or equivalent internal classification.
 5. Ensure `do:Workflow` synthesizes `Workflow<A>` from final `return`.
 6. Ensure `<-` in `do:Workflow` requires `Workflow<A>` RHS.
-7. Lower `requires R;` as `_ <- workflow::requires(R);` and `ensures Q;` as `_ <- workflow::ensures(Q);`, preserving the corresponding `WorkflowForm` nodes and projection events.
+7. Lower `requires: R;` as `_ <- workflow::requires(R);` and `ensures: Q;` as `_ <- workflow::ensures(Q);`, preserving the corresponding `WorkflowForm` nodes and projection events.
 8. Add diagnostics suggesting `workflow::from_proc` / `workflow::from_act` for wrong RHS tower.
 9. Do not change `do:Act` or `do:Proc` behavior.
 

@@ -4,11 +4,11 @@
 **Spec:** SPEC-043
 **Related:** SPEC-038, SPEC-039
 **Estimate:** 48 hours
-**Status:** 📝 Planned
+**Status:** 📝 Planned (Not Implemented; Reconfirmed by TASK-767)
 
 ## Description
 
-Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine.
+Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine. TASK-767 reconfirmed that this has not been implemented: `ash-lsp-core` still uses the simple DashMap-backed `AnalysisCache`, has no `salsa` dependency, and lacks tracked `parse_file`, `module_graph`, `type_check_file`, or `symbol_index` queries.
 
 > **Prerequisite spike:** Before implementation, run an 8–12 hour spike to verify `ash-typeck` and `ash-parser` types satisfy Salsa's `'static + Clone + Eq + Hash + Debug` requirements. See SPEC-043 §7 for details. **This spike is essential** — if core types cannot derive `Eq + Hash`, the entire task is blocked.
 
@@ -71,3 +71,8 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 - [ ] Correctness, invalidation, and perf tests passing
 - [ ] `cargo test --all` passing
 - [ ] Clippy and fmt clean
+
+
+## TASK-767 Reconciliation Note
+
+`PLAN-INDEX.md` previously marked Phase 89 / TASK-576 as done, but the task file and live code show that the Salsa migration remains planned. Before implementation, run the compatibility spike described above and decide whether Salsa is still the right mechanism after later Ash language changes. Do not begin this task until typecheck diagnostics/module-level query APIs and cross-file workspace requirements are clarified.

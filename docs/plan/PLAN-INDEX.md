@@ -2502,18 +2502,19 @@ Convert `crates/ash-lint` from a CLI-only binary into a reusable library crate t
 
 ## Phase 87: LSP & MCP Interface
 
-Implement a production-quality LSP server for Ash with an embedded MCP bridge.
+Implement the local LSP MVP for Ash and track production/workspace/MCP follow-ups separately after status reconciliation.
 
 **Plan Reference:** [PLAN-036: LSP & MCP Interface](PLAN-036-LSP-MCP-INTERFACE.md)
 **Spec:** [SPEC-038](../spec/SPEC-038-LANGUAGE-SERVER.md)
 **Priority:** Medium
-**Status:** ✅ Done
+**Status:** ✅ Complete (Local MVP; follow-ups planned)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | [SPEC-038](../spec/SPEC-038-LANGUAGE-SERVER.md) | 180 | ✅ Done |
+| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | Local LSP MVP for Ash: VFS/cache, parser+lint diagnostics, hover, symbols, same-file definition, completion | [SPEC-038](../spec/SPEC-038-LANGUAGE-SERVER.md) | 180 original / MVP subset | ✅ Complete |
+| [TASK-767](tasks/TASK-767-lsp-status-reconciliation.md) | Reconcile LSP docs/status against live code and record syntax/semantics drift before further LSP work | [SPEC-038](../spec/SPEC-038-LANGUAGE-SERVER.md), [SPEC-043](../spec/SPEC-043-INCREMENTAL-ANALYSIS.md) | 2-4 | ✅ Complete |
 
-**Deliverable:** `ash-lsp` and `ash-mcp` crates; diagnostics, hover, goto-definition, completion, references; VSCode extension skeleton.
+**Deliverable:** Local LSP MVP in `ash-lsp` and `ash-lsp-core`: VFS/cache, parser+lint diagnostics, hover, document symbols, same-file goto-definition, and completion. Typecheck diagnostics, references, workspace symbols, code actions, config/debounce/panic isolation, editor packaging, and MCP parity are follow-up work.
 
 ## Phase 88: Ash Source Formatter
 
@@ -2532,18 +2533,18 @@ Provide a source formatter for Ash that pretty-prints any valid `ModuleFile` whi
 
 ## Phase 89: Incremental Analysis Engine
 
-Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine.
+Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine. TASK-767 reconfirmed that this migration is not implemented and should be treated as planned/blocked pending a compatibility spike and possible rescope.
 
 **Plan Reference:** [PLAN-035: Incremental Analysis Engine](PLAN-035-INCREMENTAL-ANALYSIS.md)
 **Spec:** [SPEC-043](../spec/SPEC-043-INCREMENTAL-ANALYSIS.md)
 **Priority:** Low
-**Status:** ✅ Done
+**Status:** 📝 Planned (Blocked/Rescope Required)
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries | [SPEC-043](../spec/SPEC-043-INCREMENTAL-ANALYSIS.md) | 48 | ✅ Done |
+| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate or rescope `salsa` in `ash-lsp-core` for parse/type/symbol queries after prerequisite spike | [SPEC-043](../spec/SPEC-043-INCREMENTAL-ANALYSIS.md) | 48 | 📝 Planned |
 
-**Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working.
+**Target Deliverable:** Salsa database driving `parse_file`, `module_graph`, `type_check_file`, `symbol_index`; cross-file invalidation working. Not currently implemented; live code still uses the simple `AnalysisCache`.
 
 ## Phase 90: Spec Processor (Independent Application Track)
 

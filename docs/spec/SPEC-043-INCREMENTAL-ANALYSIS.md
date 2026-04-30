@@ -1,12 +1,12 @@
 # SPEC-043: Incremental Analysis Engine for ash-lsp-core
 
-## Status: Draft
+## Status: Draft (Planned / Not Implemented)
 
 ## 1. Goal
 
 Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine so that editing one file does not invalidate the analysis of unchanged files.
 
-> **Prerequisite:** `crates/ash-lsp-core` does not yet exist. It must be created and stabilized as part of SPEC-038 Phase 2 (Diagnostics & Symbols) before this spec can be implemented.
+> **TASK-767 reconciliation note:** `crates/ash-lsp-core` now exists, but this spec is not implemented. The live crate still uses the simple DashMap-backed `AnalysisCache`, has no `salsa` dependency, and lacks tracked `parse_file`, `module_graph`, `type_check_file`, or `symbol_index` queries. Before implementation, rerun the compatibility spike and decide whether Salsa is still the right mechanism after later Ash syntax/semantics changes.
 
 ## 2. Scope
 
@@ -17,7 +17,7 @@ This spec covers:
 
 ## 3. Why Salsa
 
-`ash-lsp-core` (once created) will use an LRU cache keyed by `(Url, version)`. This means:
+Live `ash-lsp-core` uses a simple per-URI/per-version DashMap cache (`AnalysisCache`). The original design assumed a short-lived cache keyed by `(Uri, version)`. This means:
 - Every `didChange` invalidates the edited file's cache entry.
 - Cross-file dependencies are not tracked; changing `A.ash` invalidates nothing in `B.ash` even if `B` imports `A`.
 - For large workspaces, this leads to excessive re-parsing and re-type-checking.
@@ -89,9 +89,9 @@ pub fn symbol_index(db: &dyn AshDb, file: SourceFile) -> SymbolIndex {
 > **Over-invalidation risk:** `type_check_file` is keyed on both `file` and `manifest`. Any edit to the workspace manifest (e.g., `ash.toml`) will therefore invalidate `type_check_file` for **every** file in the workspace. This is acceptable for the MVP because manifest edits are rare; a finer-grained crate-root query can be introduced later.
 
 > **Prerequisites:**
-> - `ash-parser` must expose `parse_surface_file(text: &str) -> (ModuleFile, Vec<ParseError>)` before this query can be implemented. See SPEC-039 §4.6.
-> - `ash-typeck` currently has **no** `type_check_module_file(module: &ModuleFile, graph: &ModuleGraph)` API. This function (or an equivalent module-level entry point) must be created before this query can be implemented. The review recommends delivering it as part of SPEC-038 Phase 2.
-> - `ConstructorError` is the error type produced by `ash-typeck` during environment construction (see SPEC-038 §12).
+> - `ash-parser` exposes `parse_surface_file(text: &str)` and is already used by `ash-lsp-core`.
+> - `ash-typeck` still needs an LSP-friendly module-level query API and diagnostics integration path before `type_check_file` can be implemented honestly.
+> - The query boundaries must be refreshed against current Ash syntax/semantics before Salsa integration begins.
 
 ### 4.3 SymbolIndex Definition
 
@@ -249,3 +249,8 @@ The migration from simple cache to salsa should be **transparent** to `ash-lsp` 
   - `ash-typeck`, `ash-parser`, and `ash-core` types must derive `Eq + Hash` (see §7 prerequisite task)
 - **Follows:** SPEC-039, SPEC-040, SPEC-041 (all stable)
 - **Enables:** Large-workspace LSP performance
+
+
+## 10. TASK-767 Reconciliation Status
+
+TASK-767 restored Phase 89 / TASK-576 to planned status. This spec remains a target design, not an implemented subsystem. Future work must first run the Salsa compatibility spike, audit current parser/typechecker AST traits and module graph APIs, and decide whether to implement this design as written or rescope it around a simpler workspace index.

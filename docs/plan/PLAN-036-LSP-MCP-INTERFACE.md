@@ -2,9 +2,11 @@
 
 ## Phase: 87
 
+## Status: ✅ Complete (Local LSP MVP Only; Production Follow-Ups Planned)
+
 ## Goal
 
-Implement a production-quality Language Server Protocol (LSP) server for Ash with an embedded Model Context Protocol (MCP) bridge. The server provides real-time diagnostics, hover, go-to-definition, completion, find references, document symbols, and code actions for human editors (VSCode, Neovim) while exposing the same semantic intelligence as MCP tools for AI coding agents.
+Establish an Ash Language Server Protocol implementation and shared `ash-lsp-core` analysis substrate. After TASK-767 reconciliation, this plan is scoped honestly as a completed **local LSP MVP** plus explicitly pending follow-up tracks for production/workspace/MCP features.
 
 ## Specification
 
@@ -15,46 +17,63 @@ Implement a production-quality Language Server Protocol (LSP) server for Ash wit
 
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
-| [TASK-569](../tasks/TASK-569-lsp-mcp-implementation.md) | LSP & MCP interface for Ash | 180h | 📝 Planned |
+| [TASK-569](tasks/TASK-569-lsp-mcp-implementation.md) | Local LSP MVP: VFS/cache, parser+lint diagnostics, hover, document symbols, same-file goto-definition, completion, stdio/TCP binary | 180h original / implemented subset | ✅ Complete (Local MVP) |
+| [TASK-767](tasks/TASK-767-lsp-status-reconciliation.md) | Reconcile LSP planning/status claims against live code and record syntax/semantics drift before further LSP work | 2-4h | ✅ Complete |
 
-## Hard Prerequisites (Must Complete First)
+## Hard Prerequisites
 
-These blockers are defined in SPEC-038 §18:
+The original blockers from SPEC-038 §18 have been partially resolved by Phases 84-86:
 
-1. **Local variable spans** — `Expr::Variable { name: Name, span: Span }` and `Pattern::Variable { name: Name, span: Span }` (Phase 84, TASK-570)
-2. **Type-checker error spans** — all `TypeEnvError`, `ConstructorError`, `NameError`, `ResolutionError`, and `TypeError` variants carry `span` (Phase 85, TASK-572)
-3. **Unified error trait** — `AshLspError` trait implemented for all error types (Phase 85, TASK-573)
-4. **`ash-lint` library extraction** — `lint_module` API available (Phase 86, TASK-574)
-5. **`parse_surface_file` API** — top-level parser entry point returning `ModuleFile` with `CommentTable` (Phase 84, TASK-571)
+1. ✅ Local variable spans — Phase 84 / TASK-570.
+2. ✅ Type-checker error spans — Phase 85 / TASK-572.
+3. ✅ Unified error trait — Phase 85 / TASK-573.
+4. ✅ `ash-lint` library extraction — Phase 86 / TASK-574.
+5. ✅ `parse_surface_file` API — Phase 84 / TASK-571.
 
-## Deliverable
+However, these prerequisites do **not** mean the production LSP is complete. The current `ash-lsp-core` diagnostic path still does not call typecheck, and navigation/completion remain parser/top-level oriented.
 
-- `crates/ash-lsp` and `crates/ash-mcp` crates
-- LSP handlers: diagnostics, hover, goto-definition, completion, find references, document symbols, code actions
-- MCP tools: `ash_get_diagnostics`, `ash_hover`, `ash_goto_definition`, `ash_find_references`, `ash_complete`, `ash_document_symbols`, `ash_workspace_symbols`, `ash_code_action`
-- VSCode extension skeleton and Neovim setup documentation
-- `ash lsp --stdio`, `ash lsp --port <n>`, `ash lsp --mcp` CLI interfaces
+## Implemented Deliverable
+
+- `crates/ash-lsp-core` crate.
+- `crates/ash-lsp` binary crate.
+- VFS with open/change/close and incremental edit application.
+- Per-URI/per-version analysis cache.
+- Parser + lint diagnostics.
+- `textDocument/hover` for keywords/top-level declarations.
+- `textDocument/documentSymbol`.
+- `textDocument/definition` for same-file declaration lookup.
+- `textDocument/completion` for keywords/snippets and top-level names.
+- stdio launch and TCP `--port` launch on the `ash-lsp` binary.
+- Focused tests: 49 `ash-lsp-core` tests and 8 `ash-lsp` tests passed during the TASK-767 audit.
+
+## Pending Follow-Up Tracks
+
+These were formerly overclaimed by the broad Phase 87 wording and are now explicitly pending:
+
+1. Typecheck diagnostics and expression-level type hover.
+2. Cross-file workspace/module graph index.
+3. `textDocument/references`, `workspace/symbol`, and `textDocument/codeAction`.
+4. Config ingestion, diagnostic debouncing, max-diagnostic limiting, watched-file handling, and panic isolation.
+5. Current-Ash syntax/semantics refresh for capability/resource declarations, operational failure, Proc, generalized `do:K`, bracket comprehensions, and std/module syntax drift.
+6. MCP parity hardening if `ash-mcp` is to share exactly the same LSP-core query semantics.
+7. Salsa incremental engine follow-up through Phase 89 / TASK-576 after prerequisite spike and possible rescope.
+
+## Syntax/Semantics Drift Warning
+
+Ash language development after Phase 89 materially changed the surface and semantic vocabulary. Any new LSP feature work must first audit current parser/typechecker/runtime behavior for post-Phase-89 features rather than assuming the original SPEC-038 examples and keyword/completion lists are current.
 
 ## Timeline
 
-5 weeks (~180 hours)
+Original estimate: 5 weeks / ~180h for a production LSP+MCP interface.
 
-| Phase | Work | Hours |
-|-------|------|-------|
-| Week 1 | Skeleton + VFS + parser diagnostics | 32 |
-| Week 2 | Typeck diagnostics + hover + symbols | 36 |
-| Week 3 | Go-to-definition + completion + references | 40 |
-| Week 4 | MCP bridge + VSCode skeleton | 40 |
-| Week 5 | Polish, tests, docs, CHANGELOG | 32 |
+Reconciled status:
+
+- Local LSP MVP: implemented.
+- Production/workspace/MCP hardening: unestimated follow-up work pending new task files.
+- Salsa: separate Phase 89 task remains planned/blocked.
 
 ## Risks
 
-- `tower-lsp-server` and `rmcp` are moving targets; URI handling and transport APIs may shift.
-- Cross-file reference index invalidation on `didChange` is error-prone.
-- No prior LSP skeleton exists; Phase 87 is truly greenfield.
-
-## Parallelization
-
-- Phase 87 cannot start until all five hard prerequisites are resolved.
-- Phase 88 (Formatter core crate) can begin in parallel with Weeks 4–5 of Phase 87 because it only needs `CommentTable` from Phase 84.
-- Phase 89 (Salsa) should wait until `ash-lsp-core` VFS and diagnostic pipeline are stable (Week 3+ of Phase 87).
+- Planning documents can overclaim implementation maturity if local MVP and production LSP are not separated.
+- Later Ash syntax/semantics drift can make hover/completion snippets stale even if the parser still accepts the source.
+- Cross-file LSP features depend on module graph and typecheck APIs that the current `ash-lsp-core` does not use.

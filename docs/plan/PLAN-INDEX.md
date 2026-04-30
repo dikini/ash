@@ -3071,7 +3071,7 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 |------|-------------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | First-class workflow spec/plan packet | 4 | ✅ Complete |
 | [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, obligation, and adapter semantics | 7 | ✅ Complete |
-| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Workflow contract surface, classifier, and header events | 7 | 📝 Planned |
+| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Workflow contract surface, classifier, and header events | 7 | ✅ Complete |
 | [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Workflow type, qualified builtins, shared carriers, and intrinsic parameters | 9 | 📝 Planned |
 | [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | WorkflowForm-preserving Workflow do target | 9 | 📝 Planned |
 | [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Workflow algebra and contract intrinsic call elaboration | 5 | 📝 Planned |

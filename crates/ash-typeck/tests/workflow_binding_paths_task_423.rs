@@ -57,6 +57,7 @@ fn for_bound_interface_method_call_workflow() -> WorkflowDef {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: Workflow::For {
             pattern: Pattern::Variable {
                 name: "item".into(),
@@ -99,6 +100,7 @@ fn for_bound_declared_return_workflow() -> WorkflowDef {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: Workflow::For {
             pattern: Pattern::Variable {
                 name: "item".into(),
@@ -132,6 +134,7 @@ fn observe_bound_declared_return_workflow() -> WorkflowDef {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: Workflow::Observe {
             capability: "read_policy".into(),
             binding: Some(Pattern::Variable {
@@ -162,6 +165,7 @@ fn propose_binding_workflow() -> WorkflowDef {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: Workflow::Propose {
             action: ActionRef {
                 target: ash_parser::surface::OperationalTarget::Explicit {
@@ -269,6 +273,7 @@ fn workflow_typecheck_rejects_non_list_for_collection_honestly() {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: Workflow::For {
             pattern: Pattern::Variable {
                 name: "x".into(),

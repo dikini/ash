@@ -688,12 +688,24 @@ pub struct WorkflowDef {
     pub owned_resources: Vec<WorkflowOwnedResource>,
     /// Capability bindings this workflow uses (from `uses name: Interface = Impl(...)` clauses)
     pub used_bindings: Vec<WorkflowUsedBinding>,
+    /// Source-ordered workflow header clauses, preserving deprecated legacy declaration order.
+    pub header_events: Vec<WorkflowHeaderEvent>,
     /// The workflow body
     pub body: Workflow,
     /// Optional contract (requires/ensures)
     pub contract: Option<Contract>,
     /// Source span
     pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum WorkflowHeaderEvent {
+    PlaysRole(RoleRef),
+    Capabilities(Vec<CapabilityDecl>),
+    Owns(WorkflowOwnedResource),
+    Uses(WorkflowUsedBinding),
+    Requires { expr: Expr, span: Span },
+    Ensures { expr: Expr, span: Span },
 }
 
 /// Surface workflow syntax - more flexible than core IR.
@@ -1044,6 +1056,20 @@ pub enum DoStmt {
         /// Source span covering the whole statement.
         span: Span,
     },
+    /// Workflow contract precondition statement: `requires: expr;`.
+    WorkflowRequires {
+        /// Raw contract expression, classified later.
+        expr: Box<Expr>,
+        /// Source span covering the whole statement.
+        span: Span,
+    },
+    /// Workflow contract postcondition statement: `ensures: expr;`.
+    WorkflowEnsures {
+        /// Raw postcondition expression, classified later.
+        expr: Box<Expr>,
+        /// Source span covering the whole statement.
+        span: Span,
+    },
     /// Final return statement: `return expr`.
     Return {
         /// Returned expression.
@@ -1288,6 +1314,8 @@ pub enum Expr {
         /// Source span covering the whole comprehension and target annotation.
         span: Span,
     },
+    /// List expression, primarily used to preserve raw contract syntax such as `any_role([a, b])`.
+    List { items: Vec<Expr>, span: Span },
 }
 
 /// Preserved constructor payload shape at the parser surface.
@@ -1709,6 +1737,7 @@ impl Spanned for Expr {
             Expr::ActBlock { span, .. } => *span,
             Expr::DoBlock { span, .. } => *span,
             Expr::Comprehension { span, .. } => *span,
+            Expr::List { span, .. } => *span,
         }
     }
 }
@@ -1913,6 +1942,7 @@ mod tests {
                 capabilities: vec![],
                 owned_resources: vec![],
                 used_bindings: vec![],
+                header_events: vec![],
                 body: Workflow::Done {
                     span: Span::new(0, 4, 1, 1),
                 },
@@ -2191,6 +2221,7 @@ mod tests {
             capabilities: vec![],
             owned_resources: vec![],
             used_bindings: vec![],
+            header_events: vec![],
             body: Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
             },

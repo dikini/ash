@@ -2885,6 +2885,7 @@ mod tests {
                 capabilities: vec![],
                 owned_resources: vec![],
                 used_bindings: vec![],
+                header_events: vec![],
                 body: SurfaceWorkflow::Ret {
                     expr: ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Null),
                     span,

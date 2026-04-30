@@ -35,6 +35,7 @@ pub mod resolver;
 pub mod surface;
 pub mod token;
 pub mod use_tree;
+pub mod workflow_contract_classifier;
 
 pub use capability_resolver::{CapabilityResolver, CapabilityTarget};
 pub use combinators::*;

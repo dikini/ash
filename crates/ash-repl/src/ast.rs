@@ -277,7 +277,24 @@ fn render_expr(expr: &Expr) -> String {
                     ash_parser::surface::DoStmt::Return { value, .. } => {
                         format!("Return({})", render_expr(value))
                     }
+                    ash_parser::surface::DoStmt::WorkflowRequires { expr, .. } => {
+                        format!("WorkflowRequires({})", render_expr(expr))
+                    }
+                    ash_parser::surface::DoStmt::WorkflowEnsures { expr, .. } => {
+                        format!("WorkflowEnsures({})", render_expr(expr))
+                    }
                 })),
+            );
+            out.push('}');
+            out
+        }
+        Expr::List { items, .. } => {
+            let mut out = String::from("List {\n");
+            push_field(
+                &mut out,
+                2,
+                "items",
+                &render_list(items.iter().map(render_expr)),
             );
             out.push('}');
             out

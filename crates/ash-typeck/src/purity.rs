@@ -340,6 +340,11 @@ fn check_purity_recursive(
             // TASK-756 only wires parser/visitor substrate. Like DoBlock,
             // comprehension purity semantics are deferred to typed elaboration.
         }
+        Expr::List { items, .. } => {
+            for item in items {
+                check_purity_recursive(env, item, allow_effects, errors);
+            }
+        }
     }
 }
 

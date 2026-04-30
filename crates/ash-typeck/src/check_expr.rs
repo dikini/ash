@@ -651,6 +651,10 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             qualifiers,
             span,
         } => check_comprehension(env, target.as_ref(), result, qualifiers, *span),
+        Expr::List { span, .. } => CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "contract/list expression".to_string(),
+            span: *span,
+        }),
     }
 }
 
@@ -717,6 +721,11 @@ fn collect_do_notation_diagnostics(env: &TypeEnv, expr: &Expr, diagnostics: &mut
                         }
                         DoStmt::Bind { value, .. } | DoStmt::Return { value, .. } => {
                             collect_do_notation_diagnostics(&block_env, value, diagnostics);
+                        }
+                        DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {
+                            // Raw contract statements are classified by workflow elaboration.
+                            // Avoid treating symbolic roles or the delayed `result` binder as
+                            // ordinary do-notation values during generic diagnostics.
                         }
                     }
                 }
@@ -834,6 +843,11 @@ fn collect_do_notation_diagnostics(env: &TypeEnv, expr: &Expr, diagnostics: &mut
         | Expr::Variable { .. }
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. } => {}
+        Expr::List { items, .. } => {
+            for item in items {
+                collect_do_notation_diagnostics(env, item, diagnostics);
+            }
+        }
     }
 }
 
@@ -1384,6 +1398,13 @@ fn check_do_block(
                 }
                 return_ty = substitution.apply(&value_result.ty);
             }
+            DoStmt::WorkflowRequires { span, .. } | DoStmt::WorkflowEnsures { span, .. } => {
+                errors.push(ConstructorError::UnsupportedExpression {
+                    kind: "workflow contract statement requires do:Workflow elaboration"
+                        .to_string(),
+                    span: *span,
+                });
+            }
         }
     }
 
@@ -1408,7 +1429,11 @@ fn check_do_block(
 
 fn do_stmt_span(stmt: &DoStmt) -> Span {
     match stmt {
-        DoStmt::Let { span, .. } | DoStmt::Bind { span, .. } | DoStmt::Return { span, .. } => *span,
+        DoStmt::Let { span, .. }
+        | DoStmt::Bind { span, .. }
+        | DoStmt::Return { span, .. }
+        | DoStmt::WorkflowRequires { span, .. }
+        | DoStmt::WorkflowEnsures { span, .. } => *span,
     }
 }
 
@@ -1566,6 +1591,7 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::ActBlock { span, .. } => *span,
         Expr::DoBlock { span, .. } => *span,
         Expr::Comprehension { span, .. } => *span,
+        Expr::List { span, .. } => *span,
     }
 }
 

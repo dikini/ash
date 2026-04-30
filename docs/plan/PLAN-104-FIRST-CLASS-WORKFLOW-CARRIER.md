@@ -23,7 +23,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | Promote DESIGN-033 into SPEC-056/PLAN-104 and register Phase 108 | Docs/Planning | 4 | ✅ Complete |
 | [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Define workflow form, projection, obligation, and adapter semantics | Docs/Semantics | 7 | ✅ Complete |
-| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Add workflow contract surface, classifier, and source-ordered header events | Parser/Substrate | 7 | 📝 Planned |
+| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Add workflow contract surface, classifier, and source-ordered header events | Parser/Substrate | 7 | ✅ Complete |
 | [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Register `Workflow<A>`, qualified workflow builtins, shared carriers, and non-denotable intrinsic parameters | Type/Substrate | 9 | 📝 Planned |
 | [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | Add WorkflowForm-preserving `do:Workflow` target | Semantic | 9 | 📝 Planned |
 | [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Elaborate Workflow algebra and contract intrinsic calls into WorkflowForm artifacts | Semantic | 5 | 📝 Planned |

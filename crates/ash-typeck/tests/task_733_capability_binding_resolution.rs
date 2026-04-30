@@ -191,6 +191,7 @@ fn workflow_with_body(body: Workflow, used_bindings: Vec<WorkflowUsedBinding>) -
         capabilities: vec![],
         owned_resources: vec![own("kv", "KvResource")],
         used_bindings,
+        header_events: vec![],
         body,
         contract: None,
         span: span(),

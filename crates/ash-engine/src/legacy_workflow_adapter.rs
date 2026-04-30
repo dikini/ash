@@ -1,10 +1,12 @@
 //! Compatibility adapter from legacy surface workflow headers into shared workflow carriers.
 //!
-//! This is intentionally conservative: role, authority/resource, and contract
+//! This is intentionally fail-closed: role, authority/resource, and contract
 //! headers are translated into the shared `WorkflowForm` contract/projection path
 //! in legacy source order. Supported legacy body shapes are summarized as a
-//! `FromProc` lower summary with explicit coverage-obligation nodes; opaque body
-//! constructs are rejected with diagnostics rather than silently treated as covered.
+//! non-conservative supported-subset `FromProc` lower summary with explicit
+//! coverage-obligation, failure, resource-authority, and provenance fields;
+//! opaque body constructs are rejected with diagnostics rather than silently
+//! treated as covered.
 
 use ash_core::workflow_carrier::{
     OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
@@ -67,7 +69,7 @@ pub enum UnsupportedLegacyBodyConstruct {
 /// contract path, preserving the legacy header source order.
 ///
 /// Authority/resource and contract header events enter `WorkflowForm` in source
-/// order. Supported bodies are represented by a conservative
+/// order. Supported bodies are represented by a non-conservative supported-subset
 /// `FromProc` summary anchored to `legacy_body_as_proc_summary:<workflow-name>`;
 /// unsupported opaque bodies reject rather than producing obligation-free
 /// summaries.
@@ -75,8 +77,8 @@ pub enum UnsupportedLegacyBodyConstruct {
 /// # Errors
 ///
 /// Returns `LegacyWorkflowAdapterError` when a legacy header expression cannot be
-/// classified or when the body contains a construct this conservative body
-/// summary slice cannot represent soundly yet.
+/// classified or when the body contains a construct the supported-subset body
+/// summary cannot represent soundly yet.
 pub fn legacy_workflow_def_to_workflow_form(
     workflow: &WorkflowDef,
 ) -> Result<WorkflowForm<()>, LegacyWorkflowAdapterError> {
@@ -305,53 +307,178 @@ fn legacy_body_as_proc_summary(
     body_node: WorkflowNodeId,
 ) -> Result<ProcLowerSummary, LegacyWorkflowAdapterError> {
     let mut next_node = body_node.0 + 1_000;
-    let mut obligations = Vec::new();
-    collect_supported_body_obligations(&workflow.body, &mut next_node, &mut obligations)?;
+    let mut body_summary = LegacyBodySummary::default();
+    collect_supported_body_summary(&workflow.body, &mut next_node, &mut body_summary)?;
+    let mut authority_resources = legacy_authority_resource_names(workflow);
+    authority_resources.extend(body_summary.authority_resources.iter().cloned());
     Ok(ProcLowerSummary {
-        coverage_obligation_nodes: obligations.clone(),
+        coverage_obligation_nodes: body_summary.obligations.clone(),
         contract_summary: Some(ProcContractSummary {
-            obligations,
+            obligations: body_summary.obligations,
             public_anchor: Some(format!("legacy_body_as_proc_summary:{}", workflow.name)),
         }),
         failure_summary: Some(ProcFailureSummary {
-            routes: Vec::new(),
-            conservative: true,
+            routes: body_summary.failure_routes,
+            conservative: false,
         }),
         resource_authority_summary: Some(ProcResourceAuthoritySummary {
-            resources: Vec::new(),
-            conservative: true,
+            resources: authority_resources,
+            conservative: false,
         }),
         provenance_summary: Some(ProcProvenanceSummary {
-            event_kinds: Vec::new(),
-            conservative: true,
+            event_kinds: body_summary.provenance_events,
+            conservative: false,
         }),
         source_origin: Some(legacy_workflow_source_origin(workflow)),
     })
 }
 
-fn collect_supported_body_obligations(
+#[derive(Default)]
+struct LegacyBodySummary {
+    obligations: Vec<WorkflowNodeId>,
+    failure_routes: Vec<String>,
+    provenance_events: Vec<String>,
+    authority_resources: Vec<String>,
+}
+
+fn legacy_authority_resource_names(workflow: &WorkflowDef) -> Vec<String> {
+    let mut resources = Vec::new();
+    resources.extend(
+        workflow
+            .capabilities
+            .iter()
+            .map(|capability| format!("capability:{}", capability.capability)),
+    );
+    resources.extend(
+        workflow
+            .owned_resources
+            .iter()
+            .map(|resource| resource.name.to_string()),
+    );
+    resources.extend(
+        workflow
+            .used_bindings
+            .iter()
+            .map(|binding| format!("uses:{}", binding.name)),
+    );
+    resources
+}
+
+#[allow(clippy::too_many_lines)]
+fn collect_supported_body_summary(
     body: &Workflow,
     next_node: &mut u64,
-    obligations: &mut Vec<WorkflowNodeId>,
+    summary: &mut LegacyBodySummary,
 ) -> Result<(), LegacyWorkflowAdapterError> {
     match body {
         Workflow::Done { .. } => Ok(()),
-        Workflow::Observe { continuation, .. }
-        | Workflow::Orient { continuation, .. }
+        Workflow::Observe {
+            capability,
+            continuation,
+            ..
+        } => {
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.failure_routes,
+                workflow_body_failure_route(body),
+            );
+            push_unique(
+                &mut summary.authority_resources,
+                format!("body:observe:{capability}"),
+            );
+            if let Some(continuation) = continuation {
+                collect_supported_body_summary(continuation, next_node, summary)?;
+            }
+            Ok(())
+        }
+        Workflow::Act {
+            action,
+            continuation,
+            ..
+        } => {
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.failure_routes,
+                workflow_body_failure_route(body),
+            );
+            push_unique(
+                &mut summary.authority_resources,
+                format!("body:act:{}", action_target_summary(&action.target)),
+            );
+            if let Some(continuation) = continuation {
+                collect_supported_body_summary(continuation, next_node, summary)?;
+            }
+            Ok(())
+        }
+        Workflow::Set {
+            capability,
+            channel,
+            continuation,
+            ..
+        }
+        | Workflow::Send {
+            capability,
+            channel,
+            continuation,
+            ..
+        } => {
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.failure_routes,
+                workflow_body_failure_route(body),
+            );
+            push_unique(
+                &mut summary.authority_resources,
+                format!(
+                    "body:{}:{capability}:{channel}",
+                    workflow_body_event_kind(body)
+                ),
+            );
+            if let Some(continuation) = continuation {
+                collect_supported_body_summary(continuation, next_node, summary)?;
+            }
+            Ok(())
+        }
+        Workflow::Orient { continuation, .. }
         | Workflow::Propose { continuation, .. }
         | Workflow::Check { continuation, .. }
-        | Workflow::Act { continuation, .. }
-        | Workflow::Let { continuation, .. }
-        | Workflow::Set { continuation, .. }
-        | Workflow::Send { continuation, .. } => {
-            push_body_obligation(next_node, obligations);
+        | Workflow::Let { continuation, .. } => {
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.failure_routes,
+                workflow_body_failure_route(body),
+            );
             if let Some(continuation) = continuation {
-                collect_supported_body_obligations(continuation, next_node, obligations)?;
+                collect_supported_body_summary(continuation, next_node, summary)?;
             }
             Ok(())
         }
         Workflow::Oblige { .. } | Workflow::Ret { .. } => {
-            push_body_obligation(next_node, obligations);
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.failure_routes,
+                workflow_body_failure_route(body),
+            );
             Ok(())
         }
         Workflow::Decide {
@@ -364,27 +491,63 @@ fn collect_supported_body_obligations(
             else_branch,
             ..
         } => {
-            push_body_obligation(next_node, obligations);
-            collect_supported_body_obligations(then_branch, next_node, obligations)?;
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            collect_supported_body_summary(then_branch, next_node, summary)?;
             if let Some(else_branch) = else_branch {
-                collect_supported_body_obligations(else_branch, next_node, obligations)?;
+                collect_supported_body_summary(else_branch, next_node, summary)?;
             }
             Ok(())
         }
-        Workflow::For { body, .. } | Workflow::With { body, .. } | Workflow::Must { body, .. } => {
-            push_body_obligation(next_node, obligations);
-            collect_supported_body_obligations(body, next_node, obligations)
+        Workflow::For { body: inner, .. } | Workflow::Must { body: inner, .. } => {
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.failure_routes,
+                workflow_body_failure_route(body),
+            );
+            collect_supported_body_summary(inner, next_node, summary)
+        }
+        Workflow::With {
+            capability,
+            body: inner,
+            ..
+        } => {
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.authority_resources,
+                format!("body:with:{capability}"),
+            );
+            collect_supported_body_summary(inner, next_node, summary)
         }
         Workflow::Maybe {
             primary, fallback, ..
         } => {
-            push_body_obligation(next_node, obligations);
-            collect_supported_body_obligations(primary, next_node, obligations)?;
-            collect_supported_body_obligations(fallback, next_node, obligations)
+            push_body_obligation(next_node, &mut summary.obligations);
+            push_unique(
+                &mut summary.provenance_events,
+                workflow_body_event_kind(body),
+            );
+            push_unique(
+                &mut summary.failure_routes,
+                workflow_body_failure_route(body),
+            );
+            collect_supported_body_summary(primary, next_node, summary)?;
+            collect_supported_body_summary(fallback, next_node, summary)
         }
         Workflow::Seq { first, second, .. } => {
-            collect_supported_body_obligations(first, next_node, obligations)?;
-            collect_supported_body_obligations(second, next_node, obligations)
+            collect_supported_body_summary(first, next_node, summary)?;
+            collect_supported_body_summary(second, next_node, summary)
         }
         Workflow::Receive { span, .. } => Err(LegacyWorkflowAdapterError::UnsupportedBody {
             construct: UnsupportedLegacyBodyConstruct::Receive,
@@ -398,6 +561,65 @@ fn collect_supported_body_obligations(
             construct: UnsupportedLegacyBodyConstruct::Resume,
             span: format!("{span:?}"),
         }),
+    }
+}
+
+fn action_target_summary(target: &ash_parser::surface::OperationalTarget) -> String {
+    match target {
+        ash_parser::surface::OperationalTarget::Symbolic { capability_name } => {
+            capability_name.to_string()
+        }
+        ash_parser::surface::OperationalTarget::Qualified {
+            module,
+            capability_name,
+        } => format!("{module}::{capability_name}"),
+        ash_parser::surface::OperationalTarget::Explicit { provider, action } => {
+            format!("{provider}:{action}")
+        }
+    }
+}
+
+fn workflow_body_event_kind(body: &Workflow) -> String {
+    match body {
+        Workflow::Done { .. } => "done",
+        Workflow::Observe { .. } => "observe",
+        Workflow::Orient { .. } => "orient",
+        Workflow::Propose { .. } => "propose",
+        Workflow::Check { .. } => "check",
+        Workflow::Oblige { .. } => "oblige",
+        Workflow::Act { .. } => "act",
+        Workflow::Let { .. } => "let",
+        Workflow::Set { .. } => "set",
+        Workflow::Send { .. } => "send",
+        Workflow::Decide { .. } => "decide",
+        Workflow::If { .. } => "if",
+        Workflow::For { .. } => "for",
+        Workflow::With { .. } => "with",
+        Workflow::Maybe { .. } => "maybe",
+        Workflow::Must { .. } => "must",
+        Workflow::Seq { .. } => "seq",
+        Workflow::Ret { .. } => "ret",
+        Workflow::Receive { .. } => "receive",
+        Workflow::Yield { .. } => "yield",
+        Workflow::Resume { .. } => "resume",
+    }
+    .to_string()
+}
+
+fn workflow_body_failure_route(body: &Workflow) -> String {
+    match body {
+        Workflow::Maybe { .. } => "maybe.fallback",
+        Workflow::Must { .. } => "must.enforced",
+        Workflow::Check { .. } => "check.failure",
+        Workflow::Oblige { .. } => "obligation.failure",
+        _ => "none",
+    }
+    .to_string()
+}
+
+fn push_unique(items: &mut Vec<String>, item: String) {
+    if item != "none" && !items.contains(&item) {
+        items.push(item);
     }
 }
 

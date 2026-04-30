@@ -28,7 +28,7 @@
 | [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | Add WorkflowForm-preserving `do:Workflow` target | Semantic | 9 | ✅ Complete |
 | [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Elaborate Workflow algebra and contract intrinsic calls into WorkflowForm artifacts | Semantic | 5 | ✅ Complete |
 | [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Add executable Workflow lowering and runtime projection tests | Runtime/Semantic | 6 | ✅ Complete |
-| [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Translate deprecated legacy workflow declarations and emit warnings | Compatibility | 8 | 🚧 In Progress |
+| [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Translate deprecated legacy workflow declarations and emit warnings | Compatibility | 8 | ✅ Complete |
 | [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Enable `[...]: Workflow` comprehensions through SPEC-055 path | Semantic | 5 | 📝 Planned |
 | [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Preserve workflow type/contract summaries across module exports/imports | Substrate | 7 | 📝 Planned |
 | [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Add workflow diagnostics and negative tests | Semantic | 6 | 📝 Planned |

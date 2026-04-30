@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): completed the legacy workflow body-summary adapter for the supported legacy-body subset by emitting non-conservative failure, resource-authority, and provenance summaries through `FromProc(legacy_body_as_proc_summary:<name>)` while continuing to reject opaque receive/yield/resume bodies explicitly.
+
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added a shared `WorkflowAuthorityEvent` carrier and extended legacy workflow lowering so `capabilities:`, `owns`, and `uses` headers enter the same source-ordered `WorkflowForm` / projection / coverage path as role and contract headers instead of remaining legacy-only metadata.
 
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): extended the conservative legacy workflow adapter to lower `plays role(...)` header events into the same admission `WorkflowForm::Requires(HasRole(...))` path as explicit `requires: role(...)`, preserving source order with contract headers.

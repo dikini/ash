@@ -12,6 +12,11 @@ use ash_engine::legacy_workflow_adapter::{
 use ash_parser::{
     new_input,
     parse_module::{parse_resume, parse_yield},
+    surface::{
+        ActionRef, CheckTarget, Expr, Literal, Name, ObligationRef, OperationalTarget, Pattern,
+        Workflow,
+    },
+    token::Span,
     workflow_def,
 };
 use winnow::Parser;
@@ -218,7 +223,7 @@ fn legacy_empty_capabilities_header_does_not_fabricate_authority() {
 }
 
 #[test]
-fn legacy_ensures_targets_successful_workflow_result_and_body_is_conservative_from_proc() {
+fn legacy_ensures_targets_successful_workflow_result_and_body_enters_from_proc() {
     let workflow = parse_workflow("workflow positive ensures: result >= 1 { done }");
 
     let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
@@ -231,7 +236,7 @@ fn legacy_ensures_targets_successful_workflow_result_and_body_is_conservative_fr
 
     assert!(
         contains_body_placeholder(&form),
-        "this slice should expose the conservative legacy body FromProc placeholder honestly"
+        "this slice should expose the legacy body FromProc summary honestly"
     );
 }
 
@@ -276,8 +281,40 @@ fn legacy_body_summary_carries_lower_coverage_obligations_for_supported_body_nod
 }
 
 #[test]
-fn legacy_body_summary_carries_explicit_conservative_full_summary_fields() {
-    let workflow = parse_workflow("workflow full_summary { let x = 1 ret x }");
+#[allow(clippy::too_many_lines)]
+fn legacy_body_summary_carries_explicit_non_conservative_full_summary_fields_for_supported_subset()
+{
+    let mut workflow = parse_workflow(
+        "workflow full_summary capabilities: [clock] owns cache: CacheResource requires: role(Auditor) { done }",
+    );
+    let span = Span::default();
+    workflow.body = Workflow::Seq {
+        first: Box::new(Workflow::Let {
+            pattern: Pattern::Variable {
+                name: Name::from("x"),
+                span,
+            },
+            expr: Expr::Literal(Literal::Int(1)),
+            continuation: None,
+            span,
+        }),
+        second: Box::new(Workflow::Seq {
+            first: Box::new(Workflow::Check {
+                target: CheckTarget::Obligation(ObligationRef {
+                    role: Name::from("audit"),
+                    condition: Expr::Literal(Literal::Bool(true)),
+                }),
+                continuation: None,
+                span,
+            }),
+            second: Box::new(Workflow::Oblige {
+                obligation: Name::from("audit"),
+                span,
+            }),
+            span,
+        }),
+        span,
+    };
 
     let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
     let lowered = lower_workflow_form(&form, legacy_workflow_source_origin(&workflow));
@@ -298,29 +335,181 @@ fn legacy_body_summary_carries_explicit_conservative_full_summary_fields() {
             .failure_summary
             .as_ref()
             .map(|summary| summary.conservative),
-        Some(true),
-        "supported legacy FromProc summaries must carry an explicit conservative failure summary"
+        Some(false),
+        "supported legacy FromProc summaries must carry a complete failure summary for the supported subset"
     );
     assert_eq!(
         summary
             .resource_authority_summary
             .as_ref()
             .map(|summary| summary.conservative),
-        Some(true),
-        "supported legacy FromProc summaries must carry an explicit conservative resource-authority summary"
+        Some(false),
+        "supported legacy FromProc summaries must carry a complete resource-authority summary for the supported subset"
     );
     assert_eq!(
         summary
             .provenance_summary
             .as_ref()
             .map(|summary| summary.conservative),
-        Some(true),
-        "supported legacy FromProc summaries must carry an explicit conservative provenance summary"
+        Some(false),
+        "supported legacy FromProc summaries must carry a complete provenance summary for the supported subset"
     );
+    let resource_summary = summary
+        .resource_authority_summary
+        .as_ref()
+        .expect("resource summary exists");
+    assert!(
+        resource_summary
+            .resources
+            .iter()
+            .any(|name| name == "cache")
+    );
+    assert!(
+        resource_summary
+            .resources
+            .iter()
+            .any(|name| name == "capability:clock")
+    );
+    let failure_summary = summary
+        .failure_summary
+        .as_ref()
+        .expect("failure summary exists");
+    for route in ["check.failure", "obligation.failure"] {
+        assert!(
+            failure_summary.routes.iter().any(|actual| actual == route),
+            "supported legacy body summaries must include {route}"
+        );
+    }
+    let provenance_summary = summary
+        .provenance_summary
+        .as_ref()
+        .expect("provenance summary exists");
+    for kind in ["let", "check", "oblige"] {
+        assert!(
+            provenance_summary
+                .event_kinds
+                .iter()
+                .any(|actual| actual == kind),
+            "supported legacy body summaries must include {kind} provenance"
+        );
+    }
     assert!(
         matches!(summary.source_origin, Some(SourceOrigin::Synthetic { .. })),
         "supported legacy FromProc summaries must carry explicit source-origin metadata"
     );
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn legacy_supported_body_summary_accounts_for_construct_specific_failure_and_provenance() {
+    let span = Span::default();
+    let mut workflow = parse_workflow("workflow construct_summary { done }");
+    workflow.body = Workflow::Seq {
+        first: Box::new(Workflow::Check {
+            target: CheckTarget::Obligation(ObligationRef {
+                role: Name::from("audit"),
+                condition: Expr::Literal(Literal::Bool(true)),
+            }),
+            continuation: None,
+            span,
+        }),
+        second: Box::new(Workflow::Seq {
+            first: Box::new(Workflow::Oblige {
+                obligation: Name::from("audit"),
+                span,
+            }),
+            second: Box::new(Workflow::Seq {
+                first: Box::new(Workflow::Must {
+                    body: Box::new(Workflow::Done { span }),
+                    span,
+                }),
+                second: Box::new(Workflow::Seq {
+                    first: Box::new(Workflow::For {
+                        pattern: Pattern::Variable {
+                            name: Name::from("item"),
+                            span,
+                        },
+                        collection: Expr::Variable {
+                            name: Name::from("items"),
+                            span,
+                        },
+                        body: Box::new(Workflow::Done { span }),
+                        span,
+                    }),
+                    second: Box::new(Workflow::With {
+                        capability: Name::from("clock"),
+                        body: Box::new(Workflow::Act {
+                            action: ActionRef {
+                                target: OperationalTarget::Symbolic {
+                                    capability_name: Name::from("tick"),
+                                },
+                                args: Vec::new(),
+                            },
+                            guard: None,
+                            result_name: None,
+                            continuation: None,
+                            span,
+                        }),
+                        span,
+                    }),
+                    span,
+                }),
+                span,
+            }),
+            span,
+        }),
+        span,
+    };
+
+    let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
+    let lowered = lower_workflow_form(&form, legacy_workflow_source_origin(&workflow));
+    let Some(summary) = lowered
+        .projection_events
+        .iter()
+        .find_map(|event| match &event.kind {
+            ProjectionEventKind::FromProc { summary } => Some(summary),
+            _ => None,
+        })
+    else {
+        panic!("legacy body must lower as FromProc");
+    };
+
+    let resource_summary = summary
+        .resource_authority_summary
+        .as_ref()
+        .expect("resource summary exists");
+    for resource in ["body:with:clock", "body:act:tick"] {
+        assert!(
+            resource_summary
+                .resources
+                .iter()
+                .any(|actual| actual == resource),
+            "supported legacy body summaries must include {resource} authority"
+        );
+    }
+    let failure_summary = summary
+        .failure_summary
+        .as_ref()
+        .expect("failure summary exists");
+    for route in ["check.failure", "obligation.failure", "must.enforced"] {
+        assert!(
+            failure_summary.routes.iter().any(|actual| actual == route),
+            "supported legacy body summaries must include {route}"
+        );
+    }
+    let provenance_summary = summary
+        .provenance_summary
+        .as_ref()
+        .expect("provenance summary exists");
+    for kind in ["check", "oblige", "must", "for", "with", "act"] {
+        assert!(
+            provenance_summary
+                .event_kinds
+                .iter()
+                .any(|actual| actual == kind),
+            "supported legacy body summaries must include {kind} provenance"
+        );
+    }
 }
 
 #[test]

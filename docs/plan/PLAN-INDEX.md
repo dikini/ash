@@ -184,12 +184,14 @@ Every task is considered **complete** only when:
 
 **Phase 9 Deliverable**: User-defined policies with compile-time conflict detection
 
-## Total Effort Estimate
+## Original Foundation Effort Estimate
 
-- **Tasks**: 59 (56 complete, 3 planned)
-- **Estimated Hours**: ~424 hours (including Phase 9)
-- **Calendar Time**: 12 weeks (single developer)
-- **Team of 3**: ~4 weeks with parallel work
+This historical estimate covers the original early project phases only and is not the canonical count for the modern PLAN-INDEX. Use the current progress summary and per-phase sections for active planning.
+
+- **Original tasks**: 59 (56 complete, 3 planned at the time this estimate was written)
+- **Original estimated hours**: ~424 hours (including Phase 9)
+- **Original calendar time**: 12 weeks (single developer)
+- **Original team-of-3 estimate**: ~4 weeks with parallel work
 
 ## Dependency Graph
 
@@ -221,7 +223,7 @@ Phase 1 (Core)
 6. Commit: `git commit -m "TASK-XXX: Description"`
 7. Move to next task
 
-## Progress Tracking
+## Progress Tracking (current summary)
 
 Update this section as tasks complete:
 
@@ -282,6 +284,8 @@ Update this section as tasks complete:
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 2 | 🚧 In Progress |
+| 108 | 12 | 1 | 📝 Planned |
+| 109 | 12 | 1 | 🚧 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -328,7 +332,9 @@ Update this section as tasks complete:
 
 **Phase 12 Deliverable**: Interactive REPL with readline features
 
-## Progress Tracking
+## Progress Tracking (legacy snapshot)
+
+This table is retained near the original early-phase section for historical context. The current summary table near the top of this file is canonical.
 
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
@@ -384,6 +390,8 @@ Update this section as tasks complete:
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 2 | 🚧 In Progress |
+| 108 | 12 | 1 | 📝 Planned |
+| 109 | 12 | 1 | 🚧 In Progress |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -454,10 +462,9 @@ Output capabilities for writing/sending data (complement to input capabilities i
 
 **Phase 16 Deliverable**: Runtime verification of workflow-context compatibility
 
-**Overall Progress**: 272 complete / 295 tracked tasks
-**Remaining Tasks**:
+**Legacy progress note:** This aggregate predates the later phase packets and is no longer the canonical project-wide count. Use the current progress summary near the top of this file and the per-phase task tables for active planning.
 
-- 1 deferred: `TASK-063` (dynamic policy registration)
+**Known historical deferred task:** `TASK-063` (dynamic policy registration).
 
 ## Phase 17: Lean Reference Implementation (Weeks 26-28)
 
@@ -3094,3 +3101,42 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 - D4: Dynamic admission, workflow handles, and workflow-level parallel operators are deferred.
 - D5: Deprecated legacy workflow declarations warn and translate into the same `WorkflowForm` implementation path; no separate legacy semantic path remains underneath.
 - D6: Accepted legacy-compatible contract semantics, including `any_role` OR semantics and current header semantics, are implemented in the new path rather than deferred.
+
+## Phase 109: Unified Type/Module Pipeline and Semantic Summaries
+
+**Priority:** High (Tier 0 prerequisite for [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md) total compile-time type computation)
+**Status:** 🚧 In Progress (planning packet complete; implementation tasks planned)
+**Spec:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md)
+**Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
+**Plan:** [docs/plan/PLAN-105-UNIFIED-TYPE-MODULE-PIPELINE-SEMANTIC-SUMMARIES.md](PLAN-105-UNIFIED-TYPE-MODULE-PIPELINE-SEMANTIC-SUMMARIES.md)
+
+Phase 109 implements SPEC-A from DESIGN-034. It unifies ordinary type declaration handling by routing `type` metadata through ModuleFile, core semantic summaries, engine import/export transport, and TypeEnv registration. The phase replaces or fences source-snippet ordinary type-definition scanning and establishes canonical type/module identity, visibility, opacity, and summary transport needed by later total type computation specs. It does not implement `type fn`, sealed type domains, type-level normalization, associated type-family computation, or proposition solving.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-780](tasks/TASK-780-unified-type-module-pipeline-spec-plan-packet.md) | Unified type/module pipeline spec/plan packet | 4 | ✅ Complete |
+| [TASK-781](tasks/TASK-781-current-type-pipeline-audit-and-semantic-summary-gate.md) | Current type pipeline audit and semantic-summary gate | 4 | 📝 Planned |
+| [TASK-782](tasks/TASK-782-modulefile-ordinary-type-declaration-surface-integration.md) | ModuleFile ordinary type declaration surface integration | 6 | 📝 Planned |
+| [TASK-783](tasks/TASK-783-core-canonical-type-ids-and-module-semantic-summary-carriers.md) | Core canonical type IDs and ModuleSemanticSummary carriers | 8 | 📝 Planned |
+| [TASK-784](tasks/TASK-784-surface-to-core-type-metadata-lowering-and-source-anchors.md) | Surface-to-core type metadata lowering and source anchors | 6 | 📝 Planned |
+| [TASK-785](tasks/TASK-785-engine-summary-builder-and-export-collection-from-modulefile.md) | Engine summary builder and export collection from ModuleFile | 8 | 📝 Planned |
+| [TASK-786](tasks/TASK-786-import-pub-use-glob-visibility-and-opacity-summary-rules.md) | Import, pub-use, glob, visibility, and opacity summary rules | 7 | 📝 Planned |
+| [TASK-787](tasks/TASK-787-typeenv-two-pass-registration-from-semantic-summaries.md) | TypeEnv two-pass registration from semantic summaries | 8 | 📝 Planned |
+| [TASK-788](tasks/TASK-788-interface-and-associated-member-identity-summary-plumbing.md) | Interface and associated-member identity summary plumbing | 6 | 📝 Planned |
+| [TASK-789](tasks/TASK-789-legacy-type-snippet-scanner-quarantine-removal.md) | Legacy type-snippet scanner quarantine/removal | 5 | 📝 Planned |
+| [TASK-790](tasks/TASK-790-diagnostics-negative-tests-and-non-interference-coverage.md) | Diagnostics, negative tests, and non-interference coverage | 6 | 📝 Planned |
+| [TASK-791](tasks/TASK-791-spec-a-closeout-docs-examples-verification.md) | SPEC-A closeout, docs, examples, and verification | 4 | 📝 Planned |
+
+**Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-A to SPEC-057/PLAN-105, then audit current parser/core/engine/typechecker paths before implementation begins.
+**Track B (Parser/Core Semantic Substrate):** 20h. Route ordinary type declarations into ModuleFile, add core canonical IDs and summary carriers, and lower surface metadata into summaries with source anchors.
+**Track C (Engine Module Import/Export Path):** 20h. Build/export summaries from ModuleFile/core summaries, apply named/glob/pub-use visibility and opacity rules, and remove or fence legacy snippet scanning.
+**Track D (Typechecker Consumption and Identity Plumbing):** 14h. Consume summaries through TypeEnv two-pass declaration/validation/exposure and preserve current interface/associated-member identities without adding associated-family computation.
+**Track E (Diagnostics and Closeout):** 10h. Harden diagnostics, prove non-interference, reconcile docs/status/changelog, and run final verification.
+
+**Decision gates:**
+- D1: Ordinary `type` declarations must be parsed as ModuleFile definitions; snippet scanning is not the normal semantic path.
+- D2: `ash-core` owns canonical semantic summary carriers; `ash-engine` transports them and does not own type semantics.
+- D3: Public/private/crate visibility and opacity are summary invariants, not ad-hoc import behavior.
+- D4: TypeEnv consumes summaries with two-pass declaration/validation; imported public type identities must not depend on parse order.
+- D5: SPEC-A explicitly does not implement type functions, sealed domains, normalization, generalized associated families, or proposition solving.
+- D6: The phase must leave existing ADT/interface/workflow/capability/resource/do/comprehension behavior unchanged except for routing ordinary type metadata through the unified path.

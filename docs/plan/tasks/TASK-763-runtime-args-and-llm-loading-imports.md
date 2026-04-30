@@ -1,6 +1,6 @@
 # TASK-763: Runtime Args and LLM Loading Imports
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,8 +14,8 @@ Repair remaining std import/export drift around `runtime::Args` and `std/src/llm
 
 ## Dependencies
 
-- 📝 TASK-761: Stdlib Multiline Imports and Module Roots
-- 📝 TASK-762: Stdlib Workflow Exports and Relative Imports
+- ✅ TASK-761: Stdlib Multiline Imports and Module Roots
+- ✅ TASK-762: Stdlib Workflow Exports and Relative Imports
 
 ## Requirements
 
@@ -39,11 +39,18 @@ Repair remaining std import/export drift around `runtime::Args` and `std/src/llm
 3. Fix re-export/import behavior or std source imports.
 4. Verify affected std/example checks pass.
 
+## Outcome
+
+- `examples/entrypoint_args.ash` remains checkable through `runtime::{RuntimeError, Args}` re-exports from `std/src/runtime/mod.ash`.
+- `std/src/llm/loading.ash` now imports through supported public std surfaces (`types::{...}` and `io::{...}`) rather than orphan `path`/`fs` modules from the LLM directory.
+- The loading workflows use the current parser-supported `ret ...;` workflow body shape. Rich file/env/cache dispatch remains deferred until the parser/runtime surfaces for those workflow bodies and providers are canonicalized.
+- The std corpus harness now pins `std/src/llm/loading.ash` as expected-pass, raising the std baseline from 33/39 to 34/39.
+
 ## Verification Checklist
 
-- [ ] `cargo run -q -p ash-cli -- check examples/entrypoint_args.ash` passes.
-- [ ] `cargo run -q -p ash-cli -- check std/src/llm/loading.ash` passes.
-- [ ] Runtime std re-export tests pass.
-- [ ] Corpus harness expected-pass list is updated.
-- [ ] `cargo fmt --check` passes.
-- [ ] Independent review confirms std API claims are honest.
+- [x] `cargo run -q -p ash-cli -- check examples/entrypoint_args.ash` passes.
+- [x] `cargo run -q -p ash-cli -- check std/src/llm/loading.ash` passes.
+- [x] Runtime std re-export tests pass via `task_763_runtime_args_and_llm_loading_repair_targets_stay_checkable`.
+- [x] Corpus harness expected-pass list is updated.
+- [x] `cargo fmt --check` passes.
+- [x] Independent review confirms std API claims are honest.

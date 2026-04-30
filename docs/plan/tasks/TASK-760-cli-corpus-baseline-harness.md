@@ -1,6 +1,6 @@
 # TASK-760: CLI Corpus Baseline Harness
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -40,9 +40,9 @@ Add a reproducible corpus harness for `ash check` over std and example `.ash` fi
 
 ## Verification Checklist
 
-- [ ] `cargo test -p ash-cli --test stdlib_corpus_check -- --nocapture` passes.
-- [ ] `cargo test -p ash-cli --test example_corpus_check -- --nocapture` passes.
-- [ ] Harness uses the CLI check path or equivalent command implementation, not only module-file registration.
-- [ ] Known Phase 105/106 examples are expected-pass.
-- [ ] `cargo fmt --check` passes.
-- [ ] Independent review confirms the baseline is honest and not overfit.
+- [x] `cargo test -p ash-cli --test stdlib_corpus_check -- --nocapture` passes.
+- [x] `cargo test -p ash-cli --test example_corpus_check -- --nocapture` passes.
+- [x] Harness uses the CLI check path or equivalent command implementation, not only module-file registration.
+- [x] Known Phase 105/106 examples are expected-pass.
+- [x] `cargo fmt --check` passes.
+- [x] Independent review confirms the baseline is honest and not overfit.

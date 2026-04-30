@@ -1,3 +1,4 @@
+// REFERENCE-ONLY: Historical policy sketch; excluded from the Phase 107 executable example corpus until role/policy declarations and legacy workflow forms are current-syntax checkable.
 // Role-Based Access Control
 //
 // This workflow demonstrates role-based policies and permissions.

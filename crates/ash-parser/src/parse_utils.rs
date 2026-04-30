@@ -13,6 +13,8 @@ use winnow::token::take_while;
 use crate::input::{ParseInput, offset_to_span};
 use crate::token::Span;
 
+const LINE_COMMENT_PREFIXES: [&str; 2] = ["--", "//"];
+
 /// Check if a string is a reserved keyword.
 ///
 /// This is the canonical keyword list for the Ash language, synchronized with
@@ -336,27 +338,7 @@ pub fn skip_whitespace_and_comments(input: &mut ParseInput) {
         }
 
         // Check for line comment
-        if input.input.starts_with("--") {
-            let start = crate::input::current_span(input);
-            let mut text = String::new();
-            text.push_str("--");
-            input.state.pos.advance('-');
-            input.state.pos.advance('-');
-            let _ = input.input.next_slice(2);
-            let rest: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
-            if let Ok(r) = rest {
-                text.push_str(r);
-                for c in r.chars() {
-                    input.state.pos.advance(c);
-                }
-            }
-            let end = crate::input::current_span(input);
-            let span = Span::new(start.start, end.start, start.line, start.column);
-            input.state.comments.push_skipped_comment(Comment {
-                text,
-                kind: CommentKind::Line,
-                span,
-            });
+        if consume_line_comment(input) {
             continue;
         }
 
@@ -417,27 +399,7 @@ pub fn skip_horizontal_ws_and_comments(input: &mut ParseInput) {
         }
 
         // Check for line comment: consume up to (but not including) the newline
-        if input.input.starts_with("--") {
-            let start = crate::input::current_span(input);
-            let mut text = String::new();
-            text.push_str("--");
-            input.state.pos.advance('-');
-            input.state.pos.advance('-');
-            let _ = input.input.next_slice(2);
-            let rest: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
-            if let Ok(r) = rest {
-                text.push_str(r);
-                for c in r.chars() {
-                    input.state.pos.advance(c);
-                }
-            }
-            let end = crate::input::current_span(input);
-            let span = Span::new(start.start, end.start, start.line, start.column);
-            input.state.comments.push_skipped_comment(Comment {
-                text,
-                kind: CommentKind::Line,
-                span,
-            });
+        if consume_line_comment(input) {
             continue;
         }
 
@@ -481,6 +443,39 @@ pub fn skip_horizontal_ws_and_comments(input: &mut ParseInput) {
 
         break;
     }
+}
+
+fn consume_line_comment(input: &mut ParseInput) -> bool {
+    let Some(prefix) = LINE_COMMENT_PREFIXES
+        .iter()
+        .find(|prefix| input.input.starts_with(**prefix))
+        .copied()
+    else {
+        return false;
+    };
+
+    let start = crate::input::current_span(input);
+    let mut text = String::from(prefix);
+    for c in prefix.chars() {
+        input.state.pos.advance(c);
+    }
+    let _ = input.input.next_slice(prefix.len());
+    let rest: ModalResult<&str> = take_while(0.., |c: char| c != '\n').parse_next(input);
+    if let Ok(r) = rest {
+        text.push_str(r);
+        for c in r.chars() {
+            input.state.pos.advance(c);
+        }
+    }
+    let end = crate::input::current_span(input);
+    let span = Span::new(start.start, end.start, start.line, start.column);
+    input.state.comments.push_skipped_comment(Comment {
+        text,
+        kind: CommentKind::Line,
+        span,
+    });
+
+    true
 }
 
 #[cfg(test)]

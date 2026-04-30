@@ -172,6 +172,49 @@ fn test_valid_pub_fn_no_warning() {
 
 /// Test 6: The Phase 97 stdlib act module parses cleanly as a module file.
 #[test]
+fn test_check_module_file_re_export_only_module_root() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let child_path = dir.path().join("child.ash");
+    let root_path = dir.path().join("mod.ash");
+
+    std::fs::write(&child_path, "pub type Thing = Thing { id: Int };\n")
+        .expect("write child module");
+    std::fs::write(&root_path, "pub mod child;\npub use child::{Thing};\n")
+        .expect("write module root");
+
+    let engine = make_engine();
+    let result = engine
+        .check_module_file(&root_path)
+        .expect("re-export-only module root should check successfully");
+
+    assert!(
+        result.errors.is_empty(),
+        "re-export-only module root should have zero errors: {:?}",
+        result.errors,
+    );
+    assert_eq!(result.type_count, 0);
+    assert_eq!(result.fn_count, 0);
+}
+
+#[test]
+fn test_check_module_file_stdlib_io_module_root() {
+    let engine = make_engine();
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set");
+    let io_mod_path = PathBuf::from(manifest_dir)
+        .join("../../std/src/io/mod.ash")
+        .canonicalize()
+        .expect("io mod.ash should exist");
+
+    let result = engine.check_module_file(&io_mod_path);
+
+    assert!(
+        result.is_ok(),
+        "std/src/io/mod.ash should check as a module root, got {result:?}",
+    );
+}
+
+/// Test 7: The Phase 97 stdlib act module parses cleanly as a module file.
+#[test]
 fn test_check_module_file_stdlib_act_module() {
     let engine = make_engine();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set");

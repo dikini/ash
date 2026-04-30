@@ -1,6 +1,8 @@
 # Real-World Examples
 
-This directory contains practical, real-world workflow examples.
+This directory preserves practical, real-world workflow scenario sketches.
+
+Phase 107 classifies the `.ash` files in this directory as **reference-only**. They are useful scenario/design material, but they use broad historical OODA, role, policy, obligation, and action forms that are not current executable conformance syntax. They are excluded from the executable example corpus until rewritten against the current parser/typechecker surface.
 
 ## Files
 

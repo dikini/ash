@@ -1,7 +1,7 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_cli_help() {
@@ -98,4 +98,45 @@ fn test_check_rejects_capability_as_pure_function_syntax() {
     cmd.assert().failure().stdout(
         predicate::str::contains("capability").and(predicate::str::contains("not a function")),
     );
+}
+
+#[test]
+fn check_rejects_broken_dispatch_named_workflow_file_as_module() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("dispatch.ash");
+    fs::write(&path, "workflow broken( {\n  this is not valid ash\n}\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("ash").unwrap();
+    cmd.args(["check", path.to_str().unwrap()]);
+    cmd.assert()
+        .failure()
+        .stdout(predicate::str::contains("FAILED"));
+}
+
+#[test]
+fn check_rejects_broken_user_std_llm_dispatch_workflow_file_as_module() {
+    let dir = TempDir::new().unwrap();
+    let std_llm = dir.path().join("std").join("llm");
+    fs::create_dir_all(&std_llm).unwrap();
+    let path = std_llm.join("dispatch.ash");
+    fs::write(&path, "workflow broken( {\n  this is not valid ash\n}\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("ash").unwrap();
+    cmd.args(["check", path.to_str().unwrap()]);
+    cmd.assert()
+        .failure()
+        .stdout(predicate::str::contains("FAILED"));
+}
+
+#[test]
+fn check_rejects_broken_mod_named_workflow_file_as_module() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("mod.ash");
+    fs::write(&path, "workflow broken( {\n  this is not valid ash\n}\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("ash").unwrap();
+    cmd.args(["check", path.to_str().unwrap()]);
+    cmd.assert()
+        .failure()
+        .stdout(predicate::str::contains("FAILED"));
 }

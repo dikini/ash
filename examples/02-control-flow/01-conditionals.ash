@@ -1,44 +1,13 @@
-// Conditionals - Branching logic
+// Conditionals - current Ash if/then/else syntax.
 //
-// This workflow demonstrates conditional execution with if/then/else.
+// Ash workflow conditionals use `if <condition> then <workflow> else <workflow>`.
+// This example keeps the branches expression-free and returns a simple value so
+// it remains a checkable conformance example.
 
 workflow main {
     let score = 85
-    
-    // Simple if/then/else
-    let grade = if score >= 90 {
-        "A"
-    } else if score >= 80 {
-        "B"
-    } else if score >= 70 {
-        "C"
-    } else if score >= 60 {
-        "D"
-    } else {
-        "F"
-    }
-    
-    // Using conditionals in workflow control
-    if grade == "A" || grade == "B" {
-        ret {
-            score: score,
-            grade: grade,
-            message: "Great job!",
-            passed: true
-        }
-    } else if grade == "C" {
-        ret {
-            score: score,
-            grade: grade,
-            message: "You passed.",
-            passed: true
-        }
-    } else {
-        ret {
-            score: score,
-            grade: grade,
-            message: "Needs improvement.",
-            passed: false
-        }
-    }
+    let honors_cutoff = 90
+    let pass_cutoff = 70
+
+    if score >= honors_cutoff then ret "honors" else if score >= pass_cutoff then ret "pass" else ret "retry"
 }

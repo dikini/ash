@@ -1,6 +1,6 @@
 # TASK-765: Canonicalize Small Examples
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,8 +14,8 @@ Rewrite the small control-flow and IO examples to current Ash syntax so they bec
 
 ## Dependencies
 
-- 📝 TASK-760: CLI Corpus Baseline Harness
-- 📝 TASK-764: Parser Comments and Diagnostics
+- ✅ TASK-760: CLI Corpus Baseline Harness
+- ✅ TASK-764: Parser Comments and Diagnostics
 
 ## Requirements
 
@@ -38,19 +38,26 @@ Rewrite the small control-flow and IO examples to current Ash syntax so they bec
 
 ## TDD Steps
 
-1. Add the target files as expected-pass in the example corpus test and watch them fail.
-2. Repair examples incrementally with `ash check <file>` after each file.
-3. Keep examples small and current-syntax focused.
-4. Update corpus expected-pass list.
+1. ✅ Add the target files as expected-pass in the example corpus test and watch them fail.
+2. ✅ Repair examples incrementally with `ash check <file>` after each file.
+3. ✅ Keep examples small and current-syntax focused.
+4. ✅ Update corpus expected-pass list.
+
+## Outcome
+
+- Rewrote all four `examples/02-control-flow/*.ash` files to current parser-supported workflow syntax.
+- Rewrote the three `examples/03-io/*.ash` files as honest checkable demonstrations that name intended paths/payloads without claiming host filesystem effects.
+- Moved the seven repaired files into the example corpus expected-pass set.
+- Raised the example corpus baseline from `20/36` to `27/36` while leaving larger policy/real-world/reference sketches for TASK-766.
 
 ## Verification Checklist
 
-- [ ] `cargo run -q -p ash-cli -- check examples/02-control-flow/01-conditionals.ash` passes.
-- [ ] `cargo run -q -p ash-cli -- check examples/02-control-flow/02-foreach.ash` passes.
-- [ ] `cargo run -q -p ash-cli -- check examples/02-control-flow/03-sequential.ash` passes.
-- [ ] `cargo run -q -p ash-cli -- check examples/02-control-flow/04-sequential.ash` passes.
-- [ ] `cargo run -q -p ash-cli -- check examples/03-io/directory_listing.ash` passes.
-- [ ] `cargo run -q -p ash-cli -- check examples/03-io/file_read_write.ash` passes.
-- [ ] `cargo run -q -p ash-cli -- check examples/03-io/path_operations.ash` passes.
-- [ ] Example corpus test passes for the expanded expected-pass set.
-- [ ] Independent review confirms examples teach current syntax.
+- [x] `cargo run -q -p ash-cli -- check examples/02-control-flow/01-conditionals.ash` passes.
+- [x] `cargo run -q -p ash-cli -- check examples/02-control-flow/02-foreach.ash` passes.
+- [x] `cargo run -q -p ash-cli -- check examples/02-control-flow/03-sequential.ash` passes.
+- [x] `cargo run -q -p ash-cli -- check examples/02-control-flow/04-sequential.ash` passes.
+- [x] `cargo run -q -p ash-cli -- check examples/03-io/directory_listing.ash` passes.
+- [x] `cargo run -q -p ash-cli -- check examples/03-io/file_read_write.ash` passes.
+- [x] `cargo run -q -p ash-cli -- check examples/03-io/path_operations.ash` passes.
+- [x] Example corpus test passes for the expanded expected-pass set.
+- [x] Independent review confirms examples teach current syntax.

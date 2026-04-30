@@ -12,7 +12,7 @@
 
 ## Phase 107: Stdlib and Example Corpus Repair
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Depends on:** Phase 105 generalized typed do notation, Phase 106 monad comprehension syntax, existing std module loader.
 **Investigation baseline:** 2026-04-28 on `34f083f`.
 
@@ -22,7 +22,7 @@ Fresh `ash check` sweeps in the Phase 107 worktree found:
 
 | Corpus | Files | Passing | Failing |
 |--------|-------|---------|---------|
-| `std/src/**/*.ash` | 39 | 31 | 8 |
+| `std/src/**/*.ash` | 39 | 33 | 6 |
 | `examples/**/*.ash` | 36 | 19 | 17 |
 
 Passing modern syntax examples include all Phase 105 and Phase 106 examples. The broken corpus is not a Phase 105/106 regression by itself; failures cluster around std module/import resolution and older example syntax.
@@ -46,13 +46,24 @@ Passing modern syntax examples include all Phase 105 and Phase 106 examples. The
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-760](tasks/TASK-760-cli-corpus-baseline-harness.md) | Add std/example `ash check` corpus harness and baseline classification | Test/Scaffold | 4 | 📝 Planned |
-| [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Fix multiline imports and module-root re-export checking | Substrate | 6 | 📝 Planned |
-| [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Fix workflow export visibility plus relative/super imports | Substrate | 6 | 📝 Planned |
-| [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Repair `runtime::Args` and `llm/loading.ash` std import surfaces | Semantic | 5 | 📝 Planned |
-| [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Add `//` comment support and targeted parse diagnostics for common stale syntax | Parser/DX | 6 | 📝 Planned |
-| [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small control-flow and IO examples to current syntax | Examples | 6 | 📝 Planned |
-| [TASK-766](tasks/TASK-766-reference-example-policy-and-closeout.md) | Decide/canonicalize/mark large reference examples and close Phase 107 | Docs/Examples | 6 | 📝 Planned |
+| [TASK-760](tasks/TASK-760-cli-corpus-baseline-harness.md) | Add std/example `ash check` corpus harness and baseline classification | Test/Scaffold | 4 | ✅ Complete |
+| [TASK-761](tasks/TASK-761-stdlib-multiline-imports-and-module-roots.md) | Fix multiline imports and module-root re-export checking | Substrate | 6 | ✅ Complete |
+| [TASK-762](tasks/TASK-762-stdlib-workflow-export-and-relative-imports.md) | Fix workflow export visibility plus relative/super imports | Substrate | 6 | ✅ Complete |
+| [TASK-763](tasks/TASK-763-runtime-args-and-llm-loading-imports.md) | Repair `runtime::Args` and `llm/loading.ash` std import surfaces | Semantic | 5 | ✅ Complete |
+| [TASK-764](tasks/TASK-764-parser-comments-and-diagnostics.md) | Add `//` comment support and targeted parse diagnostics for common stale syntax | Parser/DX | 6 | ✅ Complete |
+| [TASK-765](tasks/TASK-765-canonicalize-small-examples.md) | Canonicalize small control-flow and IO examples to current syntax | Examples | 6 | ✅ Complete |
+| [TASK-766](tasks/TASK-766-reference-example-policy-and-closeout.md) | Decide/canonicalize/mark large reference examples and close Phase 107 | Docs/Examples | 6 | ✅ Complete |
+
+### Final Corpus State
+
+Phase 107 closes with every `examples/**/*.ash` file classified by the CLI corpus harness:
+
+| Corpus | Files | Passing | Expected failing | Reference-only |
+|--------|-------|---------|------------------|----------------|
+| `std/src/**/*.ash` | 39 | 34 | 5 | 0 |
+| `examples/**/*.ash` | 36 | 27 | 0 | 9 |
+
+The remaining std expected failures are the known LLM consumer and runtime supervisor semantic/parser gaps. The nine reference-only examples are large historical sketches marked in-file with `REFERENCE-ONLY` and excluded from executable conformance counts until their role/policy/OODA surfaces are re-canonicalized.
 
 Estimated total: 39 hours.
 

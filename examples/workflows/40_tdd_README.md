@@ -1,6 +1,8 @@
 # TDD Workflow Examples
 
-These examples demonstrate how Ash can orchestrate complex development workflows, specifically Test-Driven Development (TDD) processes involving multiple roles and iterative cycles.
+These examples preserve historical sketches of how Ash could orchestrate complex development workflows, specifically Test-Driven Development (TDD) processes involving multiple roles and iterative cycles.
+
+Phase 107 classifies `40_tdd_workflow.ash` and `40a_tdd_concrete_example.ash` as **reference-only**. They remain valuable process templates, but they use long-form historical role, policy, capability, obligation, and `observe ... with` syntax that is outside the current executable conformance surface.
 
 ## Files
 
@@ -234,11 +236,9 @@ To run these workflows, the following capabilities would need to be implemented:
 
 ## Running the Examples
 
-Currently, these are **outline workflows** that demonstrate the Ash language's capabilities for orchestrating complex processes. To actually run them:
+These files are **reference-only outline workflows** and are not currently executable with `ash run`. To turn them into executable conformance examples, first rewrite the source to the current parser/typechecker surface and then provide the required capability-provider/runtime wiring.
 
-1. Implement the required capability providers (see `../providers/`)
-2. Set up the runtime context with appropriate providers
-3. Run with: `ash run 40_tdd_workflow.ash -- '{"task_id": "TASK-001"}'`
+Do not use the preserved `40_tdd_workflow.ash` and `40a_tdd_concrete_example.ash` files as current syntax templates; use them as process-design references.
 
 ## Key Ash Features Demonstrated
 

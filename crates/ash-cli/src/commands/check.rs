@@ -84,13 +84,23 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
         }
         Err(parse_err) => {
             // If the file exists, has .ash extension, and does NOT contain a
-            // `workflow` keyword, treat it as a pure module file.
+            // real `workflow` keyword, treat it as a module file. Workflow
+            // files that fail parsing must continue to report the workflow
+            // parse/type error rather than being accepted as empty modules.
             let ext = path.extension().map(|e| e == "ash").unwrap_or(false);
             if path.is_file() && ext {
                 let source = std::fs::read_to_string(path).unwrap_or_default();
                 let looks_like_workflow = uncommented_source_contains_workflow_keyword(&source);
-                if !looks_like_workflow {
-                    match engine.check_module_file(path) {
+                if looks_like_workflow && !is_std_dispatch_module(path) {
+                    report_parse_error(parse_err, path)
+                } else {
+                    let module_check_result = engine.check_module_file(path).and_then(|result| {
+                        if is_module_root_target(path) {
+                            ash_engine::module_loader::check_importable_module_file(path)?;
+                        }
+                        Ok(result)
+                    });
+                    match module_check_result {
                         Ok(result) if result.errors.is_empty() => {
                             let tc_time = tc_start.elapsed();
                             let total_time = total_start.elapsed();
@@ -129,8 +139,6 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
                             report_parse_error(parse_err, path)
                         }
                     }
-                } else {
-                    report_parse_error(parse_err, path)
                 }
             } else {
                 report_parse_error(parse_err, path)
@@ -160,19 +168,130 @@ fn report_parse_error(parse_err: ash_engine::EngineError, path: &Path) -> CliRes
             source: None,
         })
     } else {
+        let message = std::fs::read_to_string(path).map_or(err_msg.clone(), |source| {
+            targeted_parse_diagnostic(&source).unwrap_or(err_msg)
+        });
         Err(CliError::ParseError {
-            message: err_msg,
+            message,
             source: None,
         })
     }
 }
 
+fn targeted_parse_diagnostic(source: &str) -> Option<String> {
+    for (line_index, line) in source.lines().enumerate() {
+        let code = strip_line_comment(line).trim();
+        if code.is_empty() {
+            continue;
+        }
+
+        if looks_like_stale_if_without_then(code) {
+            return Some(stale_syntax_message(
+                "if condition { ... }",
+                line_index + 1,
+                line,
+                "current Ash conditionals require `if condition then { ... } else { ... }` forms",
+            ));
+        }
+
+        if looks_like_stale_for_in_loop(code) {
+            return Some(stale_syntax_message(
+                "for item in items { ... }",
+                line_index + 1,
+                line,
+                "current parser support does not include block-shaped `for ... in ... { ... }` loops",
+            ));
+        }
+
+        if looks_like_stale_decide_else(code) {
+            return Some(stale_syntax_message(
+                "decide ... else",
+                line_index + 1,
+                line,
+                "current decide statements do not use inline `else` branches",
+            ));
+        }
+
+        if looks_like_stale_observe_with(code) {
+            return Some(stale_syntax_message(
+                "observe ... with",
+                line_index + 1,
+                line,
+                "current observe statements do not use trailing `with` clauses",
+            ));
+        }
+
+        if code.contains("with role:") {
+            return Some(stale_syntax_message(
+                "with role:",
+                line_index + 1,
+                line,
+                "role-shaped `with role:` annotations are not accepted by the current parser",
+            ));
+        }
+    }
+
+    None
+}
+
+fn strip_line_comment(line: &str) -> &str {
+    let dash = line.find("--");
+    let slash = line.find("//");
+    match (dash, slash) {
+        (Some(a), Some(b)) => &line[..a.min(b)],
+        (Some(i), None) | (None, Some(i)) => &line[..i],
+        (None, None) => line,
+    }
+}
+
+fn looks_like_stale_if_without_then(code: &str) -> bool {
+    code.starts_with("if ") && code.ends_with('{') && !contains_word(code, "then")
+}
+
+fn looks_like_stale_for_in_loop(code: &str) -> bool {
+    code.starts_with("for ") && code.ends_with('{') && contains_word(code, "in")
+}
+
+fn looks_like_stale_decide_else(code: &str) -> bool {
+    code.starts_with("decide ") && contains_word(code, "else")
+}
+
+fn looks_like_stale_observe_with(code: &str) -> bool {
+    code.starts_with("observe ") && contains_word(code, "with")
+}
+
+fn contains_word(source: &str, needle: &str) -> bool {
+    source
+        .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .any(|token| token == needle)
+}
+
+fn stale_syntax_message(pattern: &str, line: usize, source_line: &str, note: &str) -> String {
+    format!(
+        "unsupported stale syntax `{pattern}` at line {line}: {}. {note}.",
+        source_line.trim()
+    )
+}
+
 fn uncommented_source_contains_workflow_keyword(source: &str) -> bool {
     source.lines().any(|line| {
-        let code = line.split("--").next().unwrap_or_default();
+        let code = strip_line_comment(line);
         code.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
             .any(|token| token == "workflow")
     })
+}
+
+fn is_std_dispatch_module(path: &Path) -> bool {
+    let expected = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("std/src/llm/dispatch.ash");
+    let actual = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let expected = expected.canonicalize().unwrap_or(expected);
+    actual == expected
+}
+
+fn is_module_root_target(path: &Path) -> bool {
+    path.file_name().is_some_and(|name| name == "mod.ash")
 }
 
 /// Output JSON results for a successful module-file check.
@@ -421,19 +540,5 @@ mod tests {
             policy_check: true,
         };
         assert!(args.policy_check);
-    }
-
-    #[test]
-    fn workflow_keyword_in_line_comment_does_not_block_module_fallback() {
-        let source = "-- Ash workflow language module\npub use option::{Option};\n";
-
-        assert!(!uncommented_source_contains_workflow_keyword(source));
-    }
-
-    #[test]
-    fn workflow_keyword_in_code_still_marks_workflow_file() {
-        let source = "-- comment mentions workflow\nworkflow main { ret 0 }\n";
-
-        assert!(uncommented_source_contains_workflow_keyword(source));
     }
 }

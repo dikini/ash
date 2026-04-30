@@ -1,6 +1,6 @@
 # TASK-761: Stdlib Multiline Imports and Module Roots
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Fix std module-loader behavior for multiline `use` declarations and `pub mod` / 
 
 ## Dependencies
 
-- 📝 TASK-760: CLI Corpus Baseline Harness
+- ✅ TASK-760: CLI Corpus Baseline Harness
 
 ## Requirements
 
@@ -48,10 +48,17 @@ Fix std module-loader behavior for multiline `use` declarations and `pub mod` / 
 
 ## Verification Checklist
 
-- [ ] `cargo run -q -p ash-cli -- check std/src/llm/dispatch.ash` no longer fails on `use types::{`.
-- [ ] `cargo run -q -p ash-cli -- check std/src/io/mod.ash` passes.
-- [ ] Targeted module import tests pass.
-- [ ] `cargo check -p ash-engine -p ash-cli` passes.
-- [ ] `cargo clippy -p ash-engine -p ash-cli --all-targets --all-features -- -D warnings` passes.
-- [ ] `cargo fmt --check` passes.
-- [ ] Independent review confirms no import-parser overreach.
+- [x] `cargo run -q -p ash-cli -- check std/src/llm/dispatch.ash` no longer fails on `use types::{`.
+- [x] `cargo run -q -p ash-cli -- check std/src/io/mod.ash` passes.
+- [x] Targeted module import tests pass.
+- [x] `cargo check -p ash-engine -p ash-cli` passes.
+- [x] `cargo clippy -p ash-engine -p ash-cli --all-targets --all-features -- -D warnings` passes.
+- [x] `cargo fmt --check` passes.
+- [x] Independent review confirms no import-parser overreach.
+
+## Completion Notes
+
+- Implemented multiline ordinary import collection before workflow parsing and in module export cycle checks.
+- Added an importable module-file check path for `mod.ash`/stdlib module files so `std/src/io/mod.ash` and `std/src/llm/dispatch.ash` can pass the real `ash-cli check` path without accepting unrelated broken workflow examples as empty modules.
+- Added regression coverage for multiline nested imports and re-export-only module roots.
+- Updated the TASK-760 std corpus harness baseline from 31/39 pass to 33/39 pass.

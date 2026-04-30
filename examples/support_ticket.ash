@@ -1,3 +1,4 @@
+-- REFERENCE-ONLY: Historical support workflow sketch; excluded from the Phase 107 executable example corpus until observe-with, orient/propose, and policy-gated act forms are current-syntax checkable.
 -- Support Ticket Resolution Workflow
 -- Demonstrates: observation, analysis, policy decision, action
 

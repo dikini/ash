@@ -1,3 +1,4 @@
+// REFERENCE-ONLY: Historical real-world scenario sketch; excluded from the Phase 107 executable example corpus until the full OODA/policy workflow surface is current-syntax checkable.
 // Code Review Workflow
 //
 // A workflow for processing pull request reviews with policy enforcement.

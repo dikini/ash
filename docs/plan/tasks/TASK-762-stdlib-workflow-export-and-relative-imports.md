@@ -1,6 +1,6 @@
 # TASK-762: Stdlib Workflow Exports and Relative Imports
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -40,13 +40,20 @@ Fix module export/import resolution for std workflows and relative imports. This
 3. Implement workflow export collection and relative import normalization.
 4. Re-run affected std `ash check` commands.
 
+## Outcome
+
+- Plain `workflow` definitions in importable std modules are treated as exported callable signatures. If full workflow parsing succeeds, export collection preserves parsed metadata; if the body uses legacy syntax, collection falls back to header/signature parsing so consumers can resolve imports such as `dispatch::{complete}` and `dispatch::{complete_with_tools}`.
+- Relative imports normalize from the importing file's module directory for `super::`, `self::`, and `crate::` paths while preserving absolute std/local search behavior.
+- The change exposes later semantic issues honestly: `std/src/runtime/supervisor.ash` now reaches `unbound variable: completion`, and LLM consumers still hit their existing parser/body-shape issues rather than the earlier dispatch item-not-found blocker.
+- The example baseline moved `examples/entrypoint_args.ash` to expected-pass because `runtime::Args` import drift is no longer the blocker.
+
 ## Verification Checklist
 
-- [ ] `cargo run -q -p ash-cli -- check std/src/runtime/supervisor.ash` passes or reaches only a separately documented semantic issue.
-- [ ] `cargo run -q -p ash-cli -- check std/src/llm/conversation.ash` passes or reaches only a separately documented semantic issue.
-- [ ] `cargo run -q -p ash-cli -- check std/src/llm/router.ash` passes or reaches only a separately documented semantic issue.
-- [ ] `cargo run -q -p ash-cli -- check std/src/llm/supervised.ash` passes or reaches only a separately documented semantic issue.
-- [ ] `cargo run -q -p ash-cli -- check std/src/llm/tool_agent.ash` passes or reaches only a separately documented semantic issue.
-- [ ] Targeted module import tests pass.
-- [ ] `cargo clippy -p ash-engine -p ash-cli --all-targets --all-features -- -D warnings` passes.
-- [ ] Independent review confirms relative paths do not break absolute std imports.
+- [x] `cargo run -q -p ash-cli -- check std/src/runtime/supervisor.ash` passes or reaches only a separately documented semantic issue.
+- [x] `cargo run -q -p ash-cli -- check std/src/llm/conversation.ash` passes or reaches only a separately documented semantic issue.
+- [x] `cargo run -q -p ash-cli -- check std/src/llm/router.ash` passes or reaches only a separately documented semantic issue.
+- [x] `cargo run -q -p ash-cli -- check std/src/llm/supervised.ash` passes or reaches only a separately documented semantic issue.
+- [x] `cargo run -q -p ash-cli -- check std/src/llm/tool_agent.ash` passes or reaches only a separately documented semantic issue.
+- [x] Targeted module import tests pass.
+- [x] `cargo clippy -p ash-engine -p ash-cli --all-targets --all-features -- -D warnings` passes.
+- [x] Independent review confirms relative paths do not break absolute std imports.

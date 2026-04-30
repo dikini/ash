@@ -207,6 +207,16 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                         return CheckResult::success(workflow_null_type());
                     }
                     "ensures" if args.len() == 1 => {
+                        if env
+                            .lookup_variable("__workflow_intrinsic_context")
+                            .is_none()
+                            && expr_mentions_variable(&args[0], "result")
+                        {
+                            return CheckResult::error(ConstructorError::UnsupportedExpression {
+                                kind: "standalone workflow::ensures with open result postcondition requires a surrounding Workflow result target".to_string(),
+                                span: *span,
+                            });
+                        }
                         if let Err(err) = validate_postcondition_expr(&args[0]) {
                             return CheckResult::error(err);
                         }
@@ -1308,14 +1318,14 @@ fn elaborate_do_stmts(
         }),
         [DoStmt::Return { value, .. }] => Ok(dictionary_call(
             &dictionary.return_op,
-            vec![elaborate_surface_expr(value)?],
+            vec![elaborate_workflow_call_expr(value)?],
         )),
         [DoStmt::Let { name, value, .. }, rest @ ..] => Ok(CoreExpr::Let {
             pattern: CorePattern::Variable {
                 name: name.to_string(),
                 span: ash_core::Span::default(),
             },
-            expr: Box::new(elaborate_surface_expr(value)?),
+            expr: Box::new(elaborate_workflow_call_expr(value)?),
             body: Box::new(elaborate_do_stmts(rest, dictionary)?),
             span: ash_core::Span::default(),
         }),
@@ -1327,7 +1337,7 @@ fn elaborate_do_stmts(
             };
             Ok(dictionary_call(
                 &dictionary.bind_op,
-                vec![elaborate_surface_expr(value)?, continuation],
+                vec![elaborate_workflow_call_expr(value)?, continuation],
             ))
         }
         [DoStmt::WorkflowRequires { expr, .. }, rest @ ..]
@@ -1423,7 +1433,7 @@ impl WorkflowArtifactBuilder {
         match stmts {
             [DoStmt::Return { value, .. }] => {
                 let node = self.node();
-                let value = elaborate_surface_expr(value)?;
+                let value = elaborate_workflow_call_expr(value)?;
                 self.push_event(
                     node,
                     ProjectionEventKind::Unit {
@@ -1808,6 +1818,65 @@ fn dictionary_call(op: &crate::do_target::DoDictionaryOp, arguments: Vec<CoreExp
     }
 }
 
+fn elaborate_workflow_call_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
+    if let Expr::Call {
+        module: Some(module),
+        func,
+        args,
+        ..
+    } = expr
+    {
+        if module.as_ref() != "workflow" {
+            return elaborate_surface_expr(expr);
+        }
+        let arguments = match func.as_ref() {
+            "requires" | "ensures" => Vec::new(),
+            "from_proc" | "from_act" => args
+                .iter()
+                .map(elaborate_lift_argument_expr)
+                .collect::<Result<Vec<_>, _>>()?,
+            _ => args
+                .iter()
+                .map(elaborate_surface_expr)
+                .collect::<Result<Vec<_>, _>>()?,
+        };
+        return Ok(CoreExpr::Call {
+            func: func.to_string(),
+            module: Some("workflow".to_string()),
+            arguments,
+        });
+    }
+    elaborate_surface_expr(expr)
+}
+
+fn elaborate_lift_argument_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
+    if let Expr::DoBlock { target, stmts, .. } = expr {
+        let dictionary = match target.name.as_ref() {
+            "Act" => crate::do_target::DoDictionary {
+                target: crate::QualifiedName::root("Act"),
+                value_constructor: crate::QualifiedName::root("Act"),
+                return_op: crate::do_target::DoDictionaryOp::HiddenActReturn,
+                bind_op: crate::do_target::DoDictionaryOp::HiddenActBind,
+                tower_level: crate::do_target::DoTowerLevel::Effectful,
+            },
+            "Proc" => crate::do_target::DoDictionary {
+                target: crate::QualifiedName::root("Proc"),
+                value_constructor: crate::QualifiedName::root("Proc"),
+                return_op: crate::do_target::DoDictionaryOp::Ordinary(
+                    crate::QualifiedName::qualified(vec!["proc".to_string()], "unit"),
+                ),
+                bind_op: crate::do_target::DoDictionaryOp::Ordinary(
+                    crate::QualifiedName::qualified(vec!["proc".to_string()], "bind"),
+                ),
+                tower_level: crate::do_target::DoTowerLevel::Proc,
+            },
+            _ => return elaborate_surface_expr(expr),
+        };
+        return elaborate_do_stmts(stmts, &dictionary);
+    }
+    elaborate_surface_expr(expr)
+}
+
 fn elaborate_surface_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
     ash_parser::lower_expr(expr).map_err(|err| ConstructorError::UnsupportedExpression {
         kind: format!("failed to lower do-block subexpression after typed elaboration: {err}"),
@@ -1850,6 +1919,9 @@ fn check_do_block(
     }
 
     let mut block_env = env.clone();
+    if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow {
+        block_env.bind_variable("__workflow_intrinsic_context", Type::Null);
+    }
     let mut substitution = Substitution::new();
     let mut errors: Vec<ConstructorError> = Vec::new();
     let mut return_ty = Type::Null;
@@ -1983,6 +2055,30 @@ fn workflow_null_type() -> Type {
         name: crate::QualifiedName::root("Workflow"),
         args: vec![Type::Null],
         kind: crate::Kind::Type,
+    }
+}
+
+fn expr_mentions_variable(expr: &Expr, target: &str) -> bool {
+    match expr {
+        Expr::Variable { name, .. } => name.as_ref() == target,
+        Expr::Binary { left, right, .. } => {
+            expr_mentions_variable(left, target) || expr_mentions_variable(right, target)
+        }
+        Expr::Call { args, .. } => args.iter().any(|arg| expr_mentions_variable(arg, target)),
+        Expr::FieldAccess { base, .. } => expr_mentions_variable(base, target),
+        Expr::IndexAccess { base, index, .. } => {
+            expr_mentions_variable(base, target) || expr_mentions_variable(index, target)
+        }
+        Expr::FnDef { body, .. } => expr_mentions_variable(body, target),
+        Expr::DoBlock { stmts, .. } => stmts.iter().any(|stmt| match stmt {
+            DoStmt::Let { value, .. }
+            | DoStmt::Bind { value, .. }
+            | DoStmt::Return { value, .. } => expr_mentions_variable(value, target),
+            DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
+                expr_mentions_variable(expr, target)
+            }
+        }),
+        _ => false,
     }
 }
 

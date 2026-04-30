@@ -1,3 +1,6 @@
+use ash_core::ast::Expr as CoreExpr;
+use ash_parser::input::new_input;
+use ash_parser::parse_expr::expr as parse_surface_expr;
 use ash_parser::surface::{BinaryOp, DoStmt, DoTarget, Expr, Literal};
 use ash_parser::token::Span;
 use ash_typeck::check_expr::{WorkflowForm, check_expr, elaborate_typed_do_block};
@@ -25,6 +28,19 @@ fn call(module: Option<&str>, func: &str, args: Vec<Expr>) -> Expr {
 }
 fn workflow_call(func: &str, args: Vec<Expr>) -> Expr {
     call(Some("workflow"), func, args)
+}
+fn parsed_expr(src: &str) -> Expr {
+    let mut input = new_input(src);
+    let parsed = parse_surface_expr(&mut input).expect("expression should parse");
+    assert_eq!(*input.input.as_ref(), "", "parser left trailing input");
+    parsed
+}
+fn do_block_for(target_name: &str, stmts: Vec<DoStmt>) -> Expr {
+    Expr::DoBlock {
+        target: target(target_name),
+        stmts,
+        span: span(),
+    }
 }
 fn fn1(name: &str, body: Expr) -> Expr {
     Expr::FnDef {
@@ -83,6 +99,26 @@ fn error_text(result: ash_typeck::check_expr::CheckResult) -> String {
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join("\n")
+}
+fn contains_workflow_call_with_arity(expr: &CoreExpr, func: &str, arity: usize) -> bool {
+    match expr {
+        CoreExpr::Call {
+            func: call_func,
+            module,
+            arguments,
+        } => {
+            (call_func == func && module.as_deref() == Some("workflow") && arguments.len() == arity)
+                || arguments
+                    .iter()
+                    .any(|arg| contains_workflow_call_with_arity(arg, func, arity))
+        }
+        CoreExpr::Let { expr, body, .. } => {
+            contains_workflow_call_with_arity(expr, func, arity)
+                || contains_workflow_call_with_arity(body, func, arity)
+        }
+        CoreExpr::FnDef { body, .. } => contains_workflow_call_with_arity(body, func, arity),
+        _ => false,
+    }
 }
 
 #[test]
@@ -144,6 +180,63 @@ fn ordinary_workflow_unit_bind_then_preserve_forms_in_workflow_context() {
 }
 
 #[test]
+fn ordinary_workflow_from_proc_and_from_act_preserve_lift_forms_in_workflow_context() {
+    let env = TypeEnv::with_builtin_types();
+    let expr = do_block(vec![
+        bind_stmt(
+            "p",
+            workflow_call(
+                "from_proc",
+                vec![do_block_for("Proc", vec![ret(int_lit(10))])],
+            ),
+        ),
+        bind_stmt(
+            "a",
+            workflow_call(
+                "from_act",
+                vec![do_block_for("Act", vec![ret(int_lit(20))])],
+            ),
+        ),
+        ret(var("a")),
+    ]);
+
+    let checked = check_expr(&env, &expr);
+    assert!(
+        checked.is_ok(),
+        "explicit workflow lifts should type-check: {checked:?}"
+    );
+    assert_eq!(checked.ty, computation_type("Workflow", Type::Int));
+
+    let elaborated = elaborate_typed_do_block(&env, &expr).expect("elaborates");
+    assert!(
+        contains_workflow_call_with_arity(&elaborated.expr, "from_proc", 1),
+        "workflow::from_proc core call must retain its Proc argument: {:?}",
+        elaborated.expr
+    );
+    assert!(
+        contains_workflow_call_with_arity(&elaborated.expr, "from_act", 1),
+        "workflow::from_act core call must retain its Act argument: {:?}",
+        elaborated.expr
+    );
+
+    let artifact = elaborated.workflow_artifact.expect("artifact");
+    let WorkflowForm::Bind { source, next, .. } = artifact.form else {
+        panic!("expected first lift bind: {artifact:?}");
+    };
+    assert!(
+        matches!(*source, WorkflowForm::FromProc { .. }),
+        "workflow::from_proc must preserve a FromProc artifact: {source:?}"
+    );
+    let WorkflowForm::Bind { source, .. } = *next else {
+        panic!("expected second lift bind: {next:?}");
+    };
+    assert!(
+        matches!(*source, WorkflowForm::FromAct { .. }),
+        "workflow::from_act must preserve a FromAct artifact: {source:?}"
+    );
+}
+
+#[test]
 fn ordinary_contract_intrinsic_calls_use_classifier_without_denotable_contract_values() {
     let env = TypeEnv::with_builtin_types();
     let expr = do_block(vec![
@@ -178,6 +271,88 @@ fn ordinary_contract_intrinsic_calls_use_classifier_without_denotable_contract_v
         event.kind,
         ash_core::workflow_carrier::ProjectionEventKind::Ensures { .. }
     )));
+}
+
+#[test]
+fn ordinary_any_role_requirement_call_preserves_or_role_contract_semantics() {
+    let env = TypeEnv::with_builtin_types();
+    let expr = do_block(vec![
+        bind_stmt(
+            "_",
+            workflow_call("requires", vec![parsed_expr("any_role([admin, reviewer])")]),
+        ),
+        ret(int_lit(1)),
+    ]);
+
+    let checked = check_expr(&env, &expr);
+    assert!(
+        checked.is_ok(),
+        "workflow::requires(any_role([...])) should type-check via the raw contract classifier: {checked:?}"
+    );
+    let artifact = elaborate_typed_do_block(&env, &expr)
+        .expect("elaborates")
+        .workflow_artifact
+        .expect("artifact");
+    assert!(artifact.projection_events.iter().any(|event| matches!(
+        &event.kind,
+        ash_core::workflow_carrier::ProjectionEventKind::Requires {
+            requirement: ash_core::workflow_contract::Requirement::AnyRole(policy)
+        } if policy.roles == ["admin", "reviewer"]
+    )));
+}
+
+#[test]
+fn workflow_contract_intrinsics_reject_partial_stored_and_prebuilt_contract_value_misuse() {
+    let env = TypeEnv::with_builtin_types();
+
+    let partial = workflow_call("requires", vec![]);
+    let partial_text = error_text(check_expr(&env, &partial));
+    assert!(
+        partial_text.contains("expects 1 arguments")
+            || partial_text.contains("arity")
+            || partial_text.contains("unknown function 'workflow::requires'"),
+        "{partial_text}"
+    );
+
+    let stored_intrinsic = do_block(vec![
+        DoStmt::Let {
+            name: "req".into(),
+            value: Box::new(var("workflow::requires")),
+            span: span(),
+        },
+        ret(int_lit(1)),
+    ]);
+    let stored_text = error_text(check_expr(&env, &stored_intrinsic));
+    assert!(
+        stored_text.contains("unbound variable") || stored_text.contains("unknown"),
+        "{stored_text}"
+    );
+
+    let mut env_with_fake_contract_value = TypeEnv::with_builtin_types();
+    env_with_fake_contract_value.bind_variable("prebuilt", Type::Bool);
+    let prebuilt = do_block(vec![
+        bind_stmt("_", workflow_call("requires", vec![var("prebuilt")])),
+        ret(int_lit(1)),
+    ]);
+    let prebuilt_text = error_text(check_expr(&env_with_fake_contract_value, &prebuilt));
+    assert!(
+        prebuilt_text.contains("unsupported workflow requires contract expression"),
+        "{prebuilt_text}"
+    );
+}
+
+#[test]
+fn standalone_open_workflow_ensures_is_rejected_without_workflow_result_target() {
+    let env = TypeEnv::with_builtin_types();
+    let standalone = workflow_call(
+        "ensures",
+        vec![binary(var("result"), BinaryOp::Gt, int_lit(0))],
+    );
+    let text = error_text(check_expr(&env, &standalone));
+    assert!(
+        !text.is_empty(),
+        "standalone workflow::ensures(result > 0) must not be accepted without a suffix workflow result target"
+    );
 }
 
 #[test]

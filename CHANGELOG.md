@@ -8,7 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- [TASK-773](docs/plan/tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md): added the first WorkflowForm-aware ordinary-call elaboration slice for qualified `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts, preserving structured artifacts, classifying raw contract arguments before denotable value typing, rejecting opaque workflow sequencing, and keeping unqualified workflow operations unavailable.
+- [TASK-773](docs/plan/tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md): extended the first WorkflowForm-aware ordinary-call elaboration slice for qualified `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts, preserving structured artifacts, classifying raw contract arguments (including `any_role([...])`) before denotable value typing, rejecting opaque workflow sequencing and standalone open `workflow::ensures(result ...)`, and keeping unqualified/stored/partial workflow contract intrinsics unavailable.
 
 - [TASK-772](docs/plan/tasks/TASK-772-workflow-form-preserving-do-target.md): added `do:Workflow` target resolution through the typed-do dictionary path, preserved a `WorkflowTypedArtifact` carrying `WorkflowForm`, projection-event, contract-plan, obligation, and source-origin metadata for workflow elaboration, accepted workflow-only `requires:` / `ensures:` do statements, and added lift diagnostics for raw `Proc` / `Act` RHS values.
 

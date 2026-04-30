@@ -1,8 +1,8 @@
 # TASK-773: Workflow Algebra and Contract Intrinsic Call Elaboration
 
-## Status: 🚧 First slice implemented
+## Status: 🚧 Expanded first slice implemented
 
-Implemented first slice covers qualified ordinary-call preservation for `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts. `workflow::from_proc` / `workflow::from_act` retain the TASK-772 explicit lift artifact path; full opaque Proc/Act summary validation, imported workflow summary recovery, standalone open-ensures finalization, and broader composition/import/export cases remain follow-up work.
+Implemented first slice covers qualified ordinary-call preservation for `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts. Focused coverage now includes explicit Proc/Act lift artifact preservation, direct `any_role([...])` contract classifier semantics, stored/partial/prebuilt contract intrinsic misuse rejection, and standalone open `workflow::ensures(result ...)` rejection. Full opaque Proc/Act summary validation, imported workflow summary recovery, broader standalone closed-postcondition policy, and broader composition/import/export cases remain follow-up work.
 
 ## References
 
@@ -56,13 +56,13 @@ Implement WorkflowForm-aware ordinary expression elaboration for compiler-known 
 
 ## Verification
 
-- [ ] `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, and `workflow::from_act` ordinary calls elaborate to preserved WorkflowForm artifacts in Workflow construction contexts.
-- [ ] `workflow::bind` continuations are checked under binder scope and reject continuations that cannot yield a Workflow form.
-- [ ] Direct contract intrinsic calls elaborate to the same WorkflowForm events as statement forms.
-- [ ] Contract arguments are classified before ordinary value typing as contract values.
-- [ ] `Requirement` / `OpenPostcondition` remain non-denotable.
+- [x] `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, and `workflow::from_act` ordinary calls elaborate to preserved WorkflowForm artifacts in Workflow construction contexts.
+- [x] `workflow::bind` continuations are checked under binder scope and reject continuations that cannot yield a Workflow form.
+- [x] Direct contract intrinsic calls elaborate to the same WorkflowForm events as statement forms.
+- [x] Contract arguments are classified before ordinary value typing as contract values.
+- [x] `Requirement` / `OpenPostcondition` remain non-denotable.
 - [ ] Named/local/imported opaque Workflow values without a live artifact or public summary are rejected for bind/then/use, while named/local values with registered artifacts are accepted.
-- [ ] Qualified `workflow::...` builtins resolve; unqualified operation names are not implicitly imported by `do:Workflow`.
-- [ ] Standalone unresolved `ensures` rejects with a targeted diagnostic.
-- [ ] Existing ordinary function-call behavior does not regress.
-- [ ] CHANGELOG.md updated.
+- [x] Qualified `workflow::...` builtins resolve; unqualified operation names are not implicitly imported by `do:Workflow`.
+- [x] Standalone unresolved `ensures` rejects with a targeted diagnostic.
+- [x] Existing ordinary function-call behavior does not regress.
+- [x] CHANGELOG.md updated.

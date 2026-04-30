@@ -79,7 +79,7 @@ pub use type_env::{
     AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
     CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo,
     ProvenanceSourceKind, ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract,
-    TypeEnv,
+    TypeEnv, WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
 };
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};

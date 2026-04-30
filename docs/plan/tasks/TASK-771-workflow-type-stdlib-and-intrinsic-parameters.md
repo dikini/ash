@@ -1,6 +1,6 @@
 # TASK-771: Workflow Type, Qualified Builtins, Shared Carriers, and Intrinsic Parameters
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -16,8 +16,8 @@ Register public `Workflow<A>`, add the first-slice compiler-known qualified `wor
 
 ## Dependencies
 
-- 📝 TASK-769: Workflow form, projection, obligation, and adapter semantics.
-- 📝 TASK-770: contract surface/classifier decisions that define non-denotable intrinsic arguments.
+- ✅ TASK-769: Workflow form, projection, obligation, and adapter semantics.
+- ✅ TASK-770: contract surface/classifier decisions that define non-denotable intrinsic arguments.
 
 ## Requirements
 
@@ -45,12 +45,12 @@ Register public `Workflow<A>`, add the first-slice compiler-known qualified `wor
 
 ## Verification
 
-- [ ] `Workflow<A>` resolves as a unary type constructor and wrong-arity `Workflow` uses are rejected by the type-constructor arity path.
-- [ ] All seven workflow operations are registered as qualified compiler-known builtins.
-- [ ] Unqualified workflow operation names are not implicitly imported by `do:Workflow`.
-- [ ] `Requirement` and `OpenPostcondition` are non-denotable in Ash source.
-- [ ] Shared carriers live in `ash-core`, are aligned with `WorkflowForm`, and do not expose `Workflow<C, A>`.
-- [ ] Explicit lifts work and emit delayed lower-contract coverage obligations.
-- [ ] Implicit lifts fail.
-- [ ] Existing `Act`/`Proc` operations still pass regression tests.
-- [ ] CHANGELOG.md updated.
+- [x] `Workflow<A>` resolves as a unary type constructor and wrong-arity `Workflow` uses are rejected by the type-constructor arity path.
+- [x] All seven workflow operations are registered as qualified compiler-known builtins.
+- [x] Unqualified workflow operation names are not implicitly imported by `do:Workflow`.
+- [x] `Requirement` and `OpenPostcondition` are non-denotable in Ash source.
+- [x] Shared carriers live in `ash-core`, are aligned with `WorkflowForm`, and do not expose `Workflow<C, A>`.
+- [x] Explicit lift signatures and delayed lower-contract coverage summary carriers are present.
+- [x] No implicit Act/Proc-to-Workflow conversion is registered in the type environment.
+- [x] Existing `Act`/`Proc` operations still pass regression tests.
+- [x] CHANGELOG.md updated.

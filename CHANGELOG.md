@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-771](docs/plan/tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md): registered public unary `Workflow<A>`, added qualified compiler-known `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, and `workflow::from_act` signatures, added typed intrinsic descriptors for non-denotable `workflow::requires` / `workflow::ensures` parameters, introduced shared `ash-core` workflow carriers aligned with SPEC-056 projection/alignment/contract/evidence shapes, and covered namespace/arity/non-denotable intrinsic behavior plus carrier shape with focused typechecker tests.
+
 - [TASK-770](docs/plan/tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md): added the Phase 108 parser/substrate slice for raw `requires:` / `ensures:` do statements, source-ordered `WorkflowHeaderEvent`s with legacy aggregate views, an `any_role` OR-role contract carrier, a focused contract classifier skeleton, and cross-crate visitor/exhaustiveness handling that preserves workflow contract statements for later elaboration instead of silently erasing them.
 
 - [TASK-769](docs/plan/tasks/TASK-769-workflow-form-projection-semantics.md): completed the Phase 108 docs-only semantic gate by verifying SPEC-056 freezes the implementation-grade `WorkflowForm`, projection/alignment carriers, source-ordered `WorkflowHeaderEvent`, non-denotable contract argument classes, `any_role` OR semantics, `OpenPostcondition` targeting, WorkflowForm-preserving typed-do artifact, conservative obligation discharge, equality strata, and `legacy_body_as_proc_summary` adapter contract before Rust carrier work.

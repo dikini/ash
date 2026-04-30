@@ -16,6 +16,7 @@ pub mod small_step;
 pub mod stream;
 pub mod value;
 pub mod visualize;
+pub mod workflow_carrier;
 pub mod workflow_contract;
 
 // Property testing helpers available when proptest feature enabled

@@ -548,7 +548,7 @@ impl WorkflowFormLowering {
             } => ContractPlan::EnsuresContract {
                 node: *node,
                 postcondition: postcondition.clone(),
-                target: PostconditionTarget::DelayedWorkflowResult,
+                target: PostconditionTarget::WorkflowResult,
             },
             WorkflowForm::Scope { scope, body, .. } => ContractPlan::ScopeContract {
                 scope: scope.clone(),

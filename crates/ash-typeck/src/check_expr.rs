@@ -1744,7 +1744,7 @@ impl WorkflowArtifactBuilder {
             } => ContractPlan::EnsuresContract {
                 node: *node,
                 postcondition: postcondition.clone(),
-                target: PostconditionTarget::DelayedWorkflowResult,
+                target: PostconditionTarget::WorkflowResult,
             },
             WorkflowForm::FromProc { node, summary } => ContractPlan::LowerProcContract {
                 node: *node,

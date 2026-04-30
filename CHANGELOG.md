@@ -8,7 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added the first warning-plumbing slice for deprecated legacy workflow header declarations. Accepted legacy workflow headers now carry non-fatal `ash-engine` workflow warnings and `ash check` surfaces `[NEW] DeprecatedLegacyWorkflowDeclaration` without failing otherwise-successful checks; legacy WorkflowForm translation remains deferred.
+- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added a conservative `ash-engine` legacy workflow adapter slice that translates `WorkflowDef.header_events` `requires:` / `ensures:` clauses into the shared `WorkflowForm` lowering path in source order, preserves `any_role([...])` as a single OR-role requirement, targets `ensures` at the successful workflow result, and represents the legacy body honestly as an opaque `FromProc` summary anchored to `legacy_body_as_proc_summary`; full body-summary adaptation and legacy/first-class equivalence coverage remain deferred.
+
+- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added the first warning-plumbing slice for deprecated legacy workflow header declarations. Accepted legacy workflow headers now carry non-fatal `ash-engine` workflow warnings and `ash check` surfaces `[NEW] DeprecatedLegacyWorkflowDeclaration` without failing otherwise-successful checks.
 
 - [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added an `ash-engine` first-class Workflow projection seam that accepts only `ash-core::workflow_carrier::WorkflowProcProjection<Value>`, forwards supported projections through the public `ash-interp` boundary, and preserves the named `FirstClassWorkflowProjectionExecutionUnsupported` diagnostic for unsupported projection shapes without adding parser/typechecker-private runtime inputs.
 

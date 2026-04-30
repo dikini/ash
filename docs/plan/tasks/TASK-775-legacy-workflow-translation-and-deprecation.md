@@ -1,8 +1,8 @@
 # TASK-775: Legacy Workflow Translation and Deprecation
 
-## Status: 🛠️ In Progress (first warning-plumbing slice landed)
+## Status: 🛠️ In Progress (warning plumbing + conservative header adapter slices landed)
 
-> Slice note: this task is not complete. The current slice only audits/extends the non-fatal warning path enough for accepted legacy workflow header declarations to carry and surface `[NEW] DeprecatedLegacyWorkflowDeclaration` through `ash check` without failing otherwise-successful checks. Full WorkflowForm translation, source-origin spans/rewrite hints, header-event semantic lowering, and legacy-body adapter work remain deferred.
+> Slice note: this task is not complete. Landed slices audit/extend the non-fatal warning path enough for accepted legacy workflow header declarations to carry and surface `[NEW] DeprecatedLegacyWorkflowDeclaration` through `ash check` without failing otherwise-successful checks, and add a conservative `ash-engine` adapter that translates legacy `requires:` / `ensures:` header events into the shared `WorkflowForm` path in source order. The body is still represented by an opaque `FromProc` placeholder anchored to `legacy_body_as_proc_summary`; full body-summary adaptation, source-origin span/rewrite fidelity, admission/resource header lowering, and legacy/first-class equivalence coverage remain deferred.
 
 ## References
 
@@ -57,9 +57,12 @@ Deprecate the current workflow declaration surface while preserving its semantic
 
 - [x] Deprecated declarations warn but do not error solely because of deprecation for the accepted legacy header events covered by this slice.
 - [x] Warning carrier/API support has been audited or extended, and `ash check` surfaces deprecation warnings without failing when no errors exist.
-- [ ] Legacy declarations lower to the same WorkflowForm path as first-class workflows.
-- [ ] Source-ordered header events are preserved in translation.
-- [ ] Legacy body summaries enter through `FromProc(...)` with lower coverage obligations.
+- [x] Legacy `requires:` / `ensures:` header events lower through the same shared `WorkflowForm` lowering/projection substrate used by first-class workflow forms.
+- [x] Source-ordered legacy `requires:` / `ensures:` header events are preserved in translation.
+- [x] `any_role([...])` remains a single OR-role requirement event in the translated form.
+- [x] Translated legacy `ensures:` clauses target the successful workflow result.
+- [x] Legacy body placeholder enters through `FromProc(legacy_body_as_proc_summary)` for this conservative slice.
+- [ ] Full legacy body summaries enter through `FromProc(...)` with lower coverage obligations.
 - [ ] Equivalent legacy and first-class forms produce equivalent public summaries/events.
 - [ ] No separate legacy runtime/typechecking semantic path is introduced.
 - [ ] CHANGELOG.md updated.

@@ -31,7 +31,7 @@ Implement WorkflowForm-aware ordinary expression elaboration for compiler-known 
 8. For `workflow::requires(expr)` and `workflow::ensures(expr)`, capture the raw argument expression before ordinary argument typechecking/name resolution of a `Requirement` / `OpenPostcondition` parameter.
 9. Classify contract arguments with the same classifier used by statement forms and legacy header events.
 10. Produce the same `Requires` / `Ensures` WorkflowForm nodes and projection events as statement forms, modulo source-origin metadata.
-11. Named/local/imported `Workflow<A>` values used by these operations must carry or reference a live `WorkflowTypedArtifact` or public `WorkflowContractSummary` / workflow summary. Reject bind/then/use of opaque `Workflow<A>` values lacking a form or public summary.
+11. Named/local/imported `Workflow<A>` values used by these operations must carry or reference a live `WorkflowTypedArtifact` or public `WorkflowContractSummary` / workflow summary. Use the `TypeEnv` sidecar, artifact registry, or equivalent typed binding metadata introduced for `do:Workflow` so named/local values can find their artifact; reject bind/then/use of opaque `Workflow<A>` values lacking a form or public summary.
 12. Reject higher-order use, partial application, storing intrinsic names as values, passing prebuilt `Requirement` variables, or exporting/importing contract argument values.
 13. Standalone open `workflow::ensures(Q)` without a suffix workflow result target must reject at WorkflowForm finalization unless `Q` is explicitly closed and SPEC-056 allows that narrow case.
 14. Qualified `workflow::...` names must resolve in the same compiler-known namespace style as `proc::...` names. Unqualified `unit`, `bind`, `then`, `from_proc`, `from_act`, `requires`, and `ensures` must not be made available merely because the surrounding target is `Workflow`.
@@ -48,7 +48,7 @@ Implement WorkflowForm-aware ordinary expression elaboration for compiler-known 
 8. Write negative tests for higher-order/stored/partial intrinsic use and ordinary first-class `Requirement` / `OpenPostcondition` values.
 9. Write negative tests for standalone unresolved open `ensures`.
 10. Write namespace tests proving qualified `workflow::...` names resolve like qualified `proc::...` names and unqualified workflow operations are not implicitly imported by `do:Workflow`.
-11. Write opaque-summary tests for named/local/imported `Workflow`, `Proc`, or `Act` values that lack required artifacts/summaries.
+11. Write opaque-summary tests for named/local/imported `Workflow`, `Proc`, or `Act` values that lack required artifacts/summaries, plus positive named/local `Workflow<A>` tests that recover a registered live artifact.
 12. Implement WorkflowForm-aware call recognition and event/artifact construction.
 13. Run focused typechecker/elaboration tests.
 
@@ -59,7 +59,7 @@ Implement WorkflowForm-aware ordinary expression elaboration for compiler-known 
 - [ ] Direct contract intrinsic calls elaborate to the same WorkflowForm events as statement forms.
 - [ ] Contract arguments are classified before ordinary value typing as contract values.
 - [ ] `Requirement` / `OpenPostcondition` remain non-denotable.
-- [ ] Named/local/imported opaque Workflow values without a live artifact or public summary are rejected for bind/then/use.
+- [ ] Named/local/imported opaque Workflow values without a live artifact or public summary are rejected for bind/then/use, while named/local values with registered artifacts are accepted.
 - [ ] Qualified `workflow::...` builtins resolve; unqualified operation names are not implicitly imported by `do:Workflow`.
 - [ ] Standalone unresolved `ensures` rejects with a targeted diagnostic.
 - [ ] Existing ordinary function-call behavior does not regress.

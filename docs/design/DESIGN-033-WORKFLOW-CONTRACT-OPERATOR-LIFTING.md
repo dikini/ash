@@ -3,17 +3,18 @@
 **Status:** Draft
 **Date:** 2026-04-29
 **Related:** DESIGN-030, DESIGN-031, SPEC-047, SPEC-048, SPEC-049, SPEC-050, SPEC-054, SPEC-056, PLAN-104, NOTE-007
+**Superseded by:** SPEC-056 for the normative Phase 108 first-class workflow carrier semantics.
 
 ## 1. Summary
 
-Workflow should be modeled as a contract-indexed process carrier:
+Workflow should be modeled as a synchronized, contract-indexed process carrier:
 
 ```text
-Workflow<A> = WorkflowContract<A> + Proc<A>
+Workflow<A> = synchronized_product(Proc<A>, WorkflowContract<A>) via WorkflowForm<A>
 WorkflowContract<A> = AdmissionEnvelope + ContractPlan<A>
 ```
 
-`Proc<A>` owns the computational/process behavior. `Workflow<A>` owns the governed version of that behavior: admission, authority envelope, staged contract plan, obligations, reporting, failure-boundary behavior, and coverage evidence.
+`Proc<A>` owns the computational/process behavior. `WorkflowForm<A>` is the source of truth that synchronizes that behavior with the governed workflow view: admission, authority envelope, staged contract plan, obligations, reporting, failure-boundary behavior, and coverage evidence.
 
 The central design rule is:
 

@@ -21,7 +21,7 @@ Register public `Workflow<A>`, add the first-slice compiler-known qualified `wor
 
 ## Requirements
 
-1. Register `Workflow` as a builtin unary public type constructor in `crates/ash-typeck/src/type_env.rs` without exposing `Workflow<C, A>`.
+1. Register `Workflow` as a builtin unary public type constructor in `crates/ash-typeck/src/type_env.rs` without exposing `Workflow<C, A>`. Update `TypeEnv::check_type_constructor_arity` or its current equivalent so `Workflow` receives the same arity protection as `Proc` / `P`.
 2. Add shared Rust carriers in `ash-core` for `WorkflowForm`, `WorkflowNodeId`, `ProjectionEvent`, `WorkflowContract`, `AdmissionEnvelope`, `ContractPlan`, `CoverageEvidence`, `CoverageError`, public workflow summary types, and lower summary carriers needed by coverage, aligned with TASK-769/SPEC-056. Typechecker-private helper artifacts may wrap these, but shared semantic/runtime definitions must not live only in `ash-typeck`.
 3. Add or expose compiler-known qualified builtins `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` with signatures from SPEC-056.
 4. Register `workflow::...` names in the same qualified builtin namespace style as `proc::...` names. Do not implicitly import unqualified `unit`, `bind`, `then`, `from_proc`, `from_act`, `requires`, or `ensures` when `do:Workflow` is selected.
@@ -45,7 +45,7 @@ Register public `Workflow<A>`, add the first-slice compiler-known qualified `wor
 
 ## Verification
 
-- [ ] `Workflow<A>` resolves as a unary type constructor.
+- [ ] `Workflow<A>` resolves as a unary type constructor and wrong-arity `Workflow` uses are rejected by the type-constructor arity path.
 - [ ] All seven workflow operations are registered as qualified compiler-known builtins.
 - [ ] Unqualified workflow operation names are not implicitly imported by `do:Workflow`.
 - [ ] `Requirement` and `OpenPostcondition` are non-denotable in Ash source.

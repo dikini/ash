@@ -27,7 +27,7 @@ Add the parser/surface substrate for first-class workflow contract syntax and de
 5. Extend `crates/ash-parser/src/surface.rs::WorkflowDef` with a source-ordered `header_events: Vec<WorkflowHeaderEvent>` or equivalent. Existing `plays_roles`, `capabilities`, `owned_resources`, `used_bindings`, and `contract` fields may remain as compatibility/derived views.
 6. Extend `crates/ash-parser/src/parse_workflow.rs` so `workflow_def`, `parse_plays_roles`, `parse_workflow_header_clauses`, and `parse_opt_contract` preserve exact source order in `WorkflowHeaderEvent`. This likely requires a unified header-event collection loop rather than only the current phase-separated parse order.
 7. Keep `ash-parser` ownership limited to raw surface carriers: `DoStmt` raw `requires:` / `ensures:` expressions, `WorkflowHeaderEvent` raw clauses, spans, source order, and origin. Semantic `WorkflowForm`, `WorkflowContract`, coverage, and executable metadata are owned by later layers/shared `ash-core` carriers, not parser AST.
-8. Define/implement a classifier skeleton over raw `Expr` with a mapping table matching SPEC-056:
+8. Define the classifier contract over raw `Expr` with a mapping table matching SPEC-056. Parser ownership is limited to raw syntax/header events and spans; semantic classifier outputs must be shared `ash-core` contract carriers or typechecker-owned artifacts built from those carriers, not parser-private semantic structs:
    - `role(name)` -> `Requirement::HasRole(name)`.
    - `any_role([a, b, ...])` -> implemented OR-role requirement carrier, not two AND requirements.
    - bare identifiers in role lists -> symbolic role refs, not lexical variables.
@@ -52,7 +52,7 @@ Add the parser/surface substrate for first-class workflow contract syntax and de
 
 - [ ] `requires: expr;` and `ensures: expr;` parse inside do blocks with spans preserved.
 - [ ] Source-ordered `WorkflowHeaderEvent`s preserve legacy declaration header order.
-- [ ] Parser additions remain raw surface carriers and do not own semantic WorkflowForm/coverage/runtime metadata.
+- [ ] Parser additions remain raw surface carriers and do not own semantic WorkflowForm/coverage/runtime metadata or parser-private classifier output structs.
 - [ ] Existing legacy aggregate fields remain available or are derived without behavior loss.
 - [ ] `any_role([...])` has a real OR-role semantic carrier.
 - [ ] Contract statement nodes are not silently erased by visitors/lowering.

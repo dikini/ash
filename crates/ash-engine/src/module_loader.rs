@@ -7,6 +7,7 @@
 //! - imported callable bodies from local workflows and stdlib `pub fn` / `pub use`
 
 use crate::EngineError;
+use crate::legacy_workflow_adapter::legacy_workflow_def_to_workflow_form;
 use ash_core::ast::{
     TypeBody as CoreTypeBody, TypeDef as CoreTypeDef, TypeExpr as CoreTypeExpr,
     VariantDef as CoreVariantDef, VariantPayload as CoreVariantPayload,
@@ -14,7 +15,7 @@ use ash_core::ast::{
 };
 use ash_core::workflow_carrier::{
     CoverageEvidence, ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary,
-    SourceOrigin, WorkflowNodeId,
+    SourceOrigin, WorkflowNodeId, lower_workflow_form,
 };
 use ash_parser::input::new_input;
 use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
@@ -1319,6 +1320,7 @@ struct ImportedCallableExport {
 fn extract_callable_from_workflow(
     workflow: WorkflowDef,
 ) -> Result<Option<ImportedCallableExport>, EngineError> {
+    let workflow_summary = public_workflow_summary_from_workflow(&workflow);
     let WorkflowDef {
         name,
         params,
@@ -1353,9 +1355,25 @@ fn extract_callable_from_workflow(
             effectful_names: HashSet::new(),
             kind: CallableKind::User { body: expr },
             signature,
-            workflow_summary: Some(public_workflow_summary(name.as_ref())),
+            workflow_summary: Some(workflow_summary),
         },
     }))
+}
+
+fn public_workflow_summary_from_workflow(workflow: &WorkflowDef) -> PublicWorkflowSummary {
+    let origin = SourceOrigin::ImportedSummary {
+        module: String::new(),
+        public_anchor: workflow.name.to_string(),
+    };
+    let Ok(form) = legacy_workflow_def_to_workflow_form(workflow) else {
+        return public_workflow_summary(workflow.name.as_ref());
+    };
+    let lowered = lower_workflow_form(&form, origin);
+    PublicWorkflowSummary {
+        node_count: lowered.projection_events.len(),
+        projection_events: lowered.projection_events,
+        coverage: lowered.coverage,
+    }
 }
 
 fn public_workflow_summary(anchor: &str) -> PublicWorkflowSummary {

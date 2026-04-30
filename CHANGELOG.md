@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-777](docs/plan/tasks/TASK-777-workflow-contract-summary-import-export.md): enriched exported public workflow summaries in the engine module loader by lowering importable legacy workflow definitions through the shared WorkflowForm path so public `requires:` / `ensures:` contract events survive import with imported-summary origins.
+
 - [TASK-777](docs/plan/tasks/TASK-777-workflow-contract-summary-import-export.md): added minimal typechecker/core support for public imported Workflow summaries, letting `do:Workflow` and `[...]: Workflow` recover a `WorkflowForm::ImportedSummary` from `TypeEnv` metadata while preserving imported summary projection origins/events and continuing to reject opaque `Workflow<T>` imports without summaries.
 
 - [TASK-776](docs/plan/tasks/TASK-776-workflow-comprehension-target.md): added explicit `[...]: Workflow` parser and typechecker regression coverage proving workflow comprehensions reuse SPEC-055 comprehension-to-`do:Workflow` normalization, preserve `WorkflowForm` / projection / obligation / source-origin alignment with equivalent `do:Workflow`, reject raw `Proc` / `Act` RHS values without `workflow::from_proc` / `workflow::from_act`, and accept those explicit lifts without adding guards, pattern binders, target inference, or applicative semantics.

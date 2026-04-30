@@ -51,7 +51,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 ## Verification
 
 - [x] Diagnostics state expected type/constructor and found type for generalized `do` target unknown/wrong-kind cases.
-- [ ] Coverage/obligation errors mention the failed evidence component.
+- [x] Coverage/obligation errors mention the failed evidence component.
 - [ ] Lift hints are present where applicable.
 - [ ] Contract statement misuse and intrinsic parameter misuse diagnostics are covered.
 - [x] Contract-expression classification failures cover empty `any_role`, invalid role-policy entries, and non-`result` `workflow ensures` targets with stable Requirement/OpenPostcondition wording.
@@ -73,5 +73,6 @@ Implemented the current TASK-778 diagnostic slices:
 - Legacy workflow deprecation diagnostics now use the stable `DeprecatedLegacyWorkflowDeclaration` code instead of the provisional `[NEW] ...` spelling.
 - Headerless legacy workflow declarations and declarations with multiple legacy header events both produce one declaration-level warning.
 - JSON warning output now uses the workflow declaration span as its diagnostic anchor.
+- Coverage and obligation carriers now expose stable evidence-component labels/messages for lower Proc/Act obligations, missing projection events, and opaque imported summary rejections.
 
-Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, coverage/obligation component labels, `requires`/`ensures` proof/target diagnostics beyond the classifier target checks above, neutral projection preservation, and Act/Proc diagnostic regression coverage.
+Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, coverage/admission proof diagnostics beyond this carrier-label slice, `requires`/`ensures` proof/target diagnostics beyond the classifier target checks above, neutral projection preservation, and Act/Proc diagnostic regression coverage.

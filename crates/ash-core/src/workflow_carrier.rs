@@ -6,6 +6,7 @@
 
 use crate::workflow_contract::{Contract, PostPredicate, Requirement};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WorkflowNodeId(pub u64);
@@ -229,6 +230,58 @@ pub enum CoverageError {
     },
 }
 
+impl CoverageError {
+    #[must_use]
+    pub fn evidence_component(&self) -> &'static str {
+        match self {
+            Self::MissingProjectionEvent { key } => key.projection.evidence_component(),
+            Self::MissingLowerContract { .. }
+            | Self::UncoveredRequirement { .. }
+            | Self::UncoveredPostcondition { .. }
+            | Self::OpaqueSummaryRejected { .. } => "obligations",
+        }
+    }
+}
+
+impl fmt::Display for CoverageError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingLowerContract { node } => write!(
+                f,
+                "missing lower contract coverage for obligations evidence at node {}",
+                node.0
+            ),
+            Self::UncoveredRequirement { node } => write!(
+                f,
+                "uncovered workflow requirement in obligations evidence at node {}",
+                node.0
+            ),
+            Self::UncoveredPostcondition { node } => write!(
+                f,
+                "uncovered workflow postcondition in obligations evidence at node {}",
+                node.0
+            ),
+            Self::OpaqueSummaryRejected {
+                node,
+                imported_name,
+            } => write!(
+                f,
+                "opaque imported workflow summary `{imported_name}` rejected for obligations evidence at node {}",
+                node.0
+            ),
+            Self::MissingProjectionEvent { key } => write!(
+                f,
+                "missing {} projection event for {} evidence at node {}",
+                key.projection.diagnostic_label(),
+                key.projection.evidence_component(),
+                key.node.0
+            ),
+        }
+    }
+}
+
+impl std::error::Error for CoverageError {}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct CoverageEvidence {
     pub authority: Vec<AlignmentKey>,
@@ -303,6 +356,153 @@ pub enum WorkflowObligation {
         node: WorkflowNodeId,
         imported_name: String,
     },
+}
+
+impl WorkflowObligation {
+    #[must_use]
+    pub fn evidence_component(&self) -> &'static str {
+        "obligations"
+    }
+
+    #[must_use]
+    pub fn diagnostic_label(&self) -> &'static str {
+        match self {
+            Self::RequirementMustHold { .. } => "workflow requirement coverage",
+            Self::RequirementRefinementCovered { .. } => "requirement refinement coverage",
+            Self::OpenPostconditionTarget { .. } => "open postcondition target coverage",
+            Self::LowerProcCovered { .. } => "lower Proc contract coverage",
+            Self::LowerActCovered { .. } => "lower Act contract coverage",
+            Self::RequiredCapabilityCovered { .. } => "required capability coverage",
+            Self::ResourceAvailable { .. } => "resource availability coverage",
+            Self::CapabilityBindingAvailable { .. } => "capability binding coverage",
+            Self::FailureRouteDefined { .. } => "failure route coverage",
+            Self::ProvenanceRecordable { .. } => "provenance record coverage",
+            Self::OpaqueSummaryRejected { .. } => "opaque summary rejection",
+        }
+    }
+
+    #[must_use]
+    pub fn diagnostic_message(&self) -> String {
+        match self {
+            Self::RequirementMustHold { node, .. } => format!(
+                "workflow requirement must be proven by obligations evidence at node {}",
+                node.0
+            ),
+            Self::RequirementRefinementCovered { node, .. } => format!(
+                "requirement refinement must be covered by obligations evidence at node {}",
+                node.0
+            ),
+            Self::OpenPostconditionTarget {
+                node, target_type, ..
+            } => format!(
+                "open postcondition target `{target_type}` must be covered by obligations evidence at node {}",
+                node.0
+            ),
+            Self::LowerProcCovered { node, summary } => lower_contract_message(
+                "Proc",
+                *node,
+                summary.public_anchor.as_deref(),
+                summary.obligations.len(),
+            ),
+            Self::LowerActCovered { node, summary } => lower_contract_message(
+                "Act",
+                *node,
+                summary.public_anchor.as_deref(),
+                summary.obligations.len(),
+            ),
+            Self::RequiredCapabilityCovered {
+                node,
+                capability,
+                mode,
+            } => format!(
+                "required capability `{capability}` ({mode}) must be covered by obligations evidence at node {}",
+                node.0
+            ),
+            Self::ResourceAvailable {
+                node,
+                resource,
+                access_mode,
+            } => format!(
+                "resource `{resource}` with {access_mode} access must be covered by obligations evidence at node {}",
+                node.0
+            ),
+            Self::CapabilityBindingAvailable {
+                node,
+                binding,
+                interface,
+            } => format!(
+                "capability binding `{binding}` for interface `{interface}` must be covered by obligations evidence at node {}",
+                node.0
+            ),
+            Self::FailureRouteDefined {
+                node,
+                failure_event_kind,
+            } => format!(
+                "failure route `{failure_event_kind}` must be covered by obligations evidence at node {}",
+                node.0
+            ),
+            Self::ProvenanceRecordable {
+                node,
+                provenance_event_kind,
+            } => format!(
+                "provenance event `{provenance_event_kind}` must be recordable in obligations evidence at node {}",
+                node.0
+            ),
+            Self::OpaqueSummaryRejected {
+                node,
+                imported_name,
+            } => format!(
+                "opaque imported workflow summary `{imported_name}` cannot satisfy obligations evidence at node {}",
+                node.0
+            ),
+        }
+    }
+}
+
+impl ProjectionKind {
+    #[must_use]
+    pub fn evidence_component(self) -> &'static str {
+        match self {
+            Self::Proc => "proc",
+            Self::Contract => "obligations",
+            Self::Check => "checks",
+            Self::AuthorityResource => "authority/resources",
+            Self::Failure => "failure",
+            Self::Reporting => "reporting",
+            Self::Provenance => "provenance",
+        }
+    }
+
+    #[must_use]
+    pub fn diagnostic_label(self) -> &'static str {
+        match self {
+            Self::Proc => "Proc",
+            Self::Contract => "contract",
+            Self::Check => "check",
+            Self::AuthorityResource => "authority/resource",
+            Self::Failure => "failure",
+            Self::Reporting => "reporting",
+            Self::Provenance => "provenance",
+        }
+    }
+}
+
+fn lower_contract_message(
+    kind: &str,
+    node: WorkflowNodeId,
+    public_anchor: Option<&str>,
+    obligation_count: usize,
+) -> String {
+    match public_anchor {
+        Some(anchor) => format!(
+            "lower {kind} contract coverage for obligations evidence at node {} using public anchor `{anchor}` with {obligation_count} obligation(s)",
+            node.0
+        ),
+        None => format!(
+            "lower {kind} contract coverage for obligations evidence at node {} with {obligation_count} obligation(s)",
+            node.0
+        ),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]

@@ -25,7 +25,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 
 ## Requirements
 
-1. Add diagnostics for unknown/wrong-kind/missing Workflow dictionary states.
+1. Add diagnostics for unknown/wrong-kind/missing Workflow dictionary states. First slice covers generalized `do` target diagnostics for unknown and wrong-kind targets and now names the accepted `Act`, `Proc`, and `Workflow` compiler-known constructors.
 2. Add wrong RHS diagnostics for `do:Workflow` and workflow comprehensions.
 3. Add explicit-lift hints for `workflow::from_proc` and `workflow::from_act`.
 4. Add diagnostics for contract statements outside `do:Workflow`.
@@ -50,7 +50,7 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 
 ## Verification
 
-- [ ] Diagnostics state expected type/constructor and found type.
+- [x] Diagnostics state expected type/constructor and found type for generalized `do` target unknown/wrong-kind cases.
 - [ ] Coverage/obligation errors mention the failed evidence component.
 - [ ] Lift hints are present where applicable.
 - [ ] Contract statement misuse and intrinsic parameter misuse diagnostics are covered.
@@ -64,8 +64,9 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 
 ## Partial Slice Notes
 
-Implemented the first TASK-778 warning/diagnostic slice:
+Implemented the current TASK-778 diagnostic slices:
 
+- Generalized `do` target diagnostics now name stale/missing dictionary states against the current accepted constructors: `Act`, `Proc`, and `Workflow`.
 - `ash check` now has CLI-level regression coverage proving deprecated legacy workflow declarations emit non-fatal warnings in both human and JSON output.
 - Legacy workflow deprecation diagnostics now use the stable `DeprecatedLegacyWorkflowDeclaration` code instead of the provisional `[NEW] ...` spelling.
 - Headerless legacy workflow declarations and declarations with multiple legacy header events both produce one declaration-level warning.

@@ -73,6 +73,7 @@ fn check_expr_reports_wrong_kind_for_proper_type_target() {
 
     assert!(message.contains("do target Int has kind *"), "{message}");
     assert!(message.contains("expected * -> *"), "{message}");
+    assert!(message.contains("Act, Proc, or Workflow"), "{message}");
 }
 
 #[test]
@@ -80,6 +81,7 @@ fn check_expr_reports_unknown_do_target() {
     let message = first_unsupported("do:Missing { return 1 }");
 
     assert!(message.contains("unknown do target 'Missing'"), "{message}");
+    assert!(message.contains("Act, Proc, or Workflow"), "{message}");
 }
 
 #[test]

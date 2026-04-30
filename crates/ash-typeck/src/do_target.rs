@@ -35,7 +35,7 @@ pub(crate) struct DoDictionary {
 
 /// Resolve a surface `do:K` target to the MVP hidden dictionary.
 ///
-/// The accepted MVP targets are compiler-known `Act` and `Proc` unary type
+/// The accepted MVP targets are compiler-known `Act`, `Proc`, and `Workflow` unary type
 /// constructors. This is deliberately shaped like future `Monad<K>` evidence,
 /// but does not attempt interface/impl lookup yet.
 pub(crate) fn resolve_do_target(
@@ -57,7 +57,7 @@ pub(crate) fn resolve_do_target(
         env.resolve_type(target_name)
             .map_err(|_| ConstructorError::UnsupportedExpression {
                 kind: format!(
-                    "unknown do target '{target_name}'; use a registered computation constructor such as Act or Proc"
+                    "unknown do target '{target_name}'; use a registered computation constructor such as Act, Proc, or Workflow"
                 ),
                 span: target.span,
             })?;
@@ -82,7 +82,7 @@ pub(crate) fn resolve_do_target(
     if kind != expected {
         return Err(ConstructorError::UnsupportedExpression {
             kind: format!(
-                "do target {} has kind {kind}, expected {expected}; use a computation constructor such as Act or Proc",
+                "do target {} has kind {kind}, expected {expected}; use a computation constructor such as Act, Proc, or Workflow",
                 qualified.display()
             ),
             span: target.span,
@@ -193,7 +193,7 @@ mod tests {
 
         assert!(message.contains("do target Int has kind *"), "{message}");
         assert!(message.contains("expected * -> *"), "{message}");
-        assert!(message.contains("Act or Proc"), "{message}");
+        assert!(message.contains("Act, Proc, or Workflow"), "{message}");
     }
 
     #[test]
@@ -201,6 +201,7 @@ mod tests {
         let message = error_text(resolve("Missing").expect_err("Missing target is unknown"));
 
         assert!(message.contains("unknown do target 'Missing'"), "{message}");
+        assert!(message.contains("Act, Proc, or Workflow"), "{message}");
     }
 
     #[test]

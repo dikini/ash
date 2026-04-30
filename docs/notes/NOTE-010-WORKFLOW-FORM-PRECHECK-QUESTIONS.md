@@ -614,16 +614,19 @@ SPEC-056 has moved toward `WorkflowForm`, projection events, and contract-inject
 
 Likely updates:
 
-- TASK-769 now owns `WorkflowForm`, node ids, projections, staged `ContractPlan`, obligation handoff, first-slice contract syntax decisions, and equality strata.
-- TASK-776 owns `requires:` / `ensures:` do-statement parsing, opaque intrinsic-call elaboration for `workflow::requires` / `workflow::ensures`, conservative contract-expression name resolution, and deprecated legacy declaration translation.
-- TASK-770 owns public `Workflow<A>`, internal carriers derived from `WorkflowForm`, and `workflow::requires` / `workflow::ensures` operations.
-- TASK-771 should consume TASK-776's contract-injection statement syntax through the typed-do workflow dictionary.
-- TASK-774 should include preservation/no-erasure diagnostics/tests plus legacy-declaration deprecation warnings.
+- TASK-769 owns `WorkflowForm`, node ids, projections, staged `ContractPlan`, obligation handoff, non-denotable contract argument semantics, WorkflowForm-preserving typed-do artifacts, the legacy-body adapter contract, first-slice contract syntax decisions, and equality strata.
+- TASK-770 owns `requires:` / `ensures:` do-statement parsing, source-ordered `WorkflowHeaderEvent`s, conservative contract-expression name resolution, the classifier mapping table, and implemented legacy-compatible role semantics such as `any_role` OR.
+- TASK-771 owns public `Workflow<A>`, internal carriers derived from `WorkflowForm`, workflow operations, and non-denotable intrinsic parameter classes for contract arguments.
+- TASK-772 consumes TASK-770's contract-injection statement syntax through a WorkflowForm-preserving typed-do artifact.
+- TASK-773 owns direct intrinsic-call elaboration for `workflow::requires` / `workflow::ensures` after TASK-771/TASK-772 exist.
+- TASK-774 owns executable Workflow lowering/runtime projection through existing Proc/workflow boundaries and proves contract-injection metadata is not dead.
+- TASK-775 owns deprecated legacy declaration warning plumbing, source-ordered header translation, and `legacy_body_as_proc_summary` compatibility lowering.
+- TASK-778 includes preservation/no-erasure diagnostics/tests plus legacy-declaration deprecation warnings.
 
 Decision target:
 
 ```text
-PLAN-104 / TASK-769..776 realignment patch scope = ...
+PLAN-104 / TASK-769..779 realignment patch scope = split/reorder implementation tasks around parser/classifier/header events, workflow type/intrinsic parameters, WorkflowForm-preserving do, intrinsic call elaboration, executable runtime projection, legacy translation, modules, diagnostics, and closeout
 ```
 
 ### 23. Which reusable skills/memories need drift correction?
@@ -658,18 +661,19 @@ Use this order for a future session:
 9. workflow contract syntax and block lowering
 10. contract name resolution
 11. deprecated workflow declaration/header translation
-12. OpenPostcondition representation
-13. module export/import summaries
-14. Scope form semantics
-15. failure event vocabulary
-16. environment projection to Proc/Act
-17. obligation/constraint vocabulary
-18. requirement/postcondition projection classification
-19. equality/normalization strata
-20. source-origin metadata
-21. parallel-compatible zipper structure
-22. PLAN/TASK realignment
-23. skill/memory drift correction
+12. Workflow runtime projection boundary
+13. OpenPostcondition representation
+14. module export/import summaries
+15. Scope form semantics
+16. failure event vocabulary
+17. environment projection to Proc/Act
+18. obligation/constraint vocabulary
+19. requirement/postcondition projection classification
+20. equality/normalization strata
+21. source-origin metadata
+22. parallel-compatible zipper structure
+23. PLAN/TASK realignment
+24. skill/memory drift correction
 ```
 
 ## Stop Conditions for the Q&A Pass

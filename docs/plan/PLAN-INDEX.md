@@ -3064,28 +3064,32 @@ Repair the post-Phase-106 `ash check` corpus for standard library modules and ex
 **Design:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md)
 **Plan:** [docs/plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md](PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
 
-Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phase 108 now starts with a blocking workflow-form/projection semantic gate: `WorkflowForm`, node/alignment ids, projection events, staged `ContractPlan`, obligations, `requires`/`ensures`, and equality strata must be specified before Rust carriers and public operations are implemented. The implementation then adds legacy-compatible `requires:` / `ensures:` contract syntax, deprecated legacy workflow declaration translation to the same `WorkflowForm` path, the public `Workflow<A>` type constructor, internal workflow contract/coverage/evidence substrate derived from the preserved form, `workflow::unit`/`bind`/`then`/`from_proc`/`from_act`/`requires`/`ensures`, a compiler-known `Workflow` typed-do dictionary, `[...]: Workflow` comprehension integration, modular workflow contract summaries, and diagnostics. The phase is sequential-workflow-only: dynamic admission, workflow handles, workflow-level parallel operators, and richer public contract/admission/reporting combinators are deferred.
+Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phase 108 now starts with a blocking workflow-form/projection semantic gate: `WorkflowForm`, node/alignment ids, source-ordered legacy `WorkflowHeaderEvent`s, projection events, staged `ContractPlan`, non-denotable contract argument classes, obligations, `requires`/`ensures`, `any_role` OR semantics, the legacy-body adapter contract, and equality strata must be specified before Rust carriers and public operations are implemented. Implementation then proceeds in testable order: parser/classifier/header events; public `Workflow<A>` and workflow operations; WorkflowForm-preserving `do:Workflow`; intrinsic `workflow::requires` / `workflow::ensures`; executable lowering/runtime projection through existing Proc/workflow boundaries; deprecated legacy workflow declaration translation to the same `WorkflowForm` path; `[...]: Workflow`; modular summaries; diagnostics; closeout. The phase is sequential-workflow-only: dynamic admission, workflow handles, workflow-level parallel operators, and richer public contract/admission/reporting combinators are deferred.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | First-class workflow spec/plan packet | 4 | ✅ Complete |
-| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, and obligation semantics | 6 | 📝 Planned |
-| [TASK-776](tasks/TASK-776-workflow-contract-syntax-and-legacy-translation.md) | Workflow contract syntax and legacy declaration translation | 6 | 📝 Planned |
-| [TASK-770](tasks/TASK-770-workflow-type-and-stdlib-operations.md) | Workflow type, carrier, and stdlib operations | 9 | 📝 Planned |
-| [TASK-771](tasks/TASK-771-workflow-do-target-dictionary.md) | Workflow do target dictionary | 8 | 📝 Planned |
-| [TASK-772](tasks/TASK-772-workflow-comprehension-target.md) | Workflow comprehension target | 5 | 📝 Planned |
-| [TASK-773](tasks/TASK-773-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | 📝 Planned |
-| [TASK-774](tasks/TASK-774-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 5 | 📝 Planned |
-| [TASK-775](tasks/TASK-775-first-class-workflow-closeout.md) | First-class workflow closeout | 4 | 📝 Planned |
+| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, obligation, and adapter semantics | 7 | 📝 Planned |
+| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Workflow contract surface, classifier, and header events | 7 | 📝 Planned |
+| [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Workflow type, operations, and intrinsic parameters | 9 | 📝 Planned |
+| [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | WorkflowForm-preserving Workflow do target | 9 | 📝 Planned |
+| [TASK-773](tasks/TASK-773-workflow-contract-intrinsic-call-elaboration.md) | Workflow contract intrinsic call elaboration | 5 | 📝 Planned |
+| [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Workflow lowering and runtime projection | 6 | 📝 Planned |
+| [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Legacy workflow translation and deprecation | 8 | 📝 Planned |
+| [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Workflow comprehension target | 5 | 📝 Planned |
+| [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | 📝 Planned |
+| [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 6 | 📝 Planned |
+| [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | First-class workflow closeout | 4 | 📝 Planned |
 
-**Track A (Workflow Form + Syntax + Evidence):** 16h. Promote DESIGN-033 to SPEC-056/PLAN-104, harden the workflow-form/projection/obligation semantics, and add the legacy-compatible contract syntax/deprecation bridge before implementation.
-**Track B (Public Surface + Carrier):** 17h. Add public `Workflow<A>`, internal carriers derived from `WorkflowForm`, workflow operations, and the typed-do dictionary.
-**Track C (Comprehension + Modules + Diagnostics):** 17h. Enable `[...]: Workflow`, preserve summaries across imports, and harden diagnostics.
-**Track D (Closeout):** 4h. Add examples, reconcile docs/changelog, and run final verification.
+**Track A (Workflow Form + Compatibility Substrate):** 18h. Promote DESIGN-033 to SPEC-056/PLAN-104, harden workflow-form/projection/obligation semantics, and add parser/classifier/header-event substrate.
+**Track B (Public Surface + Workflow Do + Runtime):** 29h. Add public `Workflow<A>`, internal carriers, workflow operations, non-denotable intrinsic parameters, WorkflowForm-preserving `do:Workflow`, direct intrinsic call elaboration, and executable runtime/projection tests.
+**Track C (Legacy + Comprehension + Modules):** 20h. Translate deprecated legacy declarations to the same path, enable `[...]: Workflow`, and preserve summaries across imports.
+**Track D (Diagnostics + Closeout):** 10h. Harden diagnostics/negative tests, add examples, reconcile docs/changelog, and run final verification.
 
 **Decision gates:**
 - D1: Public type is `Workflow<A>` only; contract/evidence parameters remain internal.
-- D2: Workflow target support reuses SPEC-054/SPEC-055 typed-do/comprehension infrastructure and does not fork lowering.
+- D2: Workflow target support reuses SPEC-054/SPEC-055 typed-do/comprehension infrastructure and preserves a `WorkflowForm` artifact instead of forking parser-only lowering.
 - D3: No implicit Act/Proc-to-Workflow lifts; use `workflow::from_act` and `workflow::from_proc` explicitly.
 - D4: Dynamic admission, workflow handles, and workflow-level parallel operators are deferred.
 - D5: Deprecated legacy workflow declarations warn and translate into the same `WorkflowForm` implementation path; no separate legacy semantic path remains underneath.
+- D6: Accepted legacy-compatible contract semantics, including `any_role` OR semantics and current header semantics, are implemented in the new path rather than deferred.

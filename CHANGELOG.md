@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added the first warning-plumbing slice for deprecated legacy workflow header declarations. Accepted legacy workflow headers now carry non-fatal `ash-engine` workflow warnings and `ash check` surfaces `[NEW] DeprecatedLegacyWorkflowDeclaration` without failing otherwise-successful checks; legacy WorkflowForm translation remains deferred.
+
 - [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added an `ash-engine` first-class Workflow projection seam that accepts only `ash-core::workflow_carrier::WorkflowProcProjection<Value>`, forwards supported projections through the public `ash-interp` boundary, and preserves the named `FirstClassWorkflowProjectionExecutionUnsupported` diagnostic for unsupported projection shapes without adding parser/typechecker-private runtime inputs.
 
 - [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added an `ash-interp` runtime-facing first-class Workflow projection boundary that consumes the public `ash-core::workflow_carrier::WorkflowProcProjection<Value>` carrier, executes already-sound `unit`, materialized `bind` / `then`, and transparent `scope` projections, and fails unsupported `from_proc`, `from_act`, and neutral governance shapes at the named `FirstClassWorkflowProjectionExecutionUnsupported` Phase 108 diagnostic instead of silently producing dead runtime values.

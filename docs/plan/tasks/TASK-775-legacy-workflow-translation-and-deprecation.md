@@ -1,6 +1,8 @@
 # TASK-775: Legacy Workflow Translation and Deprecation
 
-## Status: 📝 Planned
+## Status: 🛠️ In Progress (first warning-plumbing slice landed)
+
+> Slice note: this task is not complete. The current slice only audits/extends the non-fatal warning path enough for accepted legacy workflow header declarations to carry and surface `[NEW] DeprecatedLegacyWorkflowDeclaration` through `ash check` without failing otherwise-successful checks. Full WorkflowForm translation, source-origin spans/rewrite hints, header-event semantic lowering, and legacy-body adapter work remain deferred.
 
 ## References
 
@@ -53,8 +55,8 @@ Deprecate the current workflow declaration surface while preserving its semantic
 
 ## Verification
 
-- [ ] Deprecated declarations warn but do not error solely because of deprecation.
-- [ ] Warning carrier/API support has been audited or extended, and `ash check` surfaces deprecation warnings without failing when no errors exist.
+- [x] Deprecated declarations warn but do not error solely because of deprecation for the accepted legacy header events covered by this slice.
+- [x] Warning carrier/API support has been audited or extended, and `ash check` surfaces deprecation warnings without failing when no errors exist.
 - [ ] Legacy declarations lower to the same WorkflowForm path as first-class workflows.
 - [ ] Source-ordered header events are preserved in translation.
 - [ ] Legacy body summaries enter through `FromProc(...)` with lower coverage obligations.

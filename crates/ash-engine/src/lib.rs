@@ -114,6 +114,39 @@ pub struct Workflow {
     /// produce the proper polymorphic type instead of an arity-only synthetic.
     pub imported_builtin_signatures:
         std::collections::HashMap<String, ash_parser::surface::BuiltinFnDef>,
+    /// Non-fatal diagnostics collected while accepting this workflow.
+    pub warnings: Vec<WorkflowWarning>,
+}
+
+/// Non-fatal warning emitted while parsing/checking workflow declarations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowWarning {
+    /// Stable warning code surfaced by tooling.
+    pub code: &'static str,
+    /// Human-readable warning text.
+    pub message: String,
+}
+
+impl WorkflowWarning {
+    /// Warning code for deprecated legacy workflow header declarations.
+    pub const DEPRECATED_LEGACY_WORKFLOW_DECLARATION: &'static str =
+        "[NEW] DeprecatedLegacyWorkflowDeclaration";
+
+    /// Construct the legacy workflow declaration deprecation warning.
+    #[must_use]
+    pub fn deprecated_legacy_workflow_declaration() -> Self {
+        Self {
+            code: Self::DEPRECATED_LEGACY_WORKFLOW_DECLARATION,
+            message: "legacy workflow declarations are deprecated; prefer first-class Workflow declarations/contracts".to_string(),
+        }
+    }
+}
+
+fn workflow_warnings_for_def(def: &ash_parser::surface::WorkflowDef) -> Vec<WorkflowWarning> {
+    def.header_events
+        .iter()
+        .map(|_| WorkflowWarning::deprecated_legacy_workflow_declaration())
+        .collect()
 }
 
 impl PartialEq for Workflow {
@@ -1004,6 +1037,7 @@ impl Engine {
                             ))
                         })?;
 
+                    let warnings = workflow_warnings_for_def(&program.workflow);
                     let id = self.store_surface_workflow_def(program.workflow.clone());
                     let (local_closures, local_param_counts, core) = self
                         .process_program_definitions(
@@ -1021,10 +1055,12 @@ impl Engine {
                         imported_param_counts: local_param_counts,
                         imported_fn_signatures,
                         imported_builtin_signatures,
+                        warnings,
                     });
                 }
 
                 // Single workflow, no trailing input — original fast path.
+                let warnings = workflow_warnings_for_def(&def);
                 let core = lower_workflow(&def)
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(def);
@@ -1036,6 +1072,7 @@ impl Engine {
                     imported_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    warnings,
                 })
             }
             Err(parse_error) => {
@@ -1043,6 +1080,7 @@ impl Engine {
                 let program = module_loader::parse_program_with_functions(source)
                     .map_err(|_| EngineError::Parse(format!("{parse_error}")))?;
 
+                let warnings = workflow_warnings_for_def(&program.workflow);
                 let id = self.store_surface_workflow_def(program.workflow.clone());
                 let (local_closures, local_param_counts, core) = self.process_program_definitions(
                     &program,
@@ -1059,6 +1097,7 @@ impl Engine {
                     imported_param_counts: local_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    warnings,
                 })
             }
         }
@@ -2954,6 +2993,20 @@ mod tests {
     }
 
     #[test]
+    fn legacy_workflow_header_events_emit_deprecation_warnings() {
+        let engine = Engine::new().build().expect("engine builds");
+        let workflow = engine
+            .parse_entry_source("workflow main plays role(Admin) { done }")
+            .expect("legacy declaration workflow should remain accepted");
+
+        assert_eq!(workflow.warnings.len(), 1);
+        assert_eq!(
+            workflow.warnings[0].code,
+            WorkflowWarning::DEPRECATED_LEGACY_WORKFLOW_DECLARATION
+        );
+    }
+
+    #[test]
     fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
         use ash_parser::input::new_input;
         use ash_parser::parse_module::parse_fn_definition;
@@ -2977,6 +3030,7 @@ mod tests {
             imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
             imported_fn_signatures: HashMap::from([(String::from("bind"), function)]),
             imported_builtin_signatures: HashMap::new(),
+            warnings: Vec::new(),
         };
 
         let mut env = TypeEnv::with_builtin_types();

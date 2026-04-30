@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-777](docs/plan/tasks/TASK-777-workflow-contract-summary-import-export.md): added supported-subset public summary export for first-class `pub fn ... -> Workflow<A>` definitions whose body is a `do:Workflow` contract-statement expression, preserving public `requires:` / `ensures:` events and obligations at module boundaries while leaving unsupported Workflow-returning function bodies opaque instead of fabricating summaries.
+
 - [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added focused neutral Proc-projection preservation regression coverage proving `requires` / `ensures` governance nodes remain as neutral source nodes inside sequential `Bind` forms until any later evidence-preserving optimization; closed TASK-778 after re-auditing lift hints and Act/Proc diagnostics.
 
 - [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added stable contract-only intrinsic misuse diagnostics for first-class `workflow::requires` / `workflow::ensures` calls outside `do:Workflow`, naming the qualified intrinsic, non-denotable Requirement/OpenPostcondition parameter class, arity failures, and open-result Workflow result-boundary requirements.

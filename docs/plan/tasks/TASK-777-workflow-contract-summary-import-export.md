@@ -56,7 +56,7 @@ Public workflow summaries are shared semantic/module carriers owned by `ash-core
 - [x] Public summaries preserve exported workflow header `requires:` / `ensures:` contract events and coverage obligations via the shared `WorkflowForm` lowering path.
 - [ ] Qualified workflow exports remain preservable if future stdlib backing is added, without implicit unqualified operation imports.
 - [x] Cargo dependency boundaries for summary propagation are audited; this slice enforces public API boundaries through `ash-core` summary types and does not remove existing engine parser/typechecker dependencies.
-- [ ] Deprecated legacy and equivalent first-class workflows export equivalent public contract summaries.
+- [x] Deprecated legacy and equivalent first-class workflows export equivalent public contract summaries for supported first-class `do:Workflow` contract-statement bodies.
 - [x] Missing summaries produce diagnostics.
 - [x] Private body details are not required in public summaries.
 - [x] CHANGELOG.md updated.
@@ -68,11 +68,12 @@ Implemented the first import/export substrate slice:
 - `ash-core` now has `WorkflowForm::ImportedSummary`, and lowering preserves imported public projection events / coverage obligations while projecting the imported opaque body as neutral rather than fabricating private internals.
 - `ash-typeck::TypeEnv` stores `PublicWorkflowSummary` values and `do:Workflow` / `[...]: Workflow` artifact construction can recover imported summary-backed `WorkflowForm` nodes for imported variables and calls.
 - `ash-engine` carries public workflow summaries from `module_loader::InlineCallable` into `Workflow.imported_workflow_summaries` and binds them into the type environment during checking.
-- Tests cover typechecker composition from imported summaries, missing-summary rejection, and engine-level module import/export of public workflow summary origins.
+- Tests cover typechecker composition from imported summaries, missing-summary rejection, engine-level module import/export of public workflow summary origins, and supported legacy-vs-first-class public contract-summary equivalence.
+- `pub fn ... -> Workflow<A>` module exports now derive public summaries for the supported first-class `do:Workflow` subset containing public `requires:` / `ensures:` contract statements and a final `return`, while unsupported Workflow-returning function bodies remain opaque rather than fabricating summaries.
 
 Deferred follow-up work remains for full task completion:
 
-- Derive full public summaries from first-class workflow expression exports and legacy adapters beyond header contract events.
+- Derive full public summaries from first-class workflow expression exports beyond the currently supported `do:Workflow` contract-statement subset, and from legacy adapters beyond header contract events.
 - Add engine end-to-end `do:Workflow` / comprehension import tests after typed workflow expressions can be elaborated before core lowering in `parse_file`.
-- Add legacy-vs-first-class public contract-summary equivalence tests at the module export boundary.
+- Extend first-class-vs-legacy public contract-summary equivalence beyond the supported module-export subset as the summary adapter grows.
 - Add future `workflow::...` backing-module preservation tests if/when such a stdlib module exists.

@@ -14,8 +14,10 @@ use ash_core::ast::{
     Visibility as CoreVisibility,
 };
 use ash_core::workflow_carrier::{
-    CoverageEvidence, ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary,
-    SourceOrigin, WorkflowNodeId, lower_workflow_form,
+    CoverageEvidence, OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
+    ProcProvenanceSummary, ProcResourceAuthoritySummary, ProjectionEvent, ProjectionEventKind,
+    ProjectionKind, PublicWorkflowSummary, SourceOrigin, WorkflowBinder, WorkflowForm,
+    WorkflowNodeId, WorkflowScope, lower_workflow_form,
 };
 use ash_parser::input::new_input;
 use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
@@ -25,7 +27,7 @@ use ash_parser::parse_type_def::{
 };
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{Definition, Expr, Workflow, WorkflowDef};
+use ash_parser::surface::{Definition, Expr, Type, Workflow, WorkflowDef};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
@@ -695,6 +697,13 @@ pub(crate) fn collect_module_exports(
                 let mut callable = callable.callable;
                 callable.effectful_names.clone_from(&module_effectful_names);
                 let exported_name = callable.exported_name.clone();
+                if let Some(summary) = callable.workflow_summary.as_mut() {
+                    stamp_workflow_summary_import_origin(
+                        summary,
+                        module_path_text(path.as_path()),
+                        &exported_name,
+                    );
+                }
                 insert_callable_export(&mut exports, &exported_name, callable)?;
             }
             Ok(None) => {}
@@ -1232,6 +1241,8 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
         .map(|param| param.name.to_string())
         .collect::<Vec<_>>();
 
+    let workflow_summary = workflow_returning_pub_fn_summary(&function);
+
     Ok(Some(ImportedCallableExport {
         callable: InlineCallable {
             exported_name: name,
@@ -1241,9 +1252,165 @@ fn parse_pub_fn_callable(snippet: &str) -> Result<Option<ImportedCallableExport>
                 body: function.body.clone(),
             },
             signature: Some(CallableSignature::Function(function)),
-            workflow_summary: None,
+            workflow_summary,
         },
     }))
+}
+
+/// Conservative public-summary adapter for parser-only module export collection.
+///
+/// This intentionally recognizes only first-class `do:Workflow` expressions
+/// whose public contract statements can be classified without typed lowering.
+/// Unsupported shapes return `None` rather than inventing public workflow
+/// metadata; full typed workflow expression lowering remains owned by typeck.
+fn workflow_returning_pub_fn_summary(
+    function: &ash_parser::surface::FnDef,
+) -> Option<PublicWorkflowSummary> {
+    let return_type = function.return_type.as_ref()?;
+    if !is_workflow_return_type(return_type) {
+        return None;
+    }
+
+    let workflow_expr = workflow_summary_source_expr(&function.body)?;
+    let form = workflow_expr_summary_form(workflow_expr, function.name.as_ref())?;
+    let origin = SourceOrigin::ImportedSummary {
+        module: String::new(),
+        public_anchor: function.name.to_string(),
+    };
+    let mut lowered = lower_workflow_form(&form, origin.clone());
+    for event in &mut lowered.projection_events {
+        event.origin = origin.clone();
+    }
+    Some(PublicWorkflowSummary {
+        node_count: lowered.projection_events.len(),
+        projection_events: lowered.projection_events,
+        coverage: lowered.coverage,
+    })
+}
+
+fn workflow_summary_source_expr(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::DoBlock { .. } => Some(expr),
+        Expr::Block {
+            statements,
+            tail_expr: Some(tail_expr),
+            ..
+        } if statements.is_empty() => workflow_summary_source_expr(tail_expr),
+        _ => None,
+    }
+}
+
+fn workflow_expr_summary_form(expr: &Expr, anchor: &str) -> Option<WorkflowForm<()>> {
+    match expr {
+        Expr::DoBlock { target, stmts, .. } if target.name.as_ref() == "Workflow" => {
+            let mut next_node = 1;
+            let form = workflow_do_stmts_summary_form(stmts, &mut next_node, anchor)?;
+            Some(WorkflowForm::Scope {
+                node: WorkflowNodeId(next_node),
+                scope: WorkflowScope {
+                    name: Some(anchor.to_string()),
+                    origin: first_class_workflow_source_origin(),
+                },
+                body: Box::new(form),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn workflow_do_stmts_summary_form(
+    stmts: &[ash_parser::surface::DoStmt],
+    next_node: &mut u64,
+    anchor: &str,
+) -> Option<WorkflowForm<()>> {
+    match stmts {
+        [ash_parser::surface::DoStmt::Return { .. }] => Some(WorkflowForm::FromProc {
+            node: workflow_summary_node(next_node),
+            summary: first_class_body_proc_summary(anchor),
+        }),
+        [
+            ash_parser::surface::DoStmt::WorkflowRequires { expr, .. },
+            rest @ ..,
+        ] => {
+            let node = workflow_summary_node(next_node);
+            let requirement =
+                ash_parser::workflow_contract_classifier::classify_requirement(expr).ok()?;
+            let source = WorkflowForm::Requires { node, requirement };
+            let next = workflow_do_stmts_summary_form(rest, next_node, anchor)?;
+            Some(WorkflowForm::Bind {
+                node: workflow_summary_node(next_node),
+                source: Box::new(source),
+                binder: WorkflowBinder::Ignored,
+                next: Box::new(next),
+            })
+        }
+        [
+            ash_parser::surface::DoStmt::WorkflowEnsures { expr, .. },
+            rest @ ..,
+        ] => {
+            let node = workflow_summary_node(next_node);
+            let postcondition =
+                ash_parser::workflow_contract_classifier::classify_postcondition(expr).ok()?;
+            let source = WorkflowForm::Ensures {
+                node,
+                postcondition: OpenPostcondition {
+                    predicate: postcondition,
+                },
+            };
+            let next = workflow_do_stmts_summary_form(rest, next_node, anchor)?;
+            Some(WorkflowForm::Bind {
+                node: workflow_summary_node(next_node),
+                source: Box::new(source),
+                binder: WorkflowBinder::Ignored,
+                next: Box::new(next),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn first_class_body_proc_summary(anchor: &str) -> ProcLowerSummary {
+    ProcLowerSummary {
+        coverage_obligation_nodes: Vec::new(),
+        contract_summary: Some(ProcContractSummary {
+            obligations: Vec::new(),
+            public_anchor: Some(format!("first_class_body_as_proc_summary:{anchor}")),
+        }),
+        failure_summary: Some(ProcFailureSummary {
+            routes: Vec::new(),
+            conservative: false,
+        }),
+        resource_authority_summary: Some(ProcResourceAuthoritySummary {
+            resources: Vec::new(),
+            conservative: false,
+        }),
+        provenance_summary: Some(ProcProvenanceSummary {
+            event_kinds: Vec::new(),
+            conservative: false,
+        }),
+        source_origin: Some(first_class_workflow_source_origin()),
+    }
+}
+
+fn first_class_workflow_source_origin() -> SourceOrigin {
+    SourceOrigin::Synthetic {
+        parent_span: None,
+        reason: "first-class do:Workflow public summary adapter".to_string(),
+    }
+}
+
+const fn workflow_summary_node(next_node: &mut u64) -> WorkflowNodeId {
+    let node = WorkflowNodeId(*next_node);
+    *next_node += 1;
+    node
+}
+
+fn is_workflow_return_type(return_type: &Type) -> bool {
+    match return_type {
+        Type::Constructor { name, args } => name.as_ref() == "Workflow" && args.len() == 1,
+        Type::Name(name) => name.as_ref() == "Workflow",
+        _ => false,
+    }
 }
 
 /// Diagnostic produced when a `pub fn` snippet fails to parse.

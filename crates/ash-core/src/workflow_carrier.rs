@@ -83,6 +83,10 @@ pub enum WorkflowForm<A> {
         node: WorkflowNodeId,
         postcondition: OpenPostcondition,
     },
+    Authority {
+        node: WorkflowNodeId,
+        authority: WorkflowAuthorityEvent,
+    },
     Scope {
         node: WorkflowNodeId,
         scope: WorkflowScope,
@@ -107,8 +111,44 @@ pub enum ProjectionEventKind {
     FromAct { summary: ActLowerSummary },
     Requires { requirement: Requirement },
     Ensures { postcondition: OpenPostcondition },
+    Authority { authority: WorkflowAuthorityEvent },
     Scope { scope: WorkflowScope },
     Neutral,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkflowAuthorityEvent {
+    RequiredCapability(WorkflowRequiredCapability),
+    OwnedResource(WorkflowOwnedResourceSummary),
+    UsedBinding(WorkflowUsedBindingSummary),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowRequiredCapability {
+    pub capability: String,
+    pub constraints: Vec<(String, WorkflowConstraintValue)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkflowConstraintValue {
+    Bool(bool),
+    Int(i64),
+    String(String),
+    Array(Vec<WorkflowConstraintValue>),
+    Object(Vec<(String, WorkflowConstraintValue)>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowOwnedResourceSummary {
+    pub name: String,
+    pub ty: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowUsedBindingSummary {
+    pub name: String,
+    pub interface: String,
+    pub implementation: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -241,6 +281,11 @@ pub enum WorkflowObligation {
         node: WorkflowNodeId,
         resource: String,
         access_mode: String,
+    },
+    CapabilityBindingAvailable {
+        node: WorkflowNodeId,
+        binding: String,
+        interface: String,
     },
     FailureRouteDefined {
         node: WorkflowNodeId,
@@ -547,6 +592,52 @@ impl WorkflowFormLowering {
                     });
                 WorkflowProcProjection::Neutral { node: *node }
             }
+            WorkflowForm::Authority { node, authority } => {
+                self.event(
+                    *node,
+                    ProjectionEventKind::Authority {
+                        authority: authority.clone(),
+                    },
+                );
+                self.coverage.authority.push(AlignmentKey {
+                    node: *node,
+                    projection: ProjectionKind::AuthorityResource,
+                });
+                match authority {
+                    WorkflowAuthorityEvent::RequiredCapability(capability) => {
+                        self.coverage.obligations.push(
+                            WorkflowObligation::RequiredCapabilityCovered {
+                                node: *node,
+                                capability: capability.capability.clone(),
+                                mode: "required capability".to_string(),
+                            },
+                        );
+                    }
+                    WorkflowAuthorityEvent::OwnedResource(resource) => {
+                        self.coverage.resources.push(AlignmentKey {
+                            node: *node,
+                            projection: ProjectionKind::AuthorityResource,
+                        });
+                        self.coverage
+                            .obligations
+                            .push(WorkflowObligation::ResourceAvailable {
+                                node: *node,
+                                resource: resource.name.clone(),
+                                access_mode: "owned resource".to_string(),
+                            });
+                    }
+                    WorkflowAuthorityEvent::UsedBinding(binding) => {
+                        self.coverage.obligations.push(
+                            WorkflowObligation::CapabilityBindingAvailable {
+                                node: *node,
+                                binding: binding.name.clone(),
+                                interface: binding.interface.clone(),
+                            },
+                        );
+                    }
+                }
+                WorkflowProcProjection::Neutral { node: *node }
+            }
             WorkflowForm::Scope { node, scope, body } => {
                 self.event(
                     *node,
@@ -598,6 +689,9 @@ impl WorkflowFormLowering {
                 node: *node,
                 postcondition: postcondition.clone(),
                 target: PostconditionTarget::WorkflowResult,
+            },
+            WorkflowForm::Authority { .. } => ContractPlan::EmptyContract {
+                result_marker: None,
             },
             WorkflowForm::Scope { scope, body, .. } => ContractPlan::ScopeContract {
                 scope: scope.clone(),

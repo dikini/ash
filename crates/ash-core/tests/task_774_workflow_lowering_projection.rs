@@ -1,8 +1,9 @@
 use ash_core::workflow_carrier::{
     ActLowerSummary, ContractPlan, OpenPostcondition, ProcContractSummary, ProcFailureSummary,
     ProcLowerSummary, ProcProvenanceSummary, ProcResourceAuthoritySummary, ProjectionEventKind,
-    SourceOrigin, WorkflowBinder, WorkflowForm, WorkflowNodeId, WorkflowObligation,
-    WorkflowProcProjection, lower_workflow_form,
+    ProjectionKind, SourceOrigin, WorkflowAuthorityEvent, WorkflowBinder, WorkflowForm,
+    WorkflowNodeId, WorkflowObligation, WorkflowOwnedResourceSummary, WorkflowProcProjection,
+    WorkflowRequiredCapability, lower_workflow_form,
 };
 use ash_core::workflow_contract::{ArithConstraint, Effect, PostPredicate, Requirement};
 
@@ -138,6 +139,61 @@ fn requires_and_ensures_survive_lowering_as_contract_metadata_and_obligations() 
     assert!(lowered.projection_events.iter().any(|event| {
         event.node == WorkflowNodeId(11)
             && matches!(event.kind, ProjectionEventKind::Ensures { postcondition: ref p } if p == &postcondition)
+    }));
+}
+
+#[test]
+fn authority_headers_survive_lowering_as_neutral_proc_projection_and_coverage() {
+    let capability = WorkflowAuthorityEvent::RequiredCapability(WorkflowRequiredCapability {
+        capability: "filesystem".to_string(),
+        constraints: Vec::new(),
+    });
+    let resource = WorkflowAuthorityEvent::OwnedResource(WorkflowOwnedResourceSummary {
+        name: "cache".to_string(),
+        ty: "CacheResource".to_string(),
+    });
+    let form: WorkflowForm<()> = WorkflowForm::Bind {
+        node: WorkflowNodeId(72),
+        source: Box::new(WorkflowForm::Authority {
+            node: WorkflowNodeId(70),
+            authority: capability.clone(),
+        }),
+        binder: WorkflowBinder::Ignored,
+        next: Box::new(WorkflowForm::Authority {
+            node: WorkflowNodeId(71),
+            authority: resource.clone(),
+        }),
+    };
+
+    let lowered = lower_workflow_form(&form, origin());
+
+    assert!(lowered.projection_events.iter().any(|event| {
+        event.node == WorkflowNodeId(70)
+            && matches!(event.kind, ProjectionEventKind::Authority { ref authority } if authority == &capability)
+    }));
+    assert!(lowered.projection_events.iter().any(|event| {
+        event.node == WorkflowNodeId(71)
+            && matches!(event.kind, ProjectionEventKind::Authority { ref authority } if authority == &resource)
+    }));
+    assert!(lowered.coverage.authority.iter().any(|key| {
+        key.node == WorkflowNodeId(70) && key.projection == ProjectionKind::AuthorityResource
+    }));
+    assert!(lowered.coverage.resources.iter().any(|key| {
+        key.node == WorkflowNodeId(71) && key.projection == ProjectionKind::AuthorityResource
+    }));
+    assert!(lowered.coverage.obligations.iter().any(|obligation| {
+        matches!(
+            obligation,
+            WorkflowObligation::RequiredCapabilityCovered { node, capability, .. }
+                if *node == WorkflowNodeId(70) && capability == "filesystem"
+        )
+    }));
+    assert!(lowered.coverage.obligations.iter().any(|obligation| {
+        matches!(
+            obligation,
+            WorkflowObligation::ResourceAvailable { node, resource, .. }
+                if *node == WorkflowNodeId(71) && resource == "cache"
+        )
     }));
 }
 

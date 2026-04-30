@@ -123,6 +123,101 @@ fn legacy_header_events_lower_in_source_order_with_any_role_or_semantics() {
 }
 
 #[test]
+fn legacy_capability_resource_and_uses_headers_lower_in_source_order() {
+    let workflow = parse_workflow(
+        r#"workflow authority_flow plays role(Admin) capabilities: [filesystem @ { paths: ["/tmp/*"], read: true }, network] owns cache: CacheResource uses store: Store = StoreImpl(cache) requires: role(Auditor) { done }"#,
+    );
+
+    let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
+    let lowered = lower_workflow_form(&form, legacy_workflow_source_origin(&workflow));
+
+    let authority_and_contract_events: Vec<_> = lowered
+        .projection_events
+        .iter()
+        .filter_map(|event| match &event.kind {
+            ProjectionEventKind::Requires { requirement } => {
+                Some(format!("requires:{requirement:?}"))
+            }
+            ProjectionEventKind::Authority { authority } => {
+                Some(format!("authority:{authority:?}"))
+            }
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(
+        authority_and_contract_events,
+        vec![
+            "requires:HasRole(\"Admin\")",
+            "authority:RequiredCapability(WorkflowRequiredCapability { capability: \"filesystem\", constraints: [(\"paths\", Array([String(\"/tmp/*\")])), (\"read\", Bool(true))] })",
+            "authority:RequiredCapability(WorkflowRequiredCapability { capability: \"network\", constraints: [] })",
+            "authority:OwnedResource(WorkflowOwnedResourceSummary { name: \"cache\", ty: \"CacheResource\" })",
+            "authority:UsedBinding(WorkflowUsedBindingSummary { name: \"store\", interface: \"Store\", implementation: \"StoreImpl(cache)\" })",
+            "requires:HasRole(\"Auditor\")",
+        ],
+        "legacy authority headers must enter the shared projection path in source order instead of being skipped"
+    );
+
+    assert!(lowered.coverage.authority.iter().any(|key| key.node.0 > 0));
+    assert!(lowered.coverage.resources.iter().any(|key| key.node.0 > 0));
+    assert!(lowered.coverage.obligations.iter().any(|obligation| {
+        matches!(
+            obligation,
+            ash_core::workflow_carrier::WorkflowObligation::RequiredCapabilityCovered {
+                capability,
+                mode,
+                ..
+            } if capability == "filesystem" && mode == "required capability"
+        )
+    }));
+    assert!(lowered.coverage.obligations.iter().any(|obligation| {
+        matches!(
+            obligation,
+            ash_core::workflow_carrier::WorkflowObligation::ResourceAvailable {
+                resource,
+                access_mode,
+                ..
+            } if resource == "cache" && access_mode == "owned resource"
+        )
+    }));
+    assert!(lowered.coverage.obligations.iter().any(|obligation| {
+        matches!(
+            obligation,
+            ash_core::workflow_carrier::WorkflowObligation::CapabilityBindingAvailable {
+                binding,
+                interface,
+                ..
+            } if binding == "store" && interface == "Store"
+        )
+    }));
+}
+
+#[test]
+fn legacy_empty_capabilities_header_does_not_fabricate_authority() {
+    let workflow =
+        parse_workflow("workflow empty_caps capabilities: [] requires: role(Auditor) { done }");
+
+    let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
+    let lowered = lower_workflow_form(&form, legacy_workflow_source_origin(&workflow));
+
+    let events: Vec<_> = lowered
+        .projection_events
+        .iter()
+        .filter_map(|event| match &event.kind {
+            ProjectionEventKind::Authority { authority } => {
+                Some(format!("authority:{authority:?}"))
+            }
+            ProjectionEventKind::Requires { requirement } => {
+                Some(format!("requires:{requirement:?}"))
+            }
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(events, vec!["requires:HasRole(\"Auditor\")"]);
+}
+
+#[test]
 fn legacy_ensures_targets_successful_workflow_result_and_body_is_conservative_from_proc() {
     let workflow = parse_workflow("workflow positive ensures: result >= 1 { done }");
 

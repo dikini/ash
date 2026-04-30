@@ -1,17 +1,22 @@
 //! Compatibility adapter from legacy surface workflow headers into shared workflow carriers.
 //!
-//! This is intentionally conservative: header `requires`/`ensures` clauses are
-//! translated into the shared `WorkflowForm` contract/projection path in legacy
-//! source order. Supported legacy body shapes are summarized as a `FromProc`
-//! lower summary with explicit coverage-obligation nodes; opaque body constructs
-//! are rejected with diagnostics rather than silently treated as covered.
+//! This is intentionally conservative: role, authority/resource, and contract
+//! headers are translated into the shared `WorkflowForm` contract/projection path
+//! in legacy source order. Supported legacy body shapes are summarized as a
+//! `FromProc` lower summary with explicit coverage-obligation nodes; opaque body
+//! constructs are rejected with diagnostics rather than silently treated as covered.
 
 use ash_core::workflow_carrier::{
     OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
-    ProcProvenanceSummary, ProcResourceAuthoritySummary, SourceOrigin, WorkflowBinder,
-    WorkflowForm, WorkflowNodeId, WorkflowScope,
+    ProcProvenanceSummary, ProcResourceAuthoritySummary, SourceOrigin, WorkflowAuthorityEvent,
+    WorkflowBinder, WorkflowConstraintValue, WorkflowForm, WorkflowNodeId,
+    WorkflowOwnedResourceSummary, WorkflowRequiredCapability, WorkflowScope,
+    WorkflowUsedBindingSummary,
 };
-use ash_parser::surface::{Workflow, WorkflowDef, WorkflowHeaderEvent};
+use ash_parser::surface::{
+    CapabilityDecl, ConstraintValue, ConstructorPayload, Expr, Type, Workflow, WorkflowDef,
+    WorkflowHeaderEvent, WorkflowOwnedResource, WorkflowUsedBinding,
+};
 use ash_parser::workflow_contract_classifier::{
     ContractClassificationError, classify_postcondition, classify_requirement,
 };
@@ -61,8 +66,8 @@ pub enum UnsupportedLegacyBodyConstruct {
 /// Translate legacy `WorkflowDef.header_events` into the shared `WorkflowForm`
 /// contract path, preserving the legacy header source order.
 ///
-/// Non-contract header events remain in `WorkflowDef` legacy fields today and are
-/// skipped by this slice. Supported bodies are represented by a conservative
+/// Authority/resource and contract header events enter `WorkflowForm` in source
+/// order. Supported bodies are represented by a conservative
 /// `FromProc` summary anchored to `legacy_body_as_proc_summary:<workflow-name>`;
 /// unsupported opaque bodies reject rather than producing obligation-free
 /// summaries.
@@ -86,46 +91,75 @@ pub fn legacy_workflow_def_to_workflow_form(
     };
 
     for (header_index, event) in workflow.header_events.iter().enumerate().rev() {
-        let node = WorkflowNodeId(next_node);
-        next_node += 1;
-        let source = match event {
-            WorkflowHeaderEvent::Requires { expr, .. } => WorkflowForm::Requires {
-                node,
-                requirement: classify_requirement(expr).map_err(|source| {
-                    LegacyWorkflowAdapterError::UnsupportedRequires {
-                        header_index,
-                        source,
+        let sources = if let WorkflowHeaderEvent::Capabilities(capabilities) = event {
+            capabilities
+                .iter()
+                .rev()
+                .map(|capability| {
+                    let node = WorkflowNodeId(next_node);
+                    next_node += 1;
+                    WorkflowForm::Authority {
+                        node,
+                        authority: WorkflowAuthorityEvent::RequiredCapability(
+                            required_capability_summary(capability),
+                        ),
                     }
-                })?,
-            },
-            WorkflowHeaderEvent::Ensures { expr, .. } => WorkflowForm::Ensures {
-                node,
-                postcondition: OpenPostcondition {
-                    predicate: classify_postcondition(expr).map_err(|source| {
-                        LegacyWorkflowAdapterError::UnsupportedEnsures {
+                })
+                .collect::<Vec<_>>()
+        } else {
+            let node = WorkflowNodeId(next_node);
+            next_node += 1;
+            vec![match event {
+                WorkflowHeaderEvent::Requires { expr, .. } => WorkflowForm::Requires {
+                    node,
+                    requirement: classify_requirement(expr).map_err(|source| {
+                        LegacyWorkflowAdapterError::UnsupportedRequires {
                             header_index,
                             source,
                         }
                     })?,
                 },
-            },
-            WorkflowHeaderEvent::PlaysRole(role) => WorkflowForm::Requires {
-                node,
-                requirement: ash_core::workflow_contract::Requirement::HasRole(
-                    role.name.to_string(),
-                ),
-            },
-            WorkflowHeaderEvent::Capabilities(_)
-            | WorkflowHeaderEvent::Owns(_)
-            | WorkflowHeaderEvent::Uses(_) => continue,
+                WorkflowHeaderEvent::Ensures { expr, .. } => WorkflowForm::Ensures {
+                    node,
+                    postcondition: OpenPostcondition {
+                        predicate: classify_postcondition(expr).map_err(|source| {
+                            LegacyWorkflowAdapterError::UnsupportedEnsures {
+                                header_index,
+                                source,
+                            }
+                        })?,
+                    },
+                },
+                WorkflowHeaderEvent::PlaysRole(role) => WorkflowForm::Requires {
+                    node,
+                    requirement: ash_core::workflow_contract::Requirement::HasRole(
+                        role.name.to_string(),
+                    ),
+                },
+                WorkflowHeaderEvent::Owns(resource) => WorkflowForm::Authority {
+                    node,
+                    authority: WorkflowAuthorityEvent::OwnedResource(owned_resource_summary(
+                        resource,
+                    )),
+                },
+                WorkflowHeaderEvent::Uses(binding) => WorkflowForm::Authority {
+                    node,
+                    authority: WorkflowAuthorityEvent::UsedBinding(used_binding_summary(binding)),
+                },
+                WorkflowHeaderEvent::Capabilities(_) => {
+                    unreachable!("capabilities handled before single-event source construction")
+                }
+            }]
         };
-        form = WorkflowForm::Bind {
-            node: WorkflowNodeId(next_node),
-            source: Box::new(source),
-            binder: WorkflowBinder::Ignored,
-            next: Box::new(form),
-        };
-        next_node += 1;
+        for source in sources {
+            form = WorkflowForm::Bind {
+                node: WorkflowNodeId(next_node),
+                source: Box::new(source),
+                binder: WorkflowBinder::Ignored,
+                next: Box::new(form),
+            };
+            next_node += 1;
+        }
     }
 
     Ok(WorkflowForm::Scope {
@@ -136,6 +170,134 @@ pub fn legacy_workflow_def_to_workflow_form(
         },
         body: Box::new(form),
     })
+}
+
+fn required_capability_summary(capability: &CapabilityDecl) -> WorkflowRequiredCapability {
+    WorkflowRequiredCapability {
+        capability: capability.capability.to_string(),
+        constraints: capability
+            .constraints
+            .as_ref()
+            .map(|constraints| {
+                constraints
+                    .fields
+                    .iter()
+                    .map(|field| {
+                        (
+                            field.name.to_string(),
+                            workflow_constraint_value(&field.value),
+                        )
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+    }
+}
+
+fn owned_resource_summary(resource: &WorkflowOwnedResource) -> WorkflowOwnedResourceSummary {
+    WorkflowOwnedResourceSummary {
+        name: resource.name.to_string(),
+        ty: type_summary(&resource.ty),
+    }
+}
+
+fn used_binding_summary(binding: &WorkflowUsedBinding) -> WorkflowUsedBindingSummary {
+    WorkflowUsedBindingSummary {
+        name: binding.name.to_string(),
+        interface: type_summary(&binding.interface),
+        implementation: expr_summary(&binding.implementation),
+    }
+}
+
+fn type_summary(ty: &Type) -> String {
+    match ty {
+        Type::Name(name) | Type::Capability(name) => name.to_string(),
+        Type::List(inner) => format!("[{}]", type_summary(inner)),
+        Type::Tuple(items) => format!(
+            "({})",
+            items
+                .iter()
+                .map(type_summary)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Type::Record(fields) => format!(
+            "{{{}}}",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("{}: {}", name, type_summary(ty)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Type::Constructor { name, args } => format!(
+            "{}<{}>",
+            name,
+            args.iter().map(type_summary).collect::<Vec<_>>().join(", ")
+        ),
+        Type::Associated { base, name } => format!("{}::{}", type_summary(base), name),
+        Type::Fn(args, ret) => format!(
+            "Fn({}) -> {}",
+            args.iter().map(type_summary).collect::<Vec<_>>().join(", "),
+            type_summary(ret)
+        ),
+    }
+}
+
+fn expr_summary(expr: &Expr) -> String {
+    match expr {
+        Expr::Variable { name, .. } => name.to_string(),
+        Expr::Call {
+            func, module, args, ..
+        } => {
+            let callee = module
+                .as_ref()
+                .map_or_else(|| func.to_string(), |module| format!("{module}::{func}"));
+            format!(
+                "{}({})",
+                callee,
+                args.iter().map(expr_summary).collect::<Vec<_>>().join(", ")
+            )
+        }
+        Expr::Constructor { name, payload, .. } => match payload {
+            ConstructorPayload::Unit => name.to_string(),
+            ConstructorPayload::Tuple(items) => format!(
+                "{}({})",
+                name,
+                items
+                    .iter()
+                    .map(expr_summary)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            ConstructorPayload::Record(fields) => format!(
+                "{} {{ {} }}",
+                name,
+                fields
+                    .iter()
+                    .map(|(name, value)| format!("{}: {}", name, expr_summary(value)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        },
+        other => format!("{other:?}"),
+    }
+}
+
+fn workflow_constraint_value(value: &ConstraintValue) -> WorkflowConstraintValue {
+    match value {
+        ConstraintValue::Bool(value) => WorkflowConstraintValue::Bool(*value),
+        ConstraintValue::Int(value) => WorkflowConstraintValue::Int(*value),
+        ConstraintValue::String(value) => WorkflowConstraintValue::String(value.clone()),
+        ConstraintValue::Array(values) => {
+            WorkflowConstraintValue::Array(values.iter().map(workflow_constraint_value).collect())
+        }
+        ConstraintValue::Object(fields) => WorkflowConstraintValue::Object(
+            fields
+                .iter()
+                .map(|(name, value)| (name.clone(), workflow_constraint_value(value)))
+                .collect(),
+        ),
+    }
 }
 
 fn legacy_body_as_proc_summary(

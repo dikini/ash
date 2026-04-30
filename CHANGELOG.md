@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added a shared `WorkflowAuthorityEvent` carrier and extended legacy workflow lowering so `capabilities:`, `owns`, and `uses` headers enter the same source-ordered `WorkflowForm` / projection / coverage path as role and contract headers instead of remaining legacy-only metadata.
+
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): extended the conservative legacy workflow adapter to lower `plays role(...)` header events into the same admission `WorkflowForm::Requires(HasRole(...))` path as explicit `requires: role(...)`, preserving source order with contract headers.
 
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): extended `ash-core::workflow_carrier::ProcLowerSummary` with typed optional failure, resource-authority, provenance, and source-origin summary fields; the `ash-engine` legacy body adapter now populates explicit conservative summaries for supported body `FromProc` nodes while keeping receive/yield/resume rejection behavior covered.

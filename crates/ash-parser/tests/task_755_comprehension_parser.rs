@@ -60,6 +60,36 @@ fn parses_explicit_target_comprehension() {
 }
 
 #[test]
+fn parses_explicit_workflow_target_comprehension() {
+    let parsed = parse_expr("[x | x <- wf]: Workflow");
+
+    let Expr::Comprehension {
+        result,
+        qualifiers,
+        target,
+        span,
+    } = parsed
+    else {
+        panic!("expected comprehension expression");
+    };
+
+    assert!(span.start < span.end);
+    assert!(matches!(result.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x"));
+    assert_eq!(qualifiers.len(), 1);
+    match &qualifiers[0] {
+        ComprehensionQualifier::Bind { name, value, span } => {
+            assert_eq!(name.as_ref(), "x");
+            assert!(span.start < span.end);
+            assert!(matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "wf"));
+        }
+        other => panic!("expected bind qualifier, got {other:?}"),
+    }
+    let target = target.expect("target should be parsed");
+    assert_eq!(target.name.as_ref(), "Workflow");
+    assert!(target.args.is_empty());
+}
+
+#[test]
 fn parses_multiple_mixed_qualifiers_and_target_args() {
     let parsed = parse_expr(
         "[result | raw <- read(path), let parsed = parse(raw), _ <- guard(parsed)]: Result<ParseError>",

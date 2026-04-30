@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-776](docs/plan/tasks/TASK-776-workflow-comprehension-target.md): added explicit `[...]: Workflow` parser and typechecker regression coverage proving workflow comprehensions reuse SPEC-055 comprehension-to-`do:Workflow` normalization, preserve `WorkflowForm` / projection / obligation / source-origin alignment with equivalent `do:Workflow`, reject raw `Proc` / `Act` RHS values without `workflow::from_proc` / `workflow::from_act`, and accept those explicit lifts without adding guards, pattern binders, target inference, or applicative semantics.
+
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): completed the legacy workflow body-summary adapter for the supported legacy-body subset by emitting non-conservative failure, resource-authority, and provenance summaries through `FromProc(legacy_body_as_proc_summary:<name>)` while continuing to reject opaque receive/yield/resume bodies explicitly.
 
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added a shared `WorkflowAuthorityEvent` carrier and extended legacy workflow lowering so `capabilities:`, `owns`, and `uses` headers enter the same source-ordered `WorkflowForm` / projection / coverage path as role and contract headers instead of remaining legacy-only metadata.

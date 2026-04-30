@@ -29,7 +29,7 @@
 | [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Elaborate Workflow algebra and contract intrinsic calls into WorkflowForm artifacts | Semantic | 5 | ✅ Complete |
 | [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Add executable Workflow lowering and runtime projection tests | Runtime/Semantic | 6 | ✅ Complete |
 | [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Translate deprecated legacy workflow declarations and emit warnings | Compatibility | 8 | ✅ Complete |
-| [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Enable `[...]: Workflow` comprehensions through SPEC-055 path | Semantic | 5 | 📝 Planned |
+| [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Enable `[...]: Workflow` comprehensions through SPEC-055 path | Semantic | 5 | ✅ Complete |
 | [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Preserve workflow type/contract summaries across module exports/imports | Substrate | 7 | 📝 Planned |
 | [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Add workflow diagnostics and negative tests | Semantic | 6 | 📝 Planned |
 | [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | 📝 Planned |

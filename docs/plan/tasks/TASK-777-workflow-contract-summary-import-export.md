@@ -22,7 +22,7 @@ Public workflow summaries are shared semantic/module carriers owned by `ash-core
 - 📝 TASK-772: WorkflowForm-preserving Workflow do target.
 - 📝 TASK-774: Workflow lowering and runtime projection.
 - 📝 TASK-775: Legacy workflow translation and deprecation.
-- 📝 TASK-776: Workflow comprehension target.
+- ✅ TASK-776: Workflow comprehension target.
 
 ## Requirements
 

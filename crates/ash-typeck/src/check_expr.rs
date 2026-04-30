@@ -1929,7 +1929,11 @@ fn check_do_block(
 
     for stmt in stmts {
         match stmt {
-            DoStmt::Let { name, value, .. } => {
+            DoStmt::Let {
+                name,
+                value,
+                span: let_span,
+            } => {
                 let value_result = check_expr(&block_env, value);
                 substitution = substitution.compose(&value_result.substitution);
                 if !value_result.is_ok() {
@@ -1940,9 +1944,15 @@ fn check_do_block(
                 block_env.bind_variable(name.as_ref(), value_ty.clone());
                 if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
                     && monadic_inner_type(&value_ty, &dictionary.value_constructor).is_some()
-                    && workflow_expr_has_live_artifact(value, &live_workflow_bindings)
                 {
-                    live_workflow_bindings.insert(name.to_string());
+                    if workflow_expr_has_live_artifact(value, &live_workflow_bindings) {
+                        live_workflow_bindings.insert(name.to_string());
+                    } else {
+                        live_workflow_bindings.remove(name.as_ref());
+                        if workflow_expr_requires_live_artifact(value) {
+                            errors.push(workflow_opaque_artifact_error(*let_span, "let RHS"));
+                        }
+                    }
                 } else if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow {
                     live_workflow_bindings.remove(name.as_ref());
                 }
@@ -1961,11 +1971,7 @@ fn check_do_block(
                         if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
                             && !workflow_expr_has_live_artifact(value, &live_workflow_bindings)
                         {
-                            errors.push(ConstructorError::UnsupportedExpression {
-                                kind: "do:Workflow bind RHS for <- must carry a live WorkflowTypedArtifact or public workflow summary; opaque Workflow<T> values cannot be sequenced without preserving WorkflowForm metadata"
-                                    .to_string(),
-                                span: *span,
-                            });
+                            errors.push(workflow_opaque_artifact_error(*span, "bind RHS for <-"));
                         } else {
                             block_env.bind_variable(name.as_ref(), bound_ty);
                         }
@@ -2110,6 +2116,26 @@ fn workflow_expr_has_live_artifact(expr: &Expr, live_bindings: &HashSet<String>)
         }
         Expr::Variable { name, .. } => live_bindings.contains(name.as_ref()),
         _ => false,
+    }
+}
+
+fn workflow_expr_requires_live_artifact(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Call {
+            module: Some(module),
+            func,
+            ..
+        } if module.as_ref() == "workflow" && matches!(func.as_ref(), "bind" | "then")
+    )
+}
+
+fn workflow_opaque_artifact_error(span: Span, context: &str) -> ConstructorError {
+    ConstructorError::UnsupportedExpression {
+        kind: format!(
+            "do:Workflow {context} must carry a live WorkflowTypedArtifact or public workflow summary; opaque Workflow<T> values cannot be sequenced without preserving WorkflowForm metadata"
+        ),
+        span,
     }
 }
 

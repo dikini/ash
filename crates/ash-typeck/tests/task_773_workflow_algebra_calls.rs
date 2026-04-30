@@ -85,6 +85,13 @@ fn bind_stmt(name: &str, value: Expr) -> DoStmt {
         span: span(),
     }
 }
+fn let_stmt(name: &str, value: Expr) -> DoStmt {
+    DoStmt::Let {
+        name: name.into(),
+        value: Box::new(value),
+        span: span(),
+    }
+}
 fn computation_type(name: &str, inner: Type) -> Type {
     Type::Constructor {
         name: QualifiedName::root(name),
@@ -377,6 +384,112 @@ fn unqualified_workflow_operations_are_not_available_and_opaque_workflows_still_
         ret(var("x")),
     ]);
     let text = error_text(check_expr(&env, &opaque_then));
+    assert!(
+        text.contains("opaque Workflow") || text.contains("WorkflowTypedArtifact"),
+        "{text}"
+    );
+}
+
+#[test]
+fn local_live_workflow_let_binding_is_recovered_by_bind_and_then() {
+    let env = TypeEnv::with_builtin_types();
+    let expr = do_block(vec![
+        let_stmt("w", workflow_call("unit", vec![int_lit(1)])),
+        bind_stmt(
+            "x",
+            workflow_call(
+                "bind",
+                vec![var("w"), fn1("n", workflow_call("unit", vec![var("n")]))],
+            ),
+        ),
+        let_stmt("w2", workflow_call("unit", vec![int_lit(2)])),
+        bind_stmt(
+            "y",
+            workflow_call(
+                "then",
+                vec![var("w2"), workflow_call("unit", vec![var("x")])],
+            ),
+        ),
+        ret(var("y")),
+    ]);
+
+    let checked = check_expr(&env, &expr);
+    assert!(
+        checked.is_ok(),
+        "workflow::bind/then should recover live local let artifacts: {checked:?}"
+    );
+
+    let artifact = elaborate_typed_do_block(&env, &expr)
+        .expect("elaborates")
+        .workflow_artifact
+        .expect("artifact");
+    let WorkflowForm::Bind { source, next, .. } = artifact.form else {
+        panic!("expected bind call statement: {artifact:?}");
+    };
+    assert!(matches!(*source, WorkflowForm::Bind { .. }));
+    let WorkflowForm::Bind { source, .. } = *next else {
+        panic!("expected then call statement: {next:?}");
+    };
+    assert!(matches!(*source, WorkflowForm::Bind { .. }));
+}
+
+#[test]
+fn opaque_local_workflow_values_are_rejected_in_ordinary_bind_then_calls() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable("opaque", computation_type("Workflow", Type::Int));
+
+    let opaque_bind = do_block(vec![
+        bind_stmt(
+            "x",
+            workflow_call(
+                "bind",
+                vec![
+                    var("opaque"),
+                    fn1("n", workflow_call("unit", vec![var("n")])),
+                ],
+            ),
+        ),
+        ret(var("x")),
+    ]);
+    let text = error_text(check_expr(&env, &opaque_bind));
+    assert!(
+        text.contains("opaque Workflow") || text.contains("WorkflowTypedArtifact"),
+        "{text}"
+    );
+
+    let opaque_local_then = do_block(vec![
+        let_stmt("local", var("opaque")),
+        bind_stmt(
+            "x",
+            workflow_call(
+                "then",
+                vec![var("local"), workflow_call("unit", vec![int_lit(2)])],
+            ),
+        ),
+        ret(var("x")),
+    ]);
+    let text = error_text(check_expr(&env, &opaque_local_then));
+    assert!(
+        text.contains("opaque Workflow") || text.contains("WorkflowTypedArtifact"),
+        "{text}"
+    );
+}
+
+#[test]
+fn opaque_workflow_algebra_let_result_is_rejected_before_later_sequencing() {
+    let mut env = TypeEnv::with_builtin_types();
+    env.bind_variable("opaque", computation_type("Workflow", Type::Int));
+    let expr = do_block(vec![
+        let_stmt(
+            "bad",
+            workflow_call(
+                "then",
+                vec![var("opaque"), workflow_call("unit", vec![int_lit(2)])],
+            ),
+        ),
+        ret(int_lit(0)),
+    ]);
+    let text = error_text(check_expr(&env, &expr));
     assert!(
         text.contains("opaque Workflow") || text.contains("WorkflowTypedArtifact"),
         "{text}"

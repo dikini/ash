@@ -1,8 +1,8 @@
 # TASK-773: Workflow Algebra and Contract Intrinsic Call Elaboration
 
-## Status: 🚧 Expanded first slice implemented
+## Status: 🚧 Expanded local-artifact slice implemented
 
-Implemented first slice covers qualified ordinary-call preservation for `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts. Focused coverage now includes explicit Proc/Act lift artifact preservation, direct `any_role([...])` contract classifier semantics, stored/partial/prebuilt contract intrinsic misuse rejection, and standalone open `workflow::ensures(result ...)` rejection. Full opaque Proc/Act summary validation, imported workflow summary recovery, broader standalone closed-postcondition policy, and broader composition/import/export cases remain follow-up work.
+Implemented first slices cover qualified ordinary-call preservation for `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts. Focused coverage now includes explicit Proc/Act lift artifact preservation, direct `any_role([...])` contract classifier semantics, stored/partial/prebuilt contract intrinsic misuse rejection, standalone open `workflow::ensures(result ...)` rejection, positive local live Workflow artifact recovery through `let` binding into ordinary `workflow::bind` / `workflow::then`, and rejection of opaque named/local `Workflow<T>` values in ordinary `bind` / `then` calls. Full imported/public workflow summary recovery, `workflow::use`, opaque Proc/Act summary validation, broader standalone closed-postcondition policy, and broader composition/import/export cases remain follow-up work.
 
 ## References
 
@@ -61,7 +61,8 @@ Implement WorkflowForm-aware ordinary expression elaboration for compiler-known 
 - [x] Direct contract intrinsic calls elaborate to the same WorkflowForm events as statement forms.
 - [x] Contract arguments are classified before ordinary value typing as contract values.
 - [x] `Requirement` / `OpenPostcondition` remain non-denotable.
-- [ ] Named/local/imported opaque Workflow values without a live artifact or public summary are rejected for bind/then/use, while named/local values with registered artifacts are accepted.
+- [x] Named/local opaque Workflow values without a live artifact are rejected for bind/then, while named/local values with registered live artifacts are accepted.
+- [ ] Imported Workflow values and public workflow summaries recover/reject through the module summary path; `workflow::use` remains deferred with the broader use/admission slice.
 - [x] Qualified `workflow::...` builtins resolve; unqualified operation names are not implicitly imported by `do:Workflow`.
 - [x] Standalone unresolved `ensures` rejects with a targeted diagnostic.
 - [x] Existing ordinary function-call behavior does not regress.

@@ -3067,7 +3067,7 @@ Repair the post-Phase-106 `ash check` corpus for standard library modules and ex
 ## Phase 108: First-Class Workflow Carrier
 
 **Priority:** High (enables first-class workflow composition and Workflow typed-do/comprehension targets)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md)
 **Design:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md)
 **Plan:** [docs/plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md](PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
@@ -3077,17 +3077,17 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | First-class workflow spec/plan packet | 4 | ✅ Complete |
-| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, obligation, and adapter semantics | 7 | 📝 Planned |
-| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Workflow contract surface, classifier, and header events | 7 | 📝 Planned |
-| [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Workflow type, qualified builtins, shared carriers, and intrinsic parameters | 9 | 📝 Planned |
-| [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | WorkflowForm-preserving Workflow do target | 9 | 📝 Planned |
-| [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Workflow algebra and contract intrinsic call elaboration | 5 | 📝 Planned |
-| [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Workflow lowering and runtime projection | 6 | 📝 Planned |
-| [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Legacy workflow translation and deprecation | 8 | 📝 Planned |
-| [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Workflow comprehension target | 5 | 📝 Planned |
-| [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | 📝 Planned |
-| [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 6 | 📝 Planned |
-| [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | First-class workflow closeout | 4 | 📝 Planned |
+| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, obligation, and adapter semantics | 7 | ✅ Complete |
+| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Workflow contract surface, classifier, and header events | 7 | ✅ Complete |
+| [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Workflow type, qualified builtins, shared carriers, and intrinsic parameters | 9 | ✅ Complete |
+| [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | WorkflowForm-preserving Workflow do target | 9 | ✅ Complete |
+| [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Workflow algebra and contract intrinsic call elaboration | 5 | ✅ Complete |
+| [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Workflow lowering and runtime projection | 6 | ✅ Complete |
+| [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Legacy workflow translation and deprecation | 8 | ✅ Complete |
+| [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Workflow comprehension target | 5 | ✅ Complete |
+| [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | ✅ Complete |
+| [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 6 | ✅ Complete |
+| [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | First-class workflow closeout | 4 | ✅ Complete |
 
 **Track A (Workflow Form + Compatibility Substrate):** 18h. Promote DESIGN-033 to SPEC-056/PLAN-104, harden workflow-form/projection/obligation semantics, and add parser/classifier/header-event substrate.
 **Track B (Public Surface + Workflow Do + Runtime):** 29h. Add public `Workflow<A>`, shared `ash-core` carriers, qualified compiler-known workflow operations, non-denotable intrinsic parameters, WorkflowForm-preserving `do:Workflow`, Workflow algebra/contract intrinsic call elaboration, and executable runtime/projection tests.

@@ -1,6 +1,6 @@
 # TASK-776: Workflow Comprehension Target
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -38,8 +38,12 @@ Enable explicit-target workflow comprehensions `[result | qualifiers]: Workflow`
 
 ## Verification
 
-- [ ] `[...]: Workflow` type-checks for workflow qualifiers.
-- [ ] Elaboration shape matches `do:Workflow` and produces the same `WorkflowForm` / projection-event alignment.
-- [ ] Negative tower mismatch diagnostics work.
-- [ ] Existing Act/Proc comprehensions still pass.
-- [ ] CHANGELOG.md updated.
+- [x] `[...]: Workflow` type-checks for workflow qualifiers.
+- [x] Elaboration shape matches `do:Workflow` and produces the same `WorkflowForm` / projection-event alignment.
+- [x] Negative tower mismatch diagnostics work.
+- [x] Existing Act/Proc comprehensions still pass.
+- [x] CHANGELOG.md updated.
+
+## Completion Notes
+
+Completed in Phase 108 by adding explicit TASK-776 regression coverage around the existing SPEC-055 comprehension-to-do path. `[...]: Workflow` now has parser coverage, typechecker coverage proving `Workflow<Int>` synthesis, elaboration equivalence with explicit `do:Workflow`, artifact/projection/obligation/source-origin alignment, raw `Proc` / `Act` RHS lift diagnostics, and explicit `workflow::from_proc` / `workflow::from_act` acceptance coverage. No new comprehension semantics were added: target inference, guards, pattern binders, and applicative semantics remain out of scope.

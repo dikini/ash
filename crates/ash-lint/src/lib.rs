@@ -471,13 +471,12 @@ fn contains_policy(expr: &Expr) -> bool {
             };
             contains_policy(value)
         }),
-        Expr::DoBlock { stmts, .. } => stmts.iter().any(|stmt| {
-            let value = match stmt {
-                ash_parser::surface::DoStmt::Let { value, .. }
-                | ash_parser::surface::DoStmt::Bind { value, .. }
-                | ash_parser::surface::DoStmt::Return { value, .. } => value,
-            };
-            contains_policy(value)
+        Expr::DoBlock { stmts, .. } => stmts.iter().any(|stmt| match stmt {
+            ash_parser::surface::DoStmt::Let { value, .. }
+            | ash_parser::surface::DoStmt::Bind { value, .. }
+            | ash_parser::surface::DoStmt::Return { value, .. } => contains_policy(value),
+            ash_parser::surface::DoStmt::WorkflowRequires { .. }
+            | ash_parser::surface::DoStmt::WorkflowEnsures { .. } => false,
         }),
         Expr::Comprehension {
             result, qualifiers, ..
@@ -493,6 +492,7 @@ fn contains_policy(expr: &Expr) -> bool {
                 contains_policy(value)
             }) || contains_policy(result)
         }
+        Expr::List { items, .. } => items.iter().any(contains_policy),
     }
 }
 
@@ -742,6 +742,7 @@ mod tests {
             capabilities: vec![],
             owned_resources: vec![],
             used_bindings: vec![],
+            header_events: vec![],
             body: decide,
             contract: None,
             span: Span::default(),

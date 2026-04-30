@@ -815,12 +815,15 @@ impl CapabilityChecker {
             Expr::DoBlock { stmts, .. } => {
                 use ash_parser::surface::DoStmt;
                 for stmt in stmts {
-                    let value = match stmt {
+                    match stmt {
                         DoStmt::Let { value, .. }
                         | DoStmt::Bind { value, .. }
-                        | DoStmt::Return { value, .. } => value,
-                    };
-                    self.verify_expr(value)?;
+                        | DoStmt::Return { value, .. } => self.verify_expr(value)?,
+                        DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {
+                            // Contract statements are classified by workflow elaboration; do not
+                            // interpret role/result syntax as ordinary capability-bearing exprs.
+                        }
+                    }
                 }
                 Ok(())
             }
@@ -838,6 +841,13 @@ impl CapabilityChecker {
                     self.verify_expr(value)?;
                 }
                 self.verify_expr(result)
+            }
+
+            Expr::List { items, .. } => {
+                for item in items {
+                    self.verify_expr(item)?;
+                }
+                Ok(())
             }
         }
     }

@@ -48,6 +48,7 @@ fn create_workflow_def_with_roles(role_names: Vec<&str>) -> WorkflowDef {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: ash_parser::surface::Workflow::Done { span: test_span() },
         contract: None,
         span: test_span(),

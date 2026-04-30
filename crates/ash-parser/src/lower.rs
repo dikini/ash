@@ -1624,6 +1624,10 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         Expr::Comprehension { .. } => Err(LoweringError::ExprNotLowerable {
             kind: "comprehension requires typed do elaboration before lowering",
         }),
+
+        Expr::List { .. } => Err(LoweringError::ExprNotLowerable {
+            kind: "contract/list expression requires classifier before lowering",
+        }),
     }
 }
 

@@ -147,7 +147,7 @@ fn unknown_do_target_names_target_and_fix_shape() {
     let expr = do_block("Missing", vec![ret(int_lit(1))]);
     let text = first_error_text(&expr);
     assert!(text.contains("unknown do target 'Missing'"), "{text}");
-    assert!(text.contains("Act") || text.contains("Proc"), "{text}");
+    assert!(text.contains("Act, Proc, or Workflow"), "{text}");
     assert_first_error_has_span(&expr);
 }
 
@@ -157,7 +157,7 @@ fn wrong_kind_target_names_expected_computation_kind() {
     let text = first_error_text(&expr);
     assert!(text.contains("do target Int has kind *"), "{text}");
     assert!(text.contains("expected * -> *"), "{text}");
-    assert!(text.contains("Act or Proc"), "{text}");
+    assert!(text.contains("Act, Proc, or Workflow"), "{text}");
     assert_first_error_has_span(&expr);
 }
 

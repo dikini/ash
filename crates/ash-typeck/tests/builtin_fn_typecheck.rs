@@ -25,6 +25,7 @@ fn workflow_returning(expr: Expr, return_ty: SurfaceType) -> WorkflowDef {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: Workflow::Ret { expr, span: span() },
         contract: None,
         span: span(),

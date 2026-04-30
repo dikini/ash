@@ -1,6 +1,6 @@
 # TASK-770: Workflow Contract Surface, Classifier, and Header Events
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -14,7 +14,7 @@ Add the parser/surface substrate for first-class workflow contract syntax and de
 
 ## Dependencies
 
-- 📝 TASK-769: Workflow form, projection, obligation, and adapter semantics.
+- ✅ TASK-769: Workflow form, projection, obligation, and adapter semantics.
 
 ## Requirements
 
@@ -50,13 +50,13 @@ Add the parser/surface substrate for first-class workflow contract syntax and de
 
 ## Verification
 
-- [ ] `requires: expr;` and `ensures: expr;` parse inside do blocks with spans preserved.
-- [ ] Source-ordered `WorkflowHeaderEvent`s preserve legacy declaration header order.
-- [ ] Parser additions remain raw surface carriers and do not own semantic WorkflowForm/coverage/runtime metadata or parser-private classifier output structs.
-- [ ] Existing legacy aggregate fields remain available or are derived without behavior loss.
-- [ ] `any_role([...])` has a real OR-role semantic carrier.
-- [ ] Contract statement nodes are not silently erased by visitors/lowering.
-- [ ] WorkflowDef constructor/exhaustive-match fallout is addressed across crates.
-- [ ] Existing Act/Proc do parser tests still pass.
-- [ ] Focused affected `cargo check` passes.
-- [ ] CHANGELOG.md updated.
+- [x] `requires: expr;` and `ensures: expr;` parse inside do blocks with spans preserved.
+- [x] Source-ordered `WorkflowHeaderEvent`s preserve legacy declaration header order.
+- [x] Parser additions remain raw surface carriers and do not own semantic WorkflowForm/coverage/runtime metadata or parser-private classifier output structs.
+- [x] Existing legacy aggregate fields remain available or are derived without behavior loss.
+- [x] `any_role([...])` has a real OR-role semantic carrier.
+- [x] Contract statement nodes are not silently erased by visitors/lowering.
+- [x] WorkflowDef constructor/exhaustive-match fallout is addressed across crates.
+- [x] Existing Act/Proc do parser tests still pass.
+- [x] Focused affected `cargo check` passes.
+- [x] CHANGELOG.md updated.

@@ -212,6 +212,7 @@ fn workflow(body_expr: Expr, used_bindings: Vec<WorkflowUsedBinding>) -> Workflo
         capabilities: vec![],
         owned_resources: vec![owned_file()],
         used_bindings,
+        header_events: vec![],
         body: Workflow::Ret {
             expr: body_expr,
             span: span(),

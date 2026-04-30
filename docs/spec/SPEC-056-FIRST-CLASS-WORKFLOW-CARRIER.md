@@ -332,7 +332,7 @@ LegacyBodyProcSummary = {
 
 The adapter is a compatibility boundary only. It must preserve lower Proc summaries and emit lower-coverage obligations, must not create an independent legacy runtime/typechecking path, and must conservatively reject legacy bodies that cannot produce sufficient static summaries in Phase 108. Header events and the body summary are reconciled by the same WorkflowForm coverage/obligation machinery used by first-class `do:Workflow`.
 
-Required warning family: `[NEW] DeprecatedLegacyWorkflowDeclaration`, emitted with the workflow declaration span and a fix hint to rewrite as a named `Workflow<A>` value or `do:Workflow` expression once the new surface is available. The warning must be diagnostics-plumbed through parser/typechecker/engine/CLI or an equivalent check path, must be emitted exactly once per deprecated declaration, and must not cause `ash check` to fail when no errors exist.
+Required warning family: `DeprecatedLegacyWorkflowDeclaration`, emitted with the workflow declaration span and a fix hint to rewrite as a named `Workflow<A>` value or `do:Workflow` expression once the new surface is available. The warning must be diagnostics-plumbed through parser/typechecker/engine/CLI or an equivalent check path, must be emitted exactly once per deprecated declaration, and must not cause `ash check` to fail when no errors exist.
 
 ### 5.3 Algebraic intent
 
@@ -1059,7 +1059,7 @@ The first implementation slice must add or adapt diagnostics for:
 10. Dynamic admission required but forbidden by this spec.
 11. Parser-only lowering attempted for `do:Workflow` or `[...]: Workflow`.
 12. Evidence-preserving optimization violation: a neutral Proc-projection governance node was erased before its coverage/provenance/report evidence was preserved.
-13. Deprecated legacy workflow declaration: accepted compatibility syntax translated to `WorkflowForm`, with warning `[NEW] DeprecatedLegacyWorkflowDeclaration` and a rewrite hint.
+13. Deprecated legacy workflow declaration: accepted compatibility syntax translated to `WorkflowForm`, with warning `DeprecatedLegacyWorkflowDeclaration` and a rewrite hint.
 14. Public contract-value misuse: attempts to store/pass/return `Requirement` or `OpenPostcondition` as ordinary values must state that these are opaque compiler-known contract arguments in the first slice.
 
 Diagnostics should state expected shape, found type, relevant contract/evidence component, and one likely fix.

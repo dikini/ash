@@ -213,6 +213,7 @@ fn type_check_program_registers_capability_interface_definitions_before_workflow
             capabilities: vec![],
             owned_resources: vec![],
             used_bindings: vec![],
+            header_events: vec![],
             body: Workflow::Done { span: span() },
             contract: None,
             span: span(),

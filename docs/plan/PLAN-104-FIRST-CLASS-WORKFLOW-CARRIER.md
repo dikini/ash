@@ -12,7 +12,7 @@
 
 ## Phase 108: First-Class Workflow Carrier
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md)
 **Design:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md)
 **Depends on:** Phase 105 / [SPEC-054](../spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), Phase 106 / [SPEC-055](../spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md), Proc/runtime specs [SPEC-048](../spec/SPEC-048-PROC-LIBRARY.md), [SPEC-049](../spec/SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](../spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](../spec/SPEC-051-WORKFLOW-SEMANTICS.md), and authority/resource specs [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)/[SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md).
@@ -22,20 +22,20 @@
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | Promote DESIGN-033 into SPEC-056/PLAN-104 and register Phase 108 | Docs/Planning | 4 | ✅ Complete |
-| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Define workflow form, projection, obligation, and adapter semantics | Docs/Semantics | 7 | 📝 Planned |
-| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Add workflow contract surface, classifier, and source-ordered header events | Parser/Substrate | 7 | 📝 Planned |
-| [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Register `Workflow<A>`, qualified workflow builtins, shared carriers, and non-denotable intrinsic parameters | Type/Substrate | 9 | 📝 Planned |
-| [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | Add WorkflowForm-preserving `do:Workflow` target | Semantic | 9 | 📝 Planned |
-| [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Elaborate Workflow algebra and contract intrinsic calls into WorkflowForm artifacts | Semantic | 5 | 📝 Planned |
-| [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Add executable Workflow lowering and runtime projection tests | Runtime/Semantic | 6 | 📝 Planned |
-| [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Translate deprecated legacy workflow declarations and emit warnings | Compatibility | 8 | 📝 Planned |
-| [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Enable `[...]: Workflow` comprehensions through SPEC-055 path | Semantic | 5 | 📝 Planned |
-| [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Preserve workflow type/contract summaries across module exports/imports | Substrate | 7 | 📝 Planned |
-| [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Add workflow diagnostics and negative tests | Semantic | 6 | 📝 Planned |
-| [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | 📝 Planned |
+| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Define workflow form, projection, obligation, and adapter semantics | Docs/Semantics | 7 | ✅ Complete |
+| [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Add workflow contract surface, classifier, and source-ordered header events | Parser/Substrate | 7 | ✅ Complete |
+| [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Register `Workflow<A>`, qualified workflow builtins, shared carriers, and non-denotable intrinsic parameters | Type/Substrate | 9 | ✅ Complete |
+| [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | Add WorkflowForm-preserving `do:Workflow` target | Semantic | 9 | ✅ Complete |
+| [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Elaborate Workflow algebra and contract intrinsic calls into WorkflowForm artifacts | Semantic | 5 | ✅ Complete |
+| [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Add executable Workflow lowering and runtime projection tests | Runtime/Semantic | 6 | ✅ Complete |
+| [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Translate deprecated legacy workflow declarations and emit warnings | Compatibility | 8 | ✅ Complete |
+| [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Enable `[...]: Workflow` comprehensions through SPEC-055 path | Semantic | 5 | ✅ Complete |
+| [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Preserve workflow type/contract summaries across module exports/imports | Substrate | 7 | ✅ Complete |
+| [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Add workflow diagnostics and negative tests | Semantic | 6 | ✅ Complete |
+| [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | ✅ Complete |
 
 Estimated total: 77 hours.
-Remaining after TASK-768: 73 hours.
+Remaining after TASK-769: 66 hours.
 
 ## Tracks
 
@@ -134,18 +134,18 @@ Phase 108 also builds on Proc/runtime/capability/resource substrates. It must no
 
 Phase 108 is complete when:
 
-- [ ] SPEC-056 is registered in docs/spec/README.md.
-- [ ] PLAN-104 and TASK-768 through TASK-779 are registered in PLAN-INDEX.md.
-- [ ] `Workflow<A>` is a public builtin unary type constructor.
-- [ ] `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` exist as compiler-known qualified builtins and type-check without implicit unqualified imports.
-- [ ] `Workflow` resolves as a SPEC-054 do target.
-- [ ] `do:Workflow` type-checks and elaborates through a WorkflowForm-preserving artifact.
-- [ ] Ordinary compiler-known calls to all first-slice `workflow::...` operations preserve WorkflowForm artifacts in Workflow construction contexts.
-- [ ] `workflow::unit`, `workflow::bind`, and `workflow::then` have executable Proc/runtime projections through existing Proc/workflow boundaries, with contract metadata preserved.
-- [ ] `[...]: Workflow` comprehensions elaborate through the same path.
-- [ ] Implicit Act/Proc-to-Workflow lifts are rejected with explicit-lift hints.
-- [ ] Workflow contract/coverage evidence exists and is used by diagnostics and lowering/runtime projection where applicable; non-dischargeable or opaque obligations are conservatively rejected rather than silently accepted.
-- [ ] Imported workflow summaries are preserved or missing summaries are rejected.
-- [ ] Deprecated legacy workflow declarations warn and translate to the same `WorkflowForm` path as equivalent first-class workflow expressions.
-- [ ] Examples and docs state deferred parallel/dynamic-admission behavior honestly.
-- [ ] Full verification and independent review pass.
+- [x] SPEC-056 is registered in docs/spec/README.md.
+- [x] PLAN-104 and TASK-768 through TASK-779 are registered in PLAN-INDEX.md.
+- [x] `Workflow<A>` is a public builtin unary type constructor.
+- [x] `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` exist as compiler-known qualified builtins and type-check without implicit unqualified imports.
+- [x] `Workflow` resolves as a SPEC-054 do target.
+- [x] `do:Workflow` type-checks and elaborates through a WorkflowForm-preserving artifact.
+- [x] Ordinary compiler-known calls to all first-slice `workflow::...` operations preserve WorkflowForm artifacts in Workflow construction contexts.
+- [x] `workflow::unit`, `workflow::bind`, and `workflow::then` have executable Proc/runtime projections through existing Proc/workflow boundaries, with contract metadata preserved.
+- [x] `[...]: Workflow` comprehensions elaborate through the same path.
+- [x] Implicit Act/Proc-to-Workflow lifts are rejected with explicit-lift hints.
+- [x] Workflow contract/coverage evidence exists and is used by diagnostics and lowering/runtime projection where applicable; non-dischargeable or opaque obligations are conservatively rejected rather than silently accepted.
+- [x] Imported workflow summaries are preserved or missing summaries are rejected.
+- [x] Deprecated legacy workflow declarations warn and translate to the same `WorkflowForm` path as equivalent first-class workflow expressions.
+- [x] Examples and docs state deferred parallel/dynamic-admission behavior honestly.
+- [x] Full verification and independent review pass.

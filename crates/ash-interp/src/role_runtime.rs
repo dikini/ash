@@ -36,6 +36,7 @@
 //!     used_bindings: vec![],
 //!     body: ash_parser::surface::Workflow::Done { span: ash_parser::token::Span::default() },
 //!     contract: None,
+//!     header_events: vec![],
 //!     span: ash_parser::token::Span::default(),
 //! };
 //!
@@ -415,6 +416,7 @@ mod tests {
             capabilities: vec![],
             owned_resources: vec![],
             used_bindings: vec![],
+            header_events: vec![],
             body: ash_parser::surface::Workflow::Done { span: test_span() },
             contract: None,
             span: test_span(),

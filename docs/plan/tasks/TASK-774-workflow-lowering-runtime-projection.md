@@ -1,6 +1,10 @@
 # TASK-774: Workflow Lowering and Runtime Projection
 
-## Status: 📝 Planned
+## Status: ✅ Complete
+
+First slice implemented: `ash-core` now owns a public `WorkflowForm` lowering/projection carrier (`LoweredWorkflowProjection` / `WorkflowProcProjection`) and `lower_workflow_form` API. This slice proves `unit`, `bind`, `then`-shaped ignored binds, `requires`, `ensures`, `from_proc`, and `from_act` lower from shared carriers while preserving projection events, contract metadata, and delayed coverage obligations. Runtime-boundary slices implemented: `ash-interp` now exposes a runtime-facing projection boundary that consumes `ash-core` `WorkflowProcProjection<Value>` directly, executes sound `unit`, materialized `bind`/`then`, and transparent `scope` cases, and names unsupported `from_proc`, `from_act`, and neutral governance execution with `FirstClassWorkflowProjectionExecutionUnsupported` rather than silently producing dead values. `ash-engine` now exposes a narrow engine-facing seam that accepts the same public `ash-core` carrier and forwards to the `ash-interp` projection boundary. It does not claim full lower-carrier execution yet.
+
+Second-slice dependency audit: `ash-interp` already depends on `ash-core`, `ash-parser`, and `ash-typeck`, but the new runtime-facing projection boundary intentionally imports only `ash_core::{Value, workflow_carrier::{WorkflowNodeId, WorkflowProcProjection}}` and local `ExecError`/`ExecResult`. The engine-facing seam uses `ash-core::workflow_carrier::WorkflowProcProjection<Value>` and `ash-interp::execute_workflow_proc_projection`; it does not add parser/typechecker-private runtime inputs. This slice performs API-boundary cleanup/enforcement only; it does not remove the existing broad `ash-interp` or `ash-engine` parser/typeck dependencies.
 
 ## References
 
@@ -18,9 +22,9 @@ Make first-class Workflow values executable through the existing Proc/workflow b
 
 ## Dependencies
 
-- 📝 TASK-771: Workflow type, qualified builtins, `ash-core` carrier substrate, and intrinsic parameter classes.
-- 📝 TASK-772: WorkflowForm-preserving `do:Workflow` typed artifact.
-- 📝 TASK-773: Workflow algebra and contract intrinsic call elaboration.
+- ✅ TASK-771: Workflow type, qualified builtins, `ash-core` carrier substrate, and intrinsic parameter classes.
+- ✅ TASK-772: WorkflowForm-preserving `do:Workflow` typed artifact.
+- ✅ TASK-773: Workflow algebra and contract intrinsic call elaboration.
 
 ## Requirements
 
@@ -50,12 +54,12 @@ Make first-class Workflow values executable through the existing Proc/workflow b
 
 ## Verification
 
-- [ ] `workflow::unit`, `workflow::bind`, and `workflow::then` have executable Proc projections.
-- [ ] Runtime/lowering boundaries use `ash-core` carriers/public summaries and do not require parser ASTs or typeck-private structs.
-- [ ] Cargo dependency boundaries are audited, and the task records whether it performed API-boundary cleanup only or actual dependency removal.
-- [ ] Explicit lower-carrier lifts preserve summaries and coverage obligations.
-- [ ] Contract-injection nodes survive lowering into metadata/obligations.
-- [ ] First-class Workflow execution matches existing legacy semantics where legacy execution already exists.
-- [ ] Unsupported execution cases fail at a named, tested boundary rather than silently producing dead values.
-- [ ] Existing Proc/workflow boundary semantics are not redefined.
-- [ ] CHANGELOG.md updated.
+- [x] `workflow::unit`, materialized `workflow::bind` / `workflow::then`, and transparent projection scopes have an `ash-interp` runtime-facing consumer through `WorkflowProcProjection<Value>`; `from_proc`, `from_act`, and neutral governance projections remain explicitly unsupported at execution until their Proc/Act runtimes are wired.
+- [x] Runtime/lowering boundaries use `ash-core` carriers/public summaries and do not require parser ASTs or typeck-private structs for the first shared lowering slice (`lower_workflow_form`).
+- [x] Cargo dependency boundaries are audited, and this slice records API-boundary cleanup/enforcement only rather than dependency removal.
+- [x] Explicit lower-carrier lifts preserve summaries and coverage obligations in `ash-core` shared lowering tests.
+- [x] Contract-injection nodes survive shared lowering into metadata/obligations (`requires` admission + obligations, `ensures` delayed result obligations).
+- [x] First-class Workflow execution matches existing legacy semantics where legacy execution already exists for the materialized projection carrier shapes in this slice; unsupported Proc/Act lift execution remains named and tested instead of silently degrading.
+- [x] Unsupported execution cases fail at a named, tested boundary rather than silently producing dead values (`FirstClassWorkflowProjectionExecutionUnsupported` in `ash-interp`).
+- [x] Existing Proc/workflow boundary semantics are not redefined by the engine-facing first-class Workflow projection seam; it is a narrow forwarder to the public `ash-interp` `WorkflowProcProjection<Value>` boundary for supported shapes and named unsupported diagnostics.
+- [x] CHANGELOG.md updated for the first shared `ash-core` lowering/projection slice, the `ash-interp` named-boundary slice, and the `ash-engine` forwarding seam.

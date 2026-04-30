@@ -43,11 +43,18 @@ pub enum Requirement {
     HasCapability { cap: String, min_effect: Effect },
     /// Required role membership
     HasRole(String),
+    /// At least one role from the policy must be present.
+    AnyRole(RolePolicy),
     /// Arithmetic constraint on parameter (SMT-checkable)
     Arithmetic {
         var: String,
         constraint: ArithConstraint,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RolePolicy {
+    pub roles: Vec<String>,
 }
 
 /// Effect levels for capability requirements

@@ -795,6 +795,71 @@ fn convert_type_def(type_def: &TypeDef, type_env: &TypeEnv) -> Result<TypeInfo, 
     }
 }
 
+/// Non-denotable compiler-known parameter classes accepted by workflow intrinsics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WorkflowIntrinsicParameterClass {
+    Requirement,
+    OpenPostcondition,
+}
+
+impl WorkflowIntrinsicParameterClass {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Requirement => "Requirement",
+            Self::OpenPostcondition => "OpenPostcondition",
+        }
+    }
+}
+
+/// Compiler-known workflow intrinsic operation identity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WorkflowIntrinsicKind {
+    Requires,
+    Ensures,
+}
+
+/// Compiler-known workflow intrinsic descriptor with typed opaque parameter metadata.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowIntrinsic {
+    pub kind: WorkflowIntrinsicKind,
+    pub qualified_name: &'static str,
+    pub parameter_class: WorkflowIntrinsicParameterClass,
+    pub result_type: crate::types::Type,
+}
+
+impl WorkflowIntrinsic {
+    #[must_use]
+    pub fn requires(result_type: crate::types::Type) -> Self {
+        Self {
+            kind: WorkflowIntrinsicKind::Requires,
+            qualified_name: "workflow::requires",
+            parameter_class: WorkflowIntrinsicParameterClass::Requirement,
+            result_type,
+        }
+    }
+
+    #[must_use]
+    pub fn ensures(result_type: crate::types::Type) -> Self {
+        Self {
+            kind: WorkflowIntrinsicKind::Ensures,
+            qualified_name: "workflow::ensures",
+            parameter_class: WorkflowIntrinsicParameterClass::OpenPostcondition,
+            result_type,
+        }
+    }
+
+    #[must_use]
+    pub const fn parameter_class(&self) -> WorkflowIntrinsicParameterClass {
+        self.parameter_class
+    }
+
+    #[must_use]
+    pub const fn result_type(&self) -> &crate::types::Type {
+        &self.result_type
+    }
+}
+
 /// Type environment for tracking type definitions and constructor mappings
 #[derive(Debug, Clone, Default)]
 pub struct TypeEnv {
@@ -822,6 +887,10 @@ pub struct TypeEnv {
     pub(crate) type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
     /// Variable bindings: variable name -> type
     variables: HashMap<String, crate::types::Type>,
+    /// Compiler-known workflow intrinsics whose parameters are not source-denotable types.
+    workflow_intrinsics: HashMap<String, WorkflowIntrinsic>,
+    /// Public Workflow summaries imported from module metadata by binding name.
+    public_workflow_summaries: HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
     /// Lowered pure-function contracts kept at the type/runtime boundary.
     fn_contracts: HashMap<String, StoredFnContract>,
     /// Capability symbols known to be capability targets, not pure functions.
@@ -914,6 +983,8 @@ impl TypeEnv {
             impls: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
+            workflow_intrinsics: HashMap::with_capacity(2),
+            public_workflow_summaries: HashMap::with_capacity(2),
             fn_contracts: HashMap::with_capacity(10),
             capability_symbols: HashSet::with_capacity(8),
             parent: None,
@@ -1579,6 +1650,8 @@ impl TypeEnv {
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
+            workflow_intrinsics: self.workflow_intrinsics.clone(),
+            public_workflow_summaries: HashMap::new(),
             fn_contracts: HashMap::new(),
             capability_symbols: HashSet::new(),
             parent: None,
@@ -1897,8 +1970,10 @@ impl TypeEnv {
         self.add_act_env_type();
         self.add_act_type();
         self.add_proc_type();
+        self.add_workflow_type();
         self.add_process_handle_type();
         self.add_proc_builtin_values();
+        self.add_workflow_builtin_values();
         self.add_builtin_capability_symbols();
     }
 
@@ -2048,6 +2123,20 @@ impl TypeEnv {
             .expect("Failed to register Proc type");
     }
 
+    /// Add the public Workflow<T> type.
+    fn add_workflow_type(&mut self) {
+        let workflow_type = TypeDef {
+            name: "Workflow".to_string(),
+            params: vec!["T".to_string()],
+            body: TypeBody::Struct(vec![]),
+            visibility: ash_core::ast::Visibility::Public,
+            builtin: true,
+        };
+
+        self.register_type(&workflow_type)
+            .expect("Failed to register Workflow type");
+    }
+
     /// Add the opaque P<T> process handle type.
     fn add_process_handle_type(&mut self) {
         let process_handle_type = TypeDef {
@@ -2183,6 +2272,74 @@ impl TypeEnv {
         );
     }
 
+    /// Add the qualified workflow module builtin value signatures.
+    fn add_workflow_builtin_values(&mut self) {
+        let a = crate::types::Type::Var(crate::types::TypeVar(0));
+        let b = crate::types::Type::Var(crate::types::TypeVar(1));
+        let workflow_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Workflow"),
+            args: vec![a.clone()],
+            kind: crate::Kind::Type,
+        };
+        let workflow_b = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Workflow"),
+            args: vec![b.clone()],
+            kind: crate::Kind::Type,
+        };
+        let proc_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Proc"),
+            args: vec![a.clone()],
+            kind: crate::Kind::Type,
+        };
+        let act_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Act"),
+            args: vec![a.clone()],
+            kind: crate::Kind::Type,
+        };
+        self.bind_variable(
+            "workflow::unit",
+            crate::types::Type::Fn(vec![a.clone()], Box::new(workflow_a.clone())),
+        );
+        self.bind_variable(
+            "workflow::bind",
+            crate::types::Type::Fn(
+                vec![
+                    workflow_a.clone(),
+                    crate::types::Type::Fn(vec![a], Box::new(workflow_b.clone())),
+                ],
+                Box::new(workflow_b.clone()),
+            ),
+        );
+        self.bind_variable(
+            "workflow::then",
+            crate::types::Type::Fn(
+                vec![workflow_a.clone(), workflow_b.clone()],
+                Box::new(workflow_b),
+            ),
+        );
+        self.bind_variable(
+            "workflow::from_proc",
+            crate::types::Type::Fn(vec![proc_a], Box::new(workflow_a.clone())),
+        );
+        self.bind_variable(
+            "workflow::from_act",
+            crate::types::Type::Fn(vec![act_a], Box::new(workflow_a)),
+        );
+        let workflow_unit = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Workflow"),
+            args: vec![crate::types::Type::Null],
+            kind: crate::Kind::Type,
+        };
+        self.workflow_intrinsics.insert(
+            "workflow::requires".to_string(),
+            WorkflowIntrinsic::requires(workflow_unit.clone()),
+        );
+        self.workflow_intrinsics.insert(
+            "workflow::ensures".to_string(),
+            WorkflowIntrinsic::ensures(workflow_unit),
+        );
+    }
+
     /// Check if a type is registered
     pub fn has_type(&self, name: &str) -> bool {
         self.ast_types.contains_key(name)
@@ -2205,6 +2362,40 @@ impl TypeEnv {
     /// Bind a variable to a type in this environment
     pub fn bind_variable(&mut self, name: &str, ty: crate::types::Type) {
         self.variables.insert(name.to_string(), ty);
+    }
+
+    /// Look up a compiler-known workflow intrinsic.
+    pub fn lookup_workflow_intrinsic(&self, name: &str) -> Option<WorkflowIntrinsic> {
+        self.workflow_intrinsics.get(name).cloned().or_else(|| {
+            self.parent
+                .as_ref()
+                .and_then(|parent| parent.lookup_workflow_intrinsic(name))
+        })
+    }
+
+    /// Bind a public Workflow summary imported from module metadata.
+    pub fn bind_public_workflow_summary(
+        &mut self,
+        name: &str,
+        summary: ash_core::workflow_carrier::PublicWorkflowSummary,
+    ) {
+        self.public_workflow_summaries
+            .insert(name.to_string(), summary);
+    }
+
+    /// Look up a public Workflow summary by local or qualified binding name.
+    pub fn lookup_public_workflow_summary(
+        &self,
+        name: &str,
+    ) -> Option<ash_core::workflow_carrier::PublicWorkflowSummary> {
+        self.public_workflow_summaries
+            .get(name)
+            .cloned()
+            .or_else(|| {
+                self.parent
+                    .as_ref()
+                    .and_then(|parent| parent.lookup_public_workflow_summary(name))
+            })
     }
 
     /// Return the names of all bound variables (used for name resolution of imported callables).
@@ -2306,6 +2497,8 @@ impl TypeEnv {
             impls: self.impls.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
+            workflow_intrinsics: self.workflow_intrinsics.clone(),
+            public_workflow_summaries: self.public_workflow_summaries.clone(),
             fn_contracts: self.fn_contracts.clone(),
             capability_symbols: self.capability_symbols.clone(),
             parent: Some(Box::new(self.clone())),
@@ -2667,7 +2860,9 @@ impl TypeEnv {
             .is_root()
             .then(|| self.ast_types.get(&name.name))
             .flatten()
-            .filter(|type_def| type_def.builtin && matches!(name.name.as_str(), "Proc" | "P"))
+            .filter(|type_def| {
+                type_def.builtin && matches!(name.name.as_str(), "Proc" | "P" | "Workflow")
+            })
         else {
             return Ok(());
         };

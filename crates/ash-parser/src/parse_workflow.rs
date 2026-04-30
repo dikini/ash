@@ -17,8 +17,8 @@ use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
     Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter, Pattern,
-    Requirement, RoleRef, Spanned, Type, TypeParam, Workflow, WorkflowDef, WorkflowOwnedResource,
-    WorkflowUsedBinding,
+    Requirement, RoleRef, Spanned, Type, TypeParam, Workflow, WorkflowDef, WorkflowHeaderEvent,
+    WorkflowOwnedResource, WorkflowUsedBinding,
 };
 use crate::token::Span;
 
@@ -50,17 +50,35 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     skip_whitespace_and_comments(input);
     let declared_return_type = parse_optional_declared_return_type(input)?;
 
-    // Parse optional `plays role(R)` clauses
-    skip_whitespace_and_comments(input);
-    let plays_roles = parse_plays_roles(input)?;
-
-    // Parse optional workflow header clauses.
-    skip_whitespace_and_comments(input);
-    let (capabilities, owned_resources, used_bindings) = parse_workflow_header_clauses(input)?;
-
-    // Parse optional contract clauses (requires/ensures)
-    skip_whitespace_and_comments(input);
-    let contract = parse_opt_contract(input)?;
+    let header_events = parse_workflow_header_events(input)?;
+    let mut plays_roles = Vec::new();
+    let mut capabilities = Vec::new();
+    let mut owned_resources = Vec::new();
+    let mut used_bindings = Vec::new();
+    let mut requires = Vec::new();
+    let mut ensures = Vec::new();
+    for event in &header_events {
+        match event {
+            WorkflowHeaderEvent::PlaysRole(role) => plays_roles.push(role.clone()),
+            WorkflowHeaderEvent::Capabilities(caps) => capabilities.extend(caps.clone()),
+            WorkflowHeaderEvent::Owns(resource) => owned_resources.push(resource.clone()),
+            WorkflowHeaderEvent::Uses(binding) => used_bindings.push(binding.clone()),
+            WorkflowHeaderEvent::Requires { expr, .. } => {
+                requires.push(Requirement::Arithmetic { expr: expr.clone() });
+            }
+            WorkflowHeaderEvent::Ensures { expr, span } => {
+                ensures.push(EnsuresClause {
+                    expr: expr.clone(),
+                    span: *span,
+                });
+            }
+        }
+    }
+    let contract = if requires.is_empty() && ensures.is_empty() {
+        None
+    } else {
+        Some(Contract { requires, ensures })
+    };
 
     skip_whitespace_and_comments(input);
     let body = delimited(literal_str("{"), workflow, literal_str("}")).parse_next(input)?;
@@ -76,12 +94,69 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
         capabilities,
         owned_resources,
         used_bindings,
+        header_events,
         body,
         contract,
         span,
     })
 }
 
+/// Parse source-ordered legacy workflow header clauses.
+fn parse_workflow_header_events(input: &mut ParseInput) -> ModalResult<Vec<WorkflowHeaderEvent>> {
+    let mut events = Vec::new();
+    let mut saw_capabilities = false;
+
+    loop {
+        skip_whitespace_and_comments(input);
+        if starts_with_keyword(input, "plays") {
+            events.push(WorkflowHeaderEvent::PlaysRole(parse_single_plays_role(
+                input,
+            )?));
+        } else if starts_with_keyword(input, "capabilities") {
+            if saw_capabilities {
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+            saw_capabilities = true;
+            events.push(WorkflowHeaderEvent::Capabilities(
+                parse_capabilities_clause(input)?,
+            ));
+        } else if starts_with_keyword(input, "owns") {
+            events.push(WorkflowHeaderEvent::Owns(parse_owns_clause(input)?));
+        } else if starts_with_keyword(input, "uses") {
+            events.push(WorkflowHeaderEvent::Uses(parse_uses_clause(input)?));
+        } else if starts_with_keyword(input, "requires") {
+            let start_pos = input.state.pos;
+            let _ = keyword("requires").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(":").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let expr = expr(input)?;
+            events.push(WorkflowHeaderEvent::Requires {
+                expr,
+                span: span_from(&start_pos, &input.state.pos),
+            });
+        } else if starts_with_keyword(input, "ensures") {
+            let start_pos = input.state.pos;
+            let _ = keyword("ensures").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(":").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let expr = expr(input)?;
+            events.push(WorkflowHeaderEvent::Ensures {
+                expr,
+                span: span_from(&start_pos, &input.state.pos),
+            });
+        } else {
+            break;
+        }
+    }
+
+    Ok(events)
+}
+
+#[allow(dead_code)]
 /// Parse zero or more `plays role(R)` clauses.
 fn parse_plays_roles(input: &mut ParseInput) -> ModalResult<Vec<RoleRef>> {
     let mut roles = Vec::new();
@@ -133,7 +208,8 @@ fn parse_single_plays_role(input: &mut ParseInput) -> ModalResult<RoleRef> {
     })
 }
 
-/// Parse optional workflow header clauses after roles.
+#[allow(dead_code)]
+/// Parse optional workflow header clauses after parameters/roles and before contracts.
 fn parse_workflow_header_clauses(
     input: &mut ParseInput,
 ) -> ModalResult<(
@@ -704,6 +780,7 @@ fn parse_type_arg_separator(input: &mut ParseInput) -> ModalResult<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 /// Parse optional contract clauses
 fn parse_opt_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
     let mut requires = Vec::new();
@@ -730,6 +807,7 @@ fn parse_opt_contract(input: &mut ParseInput) -> ModalResult<Option<Contract>> {
     }
 }
 
+#[allow(dead_code)]
 /// Parse a requires clause: `requires: <expr>`
 fn parse_requires_clause(input: &mut ParseInput) -> ModalResult<Requirement> {
     let _ = keyword("requires").parse_next(input)?;
@@ -743,6 +821,7 @@ fn parse_requires_clause(input: &mut ParseInput) -> ModalResult<Requirement> {
     Ok(Requirement::Arithmetic { expr })
 }
 
+#[allow(dead_code)]
 /// Parse an ensures clause: `ensures: <expr>`
 fn parse_ensures_clause(input: &mut ParseInput) -> ModalResult<EnsuresClause> {
     let start_pos = input.state.pos;

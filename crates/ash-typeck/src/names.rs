@@ -744,6 +744,12 @@ impl NameResolver {
                         ash_parser::surface::DoStmt::Return { value, .. } => {
                             self.resolve_expr(value);
                         }
+                        ash_parser::surface::DoStmt::WorkflowRequires { .. }
+                        | ash_parser::surface::DoStmt::WorkflowEnsures { .. } => {
+                            // Contract statements are raw workflow-contract syntax until the
+                            // Workflow elaborator classifies them. Do not resolve role symbols
+                            // or the delayed `result` binder as ordinary lexical variables here.
+                        }
                     }
                 }
             }
@@ -768,6 +774,11 @@ impl NameResolver {
                 }
                 self.resolve_expr(result);
                 self.pop_scope();
+            }
+            Expr::List { items, .. } => {
+                for item in items {
+                    self.resolve_expr(item);
+                }
             }
         }
     }

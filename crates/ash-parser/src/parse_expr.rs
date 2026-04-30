@@ -142,6 +142,38 @@ fn parse_do_stmt(input: &mut ParseInput) -> ModalResult<DoStmt> {
         });
     }
 
+    if input_starts_with_keyword(input, "requires") {
+        let _ = keyword("requires").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let contract_expr = expr(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(";").parse_next(input)?;
+        let span = span_from(&stmt_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        return Ok(DoStmt::WorkflowRequires {
+            expr: Box::new(contract_expr),
+            span,
+        });
+    }
+
+    if input_starts_with_keyword(input, "ensures") {
+        let _ = keyword("ensures").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let post_expr = expr(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(";").parse_next(input)?;
+        let span = span_from(&stmt_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        return Ok(DoStmt::WorkflowEnsures {
+            expr: Box::new(post_expr),
+            span,
+        });
+    }
+
     if input_starts_with_keyword(input, "return") {
         let _ = keyword("return").parse_next(input)?;
         skip_whitespace_and_comments(input);
@@ -1261,6 +1293,10 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         if opt(literal_str("(")).parse_next(input)?.is_some() {
             let args = if literal_str(")").parse_next(input).is_ok() {
                 vec![]
+            } else if matches!(&expr, Expr::Variable { name, .. } if name.as_ref() == "any_role") {
+                let args = vec![parse_list_expr(input)?];
+                let _ = literal_str(")").parse_next(input)?;
+                args
             } else {
                 let args = parse_args(input)?;
                 let _ = literal_str(")").parse_next(input)?;
@@ -1287,6 +1323,37 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     Ok(expr)
+}
+
+fn parse_list_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state.pos;
+    let _ = literal_str("[").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut items = Vec::new();
+    if input.input.starts_with(']') {
+        let _ = literal_str("]").parse_next(input)?;
+        return Ok(Expr::List {
+            items,
+            span: span_from(&start_pos, &input.state.pos),
+        });
+    }
+
+    loop {
+        items.push(expr(input)?);
+        skip_whitespace_and_comments(input);
+        if !input.input.starts_with(',') {
+            break;
+        }
+        let _ = literal_str(",").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("]").parse_next(input)?;
+    Ok(Expr::List {
+        items,
+        span: span_from(&start_pos, &input.state.pos),
+    })
 }
 
 fn parse_comprehension_expr(input: &mut ParseInput) -> ModalResult<Expr> {
@@ -1419,7 +1486,7 @@ fn expr_name_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, 
     *input = checkpoint;
 
     let start_pos = input.state.pos;
-    for keyword_name in ["act", "then", "guard"] {
+    for keyword_name in ["act", "then", "guard", "role"] {
         let checkpoint = input.clone();
         if keyword(keyword_name).parse_next(input).is_ok() {
             let span = span_from(&start_pos, &input.state.pos);

@@ -18,6 +18,7 @@ pub mod entry;
 pub mod error;
 pub mod execute;
 pub mod harness;
+pub mod legacy_workflow_adapter;
 pub mod module_loader;
 pub mod monomorphize;
 pub mod parse;
@@ -36,11 +37,12 @@ use ash_core::runtime::{
     WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
     WorkflowFailure, WorkflowFailureKind, WorkflowReport,
 };
-use ash_core::{Provenance, Role, Value, WorkflowId};
+use ash_core::{Provenance, Role, Value, WorkflowId, workflow_carrier::WorkflowProcProjection};
 use ash_interp::{
     BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
     RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
 };
+use ash_parser::Span;
 use ash_parser::surface::Type as SurfaceType;
 use std::collections::{HashMap, HashSet};
 
@@ -114,6 +116,44 @@ pub struct Workflow {
     /// produce the proper polymorphic type instead of an arity-only synthetic.
     pub imported_builtin_signatures:
         std::collections::HashMap<String, ash_parser::surface::BuiltinFnDef>,
+    /// Public first-class workflow summaries for imported `Workflow<A>` callables.
+    pub imported_workflow_summaries:
+        std::collections::HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
+    /// Non-fatal diagnostics collected while accepting this workflow.
+    pub warnings: Vec<WorkflowWarning>,
+}
+
+/// Non-fatal warning emitted while parsing/checking workflow declarations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowWarning {
+    /// Stable warning code surfaced by tooling.
+    pub code: &'static str,
+    /// Human-readable warning text.
+    pub message: String,
+    /// Source span for the diagnostic anchor.
+    pub span: Span,
+}
+
+impl WorkflowWarning {
+    /// Warning code for deprecated legacy workflow header declarations.
+    pub const DEPRECATED_LEGACY_WORKFLOW_DECLARATION: &'static str =
+        "DeprecatedLegacyWorkflowDeclaration";
+
+    /// Construct the legacy workflow declaration deprecation warning.
+    #[must_use]
+    pub fn deprecated_legacy_workflow_declaration(span: Span) -> Self {
+        Self {
+            code: Self::DEPRECATED_LEGACY_WORKFLOW_DECLARATION,
+            message: "legacy workflow declarations are deprecated; prefer first-class Workflow declarations/contracts".to_string(),
+            span,
+        }
+    }
+}
+
+fn workflow_warnings_for_def(def: &ash_parser::surface::WorkflowDef) -> Vec<WorkflowWarning> {
+    vec![WorkflowWarning::deprecated_legacy_workflow_declaration(
+        def.span,
+    )]
 }
 
 impl PartialEq for Workflow {
@@ -984,6 +1024,7 @@ impl Engine {
             imported_param_counts,
             imported_fn_signatures,
             imported_builtin_signatures,
+            imported_workflow_summaries,
         ) = build_imported_closures(imported_callables);
 
         let mut input = new_input(source);
@@ -1004,6 +1045,7 @@ impl Engine {
                             ))
                         })?;
 
+                    let warnings = workflow_warnings_for_def(&program.workflow);
                     let id = self.store_surface_workflow_def(program.workflow.clone());
                     let (local_closures, local_param_counts, core) = self
                         .process_program_definitions(
@@ -1021,10 +1063,13 @@ impl Engine {
                         imported_param_counts: local_param_counts,
                         imported_fn_signatures,
                         imported_builtin_signatures,
+                        imported_workflow_summaries,
+                        warnings,
                     });
                 }
 
                 // Single workflow, no trailing input — original fast path.
+                let warnings = workflow_warnings_for_def(&def);
                 let core = lower_workflow(&def)
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(def);
@@ -1036,6 +1081,8 @@ impl Engine {
                     imported_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    imported_workflow_summaries,
+                    warnings,
                 })
             }
             Err(parse_error) => {
@@ -1043,6 +1090,7 @@ impl Engine {
                 let program = module_loader::parse_program_with_functions(source)
                     .map_err(|_| EngineError::Parse(format!("{parse_error}")))?;
 
+                let warnings = workflow_warnings_for_def(&program.workflow);
                 let id = self.store_surface_workflow_def(program.workflow.clone());
                 let (local_closures, local_param_counts, core) = self.process_program_definitions(
                     &program,
@@ -1059,6 +1107,8 @@ impl Engine {
                     imported_param_counts: local_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    imported_workflow_summaries,
+                    warnings,
                 })
             }
         }
@@ -1316,6 +1366,26 @@ impl Engine {
             &self.runtime_state,
         )
         .await
+    }
+
+    /// Execute a first-class Workflow Proc projection through the public interpreter boundary.
+    ///
+    /// This engine-facing seam intentionally accepts only the shared
+    /// `ash-core::workflow_carrier::WorkflowProcProjection<Value>` carrier and
+    /// forwards to `ash-interp`'s named projection executor. It does not perform
+    /// parser or typechecker-private lowering. Unsupported projection shapes keep
+    /// the interpreter's stable `FirstClassWorkflowProjectionExecutionUnsupported`
+    /// diagnostic.
+    ///
+    /// # Errors
+    ///
+    /// Returns the interpreter's `ExecError` when the projection shape is not yet
+    /// executable by Phase 108's first-class Workflow projection boundary.
+    pub fn execute_workflow_proc_projection(
+        &self,
+        projection: &WorkflowProcProjection<Value>,
+    ) -> ExecResult<Value> {
+        ash_interp::execute_workflow_proc_projection(projection)
     }
 
     /// Admit and execute a workflow through the workflow-boundary carrier substrate.
@@ -2100,6 +2170,9 @@ fn bind_imported_callable_types(
         let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
         type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
     }
+    for (name, summary) in &workflow.imported_workflow_summaries {
+        type_env.bind_public_workflow_summary(name, summary.clone());
+    }
     Ok(())
 }
 
@@ -2109,6 +2182,7 @@ type ImportedClosureBindings = (
     HashMap<String, usize>,
     HashMap<String, ash_parser::surface::FnDef>,
     HashMap<String, ash_parser::surface::BuiltinFnDef>,
+    HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
 );
 
 /// Convert imported callables to `Value::Closure` for runtime binding.
@@ -2139,6 +2213,7 @@ fn build_imported_closures(
     let mut param_counts = HashMap::new();
     let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
+    let mut workflow_summaries = HashMap::new();
     let mut specs = Vec::new();
 
     for (name, callable) in imported_callables {
@@ -2155,6 +2230,10 @@ fn build_imported_closures(
                     builtin_signatures.insert(name.clone(), builtin.clone());
                 }
             }
+        }
+
+        if let Some(summary) = &callable.workflow_summary {
+            workflow_summaries.insert(name.clone(), summary.clone());
         }
 
         let body_expr = match &callable.kind {
@@ -2237,7 +2316,13 @@ fn build_imported_closures(
         closures.insert(spec.name, closure);
     }
 
-    (closures, param_counts, fn_signatures, builtin_signatures)
+    (
+        closures,
+        param_counts,
+        fn_signatures,
+        builtin_signatures,
+        workflow_summaries,
+    )
 }
 
 #[cfg(test)]
@@ -2885,6 +2970,7 @@ mod tests {
                 capabilities: vec![],
                 owned_resources: vec![],
                 used_bindings: vec![],
+                header_events: vec![],
                 body: SurfaceWorkflow::Ret {
                     expr: ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Null),
                     span,
@@ -2921,15 +3007,38 @@ mod tests {
                     body: effectful_act_block_body("read"),
                 },
                 signature: None,
+                workflow_summary: None,
             },
         );
 
-        let (closures, _, _, _) = build_imported_closures(&imported_callables);
+        let (closures, _, _, _, _) = build_imported_closures(&imported_callables);
         let closure = closures
             .get("demo")
             .expect("imported callable should lower into a closure");
 
         assert_closure_body_preserves_effectful_bind(closure);
+    }
+
+    #[test]
+    fn legacy_workflow_header_events_emit_deprecation_warnings() {
+        let engine = Engine::new().build().expect("engine builds");
+        let workflow = engine
+            .parse_entry_source("workflow main plays role(Admin) requires: role(Auditor) { done }")
+            .expect("legacy declaration workflow should remain accepted");
+
+        assert_eq!(workflow.warnings.len(), 1);
+        assert_eq!(
+            workflow.warnings[0].code,
+            WorkflowWarning::DEPRECATED_LEGACY_WORKFLOW_DECLARATION
+        );
+        let headerless = engine
+            .parse_entry_source("workflow main { done }")
+            .expect("headerless legacy declaration workflow should remain accepted");
+        assert_eq!(headerless.warnings.len(), 1);
+        assert_eq!(
+            headerless.warnings[0].code,
+            WorkflowWarning::DEPRECATED_LEGACY_WORKFLOW_DECLARATION
+        );
     }
 
     #[test]
@@ -2956,6 +3065,8 @@ mod tests {
             imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
             imported_fn_signatures: HashMap::from([(String::from("bind"), function)]),
             imported_builtin_signatures: HashMap::new(),
+            imported_workflow_summaries: HashMap::new(),
+            warnings: Vec::new(),
         };
 
         let mut env = TypeEnv::with_builtin_types();

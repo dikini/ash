@@ -79,7 +79,7 @@ pub use type_env::{
     AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
     CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo,
     ProvenanceSourceKind, ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract,
-    TypeEnv,
+    TypeEnv, WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
 };
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
@@ -697,6 +697,12 @@ fn validate_interface_calls_in_expr(
                 validate_interface_calls_in_expr(env, value)?;
             }
             validate_interface_calls_in_expr(env, result)
+        }
+        ash_parser::surface::Expr::List { items, .. } => {
+            for item in items {
+                validate_interface_calls_in_expr(env, item)?;
+            }
+            Ok(())
         }
     }
 }
@@ -1882,6 +1888,12 @@ fn validate_fn_call_preconditions_expr(
             }
             validate_fn_call_preconditions_expr(env, result, facts, assumptions)
         }
+        ash_parser::surface::Expr::List { items, .. } => {
+            for item in items {
+                validate_fn_call_preconditions_expr(env, item, facts, assumptions)?;
+            }
+            Ok(())
+        }
     }
 }
 
@@ -2771,6 +2783,7 @@ mod tests {
             capabilities: vec![],
             owned_resources: vec![],
             used_bindings: vec![],
+            header_events: vec![],
             body: Workflow::Ret {
                 expr: ash_parser::surface::Expr::FnDef {
                     params: vec![("x".into(), Some("Int".into()))],

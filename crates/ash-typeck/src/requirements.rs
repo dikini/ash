@@ -372,6 +372,15 @@ pub fn check_requirement(req: &Requirement, ctx: &RequirementContext) -> CheckRe
                 CheckResult::Failed(RequirementError::MissingRole { role: role.clone() })
             }
         }
+        Requirement::AnyRole(policy) => {
+            if policy.roles.iter().any(|role| ctx.has_role(role)) {
+                CheckResult::Satisfied
+            } else {
+                CheckResult::Failed(RequirementError::MissingRole {
+                    role: policy.roles.join(" | "),
+                })
+            }
+        }
         Requirement::Arithmetic { var, constraint } => {
             check_arithmetic_constraint(var, constraint, ctx)
         }

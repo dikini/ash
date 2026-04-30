@@ -113,6 +113,7 @@ fn workflow() -> WorkflowDef {
         capabilities: vec![],
         owned_resources: vec![],
         used_bindings: vec![],
+        header_events: vec![],
         body: Workflow::Done { span: span() },
         contract: None,
         span: span(),

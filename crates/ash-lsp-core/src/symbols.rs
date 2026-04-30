@@ -231,6 +231,7 @@ mod tests {
                 capabilities: vec![],
                 owned_resources: vec![],
                 used_bindings: vec![],
+                header_events: vec![],
                 body: Workflow::Done {
                     span: span(30, 40, 4, 1),
                 },
@@ -339,6 +340,7 @@ mod tests {
                 capabilities: vec![],
                 owned_resources: vec![],
                 used_bindings: vec![],
+                header_events: vec![],
                 body: Workflow::Done {
                     span: span(10, 20, 2, 1),
                 },

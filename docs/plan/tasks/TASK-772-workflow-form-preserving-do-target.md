@@ -1,6 +1,6 @@
 # TASK-772: WorkflowForm-Preserving Workflow Do Target
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -15,8 +15,8 @@ Add `Workflow` as a typed-do target while preserving a `WorkflowForm` artifact a
 
 ## Dependencies
 
-- 📝 TASK-770: Workflow contract surface, classifier, and header events.
-- 📝 TASK-771: Workflow type, qualified builtins, shared carriers, and intrinsic parameters.
+- ✅ TASK-770: Workflow contract surface, classifier, and header events.
+- ✅ TASK-771: Workflow type, qualified builtins, shared carriers, and intrinsic parameters.
 
 ## Requirements
 
@@ -46,11 +46,11 @@ Add `Workflow` as a typed-do target while preserving a `WorkflowForm` artifact a
 
 ## Verification
 
-- [ ] `Workflow` resolves as a typed-do target.
-- [ ] `do:Workflow` synthesizes `Workflow<A>` from final `return`.
-- [ ] Workflow do elaboration preserves `WorkflowForm` / projection-event alignment.
-- [ ] Workflow bind statements reject opaque Workflow values lacking a live artifact or public summary, while named/local bindings with registered live artifacts elaborate successfully.
-- [ ] `requires:` and `ensures:` statements produce preserved WorkflowForm nodes.
-- [ ] Wrong tower RHS values produce explicit lift hints.
-- [ ] Existing Act/Proc do behavior and tests do not regress.
-- [ ] CHANGELOG.md updated.
+- [x] `Workflow` resolves as a typed-do target.
+- [x] `do:Workflow` synthesizes `Workflow<A>` from final `return`.
+- [x] Workflow do elaboration preserves `WorkflowForm` / projection-event alignment.
+- [x] Workflow bind statements reject opaque Workflow values lacking a live artifact or public summary, while named/local bindings with registered live artifacts elaborate successfully.
+- [x] `requires:` and `ensures:` statements produce preserved WorkflowForm nodes.
+- [x] Wrong tower RHS values produce explicit lift hints.
+- [x] Existing Act/Proc do behavior and tests do not regress.
+- [x] CHANGELOG.md updated.

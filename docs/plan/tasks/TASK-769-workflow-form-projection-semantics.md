@@ -1,6 +1,6 @@
 # TASK-769: Workflow Form, Projection, Obligation, and Adapter Semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -46,11 +46,24 @@ This is a docs/spec gate. It should cite the live implementation surfaces that l
 
 ## Verification
 
-- [ ] SPEC-056 defines `WorkflowForm` and all carrier schemas required by downstream tasks.
-- [ ] SPEC-056 defines source-ordered `WorkflowHeaderEvent` and states legacy aggregate fields are derived/compatibility views.
-- [ ] SPEC-056 defines non-denotable intrinsic contract argument classes.
-- [ ] SPEC-056 defines `any_role` OR semantics as implemented first-slice behavior.
-- [ ] SPEC-056 defines WorkflowForm-preserving typed-do artifact requirements.
-- [ ] SPEC-056 defines `legacy_body_as_proc_summary` adapter contract.
-- [ ] PLAN-104 marks this task as a blocking semantic gate before implementation.
-- [ ] `git diff --check` passes.
+- [x] SPEC-056 defines `WorkflowForm` and all carrier schemas required by downstream tasks.
+- [x] SPEC-056 defines source-ordered `WorkflowHeaderEvent` and states legacy aggregate fields are derived/compatibility views.
+- [x] SPEC-056 defines non-denotable intrinsic contract argument classes.
+- [x] SPEC-056 defines `any_role` OR semantics as implemented first-slice behavior.
+- [x] SPEC-056 defines WorkflowForm-preserving typed-do artifact requirements.
+- [x] SPEC-056 defines `legacy_body_as_proc_summary` adapter contract.
+- [x] PLAN-104 marks this task as a blocking semantic gate before implementation.
+- [x] `git diff --check` passes.
+
+## Completion Notes
+
+Completed 2026-04-30 as a docs-only semantic gate. Re-read SPEC-056, PLAN-104, and NOTE-010 and verified that the implementation-grade freeze points required before Rust carrier work are present:
+
+- SPEC-056 §6.2.1 freezes first-slice `WorkflowForm` as `Unit`, `Bind`, `FromProc`, `FromAct`, `Requires`, `Ensures`, and `Scope`; `Then` remains derived from `Bind`.
+- SPEC-056 §6.2.2-§6.2.3 and §8.3 define `WorkflowNodeId`, `ProjectionKind`, `ProjectionEvent`, `AlignmentKey`, `SourceOrigin`, `ContractPlan`, `WorkflowObligation`, `CoverageEvidence`, `WorkflowContractSummary`, and `WorkflowTypedArtifact` requirements for downstream carrier tasks.
+- SPEC-056 §5.2.3 defines source-ordered `WorkflowHeaderEvent` and explicitly makes legacy aggregate fields compatibility views rather than authoritative lowering input.
+- SPEC-056 §5.2.1-§5.2.2 define non-denotable `Requirement` / `OpenPostcondition` intrinsic argument classes and implement `any_role([...])` as a single OR-role requirement carrier.
+- SPEC-056 §7.6 defines delayed `OpenPostcondition` result-targeting and rejects unresolved target failures through diagnostics rather than ordinary value fallback.
+- SPEC-056 §5.2.3 defines `legacy_body_as_proc_summary`, including inputs, output summary fields, conservative rejection, lower Proc coverage obligations, and the requirement to avoid a separate legacy runtime/typechecking path.
+- SPEC-056 §6.2.4 and §13 freeze equality/normalization strata and forbid early erasure of governance nodes before coverage/evidence preservation.
+- NOTE-010 records the same decisions as promoted into SPEC-056 and leaves remaining questions as refinement prompts, not Phase 108 blockers.

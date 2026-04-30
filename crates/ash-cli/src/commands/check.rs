@@ -76,11 +76,34 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
     let tc_start = Instant::now();
     let check_result: CliResult<()> = match parse_result {
         Ok(mut workflow) => {
+            let warnings = workflow.warnings.clone();
             let type_result = engine.check(&mut workflow);
-            type_result.map_err(|e| CliError::TypeError {
-                message: format!("{e}"),
-                source: None,
-            })
+            match type_result {
+                Ok(()) => {
+                    let tc_time = tc_start.elapsed();
+                    let total_time = total_start.elapsed();
+                    match args.format {
+                        CheckOutputFormat::Json => {
+                            return output_json_with_warnings(
+                                path,
+                                &Ok(()),
+                                &warnings,
+                                args,
+                                parse_time,
+                                tc_time,
+                                total_time,
+                            );
+                        }
+                        CheckOutputFormat::Human => {
+                            return output_human_with_warnings(path, &Ok(()), &warnings, args);
+                        }
+                    }
+                }
+                Err(e) => Err(CliError::TypeError {
+                    message: format!("{e}"),
+                    source: None,
+                }),
+            }
         }
         Err(parse_err) => {
             // If the file exists, has .ash extension, and does NOT contain a
@@ -379,6 +402,35 @@ fn check_directory(path: &Path, args: &CheckArgs) -> CliResult<()> {
 }
 
 /// Output results in human-readable format
+fn output_human_with_warnings(
+    path: &Path,
+    result: &CliResult<()>,
+    warnings: &[ash_engine::WorkflowWarning],
+    args: &CheckArgs,
+) -> CliResult<()> {
+    let file_name = path.display().to_string().cyan();
+
+    if result.is_ok() {
+        println!("[OK] {file_name}: {}", "OK".green());
+        for warning in warnings {
+            println!(
+                "  {} {}: {}",
+                "Warning:".yellow(),
+                warning.code,
+                warning.message
+            );
+        }
+        if args.strict {
+            // Strict mode warning-as-error behavior is not wired for this slice.
+            println!("  {} Strict mode enabled", "Note:".yellow());
+        }
+        Ok(())
+    } else {
+        output_human(path, result, args)
+    }
+}
+
+/// Output results in human-readable format
 fn output_human(path: &Path, result: &CliResult<()>, args: &CheckArgs) -> CliResult<()> {
     let file_name = path.display().to_string().cyan();
 
@@ -430,6 +482,27 @@ fn output_json(
     tc_time: std::time::Duration,
     total_time: std::time::Duration,
 ) -> CliResult<()> {
+    output_json_with_warnings(path, result, &[], args, parse_time, tc_time, total_time)
+}
+
+fn workflow_warning_location(path: &Path, warning: &ash_engine::WorkflowWarning) -> JsonLocation {
+    JsonLocation::new(
+        path.display().to_string(),
+        warning.span.line,
+        warning.span.column,
+    )
+}
+
+/// Output results in JSON format, including non-fatal workflow warnings.
+fn output_json_with_warnings(
+    path: &Path,
+    result: &CliResult<()>,
+    warnings: &[ash_engine::WorkflowWarning],
+    args: &CheckArgs,
+    parse_time: std::time::Duration,
+    tc_time: std::time::Duration,
+    total_time: std::time::Duration,
+) -> CliResult<()> {
     let success = result.is_ok();
     // Determine exit code based on error type (per SPEC-005)
     let exit_code = if success {
@@ -448,6 +521,15 @@ fn output_json(
         .with_strict(args.strict)
         .with_exit_code(exit_code)
         .with_timing(parse_time, tc_time, total_time);
+
+    // Add warnings if present
+    for warning in warnings {
+        output = output.with_warning(
+            &format!("{}: {}", warning.code, warning.message),
+            warning.code,
+            Some(workflow_warning_location(path, warning)),
+        );
+    }
 
     // Add errors if present
     if let Err(e) = result {
@@ -493,7 +575,7 @@ fn output_json(
             source: None,
         }),
         Err(other) => Err(CliError::general(format!("{other}"))),
-        Ok(_) => unreachable!(),
+        Ok(()) => Ok(()),
     }
 }
 

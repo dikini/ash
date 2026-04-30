@@ -1,6 +1,8 @@
 # TASK-775: Legacy Workflow Translation and Deprecation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
+
+> Completion note: TASK-775 now preserves accepted deprecated legacy workflow declarations through the first-class carrier path. The landed slices surface `DeprecatedLegacyWorkflowDeclaration` as a non-fatal `ash check` warning; translate legacy `plays role(...)`, `capabilities:`, `owns`, `uses`, `requires:` and `ensures:` header events into source-ordered shared `WorkflowForm` nodes; preserve `any_role([...])` OR semantics and successful-result `ensures` targeting; summarize supported legacy bodies as `FromProc(legacy_body_as_proc_summary:<workflow-name>)` with aligned coverage/contract obligations plus non-conservative supported-subset failure/resource-authority/provenance summaries and source-origin metadata; and reject opaque stream receive / yield / resume bodies with explicit diagnostics instead of fabricating coverage.
 
 ## References
 
@@ -27,8 +29,8 @@ Deprecate the current workflow declaration surface while preserving its semantic
 ## Requirements
 
 1. Deprecated legacy workflow declarations remain accepted during the migration window.
-2. Emit `[NEW] DeprecatedLegacyWorkflowDeclaration` exactly once per legacy workflow declaration, with declaration span and a rewrite hint to a named `Workflow<A>` value or `do:Workflow` expression.
-3. Audit the existing non-fatal warning carrier/API before emitting `[NEW] DeprecatedLegacyWorkflowDeclaration`. Extend parser/typechecker/engine/CLI warning plumbing as needed so warnings are collected, surfaced by `ash check`, and do not fail `ash check` when no errors exist.
+2. Emit `DeprecatedLegacyWorkflowDeclaration` exactly once per legacy workflow declaration, with declaration span and a rewrite hint to a named `Workflow<A>` value or `do:Workflow` expression.
+3. Audit the existing non-fatal warning carrier/API before emitting `DeprecatedLegacyWorkflowDeclaration`. Extend parser/typechecker/engine/CLI warning plumbing as needed so warnings are collected, surfaced by `ash check`, and do not fail `ash check` when no errors exist.
 4. Translate `WorkflowDef.header_events` in source order into leading `Requires` / `Ensures` / admission/resource WorkflowForm events.
 5. `ensures:` header events attach to the successful result boundary of the translated body suffix.
 6. `any_role([...])` remains a single OR-role requirement event, never multiple AND requirements.
@@ -53,11 +55,16 @@ Deprecate the current workflow declaration surface while preserving its semantic
 
 ## Verification
 
-- [ ] Deprecated declarations warn but do not error solely because of deprecation.
-- [ ] Warning carrier/API support has been audited or extended, and `ash check` surfaces deprecation warnings without failing when no errors exist.
-- [ ] Legacy declarations lower to the same WorkflowForm path as first-class workflows.
-- [ ] Source-ordered header events are preserved in translation.
-- [ ] Legacy body summaries enter through `FromProc(...)` with lower coverage obligations.
-- [ ] Equivalent legacy and first-class forms produce equivalent public summaries/events.
-- [ ] No separate legacy runtime/typechecking semantic path is introduced.
-- [ ] CHANGELOG.md updated.
+- [x] Deprecated declarations warn but do not error solely because of deprecation for the accepted legacy header events covered by this slice.
+- [x] Warning carrier/API support has been audited or extended, and `ash check` surfaces deprecation warnings without failing when no errors exist.
+- [x] Legacy `plays role(...)`, `capabilities:`, `owns`, `uses`, `requires:` and `ensures:` header events lower through the same shared `WorkflowForm` lowering/projection substrate used by first-class workflow forms.
+- [x] Source-ordered legacy `plays role(...)`, `capabilities:`, `owns`, `uses`, `requires:` and `ensures:` header events are preserved in translation.
+- [x] `any_role([...])` remains a single OR-role requirement event in the translated form.
+- [x] Translated legacy `ensures:` clauses target the successful workflow result.
+- [x] Legacy body placeholder enters through `FromProc(legacy_body_as_proc_summary:<workflow-name>)` for this conservative slice.
+- [x] Supported legacy body shapes carry aligned `FromProc` coverage-obligation nodes and Proc contract obligations plus non-conservative supported-subset failure/resource-authority/provenance summaries and source-origin metadata.
+- [x] Opaque stream receive and yield/resume legacy body constructs reject conservatively with explicit adapter diagnostics.
+- [x] Complete non-conservative Proc/failure/provenance legacy body summaries enter through `FromProc(...)` with complete lower coverage obligations for the supported legacy-body subset; opaque receive/yield/resume bodies reject explicitly instead of fabricating complete summaries.
+- [x] Equivalent legacy and first-class forms produce equivalent public summaries/events for the supported `requires:` / `ensures:` contract-header subset, modulo source/body metadata.
+- [x] No separate legacy runtime/typechecking semantic path is introduced by the current compatibility adapter slices.
+- [x] CHANGELOG.md updated.

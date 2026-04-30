@@ -198,6 +198,24 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             args,
             span,
         } => {
+            if module.as_deref() == Some("workflow") {
+                match func.as_ref() {
+                    "requires" if args.len() == 1 => {
+                        if let Err(err) = validate_requirement_expr(env, &args[0]) {
+                            return CheckResult::error(err);
+                        }
+                        return CheckResult::success(workflow_null_type());
+                    }
+                    "ensures" if args.len() == 1 => {
+                        if let Err(err) = validate_postcondition_expr(&args[0]) {
+                            return CheckResult::error(err);
+                        }
+                        return CheckResult::success(workflow_null_type());
+                    }
+                    _ => {}
+                }
+            }
+
             let mut errors: Vec<ConstructorError> = Vec::new();
             let mut substitution = Substitution::new();
             let mut arg_types: Vec<Type> = Vec::with_capacity(args.len());
@@ -1564,6 +1582,89 @@ impl WorkflowArtifactBuilder {
                     );
                     return Ok(Some(WorkflowForm::Unit { node, value }));
                 }
+                "bind" if args.len() == 2 => {
+                    let node = self.node();
+                    let source = self.workflow_source_form(&args[0])?;
+                    let Expr::FnDef { params, body, .. } = &args[1] else {
+                        return Ok(None);
+                    };
+                    let binder = params
+                        .first()
+                        .map(|(name, _)| {
+                            if name.as_ref() == "_" {
+                                WorkflowBinder::Ignored
+                            } else {
+                                WorkflowBinder::Named(name.to_string())
+                            }
+                        })
+                        .unwrap_or(WorkflowBinder::Ignored);
+                    let next = self.workflow_source_form(body)?;
+                    self.push_event(
+                        node,
+                        ProjectionEventKind::Bind {
+                            binder: binder.clone(),
+                        },
+                    );
+                    return Ok(Some(WorkflowForm::Bind {
+                        node,
+                        source: Box::new(source),
+                        binder,
+                        next: Box::new(next),
+                    }));
+                }
+                "then" if args.len() == 2 => {
+                    let node = self.node();
+                    let source = self.workflow_source_form(&args[0])?;
+                    let next = self.workflow_source_form(&args[1])?;
+                    self.push_event(
+                        node,
+                        ProjectionEventKind::Bind {
+                            binder: WorkflowBinder::Ignored,
+                        },
+                    );
+                    return Ok(Some(WorkflowForm::Bind {
+                        node,
+                        source: Box::new(source),
+                        binder: WorkflowBinder::Ignored,
+                        next: Box::new(next),
+                    }));
+                }
+                "requires" if args.len() == 1 => {
+                    let node = self.node();
+                    let requirement = classify_requirement(&args[0])?;
+                    self.push_event(
+                        node,
+                        ProjectionEventKind::Requires {
+                            requirement: requirement.clone(),
+                        },
+                    );
+                    self.obligations
+                        .push(WorkflowObligation::RequirementMustHold {
+                            node,
+                            requirement: requirement.clone(),
+                        });
+                    return Ok(Some(WorkflowForm::Requires { node, requirement }));
+                }
+                "ensures" if args.len() == 1 => {
+                    let node = self.node();
+                    let postcondition = classify_postcondition(&args[0])?;
+                    self.push_event(
+                        node,
+                        ProjectionEventKind::Ensures {
+                            postcondition: postcondition.clone(),
+                        },
+                    );
+                    self.obligations
+                        .push(WorkflowObligation::OpenPostconditionTarget {
+                            node,
+                            postcondition: postcondition.clone(),
+                            target_type: "WorkflowResult".to_string(),
+                        });
+                    return Ok(Some(WorkflowForm::Ensures {
+                        node,
+                        postcondition,
+                    }));
+                }
                 "from_proc" if args.len() == 1 => {
                     let node = self.node();
                     let summary = ProcLowerSummary {
@@ -1877,14 +1978,39 @@ fn monadic_inner_type(ty: &Type, constructor: &crate::QualifiedName) -> Option<T
     }
 }
 
+fn workflow_null_type() -> Type {
+    Type::Constructor {
+        name: crate::QualifiedName::root("Workflow"),
+        args: vec![Type::Null],
+        kind: crate::Kind::Type,
+    }
+}
+
 fn workflow_expr_has_live_artifact(expr: &Expr, live_bindings: &HashSet<String>) -> bool {
     match expr {
         Expr::DoBlock { target, .. } => target.name.as_ref() == "Workflow",
-        Expr::Call { module, func, .. } => {
-            module
+        Expr::Call {
+            module, func, args, ..
+        } => {
+            if module
                 .as_ref()
-                .is_some_and(|module| module.as_ref() == "workflow")
-                && matches!(func.as_ref(), "unit" | "from_proc" | "from_act")
+                .is_none_or(|module| module.as_ref() != "workflow")
+            {
+                return false;
+            }
+            match func.as_ref() {
+                "unit" | "requires" | "ensures" => true,
+                "from_proc" | "from_act" => true,
+                "bind" if args.len() == 2 => {
+                    workflow_expr_has_live_artifact(&args[0], live_bindings)
+                        && matches!(&args[1], Expr::FnDef { body, .. } if workflow_expr_has_live_artifact(body, live_bindings))
+                }
+                "then" if args.len() == 2 => {
+                    workflow_expr_has_live_artifact(&args[0], live_bindings)
+                        && workflow_expr_has_live_artifact(&args[1], live_bindings)
+                }
+                _ => false,
+            }
         }
         Expr::Variable { name, .. } => live_bindings.contains(name.as_ref()),
         _ => false,

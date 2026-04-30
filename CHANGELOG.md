@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-773](docs/plan/tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md): added the first WorkflowForm-aware ordinary-call elaboration slice for qualified `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts, preserving structured artifacts, classifying raw contract arguments before denotable value typing, rejecting opaque workflow sequencing, and keeping unqualified workflow operations unavailable.
+
 - [TASK-772](docs/plan/tasks/TASK-772-workflow-form-preserving-do-target.md): added `do:Workflow` target resolution through the typed-do dictionary path, preserved a `WorkflowTypedArtifact` carrying `WorkflowForm`, projection-event, contract-plan, obligation, and source-origin metadata for workflow elaboration, accepted workflow-only `requires:` / `ensures:` do statements, and added lift diagnostics for raw `Proc` / `Act` RHS values.
 
 - [TASK-771](docs/plan/tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md): registered public unary `Workflow<A>`, added qualified compiler-known `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, and `workflow::from_act` signatures, added typed intrinsic descriptors for non-denotable `workflow::requires` / `workflow::ensures` parameters, introduced shared `ash-core` workflow carriers aligned with SPEC-056 projection/alignment/contract/evidence shapes, and covered namespace/arity/non-denotable intrinsic behavior plus carrier shape with focused typechecker tests.

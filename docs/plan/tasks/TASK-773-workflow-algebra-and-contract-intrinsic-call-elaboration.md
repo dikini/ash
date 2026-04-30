@@ -1,6 +1,8 @@
 # TASK-773: Workflow Algebra and Contract Intrinsic Call Elaboration
 
-## Status: 📝 Planned
+## Status: 🚧 First slice implemented
+
+Implemented first slice covers qualified ordinary-call preservation for `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts. `workflow::from_proc` / `workflow::from_act` retain the TASK-772 explicit lift artifact path; full opaque Proc/Act summary validation, imported workflow summary recovery, standalone open-ensures finalization, and broader composition/import/export cases remain follow-up work.
 
 ## References
 

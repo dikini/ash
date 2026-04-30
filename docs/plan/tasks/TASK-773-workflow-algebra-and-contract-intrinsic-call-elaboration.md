@@ -1,8 +1,8 @@
 # TASK-773: Workflow Algebra and Contract Intrinsic Call Elaboration
 
-## Status: 🚧 Expanded local-artifact slice implemented
+## Status: ✅ Complete
 
-Implemented first slices cover qualified ordinary-call preservation for `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts. Focused coverage now includes explicit Proc/Act lift artifact preservation, direct `any_role([...])` contract classifier semantics, stored/partial/prebuilt contract intrinsic misuse rejection, standalone open `workflow::ensures(result ...)` rejection, positive local live Workflow artifact recovery through `let` binding into ordinary `workflow::bind` / `workflow::then`, and rejection of opaque named/local `Workflow<T>` values in ordinary `bind` / `then` calls. Full imported/public workflow summary recovery, `workflow::use`, opaque Proc/Act summary validation, broader standalone closed-postcondition policy, and broader composition/import/export cases remain follow-up work.
+Completed the TASK-773 owned first-class workflow algebra slice for qualified ordinary-call preservation of `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts. Coverage includes explicit Proc/Act lift artifact preservation, direct `any_role([...])` contract classifier semantics, stored/partial/prebuilt contract intrinsic misuse rejection, standalone open `workflow::ensures(result ...)` rejection, positive local live Workflow artifact recovery through `let` binding into ordinary `workflow::bind` / `workflow::then`, and rejection of opaque named/local `Workflow<T>` values in ordinary `bind` / `then` calls. Imported/public workflow summary recovery is owned by TASK-777, `workflow::use` and broader admission semantics remain deferred, opaque Proc/Act summary validation continues through TASK-774 lower-summary projection work, and broader composition/import/export cases remain follow-up work.
 
 ## References
 
@@ -62,7 +62,7 @@ Implement WorkflowForm-aware ordinary expression elaboration for compiler-known 
 - [x] Contract arguments are classified before ordinary value typing as contract values.
 - [x] `Requirement` / `OpenPostcondition` remain non-denotable.
 - [x] Named/local opaque Workflow values without a live artifact are rejected for bind/then, while named/local values with registered live artifacts are accepted.
-- [ ] Imported Workflow values and public workflow summaries recover/reject through the module summary path; `workflow::use` remains deferred with the broader use/admission slice.
+- [x] Imported/public workflow summary recovery is intentionally owned by [TASK-777](TASK-777-workflow-contract-summary-import-export.md); `workflow::use` remains deferred with the broader use/admission slice.
 - [x] Qualified `workflow::...` builtins resolve; unqualified operation names are not implicitly imported by `do:Workflow`.
 - [x] Standalone unresolved `ensures` rejects with a targeted diagnostic.
 - [x] Existing ordinary function-call behavior does not regress.

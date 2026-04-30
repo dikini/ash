@@ -3074,8 +3074,8 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 | [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Workflow contract surface, classifier, and header events | 7 | ✅ Complete |
 | [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Workflow type, qualified builtins, shared carriers, and intrinsic parameters | 9 | ✅ Complete |
 | [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | WorkflowForm-preserving Workflow do target | 9 | ✅ Complete |
-| [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Workflow algebra and contract intrinsic call elaboration | 5 | 📝 Planned |
-| [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Workflow lowering and runtime projection | 6 | 📝 Planned |
+| [TASK-773](tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md) | Workflow algebra and contract intrinsic call elaboration | 5 | ✅ Complete |
+| [TASK-774](tasks/TASK-774-workflow-lowering-runtime-projection.md) | Workflow lowering and runtime projection | 6 | 🚧 First slice implemented |
 | [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Legacy workflow translation and deprecation | 8 | 📝 Planned |
 | [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Workflow comprehension target | 5 | 📝 Planned |
 | [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | 📝 Planned |

@@ -16,7 +16,10 @@ examples/
 ├── 03-policies/        # Policy and governance
 ├── 04-real-world/      # Real-world applications
 ├── 05-phase98/         # Proc/failure/workflow-boundary conformance examples
-└── 06-capability-implementations/ # Capability interface/impl/resource examples
+├── 06-capability-implementations/ # Capability interface/impl/resource examples
+├── 07-phase105/       # Generalized typed do-notation examples
+├── 08-phase106/       # Explicit-target monad comprehension examples
+└── 09-phase108/       # First-class Workflow carrier examples
 ```
 
 ## Quick Start
@@ -70,6 +73,24 @@ workflow boundary reporting currently requires the engine admission API rather t
 - **03-recording-replay-sketch.ash**: record/replay capability substitution sketch backed by replay-log authority
 
 These Phase 104 source examples are checkable declaration packets. Runtime execution coverage for the same substitution/adapter/replay patterns is currently provided by `ash-interp` API tests because standalone `ash run` lowering from source-level capability implementation declarations into runtime admissions is not complete yet.
+
+### 07 - Phase 105 Generalized Typed Do-Notation
+- **01-do-act.ash**: explicit `do:Act` sequencing
+- **02-act-sugar.ash**: new-form `act { ... }` sugar for `do:Act`
+- **03-do-proc-from-act.ash**: explicit `proc::from_act(...)` when embedding Act work in Proc
+
+### 08 - Phase 106 Monad Comprehension Syntax
+- **01-act-comprehension.ash**: explicit `Act` target comprehension
+- **02-proc-comprehension-from-act.ash**: explicit Proc comprehension with explicit Act-to-Proc lift
+- **03-deferred-pure-targets.ash**: reference-only deferred pure target coverage
+
+### 09 - Phase 108 First-Class Workflow Carrier
+- **01-do-workflow-unit.ash**: first-class `Workflow<Int>` value with a pure final result
+- **02-do-workflow-contract-statements.ash**: `requires:` / `ensures:` statements in `do:Workflow`
+- **03-workflow-algebra-intrinsics.reference.ash**: reference-only `workflow::unit` / `bind` / `then` and contract intrinsic call spelling
+- **04-workflow-explicit-lifts.reference.ash**: reference-only explicit `workflow::from_proc` / `workflow::from_act` lifts
+- **05-workflow-comprehension.reference.ash**: reference-only `[...]: Workflow` spelling
+- **06-legacy-workflow-migration-warning.ash**: deprecated legacy declaration paired with a first-class rewrite
 
 ## Canonical ADT Helper Surface
 

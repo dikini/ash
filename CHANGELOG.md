@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-779](docs/plan/tasks/TASK-779-first-class-workflow-closeout.md): closed Phase 108 with first-class Workflow examples under `examples/09-phase108/`, marking currently executable `do:Workflow` examples separately from reference-only algebra/comprehension spellings and documenting deferred dynamic admission, handles, implicit lifts, and workflow-level parallelism.
+
 - [TASK-777](docs/plan/tasks/TASK-777-workflow-contract-summary-import-export.md): added supported-subset public summary export for first-class `pub fn ... -> Workflow<A>` definitions whose body is a `do:Workflow` contract-statement expression, preserving public `requires:` / `ensures:` events and obligations at module boundaries while leaving unsupported Workflow-returning function bodies opaque instead of fabricating summaries.
 
 - [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added focused neutral Proc-projection preservation regression coverage proving `requires` / `ensures` governance nodes remain as neutral source nodes inside sequential `Bind` forms until any later evidence-preserving optimization; closed TASK-778 after re-auditing lift hints and Act/Proc diagnostics.

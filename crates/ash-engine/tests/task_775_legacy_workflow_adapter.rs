@@ -5,6 +5,7 @@ use ash_core::workflow_carrier::{
 };
 use ash_core::workflow_contract::{ArithConstraint, PostPredicate, Requirement};
 use ash_engine::legacy_workflow_adapter::{
+    LegacyWorkflowAdapterError, UnsupportedLegacyBodyConstruct,
     legacy_workflow_def_to_workflow_form, legacy_workflow_source_origin,
 };
 use ash_parser::{new_input, workflow_def};
@@ -36,13 +37,11 @@ fn has_workflow_result_ensures(plan: &ContractPlan<()>) -> bool {
 
 fn contains_body_placeholder(form: &WorkflowForm<()>) -> bool {
     match form {
-        WorkflowForm::FromProc { summary, .. } => {
-            summary
-                .contract_summary
-                .as_ref()
-                .and_then(|summary| summary.public_anchor.as_deref())
-                == Some("legacy_body_as_proc_summary")
-        }
+        WorkflowForm::FromProc { summary, .. } => summary
+            .contract_summary
+            .as_ref()
+            .and_then(|summary| summary.public_anchor.as_deref())
+            .is_some_and(|anchor| anchor.starts_with("legacy_body_as_proc_summary")),
         WorkflowForm::Bind { source, next, .. } => {
             contains_body_placeholder(source) || contains_body_placeholder(next)
         }
@@ -110,4 +109,60 @@ fn legacy_ensures_targets_successful_workflow_result_and_body_is_conservative_fr
         contains_body_placeholder(&form),
         "this slice should expose the conservative legacy body FromProc placeholder honestly"
     );
+}
+
+#[test]
+fn legacy_body_summary_carries_lower_coverage_obligations_for_supported_body_nodes() {
+    let workflow = parse_workflow("workflow body_summary { let x = 1 ret x }");
+
+    let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
+    let lowered = lower_workflow_form(&form, legacy_workflow_source_origin(&workflow));
+
+    let Some(summary) = lowered
+        .projection_events
+        .iter()
+        .find_map(|event| match &event.kind {
+            ProjectionEventKind::FromProc { summary } => Some(summary),
+            _ => None,
+        })
+    else {
+        panic!("legacy body must enter the shared lowering path as FromProc");
+    };
+
+    assert_eq!(
+        summary.coverage_obligation_nodes,
+        summary
+            .contract_summary
+            .as_ref()
+            .expect("supported legacy bodies carry a Proc contract summary")
+            .obligations,
+        "body coverage obligations and Proc contract obligations must stay aligned"
+    );
+    assert!(
+        summary.coverage_obligation_nodes.len() >= 2,
+        "oblige/check/ret body should not be represented as an obligation-free opaque body"
+    );
+    assert_eq!(
+        summary
+            .contract_summary
+            .as_ref()
+            .and_then(|summary| summary.public_anchor.as_deref()),
+        Some("legacy_body_as_proc_summary:body_summary")
+    );
+}
+
+#[test]
+fn legacy_body_adapter_rejects_opaque_receive_construct_with_diagnostic() {
+    let workflow = parse_workflow("workflow opaque { receive { _ => done } }");
+
+    let err = legacy_workflow_def_to_workflow_form(&workflow)
+        .expect_err("opaque receive bodies must reject conservatively");
+
+    assert!(matches!(
+        err,
+        LegacyWorkflowAdapterError::UnsupportedBody {
+            construct: UnsupportedLegacyBodyConstruct::Receive,
+            ..
+        }
+    ));
 }

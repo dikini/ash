@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): strengthened the conservative legacy workflow body adapter so supported legacy body shapes enter `FromProc` with aligned `coverage_obligation_nodes` / `ProcContractSummary.obligations` and a workflow-specific `legacy_body_as_proc_summary:<name>` anchor; stream receive and yield/resume bodies now reject with explicit `UnsupportedBody` diagnostics instead of being represented as obligation-free opaque summaries. Full Proc/failure/provenance body summaries and legacy/first-class equivalence remain deferred.
+
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added a conservative `ash-engine` legacy workflow adapter slice that translates `WorkflowDef.header_events` `requires:` / `ensures:` clauses into the shared `WorkflowForm` lowering path in source order, preserves `any_role([...])` as a single OR-role requirement, targets `ensures` at the successful workflow result, and represents the legacy body honestly as an opaque `FromProc` summary anchored to `legacy_body_as_proc_summary`; full body-summary adaptation and legacy/first-class equivalence coverage remain deferred.
 
 - [TASK-775](docs/plan/tasks/TASK-775-legacy-workflow-translation-and-deprecation.md): added the first warning-plumbing slice for deprecated legacy workflow header declarations. Accepted legacy workflow headers now carry non-fatal `ash-engine` workflow warnings and `ash check` surfaces `[NEW] DeprecatedLegacyWorkflowDeclaration` without failing otherwise-successful checks.

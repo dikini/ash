@@ -1,8 +1,8 @@
 # TASK-775: Legacy Workflow Translation and Deprecation
 
-## Status: 🛠️ In Progress (warning plumbing + conservative header adapter slices landed)
+## Status: 🛠️ In Progress (warning plumbing + conservative header/body adapter slices landed)
 
-> Slice note: this task is not complete. Landed slices audit/extend the non-fatal warning path enough for accepted legacy workflow header declarations to carry and surface `[NEW] DeprecatedLegacyWorkflowDeclaration` through `ash check` without failing otherwise-successful checks, and add a conservative `ash-engine` adapter that translates legacy `requires:` / `ensures:` header events into the shared `WorkflowForm` path in source order. The body is still represented by an opaque `FromProc` placeholder anchored to `legacy_body_as_proc_summary`; full body-summary adaptation, source-origin span/rewrite fidelity, admission/resource header lowering, and legacy/first-class equivalence coverage remain deferred.
+> Slice note: this task is not complete. Landed slices audit/extend the non-fatal warning path enough for accepted legacy workflow header declarations to carry and surface `[NEW] DeprecatedLegacyWorkflowDeclaration` through `ash check` without failing otherwise-successful checks; add a conservative `ash-engine` adapter that translates legacy `requires:` / `ensures:` header events into the shared `WorkflowForm` path in source order; and strengthen the legacy body placeholder so supported body shapes produce aligned `FromProc` coverage/contract obligation nodes under `legacy_body_as_proc_summary:<workflow-name>`. Opaque stream receive and yield/resume body constructs now reject with explicit adapter diagnostics. Full Proc/failure/provenance body-summary adaptation, source-origin span/rewrite fidelity, admission/resource header lowering, and legacy/first-class equivalence coverage remain deferred.
 
 ## References
 
@@ -61,8 +61,10 @@ Deprecate the current workflow declaration surface while preserving its semantic
 - [x] Source-ordered legacy `requires:` / `ensures:` header events are preserved in translation.
 - [x] `any_role([...])` remains a single OR-role requirement event in the translated form.
 - [x] Translated legacy `ensures:` clauses target the successful workflow result.
-- [x] Legacy body placeholder enters through `FromProc(legacy_body_as_proc_summary)` for this conservative slice.
-- [ ] Full legacy body summaries enter through `FromProc(...)` with lower coverage obligations.
+- [x] Legacy body placeholder enters through `FromProc(legacy_body_as_proc_summary:<workflow-name>)` for this conservative slice.
+- [x] Supported legacy body shapes carry aligned `FromProc` coverage-obligation nodes and Proc contract obligations.
+- [x] Opaque stream receive and yield/resume legacy body constructs reject conservatively with explicit adapter diagnostics.
+- [ ] Full Proc/failure/provenance legacy body summaries enter through `FromProc(...)` with complete lower coverage obligations.
 - [ ] Equivalent legacy and first-class forms produce equivalent public summaries/events.
-- [ ] No separate legacy runtime/typechecking semantic path is introduced.
-- [ ] CHANGELOG.md updated.
+- [x] No separate legacy runtime/typechecking semantic path is introduced by the current compatibility adapter slices.
+- [x] CHANGELOG.md updated.

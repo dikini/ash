@@ -36,6 +36,7 @@
 //!     used_bindings: vec![],
 //!     body: ash_parser::surface::Workflow::Done { span: ash_parser::token::Span::default() },
 //!     contract: None,
+//!     header_events: vec![],
 //!     span: ash_parser::token::Span::default(),
 //! };
 //!

@@ -46,6 +46,7 @@ pub mod runtime_state;
 pub mod small_step;
 pub mod stream;
 pub mod typed_provider;
+pub mod workflow_projection;
 pub mod yield_routing;
 pub mod yield_state;
 
@@ -111,6 +112,9 @@ pub use stream::{
     StreamContext, StreamProvider, StreamRegistry, TypedSendableProvider,
 };
 pub use typed_provider::{TypedBehaviourProvider, TypedStreamProvider};
+pub use workflow_projection::{
+    execute_workflow_proc_projection, unsupported_workflow_proc_projection_message,
+};
 pub use yield_routing::{PendingYield, ResumeResult, YieldError, YieldId, YieldRouter};
 pub use yield_state::{CorrelationId, SuspendedYields, YieldState};
 

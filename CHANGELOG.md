@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added an `ash-interp` runtime-facing first-class Workflow projection boundary that consumes the public `ash-core::workflow_carrier::WorkflowProcProjection<Value>` carrier, executes already-sound `unit`/transparent `scope` projections, and fails unsupported `bind`/`from_proc`/`from_act`/neutral governance shapes at the named `FirstClassWorkflowProjectionExecutionUnsupported` Phase 108 diagnostic instead of silently producing dead runtime values.
+
 - [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added the first `ash-core` shared WorkflowForm lowering/projection slice with public `LoweredWorkflowProjection`, `WorkflowProcProjection`, and `lower_workflow_form`, preserving `workflow::unit`/`bind`/`then`-shaped projection events plus `requires`/`ensures` metadata and `from_proc`/`from_act` delayed coverage obligations without claiming `ash-interp` / `ash-engine` execution yet.
 
 - [TASK-773](docs/plan/tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md): extended the WorkflowForm-aware ordinary-call slice with live local `Workflow<T>` artifact recovery through `let` bindings into `workflow::bind` / `workflow::then`, plus earlier rejection for opaque named/local Workflow values used in ordinary algebra composition without preserved form metadata.

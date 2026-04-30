@@ -108,6 +108,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+
+- TASK-767: reconciled LSP planning/status documents against the live `ash-lsp` and `ash-lsp-core` implementation. Downgraded Phase 87 to the verified local LSP MVP, restored Phase 89/TASK-576/SPEC-043 Salsa work to planned status, and recorded post-Phase-89 Ash syntax/semantics drift that must be audited before further LSP feature work.
 - Reconciled PLAN-INDEX aggregate progress rows for Phase 106 so both summary tables now match the completed Phase 106 task section and merged implementation state.
 
 - Parser lexer property tests now exclude reserved keywords from the generated identifier round-trip domain, preventing valid keyword tokens such as `if` from being misclassified as identifier round-trip failures during broad post-merge verification.

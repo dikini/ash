@@ -2,9 +2,11 @@
 
 ## Phase: 89
 
+## Status: 📝 Planned (Not Implemented; Reconfirmed by TASK-767)
+
 ## Goal
 
-Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine.
+Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine. TASK-767 reconfirmed that live `ash-lsp-core` still uses the simple `AnalysisCache` and has no `salsa` dependency.
 
 ## Specification
 
@@ -14,7 +16,7 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
-| [TASK-576](../tasks/TASK-576-ash-lsp-salsa.md) | Integrate `salsa` into `ash-lsp-core` for parse/type/symbol queries (includes `Eq + Hash` sub-task and `SymbolIndex` definition) | 48h | 📝 Planned |
+| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate or rescope `salsa` in `ash-lsp-core` for parse/type/symbol queries after prerequisite spike | 48h | 📝 Planned |
 
 ## Deliverable
 
@@ -32,7 +34,7 @@ Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incr
 
 ## Risks
 
-- `ash-lsp-core` does not yet exist; blocked until SPEC-038 Phase 2 is complete.
+- `ash-lsp-core` now exists, but the Salsa task is blocked on the compatibility spike, module-level typecheck query API, and cross-file workspace requirements.
 - Salsa trait requirements may force refactoring of `TypeEnv`, `ModuleGraph`, or many `surface.rs` AST types.
 - Debugging invalidation bugs is notoriously difficult.
 - Cycle recovery may require redesigning query boundaries if the salsa API is insufficient.

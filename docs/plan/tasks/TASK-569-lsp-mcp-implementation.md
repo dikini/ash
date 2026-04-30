@@ -1,161 +1,124 @@
-# TASK-569: LSP & MCP Interface for Ash
+# TASK-569: Local LSP MVP for Ash
 
-## Status: Planned
+## Status: ✅ Complete (Local LSP MVP; Production Follow-Ups Split Out)
 
 ## Description
 
-Implement a Language Server Protocol (LSP) server for the Ash workflow language with an embedded Model Context Protocol (MCP) interface. The server will provide real-time diagnostics, hover, go-to-definition, completion, and code actions for human editors (VSCode, Neovim) while exposing the same semantic intelligence as MCP tools for AI coding agents (Hermes, Codex, Claude).
-
-This task implements the MVP defined in SPEC-038. Source formatting and Salsa-based incremental caching are explicitly out of scope and deferred to follow-up work.
+Implement the first usable Language Server Protocol server for Ash. After TASK-767 reconciliation, this task is considered complete only for the implemented local LSP MVP: document synchronization, VFS/cache, parser+lint diagnostics, hover, document symbols, same-file goto-definition, completion, and the `ash-lsp` stdio/TCP binary. The broader production LSP/MCP/workspace scope originally described here has been split into explicit pending follow-up work.
 
 ## Specification Reference
 
 - [SPEC-038: Ash Language Server Protocol (LSP) & MCP Interface](../../spec/SPEC-038-LANGUAGE-SERVER.md)
 - [SPEC-005: CLI Specification — LSP section](../../spec/SPEC-005-CLI.md)
+- [TASK-767: LSP Status Reconciliation and Syntax/Semantics Drift Audit](TASK-767-lsp-status-reconciliation.md)
 
-## Hard Prerequisites (Must Complete First)
+## Hard Prerequisites
 
-These blockers are defined in SPEC-038 §18. Engineering must not begin until they are resolved.
+- ✅ TASK-570: Local variable spans.
+- ✅ TASK-571: `parse_surface_file` and `CommentTable` substrate.
+- ✅ TASK-572: Typechecker/name-resolution error spans.
+- ✅ TASK-573: `AshLspError` diagnostic trait.
+- ✅ TASK-574: `ash-lint` library extraction.
 
-1. **Local variable spans** — `Expr::Variable { name: Name, span: Span }` and `Pattern::Variable { name: Name, span: Span }` (Phase 84, TASK-570)
-2. **Type-checker error spans** — all `TypeEnvError`, `ConstructorError`, `NameError`, `ResolutionError`, and `TypeError` variants carry `span` (Phase 85, TASK-572)
-3. **Unified error trait** — `AshLspError` trait implemented for all error types (Phase 85, TASK-573)
-4. **`ash-lint` library extraction** — `lint_module` API available (Phase 86, TASK-574)
-5. **`parse_surface_file` API** — top-level parser entry point returning `ModuleFile` with `CommentTable` (Phase 84, TASK-571)
+## Implemented Requirements
 
-## Requirements
+### 1. `crates/ash-lsp-core`
 
-### 1. LSP Core (`crates/ash-lsp`)
-- Use `tower-lsp-server = "0.23"` for the JSON-RPC protocol layer.
-- Support stdio and TCP transports per SPEC-005 (`ash lsp --stdio` and `ash lsp --port <n>`).
-- Implement `initialize`, `shutdown`, `didOpen`, `didChange`, `didClose`.
-- Advertise capabilities: text document sync (incremental), hover, completion, diagnostics, document symbols.
-- **Do not** advertise `textDocument/formatting` (deferred).
-- Wrap every request handler in panic isolation (`catch_unwind` or equivalent) so parser/type-checker panics do not crash the server.
+- ✅ VFS with `lsp_types::Uri` keys.
+- ✅ In-memory overlay for open documents.
+- ✅ Full-document changes.
+- ✅ Incremental range changes.
+- ✅ Line/column ↔ byte-offset helpers.
+- ✅ Per-version analysis cache keyed by document URI.
+- ✅ Parser + lint diagnostic aggregation.
+- ✅ Hover for keywords and top-level declarations.
+- ✅ Document symbols from `ModuleFile`.
+- ✅ Same-file goto-definition over parsed declarations.
+- ✅ Keyword/snippet and top-level-name completion.
 
-### 2. Analysis Engine (`crates/ash-lsp-core`)
-- Build a Virtual File System (VFS) with `lsp_types::Url` keys, in-memory overlays, and incremental change application.
-- Cache parsed `ash_parser::surface::ModuleFile` per file version.
-- Aggregate diagnostics from `ash-parser`, `ash-typeck`, and `ash-lint`.
-- Debounce diagnostic publishing (200 ms, configurable) after `didChange` using `tokio::time::sleep` + `CancellationToken`.
-- Build a cross-file reference index for "Find References" and workspace symbols.
-- Support multi-crate workspaces by discovering `ash.toml` / `.ash.toml` files and loading crate graphs via `ash-engine`.
+### 2. `crates/ash-lsp`
 
-### 3. LSP Handlers (Priority Order)
-1. **Diagnostics** — publish on open, change, save.
-2. **Document Symbols** — outline view from surface AST.
-3. **Hover** — keyword docs + type information from `ash-typeck`.
-4. **Go to Definition** — using `NameBinder` and `TypeEnv`.
-5. **Completion** — keywords, in-scope variables, interface/policy names, record fields.
-6. **Find References** — cross-file symbol usage index.
-7. **Code Actions** — quick fixes (imports, match arm completion).
-8. **Workspace Symbols** — search across all `.ash` files.
+- ✅ `tower-lsp-server = "0.23"` based server.
+- ✅ stdio transport by default.
+- ✅ TCP transport via `--port`.
+- ✅ `initialize`, `shutdown`, `didOpen`, `didChange`, `didClose`.
+- ✅ Diagnostic publish on open/change and clear on close.
+- ✅ Advertises and handles hover, completion, definition, and document symbols.
+- ✅ Focused JSON-RPC style unit tests.
 
-### 4. MCP Bridge (`crates/ash-mcp`)
-- Built on `rmcp = "1.4"` (official Anthropic Rust SDK).
-- Expose MCP tools that wrap `ash-lsp-core` queries:
-  - `ash_get_diagnostics`
-  - `ash_hover`
-  - `ash_goto_definition`
-  - `ash_find_references`
-  - `ash_complete`
-  - `ash_document_symbols`
-  - `ash_workspace_symbols`
-  - `ash_code_action`
-- **No direct file-write tool.** Edits are returned as `CodeAction` / `TextEdit` arrays only.
-- Respond with token-efficient JSON including a one-line `summary`.
-- Auto-open files on first tool call; keep them in memory for the session.
-- Launch mode: `ash lsp --mcp` (per SPEC-005).
+## Explicitly Pending Follow-Ups
 
-### 5. Editor Support
-- Provide a minimal VSCode extension skeleton (`editors/vscode/`).
-- Provide Neovim `lspconfig` / `vim.lsp.config` setup documentation.
-- Provide a basic TextMate grammar (`syntaxes/ash.tmLanguage.json`) for syntax highlighting.
+The following requirements from the original broad task are **not** completed by TASK-569 and must receive separate task files before implementation:
 
-### 6. Configuration & Observability
-- Read LSP config from `initialize` params and workspace `.ash.toml`:
-  - `ash.lsp.debounce_ms` (default 200)
-  - `ash.lsp.max_diagnostics` (default 100)
-- Use `tracing` for structured logging at `INFO`/`DEBUG`/`TRACE` levels.
+- 📝 Typecheck diagnostics from `ash-typeck`.
+- 📝 Expression-level type hover.
+- 📝 `NameBinder`/`TypeEnv`-powered semantic goto-definition.
+- 📝 Cross-file reference/workspace index.
+- 📝 `textDocument/references`.
+- 📝 `workspace/symbol`.
+- 📝 `textDocument/codeAction`.
+- 📝 `textDocument/formatting` integration, if formatter work is reintroduced through LSP.
+- 📝 Diagnostic debounce and max-diagnostic limiting.
+- 📝 Configuration from `initialize` params and `.ash.toml`.
+- 📝 Panic isolation for LSP request handlers.
+- 📝 Watched-file handling and workspace root/crate graph discovery.
+- 📝 VSCode extension skeleton and Neovim user docs.
+- 📝 Current-Ash syntax/semantics refresh for post-Phase-89 language features.
+- 📝 MCP parity hardening through `ash-mcp` / shared `ash-lsp-core` queries.
 
-### 7. Testing
-- Unit tests for VFS change application and `Url` normalization.
-- LSP conformance tests (manual JSON-RPC request/response pairs).
-- Integration tests against real `.ash` files in `examples/`.
-- MCP end-to-end tests spawning `ash lsp --mcp` and asserting tool outputs.
+## Syntax/Semantics Drift to Audit Before More LSP Work
 
-## TDD Steps
+Later Ash phases introduced language constructs not covered by the original LSP MVP assumptions:
 
-### Red
-- No LSP or MCP server exists for Ash beyond the design doc in TASK-059.
-- `ash-lint` is a CLI binary; its diagnostic logic must be extracted into a library.
-- `TypeEnvError`, `ExhaustivenessError`, and `NameError` lack source spans.
+- Capability interfaces and Ash-defined capability implementations.
+- Runtime resources, workflow `owns`, and workflow `uses` bindings.
+- Authority provenance and implementation-backed capability binding metadata.
+- `fail` / `with_error` operational failure syntax and semantics.
+- `Proc<T>`, `P<T>`, and the `std::proc` surface.
+- Generalized `do:Act` / `do:Proc` notation and new-form `act { ... }` compatibility.
+- Bracket comprehension syntax with explicit computation targets.
+- Stdlib/module import/export drift and corpus classification from Phase 107 planning.
 
-### Green
-- `ash-lsp` binary responds to `initialize` with correct capabilities.
-- `ash-lsp-core` parses an open file and returns diagnostics mapped from `ParseError` spans.
-- Hover and go-to-definition return accurate results for example files.
-- MCP tools return structured JSON that agents can consume.
+## Verification Evidence
+
+Fresh TASK-767 audit commands against the live crates:
+
+- ✅ `cargo check -p ash-lsp-core -p ash-lsp`
+- ✅ `cargo test -p ash-lsp-core -p ash-lsp` — 57 tests passed.
+- ✅ `cargo clippy -p ash-lsp-core -p ash-lsp --all-targets --all-features -- -D warnings`
+- ✅ `cargo fmt --check`
+- ✅ `cargo run -p ash-lsp -- --help`
 
 ## Completion Checklist
 
-- [ ] All 4 hard prerequisites resolved
-- [ ] `crates/ash-lsp` created with basic LSP skeleton
-- [ ] `crates/ash-lsp-core` created with VFS and diagnostic aggregator
-- [ ] Incremental text document sync implemented and tested
-- [ ] Diagnostic pipeline wired to `ash-parser`, `ash-typeck`, `ash-lint`
-- [ ] Hover handler implemented
-- [ ] Go-to-definition handler implemented
-- [ ] Document symbol handler implemented
-- [ ] Completion handler implemented
-- [ ] Find references handler implemented
-- [ ] Code actions handler implemented
-- [ ] Workspace symbols handler implemented
-- [ ] `crates/ash-mcp` created with MCP tool bridge
-- [ ] VSCode extension skeleton provided
-- [ ] Neovim setup documented
-- [ ] Unit and integration tests passing
-- [ ] `cargo test --workspace` clean for affected crates
-- [ ] `cargo clippy --all-targets --all-features` clean
-- [ ] `cargo fmt --check` clean
-- [ ] CHANGELOG.md updated
+- [x] `crates/ash-lsp` created with basic LSP skeleton.
+- [x] `crates/ash-lsp-core` created with VFS and diagnostic aggregator.
+- [x] Incremental text document sync implemented and tested.
+- [x] Parser diagnostic path wired.
+- [x] Lint diagnostic path wired.
+- [ ] Typecheck diagnostic path wired. Deferred follow-up.
+- [x] Hover handler implemented for keywords/top-level declarations.
+- [x] Go-to-definition handler implemented for same-file parsed declarations.
+- [x] Document symbol handler implemented.
+- [x] Completion handler implemented for keywords/top-level names.
+- [ ] Find references handler implemented. Deferred follow-up.
+- [ ] Code actions handler implemented. Deferred follow-up.
+- [ ] Workspace symbols handler implemented. Deferred follow-up.
+- [ ] Full production MCP parity complete. Deferred follow-up.
+- [ ] VSCode extension skeleton provided. Deferred follow-up.
+- [ ] Neovim setup documented. Deferred follow-up.
+- [x] Unit and focused integration tests passing for implemented local MVP.
+- [x] Targeted `cargo test -p ash-lsp-core -p ash-lsp` clean.
+- [x] Targeted clippy clean.
+- [x] `cargo fmt --check` clean.
+- [x] CHANGELOG.md updated by TASK-767 reconciliation.
 
-## Estimated Effort
+## Required Follow-Up Task Seeds
 
-**~180 hours (5 weeks, 1 engineer full-time)**
-
-| Phase | Work | Hours |
-|-------|------|-------|
-| Prerequisites | Spans, error trait, `ash-lint` lib | 24–36 |
-| Phase 1 | Skeleton + VFS + parser diagnostics | 32 |
-| Phase 2 | Typeck diagnostics + hover + symbols | 36 |
-| Phase 3 | Go-to-definition + completion + references | 40 |
-| Phase 4 | MCP bridge + VSCode skeleton | 40 |
-| Phase 5 | Polish, tests, docs, CHANGELOG | 32 |
-
-## Dependencies
-
-- `tower-lsp-server = "0.23"`
-- `tokio = "1.52"`
-- `dashmap = "6.1"`
-- `serde` / `serde_json`
-- `rmcp = "1.4"`
-- `tracing = "0.1"`
-- `ash-parser`
-- `ash-typeck`
-- `ash-lint` (refactored to lib)
-- `ash-engine`
-
-## Blocked By
-
-- TASK-570 (binding spans)
-- TASK-571 (`parse_surface_file` and `CommentTable`)
-- TASK-572 (error spans)
-- TASK-573 (`AshLspError` trait)
-- TASK-574 (`ash-lint` library extraction)
-
-## Blocks
-
-- Future IDE-first workflows
-- Agent-driven Ash development (Hermes/Codex deep integration)
-- Source formatter (depends on LSP skeleton existing)
+1. LSP current-syntax refresh and corpus-backed examples.
+2. Typecheck diagnostics + type hover.
+3. Workspace/module graph index.
+4. References/workspace-symbol/code-action feature set.
+5. LSP hardening: config, debounce, panic isolation, watched files.
+6. Editor integration docs/skeleton.
+7. MCP parity hardening.

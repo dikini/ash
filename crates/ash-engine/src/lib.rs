@@ -42,6 +42,7 @@ use ash_interp::{
     BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
     RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
 };
+use ash_parser::Span;
 use ash_parser::surface::Type as SurfaceType;
 use std::collections::{HashMap, HashSet};
 
@@ -129,28 +130,30 @@ pub struct WorkflowWarning {
     pub code: &'static str,
     /// Human-readable warning text.
     pub message: String,
+    /// Source span for the diagnostic anchor.
+    pub span: Span,
 }
 
 impl WorkflowWarning {
     /// Warning code for deprecated legacy workflow header declarations.
     pub const DEPRECATED_LEGACY_WORKFLOW_DECLARATION: &'static str =
-        "[NEW] DeprecatedLegacyWorkflowDeclaration";
+        "DeprecatedLegacyWorkflowDeclaration";
 
     /// Construct the legacy workflow declaration deprecation warning.
     #[must_use]
-    pub fn deprecated_legacy_workflow_declaration() -> Self {
+    pub fn deprecated_legacy_workflow_declaration(span: Span) -> Self {
         Self {
             code: Self::DEPRECATED_LEGACY_WORKFLOW_DECLARATION,
             message: "legacy workflow declarations are deprecated; prefer first-class Workflow declarations/contracts".to_string(),
+            span,
         }
     }
 }
 
 fn workflow_warnings_for_def(def: &ash_parser::surface::WorkflowDef) -> Vec<WorkflowWarning> {
-    def.header_events
-        .iter()
-        .map(|_| WorkflowWarning::deprecated_legacy_workflow_declaration())
-        .collect()
+    vec![WorkflowWarning::deprecated_legacy_workflow_declaration(
+        def.span,
+    )]
 }
 
 impl PartialEq for Workflow {
@@ -3020,12 +3023,20 @@ mod tests {
     fn legacy_workflow_header_events_emit_deprecation_warnings() {
         let engine = Engine::new().build().expect("engine builds");
         let workflow = engine
-            .parse_entry_source("workflow main plays role(Admin) { done }")
+            .parse_entry_source("workflow main plays role(Admin) requires: role(Auditor) { done }")
             .expect("legacy declaration workflow should remain accepted");
 
         assert_eq!(workflow.warnings.len(), 1);
         assert_eq!(
             workflow.warnings[0].code,
+            WorkflowWarning::DEPRECATED_LEGACY_WORKFLOW_DECLARATION
+        );
+        let headerless = engine
+            .parse_entry_source("workflow main { done }")
+            .expect("headerless legacy declaration workflow should remain accepted");
+        assert_eq!(headerless.warnings.len(), 1);
+        assert_eq!(
+            headerless.warnings[0].code,
             WorkflowWarning::DEPRECATED_LEGACY_WORKFLOW_DECLARATION
         );
     }

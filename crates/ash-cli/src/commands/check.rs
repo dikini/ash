@@ -485,6 +485,14 @@ fn output_json(
     output_json_with_warnings(path, result, &[], args, parse_time, tc_time, total_time)
 }
 
+fn workflow_warning_location(path: &Path, warning: &ash_engine::WorkflowWarning) -> JsonLocation {
+    JsonLocation::new(
+        path.display().to_string(),
+        warning.span.line,
+        warning.span.column,
+    )
+}
+
 /// Output results in JSON format, including non-fatal workflow warnings.
 fn output_json_with_warnings(
     path: &Path,
@@ -519,7 +527,7 @@ fn output_json_with_warnings(
         output = output.with_warning(
             &format!("{}: {}", warning.code, warning.message),
             warning.code,
-            Some(JsonLocation::new(path.display().to_string(), 0, 0)),
+            Some(workflow_warning_location(path, warning)),
         );
     }
 

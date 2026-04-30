@@ -1,6 +1,6 @@
 # TASK-778: Workflow Diagnostics and Negative Tests
 
-## Status: 📝 Planned
+## Status: 🚧 Partial
 
 ## References
 
@@ -14,12 +14,12 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 
 ## Dependencies
 
-- 📝 TASK-770: Workflow contract surface, classifier, and header events.
-- 📝 TASK-771: Workflow type, qualified builtins, shared carriers, and intrinsic parameters.
-- 📝 TASK-772: WorkflowForm-preserving Workflow do target.
-- 📝 TASK-773: Workflow algebra and contract intrinsic call elaboration.
-- 📝 TASK-774: Workflow lowering and runtime projection.
-- 📝 TASK-775: Legacy workflow translation and deprecation.
+- ✅ TASK-770: Workflow contract surface, classifier, and header events.
+- ✅ TASK-771: Workflow type, qualified builtins, shared carriers, and intrinsic parameters.
+- ✅ TASK-772: WorkflowForm-preserving Workflow do target.
+- ✅ TASK-773: Workflow algebra and contract intrinsic call elaboration.
+- ✅ TASK-774: Workflow lowering and runtime projection.
+- ✅ TASK-775: Legacy workflow translation and deprecation.
 - ✅ TASK-776: Workflow comprehension target.
 - 🚧 TASK-777: Workflow contract summary import/export has a partial substrate slice; public `requires:` / `ensures:` summary export is covered, while first-class export equivalence and richer summaries remain follow-up work.
 
@@ -56,8 +56,19 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 - [ ] Contract statement misuse and intrinsic parameter misuse diagnostics are covered.
 - [ ] `requires` refinement failures distinguish assumed availability from proven admission.
 - [ ] `ensures` target/type failures identify the suffix result boundary.
-- [ ] Deprecated legacy workflow declarations emit warnings with rewrite hints.
-- [ ] `DeprecatedLegacyWorkflowDeclaration` reaches `ash check` as a non-fatal warning when no errors exist.
+- [x] Deprecated legacy workflow declarations emit warnings with rewrite hints in `ash check` human and JSON output.
+- [x] `DeprecatedLegacyWorkflowDeclaration` reaches `ash check` as a non-fatal warning when no errors exist.
 - [ ] Neutral-Proc contract nodes are not silently erased before evidence-preserving optimization.
 - [ ] Act/Proc diagnostics do not regress.
-- [ ] CHANGELOG.md updated.
+- [x] CHANGELOG.md updated.
+
+## Partial Slice Notes
+
+Implemented the first TASK-778 warning/diagnostic slice:
+
+- `ash check` now has CLI-level regression coverage proving deprecated legacy workflow declarations emit non-fatal warnings in both human and JSON output.
+- Legacy workflow deprecation diagnostics now use the stable `DeprecatedLegacyWorkflowDeclaration` code instead of the provisional `[NEW] ...` spelling.
+- Headerless legacy workflow declarations and declarations with multiple legacy header events both produce one declaration-level warning.
+- JSON warning output now uses the workflow declaration span as its diagnostic anchor.
+
+Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, contract intrinsic misuse, contract-expression classification failures, coverage/obligation component labels, `requires`/`ensures` proof/target diagnostics, neutral projection preservation, and Act/Proc diagnostic regression coverage.

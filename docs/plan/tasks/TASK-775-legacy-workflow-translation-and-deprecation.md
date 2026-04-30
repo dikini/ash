@@ -2,7 +2,7 @@
 
 ## Status: ✅ Complete
 
-> Completion note: TASK-775 now preserves accepted deprecated legacy workflow declarations through the first-class carrier path. The landed slices surface `[NEW] DeprecatedLegacyWorkflowDeclaration` as a non-fatal `ash check` warning; translate legacy `plays role(...)`, `capabilities:`, `owns`, `uses`, `requires:` and `ensures:` header events into source-ordered shared `WorkflowForm` nodes; preserve `any_role([...])` OR semantics and successful-result `ensures` targeting; summarize supported legacy bodies as `FromProc(legacy_body_as_proc_summary:<workflow-name>)` with aligned coverage/contract obligations plus non-conservative supported-subset failure/resource-authority/provenance summaries and source-origin metadata; and reject opaque stream receive / yield / resume bodies with explicit diagnostics instead of fabricating coverage.
+> Completion note: TASK-775 now preserves accepted deprecated legacy workflow declarations through the first-class carrier path. The landed slices surface `DeprecatedLegacyWorkflowDeclaration` as a non-fatal `ash check` warning; translate legacy `plays role(...)`, `capabilities:`, `owns`, `uses`, `requires:` and `ensures:` header events into source-ordered shared `WorkflowForm` nodes; preserve `any_role([...])` OR semantics and successful-result `ensures` targeting; summarize supported legacy bodies as `FromProc(legacy_body_as_proc_summary:<workflow-name>)` with aligned coverage/contract obligations plus non-conservative supported-subset failure/resource-authority/provenance summaries and source-origin metadata; and reject opaque stream receive / yield / resume bodies with explicit diagnostics instead of fabricating coverage.
 
 ## References
 
@@ -29,8 +29,8 @@ Deprecate the current workflow declaration surface while preserving its semantic
 ## Requirements
 
 1. Deprecated legacy workflow declarations remain accepted during the migration window.
-2. Emit `[NEW] DeprecatedLegacyWorkflowDeclaration` exactly once per legacy workflow declaration, with declaration span and a rewrite hint to a named `Workflow<A>` value or `do:Workflow` expression.
-3. Audit the existing non-fatal warning carrier/API before emitting `[NEW] DeprecatedLegacyWorkflowDeclaration`. Extend parser/typechecker/engine/CLI warning plumbing as needed so warnings are collected, surfaced by `ash check`, and do not fail `ash check` when no errors exist.
+2. Emit `DeprecatedLegacyWorkflowDeclaration` exactly once per legacy workflow declaration, with declaration span and a rewrite hint to a named `Workflow<A>` value or `do:Workflow` expression.
+3. Audit the existing non-fatal warning carrier/API before emitting `DeprecatedLegacyWorkflowDeclaration`. Extend parser/typechecker/engine/CLI warning plumbing as needed so warnings are collected, surfaced by `ash check`, and do not fail `ash check` when no errors exist.
 4. Translate `WorkflowDef.header_events` in source order into leading `Requires` / `Ensures` / admission/resource WorkflowForm events.
 5. `ensures:` header events attach to the successful result boundary of the translated body suffix.
 6. `any_role([...])` remains a single OR-role requirement event, never multiple AND requirements.

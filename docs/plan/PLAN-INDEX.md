@@ -3079,7 +3079,7 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 | [TASK-775](tasks/TASK-775-legacy-workflow-translation-and-deprecation.md) | Legacy workflow translation and deprecation | 8 | ✅ Complete |
 | [TASK-776](tasks/TASK-776-workflow-comprehension-target.md) | Workflow comprehension target | 5 | ✅ Complete |
 | [TASK-777](tasks/TASK-777-workflow-contract-summary-import-export.md) | Workflow contract summary import/export | 7 | 🚧 Partial |
-| [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 6 | 📝 Planned |
+| [TASK-778](tasks/TASK-778-workflow-diagnostics-and-negative-tests.md) | Workflow diagnostics and negative tests | 6 | 🚧 Partial |
 | [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | First-class workflow closeout | 4 | 📝 Planned |
 
 **Track A (Workflow Form + Compatibility Substrate):** 18h. Promote DESIGN-033 to SPEC-056/PLAN-104, harden workflow-form/projection/obligation semantics, and add parser/classifier/header-event substrate.

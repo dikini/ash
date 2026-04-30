@@ -14,6 +14,7 @@ use ash_parser::surface::DoTarget;
 pub(crate) enum DoTowerLevel {
     Effectful,
     Proc,
+    Workflow,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,6 +109,19 @@ pub(crate) fn resolve_do_target(
                 "bind",
             )),
             tower_level: DoTowerLevel::Proc,
+        }),
+        "Workflow" => Ok(DoDictionary {
+            target: qualified.clone(),
+            value_constructor: qualified,
+            return_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
+                vec!["workflow".to_string()],
+                "unit",
+            )),
+            bind_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
+                vec!["workflow".to_string()],
+                "bind",
+            )),
+            tower_level: DoTowerLevel::Workflow,
         }),
         "Result" => unreachable!("Result is rejected before MVP dictionary selection"),
         other => Err(ConstructorError::UnsupportedExpression {

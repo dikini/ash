@@ -1,6 +1,8 @@
 # TASK-774: Workflow Lowering and Runtime Projection
 
-## Status: 📝 Planned
+## Status: 🚧 In Progress
+
+First slice implemented: `ash-core` now owns a public `WorkflowForm` lowering/projection carrier (`LoweredWorkflowProjection` / `WorkflowProcProjection`) and `lower_workflow_form` API. This slice proves `unit`, `bind`, `then`-shaped ignored binds, `requires`, `ensures`, `from_proc`, and `from_act` lower from shared carriers while preserving projection events, contract metadata, and delayed coverage obligations. It does not claim `ash-interp` / `ash-engine` execution yet.
 
 ## References
 
@@ -51,11 +53,11 @@ Make first-class Workflow values executable through the existing Proc/workflow b
 ## Verification
 
 - [ ] `workflow::unit`, `workflow::bind`, and `workflow::then` have executable Proc projections.
-- [ ] Runtime/lowering boundaries use `ash-core` carriers/public summaries and do not require parser ASTs or typeck-private structs.
+- [x] Runtime/lowering boundaries use `ash-core` carriers/public summaries and do not require parser ASTs or typeck-private structs for the first shared lowering slice (`lower_workflow_form`).
 - [ ] Cargo dependency boundaries are audited, and the task records whether it performed API-boundary cleanup only or actual dependency removal.
-- [ ] Explicit lower-carrier lifts preserve summaries and coverage obligations.
-- [ ] Contract-injection nodes survive lowering into metadata/obligations.
+- [x] Explicit lower-carrier lifts preserve summaries and coverage obligations in `ash-core` shared lowering tests.
+- [x] Contract-injection nodes survive shared lowering into metadata/obligations (`requires` admission + obligations, `ensures` delayed result obligations).
 - [ ] First-class Workflow execution matches existing legacy semantics where legacy execution already exists.
 - [ ] Unsupported execution cases fail at a named, tested boundary rather than silently producing dead values.
 - [ ] Existing Proc/workflow boundary semantics are not redefined.
-- [ ] CHANGELOG.md updated.
+- [x] CHANGELOG.md updated for the first shared `ash-core` lowering/projection slice.

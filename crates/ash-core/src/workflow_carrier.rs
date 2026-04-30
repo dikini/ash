@@ -294,3 +294,266 @@ pub struct PublicWorkflowSummary {
     pub projection_events: Vec<ProjectionEvent>,
     pub coverage: CoverageEvidence,
 }
+
+/// Public Proc-shaped runtime projection derived from a [`WorkflowForm`].
+///
+/// This is intentionally owned by `ash-core` so runtime crates can consume a
+/// shared carrier without depending on parser ASTs or typechecker-private typed
+/// artifacts. Governance-only workflow nodes project to [`Self::Neutral`] in the
+/// Proc view while remaining present in contract/evidence metadata.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum WorkflowProcProjection<A> {
+    Unit {
+        node: WorkflowNodeId,
+        value: A,
+    },
+    Bind {
+        node: WorkflowNodeId,
+        source: Box<WorkflowProcProjection<A>>,
+        binder: WorkflowBinder,
+        next: Box<WorkflowProcProjection<A>>,
+    },
+    FromProc {
+        node: WorkflowNodeId,
+        summary: ProcLowerSummary,
+    },
+    FromAct {
+        node: WorkflowNodeId,
+        summary: ActLowerSummary,
+    },
+    Scope {
+        node: WorkflowNodeId,
+        scope: WorkflowScope,
+        body: Box<WorkflowProcProjection<A>>,
+    },
+    Neutral {
+        node: WorkflowNodeId,
+    },
+}
+
+/// Shared lowering result for first-class Workflow values.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LoweredWorkflowProjection<A> {
+    pub proc_projection: WorkflowProcProjection<A>,
+    pub contract: WorkflowContract<A>,
+    pub coverage: CoverageEvidence,
+    pub projection_events: Vec<ProjectionEvent>,
+}
+
+/// Lower a shared [`WorkflowForm`] carrier into public runtime/projection
+/// metadata.
+#[must_use]
+pub fn lower_workflow_form<A: Clone>(
+    form: &WorkflowForm<A>,
+    origin: SourceOrigin,
+) -> LoweredWorkflowProjection<A> {
+    let mut lowering = WorkflowFormLowering::new(origin);
+    let proc_projection = lowering.proc_projection(form);
+    let plan = lowering.contract_plan(form);
+    LoweredWorkflowProjection {
+        proc_projection,
+        contract: WorkflowContract {
+            admission: AdmissionEnvelope {
+                requirements: lowering.requirements,
+            },
+            plan,
+            legacy_contract: Contract::default(),
+        },
+        coverage: lowering.coverage,
+        projection_events: lowering.projection_events,
+    }
+}
+
+struct WorkflowFormLowering {
+    origin: SourceOrigin,
+    projection_events: Vec<ProjectionEvent>,
+    coverage: CoverageEvidence,
+    requirements: Vec<Requirement>,
+}
+
+impl WorkflowFormLowering {
+    fn new(origin: SourceOrigin) -> Self {
+        Self {
+            origin,
+            projection_events: Vec::new(),
+            coverage: CoverageEvidence::default(),
+            requirements: Vec::new(),
+        }
+    }
+
+    fn event(&mut self, node: WorkflowNodeId, kind: ProjectionEventKind) {
+        self.projection_events.push(ProjectionEvent {
+            node,
+            projection: ProjectionKind::Proc,
+            origin: self.origin.clone(),
+            kind,
+        });
+    }
+
+    fn proc_projection<A: Clone>(&mut self, form: &WorkflowForm<A>) -> WorkflowProcProjection<A> {
+        match form {
+            WorkflowForm::Unit { node, value } => {
+                self.event(
+                    *node,
+                    ProjectionEventKind::Unit {
+                        value_erased: false,
+                    },
+                );
+                WorkflowProcProjection::Unit {
+                    node: *node,
+                    value: value.clone(),
+                }
+            }
+            WorkflowForm::Bind {
+                node,
+                source,
+                binder,
+                next,
+            } => {
+                let source = Box::new(self.proc_projection(source));
+                let kind = if *binder == WorkflowBinder::Ignored {
+                    ProjectionEventKind::Then
+                } else {
+                    ProjectionEventKind::Bind {
+                        binder: binder.clone(),
+                    }
+                };
+                self.event(*node, kind);
+                let next = Box::new(self.proc_projection(next));
+                WorkflowProcProjection::Bind {
+                    node: *node,
+                    source,
+                    binder: binder.clone(),
+                    next,
+                }
+            }
+            WorkflowForm::FromProc { node, summary } => {
+                self.event(
+                    *node,
+                    ProjectionEventKind::FromProc {
+                        summary: summary.clone(),
+                    },
+                );
+                self.coverage
+                    .obligations
+                    .push(WorkflowObligation::LowerProcCovered {
+                        node: *node,
+                        summary: summary.contract_summary.clone().unwrap_or_default(),
+                    });
+                WorkflowProcProjection::FromProc {
+                    node: *node,
+                    summary: summary.clone(),
+                }
+            }
+            WorkflowForm::FromAct { node, summary } => {
+                self.event(
+                    *node,
+                    ProjectionEventKind::FromAct {
+                        summary: summary.clone(),
+                    },
+                );
+                self.coverage
+                    .obligations
+                    .push(WorkflowObligation::LowerActCovered {
+                        node: *node,
+                        summary: summary.contract_summary.clone().unwrap_or_default(),
+                    });
+                WorkflowProcProjection::FromAct {
+                    node: *node,
+                    summary: summary.clone(),
+                }
+            }
+            WorkflowForm::Requires { node, requirement } => {
+                self.event(
+                    *node,
+                    ProjectionEventKind::Requires {
+                        requirement: requirement.clone(),
+                    },
+                );
+                self.requirements.push(requirement.clone());
+                self.coverage
+                    .obligations
+                    .push(WorkflowObligation::RequirementMustHold {
+                        node: *node,
+                        requirement: requirement.clone(),
+                    });
+                WorkflowProcProjection::Neutral { node: *node }
+            }
+            WorkflowForm::Ensures {
+                node,
+                postcondition,
+            } => {
+                self.event(
+                    *node,
+                    ProjectionEventKind::Ensures {
+                        postcondition: postcondition.clone(),
+                    },
+                );
+                self.coverage
+                    .obligations
+                    .push(WorkflowObligation::OpenPostconditionTarget {
+                        node: *node,
+                        postcondition: postcondition.clone(),
+                        target_type: "WorkflowResult".to_string(),
+                    });
+                WorkflowProcProjection::Neutral { node: *node }
+            }
+            WorkflowForm::Scope { node, scope, body } => {
+                self.event(
+                    *node,
+                    ProjectionEventKind::Scope {
+                        scope: scope.clone(),
+                    },
+                );
+                WorkflowProcProjection::Scope {
+                    node: *node,
+                    scope: scope.clone(),
+                    body: Box::new(self.proc_projection(body)),
+                }
+            }
+        }
+    }
+
+    fn contract_plan<A: Clone>(&self, form: &WorkflowForm<A>) -> ContractPlan<A> {
+        match form {
+            WorkflowForm::Unit { value, .. } => ContractPlan::EmptyContract {
+                result_marker: Some(value.clone()),
+            },
+            WorkflowForm::Bind {
+                node,
+                source,
+                binder,
+                next,
+            } => ContractPlan::BindContract {
+                node: *node,
+                first: Box::new(self.contract_plan(source)),
+                binder: binder.clone(),
+                second: Box::new(self.contract_plan(next)),
+            },
+            WorkflowForm::FromProc { node, summary } => ContractPlan::LowerProcContract {
+                node: *node,
+                summary: summary.contract_summary.clone().unwrap_or_default(),
+            },
+            WorkflowForm::FromAct { node, summary } => ContractPlan::LowerActContract {
+                node: *node,
+                summary: summary.contract_summary.clone().unwrap_or_default(),
+            },
+            WorkflowForm::Requires { node, requirement } => ContractPlan::RequirementContract {
+                node: *node,
+                requirement: requirement.clone(),
+            },
+            WorkflowForm::Ensures {
+                node,
+                postcondition,
+            } => ContractPlan::EnsuresContract {
+                node: *node,
+                postcondition: postcondition.clone(),
+                target: PostconditionTarget::DelayedWorkflowResult,
+            },
+            WorkflowForm::Scope { scope, body, .. } => ContractPlan::ScopeContract {
+                scope: scope.clone(),
+                plan: Box::new(self.contract_plan(body)),
+            },
+        }
+    }
+}

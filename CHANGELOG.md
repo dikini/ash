@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added the first `ash-core` shared WorkflowForm lowering/projection slice with public `LoweredWorkflowProjection`, `WorkflowProcProjection`, and `lower_workflow_form`, preserving `workflow::unit`/`bind`/`then`-shaped projection events plus `requires`/`ensures` metadata and `from_proc`/`from_act` delayed coverage obligations without claiming `ash-interp` / `ash-engine` execution yet.
+
 - [TASK-773](docs/plan/tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md): extended the WorkflowForm-aware ordinary-call slice with live local `Workflow<T>` artifact recovery through `let` bindings into `workflow::bind` / `workflow::then`, plus earlier rejection for opaque named/local Workflow values used in ordinary algebra composition without preserved form metadata.
 
 - [TASK-773](docs/plan/tasks/TASK-773-workflow-algebra-and-contract-intrinsic-call-elaboration.md): extended the first WorkflowForm-aware ordinary-call elaboration slice for qualified `workflow::unit`, `workflow::bind`, `workflow::then`, `workflow::from_proc`, `workflow::from_act`, `workflow::requires`, and `workflow::ensures` in `do:Workflow` construction contexts, preserving structured artifacts, classifying raw contract arguments (including `any_role([...])`) before denotable value typing, rejecting opaque workflow sequencing and standalone open `workflow::ensures(result ...)`, and keeping unqualified/stored/partial workflow contract intrinsics unavailable.

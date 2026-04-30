@@ -1,6 +1,6 @@
 # TASK-778: Workflow Diagnostics and Negative Tests
 
-## Status: 🚧 Partial
+## Status: ✅ Complete
 
 ## References
 
@@ -52,20 +52,20 @@ Harden diagnostics and negative coverage for first-class workflow target behavio
 
 - [x] Diagnostics state expected type/constructor and found type for generalized `do` target unknown/wrong-kind cases.
 - [x] Coverage/obligation errors mention the failed evidence component.
-- [ ] Lift hints are present where applicable.
+- [x] Lift hints are present where applicable.
 - [x] Contract statement misuse and intrinsic parameter misuse diagnostics are covered for first-class `workflow::requires` / `workflow::ensures` call misuse outside `do:Workflow`.
 - [x] Contract-expression classification failures cover empty `any_role`, invalid role-policy entries, and non-`result` `workflow ensures` targets with stable Requirement/OpenPostcondition wording.
 - [x] `requires` refinement failures distinguish assumed availability from proven admission at the carrier diagnostic boundary.
 - [x] `ensures` target/type failures identify the successful-result suffix boundary at the carrier diagnostic boundary.
 - [x] Deprecated legacy workflow declarations emit warnings with rewrite hints in `ash check` human and JSON output.
 - [x] `DeprecatedLegacyWorkflowDeclaration` reaches `ash check` as a non-fatal warning when no errors exist.
-- [ ] Neutral-Proc contract nodes are not silently erased before evidence-preserving optimization.
-- [ ] Act/Proc diagnostics do not regress.
+- [x] Neutral-Proc contract nodes are not silently erased before evidence-preserving optimization.
+- [x] Act/Proc diagnostics do not regress.
 - [x] CHANGELOG.md updated.
 
-## Partial Slice Notes
+## Completion Notes
 
-Implemented the current TASK-778 diagnostic slices:
+TASK-778 is complete as a diagnostic hardening task:
 
 - Stable workflow contract classifier diagnostics now identify Requirement/OpenPostcondition classification failures for empty `any_role`, invalid role-policy entries, and non-`result` `workflow ensures` targets.
 - Generalized `do` target diagnostics now name stale/missing dictionary states against the current accepted constructors: `Act`, `Proc`, and `Workflow`.
@@ -76,5 +76,7 @@ Implemented the current TASK-778 diagnostic slices:
 - Coverage and obligation carriers now expose stable evidence-component labels/messages for lower Proc/Act obligations, missing projection events, and opaque imported summary rejections.
 - Carrier diagnostics for `RequirementMustHold`, `RequirementRefinementCovered`, and `OpenPostconditionTarget` now distinguish final admission proof, requires-assumption/refinement coverage, and successful-result postcondition target boundaries.
 - First-class `workflow::requires` / `workflow::ensures` call misuse outside `do:Workflow` now reports stable contract-only intrinsic diagnostics naming the qualified intrinsic, non-denotable Requirement/OpenPostcondition parameter class, arity failures, and open-result Workflow result-boundary requirements.
+- Neutral governance nodes now have focused regression coverage proving `requires` / `ensures` remain as neutral Proc-projection nodes inside sequential `Bind` forms until any later evidence-preserving optimization.
+- Existing Act/Proc and Workflow lift-hint diagnostics were re-audited with focused regression tests: `task_752_do_diagnostics`, `task_758_comprehension_diagnostics`, `task_772_workflow_do`, and `task_776_workflow_comprehension_target`.
 
-Remaining TASK-778 work covers the broader SPEC-056 diagnostic matrix: wrong-kind Workflow dictionary states, source/typechecker-level admission proof validation beyond this carrier-label slice, neutral projection preservation, lift-hint coverage, and Act/Proc diagnostic regression coverage.
+Remaining Phase 108 work moves to TASK-777 follow-ups and TASK-779 closeout rather than TASK-778 diagnostics.

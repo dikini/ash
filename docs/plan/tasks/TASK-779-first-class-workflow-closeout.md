@@ -14,7 +14,7 @@ Close Phase 108 with examples, documentation reconciliation, changelog, and inde
 
 ## Dependencies
 
-- 📝 TASK-778: Workflow diagnostics and negative tests.
+- ✅ TASK-778: Workflow diagnostics and negative tests.
 
 ## Requirements
 

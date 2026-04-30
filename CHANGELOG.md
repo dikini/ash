@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added focused neutral Proc-projection preservation regression coverage proving `requires` / `ensures` governance nodes remain as neutral source nodes inside sequential `Bind` forms until any later evidence-preserving optimization; closed TASK-778 after re-auditing lift hints and Act/Proc diagnostics.
+
 - [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added stable contract-only intrinsic misuse diagnostics for first-class `workflow::requires` / `workflow::ensures` calls outside `do:Workflow`, naming the qualified intrinsic, non-denotable Requirement/OpenPostcondition parameter class, arity failures, and open-result Workflow result-boundary requirements.
 
 - [TASK-778](docs/plan/tasks/TASK-778-workflow-diagnostics-and-negative-tests.md): added stable coverage/obligation evidence-component diagnostics on `ash-core` workflow carriers, including lower Proc/Act obligation labels/messages, final-admission versus requires-refinement proof boundary messages, successful-result OpenPostcondition target messages, and `CoverageError` display output for missing projection events and opaque imported summaries.

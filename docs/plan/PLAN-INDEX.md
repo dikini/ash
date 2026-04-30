@@ -3060,7 +3060,7 @@ Repair the post-Phase-106 `ash check` corpus for standard library modules and ex
 ## Phase 108: First-Class Workflow Carrier
 
 **Priority:** High (enables first-class workflow composition and Workflow typed-do/comprehension targets)
-**Status:** 📝 Planned
+**Status:** 🚧 In Progress
 **Spec:** [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md)
 **Design:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md)
 **Plan:** [docs/plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md](PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
@@ -3070,7 +3070,7 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-768](tasks/TASK-768-first-class-workflow-spec-plan-packet.md) | First-class workflow spec/plan packet | 4 | ✅ Complete |
-| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, obligation, and adapter semantics | 7 | 📝 Planned |
+| [TASK-769](tasks/TASK-769-workflow-form-projection-semantics.md) | Workflow form, projection, obligation, and adapter semantics | 7 | ✅ Complete |
 | [TASK-770](tasks/TASK-770-workflow-contract-surface-classifier-and-header-events.md) | Workflow contract surface, classifier, and header events | 7 | 📝 Planned |
 | [TASK-771](tasks/TASK-771-workflow-type-stdlib-and-intrinsic-parameters.md) | Workflow type, qualified builtins, shared carriers, and intrinsic parameters | 9 | 📝 Planned |
 | [TASK-772](tasks/TASK-772-workflow-form-preserving-do-target.md) | WorkflowForm-preserving Workflow do target | 9 | 📝 Planned |

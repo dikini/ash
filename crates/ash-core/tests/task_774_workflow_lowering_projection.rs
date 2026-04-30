@@ -1,7 +1,8 @@
 use ash_core::workflow_carrier::{
-    ActLowerSummary, ContractPlan, OpenPostcondition, ProcContractSummary, ProcLowerSummary,
-    ProjectionEventKind, SourceOrigin, WorkflowBinder, WorkflowForm, WorkflowNodeId,
-    WorkflowObligation, WorkflowProcProjection, lower_workflow_form,
+    ActLowerSummary, ContractPlan, OpenPostcondition, ProcContractSummary, ProcFailureSummary,
+    ProcLowerSummary, ProcProvenanceSummary, ProcResourceAuthoritySummary, ProjectionEventKind,
+    SourceOrigin, WorkflowBinder, WorkflowForm, WorkflowNodeId, WorkflowObligation,
+    WorkflowProcProjection, lower_workflow_form,
 };
 use ash_core::workflow_contract::{ArithConstraint, Effect, PostPredicate, Requirement};
 
@@ -20,6 +21,13 @@ fn post_eq(lhs: &str, rhs: &str) -> OpenPostcondition {
     OpenPostcondition {
         predicate: PostPredicate::Eq(lhs.to_string(), rhs.to_string()),
     }
+}
+
+#[test]
+fn proc_summary_defaults_are_explicitly_conservative() {
+    assert!(ProcFailureSummary::default().conservative);
+    assert!(ProcResourceAuthoritySummary::default().conservative);
+    assert!(ProcProvenanceSummary::default().conservative);
 }
 
 #[test]
@@ -141,6 +149,7 @@ fn explicit_proc_and_act_lifts_preserve_summaries_and_delayed_coverage_obligatio
             obligations: vec![WorkflowNodeId(21)],
             public_anchor: Some("proc.anchor".to_string()),
         }),
+        ..Default::default()
     };
     let act_summary = ActLowerSummary {
         coverage_obligation_nodes: vec![WorkflowNodeId(30)],

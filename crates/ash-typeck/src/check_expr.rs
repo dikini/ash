@@ -1680,6 +1680,7 @@ impl WorkflowArtifactBuilder {
                     let summary = ProcLowerSummary {
                         coverage_obligation_nodes: vec![node],
                         contract_summary: None,
+                        ..Default::default()
                     };
                     self.push_event(
                         node,

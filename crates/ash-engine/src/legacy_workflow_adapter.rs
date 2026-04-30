@@ -7,7 +7,8 @@
 //! are rejected with diagnostics rather than silently treated as covered.
 
 use ash_core::workflow_carrier::{
-    OpenPostcondition, ProcContractSummary, ProcLowerSummary, SourceOrigin, WorkflowBinder,
+    OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
+    ProcProvenanceSummary, ProcResourceAuthoritySummary, SourceOrigin, WorkflowBinder,
     WorkflowForm, WorkflowNodeId, WorkflowScope,
 };
 use ash_parser::surface::{Workflow, WorkflowDef, WorkflowHeaderEvent};
@@ -145,6 +146,19 @@ fn legacy_body_as_proc_summary(
             obligations,
             public_anchor: Some(format!("legacy_body_as_proc_summary:{}", workflow.name)),
         }),
+        failure_summary: Some(ProcFailureSummary {
+            routes: Vec::new(),
+            conservative: true,
+        }),
+        resource_authority_summary: Some(ProcResourceAuthoritySummary {
+            resources: Vec::new(),
+            conservative: true,
+        }),
+        provenance_summary: Some(ProcProvenanceSummary {
+            event_kinds: Vec::new(),
+            conservative: true,
+        }),
+        source_origin: Some(legacy_workflow_source_origin(workflow)),
     })
 }
 

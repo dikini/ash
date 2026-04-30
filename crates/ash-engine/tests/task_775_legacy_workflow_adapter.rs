@@ -2,14 +2,18 @@
 
 use ash_core::workflow_carrier::{
     ContractPlan, OpenPostcondition, ProcContractSummary, ProcLowerSummary, ProjectionEventKind,
-    WorkflowBinder, WorkflowForm, WorkflowNodeId, lower_workflow_form,
+    SourceOrigin, WorkflowBinder, WorkflowForm, WorkflowNodeId, lower_workflow_form,
 };
 use ash_core::workflow_contract::{ArithConstraint, PostPredicate, Requirement, RolePolicy};
 use ash_engine::legacy_workflow_adapter::{
     LegacyWorkflowAdapterError, UnsupportedLegacyBodyConstruct,
     legacy_workflow_def_to_workflow_form, legacy_workflow_source_origin,
 };
-use ash_parser::{new_input, workflow_def};
+use ash_parser::{
+    new_input,
+    parse_module::{parse_resume, parse_yield},
+    workflow_def,
+};
 use winnow::Parser;
 
 fn parse_workflow(source: &str) -> ash_parser::surface::WorkflowDef {
@@ -172,6 +176,54 @@ fn legacy_body_summary_carries_lower_coverage_obligations_for_supported_body_nod
 }
 
 #[test]
+fn legacy_body_summary_carries_explicit_conservative_full_summary_fields() {
+    let workflow = parse_workflow("workflow full_summary { let x = 1 ret x }");
+
+    let form = legacy_workflow_def_to_workflow_form(&workflow).expect("legacy adapter succeeds");
+    let lowered = lower_workflow_form(&form, legacy_workflow_source_origin(&workflow));
+
+    let Some(summary) = lowered
+        .projection_events
+        .iter()
+        .find_map(|event| match &event.kind {
+            ProjectionEventKind::FromProc { summary } => Some(summary),
+            _ => None,
+        })
+    else {
+        panic!("legacy body must lower as FromProc");
+    };
+
+    assert_eq!(
+        summary
+            .failure_summary
+            .as_ref()
+            .map(|summary| summary.conservative),
+        Some(true),
+        "supported legacy FromProc summaries must carry an explicit conservative failure summary"
+    );
+    assert_eq!(
+        summary
+            .resource_authority_summary
+            .as_ref()
+            .map(|summary| summary.conservative),
+        Some(true),
+        "supported legacy FromProc summaries must carry an explicit conservative resource-authority summary"
+    );
+    assert_eq!(
+        summary
+            .provenance_summary
+            .as_ref()
+            .map(|summary| summary.conservative),
+        Some(true),
+        "supported legacy FromProc summaries must carry an explicit conservative provenance summary"
+    );
+    assert!(
+        matches!(summary.source_origin, Some(SourceOrigin::Synthetic { .. })),
+        "supported legacy FromProc summaries must carry explicit source-origin metadata"
+    );
+}
+
+#[test]
 fn legacy_body_adapter_rejects_opaque_receive_construct_with_diagnostic() {
     let workflow = parse_workflow("workflow opaque { receive { _ => done } }");
 
@@ -185,6 +237,39 @@ fn legacy_body_adapter_rejects_opaque_receive_construct_with_diagnostic() {
             ..
         }
     ));
+}
+
+#[test]
+fn legacy_body_adapter_rejects_opaque_yield_and_resume_constructs_with_diagnostics() {
+    let cases = [
+        (
+            parse_yield
+                .parse(new_input("yield role(manager) request resume response : TransferResponse { Approved => { done } }"))
+                .expect("yield body should parse"),
+            UnsupportedLegacyBodyConstruct::Yield,
+        ),
+        (
+            parse_resume
+                .parse(new_input("resume approved : ApprovalResponse"))
+                .expect("resume body should parse"),
+            UnsupportedLegacyBodyConstruct::Resume,
+        ),
+    ];
+
+    for (body, construct) in cases {
+        let mut workflow = parse_workflow("workflow opaque { done }");
+        workflow.body = body;
+        let err = legacy_workflow_def_to_workflow_form(&workflow)
+            .expect_err("opaque yield/resume bodies must reject conservatively");
+
+        assert!(matches!(
+            err,
+            LegacyWorkflowAdapterError::UnsupportedBody {
+                construct: actual,
+                ..
+            } if actual == construct
+        ));
+    }
 }
 
 #[test]
@@ -221,6 +306,7 @@ fn legacy_and_first_class_forms_produce_equivalent_public_contract_events() {
                         obligations: Vec::new(),
                         public_anchor: Some("first_class_body".to_string()),
                     }),
+                    ..Default::default()
                 },
             }),
         }),

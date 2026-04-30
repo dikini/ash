@@ -99,6 +99,7 @@ fn unsupported_lift_projections_fail_at_named_phase_108_boundary() {
                 summary: ProcLowerSummary {
                     coverage_obligation_nodes: vec![WorkflowNodeId(4)],
                     contract_summary: None,
+                    ..Default::default()
                 },
             },
             "from_proc",

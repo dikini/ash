@@ -260,6 +260,55 @@ pub enum WorkflowObligation {
 pub struct ProcLowerSummary {
     pub coverage_obligation_nodes: Vec<WorkflowNodeId>,
     pub contract_summary: Option<ProcContractSummary>,
+    pub failure_summary: Option<ProcFailureSummary>,
+    pub resource_authority_summary: Option<ProcResourceAuthoritySummary>,
+    pub provenance_summary: Option<ProcProvenanceSummary>,
+    pub source_origin: Option<SourceOrigin>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProcFailureSummary {
+    pub routes: Vec<String>,
+    pub conservative: bool,
+}
+
+impl Default for ProcFailureSummary {
+    fn default() -> Self {
+        Self {
+            routes: Vec::new(),
+            conservative: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProcResourceAuthoritySummary {
+    pub resources: Vec<String>,
+    pub conservative: bool,
+}
+
+impl Default for ProcResourceAuthoritySummary {
+    fn default() -> Self {
+        Self {
+            resources: Vec::new(),
+            conservative: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProcProvenanceSummary {
+    pub event_kinds: Vec<String>,
+    pub conservative: bool,
+}
+
+impl Default for ProcProvenanceSummary {
+    fn default() -> Self {
+        Self {
+            event_kinds: Vec::new(),
+            conservative: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]

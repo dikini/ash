@@ -36,7 +36,7 @@ use ash_core::runtime::{
     WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
     WorkflowFailure, WorkflowFailureKind, WorkflowReport,
 };
-use ash_core::{Provenance, Role, Value, WorkflowId};
+use ash_core::{Provenance, Role, Value, WorkflowId, workflow_carrier::WorkflowProcProjection};
 use ash_interp::{
     BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
     RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
@@ -1316,6 +1316,26 @@ impl Engine {
             &self.runtime_state,
         )
         .await
+    }
+
+    /// Execute a first-class Workflow Proc projection through the public interpreter boundary.
+    ///
+    /// This engine-facing seam intentionally accepts only the shared
+    /// `ash-core::workflow_carrier::WorkflowProcProjection<Value>` carrier and
+    /// forwards to `ash-interp`'s named projection executor. It does not perform
+    /// parser or typechecker-private lowering. Unsupported projection shapes keep
+    /// the interpreter's stable `FirstClassWorkflowProjectionExecutionUnsupported`
+    /// diagnostic.
+    ///
+    /// # Errors
+    ///
+    /// Returns the interpreter's `ExecError` when the projection shape is not yet
+    /// executable by Phase 108's first-class Workflow projection boundary.
+    pub fn execute_workflow_proc_projection(
+        &self,
+        projection: &WorkflowProcProjection<Value>,
+    ) -> ExecResult<Value> {
+        ash_interp::execute_workflow_proc_projection(projection)
     }
 
     /// Admit and execute a workflow through the workflow-boundary carrier substrate.

@@ -19,7 +19,28 @@ fn unit_projection_executes_without_parser_or_typeck_artifacts() {
 }
 
 #[test]
-fn bind_projection_fails_at_named_phase_108_boundary() {
+fn ignored_bind_projection_executes_non_dependent_then_sequence() {
+    let projection = WorkflowProcProjection::Bind {
+        node: WorkflowNodeId(6),
+        source: Box::new(WorkflowProcProjection::Unit {
+            node: WorkflowNodeId(1),
+            value: Value::Int(1),
+        }),
+        binder: ash_core::workflow_carrier::WorkflowBinder::Ignored,
+        next: Box::new(WorkflowProcProjection::Unit {
+            node: WorkflowNodeId(2),
+            value: Value::Int(2),
+        }),
+    };
+
+    let value = execute_workflow_proc_projection(&projection)
+        .expect("ignored bind / then projection should run");
+
+    assert_eq!(value, Value::Int(2));
+}
+
+#[test]
+fn named_bind_projection_fails_at_named_phase_108_boundary() {
     let projection = WorkflowProcProjection::Bind {
         node: WorkflowNodeId(3),
         source: Box::new(WorkflowProcProjection::Unit {

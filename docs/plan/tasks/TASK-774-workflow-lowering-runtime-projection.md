@@ -2,7 +2,7 @@
 
 ## Status: 🚧 In Progress
 
-First slice implemented: `ash-core` now owns a public `WorkflowForm` lowering/projection carrier (`LoweredWorkflowProjection` / `WorkflowProcProjection`) and `lower_workflow_form` API. This slice proves `unit`, `bind`, `then`-shaped ignored binds, `requires`, `ensures`, `from_proc`, and `from_act` lower from shared carriers while preserving projection events, contract metadata, and delayed coverage obligations. Second slice implemented: `ash-interp` now exposes a runtime-facing projection boundary that consumes `ash-core` `WorkflowProcProjection<Value>` directly, executes sound `unit`/transparent `scope` cases, and names unsupported first-class Workflow projection execution with `FirstClassWorkflowProjectionExecutionUnsupported` rather than silently producing dead values. It does not claim full `bind` / `from_proc` / `from_act` execution yet.
+First slice implemented: `ash-core` now owns a public `WorkflowForm` lowering/projection carrier (`LoweredWorkflowProjection` / `WorkflowProcProjection`) and `lower_workflow_form` API. This slice proves `unit`, `bind`, `then`-shaped ignored binds, `requires`, `ensures`, `from_proc`, and `from_act` lower from shared carriers while preserving projection events, contract metadata, and delayed coverage obligations. Runtime-boundary slices implemented: `ash-interp` now exposes a runtime-facing projection boundary that consumes `ash-core` `WorkflowProcProjection<Value>` directly, executes sound `unit`, non-dependent ignored-bind/`then`, and transparent `scope` cases, and names unsupported dependent `bind`, `from_proc`, `from_act`, and neutral governance execution with `FirstClassWorkflowProjectionExecutionUnsupported` rather than silently producing dead values. It does not claim full dependent bind or lower-carrier execution yet.
 
 Second-slice dependency audit: `ash-interp` already depends on `ash-core`, `ash-parser`, and `ash-typeck`, but the new runtime-facing projection boundary intentionally imports only `ash_core::{Value, workflow_carrier::{WorkflowNodeId, WorkflowProcProjection}}` and local `ExecError`/`ExecResult`. This slice performs API-boundary cleanup/enforcement only; it does not remove the existing broad `ash-interp` parser/typeck dependencies.
 
@@ -54,7 +54,7 @@ Make first-class Workflow values executable through the existing Proc/workflow b
 
 ## Verification
 
-- [x] `workflow::unit` and transparent projection scopes have an `ash-interp` runtime-facing consumer through `WorkflowProcProjection<Value>`; `bind` / `then` remain explicitly unsupported at execution.
+- [x] `workflow::unit`, non-dependent `workflow::then` / ignored-bind projections, and transparent projection scopes have an `ash-interp` runtime-facing consumer through `WorkflowProcProjection<Value>`; dependent `bind` remains explicitly unsupported at execution.
 - [x] Runtime/lowering boundaries use `ash-core` carriers/public summaries and do not require parser ASTs or typeck-private structs for the first shared lowering slice (`lower_workflow_form`).
 - [x] Cargo dependency boundaries are audited, and this slice records API-boundary cleanup/enforcement only rather than dependency removal.
 - [x] Explicit lower-carrier lifts preserve summaries and coverage obligations in `ash-core` shared lowering tests.

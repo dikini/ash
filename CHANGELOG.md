@@ -8,7 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added an `ash-interp` runtime-facing first-class Workflow projection boundary that consumes the public `ash-core::workflow_carrier::WorkflowProcProjection<Value>` carrier, executes already-sound `unit`/transparent `scope` projections, and fails unsupported `bind`/`from_proc`/`from_act`/neutral governance shapes at the named `FirstClassWorkflowProjectionExecutionUnsupported` Phase 108 diagnostic instead of silently producing dead runtime values.
+- [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added an `ash-interp` runtime-facing first-class Workflow projection boundary that consumes the public `ash-core::workflow_carrier::WorkflowProcProjection<Value>` carrier, executes already-sound `unit`, non-dependent ignored-bind / `then`, and transparent `scope` projections, and fails unsupported dependent `bind`, `from_proc`, `from_act`, and neutral governance shapes at the named `FirstClassWorkflowProjectionExecutionUnsupported` Phase 108 diagnostic instead of silently producing dead runtime values.
 
 - [TASK-774](docs/plan/tasks/TASK-774-workflow-lowering-runtime-projection.md): added the first `ash-core` shared WorkflowForm lowering/projection slice with public `LoweredWorkflowProjection`, `WorkflowProcProjection`, and `lower_workflow_form`, preserving `workflow::unit`/`bind`/`then`-shaped projection events plus `requires`/`ensures` metadata and `from_proc`/`from_act` delayed coverage obligations without claiming `ash-interp` / `ash-engine` execution yet.
 

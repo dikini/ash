@@ -2,13 +2,14 @@
 //!
 //! Phase 108 introduced shared `ash-core` lowering carriers before the full
 //! runtime executor exists. This module is the named seam consumed by runtime
-//! crates: shapes that are already sound (`unit`, transparent `scope`) execute,
-//! and all remaining first-class Workflow projection shapes fail at an explicit
-//! diagnostic boundary instead of silently becoming inert values.
+//! crates: shapes that are already sound (`unit`, non-dependent ignored
+//! `bind`/`then`, transparent `scope`) execute, and all remaining first-class
+//! Workflow projection shapes fail at an explicit diagnostic boundary instead
+//! of silently becoming inert values.
 
 use ash_core::{
     Value,
-    workflow_carrier::{WorkflowNodeId, WorkflowProcProjection},
+    workflow_carrier::{WorkflowBinder, WorkflowNodeId, WorkflowProcProjection},
 };
 
 use crate::{ExecError, ExecResult};
@@ -19,14 +20,23 @@ const UNSUPPORTED_BOUNDARY: &str = "FirstClassWorkflowProjectionExecutionUnsuppo
 ///
 /// This intentionally accepts only the public `ash-core` projection carrier. It
 /// does not depend on parser AST nodes or typechecker-private typed artifacts.
-/// Full `bind`, `from_proc`, and `from_act` scheduling is still outside this
-/// slice; those shapes return a named Phase 108 unsupported diagnostic.
+/// Full dependent `bind`, `from_proc`, and `from_act` scheduling is still outside
+/// this slice; those shapes return a named Phase 108 unsupported diagnostic.
 pub fn execute_workflow_proc_projection(
     projection: &WorkflowProcProjection<Value>,
 ) -> ExecResult<Value> {
     match projection {
         WorkflowProcProjection::Unit { value, .. } => Ok(value.clone()),
         WorkflowProcProjection::Scope { body, .. } => execute_workflow_proc_projection(body),
+        WorkflowProcProjection::Bind {
+            source,
+            binder: WorkflowBinder::Ignored,
+            next,
+            ..
+        } => {
+            let _ = execute_workflow_proc_projection(source)?;
+            execute_workflow_proc_projection(next)
+        }
         WorkflowProcProjection::Bind { .. }
         | WorkflowProcProjection::FromProc { .. }
         | WorkflowProcProjection::FromAct { .. }

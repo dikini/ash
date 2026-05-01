@@ -1,6 +1,6 @@
 # TASK-788: Interface and Associated-Member Identity Summary Plumbing
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -30,9 +30,9 @@ Audit and preserve current interface and associated-member metadata in the seman
 
 ## Verification
 
-- [ ] Current interface/associated type behavior still works.
-- [ ] Summary metadata is limited to current interface identity, associated type declaration identity, member name/path, and source anchor as needed; future SPEC-B/G semantics remain absent.
-- [ ] No associated-family computation, generalized projection resolution, or normalization is implemented; add a negative check if practical.
+- [x] Current interface/associated type behavior still works.
+- [x] Summary metadata is limited to current interface identity, associated type declaration identity, member name/path, and source anchor as needed; future SPEC-B/G semantics remain absent.
+- [x] No associated-family computation, generalized projection resolution, or normalization is implemented; add a negative check if practical.
 
 ## Implementation Notes
 

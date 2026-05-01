@@ -1,6 +1,6 @@
 # TASK-790: Diagnostics, Negative Tests, and Non-Interference Coverage
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -34,9 +34,17 @@ Harden user-visible diagnostics and prove SPEC-A does not change unrelated langu
 
 ## Verification
 
-- [ ] Diagnostics include module/source context.
-- [ ] Deferred features remain unsupported.
-- [ ] Existing unrelated behavior is preserved or explicitly documented with exact commands and failures, if any.
+- [x] Diagnostics include module/source context.
+- [x] Deferred features remain unsupported.
+- [x] Existing unrelated behavior is preserved or explicitly documented with exact commands and failures, if any.
+
+## Completion Notes
+
+- Hardened duplicate ordinary-type semantic-summary identity diagnostics in `ash-typeck` so conflicts report the visible name, existing and duplicate canonical origins, module path, and source-anchor context.
+- Existing TASK-785/TASK-786/TASK-789 coverage already asserts missing summary/snippet fallback behavior, private public-signature leaks, constructor visibility, alias import, missing `pub use` target, constructor-only import, and private leak-through-public-signature diagnostics.
+- Existing TASK-782 parser coverage rejects deferred `type fn` and `sealed type domain` syntax as ordinary type metadata.
+- Existing TASK-777/TASK-785/TASK-786/TASK-787 coverage preserves workflow summaries through ordinary-type summary transport, including `InlineCallable.workflow_summary`, imported workflow summaries, TypeEnv public workflow-summary bindings, and imported-summary origins.
+- Non-interference verification was run for ADTs/imports/interfaces/associated types/workflows/capabilities/resources/do/comprehensions via the focused command set and `cargo test --all`. The broad suite has one pre-existing/unrelated example-corpus failure: `cargo test --all` fails in `crates/ash-cli/tests/example_corpus_check.rs` on `examples/06-capability-implementations/01-mock-internal-kv.ash` with `parse error: Parsing Error: ContextError { context: [], cause: None }`.
 
 ## Implementation Notes
 

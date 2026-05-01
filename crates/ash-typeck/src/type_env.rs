@@ -933,6 +933,23 @@ pub struct TypeEnv {
     capability_implementation_body: bool,
 }
 
+fn duplicate_summary_identity_diagnostic(
+    visible_name: &str,
+    existing: &TypeDeclId,
+    duplicate: &TypeDeclSummary,
+) -> String {
+    format!(
+        "duplicate ordinary type summary identity for visible type '{visible_name}': \
+         existing origin '{}::{}', duplicate origin '{}::{}' from module '{}' at {:?}",
+        existing.module.path.join("::"),
+        existing.name,
+        duplicate.id.module.path.join("::"),
+        duplicate.id.name,
+        duplicate.id.module.path.join("::"),
+        duplicate.source_anchor,
+    )
+}
+
 impl TypeEnv {
     fn convert_interface_method(
         &self,
@@ -1153,11 +1170,24 @@ impl TypeEnv {
         if let Some(existing) = self.type_alias_identities.get(&visible_name)
             && existing != &summary.id
         {
-            return Err(TypeEnvError::DuplicateType(visible_name, Span::default()));
+            return Err(TypeEnvError::InvalidDefinition(
+                duplicate_summary_identity_diagnostic(&visible_name, existing, summary),
+                Span::default(),
+            ));
         }
         if let Some(existing) = self.ast_types.get(&visible_name) {
             let existing_identity = self.type_alias_identities.get(&visible_name);
             if !self.is_placeholder_name(&visible_name) && existing_identity != Some(&summary.id) {
+                if let Some(existing_identity) = existing_identity {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        duplicate_summary_identity_diagnostic(
+                            &visible_name,
+                            existing_identity,
+                            summary,
+                        ),
+                        Span::default(),
+                    ));
+                }
                 return Err(TypeEnvError::DuplicateType(visible_name, Span::default()));
             }
             if !existing.params.is_empty() && existing.params != summary.params {

@@ -161,6 +161,58 @@ impl ConstructorId {
     }
 }
 
+/// Opaque identity for an interface declaration in the current metadata model.
+///
+/// This is a reserved identity carrier only: it is not a projection IR handle and
+/// must not imply associated-family computation, normalization, or equality rules.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct InterfaceIdentityId {
+    pub module: ModuleIdentity,
+    pub name: Name,
+}
+
+impl InterfaceIdentityId {
+    #[must_use]
+    pub fn new(module: ModuleIdentity, name: impl Into<Name>) -> Self {
+        Self {
+            module,
+            name: name.into(),
+        }
+    }
+}
+
+/// Opaque current associated-member kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AssociatedMemberIdentityKind {
+    AssociatedType,
+}
+
+/// Opaque identity for an associated member declared by an interface.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AssociatedMemberIdentityId {
+    pub interface: InterfaceIdentityId,
+    pub name: Name,
+    pub member_path: Vec<String>,
+    pub kind: AssociatedMemberIdentityKind,
+}
+
+impl AssociatedMemberIdentityId {
+    #[must_use]
+    pub fn associated_type(
+        interface: InterfaceIdentityId,
+        name: impl Into<Name>,
+        member_path: Vec<String>,
+    ) -> Self {
+        Self {
+            interface,
+            name: name.into(),
+            member_path,
+            kind: AssociatedMemberIdentityKind::AssociatedType,
+        }
+    }
+}
+
 /// Exported name/path pointing at an origin type identity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TypeExportRef {
@@ -347,6 +399,55 @@ impl ReservedSemanticIdentitySlots {
     }
 }
 
+/// Opaque summary entry for an interface declaration identity.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InterfaceIdentitySummary {
+    pub id: InterfaceIdentityId,
+    pub name: Name,
+    pub path: Vec<String>,
+    pub source_anchor: SourceAnchor,
+}
+
+impl InterfaceIdentitySummary {
+    #[must_use]
+    pub fn new(
+        id: InterfaceIdentityId,
+        name: impl Into<Name>,
+        path: Vec<String>,
+        source_anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            path,
+            source_anchor,
+        }
+    }
+}
+
+/// Opaque summary entry for an associated member declaration identity.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AssociatedMemberIdentitySummary {
+    pub id: AssociatedMemberIdentityId,
+    pub name: Name,
+    pub source_anchor: SourceAnchor,
+}
+
+impl AssociatedMemberIdentitySummary {
+    #[must_use]
+    pub fn new(
+        id: AssociatedMemberIdentityId,
+        name: impl Into<Name>,
+        source_anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            source_anchor,
+        }
+    }
+}
+
 /// Core-owned ordinary-type semantic summary for one module.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModuleSemanticSummary {
@@ -356,6 +457,10 @@ pub struct ModuleSemanticSummary {
     pub exported_constructors: Vec<ConstructorSummary>,
     pub re_exports: Vec<ReExportSummary>,
     pub imported_summary_refs: Vec<ModuleSummaryRef>,
+    #[serde(default)]
+    pub interface_identities: Vec<InterfaceIdentitySummary>,
+    #[serde(default)]
+    pub associated_member_identities: Vec<AssociatedMemberIdentitySummary>,
     pub reserved_identity_slots: ReservedSemanticIdentitySlots,
     pub diagnostic_anchors: Vec<SourceAnchor>,
 }
@@ -370,6 +475,8 @@ impl ModuleSemanticSummary {
             exported_constructors: Vec::new(),
             re_exports: Vec::new(),
             imported_summary_refs: Vec::new(),
+            interface_identities: Vec::new(),
+            associated_member_identities: Vec::new(),
             reserved_identity_slots: ReservedSemanticIdentitySlots::default(),
             diagnostic_anchors: Vec::new(),
         }
@@ -396,6 +503,21 @@ impl ModuleSemanticSummary {
     #[must_use]
     pub fn with_imported_summary_ref(mut self, summary_ref: ModuleSummaryRef) -> Self {
         self.imported_summary_refs.push(summary_ref);
+        self
+    }
+
+    #[must_use]
+    pub fn with_interface_identity(mut self, identity: InterfaceIdentitySummary) -> Self {
+        self.interface_identities.push(identity);
+        self
+    }
+
+    #[must_use]
+    pub fn with_associated_member_identity(
+        mut self,
+        identity: AssociatedMemberIdentitySummary,
+    ) -> Self {
+        self.associated_member_identities.push(identity);
         self
     }
 
@@ -475,6 +597,52 @@ mod tests {
         assert_eq!(unit_pending.parent, parent);
         assert_ne!(unit_pending, record_pending);
         assert_ne!(unit_pending, unit_done);
+    }
+
+    #[test]
+    fn interface_and_associated_member_identity_slots_are_opaque_current_metadata() {
+        let module = module_identity();
+        let interface_id = InterfaceIdentityId::new(module.clone(), "Serializer");
+        let associated_id = AssociatedMemberIdentityId::associated_type(
+            interface_id.clone(),
+            "Ok",
+            vec!["Serializer".into(), "Ok".into()],
+        );
+        let interface_anchor = SourceAnchor::new(
+            SourceOrigin::File("/repo/src/domain.ash".into()),
+            Some(Span { start: 10, end: 40 }),
+            "interface Serializer",
+        );
+        let associated_anchor = SourceAnchor::new(
+            SourceOrigin::File("/repo/src/domain.ash".into()),
+            Some(Span { start: 20, end: 22 }),
+            "associated type Ok",
+        );
+
+        let summary = ModuleSemanticSummary::new(module.clone())
+            .with_interface_identity(InterfaceIdentitySummary::new(
+                interface_id.clone(),
+                "Serializer",
+                vec!["Serializer".into()],
+                interface_anchor.clone(),
+            ))
+            .with_associated_member_identity(AssociatedMemberIdentitySummary::new(
+                associated_id.clone(),
+                "Ok",
+                associated_anchor.clone(),
+            ));
+
+        assert_eq!(summary.interface_identities[0].id, interface_id);
+        assert_eq!(
+            summary.interface_identities[0].source_anchor,
+            interface_anchor
+        );
+        assert_eq!(summary.associated_member_identities[0].id, associated_id);
+        assert_eq!(
+            summary.associated_member_identities[0].source_anchor,
+            associated_anchor
+        );
+        assert!(summary.reserved_identity_slots.is_empty());
     }
 
     #[test]

@@ -1,8 +1,8 @@
 # DESIGN-034: Total Compile-Time Type Computation
 
-**Status:** Draft design note, spec-set hardened
+**Status:** Draft design note, SPEC-A/Phase 109 substrate implemented
 **Date:** 2026-04-30
-**Related:** DESIGN-031, DESIGN-032, SPEC-034, SPEC-035, SPEC-054, SPEC-055
+**Related:** DESIGN-031, DESIGN-032, SPEC-034, SPEC-035, SPEC-054, SPEC-055, SPEC-057
 
 ## 1. Summary
 

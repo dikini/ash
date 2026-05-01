@@ -63,10 +63,24 @@ fn test_check_module_file_invalid_type() {
     let engine = make_engine();
     let result = engine.check_module_file(&file_path);
 
-    // collect_public_type_defs_from_source should fail to parse the broken type.
     assert!(
         result.is_err(),
-        "expected error for invalid type definition, got {result:?}",
+        "expected ModuleFile parse error for invalid type definition, got {result:?}",
+    );
+}
+
+#[test]
+fn malformed_type_without_semicolon_fails_modulefile_parse_instead_of_snippet_skip() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let file_path = dir.path().join("bad_no_semicolon.ash");
+    std::fs::write(&file_path, "pub type Broken = MissingTerminator\n").expect("write temp file");
+
+    let engine = make_engine();
+    let result = engine.check_module_file(&file_path);
+
+    assert!(
+        result.is_err(),
+        "ModuleFile parsing must be authoritative; legacy semicolon snippets would skip this malformed type"
     );
 }
 
@@ -104,7 +118,7 @@ fn test_check_module_file_empty() {
     );
 }
 
-/// Test 4: A `pub fn` with invalid syntax should produce a warning.
+/// Test 4: A malformed `pub fn` now fails authoritative `ModuleFile` parsing.
 #[test]
 fn test_pub_fn_parse_failure_produces_warning() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -116,29 +130,11 @@ fn test_pub_fn_parse_failure_produces_warning() {
     .expect("write temp file");
 
     let engine = make_engine();
-    let result = engine
-        .check_module_file(&file_path)
-        .expect("check_module_file should succeed even with broken pub fn");
+    let result = engine.check_module_file(&file_path);
 
-    assert_eq!(
-        result.type_count, 1,
-        "should have 1 pub type, got {}",
-        result.type_count,
-    );
-    assert_eq!(
-        result.fn_count, 0,
-        "should have 0 parseable pub fn, got {}",
-        result.fn_count,
-    );
     assert!(
-        !result.warnings.is_empty(),
-        "expected at least one warning for broken pub fn, got {:?}",
-        result.warnings,
-    );
-    assert!(
-        result.warnings.iter().any(|w| w.contains("broken")),
-        "warning should mention the function name 'broken', got {:?}",
-        result.warnings,
+        result.is_err(),
+        "authoritative ModuleFile parsing should reject malformed pub fn source, got {result:?}"
     );
 }
 

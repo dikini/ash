@@ -1,6 +1,6 @@
 # TASK-789: Legacy Type-Snippet Scanner Quarantine/Removal
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -30,9 +30,16 @@ Remove or fence legacy source-snippet ordinary type collection after the normal 
 
 ## Verification
 
-- [ ] Normal `ash check` and module loading do not depend on snippet type extraction.
-- [ ] Fallback scope, if any, is documented and tested.
-- [ ] Malformed normal type declarations report parser/semantic diagnostics rather than silent snippet skips.
+- [x] Normal `ash check` and module loading do not depend on snippet type extraction.
+- [x] Fallback scope, if any, is documented and tested.
+- [x] Malformed normal type declarations report parser/semantic diagnostics rather than silent snippet skips.
+
+## Completion Notes
+
+- Audited source-snippet ordinary type collection call sites. `Engine::check_module_file`, `collect_module_exports`, and runtime stdlib type discovery all route ordinary type metadata through ModuleFile parsing and core semantic summaries.
+- Renamed the remaining legacy ordinary type snippet helpers to `collect_public_type_defs_from_source_compat` and `collect_type_identity_defs_from_source_compat`, documenting them as compatibility-only/test-only paths and guarding them behind explicit `with_legacy_type_snippet_compat(...)` scope.
+- Left `extract_semicolon_snippets` in place for non-type snippets such as builtin functions, imports, capabilities, and `pub mod` declarations.
+- Added regression coverage proving a malformed `pub type` declaration without a semicolon fails authoritative ModuleFile parsing instead of being silently skipped by semicolon snippet extraction.
 
 ## Implementation Notes
 

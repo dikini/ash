@@ -9,7 +9,7 @@ pub type ErrorKind = NotFound | PermissionDenied | InvalidInput | Other;
 pub type Error = Error { kind: ErrorKind, message: String };
 
 -- Result type alias for IO operations
-pub type Result<T> = result::Result<T, Error>;
+pub type Result<T> = Ok { value: T } | Err { error: Error };
 
 -- Path module for pure path operations
 pub mod path;

@@ -33,9 +33,36 @@ use ash_parser::parse_type_def::{
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
 use ash_parser::surface::{Definition, Expr, Type, Workflow, WorkflowDef};
+use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
+
+thread_local! {
+    static LEGACY_TYPE_SNIPPET_COMPAT_SCOPE: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Executes `f` with the legacy ordinary-type snippet compatibility APIs enabled.
+///
+/// This is an explicit TASK-789 quarantine fence. Normal module checking,
+/// import/export collection, and stdlib discovery must not enter this scope;
+/// they use parsed `ModuleFile` metadata and semantic summaries instead.
+pub fn with_legacy_type_snippet_compat<T>(f: impl FnOnce() -> T) -> T {
+    struct ScopeGuard;
+
+    impl Drop for ScopeGuard {
+        fn drop(&mut self) {
+            LEGACY_TYPE_SNIPPET_COMPAT_SCOPE.with(|scope| {
+                let depth = scope.get();
+                scope.set(depth.saturating_sub(1));
+            });
+        }
+    }
+
+    LEGACY_TYPE_SNIPPET_COMPAT_SCOPE.with(|scope| scope.set(scope.get() + 1));
+    let _guard = ScopeGuard;
+    f()
+}
 
 /// Ordinary-file loading output after import stripping and dependency collection.
 #[derive(Debug, Clone)]
@@ -681,15 +708,20 @@ fn append_callable_signature_visibility_errors(
     }
 }
 
-/// Extract all `pub type` definitions from source text.
+/// Compatibility-only extractor for legacy tests that intentionally exercise
+/// pre-ModuleFile `pub type` snippet parsing.
 ///
-/// Parses each extracted `pub type` snippet and converts it to AST
-/// [`CoreTypeDef`] instances ready for type-checking.
+/// Normal module checking, export collection, and runtime stdlib discovery must
+/// use [`collect_module_type_metadata_from_module_file`] (or its runtime wrapper)
+/// so `ModuleFile` parsing and semantic summaries are authoritative.
 ///
 /// # Errors
 ///
-/// Returns [`EngineError::Parse`] if any type snippet contains invalid syntax.
-pub fn collect_public_type_defs_from_source(source: &str) -> Result<Vec<CoreTypeDef>, EngineError> {
+/// Returns [`EngineError::Parse`] if any extracted type snippet contains invalid syntax.
+pub fn collect_public_type_defs_from_source_compat(
+    source: &str,
+) -> Result<Vec<CoreTypeDef>, EngineError> {
+    ensure_legacy_type_snippet_compat_scope()?;
     let mut type_defs = Vec::new();
     for snippet in extract_semicolon_snippets(source, is_public_type_definition_start) {
         type_defs.push(parse_type_def_snippet(&snippet)?);
@@ -697,22 +729,35 @@ pub fn collect_public_type_defs_from_source(source: &str) -> Result<Vec<CoreType
     Ok(type_defs)
 }
 
-/// Extract all type definitions whose identities should be discoverable from
-/// source text.
+/// Compatibility-only extractor for legacy tests that intentionally exercise
+/// pre-ModuleFile ordinary type identity snippet parsing.
 ///
-/// This includes both `type` and `pub type` declarations.
+/// This includes both `type` and `pub type` declarations. It is not a normal
+/// semantic path for module checking, imports/exports, or stdlib discovery.
 ///
 /// # Errors
 ///
-/// Returns [`EngineError::Parse`] if any type snippet contains invalid syntax.
-pub fn collect_type_identity_defs_from_source(
+/// Returns [`EngineError::Parse`] if any extracted type snippet contains invalid syntax.
+pub fn collect_type_identity_defs_from_source_compat(
     source: &str,
 ) -> Result<Vec<CoreTypeDef>, EngineError> {
+    ensure_legacy_type_snippet_compat_scope()?;
     let mut type_defs = Vec::new();
     for snippet in extract_semicolon_snippets(source, is_type_definition_start) {
         type_defs.push(parse_type_def_snippet(&snippet)?);
     }
     Ok(type_defs)
+}
+
+fn ensure_legacy_type_snippet_compat_scope() -> Result<(), EngineError> {
+    let enabled = LEGACY_TYPE_SNIPPET_COMPAT_SCOPE.with(|scope| scope.get() > 0);
+    if enabled {
+        Ok(())
+    } else {
+        Err(EngineError::Parse(
+            "legacy ordinary type snippet compatibility path requires explicit with_legacy_type_snippet_compat scope; normal type metadata must use ModuleFile semantic summaries".into(),
+        ))
+    }
 }
 
 /// Parse a module source as a full `ModuleFile` and lower its ordinary type
@@ -754,18 +799,22 @@ fn parse_module_file_for_type_metadata(
     }
 }
 
-/// Compatibility fence for Phase 108 legacy `pub workflow` export snippets.
+/// Compatibility fence for Phase 108 legacy `pub workflow` and unsupported
+/// `pub fn` export snippets.
 ///
 /// TASK-785 routes ordinary type metadata through parsed `ModuleFile` lowering.
-/// Some legacy workflow-export snippets are still collected by the existing
-/// braced-snippet workflow path and are not accepted by full `ModuleFile` parsing.
-/// This projection removes only braced workflow exports, then retries `ModuleFile`
-/// parsing for ordinary type metadata. It is intentionally narrow and must not
-/// be generalized into ordinary type snippet scanning; TASK-789 owns removing or
-/// further quarantining legacy snippet paths.
+/// Some legacy workflow-export and broken/unsupported public function snippets
+/// are still collected by existing snippet paths and are not accepted by full
+/// `ModuleFile` parsing. This projection removes only braced non-type exports,
+/// then retries `ModuleFile` parsing for ordinary type metadata. It is
+/// intentionally narrow and must not be generalized into ordinary type snippet
+/// scanning.
 fn module_source_without_legacy_workflow_exports(source: &str) -> String {
     let mut projected = source.to_string();
     for snippet in extract_braced_snippets(source, is_workflow_export_start) {
+        projected = projected.replace(&snippet, "");
+    }
+    for snippet in extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn ")) {
         projected = projected.replace(&snippet, "");
     }
     projected
@@ -2963,9 +3012,11 @@ pub type Flag = On | Off;",
 
     #[test]
     fn type_identity_collector_includes_builtin_type_forms() {
-        let defs = collect_type_identity_defs_from_source(
-            "builtin type ActEnv;\npub builtin type PublicOpaque;\ntype Local = Int;\npub type Exported = String;",
-        )
+        let defs = with_legacy_type_snippet_compat(|| {
+            collect_type_identity_defs_from_source_compat(
+                "builtin type ActEnv;\npub builtin type PublicOpaque;\ntype Local = Int;\npub type Exported = String;",
+            )
+        })
         .expect("collect type identities");
 
         let names = defs.iter().map(|def| def.name.as_str()).collect::<Vec<_>>();

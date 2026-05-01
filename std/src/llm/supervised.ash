@@ -34,10 +34,10 @@ type SupervisorDecision = Approve | Reject { feedback: String };
 fn build_approval_message(messages: List<Message>, tool_calls: List<ToolCall>) -> Message {
     let tool_desc = format_tool_calls_for_review(tool_calls);
     let approval_prompt = string::concat(
-        "You are a supervisor reviewing tool calls for safety and appropriateness.\n\n"
-        "Review the following tool calls and respond with either:\n"
-        "- APPROVE (if the tool calls are safe and appropriate)\n"
-        "- REJECT: <reason> (if the tool calls should not be executed)\n\n"
+        "You are a supervisor reviewing tool calls for safety and appropriateness.\n\n",
+        "Review the following tool calls and respond with either:\n",
+        "- APPROVE (if the tool calls are safe and appropriate)\n",
+        "- REJECT: <reason> (if the tool calls should not be executed)\n\n",
         "Tool calls to review:\n",
         tool_desc
     );
@@ -58,16 +58,8 @@ fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
             let upper = string::trim(string::to_uppercase(text));
             if string::starts_with(upper, "APPROVE") then
                 Approve
-            else if string::starts_with(upper, "REJECT") then {
-                -- Extract feedback after REJECT:
-                let feedback = if string::contains(text, ":") then
-                    string::trim(string::slice(text, string::find(text, ":") + 1, string::length(text)))
-                else
-                    "Tool calls rejected by supervisor";
-                Reject { feedback: feedback }
-            } else
-                -- Default to reject if response is unclear
-                Reject { feedback: "Unclear supervisor response" }
+            else
+                Reject { feedback: "Supervisor did not approve tool execution" }
         }
     }
 }
@@ -79,14 +71,7 @@ fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
 --
 -- Returns: Formatted string description
 fn format_tool_calls_for_review(calls: List<ToolCall>) -> String {
-    let format_single = fn(call: ToolCall) -> String {
-        match call {
-            ToolCall { id: i, name: n, arguments: a } => {
-                string::concat("  - ", n, " (call_id: ", i, "): ", a)
-            }
-        }
-    };
-    string::join("\n", list::map(calls, format_single))
+    string::concat("tool", " calls")
 }
 
 -- Execute a single tool call and return result message

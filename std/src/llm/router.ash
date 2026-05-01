@@ -31,14 +31,14 @@ type RouteTarget = Coding | General | Complex | Simple | Creative | Factual;
 -- Returns: User Message containing the classification prompt
 fn build_classify_message(user_message: String) -> Message {
     let classify_prompt = string::concat(
-        "Classify the following user request into one category: "
-        "CODING (code generation/debugging), "
-        "COMPLEX (complex reasoning), "
-        "CREATIVE (creative writing), "
-        "FACTUAL (factual lookup), "
-        "SIMPLE (simple Q&A), or "
-        "GENERAL (general conversation).\n\n"
-        "Respond with ONLY the category name in uppercase.\n\n"
+        "Classify the following user request into one category: ",
+        "CODING (code generation/debugging), ",
+        "COMPLEX (complex reasoning), ",
+        "CREATIVE (creative writing), ",
+        "FACTUAL (factual lookup), ",
+        "SIMPLE (simple Q&A), or ",
+        "GENERAL (general conversation).\n\n",
+        "Respond with ONLY the category name in uppercase.\n\n",
         "User request: ",
         user_message
     );

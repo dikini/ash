@@ -1362,10 +1362,19 @@ impl Engine {
             &type_metadata.type_defs,
         );
 
-        // Build a TypeEnv and register the lowered semantic summary so ordinary
-        // type identities and exposed representations take the same path as imports.
+        // Build a TypeEnv and register the public lowered semantic summary so
+        // ordinary type identities and exposed representations take the same
+        // path as imports without colliding with hidden local builtin/private
+        // implementation details such as std::act's ActEnv.
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
-        if let Err(e) = type_env.register_module_semantic_summary(&type_metadata.summary) {
+        let mut public_summary = type_metadata.summary;
+        public_summary
+            .exported_types
+            .retain(|summary| matches!(summary.visibility, ash_core::ast::Visibility::Public));
+        public_summary
+            .exported_constructors
+            .retain(|summary| matches!(summary.visibility, ash_core::ast::Visibility::Public));
+        if let Err(e) = type_env.register_module_semantic_summary(&public_summary) {
             errors.push(format!("{e}"));
         }
 

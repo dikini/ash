@@ -33,7 +33,7 @@ pub type ToolCallDelta = ToolCallDelta {
 };
 
 -- Message represents a chat message in a conversation
-++ sender: The sender role of the message (system/user/assistant/tool)
+-- sender: The sender role of the message (system/user/assistant/tool)
 -- content: The text content (may be empty for tool calls)
 -- tool_calls: Optional list of tool calls (for assistant messages)
 -- tool_call_id: Optional tool call ID (for tool messages)

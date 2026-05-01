@@ -1,7 +1,7 @@
 //! End-to-end validation of LLM stdlib module files (TASK-543).
 //!
-//! Uses structural engine APIs (`check_module_file`, `collect_public_type_defs_from_source`,
-//! `count_pub_fn_snippets`) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
+//! Uses structural engine APIs (`check_module_file`, compatibility-only legacy type snippet
+//! collection, and `count_pub_fn_snippets`) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
 //!
 //! Key finding: prompt.ash has 27 `pub fn` declarations. After TASK-546 fix
 //! (keywords allowed as constructor field names), 12 parse through
@@ -13,7 +13,10 @@
 //! the known gap.
 
 use ash_engine::Engine;
-use ash_engine::module_loader::{collect_public_type_defs_from_source, count_pub_fn_snippets};
+use ash_engine::module_loader::{
+    collect_public_type_defs_from_source_compat, count_pub_fn_snippets,
+    with_legacy_type_snippet_compat,
+};
 use std::path::{Path, PathBuf};
 
 fn stdlib_root() -> &'static Path {
@@ -76,7 +79,8 @@ fn test_types_ash_check_module_file() {
 fn test_types_ash_structural_type_names() {
     let source = read_stdlib_file("llm/types.ash");
     let type_defs =
-        collect_public_type_defs_from_source(&source).expect("parsing types.ash should succeed");
+        with_legacy_type_snippet_compat(|| collect_public_type_defs_from_source_compat(&source))
+            .expect("compat parsing types.ash should succeed");
 
     let expected_names = [
         "Role",
@@ -106,6 +110,18 @@ fn test_types_ash_structural_type_names() {
         "types.ash should have exactly {} types, found {}: {actual_names:?}",
         expected_names.len(),
         actual_names.len(),
+    );
+}
+
+#[test]
+fn legacy_type_snippet_compat_requires_explicit_scope() {
+    let err = collect_public_type_defs_from_source_compat("pub type Role = System | User;")
+        .expect_err("legacy ordinary type snippet compat must reject unscoped use");
+
+    assert!(
+        err.to_string()
+            .contains("legacy ordinary type snippet compatibility path"),
+        "unexpected compat guard diagnostic: {err}"
     );
 }
 

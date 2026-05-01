@@ -191,7 +191,21 @@ fn duplicate_exported_names_with_different_identity_are_rejected() {
         .with_exported_type(second);
 
     let mut env = TypeEnv::new();
-    assert!(env.register_module_semantic_summary(&summary).is_err());
+    let err = env
+        .register_module_semantic_summary(&summary)
+        .expect_err("duplicate exported names with distinct identities must be rejected");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("duplicate ordinary type summary identity"),
+        "{msg}"
+    );
+    assert!(msg.contains("Thing"), "{msg}");
+    assert!(msg.contains("A") && msg.contains("B"), "{msg}");
+    assert!(msg.contains("pkg::dups"), "{msg}");
+    assert!(
+        msg.contains("task-787-test"),
+        "diagnostic should include source-anchor context: {msg}"
+    );
 }
 
 #[test]

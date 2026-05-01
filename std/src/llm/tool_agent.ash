@@ -25,7 +25,7 @@ use dispatch::complete_with_tools;
 --   call: The tool call to execute
 --
 -- Returns: Tool result message
-fn execute_tool_call(call: ToolCall) -> Message {
+pub fn execute_tool_call(call: ToolCall) -> Message {
     match call {
         ToolCall { id: call_id, name: tool_name, arguments: args } => {
             -- Tool execution would happen here
@@ -42,7 +42,7 @@ fn execute_tool_call(call: ToolCall) -> Message {
 --   calls: List of tool calls to execute
 --
 -- Returns: List of tool result messages
-fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
+pub fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
     list::map(calls, execute_tool_call)
 }
 

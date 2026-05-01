@@ -268,21 +268,19 @@ fn format_message_md(msg: Message) -> String {
 }
 
 -- Helper: Render tool calls as markdown
+fn render_tool_call(call: ToolCall) -> String {
+    match call {
+        ToolCall { id: i, name: n, arguments: a } => {
+            string::concat("\n\n- **", n, "** (`", i, "`): ", a)
+        }
+    }
+}
+
 fn render_tool_calls(calls: List<ToolCall>) -> String {
     if list::is_empty(calls) then
         ""
-    else {
-        let format_call = fn(call: ToolCall) -> String {
-            match call {
-                ToolCall { id: i, name: n, arguments: a } => {
-                    let header = string::concat("\n\n- **", n, "** (`", i, "`)");
-                    let args = string::concat("\n  ```json\n  ", a, "\n  ```");
-                    string::concat(header, args)
-                }
-            }
-        };
-        string::concat("\n\n**Tool Calls:**", string::concat_list(list::map(calls, format_call)))
-    }
+    else
+        string::concat("\n\n**Tool Calls:**", string::concat_list(list::map(calls, render_tool_call)))
 }
 
 -- Render messages as markdown

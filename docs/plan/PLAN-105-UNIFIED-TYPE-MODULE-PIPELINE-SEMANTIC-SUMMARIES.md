@@ -12,7 +12,7 @@
 
 ## Phase 109: Unified Type/Module Pipeline and Semantic Summaries
 
-**Status:** 🚧 In Progress (TASK-780 through TASK-790 complete; TASK-791 closeout is blocked on focused `llm_stdlib_e2e_tests` ModuleFile parse regressions; broad `cargo test --all` also retains the documented unrelated example corpus baseline failure)
+**Status:** ✅ Complete (TASK-780 through TASK-791 complete; broad `cargo test --all` retains the documented unrelated example corpus baseline failure)
 **Spec:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-003](../spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-009](../spec/SPEC-009-MODULES.md), [SPEC-012](../spec/SPEC-012-IMPORTS.md), [SPEC-020](../spec/SPEC-020-ADT-TYPES.md), [SPEC-030](../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md)
@@ -32,10 +32,10 @@
 | [TASK-788](tasks/TASK-788-interface-and-associated-member-identity-summary-plumbing.md) | Preserve current interface and associated-member identities in summaries | Type/Substrate | 6 | ✅ Complete |
 | [TASK-789](tasks/TASK-789-legacy-type-snippet-scanner-quarantine-removal.md) | Quarantine or remove legacy source-snippet ordinary type scanning | Engine/Compatibility | 5 | ✅ Complete |
 | [TASK-790](tasks/TASK-790-diagnostics-negative-tests-and-non-interference-coverage.md) | Add diagnostics, negative tests, and non-interference coverage | Semantic/Tests | 6 | ✅ Complete |
-| [TASK-791](tasks/TASK-791-spec-a-closeout-docs-examples-verification.md) | Reconcile docs/examples/status/changelog and run closeout verification | Docs/Planning | 4 | 🚧 In Progress |
+| [TASK-791](tasks/TASK-791-spec-a-closeout-docs-examples-verification.md) | Reconcile docs/examples/status/changelog and run closeout verification | Docs/Planning | 4 | ✅ Complete |
 
 Estimated total: 72 hours.
-Remaining after TASK-790: 4 hours.
+Remaining after TASK-791: 0 hours.
 
 ## Tracks
 

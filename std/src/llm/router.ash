@@ -21,7 +21,7 @@ use dispatch::complete;
 
 -- Route classification result
 -- Indicates which target model should handle the request
-type RouteTarget = Coding | General | Complex | Simple | Creative | Factual;
+pub type RouteTarget = Coding | General | Complex | Simple | Creative | Factual;
 
 -- Build the classification prompt message (pure)
 --
@@ -29,7 +29,7 @@ type RouteTarget = Coding | General | Complex | Simple | Creative | Factual;
 --   user_message: The message to classify
 --
 -- Returns: User Message containing the classification prompt
-fn build_classify_message(user_message: String) -> Message {
+pub fn build_classify_message(user_message: String) -> Message {
     let classify_prompt = string::concat(
         "Classify the following user request into one category: ",
         "CODING (code generation/debugging), ",
@@ -52,17 +52,23 @@ fn build_classify_message(user_message: String) -> Message {
 --   response: ChatResponse from the classifier model
 --
 -- Returns: RouteTarget indicating which model type to use
-fn parse_route(response: ChatResponse) -> RouteTarget {
+pub fn parse_route(response: ChatResponse) -> RouteTarget {
     match response.content {
         None => General,
         Some { value: text } => {
             let upper = string::to_uppercase(text);
-            if string::contains(upper, "CODING") then Coding
-            else if string::contains(upper, "COMPLEX") then Complex
-            else if string::contains(upper, "CREATIVE") then Creative
-            else if string::contains(upper, "FACTUAL") then Factual
-            else if string::contains(upper, "SIMPLE") then Simple
-            else General
+            if string::contains(upper, "CODING") then
+                Coding
+            else if string::contains(upper, "COMPLEX") then
+                Complex
+            else if string::contains(upper, "CREATIVE") then
+                Creative
+            else if string::contains(upper, "FACTUAL") then
+                Factual
+            else if string::contains(upper, "SIMPLE") then
+                Simple
+            else
+                General
         }
     }
 }
@@ -74,17 +80,19 @@ fn parse_route(response: ChatResponse) -> RouteTarget {
 --   route: The classified route target
 --
 -- Returns: Selected model identifier
-fn select_model(
+pub fn select_model(
     target_models: List<(String, String)>,
     route: RouteTarget
 ) -> String {
-    -- Default to first model if no match found
+    -- Default to first model if no route-specific target is found.
     let default = match list::head(target_models) {
         None => "gpt-4o",
-        Some { value: (_, model_id) } => model_id
+        Some { value: pair } => {
+            let (_, model_id) = pair;
+            model_id
+        }
     };
 
-    -- Find matching model based on route
     let target_name = match route {
         Coding => "coding",
         Complex => "complex",
@@ -94,7 +102,6 @@ fn select_model(
         General => "general"
     };
 
-    -- Look for matching target in the list
     let find_result = list::find(
         target_models,
         fn(pair: (String, String)) -> Bool {
@@ -105,7 +112,10 @@ fn select_model(
 
     match find_result {
         None => default,
-        Some { value: (_, model_id) } => model_id
+        Some { value: pair } => {
+            let (_, model_id) = pair;
+            model_id
+        }
     }
 }
 

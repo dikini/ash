@@ -285,7 +285,7 @@ Update this section as tasks complete:
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 2 | 🚧 In Progress |
 | 108 | 12 | 1 | 📝 Planned |
-| 109 | 12 | 11 | 🚧 In Progress |
+| 109 | 12 | 12 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -391,7 +391,7 @@ This table is retained near the original early-phase section for historical cont
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 2 | 🚧 In Progress |
 | 108 | 12 | 1 | 📝 Planned |
-| 109 | 12 | 11 | 🚧 In Progress |
+| 109 | 12 | 12 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3125,11 +3125,11 @@ Phase 109 implements SPEC-A from DESIGN-034. It unifies ordinary type declaratio
 | [TASK-788](tasks/TASK-788-interface-and-associated-member-identity-summary-plumbing.md) | Interface and associated-member identity summary plumbing | 6 | ✅ Complete |
 | [TASK-789](tasks/TASK-789-legacy-type-snippet-scanner-quarantine-removal.md) | Legacy type-snippet scanner quarantine/removal | 5 | ✅ Complete |
 | [TASK-790](tasks/TASK-790-diagnostics-negative-tests-and-non-interference-coverage.md) | Diagnostics, negative tests, and non-interference coverage | 6 | ✅ Complete |
-| [TASK-791](tasks/TASK-791-spec-a-closeout-docs-examples-verification.md) | SPEC-A closeout, docs, examples, and verification | 4 | 🚧 In Progress |
+| [TASK-791](tasks/TASK-791-spec-a-closeout-docs-examples-verification.md) | SPEC-A closeout, docs, examples, and verification | 4 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-A to SPEC-057/PLAN-105, then audit current parser/core/engine/typechecker paths before implementation begins.
 **Track B (Parser/Core Semantic Substrate):** 20h. Route ordinary type declarations into ModuleFile, add core canonical IDs and summary carriers, and lower surface metadata into summaries with source anchors.
-**Track C (Engine Module Import/Export Path):** 20h. Build/export summaries from ModuleFile/core summaries, apply named/glob/pub-use visibility and opacity rules (complete through TASK-786), and remove or fence legacy snippet scanning in TASK-789. Remaining after TASK-790: 4 hours.
+**Track C (Engine Module Import/Export Path):** 20h. Build/export summaries from ModuleFile/core summaries, apply named/glob/pub-use visibility and opacity rules (complete through TASK-786), and remove or fence legacy snippet scanning in TASK-789. Remaining after TASK-791: 0 hours.
 **Track D (Typechecker Consumption and Identity Plumbing):** 14h. Consume summaries through TypeEnv two-pass declaration/validation/exposure and preserve current interface/associated-member identities without adding associated-family computation.
 **Track E (Diagnostics and Closeout):** 10h. Harden diagnostics, prove non-interference, reconcile docs/status/changelog, and run final verification.
 

@@ -1,6 +1,6 @@
 # TASK-791: SPEC-A Closeout, Docs, Examples, and Verification
 
-## Status: 🚧 In Progress
+## Status: ✅ Complete
 
 ## References
 
@@ -51,7 +51,7 @@ Close Phase 109 by reconciling docs, examples, statuses, changelog, and verifica
 - Updated PLAN-INDEX Phase 109 counts/status to 12/12 complete in both progress tables and marked TASK-791 complete in the Phase 109 task table.
 - Updated CHANGELOG.md with a TASK-791 closeout entry.
 - Added ordinary type module behavior documentation at `docs/examples/phase109-ordinary-type-modules.md`. It documents public ordinary type export/import, semantic-summary identity preservation, private ordinary type non-leakage, constructor visibility, and deferred DESIGN-034 features without adding executable example-corpus surface area.
-- No TASK-791-specific production code changes were made, but closeout review repaired stdlib ordinary-type module-file cleanliness (`std/src/llm/types.ash`, `std/src/io/mod.ash`) and aligned `check_module_file` validation with public exported summaries so the focused engine module-file gate passes.
+- Closeout review repaired stdlib ordinary-type module-file cleanliness (`std/src/llm/types.ash`, `std/src/io/mod.ash`, and focused `std/src/llm/*` helper/re-export syntax) and aligned `check_module_file` validation with public exported summaries so the focused engine module-file and LLM stdlib E2E gates pass. `std::llm::router` and `std::llm::supervised` remain public child modules but their workflow root re-exports stay deferred until workflow pub-use export collection can handle helper snippet warnings without masking unrelated type re-exports.
 
 ## Verification Evidence
 

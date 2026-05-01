@@ -8,7 +8,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- [TASK-791](docs/plan/tasks/TASK-791-spec-a-closeout-docs-examples-verification.md): advanced Phase 109 closeout reconciliation by updating SPEC-057, PLAN-105, PLAN-INDEX, ordinary type module behavior documentation at `docs/examples/phase109-ordinary-type-modules.md`, and verification evidence; TASK-791 remains in progress pending focused `llm_stdlib_e2e_tests` ModuleFile parse cleanup, with the broader ash-cli example-corpus baseline failure documented separately.
+- [TASK-791](docs/plan/tasks/TASK-791-spec-a-closeout-docs-examples-verification.md): closed Phase 109 by reconciling SPEC-057, PLAN-105, and PLAN-INDEX completion status, adding ordinary type module behavior documentation at `docs/examples/phase109-ordinary-type-modules.md`, recording closeout verification evidence, fixing stdlib ordinary-type module-file cleanliness for focused `check_module_file`/`llm_stdlib_e2e_tests` gates, documenting deferred `std::llm` root re-exports for router/supervised workflows, and documenting the still-reproducing broad example-corpus baseline failure separately from the focused Phase 109 gates.
 
 - [TASK-790](docs/plan/tasks/TASK-790-diagnostics-negative-tests-and-non-interference-coverage.md): hardened duplicate ordinary-type semantic-summary identity diagnostics with visible name, canonical origins, module path, and source-anchor context; audited existing missing-summary, private-leak, constructor/import, snippet-fallback, deferred-syntax, workflow-summary, and reference-only boundary coverage; and recorded focused plus broad non-interference verification for ADTs, imports, interfaces, associated types, workflows, capabilities/resources, `do`, and comprehensions.
 

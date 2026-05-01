@@ -116,5 +116,6 @@ pub use loading::{
 -- Re-export agent orchestration workflows
 pub use conversation::conversation;
 pub use tool_agent::tool_agent;
-pub use router::router;
-pub use supervised::supervised_agent;
+-- NOTE(TASK-791): router::router and supervised::supervised_agent remain
+-- available through their public child modules, but are not root re-exported
+-- until workflow pub-use export collection handles helper snippet warnings.

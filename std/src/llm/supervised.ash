@@ -22,7 +22,7 @@ use dispatch::complete_with_tools;
 -- Supervisor decision type
 -- Approve: Tool calls are approved for execution
 -- Reject: Tool calls are rejected with feedback
-type SupervisorDecision = Approve | Reject { feedback: String };
+pub type SupervisorDecision = Approve | Reject { feedback: String };
 
 -- Build the supervisor approval request message (pure)
 --
@@ -31,7 +31,7 @@ type SupervisorDecision = Approve | Reject { feedback: String };
 --   tool_calls: The tool calls awaiting approval
 --
 -- Returns: User Message containing the approval request prompt
-fn build_approval_message(messages: List<Message>, tool_calls: List<ToolCall>) -> Message {
+pub fn build_approval_message(messages: List<Message>, tool_calls: List<ToolCall>) -> Message {
     let tool_desc = format_tool_calls_for_review(tool_calls);
     let approval_prompt = string::concat(
         "You are a supervisor reviewing tool calls for safety and appropriateness.\n\n",
@@ -51,7 +51,7 @@ fn build_approval_message(messages: List<Message>, tool_calls: List<ToolCall>) -
 --   response: ChatResponse from the supervisor model
 --
 -- Returns: SupervisorDecision indicating approval or rejection
-fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
+pub fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
     match response.content {
         None => Reject { feedback: "No response from supervisor" },
         Some { value: text } => {
@@ -70,8 +70,8 @@ fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
 --   calls: List of tool calls to format
 --
 -- Returns: Formatted string description
-fn format_tool_calls_for_review(calls: List<ToolCall>) -> String {
-    string::concat("tool", " calls")
+pub fn format_tool_calls_for_review(calls: List<ToolCall>) -> String {
+    string::concat("Tool calls awaiting approval: ", string::to_string(list::len(calls)))
 }
 
 -- Execute a single tool call and return result message
@@ -80,7 +80,7 @@ fn format_tool_calls_for_review(calls: List<ToolCall>) -> String {
 --   call: The tool call to execute
 --
 -- Returns: Tool result message
-fn execute_tool_call(call: ToolCall) -> Message {
+pub fn execute_tool_call(call: ToolCall) -> Message {
     match call {
         ToolCall { id: call_id, name: tool_name, arguments: args } => {
             -- Tool execution would happen here
@@ -96,7 +96,7 @@ fn execute_tool_call(call: ToolCall) -> Message {
 --   calls: List of tool calls to execute
 --
 -- Returns: List of tool result messages
-fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
+pub fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
     list::map(calls, execute_tool_call)
 }
 

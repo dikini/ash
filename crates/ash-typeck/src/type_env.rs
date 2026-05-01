@@ -6,10 +6,14 @@
 
 use crate::error::TypeEnvError;
 use crate::solver::TypeError;
-use crate::types::{Substitution, Type, TypeVar, unify};
+use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
+use ash_core::semantic_summary::{
+    ModuleSemanticSummary, RepresentationExposure, TypeDeclId, TypeDeclSummary,
+    TypeRepresentationSummary,
+};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
     CapabilityImplementationDef, CapabilityImplementationDependency,
@@ -35,6 +39,13 @@ pub type FieldName = String;
 
 /// Index of a variant within an enum type
 pub type VariantIndex = usize;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TypeDeclarationState {
+    Placeholder,
+    IdentityOnly,
+    Full,
+}
 
 /// Convert a type expression to an internal type
 ///
@@ -871,6 +882,12 @@ pub struct TypeEnv {
     constructors: HashMap<String, (TypeName, VariantIndex)>,
     /// Public alias names whose underlying representation is intentionally transparent.
     transparent_aliases: HashSet<TypeName>,
+    /// Explicit declaration state, avoiding structural placeholder guesses.
+    type_declaration_states: HashMap<TypeName, TypeDeclarationState>,
+    /// Visible type-name aliases to canonical ordinary type identities.
+    type_alias_identities: HashMap<TypeName, TypeDeclId>,
+    /// Preferred visible name for a canonical ordinary type identity.
+    canonical_type_names: HashMap<TypeDeclId, TypeName>,
     /// Registered interfaces by name.
     pub(crate) interfaces: HashMap<String, InterfaceInfo>,
     /// Registered capability interfaces by name.
@@ -975,6 +992,9 @@ impl TypeEnv {
             type_info: HashMap::with_capacity(10),
             constructors: HashMap::with_capacity(10),
             transparent_aliases: HashSet::with_capacity(4),
+            type_declaration_states: HashMap::with_capacity(10),
+            type_alias_identities: HashMap::with_capacity(10),
+            canonical_type_names: HashMap::with_capacity(10),
             interfaces: HashMap::with_capacity(4),
             capability_interfaces: HashMap::with_capacity(4),
             resource_types: HashMap::with_capacity(4),
@@ -1032,13 +1052,23 @@ impl TypeEnv {
             builtin: false,
         };
         self.ast_types.entry(name.to_owned()).or_insert(placeholder);
+        self.type_declaration_states
+            .entry(name.to_owned())
+            .or_insert(TypeDeclarationState::Placeholder);
     }
 
-    /// Check whether a `TypeDef` is a placeholder inserted by `declare_type_name`.
-    ///
-    /// Placeholders are identified by having no type parameters and an empty struct body.
-    fn is_placeholder(def: &TypeDef) -> bool {
-        def.params.is_empty() && matches!(&def.body, TypeBody::Struct(fields) if fields.is_empty())
+    fn is_placeholder_name(&self, name: &str) -> bool {
+        matches!(
+            self.type_declaration_states.get(name),
+            Some(TypeDeclarationState::Placeholder)
+        )
+    }
+
+    fn is_identity_only_name(&self, name: &str) -> bool {
+        matches!(
+            self.type_declaration_states.get(name),
+            Some(TypeDeclarationState::IdentityOnly)
+        )
     }
 
     /// Register a type definition without exposing its constructors or
@@ -1046,12 +1076,14 @@ impl TypeEnv {
     pub fn register_type_identity(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         let type_name = def.name.clone();
 
-        if let Some(existing) = self.ast_types.get(&type_name) {
-            // Allow upgrading a placeholder (empty struct with same name and no params)
-            if !Self::is_placeholder(existing) {
+        if self.ast_types.contains_key(&type_name) {
+            // Allow upgrading an explicit placeholder, or replacing an
+            // identity-only summary declaration with the same imported fallback
+            // definition.
+            if !self.is_placeholder_name(&type_name) && !self.is_identity_only_name(&type_name) {
                 return Err(TypeEnvError::DuplicateType(type_name, Span::default()));
             }
-            // Placeholder will be replaced below
+            // Placeholder/identity-only entry will be replaced below.
         }
 
         // Convert to internal TypeInfo for type checking
@@ -1061,6 +1093,8 @@ impl TypeEnv {
 
         self.ast_types.insert(type_name.clone(), def.clone());
         self.type_info.insert(type_name, type_info);
+        self.type_declaration_states
+            .insert(def.name.clone(), TypeDeclarationState::Full);
         Ok(())
     }
 
@@ -1111,6 +1145,181 @@ impl TypeEnv {
         self.expose_type_representation(&def.name)
     }
 
+    fn declare_summary_type_identity(
+        &mut self,
+        summary: &TypeDeclSummary,
+    ) -> Result<(), TypeEnvError> {
+        let visible_name = summary.exported_name.clone();
+        if let Some(existing) = self.type_alias_identities.get(&visible_name)
+            && existing != &summary.id
+        {
+            return Err(TypeEnvError::DuplicateType(visible_name, Span::default()));
+        }
+        if let Some(existing) = self.ast_types.get(&visible_name) {
+            let existing_identity = self.type_alias_identities.get(&visible_name);
+            if !self.is_placeholder_name(&visible_name) && existing_identity != Some(&summary.id) {
+                return Err(TypeEnvError::DuplicateType(visible_name, Span::default()));
+            }
+            if !existing.params.is_empty() && existing.params != summary.params {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("type '{}' summary parameter conflict", visible_name),
+                    Span::default(),
+                ));
+            }
+        }
+
+        let identity_def = TypeDef {
+            name: visible_name.clone(),
+            params: summary.params.clone(),
+            body: TypeBody::Struct(vec![]),
+            visibility: summary.visibility,
+            builtin: matches!(
+                summary.representation,
+                TypeRepresentationSummary::Opaque { builtin: true }
+            ),
+        };
+        self.ast_types.insert(visible_name.clone(), identity_def);
+        let type_info = TypeInfo::Struct {
+            name: visible_name.clone(),
+            params: summary.params.iter().map(|_| TypeVar::fresh()).collect(),
+            fields: vec![],
+        };
+        self.type_info.insert(visible_name.clone(), type_info);
+        self.type_declaration_states
+            .insert(visible_name.clone(), TypeDeclarationState::IdentityOnly);
+        self.type_alias_identities
+            .insert(visible_name.clone(), summary.id.clone());
+        self.canonical_type_names
+            .entry(summary.id.clone())
+            .or_insert(visible_name);
+        Ok(())
+    }
+
+    /// Register all visible ordinary type identities from a module semantic summary first,
+    /// then validate/expose public representations in a second pass.
+    pub fn register_module_semantic_summary(
+        &mut self,
+        summary: &ModuleSemanticSummary,
+    ) -> Result<(), TypeEnvError> {
+        for ty in &summary.exported_types {
+            self.declare_summary_type_identity(ty)?;
+        }
+
+        for ty in &summary.exported_types {
+            if ty.representation_exposure != RepresentationExposure::Exposed {
+                continue;
+            }
+            let TypeRepresentationSummary::Exposed(body) = &ty.representation else {
+                continue;
+            };
+            let def = TypeDef {
+                name: ty.exported_name.clone(),
+                params: ty.params.clone(),
+                body: body.clone(),
+                visibility: ty.visibility,
+                builtin: false,
+            };
+            let type_info = convert_type_def(&def, self).map_err(|e| {
+                TypeEnvError::InvalidDefinition(
+                    format!("type '{}': {e}", def.name),
+                    Span::default(),
+                )
+            })?;
+            self.ast_types.insert(def.name.clone(), def.clone());
+            self.type_info.insert(def.name.clone(), type_info);
+            self.type_declaration_states
+                .insert(def.name.clone(), TypeDeclarationState::Full);
+            self.expose_type_representation(&def.name)?;
+        }
+
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn type_identity_for_name(&self, name: &str) -> Option<&TypeDeclId> {
+        self.type_alias_identities.get(name)
+    }
+
+    #[must_use]
+    pub fn canonical_type_name(&self, id: &TypeDeclId) -> Option<&String> {
+        self.canonical_type_names.get(id)
+    }
+
+    fn canonical_constructor_name_for_equality(&self, name: &QualifiedName) -> QualifiedName {
+        if !name.is_root() {
+            return name.clone();
+        }
+
+        self.type_alias_identities
+            .get(name.name.as_str())
+            .and_then(|id| self.canonical_type_names.get(id))
+            .map(|canonical| QualifiedName::root(canonical.clone()))
+            .unwrap_or_else(|| name.clone())
+    }
+
+    /// Return a copy of `ty` where visible imported-summary aliases that share
+    /// a canonical `TypeDeclId` are rewritten to that identity's preferred
+    /// visible name. This is intentionally an equality/unification hook: normal
+    /// resolution still preserves the source-visible alias name for diagnostics.
+    #[must_use]
+    pub fn canonicalize_type_for_equality(&self, ty: &Type) -> Type {
+        match ty {
+            Type::Constructor { name, args, kind } => Type::Constructor {
+                name: self.canonical_constructor_name_for_equality(name),
+                args: args
+                    .iter()
+                    .map(|arg| self.canonicalize_type_for_equality(arg))
+                    .collect(),
+                kind: kind.clone(),
+            },
+            Type::List(inner) => Type::List(Box::new(self.canonicalize_type_for_equality(inner))),
+            Type::Record(fields) => Type::Record(
+                fields
+                    .iter()
+                    .map(|(name, ty)| (name.clone(), self.canonicalize_type_for_equality(ty)))
+                    .collect(),
+            ),
+            Type::Fn(params, ret) => Type::Fn(
+                params
+                    .iter()
+                    .map(|param| self.canonicalize_type_for_equality(param))
+                    .collect(),
+                Box::new(self.canonicalize_type_for_equality(ret)),
+            ),
+            Type::Fun(params, ret, effect) => Type::Fun(
+                params
+                    .iter()
+                    .map(|param| self.canonicalize_type_for_equality(param))
+                    .collect(),
+                Box::new(self.canonicalize_type_for_equality(ret)),
+                *effect,
+            ),
+            Type::Associated {
+                interface,
+                base,
+                name,
+            } => Type::Associated {
+                interface: interface.clone(),
+                base: Box::new(self.canonicalize_type_for_equality(base)),
+                name: name.clone(),
+            },
+            other => other.clone(),
+        }
+    }
+
+    /// Unify types using TypeEnv's canonical imported-summary identity map.
+    pub fn unify_types(&self, left: &Type, right: &Type) -> Result<Substitution, UnifyError> {
+        unify(
+            &self.canonicalize_type_for_equality(left),
+            &self.canonicalize_type_for_equality(right),
+        )
+    }
+
+    #[must_use]
+    pub fn types_equivalent_for_equality(&self, left: &Type, right: &Type) -> bool {
+        self.unify_types(left, right).is_ok()
+    }
+
     /// Register an interface declaration.
     pub fn register_interface(&mut self, def: &InterfaceDef) -> Result<(), TypeEnvError> {
         let interface_name = def.name.to_string();
@@ -1129,8 +1338,32 @@ impl TypeEnv {
 
         let ordered_param_names: Vec<String> =
             def.type_params.iter().map(ToString::to_string).collect();
+        let interface_type_params = def
+            .type_params
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>();
+        let associated_types = def
+            .associated_types
+            .iter()
+            .map(|a| a.name.to_string())
+            .collect::<Vec<_>>();
 
-        let methods = def
+        // Make the interface's own arity visible while converting method
+        // signatures. Existing interface syntax uses the interface name as the
+        // nominal head in method parameters (for example `Pair<A, B>`), which
+        // may coexist with a zero-arity ordinary carrier type named `Pair`.
+        self.interfaces.insert(
+            interface_name.clone(),
+            InterfaceInfo {
+                name: interface_name.clone(),
+                type_params: interface_type_params.clone(),
+                associated_types: associated_types.clone(),
+                methods: HashMap::new(),
+            },
+        );
+
+        let methods = match def
             .methods
             .iter()
             .map(|method| {
@@ -1141,18 +1374,21 @@ impl TypeEnv {
                     &interface_name,
                 )
             })
-            .collect::<Result<HashMap<_, _>, _>>()?;
+            .collect::<Result<HashMap<_, _>, _>>()
+        {
+            Ok(methods) => methods,
+            Err(error) => {
+                self.interfaces.remove(&interface_name);
+                return Err(error);
+            }
+        };
 
         self.interfaces.insert(
             interface_name.clone(),
             InterfaceInfo {
                 name: interface_name,
-                type_params: def.type_params.iter().map(ToString::to_string).collect(),
-                associated_types: def
-                    .associated_types
-                    .iter()
-                    .map(|a| a.name.to_string())
-                    .collect(),
+                type_params: interface_type_params,
+                associated_types,
                 methods,
             },
         );
@@ -1421,7 +1657,7 @@ impl TypeEnv {
                 .zip(operation_info.params.iter())
                 .enumerate()
             {
-                if expected_param != actual_param {
+                if !self.types_equivalent_for_equality(expected_param, actual_param) {
                     return Err(TypeEnvError::InvalidDefinition(
                         format!(
                             "capability implementation operation '{implementation_name}::{operation_name}' parameter {index} type mismatch: expected {expected_param}, found {actual_param}"
@@ -1431,7 +1667,9 @@ impl TypeEnv {
                 }
             }
 
-            if operation_info.return_type != expected.return_type {
+            if !self
+                .types_equivalent_for_equality(&operation_info.return_type, &expected.return_type)
+            {
                 return Err(TypeEnvError::InvalidDefinition(
                     format!(
                         "capability implementation operation '{implementation_name}::{operation_name}' return type mismatch: expected {}, found {}",
@@ -1620,7 +1858,7 @@ impl TypeEnv {
         }
 
         let actual_return_ty = body_result.substitution.apply(&body_result.ty);
-        unify(&operation_info.return_type, &actual_return_ty)
+        self.unify_types(&operation_info.return_type, &actual_return_ty)
             .map(|_| ())
             .map_err(|_| {
                 TypeEnvError::InvalidDefinition(
@@ -1642,6 +1880,9 @@ impl TypeEnv {
             type_info: self.type_info.clone(),
             constructors: self.constructors.clone(),
             transparent_aliases: self.transparent_aliases.clone(),
+            type_declaration_states: self.type_declaration_states.clone(),
+            type_alias_identities: self.type_alias_identities.clone(),
+            canonical_type_names: self.canonical_type_names.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),
@@ -1721,7 +1962,7 @@ impl TypeEnv {
 
         // Overlap check
         for scheme in self.impls.iter().filter(|s| s.interface == interface_name) {
-            if crate::types::unify(&scheme.head, &impl_head).is_ok() {
+            if self.unify_types(&scheme.head, &impl_head).is_ok() {
                 if scheme.type_params.is_empty() && def.type_params.is_empty() {
                     return Err(TypeEnvError::DuplicateImpl {
                         interface: interface_name,
@@ -1870,15 +2111,16 @@ impl TypeEnv {
             }
 
             let actual_return_ty = body_result.substitution.apply(&body_result.ty);
-            unify(&expected_return_ty, &actual_return_ty).map_err(|_| {
-                TypeEnvError::InvalidDefinition(
-                    format!(
-                        "impl method '{}::{}' must return {}, found {}",
-                        interface.name, method_name, expected_return_ty, actual_return_ty
-                    ),
-                    Span::default(),
-                )
-            })?;
+            self.unify_types(&expected_return_ty, &actual_return_ty)
+                .map_err(|_| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "impl method '{}::{}' must return {}, found {}",
+                            interface.name, method_name, expected_return_ty, actual_return_ty
+                        ),
+                        Span::default(),
+                    )
+                })?;
 
             let core_body = ash_parser::lower_expr(&method.body).map_err(|e| {
                 TypeEnvError::InvalidDefinition(format!("lowering error: {e}"), Span::default())
@@ -2350,7 +2592,10 @@ impl TypeEnv {
     pub fn has_full_type(&self, name: &str) -> bool {
         match self.ast_types.get(name) {
             None => false,
-            Some(existing) => !Self::is_placeholder(existing),
+            Some(_) => matches!(
+                self.type_declaration_states.get(name),
+                Some(TypeDeclarationState::Full)
+            ),
         }
     }
 
@@ -2489,6 +2734,9 @@ impl TypeEnv {
             type_info: self.type_info.clone(),
             constructors: self.constructors.clone(),
             transparent_aliases: self.transparent_aliases.clone(),
+            type_declaration_states: self.type_declaration_states.clone(),
+            type_alias_identities: self.type_alias_identities.clone(),
+            canonical_type_names: self.canonical_type_names.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),
@@ -2719,7 +2967,8 @@ impl TypeEnv {
 
         let mut subst = Substitution::new();
         for (expected, actual) in method_info.params.iter().zip(arg_types.iter()) {
-            let sub = unify(&subst.apply(expected), actual)
+            let sub = self
+                .unify_types(&subst.apply(expected), actual)
                 .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}"), Span::default()))?;
             subst = subst.compose(&sub);
         }
@@ -2778,7 +3027,7 @@ impl TypeEnv {
             });
         }
         for scheme in self.impls.iter().filter(|s| s.interface == interface) {
-            if let Ok(scheme_subst) = crate::types::unify(&scheme.head, target_head) {
+            if let Ok(scheme_subst) = self.unify_types(&scheme.head, target_head) {
                 let mut bounds_ok = true;
                 for bound in &scheme.where_bounds {
                     let bounded_ty = scheme_subst.apply(&Type::Var(bound.type_var));
@@ -2834,9 +3083,13 @@ impl TypeEnv {
             _ => {}
         }
 
-        // Try local types
-        if let Some(info) = self.type_info.get(name) {
-            return Ok((QualifiedName::root(name), Some(info)));
+        // Try local types. Identity-only summaries deliberately resolve as
+        // names with known arity but without unfoldable representation.
+        if self.type_info.contains_key(name) {
+            if self.is_identity_only_name(name) {
+                return Ok((QualifiedName::root(name), None));
+            }
+            return Ok((QualifiedName::root(name), self.type_info.get(name)));
         }
 
         // Try AST types for types not yet converted
@@ -2856,18 +3109,30 @@ impl TypeEnv {
         name: &QualifiedName,
         found_arity: usize,
     ) -> Result<(), TypeError> {
-        let Some(type_def) = name
-            .is_root()
-            .then(|| self.ast_types.get(&name.name))
-            .flatten()
-            .filter(|type_def| {
-                type_def.builtin && matches!(name.name.as_str(), "Proc" | "P" | "Workflow")
-            })
-        else {
+        if !name.is_root() {
+            return Ok(());
+        }
+
+        if let Some(interface) = self.interfaces.get(&name.name)
+            && found_arity > 0
+        {
+            let expected_arity = interface.type_params.len();
+            if expected_arity != found_arity {
+                return Err(TypeError::ConstructorArityMismatch {
+                    name: name.display(),
+                    expected_arity,
+                    found_arity,
+                    span: Span::default(),
+                });
+            }
+            return Ok(());
+        }
+
+        let Some(type_def) = self.ast_types.get(&name.name) else {
             return Ok(());
         };
 
-        if Self::is_placeholder(type_def) {
+        if self.is_placeholder_name(&name.name) {
             return Ok(());
         }
 

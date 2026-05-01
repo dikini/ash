@@ -1,6 +1,6 @@
 # TASK-781: Current Type Pipeline Audit and Semantic-Summary Gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -27,13 +27,17 @@ Audit the current fragmented type declaration pipeline and freeze the semantic-s
 3. Audit `ash-engine` ModuleExports and source-snippet type collection paths.
 4. Audit `ash-typeck` TypeEnv declaration/registration/constructor exposure paths.
 5. Document which snippet paths must be replaced or fenced, including all normal-path and compatibility call sites.
-6. Produce `docs/plan/audits/TASK-781-type-pipeline-audit.md` with: exact files/functions inspected; a live call graph for `parse_type_def`, `module_file`, `check_module_file`, `collect_module_exports`, `load_ordinary_file`, `runtime_stdlib_type_defs`, imported type registration, and TypeEnv registration; snippet scanner replacement/fencing decisions; and a SPEC-057 requirement-to-task traceability matrix.
+6. Produce `docs/plan/audits/TASK-781-type-pipeline-audit.md` with: exact files/functions inspected; a live call graph for `parse_type_def`, `ash_parser::parse_module::module_file`, `ash_parser::parse_surface_file`, `ash_parser::parse_surface_file_with_path`, `check_module_file`, `check_importable_module_file`, `collect_module_exports`, `load_ordinary_file`, `Engine::check`, `runtime_stdlib_type_defs`, `register_imported_type_defs`, imported type registration, and TypeEnv registration; snippet scanner replacement/fencing decisions; and a SPEC-057 requirement-to-task traceability matrix.
+7. The audit MUST record current ModuleFile drift precisely: ordinary `type` declarations are parsed by standalone `parse_type_def`, but the live `surface::Definition` / `ModuleFile` path lacks an ordinary type item and module-file unknown-item recovery can skip type declarations.
+8. The audit MUST record current parser-private type-definition carrier limitations, including `parse_type_def::TypeDef` being separate from `surface::Definition` and lacking the source-origin/span metadata required by SPEC-057 summaries.
+9. The audit MUST record current private type export/import compatibility behavior, including any opaque empty-struct/builtin `CoreTypeDef` identity placeholders and whether TASK-786/TASK-787 should preserve, tag, or reject them.
+10. The audit MUST include Phase 108 workflow-summary transport in the non-interference call graph: `ModuleExports.callables`, `InlineCallable.workflow_summary`, `ash_core::workflow_carrier::PublicWorkflowSummary`, `stamp_workflow_summary_import_origin`, workflow-returning pub-fn summary builders, `build_imported_closures`, `Workflow.imported_workflow_summaries`, `bind_imported_callable_types`, `TypeEnv::bind_public_workflow_summary`, `TypeEnv::lookup_public_workflow_summary`, and `check_expr` imported Workflow summary consumers. SPEC-A ordinary-type summaries must preserve this path.
 
 ## Verification
 
-- [ ] `docs/plan/audits/TASK-781-type-pipeline-audit.md` names exact files/functions affected.
-- [ ] Semantic-summary gate is stated before parser/core/engine/typeck edits begin.
-- [ ] No code behavior changes are made in this task except optional docs/test scaffolding.
+- [x] `docs/plan/audits/TASK-781-type-pipeline-audit.md` names exact files/functions affected.
+- [x] Semantic-summary gate is stated before parser/core/engine/typeck edits begin.
+- [x] No code behavior changes are made in this task except optional docs/test scaffolding.
 
 ## Implementation Notes
 

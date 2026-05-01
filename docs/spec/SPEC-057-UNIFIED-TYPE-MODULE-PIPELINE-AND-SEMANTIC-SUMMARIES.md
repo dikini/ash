@@ -111,7 +111,9 @@ Out of scope:
 
 **Constructor identity**: a stable identity for an ordinary ADT constructor/variant exposed by a type representation when visibility permits.
 
-**ModuleSemanticSummary**: a core-owned carrier that describes checked/importable semantic metadata for a module. In SPEC-057, it carries ordinary type metadata and reserved identity slots only.
+**ModuleSemanticSummary**: a core-owned carrier that describes checked/importable semantic metadata for a module. In SPEC-057, it is an ordinary-type module semantic summary: it carries ordinary type metadata and reserved identity slots only.
+
+**PublicWorkflowSummary**: the Phase 108 / SPEC-056 core-owned workflow contract summary carrier for imported `Workflow<A>` values and workflow-returning callables. SPEC-057 MUST preserve this carrier and its transport path; it does not replace, reinterpret, or subsume workflow contract summaries.
 
 **Exported summary**: the public subset of a module semantic summary transported across module boundaries.
 
@@ -225,6 +227,8 @@ Concrete identity semantics in SPEC-057 are limited to ordinary type declaration
 
 Existing SPEC-034/SPEC-035 interface and associated-member metadata may receive opaque stable IDs only to preserve current behavior. Those IDs MUST NOT participate in generalized projection resolution, family computation, normalization, or definitional equality.
 
+The ordinary-type `ModuleSemanticSummary` introduced by SPEC-057 MUST NOT erase or replace the Phase 108 workflow-summary path. In particular, implementations MUST preserve `ash_core::workflow_carrier::PublicWorkflowSummary`, `InlineCallable.workflow_summary`, `Workflow.imported_workflow_summaries`, and `TypeEnv` public workflow-summary bindings unless a later Workflow-specific spec explicitly migrates them. SPEC-057 may route ordinary type identities needed by workflow signatures through the new ordinary-type summary, but workflow contract/projection facts remain owned by SPEC-056 carriers.
+
 ## 10. Visibility and Opacity
 
 Visibility and opacity are semantic-summary invariants, not ad-hoc import behavior.
@@ -255,7 +259,8 @@ Required behavior:
 - child module summaries are available for explicit re-export without implicit flattening;
 - public function/workflow signatures that mention imported public type identities resolve through summaries;
 - import order does not change identity or registration success;
-- missing summaries produce diagnostics rather than silent fallback to string names.
+- missing summaries produce diagnostics rather than silent fallback to string names;
+- named imports, glob imports, and `pub use` re-exports of workflow-returning callables MUST preserve existing `PublicWorkflowSummary` data while ordinary type identities move through SPEC-057 summaries.
 
 ## 12. TypeEnv Integration
 
@@ -268,7 +273,7 @@ This preserves SPEC-030 sibling type resolution while moving its inputs from sou
 
 The implementation MUST explicitly handle placeholders. It SHOULD avoid confusing a real empty struct declaration with a placeholder, or document and test the compatibility behavior if the current placeholder shape remains temporarily.
 
-Imported summaries MUST register type identities before imported callables, workflow summaries, interface methods, or ordinary function signatures that mention those types are checked.
+Imported summaries MUST register type identities before imported callables, workflow summaries, interface methods, or ordinary function signatures that mention those types are checked. This includes `PublicWorkflowSummary` users introduced by Phase 108: imported workflow summaries must see the ordinary type identities they mention before `TypeEnv::bind_public_workflow_summary`, `TypeEnv::lookup_public_workflow_summary`, or imported `do:Workflow` / `[...]: Workflow` composition checks run.
 
 ## 13. Compatibility and Migration
 
@@ -316,6 +321,8 @@ Diagnostics MUST include source/module context sufficient for users and future a
 ## 16. Non-Interference
 
 SPEC-057 MUST preserve SPEC-009 module paths, SPEC-012 import/re-export syntax, SPEC-020 ordinary ADT runtime semantics, SPEC-034 impl search, SPEC-035 simple associated type substitution, SPEC-054/SPEC-055 do/comprehension behavior, SPEC-056 workflow semantics, and capability/resource authority behavior.
+
+For SPEC-056 specifically, ordinary-type summary work MUST preserve Phase 108 workflow-summary transport: `PublicWorkflowSummary`, `InlineCallable.workflow_summary`, `Workflow.imported_workflow_summaries`, `TypeEnv::bind_public_workflow_summary`, `TypeEnv::lookup_public_workflow_summary`, imported-summary origins, and TASK-777 import/export behavior. A SPEC-057 implementation may make workflow signatures depend on ordinary type identities from the new summary path, but it MUST NOT collapse workflow contract summaries into ordinary type summaries or drop workflow projection/contract metadata.
 
 Any behavior change outside ordinary type metadata routing requires a separate task/spec amendment.
 
@@ -367,6 +374,8 @@ Any behavior change outside ordinary type metadata routing requires a separate t
 - Existing ADT tests continue to pass.
 - Existing module/import tests continue to pass.
 - Existing interface, associated type, capability/resource, workflow, do-notation, and comprehension tests continue to pass or have explicitly documented unrelated failures.
+- Phase 108 TASK-777 workflow summary import/export tests continue to pass, including named import, glob import, and `pub use` paths for workflow-returning callables where those paths are supported.
+- Adding ordinary-type module semantic summaries does not clear `InlineCallable.workflow_summary`, `Workflow.imported_workflow_summaries`, or TypeEnv public workflow-summary bindings.
 
 ## 18. Deferred Packet Map
 

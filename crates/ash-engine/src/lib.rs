@@ -76,6 +76,10 @@ pub struct Engine {
     /// Imported ADT/type definitions keyed by parsed workflow ID.
     imported_type_defs:
         std::sync::Mutex<std::collections::HashMap<u64, Vec<ash_core::ast::TypeDef>>>,
+    /// Imported semantic summaries keyed by parsed workflow ID.
+    imported_semantic_summaries: std::sync::Mutex<
+        std::collections::HashMap<u64, Vec<ash_core::semantic_summary::ModuleSemanticSummary>>,
+    >,
     /// Parsed program metadata for workflows loaded with local pure-function definitions.
     surface_programs:
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::Program>>,
@@ -719,6 +723,17 @@ impl Engine {
         }
     }
 
+    /// Store imported semantic summaries for a parsed workflow.
+    fn store_imported_semantic_summaries(
+        &self,
+        workflow_id: u64,
+        summaries: Vec<ash_core::semantic_summary::ModuleSemanticSummary>,
+    ) {
+        if let Ok(mut map) = self.imported_semantic_summaries.lock() {
+            map.insert(workflow_id, summaries);
+        }
+    }
+
     fn store_surface_program(&self, workflow_id: u64, program: ash_parser::surface::Program) {
         if let Ok(mut map) = self.surface_programs.lock() {
             map.insert(workflow_id, program);
@@ -741,6 +756,17 @@ impl Engine {
     /// Retrieve imported type definitions by workflow ID.
     fn get_imported_type_defs(&self, id: u64) -> Vec<ash_core::ast::TypeDef> {
         self.imported_type_defs.lock().map_or_else(
+            |_| Vec::new(),
+            |map| map.get(&id).cloned().unwrap_or_default(),
+        )
+    }
+
+    /// Retrieve imported semantic summaries by workflow ID.
+    fn get_imported_semantic_summaries(
+        &self,
+        id: u64,
+    ) -> Vec<ash_core::semantic_summary::ModuleSemanticSummary> {
+        self.imported_semantic_summaries.lock().map_or_else(
             |_| Vec::new(),
             |map| map.get(&id).cloned().unwrap_or_default(),
         )
@@ -860,15 +886,18 @@ impl Engine {
             .map_err(|_| {
                 EngineError::Configuration("runtime stdlib registry lock poisoned".to_string())
             })?
-            .values()
-            .cloned()
+            .iter()
+            .map(|(module_path, source)| (module_path.clone(), source.clone()))
             .collect::<Vec<_>>();
 
         let mut type_defs = Vec::new();
-        for source in &sources {
-            type_defs.extend(module_loader::collect_type_identity_defs_from_source(
-                source,
-            )?);
+        for (module_path, source) in &sources {
+            type_defs.extend(
+                module_loader::collect_runtime_stdlib_type_defs_from_module_file(
+                    module_path,
+                    source,
+                )?,
+            );
         }
         Ok(type_defs)
     }
@@ -880,7 +909,7 @@ impl Engine {
     /// Returns `EngineError::Parse` if the source contains syntax errors.
     pub fn parse(&self, source: &str) -> Result<Workflow, EngineError> {
         let imported_callables = HashMap::new();
-        self.parse_workflow_source_with_imports(source, Vec::new(), &imported_callables)
+        self.parse_workflow_source_with_imports(source, Vec::new(), Vec::new(), &imported_callables)
     }
 
     /// Parse entry source into a [`Workflow`], tolerating a leading `use` prelude.
@@ -901,6 +930,7 @@ impl Engine {
         })?;
         self.parse_workflow_source_with_imports(
             entry::strip_leading_entry_use_lines(source),
+            Vec::new(),
             Vec::new(),
             &HashMap::new(),
         )
@@ -932,6 +962,7 @@ impl Engine {
         self.parse_workflow_source_with_imports(
             &loaded.workflow_source,
             loaded.imported_type_defs,
+            loaded.imported_semantic_summaries,
             &loaded.imported_callables,
         )
     }
@@ -1011,6 +1042,7 @@ impl Engine {
         &self,
         source: &str,
         imported_type_defs: Vec<ash_core::ast::TypeDef>,
+        imported_semantic_summaries: Vec<ash_core::semantic_summary::ModuleSemanticSummary>,
         imported_callables: &HashMap<String, module_loader::InlineCallable>,
     ) -> Result<Workflow, EngineError> {
         use ash_parser::{
@@ -1055,6 +1087,7 @@ impl Engine {
                         )?;
 
                     self.store_surface_program(id, program);
+                    self.store_imported_semantic_summaries(id, imported_semantic_summaries);
                     self.store_imported_type_defs(id, imported_type_defs);
                     return Ok(Workflow {
                         core,
@@ -1073,6 +1106,7 @@ impl Engine {
                 let core = lower_workflow(&def)
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(def);
+                self.store_imported_semantic_summaries(id, imported_semantic_summaries);
                 self.store_imported_type_defs(id, imported_type_defs);
                 Ok(Workflow {
                     core,
@@ -1099,6 +1133,7 @@ impl Engine {
                 )?;
 
                 self.store_surface_program(id, program);
+                self.store_imported_semantic_summaries(id, imported_semantic_summaries);
                 self.store_imported_type_defs(id, imported_type_defs);
                 Ok(Workflow {
                     core,
@@ -1157,6 +1192,11 @@ impl Engine {
         if let Some(program) = self.get_surface_program(workflow.id) {
             // Build type environment with imported types and callable signatures.
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
+            for summary in self.get_imported_semantic_summaries(workflow.id) {
+                type_env
+                    .register_module_semantic_summary(&summary)
+                    .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
+            }
             let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
             imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
             register_imported_type_defs(&mut type_env, imported_type_defs)?;
@@ -1190,6 +1230,14 @@ impl Engine {
 
             // Build type environment with imported callable signatures
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
+            for summary in self.get_imported_semantic_summaries(workflow.id) {
+                type_env
+                    .register_module_semantic_summary(&summary)
+                    .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
+            }
+            let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
+            imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
+            register_imported_type_defs(&mut type_env, imported_type_defs)?;
             bind_imported_callable_types(&mut type_env, workflow)?;
             if let Some(_refs) = param_refs.first() {
                 for (name, ty) in &param_refs {
@@ -1221,6 +1269,11 @@ impl Engine {
         imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
 
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+        for summary in self.get_imported_semantic_summaries(workflow.id) {
+            type_env
+                .register_module_semantic_summary(&summary)
+                .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
+        }
         register_imported_type_defs(&mut type_env, imported_type_defs)?;
         // Register imported callable signatures
         bind_imported_callable_types(&mut type_env, workflow)?;
@@ -1286,8 +1339,13 @@ impl Engine {
     ) -> Result<ModuleFileCheckResult, EngineError> {
         let source = std::fs::read_to_string(path)?;
 
-        let type_defs = module_loader::collect_public_type_defs_from_source(&source)?;
-        let type_count = type_defs.len();
+        let type_metadata =
+            module_loader::collect_module_type_metadata_from_module_file(path, &source)?;
+        let type_count = type_metadata
+            .type_defs
+            .iter()
+            .filter(|type_def| matches!(type_def.visibility, ash_core::ast::Visibility::Public))
+            .count();
         let (fn_count, fn_diagnostics) = module_loader::count_pub_fn_snippets(&source);
 
         let warnings: Vec<String> = fn_diagnostics
@@ -1299,21 +1357,16 @@ impl Engine {
                 )
             })
             .collect();
-        let mut errors = Vec::new();
+        let mut errors = module_loader::public_callable_signature_visibility_errors(
+            &source,
+            &type_metadata.type_defs,
+        );
 
-        // Build a TypeEnv and register all discovered types so cross-references resolve.
+        // Build a TypeEnv and register the lowered semantic summary so ordinary
+        // type identities and exposed representations take the same path as imports.
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
-        for td in &type_defs {
-            if !type_env.has_type(&td.name) {
-                type_env.declare_type_name(&td.name);
-            }
-        }
-        for td in type_defs {
-            if !type_env.has_full_type(&td.name)
-                && let Err(e) = type_env.register_type(&td)
-            {
-                errors.push(format!("{e}"));
-            }
+        if let Err(e) = type_env.register_module_semantic_summary(&type_metadata.summary) {
+            errors.push(format!("{e}"));
         }
 
         Ok(ModuleFileCheckResult {
@@ -1700,11 +1753,17 @@ fn register_imported_type_defs(
         }
     }
     for imported_type in imported_type_defs {
-        if !type_env.has_full_type(&imported_type.name) {
-            type_env
-                .register_type_identity(&imported_type)
-                .map_err(|error| EngineError::Type(error.to_string()))?;
+        if type_env.has_full_type(&imported_type.name)
+            || type_env
+                .type_identity_for_name(&imported_type.name)
+                .is_some()
+        {
+            continue;
         }
+
+        type_env
+            .register_type_identity(&imported_type)
+            .map_err(|error| EngineError::Type(error.to_string()))?;
         if matches!(imported_type.visibility, ash_core::ast::Visibility::Public) {
             type_env
                 .expose_type_representation(&imported_type.name)
@@ -1922,6 +1981,7 @@ impl EngineBuilder {
         Ok(Engine {
             surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_type_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
+            imported_semantic_summaries: std::sync::Mutex::new(std::collections::HashMap::new()),
             surface_programs: std::sync::Mutex::new(std::collections::HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),

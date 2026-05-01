@@ -1,6 +1,6 @@
 # TASK-782: ModuleFile Ordinary Type Declaration Surface Integration
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## References
 
@@ -31,9 +31,16 @@ Parse existing ordinary `type` declarations as normal ModuleFile definitions.
 
 ## Verification
 
-- [ ] ModuleFile parse result contains ordinary type declarations.
-- [ ] Standalone type parser tests still pass.
-- [ ] Unknown-item recovery does not silently skip valid ordinary type declarations.
+- [x] ModuleFile parse result contains ordinary type declarations.
+- [x] Standalone type parser tests still pass.
+- [x] Unknown-item recovery does not silently skip valid ordinary type declarations.
+
+## Completion Notes
+
+- Added `surface::Definition::Type` with a source-aware `surface::TypeDef` carrier for ordinary `type` declarations, including visibility, name, params, body, builtin marker, declaration span, and optional source path.
+- Reused the existing `parse_type_def` grammar for the syntax accepted by ordinary type declarations while converting into surface AST types. Since the parser-private grammar does not expose fine-grained field/variant spans yet, field and variant spans are conservatively anchored to the enclosing declaration span rather than fabricated.
+- Wired ordinary type declarations through `module_file`, inline module parsing, and unknown-item recovery so valid type declarations are preserved instead of skipped.
+- Parser-only integration tests cover top-level mixed module files, files containing only types, workflow files with local type declarations, inline modules, and unknown-item recovery.
 
 ## Implementation Notes
 

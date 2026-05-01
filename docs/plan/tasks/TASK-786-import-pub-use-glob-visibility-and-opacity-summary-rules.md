@@ -1,6 +1,6 @@
 # TASK-786: Import, Pub-Use, Glob, Visibility, and Opacity Summary Rules
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -28,13 +28,16 @@ Make ordinary type summary transport coherent across existing import/re-export f
 4. Handle child module summaries without implicit flattening.
 5. Enforce public/private/crate visibility and opacity rules without adding new opaque type syntax; opaque exported identities are limited to existing explicit builtin/opaque exceptions.
 6. Add import-order independence tests plus constructor-only import and glob-import constructor exposure tests.
+7. Preserve Phase 108 workflow-summary transport through supported named import, glob import, and `pub use` paths for workflow-returning callables; ordinary type identity transport must not drop `InlineCallable.workflow_summary` or imported `PublicWorkflowSummary` data.
+8. Add non-regression coverage using TASK-777 workflow summary import/export scenarios alongside ordinary type identity tests.
 
 ## Verification
 
-- [ ] Public type identities import consistently.
-- [ ] `pub use` preserves canonical identity.
-- [ ] Private type leaks are rejected.
-- [ ] Constructor imports obey representation visibility.
+- [x] Public type identities import consistently.
+- [x] `pub use` preserves canonical identity shape/name in the current CoreTypeDef transport and reports missing targets.
+- [x] Private/crate ordinary type leaks are rejected; explicit builtin opaque identities and the legacy `Act` compatibility boundary remain importable opaquely.
+- [x] Constructor imports obey representation visibility.
+- [x] Workflow summaries survive named import, glob import, and `pub use` alias paths.
 
 ## Implementation Notes
 

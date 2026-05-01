@@ -1242,6 +1242,232 @@ pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
     }
 }
 
+/// Core ordinary type declarations plus their core-owned semantic summary.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoweredTypeMetadata {
+    pub type_defs: Vec<ash_core::ast::TypeDef>,
+    pub summary: ash_core::semantic_summary::ModuleSemanticSummary,
+}
+
+/// Lower ordinary surface type declarations in a parsed module to core carriers.
+///
+/// The caller supplies the resolved module identity so canonical type identities
+/// are module-anchored instead of string-only.
+#[must_use]
+pub fn lower_module_type_metadata(
+    module: &crate::surface::ModuleFile,
+    module_identity: ash_core::semantic_summary::ModuleIdentity,
+) -> LoweredTypeMetadata {
+    let module_anchor = source_anchor_for_module(module, &module_identity);
+    let mut summary =
+        ash_core::semantic_summary::ModuleSemanticSummary::new(module_identity.clone())
+            .with_diagnostic_anchor(module_anchor);
+    let mut type_defs = Vec::new();
+
+    for definition in &module.definitions {
+        let crate::surface::Definition::Type(surface_type) = definition else {
+            continue;
+        };
+
+        let core_type = lower_surface_type_def(surface_type);
+        let type_id = ash_core::semantic_summary::TypeDeclId::ordinary(
+            module_identity.clone(),
+            core_type.name.clone(),
+        );
+        let anchor = source_anchor_for_type(surface_type, module, &module_identity);
+        let representation_exposure = if core_type.builtin {
+            ash_core::semantic_summary::RepresentationExposure::Opaque
+        } else {
+            ash_core::semantic_summary::RepresentationExposure::Exposed
+        };
+        let representation = if core_type.builtin {
+            ash_core::semantic_summary::TypeRepresentationSummary::opaque(true)
+        } else {
+            ash_core::semantic_summary::TypeRepresentationSummary::exposed(core_type.body.clone())
+        };
+
+        let type_summary = ash_core::semantic_summary::TypeDeclSummary::new(
+            type_id.clone(),
+            core_type.name.clone(),
+            core_type.visibility,
+            representation_exposure,
+            representation,
+            anchor.clone(),
+        )
+        .with_params(core_type.params.clone());
+        summary = summary.with_exported_type(type_summary);
+
+        if !core_type.builtin
+            && let ash_core::ast::TypeBody::Enum(variants) = &core_type.body
+        {
+            for variant in variants {
+                let payload_kind = constructor_payload_kind(&variant.payload);
+                let constructor_id = ash_core::semantic_summary::ConstructorId::variant(
+                    type_id.clone(),
+                    variant.name.clone(),
+                    payload_kind,
+                );
+                let constructor = ash_core::semantic_summary::ConstructorSummary::new(
+                    constructor_id,
+                    type_id.clone(),
+                    variant.name.clone(),
+                    payload_kind,
+                    core_type.visibility,
+                    anchor.clone(),
+                );
+                summary = summary.with_exported_constructor(constructor);
+            }
+        }
+
+        summary = summary.with_diagnostic_anchor(anchor);
+        type_defs.push(core_type);
+    }
+
+    LoweredTypeMetadata { type_defs, summary }
+}
+
+#[must_use]
+pub fn lower_surface_type_def(type_def: &crate::surface::TypeDef) -> ash_core::ast::TypeDef {
+    ash_core::ast::TypeDef {
+        name: type_def.name.to_string(),
+        params: type_def.params.iter().map(ToString::to_string).collect(),
+        body: lower_surface_type_body(&type_def.body),
+        visibility: lower_surface_visibility(&type_def.visibility),
+        builtin: type_def.builtin,
+    }
+}
+
+fn lower_surface_type_body(body: &crate::surface::TypeBody) -> ash_core::ast::TypeBody {
+    match body {
+        crate::surface::TypeBody::Struct(fields) => ash_core::ast::TypeBody::Struct(
+            fields
+                .iter()
+                .map(|field| (field.name.to_string(), lower_surface_type(&field.ty)))
+                .collect(),
+        ),
+        crate::surface::TypeBody::Enum(variants) => {
+            ash_core::ast::TypeBody::Enum(variants.iter().map(lower_surface_variant_def).collect())
+        }
+        crate::surface::TypeBody::Alias(ty) => {
+            ash_core::ast::TypeBody::Alias(lower_surface_type(ty))
+        }
+    }
+}
+
+fn lower_surface_variant_def(variant: &crate::surface::VariantDef) -> ash_core::ast::VariantDef {
+    ash_core::ast::VariantDef {
+        name: variant.name.to_string(),
+        fields: variant
+            .fields
+            .iter()
+            .map(|field| (field.name.to_string(), lower_surface_type(&field.ty)))
+            .collect(),
+        payload: lower_surface_variant_payload(&variant.payload),
+    }
+}
+
+fn lower_surface_variant_payload(
+    payload: &crate::surface::VariantPayload,
+) -> ash_core::ast::VariantPayload {
+    match payload {
+        crate::surface::VariantPayload::Unit => ash_core::ast::VariantPayload::Unit,
+        crate::surface::VariantPayload::Record(fields) => ash_core::ast::VariantPayload::Record(
+            fields
+                .iter()
+                .map(|field| (field.name.to_string(), lower_surface_type(&field.ty)))
+                .collect(),
+        ),
+        crate::surface::VariantPayload::Tuple(items) => {
+            ash_core::ast::VariantPayload::Tuple(items.iter().map(lower_surface_type).collect())
+        }
+    }
+}
+
+fn lower_surface_visibility(visibility: &crate::surface::Visibility) -> ash_core::ast::Visibility {
+    match visibility {
+        crate::surface::Visibility::Public => ash_core::ast::Visibility::Public,
+        crate::surface::Visibility::Crate => ash_core::ast::Visibility::Crate,
+        _ => ash_core::ast::Visibility::Private,
+    }
+}
+
+fn constructor_payload_kind(
+    payload: &ash_core::ast::VariantPayload,
+) -> ash_core::semantic_summary::ConstructorPayloadKind {
+    match payload {
+        ash_core::ast::VariantPayload::Unit => {
+            ash_core::semantic_summary::ConstructorPayloadKind::Unit
+        }
+        ash_core::ast::VariantPayload::Record(_) => {
+            ash_core::semantic_summary::ConstructorPayloadKind::Record
+        }
+        ash_core::ast::VariantPayload::Tuple(_) => {
+            ash_core::semantic_summary::ConstructorPayloadKind::Tuple
+        }
+    }
+}
+
+fn source_anchor_for_module(
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    ash_core::semantic_summary::SourceAnchor::new(
+        source_origin_from_module(module, module_identity),
+        Some(to_core_span(module.span)),
+        "module",
+    )
+}
+
+fn source_anchor_for_type(
+    type_def: &crate::surface::TypeDef,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    let origin = type_def
+        .source
+        .as_ref()
+        .map(|source| ash_core::semantic_summary::SourceOrigin::File(source.to_string()))
+        .unwrap_or_else(|| source_origin_from_module(module, module_identity));
+    ash_core::semantic_summary::SourceAnchor::new(
+        origin,
+        Some(to_core_span(type_def.span)),
+        format!("type {}", type_def.name),
+    )
+}
+
+fn source_origin_from_module(
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceOrigin {
+    if let Some(path) = &module.path {
+        return ash_core::semantic_summary::SourceOrigin::File(path.to_string());
+    }
+
+    match &module_identity.source {
+        ash_core::semantic_summary::ModuleSourceOrigin::File(path) => {
+            ash_core::semantic_summary::SourceOrigin::File(path.clone())
+        }
+        ash_core::semantic_summary::ModuleSourceOrigin::Inline { parent, offset } => {
+            ash_core::semantic_summary::SourceOrigin::InlineModule {
+                module: *parent,
+                offset: *offset,
+            }
+        }
+        ash_core::semantic_summary::ModuleSourceOrigin::Synthetic { reason } => {
+            ash_core::semantic_summary::SourceOrigin::Synthetic {
+                reason: reason.clone(),
+            }
+        }
+    }
+}
+
+fn to_core_span(span: crate::token::Span) -> ash_core::ast::Span {
+    ash_core::ast::Span {
+        start: span.start,
+        end: span.end,
+    }
+}
+
 /// Lower a surface interface definition to core AST.
 pub fn lower_interface_def(
     iface: &crate::surface::InterfaceDef,
@@ -2635,6 +2861,126 @@ mod tests {
         let core =
             lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
         assert!(matches!(core, CoreWorkflow::Orient { .. }));
+    }
+
+    fn module_identity_for_type_lowering_tests() -> ash_core::semantic_summary::ModuleIdentity {
+        ash_core::semantic_summary::ModuleIdentity::new(
+            Some(ash_core::module_graph::CrateId(1)),
+            ash_core::module_graph::ModuleId(7),
+            vec!["crate".into(), "domain".into()],
+            ash_core::semantic_summary::ModuleSourceOrigin::File("/repo/domain.ash".into()),
+        )
+    }
+
+    fn parse_module_for_type_lowering(source: &str) -> crate::surface::ModuleFile {
+        crate::parse_surface_file_with_path(source, Some(std::path::Path::new("/repo/domain.ash")))
+            .expect("module with ordinary type definitions should parse")
+    }
+
+    #[test]
+    fn task784_lowers_alias_type_to_core_and_summary_with_source_anchor() {
+        let module = parse_module_for_type_lowering("pub type UserId = String;");
+        let module_identity = module_identity_for_type_lowering_tests();
+
+        let lowered = lower_module_type_metadata(&module, module_identity.clone());
+
+        assert_eq!(lowered.type_defs.len(), 1);
+        assert_eq!(lowered.summary.exported_types.len(), 1);
+        let core = &lowered.type_defs[0];
+        assert_eq!(core.name, "UserId");
+        assert_eq!(core.visibility, ash_core::ast::Visibility::Public);
+        assert!(!core.builtin);
+        assert_eq!(
+            core.body,
+            ash_core::ast::TypeBody::Alias(ash_core::ast::TypeExpr::Named("String".into()))
+        );
+        let summary = &lowered.summary.exported_types[0];
+        assert_eq!(summary.id.module, module_identity);
+        assert_eq!(summary.id.name, "UserId");
+        assert_eq!(summary.exported_name, "UserId");
+        assert_eq!(
+            summary.source_anchor.span,
+            Some(ash_core::ast::Span { start: 0, end: 25 })
+        );
+        assert_eq!(
+            summary.source_anchor.origin,
+            ash_core::semantic_summary::SourceOrigin::File("/repo/domain.ash".into())
+        );
+    }
+
+    #[test]
+    fn task784_lowers_struct_type_preserving_fields_and_generic_params() {
+        let module = parse_module_for_type_lowering("pub type Box<T> = { value: T };");
+        let lowered =
+            lower_module_type_metadata(&module, module_identity_for_type_lowering_tests());
+
+        assert_eq!(lowered.type_defs[0].params, vec!["T"]);
+        assert_eq!(
+            lowered.type_defs[0].body,
+            ash_core::ast::TypeBody::Struct(vec![(
+                "value".into(),
+                ash_core::ast::TypeExpr::Named("T".into())
+            )])
+        );
+        assert_eq!(lowered.summary.exported_types[0].params, vec!["T"]);
+        assert!(matches!(
+            lowered.summary.exported_types[0].representation,
+            ash_core::semantic_summary::TypeRepresentationSummary::Exposed(_)
+        ));
+    }
+
+    #[test]
+    fn task784_lowers_enum_variants_and_constructor_summaries_with_payload_kinds() {
+        let module = parse_module_for_type_lowering(
+            "pub type Result<T> = Ok(T) | Err { message: String } | Pending;",
+        );
+        let lowered =
+            lower_module_type_metadata(&module, module_identity_for_type_lowering_tests());
+
+        assert_eq!(lowered.summary.exported_constructors.len(), 3);
+        assert_eq!(lowered.summary.exported_constructors[0].exported_name, "Ok");
+        assert_eq!(
+            lowered.summary.exported_constructors[0].payload_kind,
+            ash_core::semantic_summary::ConstructorPayloadKind::Tuple
+        );
+        assert_eq!(
+            lowered.summary.exported_constructors[1].exported_name,
+            "Err"
+        );
+        assert_eq!(
+            lowered.summary.exported_constructors[1].payload_kind,
+            ash_core::semantic_summary::ConstructorPayloadKind::Record
+        );
+        assert_eq!(
+            lowered.summary.exported_constructors[2].exported_name,
+            "Pending"
+        );
+        assert_eq!(
+            lowered.summary.exported_constructors[2].payload_kind,
+            ash_core::semantic_summary::ConstructorPayloadKind::Unit
+        );
+        assert!(matches!(
+            &lowered.type_defs[0].body,
+            ash_core::ast::TypeBody::Enum(variants) if variants.len() == 3
+        ));
+    }
+
+    #[test]
+    fn task784_lowers_builtin_opaque_type_as_core_builtin_and_opaque_summary() {
+        let module = parse_module_for_type_lowering("pub builtin type NativeHandle;");
+        let lowered =
+            lower_module_type_metadata(&module, module_identity_for_type_lowering_tests());
+
+        assert!(lowered.type_defs[0].builtin);
+        assert_eq!(
+            lowered.summary.exported_types[0].representation_exposure,
+            ash_core::semantic_summary::RepresentationExposure::Opaque
+        );
+        assert_eq!(
+            lowered.summary.exported_types[0].representation,
+            ash_core::semantic_summary::TypeRepresentationSummary::Opaque { builtin: true }
+        );
+        assert_eq!(lowered.summary.diagnostic_anchors.len(), 2);
     }
 
     #[test]

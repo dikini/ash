@@ -13,6 +13,11 @@ use ash_core::ast::{
     VariantDef as CoreVariantDef, VariantPayload as CoreVariantPayload,
     Visibility as CoreVisibility,
 };
+use ash_core::module_graph::ModuleId;
+use ash_core::semantic_summary::{
+    ModuleIdentity, ModuleSemanticSummary, ModuleSourceOrigin, TypeDeclSummary,
+    TypeRepresentationSummary,
+};
 use ash_core::workflow_carrier::{
     CoverageEvidence, OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
     ProcProvenanceSummary, ProcResourceAuthoritySummary, ProjectionEvent, ProjectionEventKind,
@@ -39,6 +44,8 @@ pub struct LoadedOrdinaryFile {
     pub workflow_source: String,
     /// Imported public type definitions collected from resolved modules.
     pub imported_type_defs: Vec<CoreTypeDef>,
+    /// Imported semantic summaries collected from resolved modules.
+    pub imported_semantic_summaries: Vec<ModuleSemanticSummary>,
     /// Imported callable bodies keyed by the imported name.
     pub imported_callables: HashMap<String, InlineCallable>,
 }
@@ -158,6 +165,8 @@ pub(crate) struct ModuleExports {
     pub(crate) type_defs: HashMap<String, CoreTypeDef>,
     pub(crate) constructor_defs: HashMap<String, CoreTypeDef>,
     pub(crate) callables: HashMap<String, InlineCallable>,
+    /// Core-owned ordinary type semantic summary lowered from the parsed `ModuleFile`.
+    pub(crate) semantic_summary: Option<ModuleSemanticSummary>,
     /// Child module exports loaded via `pub mod <name>;` declarations.
     ///
     /// Populated by TASK-540 but not yet consumed by `merge_use_exports` --
@@ -293,6 +302,8 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
 
     let mut imported_type_defs = Vec::new();
     let mut imported_type_names = HashSet::new();
+    let mut imported_semantic_summaries = Vec::new();
+    let mut imported_summary_keys = HashSet::new();
     let mut imported_callables = HashMap::new();
 
     let crate_root = discover_crate_root(entry_root);
@@ -321,6 +332,12 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                             imported_type_defs.push(type_def.clone());
                         }
                     }
+                    if let Some(summary) = exports.semantic_summary.clone() {
+                        let key = imported_summary_key(&summary);
+                        if imported_summary_keys.insert(key) {
+                            imported_semantic_summaries.push(summary);
+                        }
+                    }
                     for (k, mut v) in exports.callables.clone() {
                         if let CallableKind::Builtin { ref mut module } = v.kind {
                             *module = module_segments.join("::");
@@ -331,18 +348,41 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                 ImportSelection::Named { name, alias } => {
                     let exported_name = alias.unwrap_or_else(|| name.clone());
                     if let Some(type_def) = exports.type_defs.get(&name) {
-                        if imported_type_names.insert(type_def.name.clone()) {
-                            imported_type_defs.push(type_def.clone());
+                        let mut imported_type = type_def.clone();
+                        imported_type.name.clone_from(&exported_name);
+                        if imported_type_names.insert(imported_type.name.clone()) {
+                            imported_type_defs.push(imported_type);
                         }
+                        push_selected_semantic_summary(
+                            &mut imported_semantic_summaries,
+                            &mut imported_summary_keys,
+                            exports.semantic_summary.as_ref(),
+                            &name,
+                            &exported_name,
+                        );
                     } else if let Some(type_def) = exports.constructor_defs.get(&name) {
                         if imported_type_names.insert(type_def.name.clone()) {
                             imported_type_defs.push(type_def.clone());
                         }
+                        push_selected_semantic_summary(
+                            &mut imported_semantic_summaries,
+                            &mut imported_summary_keys,
+                            exports.semantic_summary.as_ref(),
+                            &type_def.name,
+                            &type_def.name,
+                        );
                     } else if let Some(callable) = exports.callables.get(&name) {
+                        push_signature_semantic_summaries(
+                            &mut imported_semantic_summaries,
+                            &mut imported_summary_keys,
+                            exports.semantic_summary.as_ref(),
+                            callable,
+                        );
                         // Imported callable signatures may mention private/opaque
                         // module-local type identities (for example std::act::Act
-                        // and Policy). Bring those identities into the type
-                        // environment without exposing constructors.
+                        // and Policy). Bring legacy identities into the type
+                        // environment without exposing constructors while semantic
+                        // summaries carry selected ordinary identities.
                         for type_def in exports.type_defs.values() {
                             if imported_type_names.insert(type_def.name.clone()) {
                                 imported_type_defs.push(type_def.clone());
@@ -368,8 +408,277 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
     Ok(LoadedOrdinaryFile {
         workflow_source: kept_lines.join("\n"),
         imported_type_defs,
+        imported_semantic_summaries,
         imported_callables,
     })
+}
+
+type ImportedSummaryKey = Vec<(String, String, Option<usize>, usize, String)>;
+
+fn push_selected_semantic_summary(
+    imported_semantic_summaries: &mut Vec<ModuleSemanticSummary>,
+    imported_summary_keys: &mut HashSet<ImportedSummaryKey>,
+    summary: Option<&ModuleSemanticSummary>,
+    source_name: &str,
+    imported_name: &str,
+) {
+    let Some(summary) = summary else {
+        return;
+    };
+    let Some(selected) = selected_type_semantic_summary(summary, source_name, imported_name) else {
+        return;
+    };
+    let key = imported_summary_key(&selected);
+    if imported_summary_keys.insert(key) {
+        imported_semantic_summaries.push(selected);
+    }
+}
+
+fn push_signature_semantic_summaries(
+    imported_semantic_summaries: &mut Vec<ModuleSemanticSummary>,
+    imported_summary_keys: &mut HashSet<ImportedSummaryKey>,
+    summary: Option<&ModuleSemanticSummary>,
+    callable: &InlineCallable,
+) {
+    let mut names = callable_signature_type_names(callable);
+    names.sort_unstable();
+    names.dedup();
+    for name in names {
+        push_selected_semantic_summary(
+            imported_semantic_summaries,
+            imported_summary_keys,
+            summary,
+            &name,
+            &name,
+        );
+    }
+}
+
+fn callable_signature_type_names(callable: &InlineCallable) -> Vec<String> {
+    let mut names = Vec::new();
+    match callable.signature.as_ref() {
+        Some(CallableSignature::Function(function)) => {
+            for param in &function.params {
+                collect_surface_type_names(&param.ty, &mut names);
+            }
+            if let Some(return_type) = function.return_type.as_ref() {
+                collect_surface_type_names(return_type, &mut names);
+            }
+            names.retain(|name| {
+                !function
+                    .type_params
+                    .iter()
+                    .any(|param| param.as_ref() == name)
+            });
+        }
+        Some(CallableSignature::Builtin(builtin)) => {
+            for param in &builtin.params {
+                collect_surface_type_names(&param.ty, &mut names);
+            }
+            collect_surface_type_names(&builtin.return_type, &mut names);
+            names.retain(|name| {
+                !builtin
+                    .type_params
+                    .iter()
+                    .any(|param| param.as_ref() == name)
+            });
+        }
+        None => {}
+    }
+    names
+}
+
+fn collect_surface_type_names(ty: &Type, names: &mut Vec<String>) {
+    match ty {
+        Type::Name(name) | Type::Capability(name) => names.push(name.to_string()),
+        Type::List(inner) | Type::Associated { base: inner, .. } => {
+            collect_surface_type_names(inner, names);
+        }
+        Type::Tuple(items) => {
+            for item in items {
+                collect_surface_type_names(item, names);
+            }
+        }
+        Type::Record(fields) => {
+            for (_, field_ty) in fields {
+                collect_surface_type_names(field_ty, names);
+            }
+        }
+        Type::Constructor { name, args } => {
+            names.push(name.to_string());
+            for arg in args {
+                collect_surface_type_names(arg, names);
+            }
+        }
+        Type::Fn(params, ret) => {
+            for param in params {
+                collect_surface_type_names(param, names);
+            }
+            collect_surface_type_names(ret, names);
+        }
+    }
+}
+
+fn rewrite_callable_signature_aliases(
+    callable: &mut InlineCallable,
+    source_summary: Option<&ModuleSemanticSummary>,
+    exported_summary: Option<&ModuleSemanticSummary>,
+) {
+    let Some(source_summary) = source_summary else {
+        return;
+    };
+    let Some(exported_summary) = exported_summary else {
+        return;
+    };
+
+    let aliases = source_summary
+        .exported_types
+        .iter()
+        .filter_map(|source_ty| {
+            exported_summary
+                .exported_types
+                .iter()
+                .find(|exported_ty| exported_ty.id == source_ty.id)
+                .map(|exported_ty| {
+                    (
+                        source_ty.exported_name.clone(),
+                        exported_ty.exported_name.clone(),
+                    )
+                })
+        })
+        .filter(|(source, exported)| source != exported)
+        .collect::<HashMap<_, _>>();
+    if aliases.is_empty() {
+        return;
+    }
+
+    match callable.signature.as_mut() {
+        Some(CallableSignature::Function(function)) => {
+            for param in &mut function.params {
+                rewrite_surface_type_aliases(&mut param.ty, &aliases);
+            }
+            if let Some(return_type) = function.return_type.as_mut() {
+                rewrite_surface_type_aliases(return_type, &aliases);
+            }
+        }
+        Some(CallableSignature::Builtin(builtin)) => {
+            for param in &mut builtin.params {
+                rewrite_surface_type_aliases(&mut param.ty, &aliases);
+            }
+            rewrite_surface_type_aliases(&mut builtin.return_type, &aliases);
+        }
+        None => {}
+    }
+}
+
+fn rewrite_surface_type_aliases(ty: &mut Type, aliases: &HashMap<String, String>) {
+    match ty {
+        Type::Name(name) | Type::Capability(name) => {
+            if let Some(alias) = aliases.get(name.as_ref()) {
+                *name = alias.as_str().into();
+            }
+        }
+        Type::List(inner) | Type::Associated { base: inner, .. } => {
+            rewrite_surface_type_aliases(inner, aliases);
+        }
+        Type::Tuple(items) => {
+            for item in items {
+                rewrite_surface_type_aliases(item, aliases);
+            }
+        }
+        Type::Record(fields) => {
+            for (_, field_ty) in fields {
+                rewrite_surface_type_aliases(field_ty, aliases);
+            }
+        }
+        Type::Constructor { name, args } => {
+            if let Some(alias) = aliases.get(name.as_ref()) {
+                *name = alias.as_str().into();
+            }
+            for arg in args {
+                rewrite_surface_type_aliases(arg, aliases);
+            }
+        }
+        Type::Fn(params, ret) => {
+            for param in params {
+                rewrite_surface_type_aliases(param, aliases);
+            }
+            rewrite_surface_type_aliases(ret, aliases);
+        }
+    }
+}
+
+pub(crate) fn public_callable_signature_visibility_errors(
+    source: &str,
+    type_defs: &[CoreTypeDef],
+) -> Vec<String> {
+    let private_ordinary_types = type_defs
+        .iter()
+        .filter(|type_def| {
+            !matches!(type_def.visibility, CoreVisibility::Public)
+                && !type_def.builtin
+                && !is_existing_opaque_compatibility_exception(type_def)
+        })
+        .map(|type_def| type_def.name.clone())
+        .collect::<HashSet<_>>();
+    if private_ordinary_types.is_empty() {
+        return Vec::new();
+    }
+
+    let mut errors = Vec::new();
+    for snippet in extract_braced_snippets(source, is_workflow_export_start) {
+        let callable = parse_workflow_callable(&snippet)
+            .ok()
+            .flatten()
+            .or_else(|| parse_workflow_signature_callable(&snippet));
+        if let Some(callable) = callable {
+            append_callable_signature_visibility_errors(
+                &callable.callable,
+                &private_ordinary_types,
+                &mut errors,
+            );
+        }
+    }
+    for snippet in extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn ")) {
+        if let Ok(Some(callable)) = parse_supported_pub_fn_callable(&snippet) {
+            append_callable_signature_visibility_errors(
+                &callable.callable,
+                &private_ordinary_types,
+                &mut errors,
+            );
+        }
+    }
+    for snippet in
+        extract_semicolon_snippets(source, |trimmed| trimmed.starts_with("pub builtin fn "))
+    {
+        if let Ok(Some(callable)) = parse_builtin_fn_callable(&snippet, String::new()) {
+            append_callable_signature_visibility_errors(
+                &callable.callable,
+                &private_ordinary_types,
+                &mut errors,
+            );
+        }
+    }
+    errors
+}
+
+fn append_callable_signature_visibility_errors(
+    callable: &InlineCallable,
+    private_ordinary_types: &HashSet<String>,
+    errors: &mut Vec<String>,
+) {
+    let mut leaked = callable_signature_type_names(callable)
+        .into_iter()
+        .filter(|name| private_ordinary_types.contains(name))
+        .collect::<Vec<_>>();
+    leaked.sort_unstable();
+    leaked.dedup();
+    for name in leaked {
+        errors.push(format!(
+            "public callable '{}' exposes private ordinary type '{}' in its signature",
+            callable.exported_name, name
+        ));
+    }
 }
 
 /// Extract all `pub type` definitions from source text.
@@ -404,6 +713,117 @@ pub fn collect_type_identity_defs_from_source(
         type_defs.push(parse_type_def_snippet(&snippet)?);
     }
     Ok(type_defs)
+}
+
+/// Parse a module source as a full `ModuleFile` and lower its ordinary type
+/// metadata into core declarations plus core-owned semantic summaries.
+pub(crate) fn collect_module_type_metadata_from_module_file(
+    path: &Path,
+    source: &str,
+) -> Result<ash_parser::lower::LoweredTypeMetadata, EngineError> {
+    let module = parse_module_file_for_type_metadata(path, source)?;
+    Ok(ash_parser::lower::lower_module_type_metadata(
+        &module,
+        module_identity_for_path(path),
+    ))
+}
+
+pub(crate) fn collect_runtime_stdlib_type_defs_from_module_file(
+    module_path: &str,
+    source: &str,
+) -> Result<Vec<CoreTypeDef>, EngineError> {
+    let virtual_path = PathBuf::from(format!("std://{}.ash", module_path.replace("::", "/")));
+    Ok(collect_module_type_metadata_from_module_file(&virtual_path, source)?.type_defs)
+}
+
+fn parse_module_file_for_type_metadata(
+    path: &Path,
+    source: &str,
+) -> Result<ash_parser::surface::ModuleFile, EngineError> {
+    match ash_parser::parse_surface_file_with_path(source, Some(path)) {
+        Ok(module) => Ok(module),
+        Err(first_errors) if source_contains_workflow_keyword(source) => {
+            let projected = module_source_without_legacy_workflow_exports(source);
+            if projected == source {
+                return Err(module_type_metadata_parse_error(path, &first_errors));
+            }
+            ash_parser::parse_surface_file_with_path(&projected, Some(path))
+                .map_err(|_| module_type_metadata_parse_error(path, &first_errors))
+        }
+        Err(errors) => Err(module_type_metadata_parse_error(path, &errors)),
+    }
+}
+
+/// Compatibility fence for Phase 108 legacy `pub workflow` export snippets.
+///
+/// TASK-785 routes ordinary type metadata through parsed `ModuleFile` lowering.
+/// Some legacy workflow-export snippets are still collected by the existing
+/// braced-snippet workflow path and are not accepted by full `ModuleFile` parsing.
+/// This projection removes only braced workflow exports, then retries `ModuleFile`
+/// parsing for ordinary type metadata. It is intentionally narrow and must not
+/// be generalized into ordinary type snippet scanning; TASK-789 owns removing or
+/// further quarantining legacy snippet paths.
+fn module_source_without_legacy_workflow_exports(source: &str) -> String {
+    let mut projected = source.to_string();
+    for snippet in extract_braced_snippets(source, is_workflow_export_start) {
+        projected = projected.replace(&snippet, "");
+    }
+    projected
+}
+
+fn module_type_metadata_parse_error(
+    path: &Path,
+    errors: &[ash_parser::error::ParseError],
+) -> EngineError {
+    EngineError::Parse(format!(
+        "in '{}': failed to parse module file for type metadata: {}",
+        path.display(),
+        format_parse_errors(errors)
+    ))
+}
+
+fn format_parse_errors(errors: &[ash_parser::error::ParseError]) -> String {
+    errors
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn module_identity_for_path(path: &Path) -> ModuleIdentity {
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let path_text = canonical.to_string_lossy().into_owned();
+    ModuleIdentity::new(
+        None,
+        ModuleId(stable_module_id_from_path(&path_text)),
+        module_identity_segments(&canonical),
+        ModuleSourceOrigin::File(path_text),
+    )
+}
+
+fn stable_module_id_from_path(path: &str) -> usize {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for byte in path.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    #[cfg(target_pointer_width = "64")]
+    {
+        usize::try_from(hash).expect("u64 hash fits in usize on 64-bit targets")
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        let folded = hash ^ (hash >> 32);
+        usize::try_from(folded & u64::from(u32::MAX))
+            .expect("folded 32-bit hash fits in usize on 32-bit targets")
+    }
+}
+
+fn module_identity_segments(path: &Path) -> Vec<String> {
+    path.file_stem().and_then(|stem| stem.to_str()).map_or_else(
+        || vec![path.to_string_lossy().into_owned()],
+        |stem| vec![stem.to_string()],
+    )
 }
 
 fn is_public_type_definition_start(trimmed: &str) -> bool {
@@ -639,10 +1059,14 @@ pub(crate) fn collect_module_exports(
         .map(|module| ash_parser::effectful_names_from_definitions(&module.definitions))
         .unwrap_or_default();
 
-    for snippet in extract_semicolon_snippets(&source, is_type_definition_start) {
-        let type_def = parse_type_def_snippet(&snippet)?;
-        insert_type_export(&mut exports, &type_def)?;
+    let type_metadata = collect_module_type_metadata_from_module_file(&path, &source)?;
+    for type_def in &type_metadata.type_defs {
+        insert_type_export(&mut exports, type_def)?;
     }
+    exports.semantic_summary = Some(exportable_module_semantic_summary(
+        &type_metadata.summary,
+        &exports.type_defs,
+    ));
 
     for name in extract_public_capability_names(&source) {
         insert_type_export(&mut exports, &capability_type_identity(&name))?;
@@ -831,10 +1255,22 @@ fn merge_use_exports(
 ) -> Result<(), EngineError> {
     use ash_parser::use_tree::UsePath;
 
+    let target_semantic_summary = target_exports.semantic_summary.clone();
+
     match use_stmt.path {
         UsePath::Glob(_) => {
             for (name, type_def) in target_exports.type_defs {
                 insert_type_export_with_name(exports, &name, type_def)?;
+            }
+            if let Some(summary) = target_semantic_summary.as_ref() {
+                for ty in &summary.exported_types {
+                    merge_type_summary_export(
+                        exports,
+                        summary,
+                        &ty.exported_name,
+                        &ty.exported_name,
+                    )?;
+                }
             }
             for (name, type_def) in target_exports.constructor_defs {
                 insert_constructor_export_with_name(exports, &name, type_def)?;
@@ -854,15 +1290,23 @@ fn merge_use_exports(
                 .map_or_else(|| name.clone(), |alias| alias.to_string());
             if let Some(type_def) = target_exports.type_defs.get(&name) {
                 insert_type_export_with_name(exports, &exported_name, type_def.clone())?;
+                if let Some(summary) = target_semantic_summary.as_ref() {
+                    merge_type_summary_export(exports, summary, &name, &exported_name)?;
+                }
             } else if let Some(type_def) = target_exports.constructor_defs.get(&name) {
                 insert_constructor_export_with_name(exports, &exported_name, type_def.clone())?;
             } else if let Some(callable) = target_exports.callables.get(&name) {
                 let mut callable = callable.clone();
+                rewrite_callable_signature_aliases(
+                    &mut callable,
+                    target_semantic_summary.as_ref(),
+                    exports.semantic_summary.as_ref(),
+                );
                 callable.exported_name.clone_from(&exported_name);
                 insert_callable_export(exports, &exported_name, callable)?;
+            } else {
+                return Err(missing_pub_use_target_error(&name));
             }
-            // Silently skip items not found in re-export target during
-            // module export collection (may reference not-yet-defined items).
         }
         UsePath::Nested(_, items) => {
             for item in items {
@@ -871,17 +1315,30 @@ fn merge_use_exports(
                     .map_or_else(|| item.name.to_string(), |alias| alias.to_string());
                 if let Some(type_def) = target_exports.type_defs.get(item.name.as_ref()) {
                     insert_type_export_with_name(exports, &exported_name, type_def.clone())?;
+                    if let Some(summary) = target_semantic_summary.as_ref() {
+                        merge_type_summary_export(
+                            exports,
+                            summary,
+                            item.name.as_ref(),
+                            &exported_name,
+                        )?;
+                    }
                 } else if let Some(type_def) =
                     target_exports.constructor_defs.get(item.name.as_ref())
                 {
                     insert_constructor_export_with_name(exports, &exported_name, type_def.clone())?;
                 } else if let Some(callable) = target_exports.callables.get(item.name.as_ref()) {
                     let mut callable = callable.clone();
+                    rewrite_callable_signature_aliases(
+                        &mut callable,
+                        target_semantic_summary.as_ref(),
+                        exports.semantic_summary.as_ref(),
+                    );
                     callable.exported_name.clone_from(&exported_name);
                     insert_callable_export(exports, &exported_name, callable)?;
+                } else {
+                    return Err(missing_pub_use_target_error(item.name.as_ref()));
                 }
-                // Silently skip items not found in re-export target during
-                // module export collection (may reference not-yet-defined items).
             }
         }
     }
@@ -893,17 +1350,21 @@ fn insert_type_export(
     exports: &mut ModuleExports,
     type_def: &CoreTypeDef,
 ) -> Result<(), EngineError> {
-    // Always export the type identity so imported callable signatures may name
-    // private/opaque types without exposing their representation.
-    let exported_type_def = if matches!(type_def.visibility, CoreVisibility::Public) {
-        type_def.clone()
-    } else {
+    // Public ordinary types export their representation. Non-public explicit
+    // builtin substrate types may still export an opaque identity so public
+    // callable signatures can name existing runtime-managed handles without
+    // exposing constructors or representations. Non-public ordinary types are
+    // not exported/importable downstream.
+    if matches!(type_def.visibility, CoreVisibility::Public) {
+        insert_type_export_with_name(exports, &type_def.name, type_def.clone())?;
+    } else if type_def.builtin || is_existing_opaque_compatibility_exception(type_def) {
         let mut opaque = type_def.clone();
         opaque.body = CoreTypeBody::Struct(vec![]);
         opaque.builtin = true;
-        opaque
-    };
-    insert_type_export_with_name(exports, &type_def.name, exported_type_def)?;
+        insert_type_export_with_name(exports, &type_def.name, opaque)?;
+    } else {
+        return Ok(());
+    }
 
     // Only public type definitions expose constructor names/representation to
     // importing modules.
@@ -918,6 +1379,151 @@ fn insert_type_export(
         }
     }
     Ok(())
+}
+
+fn missing_pub_use_target_error(name: &str) -> EngineError {
+    EngineError::Parse(format!(
+        "pub use target '{name}' not found in re-exported module"
+    ))
+}
+
+fn exportable_module_semantic_summary(
+    raw: &ModuleSemanticSummary,
+    exportable_types: &HashMap<String, CoreTypeDef>,
+) -> ModuleSemanticSummary {
+    let mut summary = raw.clone();
+    summary.exported_types = raw
+        .exported_types
+        .iter()
+        .filter_map(|ty| exportable_type_summary(ty, exportable_types))
+        .collect();
+    summary.exported_constructors = raw
+        .exported_constructors
+        .iter()
+        .filter(|constructor| exportable_types.contains_key(constructor.parent.name.as_str()))
+        .cloned()
+        .collect();
+    summary
+}
+
+fn exportable_type_summary(
+    ty: &TypeDeclSummary,
+    exportable_types: &HashMap<String, CoreTypeDef>,
+) -> Option<TypeDeclSummary> {
+    let exported = exportable_types.get(ty.exported_name.as_str())?;
+    let mut summary = ty.clone();
+    if !matches!(exported.visibility, CoreVisibility::Public) {
+        summary.representation_exposure =
+            ash_core::semantic_summary::RepresentationExposure::Opaque;
+        summary.representation = TypeRepresentationSummary::opaque(exported.builtin);
+    }
+    Some(summary)
+}
+
+fn selected_type_semantic_summary(
+    summary: &ModuleSemanticSummary,
+    source_name: &str,
+    imported_name: &str,
+) -> Option<ModuleSemanticSummary> {
+    let selected = summary
+        .exported_types
+        .iter()
+        .find(|ty| ty.exported_name == source_name)?;
+    let mut selected_type = selected.clone();
+    selected_type.exported_name = imported_name.into();
+    let mut selected_summary = ModuleSemanticSummary::new(summary.module.clone());
+    selected_summary.version = summary.version;
+    selected_summary.exported_types.push(selected_type);
+    selected_summary.exported_constructors = summary
+        .exported_constructors
+        .iter()
+        .filter(|constructor| constructor.parent == selected.id)
+        .cloned()
+        .collect();
+    selected_summary.re_exports.clone_from(&summary.re_exports);
+    selected_summary
+        .imported_summary_refs
+        .clone_from(&summary.imported_summary_refs);
+    selected_summary.reserved_identity_slots = summary.reserved_identity_slots.clone();
+    selected_summary
+        .diagnostic_anchors
+        .clone_from(&summary.diagnostic_anchors);
+    Some(selected_summary)
+}
+
+fn imported_summary_key(summary: &ModuleSemanticSummary) -> ImportedSummaryKey {
+    let mut key = summary
+        .exported_types
+        .iter()
+        .map(|ty| {
+            (
+                ty.exported_name.clone(),
+                ty.id.name.clone(),
+                ty.id.module.crate_id.map(|crate_id| crate_id.0),
+                ty.id.module.module_id.0,
+                format!("{:?}", ty.id.item_kind),
+            )
+        })
+        .collect::<Vec<_>>();
+    key.sort_unstable();
+    key
+}
+
+fn merge_type_summary_export(
+    exports: &mut ModuleExports,
+    target_summary: &ModuleSemanticSummary,
+    source_name: &str,
+    exported_name: &str,
+) -> Result<(), EngineError> {
+    let Some(mut ty) = target_summary
+        .exported_types
+        .iter()
+        .find(|ty| ty.exported_name == source_name)
+        .cloned()
+    else {
+        return Ok(());
+    };
+    ty.exported_name = exported_name.into();
+    let summary = exports
+        .semantic_summary
+        .get_or_insert_with(|| ModuleSemanticSummary::new(target_summary.module.clone()));
+    if let Some(existing) = summary
+        .exported_types
+        .iter()
+        .find(|existing| existing.exported_name == ty.exported_name)
+    {
+        if existing.id == ty.id {
+            return Ok(());
+        }
+        return Err(EngineError::Configuration(format!(
+            "duplicate exported type semantic summary '{}'",
+            ty.exported_name
+        )));
+    }
+    summary.exported_types.push(ty.clone());
+    for constructor in target_summary
+        .exported_constructors
+        .iter()
+        .filter(|constructor| constructor.parent == ty.id)
+    {
+        if !summary
+            .exported_constructors
+            .iter()
+            .any(|existing| existing.id == constructor.id)
+        {
+            summary.exported_constructors.push(constructor.clone());
+        }
+    }
+    Ok(())
+}
+
+fn is_existing_opaque_compatibility_exception(type_def: &CoreTypeDef) -> bool {
+    // Phase 97 std::act established an opaque public boundary using a private
+    // ordinary `Act<A>` alias over the explicit builtin `ActEnv` substrate. Keep
+    // that named identity importable until TASK-787+TASK-790 move the exception
+    // into a core-owned summary/diagnostic rule; do not generalize this to other
+    // private ordinary types.
+    type_def.name == "Act" && !matches!(type_def.visibility, CoreVisibility::Public)
 }
 
 fn insert_type_export_with_name(
@@ -1497,19 +2103,17 @@ fn extract_callable_from_workflow(
         ..
     } = workflow;
 
-    let (expr, signature) = match body {
-        Workflow::Ret { expr, .. } => (expr, None),
-        other => {
-            let fn_def = workflow_signature_from_parts(
-                name.clone(),
-                params.clone(),
-                declared_return_type,
-                &other,
-                span,
-            );
-            let expr = workflow_signature_expr(&fn_def);
-            (expr, Some(CallableSignature::Function(fn_def)))
-        }
+    let fn_def = workflow_signature_from_parts(
+        name.clone(),
+        params.clone(),
+        declared_return_type,
+        &body,
+        span,
+    );
+    let signature = Some(CallableSignature::Function(fn_def.clone()));
+    let expr = match body {
+        Workflow::Ret { expr, .. } => expr,
+        _ => workflow_signature_expr(&fn_def),
     };
 
     Ok(Some(ImportedCallableExport {
@@ -2403,13 +3007,9 @@ pub type Flag = On | Off;",
         assert!(
             matches!(private_opaque.body, CoreTypeBody::Struct(ref fields) if fields.is_empty())
         );
-        let private_alias = exports
-            .type_defs
-            .get("PrivateAlias")
-            .expect("private alias identity should export opaquely");
-        assert!(private_alias.builtin);
         assert!(
-            matches!(private_alias.body, CoreTypeBody::Struct(ref fields) if fields.is_empty())
+            !exports.type_defs.contains_key("PrivateAlias"),
+            "private ordinary aliases must not be exported/importable downstream"
         );
         assert!(!exports.constructor_defs.contains_key("PrivateOpaque"));
         assert!(!exports.constructor_defs.contains_key("PrivateAlias"));
@@ -2424,8 +3024,7 @@ pub type Flag = On | Off;",
             "type Secret = Int;\npub type Public = Int;",
         )
         .expect("write inner");
-        std::fs::write(dir.join("outer.ash"), "pub use inner::{Secret, Public};")
-            .expect("write outer");
+        std::fs::write(dir.join("outer.ash"), "pub use inner::{Public};").expect("write outer");
         std::fs::write(
             dir.join("caller.ash"),
             "use outer::{Public}\nworkflow main { ret 0 }\n",
@@ -2433,7 +3032,7 @@ pub type Flag = On | Off;",
         .expect("write caller");
 
         let loaded = load_ordinary_file(&dir.join("caller.ash"))
-            .expect("public type remains importable through mixed re-export");
+            .expect("public type remains importable through public re-export");
         assert!(
             loaded
                 .imported_type_defs
@@ -2447,21 +3046,20 @@ pub type Flag = On | Off;",
                 .any(|def| def.name == "Secret")
         );
 
-        let reexport_secret_caller = dir.join("reexport_secret_caller.ash");
-        std::fs::write(
-            &reexport_secret_caller,
-            "use outer::{Secret}\nworkflow main { ret 0 }\n",
+        let reexport_secret_module = dir.join("reexport_secret.ash");
+        std::fs::write(&reexport_secret_module, "pub use inner::{Secret};")
+            .expect("write re-export secret module");
+        let err = collect_module_exports(
+            &reexport_secret_module,
+            &mut HashMap::new(),
+            &mut HashSet::new(),
         )
-        .expect("write re-export secret caller");
-        let loaded = load_ordinary_file(&reexport_secret_caller)
-            .expect("private Secret identity should be importable opaquely");
-        let secret = loaded
-            .imported_type_defs
-            .iter()
-            .find(|def| def.name == "Secret")
-            .expect("Secret identity imported");
-        assert!(secret.builtin);
-        assert!(matches!(secret.body, CoreTypeBody::Struct(ref fields) if fields.is_empty()));
+        .expect_err("private ordinary re-export must fail");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Secret") && msg.contains("pub use"),
+            "private ordinary re-export diagnostic should mention Secret and pub use: {msg}"
+        );
 
         let secret_caller = dir.join("secret_caller.ash");
         std::fs::write(
@@ -2469,14 +3067,12 @@ pub type Flag = On | Off;",
             "use inner::{Secret}\nworkflow main { ret 0 }\n",
         )
         .expect("write secret caller");
-        let loaded = load_ordinary_file(&secret_caller)
-            .expect("private Secret identity should be directly importable opaquely");
-        let secret = loaded
-            .imported_type_defs
-            .iter()
-            .find(|def| def.name == "Secret")
-            .expect("Secret identity imported");
-        assert!(secret.builtin);
-        assert!(matches!(secret.body, CoreTypeBody::Struct(ref fields) if fields.is_empty()));
+        let err = load_ordinary_file(&secret_caller)
+            .expect_err("private ordinary Secret identity should not import");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Secret") && msg.contains("not found"),
+            "private ordinary import diagnostic should mention Secret not found: {msg}"
+        );
     }
 }

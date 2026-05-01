@@ -21,7 +21,8 @@ use crate::surface::{
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, CapabilityRef,
     Constraint, Contract, Definition, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate, ProxyDef,
-    ResourceField, ResourceTypeDef, RoleDef, Type, Visibility, WhereBound, Workflow, YieldArm,
+    ResourceField, ResourceTypeDef, RoleDef, Type, TypeBody, TypeDef, TypeField, VariantDef,
+    VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -154,6 +155,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             continue;
         }
 
+        if starts_with_type_definition(input) {
+            definitions.push(parse_type_definition(input)?);
+            continue;
+        }
+
         if starts_with_visible_capability_interface(input) {
             definitions.push(parse_capability_interface_definition(input)?);
             continue;
@@ -259,6 +265,135 @@ fn parse_resource_field(input: &mut ParseInput) -> ModalResult<ResourceField> {
         ty,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     })
+}
+
+fn parse_type_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let start_input = input.input.to_string();
+    let mut lookahead = crate::input::new_input(&start_input);
+    let parsed = crate::parse_type_def::parse_type_def(&mut lookahead)?;
+    let consumed = start_input.len().saturating_sub(lookahead.input.len());
+
+    for _ in start_input[..consumed].chars() {
+        let Some(c) = input.input.next_token() else {
+            break;
+        };
+        input.state.advance(c);
+    }
+    if input.input.starts_with(';') {
+        let _ = input.input.next_slice(1);
+        input.state.advance(';');
+    }
+
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
+    Ok(Definition::Type(convert_type_def(parsed, span)))
+}
+
+fn convert_type_def(parsed: crate::parse_type_def::TypeDef, span: Span) -> TypeDef {
+    TypeDef {
+        visibility: convert_type_visibility(parsed.visibility),
+        name: parsed.name.into_boxed_str(),
+        params: parsed
+            .params
+            .into_iter()
+            .map(String::into_boxed_str)
+            .collect(),
+        body: convert_type_body(parsed.body, span),
+        builtin: parsed.builtin,
+        span,
+        source: None,
+    }
+}
+
+fn convert_type_visibility(visibility: crate::parse_type_def::Visibility) -> Visibility {
+    match visibility {
+        crate::parse_type_def::Visibility::Public => Visibility::Public,
+        crate::parse_type_def::Visibility::Crate => Visibility::Crate,
+        crate::parse_type_def::Visibility::Private => Visibility::Inherited,
+    }
+}
+
+fn convert_type_body(body: crate::parse_type_def::TypeBody, span: Span) -> TypeBody {
+    match body {
+        crate::parse_type_def::TypeBody::Struct(fields) => TypeBody::Struct(
+            fields
+                .into_iter()
+                .map(|(name, ty)| convert_type_field(name, ty, span))
+                .collect(),
+        ),
+        crate::parse_type_def::TypeBody::Enum(variants) => TypeBody::Enum(
+            variants
+                .into_iter()
+                .map(|variant| convert_variant_def(variant, span))
+                .collect(),
+        ),
+        crate::parse_type_def::TypeBody::Alias(ty) => TypeBody::Alias(convert_type_expr(ty)),
+    }
+}
+
+fn convert_variant_def(variant: crate::parse_type_def::VariantDef, span: Span) -> VariantDef {
+    let fields: Vec<TypeField> = variant
+        .fields
+        .into_iter()
+        .map(|(name, ty)| convert_type_field(name, ty, span))
+        .collect();
+    let payload = match variant.payload {
+        crate::parse_type_def::VariantPayload::Unit => VariantPayload::Unit,
+        crate::parse_type_def::VariantPayload::Record(record_fields) => VariantPayload::Record(
+            record_fields
+                .into_iter()
+                .map(|(name, ty)| convert_type_field(name, ty, span))
+                .collect(),
+        ),
+        crate::parse_type_def::VariantPayload::Tuple(items) => {
+            VariantPayload::Tuple(items.into_iter().map(convert_type_expr).collect())
+        }
+    };
+
+    VariantDef {
+        name: variant.name.into_boxed_str(),
+        fields,
+        payload,
+        span,
+    }
+}
+
+fn convert_type_field(name: String, ty: crate::parse_type_def::TypeExpr, span: Span) -> TypeField {
+    TypeField {
+        name: name.into_boxed_str(),
+        ty: convert_type_expr(ty),
+        span,
+    }
+}
+
+fn convert_type_expr(ty: crate::parse_type_def::TypeExpr) -> Type {
+    match ty {
+        crate::parse_type_def::TypeExpr::Named(name) => Type::Name(name.into_boxed_str()),
+        crate::parse_type_def::TypeExpr::Constructor { name, args } if name == "Fn" => {
+            let mut args: Vec<Type> = args.into_iter().map(convert_type_expr).collect();
+            if let Some(ret) = args.pop() {
+                Type::Fn(args, Box::new(ret))
+            } else {
+                Type::Constructor {
+                    name: name.into_boxed_str(),
+                    args,
+                }
+            }
+        }
+        crate::parse_type_def::TypeExpr::Constructor { name, args } => Type::Constructor {
+            name: name.into_boxed_str(),
+            args: args.into_iter().map(convert_type_expr).collect(),
+        },
+        crate::parse_type_def::TypeExpr::Tuple(items) => {
+            Type::Tuple(items.into_iter().map(convert_type_expr).collect())
+        }
+        crate::parse_type_def::TypeExpr::Record(fields) => Type::Record(
+            fields
+                .into_iter()
+                .map(|(name, ty)| (name.into_boxed_str(), convert_type_expr(ty)))
+                .collect(),
+        ),
+    }
 }
 
 fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -1188,6 +1323,26 @@ fn starts_with_visible_keyword(input: &ParseInput, word: &str) -> bool {
     }
 }
 
+fn starts_with_type_definition(input: &ParseInput) -> bool {
+    if starts_with_keyword(input, "type") {
+        return true;
+    }
+
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(_) => {
+            skip_whitespace_and_comments(&mut lookahead);
+            if starts_with_keyword(&lookahead, "builtin") {
+                let rest = skip_ws_in(&lookahead.input["builtin".len()..]);
+                starts_with_keyword_from(rest, "type")
+            } else {
+                starts_with_keyword(&lookahead, "type")
+            }
+        }
+        Err(_) => false,
+    }
+}
+
 fn starts_with_visible_resource_type(input: &ParseInput) -> bool {
     let mut lookahead = crate::input::new_input(&input.input);
     match parse_visibility(&mut lookahead) {
@@ -1281,7 +1436,6 @@ fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
         "pub",
         "workflow",
         "policy",
-        "type",
         "datatype",
         "memory",
         "mod",
@@ -1290,6 +1444,23 @@ fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
     ]
     .into_iter()
     .any(|keyword| starts_with_keyword(input, keyword))
+}
+
+fn starts_with_recoverable_definition(input: &ParseInput) -> bool {
+    starts_with_visible_keyword(input, "workflow")
+        || starts_with_visible_keyword(input, "mod")
+        || starts_with_keyword(input, "role")
+        || starts_with_visible_resource_type(input)
+        || starts_with_type_definition(input)
+        || starts_with_visible_capability_interface(input)
+        || starts_with_visible_capability_impl(input)
+        || starts_with_visible_keyword(input, "capability")
+        || starts_with_keyword(input, "proxy")
+        || starts_with_visible_keyword(input, "interface")
+        || starts_with_visible_keyword(input, "impl")
+        || starts_with_builtin_fn(input)
+        || starts_with_visible_keyword(input, "fn")
+        || starts_with_unsupported_inline_definition(input)
 }
 
 fn consume_optional_comma(input: &mut ParseInput) {
@@ -1321,10 +1492,7 @@ fn skip_unknown_definition(input: &mut ParseInput) {
     while !input.input.is_empty() {
         if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 && consumed_any {
             skip_whitespace_and_comments(input);
-            if starts_with_keyword(input, "role")
-                || starts_with_keyword(input, "capability")
-                || starts_with_unsupported_inline_definition(input)
-            {
+            if starts_with_recoverable_definition(input) {
                 break;
             }
         }
@@ -2319,6 +2487,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
 
         if starts_with_visible_resource_type(input) {
             definitions.push(parse_resource_type_definition(input)?);
+            continue;
+        }
+
+        if starts_with_type_definition(input) {
+            definitions.push(parse_type_definition(input)?);
             continue;
         }
 

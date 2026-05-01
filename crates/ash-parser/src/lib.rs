@@ -85,6 +85,14 @@ pub fn parse_surface_file_with_path(
             }
             module.comments = input.state.comments;
             module.path = path.map(|p| p.to_string_lossy().into_owned().into());
+            if let Some(source) = module.path.clone() {
+                attach_type_definition_source(&mut module.definitions, &source);
+                for module_decl in &mut module.module_decls {
+                    if let module::ModuleSource::Inline(definitions) = &mut module_decl.source {
+                        attach_type_definition_source(definitions, &source);
+                    }
+                }
+            }
             Ok(module)
         }
         Err(e) => {
@@ -93,6 +101,14 @@ pub fn parse_surface_file_with_path(
                 span,
                 format!("parse error: {e}"),
             )])
+        }
+    }
+}
+
+fn attach_type_definition_source(definitions: &mut [surface::Definition], source: &str) {
+    for definition in definitions {
+        if let surface::Definition::Type(type_def) = definition {
+            type_def.source = Some(source.into());
         }
     }
 }

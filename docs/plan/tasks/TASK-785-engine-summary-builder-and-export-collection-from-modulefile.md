@@ -1,6 +1,6 @@
 # TASK-785: Engine Summary Builder and Export Collection from ModuleFile
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -27,12 +27,20 @@ Build engine export summaries from parsed ModuleFile/core summaries instead of r
 3. Ensure public function/workflow signatures can pull public type identities from summaries.
 4. Route normal module checks away from snippet type extraction and add instrumentation/tests proving public type export works with snippet scanning disabled or fenced.
 5. Keep any compatibility fallback explicitly fenced.
+6. Preserve Phase 108 workflow-summary export data while refactoring type export collection: `ModuleExports.callables`, `InlineCallable.workflow_summary`, `PublicWorkflowSummary`, imported-summary origin stamping, and TASK-777 workflow-returning callable export behavior must survive the new ordinary-type summary builder.
+7. Add or retain tests proving the new ordinary-type summary path does not clear workflow summaries on imported workflow-returning callables.
 
 ## Verification
 
-- [ ] Normal module loading and checking exports type metadata from ModuleFile/core summaries across the relevant engine entry points.
-- [ ] Existing import/export tests continue to pass.
-- [ ] Snippet scanner is not required for normal public type exports.
+- [x] Normal module loading and checking exports type metadata from ModuleFile/core summaries across the relevant engine entry points.
+- [x] Existing import/export tests continue to pass.
+- [x] Snippet scanner is not required for normal public type exports.
+
+## Completion Notes
+
+- Added the engine ModuleFile-backed ordinary-type metadata helper that parses a module with path metadata and lowers through `ash_parser::lower::lower_module_type_metadata` using a deterministic path-derived `ModuleIdentity`.
+- Routed `collect_module_exports` and `Engine::check_module_file` through the ModuleFile/core summary path for ordinary type definitions while leaving legacy scanner helpers fenced for compatibility/TASK-789.
+- Preserved Phase 108 workflow summary transport (`InlineCallable.workflow_summary`, import-origin stamping, and workflow-returning callable summaries) with focused TASK-785 regression coverage.
 
 ## Implementation Notes
 

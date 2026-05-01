@@ -78,6 +78,8 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::CapabilityImplementation(i) => Some(i.name.as_ref().to_string()),
         Definition::ResourceType(r) if Some(r.name.as_ref()) == current_token => None,
         Definition::ResourceType(r) => Some(r.name.as_ref().to_string()),
+        Definition::Type(t) if Some(t.name.as_ref()) == current_token => None,
+        Definition::Type(t) => Some(t.name.as_ref().to_string()),
         Definition::Impl(_) => None, // impl blocks don't have a useful single name
         Definition::BuiltinFn(b) if Some(b.name.as_ref()) == current_token => None,
         Definition::BuiltinFn(b) => Some(b.name.as_ref().to_string()),
@@ -90,7 +92,9 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         Definition::Capability(_) | Definition::Role(_) | Definition::Proxy(_) => {
             CompletionItemKind::CLASS
         }
-        Definition::Policy(_) | Definition::ResourceType(_) => CompletionItemKind::STRUCT,
+        Definition::Policy(_) | Definition::ResourceType(_) | Definition::Type(_) => {
+            CompletionItemKind::STRUCT
+        }
         Definition::Interface(_) | Definition::CapabilityInterface(_) => {
             CompletionItemKind::INTERFACE
         }

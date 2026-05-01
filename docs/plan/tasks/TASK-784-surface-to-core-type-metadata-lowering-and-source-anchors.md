@@ -1,6 +1,6 @@
 # TASK-784: Surface-to-Core Type Metadata Lowering and Source Anchors
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -30,9 +30,24 @@ Lower surface ordinary type declarations into core summaries with stable source 
 
 ## Verification
 
-- [ ] Surface declarations lower to core ordinary type declarations.
-- [ ] Source spans survive into summary diagnostics.
-- [ ] Existing SPEC-020 ADT behavior is preserved.
+- [x] Surface declarations lower to core ordinary type declarations.
+- [x] Source spans survive into summary diagnostics.
+- [x] Existing SPEC-020 ADT behavior is preserved.
+
+## Completion Notes
+
+- Added parser-side lowering helpers in `ash-parser::lower` that convert parsed `surface::TypeDef` declarations into `ash_core::ast::TypeDef` values plus core-owned `ModuleSemanticSummary` entries.
+- The summary-producing API requires a resolved `ModuleIdentity`, so ordinary type IDs are module-anchored rather than string-only.
+- Lowering preserves visibility, generic parameters, alias/struct/enum bodies, enum payload kinds, builtin opaque markers, declaration spans, and module/declaration source anchors.
+- Added focused TDD coverage for public aliases, generic structs, generic enums with tuple/record/unit constructors, and public builtin opaque types.
+
+## Verification
+
+- `cargo test -p ash-parser task784 -- --nocapture`
+- `cargo test -p ash-core semantic_summary -- --nocapture`
+- `cargo fmt`
+- `cargo check --workspace`
+- `git diff --check`
 
 ## Implementation Notes
 

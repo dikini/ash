@@ -35,7 +35,7 @@
 | [TASK-779](tasks/TASK-779-first-class-workflow-closeout.md) | Add examples, reconcile docs/status/changelog, and run final verification | Docs/Planning | 4 | ✅ Complete |
 
 Estimated total: 77 hours.
-Remaining after TASK-769: 66 hours.
+Remaining: 0 hours (Phase 108 complete).
 
 ## Tracks
 

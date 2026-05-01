@@ -82,6 +82,8 @@ pub enum Definition {
     CapabilityImplementation(CapabilityImplementationDef),
     /// Resource type definition
     ResourceType(ResourceTypeDef),
+    /// Ordinary type declaration
+    Type(TypeDef),
     /// Policy definition
     Policy(PolicyDef),
     /// Role definition
@@ -96,6 +98,71 @@ pub enum Definition {
     Function(FnDef),
     /// Builtin function definition (no Ash-level body)
     BuiltinFn(BuiltinFnDef),
+}
+
+/// An ordinary type declaration parsed as a file/module surface definition.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeDef {
+    /// Visibility modifier (pub, pub(crate), etc.)
+    pub visibility: Visibility,
+    /// Name of the declared type
+    pub name: Name,
+    /// Generic type parameters (e.g., `<T, U>`)
+    pub params: Vec<Name>,
+    /// Type body (struct, enum, or alias)
+    pub body: TypeBody,
+    /// Whether this type is declared as runtime-managed builtin substrate.
+    pub builtin: bool,
+    /// Source span covering the declaration.
+    pub span: Span,
+    /// Optional filesystem path of the source file/module that produced this declaration.
+    pub source: Option<Box<str>>,
+}
+
+/// Body of an ordinary type declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeBody {
+    /// Struct type: `type Point = { x: Int, y: Int };`
+    Struct(Vec<TypeField>),
+    /// Enum type: `type Status = Pending | Processing;`
+    Enum(Vec<VariantDef>),
+    /// Type alias: `type Name = String;`
+    Alias(Type),
+}
+
+/// A named field in a type declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeField {
+    /// Field name
+    pub name: Name,
+    /// Field type
+    pub ty: Type,
+    /// Source span. When fine-grained spans are unavailable, this is the declaration span.
+    pub span: Span,
+}
+
+/// Variant definition for ordinary enum type declarations.
+#[derive(Debug, Clone, PartialEq)]
+pub struct VariantDef {
+    /// Variant name
+    pub name: Name,
+    /// Named record fields, if present.
+    pub fields: Vec<TypeField>,
+    /// Explicit payload shape for the variant.
+    pub payload: VariantPayload,
+    /// Source span. When fine-grained spans are unavailable, this is the declaration span.
+    pub span: Span,
+}
+
+/// Explicit payload shape for enum variants.
+#[derive(Debug, Clone, PartialEq)]
+pub enum VariantPayload {
+    /// Unit variant with no payload
+    Unit,
+    /// Record variant with named fields
+    Record(Vec<TypeField>),
+    /// Tuple variant with positional items
+    Tuple(Vec<Type>),
 }
 
 /// A named resource type definition.

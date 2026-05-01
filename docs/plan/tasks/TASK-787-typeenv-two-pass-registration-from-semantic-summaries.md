@@ -1,6 +1,6 @@
 # TASK-787: TypeEnv Two-Pass Registration from Semantic Summaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -26,14 +26,15 @@ Consume semantic summaries in TypeEnv with two-pass declaration, validation, and
 2. Validate type bodies and expose representations/constructors according to visibility; distinguish identity-only imports from full public representation exposure.
 3. Preserve sibling forward-reference behavior from SPEC-030.
 4. Handle placeholder upgrade conflicts explicitly with a tagged declaration/placeholder state so real empty structs and opaque summaries are not mistaken for placeholders.
-5. Register imported public type identities before imported signatures are checked, and register local ordinary type definitions before interfaces/resources/functions that may mention them.
-6. Add tests for imported public types, private leakage, duplicates, sibling/self/generic references, and malformed generic arity where current ordinary generic metadata is sufficient to validate it.
+5. Register imported public type identities before imported signatures are checked, and register local ordinary type definitions before interfaces/resources/functions that may mention them. The implementation should explicitly reconcile live `TypeEnv` APIs such as `register_type_identity`, `expose_type_representation`, `declare_type_name`, and `register_type` with the new summary path.
+6. Register ordinary type identities before binding or checking imported Phase 108 `PublicWorkflowSummary` users, including `TypeEnv::bind_public_workflow_summary`, `TypeEnv::lookup_public_workflow_summary`, and imported `do:Workflow` / `[...]: Workflow` composition checks.
+7. Add tests for imported public types, private leakage, duplicates, sibling/self/generic references, malformed generic arity where current ordinary generic metadata is sufficient to validate it, and workflow-summary preservation when imported Workflow summaries mention ordinary public type identities.
 
 ## Verification
 
-- [ ] Sibling/self/generic type references register independent of order.
-- [ ] Imported public type identities are available before imported callables are checked.
-- [ ] Placeholder behavior is explicit and tested.
+- [x] Sibling/self/generic type references register independent of order.
+- [x] Imported public type identities are available before imported callables are checked.
+- [x] Placeholder behavior is explicit and tested.
 
 ## Implementation Notes
 

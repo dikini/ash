@@ -8,7 +8,21 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- [SPEC-057](docs/spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [PLAN-105](docs/plan/PLAN-105-UNIFIED-TYPE-MODULE-PIPELINE-SEMANTIC-SUMMARIES.md), and [TASK-780](docs/plan/tasks/TASK-780-unified-type-module-pipeline-spec-plan-packet.md) through [TASK-791](docs/plan/tasks/TASK-791-spec-a-closeout-docs-examples-verification.md): promoted DESIGN-034 SPEC-A into a Phase 109 packet for the Tier 0 unified ordinary type/module pipeline. Ordinary `type` declarations must flow through ModuleFile, core semantic summaries, engine import/export transport, and TypeEnv registration while source-snippet type discovery is fenced; `type fn`, sealed domains, normalization, generalized associated type-family computation, and propositions remain deferred.
+- [TASK-787](docs/plan/tasks/TASK-787-typeenv-two-pass-registration-from-semantic-summaries.md): added `TypeEnv::register_module_semantic_summary` with two-pass ordinary-type identity declaration and exposed-representation validation, explicit declaration-state tracking so real empty structs and opaque identity-only imports are not mistaken for placeholders, canonical type identity/visible alias maps, constructor exposure for public exposed enum summaries, generic arity validation for summary-backed types, focused TypeEnv regression coverage, and engine storage/registration of imported semantic summaries before callable/workflow summary typechecking while retaining a fenced legacy `TypeDef` compatibility path that respects named-import summary scoping, alias-visible names, and canonical-id equality for imported aliases.
+
+- [TASK-786](docs/plan/tasks/TASK-786-import-pub-use-glob-visibility-and-opacity-summary-rules.md): added focused ash-engine coverage and rules for named/glob import and `pub use` ordinary-type summary transport, constructor-only imports, child-module non-flattening, missing re-export diagnostics, public/private/crate visibility enforcement, explicit builtin/legacy `Act` opaque compatibility, aliased callable signature dependency transport, re-exported constructor summaries, and Phase 108 workflow-summary preservation through named, glob, and re-export paths.
+
+- [TASK-785](docs/plan/tasks/TASK-785-engine-summary-builder-and-export-collection-from-modulefile.md): added the engine ModuleFile-backed ordinary-type metadata path, lowering parsed modules through `ash_parser::lower::lower_module_type_metadata` with deterministic path-derived `ModuleIdentity`, routing `collect_module_exports` and `Engine::check_module_file` away from normal source-snippet type extraction, rejecting public callable/workflow signatures that expose private ordinary types, preserving private opaque identity compatibility and Phase 108 `PublicWorkflowSummary` import/export transport, and covering multiline type imports/checks plus workflow-summary non-interference.
+
+- [TASK-784](docs/plan/tasks/TASK-784-surface-to-core-type-metadata-lowering-and-source-anchors.md): added parser-side ordinary type metadata lowering from parsed `surface::TypeDef` declarations to core `TypeDef` values and module-anchored `ModuleSemanticSummary` entries, preserving visibility, generic params, alias/struct/enum bodies, enum payload kinds, builtin opaque markers, declaration spans, and source anchors with focused alias/struct/enum/generic/builtin lowering tests.
+
+- [TASK-783](docs/plan/tasks/TASK-783-core-canonical-type-ids-and-module-semantic-summary-carriers.md): added `ash_core::semantic_summary` with core-owned canonical ordinary type identities, constructor identities derived from parent type identity plus payload kind, `ModuleSemanticSummary` and public ordinary type/constructor/re-export carriers, diagnostic source anchors, representation exposure metadata, and reserved uninterpreted future identity namespaces while preserving Phase 108 `PublicWorkflowSummary` as a separate carrier.
+
+- [TASK-782](docs/plan/tasks/TASK-782-modulefile-ordinary-type-declaration-surface-integration.md): added `surface::Definition::Type` for ordinary `type` declarations, wired them through ModuleFile and inline-module parsing using the existing type-definition grammar, preserved declaration/source anchors, prevented unknown-item recovery from skipping valid type declarations, and compile-fixed downstream LSP Definition match sites.
+
+- [TASK-781](docs/plan/tasks/TASK-781-current-type-pipeline-audit-and-semantic-summary-gate.md): completed the Phase 109 docs/substrate audit in `docs/plan/audits/TASK-781-type-pipeline-audit.md`, freezing the semantic-summary implementation gate before Rust behavior changes. The audit records the current ModuleFile/type-declaration drift, parser-private type carrier limitations, engine snippet-scanner call graph, TypeEnv registration path, private opaque placeholder compatibility behavior, Phase 108 `PublicWorkflowSummary` non-interference path, and SPEC-057 requirement-to-task traceability.
+
+- [SPEC-057](docs/spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [PLAN-105](docs/plan/PLAN-105-UNIFIED-TYPE-MODULE-PIPELINE-SEMANTIC-SUMMARIES.md), and [TASK-780](docs/plan/tasks/TASK-780-unified-type-module-pipeline-spec-plan-packet.md) through [TASK-791](docs/plan/tasks/TASK-791-spec-a-closeout-docs-examples-verification.md): promoted DESIGN-034 SPEC-A into a Phase 109 packet for the Tier 0 unified ordinary type/module pipeline and review-hardened it after the Phase 108 merge. Ordinary `type` declarations must flow through ModuleFile, core semantic summaries, engine import/export transport, and TypeEnv registration; TASK-789 owns full source-snippet type-discovery quarantine/removal, and snippet scanning is not the normal semantic path in the meantime; the ordinary-type summary roadbed must preserve Phase 108 `PublicWorkflowSummary` transport; `type fn`, sealed domains, normalization, generalized associated type-family computation, and propositions remain deferred.
 
 - [DESIGN-034](docs/design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md): drafted and spec-set-hardened the total compile-time type computation design note, separating Monad/HKT/inference work from type-level reduction, recording the hard requirement that accepted compile-time type computation be total, terminating, and normalizing, and adding explicit Tier 0 prerequisites, neutral normal forms, sealed nominal marker domains, coverage/termination/coherence rules, rigid projection boundaries, an ordered SPEC-A through SPEC-H packet decomposition with crate ownership and module-summary sequencing, tightened associated type-family computation semantics, implementation sequencing, and DX diagnostics.
 
@@ -188,6 +202,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+
+- Phase 109 corpus/cleanliness follow-up: reconciled PLAN-105 completion checklist status through TASK-787, corrected PLAN-INDEX remaining work after TASK-787 to 21 hours with TASK-788 through TASK-791 still planned, and tightened TASK-780/PLAN wording so full source-snippet type scanner quarantine/removal remains honestly owned by planned TASK-789.
 
 - TASK-767: reconciled LSP planning/status documents against the live `ash-lsp` and `ash-lsp-core` implementation. Downgraded Phase 87 to the verified local LSP MVP, restored Phase 89/TASK-576/SPEC-043 Salsa work to planned status, and recorded post-Phase-89 Ash syntax/semantics drift that must be audited before further LSP feature work.
 - Reconciled PLAN-INDEX aggregate progress rows for Phase 106 so both summary tables now match the completed Phase 106 task section and merged implementation state.
@@ -934,8 +950,6 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - SPEC-031 v0.4 (approved): `fn(params) { body }` as expression producing `Value::Closure`, named local fn desugars to `let name = fn(...)`, `|x| => body` closure syntax, `Arc<EnvFrame>` shared scope capture, `BindingSlot::Late` for recursion, `Expr::FnApply` for user calls, `Type::Fn`/`Type::Fun` three-vertex enforcement.
   - PLAN-028: 9 tasks (TASK-551 through TASK-559), 5 migration phases (A-E), deletes 476 lines of `pure_runtime.rs`.
   - Phase 80 registered in PLAN-INDEX.
-
-### Added
 
 - **Phase 78: Module Type Resolution (SPEC-030)** — Two-pass type collection, module-file checking, and pub fn diagnostics:
   - Two-pass type registration with pre-declaration in `TypeEnv` for forward references (TASK-539). Extracted `is_placeholder` helper for deduplicated placeholder detection.
@@ -2104,8 +2118,6 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Added (continued 4)
 
 - List literal parsing for expressions: `[1, 2, 3]` or `["a", "b"]` syntax. Updated SPEC-002 to define list_literal production. Added Literal::List variant to surface AST.
-
-### Added (continued 5)
 
 - Initial project structure with workspace and 9 crates (ash-core, ash-macros, ash-parser, ash-typeck, ash-interp, ash-provenance, ash-cli, ash-lint, ash-doc-tests)
 - Effect lattice implementation with 4 levels: Epistemic, Deliberative, Evaluative, Operational (TASK-001)

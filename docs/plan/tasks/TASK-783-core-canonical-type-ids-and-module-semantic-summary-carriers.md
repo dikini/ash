@@ -1,6 +1,6 @@
 # TASK-783: Core Canonical Type IDs and ModuleSemanticSummary Carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## References
 
@@ -28,12 +28,13 @@ Add core-owned canonical identity and semantic summary carriers for ordinary typ
 4. Include visibility, representation exposure, source-origin, module identity/path, and diagnostic anchor metadata; spans are diagnostic anchors, not identity inputs.
 5. Include reserved extension namespaces for future type-computation packets without interpreting them; future type-function, sealed-domain, generalized projection, and associated-family identity semantics remain deferred.
 6. Avoid engine-private or parser-private ownership of semantic carriers.
+7. Define the carrier as an ordinary-type module semantic summary for SPEC-A. It MUST NOT replace, erase, or reinterpret Phase 108 `ash_core::workflow_carrier::PublicWorkflowSummary` or any workflow contract/projection summary carrier.
 
 ## Verification
 
-- [ ] Core-owned carrier exists and is serializable/debuggable as needed.
-- [ ] Summary can represent public ordinary types and constructor exposure.
-- [ ] No type-function/normalizer semantics are added.
+- [x] Core-owned carrier exists and is serializable/debuggable as needed.
+- [x] Summary can represent public ordinary types and constructor exposure.
+- [x] No type-function/normalizer semantics are added.
 
 ## Implementation Notes
 

@@ -29,6 +29,8 @@ Harden user-visible diagnostics and prove SPEC-A does not change unrelated langu
 5. Add snippet fallback diagnostics.
 6. Add negative tests for deferred `type fn` and `sealed type domain` syntax.
 7. Run non-regression coverage for ADTs, imports, interfaces, associated types, workflows, capabilities/resources, do, and comprehensions. At minimum, run affected crate tests plus `cargo test --all` when feasible; document any unrelated failures with exact commands.
+8. Include Phase 108 TASK-777 workflow summary import/export regressions in the required non-interference set. Tests must prove ordinary-type summary work does not clear `InlineCallable.workflow_summary`, `Workflow.imported_workflow_summaries`, TypeEnv public workflow-summary bindings, or imported-summary origins.
+9. Preserve Phase 108 reference-only example boundaries: supported `do:Workflow` and `[...]: Workflow` examples should remain executable, while reference-only algebra/lift source-file examples must keep their explicit reference-only expectations until their separate typed-elaboration follow-up exists.
 
 ## Verification
 

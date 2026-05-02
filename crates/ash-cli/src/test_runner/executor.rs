@@ -118,26 +118,52 @@ pub(crate) fn run_operation_with_timeout<F>(
 where
     F: FnOnce() -> (Outcome, Option<String>) + Send + 'static,
 {
+    let started_at = Instant::now();
     let (tx, rx) = mpsc::sync_channel(1);
     thread::spawn(move || {
         let result = panic::catch_unwind(AssertUnwindSafe(operation));
-        let _ = tx.send(match result {
+        let result = match result {
             Ok(result) => result,
             Err(panic_payload) => (Outcome::Panic, panic_message(panic_payload)),
+        };
+        let _ = tx.send(TimedOperationResult {
+            result,
+            completed_at: Instant::now(),
         });
     });
 
     match rx.recv_timeout(timeout) {
-        Ok(result) => result,
-        Err(mpsc::RecvTimeoutError::Timeout) => (
-            Outcome::Error,
-            Some(format!("test timed out after {}ms", timeout.as_millis())),
-        ),
+        Ok(result) => classify_operation_result(started_at, timeout, result),
+        Err(mpsc::RecvTimeoutError::Timeout) => timeout_result(timeout),
         Err(mpsc::RecvTimeoutError::Disconnected) => (
             Outcome::Error,
             Some("test execution thread terminated unexpectedly".to_string()),
         ),
     }
+}
+
+struct TimedOperationResult {
+    result: (Outcome, Option<String>),
+    completed_at: Instant,
+}
+
+fn classify_operation_result(
+    started_at: Instant,
+    timeout: Duration,
+    result: TimedOperationResult,
+) -> (Outcome, Option<String>) {
+    if result.completed_at.duration_since(started_at) > timeout {
+        timeout_result(timeout)
+    } else {
+        result.result
+    }
+}
+
+fn timeout_result(timeout: Duration) -> (Outcome, Option<String>) {
+    (
+        Outcome::Error,
+        Some(format!("test timed out after {}ms", timeout.as_millis())),
+    )
 }
 
 fn panic_message(panic_payload: Box<dyn std::any::Any + Send>) -> Option<String> {
@@ -560,6 +586,24 @@ mod tests {
         assert!(
             started.elapsed() < Duration::from_millis(150),
             "timeout containment should return before the full operation completes"
+        );
+    }
+
+    #[test]
+    fn operation_result_after_deadline_is_timeout_even_if_receiver_wakes_late() {
+        let started = Instant::now();
+        let result = TimedOperationResult {
+            result: (Outcome::Pass, None),
+            completed_at: started + Duration::from_millis(200),
+        };
+
+        let (outcome, message) =
+            classify_operation_result(started, Duration::from_millis(25), result);
+
+        assert_eq!(outcome, Outcome::Error);
+        assert!(
+            message.unwrap_or_default().contains("timed out after 25ms"),
+            "late completion should be reported as timeout"
         );
     }
 

@@ -8,8 +8,9 @@ pub type ErrorKind = NotFound | PermissionDenied | InvalidInput | Other;
 -- IO error type with kind and message
 pub type Error = Error { kind: ErrorKind, message: String };
 
--- Result type alias for IO operations
-pub type Result<T> = Ok { value: T } | Err { error: Error };
+-- NOTE(TASK-792): io::Result<T> remains deferred until qualified applied
+-- generic aliases can name std::result::Result<T, Error> without shadowing the
+-- prelude Result<T, E> identity.
 
 -- Path module for pure path operations
 pub mod path;

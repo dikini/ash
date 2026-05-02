@@ -7,6 +7,60 @@ use ash_interp::error::EvalError;
 use ash_interp::eval::{
     BuiltinEntry, builtin_dispatch_table, dispatch_builtin, eval_expr, is_known_builtin,
 };
+use std::path::{Path, PathBuf};
+
+fn workspace_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.pop();
+    path.pop();
+    path
+}
+
+fn stdlib_root() -> PathBuf {
+    workspace_root().join("std/src")
+}
+
+fn builtin_module_prefix(path: &Path) -> String {
+    let root = stdlib_root();
+    let relative = path.strip_prefix(&root).unwrap_or(path);
+    let without_ext = relative.with_extension("");
+    let mut parts: Vec<String> = without_ext
+        .iter()
+        .map(|part| part.to_string_lossy().into_owned())
+        .collect();
+    if parts.last().is_some_and(|part| part == "mod") {
+        parts.pop();
+    }
+    parts.join("::")
+}
+
+fn collect_stdlib_builtin_declarations(dir: &Path, out: &mut Vec<String>) {
+    for entry in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display())) {
+        let entry = entry.expect("stdlib dir entry should be readable");
+        let path = entry.path();
+        if path.is_dir() {
+            collect_stdlib_builtin_declarations(&path, out);
+            continue;
+        }
+        if path.extension().is_none_or(|ext| ext != "ash") {
+            continue;
+        }
+
+        let module = builtin_module_prefix(&path);
+        let source = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for line in source.lines() {
+            let Some(rest) = line.trim_start().strip_prefix("pub builtin fn ") else {
+                continue;
+            };
+            let Some(before_args) = rest.split('(').next() else {
+                continue;
+            };
+            let name = before_args.split('<').next().unwrap_or(before_args).trim();
+            out.push(format!("{module}::{name}"));
+        }
+    }
+}
 
 // ── TASK-621: Dispatch table structure ────────────────────────────
 
@@ -97,15 +151,63 @@ fn dispatch_table_contains_unqualified_builtins() {
 }
 
 #[test]
-fn dispatch_table_forward_declared_builtins_are_marked_unimplemented() {
+fn dispatch_table_string_case_and_whitespace_builtins_are_implemented() {
     let table = builtin_dispatch_table();
     for name in &["string::to_upper", "string::to_lower", "string::trim"] {
         let entry = table
             .get(name)
             .unwrap_or_else(|| panic!("{name} should be in the dispatch table"));
         assert!(
+            entry.implemented,
+            "{name} should be marked implemented because eval_function_call handles it"
+        );
+    }
+}
+
+#[test]
+fn stdlib_pub_builtin_declarations_have_honest_dispatch_entries() {
+    let table = builtin_dispatch_table();
+    let mut declarations = Vec::new();
+    collect_stdlib_builtin_declarations(&stdlib_root(), &mut declarations);
+    declarations.sort();
+
+    let missing: Vec<_> = declarations
+        .iter()
+        .filter(|name| !table.contains_key(name.as_str()))
+        .cloned()
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "every stdlib `pub builtin fn` must have a dispatch-table entry; missing {missing:?}"
+    );
+}
+
+#[test]
+fn provider_backed_stdlib_builtins_are_forward_declared_not_implemented() {
+    let table = builtin_dispatch_table();
+    for name in [
+        "http::get",
+        "http::post",
+        "http::put",
+        "http::delete",
+        "time::now",
+        "time::now_iso",
+        "time::epoch_millis",
+        "time::sleep",
+        "io::stdio::read_line",
+        "io::fs::read",
+        "io::fs::read_to_string",
+        "io::dir::read_dir",
+        "io::meta::metadata",
+        "io::buf::read_to_end",
+    ] {
+        let entry = table
+            .get(name)
+            .unwrap_or_else(|| panic!("{name} should have an honest forward dispatch entry"));
+        assert!(
             !entry.implemented,
-            "{name} should be marked as not implemented"
+            "{name} should stay marked unimplemented until provider bridge shapes are implemented"
         );
     }
 }
@@ -315,9 +417,9 @@ fn dispatch_builtin_act_guard_wrong_arity_is_reported() {
 #[test]
 fn dispatch_builtin_forward_declared_produces_unimplemented_error() {
     let ctx = Context::new();
-    let args = vec![Value::String("hello".into())];
-    let result = dispatch_builtin("string::to_upper", &args, &ctx)
-        .expect("dispatch should find string::to_upper in the table");
+    let args = vec![Value::String("https://example.invalid".into())];
+    let result = dispatch_builtin("http::get", &args, &ctx)
+        .expect("dispatch should find http::get in the table");
     assert!(
         matches!(result, Err(EvalError::UnimplementedBuiltin { .. })),
         "forward-declared builtin should produce UnimplementedBuiltin, got: {result:?}"
@@ -343,23 +445,25 @@ fn unimplemented_builtin_error_message_is_clear() {
 #[test]
 fn eval_function_call_forward_declared_via_expr_produces_unimplemented() {
     let ctx = Context::new();
-    // Call string::to_upper("hello") — it's in the dispatch table but not
-    // implemented in eval_function_call's match arms.
+    // Call http::get("https://example.invalid") — it is forward-declared in
+    // the dispatch table but deliberately not bridged in the interpreter.
     let expr = Expr::Call {
-        func: "to_upper".to_string(),
-        module: Some("string".to_string()),
-        arguments: vec![Expr::Literal(Value::String("hello".into()))],
+        func: "get".to_string(),
+        module: Some("http".to_string()),
+        arguments: vec![Expr::Literal(Value::String(
+            "https://example.invalid".into(),
+        ))],
     };
     let err = eval_expr(&expr, &ctx).unwrap_err();
     assert!(
         matches!(err, EvalError::UnimplementedBuiltin { .. }),
-        "expected UnimplementedBuiltin for string::to_upper, got: {err:?}"
+        "expected UnimplementedBuiltin for http::get, got: {err:?}"
     );
 
     // Verify the error message contains the qualified name
     let msg = err.to_string();
     assert!(
-        msg.contains("string::to_upper"),
+        msg.contains("http::get"),
         "error message should contain qualified name, got: {msg}"
     );
 }
@@ -853,6 +957,23 @@ fn eval_function_call_unqualified_is_int_still_works_via_expr() {
 
 // ── TASK-598: process::run dispatch and evaluation ──────────────
 
+fn assert_process_run_record(result: Value, stdout: &str, stderr: &str, exit_code: i64) {
+    match result {
+        Value::Record(fields) => {
+            assert_eq!(
+                fields.get("stdout"),
+                Some(&Value::String(stdout.to_string()))
+            );
+            assert_eq!(
+                fields.get("stderr"),
+                Some(&Value::String(stderr.to_string()))
+            );
+            assert_eq!(fields.get("exit_code"), Some(&Value::Int(exit_code)));
+        }
+        other => panic!("expected process::run result record, got {other:?}"),
+    }
+}
+
 #[test]
 fn dispatch_table_contains_process_run() {
     let table = builtin_dispatch_table();
@@ -879,7 +1000,7 @@ fn dispatch_builtin_process_run_echo() {
     let result = dispatch_builtin("process::run", &args, &ctx)
         .expect("dispatch should find process::run")
         .expect("process::run should succeed");
-    assert_eq!(result, Value::String("hello\n".to_string()));
+    assert_process_run_record(result, "hello\n", "", 0);
 }
 
 #[test]
@@ -895,7 +1016,7 @@ fn dispatch_builtin_process_run_with_multiple_args() {
     let result = dispatch_builtin("process::run", &args, &ctx)
         .expect("dispatch should find process::run")
         .expect("process::run should succeed");
-    assert_eq!(result, Value::String("hello world\n".to_string()));
+    assert_process_run_record(result, "hello world\n", "", 0);
 }
 
 #[test]
@@ -905,7 +1026,7 @@ fn dispatch_builtin_process_run_empty_args() {
     let result = dispatch_builtin("process::run", &args, &ctx)
         .expect("dispatch should find process::run")
         .expect("process::run should succeed");
-    assert_eq!(result, Value::String("\n".to_string()));
+    assert_process_run_record(result, "\n", "", 0);
 }
 
 #[test]
@@ -949,7 +1070,7 @@ fn eval_function_call_process_run_via_expr() {
         ],
     };
     let result = eval_expr(&expr, &ctx).expect("process::run should succeed");
-    assert_eq!(result, Value::String("hello\n".to_string()));
+    assert_process_run_record(result, "hello\n", "", 0);
 }
 
 // ── TASK-596: Markdown builtin dispatch tests ────────────────────

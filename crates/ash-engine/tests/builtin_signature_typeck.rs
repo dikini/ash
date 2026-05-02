@@ -143,10 +143,10 @@ fn non_builtin_callable_uses_arity_only_fallback() {
 // ---------------------------------------------------------------------------
 
 /// Verify that if an imported builtin fn declaration references a type the
-/// typechecker does not know about, `Engine::check` fails rather than silently
-/// replacing the declared signature with an arity-only synthetic type.
+/// engine rejects the public signature at the import/export boundary rather than
+/// silently replacing the declared signature with an arity-only synthetic type.
 #[test]
-fn builtin_fn_signature_with_unknown_type_fails_check() {
+fn builtin_fn_signature_with_unknown_type_fails_at_import_boundary() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
 
@@ -165,16 +165,9 @@ fn builtin_fn_signature_with_unknown_type_fails_check() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
-
-    assert!(
-        workflow.imported_builtin_signatures.contains_key("keys"),
-        "Expected 'keys' in imported_builtin_signatures"
-    );
-
     let err = engine
-        .check(&mut workflow)
-        .expect_err("unknown type in declared imported signature must fail check");
+        .parse_file(&caller)
+        .expect_err("unknown type in declared imported signature must fail import");
     assert!(
         err.to_string().contains("NotRegistered"),
         "error should mention unknown type, got: {err}"

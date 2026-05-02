@@ -189,9 +189,15 @@ impl ProcessProvider {
         match output {
             Ok(o) if o.status.success() => {
                 let path = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                Ok(Value::String(path))
+                Ok(Value::Variant {
+                    name: "Some".to_string(),
+                    fields: Box::new(vec![("value".to_string(), Value::String(path))]),
+                })
             }
-            _ => Ok(Value::Null),
+            _ => Ok(Value::Variant {
+                name: "None".to_string(),
+                fields: Box::new(vec![]),
+            }),
         }
     }
 }
@@ -459,8 +465,14 @@ mod tests {
             .unwrap();
         // On Linux, ls should be found
         match result {
-            Value::String(path) => assert!(path.contains("ls")),
-            other => panic!("Expected String path, got {other:?}"),
+            Value::Variant { name, fields } => {
+                assert_eq!(name, "Some");
+                assert!(matches!(
+                    fields.as_slice(),
+                    [(field, Value::String(path))] if field == "value" && path.contains("ls")
+                ));
+            }
+            other => panic!("Expected Some(path), got {other:?}"),
         }
     }
 
@@ -474,6 +486,12 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(result, Value::Null);
+        assert_eq!(
+            result,
+            Value::Variant {
+                name: "None".to_string(),
+                fields: Box::new(vec![]),
+            }
+        );
     }
 }

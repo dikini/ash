@@ -1,12 +1,12 @@
 # SPEC-057: Unified Type/Module Pipeline and Semantic Summaries
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-04-30
 **Promotes:** [DESIGN-034 §16.1](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#161-spec-a-unified-typemodule-pipeline-and-semantic-summaries)
 **Builds on:** [SPEC-003](SPEC-003-TYPE-SYSTEM.md), [SPEC-009](SPEC-009-MODULES.md), [SPEC-012](SPEC-012-IMPORTS.md), [SPEC-020](SPEC-020-ADT-TYPES.md), [SPEC-030](SPEC-030-MODULE-TYPE-RESOLUTION.md)
 **Related:** [SPEC-034](SPEC-034-WHERE-BOUNDED-GENERIC-INTERFACE-IMPLEMENTATIONS.md), [SPEC-035](SPEC-035-ASSOCIATED-TYPES.md), [SPEC-056](SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md)
 **Plan:** [PLAN-105](../plan/PLAN-105-UNIFIED-TYPE-MODULE-PIPELINE-SEMANTIC-SUMMARIES.md)
-**Implementation Tasks:** [TASK-780](../plan/tasks/TASK-780-unified-type-module-pipeline-spec-plan-packet.md) through [TASK-791](../plan/tasks/TASK-791-spec-a-closeout-docs-examples-verification.md)
+**Implementation Tasks:** [TASK-780](../plan/tasks/TASK-780-unified-type-module-pipeline-spec-plan-packet.md) through [TASK-792](../plan/tasks/TASK-792-phase109-review-remediation.md)
 
 ## 1. Summary
 
@@ -32,13 +32,13 @@ This spec does not add type-level computation. It creates the semantic-summary r
 
 DESIGN-034 requires total compile-time type computation to be total, terminating, normalizing, and modular. That requirement cannot be implemented safely while ordinary type metadata is fragmented across parser-only structures, engine-private export tables, typechecker maps, source snippets, and capability-specific metadata carriers.
 
-Current implementation reality matches this risk:
+Before Phase 109, implementation reality matched this risk:
 
-- `crates/ash-parser/src/parse_type_def.rs` parses ordinary type definitions, but the normal `ModuleFile` path does not yet make ordinary `type` declarations an authoritative definition item.
-- `crates/ash-engine/src/module_loader.rs` has engine-side source-snippet collection paths such as `collect_public_type_defs_from_source`, `collect_type_identity_defs_from_source`, and `extract_semicolon_snippets`.
-- `crates/ash-engine/src/module_loader.rs` owns an engine-private `ModuleExports` structure that carries type exports and constructor exports.
-- `crates/ash-core/src/ast.rs` already has ordinary `TypeDef`, `TypeBody`, `VariantDef`, `TypeExpr`, and `ModuleItem::Type` carriers.
-- `crates/ash-typeck/src/type_env.rs` already has placeholder declaration, registration, constructor exposure, transparent aliases, interfaces, associated types, capability/resource metadata, and impl schemes.
+- `crates/ash-parser/src/parse_type_def.rs` parsed ordinary type definitions, but the normal `ModuleFile` path did not yet make ordinary `type` declarations an authoritative definition item.
+- `crates/ash-engine/src/module_loader.rs` had engine-side source-snippet collection paths such as `collect_public_type_defs_from_source`, `collect_type_identity_defs_from_source`, and `extract_semicolon_snippets`.
+- `crates/ash-engine/src/module_loader.rs` owned an engine-private `ModuleExports` structure that carried type exports and constructor exports.
+- `crates/ash-core/src/ast.rs` already had ordinary `TypeDef`, `TypeBody`, `VariantDef`, `TypeExpr`, and `ModuleItem::Type` carriers.
+- `crates/ash-typeck/src/type_env.rs` already had placeholder declaration, registration, constructor exposure, transparent aliases, interfaces, associated types, capability/resource metadata, and impl schemes.
 
 SPEC-057 reconciles those paths by making ordinary type metadata a normal module semantic artifact owned by `ash-core`, transported by `ash-engine`, and consumed by `ash-typeck`.
 
@@ -253,7 +253,9 @@ Existing import syntax remains unchanged. SPEC-057 only ensures ordinary type me
 
 Required behavior:
 
-- named imports bring public type identities and allowed constructor identities into scope;
+- named imports bring public type identities and selected constructor identities into scope;
+- representation dependencies required to check an imported public type are transported as semantic summary metadata, but their constructors are exposed only when the dependency type or constructor is selected by the import/re-export;
+- repeated selected imports for the same parent type merge constructor metadata cumulatively without duplicating or narrowing the parent type identity summary;
 - glob imports bring the same public type metadata they would bring for explicit names;
 - `pub use` re-exports preserve canonical identity;
 - child module summaries are available for explicit re-export without implicit flattening;
@@ -272,6 +274,8 @@ Required behavior:
 This preserves SPEC-030 sibling type resolution while moving its inputs from source snippets to semantic summaries. TypeEnv may need canonical identity-aware keys or alias-to-identity bindings; string-only names are insufficient for re-export identity preservation, import-order independence, and duplicate detection.
 
 The implementation MUST explicitly handle placeholders. It SHOULD avoid confusing a real empty struct declaration with a placeholder, or document and test the compatibility behavior if the current placeholder shape remains temporarily.
+
+TypeEnv must treat an opaque/identity-only summary for a visible canonical identity as an incomplete declaration that may later be upgraded by a compatible exposed summary for the same visible name and `TypeDeclId`. That upgrade must not be reported as a duplicate type or conflicting summary; incompatible visible aliases or mismatched contracts remain errors.
 
 Imported summaries MUST register type identities before imported callables, workflow summaries, interface methods, or ordinary function signatures that mention those types are checked. This includes `PublicWorkflowSummary` users introduced by Phase 108: imported workflow summaries must see the ordinary type identities they mention before `TypeEnv::bind_public_workflow_summary`, `TypeEnv::lookup_public_workflow_summary`, or imported `do:Workflow` / `[...]: Workflow` composition checks run.
 
@@ -353,8 +357,8 @@ Any behavior change outside ordinary type metadata routing requires a separate t
 - A public type imported from another module resolves to the same canonical identity as the definition site.
 - `pub use` preserves canonical identity.
 - Private ordinary types cannot be imported downstream.
-- Public signatures mentioning private ordinary types are rejected unless an existing explicit opaque/builtin exception applies.
-- Constructors are imported/exposed only when representation visibility permits.
+- Public signatures mentioning private, imported-private, or unresolved ordinary types are rejected unless an existing explicit opaque/builtin exception applies; capability references and current builtin carrier names are not ordinary-type references for this validation.
+- Constructors are exposed only for selected constructor/type summaries whose representation visibility allows exposure; partial constructor summaries for the same parent type accumulate instead of replacing one another.
 
 ### 17.5 Snippet extraction containment
 
@@ -407,6 +411,7 @@ SPEC-A defines the carrier roadbed. SPEC-F later extends that roadbed with compu
 - [TASK-789](../plan/tasks/TASK-789-legacy-type-snippet-scanner-quarantine-removal.md): Legacy type-snippet scanner quarantine/removal.
 - [TASK-790](../plan/tasks/TASK-790-diagnostics-negative-tests-and-non-interference-coverage.md): Diagnostics, negative tests, and non-interference coverage.
 - [TASK-791](../plan/tasks/TASK-791-spec-a-closeout-docs-examples-verification.md): SPEC-A closeout, docs, examples, and verification.
+- [TASK-792](../plan/tasks/TASK-792-phase109-review-remediation.md): Phase 109 review remediation.
 
 ## 20. Changelog
 

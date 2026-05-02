@@ -285,7 +285,7 @@ Update this section as tasks complete:
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 2 | 🚧 In Progress |
 | 108 | 12 | 1 | 📝 Planned |
-| 109 | 12 | 12 | ✅ Complete |
+| 109 | 13 | 13 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -391,7 +391,7 @@ This table is retained near the original early-phase section for historical cont
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 2 | 🚧 In Progress |
 | 108 | 12 | 1 | 📝 Planned |
-| 109 | 12 | 12 | ✅ Complete |
+| 109 | 13 | 13 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3105,12 +3105,12 @@ Promote `Workflow<A>` into a first-class, contract-indexed process carrier. Phas
 ## Phase 109: Unified Type/Module Pipeline and Semantic Summaries
 
 **Priority:** High (Tier 0 prerequisite for [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md) total compile-time type computation)
-**Status:** 🚧 In Progress (TASK-780 through TASK-787 complete; interface/legacy/diagnostics closeout tasks remain planned)
+**Status:** ✅ Complete (TASK-780 through TASK-792 complete)
 **Spec:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-105-UNIFIED-TYPE-MODULE-PIPELINE-SEMANTIC-SUMMARIES.md](PLAN-105-UNIFIED-TYPE-MODULE-PIPELINE-SEMANTIC-SUMMARIES.md)
 
-Phase 109 implements SPEC-A from DESIGN-034. It unifies ordinary type declaration handling by routing `type` metadata through ModuleFile, core semantic summaries, engine import/export transport, and TypeEnv registration. TASK-789 owns full source-snippet ordinary type-definition scanner quarantine/removal; until then, snippet scanning is not the normal semantic path. The phase establishes canonical type/module identity, visibility, opacity, and summary transport needed by later total type computation specs. It does not implement `type fn`, sealed type domains, type-level normalization, associated type-family computation, or proposition solving.
+Phase 109 implements SPEC-A from DESIGN-034. It unifies ordinary type declaration handling by routing `type` metadata through ModuleFile, core semantic summaries, engine import/export transport, and TypeEnv registration. TASK-789 quarantined legacy source-snippet ordinary type-definition scanning behind explicit compatibility scopes; snippet scanning is not the normal semantic path. TASK-792 remediated post-closeout review findings around status coherence, summary authority, alias transport, selected representation dependency transport, and stdlib semantic/corpus preservation. The phase establishes canonical type/module identity, visibility, opacity, and summary transport needed by later total type computation specs. It does not implement `type fn`, sealed type domains, type-level normalization, associated type-family computation, or proposition solving.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
@@ -3126,10 +3126,11 @@ Phase 109 implements SPEC-A from DESIGN-034. It unifies ordinary type declaratio
 | [TASK-789](tasks/TASK-789-legacy-type-snippet-scanner-quarantine-removal.md) | Legacy type-snippet scanner quarantine/removal | 5 | ✅ Complete |
 | [TASK-790](tasks/TASK-790-diagnostics-negative-tests-and-non-interference-coverage.md) | Diagnostics, negative tests, and non-interference coverage | 6 | ✅ Complete |
 | [TASK-791](tasks/TASK-791-spec-a-closeout-docs-examples-verification.md) | SPEC-A closeout, docs, examples, and verification | 4 | ✅ Complete |
+| [TASK-792](tasks/TASK-792-phase109-review-remediation.md) | Phase 109 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-A to SPEC-057/PLAN-105, then audit current parser/core/engine/typechecker paths before implementation begins.
 **Track B (Parser/Core Semantic Substrate):** 20h. Route ordinary type declarations into ModuleFile, add core canonical IDs and summary carriers, and lower surface metadata into summaries with source anchors.
-**Track C (Engine Module Import/Export Path):** 20h. Build/export summaries from ModuleFile/core summaries, apply named/glob/pub-use visibility and opacity rules (complete through TASK-786), and remove or fence legacy snippet scanning in TASK-789. Remaining after TASK-791: 0 hours.
+**Track C (Engine Module Import/Export Path):** 20h. Build/export summaries from ModuleFile/core summaries, apply named/glob/pub-use visibility and opacity rules (complete through TASK-786), remove or fence legacy snippet scanning in TASK-789, and harden alias/dependency transport in TASK-792. Remaining after TASK-792: 0 hours.
 **Track D (Typechecker Consumption and Identity Plumbing):** 14h. Consume summaries through TypeEnv two-pass declaration/validation/exposure and preserve current interface/associated-member identities without adding associated-family computation.
 **Track E (Diagnostics and Closeout):** 10h. Harden diagnostics, prove non-interference, reconcile docs/status/changelog, and run final verification.
 

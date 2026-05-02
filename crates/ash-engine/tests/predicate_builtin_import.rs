@@ -52,17 +52,19 @@ fn predicate_builtin_import_resolves_at_module_load() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
 
-    // Write a local predicate.ash that mirrors std/src/predicate.ash
+    // Write a local predicate.ash that mirrors std/src/predicate.ash. The
+    // generic parameter is part of the public signature and must not be treated
+    // as an unresolved ordinary type by import/export validation.
     std::fs::write(
         dir.join("predicate.ash"),
         "\
 -- Type predicate functions
-pub builtin fn is_int(value: a) -> Bool;
-pub builtin fn is_string(value: a) -> Bool;
-pub builtin fn is_bool(value: a) -> Bool;
-pub builtin fn is_list(value: a) -> Bool;
-pub builtin fn is_record(value: a) -> Bool;
-pub builtin fn is_null(value: a) -> Bool;
+pub builtin fn is_int<a>(value: a) -> Bool;
+pub builtin fn is_string<a>(value: a) -> Bool;
+pub builtin fn is_bool<a>(value: a) -> Bool;
+pub builtin fn is_list<a>(value: a) -> Bool;
+pub builtin fn is_record<a>(value: a) -> Bool;
+pub builtin fn is_null<a>(value: a) -> Bool;
 ",
     )
     .expect("write predicate.ash");
@@ -120,12 +122,12 @@ fn predicate_all_builtins_import_via_glob() {
     std::fs::write(
         dir.join("predicate.ash"),
         "\
-pub builtin fn is_int(value: a) -> Bool;
-pub builtin fn is_string(value: a) -> Bool;
-pub builtin fn is_bool(value: a) -> Bool;
-pub builtin fn is_list(value: a) -> Bool;
-pub builtin fn is_record(value: a) -> Bool;
-pub builtin fn is_null(value: a) -> Bool;
+pub builtin fn is_int<a>(value: a) -> Bool;
+pub builtin fn is_string<a>(value: a) -> Bool;
+pub builtin fn is_bool<a>(value: a) -> Bool;
+pub builtin fn is_list<a>(value: a) -> Bool;
+pub builtin fn is_record<a>(value: a) -> Bool;
+pub builtin fn is_null<a>(value: a) -> Bool;
 ",
     )
     .expect("write predicate.ash");

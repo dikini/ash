@@ -2492,9 +2492,15 @@ pub fn type_check_workflow_in_env(
         }
     }
 
-    // Inject imported callable names into the resolver
+    // Inject imported callable names and registered unit constructor terms into
+    // the resolver. Constructors are not lexical variables, but name resolution
+    // must allow bare unit constructors so type checking can validate them
+    // against TypeEnv's visibility-filtered constructor table.
     if let Some(env) = type_env {
         for name in env.variable_names() {
+            resolver.bind(name);
+        }
+        for name in env.unit_constructor_names() {
             resolver.bind(name);
         }
     }

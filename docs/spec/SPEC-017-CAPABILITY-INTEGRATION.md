@@ -1104,19 +1104,19 @@ workflow file_operations {
 
 ### 11.4 Result Type Reuse
 
-The `io` modules reuse `result::Result<T, E>` rather than introducing a separate global `Result` ADT:
+The `io` modules reuse the canonical `result::Result<T, E>` design rather than introducing a separate global or IO-specific `Result` ADT. A short `io::Result<T>` alias remains deferred until qualified applied generic aliases can represent `result::Result<T, io::Error>` without shadowing the prelude `Result<T, E>` identity:
 
 ```ash
 use result::Result;
 use io::{Error, ErrorKind};
 
--- io::Result<T> is an alias for result::Result<T, io::Error>
-let content: io::Result<String> = io::fs::read_to_string("file.txt");
-
-match content {
-    Ok { value: text } -> process(text),
-    Err { error: e } -> handle_error(e),
-}
+-- Future alias spelling: io::Result<T> = result::Result<T, io::Error>
+-- Current checked stdlib exposes Error/ErrorKind and keeps the alias deferred.
+-- Provider-backed filesystem declarations currently expose their raw success
+-- payload (for example String) until capability-wrapper bodies can return the
+-- canonical Result shape without aliasing ambiguity.
+let content: String = io::fs::read_to_string("file.txt");
+process(content);
 ```
 
 ### 11.5 IO Capability Vocabulary
@@ -1157,7 +1157,7 @@ The initial capability vocabulary for `io` operations includes:
 - TASK-112: Capability declaration verification
 - TASK-113: Read/write type checking
 - TASK-233: Capability definition parsing specification (completed)
-- TASK-234: Capability definition parser implementation (pending)
+- TASK-234: Capability definition parser implementation (completed)
 - TASK-493: Freeze Stdlib IO V1 Contract (completed - this spec updated)
 
 ## References

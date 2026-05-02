@@ -167,7 +167,7 @@ The `io` namespace is a top-level standard-library module family providing file,
 
 | Module | Description | Capability-Bearing |
 |--------|-------------|-------------------|
-| `io` | Root module with shared `Error`, `ErrorKind`, `Result<T>` alias | No |
+| `io` | Root module with shared `Error` and `ErrorKind`; `io::Result<T>` aliases remain deferred until qualified applied generic aliases are implemented | No |
 | `io::path` | Pure path manipulation (`Path`, `PathBuf`, `join`, `parent`, etc.) | **No** - Pure functions only |
 | `io::stdio` | Standard I/O operations (`print`, `read_line`, `stdin()`, `stdout()`, etc.) | **Yes** - Host access |
 | `io::fs` | File operations (`read`, `write`, `open`, `create`, `File`, etc.) | **Yes** - Host access |
@@ -179,8 +179,8 @@ The `io` namespace is a top-level standard-library module family providing file,
 
 1. `io::path` is **pure and capability-free** - path manipulation is computation over values without host interaction
 2. All other `io` submodules (`stdio`, `fs`, `dir`, `meta`, `buf`) are **capability-bearing** - they require host authority
-3. The `io` root provides shared types: `io::Error`, `io::ErrorKind`, and `io::Result<T>` as an alias for `result::Result<T, io::Error>`
-4. No separate global `Result` ADT is introduced; `io` reuses `result::Result<T, E>`
+3. The `io` root provides shared types: `io::Error` and `io::ErrorKind`; `io::Result<T>` remains deferred until the type pipeline can represent qualified applied generic aliases such as `result::Result<T, io::Error>` without shadowing the prelude `Result<T, E>` identity
+4. No separate global or IO-specific `Result` ADT is introduced; `io` reuses the canonical `result::Result<T, E>` design when alias support is available
 
 **Import Examples:**
 

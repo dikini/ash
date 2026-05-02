@@ -12,7 +12,7 @@ pub capability impl RecordingKV for KeyValue
     requires config label: String
 {
     observe get(key: String) returns String { label }
-    execute put(key: String, value: String) returns Unit { () }
+    execute put(key: String, value: String) returns Unit { null }
 }
 
 pub capability impl ReplayKV for KeyValue
@@ -20,5 +20,5 @@ pub capability impl ReplayKV for KeyValue
     requires config recorded: String
 {
     observe get(key: String) returns String { recorded }
-    execute put(key: String, value: String) returns Unit { () }
+    execute put(key: String, value: String) returns Unit { null }
 }

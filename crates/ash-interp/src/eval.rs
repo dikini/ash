@@ -629,7 +629,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: false,
+                implemented: true,
             },
         );
         m.insert(
@@ -637,7 +637,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: false,
+                implemented: true,
             },
         );
         m.insert(
@@ -645,15 +645,69 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             BuiltinEntry {
                 arity: 1,
                 variadic: false,
-                implemented: false,
+                implemented: true,
             },
         );
+
+        // ── Provider-backed stdlib surfaces intentionally deferred in interp ──
+        for (name, arity) in [
+            ("http::get", 1),
+            ("http::post", 2),
+            ("http::put", 2),
+            ("http::delete", 1),
+            ("time::now", 0),
+            ("time::now_iso", 0),
+            ("time::epoch_millis", 0),
+            ("time::sleep", 1),
+            ("io::stdio::read_line", 0),
+            ("io::stdio::print", 1),
+            ("io::stdio::println", 1),
+            ("io::fs::read", 1),
+            ("io::fs::read_to_string", 1),
+            ("io::fs::write", 2),
+            ("io::fs::write_string", 2),
+            ("io::fs::append", 2),
+            ("io::fs::copy", 2),
+            ("io::fs::rename", 2),
+            ("io::fs::remove_file", 1),
+            ("io::dir::create_dir", 1),
+            ("io::dir::create_dir_all", 1),
+            ("io::dir::remove_dir", 1),
+            ("io::dir::remove_dir_all", 1),
+            ("io::dir::read_dir", 1),
+            ("io::meta::metadata", 1),
+            ("io::meta::is_file", 1),
+            ("io::meta::is_dir", 1),
+            ("io::meta::len", 1),
+            ("io::meta::readonly", 1),
+            ("io::buf::read_to_end", 1),
+            ("io::buf::read_to_string", 1),
+            ("io::buf::write_all", 2),
+            ("io::buf::lines", 1),
+        ] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic: false,
+                    implemented: false,
+                },
+            );
+        }
 
         // ── Process module builtins (qualified) ──
         m.insert(
             "process::run",
             BuiltinEntry {
                 arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "process::which",
+            BuiltinEntry {
+                arity: 1,
                 variadic: false,
                 implemented: true,
             },
@@ -757,6 +811,22 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
                 implemented: true,
             },
         );
+
+        // ── Record module builtins (qualified) ──
+        for (name, arity, variadic) in [
+            ("record::keys", 1, false),
+            ("record::values", 1, false),
+            ("record::record", 0, true),
+        ] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic,
+                    implemented: true,
+                },
+            );
+        }
 
         // ── Unqualified builtins ──
         let unqualified = [
@@ -3155,17 +3225,27 @@ pub fn eval_function_call(
                 .output()
                 .map_err(|e| EvalError::ExecutionFailed(format!("process::run failed: {e}")))?;
 
-            if output.status.success() {
-                Ok(Value::String(
-                    String::from_utf8_lossy(&output.stdout).to_string(),
-                ))
-            } else {
-                Err(EvalError::ExecutionFailed(format!(
-                    "process::run exited with status {}: {}",
-                    output.status,
-                    String::from_utf8_lossy(&output.stderr)
-                )))
+            let mut result = HashMap::new();
+            result.insert(
+                "stdout".to_string(),
+                Value::String(String::from_utf8_lossy(&output.stdout).to_string()),
+            );
+            result.insert(
+                "stderr".to_string(),
+                Value::String(String::from_utf8_lossy(&output.stderr).to_string()),
+            );
+            result.insert(
+                "exit_code".to_string(),
+                Value::Int(i64::from(output.status.code().unwrap_or(-1))),
+            );
+            Ok(Value::Record(Box::new(result)))
+        }
+        (Some("process"), "which") => {
+            if args.len() != 1 {
+                return builtin_arity_error("process::which", 1, args.len());
             }
+            let cmd = expect_string_arg(args, 0, "string")?;
+            Ok(process_which_value(cmd))
         }
         // List operations
         (_, "len") => {
@@ -3495,6 +3575,36 @@ fn expect_string_arg<'a>(args: &'a [Value], index: usize, expected: &str) -> Eva
             actual: format!("{other:?}"),
         }),
     }
+}
+
+fn option_some(value: Value) -> Value {
+    Value::Variant {
+        name: "Some".to_string(),
+        fields: Box::new(vec![("value".to_string(), value)]),
+    }
+}
+
+fn option_none() -> Value {
+    Value::Variant {
+        name: "None".to_string(),
+        fields: Box::new(vec![]),
+    }
+}
+
+fn process_which_value(cmd: &str) -> Value {
+    let command_path = std::path::Path::new(cmd);
+    if command_path.components().count() > 1 && command_path.is_file() {
+        return option_some(Value::String(cmd.to_string()));
+    }
+    std::env::var_os("PATH")
+        .and_then(|paths| {
+            std::env::split_paths(&paths)
+                .map(|path| path.join(cmd))
+                .find(|candidate| candidate.is_file())
+        })
+        .map_or_else(option_none, |path| {
+            option_some(Value::String(path.display().to_string()))
+        })
 }
 
 fn compile_regex(pattern: &str) -> EvalResult<regex::Regex> {

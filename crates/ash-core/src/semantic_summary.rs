@@ -461,7 +461,9 @@ pub struct ModuleSemanticSummary {
     pub interface_identities: Vec<InterfaceIdentitySummary>,
     #[serde(default)]
     pub associated_member_identities: Vec<AssociatedMemberIdentitySummary>,
+    #[serde(default)]
     pub reserved_identity_slots: ReservedSemanticIdentitySlots,
+    #[serde(default)]
     pub diagnostic_anchors: Vec<SourceAnchor>,
 }
 
@@ -744,5 +746,24 @@ mod tests {
 
         assert!(summary.exported_types.is_empty());
         assert_eq!(workflow_summary.node_count, 0);
+    }
+
+    #[test]
+    fn module_semantic_summary_deserializes_older_payloads_with_defaulted_extension_fields() {
+        let mut value = serde_json::to_value(ModuleSemanticSummary::new(module_identity()))
+            .expect("summary should serialize");
+        let object = value.as_object_mut().expect("summary serializes as object");
+        object.remove("interface_identities");
+        object.remove("associated_member_identities");
+        object.remove("reserved_identity_slots");
+        object.remove("diagnostic_anchors");
+
+        let summary: ModuleSemanticSummary =
+            serde_json::from_value(value).expect("older summary payload should deserialize");
+
+        assert!(summary.interface_identities.is_empty());
+        assert!(summary.associated_member_identities.is_empty());
+        assert!(summary.reserved_identity_slots.is_empty());
+        assert!(summary.diagnostic_anchors.is_empty());
     }
 }

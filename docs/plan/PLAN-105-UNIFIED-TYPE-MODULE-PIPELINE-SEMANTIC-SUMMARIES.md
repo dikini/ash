@@ -4,7 +4,7 @@
 
 **Goal:** Implement [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md) by routing ordinary `type` metadata through the normal `ModuleFile`, core semantic summary, engine import/export, and TypeEnv registration path.
 
-**Architecture:** Phase 109 is a Tier 0 substrate phase. `ash-parser` preserves ordinary type declarations as surface module items. `ash-core` owns canonical type identities and ordinary-type `ModuleSemanticSummary` carriers. `ash-engine` builds/transports/imports/exports ordinary-type summaries without owning type semantics. `ash-typeck` consumes ordinary-type summaries with two-pass declaration, validation, and representation exposure. TASK-789 owns full removal or quarantine of legacy source-snippet ordinary type scanning; until then, snippet scanning is not the normal semantic path. Phase 109 must preserve the Phase 108 `PublicWorkflowSummary` transport path; ordinary-type summaries augment workflow summaries, they do not replace them.
+**Architecture:** Phase 109 is a Tier 0 substrate phase. `ash-parser` preserves ordinary type declarations as surface module items. `ash-core` owns canonical type identities and ordinary-type `ModuleSemanticSummary` carriers. `ash-engine` builds/transports/imports/exports ordinary-type summaries without owning type semantics. `ash-typeck` consumes ordinary-type summaries with two-pass declaration, validation, and representation exposure. TASK-789 quarantined legacy source-snippet ordinary type scanning behind explicit compatibility scopes; snippet scanning is not the normal semantic path. Phase 109 preserves the Phase 108 `PublicWorkflowSummary` transport path; ordinary-type summaries augment workflow summaries, they do not replace them.
 
 **Tech Stack:** Rust 2024, `ash-parser`, `ash-core`, `ash-engine`, `ash-typeck`, existing `ModuleFile`, `TypeDef`, `TypeEnv`, `ModuleGraph`, module loader, ADT/interface metadata, and CLI check surfaces.
 
@@ -12,7 +12,7 @@
 
 ## Phase 109: Unified Type/Module Pipeline and Semantic Summaries
 
-**Status:** ✅ Complete (TASK-780 through TASK-791 complete; broad `cargo test --all` retains the documented unrelated example corpus baseline failure)
+**Status:** ✅ Complete (TASK-780 through TASK-792 complete)
 **Spec:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-003](../spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-009](../spec/SPEC-009-MODULES.md), [SPEC-012](../spec/SPEC-012-IMPORTS.md), [SPEC-020](../spec/SPEC-020-ADT-TYPES.md), [SPEC-030](../spec/SPEC-030-MODULE-TYPE-RESOLUTION.md)
@@ -33,9 +33,10 @@
 | [TASK-789](tasks/TASK-789-legacy-type-snippet-scanner-quarantine-removal.md) | Quarantine or remove legacy source-snippet ordinary type scanning | Engine/Compatibility | 5 | ✅ Complete |
 | [TASK-790](tasks/TASK-790-diagnostics-negative-tests-and-non-interference-coverage.md) | Add diagnostics, negative tests, and non-interference coverage | Semantic/Tests | 6 | ✅ Complete |
 | [TASK-791](tasks/TASK-791-spec-a-closeout-docs-examples-verification.md) | Reconcile docs/examples/status/changelog and run closeout verification | Docs/Planning | 4 | ✅ Complete |
+| [TASK-792](tasks/TASK-792-phase109-review-remediation.md) | Remediate post-closeout review findings across docs, TypeEnv, engine summary transport, and stdlib semantics | Review/Hardening | 6 | ✅ Complete |
 
-Estimated total: 72 hours.
-Remaining after TASK-791: 0 hours.
+Estimated total: 78 hours.
+Remaining after TASK-792: 0 hours.
 
 ## Tracks
 
@@ -54,7 +55,8 @@ Remaining after TASK-791: 0 hours.
 
 - TASK-785 builds and exports ordinary-type summaries from ModuleFile/core summaries across `check_module_file`, `collect_module_exports`, `load_ordinary_file`, `parse_file`, `parse_workflow_source_with_imports`, and runtime stdlib type discovery entry points, while preserving existing `InlineCallable.workflow_summary` / `PublicWorkflowSummary` export data.
 - TASK-786 applies named import, glob import, `pub use`, visibility, and opacity rules, including non-regression coverage that workflow-returning callables keep their `PublicWorkflowSummary` data through those import/re-export paths.
-- TASK-789 removes or fences legacy source-snippet type scanning after the normal path is proven.
+- TASK-789 quarantines legacy source-snippet type scanning behind explicit compatibility scopes after the normal path is proven.
+- TASK-792 hardens engine import/export alias transport and export/check validation after independent review.
 
 ### Track D: Typechecker Consumption and Identity Plumbing
 
@@ -65,6 +67,7 @@ Remaining after TASK-791: 0 hours.
 
 - TASK-790 adds negative diagnostics and non-interference coverage.
 - TASK-791 reconciles docs/status/changelog and performs final verification.
+- TASK-792 reconciles post-closeout review findings, including stale status surfaces, TypeEnv summary authority gaps, engine alias leakage, and stdlib semantic preservation.
 
 ## Implementation Constraints
 
@@ -109,7 +112,7 @@ Every implementation task must include focused tests for its changed layer and a
 ## Completion Checklist
 
 - [x] SPEC-057 is registered in docs/spec/README.md.
-- [x] PLAN-105 and TASK-780 through TASK-791 are registered in PLAN-INDEX.md.
+- [x] PLAN-105 and TASK-780 through TASK-792 are registered in PLAN-INDEX.md.
 - [x] Ordinary type declarations are parsed as ModuleFile definitions.
 - [x] Core-owned ModuleSemanticSummary or equivalent exists.
 - [x] Surface ordinary type declarations lower to core TypeDef values and module-anchored summaries.
@@ -118,6 +121,6 @@ Every implementation task must include focused tests for its changed layer and a
 - [x] Private representations do not leak downstream.
 - [x] Constructors are imported/exposed only when representation visibility allows.
 - [x] Source-snippet ordinary type scanning is removed or fenced behind documented compatibility tests.
-- [x] Existing ADT/interface/workflow/capability/resource/do/comprehension regressions pass for the focused Phase 109 gates; broad `cargo test --all` still hits the documented example-corpus baseline parse failure in `examples/06-capability-implementations/01-mock-internal-kv.ash`.
-- [x] TASK-787 through TASK-791 docs/changelog/status are reconciled.
-- [x] Controller independent-review handoff is documented in TASK-791; self-review found no blocking spec drift.
+- [x] Existing ADT/interface/workflow/capability/resource/do/comprehension regressions pass for the focused Phase 109 gates, and TASK-792 resolves the prior broad example-corpus parse failure in `examples/06-capability-implementations/01-mock-internal-kv.ash`.
+- [x] TASK-787 through TASK-792 docs/changelog/status are reconciled.
+- [x] Controller independent-review findings are remediated and covered by regression tests, including alias self-reference rewriting, selected representation dependency transport, TypeEnv summary validation, stdlib corpus repair, and broad verification.

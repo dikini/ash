@@ -1,26 +1,19 @@
 -- Buffered I/O helpers
 --
--- Provides convenience functions for common buffered I/O operations.
+-- Provides parser-checkable runtime-provided declarations for common buffered
+-- I/O operations. Concrete wrappers over `io::fs` remain deferred until the
+-- parser/runtime support a canonical stdlib effect-wrapper spelling.
 
 use path::PathBuf;
 
 -- Read entire file contents as bytes
-pub fn read_to_end(path: PathBuf) -> Bytes {
-    fs::read(path)
-}
+pub builtin fn read_to_end(path: PathBuf) -> Bytes;
 
 -- Read entire file contents as a string
-pub fn read_to_string(path: PathBuf) -> String {
-    fs::read_to_string(path)
-}
+pub builtin fn read_to_string(path: PathBuf) -> String;
 
 -- Write all bytes to a file (overwrites existing)
-pub fn write_all(path: PathBuf, content: Bytes) {
-    fs::write(path, content);
-}
+pub builtin fn write_all(path: PathBuf, content: Bytes) -> Unit;
 
 -- Split text into lines
-pub fn lines(text: String) -> List<String> {
-    -- TODO: Implement string splitting when string module is available
-    panic "lines: not yet implemented"
-}
+pub builtin fn lines(text: String) -> List<String>;

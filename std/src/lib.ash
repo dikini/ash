@@ -33,7 +33,7 @@ pub use llm::{
 };
 
 -- IO types
-pub use io::{Error, ErrorKind, Result};
+pub use io::{Error, ErrorKind};
 pub use io::path::{PathBuf, from_string, join, parent, file_name, extension, is_absolute};
 pub use io::stdio::{Stdio, read_line, print, println};
 pub use io::fs::{Fs, read, read_to_string, write, write_string, append, copy, rename, remove_file};

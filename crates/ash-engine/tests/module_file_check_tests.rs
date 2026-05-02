@@ -8,6 +8,26 @@ fn make_engine() -> Engine {
     Engine::new().build().expect("engine should build")
 }
 
+#[test]
+fn inline_module_type_declarations_fail_explicitly_in_module_check() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let file_path = dir.path().join("inline.ash");
+    std::fs::write(
+        &file_path,
+        "pub mod child {\n  pub type Inner = Inner { value: Int };\n}\n",
+    )
+    .expect("write inline module");
+
+    let err = make_engine()
+        .check_module_file(&file_path)
+        .expect_err("inline module ordinary types must not silently disappear");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("inline module") && msg.contains("ordinary type"),
+        "diagnostic should name unsupported inline ordinary type summaries: {msg}"
+    );
+}
+
 /// Test 1: Check the real stdlib LLM types file.
 ///
 /// `std/src/llm/types.ash` contains 11 `pub type` definitions.  Float is
@@ -201,11 +221,14 @@ fn test_check_module_file_stdlib_io_module_root() {
         .canonicalize()
         .expect("io mod.ash should exist");
 
-    let result = engine.check_module_file(&io_mod_path);
+    let result = engine
+        .check_module_file(&io_mod_path)
+        .expect("std/src/io/mod.ash should check as a module root");
 
     assert!(
-        result.is_ok(),
-        "std/src/io/mod.ash should check as a module root, got {result:?}",
+        result.errors.is_empty(),
+        "std/src/io/mod.ash should have zero semantic summary errors, got {:?}",
+        result.errors,
     );
 }
 

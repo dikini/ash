@@ -101,13 +101,22 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 });
             }
 
-            // FIXED: Look up variable in environment instead of creating fresh type var
+            // Look up lexical variables first. If no variable is bound, allow
+            // registered unit enum constructors to be used as bare values (for
+            // example `ret System` for `pub type Role = System | User`).
             match env.lookup_variable(name.as_ref()) {
                 Some(ty) => CheckResult::success(ty),
-                None => CheckResult::error(ConstructorError::UnboundVariable {
-                    name: name.to_string(),
-                    span: get_expr_span(expr),
-                }),
+                None => match env.get_variant(name.as_ref()) {
+                    Some((type_info, variant_idx, variant_info))
+                        if matches!(variant_info.payload_shape, VariantPayloadShape::Unit) =>
+                    {
+                        CheckResult::success(build_constructor_type(type_info, variant_idx))
+                    }
+                    _ => CheckResult::error(ConstructorError::UnboundVariable {
+                        name: name.to_string(),
+                        span: get_expr_span(expr),
+                    }),
+                },
             }
         }
         Expr::Unary { op, operand, .. } => check_unary(env, *op, operand),

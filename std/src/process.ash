@@ -1,19 +1,18 @@
 -- Process execution capability and functions
 --
--- Provides functions for executing external processes.
--- All functions require the Process capability.
+-- Provides parser-checkable runtime-provided function declarations for external
+-- process access. The Process capability below records the intended authority
+-- contract; concrete capability-wrapper bodies remain deferred until the
+-- parser/runtime support a canonical stdlib `act` wrapper spelling.
 -- Process execution is effectful (Operational) per the three-pillar principle.
 
--- Process capability for command execution
-pub capability Process: execute run(cmd: String, args: List<String>) returns String
-                     | execute which(cmd: String) returns String;
+-- Process.run returns a runtime record with stdout, stderr, and exit_code.
+-- Process.which returns Some(path) when found and None when absent.
+pub capability Process: execute run(cmd: String, args: List<String>) returns Record
+                     | execute which(cmd: String) returns Option<String>;
 
--- Execute a command with arguments, returns a record with stdout, stderr, exit_code
-pub fn run(cmd: String, args: List<String>) -> String {
-    act execute Process.run with cmd: cmd, args: args;
-}
+-- Execute a command with arguments, returning the provider output record.
+pub builtin fn run(cmd: String, args: List<String>) -> Record;
 
--- Check if a command exists, returns its path or null
-pub fn which(cmd: String) -> String {
-    act execute Process.which with cmd: cmd;
-}
+-- Check if a command exists, returning Some(path) or None.
+pub builtin fn which(cmd: String) -> Option<String>;

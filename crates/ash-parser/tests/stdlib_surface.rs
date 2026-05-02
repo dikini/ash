@@ -24,6 +24,10 @@ fn normalize_whitespace(source: &str) -> String {
     source.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+fn contains_public_callable(source: &str, name: &str) -> bool {
+    source.contains(&format!("pub fn {name}")) || source.contains(&format!("pub builtin fn {name}"))
+}
+
 fn runtime_mod_path() -> PathBuf {
     workspace_root().join("std/src/runtime/mod.ash")
 }
@@ -351,8 +355,8 @@ fn io_module_exposes_error_type() {
         "io/mod.ash should declare ErrorKind type"
     );
     assert!(
-        io_mod.contains("pub type Result<T>"),
-        "io/mod.ash should declare Result<T> type alias"
+        io_mod.contains("io::Result<T> remains deferred"),
+        "io/mod.ash should document deferred io::Result<T> alias"
     );
 }
 
@@ -371,7 +375,7 @@ fn io_path_has_required_functions() {
 
     for func in &required_functions {
         assert!(
-            path_content.contains(&format!("pub fn {}", func)),
+            contains_public_callable(&path_content, func),
             "io/path.ash should contain {} function",
             func
         );
@@ -449,7 +453,7 @@ fn io_stdio_has_required_functions() {
 
     for func in &required_functions {
         assert!(
-            stdio_content.contains(&format!("pub fn {}", func)),
+            contains_public_callable(&stdio_content, func),
             "io/stdio.ash should contain {} function",
             func
         );
@@ -606,7 +610,7 @@ fn io_fs_has_required_functions() {
 
     for func in &required_functions {
         assert!(
-            fs_content.contains(&format!("pub fn {}", func)),
+            contains_public_callable(&fs_content, func),
             "io/fs.ash should contain {} function",
             func
         );
@@ -627,7 +631,7 @@ fn io_dir_has_required_functions() {
 
     for func in &required_functions {
         assert!(
-            dir_content.contains(&format!("pub fn {}", func)),
+            contains_public_callable(&dir_content, func),
             "io/dir.ash should contain {} function",
             func
         );
@@ -642,7 +646,7 @@ fn io_meta_has_required_functions() {
 
     for func in &required_functions {
         assert!(
-            meta_content.contains(&format!("pub fn {}", func)),
+            contains_public_callable(&meta_content, func),
             "io/meta.ash should contain {} function",
             func
         );
@@ -743,7 +747,7 @@ fn lib_exports_io_fs_dir_meta() {
 fn io_fs_has_read_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn read"),
+        contains_public_callable(&fs_content, "read"),
         "io/fs.ash should contain read function"
     );
 }
@@ -752,7 +756,7 @@ fn io_fs_has_read_function() {
 fn io_fs_has_read_to_string_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn read_to_string"),
+        contains_public_callable(&fs_content, "read_to_string"),
         "io/fs.ash should contain read_to_string function"
     );
 }
@@ -761,7 +765,7 @@ fn io_fs_has_read_to_string_function() {
 fn io_fs_has_write_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn write"),
+        contains_public_callable(&fs_content, "write"),
         "io/fs.ash should contain write function"
     );
 }
@@ -770,7 +774,7 @@ fn io_fs_has_write_function() {
 fn io_fs_has_write_string_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn write_string"),
+        contains_public_callable(&fs_content, "write_string"),
         "io/fs.ash should contain write_string function"
     );
 }
@@ -779,7 +783,7 @@ fn io_fs_has_write_string_function() {
 fn io_fs_has_append_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn append"),
+        contains_public_callable(&fs_content, "append"),
         "io/fs.ash should contain append function"
     );
 }
@@ -788,7 +792,7 @@ fn io_fs_has_append_function() {
 fn io_fs_has_copy_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn copy"),
+        contains_public_callable(&fs_content, "copy"),
         "io/fs.ash should contain copy function"
     );
 }
@@ -797,7 +801,7 @@ fn io_fs_has_copy_function() {
 fn io_fs_has_rename_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn rename"),
+        contains_public_callable(&fs_content, "rename"),
         "io/fs.ash should contain rename function"
     );
 }
@@ -806,7 +810,7 @@ fn io_fs_has_rename_function() {
 fn io_fs_has_remove_file_function() {
     let fs_content = read_stdlib_file("io/fs.ash");
     assert!(
-        fs_content.contains("pub fn remove_file"),
+        contains_public_callable(&fs_content, "remove_file"),
         "io/fs.ash should contain remove_file function"
     );
 }
@@ -815,7 +819,7 @@ fn io_fs_has_remove_file_function() {
 fn io_dir_has_create_dir_function() {
     let dir_content = read_stdlib_file("io/dir.ash");
     assert!(
-        dir_content.contains("pub fn create_dir"),
+        contains_public_callable(&dir_content, "create_dir"),
         "io/dir.ash should contain create_dir function"
     );
 }
@@ -824,7 +828,7 @@ fn io_dir_has_create_dir_function() {
 fn io_dir_has_create_dir_all_function() {
     let dir_content = read_stdlib_file("io/dir.ash");
     assert!(
-        dir_content.contains("pub fn create_dir_all"),
+        contains_public_callable(&dir_content, "create_dir_all"),
         "io/dir.ash should contain create_dir_all function"
     );
 }
@@ -833,7 +837,7 @@ fn io_dir_has_create_dir_all_function() {
 fn io_dir_has_remove_dir_function() {
     let dir_content = read_stdlib_file("io/dir.ash");
     assert!(
-        dir_content.contains("pub fn remove_dir"),
+        contains_public_callable(&dir_content, "remove_dir"),
         "io/dir.ash should contain remove_dir function"
     );
 }
@@ -842,7 +846,7 @@ fn io_dir_has_remove_dir_function() {
 fn io_dir_has_remove_dir_all_function() {
     let dir_content = read_stdlib_file("io/dir.ash");
     assert!(
-        dir_content.contains("pub fn remove_dir_all"),
+        contains_public_callable(&dir_content, "remove_dir_all"),
         "io/dir.ash should contain remove_dir_all function"
     );
 }
@@ -851,7 +855,7 @@ fn io_dir_has_remove_dir_all_function() {
 fn io_dir_has_read_dir_function() {
     let dir_content = read_stdlib_file("io/dir.ash");
     assert!(
-        dir_content.contains("pub fn read_dir"),
+        contains_public_callable(&dir_content, "read_dir"),
         "io/dir.ash should contain read_dir function"
     );
 }
@@ -860,7 +864,7 @@ fn io_dir_has_read_dir_function() {
 fn io_meta_has_metadata_function() {
     let meta_content = read_stdlib_file("io/meta.ash");
     assert!(
-        meta_content.contains("pub fn metadata"),
+        contains_public_callable(&meta_content, "metadata"),
         "io/meta.ash should contain metadata function"
     );
 }
@@ -869,7 +873,7 @@ fn io_meta_has_metadata_function() {
 fn io_meta_has_is_file_function() {
     let meta_content = read_stdlib_file("io/meta.ash");
     assert!(
-        meta_content.contains("pub fn is_file"),
+        contains_public_callable(&meta_content, "is_file"),
         "io/meta.ash should contain is_file function"
     );
 }
@@ -878,7 +882,7 @@ fn io_meta_has_is_file_function() {
 fn io_meta_has_is_dir_function() {
     let meta_content = read_stdlib_file("io/meta.ash");
     assert!(
-        meta_content.contains("pub fn is_dir"),
+        contains_public_callable(&meta_content, "is_dir"),
         "io/meta.ash should contain is_dir function"
     );
 }
@@ -887,7 +891,7 @@ fn io_meta_has_is_dir_function() {
 fn io_meta_has_len_function() {
     let meta_content = read_stdlib_file("io/meta.ash");
     assert!(
-        meta_content.contains("pub fn len"),
+        contains_public_callable(&meta_content, "len"),
         "io/meta.ash should contain len function"
     );
 }
@@ -896,7 +900,7 @@ fn io_meta_has_len_function() {
 fn io_meta_has_readonly_function() {
     let meta_content = read_stdlib_file("io/meta.ash");
     assert!(
-        meta_content.contains("pub fn readonly"),
+        contains_public_callable(&meta_content, "readonly"),
         "io/meta.ash should contain readonly function"
     );
 }
@@ -942,7 +946,7 @@ fn io_buf_has_required_functions() {
 
     for func in &required_functions {
         assert!(
-            buf_content.contains(&format!("pub fn {}", func)),
+            contains_public_callable(&buf_content, func),
             "io/buf.ash should contain {} function",
             func
         );

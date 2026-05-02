@@ -1,7 +1,11 @@
 -- Filesystem file operations
 --
--- Provides functions for reading and writing files.
--- All functions require the Fs capability.
+-- Provides parser-checkable runtime-provided function declarations for reading
+-- and writing files. The Fs capability below records the intended authority
+-- contract; concrete capability-wrapper bodies remain deferred until the
+-- parser/runtime support a canonical stdlib `act` wrapper spelling.
+-- Phase 109 honesty: interpreter dispatch forward-declares io::fs::* as
+-- unimplemented until the Fs provider bridge can preserve PathBuf/Bytes shapes.
 
 use path::PathBuf;
 
@@ -16,41 +20,25 @@ pub capability Fs: observe read(path: PathBuf) returns Bytes
                  | execute remove_file(path: PathBuf);
 
 -- Read file contents as bytes
-pub fn read(path: PathBuf) -> Bytes {
-    act observe Fs.read with path: path
-}
+pub builtin fn read(path: PathBuf) -> Bytes;
 
 -- Read file contents as a string
-pub fn read_to_string(path: PathBuf) -> String {
-    act observe Fs.read_to_string with path: path
-}
+pub builtin fn read_to_string(path: PathBuf) -> String;
 
 -- Write bytes to a file (overwrites existing)
-pub fn write(path: PathBuf, content: Bytes) {
-    act execute Fs.write with path: path, content: content;
-}
+pub builtin fn write(path: PathBuf, content: Bytes) -> Unit;
 
 -- Write a string to a file (overwrites existing)
-pub fn write_string(path: PathBuf, content: String) {
-    act execute Fs.write_string with path: path, content: content;
-}
+pub builtin fn write_string(path: PathBuf, content: String) -> Unit;
 
 -- Append bytes to a file
-pub fn append(path: PathBuf, content: Bytes) {
-    act execute Fs.append with path: path, content: content;
-}
+pub builtin fn append(path: PathBuf, content: Bytes) -> Unit;
 
 -- Copy a file from one location to another
-pub fn copy(from: PathBuf, to: PathBuf) {
-    act execute Fs.copy with from: from, to: to;
-}
+pub builtin fn copy(from: PathBuf, to: PathBuf) -> Unit;
 
 -- Rename/move a file from one location to another
-pub fn rename(from: PathBuf, to: PathBuf) {
-    act execute Fs.rename with from: from, to: to;
-}
+pub builtin fn rename(from: PathBuf, to: PathBuf) -> Unit;
 
 -- Remove a file
-pub fn remove_file(path: PathBuf) {
-    act execute Fs.remove_file with path: path;
-}
+pub builtin fn remove_file(path: PathBuf) -> Unit;

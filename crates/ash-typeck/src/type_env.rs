@@ -11,8 +11,8 @@ use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::semantic_summary::{
-    ModuleSemanticSummary, RepresentationExposure, TypeDeclId, TypeDeclSummary,
-    TypeRepresentationSummary,
+    ConstructorPayloadKind, ConstructorSummary, ModuleSemanticSummary, RepresentationExposure,
+    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
@@ -94,9 +94,17 @@ pub fn type_expr_to_type(
                     .iter()
                     .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
                     .collect::<Result<Vec<_>, _>>()?;
-                let ret = arg_types
-                    .pop()
-                    .expect("Fn constructor type should include a return type");
+                let ret = match arg_types.pop() {
+                    Some(ret) => ret,
+                    None => {
+                        return Err(TypeError::ConstructorArityMismatch {
+                            name: "Fn".to_string(),
+                            expected_arity: 1,
+                            found_arity: 0,
+                            span: Span::default(),
+                        });
+                    }
+                };
                 Ok(Type::Fn(arg_types, Box::new(ret)))
             } else {
                 let (qualified, _) = type_env.resolve_type(name)?;
@@ -532,10 +540,13 @@ fn surface_type_to_type(
                 if let Some(bounds) = type_env.type_var_interface_bounds.get(v) {
                     let mut candidates = Vec::new();
                     for bound_iface in bounds {
-                        if let Some(iface_info) = type_env.interfaces.get(bound_iface)
-                            && iface_info.associated_types.contains(&name.to_string())
-                        {
-                            candidates.push(bound_iface.clone());
+                        match type_env.interfaces.get(bound_iface) {
+                            Some(iface_info)
+                                if iface_info.associated_types.contains(&name.to_string()) =>
+                            {
+                                candidates.push(bound_iface.clone());
+                            }
+                            _ => {}
                         }
                     }
                     if candidates.len() == 1 {
@@ -624,14 +635,12 @@ fn resolve_associated_types_for_interface(
             interface: iface,
             base,
             ..
-        } => {
-            if iface.is_empty()
-                && let Type::Var(v) = base.as_ref()
-                && interface_type_params.contains(v)
-            {
+        } => match (iface.is_empty(), base.as_ref()) {
+            (true, Type::Var(v)) if interface_type_params.contains(v) => {
                 *iface = interface.to_string();
             }
-        }
+            _ => {}
+        },
         Type::Constructor { args, .. } => {
             for arg in args {
                 resolve_associated_types_for_interface(arg, interface, interface_type_params);
@@ -950,6 +959,222 @@ fn duplicate_summary_identity_diagnostic(
     )
 }
 
+fn conflicting_summary_contract_diagnostic(visible_name: &str) -> String {
+    format!("conflicting ordinary type summary metadata for visible type '{visible_name}'")
+}
+
+fn is_builtin_prelude_ordinary_type_compatibility_name(name: &str) -> bool {
+    matches!(name, "Option" | "Result")
+}
+
+fn summary_contract_matches(left: &TypeDeclSummary, right: &TypeDeclSummary) -> bool {
+    identity_summary_contract_matches(left, right) && left.exported_name == right.exported_name
+}
+
+fn identity_summary_contract_matches(left: &TypeDeclSummary, right: &TypeDeclSummary) -> bool {
+    left.id == right.id
+        && left.visibility == right.visibility
+        && left.params == right.params
+        && left.representation_exposure == right.representation_exposure
+        && left.representation == right.representation
+}
+
+fn variant_payload_kind(payload: &VariantPayload) -> ConstructorPayloadKind {
+    match payload {
+        VariantPayload::Unit => ConstructorPayloadKind::Unit,
+        VariantPayload::Record(_) => ConstructorPayloadKind::Record,
+        VariantPayload::Tuple(_) => ConstructorPayloadKind::Tuple,
+    }
+}
+
+fn validate_summary_visibility_and_duplicates(
+    summary: &ModuleSemanticSummary,
+) -> Result<(), TypeEnvError> {
+    if summary.version != SummaryVersion::SPEC057_ORDINARY_TYPE_V1 {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "unsupported module semantic summary version {}; expected {}",
+                summary.version.0,
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0
+            ),
+            Span::default(),
+        ));
+    }
+
+    for (index, ty) in summary.exported_types.iter().enumerate() {
+        if ty.visibility != ash_core::ast::Visibility::Public
+            && !matches!(
+                ty.representation,
+                TypeRepresentationSummary::Opaque { builtin: true }
+            )
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-public ordinary type summary '{}' is not valid public metadata",
+                    ty.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        match (&ty.representation_exposure, &ty.representation) {
+            (RepresentationExposure::Exposed, TypeRepresentationSummary::Exposed(_)) => {
+                if ty.visibility != ash_core::ast::Visibility::Public {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "non-public exposed ordinary type summary '{}' is not valid public metadata",
+                            ty.exported_name
+                        ),
+                        Span::default(),
+                    ));
+                }
+            }
+            (RepresentationExposure::Opaque, TypeRepresentationSummary::Opaque { .. }) => {}
+            (RepresentationExposure::Exposed, TypeRepresentationSummary::Opaque { .. }) => {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type '{}' has exposed representation exposure without an exposed body",
+                        ty.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+            (RepresentationExposure::Opaque, TypeRepresentationSummary::Exposed(_)) => {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type '{}' has opaque representation exposure with an exposed body",
+                        ty.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+
+        for duplicate in summary.exported_types.iter().skip(index + 1) {
+            if ty.exported_name != duplicate.exported_name {
+                continue;
+            }
+            if ty.id != duplicate.id {
+                return Err(TypeEnvError::InvalidDefinition(
+                    duplicate_summary_identity_diagnostic(&ty.exported_name, &ty.id, duplicate),
+                    Span::default(),
+                ));
+            }
+            if !summary_contract_matches(ty, duplicate) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    conflicting_summary_contract_diagnostic(&ty.exported_name),
+                    Span::default(),
+                ));
+            }
+        }
+        for duplicate in summary.exported_types.iter().skip(index + 1) {
+            if ty.id != duplicate.id || ty.exported_name == duplicate.exported_name {
+                continue;
+            }
+            if !identity_summary_contract_matches(ty, duplicate) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    conflicting_summary_contract_diagnostic(&duplicate.exported_name),
+                    Span::default(),
+                ));
+            }
+        }
+    }
+
+    for (index, constructor) in summary.exported_constructors.iter().enumerate() {
+        for duplicate in summary.exported_constructors.iter().skip(index + 1) {
+            if constructor.exported_name != duplicate.exported_name {
+                continue;
+            }
+            if constructor.id != duplicate.id
+                || constructor.parent != duplicate.parent
+                || constructor.payload_kind != duplicate.payload_kind
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate exported constructor summary '{}' has conflicting metadata",
+                        constructor.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        if constructor.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-public exported constructor summary '{}' is not valid public metadata",
+                    constructor.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        if constructor.id.parent != constructor.parent {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor summary '{}' parent identity does not match constructor id",
+                    constructor.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        if constructor.id.payload_kind != constructor.payload_kind {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor summary '{}' payload kind does not match constructor id",
+                    constructor.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        let Some(parent_summary) = summary
+            .exported_types
+            .iter()
+            .find(|ty| ty.id == constructor.parent)
+        else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor summary '{}' references a non-exported parent type",
+                    constructor.exported_name
+                ),
+                Span::default(),
+            ));
+        };
+        let TypeRepresentationSummary::Exposed(TypeBody::Enum(variants)) =
+            &parent_summary.representation
+        else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor summary '{}' references a parent without an exposed enum body",
+                    constructor.exported_name
+                ),
+                Span::default(),
+            ));
+        };
+        let Some(variant) = variants
+            .iter()
+            .find(|variant| variant.name == constructor.id.name)
+        else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor summary '{}' does not match any exposed variant on type '{}'",
+                    constructor.exported_name, parent_summary.exported_name
+                ),
+                Span::default(),
+            ));
+        };
+        let actual_payload_kind = variant_payload_kind(&variant.payload);
+        if actual_payload_kind != constructor.payload_kind {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor summary '{}' payload kind {:?} conflicts with exposed enum body {:?}",
+                    constructor.exported_name, constructor.payload_kind, actual_payload_kind
+                ),
+                Span::default(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 impl TypeEnv {
     fn convert_interface_method(
         &self,
@@ -1162,22 +1387,89 @@ impl TypeEnv {
         self.expose_type_representation(&def.name)
     }
 
+    fn existing_summary_contract_conflicts(
+        &self,
+        visible_name: &str,
+        existing: &TypeDef,
+        summary: &TypeDeclSummary,
+    ) -> bool {
+        if existing.params != summary.params || existing.visibility != summary.visibility {
+            return true;
+        }
+
+        match self.type_declaration_states.get(visible_name) {
+            Some(TypeDeclarationState::Full) => match &summary.representation {
+                TypeRepresentationSummary::Exposed(body) => existing.body != *body,
+                TypeRepresentationSummary::Opaque { builtin: true } => !existing.builtin,
+                TypeRepresentationSummary::Opaque { builtin: false } => true,
+            },
+            Some(TypeDeclarationState::IdentityOnly) => false,
+            Some(TypeDeclarationState::Placeholder) | None => false,
+        }
+    }
+
     fn declare_summary_type_identity(
         &mut self,
         summary: &TypeDeclSummary,
     ) -> Result<(), TypeEnvError> {
         let visible_name = summary.exported_name.clone();
-        if let Some(existing) = self.type_alias_identities.get(&visible_name)
-            && existing != &summary.id
-        {
+        let conflicting_existing_summary = self
+            .canonical_type_names
+            .get(&summary.id)
+            .cloned()
+            .is_some_and(|existing_visible_name| {
+                existing_visible_name != visible_name
+                    && self
+                        .ast_types
+                        .get(&existing_visible_name)
+                        .is_some_and(|existing| {
+                            self.existing_summary_contract_conflicts(
+                                &existing_visible_name,
+                                existing,
+                                summary,
+                            )
+                        })
+            });
+        if conflicting_existing_summary {
             return Err(TypeEnvError::InvalidDefinition(
-                duplicate_summary_identity_diagnostic(&visible_name, existing, summary),
+                conflicting_summary_contract_diagnostic(&visible_name),
                 Span::default(),
             ));
+        }
+        match self.type_alias_identities.get(&visible_name) {
+            Some(existing) if existing != &summary.id => {
+                return Err(TypeEnvError::InvalidDefinition(
+                    duplicate_summary_identity_diagnostic(&visible_name, existing, summary),
+                    Span::default(),
+                ));
+            }
+            _ => {}
         }
         if let Some(existing) = self.ast_types.get(&visible_name) {
             let existing_identity = self.type_alias_identities.get(&visible_name);
             if !self.is_placeholder_name(&visible_name) && existing_identity != Some(&summary.id) {
+                if matches!(
+                    (&summary.representation, existing.builtin),
+                    (TypeRepresentationSummary::Opaque { builtin: true }, true)
+                ) {
+                    self.type_alias_identities
+                        .insert(visible_name.clone(), summary.id.clone());
+                    self.canonical_type_names
+                        .entry(summary.id.clone())
+                        .or_insert(visible_name);
+                    return Ok(());
+                }
+                if existing_identity.is_none()
+                    && is_builtin_prelude_ordinary_type_compatibility_name(&visible_name)
+                    && !self.existing_summary_contract_conflicts(&visible_name, existing, summary)
+                {
+                    self.type_alias_identities
+                        .insert(visible_name.clone(), summary.id.clone());
+                    self.canonical_type_names
+                        .entry(summary.id.clone())
+                        .or_insert(visible_name);
+                    return Ok(());
+                }
                 if let Some(existing_identity) = existing_identity {
                     return Err(TypeEnvError::InvalidDefinition(
                         duplicate_summary_identity_diagnostic(
@@ -1190,9 +1482,11 @@ impl TypeEnv {
                 }
                 return Err(TypeEnvError::DuplicateType(visible_name, Span::default()));
             }
-            if !existing.params.is_empty() && existing.params != summary.params {
+            if existing_identity == Some(&summary.id)
+                && self.existing_summary_contract_conflicts(&visible_name, existing, summary)
+            {
                 return Err(TypeEnvError::InvalidDefinition(
-                    format!("type '{}' summary parameter conflict", visible_name),
+                    conflicting_summary_contract_diagnostic(&visible_name),
                     Span::default(),
                 ));
             }
@@ -1225,12 +1519,119 @@ impl TypeEnv {
         Ok(())
     }
 
-    /// Register all visible ordinary type identities from a module semantic summary first,
-    /// then validate/expose public representations in a second pass.
-    pub fn register_module_semantic_summary(
+    fn expose_summary_type_representation(
+        &mut self,
+        ty: &TypeDeclSummary,
+        constructors: &[ConstructorSummary],
+    ) -> Result<(), TypeEnvError> {
+        let visible_name = ty.exported_name.as_str();
+        let Some(type_info) = self.type_info.get(visible_name).cloned() else {
+            return Err(TypeEnvError::TypeNotFound(
+                visible_name.to_string(),
+                Span::default(),
+            ));
+        };
+
+        match type_info {
+            TypeInfo::Enum { variants, .. } => {
+                let matching_constructors = constructors
+                    .iter()
+                    .filter(|constructor| constructor.parent == ty.id)
+                    .collect::<Vec<_>>();
+                if !matching_constructors.is_empty() {
+                    for constructor in &matching_constructors {
+                        let Some((index, _)) = variants
+                            .iter()
+                            .enumerate()
+                            .find(|(_, variant)| variant.name == constructor.id.name)
+                        else {
+                            return Err(TypeEnvError::InvalidDefinition(
+                                format!(
+                                    "constructor summary '{}' does not match any exposed variant on type '{}'",
+                                    constructor.exported_name, visible_name
+                                ),
+                                Span::default(),
+                            ));
+                        };
+                        match self.constructors.get(&constructor.exported_name) {
+                            Some((existing_type, existing_index))
+                                if existing_type != visible_name || *existing_index != index =>
+                            {
+                                return Err(TypeEnvError::InvalidDefinition(
+                                    format!(
+                                        "duplicate exported constructor summary '{}' conflicts with an existing constructor binding",
+                                        constructor.exported_name
+                                    ),
+                                    Span::default(),
+                                ));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                for constructor in matching_constructors {
+                    let Some((index, _)) = variants
+                        .iter()
+                        .enumerate()
+                        .find(|(_, variant)| variant.name == constructor.id.name)
+                    else {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "constructor summary '{}' does not match any exposed variant on type '{}'",
+                                constructor.exported_name, visible_name
+                            ),
+                            Span::default(),
+                        ));
+                    };
+                    match self.constructors.get(&constructor.exported_name) {
+                        Some((existing_type, existing_index))
+                            if existing_type != visible_name || *existing_index != index =>
+                        {
+                            return Err(TypeEnvError::InvalidDefinition(
+                                format!(
+                                    "duplicate exported constructor summary '{}' conflicts with an existing constructor binding",
+                                    constructor.exported_name
+                                ),
+                                Span::default(),
+                            ));
+                        }
+                        _ => {}
+                    }
+                    self.constructors.insert(
+                        constructor.exported_name.clone(),
+                        (visible_name.to_string(), index),
+                    );
+                }
+            }
+            TypeInfo::Struct { fields, .. } if matches!(fields.as_slice(), [(field_name, _)] if field_name == "__alias_target") =>
+            {
+                self.transparent_aliases.insert(visible_name.to_string());
+            }
+            TypeInfo::Struct { .. } => {
+                if constructors
+                    .iter()
+                    .any(|constructor| constructor.parent == ty.id)
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "constructor summaries for '{}' require an exposed enum body",
+                            visible_name
+                        ),
+                        Span::default(),
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn register_module_semantic_summary_inner(
         &mut self,
         summary: &ModuleSemanticSummary,
     ) -> Result<(), TypeEnvError> {
+        validate_summary_visibility_and_duplicates(summary)?;
+
         for ty in &summary.exported_types {
             self.declare_summary_type_identity(ty)?;
         }
@@ -1259,9 +1660,21 @@ impl TypeEnv {
             self.type_info.insert(def.name.clone(), type_info);
             self.type_declaration_states
                 .insert(def.name.clone(), TypeDeclarationState::Full);
-            self.expose_type_representation(&def.name)?;
+            self.expose_summary_type_representation(ty, &summary.exported_constructors)?;
         }
 
+        Ok(())
+    }
+
+    /// Register all visible ordinary type identities from a module semantic summary first,
+    /// then validate/expose public representations in a second pass.
+    pub fn register_module_semantic_summary(
+        &mut self,
+        summary: &ModuleSemanticSummary,
+    ) -> Result<(), TypeEnvError> {
+        let mut staged = self.clone();
+        staged.register_module_semantic_summary_inner(summary)?;
+        *self = staged;
         Ok(())
     }
 
@@ -2673,6 +3086,15 @@ impl TypeEnv {
             })
     }
 
+    /// Return the names of all registered unit constructors.
+    pub fn unit_constructor_names(&self) -> impl Iterator<Item = String> + '_ {
+        self.constructors.iter().filter_map(|(name, _)| {
+            self.get_variant(name).and_then(|(_, _, variant)| {
+                (variant.payload_shape == VariantPayloadShape::Unit).then(|| name.clone())
+            })
+        })
+    }
+
     /// Return the names of all bound variables (used for name resolution of imported callables).
     pub fn variable_names(&self) -> impl Iterator<Item = String> + '_ {
         self.variables.keys().cloned()
@@ -3143,19 +3565,20 @@ impl TypeEnv {
             return Ok(());
         }
 
-        if let Some(interface) = self.interfaces.get(&name.name)
-            && found_arity > 0
-        {
-            let expected_arity = interface.type_params.len();
-            if expected_arity != found_arity {
-                return Err(TypeError::ConstructorArityMismatch {
-                    name: name.display(),
-                    expected_arity,
-                    found_arity,
-                    span: Span::default(),
-                });
+        match self.interfaces.get(&name.name) {
+            Some(interface) if found_arity > 0 => {
+                let expected_arity = interface.type_params.len();
+                if expected_arity != found_arity {
+                    return Err(TypeError::ConstructorArityMismatch {
+                        name: name.display(),
+                        expected_arity,
+                        found_arity,
+                        span: Span::default(),
+                    });
+                }
+                return Ok(());
             }
-            return Ok(());
+            _ => {}
         }
 
         let Some(type_def) = self.ast_types.get(&name.name) else {

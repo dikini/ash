@@ -11,5 +11,5 @@ pub capability impl MockInternalKV for KeyValue
     requires config fixture: String
 {
     observe get(key: String) returns String { fixture }
-    execute put(key: String, value: String) returns Unit { () }
+    execute put(key: String, value: String) returns Unit { null }
 }

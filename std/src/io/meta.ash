@@ -1,7 +1,9 @@
 -- Filesystem metadata operations
 --
--- Provides functions for querying file and directory metadata.
--- All functions require the Meta capability.
+-- Provides parser-checkable runtime-provided metadata declarations. The Meta
+-- capability below records the intended authority contract; concrete
+-- capability-wrapper bodies remain deferred until the parser/runtime support a
+-- canonical stdlib `act` wrapper spelling.
 
 use path::PathBuf;
 
@@ -17,9 +19,7 @@ pub type Metadata = Metadata {
 pub capability Meta: observe metadata(path: PathBuf) returns Metadata;
 
 -- Get metadata for a file or directory
-pub fn metadata(path: PathBuf) -> Metadata {
-    act observe Meta.metadata with path: path
-}
+pub builtin fn metadata(path: PathBuf) -> Metadata;
 
 -- Check if path points to a file (convenience function)
 pub fn is_file(path: PathBuf) -> Bool {

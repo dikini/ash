@@ -1,7 +1,9 @@
 -- Standard I/O capability and functions
 --
--- Provides functions for reading from stdin and writing to stdout.
--- All functions require the Stdio capability.
+-- Provides parser-checkable runtime-provided function declarations for stdin
+-- and stdout access. The Stdio capability below records the intended authority
+-- contract; concrete capability-wrapper bodies remain deferred until the
+-- parser/runtime support a canonical stdlib `act` wrapper spelling.
 
 -- Stdio capability for standard input/output operations
 pub capability Stdio: observe read_line() returns String
@@ -9,16 +11,10 @@ pub capability Stdio: observe read_line() returns String
                     | execute println(text: String);
 
 -- Read a line from stdin
-pub fn read_line() -> String {
-    act observe Stdio.read_line
-}
+pub builtin fn read_line() -> String;
 
 -- Print text without a newline
-pub fn print(text: String) {
-    act execute Stdio.print with text: text;
-}
+pub builtin fn print(text: String) -> Unit;
 
 -- Print text with a newline
-pub fn println(text: String) {
-    act execute Stdio.println with text: text;
-}
+pub builtin fn println(text: String) -> Unit;

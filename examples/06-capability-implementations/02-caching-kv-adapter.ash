@@ -11,7 +11,7 @@ pub capability impl MockInternalKV for KeyValue
     requires config fixture: String
 {
     observe get(key: String) returns String { fixture }
-    execute put(key: String, value: String) returns Unit { () }
+    execute put(key: String, value: String) returns Unit { null }
 }
 
 pub capability impl LoggingCacheKV for KeyValue
@@ -20,5 +20,5 @@ pub capability impl LoggingCacheKV for KeyValue
     requires config prefix: String
 {
     observe get(key: String) returns String { key }
-    execute put(key: String, value: String) returns Unit { () }
+    execute put(key: String, value: String) returns Unit { null }
 }

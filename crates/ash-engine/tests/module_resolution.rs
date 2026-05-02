@@ -825,10 +825,11 @@ async fn stdlib_predicate_builtin_resolves() {
     assert_eq!(result.expect("checked above"), ash_core::Value::Bool(true));
 }
 
-/// A plain `type` should still export its type identity so imported callable
-/// signatures can mention it, without exposing its representation.
+/// A public callable must not expose a private ordinary type in its signature;
+/// Phase 109 imports type identities through semantic summaries rather than
+/// allowing private ordinary type leakage through public APIs.
 #[test]
-fn plain_type_identity_imports_for_callable_signatures() {
+fn public_callable_private_plain_type_signature_is_rejected() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
@@ -842,19 +843,20 @@ fn plain_type_identity_imports_for_callable_signatures() {
     write(
         &dir.join("main.ash"),
         "\
-        use lib::{Hidden, passthrough}\n\
-        workflow main(x: Hidden) -> Hidden { ret passthrough(x); }\n\
+        use lib::{passthrough}\n\
+        workflow main { ret 0 }\n\
         ",
     );
 
     let engine = build_engine();
-    let mut workflow = engine
+    let err = engine
         .parse_file(dir.join("main.ash"))
-        .expect("plain type identity should import cleanly");
-
-    engine
-        .check(&mut workflow)
-        .expect("builtin signature should typecheck using imported plain type identity");
+        .expect_err("private ordinary type leak should be rejected at module boundary");
+    assert!(
+        err.to_string().contains("public callable 'passthrough'")
+            && err.to_string().contains("private ordinary type 'Hidden'"),
+        "diagnostic should identify the public callable private type leak: {err}"
+    );
 }
 
 /// A plain `type` should not automatically expose its representation for

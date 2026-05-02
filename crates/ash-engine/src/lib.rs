@@ -1314,25 +1314,26 @@ impl Engine {
 
     /// Check a non-workflow module file for validity.
     ///
-    /// Reads the file, collects public type definitions, validates them in a
-    /// fresh `TypeEnv`, and counts parseable `pub fn` snippets.  Returns a
-    /// `ModuleFileCheckResult` with type/fn counts and any warnings or errors.
+    /// Reads the file as an authoritative `ModuleFile`, lowers ordinary type
+    /// metadata, validates the public semantic surface in a fresh `TypeEnv`,
+    /// and counts parseable `pub fn` exports. Returns a `ModuleFileCheckResult`
+    /// with type/fn counts and any non-fatal validation diagnostics.
     ///
     /// # Error model
     ///
     /// This method uses a **dual error path**:
-    /// - **Hard errors** (file I/O failure, `pub type` parse failure) propagate
-    ///   via `Result::Err` and abort early.
-    /// - **Soft errors** (type registration failures due to unbound references)
-    ///   accumulate in `result.errors` so the caller can report all issues at
-    ///   once rather than stopping at the first.
-    /// - **Warnings** (unparseable `pub fn` snippets) accumulate in
-    ///   `result.warnings`.
+    /// - **Hard errors** (file I/O failure or authoritative `ModuleFile` parse
+    ///   failure) propagate via `Result::Err` and abort early.
+    /// - **Soft errors** (public API private-type exposure or semantic-summary
+    ///   registration failures) accumulate in `result.errors` so callers can
+    ///   report all export-surface issues together.
+    /// - **Warnings** are reserved for legacy `pub fn` snippet diagnostics that
+    ///   do not invalidate the parsed `ModuleFile`.
     ///
     /// # Errors
     ///
     /// Returns `EngineError::Io` if the file cannot be read, or
-    /// `EngineError::Parse` if type definitions fail to parse.
+    /// `EngineError::Parse` if the module file cannot be parsed for type metadata.
     pub fn check_module_file(
         &self,
         path: &std::path::Path,
@@ -1361,6 +1362,17 @@ impl Engine {
             &source,
             &type_metadata.type_defs,
         );
+        errors.extend(module_loader::public_callable_signature_resolution_errors(
+            path,
+            &source,
+            &type_metadata.type_defs,
+        ));
+        errors.extend(module_loader::public_imported_type_visibility_errors(
+            path, &source,
+        ));
+        errors.extend(module_loader::public_representation_visibility_errors(
+            &type_metadata.type_defs,
+        ));
 
         // Build a TypeEnv and register the public lowered semantic summary so
         // ordinary type identities and exposed representations take the same
@@ -2319,14 +2331,20 @@ fn build_imported_closures(
                 }
             }
             CallableKind::Builtin { module } => {
-                let qualified = format!("{module}::{}", callable.exported_name);
+                let dispatch_name = match callable.signature.as_ref() {
+                    Some(module_loader::CallableSignature::Builtin(builtin)) => {
+                        builtin.name.to_string()
+                    }
+                    _ => callable.exported_name.clone(),
+                };
+                let qualified = format!("{module}::{dispatch_name}");
                 let call_module = if dispatch_table.contains_key(qualified.as_str()) {
                     Some(module.clone())
                 } else {
                     None
                 };
 
-                let unqualified_entry = dispatch_table.get(callable.exported_name.as_str());
+                let unqualified_entry = dispatch_table.get(dispatch_name.as_str());
                 if callable.params.is_empty()
                     && let Some(entry) = unqualified_entry
                     && entry.variadic
@@ -2344,7 +2362,7 @@ fn build_imported_closures(
                     })
                     .collect();
                 ash_core::Expr::Call {
-                    func: callable.exported_name.clone(),
+                    func: dispatch_name,
                     module: call_module,
                     arguments: param_exprs,
                 }
@@ -3076,6 +3094,7 @@ mod tests {
                     body: effectful_act_block_body("read"),
                 },
                 signature: None,
+                exporting_modules: HashSet::new(),
                 workflow_summary: None,
             },
         );

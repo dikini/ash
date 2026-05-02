@@ -47,7 +47,7 @@ Close Phase 109 by reconciling docs, examples, statuses, changelog, and verifica
 
 - Reconciled SPEC-057 status in `docs/spec/README.md` to `Implemented MVP` for the implemented Tier 0 ordinary type/module pipeline substrate. Deferred DESIGN-034 features remain explicitly deferred.
 - Reconciled DESIGN-034 top metadata to mention the SPEC-A/Phase 109 substrate implementation and added SPEC-057 to related links.
-- Marked PLAN-105 Phase 109 complete and TASK-791 complete. The PLAN-105 checklist now records the known broad-suite example-corpus baseline failure separately from focused Phase 109 gate results.
+- Marked PLAN-105 Phase 109 complete and TASK-791 complete. The PLAN-105 checklist recorded the known broad-suite example-corpus baseline failure separately from focused Phase 109 gate results at TASK-791 closeout time; TASK-792 later repaired that residual failure and supersedes the broad-suite failure note.
 - Updated PLAN-INDEX Phase 109 counts/status to 12/12 complete in both progress tables and marked TASK-791 complete in the Phase 109 task table.
 - Updated CHANGELOG.md with a TASK-791 closeout entry.
 - Added ordinary type module behavior documentation at `docs/examples/phase109-ordinary-type-modules.md`. It documents public ordinary type export/import, semantic-summary identity preservation, private ordinary type non-leakage, constructor visibility, and deferred DESIGN-034 features without adding executable example-corpus surface area.
@@ -94,9 +94,10 @@ Commands run from `/home/dikini/Projects/ash`:
     - Result: passed.
 
 13. `cargo test --all`
-    - Result: failed with the known/documented broad-suite example corpus baseline failure from TASK-790.
+    - Result at TASK-791 closeout time: failed with the known/documented broad-suite example corpus baseline failure from TASK-790.
     - Output summary: build completed; many prior suites passed, then `crates/ash-cli/tests/example_corpus_check.rs` failed in `example_corpus_cli_check_baseline_is_classified_and_honest` because expected-pass example `examples/06-capability-implementations/01-mock-internal-kv.ash` failed `ash check` with `parse error: parse error: Parsing Error: ContextError { context: [], cause: None }`.
-    - This failure reproduces the known TASK-790 broad-suite failure and is documented as unrelated to the TASK-791 docs/status/example closeout.
+    - This failure reproduced the known TASK-790 broad-suite failure and was documented as unrelated to the TASK-791 docs/status/example closeout.
+    - Supersession note: TASK-792 later repaired this residual broad-suite failure and recorded broad `TMPDIR=/home/dikini cargo test --all` success after remediation.
 
 ## Self-Review Notes
 

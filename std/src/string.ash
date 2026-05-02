@@ -5,3 +5,6 @@ pub builtin fn concat(a: String, b: String) -> String;
 pub builtin fn starts_with(s: String, prefix: String) -> Bool;
 pub builtin fn ends_with(s: String, suffix: String) -> Bool;
 pub builtin fn is_empty(s: String) -> Bool;
+pub builtin fn to_upper(s: String) -> String;
+pub builtin fn to_lower(s: String) -> String;
+pub builtin fn trim(s: String) -> String;

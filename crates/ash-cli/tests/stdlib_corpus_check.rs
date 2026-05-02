@@ -10,8 +10,8 @@ struct ExpectedFailure {
 }
 
 const EXPECTED_STD_FILES: usize = 39;
-const EXPECTED_STD_PASSING: usize = 34;
-const EXPECTED_STD_FAILING: usize = 5;
+const EXPECTED_STD_PASSING: usize = 35;
+const EXPECTED_STD_FAILING: usize = 4;
 
 const EXPECTED_PASS: &[&str] = &[
     "std/src/act.ash",
@@ -31,6 +31,7 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/llm/mod.ash",
     "std/src/llm/openai.ash",
     "std/src/llm/prompt.ash",
+    "std/src/llm/supervised.ash",
     "std/src/llm/types.ash",
     "std/src/map.ash",
     "std/src/markdown.ash",
@@ -57,10 +58,6 @@ const EXPECTED_FAIL: &[ExpectedFailure] = &[
     },
     ExpectedFailure {
         path: "std/src/llm/router.ash",
-        reason: "workflow export visibility/importability cannot resolve dispatch::complete",
-    },
-    ExpectedFailure {
-        path: "std/src/llm/supervised.ash",
         reason: "workflow export visibility/importability cannot resolve dispatch::complete",
     },
     ExpectedFailure {

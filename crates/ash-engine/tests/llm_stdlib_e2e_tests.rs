@@ -3,14 +3,10 @@
 //! Uses structural engine APIs (`check_module_file`, compatibility-only legacy type snippet
 //! collection, and `count_pub_fn_snippets`) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
 //!
-//! Key finding: prompt.ash has 27 `pub fn` declarations. After TASK-546 fix
-//! (keywords allowed as constructor field names), 12 parse through
-//! `parse_fn_definition`. TASK-548 adds 4 more fns (15 of 27 now parse).
-//! TASK-549 renames Message field `role` -> `sender`, unblocking keyword
-//! collision in match patterns and parameter names (24 of 27 now parse).
-//! Removing unnecessary list literal wrappers brings us to 27 of 27.
-//! These are silently dropped during module loading -- this test documents
-//! the known gap.
+//! Key finding: prompt.ash has 27 `pub fn` declarations. Earlier parser slices
+//! raised coverage gradually; after keyword-field handling, `role` -> `sender`,
+//! and list-literal cleanup, all 27 prompt helpers now parse with zero snippet
+//! diagnostics. This test keeps that stdlib helper surface from regressing.
 
 use ash_engine::Engine;
 use ash_engine::module_loader::{
@@ -126,15 +122,14 @@ fn legacy_type_snippet_compat_requires_explicit_scope() {
 }
 
 // ---------------------------------------------------------------------------
-// Requirement 3: pub fn export coverage from prompt.ash
+// Requirement 3: full pub fn export coverage from prompt.ash
 //
-// NOTE: parse_fn_definition only handles a subset of Ash function syntax.
-// 11 of 27 pub fns in prompt.ash use record constructors or match expressions
-// that the parser cannot handle. This test documents the gap.
+// All 27 prompt helpers now parse with no diagnostics. Keep this regression
+// anchored here because LLM stdlib helper syntax has historically drifted.
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_prompt_ash_pub_fn_partial_parse_coverage() {
+fn test_prompt_ash_pub_fn_full_parse_coverage() {
     let source = read_stdlib_file("llm/prompt.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);
 
@@ -344,11 +339,18 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
             }
 
             // prompt.ash: all 27 pub fns now parse cleanly. supervised.ash keeps
-            // one snippet-compat warning for a parseable ModuleFile helper whose
-            // body uses richer expression syntax than the legacy snippet parser.
+            // snippet-compat warnings for parseable ModuleFile helpers whose bodies
+            // use richer expression syntax than the legacy snippet parser.
             let tolerated_supervised_warning = file_name == "supervised.ash"
-                && result.warnings.len() == 1
-                && result.warnings[0].contains("parse_supervisor_response");
+                && result.warnings.len() == 2
+                && result
+                    .warnings
+                    .iter()
+                    .any(|warning| warning.contains("parse_supervisor_response"))
+                && result
+                    .warnings
+                    .iter()
+                    .any(|warning| warning.contains("format_tool_calls_for_review"));
             let tolerated_router_warnings = file_name == "router.ash"
                 && result.warnings.len() == 2
                 && result
@@ -374,5 +376,25 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
     assert!(
         checked >= 10,
         "should have checked at least 10 .ash files in llm/, found {checked}",
+    );
+}
+
+#[test]
+fn test_supervised_helpers_preserve_rejection_feedback_and_tool_call_details() {
+    let source = read_stdlib_file("llm/supervised.ash");
+
+    assert!(
+        source.contains("Reject { feedback: text }"),
+        "supervised rejection should preserve model-provided feedback"
+    );
+    assert!(
+        source.contains("No tool calls awaiting approval"),
+        "tool-call review should handle the empty list explicitly"
+    );
+    assert!(
+        source.contains("First call id:")
+            && source.contains("First call name:")
+            && source.contains("First call arguments:"),
+        "tool-call review should include meaningful first-call details"
     );
 }

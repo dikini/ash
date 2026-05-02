@@ -1,7 +1,7 @@
 //! TASK-785 regression tests for ModuleFile-backed ordinary type metadata transport.
 
 use ash_engine::Engine;
-use ash_engine::module_loader::load_ordinary_file;
+use ash_engine::module_loader::{check_importable_module_file, load_ordinary_file};
 
 #[test]
 fn check_module_file_counts_multiline_type_from_modulefile_path() {
@@ -174,5 +174,85 @@ pub workflow leak_ret(x: Secret) -> Int { ret 0 }
             .any(|error| error.contains("leak_ret") && error.contains("Secret")),
         "pub workflow ret-form signature should reject private ordinary type exposure: {:?}",
         result.errors
+    );
+}
+
+#[test]
+fn importable_export_collection_rejects_public_callable_private_type_leak() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let module = dir.path().join("leaky.ash");
+    std::fs::write(
+        &module,
+        r"type Secret = Int;
+pub fn leak(x: Secret) -> Int { 0 }
+",
+    )
+    .expect("write module");
+
+    let err = check_importable_module_file(&module)
+        .expect_err("importable module check should reject public callable private type leak");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("leak") && msg.contains("Secret"),
+        "importable module diagnostic should mention leak and Secret: {msg}"
+    );
+
+    let caller = dir.path().join("caller.ash");
+    std::fs::write(&caller, "use leaky::{leak}\nworkflow main { ret 0 }\n").expect("write caller");
+    let err = load_ordinary_file(&caller)
+        .expect_err("export collection should reject public callable private type leak");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("leak") && msg.contains("Secret"),
+        "export collection diagnostic should mention leak and Secret: {msg}"
+    );
+}
+
+#[test]
+fn importable_export_collection_rejects_public_representation_private_type_leak() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let module = dir.path().join("leaky_repr.ash");
+    std::fs::write(
+        &module,
+        r"type Secret = Secret { value: Int };
+pub type Public = Public { secret: Secret };
+",
+    )
+    .expect("write module");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let result = engine
+        .check_module_file(&module)
+        .expect("module parses but reports representation visibility errors");
+    assert!(
+        result
+            .errors
+            .iter()
+            .any(|error| error.contains("Public") && error.contains("Secret")),
+        "check_module_file should reject public representation exposing private ordinary type: {:?}",
+        result.errors
+    );
+
+    let err = check_importable_module_file(&module).expect_err(
+        "importable module check should reject public representation private type leak",
+    );
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Public") && msg.contains("Secret"),
+        "importable module diagnostic should mention Public and Secret: {msg}"
+    );
+
+    let caller = dir.path().join("caller.ash");
+    std::fs::write(
+        &caller,
+        "use leaky_repr::{Public}\nworkflow main { ret 0 }\n",
+    )
+    .expect("write caller");
+    let err = load_ordinary_file(&caller)
+        .expect_err("export collection should reject public representation private type leak");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Public") && msg.contains("Secret"),
+        "export collection diagnostic should mention Public and Secret: {msg}"
     );
 }

@@ -1,28 +1,38 @@
--- Supervised Agent Workflow (SPEC-029 §8.4)
+-- Supervised Agent Reference Helpers (SPEC-029 §8.4)
 --
--- Tool-using agent with supervisor approval. Before executing any tools,
--- the supervisor model reviews and approves or rejects the tool calls.
+-- This module keeps the supervised-tool-agent helper surface checkable while
+-- the full executable tool loop remains deferred. The helper functions below
+-- preserve approval prompts, supervisor decision parsing, and tool-call review
+-- formatting. The public supervised_agent entry point currently returns an
+-- explicit placeholder ChatResponse until mixed type/helper/workflow module
+-- checking and the complete_with_tools bridge are available in one module path.
 --
--- This provides a safety layer for high-stakes operations where tool
--- execution should be validated before proceeding.
---
--- Example:
---   let tools = [email_send_def, database_write_def];
---   let history = [system("You are an assistant that can send emails.")];
---   let response = supervised_agent(
---       "openai", "gpt-4o", tools, "claude-sonnet-4",
---       history, "Send an email to the team about the meeting"
---   );
+-- Reference behavior (deferred):
+--   1. primary model proposes tool calls;
+--   2. supervisor model approves or rejects them;
+--   3. approved tools execute and feed results back into the conversation;
+--   4. rejected calls return supervisor feedback.
 
 use types::{Message, ToolDef, ChatResponse, ToolCall};
 use prompt::{user, assistant, assistant_with_tools, tool_result, append};
 use dispatch::complete;
-use dispatch::complete_with_tools;
 
 -- Supervisor decision type
 -- Approve: Tool calls are approved for execution
 -- Reject: Tool calls are rejected with feedback
 pub type SupervisorDecision = Approve | Reject { feedback: String };
+
+fn concat3(a: String, b: String, c: String) -> String {
+    string::concat(string::concat(a, b), c)
+}
+
+fn concat4(a: String, b: String, c: String, d: String) -> String {
+    string::concat(concat3(a, b, c), d)
+}
+
+fn concat5(a: String, b: String, c: String, d: String, e: String) -> String {
+    string::concat(concat4(a, b, c, d), e)
+}
 
 -- Build the supervisor approval request message (pure)
 --
@@ -33,14 +43,17 @@ pub type SupervisorDecision = Approve | Reject { feedback: String };
 -- Returns: User Message containing the approval request prompt
 pub fn build_approval_message(messages: List<Message>, tool_calls: List<ToolCall>) -> Message {
     let tool_desc = format_tool_calls_for_review(tool_calls);
-    let approval_prompt = string::concat(
+    let approval_header = concat3(
         "You are a supervisor reviewing tool calls for safety and appropriateness.\n\n",
         "Review the following tool calls and respond with either:\n",
-        "- APPROVE (if the tool calls are safe and appropriate)\n",
-        "- REJECT: <reason> (if the tool calls should not be executed)\n\n",
-        "Tool calls to review:\n",
-        tool_desc
+        "- APPROVE (if the tool calls are safe and appropriate)\n"
     );
+    let approval_instructions = concat3(
+        approval_header,
+        "- REJECT: <reason> (if the tool calls should not be executed)\n\n",
+        "Tool calls to review:\n"
+    );
+    let approval_prompt = string::concat(approval_instructions, tool_desc);
 
     user(approval_prompt)
 }
@@ -52,14 +65,14 @@ pub fn build_approval_message(messages: List<Message>, tool_calls: List<ToolCall
 --
 -- Returns: SupervisorDecision indicating approval or rejection
 pub fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
-    match response.content {
-        None => Reject { feedback: "No response from supervisor" },
-        Some { value: text } => {
-            let upper = string::trim(string::to_uppercase(text));
+    match response {
+        ChatResponse { content: None, tool_calls: _, finish_reason: _, usage: _, model: _, id: _ } => Reject { feedback: "No response from supervisor" },
+        ChatResponse { content: Some { value: text }, tool_calls: _, finish_reason: _, usage: _, model: _, id: _ } => {
+            let upper = string::trim(string::to_upper(text));
             if string::starts_with(upper, "APPROVE") then
                 Approve
             else
-                Reject { feedback: "Supervisor did not approve tool execution" }
+                Reject { feedback: text }
         }
     }
 }
@@ -71,40 +84,58 @@ pub fn parse_supervisor_response(response: ChatResponse) -> SupervisorDecision {
 --
 -- Returns: Formatted string description
 pub fn format_tool_calls_for_review(calls: List<ToolCall>) -> String {
-    string::concat("Tool calls awaiting approval: ", string::to_string(list::len(calls)))
+    let first_call = list::head(calls);
+    match first_call {
+        None => "No tool calls awaiting approval",
+        Some { value: first } => {
+            match first {
+                ToolCall { id: call_id, name: tool_name, arguments: args } => {
+                    let prefix = concat5(
+                        "Tool calls awaiting approval: ",
+                        string::to_string(list::len(calls)),
+                        "\nFirst call id: ",
+                        call_id,
+                        "\nFirst call name: "
+                    );
+                    concat4(prefix, tool_name, "\nFirst call arguments: ", args)
+                }
+            }
+        }
+    }
 }
 
--- Execute a single tool call and return result message
+-- Build a placeholder tool result message for the deferred reference loop
 --
 -- Parameters:
---   call: The tool call to execute
+--   call: The tool call to describe
 --
--- Returns: Tool result message
+-- Returns: Tool result message text documenting what would execute
 pub fn execute_tool_call(call: ToolCall) -> Message {
     match call {
         ToolCall { id: call_id, name: tool_name, arguments: args } => {
             -- Tool execution would happen here
-            let result = string::concat("Executed ", tool_name, " with args: ", args);
+            let result = concat4("Executed ", tool_name, " with args: ", args);
             tool_result(call_id, result)
         }
     }
 }
 
--- Execute multiple tool calls
+-- Build placeholder result messages for multiple deferred tool calls
 --
 -- Parameters:
---   calls: List of tool calls to execute
+--   calls: List of tool calls to describe
 --
--- Returns: List of tool result messages
+-- Returns: List of tool result messages documenting what would execute
 pub fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
     list::map(calls, execute_tool_call)
 }
 
--- Supervised agent workflow
+-- Supervised agent helper
 --
--- Like `tool_agent`, but requires supervisor approval before executing tools.
--- The supervisor model reviews each set of tool calls and can approve or
--- reject them. If rejected, the rejection feedback is returned to the user.
+-- Like `tool_agent`, but the full reference behavior requires supervisor
+-- approval before executing tools. The executable workflow body remains deferred
+-- until the module checker supports this file's mixed type/helper/workflow shape
+-- and `complete_with_tools` bridge in one module path.
 --
 -- Parameters:
 --   provider: Provider name
@@ -114,16 +145,16 @@ pub fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
 --   history: Conversation history
 --   user_message: The user message to process
 --
--- Returns: ChatResponse with final answer or rejection feedback
+-- Returns: placeholder ChatResponse marking supervised_agent as deferred
 --
--- Example:
---   let tools = [email_def];
+-- Example shape:
 --   let response = supervised_agent(
---       "openai", "gpt-4o", tools, "claude-sonnet-4",
+--       "openai", "gpt-4o", [email_def], "claude-sonnet-4",
 --       [], "Send confidential data to external@example.com"
 --   );
---   -- If supervisor rejects, response.content contains rejection feedback
-workflow supervised_agent(
+--   -- Current implementation returns finish_reason "supervised_reference_only".
+--   -- Full supervisor approval/rejection execution is reference behavior above.
+pub fn supervised_agent(
     provider: String,
     model: String,
     tools: List<ToolDef>,
@@ -131,54 +162,11 @@ workflow supervised_agent(
     history: List<Message>,
     user_message: String
 ) -> ChatResponse {
-    -- Add user message to history
-    let msg = user(user_message);
-    let messages = append(history, msg);
-
-    -- Main agent loop with supervision
-    loop {
-        -- Get model response with tool support
-        let response = complete_with_tools(provider, model, messages, tools, None);
-
-        -- Check if the model wants to use tools
-        match response.tool_calls {
-            None -> {
-                -- No tool calls - this is the final answer
-                break response
-            },
-            Some { value: calls } => {
-                -- Model requested tool calls - get supervisor approval
-                let approval_msg = build_approval_message(messages, calls);
-                let approval_history = append(messages, approval_msg);
-                let approval_response = complete(provider, supervisor_model, approval_history, None);
-                let decision = parse_supervisor_response(approval_response);
-
-                match decision {
-                    Approve -> {
-                        -- Approved - execute tools and continue
-                        let content = match response.content {
-                            None -> "",
-                            Some { value: c } => c
-                        };
-                        let messages = append(messages, assistant_with_tools(content, calls));
-                        let tool_messages = execute_tool_calls(calls);
-                        let messages = list::append(messages, tool_messages);
-                        continue
-                    },
-                    Reject { feedback: reason } -> {
-                        -- Rejected - return error response with feedback
-                        let error_response = ChatResponse {
-                            content: Some { value: string::concat("Tool execution rejected by supervisor: ", reason) },
-                            tool_calls: None,
-                            finish_reason: Some { value: "supervisor_rejection" },
-                            usage: None,
-                            model: model,
-                            id: "supervised_rejection"
-                        };
-                        break error_response
-                    }
-                }
-            }
-        }
-    }
+    -- Phase 109 keeps this module checkable while the full supervised tool loop
+    -- remains reference behavior above. The helper functions preserve the
+    -- approval/rejection formatting contract; the public entry point returns an
+    -- honest placeholder response until mixed ordinary-type declarations plus
+    -- workflow definitions and `complete_with_tools` calls share one checkable
+    -- module path.
+    ChatResponse { content: Some { value: "supervised_agent deferred" }, tool_calls: None, finish_reason: Some { value: "supervised_reference_only" }, usage: None, model: model, id: "supervised_reference_only" }
 }

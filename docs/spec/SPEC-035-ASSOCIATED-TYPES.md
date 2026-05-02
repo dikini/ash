@@ -123,7 +123,7 @@ Examples of parsed forms:
 - `S::Ok` → `Type::Associated { base: Type::Name("S"), name: "Ok" }`
 - `Map<K, V>::Entry` → `Type::Associated { base: Type::Constructor { name: "Map", args: [Name("K"), Name("V")] }, name: "Entry" }`
 
-**Ambiguity rule:** If a type variable `T` has multiple interface bounds and two or more of those interfaces declare an associated type with the same name (e.g., both `A` and `B` define `Ok`), then writing `T::Ok` is **ambiguous** and must be rejected with a [NEW] `TypeEnvError::AmbiguousAssociatedType` error. The programmer must instead use the fully explicit form `Interface::Assoc<T>` (or similar explicit syntax) to disambiguate. If exactly one bound in scope defines the name, `T::Ok` resolves to that interface's associated type.
+**Ambiguity rule:** If a type variable `T` has multiple interface bounds and two or more of those interfaces declare an associated type with the same name (e.g., both `A` and `B` define `Ok`), then writing `T::Ok` is **ambiguous** and must be rejected with a [NEW] `TypeEnvError::AmbiguousAssociatedType` error. No alternative public disambiguation syntax is normative in the current language packet. Ambiguous `T::Assoc` forms must be rejected; code must instead avoid ambiguous bound sets or otherwise make the declaring interface unique until a future packet standardizes an explicit disambiguator. If exactly one bound in scope defines the name, `T::Ok` resolves to that interface's associated type.
 
 ## 4. IR Changes
 
@@ -171,26 +171,18 @@ pub enum Type {
 }
 ```
 
-During parsing and lowering, `S::Ok` becomes `Type::Associated { interface: "Serializer", base: Type::Var(S), name: "Ok" }` when `S` is known to be bound by `Serializer`.
+During parsing and lowering, `S::Ok` remains an unresolved associated-projection form carrying `base` and `name`. Selecting the declaring interface/member is a typechecker elaboration step, not a parser responsibility.
 
 ### 4.3 Parser Updates
 
-**`crates/ash-parser/src/parse_module.rs`**
+**`crates/ash-parser/src/parse_module.rs` and `crates/ash-parser/src/parse_type_def.rs`**
 
-This is a **structural parser-body redesign**, not just an additive grammar tweak. The current body loops only parse methods:
+This is a parser alignment task across both ordinary type-definition parsing and surface/module type parsing:
 
-```rust
-while !input.input.starts_with("}") {
-    methods.push(parse_interface_method_signature(input)?);
-    ...
-}
-```
-
-They must be replaced with dispatch loops that can parse either a method or an associated-type declaration:
-
-- `parse_interface_definition` reads `type Name` declarations inside the interface body.
-- `parse_impl_definition` reads `type Name = TypeExpr` bindings inside the impl body.
-- `parse_surface_type` (in `parse_module.rs`) is extended to parse `Type::Associated` when encountering `identifier "::" identifier` in a type context.
+- `parse_surface_type` in `parse_module.rs` recognizes `type "::" identifier` in surface type positions.
+- `parse_type_expr` in `parse_type_def.rs` recognizes the same associated-projection subset inside ordinary type definitions and aliases.
+- `parse_module.rs::convert_type_expr` preserves that form when converting `parse_type_def::TypeExpr` into `surface::Type`.
+- The parser does not resolve which interface defines the associated type; that remains the type checker’s job.
 
 Example grammar:
 

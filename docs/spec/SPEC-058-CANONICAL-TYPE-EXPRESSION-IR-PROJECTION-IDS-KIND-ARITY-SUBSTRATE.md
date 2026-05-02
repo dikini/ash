@@ -69,7 +69,7 @@ Out of scope:
 SPEC-058 assumes the following live substrate:
 
 1. [SPEC-057](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md) already owns canonical `ModuleIdentity`, `TypeDeclId`, constructor identities, and reserved interface/associated-member identity slots.
-2. [SPEC-035](SPEC-035-ASSOCIATED-TYPES.md) already defines the current simple associated-type surface (`S::Ok`, `Map<K, V>::Entry`) and selected-impl substitution behavior.
+2. [SPEC-035](SPEC-035-ASSOCIATED-TYPES.md) owns only the current associated-type surface syntax (`S::Ok`, `Map<K, V>::Entry`), ambiguity rejection for bound lookup, the simple selected-impl substitution compatibility path for concrete calls, and rigid projection behavior in generic code.
 3. [SPEC-003](SPEC-003-TYPE-SYSTEM.md) already defines `Kind::Type` and `Kind::Arrow`, and current nominal constructor applications carry a kind field.
 4. current formatter/spec surfaces still treat `base::Assoc` as the canonical rendered associated projection spelling.
 
@@ -81,7 +81,7 @@ SPEC-058 must not contradict existing language features. The live tensions are:
 
 | Current contract | Tension against DESIGN-034 SPEC-B | SPEC-058 resolution |
 |---|---|---|
-| `ash-typeck::Type::Associated { interface: String, base, name }` and empty-string unresolved interface handling | Not canonical, unary/base-shaped, and unsuitable for later equality/normalization | Keep current surface syntax, but elaborate it into canonical projection identities backed by Phase 109 identity carriers. Empty-string sentinel state is replaced by explicit unresolved/ambiguous/resolved projection states. |
+| `ash-typeck::Type::Associated { interface: String, base, name }` and empty-string unresolved interface handling | Not canonical, unary/base-shaped, and unsuitable for later equality/normalization | SPEC-058 replaces that implementation detail as the normative internal contract with canonical projection identities backed by Phase 109 identity carriers. Empty-string sentinel state is replaced by explicit unresolved/ambiguous/resolved projection states. SPEC-035 remains surface/compatibility-only. |
 | SPEC-057 reserved interface/associated-member identity slots are explicitly uninterpreted for computation semantics | Later packets need canonical projection/member identity now | SPEC-058 formally promotes those identities for internal IR purposes only. Phase 109's ordinary-type identity contract remains unchanged. |
 | Current surface/core projection syntax is `base::Assoc` | DESIGN-034 sketches more explicit generalized projection spellings | SPEC-058 keeps `base::Assoc` as the only normative user-visible spelling in this packet. Alternative spellings are deferred. |
 | Existing kind support is partial and mostly implicit | DESIGN-034 wants general kind/arity substrate | SPEC-058 widens internal kind/arity validation but does not introduce new public kind syntax, holes, or partial applications. |
@@ -199,9 +199,21 @@ The current projection spelling from SPEC-035 remains the only user-facing spell
 ```ash
 S::Ok
 Map<K, V>::Entry
+Base<A, B>::Assoc
 ```
 
 No alternative public projection syntax becomes normative in SPEC-058.
+
+Parser-aligned supported subset for this packet:
+
+```text
+associated-projection = projection-base "::" identifier
+projection-base       = identifier | nominal-type-application
+```
+
+Here `nominal-type-application` means the ordinary named type form with zero or more type arguments, for example `Map<K, V>`.
+
+This replaces older shorthand formulations such as `type "::" identifier` and `identifier "::" identifier`. For this packet, `projection-base` is limited to the written forms exemplified above.
 
 ### 9.2 Elaboration contract
 
@@ -214,7 +226,7 @@ The elaboration must:
 3. produce a canonical projection IR node using promoted Phase 109 identities;
 4. preserve enough source information to render current user-facing diagnostics.
 
-For the currently supported SPEC-035 subset, unary `S::Assoc` elaborates to a one-argument projection spine. Multi-parameter projections use the interface argument order determined by the selected interface declaration and the current source/base shape.
+For the SPEC-035-compatible subset, `S::Assoc` elaborates to a one-argument projection spine `[S]`. `Base<A, B>::Assoc` elaborates by taking the written nominal base application's argument list in order and using that ordered list as the projection argument spine for the selected interface/member, so `Map<K, V>::Entry` preserves the ordered spine `[K, V]`. Projection bases outside the §9.1 supported subset must be rejected with the dedicated unsupported-shape diagnostic from §14.
 
 ### 9.3 Ambiguity and unresolved forms
 
@@ -224,7 +236,7 @@ If the projection is not ambiguous but cannot reduce because only a generic/rigi
 
 ### 9.4 Compatibility boundary
 
-Current selected-impl associated-type substitution remains allowed for the already-supported simple associated-output path, but SPEC-058 does not define that operation as general normalization.
+Current selected-impl associated-type substitution remains allowed only as the SPEC-035 compatibility path: once a concrete interface call has selected a unique `impl`, the implementation may substitute that impl's associated-type binding with the selected impl substitution applied. SPEC-058 does not define that step as general normalization, recursive projection reduction, or definitional equality.
 
 ## 10. Rigid / Neutral Carriers and Normal-Form View
 
@@ -314,7 +326,7 @@ Minimum acceptance criteria:
 6. neutral computation-head carriers exist, but no new comparison, decomposition, or solving behavior under neutral heads is required or claimed by this packet;
 7. wrong kind/arity is rejected before any later normalization/equality work;
 8. transparent aliases and canonical rigid projections are consumed at `TypeEnv::unify_types` and `TypeEnv::types_equivalent_for_equality`, via `TypeEnv::canonicalize_type_for_equality`, while diagnostics may continue to render readable source spellings;
-9. current SPEC-035 simple associated-output substitution still works for the already-supported subset;
+9. the SPEC-035 compatibility path still works: after unique impl selection for a concrete associated-output use, substituting the selected associated-type binding with the selected impl substitution applied yields the same result as the current simple behavior;
 10. no new projection spelling becomes required or accepted beyond the current `base::Assoc` surface;
 11. Phase 109 ordinary-type summary/import/export behavior remains unaffected.
 
@@ -325,9 +337,9 @@ Minimum acceptance criteria:
 - [TASK-795](../plan/tasks/TASK-795-core-type-computation-identity-carriers.md): promoted identity carriers and shared `Kind` ownership.
 - [TASK-796](../plan/tasks/TASK-796-core-canonical-type-expression-ir-and-neutral-carriers.md): canonical IR and rigid/neutral carriers.
 - [TASK-797](../plan/tasks/TASK-797-ordinary-type-parser-expression-parity-and-explicit-rejections.md): parser parity across `parse_type_def.rs` and `parse_module.rs`, plus explicit rejection boundaries.
-- [TASK-798](../plan/tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md): canonical IR lowering plus source/import interface-member identity plumbing.
+- [TASK-798](../plan/tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md): canonical IR lowering plus `TypeEnv` interface/member identity registry, storage, and source/import registration substrate.
 - [TASK-799](../plan/tasks/TASK-799-kind-and-arity-validation-hardening.md): kind/arity validation hardening.
-- [TASK-800](../plan/tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md): canonical projection elaboration and rigid-plumbing over pre-registered source/import interface/member identities.
+- [TASK-800](../plan/tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md): replacement of live stringly/sentinel projection surfaces with canonical projection elaboration, rigid plumbing, and projection-specific diagnostics over pre-registered source/import interface/member identities.
 - [TASK-801](../plan/tasks/TASK-801-transparent-alias-canonicalization-helper.md): alias canonicalization helpers.
 - [TASK-802](../plan/tasks/TASK-802-canonicalization-boundary-adoption-for-current-equality-sites.md): boundary adoption at `TypeEnv::unify_types` / `TypeEnv::types_equivalent_for_equality` only; pattern/exhaustiveness rollout remains deferred.
 - [TASK-803](../plan/tasks/TASK-803-spec-b-diagnostics-negative-tests-and-non-interference.md): diagnostics and non-interference.

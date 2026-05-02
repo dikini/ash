@@ -23,8 +23,8 @@ Close Phase 110 honestly after focused and broad verification succeeds or any re
 ## Requirements
 
 1. Reconcile SPEC-058, PLAN-106, PLAN-INDEX, task files, and CHANGELOG.
-2. Record exact focused and broad verification commands, with one-line pass/fail summaries, in a `## Verification Evidence` section in this task file.
-3. Record the exact carried-forward non-Phase-110 suites by test target name and why each belongs to closeout.
+2. Record exact focused and broad verification commands, with one-line pass/fail summaries, in a `## Verification Evidence` section in this task file, including the carried-forward TASK-797 parser rejection suite by exact target name.
+3. Record the exact carried-forward non-owner suites by test target name, why each belongs to closeout, and which task originally owned the evidence, including TASK-797 for parser rejection boundaries.
 4. Record independent-review handoff status in a `## Self-Review / Review Handoff` section in this task file. Do not mark the phase complete while controller review findings remain open.
 
 ## Files
@@ -38,7 +38,7 @@ Close Phase 110 honestly after focused and broad verification succeeds or any re
 
 ## TDD Steps
 
-1. Assemble the final focused verification command set from the exact Phase 110 task-numbered suites before editing status surfaces.
+1. Assemble the final focused verification command set from the exact Phase 110 task-numbered suites before editing status surfaces, including the carried-forward TASK-797 parser rejection suite and the TASK-803 typechecker diagnostic suites.
 2. Run focused verification first.
 3. Run broad verification before claiming closeout and record any failure with the exact command, failing target, and ownership.
 4. Only then update final status/checklist surfaces.
@@ -49,7 +49,7 @@ Close Phase 110 honestly after focused and broad verification succeeds or any re
 - [ ] `cargo fmt --check`
 - [ ] `cargo check --workspace`
 - [ ] all focused Phase 110 suites are run and listed by exact target name in `## Verification Evidence`
-- [ ] all carried-forward regression suites are listed by exact target name and rationale in `## Verification Evidence`
+- [ ] carried-forward suites are listed by exact target name, rationale, and original owning task in `## Verification Evidence`
 - [ ] broad verification command and result summary are recorded honestly in `## Verification Evidence`
 
 ## Notes

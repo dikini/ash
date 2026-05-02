@@ -1,12 +1,13 @@
 # SPEC-035: Associated Types on Interfaces
 
-**Status:** Draft  
-**Date:** 2026-04-14  
-**Version:** 0.2  
+**Status:** Draft
+**Date:** 2026-05-02
+**Version:** 0.3
+**Internal representation superseded by:** [SPEC-058](SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md)
 
 ## 1. Overview
 
-Allow interfaces to declare **associated types** — type-level outputs that are determined by each `impl` block. This enables interfaces to act as type families: a single interface maps a set of input types to a specific output type.
+Allow interfaces to declare associated types — type-level outputs that are determined by each `impl` block. This enables interfaces to act as type families: a single interface maps a set of input types to a specific output type.
 
 Associated types are the final extension needed for ergonomic generic libraries. They eliminate the "type parameter explosion" seen when output types must be threaded explicitly through every generic signature. Use cases include serialization (`Serializer::Ok`, `Serializer::Error`), collection traits (`Map::Key`, `Map::Value`), and besedarium's query builder (`QueryBuilder::Result`, `QueryBuilder::Error`).
 
@@ -44,7 +45,7 @@ fn to_json<T>(value: T) -> Result<String, SerializeError>
 }
 ```
 
-The output and error types are **projected** from the `impl` block for `JsonWriter`.
+The output and error types are projected from the `impl` block for `JsonWriter`.
 
 ## 3. Semantics
 
@@ -104,173 +105,43 @@ I::Item
 Map<K, V>::Entry
 ```
 
-At the type-system level, this is a **type projection** that must be **normalized** (resolved to a concrete type) using the selected `impl` block.
+At the surface level, associated projections use the existing `base::Assoc` spelling.
 
-**Parsing type projections:**
+Current supported grammar:
 
-The surface type parser (`parse_surface_type` in `parse_module.rs`) is extended to recognize the `::` operator after any type that can serve as a base:
-
-```
-associated-type = type "::" identifier
-```
-
-Implementation strategy:
-1. Parse the left-hand side as a normal surface `Type` (`Name`, `Constructor`, or a type variable).
-2. If the next tokens are `::` followed by an identifier, produce `Type::Associated { base, name }`.
-3. The parser does **not** resolve which interface defines the associated type — that is the type checker's job.
-
-Examples of parsed forms:
-- `S::Ok` → `Type::Associated { base: Type::Name("S"), name: "Ok" }`
-- `Map<K, V>::Entry` → `Type::Associated { base: Type::Constructor { name: "Map", args: [Name("K"), Name("V")] }, name: "Entry" }`
-
-**Ambiguity rule:** If a type variable `T` has multiple interface bounds and two or more of those interfaces declare an associated type with the same name (e.g., both `A` and `B` define `Ok`), then writing `T::Ok` is **ambiguous** and must be rejected with a [NEW] `TypeEnvError::AmbiguousAssociatedType` error. No alternative public disambiguation syntax is normative in the current language packet. Ambiguous `T::Assoc` forms must be rejected; code must instead avoid ambiguous bound sets or otherwise make the declaring interface unique until a future packet standardizes an explicit disambiguator. If exactly one bound in scope defines the name, `T::Ok` resolves to that interface's associated type.
-
-## 4. IR Changes
-
-### 4.1 AST Updates
-
-**`crates/ash-core/src/ast.rs`**
-
-```rust
-pub struct InterfaceDef {
-    pub name: Name,
-    pub type_params: Vec<TypeVar>,
-    pub associated_types: Vec<Name>,        -- NEW
-    pub methods: Vec<InterfaceMethodSig>,
-    pub visibility: Visibility,
-}
-
-pub struct ImplDef {
-    pub visibility: Visibility,
-    pub interface: Name,
-    pub type_params: Vec<TypeVar>,
-    pub type_args: Vec<TypeExpr>,
-    pub where_bounds: Vec<WhereBound>,
-    pub associated_type_bindings: Vec<(Name, TypeExpr)>,  -- NEW
-    pub methods: Vec<ImplMethodDef>,
-}
+```text
+associated-projection = projection-base "::" identifier
+projection-base       = identifier | nominal-type-application
 ```
 
-### 4.2 Type Representation
+Where `nominal-type-application` is the ordinary named type form with zero or more type arguments, for example `Map<K, V>`.
 
-**`crates/ash-typeck/src/types.rs`**
+This grammar replaces earlier shorthand formulations such as `type "::" identifier` and `identifier "::" identifier`.
 
-```rust
-pub enum Type {
-    // ... existing variants (Int, String, List, Constructor, Fun, Fn, Var, etc.)
+Notes:
+1. `S::Ok` and `Map<K, V>::Entry` are both in this supported subset.
+2. This section is intentionally surface-only. It does not define a canonical internal representation for projections.
+3. The parser records the written base and associated-member name. Resolving the declaring interface/member remains the type checker’s job.
 
-    /// Associated type projection: e.g., Serializer<JsonWriter>::Ok
-    ///
-    /// The `interface` field is required because `base` may have multiple
-    /// interface bounds that each define an associated type with the same name.
-    Associated {
-        interface: String,         -- e.g., "Serializer"
-        base: Box<Type>,           -- e.g., JsonWriter
-        name: String,              -- e.g., "Ok"
-    },
-}
-```
+Ambiguity rule: if a type variable `T` has multiple interface bounds and two or more of those interfaces declare an associated type with the same name (for example, both `A` and `B` define `Ok`), then `T::Ok` is ambiguous and must be rejected with a dedicated ambiguity error. No alternative public disambiguation syntax is normative in this packet. If exactly one bound in scope defines the requested associated type name, `T::Ok` resolves to that interface’s associated type.
 
-During parsing and lowering, `S::Ok` remains an unresolved associated-projection form carrying `base` and `name`. Selecting the declaring interface/member is a typechecker elaboration step, not a parser responsibility.
+## 4. Implementation Boundary
 
-### 4.3 Parser Updates
+SPEC-035 defines only:
+- declaration syntax for associated types inside `interface` and `impl` blocks;
+- the current projection surface forms `Base::Assoc` and `Base<A, B>::Assoc`;
+- the ambiguity rule for bound-name lookup;
+- the simple compatibility behavior in §5.
 
-**`crates/ash-parser/src/parse_module.rs` and `crates/ash-parser/src/parse_type_def.rs`**
+SPEC-035 does not define the canonical internal representation of projections, projection identities, elaboration states, kind/arity validation, alias canonicalization, or any general normalization judgment. Those internal and cross-crate contracts are owned by SPEC-058.
 
-This is a parser alignment task across both ordinary type-definition parsing and surface/module type parsing:
+## 5. Current Compatibility Semantics
 
-- `parse_surface_type` in `parse_module.rs` recognizes `type "::" identifier` in surface type positions.
-- `parse_type_expr` in `parse_type_def.rs` recognizes the same associated-projection subset inside ordinary type definitions and aliases.
-- `parse_module.rs::convert_type_expr` preserves that form when converting `parse_type_def::TypeExpr` into `surface::Type`.
-- The parser does not resolve which interface defines the associated type; that remains the type checker’s job.
+### 5.1 Concrete selected-impl substitution
 
-Example grammar:
-
-```
-associated-type = identifier "::" identifier
-
-interface-body = "{" ( interface-method | associated-type-decl )* "}"
-associated-type-decl = "type" identifier
-
-impl-body = "{" ( impl-method | associated-type-binding )* "}"
-associated-type-binding = "type" identifier "=" type-expr
-```
-
-## 5. Type System Changes
-
-### 5.1 Interface Registration
-
-`register_interface` stores the list of associated type names in `InterfaceInfo`:
-
-```rust
-pub struct InterfaceInfo {
-    pub name: String,
-    pub type_params: Vec<String>,
-    pub associated_types: Vec<String>,
-    pub methods: HashMap<String, InterfaceMethodInfo>,
-}
-```
-
-### 5.2 Impl Registration
-
-`register_impl` validates that every associated type declared by the interface has exactly one binding in the `impl` block, and that no extra bindings are present.
-
-### 5.3 Type Normalization
-
-The core new operation is **associated type normalization**: replacing `Type::Associated` with its concrete definition.
-
-```rust
-/// Normalize all associated type projections in `ty` using the selected impl scheme.
-pub fn normalize_associated_types(&self, ty: &Type, scheme: &ImplScheme) -> Result<Type, TypeEnvError> {
-    match ty {
-        Type::Associated { interface, base, name } => {
-            // 1. Verify the scheme matches the projected interface
-            if scheme.interface != *interface {
-                return Err(TypeEnvError::[NEW] MismatchedProjectionInterface { ... });
-            }
-            // 2. Look up `name` in the scheme's associated_type_bindings
-            let binding = scheme.associated_type_bindings.get(name)
-                .ok_or_else(|| TypeEnvError::[NEW] MissingAssociatedType { ... })?;
-            // 3. Apply the scheme substitution (from head unification) to the binding
-            let normalized = scheme.substitution.apply(binding);
-            // 4. Recursively normalize
-            self.normalize_associated_types(&normalized, scheme)
-        }
-        Type::Constructor { name, args, kind } => {
-            let normalized_args = args.iter()
-                .map(|a| self.normalize_associated_types(a, scheme))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(Type::Constructor { name: name.clone(), args: normalized_args, kind: kind.clone() })
-        }
-        Type::Fun(params, return_type, effect) => {
-            let normalized_params = params.iter()
-                .map(|p| self.normalize_associated_types(p, scheme))
-                .collect::<Result<Vec<_>, _>>()?;
-            let normalized_return = self.normalize_associated_types(return_type, scheme)?;
-            Ok(Type::Fun(normalized_params, Box::new(normalized_return), *effect))
-        }
-        Type::Fn(params, return_type) => {
-            let normalized_params = params.iter()
-                .map(|p| self.normalize_associated_types(p, scheme))
-                .collect::<Result<Vec<_>, _>>()?;
-            let normalized_return = self.normalize_associated_types(return_type, scheme)?;
-            Ok(Type::Fn(normalized_params, Box::new(normalized_return)))
-        }
-        // ... other variants recurse similarly
-        other => Ok(other.clone()),
-    }
-}
-```
-
-Normalization happens **after** an impl scheme is selected and a substitution is known.
-
-### 5.4 Integration with Method Resolution
-
-`resolve_interface_method_call` is extended:
-
-1. Select an impl scheme (as in SPEC-034).
-2. Normalize the method's return type using the selected scheme.
-3. Return the fully normalized type.
+After ordinary interface-method resolution selects a unique `impl` for a concrete call and computes the usual substitution from the impl head, each projection from that same interface is interpreted by:
+1. looking up the named associated-type binding in the selected `impl`; and
+2. applying the selected substitution to that binding’s right-hand side.
 
 Example:
 
@@ -286,84 +157,33 @@ impl Serializer<JsonWriter> {
 }
 ```
 
-Call: `Serializer::serialize_bool(my_writer, true)`.
+For `Serializer::serialize_bool(my_writer, true)`, selecting `impl Serializer<JsonWriter>` makes the projected result `S::Ok` compatible with `String` by substituting the selected impl binding.
 
-1. Resolve method signature: `(S, Bool) -> S::Ok`.
-2. Unify `S` with `JsonWriter`.
-3. Select `impl Serializer<JsonWriter>`.
-4. Normalize `S::Ok` → `String`.
-5. Return `String`.
+When a concrete typing operation must compare a projected type against another type after unique impl selection, it uses this same selected-impl substitution result before the ordinary compatibility check.
 
-### 5.5 Unification with Associated Types
+For this packet, this selected-impl substitution path is the only required concrete associated-type reduction behavior. It is a compatibility rule for the current simple associated-type subset, not a general normalization, definitional equality, or recursive type-computation system.
 
-Before unification in concrete code, both sides of the equality must be **fully normalized** using the selected impl scheme:
+### 5.2 Rigid projections in generic code
 
-```rust
-let normalized_expected = self.normalize_associated_types(expected, scheme)?;
-let normalized_actual = self.normalize_associated_types(actual, scheme)?;
-unify(&normalized_expected, &normalized_actual)?
-```
+If no concrete `impl` has been selected, a projection remains rigid.
 
-If an associated type appears in a context where no impl scheme has been selected yet (e.g., inside a generic function body with an abstract bound `T: Serializer`), it remains as `Type::Associated`.
+In particular:
+- inside `fn<T: Serializer>(s: T) -> T::Ok`, the projection `T::Ok` is rigid;
+- two rigid projections are compatible only when they refer to the same base or bound and the same associated member;
+- a rigid projection does not become compatible with an arbitrary concrete type merely because some later `impl` could choose that type.
 
-**Rigid projection rule for generic code:**
+This rule preserves current generic associated-type behavior while leaving general projection comparison and normalization ownership to SPEC-058 and later packets.
 
-- Inside `fn<T: Serializer>(s: T) -> T::Ok`, the projection `T::Ok` is treated as a **rigid type variable** scoped to the bound `Serializer`.
-- Two identical rigid projections (`T::Ok` and `T::Ok`) unify with each other.
-- A rigid projection does **not** unify with an arbitrary concrete type, even if that type happens to be the associated type for some specific impl.
-- Rigid projections are resolved to concrete types only during monomorphization, when `T` is replaced by a concrete type and the concrete impl scheme is selected.
-
-This rule is conservative, sound, and sufficient for serde-like and besedarium-like use cases.
-
-## 6. Lowering and Interpreter
-
-### 6.1 Monomorphization
-
-When lowering a concrete interface call, the selected impl scheme provides:
-
-- The instantiated method body (with type arguments substituted).
-- The associated type bindings (also substituted).
-
-The **ash-engine post-typecheck lowering pass** (owner defined in SPEC-034) replaces all occurrences of associated types in the method body with their normalized concrete types. Since SPEC-034 already requires monomorphization of generic impls, adding associated type substitution is a straightforward extension of the same pass.
-
-### 6.2 Runtime Representation
-
-`Type::Associated` does not appear at runtime. It is fully resolved during lowering. The interpreter sees only concrete `Type::Constructor`, `Type::Fun`, `Type::Fn`, and primitive types.
-
-## 7. Migration Path
-
-1. Add `associated_types` to `InterfaceDef` and `associated_type_bindings` to `ImplDef`.
-2. Update parser (`parse_module.rs`) to read `type Name` in interfaces and `type Name = TypeExpr` in impls, and to parse `Type::Associated` in type contexts.
-3. Add `Type::Associated` to the internal type representation.
-4. Update interface and impl registration to store associated type metadata.
-5. Implement `normalize_associated_types`.
-6. Integrate normalization into `resolve_interface_method_call` and unification.
-7. Extend the ash-engine monomorphization pass to substitute associated types in instantiated method bodies.
-8. Test:
-   - `Serializer<JsonWriter>::Ok` → `String`
-   - `Iterator<ListIter<Int>>::Item` → `Int`
-   - Generic function with rigid projection: `fn<T: Serializer>(s: T) -> T::Ok`
-
-## 8. Conformance
+## 6. Conformance
 
 An implementation conforming to SPEC-035 must:
+- parse `type Name` declarations inside `interface` blocks;
+- parse `type Name = TypeExpr` bindings inside `impl` blocks;
+- parse projection surface forms `Base::Assoc` and `Base<A1, ..., An>::Assoc` in type positions;
+- reject ambiguous `T::Assoc` lookups when more than one in-scope bound defines `Assoc`;
+- require each `impl` to provide exactly the associated type bindings declared by the interface, with no missing or extraneous bindings;
+- apply the §5.1 selected-impl substitution rule for the current simple associated-output path;
+- apply the §5.2 rigid-projection rule when no concrete `impl` has been selected;
+- support generic `impl` blocks whose associated-type bindings mention the impl’s own type parameters.
 
-- Parse `type Name` declarations inside `interface` blocks.
-- Parse `type Name = TypeExpr` bindings inside `impl` blocks.
-- Represent associated type projections (`S::Ok`) as `Type::Associated { interface, base, name }`.
-- Normalize associated types to their concrete definitions after impl scheme selection.
-- Ensure that every concrete interface call returns a fully normalized type with no remaining projections.
-- Apply the rigid-projection rule inside generic function bodies where the impl scheme is not yet known.
-- Support generic `impl` blocks where associated type bindings may reference the impl's own type parameters.
-- Reject `impl` blocks that are missing required associated type bindings or provide extraneous ones.
-
-## 9. Files Affected
-
-| File | Change |
-|------|--------|
-| `crates/ash-core/src/ast.rs` | Add `associated_types` to `InterfaceDef`; add `associated_type_bindings` to `ImplDef` |
-| `crates/ash-parser/src/parse_module.rs` | Restructure interface/impl body loops to dispatch between methods and associated-type declarations; parse `Type::Associated` in type contexts |
-| `crates/ash-parser/src/parse_expr.rs` | Parse `Type::Associated` in expression type annotations if applicable |
-| `crates/ash-typeck/src/types.rs` | Add `Type::Associated` variant; normalize before unification; apply rigid-projection rule for unresolved associated types |
-| `crates/ash-typeck/src/type_env.rs` | Store associated types in `InterfaceInfo` and `ImplScheme`; implement normalization; add [NEW] `MissingAssociatedType`, `MismatchedProjectionInterface`, and `AmbiguousAssociatedType` errors |
-| `crates/ash-engine/src/lib.rs` | Extend monomorphization pass to substitute associated types |
+All canonical internal representation details and generalized type-expression handling beyond these surface and compatibility requirements are specified by SPEC-058.

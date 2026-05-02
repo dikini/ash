@@ -25,7 +25,7 @@ Prove the Phase 110 substrate is correct, explicit about failures, and non-inter
 
 ## Requirements
 
-1. Add diagnostics and negative tests for ambiguous projections, unsupported projection shapes, wrong kind, wrong arity, and any remaining explicit rejection boundaries that Phase 110 still owns.
+1. Add residual typechecker-side diagnostic coverage and negative tests for ambiguous projections, unsupported projection shapes, wrong kind, wrong arity, and any remaining explicit Phase 110 failure boundaries after TASK-800/TASK-799. Limit code changes to the minimal diagnostic text or assertion updates required by those tests.
 2. Add non-interference coverage for Phase 109 ordinary-type behavior.
 3. Add non-interference coverage for current ADT/interface/workflow/capability/resource/do/comprehension behavior as relevant.
 4. Do not broaden semantics while writing tests.
@@ -34,24 +34,23 @@ Prove the Phase 110 substrate is correct, explicit about failures, and non-inter
 
 - Add or update `crates/ash-typeck/tests/task_803_projection_diagnostics.rs` for ambiguity, unsupported-shape, wrong-kind, wrong-arity, and multi-parameter projection-spine coverage
 - Add or update `crates/ash-typeck/tests/task_803_phase110_non_interference.rs` for carried-forward Phase 109 ordinary-type behavior plus representative ADT/interface/workflow/capability/resource/do/comprehension regressions
-- If parser rejection-boundary evidence is still required here rather than only via TASK-797, add or update `crates/ash-parser/tests/task_803_phase110_rejection_boundaries.rs`
 - Update diagnostics text only where needed
+- Do not create a new parser rejection suite; TASK-797 owns parser rejection-boundary evidence
 
 ## TDD Steps
 
 1. Write failing tests first in `task_803_projection_diagnostics.rs` for unary ambiguity, unsupported projection shape, multi-parameter projection ordering/shape, wrong kind, and wrong arity.
 2. Implement only the minimal fixes required to satisfy them.
-3. Re-run `cargo test -p ash-typeck --test task_803_projection_diagnostics`, `cargo test -p ash-typeck --test task_803_phase110_non_interference`, and the exact parser rejection suite carried forward from TASK-797 or added here.
+3. Re-run `cargo test -p ash-typeck --test task_803_projection_diagnostics` and `cargo test -p ash-typeck --test task_803_phase110_non_interference`.
 4. Review the resulting diff for accidental scope creep.
 
 ## Verification Steps
 
 - [ ] `cargo test -p ash-typeck --test task_803_projection_diagnostics`
 - [ ] `cargo test -p ash-typeck --test task_803_phase110_non_interference`
-- [ ] `cargo test -p ash-parser --test task_803_phase110_rejection_boundaries` or the exact carried-forward TASK-797 rejection suite name, recorded in TASK-804
 - [ ] `cargo fmt --check`
 - [ ] `git diff --check`
 
 ## Notes
 
-This task is test-heavy and should not invent later semantics merely to make a test green.
+This task is test-heavy and should not invent later semantics merely to make a test green. Parser rejection-boundary evidence is owned by TASK-797; this task covers typechecker diagnostics and non-interference only.

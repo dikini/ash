@@ -4,7 +4,7 @@
 
 ## Description
 
-Replace stringly associated-projection handling in `ash-typeck` with canonical identity-backed rigid projection elaboration while preserving the current simple associated-type compatibility path.
+Consume the registries landed by TASK-798 and replace every live stringly/sentinel associated-projection surface in `ash-typeck` with canonical identity-backed rigid projection elaboration, while owning projection-specific unresolved/ambiguous/unsupported-shape diagnostics and preserving the current simple associated-type compatibility path.
 
 ## Specification Reference
 
@@ -21,25 +21,30 @@ Replace stringly associated-projection handling in `ash-typeck` with canonical i
 
 ## Objective
 
-Make active typechecker projection handling canonical and identity-backed instead of stringly and sentinel-based.
+Make all active typechecker projection handling canonical and identity-backed instead of stringly and sentinel-based.
 
 ## Requirements
 
-1. Elaborate current associated projections into canonical identity-backed projection IR for both unary `S::Assoc` and multi-parameter `Base<A, B>::Assoc` forms, preserving the declaring-interface argument order and using source-local or imported `InterfaceIdentityId` / `AssociatedMemberIdentityId` entries already registered in `TypeEnv`.
-2. Replace empty-string unresolved interface handling with explicit unresolved/ambiguous/resolved states.
-3. Preserve current simple selected-impl associated-output substitution where already supported.
-4. Keep unresolved generic projections rigid; do not add recursive family computation.
+1. Replace all live projection carriers and consumers that still depend on interface strings or empty-string sentinels, including `Type::Associated { interface: String, ... }`, source/surface lowering handoff placeholders, projection comparison/unification paths, and projection-specific equality canonicalization inputs.
+2. Elaborate current associated projections into canonical identity-backed projection IR for both unary `S::Assoc` and multi-parameter `Base<A, B>::Assoc` forms, preserving the declaring-interface argument order and using pre-registered `InterfaceIdentityId` / `AssociatedMemberIdentityId` entries from `TypeEnv`.
+3. Own projection-specific error and diagnostic behavior: unresolved, ambiguous, unsupported-shape, and resolved states must be explicit and must not be represented by string or sentinel conventions.
+4. Unsupported-shape diagnostics must cover syntactically admitted but unsupported projection bases such as `(S::Item)::Assoc` and `Map<K, V>::Entry::Assoc`.
+5. Preserve current simple selected-impl associated-output substitution where already supported.
+6. Keep unresolved generic projections rigid; do not add recursive family computation.
+7. Do not add new parser rejection coverage; parser rejection-boundary evidence belongs to TASK-797.
 
 ## Files
 
 - Modify: `crates/ash-typeck/src/types.rs`
 - Modify: `crates/ash-typeck/src/type_env.rs`
 - Modify: `crates/ash-typeck/src/lib.rs`
-- Add focused `ash-typeck` tests for canonical projection handling
+- Modify: `crates/ash-typeck/src/error.rs`
+- Modify: `crates/ash-typeck/src/diagnostic.rs`
+- Add focused `ash-typeck` tests for canonical projection handling and projection diagnostics
 
 ## TDD Steps
 
-1. Write failing tests for unary projection resolution, multi-parameter projection argument-spine ordering, ambiguous projection rejection, and rigid generic projections.
+1. Write failing tests for all remaining live projection surfaces: unary projection resolution, multi-parameter projection argument-spine ordering, unresolved-vs-ambiguous diagnostic separation, unsupported-shape diagnostics for `(S::Item)::Assoc` and `Map<K, V>::Entry::Assoc`, and rigid generic projections.
 2. Implement the minimal canonicalization/elaboration changes.
 3. Re-run focused projection tests.
 4. Verify the current simple associated-output path still works.
@@ -52,4 +57,4 @@ Make active typechecker projection handling canonical and identity-backed instea
 
 ## Notes
 
-This task assumes TASK-798 already emits/registers interface/member identities for both source and imported summaries, and TASK-799 already validates projection spines. Do not reinterpret this as general normalization.
+This task assumes TASK-798 already emits/registers interface/member identities for both source and imported summaries, and TASK-799 already validates projection spines. It is the only Phase 110 task allowed to replace live stringly/sentinel projection surfaces or projection-specific diagnostics. Do not reinterpret this as general normalization.

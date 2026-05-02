@@ -27,9 +27,9 @@
 | [TASK-795](tasks/TASK-795-core-type-computation-identity-carriers.md) | Promote/add ash-core identity carriers and re-home shared `Kind` ownership for computation-grade type IR and projections | Core/Substrate | 6 | 📝 Planned |
 | [TASK-796](tasks/TASK-796-core-canonical-type-expression-ir-and-neutral-carriers.md) | Add ash-core canonical type-expression IR plus rigid/neutral carriers | Core/Substrate | 6 | 📝 Planned |
 | [TASK-797](tasks/TASK-797-ordinary-type-parser-expression-parity-and-explicit-rejections.md) | Align `parse_type_def.rs` and `parse_module.rs` ordinary type parsing with the Phase 110 parity/rejection boundary | Parser/Substrate | 5 | 📝 Planned |
-| [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Lower current surface/core type syntax into canonical IR and plumb source/import interface/member identities | Type/Substrate | 7 | 📝 Planned |
+| [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Lower current surface/core type syntax into canonical IR and make `TypeEnv` own interface/member identity registries, storage, and source/import registration | Type/Substrate | 7 | 📝 Planned |
 | [TASK-799](tasks/TASK-799-kind-and-arity-validation-hardening.md) | Harden kind/arity validation for nominal, projection, and future computation heads | Type/Substrate | 5 | 📝 Planned |
-| [TASK-800](tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md) | Replace stringly associated projections with canonical identity-backed rigid projection plumbing over pre-registered interface/member identities | Type/Substrate | 7 | 📝 Planned |
+| [TASK-800](tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md) | Replace every live stringly/sentinel associated-projection surface with canonical identity-backed rigid projection plumbing and own projection-specific diagnostics | Type/Substrate | 7 | 📝 Planned |
 | [TASK-801](tasks/TASK-801-transparent-alias-canonicalization-helper.md) | Add transparent-alias canonicalization helpers and readable diagnostic rendering rules | Type/Substrate | 5 | 📝 Planned |
 | [TASK-802](tasks/TASK-802-canonicalization-boundary-adoption-for-current-equality-sites.md) | Adopt canonicalization at `TypeEnv::unify_types` / `TypeEnv::types_equivalent_for_equality` via `TypeEnv::canonicalize_type_for_equality`; no pattern/exhaustiveness rollout | Type/Compatibility | 5 | 📝 Planned |
 | [TASK-803](tasks/TASK-803-spec-b-diagnostics-negative-tests-and-non-interference.md) | Add diagnostics, negative tests, and non-interference coverage for SPEC-B substrate | Diagnostics/Tests | 6 | 📝 Planned |
@@ -53,12 +53,12 @@ Estimated total: 70 hours.
 ### Track C: Parser + Typechecker Lowering Boundary
 
 - TASK-797 aligns `parse_type_def.rs` and `parse_module.rs` so both parser paths either support the current Phase 110 subset or reject deferred syntax explicitly.
-- TASK-798 introduces the main lowering boundary from surface/core type syntax into canonical IR and adds the source/import identity plumbing that TASK-800 depends on.
+- TASK-798 introduces the main lowering boundary from surface/core type syntax into canonical IR, defines `TypeEnv` interface/member identity registries and storage, and registers those identities from both source lowering and imported ordinary summaries. It stops before replacing existing stringly/sentinel projection consumers or projection-specific diagnostics.
 - TASK-799 hardens kind/arity checking over that canonicalized lowering path.
 
 ### Track D: Projection and Alias Canonicalization
 
-- TASK-800 replaces stringly associated projection handling with identity-backed rigid projection elaboration.
+- TASK-800 consumes the registries landed by TASK-798 and replaces all live stringly/sentinel projection handling surfaces in `ash-typeck` with identity-backed rigid projection elaboration, including projection carriers, unresolved-state handling, and projection-specific diagnostics.
 - TASK-801 adds transparent-alias canonicalization helpers while preserving readable diagnostics.
 - TASK-802 adopts TASK-800/TASK-801 outputs only at the named current equality boundaries `TypeEnv::unify_types` and `TypeEnv::types_equivalent_for_equality`, both routed through `TypeEnv::canonicalize_type_for_equality`. `check_pattern.rs` and `exhaustiveness.rs` remain out of scope for Phase 110 because their live implementations do not consume `TypeEnv` canonicalization state.
 
@@ -76,9 +76,9 @@ Phase 110 is mostly sequential with limited parallelism:
 2. TASK-794 second; no Rust implementation begins before the audit gate lands.
 3. TASK-795 must land before any canonical IR work because it establishes both the promoted identity carriers and the core-owned shared `Kind`. TASK-797 may run after TASK-794 in parallel with late TASK-795 review/fix work.
 4. TASK-796 depends on TASK-795.
-5. TASK-798 depends on TASK-796 and TASK-797 and includes source/import identity plumbing for interface/member summaries.
+5. TASK-798 depends on TASK-796 and TASK-797 and must land canonical lowering entry points plus `TypeEnv` identity registries/storage/registration for source-local and imported interface/member summaries. It does not replace the live stringly/sentinel projection representation or projection diagnostics.
 6. TASK-799 depends on TASK-798.
-7. TASK-800 depends on TASK-795 through TASK-799.
+7. TASK-800 depends on TASK-795 through TASK-799 and is the first task allowed to replace live stringly/sentinel projection representations and projection-specific diagnostics with canonical identity-backed plumbing.
 8. TASK-801 depends on TASK-798.
 9. TASK-802 depends on TASK-800 and TASK-801.
 10. TASK-803 depends on TASK-799 through TASK-802.
@@ -89,13 +89,14 @@ Phase 110 is mostly sequential with limited parallelism:
 
 1. `ash-core` owns the shared `Kind`, canonical IR, and promoted identity carriers.
 2. `ash-parser` remains surface-only; parser parity work for this phase must cover both `parse_type_def.rs` and `parse_module.rs` without adding speculative public syntax.
-3. `ash-typeck` owns elaboration, canonicalization, kind/arity validation, and imported-summary interface/member identity registration.
+3. `ash-typeck` owns elaboration, canonicalization, kind/arity validation, and all `TypeEnv` interface/member identity registry/storage/registration work; TASK-798 lands that substrate, while TASK-800 alone may replace live stringly/sentinel projection consumers and projection diagnostics.
 4. No task may reinterpret Phase 109 semantic-summary transport as computation-summary export/import.
 5. `base::Assoc` remains the only normative public projection spelling in this phase.
 6. No task may add sealed domains, public `type fn`, normalization, recursive associated-family computation, propositions, or proof search.
 7. No task may add public kind binder syntax, holes, or partial type-constructor application.
 8. Current SPEC-035 simple associated-type substitution must keep working for the already-supported subset.
 9. Existing ADT/interface/workflow/capability/resource/do/comprehension behavior must remain unaffected.
+10. TASK-797 is the single owner of parser rejection-boundary evidence for Phase 110; later tasks may rerun or cite that suite but must not create a second parser-evidence owner.
 
 ## Verification Strategy
 
@@ -104,7 +105,7 @@ Every implementation task must include focused tests for the changed crate and e
 1. canonical type IR exists in `ash-core` and distinguishes nominal heads from computation heads;
 2. canonical projection identities replace string interface matching in the active typechecker paths, including ordered argument spines for both unary `S::Assoc` and multi-parameter `Map<K, V>::Entry` projections;
 3. wrong kind/arity is rejected before later computation packets could consume the type expression;
-4. unsupported projection shapes admitted by the current `base::Assoc` syntax fail with a dedicated unsupported-shape diagnostic rather than ambiguity fallback, placeholder state, or silent acceptance;
+4. unsupported projection shapes admitted by the current `base::Assoc` syntax — for example `(S::Item)::Assoc` and `Map<K, V>::Entry::Assoc` — fail with a dedicated unsupported-shape diagnostic rather than ambiguity fallback, placeholder state, or silent acceptance;
 5. Phase 110 introduces rigid/neutral carriers only; no current equality or pattern boundary may claim comparison, decomposition, or solving under neutral computation heads;
 6. transparent aliases and canonical rigid projections are consumed at `TypeEnv::unify_types` / `TypeEnv::types_equivalent_for_equality` without losing readable diagnostics;
 7. the current simple associated-type compatibility path still works;
@@ -128,6 +129,7 @@ Every implementation task must include focused tests for the changed crate and e
 - [ ] PLAN-106 and TASK-793 through TASK-805 are registered in `PLAN-INDEX.md`.
 - [ ] The shared core-owned `Kind` exists in `ash-core` and is re-used by the canonical IR.
 - [ ] Canonical computation-capable type-expression IR exists in `ash-core`.
+- [ ] `TypeEnv` owns interface/member identity registries, storage, and source/import registration before projection replacement begins.
 - [ ] Canonical projection identities replace stringly interface-name matching in the active typechecker path.
 - [ ] Kind/arity validation is explicit for nominal constructors, projections, and future computation-head placeholders.
 - [ ] Transparent alias canonicalization helpers exist and are adopted at the named Phase 110 comparison boundaries.

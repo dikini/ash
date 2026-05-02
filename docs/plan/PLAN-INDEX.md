@@ -3157,6 +3157,8 @@ Phase 110 implements SPEC-B from DESIGN-034. It introduces the internal canonica
 
 The named current canonicalization boundaries for this phase are `TypeEnv::unify_types` and `TypeEnv::types_equivalent_for_equality`, both routed through `TypeEnv::canonicalize_type_for_equality`; `check_pattern.rs` and `exhaustiveness.rs` are not Phase 110 canonicalization boundaries in the live code. Feasibility gate before TASK-800: Phase 110 must first (1) re-home the shared `Kind` type into `ash-core`, (2) align both ordinary-type parser paths (`parse_type_def.rs` and `parse_module.rs`), and (3) plumb interface/member identities through source lowering and imported summary registration.
 
+Boundary note: TASK-798 owns canonical lowering plus `TypeEnv` interface/member identity registry/storage/registration substrate. TASK-800 owns replacement of the live `Type::Associated`/empty-sentinel projection surfaces and projection-specific unresolved/ambiguous/unsupported-shape diagnostics.
+
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-793](tasks/TASK-793-spec-b-spec-plan-packet.md) | SPEC-B spec/plan packet | 4 | 📝 Planned |
@@ -3164,9 +3166,9 @@ The named current canonicalization boundaries for this phase are `TypeEnv::unify
 | [TASK-795](tasks/TASK-795-core-type-computation-identity-carriers.md) | Core type-computation identity carriers and shared `Kind` ownership | 6 | 📝 Planned |
 | [TASK-796](tasks/TASK-796-core-canonical-type-expression-ir-and-neutral-carriers.md) | Core canonical type-expression IR and neutral carriers | 6 | 📝 Planned |
 | [TASK-797](tasks/TASK-797-ordinary-type-parser-expression-parity-and-explicit-rejections.md) | Align `parse_type_def.rs` and `parse_module.rs` ordinary type parsing plus explicit rejections | 5 | 📝 Planned |
-| [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Canonical type IR lowering plus source/import interface-member identity plumbing | 7 | 📝 Planned |
+| [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Canonical type IR lowering plus `TypeEnv` interface-member identity registry/storage/registration | 7 | 📝 Planned |
 | [TASK-799](tasks/TASK-799-kind-and-arity-validation-hardening.md) | Kind and arity validation hardening | 5 | 📝 Planned |
-| [TASK-800](tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md) | Associated projection canonicalization and rigid plumbing over pre-registered identities | 7 | 📝 Planned |
+| [TASK-800](tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md) | Replace live stringly/sentinel projection surfaces and own projection diagnostics | 7 | 📝 Planned |
 | [TASK-801](tasks/TASK-801-transparent-alias-canonicalization-helper.md) | Transparent alias canonicalization helper | 5 | 📝 Planned |
 | [TASK-802](tasks/TASK-802-canonicalization-boundary-adoption-for-current-equality-sites.md) | Canonicalization adoption at `TypeEnv::unify_types` / `types_equivalent_for_equality` only | 5 | 📝 Planned |
 | [TASK-803](tasks/TASK-803-spec-b-diagnostics-negative-tests-and-non-interference.md) | SPEC-B diagnostics, negative tests, and non-interference | 6 | 📝 Planned |
@@ -3175,8 +3177,8 @@ The named current canonicalization boundaries for this phase are `TypeEnv::unify
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-B to SPEC-058/PLAN-106, then audit the live parser/core/typechecker substrate before implementation begins.
 **Track B (ash-core Canonical IR Substrate):** 12h. Promote computation-grade identity carriers, re-home the shared `Kind` into `ash-core`, and add the canonical type-expression IR plus rigid/neutral carriers in `ash-core`.
-**Track C (Parser + Typechecker Lowering Boundary):** 17h. Align `parse_type_def.rs` / `parse_module.rs` parity and rejection boundaries, lower current surface/core type syntax into canonical IR, plumb source/import interface-member identities, and harden kind/arity validation.
-**Track D (Projection + Alias Canonicalization):** 17h. Replace stringly associated projections with canonical rigid projection elaboration, then adopt alias/projection canonicalization only at `TypeEnv::unify_types` and `TypeEnv::types_equivalent_for_equality` via `TypeEnv::canonicalize_type_for_equality`, without adding normalization or widening Phase 110 into pattern/exhaustiveness code.
+**Track C (Parser + Typechecker Lowering Boundary):** 17h. Align `parse_type_def.rs` / `parse_module.rs` parity and rejection boundaries, lower current surface/core type syntax into canonical IR, make `TypeEnv` own interface/member identity registries/storage/registration for source and imported ordinary summaries, and harden kind/arity validation. This track does not replace live stringly/sentinel projection consumers.
+**Track D (Projection + Alias Canonicalization):** 17h. Replace every live stringly/sentinel associated-projection surface with canonical rigid projection elaboration and own unresolved/ambiguous/unsupported-shape diagnostics, then adopt alias/projection canonicalization only at `TypeEnv::unify_types` and `TypeEnv::types_equivalent_for_equality` via `TypeEnv::canonicalize_type_for_equality`, without adding normalization or widening Phase 110 into pattern/exhaustiveness code.
 **Track E (Diagnostics + Closeout):** 16h. Add diagnostics/non-interference coverage, reconcile docs/status/changelog, and reserve the usual post-review remediation slice.
 
 **Decision gates:**
@@ -3187,3 +3189,4 @@ The named current canonicalization boundaries for this phase are `TypeEnv::unify
 - D5: Public kind binder syntax, holes, and partial type-constructor application remain deferred.
 - D6: Existing ADT/interface/workflow/capability/resource/do/comprehension behavior must remain non-regressed.
 - D7: Before TASK-800, Phase 110 must already have (a) core-owned `Kind`, (b) aligned ordinary-type parser targets in `parse_type_def.rs` and `parse_module.rs`, and (c) source/import plumbing for interface/member identities.
+- D8: TASK-797 is the single owner of parser rejection-boundary evidence for Phase 110; later tasks may rerun or cite that suite but must not create a second parser-evidence owner.

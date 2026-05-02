@@ -9,12 +9,14 @@ pub mod capabilities;
 pub mod capability;
 pub mod effect;
 pub mod env_frame;
+pub mod kind;
 pub mod module_graph;
 pub mod provenance;
 pub mod runtime;
 pub mod semantic_summary;
 pub mod small_step;
 pub mod stream;
+pub mod type_ir;
 pub mod value;
 pub mod visualize;
 pub mod workflow_carrier;
@@ -30,6 +32,7 @@ pub mod test_helpers;
 
 pub use ast::*;
 pub use effect::*;
+pub use kind::*;
 pub use provenance::*;
 pub use runtime::*;
 pub use stream::{

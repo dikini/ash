@@ -3163,17 +3163,17 @@ Boundary note: TASK-798 owns canonical lowering plus `TypeEnv` interface/member 
 |------|-------------|------------|--------|
 | [TASK-793](tasks/TASK-793-spec-b-spec-plan-packet.md) | SPEC-B spec/plan packet | 4 | 📝 Planned |
 | [TASK-794](tasks/TASK-794-type-expression-ir-and-kinding-audit-gate.md) | Type-expression IR and kinding audit gate | 4 | 📝 Planned |
-| [TASK-795](tasks/TASK-795-core-type-computation-identity-carriers.md) | Core type-computation identity carriers and shared `Kind` ownership | 6 | 📝 Planned |
-| [TASK-796](tasks/TASK-796-core-canonical-type-expression-ir-and-neutral-carriers.md) | Core canonical type-expression IR and neutral carriers | 6 | 📝 Planned |
+| [TASK-795](tasks/TASK-795-core-type-computation-identity-carriers.md) | Core type-computation identity carriers and shared `Kind` ownership | 6 | ✅ Complete |
+| [TASK-796](tasks/TASK-796-core-canonical-type-expression-ir-and-neutral-carriers.md) | Core canonical type-expression IR and neutral carriers | 6 | ✅ Complete |
 | [TASK-797](tasks/TASK-797-ordinary-type-parser-expression-parity-and-explicit-rejections.md) | Align `parse_type_def.rs` and `parse_module.rs` ordinary type parsing plus explicit rejections | 5 | 📝 Planned |
-| [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Canonical type IR lowering plus `TypeEnv` interface-member identity registry/storage/registration | 7 | 📝 Planned |
+| [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Canonical type IR lowering plus `TypeEnv` interface-member identity registry/storage/registration | 7 | ✅ Complete |
 | [TASK-799](tasks/TASK-799-kind-and-arity-validation-hardening.md) | Kind and arity validation hardening | 5 | 📝 Planned |
 | [TASK-800](tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md) | Replace live stringly/sentinel projection surfaces and own projection diagnostics | 7 | 📝 Planned |
 | [TASK-801](tasks/TASK-801-transparent-alias-canonicalization-helper.md) | Transparent alias canonicalization helper | 5 | 📝 Planned |
 | [TASK-802](tasks/TASK-802-canonicalization-boundary-adoption-for-current-equality-sites.md) | Canonicalization adoption at `TypeEnv::unify_types` / `types_equivalent_for_equality` only | 5 | 📝 Planned |
 | [TASK-803](tasks/TASK-803-spec-b-diagnostics-negative-tests-and-non-interference.md) | SPEC-B diagnostics, negative tests, and non-interference | 6 | 📝 Planned |
 | [TASK-804](tasks/TASK-804-spec-b-closeout-docs-and-verification.md) | SPEC-B closeout, docs, and verification | 4 | 📝 Planned |
-| [TASK-805](tasks/TASK-805-phase110-review-remediation.md) | Phase 110 review remediation | 6 | 📝 Planned |
+| [TASK-805](tasks/TASK-805-phase110-review-remediation.md) | Phase 110 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-B to SPEC-058/PLAN-106, then audit the live parser/core/typechecker substrate before implementation begins.
 **Track B (ash-core Canonical IR Substrate):** 12h. Promote computation-grade identity carriers, re-home the shared `Kind` into `ash-core`, and add the canonical type-expression IR plus rigid/neutral carriers in `ash-core`.

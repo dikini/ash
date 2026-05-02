@@ -11,9 +11,11 @@ use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::semantic_summary::{
-    ConstructorPayloadKind, ConstructorSummary, ModuleSemanticSummary, RepresentationExposure,
-    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
+    ConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleSemanticSummary,
+    RepresentationExposure, SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
+use ash_core::type_ir::{CanonicalTypeExpr, ProjectionRigidity};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
     CapabilityImplementationDef, CapabilityImplementationDependency,
@@ -897,6 +899,20 @@ pub struct TypeEnv {
     type_alias_identities: HashMap<TypeName, TypeDeclId>,
     /// Preferred visible name for a canonical ordinary type identity.
     canonical_type_names: HashMap<TypeDeclId, TypeName>,
+    /// Preferred visible interface name to canonical interface identity.
+    interface_identity_aliases: HashMap<String, InterfaceIdentityId>,
+    /// Tracks whether a visible interface alias came from imported summary metadata.
+    interface_identity_alias_is_imported: HashMap<String, bool>,
+    /// Preferred visible name for a canonical interface identity.
+    canonical_interface_names: HashMap<InterfaceIdentityId, String>,
+    /// Every known interface identity, including imported and source-local registrations.
+    known_interface_identities: HashSet<InterfaceIdentityId>,
+    /// Preferred visible `(interface, member)` pair to canonical associated-member identity.
+    associated_member_identity_aliases: HashMap<(String, String), AssociatedMemberIdentityId>,
+    /// Tracks whether a visible associated-member alias came from imported summary metadata.
+    associated_member_identity_alias_is_imported: HashMap<(String, String), bool>,
+    /// Every known associated-member identity, including imported and source-local registrations.
+    known_associated_member_identities: HashSet<AssociatedMemberIdentityId>,
     /// Registered interfaces by name.
     pub(crate) interfaces: HashMap<String, InterfaceInfo>,
     /// Registered capability interfaces by name.
@@ -1237,6 +1253,13 @@ impl TypeEnv {
             type_declaration_states: HashMap::with_capacity(10),
             type_alias_identities: HashMap::with_capacity(10),
             canonical_type_names: HashMap::with_capacity(10),
+            interface_identity_aliases: HashMap::with_capacity(4),
+            interface_identity_alias_is_imported: HashMap::with_capacity(4),
+            canonical_interface_names: HashMap::with_capacity(4),
+            known_interface_identities: HashSet::with_capacity(4),
+            associated_member_identity_aliases: HashMap::with_capacity(4),
+            associated_member_identity_alias_is_imported: HashMap::with_capacity(4),
+            known_associated_member_identities: HashSet::with_capacity(4),
             interfaces: HashMap::with_capacity(4),
             capability_interfaces: HashMap::with_capacity(4),
             resource_types: HashMap::with_capacity(4),
@@ -1636,6 +1659,14 @@ impl TypeEnv {
             self.declare_summary_type_identity(ty)?;
         }
 
+        for interface in &summary.interface_identities {
+            self.register_interface_identity_summary_imported(interface)?;
+        }
+
+        for member in &summary.associated_member_identities {
+            self.register_associated_member_identity_summary_imported(member)?;
+        }
+
         for ty in &summary.exported_types {
             if ty.representation_exposure != RepresentationExposure::Exposed {
                 continue;
@@ -1678,9 +1709,348 @@ impl TypeEnv {
         Ok(())
     }
 
+    /// Register an interface identity summary in the canonical Phase 110 registry.
+    pub fn register_interface_identity_summary(
+        &mut self,
+        summary: &InterfaceIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_interface_identity_summary_with_provenance(summary, false)
+    }
+
+    fn register_interface_identity_summary_imported(
+        &mut self,
+        summary: &InterfaceIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_interface_identity_summary_with_provenance(summary, true)
+    }
+
+    fn register_interface_identity_summary_with_provenance(
+        &mut self,
+        summary: &InterfaceIdentitySummary,
+        imported: bool,
+    ) -> Result<(), TypeEnvError> {
+        self.known_interface_identities.insert(summary.id.clone());
+        self.canonical_interface_names
+            .insert(summary.id.clone(), summary.name.to_string());
+
+        let visible_name = summary.name.as_str();
+        if let Some(existing) = self.interface_identity_aliases.get(visible_name)
+            && existing != &summary.id
+        {
+            let existing_is_imported = self
+                .interface_identity_alias_is_imported
+                .get(visible_name)
+                .copied()
+                .unwrap_or(false);
+            if imported || !existing_is_imported {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "conflicting visible interface alias '{}': {:?} vs {:?}",
+                        summary.name, existing, summary.id
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+
+        self.interface_identity_aliases
+            .insert(summary.name.to_string(), summary.id.clone());
+        self.interface_identity_alias_is_imported
+            .insert(summary.name.to_string(), imported);
+        Ok(())
+    }
+
+    /// Register an associated-member identity summary in the canonical Phase 110 registry.
+    pub fn register_associated_member_identity_summary(
+        &mut self,
+        summary: &AssociatedMemberIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_associated_member_identity_summary_with_provenance(summary, false)
+    }
+
+    fn register_associated_member_identity_summary_imported(
+        &mut self,
+        summary: &AssociatedMemberIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_associated_member_identity_summary_with_provenance(summary, true)
+    }
+
+    fn register_associated_member_identity_summary_with_provenance(
+        &mut self,
+        summary: &AssociatedMemberIdentitySummary,
+        imported: bool,
+    ) -> Result<(), TypeEnvError> {
+        self.known_associated_member_identities
+            .insert(summary.id.clone());
+        let alias_key = (
+            summary.id.interface.name.to_string(),
+            summary.name.to_string(),
+        );
+        if let Some(existing) = self.associated_member_identity_aliases.get(&alias_key)
+            && existing != &summary.id
+        {
+            let existing_is_imported = self
+                .associated_member_identity_alias_is_imported
+                .get(&alias_key)
+                .copied()
+                .unwrap_or(false);
+            if imported || !existing_is_imported {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "conflicting visible associated-member alias '{}::{}': {:?} vs {:?}",
+                        alias_key.0, alias_key.1, existing, summary.id
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        self.associated_member_identity_aliases
+            .insert(alias_key.clone(), summary.id.clone());
+        self.associated_member_identity_alias_is_imported
+            .insert(alias_key, imported);
+        Ok(())
+    }
+
+    fn lower_associated_projection_to_canonical(
+        &self,
+        base: &CanonicalTypeExpr,
+        member_name: &str,
+    ) -> Result<CanonicalTypeExpr, TypeError> {
+        let base_name = match base {
+            CanonicalTypeExpr::Var(name) => name.clone(),
+            CanonicalTypeExpr::NominalApp { visible_name, .. } => visible_name.clone(),
+            _ => {
+                return Err(TypeError::ConstructorNameMismatch {
+                    expected: "Var|NominalApp".to_string(),
+                    found: format!("{base:?}"),
+                    span: Span::default(),
+                });
+            }
+        };
+
+        let interface = self
+            .interface_identity_for_name(&base_name)
+            .cloned()
+            .or_else(|| {
+                self.interfaces.iter().find_map(|(iface_name, iface_info)| {
+                    iface_info
+                        .associated_types
+                        .contains(&member_name.to_string())
+                        .then(|| self.interface_identity_for_name(iface_name).cloned())
+                        .flatten()
+                })
+            })
+            .or_else(|| {
+                let mut matches = self
+                    .known_associated_member_identities
+                    .iter()
+                    .filter(|id| id.name == member_name)
+                    .map(|id| id.interface.clone());
+                let first = matches.next()?;
+                matches.all(|candidate| candidate == first).then_some(first)
+            })
+            .ok_or_else(|| TypeError::ConstructorNameMismatch {
+                expected: "registered associated projection".to_string(),
+                found: format!("{base_name}::{member_name}"),
+                span: Span::default(),
+            })?;
+
+        let member = self
+            .associated_member_identity_for_interface_member(&interface.name, member_name)
+            .cloned()
+            .ok_or_else(|| TypeError::ConstructorNameMismatch {
+                expected: format!("registered member on interface {}", interface.name),
+                found: member_name.to_string(),
+                span: Span::default(),
+            })?;
+
+        Ok(CanonicalTypeExpr::Projection {
+            interface,
+            member,
+            args: vec![base.clone()],
+            kind: Kind::Type,
+            rigidity: match base {
+                CanonicalTypeExpr::Var(_) => ProjectionRigidity::Neutral,
+                _ => ProjectionRigidity::Rigid,
+            },
+        })
+    }
+
+    fn canonical_type_identity_for_visible_name(
+        &self,
+        visible_name: &str,
+    ) -> Result<TypeDeclId, TypeError> {
+        self.type_identity_for_name(visible_name)
+            .cloned()
+            .ok_or_else(|| TypeError::ConstructorNameMismatch {
+                expected: "registered canonical type identity".to_string(),
+                found: visible_name.to_string(),
+                span: Span::default(),
+            })
+    }
+
+    /// Lower a core `TypeExpr` into the Phase 110 canonical type-expression substrate.
+    pub fn lower_core_type_expr_to_canonical(
+        &self,
+        expr: &TypeExpr,
+    ) -> Result<CanonicalTypeExpr, TypeError> {
+        match expr {
+            TypeExpr::Named(name) => match name.as_str() {
+                "Int" | "String" | "Bool" | "Float" | "Null" | "Unit" | "Time" | "Ref" => {
+                    Ok(CanonicalTypeExpr::Primitive(name.clone()))
+                }
+                _ => match self.resolve_type(name) {
+                    Ok((qualified, _)) => {
+                        self.check_type_constructor_arity(&qualified, 0)?;
+                        Ok(CanonicalTypeExpr::NominalApp {
+                            origin: self.canonical_type_identity_for_visible_name(name)?,
+                            visible_name: name.clone(),
+                            args: vec![],
+                            kind: Kind::Type,
+                        })
+                    }
+                    Err(TypeError::UnboundVariable(_, _)) => {
+                        Ok(CanonicalTypeExpr::Var(name.clone()))
+                    }
+                    Err(err) => Err(err),
+                },
+            },
+            TypeExpr::Constructor { name, args } => {
+                let (qualified, _) = self.resolve_type(name)?;
+                self.check_type_constructor_arity(&qualified, args.len())?;
+                Ok(CanonicalTypeExpr::NominalApp {
+                    origin: self.canonical_type_identity_for_visible_name(name)?,
+                    visible_name: name.clone(),
+                    args: args
+                        .iter()
+                        .map(|arg| self.lower_core_type_expr_to_canonical(arg))
+                        .collect::<Result<Vec<_>, _>>()?,
+                    kind: Kind::Type,
+                })
+            }
+            TypeExpr::Tuple(items) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Tuple({})", items.len()),
+                span: Span::default(),
+            }),
+            TypeExpr::Record(fields) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Record({})", fields.len()),
+                span: Span::default(),
+            }),
+            TypeExpr::Associated { base, name } => {
+                let lowered_base = self.lower_core_type_expr_to_canonical(base)?;
+                self.lower_associated_projection_to_canonical(&lowered_base, name)
+            }
+        }
+    }
+
+    /// Lower a surface `Type` into the Phase 110 canonical type-expression substrate.
+    pub fn lower_surface_type_to_canonical(
+        &self,
+        ty: &SurfaceType,
+    ) -> Result<CanonicalTypeExpr, TypeError> {
+        match ty {
+            SurfaceType::Name(name) => match name.as_ref() {
+                "Int" | "String" | "Bool" | "Float" | "Null" | "Time" | "Ref" => {
+                    Ok(CanonicalTypeExpr::Primitive(name.to_string()))
+                }
+                _ => match self.resolve_type(name.as_ref()) {
+                    Ok((qualified, _)) => {
+                        self.check_type_constructor_arity(&qualified, 0)?;
+                        Ok(CanonicalTypeExpr::NominalApp {
+                            origin: self.canonical_type_identity_for_visible_name(name.as_ref())?,
+                            visible_name: name.to_string(),
+                            args: vec![],
+                            kind: Kind::Type,
+                        })
+                    }
+                    Err(TypeError::UnboundVariable(_, _)) => {
+                        Ok(CanonicalTypeExpr::Var(name.to_string()))
+                    }
+                    Err(err) => Err(err),
+                },
+            },
+            SurfaceType::Constructor { name, args } => {
+                let (qualified, _) = self.resolve_type(name.as_ref())?;
+                self.check_type_constructor_arity(&qualified, args.len())?;
+                Ok(CanonicalTypeExpr::NominalApp {
+                    origin: self.canonical_type_identity_for_visible_name(name.as_ref())?,
+                    visible_name: name.to_string(),
+                    args: args
+                        .iter()
+                        .map(|arg| self.lower_surface_type_to_canonical(arg))
+                        .collect::<Result<Vec<_>, _>>()?,
+                    kind: Kind::Type,
+                })
+            }
+            SurfaceType::Associated { base, name } => {
+                let lowered_base = self.lower_surface_type_to_canonical(base)?;
+                self.lower_associated_projection_to_canonical(&lowered_base, name)
+            }
+            SurfaceType::Tuple(items) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Tuple({})", items.len()),
+                span: Span::default(),
+            }),
+            SurfaceType::Record(fields) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Record({})", fields.len()),
+                span: Span::default(),
+            }),
+            SurfaceType::List(_) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: "List".to_string(),
+                span: Span::default(),
+            }),
+            SurfaceType::Capability(name) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Capability({name})"),
+                span: Span::default(),
+            }),
+            SurfaceType::Fn(_, _) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: "Fn".to_string(),
+                span: Span::default(),
+            }),
+        }
+    }
+
     #[must_use]
     pub fn type_identity_for_name(&self, name: &str) -> Option<&TypeDeclId> {
         self.type_alias_identities.get(name)
+    }
+
+    #[must_use]
+    pub fn interface_identity_for_name(&self, name: &str) -> Option<&InterfaceIdentityId> {
+        self.interface_identity_aliases.get(name)
+    }
+
+    #[must_use]
+    pub fn associated_member_identity_for_interface_member(
+        &self,
+        interface_name: &str,
+        member_name: &str,
+    ) -> Option<&AssociatedMemberIdentityId> {
+        self.associated_member_identity_aliases
+            .get(&(interface_name.to_string(), member_name.to_string()))
+    }
+
+    #[must_use]
+    pub fn interface_identity_known(&self, id: &InterfaceIdentityId) -> bool {
+        self.known_interface_identities.contains(id)
+    }
+
+    #[must_use]
+    pub fn associated_member_identity_known(&self, id: &AssociatedMemberIdentityId) -> bool {
+        self.known_associated_member_identities.contains(id)
     }
 
     #[must_use]
@@ -2326,6 +2696,15 @@ impl TypeEnv {
             type_declaration_states: self.type_declaration_states.clone(),
             type_alias_identities: self.type_alias_identities.clone(),
             canonical_type_names: self.canonical_type_names.clone(),
+            interface_identity_aliases: self.interface_identity_aliases.clone(),
+            interface_identity_alias_is_imported: self.interface_identity_alias_is_imported.clone(),
+            canonical_interface_names: self.canonical_interface_names.clone(),
+            known_interface_identities: self.known_interface_identities.clone(),
+            associated_member_identity_aliases: self.associated_member_identity_aliases.clone(),
+            associated_member_identity_alias_is_imported: self
+                .associated_member_identity_alias_is_imported
+                .clone(),
+            known_associated_member_identities: self.known_associated_member_identities.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),
@@ -3189,6 +3568,15 @@ impl TypeEnv {
             type_declaration_states: self.type_declaration_states.clone(),
             type_alias_identities: self.type_alias_identities.clone(),
             canonical_type_names: self.canonical_type_names.clone(),
+            interface_identity_aliases: self.interface_identity_aliases.clone(),
+            interface_identity_alias_is_imported: self.interface_identity_alias_is_imported.clone(),
+            canonical_interface_names: self.canonical_interface_names.clone(),
+            known_interface_identities: self.known_interface_identities.clone(),
+            associated_member_identity_aliases: self.associated_member_identity_aliases.clone(),
+            associated_member_identity_alias_is_imported: self
+                .associated_member_identity_alias_is_imported
+                .clone(),
+            known_associated_member_identities: self.known_associated_member_identities.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),

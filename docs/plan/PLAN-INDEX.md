@@ -3167,7 +3167,7 @@ Boundary note: TASK-798 owns canonical lowering plus `TypeEnv` interface/member 
 | [TASK-796](tasks/TASK-796-core-canonical-type-expression-ir-and-neutral-carriers.md) | Core canonical type-expression IR and neutral carriers | 6 | ✅ Complete |
 | [TASK-797](tasks/TASK-797-ordinary-type-parser-expression-parity-and-explicit-rejections.md) | Align `parse_type_def.rs` and `parse_module.rs` ordinary type parsing plus explicit rejections | 5 | 📝 Planned |
 | [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Canonical type IR lowering plus `TypeEnv` interface-member identity registry/storage/registration | 7 | ✅ Complete |
-| [TASK-799](tasks/TASK-799-kind-and-arity-validation-hardening.md) | Kind and arity validation hardening | 5 | 📝 Planned |
+| [TASK-799](tasks/TASK-799-kind-and-arity-validation-hardening.md) | Kind and arity validation hardening | 5 | ✅ Complete |
 | [TASK-800](tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md) | Replace live stringly/sentinel projection surfaces and own projection diagnostics | 7 | 📝 Planned |
 | [TASK-801](tasks/TASK-801-transparent-alias-canonicalization-helper.md) | Transparent alias canonicalization helper | 5 | 📝 Planned |
 | [TASK-802](tasks/TASK-802-canonicalization-boundary-adoption-for-current-equality-sites.md) | Canonicalization adoption at `TypeEnv::unify_types` / `types_equivalent_for_equality` only | 5 | 📝 Planned |

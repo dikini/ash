@@ -905,6 +905,8 @@ pub struct TypeEnv {
     interface_identity_alias_is_imported: HashMap<String, bool>,
     /// Preferred visible name for a canonical interface identity.
     canonical_interface_names: HashMap<InterfaceIdentityId, String>,
+    /// Minimal TASK-799 local interface arity registry keyed by canonical identity.
+    local_interface_arities: HashMap<InterfaceIdentityId, usize>,
     /// Every known interface identity, including imported and source-local registrations.
     known_interface_identities: HashSet<InterfaceIdentityId>,
     /// Preferred visible `(interface, member)` pair to canonical associated-member identity.
@@ -1256,6 +1258,7 @@ impl TypeEnv {
             interface_identity_aliases: HashMap::with_capacity(4),
             interface_identity_alias_is_imported: HashMap::with_capacity(4),
             canonical_interface_names: HashMap::with_capacity(4),
+            local_interface_arities: HashMap::with_capacity(4),
             known_interface_identities: HashSet::with_capacity(4),
             associated_member_identity_aliases: HashMap::with_capacity(4),
             associated_member_identity_alias_is_imported: HashMap::with_capacity(4),
@@ -1757,6 +1760,13 @@ impl TypeEnv {
             .insert(summary.name.to_string(), summary.id.clone());
         self.interface_identity_alias_is_imported
             .insert(summary.name.to_string(), imported);
+        if !imported {
+            let Some(interface) = self.interfaces.get(summary.name.as_str()) else {
+                return Ok(());
+            };
+            self.local_interface_arities
+                .insert(summary.id.clone(), interface.type_params.len());
+        }
         Ok(())
     }
 
@@ -1864,10 +1874,25 @@ impl TypeEnv {
                 span: Span::default(),
             })?;
 
+        let projection_args = vec![base.clone()];
+        let expected_arity = self
+            .local_interface_arities
+            .get(&interface)
+            .copied()
+            .unwrap_or(projection_args.len());
+        if expected_arity != projection_args.len() {
+            return Err(TypeError::ConstructorArityMismatch {
+                name: interface.name.clone(),
+                expected_arity,
+                found_arity: projection_args.len(),
+                span: Span::default(),
+            });
+        }
+
         Ok(CanonicalTypeExpr::Projection {
             interface,
             member,
-            args: vec![base.clone()],
+            args: projection_args,
             kind: Kind::Type,
             rigidity: match base {
                 CanonicalTypeExpr::Var(_) => ProjectionRigidity::Neutral,
@@ -2199,12 +2224,23 @@ impl TypeEnv {
         self.interfaces.insert(
             interface_name.clone(),
             InterfaceInfo {
-                name: interface_name,
-                type_params: interface_type_params,
-                associated_types,
-                methods,
+                name: interface_name.clone(),
+                type_params: interface_type_params.clone(),
+                associated_types: associated_types.clone(),
+                methods: methods.clone(),
             },
         );
+        if let Some(interface_id) = self.interface_identity_for_name(&interface_name).cloned() {
+            let imported = self
+                .interface_identity_alias_is_imported
+                .get(&interface_name)
+                .copied()
+                .unwrap_or(false);
+            if !imported {
+                self.local_interface_arities
+                    .insert(interface_id, def.type_params.len());
+            }
+        }
         Ok(())
     }
 
@@ -2699,6 +2735,7 @@ impl TypeEnv {
             interface_identity_aliases: self.interface_identity_aliases.clone(),
             interface_identity_alias_is_imported: self.interface_identity_alias_is_imported.clone(),
             canonical_interface_names: self.canonical_interface_names.clone(),
+            local_interface_arities: self.local_interface_arities.clone(),
             known_interface_identities: self.known_interface_identities.clone(),
             associated_member_identity_aliases: self.associated_member_identity_aliases.clone(),
             associated_member_identity_alias_is_imported: self
@@ -3571,6 +3608,7 @@ impl TypeEnv {
             interface_identity_aliases: self.interface_identity_aliases.clone(),
             interface_identity_alias_is_imported: self.interface_identity_alias_is_imported.clone(),
             canonical_interface_names: self.canonical_interface_names.clone(),
+            local_interface_arities: self.local_interface_arities.clone(),
             known_interface_identities: self.known_interface_identities.clone(),
             associated_member_identity_aliases: self.associated_member_identity_aliases.clone(),
             associated_member_identity_alias_is_imported: self

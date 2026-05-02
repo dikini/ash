@@ -1,6 +1,6 @@
 # TASK-799: Kind and Arity Validation Hardening
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -44,9 +44,9 @@ Turn kind/arity checking into a first-class gate for the new canonical lowering 
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-typeck` for the new kind/arity tests
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-typeck` for the new kind/arity tests
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

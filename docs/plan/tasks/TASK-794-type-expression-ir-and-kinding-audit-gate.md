@@ -1,6 +1,6 @@
 # TASK-794: Type-Expression IR and Kinding Audit Gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -55,10 +55,10 @@ Produce the authoritative audit artifact that says what SPEC-B may change now, w
 
 ## Verification Steps
 
-- [ ] `docs/plan/audits/TASK-794-type-expression-ir-audit.md` exists
-- [ ] audit references live files and current specs
-- [ ] audit explicitly names deferred work belonging to SPEC-C/D/E/F/G
-- [ ] `git diff --check` passes
+- [x] `docs/plan/audits/TASK-794-type-expression-ir-audit.md` exists
+- [x] audit references live files and current specs
+- [x] audit explicitly names deferred work belonging to SPEC-C/D/E/F/G
+- [x] `git diff --check` passes
 
 ## Notes
 

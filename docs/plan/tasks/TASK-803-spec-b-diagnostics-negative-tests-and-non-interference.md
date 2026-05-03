@@ -1,6 +1,6 @@
 # TASK-803: SPEC-B Diagnostics, Negative Tests, and Non-Interference
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -46,10 +46,10 @@ Prove the Phase 110 substrate is correct, explicit about failures, and non-inter
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-typeck --test task_803_projection_diagnostics`
-- [ ] `cargo test -p ash-typeck --test task_803_phase110_non_interference`
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-typeck --test task_803_projection_diagnostics`
+- [x] `cargo test -p ash-typeck --test task_803_phase110_non_interference`
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

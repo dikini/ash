@@ -165,8 +165,12 @@ pub fn type_expr_to_type(
                 }
                 _ => type_expr_to_type(base, param_mapping, type_env)?,
             };
-            let interface =
-                resolve_associated_interface_from_type_var_bounds(type_env, &base_ty, name)?;
+            let interface = resolve_associated_interface_from_type_var_bounds(
+                type_env,
+                &base_ty,
+                &core_projection_base_spelling(base),
+                name,
+            )?;
             Ok(Type::Associated {
                 interface,
                 base: Box::new(base_ty),
@@ -452,6 +456,7 @@ pub struct SelectedScheme {
 fn resolve_associated_interface_from_type_var_bounds(
     type_env: &TypeEnv,
     base_ty: &Type,
+    base_spelling: &str,
     name: &str,
 ) -> Result<String, TypeEnvError> {
     let Type::Var(var) = base_ty else {
@@ -486,8 +491,15 @@ fn resolve_associated_interface_from_type_var_bounds(
     if candidates.len() == 1 {
         Ok(candidates.into_iter().next().expect("single candidate"))
     } else if candidates.len() > 1 {
+        let mut candidate_bounds = candidates;
+        candidate_bounds.sort();
         Err(TypeEnvError::AmbiguousAssociatedType {
-            name: name.to_string(),
+            name: format!(
+                "{name}' for projection '{}::{}' with candidate bounds [{}]",
+                base_spelling,
+                name,
+                candidate_bounds.join(", ")
+            ),
             span: Span::default(),
         })
     } else {
@@ -601,8 +613,12 @@ fn surface_type_to_type(
         }
         SurfaceType::Associated { base, name } => {
             let base_ty = surface_type_to_type(base, param_mapping, type_env)?;
-            let interface =
-                resolve_associated_interface_from_type_var_bounds(type_env, &base_ty, name)?;
+            let interface = resolve_associated_interface_from_type_var_bounds(
+                type_env,
+                &base_ty,
+                &surface_projection_base_spelling(base),
+                name,
+            )?;
 
             Ok(Type::Associated {
                 interface,
@@ -618,6 +634,115 @@ fn surface_type_name(ty: &SurfaceType) -> Option<String> {
         SurfaceType::Name(name) => Some(name.to_string()),
         SurfaceType::Capability(name) => Some(name.to_string()),
         _ => None,
+    }
+}
+
+fn core_projection_base_spelling(base: &TypeExpr) -> String {
+    match base {
+        TypeExpr::Named(name) => name.clone(),
+        TypeExpr::Constructor { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    name,
+                    args.iter()
+                        .map(core_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        TypeExpr::Tuple(items) => format!("Tuple({})", items.len()),
+        TypeExpr::Record(fields) => format!("Record({})", fields.len()),
+        TypeExpr::Associated { base, name } => {
+            format!("{}::{}", core_projection_base_spelling(base), name)
+        }
+    }
+}
+
+fn surface_projection_base_spelling(base: &SurfaceType) -> String {
+    match base {
+        SurfaceType::Name(name) => name.to_string(),
+        SurfaceType::Constructor { name, args } => {
+            if args.is_empty() {
+                name.to_string()
+            } else {
+                format!(
+                    "{}<{}>",
+                    name,
+                    args.iter()
+                        .map(surface_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        SurfaceType::Tuple(items) => format!("Tuple({})", items.len()),
+        SurfaceType::Record(fields) => format!("Record({})", fields.len()),
+        SurfaceType::List(_) => "List".to_string(),
+        SurfaceType::Capability(name) => format!("Capability({name})"),
+        SurfaceType::Fn(_, _) => "Fn".to_string(),
+        SurfaceType::Associated { base, name } => {
+            format!("{}::{}", surface_projection_base_spelling(base), name)
+        }
+    }
+}
+
+fn canonical_projection_base_spelling(base: &CanonicalTypeExpr) -> String {
+    match base {
+        CanonicalTypeExpr::Var(name) | CanonicalTypeExpr::Primitive(name) => name.clone(),
+        CanonicalTypeExpr::NominalApp {
+            visible_name, args, ..
+        } => {
+            if args.is_empty() {
+                visible_name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    visible_name,
+                    args.iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        CanonicalTypeExpr::Projection {
+            interface,
+            member,
+            args,
+            ..
+        } => {
+            if args.is_empty() {
+                format!("{}::{}", interface.name, member.name)
+            } else {
+                format!(
+                    "{}<{}>::{}",
+                    interface.name,
+                    args.iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    member.name
+                )
+            }
+        }
+        CanonicalTypeExpr::ComputationHeadApp { head, args, .. } => {
+            if args.is_empty() {
+                head.name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    head.name,
+                    args.iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
     }
 }
 
@@ -1882,6 +2007,11 @@ impl TypeEnv {
         base: &CanonicalTypeExpr,
         member_name: &str,
     ) -> Result<CanonicalTypeExpr, TypeError> {
+        let projection_spelling = format!(
+            "{}::{}",
+            canonical_projection_base_spelling(base),
+            member_name
+        );
         let (base_name, projection_args, rigidity) = match base {
             CanonicalTypeExpr::Var(name) => (
                 name.clone(),
@@ -1899,7 +2029,7 @@ impl TypeEnv {
                 return Err(TypeError::ConstructorNameMismatch {
                     expected: "supported associated projection base (nested projection bases are unsupported)"
                         .to_string(),
-                    found: format!("nested projection base {base:?}"),
+                    found: format!("nested projection base {projection_spelling}"),
                     span: Span::default(),
                 });
             }
@@ -1908,7 +2038,7 @@ impl TypeEnv {
                     expected:
                         "supported associated projection base (type variable or nominal application)"
                             .to_string(),
-                    found: format!("unsupported projection base {base:?}"),
+                    found: format!("unsupported projection base {projection_spelling}"),
                     span: Span::default(),
                 });
             }
@@ -1946,7 +2076,7 @@ impl TypeEnv {
             .cloned()
             .ok_or_else(|| TypeError::ConstructorNameMismatch {
                 expected: format!("registered member on interface {}", interface.name),
-                found: member_name.to_string(),
+                found: projection_spelling.clone(),
                 span: Span::default(),
             })?;
 
@@ -1957,7 +2087,7 @@ impl TypeEnv {
             .unwrap_or(projection_args.len());
         if expected_arity != projection_args.len() {
             return Err(TypeError::ConstructorArityMismatch {
-                name: interface.name.clone(),
+                name: format!("{} for projection {}", interface.name, projection_spelling),
                 expected_arity,
                 found_arity: projection_args.len(),
                 span: Span::default(),
@@ -2046,6 +2176,23 @@ impl TypeEnv {
                         span: Span::default(),
                     });
                 }
+                if matches!(base.as_ref(), TypeExpr::Tuple(_) | TypeExpr::Record(_)) {
+                    let found = match base.as_ref() {
+                        TypeExpr::Tuple(items) => {
+                            format!("unsupported projection base Tuple({})", items.len())
+                        }
+                        TypeExpr::Record(fields) => {
+                            format!("unsupported projection base Record({})", fields.len())
+                        }
+                        _ => unreachable!("guarded by matches!"),
+                    };
+                    return Err(TypeError::ConstructorNameMismatch {
+                        expected: "supported associated projection base (type variable or nominal application)"
+                            .to_string(),
+                        found,
+                        span: Span::default(),
+                    });
+                }
                 let lowered_base = self.lower_core_type_expr_to_canonical(base)?;
                 self.lower_associated_projection_to_canonical(&lowered_base, name)
             }
@@ -2097,6 +2244,35 @@ impl TypeEnv {
                         expected: "supported associated projection base (nested projection bases are unsupported)"
                             .to_string(),
                         found: format!("nested projection base {base:?}"),
+                        span: Span::default(),
+                    });
+                }
+                if matches!(
+                    base.as_ref(),
+                    SurfaceType::Tuple(_)
+                        | SurfaceType::Record(_)
+                        | SurfaceType::List(_)
+                        | SurfaceType::Capability(_)
+                        | SurfaceType::Fn(_, _)
+                ) {
+                    let found = match base.as_ref() {
+                        SurfaceType::Tuple(items) => {
+                            format!("unsupported projection base Tuple({})", items.len())
+                        }
+                        SurfaceType::Record(fields) => {
+                            format!("unsupported projection base Record({})", fields.len())
+                        }
+                        SurfaceType::List(_) => "unsupported projection base List".to_string(),
+                        SurfaceType::Capability(name) => {
+                            format!("unsupported projection base Capability({name})")
+                        }
+                        SurfaceType::Fn(_, _) => "unsupported projection base Fn".to_string(),
+                        _ => unreachable!("guarded by matches!"),
+                    };
+                    return Err(TypeError::ConstructorNameMismatch {
+                        expected: "supported associated projection base (type variable or nominal application)"
+                            .to_string(),
+                        found,
                         span: Span::default(),
                     });
                 }

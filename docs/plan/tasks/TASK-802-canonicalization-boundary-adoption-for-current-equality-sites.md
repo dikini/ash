@@ -1,6 +1,6 @@
 # TASK-802: Canonicalization Boundary Adoption for Current Equality Sites
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -43,9 +43,9 @@ Use the TASK-800 projection plumbing and TASK-801 alias helper layer in the acti
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-typeck` for the new boundary tests
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-typeck` for the new boundary tests
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

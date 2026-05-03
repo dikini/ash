@@ -125,6 +125,7 @@ impl AshLspError for crate::solver::TypeError {
             Self::UnknownCapability { span, .. } => Some((*span).into()),
             Self::InvalidConstraintField { span, .. } => Some((*span).into()),
             Self::ConstraintTypeMismatch { span, .. } => Some((*span).into()),
+            Self::TypeEnv(err) => err.span(),
         }
     }
 
@@ -156,6 +157,7 @@ impl AshLspError for crate::solver::TypeError {
                 Self::UnknownCapability { .. } => "E158",
                 Self::InvalidConstraintField { .. } => "E159",
                 Self::ConstraintTypeMismatch { .. } => "E160",
+                Self::TypeEnv(err) => return err.code(),
             }
             .into(),
         ))

@@ -1,6 +1,6 @@
 # TASK-801: Transparent Alias Canonicalization Helper
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -42,9 +42,9 @@ Prepare the helper layer that later boundary-adoption tasks will use.
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-typeck` for alias helper tests
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-typeck` for alias helper tests
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

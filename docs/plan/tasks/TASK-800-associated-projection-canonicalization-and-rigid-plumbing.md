@@ -1,6 +1,6 @@
 # TASK-800: Associated Projection Canonicalization and Rigid Plumbing
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -51,9 +51,9 @@ Make all active typechecker projection handling canonical and identity-backed in
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-typeck` for the new projection tests
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-typeck` for the new projection tests
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

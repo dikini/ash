@@ -1,6 +1,6 @@
 # TASK-804: SPEC-B Closeout, Docs, and Verification
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -45,13 +45,63 @@ Close Phase 110 honestly after focused and broad verification succeeds or any re
 
 ## Verification Steps
 
-- [ ] `git diff --check`
-- [ ] `cargo fmt --check`
-- [ ] `cargo check --workspace`
-- [ ] all focused Phase 110 suites are run and listed by exact target name in `## Verification Evidence`
-- [ ] carried-forward suites are listed by exact target name, rationale, and original owning task in `## Verification Evidence`
-- [ ] broad verification command and result summary are recorded honestly in `## Verification Evidence`
+- [x] `git diff --check`
+- [x] `cargo fmt --check`
+- [x] `cargo check --workspace`
+- [x] all focused Phase 110 suites are run and listed by exact target name in `## Verification Evidence`
+- [x] carried-forward suites are listed by exact target name, rationale, and original owning task in `## Verification Evidence`
+- [x] broad verification command and result summary are recorded honestly in `## Verification Evidence`
 
 ## Notes
 
 This task is docs/verification only. If broad verification fails, keep the phase open and document the failure honestly.
+
+## Completion Notes
+
+- Reconciled the Phase 110 closeout surfaces after focused and broad verification succeeded in the Phase 110 worktree.
+- Recorded the exact carried-forward parser and typechecker verification targets so TASK-804 closes the phase honestly without pretending to own earlier implementation work.
+- Closed the phase documentation loop by promoting the Phase 110 status surfaces from planned/draft wording to implemented/complete wording where the repository state now supports it.
+
+## Verification Evidence
+
+### Focused Phase 110 suites
+
+1. `cargo test -p ash-parser --test task_564_parser parses_associated_type_projections_in_type_context -- --exact --nocapture`
+   - Pass. Confirms the still-supported `base::Assoc` parser path remains accepted in the ordinary type-expression parser surface.
+   - Carried-forward owner: TASK-797.
+   - Why it belongs in closeout: TASK-804 must cite the exact parser-boundary evidence instead of reassigning parser ownership.
+
+2. `cargo test -p ash-parser parse_module::tests::test_parse_inline_module_rejects_unsupported_canonical_datatype_definition -- --exact --nocapture`
+   - Pass. Confirms the module parser still explicitly rejects deferred canonical-datatype syntax rather than silently widening the accepted Phase 110 surface.
+   - Carried-forward owner: TASK-797.
+   - Why it belongs in closeout: TASK-804 must preserve honest evidence that parser rejection boundaries stayed intact across later Phase 110 work.
+
+3. `cargo test -p ash-typeck --test task_803_projection_diagnostics -- --nocapture`
+   - Pass. Confirms ambiguous/unresolved/unsupported/arity-sensitive projection diagnostics still match the final SPEC-B substrate boundary.
+   - Carried-forward owner: TASK-803.
+   - Why it belongs in closeout: TASK-804 must verify the final docs/status packet against the diagnostic boundary actually shipped by Phase 110.
+
+4. `cargo test -p ash-typeck --test task_803_phase110_non_interference -- --nocapture`
+   - Pass. Confirms representative Phase 109 ordinary typing plus workflow/capability/resource/do/comprehension behavior remained non-regressed after the Phase 110 substrate changes.
+   - Carried-forward owner: TASK-803.
+   - Why it belongs in closeout: closeout must cite explicit non-owner regression evidence before claiming the phase is honestly complete.
+
+### Broad verification
+
+1. `git diff --check`
+   - Pass. No whitespace or patch-shape issues remain in the current worktree state.
+
+2. `cargo fmt --check`
+   - Pass. Formatting is clean.
+
+3. `cargo check --workspace`
+   - Pass. Workspace compilation succeeds under the final Phase 110 substrate/documentation state.
+
+4. `cargo test --workspace`
+   - Pass. Broad repository verification succeeded in the Phase 110 worktree; no residual failures required classification for TASK-804 closeout.
+
+## Self-Review / Review Handoff
+
+- Self-review result: the closeout packet now records exact focused targets, carried-forward ownership, and broad-verification outcomes instead of summarizing them loosely.
+- Independent-review handoff status: no open closeout-review blockers remain. Post-closeout review findings were tracked and remediated under TASK-805, which is already marked complete in the Phase 110 plan surfaces.
+- Residual-failure classification: none for TASK-804. All focused and broad verification commands recorded above passed in this worktree.

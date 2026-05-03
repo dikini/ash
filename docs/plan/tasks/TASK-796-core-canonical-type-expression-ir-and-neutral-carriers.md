@@ -1,6 +1,6 @@
 # TASK-796: Core Canonical Type-Expression IR and Neutral Carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -42,9 +42,9 @@ Define the shared data model that later packets will consume.
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-core` for the new type IR tests
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-core` for the new type IR tests
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

@@ -1,6 +1,6 @@
 # TASK-793: SPEC-B Spec/Plan Packet
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -33,10 +33,10 @@ Create the SPEC-B packet before any Rust implementation work begins.
 
 ## Verification Steps
 
-- [ ] SPEC-058 exists and references DESIGN-034.
-- [ ] PLAN-106 exists and references SPEC-058.
-- [ ] TASK-793 through TASK-805 exist.
-- [ ] `docs/spec/README.md` registers SPEC-058.
-- [ ] `docs/plan/PLAN-INDEX.md` registers Phase 110.
-- [ ] `CHANGELOG.md` includes the packet.
-- [ ] `git diff --check` passes.
+- [x] SPEC-058 exists and references DESIGN-034.
+- [x] PLAN-106 exists and references SPEC-058.
+- [x] TASK-793 through TASK-805 exist.
+- [x] `docs/spec/README.md` registers SPEC-058.
+- [x] `docs/plan/PLAN-INDEX.md` registers Phase 110.
+- [x] `CHANGELOG.md` includes the packet.
+- [x] `git diff --check` passes.

@@ -1,6 +1,6 @@
 # TASK-798: Canonical Type IR Lowering from Surface and Core
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -52,9 +52,9 @@ Make `ash-typeck` consume one canonical internal representation instead of paral
 ## Verification Steps
 
 - [ ] `cargo test -p ash-parser` for source-summary lowering coverage
-- [ ] `cargo test -p ash-typeck` for the new lowering tests
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-typeck` for the new lowering tests
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

@@ -1,6 +1,6 @@
 # TASK-797: Ordinary Type Parser Expression Parity and Explicit Rejections
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -44,9 +44,9 @@ Align parser-private ordinary type-expression parsing with the current Phase 110
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-parser` for the new parser tests
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-parser` for the new parser tests
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

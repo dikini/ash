@@ -11,9 +11,11 @@ use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::semantic_summary::{
-    ConstructorPayloadKind, ConstructorSummary, ModuleSemanticSummary, RepresentationExposure,
-    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
+    ConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleSemanticSummary,
+    RepresentationExposure, SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
+use ash_core::type_ir::{CanonicalTypeExpr, ProjectionRigidity};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
     CapabilityImplementationDef, CapabilityImplementationDependency,
@@ -148,9 +150,29 @@ pub fn type_expr_to_type(
             Ok(Type::Record(field_types?))
         }
         TypeExpr::Associated { base, name } => {
-            let base_ty = type_expr_to_type(base, param_mapping, type_env)?;
+            let base_ty = match base.as_ref() {
+                TypeExpr::Named(base_name) if !param_mapping.contains_key(base_name) => {
+                    match type_env.resolve_type(base_name) {
+                        Ok(_) => type_expr_to_type(base, param_mapping, type_env)?,
+                        Err(_) if looks_like_unbound_type_var_name(base_name) => {
+                            return Err(TypeError::TypeEnv(TypeEnvError::InvalidDefinition(
+                                format!("unresolved associated type '{name}'"),
+                                Span::default(),
+                            )));
+                        }
+                        Err(err) => return Err(err),
+                    }
+                }
+                _ => type_expr_to_type(base, param_mapping, type_env)?,
+            };
+            let interface = resolve_associated_interface_from_type_var_bounds(
+                type_env,
+                &base_ty,
+                &core_projection_base_spelling(base),
+                name,
+            )?;
             Ok(Type::Associated {
-                interface: String::new(), // unresolved at this level
+                interface,
                 base: Box::new(base_ty),
                 name: name.clone(),
             })
@@ -431,6 +453,63 @@ pub struct SelectedScheme {
     pub substitution: Substitution,
 }
 
+fn resolve_associated_interface_from_type_var_bounds(
+    type_env: &TypeEnv,
+    base_ty: &Type,
+    base_spelling: &str,
+    name: &str,
+) -> Result<String, TypeEnvError> {
+    let Type::Var(var) = base_ty else {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!("unresolved associated type '{name}'"),
+            Span::default(),
+        ));
+    };
+
+    let Some(bounds) = type_env.type_var_interface_bounds.get(var) else {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!("unresolved associated type '{name}'"),
+            Span::default(),
+        ));
+    };
+
+    let mut candidates = Vec::new();
+    for bound_iface in bounds {
+        match type_env.interfaces.get(bound_iface) {
+            Some(iface_info)
+                if iface_info
+                    .associated_types
+                    .iter()
+                    .any(|assoc| assoc == name) =>
+            {
+                candidates.push(bound_iface.clone());
+            }
+            _ => {}
+        }
+    }
+
+    if candidates.len() == 1 {
+        Ok(candidates.into_iter().next().expect("single candidate"))
+    } else if candidates.len() > 1 {
+        let mut candidate_bounds = candidates;
+        candidate_bounds.sort();
+        Err(TypeEnvError::AmbiguousAssociatedType {
+            name: format!(
+                "{name}' for projection '{}::{}' with candidate bounds [{}]",
+                base_spelling,
+                name,
+                candidate_bounds.join(", ")
+            ),
+            span: Span::default(),
+        })
+    } else {
+        Err(TypeEnvError::InvalidDefinition(
+            format!("unresolved associated type '{name}'"),
+            Span::default(),
+        ))
+    }
+}
+
 fn surface_type_to_type(
     ty: &SurfaceType,
     param_mapping: &HashMap<String, TypeVar>,
@@ -534,37 +613,12 @@ fn surface_type_to_type(
         }
         SurfaceType::Associated { base, name } => {
             let base_ty = surface_type_to_type(base, param_mapping, type_env)?;
-
-            // Try to resolve the interface from type variable bounds
-            let interface = if let Type::Var(v) = &base_ty {
-                if let Some(bounds) = type_env.type_var_interface_bounds.get(v) {
-                    let mut candidates = Vec::new();
-                    for bound_iface in bounds {
-                        match type_env.interfaces.get(bound_iface) {
-                            Some(iface_info)
-                                if iface_info.associated_types.contains(&name.to_string()) =>
-                            {
-                                candidates.push(bound_iface.clone());
-                            }
-                            _ => {}
-                        }
-                    }
-                    if candidates.len() == 1 {
-                        candidates.into_iter().next().unwrap()
-                    } else if candidates.len() > 1 {
-                        return Err(TypeEnvError::AmbiguousAssociatedType {
-                            name: name.to_string(),
-                            span: Span::default(),
-                        });
-                    } else {
-                        String::new() // unresolved for now
-                    }
-                } else {
-                    String::new()
-                }
-            } else {
-                String::new()
-            };
+            let interface = resolve_associated_interface_from_type_var_bounds(
+                type_env,
+                &base_ty,
+                &surface_projection_base_spelling(base),
+                name,
+            )?;
 
             Ok(Type::Associated {
                 interface,
@@ -580,6 +634,115 @@ fn surface_type_name(ty: &SurfaceType) -> Option<String> {
         SurfaceType::Name(name) => Some(name.to_string()),
         SurfaceType::Capability(name) => Some(name.to_string()),
         _ => None,
+    }
+}
+
+fn core_projection_base_spelling(base: &TypeExpr) -> String {
+    match base {
+        TypeExpr::Named(name) => name.clone(),
+        TypeExpr::Constructor { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    name,
+                    args.iter()
+                        .map(core_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        TypeExpr::Tuple(items) => format!("Tuple({})", items.len()),
+        TypeExpr::Record(fields) => format!("Record({})", fields.len()),
+        TypeExpr::Associated { base, name } => {
+            format!("{}::{}", core_projection_base_spelling(base), name)
+        }
+    }
+}
+
+fn surface_projection_base_spelling(base: &SurfaceType) -> String {
+    match base {
+        SurfaceType::Name(name) => name.to_string(),
+        SurfaceType::Constructor { name, args } => {
+            if args.is_empty() {
+                name.to_string()
+            } else {
+                format!(
+                    "{}<{}>",
+                    name,
+                    args.iter()
+                        .map(surface_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        SurfaceType::Tuple(items) => format!("Tuple({})", items.len()),
+        SurfaceType::Record(fields) => format!("Record({})", fields.len()),
+        SurfaceType::List(_) => "List".to_string(),
+        SurfaceType::Capability(name) => format!("Capability({name})"),
+        SurfaceType::Fn(_, _) => "Fn".to_string(),
+        SurfaceType::Associated { base, name } => {
+            format!("{}::{}", surface_projection_base_spelling(base), name)
+        }
+    }
+}
+
+fn canonical_projection_base_spelling(base: &CanonicalTypeExpr) -> String {
+    match base {
+        CanonicalTypeExpr::Var(name) | CanonicalTypeExpr::Primitive(name) => name.clone(),
+        CanonicalTypeExpr::NominalApp {
+            visible_name, args, ..
+        } => {
+            if args.is_empty() {
+                visible_name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    visible_name,
+                    args.iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        CanonicalTypeExpr::Projection {
+            interface,
+            member,
+            args,
+            ..
+        } => {
+            if args.is_empty() {
+                format!("{}::{}", interface.name, member.name)
+            } else {
+                format!(
+                    "{}<{}>::{}",
+                    interface.name,
+                    args.iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    member.name
+                )
+            }
+        }
+        CanonicalTypeExpr::ComputationHeadApp { head, args, .. } => {
+            if args.is_empty() {
+                head.name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    head.name,
+                    args.iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
     }
 }
 
@@ -625,6 +788,14 @@ fn implementation_authority_sources(
         .collect()
 }
 
+fn looks_like_unbound_type_var_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '_')
+}
+
+#[allow(dead_code)]
 fn resolve_associated_types_for_interface(
     ty: &mut Type,
     interface: &str,
@@ -667,6 +838,28 @@ fn resolve_associated_types_for_interface(
             resolve_associated_types_for_interface(ret, interface, interface_type_params);
         }
         _ => {}
+    }
+}
+
+fn unresolved_associated_projection_name(ty: &Type) -> Option<&str> {
+    match ty {
+        Type::Associated { base, .. } => unresolved_associated_projection_name(base),
+        Type::Constructor { args, .. } => {
+            args.iter().find_map(unresolved_associated_projection_name)
+        }
+        Type::List(inner) => unresolved_associated_projection_name(inner),
+        Type::Record(fields) => fields
+            .iter()
+            .find_map(|(_, field_ty)| unresolved_associated_projection_name(field_ty)),
+        Type::Fn(params, ret) => params
+            .iter()
+            .find_map(unresolved_associated_projection_name)
+            .or_else(|| unresolved_associated_projection_name(ret)),
+        Type::Fun(params, ret, _) => params
+            .iter()
+            .find_map(unresolved_associated_projection_name)
+            .or_else(|| unresolved_associated_projection_name(ret)),
+        _ => None,
     }
 }
 
@@ -897,6 +1090,22 @@ pub struct TypeEnv {
     type_alias_identities: HashMap<TypeName, TypeDeclId>,
     /// Preferred visible name for a canonical ordinary type identity.
     canonical_type_names: HashMap<TypeDeclId, TypeName>,
+    /// Preferred visible interface name to canonical interface identity.
+    interface_identity_aliases: HashMap<String, InterfaceIdentityId>,
+    /// Tracks whether a visible interface alias came from imported summary metadata.
+    interface_identity_alias_is_imported: HashMap<String, bool>,
+    /// Preferred visible name for a canonical interface identity.
+    canonical_interface_names: HashMap<InterfaceIdentityId, String>,
+    /// Minimal TASK-799 local interface arity registry keyed by canonical identity.
+    local_interface_arities: HashMap<InterfaceIdentityId, usize>,
+    /// Every known interface identity, including imported and source-local registrations.
+    known_interface_identities: HashSet<InterfaceIdentityId>,
+    /// Preferred visible `(interface, member)` pair to canonical associated-member identity.
+    associated_member_identity_aliases: HashMap<(String, String), AssociatedMemberIdentityId>,
+    /// Tracks whether a visible associated-member alias came from imported summary metadata.
+    associated_member_identity_alias_is_imported: HashMap<(String, String), bool>,
+    /// Every known associated-member identity, including imported and source-local registrations.
+    known_associated_member_identities: HashSet<AssociatedMemberIdentityId>,
     /// Registered interfaces by name.
     pub(crate) interfaces: HashMap<String, InterfaceInfo>,
     /// Registered capability interfaces by name.
@@ -1184,32 +1393,22 @@ impl TypeEnv {
         interface_name: &str,
     ) -> Result<(String, InterfaceMethodInfo), TypeEnvError> {
         // Allow multi-parameter interface methods for associated-type support (TASK-567)
-        let mut params: Vec<Type> = method
-            .params
-            .iter()
-            .map(|ty| surface_type_to_type(ty, param_mapping, self))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        for param in &mut params {
-            resolve_associated_types_for_interface(
-                param,
-                interface_name,
-                &ordered_param_names
-                    .iter()
-                    .map(|n| param_mapping[n])
-                    .collect::<Vec<_>>(),
-            );
+        let mut method_env = self.clone();
+        for name in ordered_param_names {
+            method_env
+                .type_var_interface_bounds
+                .entry(param_mapping[name])
+                .or_default()
+                .insert(interface_name.to_string());
         }
 
-        let mut return_type = surface_type_to_type(&method.return_type, param_mapping, self)?;
-        resolve_associated_types_for_interface(
-            &mut return_type,
-            interface_name,
-            &ordered_param_names
-                .iter()
-                .map(|n| param_mapping[n])
-                .collect::<Vec<_>>(),
-        );
+        let params: Vec<Type> = method
+            .params
+            .iter()
+            .map(|ty| surface_type_to_type(ty, param_mapping, &method_env))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let return_type = surface_type_to_type(&method.return_type, param_mapping, &method_env)?;
 
         let type_params: Vec<TypeVar> = ordered_param_names
             .iter()
@@ -1237,6 +1436,14 @@ impl TypeEnv {
             type_declaration_states: HashMap::with_capacity(10),
             type_alias_identities: HashMap::with_capacity(10),
             canonical_type_names: HashMap::with_capacity(10),
+            interface_identity_aliases: HashMap::with_capacity(4),
+            interface_identity_alias_is_imported: HashMap::with_capacity(4),
+            canonical_interface_names: HashMap::with_capacity(4),
+            local_interface_arities: HashMap::with_capacity(4),
+            known_interface_identities: HashSet::with_capacity(4),
+            associated_member_identity_aliases: HashMap::with_capacity(4),
+            associated_member_identity_alias_is_imported: HashMap::with_capacity(4),
+            known_associated_member_identities: HashSet::with_capacity(4),
             interfaces: HashMap::with_capacity(4),
             capability_interfaces: HashMap::with_capacity(4),
             resource_types: HashMap::with_capacity(4),
@@ -1636,6 +1843,14 @@ impl TypeEnv {
             self.declare_summary_type_identity(ty)?;
         }
 
+        for interface in &summary.interface_identities {
+            self.register_interface_identity_summary_imported(interface)?;
+        }
+
+        for member in &summary.associated_member_identities {
+            self.register_associated_member_identity_summary_imported(member)?;
+        }
+
         for ty in &summary.exported_types {
             if ty.representation_exposure != RepresentationExposure::Exposed {
                 continue;
@@ -1678,9 +1893,453 @@ impl TypeEnv {
         Ok(())
     }
 
+    /// Register an interface identity summary in the canonical Phase 110 registry.
+    pub fn register_interface_identity_summary(
+        &mut self,
+        summary: &InterfaceIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_interface_identity_summary_with_provenance(summary, false)
+    }
+
+    fn register_interface_identity_summary_imported(
+        &mut self,
+        summary: &InterfaceIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_interface_identity_summary_with_provenance(summary, true)
+    }
+
+    fn register_interface_identity_summary_with_provenance(
+        &mut self,
+        summary: &InterfaceIdentitySummary,
+        imported: bool,
+    ) -> Result<(), TypeEnvError> {
+        self.known_interface_identities.insert(summary.id.clone());
+        self.canonical_interface_names
+            .insert(summary.id.clone(), summary.name.to_string());
+
+        let visible_name = summary.name.as_str();
+        if let Some(existing) = self.interface_identity_aliases.get(visible_name)
+            && existing != &summary.id
+        {
+            let existing_is_imported = self
+                .interface_identity_alias_is_imported
+                .get(visible_name)
+                .copied()
+                .unwrap_or(false);
+            if imported || !existing_is_imported {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "conflicting visible interface alias '{}': {:?} vs {:?}",
+                        summary.name, existing, summary.id
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+
+        self.interface_identity_aliases
+            .insert(summary.name.to_string(), summary.id.clone());
+        self.interface_identity_alias_is_imported
+            .insert(summary.name.to_string(), imported);
+        if !imported {
+            let Some(interface) = self.interfaces.get(summary.name.as_str()) else {
+                return Ok(());
+            };
+            self.local_interface_arities
+                .insert(summary.id.clone(), interface.type_params.len());
+        }
+        Ok(())
+    }
+
+    /// Register an associated-member identity summary in the canonical Phase 110 registry.
+    pub fn register_associated_member_identity_summary(
+        &mut self,
+        summary: &AssociatedMemberIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_associated_member_identity_summary_with_provenance(summary, false)
+    }
+
+    fn register_associated_member_identity_summary_imported(
+        &mut self,
+        summary: &AssociatedMemberIdentitySummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_associated_member_identity_summary_with_provenance(summary, true)
+    }
+
+    fn register_associated_member_identity_summary_with_provenance(
+        &mut self,
+        summary: &AssociatedMemberIdentitySummary,
+        imported: bool,
+    ) -> Result<(), TypeEnvError> {
+        self.known_associated_member_identities
+            .insert(summary.id.clone());
+        let alias_key = (
+            summary.id.interface.name.to_string(),
+            summary.name.to_string(),
+        );
+        if let Some(existing) = self.associated_member_identity_aliases.get(&alias_key)
+            && existing != &summary.id
+        {
+            let existing_is_imported = self
+                .associated_member_identity_alias_is_imported
+                .get(&alias_key)
+                .copied()
+                .unwrap_or(false);
+            if imported || !existing_is_imported {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "conflicting visible associated-member alias '{}::{}': {:?} vs {:?}",
+                        alias_key.0, alias_key.1, existing, summary.id
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        self.associated_member_identity_aliases
+            .insert(alias_key.clone(), summary.id.clone());
+        self.associated_member_identity_alias_is_imported
+            .insert(alias_key, imported);
+        Ok(())
+    }
+
+    fn lower_associated_projection_to_canonical(
+        &self,
+        base: &CanonicalTypeExpr,
+        member_name: &str,
+    ) -> Result<CanonicalTypeExpr, TypeError> {
+        let projection_spelling = format!(
+            "{}::{}",
+            canonical_projection_base_spelling(base),
+            member_name
+        );
+        let (base_name, projection_args, rigidity) = match base {
+            CanonicalTypeExpr::Var(name) => (
+                name.clone(),
+                vec![CanonicalTypeExpr::Var(name.clone())],
+                ProjectionRigidity::Neutral,
+            ),
+            CanonicalTypeExpr::NominalApp {
+                visible_name, args, ..
+            } => (
+                visible_name.clone(),
+                args.clone(),
+                ProjectionRigidity::Rigid,
+            ),
+            CanonicalTypeExpr::Projection { .. } => {
+                return Err(TypeError::ConstructorNameMismatch {
+                    expected: "supported associated projection base (nested projection bases are unsupported)"
+                        .to_string(),
+                    found: format!("nested projection base {projection_spelling}"),
+                    span: Span::default(),
+                });
+            }
+            _ => {
+                return Err(TypeError::ConstructorNameMismatch {
+                    expected:
+                        "supported associated projection base (type variable or nominal application)"
+                            .to_string(),
+                    found: format!("unsupported projection base {projection_spelling}"),
+                    span: Span::default(),
+                });
+            }
+        };
+
+        let interface = self
+            .interface_identity_for_name(&base_name)
+            .cloned()
+            .or_else(|| {
+                self.interfaces.iter().find_map(|(iface_name, iface_info)| {
+                    iface_info
+                        .associated_types
+                        .contains(&member_name.to_string())
+                        .then(|| self.interface_identity_for_name(iface_name).cloned())
+                        .flatten()
+                })
+            })
+            .or_else(|| {
+                let mut matches = self
+                    .known_associated_member_identities
+                    .iter()
+                    .filter(|id| id.name == member_name)
+                    .map(|id| id.interface.clone());
+                let first = matches.next()?;
+                matches.all(|candidate| candidate == first).then_some(first)
+            })
+            .ok_or_else(|| TypeError::ConstructorNameMismatch {
+                expected: "registered associated projection".to_string(),
+                found: format!("{base_name}::{member_name}"),
+                span: Span::default(),
+            })?;
+
+        let member = self
+            .associated_member_identity_for_interface_member(&interface.name, member_name)
+            .cloned()
+            .ok_or_else(|| TypeError::ConstructorNameMismatch {
+                expected: format!("registered member on interface {}", interface.name),
+                found: projection_spelling.clone(),
+                span: Span::default(),
+            })?;
+
+        let expected_arity = self
+            .local_interface_arities
+            .get(&interface)
+            .copied()
+            .unwrap_or(projection_args.len());
+        if expected_arity != projection_args.len() {
+            return Err(TypeError::ConstructorArityMismatch {
+                name: format!("{} for projection {}", interface.name, projection_spelling),
+                expected_arity,
+                found_arity: projection_args.len(),
+                span: Span::default(),
+            });
+        }
+
+        Ok(CanonicalTypeExpr::Projection {
+            interface,
+            member,
+            args: projection_args,
+            kind: Kind::Type,
+            rigidity,
+        })
+    }
+
+    fn canonical_type_identity_for_visible_name(
+        &self,
+        visible_name: &str,
+    ) -> Result<TypeDeclId, TypeError> {
+        self.type_identity_for_name(visible_name)
+            .cloned()
+            .ok_or_else(|| TypeError::ConstructorNameMismatch {
+                expected: "registered canonical type identity".to_string(),
+                found: visible_name.to_string(),
+                span: Span::default(),
+            })
+    }
+
+    /// Lower a core `TypeExpr` into the Phase 110 canonical type-expression substrate.
+    pub fn lower_core_type_expr_to_canonical(
+        &self,
+        expr: &TypeExpr,
+    ) -> Result<CanonicalTypeExpr, TypeError> {
+        match expr {
+            TypeExpr::Named(name) => match name.as_str() {
+                "Int" | "String" | "Bool" | "Float" | "Null" | "Unit" | "Time" | "Ref" => {
+                    Ok(CanonicalTypeExpr::Primitive(name.clone()))
+                }
+                _ => match self.resolve_type(name) {
+                    Ok((qualified, _)) => {
+                        self.check_type_constructor_arity(&qualified, 0)?;
+                        Ok(CanonicalTypeExpr::NominalApp {
+                            origin: self.canonical_type_identity_for_visible_name(name)?,
+                            visible_name: name.clone(),
+                            args: vec![],
+                            kind: Kind::Type,
+                        })
+                    }
+                    Err(TypeError::UnboundVariable(_, _)) => {
+                        Ok(CanonicalTypeExpr::Var(name.clone()))
+                    }
+                    Err(err) => Err(err),
+                },
+            },
+            TypeExpr::Constructor { name, args } => {
+                let (qualified, _) = self.resolve_type(name)?;
+                self.check_type_constructor_arity(&qualified, args.len())?;
+                Ok(CanonicalTypeExpr::NominalApp {
+                    origin: self.canonical_type_identity_for_visible_name(name)?,
+                    visible_name: name.clone(),
+                    args: args
+                        .iter()
+                        .map(|arg| self.lower_core_type_expr_to_canonical(arg))
+                        .collect::<Result<Vec<_>, _>>()?,
+                    kind: Kind::Type,
+                })
+            }
+            TypeExpr::Tuple(items) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Tuple({})", items.len()),
+                span: Span::default(),
+            }),
+            TypeExpr::Record(fields) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Record({})", fields.len()),
+                span: Span::default(),
+            }),
+            TypeExpr::Associated { base, name } => {
+                if matches!(base.as_ref(), TypeExpr::Associated { .. }) {
+                    return Err(TypeError::ConstructorNameMismatch {
+                        expected: "supported associated projection base (nested projection bases are unsupported)"
+                            .to_string(),
+                        found: format!("nested projection base {base:?}"),
+                        span: Span::default(),
+                    });
+                }
+                if matches!(base.as_ref(), TypeExpr::Tuple(_) | TypeExpr::Record(_)) {
+                    let found = match base.as_ref() {
+                        TypeExpr::Tuple(items) => {
+                            format!("unsupported projection base Tuple({})", items.len())
+                        }
+                        TypeExpr::Record(fields) => {
+                            format!("unsupported projection base Record({})", fields.len())
+                        }
+                        _ => unreachable!("guarded by matches!"),
+                    };
+                    return Err(TypeError::ConstructorNameMismatch {
+                        expected: "supported associated projection base (type variable or nominal application)"
+                            .to_string(),
+                        found,
+                        span: Span::default(),
+                    });
+                }
+                let lowered_base = self.lower_core_type_expr_to_canonical(base)?;
+                self.lower_associated_projection_to_canonical(&lowered_base, name)
+            }
+        }
+    }
+
+    /// Lower a surface `Type` into the Phase 110 canonical type-expression substrate.
+    pub fn lower_surface_type_to_canonical(
+        &self,
+        ty: &SurfaceType,
+    ) -> Result<CanonicalTypeExpr, TypeError> {
+        match ty {
+            SurfaceType::Name(name) => match name.as_ref() {
+                "Int" | "String" | "Bool" | "Float" | "Null" | "Time" | "Ref" => {
+                    Ok(CanonicalTypeExpr::Primitive(name.to_string()))
+                }
+                _ => match self.resolve_type(name.as_ref()) {
+                    Ok((qualified, _)) => {
+                        self.check_type_constructor_arity(&qualified, 0)?;
+                        Ok(CanonicalTypeExpr::NominalApp {
+                            origin: self.canonical_type_identity_for_visible_name(name.as_ref())?,
+                            visible_name: name.to_string(),
+                            args: vec![],
+                            kind: Kind::Type,
+                        })
+                    }
+                    Err(TypeError::UnboundVariable(_, _)) => {
+                        Ok(CanonicalTypeExpr::Var(name.to_string()))
+                    }
+                    Err(err) => Err(err),
+                },
+            },
+            SurfaceType::Constructor { name, args } => {
+                let (qualified, _) = self.resolve_type(name.as_ref())?;
+                self.check_type_constructor_arity(&qualified, args.len())?;
+                Ok(CanonicalTypeExpr::NominalApp {
+                    origin: self.canonical_type_identity_for_visible_name(name.as_ref())?,
+                    visible_name: name.to_string(),
+                    args: args
+                        .iter()
+                        .map(|arg| self.lower_surface_type_to_canonical(arg))
+                        .collect::<Result<Vec<_>, _>>()?,
+                    kind: Kind::Type,
+                })
+            }
+            SurfaceType::Associated { base, name } => {
+                if matches!(base.as_ref(), SurfaceType::Associated { .. }) {
+                    return Err(TypeError::ConstructorNameMismatch {
+                        expected: "supported associated projection base (nested projection bases are unsupported)"
+                            .to_string(),
+                        found: format!("nested projection base {base:?}"),
+                        span: Span::default(),
+                    });
+                }
+                if matches!(
+                    base.as_ref(),
+                    SurfaceType::Tuple(_)
+                        | SurfaceType::Record(_)
+                        | SurfaceType::List(_)
+                        | SurfaceType::Capability(_)
+                        | SurfaceType::Fn(_, _)
+                ) {
+                    let found = match base.as_ref() {
+                        SurfaceType::Tuple(items) => {
+                            format!("unsupported projection base Tuple({})", items.len())
+                        }
+                        SurfaceType::Record(fields) => {
+                            format!("unsupported projection base Record({})", fields.len())
+                        }
+                        SurfaceType::List(_) => "unsupported projection base List".to_string(),
+                        SurfaceType::Capability(name) => {
+                            format!("unsupported projection base Capability({name})")
+                        }
+                        SurfaceType::Fn(_, _) => "unsupported projection base Fn".to_string(),
+                        _ => unreachable!("guarded by matches!"),
+                    };
+                    return Err(TypeError::ConstructorNameMismatch {
+                        expected: "supported associated projection base (type variable or nominal application)"
+                            .to_string(),
+                        found,
+                        span: Span::default(),
+                    });
+                }
+                let lowered_base = self.lower_surface_type_to_canonical(base)?;
+                self.lower_associated_projection_to_canonical(&lowered_base, name)
+            }
+            SurfaceType::Tuple(items) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Tuple({})", items.len()),
+                span: Span::default(),
+            }),
+            SurfaceType::Record(fields) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Record({})", fields.len()),
+                span: Span::default(),
+            }),
+            SurfaceType::List(_) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: "List".to_string(),
+                span: Span::default(),
+            }),
+            SurfaceType::Capability(name) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: format!("Capability({name})"),
+                span: Span::default(),
+            }),
+            SurfaceType::Fn(_, _) => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: "Fn".to_string(),
+                span: Span::default(),
+            }),
+        }
+    }
+
     #[must_use]
     pub fn type_identity_for_name(&self, name: &str) -> Option<&TypeDeclId> {
         self.type_alias_identities.get(name)
+    }
+
+    #[must_use]
+    pub fn interface_identity_for_name(&self, name: &str) -> Option<&InterfaceIdentityId> {
+        self.interface_identity_aliases.get(name)
+    }
+
+    #[must_use]
+    pub fn associated_member_identity_for_interface_member(
+        &self,
+        interface_name: &str,
+        member_name: &str,
+    ) -> Option<&AssociatedMemberIdentityId> {
+        self.associated_member_identity_aliases
+            .get(&(interface_name.to_string(), member_name.to_string()))
+    }
+
+    #[must_use]
+    pub fn interface_identity_known(&self, id: &InterfaceIdentityId) -> bool {
+        self.known_interface_identities.contains(id)
+    }
+
+    #[must_use]
+    pub fn associated_member_identity_known(&self, id: &AssociatedMemberIdentityId) -> bool {
+        self.known_associated_member_identities.contains(id)
     }
 
     #[must_use]
@@ -1700,21 +2359,110 @@ impl TypeEnv {
             .unwrap_or_else(|| name.clone())
     }
 
-    /// Return a copy of `ty` where visible imported-summary aliases that share
-    /// a canonical `TypeDeclId` are rewritten to that identity's preferred
-    /// visible name. This is intentionally an equality/unification hook: normal
-    /// resolution still preserves the source-visible alias name for diagnostics.
+    fn canonical_associated_projection_for_equality(
+        &self,
+        interface_name: &str,
+        member_name: &str,
+    ) -> Option<(String, String)> {
+        let interface_id = self.interface_identity_for_name(interface_name)?;
+        let member_id =
+            self.associated_member_identity_for_interface_member(interface_name, member_name)?;
+
+        if &member_id.interface != interface_id {
+            return None;
+        }
+
+        let canonical_interface = self
+            .canonical_interface_names
+            .get(interface_id)
+            .cloned()
+            .unwrap_or_else(|| interface_name.to_string());
+
+        Some((canonical_interface, member_id.name.clone()))
+    }
+
+    /// Recursively peel registered transparent aliases inside a type without
+    /// changing current equality/unification boundaries. This helper is for
+    /// later boundary adoption tasks; callers that want existing nominal
+    /// equality behavior should continue using `canonicalize_type_for_equality`.
+    #[must_use]
+    pub fn canonicalize_transparent_aliases(&self, ty: &Type) -> Type {
+        match ty {
+            Type::Constructor { name, args, kind } => {
+                let canonical_args: Vec<_> = args
+                    .iter()
+                    .map(|arg| self.canonicalize_transparent_aliases(arg))
+                    .collect();
+
+                if let Some(target) = self.transparent_alias_target(name, &canonical_args) {
+                    self.canonicalize_transparent_aliases(&target)
+                } else {
+                    Type::Constructor {
+                        name: name.clone(),
+                        args: canonical_args,
+                        kind: kind.clone(),
+                    }
+                }
+            }
+            Type::List(inner) => Type::List(Box::new(self.canonicalize_transparent_aliases(inner))),
+            Type::Record(fields) => Type::Record(
+                fields
+                    .iter()
+                    .map(|(name, ty)| (name.clone(), self.canonicalize_transparent_aliases(ty)))
+                    .collect(),
+            ),
+            Type::Fn(params, ret) => Type::Fn(
+                params
+                    .iter()
+                    .map(|param| self.canonicalize_transparent_aliases(param))
+                    .collect(),
+                Box::new(self.canonicalize_transparent_aliases(ret)),
+            ),
+            Type::Fun(params, ret, effect) => Type::Fun(
+                params
+                    .iter()
+                    .map(|param| self.canonicalize_transparent_aliases(param))
+                    .collect(),
+                Box::new(self.canonicalize_transparent_aliases(ret)),
+                *effect,
+            ),
+            Type::Associated {
+                interface,
+                base,
+                name,
+            } => Type::Associated {
+                interface: interface.clone(),
+                base: Box::new(self.canonicalize_transparent_aliases(base)),
+                name: name.clone(),
+            },
+            other => other.clone(),
+        }
+    }
+
+    #[must_use]
+    pub fn render_type_for_diagnostics(&self, ty: &Type) -> String {
+        ty.to_string()
+    }
+
     #[must_use]
     pub fn canonicalize_type_for_equality(&self, ty: &Type) -> Type {
         match ty {
-            Type::Constructor { name, args, kind } => Type::Constructor {
-                name: self.canonical_constructor_name_for_equality(name),
-                args: args
+            Type::Constructor { name, args, kind } => {
+                let canonical_args: Vec<_> = args
                     .iter()
                     .map(|arg| self.canonicalize_type_for_equality(arg))
-                    .collect(),
-                kind: kind.clone(),
-            },
+                    .collect();
+
+                if let Some(target) = self.transparent_alias_target(name, &canonical_args) {
+                    self.canonicalize_type_for_equality(&target)
+                } else {
+                    Type::Constructor {
+                        name: self.canonical_constructor_name_for_equality(name),
+                        args: canonical_args,
+                        kind: kind.clone(),
+                    }
+                }
+            }
             Type::List(inner) => Type::List(Box::new(self.canonicalize_type_for_equality(inner))),
             Type::Record(fields) => Type::Record(
                 fields
@@ -1741,11 +2489,17 @@ impl TypeEnv {
                 interface,
                 base,
                 name,
-            } => Type::Associated {
-                interface: interface.clone(),
-                base: Box::new(self.canonicalize_type_for_equality(base)),
-                name: name.clone(),
-            },
+            } => {
+                let (canonical_interface, canonical_name) = self
+                    .canonical_associated_projection_for_equality(interface, name)
+                    .unwrap_or_else(|| (interface.clone(), name.clone()));
+
+                Type::Associated {
+                    interface: canonical_interface,
+                    base: Box::new(self.canonicalize_type_for_equality(base)),
+                    name: canonical_name,
+                }
+            }
             other => other.clone(),
         }
     }
@@ -1829,12 +2583,23 @@ impl TypeEnv {
         self.interfaces.insert(
             interface_name.clone(),
             InterfaceInfo {
-                name: interface_name,
-                type_params: interface_type_params,
-                associated_types,
-                methods,
+                name: interface_name.clone(),
+                type_params: interface_type_params.clone(),
+                associated_types: associated_types.clone(),
+                methods: methods.clone(),
             },
         );
+        if let Some(interface_id) = self.interface_identity_for_name(&interface_name).cloned() {
+            let imported = self
+                .interface_identity_alias_is_imported
+                .get(&interface_name)
+                .copied()
+                .unwrap_or(false);
+            if !imported {
+                self.local_interface_arities
+                    .insert(interface_id, def.type_params.len());
+            }
+        }
         Ok(())
     }
 
@@ -2326,6 +3091,16 @@ impl TypeEnv {
             type_declaration_states: self.type_declaration_states.clone(),
             type_alias_identities: self.type_alias_identities.clone(),
             canonical_type_names: self.canonical_type_names.clone(),
+            interface_identity_aliases: self.interface_identity_aliases.clone(),
+            interface_identity_alias_is_imported: self.interface_identity_alias_is_imported.clone(),
+            canonical_interface_names: self.canonical_interface_names.clone(),
+            local_interface_arities: self.local_interface_arities.clone(),
+            known_interface_identities: self.known_interface_identities.clone(),
+            associated_member_identity_aliases: self.associated_member_identity_aliases.clone(),
+            associated_member_identity_alias_is_imported: self
+                .associated_member_identity_alias_is_imported
+                .clone(),
+            known_associated_member_identities: self.known_associated_member_identities.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),
@@ -2433,18 +3208,43 @@ impl TypeEnv {
                             Span::default(),
                         )
                     })?;
+                let bound_interface = wb.bound.to_string();
+                if !self.has_interface(&bound_interface) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!("unknown interface '{}' in where bound", bound_interface),
+                        Span::default(),
+                    ));
+                }
                 Ok(WhereBound {
                     type_var,
-                    interface: wb.bound.to_string(),
+                    interface: bound_interface,
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
+
+        let mut impl_binding_env = self.clone();
+        for bound in &where_bounds {
+            impl_binding_env
+                .type_var_interface_bounds
+                .entry(bound.type_var)
+                .or_default()
+                .insert(bound.interface.clone());
+        }
 
         let associated_type_bindings: HashMap<String, Type> = def
             .associated_type_bindings
             .iter()
             .map(|binding| {
-                let ty = surface_type_to_type(&binding.ty, &param_mapping, self)?;
+                let ty = surface_type_to_type(&binding.ty, &param_mapping, &impl_binding_env)?;
+                if let Some(name) = unresolved_associated_projection_name(&ty) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "unresolved associated type '{name}' in impl associated type binding '{}' for interface '{interface_name}'",
+                            binding.name
+                        ),
+                        Span::default(),
+                    ));
+                }
                 Ok((binding.name.to_string(), ty))
             })
             .collect::<Result<HashMap<_, _>, _>>()?;
@@ -3189,6 +3989,16 @@ impl TypeEnv {
             type_declaration_states: self.type_declaration_states.clone(),
             type_alias_identities: self.type_alias_identities.clone(),
             canonical_type_names: self.canonical_type_names.clone(),
+            interface_identity_aliases: self.interface_identity_aliases.clone(),
+            interface_identity_alias_is_imported: self.interface_identity_alias_is_imported.clone(),
+            canonical_interface_names: self.canonical_interface_names.clone(),
+            local_interface_arities: self.local_interface_arities.clone(),
+            known_interface_identities: self.known_interface_identities.clone(),
+            associated_member_identity_aliases: self.associated_member_identity_aliases.clone(),
+            associated_member_identity_alias_is_imported: self
+                .associated_member_identity_alias_is_imported
+                .clone(),
+            known_associated_member_identities: self.known_associated_member_identities.clone(),
             interfaces: self.interfaces.clone(),
             capability_interfaces: self.capability_interfaces.clone(),
             resource_types: self.resource_types.clone(),

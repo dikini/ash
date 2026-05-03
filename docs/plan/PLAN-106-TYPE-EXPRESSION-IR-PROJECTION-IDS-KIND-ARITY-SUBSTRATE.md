@@ -12,7 +12,7 @@
 
 ## Phase 110: Type-Expression IR, Projection Identities, and Kind/Arity Substrate
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Syntax grounding note:** Do not use historical syntax-reduction notes as implementation authority for Phase 110. If later work in this area reaches user-facing syntax, validate it against the live parser/surface contracts first.
@@ -22,18 +22,18 @@
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-793](tasks/TASK-793-spec-b-spec-plan-packet.md) | Promote DESIGN-034 SPEC-B into SPEC-058/PLAN-106 and register Phase 110 | Docs/Planning | 4 | 📝 Planned |
-| [TASK-794](tasks/TASK-794-type-expression-ir-and-kinding-audit-gate.md) | Audit live type-expression, projection, alias, and kind/arity substrate and freeze the Phase 110 gate | Docs/Substrate | 4 | 📝 Planned |
+| [TASK-793](tasks/TASK-793-spec-b-spec-plan-packet.md) | Promote DESIGN-034 SPEC-B into SPEC-058/PLAN-106 and register Phase 110 | Docs/Planning | 4 | ✅ Complete |
+| [TASK-794](tasks/TASK-794-type-expression-ir-and-kinding-audit-gate.md) | Audit live type-expression, projection, alias, and kind/arity substrate and freeze the Phase 110 gate | Docs/Substrate | 4 | ✅ Complete |
 | [TASK-795](tasks/TASK-795-core-type-computation-identity-carriers.md) | Promote/add ash-core identity carriers and re-home shared `Kind` ownership for computation-grade type IR and projections | Core/Substrate | 6 | 📝 Planned |
 | [TASK-796](tasks/TASK-796-core-canonical-type-expression-ir-and-neutral-carriers.md) | Add ash-core canonical type-expression IR plus rigid/neutral carriers | Core/Substrate | 6 | 📝 Planned |
-| [TASK-797](tasks/TASK-797-ordinary-type-parser-expression-parity-and-explicit-rejections.md) | Align `parse_type_def.rs` and `parse_module.rs` ordinary type parsing with the Phase 110 parity/rejection boundary | Parser/Substrate | 5 | 📝 Planned |
+| [TASK-797](tasks/TASK-797-ordinary-type-parser-expression-parity-and-explicit-rejections.md) | Align `parse_type_def.rs` and `parse_module.rs` ordinary type parsing with the Phase 110 parity/rejection boundary | Parser/Substrate | 5 | ✅ Complete |
 | [TASK-798](tasks/TASK-798-canonical-type-ir-lowering-from-surface-and-core.md) | Lower current surface/core type syntax into canonical IR and make `TypeEnv` own interface/member identity registries, storage, and source/import registration | Type/Substrate | 7 | 📝 Planned |
 | [TASK-799](tasks/TASK-799-kind-and-arity-validation-hardening.md) | Harden kind/arity validation for nominal, projection, and future computation heads | Type/Substrate | 5 | 📝 Planned |
 | [TASK-800](tasks/TASK-800-associated-projection-canonicalization-and-rigid-plumbing.md) | Replace every live stringly/sentinel associated-projection surface with canonical identity-backed rigid projection plumbing and own projection-specific diagnostics | Type/Substrate | 7 | 📝 Planned |
 | [TASK-801](tasks/TASK-801-transparent-alias-canonicalization-helper.md) | Add transparent-alias canonicalization helpers and readable diagnostic rendering rules | Type/Substrate | 5 | 📝 Planned |
 | [TASK-802](tasks/TASK-802-canonicalization-boundary-adoption-for-current-equality-sites.md) | Adopt canonicalization at `TypeEnv::unify_types` / `TypeEnv::types_equivalent_for_equality` via `TypeEnv::canonicalize_type_for_equality`; no pattern/exhaustiveness rollout | Type/Compatibility | 5 | 📝 Planned |
-| [TASK-803](tasks/TASK-803-spec-b-diagnostics-negative-tests-and-non-interference.md) | Add diagnostics, negative tests, and non-interference coverage for SPEC-B substrate | Diagnostics/Tests | 6 | 📝 Planned |
-| [TASK-804](tasks/TASK-804-spec-b-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and run Phase 110 closeout verification | Docs/Planning | 4 | 📝 Planned |
+| [TASK-803](tasks/TASK-803-spec-b-diagnostics-negative-tests-and-non-interference.md) | Add diagnostics, negative tests, and non-interference coverage for SPEC-B substrate | Diagnostics/Tests | 6 | ✅ Complete |
+| [TASK-804](tasks/TASK-804-spec-b-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and run Phase 110 closeout verification | Docs/Planning | 4 | ✅ Complete |
 | [TASK-805](tasks/TASK-805-phase110-review-remediation.md) | Remediate post-closeout review findings for Phase 110 | Review/Hardening | 6 | 📝 Planned |
 
 Estimated total: 70 hours.
@@ -136,4 +136,4 @@ Every implementation task must include focused tests for the changed crate and e
 - [ ] Current simple associated-type behavior remains intact for the already-supported subset.
 - [ ] Existing ADT/interface/workflow/capability/resource/do/comprehension regressions still pass.
 - [ ] Deferred syntax/features remain rejected or explicitly unsupported.
-- [ ] Docs/status/changelog are reconciled, TASK-804 contains exact verification evidence and residual-failure classification, and independent review findings are closed via TASK-805 before the phase is marked fully complete.
+- [x] Docs/status/changelog are reconciled, TASK-804 contains exact verification evidence and residual-failure classification, and independent review findings are closed via TASK-805 before the phase is marked fully complete.

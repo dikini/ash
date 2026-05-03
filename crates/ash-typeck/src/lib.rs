@@ -86,6 +86,46 @@ pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityE
 
 use std::collections::HashSet;
 
+fn resolve_public_surface_associated_interface(
+    env: &TypeEnv,
+    base_ty: &Type,
+    name: &str,
+) -> Result<String, TypeCheckError> {
+    let Type::Var(var) = base_ty else {
+        return Err(TypeCheckError::TypeError(format!(
+            "unresolved associated type '{name}'"
+        )));
+    };
+
+    let Some(bounds) = env.type_var_interface_bounds.get(var) else {
+        return Err(TypeCheckError::TypeError(format!(
+            "unresolved associated type '{name}'"
+        )));
+    };
+
+    let mut candidates = Vec::new();
+    for bound_iface in bounds {
+        match env.interfaces.get(bound_iface) {
+            Some(iface_info) if iface_info.associated_types.contains(&name.to_string()) => {
+                candidates.push(bound_iface.clone());
+            }
+            _ => {}
+        }
+    }
+
+    if candidates.len() == 1 {
+        Ok(candidates.into_iter().next().unwrap())
+    } else if candidates.len() > 1 {
+        Err(TypeCheckError::TypeError(format!(
+            "ambiguous associated type '{name}'"
+        )))
+    } else {
+        Err(TypeCheckError::TypeError(format!(
+            "unresolved associated type '{name}'"
+        )))
+    }
+}
+
 fn workflow_surface_type_to_type(
     env: &TypeEnv,
     ty: &ash_parser::surface::Type,
@@ -182,31 +222,7 @@ fn workflow_surface_type_to_type(
         }
         ash_parser::surface::Type::Associated { base, name } => {
             let base_ty = workflow_surface_type_to_type(env, base, type_params)?;
-            let interface = if let Type::Var(v) = &base_ty {
-                if let Some(bounds) = env.type_var_interface_bounds.get(v) {
-                    let mut candidates = Vec::new();
-                    for bound_iface in bounds {
-                        if let Some(iface_info) = env.interfaces.get(bound_iface)
-                            && iface_info.associated_types.contains(&name.to_string())
-                        {
-                            candidates.push(bound_iface.clone());
-                        }
-                    }
-                    if candidates.len() == 1 {
-                        candidates.into_iter().next().unwrap()
-                    } else if candidates.len() > 1 {
-                        return Err(TypeCheckError::TypeError(format!(
-                            "ambiguous associated type '{name}'"
-                        )));
-                    } else {
-                        String::new()
-                    }
-                } else {
-                    String::new()
-                }
-            } else {
-                String::new()
-            };
+            let interface = resolve_public_surface_associated_interface(env, &base_ty, name)?;
             Ok(Type::Associated {
                 interface,
                 base: Box::new(base_ty),

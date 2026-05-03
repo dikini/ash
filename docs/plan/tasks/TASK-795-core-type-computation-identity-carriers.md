@@ -1,6 +1,6 @@
 # TASK-795: Core Type-Computation Identity Carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -48,10 +48,10 @@ Establish the canonical identity and shared-kind substrate that later canonical 
 
 ## Verification Steps
 
-- [ ] `cargo test -p ash-core` for the new identity/shared-kind tests
-- [ ] `cargo test -p ash-typeck` for the compatibility re-export/shim surface
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+- [x] `cargo test -p ash-core` for the new identity/shared-kind tests
+- [x] `cargo test -p ash-typeck` for the compatibility re-export/shim surface
+- [x] `cargo fmt --check`
+- [x] `git diff --check`
 
 ## Notes
 

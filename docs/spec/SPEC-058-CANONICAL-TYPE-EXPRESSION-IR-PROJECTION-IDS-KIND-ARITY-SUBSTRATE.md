@@ -1,6 +1,6 @@
 # SPEC-058: Canonical Type-Expression IR, Projection Identities, and Kind/Arity Substrate
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-02
 **Promotes:** [DESIGN-034 §16.2](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Builds on:** [SPEC-003](SPEC-003-TYPE-SYSTEM.md), [SPEC-034](SPEC-034-WHERE-BOUNDED-GENERIC-INTERFACE-IMPLEMENTATIONS.md), [SPEC-035](SPEC-035-ASSOCIATED-TYPES.md), [SPEC-057](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md)

@@ -123,6 +123,9 @@ pub enum TypeError {
         found: String,
         span: Span,
     },
+    /// Type environment error propagated through type conversion/checking
+    #[error("{0}")]
+    TypeEnv(#[from] crate::error::TypeEnvError),
 }
 
 impl From<UnifyError> for TypeError {

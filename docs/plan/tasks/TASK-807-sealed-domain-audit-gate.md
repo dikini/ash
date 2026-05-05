@@ -18,6 +18,15 @@ Audit the live parser/core/engine/typechecker substrate before Phase 111 impleme
 
 - ✅ [TASK-806](TASK-806-spec-c-spec-plan-packet.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: high
+max_turns: 20
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Produce the authoritative audit artifact that says what Phase 111 may change now, what must remain compatible, and what is explicitly deferred to SPEC-D/E/F/G/H.
@@ -53,12 +62,17 @@ Produce the authoritative audit artifact that says what Phase 111 may change now
 3. Record exact downstream file targets and non-goals.
 4. Re-read the audit for scope-creep before marking the task complete.
 
-## Verification Steps
+## Verification
 
-- [ ] `docs/plan/audits/TASK-807-sealed-domain-audit.md` exists
-- [ ] audit references live files and current specs
-- [ ] audit explicitly names deferred work belonging to SPEC-D/E/F/G/H
-- [ ] `git diff --check` passes
+```
+strictness: clean
+commands:
+  - git diff --check
+checklist:
+  - [ ] docs/plan/audits/TASK-807-sealed-domain-audit.md exists
+  - [ ] audit references live files and current specs
+  - [ ] audit explicitly names deferred work belonging to SPEC-D/E/F/G/H
+```
 
 ## Notes
 

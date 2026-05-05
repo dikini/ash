@@ -20,6 +20,15 @@ Add diagnostics, negative tests, and non-interference coverage proving the seale
 - [TASK-811](TASK-811-engine-domain-summary-export-import.md)
 - [TASK-812](TASK-812-typeenv-domain-registration-and-validation.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: low
+max_turns: 12
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Prove the Phase 111 sealed-domain substrate is correct, explicit about failures, and non-interfering with existing language behavior.
@@ -45,13 +54,23 @@ Prove the Phase 111 sealed-domain substrate is correct, explicit about failures,
 3. Re-run focused parser/engine/typechecker tests.
 4. Review the resulting diff for accidental scope creep.
 
-## Verification Steps
+## Verification
 
-- [ ] `cargo test -p ash-parser --test task_813_sealed_domain_diagnostics`
-- [ ] `cargo test -p ash-engine --test task_813_sealed_domain_non_interference`
-- [ ] `cargo test -p ash-typeck --test task_813_sealed_domain_registration_diagnostics`
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+```
+strictness: clean
+commands:
+  - cargo test -p ash-parser --test task_813_sealed_domain_diagnostics
+  - cargo test -p ash-engine --test task_813_sealed_domain_non_interference
+  - cargo test -p ash-typeck --test task_813_sealed_domain_registration_diagnostics
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --check
+checklist:
+  - [ ] Focused parser diagnostic tests pass
+  - [ ] Focused engine non-interference tests pass
+  - [ ] Focused typeck registration diagnostic tests pass
+  - [ ] Clippy clean
+  - [ ] Formatting clean
+```
 
 ## Notes
 

@@ -16,6 +16,15 @@ Add the restricted `sealed type domain` declaration surface to the ModuleFile pa
 
 - [TASK-807](TASK-807-sealed-domain-audit-gate.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: medium
+max_turns: 15
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Parse sealed-domain declarations as first-class ModuleFile definitions with source-aware domain, constructor, and field carriers.
@@ -43,12 +52,21 @@ Parse sealed-domain declarations as first-class ModuleFile definitions with sour
 3. Re-run focused parser tests.
 4. Confirm ordinary `type`/workflow/module parsing still works.
 
-## Verification Steps
+## Verification
 
-- [ ] `cargo test -p ash-parser --test task_808_sealed_domain_surface`
-- [ ] `cargo test -p ash-parser`
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+```
+strictness: clean
+commands:
+  - cargo test -p ash-parser --test task_808_sealed_domain_surface
+  - cargo test -p ash-parser
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --check
+checklist:
+  - [ ] Focused parser tests pass
+  - [ ] Full ash-parser suite passes
+  - [ ] Clippy clean
+  - [ ] Formatting clean
+```
 
 ## Notes
 

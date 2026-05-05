@@ -19,6 +19,15 @@ Register and validate local and imported sealed domains plus marker constructors
 - [TASK-810](TASK-810-domain-lowering-and-summary-versioning.md)
 - [TASK-811](TASK-811-engine-domain-summary-export-import.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: medium
+max_turns: 15
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Give `ash-typeck` one visibility-aware registration path for local and imported domains without widening Phase 111 into normalization or coverage logic.
@@ -47,12 +56,22 @@ Give `ash-typeck` one visibility-aware registration path for local and imported 
 3. Re-run focused `ash-typeck` tests.
 4. Confirm ordinary type/projection behavior remains stable.
 
-## Verification Steps
+## Verification
 
-- [ ] `cargo test -p ash-typeck --test task_812_domain_registration_validation`
-- [ ] `cargo test -p ash-typeck`
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+```
+strictness: clean
+commands:
+  - cargo test -p ash-typeck --test task_812_domain_registration_validation
+  - cargo test -p ash-typeck
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --check
+checklist:
+  - [ ] Focused registration/validation tests pass
+  - [ ] Full ash-typeck suite passes
+  - [ ] Ordinary type/projection behavior stable
+  - [ ] Clippy clean
+  - [ ] Formatting clean
+```
 
 ## Notes
 

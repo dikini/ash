@@ -18,6 +18,15 @@ Lower parsed sealed-domain declarations into core semantic summaries and advance
 - [TASK-808](TASK-808-parser-surface-for-sealed-type-domains.md)
 - [TASK-809](TASK-809-core-domain-kind-ids-and-summary-carriers.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: medium
+max_turns: 15
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Make parsed domain declarations flow through the same ModuleFile-to-core-summary path as other semantic declarations, with explicit summary-version evolution.
@@ -45,12 +54,22 @@ Make parsed domain declarations flow through the same ModuleFile-to-core-summary
 3. Re-run focused lowering/versioning tests.
 4. Confirm ordinary type-lowering outputs remain stable.
 
-## Verification Steps
+## Verification
 
-- [ ] `cargo test -p ash-parser --test task_810_domain_lowering`
-- [ ] `cargo test -p ash-core`
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+```
+strictness: clean
+commands:
+  - cargo test -p ash-parser --test task_810_domain_lowering
+  - cargo test -p ash-core
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --check
+checklist:
+  - [ ] Focused lowering/versioning tests pass
+  - [ ] Full ash-core suite passes
+  - [ ] Ordinary type-lowering outputs stable
+  - [ ] Clippy clean
+  - [ ] Formatting clean
+```
 
 ## Notes
 

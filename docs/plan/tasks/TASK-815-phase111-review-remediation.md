@@ -17,6 +17,15 @@ Fix the blocking and non-blocking findings from the independent Phase 111 review
 - [TASK-806](TASK-806-spec-c-spec-plan-packet.md) through [TASK-814](TASK-814-spec-c-closeout-docs-and-verification.md)
 - Independent Phase 111 review findings from the controller review pass
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: low
+max_turns: 10
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Remediate review findings with targeted regressions and re-verification, without widening the phase into later packets.
@@ -41,12 +50,20 @@ Remediate review findings with targeted regressions and re-verification, without
 3. Re-run focused verification after each fix.
 4. Run final closeout verification again before marking complete.
 
-## Verification Steps
+## Verification
 
-- [ ] targeted regression tests for the review findings
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
-- [ ] focused and broad verification as required by the finding set
+```
+strictness: clean
+commands:
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --check
+checklist:
+  - [ ] Targeted regression tests for review findings
+  - [ ] Focused verification re-passes
+  - [ ] Broad verification re-passes if required
+  - [ ] Clippy clean
+  - [ ] Formatting clean
+```
 
 ## Notes
 

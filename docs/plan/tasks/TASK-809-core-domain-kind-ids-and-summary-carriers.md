@@ -17,6 +17,15 @@ Add the `ash-core` identity, kind, and semantic-summary carriers required for se
 
 - [TASK-807](TASK-807-sealed-domain-audit-gate.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: medium
+max_turns: 15
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Establish the canonical domain-kind and domain-summary substrate that later lowering, transport, and TypeEnv registration will consume.
@@ -45,12 +54,21 @@ Establish the canonical domain-kind and domain-summary substrate that later lowe
 3. Re-run focused `ash-core` tests plus downstream compile-compat tests if needed.
 4. Stop before parser lowering or engine transport logic.
 
-## Verification Steps
+## Verification
 
-- [ ] `cargo test -p ash-core --test task_809_domain_kind_ids_red`
-- [ ] `cargo test -p ash-core`
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+```
+strictness: clean
+commands:
+  - cargo test -p ash-core --test task_809_domain_kind_ids_red
+  - cargo test -p ash-core
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --check
+checklist:
+  - [ ] Focused domain-kind/ID tests pass
+  - [ ] Full ash-core suite passes
+  - [ ] Clippy clean
+  - [ ] Formatting clean
+```
 
 ## Notes
 

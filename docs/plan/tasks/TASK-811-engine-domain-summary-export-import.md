@@ -17,9 +17,18 @@ Transport public domain summaries through engine export/import, alias, and re-ex
 
 - [TASK-810](TASK-810-domain-lowering-and-summary-versioning.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: medium
+max_turns: 15
+toolsets: [terminal, file]
+```
+
 ## Objective
 
-Make public domain metadata available to downstream modules without leaking hidden constructors or collapsing origin identities.
+Make public domain metadata available to downstream modules without leaking hidden constructors or collapsing origin identity.
 
 ## Requirements
 
@@ -43,12 +52,22 @@ Make public domain metadata available to downstream modules without leaking hidd
 3. Re-run focused engine tests.
 4. Confirm ordinary type/workflow summary transport still works.
 
-## Verification Steps
+## Verification
 
-- [ ] `cargo test -p ash-engine --test task_811_domain_summary_transport`
-- [ ] `cargo test -p ash-engine`
-- [ ] `cargo fmt --check`
-- [ ] `git diff --check`
+```
+strictness: clean
+commands:
+  - cargo test -p ash-engine --test task_811_domain_summary_transport
+  - cargo test -p ash-engine
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --check
+checklist:
+  - [ ] Focused engine transport tests pass
+  - [ ] Full ash-engine suite passes
+  - [ ] Ordinary type/workflow transport non-regressed
+  - [ ] Clippy clean
+  - [ ] Formatting clean
+```
 
 ## Notes
 

@@ -16,6 +16,15 @@ Reconcile docs, status surfaces, changelog, and verification evidence for Phase 
 
 - [TASK-813](TASK-813-sealed-domain-diagnostics-and-non-interference.md)
 
+## Dispatch
+
+```
+agent: hermes
+reasoning: low
+max_turns: 12
+toolsets: [terminal, file]
+```
+
 ## Objective
 
 Close Phase 111 honestly after focused and broad verification succeeds or any residual failure is explicitly classified.
@@ -43,14 +52,20 @@ Close Phase 111 honestly after focused and broad verification succeeds or any re
 3. Run broad verification before claiming closeout and record any failure with the exact command, failing target, and ownership.
 4. Only then update final status/checklist surfaces.
 
-## Verification Steps
+## Verification
 
-- [ ] `git diff --check`
-- [ ] `cargo fmt --check`
-- [ ] `cargo check --workspace`
-- [ ] all focused Phase 111 suites are run and listed by exact target name in `## Verification Evidence`
-- [ ] carried-forward suites are listed by exact target name, rationale, and original owning task in `## Verification Evidence`
-- [ ] broad verification command and result summary are recorded honestly in `## Verification Evidence`
+```
+strictness: clean
+commands:
+  - cargo fmt --check
+  - cargo check --workspace
+checklist:
+  - [ ] git diff --check passes
+  - [ ] All focused Phase 111 suites run and listed by exact target name
+  - [ ] Carried-forward suites listed by target name, rationale, and original task
+  - [ ] Broad verification command and result summary recorded
+  - [ ] SPEC-059, PLAN-107, PLAN-INDEX, CHANGELOG reconciled
+```
 
 ## Notes
 

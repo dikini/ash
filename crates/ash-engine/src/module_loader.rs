@@ -661,6 +661,14 @@ fn merge_or_push_imported_semantic_summary(
                 existing.exported_constructors.push(constructor);
             }
         }
+        for domain in selected.exported_sealed_domains {
+            let exists = existing.exported_sealed_domains.iter().any(|existing| {
+                existing.id == domain.id && existing.exported_name == domain.exported_name
+            });
+            if !exists {
+                existing.exported_sealed_domains.push(domain);
+            }
+        }
         return;
     }
 
@@ -1582,6 +1590,15 @@ fn reject_inline_module_ordinary_types(
                 module_decl.name
             )));
         }
+        if definitions.iter().any(|definition| {
+            matches!(definition, ash_parser::surface::Definition::SealedDomain(_))
+        }) {
+            return Err(EngineError::Parse(format!(
+                "in '{}': inline module '{}' sealed domain declarations are not yet lowered into semantic summaries; move the sealed domain declarations to a file module or defer the inline module domain surface",
+                path.display(),
+                module_decl.name
+            )));
+        }
     }
     Ok(())
 }
@@ -2357,6 +2374,14 @@ fn exportable_module_semantic_summary(
         .filter(|constructor| exportable_types.contains_key(constructor.parent.name.as_str()))
         .cloned()
         .collect();
+    // Only export sealed domains with public visibility; private/crate domains
+    // must not leak through the module export boundary.
+    summary.exported_sealed_domains = raw
+        .exported_sealed_domains
+        .iter()
+        .filter(|domain| matches!(domain.visibility, CoreVisibility::Public))
+        .cloned()
+        .collect();
     summary
 }
 
@@ -2492,6 +2517,11 @@ fn copy_summary_side_metadata(source: &ModuleSemanticSummary, target: &mut Modul
     target
         .diagnostic_anchors
         .clone_from(&source.diagnostic_anchors);
+    // Carry sealed domain summaries through import selection paths so that
+    // downstream consumers receive the full V2 summary including domains.
+    target
+        .exported_sealed_domains
+        .clone_from(&source.exported_sealed_domains);
 }
 
 fn merge_callable_signature_summaries(

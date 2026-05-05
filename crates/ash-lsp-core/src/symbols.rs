@@ -129,6 +129,9 @@ fn definition_symbol(definition: &Definition) -> DocumentSymbol {
         Definition::BuiltinFn(def) => {
             symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
         }
+        Definition::SealedDomain(def) => {
+            symbol(def.name.to_string(), SymbolKind::ENUM, &def.span, None)
+        }
     }
 }
 
@@ -174,6 +177,7 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Impl(def) => def.span.start,
             Definition::Function(def) => def.span.start,
             Definition::BuiltinFn(def) => def.span.start,
+            Definition::SealedDomain(def) => def.span.start,
         };
         entries.push((start, definition_symbol(definition)));
     }

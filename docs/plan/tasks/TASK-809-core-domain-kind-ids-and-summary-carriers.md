@@ -1,6 +1,6 @@
 # TASK-809: Core Domain Kind, IDs, and Summary Carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -21,6 +21,9 @@ Add the `ash-core` identity, kind, and semantic-summary carriers required for se
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: medium
 max_turns: 15
 toolsets: [terminal, file]
@@ -59,15 +62,15 @@ Establish the canonical domain-kind and domain-summary substrate that later lowe
 ```
 strictness: clean
 commands:
-  - cargo test -p ash-core --test task_809_domain_kind_ids_red
+  - cargo test -p ash-core --test task_809_sealed_domain_identities
   - cargo test -p ash-core
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Focused domain-kind/ID tests pass
-  - [ ] Full ash-core suite passes
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Focused domain-kind/ID tests pass
+  - [x] Full ash-core suite passes
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

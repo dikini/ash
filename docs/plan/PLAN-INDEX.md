@@ -287,7 +287,7 @@ Update this section as tasks complete:
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
-| 111 | 10 | 1 | 📝 Planned |
+| 111 | 10 | 10 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -395,7 +395,7 @@ This table is retained near the original early-phase section for historical cont
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
-| 111 | 10 | 1 | 📝 Planned |
+| 111 | 10 | 10 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3197,7 +3197,7 @@ Boundary note: TASK-798 owns canonical lowering plus `TypeEnv` interface/member 
 ## Phase 111: Sealed Type-Level Domains
 
 **Priority:** High (DESIGN-034 SPEC-C substrate required before normalization, direct structural `type fn`, and public type-computation export/import work)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-107-SEALED-TYPE-LEVEL-DOMAINS.md](PLAN-107-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -3209,20 +3209,20 @@ Boundary note: marker constructors are not promoted ADT constructors, not ordina
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-806](tasks/TASK-806-spec-c-spec-plan-packet.md) | SPEC-C spec/plan packet | 4 | ✅ Complete |
-| [TASK-807](tasks/TASK-807-sealed-domain-audit-gate.md) | Sealed-domain audit gate | 4 | 📝 Planned |
-| [TASK-808](tasks/TASK-808-parser-surface-for-sealed-type-domains.md) | Parser surface for sealed type domains | 5 | 📝 Planned |
-| [TASK-809](tasks/TASK-809-core-domain-kind-ids-and-summary-carriers.md) | Core domain kind, IDs, and summary carriers | 6 | 📝 Planned |
-| [TASK-810](tasks/TASK-810-domain-lowering-and-summary-versioning.md) | Domain lowering and summary versioning | 6 | 📝 Planned |
-| [TASK-811](tasks/TASK-811-engine-domain-summary-export-import.md) | Engine domain summary export/import | 6 | 📝 Planned |
-| [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | TypeEnv domain registration and validation | 7 | 📝 Planned |
-| [TASK-813](tasks/TASK-813-sealed-domain-diagnostics-and-non-interference.md) | Sealed-domain diagnostics and non-interference | 6 | 📝 Planned |
-| [TASK-814](tasks/TASK-814-spec-c-closeout-docs-and-verification.md) | SPEC-C closeout, docs, and verification | 4 | 📝 Planned |
-| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Phase 111 review remediation | 6 | 📝 Planned |
+| [TASK-807](tasks/TASK-807-sealed-domain-audit-gate.md) | Sealed-domain audit gate | 4 | ✅ Complete |
+| [TASK-808](tasks/TASK-808-parser-surface-for-sealed-type-domains.md) | Parser surface for sealed type domains | 5 | ✅ Complete |
+| [TASK-809](tasks/TASK-809-core-domain-kind-ids-and-summary-carriers.md) | Core domain kind, IDs, and summary carriers | 6 | ✅ Complete |
+| [TASK-810](tasks/TASK-810-domain-lowering-and-summary-versioning.md) | Domain lowering and summary versioning | 6 | ✅ Complete |
+| [TASK-811](tasks/TASK-811-engine-domain-summary-export-import.md) | Engine domain summary export/import | 6 | ✅ Complete |
+| [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | TypeEnv domain registration and validation | 7 | ✅ Complete |
+| [TASK-813](tasks/TASK-813-sealed-domain-diagnostics-and-non-interference.md) | Sealed-domain diagnostics and non-interference | 6 | ✅ Complete |
+| [TASK-814](tasks/TASK-814-spec-c-closeout-docs-and-verification.md) | SPEC-C closeout, docs, and verification | 4 | ✅ Complete |
+| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Phase 111 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-C to SPEC-059/PLAN-107, then audit the live parser/core/engine/typechecker substrate before implementation begins.
 **Track B (Parser + Core Domain Substrate):** 11h. Add the restricted `sealed type domain` surface carriers in `ash-parser`, then land core-owned domain kinds, domain identities, marker-constructor identities, and domain-aware summary carriers in `ash-core`.
 **Track C (Lowering + Transport + Registration):** 19h. Lower parsed domain declarations into versioned core semantic summaries, transport public exposed-versus-opaque domain metadata through engine import/export flows, and register/validate local plus imported domains in `TypeEnv` using a declare-then-validate flow.
-**Track D (Diagnostics + Closeout):** 16h. Add diagnostics/non-interference coverage, reconcile docs/status/changelog, and reserve the usual post-review remediation slice.
+**Track D (Diagnostics + Closeout):** 16h. Add diagnostics/non-interference coverage, reconcile docs/status/changelog, and close the post-review remediation slice.
 
 **Decision gates:**
 - D1: Phase 111 is closed-domain metadata work only; no normalization, definitional equality, direct `type fn`, associated type families, or proposition solving lands here.

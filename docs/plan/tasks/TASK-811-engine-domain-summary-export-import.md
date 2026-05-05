@@ -1,6 +1,6 @@
 # TASK-811: Engine Domain Summary Export/Import
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -21,6 +21,9 @@ Transport public domain summaries through engine export/import, alias, and re-ex
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: medium
 max_turns: 15
 toolsets: [terminal, file]
@@ -62,11 +65,11 @@ commands:
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Focused engine transport tests pass
-  - [ ] Full ash-engine suite passes
-  - [ ] Ordinary type/workflow transport non-regressed
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Focused engine transport tests pass
+  - [x] Full ash-engine suite passes
+  - [x] Ordinary type/workflow transport non-regressed
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

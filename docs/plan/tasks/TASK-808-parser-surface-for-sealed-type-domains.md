@@ -1,6 +1,6 @@
 # TASK-808: Parser Surface for Sealed Type Domains
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -20,6 +20,9 @@ Add the restricted `sealed type domain` declaration surface to the ModuleFile pa
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: medium
 max_turns: 15
 toolsets: [terminal, file]
@@ -62,10 +65,10 @@ commands:
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Focused parser tests pass
-  - [ ] Full ash-parser suite passes
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Focused parser tests pass
+  - [x] Full ash-parser suite passes
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

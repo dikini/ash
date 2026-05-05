@@ -1264,63 +1264,77 @@ pub fn lower_module_type_metadata(
             .with_diagnostic_anchor(module_anchor);
     let mut type_defs = Vec::new();
 
+    let mut has_sealed_domains = false;
+
     for definition in &module.definitions {
-        let crate::surface::Definition::Type(surface_type) = definition else {
-            continue;
-        };
-
-        let core_type = lower_surface_type_def(surface_type);
-        let type_id = ash_core::semantic_summary::TypeDeclId::ordinary(
-            module_identity.clone(),
-            core_type.name.clone(),
-        );
-        let anchor = source_anchor_for_type(surface_type, module, &module_identity);
-        let representation_exposure = if core_type.builtin {
-            ash_core::semantic_summary::RepresentationExposure::Opaque
-        } else {
-            ash_core::semantic_summary::RepresentationExposure::Exposed
-        };
-        let representation = if core_type.builtin {
-            ash_core::semantic_summary::TypeRepresentationSummary::opaque(true)
-        } else {
-            ash_core::semantic_summary::TypeRepresentationSummary::exposed(core_type.body.clone())
-        };
-
-        let type_summary = ash_core::semantic_summary::TypeDeclSummary::new(
-            type_id.clone(),
-            core_type.name.clone(),
-            core_type.visibility,
-            representation_exposure,
-            representation,
-            anchor.clone(),
-        )
-        .with_params(core_type.params.clone());
-        summary = summary.with_exported_type(type_summary);
-
-        if !core_type.builtin
-            && let ash_core::ast::TypeBody::Enum(variants) = &core_type.body
-        {
-            for variant in variants {
-                let payload_kind = constructor_payload_kind(&variant.payload);
-                let constructor_id = ash_core::semantic_summary::ConstructorId::variant(
-                    type_id.clone(),
-                    variant.name.clone(),
-                    payload_kind,
+        match definition {
+            crate::surface::Definition::Type(surface_type) => {
+                let core_type = lower_surface_type_def(surface_type);
+                let type_id = ash_core::semantic_summary::TypeDeclId::ordinary(
+                    module_identity.clone(),
+                    core_type.name.clone(),
                 );
-                let constructor = ash_core::semantic_summary::ConstructorSummary::new(
-                    constructor_id,
+                let anchor = source_anchor_for_type(surface_type, module, &module_identity);
+                let representation_exposure = if core_type.builtin {
+                    ash_core::semantic_summary::RepresentationExposure::Opaque
+                } else {
+                    ash_core::semantic_summary::RepresentationExposure::Exposed
+                };
+                let representation = if core_type.builtin {
+                    ash_core::semantic_summary::TypeRepresentationSummary::opaque(true)
+                } else {
+                    ash_core::semantic_summary::TypeRepresentationSummary::exposed(
+                        core_type.body.clone(),
+                    )
+                };
+
+                let type_summary = ash_core::semantic_summary::TypeDeclSummary::new(
                     type_id.clone(),
-                    variant.name.clone(),
-                    payload_kind,
+                    core_type.name.clone(),
                     core_type.visibility,
+                    representation_exposure,
+                    representation,
                     anchor.clone(),
-                );
-                summary = summary.with_exported_constructor(constructor);
-            }
-        }
+                )
+                .with_params(core_type.params.clone());
+                summary = summary.with_exported_type(type_summary);
 
-        summary = summary.with_diagnostic_anchor(anchor);
-        type_defs.push(core_type);
+                if !core_type.builtin
+                    && let ash_core::ast::TypeBody::Enum(variants) = &core_type.body
+                {
+                    for variant in variants {
+                        let payload_kind = constructor_payload_kind(&variant.payload);
+                        let constructor_id = ash_core::semantic_summary::ConstructorId::variant(
+                            type_id.clone(),
+                            variant.name.clone(),
+                            payload_kind,
+                        );
+                        let constructor = ash_core::semantic_summary::ConstructorSummary::new(
+                            constructor_id,
+                            type_id.clone(),
+                            variant.name.clone(),
+                            payload_kind,
+                            core_type.visibility,
+                            anchor.clone(),
+                        );
+                        summary = summary.with_exported_constructor(constructor);
+                    }
+                }
+
+                summary = summary.with_diagnostic_anchor(anchor);
+                type_defs.push(core_type);
+            }
+            crate::surface::Definition::SealedDomain(sd) => {
+                let domain_summary = lower_sealed_domain(sd, module, &module_identity);
+                summary = summary.with_exported_sealed_domain(domain_summary);
+                has_sealed_domains = true;
+            }
+            _ => continue,
+        }
+    }
+
+    if has_sealed_domains {
+        summary.version = ash_core::semantic_summary::SummaryVersion::SPEC059_SEALED_DOMAIN_V2;
     }
 
     LoweredTypeMetadata { type_defs, summary }
@@ -1335,6 +1349,93 @@ pub fn lower_surface_type_def(type_def: &crate::surface::TypeDef) -> ash_core::a
         visibility: lower_surface_visibility(&type_def.visibility),
         builtin: type_def.builtin,
     }
+}
+
+/// Lower a sealed-domain surface declaration into a `SealedDomainSummary`.
+///
+/// Creates canonical identities for the domain and its marker constructors,
+/// maps field slots to unconstrained or domain-constrained summaries, and
+/// derives `StructuralSelfDomain` status for self-referencing fields.
+fn lower_sealed_domain(
+    sd: &crate::surface::SealedDomainDef,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SealedDomainSummary {
+    use ash_core::semantic_summary::{
+        DomainConstructorId, DomainConstructorSummary, DomainFieldSummary, SealedDomainId,
+        SealedDomainSummary,
+    };
+
+    let domain_id = SealedDomainId::new(module_identity.clone(), sd.name.clone());
+    let visibility = lower_surface_visibility(&sd.visibility);
+
+    let domain_anchor = source_anchor_for_sealed_domain(sd, module, module_identity);
+
+    let mut domain_summary = SealedDomainSummary::new(
+        domain_id.clone(),
+        sd.name.clone(),
+        visibility,
+        domain_anchor,
+    );
+
+    for ctor in &sd.constructors {
+        let ctor_id = DomainConstructorId::new(domain_id.clone(), ctor.name.clone());
+        let ctor_anchor = source_anchor_for_domain_constructor(ctor, module, module_identity);
+
+        let fields: Vec<DomainFieldSummary> = ctor
+            .fields
+            .iter()
+            .map(|field| match &field.slot {
+                crate::surface::DomainSlot::Type => {
+                    DomainFieldSummary::unconstrained(field.name.clone())
+                }
+                crate::surface::DomainSlot::DomainRef(ref_name) => {
+                    let target_domain_id = if ref_name.as_ref() == sd.name.as_ref() {
+                        domain_id.clone()
+                    } else {
+                        SealedDomainId::new(module_identity.clone(), ref_name.clone())
+                    };
+                    DomainFieldSummary::constrained_to(
+                        field.name.clone(),
+                        &domain_id,
+                        target_domain_id,
+                    )
+                }
+            })
+            .collect();
+
+        let ctor_summary =
+            DomainConstructorSummary::new(ctor_id, ctor.name.clone(), fields, ctor_anchor);
+        domain_summary = domain_summary.with_constructor(ctor_summary);
+    }
+
+    domain_summary
+}
+
+fn source_anchor_for_sealed_domain(
+    sd: &crate::surface::SealedDomainDef,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    let origin = source_origin_from_module(module, module_identity);
+    ash_core::semantic_summary::SourceAnchor::new(
+        origin,
+        Some(to_core_span(sd.span)),
+        format!("sealed type domain {}", sd.name),
+    )
+}
+
+fn source_anchor_for_domain_constructor(
+    ctor: &crate::surface::DomainConstructor,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    let origin = source_origin_from_module(module, module_identity);
+    ash_core::semantic_summary::SourceAnchor::new(
+        origin,
+        Some(to_core_span(ctor.span)),
+        format!("domain constructor {}", ctor.name),
+    )
 }
 
 fn lower_surface_type_body(body: &crate::surface::TypeBody) -> ash_core::ast::TypeBody {

@@ -661,6 +661,14 @@ fn merge_or_push_imported_semantic_summary(
                 existing.exported_constructors.push(constructor);
             }
         }
+        for domain in selected.exported_sealed_domains {
+            let exists = existing.exported_sealed_domains.iter().any(|existing| {
+                existing.id == domain.id && existing.exported_name == domain.exported_name
+            });
+            if !exists {
+                existing.exported_sealed_domains.push(domain);
+            }
+        }
         return;
     }
 
@@ -1502,8 +1510,8 @@ fn public_representation_import_visibility_errors(
 /// pre-ModuleFile `pub type` snippet parsing.
 ///
 /// Normal module checking, export collection, and runtime stdlib discovery must
-/// use [`collect_module_type_metadata_from_module_file`] (or its runtime wrapper)
-/// so `ModuleFile` parsing and semantic summaries are authoritative.
+/// use the module-file metadata collector (or its runtime wrapper) so
+/// `ModuleFile` parsing and semantic summaries are authoritative.
 ///
 /// # Errors
 ///
@@ -1578,6 +1586,15 @@ fn reject_inline_module_ordinary_types(
         {
             return Err(EngineError::Parse(format!(
                 "in '{}': inline module '{}' ordinary type declarations are not yet lowered into semantic summaries; move the type declarations to a file module or defer the inline module type surface",
+                path.display(),
+                module_decl.name
+            )));
+        }
+        if definitions.iter().any(|definition| {
+            matches!(definition, ash_parser::surface::Definition::SealedDomain(_))
+        }) {
+            return Err(EngineError::Parse(format!(
+                "in '{}': inline module '{}' sealed domain declarations are not yet lowered into semantic summaries; move the sealed domain declarations to a file module or defer the inline module domain surface",
                 path.display(),
                 module_decl.name
             )));
@@ -1942,7 +1959,7 @@ pub(crate) fn collect_module_exports(
     exports.semantic_summary = Some(exportable_module_semantic_summary(
         &type_metadata.summary,
         &exports.type_defs,
-    ));
+    )?);
 
     for name in extract_public_capability_names(&source) {
         insert_type_export(&mut exports, &capability_type_identity(&name))?;
@@ -2344,7 +2361,7 @@ fn missing_pub_use_target_error(name: &str) -> EngineError {
 fn exportable_module_semantic_summary(
     raw: &ModuleSemanticSummary,
     exportable_types: &HashMap<String, CoreTypeDef>,
-) -> ModuleSemanticSummary {
+) -> Result<ModuleSemanticSummary, EngineError> {
     let mut summary = raw.clone();
     summary.exported_types = raw
         .exported_types
@@ -2357,7 +2374,40 @@ fn exportable_module_semantic_summary(
         .filter(|constructor| exportable_types.contains_key(constructor.parent.name.as_str()))
         .cloned()
         .collect();
-    summary
+    // Only export sealed domains with public visibility; private/crate domains
+    // must not leak through the module export boundary. Public domain fields
+    // also must not reference domains outside that public export set.
+    let public_domain_names = raw
+        .exported_sealed_domains
+        .iter()
+        .filter(|domain| matches!(domain.visibility, CoreVisibility::Public))
+        .map(|domain| domain.exported_name.clone())
+        .collect::<HashSet<_>>();
+    summary.exported_sealed_domains = raw
+        .exported_sealed_domains
+        .iter()
+        .filter(|domain| matches!(domain.visibility, CoreVisibility::Public))
+        .cloned()
+        .collect();
+    for domain in &summary.exported_sealed_domains {
+        for constructor in &domain.constructors {
+            for field in &constructor.fields {
+                let Some(constraint) = field.domain_constraint.as_ref() else {
+                    continue;
+                };
+                if !public_domain_names.contains(constraint.name.as_str()) {
+                    return Err(EngineError::Parse(format!(
+                        "public sealed domain '{}' constructor '{}' field '{}' references non-exportable sealed domain '{}'",
+                        domain.exported_name,
+                        constructor.exported_name,
+                        field.name,
+                        constraint.name
+                    )));
+                }
+            }
+        }
+    }
+    Ok(summary)
 }
 
 fn exportable_type_summary(

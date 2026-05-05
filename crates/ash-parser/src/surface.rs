@@ -98,6 +98,8 @@ pub enum Definition {
     Function(FnDef),
     /// Builtin function definition (no Ash-level body)
     BuiltinFn(BuiltinFnDef),
+    /// Sealed type-level domain declaration
+    SealedDomain(SealedDomainDef),
 }
 
 /// An ordinary type declaration parsed as a file/module surface definition.
@@ -163,6 +165,56 @@ pub enum VariantPayload {
     Record(Vec<TypeField>),
     /// Tuple variant with positional items
     Tuple(Vec<Type>),
+}
+
+/// Sealed type-level domain declaration.
+///
+/// Syntax: `[pub] sealed type domain Name { Constructor; ... }`
+#[derive(Debug, Clone, PartialEq)]
+pub struct SealedDomainDef {
+    /// Visibility modifier (`pub`, `pub(crate)`, etc.)
+    pub visibility: Visibility,
+    /// Domain name
+    pub name: Name,
+    /// Marker constructors within this sealed domain
+    pub constructors: Vec<DomainConstructor>,
+    /// Source span covering the entire declaration
+    pub span: Span,
+}
+
+/// Marker constructor within a sealed domain.
+///
+/// Syntax: `Name` or `Name<field: Slot, ...>;`
+#[derive(Debug, Clone, PartialEq)]
+pub struct DomainConstructor {
+    /// Constructor name
+    pub name: Name,
+    /// Named fields (empty for unit constructors)
+    pub fields: Vec<DomainField>,
+    /// Source span covering the constructor
+    pub span: Span,
+}
+
+/// Field in a marker constructor.
+///
+/// Syntax: `name: Slot`
+#[derive(Debug, Clone, PartialEq)]
+pub struct DomainField {
+    /// Field name
+    pub name: Name,
+    /// Field slot annotation
+    pub slot: DomainSlot,
+    /// Source span covering the field
+    pub span: Span,
+}
+
+/// Allowed field slot annotations in a sealed domain constructor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DomainSlot {
+    /// Unconstrained `Type`-kind slot
+    Type,
+    /// Constrained to a named domain reference
+    DomainRef(Name),
 }
 
 /// A named resource type definition.

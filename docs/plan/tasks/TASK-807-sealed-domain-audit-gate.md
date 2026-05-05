@@ -1,6 +1,6 @@
 # TASK-807: Sealed Domain Audit Gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -22,6 +22,9 @@ Audit the live parser/core/engine/typechecker substrate before Phase 111 impleme
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: high
 max_turns: 20
 toolsets: [terminal, file]
@@ -69,9 +72,9 @@ strictness: clean
 commands:
   - git diff --check
 checklist:
-  - [ ] docs/plan/audits/TASK-807-sealed-domain-audit.md exists
-  - [ ] audit references live files and current specs
-  - [ ] audit explicitly names deferred work belonging to SPEC-D/E/F/G/H
+  - [x] docs/plan/audits/TASK-807-sealed-domain-audit.md exists
+  - [x] audit references live files and current specs
+  - [x] audit explicitly names deferred work belonging to SPEC-D/E/F/G/H
 ```
 
 ## Notes

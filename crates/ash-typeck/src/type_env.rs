@@ -13,7 +13,8 @@ use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleSemanticSummary,
-    RepresentationExposure, SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    RepresentationExposure, SealedDomainId, SealedDomainSummary, StructuralFieldStatus,
+    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{CanonicalTypeExpr, ProjectionRigidity};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
@@ -1134,6 +1135,12 @@ pub struct TypeEnv {
     parent: Option<Box<TypeEnv>>,
     /// Registered capability providers (e.g., "io", "http", "db")
     providers: HashSet<String>,
+    /// Sealed-domain identities registered in this environment.
+    sealed_domain_identities: HashSet<SealedDomainId>,
+    /// Visible alias -> canonical sealed-domain identity.
+    sealed_domain_aliases: HashMap<String, SealedDomainId>,
+    /// Sealed-domain identity -> domain summary metadata.
+    sealed_domain_summaries: HashMap<SealedDomainId, SealedDomainSummary>,
     /// Workflow effect context for the three-vertex boundary (SPEC-031 §4.8).
     ///
     /// `Some(effect)` means we are type-checking inside a workflow body at the
@@ -1199,13 +1206,25 @@ fn variant_payload_kind(payload: &VariantPayload) -> ConstructorPayloadKind {
 fn validate_summary_visibility_and_duplicates(
     summary: &ModuleSemanticSummary,
 ) -> Result<(), TypeEnvError> {
-    if summary.version != SummaryVersion::SPEC057_ORDINARY_TYPE_V1 {
+    if summary.version != SummaryVersion::SPEC057_ORDINARY_TYPE_V1
+        && summary.version != SummaryVersion::SPEC059_SEALED_DOMAIN_V2
+    {
         return Err(TypeEnvError::InvalidDefinition(
             format!(
-                "unsupported module semantic summary version {}; expected {}",
+                "unsupported module semantic summary version {}; expected {} or {}",
                 summary.version.0,
-                SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
+                SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0
             ),
+            Span::default(),
+        ));
+    }
+
+    if summary.version == SummaryVersion::SPEC057_ORDINARY_TYPE_V1
+        && !summary.exported_sealed_domains.is_empty()
+    {
+        return Err(TypeEnvError::InvalidDefinition(
+            "V1 module semantic summary cannot carry sealed domain metadata".to_string(),
             Span::default(),
         ));
     }
@@ -1381,6 +1400,102 @@ fn validate_summary_visibility_and_duplicates(
         }
     }
 
+    let same_summary_domain_ids: HashSet<&SealedDomainId> = summary
+        .exported_sealed_domains
+        .iter()
+        .map(|domain| &domain.id)
+        .collect();
+    let mut same_summary_edges: HashMap<&SealedDomainId, HashSet<&SealedDomainId>> = HashMap::new();
+    for domain in &summary.exported_sealed_domains {
+        for constructor in &domain.constructors {
+            for field in &constructor.fields {
+                let Some(target) = field.domain_constraint.as_ref() else {
+                    continue;
+                };
+                if target != &domain.id && same_summary_domain_ids.contains(target) {
+                    same_summary_edges
+                        .entry(&domain.id)
+                        .or_default()
+                        .insert(target);
+                }
+            }
+        }
+    }
+    for domain in &summary.exported_sealed_domains {
+        let Some(targets) = same_summary_edges.get(&domain.id) else {
+            continue;
+        };
+        let mut visited = HashSet::new();
+        let mut stack: Vec<&SealedDomainId> = targets.iter().copied().collect();
+        while let Some(current) = stack.pop() {
+            if current == &domain.id {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "sealed domain '{}' participates in a same-summary mutual recursion cycle",
+                        domain.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+            if visited.insert(current)
+                && let Some(next_targets) = same_summary_edges.get(current)
+            {
+                stack.extend(next_targets.iter().copied());
+            }
+        }
+    }
+
+    // Sealed-domain structural validation.
+    for (index, domain) in summary.exported_sealed_domains.iter().enumerate() {
+        // Non-public domains should not appear in imported summaries.
+        if domain.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-public sealed domain summary '{}' is not valid public metadata",
+                    domain.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        // Check for duplicate exported domain names.
+        for duplicate in summary.exported_sealed_domains.iter().skip(index + 1) {
+            if domain.exported_name == duplicate.exported_name {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate sealed domain exported name '{}'",
+                        domain.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        // Check for duplicate exported domain identities under different names.
+        for duplicate in summary.exported_sealed_domains.iter().skip(index + 1) {
+            if domain.id == duplicate.id && domain.exported_name != duplicate.exported_name {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "sealed domain identity '{}' appears under multiple exported names",
+                        domain.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        // Validate constructor name uniqueness within this domain.
+        let mut constructor_names: HashSet<&str> = HashSet::new();
+        for constructor in &domain.constructors {
+            if !constructor_names.insert(constructor.exported_name.as_str()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate constructor '{}' in sealed domain '{}'",
+                        constructor.exported_name, domain.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -1458,6 +1573,9 @@ impl TypeEnv {
             capability_symbols: HashSet::with_capacity(8),
             parent: None,
             providers: HashSet::new(),
+            sealed_domain_identities: HashSet::new(),
+            sealed_domain_aliases: HashMap::new(),
+            sealed_domain_summaries: HashMap::new(),
             workflow_effect: None,
             capability_implementation_body: false,
         }
@@ -1878,6 +1996,16 @@ impl TypeEnv {
             self.expose_summary_type_representation(ty, &summary.exported_constructors)?;
         }
 
+        // Pass 1: Declare all sealed-domain identities.
+        for domain in &summary.exported_sealed_domains {
+            self.declare_sealed_domain_identity(domain)?;
+        }
+
+        // Pass 2: Validate and store domain metadata.
+        for domain in &summary.exported_sealed_domains {
+            self.validate_and_register_sealed_domain(domain)?;
+        }
+
         Ok(())
     }
 
@@ -1891,6 +2019,192 @@ impl TypeEnv {
         staged.register_module_semantic_summary_inner(summary)?;
         *self = staged;
         Ok(())
+    }
+
+    // ------------------------------------------------------------------
+    // Sealed-domain registration helpers
+    // ------------------------------------------------------------------
+
+    /// First pass: declare a sealed-domain identity and visible alias.
+    ///
+    /// Checks that the domain identity is not already registered under a
+    /// different visible name, and that the visible name does not collide
+    /// with ordinary types or other sealed domains.
+    fn declare_sealed_domain_identity(
+        &mut self,
+        domain: &SealedDomainSummary,
+    ) -> Result<(), TypeEnvError> {
+        let visible_name = domain.exported_name.as_str();
+
+        // Check for collision with ordinary types.
+        if self.ast_types.contains_key(visible_name)
+            || self.type_alias_identities.contains_key(visible_name)
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "sealed domain name '{}' collides with an existing ordinary type",
+                    visible_name
+                ),
+                Span::default(),
+            ));
+        }
+
+        // Check for collision with other sealed domains (different identity, same name).
+        if let Some(existing) = self.sealed_domain_aliases.get(visible_name)
+            && existing != &domain.id
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "duplicate sealed domain alias '{}': existing {:?}, new {:?}",
+                    visible_name, existing, domain.id
+                ),
+                Span::default(),
+            ));
+        }
+
+        // Check that the identity is not already registered under a different name.
+        if self.sealed_domain_identities.contains(&domain.id)
+            && let Some(alias) = self.sealed_domain_aliases.iter().find_map(|(k, v)| {
+                if v == &domain.id {
+                    Some(k.as_str())
+                } else {
+                    None
+                }
+            })
+            && alias != visible_name
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "sealed domain identity already registered under alias '{}'",
+                    alias
+                ),
+                Span::default(),
+            ));
+        }
+
+        self.sealed_domain_identities.insert(domain.id.clone());
+        self.sealed_domain_aliases
+            .insert(visible_name.to_string(), domain.id.clone());
+
+        Ok(())
+    }
+
+    /// Second pass: validate structural constraints and store the full domain summary.
+    ///
+    /// Validates:
+    /// - Field domain references resolve to known domains
+    /// - At most one `StructuralSelfDomain` field per constructor
+    /// - Constructor id domain matches enclosing domain
+    fn validate_and_register_sealed_domain(
+        &mut self,
+        domain: &SealedDomainSummary,
+    ) -> Result<(), TypeEnvError> {
+        for constructor in &domain.constructors {
+            // Constructor id must reference the enclosing domain.
+            if constructor.id.domain != domain.id {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "constructor '{}' in domain '{}' references a different domain",
+                        constructor.exported_name, domain.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+            if constructor.id.name != constructor.exported_name {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "constructor '{}' in domain '{}' has id name '{}' that does not match exported name",
+                        constructor.exported_name, domain.exported_name, constructor.id.name
+                    ),
+                    Span::default(),
+                ));
+            }
+
+            // At most one StructuralSelfDomain field per constructor.
+            let structural_count = constructor
+                .fields
+                .iter()
+                .filter(|f| f.structural_status == StructuralFieldStatus::StructuralSelfDomain)
+                .count();
+            if structural_count > 1 {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "constructor '{}' in domain '{}' has {} structural self-domain fields; at most one is permitted",
+                        constructor.exported_name, domain.exported_name, structural_count
+                    ),
+                    Span::default(),
+                ));
+            }
+
+            // Validate field kinds, structural status, and domain references.
+            for field in &constructor.fields {
+                if field.kind != Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in constructor '{}' has non-Type kind",
+                            field.name, constructor.exported_name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let expected_status = if field.domain_constraint.as_ref() == Some(&domain.id) {
+                    StructuralFieldStatus::StructuralSelfDomain
+                } else {
+                    StructuralFieldStatus::NonStructural
+                };
+                if field.structural_status != expected_status {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in constructor '{}' has structural status {:?}; expected {:?}",
+                            field.name,
+                            constructor.exported_name,
+                            field.structural_status,
+                            expected_status
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if let Some(ref constraint) = field.domain_constraint {
+                    // The constraint must be the enclosing domain (self-reference) or
+                    // a domain already declared in this environment.
+                    if constraint != &domain.id
+                        && !self.sealed_domain_identities.contains(constraint)
+                    {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "field '{}' in constructor '{}' references unknown sealed domain",
+                                field.name, constructor.exported_name
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Store the full domain summary.
+        self.sealed_domain_summaries
+            .insert(domain.id.clone(), domain.clone());
+
+        Ok(())
+    }
+
+    /// Look up a sealed domain by its visible exported name.
+    #[must_use]
+    pub fn lookup_sealed_domain(&self, name: &str) -> Option<&SealedDomainSummary> {
+        let id = self.sealed_domain_aliases.get(name)?;
+        self.sealed_domain_summaries.get(id)
+    }
+
+    /// Look up a sealed domain by its canonical identity.
+    #[must_use]
+    pub fn lookup_sealed_domain_by_id(&self, id: &SealedDomainId) -> Option<&SealedDomainSummary> {
+        self.sealed_domain_summaries.get(id)
+    }
+
+    /// Iterate over all visible sealed-domain exported names.
+    pub fn sealed_domain_names(&self) -> impl Iterator<Item = &str> {
+        self.sealed_domain_aliases.keys().map(String::as_str)
     }
 
     /// Register an interface identity summary in the canonical Phase 110 registry.
@@ -3115,6 +3429,9 @@ impl TypeEnv {
             capability_symbols: HashSet::new(),
             parent: None,
             providers: self.providers.clone(),
+            sealed_domain_identities: self.sealed_domain_identities.clone(),
+            sealed_domain_aliases: self.sealed_domain_aliases.clone(),
+            sealed_domain_summaries: self.sealed_domain_summaries.clone(),
             workflow_effect: None,
             capability_implementation_body: true,
         };
@@ -4013,6 +4330,9 @@ impl TypeEnv {
             capability_symbols: self.capability_symbols.clone(),
             parent: Some(Box::new(self.clone())),
             providers: self.providers.clone(),
+            sealed_domain_identities: self.sealed_domain_identities.clone(),
+            sealed_domain_aliases: self.sealed_domain_aliases.clone(),
+            sealed_domain_summaries: self.sealed_domain_summaries.clone(),
             workflow_effect: self.workflow_effect,
             capability_implementation_body: self.capability_implementation_body,
         }

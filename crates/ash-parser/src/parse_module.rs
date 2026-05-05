@@ -19,10 +19,11 @@ use crate::surface::{
     CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, CapabilityRef,
-    Constraint, Contract, Definition, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
-    InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param, Pattern, Predicate, ProxyDef,
-    ResourceField, ResourceTypeDef, RoleDef, Type, TypeBody, TypeDef, TypeField, VariantDef,
-    VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
+    Constraint, Contract, Definition, DomainConstructor, DomainField, DomainSlot, EffectType, Expr,
+    FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param,
+    Pattern, Predicate, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
+    TypeBody, TypeDef, TypeField, VariantDef, VariantPayload, Visibility, WhereBound, Workflow,
+    YieldArm,
 };
 use crate::token::Span;
 
@@ -159,6 +160,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             definitions.push(parse_type_definition(input)?);
             continue;
         }
+
+        // Sealed domains are rejected inside inline modules via the
+        // `starts_with_unsupported_inline_definition` check below.
+        // We do NOT add `starts_with_sealed_domain` here; it must
+        // fall through to the unsupported-inline guard.
 
         if starts_with_visible_capability_interface(input) {
             definitions.push(parse_capability_interface_definition(input)?);
@@ -393,6 +399,134 @@ fn convert_type_expr(ty: crate::parse_type_def::TypeExpr) -> Type {
                 .map(|(name, ty)| (name.into_boxed_str(), convert_type_expr(ty)))
                 .collect(),
         ),
+    }
+}
+
+/// Parse a sealed type-level domain declaration.
+///
+/// Syntax: `[visibility] sealed type domain Name { Constructor* }`
+fn parse_sealed_domain_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+
+    let _ = keyword("sealed").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("type").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("domain").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let (name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+
+    // Reject generic domain parameters: `domain Name<T>` is not allowed.
+    if input.input.starts_with("<") {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut constructors = Vec::new();
+    while !input.input.starts_with("}") {
+        constructors.push(parse_domain_constructor(input)?);
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
+    Ok(Definition::SealedDomain(SealedDomainDef {
+        visibility,
+        name: name.into(),
+        constructors,
+        span,
+    }))
+}
+
+/// Parse a single domain constructor.
+///
+/// Syntax: `Name` or `Name<field: Slot, ...>;`
+fn parse_domain_constructor(input: &mut ParseInput) -> ModalResult<DomainConstructor> {
+    let start_pos = input.state.pos;
+
+    // Reject per-constructor visibility modifiers.
+    if starts_with_keyword(input, "pub") {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    let (ctor_name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+
+    let fields = if input.input.starts_with("<") {
+        let _ = literal_str("<").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+
+        let mut fields = Vec::new();
+        if !input.input.starts_with(">") {
+            loop {
+                fields.push(parse_domain_field(input)?);
+                skip_whitespace_and_comments(input);
+                if consume_comma_separator(input) {
+                    continue;
+                }
+                break;
+            }
+        }
+
+        let _ = literal_str(">").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        fields
+    } else {
+        Vec::new()
+    };
+
+    let _ = literal_str(";").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
+    Ok(DomainConstructor {
+        name: ctor_name.into(),
+        fields,
+        span,
+    })
+}
+
+/// Parse a single domain field.
+///
+/// Syntax: `name: Type` or `name: DomainRef`
+fn parse_domain_field(input: &mut ParseInput) -> ModalResult<DomainField> {
+    let start_pos = input.state.pos;
+    let (field_name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let slot = parse_domain_slot(input)?;
+
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
+    Ok(DomainField {
+        name: field_name.into(),
+        slot,
+        span,
+    })
+}
+
+/// Parse a domain slot annotation.
+///
+/// Accepts the literal keyword `Type` (unconstrained) or an identifier
+/// referring to a sealed domain name.
+fn parse_domain_slot(input: &mut ParseInput) -> ModalResult<DomainSlot> {
+    let (slot_name, _) = identifier_with_span(input)?;
+    if slot_name == "Type" {
+        Ok(DomainSlot::Type)
+    } else {
+        Ok(DomainSlot::DomainRef(slot_name.into()))
     }
 }
 
@@ -1431,6 +1565,35 @@ fn skip_ws_in(s: &str) -> &str {
     &s[len..]
 }
 
+fn starts_with_sealed_domain(input: &ParseInput) -> bool {
+    // Check for `sealed type domain` directly
+    if starts_with_keyword(input, "sealed") {
+        let rest = skip_ws_in(&input.input["sealed".len()..]);
+        if starts_with_keyword_from(rest, "type") {
+            let rest2 = skip_ws_in(&rest["type".len()..]);
+            return starts_with_keyword_from(rest2, "domain");
+        }
+    }
+
+    // Check for `[visibility] sealed type domain`
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(Visibility::Inherited) | Err(_) => false,
+        Ok(_) => {
+            skip_whitespace(&mut lookahead);
+            if !starts_with_keyword(&lookahead, "sealed") {
+                return false;
+            }
+            let rest = skip_ws_in(&lookahead.input["sealed".len()..]);
+            if !starts_with_keyword_from(rest, "type") {
+                return false;
+            }
+            let rest2 = skip_ws_in(&rest["type".len()..]);
+            starts_with_keyword_from(rest2, "domain")
+        }
+    }
+}
+
 fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
     [
         "pub",
@@ -1441,6 +1604,7 @@ fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
         "mod",
         "interface",
         "impl",
+        "sealed",
     ]
     .into_iter()
     .any(|keyword| starts_with_keyword(input, keyword))
@@ -1452,6 +1616,7 @@ fn starts_with_recoverable_definition(input: &ParseInput) -> bool {
         || starts_with_keyword(input, "role")
         || starts_with_visible_resource_type(input)
         || starts_with_type_definition(input)
+        || starts_with_sealed_domain(input)
         || starts_with_visible_capability_interface(input)
         || starts_with_visible_capability_impl(input)
         || starts_with_visible_keyword(input, "capability")
@@ -2492,6 +2657,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
 
         if starts_with_type_definition(input) {
             definitions.push(parse_type_definition(input)?);
+            continue;
+        }
+
+        if starts_with_sealed_domain(input) {
+            definitions.push(parse_sealed_domain_definition(input)?);
             continue;
         }
 

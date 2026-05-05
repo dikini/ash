@@ -1,6 +1,6 @@
 # TASK-814: SPEC-C Closeout, Docs, and Verification
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -20,6 +20,9 @@ Reconcile docs, status surfaces, changelog, and verification evidence for Phase 
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: low
 max_turns: 12
 toolsets: [terminal, file]
@@ -60,13 +63,51 @@ commands:
   - cargo fmt --check
   - cargo check --workspace
 checklist:
-  - [ ] git diff --check passes
-  - [ ] All focused Phase 111 suites run and listed by exact target name
-  - [ ] Carried-forward suites listed by target name, rationale, and original task
-  - [ ] Broad verification command and result summary recorded
-  - [ ] SPEC-059, PLAN-107, PLAN-INDEX, CHANGELOG reconciled
+  - [x] git diff --check passes
+  - [x] All focused Phase 111 suites run and listed by exact target name
+  - [x] Carried-forward suites listed by target name, rationale, and original task
+  - [x] Broad verification command and result summary recorded
+  - [x] SPEC-059, PLAN-107, PLAN-INDEX, CHANGELOG reconciled
 ```
 
 ## Notes
 
 This task is docs/verification only. If broad verification fails, keep the phase open and document the failure honestly.
+
+## Completion Notes
+
+Phase 111 (Sealed Type-Level Domains) implementation complete. All 8 implementation/diagnostic tasks (TASK-807 through TASK-813) are green. The sealed-domain substrate spans four crates: ash-parser (surface + lowering), ash-core (identities + summaries), ash-engine (transport + export filtering), and ash-typeck (TypeEnv registration + validation). No code changes needed in TASK-814 beyond doc reconciliation.
+
+## Verification Evidence
+
+### Focused Verification (all PASS)
+
+| Suite | Command | Tests | Result |
+|-------|---------|-------|--------|
+| TASK-808 | `cargo test -p ash-parser --test task_808_sealed_domain_surface` | 13 | PASS |
+| TASK-809 | `cargo test -p ash-core --test task_809_sealed_domain_identities` | 20 | PASS |
+| TASK-810 | `cargo test -p ash-parser --test task_810_domain_lowering` | 14 | PASS |
+| TASK-811 | `cargo test -p ash-engine --test task_811_domain_summary_transport` | 10 | PASS |
+| TASK-812 | `cargo test -p ash-typeck --test task_812_domain_registration_validation` | 9 | PASS |
+| TASK-813 parser | `cargo test -p ash-parser --test task_813_sealed_domain_diagnostics` | 10 | PASS |
+| TASK-813 engine | `cargo test -p ash-engine --test task_813_sealed_domain_non_interference` | 6 | PASS |
+| TASK-813 typeck | `cargo test -p ash-typeck --test task_813_sealed_domain_registration_diagnostics` | 7 | PASS |
+
+Total focused: 89 tests, 0 failures.
+
+### Broad Verification (all PASS)
+
+| Command | Result |
+|---------|--------|
+| `cargo test --all` | PASS (all suites green, 0 failures) |
+| `cargo clippy --all-targets --all-features -- -D warnings` | PASS (clean) |
+| `cargo fmt --check` | PASS (clean) |
+| `cargo check --workspace` | PASS (clean) |
+
+### Carried-Forward Non-Owner Suites
+
+No carried-forward suites. All Phase 111 evidence is owned by TASK-807 through TASK-813 test files.
+
+## Self-Review / Review Handoff
+
+Self-review completed during TASK-813 (diagnostics/non-interference task). Controller review later identified docs/status reconciliation findings only; TASK-815 closes those findings without code changes.

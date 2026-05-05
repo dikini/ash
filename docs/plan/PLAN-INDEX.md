@@ -287,7 +287,7 @@ Update this section as tasks complete:
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
-| 111 | 10 | 6 | 🔄 In Progress |
+| 111 | 10 | 7 | 🔄 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -395,7 +395,7 @@ This table is retained near the original early-phase section for historical cont
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
-| 111 | 10 | 6 | 🔄 In Progress |
+| 111 | 10 | 7 | 🔄 In Progress |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 

@@ -1510,8 +1510,8 @@ fn public_representation_import_visibility_errors(
 /// pre-ModuleFile `pub type` snippet parsing.
 ///
 /// Normal module checking, export collection, and runtime stdlib discovery must
-/// use [`collect_module_type_metadata_from_module_file`] (or its runtime wrapper)
-/// so `ModuleFile` parsing and semantic summaries are authoritative.
+/// use the module-file metadata collector (or its runtime wrapper) so
+/// `ModuleFile` parsing and semantic summaries are authoritative.
 ///
 /// # Errors
 ///
@@ -1959,7 +1959,7 @@ pub(crate) fn collect_module_exports(
     exports.semantic_summary = Some(exportable_module_semantic_summary(
         &type_metadata.summary,
         &exports.type_defs,
-    ));
+    )?);
 
     for name in extract_public_capability_names(&source) {
         insert_type_export(&mut exports, &capability_type_identity(&name))?;
@@ -2361,7 +2361,7 @@ fn missing_pub_use_target_error(name: &str) -> EngineError {
 fn exportable_module_semantic_summary(
     raw: &ModuleSemanticSummary,
     exportable_types: &HashMap<String, CoreTypeDef>,
-) -> ModuleSemanticSummary {
+) -> Result<ModuleSemanticSummary, EngineError> {
     let mut summary = raw.clone();
     summary.exported_types = raw
         .exported_types
@@ -2375,14 +2375,39 @@ fn exportable_module_semantic_summary(
         .cloned()
         .collect();
     // Only export sealed domains with public visibility; private/crate domains
-    // must not leak through the module export boundary.
+    // must not leak through the module export boundary. Public domain fields
+    // also must not reference domains outside that public export set.
+    let public_domain_names = raw
+        .exported_sealed_domains
+        .iter()
+        .filter(|domain| matches!(domain.visibility, CoreVisibility::Public))
+        .map(|domain| domain.exported_name.clone())
+        .collect::<HashSet<_>>();
     summary.exported_sealed_domains = raw
         .exported_sealed_domains
         .iter()
         .filter(|domain| matches!(domain.visibility, CoreVisibility::Public))
         .cloned()
         .collect();
-    summary
+    for domain in &summary.exported_sealed_domains {
+        for constructor in &domain.constructors {
+            for field in &constructor.fields {
+                let Some(constraint) = field.domain_constraint.as_ref() else {
+                    continue;
+                };
+                if !public_domain_names.contains(constraint.name.as_str()) {
+                    return Err(EngineError::Parse(format!(
+                        "public sealed domain '{}' constructor '{}' field '{}' references non-exportable sealed domain '{}'",
+                        domain.exported_name,
+                        constructor.exported_name,
+                        field.name,
+                        constraint.name
+                    )));
+                }
+            }
+        }
+    }
+    Ok(summary)
 }
 
 fn exportable_type_summary(
@@ -2517,11 +2542,6 @@ fn copy_summary_side_metadata(source: &ModuleSemanticSummary, target: &mut Modul
     target
         .diagnostic_anchors
         .clone_from(&source.diagnostic_anchors);
-    // Carry sealed domain summaries through import selection paths so that
-    // downstream consumers receive the full V2 summary including domains.
-    target
-        .exported_sealed_domains
-        .clone_from(&source.exported_sealed_domains);
 }
 
 fn merge_callable_signature_summaries(

@@ -162,39 +162,14 @@ fn reject_per_constructor_visibility() {
 #[test]
 fn reject_inline_module_sealed_domains() {
     // Inline-module sealed domains are explicitly unsupported.
-    // The inline-module parser should reject sealed-domain definitions.
     let source = r#"mod inline_mod {
 sealed type domain Bad { X; }
 }"#;
     let result = ash_parser::parse_surface_file(source);
-    // The inline module parser should reject this -- either as a parse error
-    // or by the inline-module rejection guard.
-    // If the parser accepts it, that's a bug but we document the expected behavior.
-    // For now, we verify it doesn't silently produce valid sealed-domain definitions.
-    if let Ok(module) = result {
-        // If it parses, check that sealed domains don't appear inside inline modules
-        let inline_sealed: Vec<_> = module
-            .module_decls
-            .iter()
-            .flat_map(|md| {
-                if let ash_parser::module::ModuleSource::Inline(defs) = &md.source {
-                    defs.iter()
-                        .filter_map(|d| match d {
-                            Definition::SealedDomain(_) => Some(true),
-                            _ => None,
-                        })
-                        .collect::<Vec<_>>()
-                } else {
-                    vec![]
-                }
-            })
-            .collect();
-        assert!(
-            inline_sealed.is_empty(),
-            "sealed domains must not appear inside inline modules"
-        );
-    }
-    // If it errors, that's the correct rejection behavior.
+    assert!(
+        result.is_err(),
+        "inline-module sealed domains should be rejected by the parser"
+    );
 }
 
 // --- Non-interference tests ---
@@ -247,10 +222,9 @@ fn sealed_domain_has_source_spans() {
 }
 
 #[test]
-fn sealed_domain_constructor_with_multiple_self_refs_rejected() {
-    // A constructor with two fields referencing the same domain is not
-    // inherently rejected at the parser level (it's a semantic check for TASK-812).
-    // But we verify the parser handles the syntax correctly.
+fn sealed_domain_constructor_with_multiple_self_refs_is_preserved_for_type_env_validation() {
+    // A constructor with two fields referencing the same domain is a semantic
+    // validation concern for TypeEnv/TASK-812, not a parser rejection.
     let source = "sealed type domain Tree { Leaf; Branch<left: Tree, right: Tree>; }";
     let module = parse(source);
 

@@ -62,6 +62,17 @@ fn parse_sealed_domain_rejects_generic_params() {
 }
 
 #[test]
+fn parse_sealed_domain_rejects_angle_generic_params() {
+    // Angle generic parameters on sealed domains are unsupported.
+    let source = "sealed type domain Foo<T> { X; }";
+    let result = ash_parser::parse_surface_file(source);
+    assert!(
+        result.is_err(),
+        "sealed domain with angle generic parameters should be rejected by the parser"
+    );
+}
+
+#[test]
 fn parse_sealed_domain_rejects_per_constructor_visibility() {
     // Per-constructor visibility is not supported in the first slice.
     let source = "sealed type domain Foo { pub Bar; }";
@@ -77,40 +88,10 @@ fn parse_sealed_domain_in_inline_module_rejected() {
     // Sealed domains inside inline modules are explicitly unsupported.
     let source = r"mod inline { sealed type domain Foo { X; } }";
     let result = ash_parser::parse_surface_file(source);
-    // If the parser rejects this outright, that's correct.
-    // If it accepts it, verify no sealed domain leaks to file-level definitions.
-    if let Ok(module) = result {
-        let file_level_sealed: Vec<_> = module
-            .definitions
-            .iter()
-            .filter(|d| matches!(d, Definition::SealedDomain(_)))
-            .collect();
-        assert!(
-            file_level_sealed.is_empty(),
-            "sealed domains inside inline modules must not appear at file level"
-        );
-
-        // Also verify inline-module definitions don't contain sealed domains
-        // (the parser may have accepted but the engine will reject).
-        let inline_sealed: Vec<_> = module
-            .module_decls
-            .iter()
-            .flat_map(|md| {
-                if let ash_parser::module::ModuleSource::Inline(defs) = &md.source {
-                    defs.iter()
-                        .filter(|d| matches!(d, Definition::SealedDomain(_)))
-                        .collect::<Vec<_>>()
-                } else {
-                    vec![]
-                }
-            })
-            .collect();
-        assert!(
-            inline_sealed.is_empty(),
-            "sealed domains must not appear inside inline module definitions"
-        );
-    }
-    // If result.is_err(), the parser correctly rejected the construct.
+    assert!(
+        result.is_err(),
+        "inline-module sealed domains should be rejected by the parser"
+    );
 }
 
 #[test]
@@ -137,6 +118,31 @@ fn parse_sealed_domain_duplicate_constructors_rejected_or_preserved() {
 // ---------------------------------------------------------------------------
 // Lowering negative cases
 // ---------------------------------------------------------------------------
+
+#[test]
+fn parse_sealed_domain_rejects_list_field_slot() {
+    assert!(
+        ash_parser::parse_surface_file("sealed type domain Bad { X<xs: List<Int>>; }").is_err()
+    );
+}
+
+#[test]
+fn parse_sealed_domain_rejects_tuple_or_unnamed_field_slot() {
+    assert!(ash_parser::parse_surface_file("sealed type domain Bad { X<(Int, Int)>; }").is_err());
+    assert!(ash_parser::parse_surface_file("sealed type domain Bad { X<Int>; }").is_err());
+}
+
+#[test]
+fn parse_sealed_domain_rejects_path_like_field_slot() {
+    assert!(ash_parser::parse_surface_file("sealed type domain Bad { X<field: A::B>; }").is_err());
+}
+
+#[test]
+fn parse_sealed_domain_rejects_generic_or_applied_field_slot() {
+    assert!(
+        ash_parser::parse_surface_file("sealed type domain Bad { X<field: Foo<T>>; }").is_err()
+    );
+}
 
 #[test]
 fn lower_sealed_domain_rejects_unknown_field_domain_records_constraint() {

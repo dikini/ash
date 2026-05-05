@@ -100,7 +100,7 @@ Total focused: 89 tests, 0 failures.
 | Command | Result |
 |---------|--------|
 | `cargo test --all` | PASS (all suites green, 0 failures) |
-| `cargo clippy --all-targets -- -D warnings` | PASS (clean) |
+| `cargo clippy --all-targets --all-features -- -D warnings` | PASS (clean) |
 | `cargo fmt --check` | PASS (clean) |
 | `cargo check --workspace` | PASS (clean) |
 
@@ -110,4 +110,4 @@ No carried-forward suites. All Phase 111 evidence is owned by TASK-807 through T
 
 ## Self-Review / Review Handoff
 
-Self-review completed during TASK-813 (diagnostics/non-interference task). No independent controller review findings open at closeout time. TASK-815 (phase review remediation) is available if the controller identifies issues post-merge.
+Self-review completed during TASK-813 (diagnostics/non-interference task). Controller review later identified docs/status reconciliation findings only; TASK-815 closes those findings without code changes.

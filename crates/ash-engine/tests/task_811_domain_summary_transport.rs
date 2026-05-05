@@ -5,6 +5,7 @@ use ash_core::module_graph::ModuleId;
 use ash_core::semantic_summary::{
     ModuleIdentity, ModuleSourceOrigin, StructuralFieldStatus, SummaryVersion,
 };
+use ash_engine::module_loader::{check_importable_module_file, load_ordinary_file};
 
 fn test_module_identity() -> ModuleIdentity {
     ModuleIdentity::new(
@@ -125,20 +126,88 @@ fn sealed_domain_constructor_fields_preserve_order() {
 // --- Inline-module rejection ---
 
 #[test]
-fn inline_module_sealed_domains_do_not_appear_in_file_definitions() {
+fn selected_ordinary_type_import_does_not_transport_unrelated_sealed_domains() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let module = dir.path().join("source.ash");
+    let caller = dir.path().join("caller.ash");
+
+    std::fs::write(
+        &module,
+        r"pub type Box = MkBox { value: Int };
+pub sealed type domain Unrelated { Marker; }
+",
+    )
+    .expect("write module");
+    std::fs::write(&caller, "use source::{Box}\nworkflow main { ret 0 }\n").expect("write caller");
+
+    let loaded = load_ordinary_file(&caller).expect("selected ordinary type import should load");
+
+    assert!(
+        loaded
+            .imported_semantic_summaries
+            .iter()
+            .all(|summary| summary.exported_sealed_domains.is_empty()),
+        "selected ordinary type import must not transport unrelated sealed domains"
+    );
+}
+
+#[test]
+fn selected_ordinary_constructor_import_does_not_transport_unrelated_sealed_domains() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let module = dir.path().join("source.ash");
+    let caller = dir.path().join("caller.ash");
+
+    std::fs::write(
+        &module,
+        r"pub type Box = MkBox { value: Int };
+pub sealed type domain Unrelated { Marker; }
+",
+    )
+    .expect("write module");
+    std::fs::write(&caller, "use source::{MkBox}\nworkflow main { ret 0 }\n")
+        .expect("write caller");
+
+    let loaded = load_ordinary_file(&caller).expect("selected constructor import should load");
+
+    assert!(
+        loaded
+            .imported_semantic_summaries
+            .iter()
+            .all(|summary| summary.exported_sealed_domains.is_empty()),
+        "selected ordinary constructor import must not transport unrelated sealed domains"
+    );
+}
+
+#[test]
+fn public_sealed_domain_referencing_private_domain_is_rejected_at_export_boundary() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let module = dir.path().join("leaky.ash");
+
+    std::fs::write(
+        &module,
+        r"sealed type domain Private { Hidden; }
+pub sealed type domain Public { Exposes<field: Private>; }
+",
+    )
+    .expect("write module");
+
+    let err = check_importable_module_file(&module)
+        .expect_err("public sealed domain must not expose private domain field");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Public") && msg.contains("Private"),
+        "error should name the leaky domains: {msg}"
+    );
+}
+
+#[test]
+fn inline_module_sealed_domains_are_rejected() {
     let source = r"mod inner {
 sealed type domain Bad { X; }
 }";
     let result = ash_parser::parse_surface_file(source);
-    // Either parse fails (rejection) or sealed domains don't appear at file level
-    if let Ok(module) = result {
-        // The inline module's sealed domain should NOT appear in the top-level definitions
-        assert!(
-            module
-                .definitions
-                .iter()
-                .all(|d| !matches!(d, ash_parser::surface::Definition::SealedDomain(_))),
-            "inline module sealed domains should not appear in file-level definitions"
-        );
-    }
+    assert!(
+        result.is_err(),
+        "SPEC-059 requires inline-module sealed-domain declarations to be rejected"
+    );
 }

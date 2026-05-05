@@ -12,7 +12,7 @@
 
 ## Phase 111: Sealed Type-Level Domains
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete (implemented MVP; review remediated)
 **Spec:** [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md)
@@ -22,15 +22,15 @@
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-806](tasks/TASK-806-spec-c-spec-plan-packet.md) | Promote DESIGN-034 SPEC-C into SPEC-059/PLAN-107 and register Phase 111 | Docs/Planning | 4 | ✅ Complete |
-| [TASK-807](tasks/TASK-807-sealed-domain-audit-gate.md) | Audit the live parser/core/engine/typeck sealed-domain boundary and freeze the implementation gate | Docs/Substrate | 4 | 📝 Planned |
-| [TASK-808](tasks/TASK-808-parser-surface-for-sealed-type-domains.md) | Add the narrow `sealed type domain` parser surface and explicit rejection boundaries | Parser/Substrate | 5 | 📝 Planned |
-| [TASK-809](tasks/TASK-809-core-domain-kind-ids-and-summary-carriers.md) | Add core sealed-domain identities, constructor field metadata, and public summary carriers | Core/Substrate | 6 | 📝 Planned |
-| [TASK-810](tasks/TASK-810-domain-lowering-and-summary-versioning.md) | Lower sealed-domain declarations into canonical core metadata and advance summary versioning | Parser/Core | 6 | 📝 Planned |
-| [TASK-811](tasks/TASK-811-engine-domain-summary-export-import.md) | Transport public sealed-domain summaries through engine export/import paths | Engine/Substrate | 6 | 📝 Planned |
-| [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | Register imported/local domain summaries and validate visibility / anti-leak rules | Type/Substrate | 7 | 📝 Planned |
-| [TASK-813](tasks/TASK-813-sealed-domain-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and non-interference coverage for Phase 111 | Diagnostics/Tests | 6 | 📝 Planned |
-| [TASK-814](tasks/TASK-814-spec-c-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | 📝 Planned |
-| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Remediate post-closeout review findings for Phase 111 | Review/Hardening | 6 | 📝 Planned |
+| [TASK-807](tasks/TASK-807-sealed-domain-audit-gate.md) | Audit the live parser/core/engine/typeck sealed-domain boundary and freeze the implementation gate | Docs/Substrate | 4 | ✅ Complete |
+| [TASK-808](tasks/TASK-808-parser-surface-for-sealed-type-domains.md) | Add the narrow `sealed type domain` parser surface and explicit rejection boundaries | Parser/Substrate | 5 | ✅ Complete |
+| [TASK-809](tasks/TASK-809-core-domain-kind-ids-and-summary-carriers.md) | Add core sealed-domain identities, constructor field metadata, and public summary carriers | Core/Substrate | 6 | ✅ Complete |
+| [TASK-810](tasks/TASK-810-domain-lowering-and-summary-versioning.md) | Lower sealed-domain declarations into canonical core metadata and advance summary versioning | Parser/Core | 6 | ✅ Complete |
+| [TASK-811](tasks/TASK-811-engine-domain-summary-export-import.md) | Transport public sealed-domain summaries through engine export/import paths | Engine/Substrate | 6 | ✅ Complete |
+| [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | Register imported/local domain summaries and validate visibility / anti-leak rules | Type/Substrate | 7 | ✅ Complete |
+| [TASK-813](tasks/TASK-813-sealed-domain-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and non-interference coverage for Phase 111 | Diagnostics/Tests | 6 | ✅ Complete |
+| [TASK-814](tasks/TASK-814-spec-c-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | ✅ Complete |
+| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Remediate post-closeout review findings for Phase 111 docs/status consistency | Review/Hardening | 6 | ✅ Complete |
 
 Estimated total: 54 hours.
 
@@ -59,7 +59,7 @@ Estimated total: 54 hours.
 
 - TASK-813 adds negative diagnostics and non-interference coverage.
 - TASK-814 reconciles status surfaces and verification evidence.
-- TASK-815 reserves the post-review hardening slice.
+- TASK-815 closes the post-review docs/status remediation slice.
 
 ## Execution Order
 
@@ -116,14 +116,14 @@ Every implementation task must include focused tests for the changed crate and e
 
 ## Completion Checklist
 
-- [ ] SPEC-059 is registered in `docs/spec/README.md`.
-- [ ] PLAN-107 and TASK-806 through TASK-815 are registered in `docs/plan/PLAN-INDEX.md`.
-- [ ] `ash-core` exposes sealed-domain identities, constructor field metadata, and public summary carriers.
-- [ ] A Phase 111 summary version exists and preserves prior ordinary metadata semantics.
-- [ ] `ash-parser` accepts the narrow `sealed type domain` subset and rejects deferred shapes explicitly.
-- [ ] Module metadata lowering produces canonical sealed-domain metadata with source anchors.
-- [ ] `ash-engine` transports visible sealed-domain summaries without private-constructor leakage.
-- [ ] `TypeEnv` registers domain metadata and validates visibility / constructor / field-domain consistency.
-- [ ] Conservative structural self-domain restrictions are enforced.
-- [ ] Existing Phase 109/110 behavior remains non-regressed.
-- [ ] Docs/status/changelog are reconciled, TASK-814 records exact verification evidence, and review findings are closed via TASK-815 before the phase is marked fully complete.
+- [x] SPEC-059 is registered in `docs/spec/README.md` as Implemented MVP.
+- [x] PLAN-107 and TASK-806 through TASK-815 are registered in `docs/plan/PLAN-INDEX.md`.
+- [x] `ash-core` exposes sealed-domain identities, constructor field metadata, and public summary carriers.
+- [x] A Phase 111 summary version exists and preserves prior ordinary metadata semantics.
+- [x] `ash-parser` accepts the narrow `sealed type domain` subset and rejects deferred shapes explicitly.
+- [x] Module metadata lowering produces canonical sealed-domain metadata with source anchors.
+- [x] `ash-engine` transports visible sealed-domain summaries without private-constructor leakage.
+- [x] `TypeEnv` registers domain metadata and validates visibility / constructor / field-domain consistency.
+- [x] Conservative structural self-domain restrictions are enforced.
+- [x] Existing Phase 109/110 behavior remains non-regressed by the focused and broad verification recorded in TASK-814.
+- [x] Docs/status/changelog are reconciled, TASK-814 records exact verification evidence, and review findings are closed via TASK-815.

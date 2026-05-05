@@ -1220,6 +1220,15 @@ fn validate_summary_visibility_and_duplicates(
         ));
     }
 
+    if summary.version == SummaryVersion::SPEC057_ORDINARY_TYPE_V1
+        && !summary.exported_sealed_domains.is_empty()
+    {
+        return Err(TypeEnvError::InvalidDefinition(
+            "V1 module semantic summary cannot carry sealed domain metadata".to_string(),
+            Span::default(),
+        ));
+    }
+
     for (index, ty) in summary.exported_types.iter().enumerate() {
         if ty.visibility != ash_core::ast::Visibility::Public
             && !matches!(
@@ -1388,6 +1397,51 @@ fn validate_summary_visibility_and_duplicates(
                 ),
                 Span::default(),
             ));
+        }
+    }
+
+    let same_summary_domain_ids: HashSet<&SealedDomainId> = summary
+        .exported_sealed_domains
+        .iter()
+        .map(|domain| &domain.id)
+        .collect();
+    let mut same_summary_edges: HashMap<&SealedDomainId, HashSet<&SealedDomainId>> = HashMap::new();
+    for domain in &summary.exported_sealed_domains {
+        for constructor in &domain.constructors {
+            for field in &constructor.fields {
+                let Some(target) = field.domain_constraint.as_ref() else {
+                    continue;
+                };
+                if target != &domain.id && same_summary_domain_ids.contains(target) {
+                    same_summary_edges
+                        .entry(&domain.id)
+                        .or_default()
+                        .insert(target);
+                }
+            }
+        }
+    }
+    for domain in &summary.exported_sealed_domains {
+        let Some(targets) = same_summary_edges.get(&domain.id) else {
+            continue;
+        };
+        let mut visited = HashSet::new();
+        let mut stack: Vec<&SealedDomainId> = targets.iter().copied().collect();
+        while let Some(current) = stack.pop() {
+            if current == &domain.id {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "sealed domain '{}' participates in a same-summary mutual recursion cycle",
+                        domain.exported_name
+                    ),
+                    Span::default(),
+                ));
+            }
+            if visited.insert(current)
+                && let Some(next_targets) = same_summary_edges.get(current)
+            {
+                stack.extend(next_targets.iter().copied());
+            }
         }
     }
 
@@ -2056,6 +2110,15 @@ impl TypeEnv {
                     Span::default(),
                 ));
             }
+            if constructor.id.name != constructor.exported_name {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "constructor '{}' in domain '{}' has id name '{}' that does not match exported name",
+                        constructor.exported_name, domain.exported_name, constructor.id.name
+                    ),
+                    Span::default(),
+                ));
+            }
 
             // At most one StructuralSelfDomain field per constructor.
             let structural_count = constructor
@@ -2073,8 +2136,34 @@ impl TypeEnv {
                 ));
             }
 
-            // Validate field domain references resolve to known domains.
+            // Validate field kinds, structural status, and domain references.
             for field in &constructor.fields {
+                if field.kind != Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in constructor '{}' has non-Type kind",
+                            field.name, constructor.exported_name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let expected_status = if field.domain_constraint.as_ref() == Some(&domain.id) {
+                    StructuralFieldStatus::StructuralSelfDomain
+                } else {
+                    StructuralFieldStatus::NonStructural
+                };
+                if field.structural_status != expected_status {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in constructor '{}' has structural status {:?}; expected {:?}",
+                            field.name,
+                            constructor.exported_name,
+                            field.structural_status,
+                            expected_status
+                        ),
+                        Span::default(),
+                    ));
+                }
                 if let Some(ref constraint) = field.domain_constraint {
                     // The constraint must be the enclosing domain (self-reference) or
                     // a domain already declared in this environment.

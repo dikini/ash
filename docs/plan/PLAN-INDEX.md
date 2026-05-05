@@ -3217,12 +3217,12 @@ Boundary note: marker constructors are not promoted ADT constructors, not ordina
 | [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | TypeEnv domain registration and validation | 7 | ✅ Complete |
 | [TASK-813](tasks/TASK-813-sealed-domain-diagnostics-and-non-interference.md) | Sealed-domain diagnostics and non-interference | 6 | ✅ Complete |
 | [TASK-814](tasks/TASK-814-spec-c-closeout-docs-and-verification.md) | SPEC-C closeout, docs, and verification | 4 | ✅ Complete |
-| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Phase 111 review remediation | 6 | ✅ Complete (no-op) |
+| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Phase 111 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-C to SPEC-059/PLAN-107, then audit the live parser/core/engine/typechecker substrate before implementation begins.
 **Track B (Parser + Core Domain Substrate):** 11h. Add the restricted `sealed type domain` surface carriers in `ash-parser`, then land core-owned domain kinds, domain identities, marker-constructor identities, and domain-aware summary carriers in `ash-core`.
 **Track C (Lowering + Transport + Registration):** 19h. Lower parsed domain declarations into versioned core semantic summaries, transport public exposed-versus-opaque domain metadata through engine import/export flows, and register/validate local plus imported domains in `TypeEnv` using a declare-then-validate flow.
-**Track D (Diagnostics + Closeout):** 16h. Add diagnostics/non-interference coverage, reconcile docs/status/changelog, and reserve the usual post-review remediation slice.
+**Track D (Diagnostics + Closeout):** 16h. Add diagnostics/non-interference coverage, reconcile docs/status/changelog, and close the post-review remediation slice.
 
 **Decision gates:**
 - D1: Phase 111 is closed-domain metadata work only; no normalization, definitional equality, direct `type fn`, associated type families, or proposition solving lands here.

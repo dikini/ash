@@ -62,7 +62,7 @@ Establish the canonical domain-kind and domain-summary substrate that later lowe
 ```
 strictness: clean
 commands:
-  - cargo test -p ash-core --test task_809_domain_kind_ids_red
+  - cargo test -p ash-core --test task_809_sealed_domain_identities
   - cargo test -p ash-core
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check

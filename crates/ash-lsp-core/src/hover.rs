@@ -417,6 +417,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     Definition::Function(def) => def.name.as_ref() == token,
                     Definition::Interface(_) | Definition::Impl(_) => false,
                     Definition::BuiltinFn(b) => b.name.as_ref() == token,
+                    Definition::SealedDomain(d) => d.name.as_ref() == token,
                 };
                 if name_matches {
                     return Some(definition_hover(definition));

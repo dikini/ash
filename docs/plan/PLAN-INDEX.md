@@ -287,7 +287,7 @@ Update this section as tasks complete:
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
-| 111 | 10 | 2 | 🔄 In Progress |
+| 111 | 10 | 4 | 🔄 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -395,7 +395,7 @@ This table is retained near the original early-phase section for historical cont
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
-| 111 | 10 | 2 | 🔄 In Progress |
+| 111 | 10 | 4 | 🔄 In Progress |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3210,8 +3210,8 @@ Boundary note: marker constructors are not promoted ADT constructors, not ordina
 |------|-------------|------------|--------|
 | [TASK-806](tasks/TASK-806-spec-c-spec-plan-packet.md) | SPEC-C spec/plan packet | 4 | ✅ Complete |
 | [TASK-807](tasks/TASK-807-sealed-domain-audit-gate.md) | Sealed-domain audit gate | 4 | ✅ Complete |
-| [TASK-808](tasks/TASK-808-parser-surface-for-sealed-type-domains.md) | Parser surface for sealed type domains | 5 | 📝 Planned |
-| [TASK-809](tasks/TASK-809-core-domain-kind-ids-and-summary-carriers.md) | Core domain kind, IDs, and summary carriers | 6 | 📝 Planned |
+| [TASK-808](tasks/TASK-808-parser-surface-for-sealed-type-domains.md) | Parser surface for sealed type domains | 5 | ✅ Complete |
+| [TASK-809](tasks/TASK-809-core-domain-kind-ids-and-summary-carriers.md) | Core domain kind, IDs, and summary carriers | 6 | ✅ Complete |
 | [TASK-810](tasks/TASK-810-domain-lowering-and-summary-versioning.md) | Domain lowering and summary versioning | 6 | 📝 Planned |
 | [TASK-811](tasks/TASK-811-engine-domain-summary-export-import.md) | Engine domain summary export/import | 6 | 📝 Planned |
 | [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | TypeEnv domain registration and validation | 7 | 📝 Planned |

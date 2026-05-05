@@ -3,8 +3,14 @@
 //! SPEC-057 defines this as an ordinary-type summary substrate. It intentionally
 //! does not interpret future type-computation namespaces and does not replace the
 //! Phase 108 workflow-summary carriers.
+//!
+//! SPEC-059 extends this with sealed type-level domain identities, marker
+//! constructor identities, field metadata, and domain/constructor summary
+//! carriers. Sealed-domain identities are distinct from ordinary `TypeDeclId` /
+//! `ConstructorId` because marker constructors are type-level only.
 
 use crate::ast::{Name, Span, TypeBody, TypeVar, Visibility};
+use crate::kind::Kind;
 use crate::module_graph::{CrateId, ModuleId};
 use serde::{Deserialize, Serialize};
 
@@ -213,6 +219,171 @@ impl AssociatedMemberIdentityId {
     }
 }
 
+/// Canonical sealed type-level domain identity.
+///
+/// This is distinct from `TypeDeclId` because sealed domains are not ordinary
+/// type declarations; they define a type-level namespace for marker constructors.
+/// Marker constructors are type-level only and must not be confused with runtime
+/// constructors represented by `ConstructorId`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SealedDomainId {
+    pub module: ModuleIdentity,
+    pub name: Name,
+}
+
+impl SealedDomainId {
+    #[must_use]
+    pub fn new(module: ModuleIdentity, name: impl Into<Name>) -> Self {
+        Self {
+            module,
+            name: name.into(),
+        }
+    }
+}
+
+/// Canonical marker-constructor identity within a sealed domain.
+///
+/// This is distinct from `ConstructorId` because marker constructors are
+/// type-level only; they do not participate in runtime value construction.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DomainConstructorId {
+    pub domain: SealedDomainId,
+    pub name: Name,
+}
+
+impl DomainConstructorId {
+    #[must_use]
+    pub fn new(domain: SealedDomainId, name: impl Into<Name>) -> Self {
+        Self {
+            domain,
+            name: name.into(),
+        }
+    }
+}
+
+/// Structural classification of a domain field relative to its enclosing domain.
+///
+/// Per SPEC-059 §7.4, at most one `StructuralSelfDomain` field is permitted per
+/// constructor, and self-recursion is only allowed through a field that names the
+/// enclosing domain directly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StructuralFieldStatus {
+    /// Field does not structurally reference the enclosing domain.
+    NonStructural,
+    /// Field references the enclosing domain directly (self-recursive slot).
+    StructuralSelfDomain,
+}
+
+/// Field metadata for a domain constructor (SPEC-059 §7).
+///
+/// Each field carries its `Kind`, an optional domain constraint, and a
+/// structural status indicating whether it introduces self-recursion into
+/// the enclosing domain.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DomainFieldSummary {
+    pub name: Name,
+    pub kind: Kind,
+    pub domain_constraint: Option<SealedDomainId>,
+    pub structural_status: StructuralFieldStatus,
+}
+
+impl DomainFieldSummary {
+    /// Create an unconstrained type-level field (slot class: Type).
+    #[must_use]
+    pub fn unconstrained(name: impl Into<Name>) -> Self {
+        Self {
+            name: name.into(),
+            kind: Kind::Type,
+            domain_constraint: None,
+            structural_status: StructuralFieldStatus::NonStructural,
+        }
+    }
+
+    /// Create a domain-constrained field pointing at the specified domain.
+    ///
+    /// If `domain` matches the enclosing domain, `structural_status` is set to
+    /// `StructuralSelfDomain`; otherwise it is `NonStructural`.
+    #[must_use]
+    pub fn constrained_to(
+        name: impl Into<Name>,
+        enclosing: &SealedDomainId,
+        domain: SealedDomainId,
+    ) -> Self {
+        let structural_status = if &domain == enclosing {
+            StructuralFieldStatus::StructuralSelfDomain
+        } else {
+            StructuralFieldStatus::NonStructural
+        };
+        Self {
+            name: name.into(),
+            kind: Kind::Type,
+            domain_constraint: Some(domain),
+            structural_status,
+        }
+    }
+}
+
+/// Summary for one marker constructor within a sealed domain (SPEC-059 §8).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DomainConstructorSummary {
+    pub id: DomainConstructorId,
+    pub exported_name: Name,
+    pub fields: Vec<DomainFieldSummary>,
+    pub anchor: SourceAnchor,
+}
+
+impl DomainConstructorSummary {
+    #[must_use]
+    pub fn new(
+        id: DomainConstructorId,
+        exported_name: impl Into<Name>,
+        fields: Vec<DomainFieldSummary>,
+        anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            id,
+            exported_name: exported_name.into(),
+            fields,
+            anchor,
+        }
+    }
+}
+
+/// Summary for one sealed type-level domain exported from a module (SPEC-059 §8).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SealedDomainSummary {
+    pub id: SealedDomainId,
+    pub exported_name: Name,
+    pub visibility: Visibility,
+    pub constructors: Vec<DomainConstructorSummary>,
+    pub anchor: SourceAnchor,
+}
+
+impl SealedDomainSummary {
+    #[must_use]
+    pub fn new(
+        id: SealedDomainId,
+        exported_name: impl Into<Name>,
+        visibility: Visibility,
+        anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            id,
+            exported_name: exported_name.into(),
+            visibility,
+            constructors: Vec::new(),
+            anchor,
+        }
+    }
+
+    #[must_use]
+    pub fn with_constructor(mut self, constructor: DomainConstructorSummary) -> Self {
+        self.constructors.push(constructor);
+        self
+    }
+}
+
 /// Exported name/path pointing at an origin type identity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TypeExportRef {
@@ -376,12 +547,18 @@ pub struct SummaryVersion(pub u16);
 
 impl SummaryVersion {
     pub const SPEC057_ORDINARY_TYPE_V1: Self = Self(1);
+    pub const SPEC059_SEALED_DOMAIN_V2: Self = Self(2);
 }
 
 /// Reserved future identity namespaces. SPEC-057 leaves these uninterpreted.
+///
+/// Note: `sealed_domains` is a placeholder string list. As of SPEC-059, typed
+/// sealed-domain metadata is carried by `ModuleSemanticSummary::exported_sealed_domains`
+/// using `SealedDomainSummary` carriers.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct ReservedSemanticIdentitySlots {
     pub future_type_functions: Vec<String>,
+    /// Placeholder only; superseded by `ModuleSemanticSummary::exported_sealed_domains`.
     pub sealed_domains: Vec<String>,
     pub generalized_projections: Vec<String>,
     pub associated_families: Vec<String>,
@@ -465,6 +642,12 @@ pub struct ModuleSemanticSummary {
     pub reserved_identity_slots: ReservedSemanticIdentitySlots,
     #[serde(default)]
     pub diagnostic_anchors: Vec<SourceAnchor>,
+    /// Sealed type-level domains exported from this module (SPEC-059 §8).
+    ///
+    /// `#[serde(default)]` ensures backward compatibility with V1 summaries
+    /// that predate sealed-domain support.
+    #[serde(default)]
+    pub exported_sealed_domains: Vec<SealedDomainSummary>,
 }
 
 impl ModuleSemanticSummary {
@@ -481,6 +664,7 @@ impl ModuleSemanticSummary {
             associated_member_identities: Vec::new(),
             reserved_identity_slots: ReservedSemanticIdentitySlots::default(),
             diagnostic_anchors: Vec::new(),
+            exported_sealed_domains: Vec::new(),
         }
     }
 
@@ -526,6 +710,13 @@ impl ModuleSemanticSummary {
     #[must_use]
     pub fn with_diagnostic_anchor(mut self, anchor: SourceAnchor) -> Self {
         self.diagnostic_anchors.push(anchor);
+        self
+    }
+
+    /// Add a sealed domain summary to this module summary.
+    #[must_use]
+    pub fn with_exported_sealed_domain(mut self, domain: SealedDomainSummary) -> Self {
+        self.exported_sealed_domains.push(domain);
         self
     }
 }

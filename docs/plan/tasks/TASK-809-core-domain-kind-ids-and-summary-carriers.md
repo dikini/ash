@@ -1,6 +1,6 @@
 # TASK-809: Core Domain Kind, IDs, and Summary Carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

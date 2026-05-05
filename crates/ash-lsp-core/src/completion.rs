@@ -83,6 +83,8 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::Impl(_) => None, // impl blocks don't have a useful single name
         Definition::BuiltinFn(b) if Some(b.name.as_ref()) == current_token => None,
         Definition::BuiltinFn(b) => Some(b.name.as_ref().to_string()),
+        Definition::SealedDomain(d) if Some(d.name.as_ref()) == current_token => None,
+        Definition::SealedDomain(d) => Some(d.name.as_ref().to_string()),
     }
 }
 
@@ -99,6 +101,7 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
             CompletionItemKind::INTERFACE
         }
         Definition::CapabilityImplementation(_) | Definition::Impl(_) => CompletionItemKind::CLASS,
+        Definition::SealedDomain(_) => CompletionItemKind::ENUM,
     }
 }
 

@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added draft design note [DESIGN-NOTE-STRUCTURED-DIAGNOSTICS](docs/design/DESIGN-NOTE-STRUCTURED-DIAGNOSTICS.md) outlining structured Ash diagnostics as the canonical model for Rust/Elm-style human errors, JSON/YAML machine formats, LSP projection, and future LLM/tool consumption.
+
 - [TASK-807](docs/plan/tasks/TASK-807-sealed-domain-audit-gate.md): Phase 111 sealed-domain audit gate. Authoritative audit of the live parser/core/engine/typechecker substrate documenting current declaration carriers, summary transport, kind ownership, import/export behavior, and registration seams. Identifies 7 contradictions between current code and SPEC-059 requirements, maps exact file targets for TASK-808 through TASK-813, and explicitly marks deferred work belonging to SPEC-D/E/F/G/H. Audit artifact: [TASK-807 sealed-domain audit](docs/plan/audits/TASK-807-sealed-domain-audit.md).
 
 - [TASK-808](docs/plan/tasks/TASK-808-parser-surface-for-sealed-type-domains.md): Sealed type domain parser surface. Added `SealedDomainDef`, `DomainConstructor`, `DomainField`, `DomainSlot` surface AST types and `Definition::SealedDomain` variant to `ash-parser`. Parser accepts `[pub] sealed type domain Name { Ctor<field: Slot>; ... }` syntax with explicit rejection boundaries for generic domain parameters, per-constructor visibility, and inline-module sealed domains. 13 focused parser tests.

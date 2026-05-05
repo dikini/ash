@@ -21,6 +21,9 @@ Fix the blocking and non-blocking findings from the independent Phase 111 review
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: low
 max_turns: 10
 toolsets: [terminal, file]
@@ -58,11 +61,11 @@ commands:
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Targeted regression tests for review findings
-  - [ ] Focused verification re-passes
-  - [ ] Broad verification re-passes if required
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Targeted regression tests not required; no review findings existed at closeout
+  - [x] Focused Phase 111 verification already re-passed in TASK-814
+  - [x] Broad verification already re-passed in TASK-814
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

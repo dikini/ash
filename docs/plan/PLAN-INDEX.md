@@ -3197,7 +3197,7 @@ Boundary note: TASK-798 owns canonical lowering plus `TypeEnv` interface/member 
 ## Phase 111: Sealed Type-Level Domains
 
 **Priority:** High (DESIGN-034 SPEC-C substrate required before normalization, direct structural `type fn`, and public type-computation export/import work)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-107-SEALED-TYPE-LEVEL-DOMAINS.md](PLAN-107-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -3214,10 +3214,10 @@ Boundary note: marker constructors are not promoted ADT constructors, not ordina
 | [TASK-809](tasks/TASK-809-core-domain-kind-ids-and-summary-carriers.md) | Core domain kind, IDs, and summary carriers | 6 | ✅ Complete |
 | [TASK-810](tasks/TASK-810-domain-lowering-and-summary-versioning.md) | Domain lowering and summary versioning | 6 | ✅ Complete |
 | [TASK-811](tasks/TASK-811-engine-domain-summary-export-import.md) | Engine domain summary export/import | 6 | ✅ Complete |
-| [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | TypeEnv domain registration and validation | 7 | 📝 Planned |
-| [TASK-813](tasks/TASK-813-sealed-domain-diagnostics-and-non-interference.md) | Sealed-domain diagnostics and non-interference | 6 | 📝 Planned |
-| [TASK-814](tasks/TASK-814-spec-c-closeout-docs-and-verification.md) | SPEC-C closeout, docs, and verification | 4 | 📝 Planned |
-| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Phase 111 review remediation | 6 | 📝 Planned |
+| [TASK-812](tasks/TASK-812-typeenv-domain-registration-and-validation.md) | TypeEnv domain registration and validation | 7 | ✅ Complete |
+| [TASK-813](tasks/TASK-813-sealed-domain-diagnostics-and-non-interference.md) | Sealed-domain diagnostics and non-interference | 6 | ✅ Complete |
+| [TASK-814](tasks/TASK-814-spec-c-closeout-docs-and-verification.md) | SPEC-C closeout, docs, and verification | 4 | ✅ Complete |
+| [TASK-815](tasks/TASK-815-phase111-review-remediation.md) | Phase 111 review remediation | 6 | ✅ Complete (no-op) |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-C to SPEC-059/PLAN-107, then audit the live parser/core/engine/typechecker substrate before implementation begins.
 **Track B (Parser + Core Domain Substrate):** 11h. Add the restricted `sealed type domain` surface carriers in `ash-parser`, then land core-owned domain kinds, domain identities, marker-constructor identities, and domain-aware summary carriers in `ash-core`.

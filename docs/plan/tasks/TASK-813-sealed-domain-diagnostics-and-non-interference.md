@@ -24,6 +24,9 @@ Add diagnostics, negative tests, and non-interference coverage proving the seale
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: low
 max_turns: 12
 toolsets: [terminal, file]
@@ -65,11 +68,11 @@ commands:
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Focused parser diagnostic tests pass
-  - [ ] Focused engine non-interference tests pass
-  - [ ] Focused typeck registration diagnostic tests pass
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Focused parser diagnostic tests pass
+  - [x] Focused engine non-interference tests pass
+  - [x] Focused typeck registration diagnostic tests pass
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

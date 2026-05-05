@@ -20,6 +20,9 @@ Reconcile docs, status surfaces, changelog, and verification evidence for Phase 
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: low
 max_turns: 12
 toolsets: [terminal, file]
@@ -60,11 +63,11 @@ commands:
   - cargo fmt --check
   - cargo check --workspace
 checklist:
-  - [ ] git diff --check passes
-  - [ ] All focused Phase 111 suites run and listed by exact target name
-  - [ ] Carried-forward suites listed by target name, rationale, and original task
-  - [ ] Broad verification command and result summary recorded
-  - [ ] SPEC-059, PLAN-107, PLAN-INDEX, CHANGELOG reconciled
+  - [x] git diff --check passes
+  - [x] All focused Phase 111 suites run and listed by exact target name
+  - [x] Carried-forward suites listed by target name, rationale, and original task
+  - [x] Broad verification command and result summary recorded
+  - [x] SPEC-059, PLAN-107, PLAN-INDEX, CHANGELOG reconciled
 ```
 
 ## Notes

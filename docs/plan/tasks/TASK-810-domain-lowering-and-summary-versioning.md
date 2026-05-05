@@ -22,6 +22,9 @@ Lower parsed sealed-domain declarations into core semantic summaries and advance
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: medium
 max_turns: 15
 toolsets: [terminal, file]
@@ -64,11 +67,11 @@ commands:
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Focused lowering/versioning tests pass
-  - [ ] Full ash-core suite passes
-  - [ ] Ordinary type-lowering outputs stable
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Focused lowering/versioning tests pass
+  - [x] Full ash-core suite passes
+  - [x] Ordinary type-lowering outputs stable
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

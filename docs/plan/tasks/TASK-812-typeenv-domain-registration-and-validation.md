@@ -23,6 +23,9 @@ Register and validate local and imported sealed domains plus marker constructors
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: medium
 max_turns: 15
 toolsets: [terminal, file]
@@ -66,11 +69,11 @@ commands:
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Focused registration/validation tests pass
-  - [ ] Full ash-typeck suite passes
-  - [ ] Ordinary type/projection behavior stable
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Focused registration/validation tests pass
+  - [x] Full ash-typeck suite passes
+  - [x] Ordinary type/projection behavior stable
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

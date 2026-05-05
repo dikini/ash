@@ -21,6 +21,9 @@ Add the `ash-core` identity, kind, and semantic-summary carriers required for se
 
 ```
 agent: hermes
+provider: openai-codex
+model: gpt-5.5
+profile: default
 reasoning: medium
 max_turns: 15
 toolsets: [terminal, file]
@@ -64,10 +67,10 @@ commands:
   - cargo clippy --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Focused domain-kind/ID tests pass
-  - [ ] Full ash-core suite passes
-  - [ ] Clippy clean
-  - [ ] Formatting clean
+  - [x] Focused domain-kind/ID tests pass
+  - [x] Full ash-core suite passes
+  - [x] Clippy clean
+  - [x] Formatting clean
 ```
 
 ## Notes

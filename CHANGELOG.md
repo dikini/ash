@@ -29,6 +29,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- [Phase 111 metadata](docs/plan/PLAN-INDEX.md): normalized TASK-807 through TASK-815 task files to the current Ash task template dispatch metadata, explicitly pinning `agent: hermes`, `provider: openai-codex`, `model: gpt-5.5`, and `profile: default` while preserving reasoning tiers (planning/audit high, development medium, testing/verification/mechanical low) and `strictness: clean`. Reconciled the Phase 111 PLAN-INDEX local status table to match completed task files.
+
 - [TASK-804](docs/plan/tasks/TASK-804-spec-b-closeout-docs-and-verification.md): closed the Phase 110 SPEC-B packet honestly by reconciling `SPEC-058`, `docs/spec/README.md`, `PLAN-106`, `PLAN-INDEX`, and the TASK-804 closeout file, recording exact focused verification targets with carried-forward ownership (`TASK-797` parser acceptance/rejection boundaries and `TASK-803` ash-typeck diagnostics/non-interference suites), and documenting successful broad verification with no residual-failure classification required.
 
 - [TASK-803](docs/plan/tasks/TASK-803-spec-b-diagnostics-negative-tests-and-non-interference.md): hardened the Phase 110 SPEC-B diagnostic boundary with focused ash-typeck regression coverage for ambiguous associated projections, unsupported projection bases, wrong-kind/function-base projection rejection, wrong arity on multi-parameter projection spines, full projection-spelling/member diagnostics, and representative non-interference checks across Phase 109 ordinary typing plus workflow/capability/resource/do/comprehension behavior, while restoring the structured `AmbiguousAssociatedType` path instead of collapsing that case into a generic invalid-definition error.

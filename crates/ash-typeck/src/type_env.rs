@@ -10,11 +10,12 @@ use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
+use ash_core::module_graph::ModuleId;
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
-    ConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleSemanticSummary,
-    RepresentationExposure, SealedDomainId, SealedDomainSummary, StructuralFieldStatus,
-    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    ConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleIdentity,
+    ModuleSemanticSummary, RepresentationExposure, SealedDomainId, SealedDomainSummary,
+    StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{CanonicalTypeExpr, ProjectionRigidity};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
@@ -454,6 +455,61 @@ pub struct SelectedScheme {
     pub substitution: Substitution,
 }
 
+fn canonical_expr_to_type_for_alias(expr: &CanonicalTypeExpr) -> Option<Type> {
+    match expr {
+        CanonicalTypeExpr::Primitive(name) => match name.as_str() {
+            "Int" => Some(Type::Int),
+            "String" => Some(Type::String),
+            "Bool" => Some(Type::Bool),
+            "Float" => Some(Type::Float),
+            "Null" | "Unit" => Some(Type::Null),
+            "Time" => Some(Type::Time),
+            "Ref" => Some(Type::Ref),
+            _ => None,
+        },
+        CanonicalTypeExpr::Var(name) => looks_like_unbound_type_var_name(name)
+            .then_some(Type::Var(TypeVar(stable_alias_type_var_id(name)))),
+        CanonicalTypeExpr::NominalApp {
+            visible_name,
+            args,
+            kind,
+            ..
+        } => Some(Type::Constructor {
+            name: QualifiedName::root(visible_name.clone()),
+            args: args
+                .iter()
+                .map(canonical_expr_to_type_for_alias)
+                .collect::<Option<_>>()?,
+            kind: kind.clone(),
+        }),
+        CanonicalTypeExpr::Projection { .. } | CanonicalTypeExpr::ComputationHeadApp { .. } => None,
+    }
+}
+
+fn stable_alias_type_var_id(name: &str) -> u32 {
+    name.bytes().fold(0x8230_0000, |acc, byte| {
+        acc.wrapping_mul(16777619).wrapping_add(u32::from(byte))
+    })
+}
+
+fn collect_canonical_alias_var_names(
+    expr: &CanonicalTypeExpr,
+    names: &mut HashMap<TypeVar, String>,
+) {
+    match expr {
+        CanonicalTypeExpr::Var(name) if looks_like_unbound_type_var_name(name) => {
+            names.insert(TypeVar(stable_alias_type_var_id(name)), name.clone());
+        }
+        CanonicalTypeExpr::NominalApp { args, .. }
+        | CanonicalTypeExpr::Projection { args, .. }
+        | CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
+            for arg in args {
+                collect_canonical_alias_var_names(arg, names);
+            }
+        }
+        CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => {}
+    }
+}
 fn resolve_associated_interface_from_type_var_bounds(
     type_env: &TypeEnv,
     base_ty: &Type,
@@ -2693,6 +2749,117 @@ impl TypeEnv {
             .unwrap_or_else(|| interface_name.to_string());
 
         Some((canonical_interface, member_id.name.clone()))
+    }
+
+    /// Returns the canonical target of a transparent nominal alias application
+    /// when all alias arguments are representable in the current type API.
+    ///
+    /// This helper is intentionally narrow for the Phase 112 normalizer: it only
+    /// peels already-registered transparent aliases at normalizer inputs and does
+    /// not force associated projections or install new equality forcing points.
+    #[must_use]
+    pub fn transparent_alias_canonical_target(
+        &self,
+        visible_name: &str,
+        args: &[CanonicalTypeExpr],
+    ) -> Option<CanonicalTypeExpr> {
+        let type_args: Vec<_> = args
+            .iter()
+            .map(canonical_expr_to_type_for_alias)
+            .collect::<Option<_>>()?;
+        let mut var_names = HashMap::new();
+        for arg in args {
+            collect_canonical_alias_var_names(arg, &mut var_names);
+        }
+        let target =
+            self.transparent_alias_target(&QualifiedName::root(visible_name), &type_args)?;
+        self.type_to_canonical_expr_for_alias(&target, &var_names)
+    }
+
+    fn type_to_canonical_expr_for_alias(
+        &self,
+        ty: &Type,
+        var_names: &HashMap<TypeVar, String>,
+    ) -> Option<CanonicalTypeExpr> {
+        match ty {
+            Type::Int => Some(CanonicalTypeExpr::Primitive("Int".to_string())),
+            Type::String => Some(CanonicalTypeExpr::Primitive("String".to_string())),
+            Type::Bool => Some(CanonicalTypeExpr::Primitive("Bool".to_string())),
+            Type::Float => Some(CanonicalTypeExpr::Primitive("Float".to_string())),
+            Type::Null => Some(CanonicalTypeExpr::Primitive("Null".to_string())),
+            Type::Time => Some(CanonicalTypeExpr::Primitive("Time".to_string())),
+            Type::Ref => Some(CanonicalTypeExpr::Primitive("Ref".to_string())),
+            Type::Var(var) => Some(CanonicalTypeExpr::Var(
+                var_names
+                    .get(var)
+                    .cloned()
+                    .unwrap_or_else(|| format!("T{}", var.0)),
+            )),
+            Type::Constructor { name, args, kind } if name.is_root() => {
+                let args = args
+                    .iter()
+                    .map(|arg| self.type_to_canonical_expr_for_alias(arg, var_names))
+                    .collect::<Option<_>>()?;
+                Some(CanonicalTypeExpr::NominalApp {
+                    origin: self
+                        .type_identity_for_name(&name.name)
+                        .cloned()
+                        .unwrap_or_else(|| {
+                            TypeDeclId::ordinary(
+                                ModuleIdentity::new(
+                                    None,
+                                    ModuleId(0),
+                                    vec!["transparent_alias".to_string(), "fallback".to_string()],
+                                    ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
+                                        reason: "transparent alias canonical target fallback"
+                                            .to_string(),
+                                    },
+                                ),
+                                name.name.clone(),
+                            )
+                        }),
+                    visible_name: name.name.clone(),
+                    args,
+                    kind: kind.clone(),
+                })
+            }
+            Type::Associated {
+                interface,
+                base,
+                name,
+            } => {
+                let base = self.type_to_canonical_expr_for_alias(base, var_names)?;
+                self.lower_associated_projection_to_canonical(&base, name)
+                    .ok()
+                    .map(|projection| match projection {
+                        CanonicalTypeExpr::Projection {
+                            interface: projection_interface,
+                            member,
+                            args,
+                            kind,
+                            rigidity,
+                        } if projection_interface.name == *interface => {
+                            CanonicalTypeExpr::Projection {
+                                interface: projection_interface,
+                                member,
+                                args,
+                                kind,
+                                rigidity,
+                            }
+                        }
+                        other => other,
+                    })
+            }
+            Type::List(_)
+            | Type::Record(_)
+            | Type::Cap { .. }
+            | Type::Fun(_, _, _)
+            | Type::Fn(_, _)
+            | Type::Instance { .. }
+            | Type::InstanceAddr { .. }
+            | Type::ControlLink { .. }
+            | Type::Constructor { .. } => None,
+        }
     }
 
     /// Recursively peel registered transparent aliases inside a type without

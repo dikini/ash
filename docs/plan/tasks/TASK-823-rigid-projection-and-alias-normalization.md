@@ -1,6 +1,6 @@
 # TASK-823: Neutral/Rigid Projection and Alias Normalization
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -75,3 +75,7 @@ checklist:
 ## Notes
 
 Task type: Type/Semantic. Estimated effort: 5 hours. Keep the slice compilable and do not widen beyond SPEC-060 scope.
+
+## Completion Notes
+
+Implemented in the Phase 112 normalizer with focused tests in `crates/ash-typeck/tests/task_823_rigid_projection_alias_normalization.rs`. The normalizer now peels registered transparent aliases only at normalizer inputs via a narrow `TypeEnv` helper, recursively normalizes rigid and neutral projection argument spines (including nested reducible fixture computations), preserves `ProjectionRigidity` and blocker reasons, and intentionally leaves associated projections as structural normal forms without recursive associated-family reduction or new equality forcing-point adoption.

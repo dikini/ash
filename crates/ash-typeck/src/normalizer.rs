@@ -358,7 +358,7 @@ pub type NormalizationResult<T> = Result<T, NormalizationError>;
 
 /// Environment-aware normalizer.
 pub struct Normalizer<'env> {
-    _env: &'env TypeEnv,
+    env: &'env TypeEnv,
     config: NormalizationConfig,
     fixture_registry: &'env FixtureEquationRegistry,
 }
@@ -402,7 +402,7 @@ impl<'env> Normalizer<'env> {
         registry: &'env FixtureEquationRegistry,
     ) -> Self {
         Self {
-            _env: env,
+            env,
             config,
             fixture_registry: registry,
         }
@@ -416,6 +416,7 @@ impl<'env> Normalizer<'env> {
             trace_enabled: self.config.trace,
             trace: Vec::new(),
             fixture_registry: self.fixture_registry,
+            env: self.env,
         };
         let (normal, evidence) = state.normalize_expr(expr)?;
         Ok(NormalizationOutcome {
@@ -594,6 +595,7 @@ struct NormalizationState<'env> {
     trace_enabled: bool,
     trace: Vec<NormalizationTraceEvent>,
     fixture_registry: &'env FixtureEquationRegistry,
+    env: &'env TypeEnv,
 }
 
 enum ComputationReduction {
@@ -625,15 +627,24 @@ impl<'env> NormalizationState<'env> {
                 visible_name,
                 args,
                 kind,
-            } => (
-                NormalTypeExpr::NominalApp {
-                    origin: origin.clone(),
-                    visible_name: visible_name.clone(),
-                    args: self.normalize_args(args)?,
-                    kind: kind.clone(),
-                },
-                NormalizationEvidence::StructuralIdentity,
-            ),
+            } => {
+                if let Some(target) = self
+                    .env
+                    .transparent_alias_canonical_target(visible_name, args)
+                {
+                    self.normalize_expr(&target)?
+                } else {
+                    (
+                        NormalTypeExpr::NominalApp {
+                            origin: origin.clone(),
+                            visible_name: visible_name.clone(),
+                            args: self.normalize_args(args)?,
+                            kind: kind.clone(),
+                        },
+                        NormalizationEvidence::StructuralIdentity,
+                    )
+                }
+            }
             CanonicalTypeExpr::Projection {
                 interface,
                 member,

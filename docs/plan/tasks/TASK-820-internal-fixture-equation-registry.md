@@ -46,7 +46,7 @@ Add an internal, non-exported fixture equation registry for test-only / explicit
 ## Files
 
 - Modify: `crates/ash-typeck/src/normalizer.rs`
-- Test: `crates/ash-typeck/tests/task_820_fixture_equation_registry.rs`
+- Test: `crates/ash-typeck/tests/task_820_internal_fixture_equation_registry.rs`
 
 ## TDD Steps
 

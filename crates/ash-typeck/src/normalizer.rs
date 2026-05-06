@@ -1183,9 +1183,9 @@ impl<'env> NormalizationState<'env> {
                 args,
                 kind,
             } => {
-                if let Some(target) = self
-                    .env
-                    .transparent_alias_canonical_target(visible_name, args)
+                if let Some(target) =
+                    self.env
+                        .transparent_alias_canonical_target(origin, visible_name, args)
                 {
                     self.normalize_expr(&target)?
                 } else {

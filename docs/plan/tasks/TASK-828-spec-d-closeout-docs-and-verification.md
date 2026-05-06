@@ -86,7 +86,7 @@ Task type: Docs/Planning. Estimated effort: 4 hours. Keep the slice compilable a
 Recorded during TASK-828 closeout in `.worktrees/phase-112`:
 
 - `cargo test -p ash-core --test task_818_normal_form_carriers`: passed, 5 tests.
-- `cargo test -p ash-typeck --test task_819_normalizer_api_skeleton --test task_820_internal_fixture_equation_registry --test task_821_closed_computation_head_reduction --test task_822_open_neutral_partial_normalization --test task_823_rigid_projection_alias_normalization --test task_824_definitional_equality --test task_825_non_inverting_unification_boundary --test task_826_typeenv_forcing_point_rollout --test task_827_normalizer_diagnostics`: passed, 62 focused tests.
+- `cargo test -p ash-typeck --test task_819_normalizer_api_skeleton --test task_820_internal_fixture_equation_registry --test task_821_closed_computation_head_reduction --test task_822_open_neutral_partial_normalization --test task_823_rigid_projection_alias_normalization --test task_824_definitional_equality --test task_825_non_inverting_unification_boundary --test task_826_typeenv_forcing_point_rollout --test task_827_normalizer_diagnostics`: passed, 63 focused tests.
 - `cargo test -p ash-parser --test task_827_no_public_type_fn_syntax`: passed, 2 parser non-interference tests.
 - `cargo fmt --check`: passed.
 - `git diff --check`: passed.

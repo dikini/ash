@@ -1,6 +1,6 @@
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, Visibility};
 use ash_core::kind::Kind;
-use ash_core::module_graph::ModuleId;
+use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, DomainConstructorId, InterfaceIdentityId, ModuleIdentity,
     ModuleSourceOrigin, SealedDomainId, TypeDeclId,
@@ -149,9 +149,28 @@ fn normalize(expr: &CanonicalTypeExpr) -> NormalTypeExpr {
     normalize_with(&TypeEnv::new(), expr)
 }
 
-fn nominal(name: &str, args: Vec<CanonicalTypeExpr>) -> CanonicalTypeExpr {
+fn registered_nominal(
+    env: &TypeEnv,
+    name: &str,
+    args: Vec<CanonicalTypeExpr>,
+) -> CanonicalTypeExpr {
     CanonicalTypeExpr::NominalApp {
-        origin: TypeDeclId::ordinary(module(), name),
+        origin: env
+            .type_identity_for_name(name)
+            .cloned()
+            .unwrap_or_else(|| {
+                TypeDeclId::ordinary(
+                    ModuleIdentity::new(
+                        Some(CrateId(usize::MAX)),
+                        ModuleId(usize::MAX),
+                        vec!["typeenv".to_string(), "defeq_fallback".to_string()],
+                        ModuleSourceOrigin::Synthetic {
+                            reason: "TASK-826 guarded TypeEnv defeq fallback identity".to_string(),
+                        },
+                    ),
+                    name,
+                )
+            }),
         visible_name: name.to_string(),
         args,
         kind: Kind::Type,
@@ -229,13 +248,16 @@ fn transparent_aliases_are_expanded_inside_normalizer_inputs_before_comparison_f
     .expect("register transparent alias");
 
     assert_eq!(
-        normalize_with(&env, &nominal("UserId", vec![])),
+        normalize_with(&env, &registered_nominal(&env, "UserId", vec![])),
         NormalTypeExpr::Primitive("String".to_string())
     );
     assert_eq!(
         normalize_with(
             &env,
-            &projection(ProjectionRigidity::Rigid, vec![nominal("UserId", vec![])])
+            &projection(
+                ProjectionRigidity::Rigid,
+                vec![registered_nominal(&env, "UserId", vec![])],
+            )
         ),
         normalized_projection(
             ProjectionRigidity::Rigid,
@@ -275,9 +297,50 @@ fn generic_transparent_alias_preserves_canonical_variable_spelling() {
     assert_eq!(
         normalize_with(
             &env,
-            &nominal("Id", vec![CanonicalTypeExpr::Var("A".to_string())])
+            &registered_nominal(&env, "Id", vec![CanonicalTypeExpr::Var("A".to_string())])
         ),
         NormalTypeExpr::Var("A".to_string())
+    );
+}
+
+#[test]
+fn transparent_alias_does_not_expand_same_visible_name_with_different_origin() {
+    let mut env = TypeEnv::new();
+    env.register_type(&TypeDef {
+        name: "Id".to_string(),
+        params: vec!["T".to_string()],
+        body: TypeBody::Alias(TypeExpr::Named("T".to_string())),
+        visibility: Visibility::Public,
+        builtin: false,
+    })
+    .expect("register local transparent alias");
+
+    let foreign_origin = TypeDeclId::ordinary(
+        ModuleIdentity::new(
+            None,
+            ModuleId(9_826),
+            vec!["task_823".to_string(), "foreign_id".to_string()],
+            ModuleSourceOrigin::Synthetic {
+                reason: "foreign same-visible-name alias identity".to_string(),
+            },
+        ),
+        "Id",
+    );
+    let foreign_id = CanonicalTypeExpr::NominalApp {
+        origin: foreign_origin.clone(),
+        visible_name: "Id".to_string(),
+        args: vec![CanonicalTypeExpr::Var("A".to_string())],
+        kind: Kind::Type,
+    };
+
+    assert_eq!(
+        normalize_with(&env, &foreign_id),
+        NormalTypeExpr::NominalApp {
+            origin: foreign_origin,
+            visible_name: "Id".to_string(),
+            args: vec![NormalTypeExpr::Var("A".to_string())],
+            kind: Kind::Type,
+        }
     );
 }
 
@@ -312,7 +375,10 @@ fn transparent_alias_bridge_preserves_unregistered_nominal_origin() {
     };
 
     assert_eq!(
-        normalize_with(&env, &nominal("Id", vec![external.clone()])),
+        normalize_with(
+            &env,
+            &registered_nominal(&env, "Id", vec![external.clone()])
+        ),
         NormalTypeExpr::NominalApp {
             origin: external_origin,
             visible_name: "External".to_string(),
@@ -321,7 +387,10 @@ fn transparent_alias_bridge_preserves_unregistered_nominal_origin() {
         }
     );
     assert_eq!(
-        normalize_with(&env, &nominal("Id", vec![external.clone()])),
+        normalize_with(
+            &env,
+            &registered_nominal(&env, "Id", vec![external.clone()])
+        ),
         normalize_with(&env, &external)
     );
 }
@@ -390,13 +459,18 @@ fn transparent_alias_bridge_preserves_same_visible_nominals_with_different_origi
         kind: Kind::Type,
     };
 
-    match normalize_with(&env, &nominal("PairAlias", vec![external_a, external_b])) {
+    match normalize_with(
+        &env,
+        &registered_nominal(&env, "PairAlias", vec![external_a, external_b]),
+    ) {
         NormalTypeExpr::NominalApp {
+            origin,
             visible_name,
             args,
             kind,
-            ..
         } => {
+            assert_eq!(origin.module.crate_id, Some(CrateId(usize::MAX)));
+            assert_eq!(origin.module.module_id, ModuleId(usize::MAX));
             assert_eq!(visible_name, "Pair");
             assert_eq!(kind, Kind::Type);
             assert_eq!(

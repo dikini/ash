@@ -284,6 +284,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+- Tightened Phase 112 transparent alias normalization to require registered alias identity matches, moved fallback canonical identities into a non-colliding synthetic space, and corrected stale TASK-820/TASK-822 test-target references.
 - Preserved unregistered canonical nominal origins through Phase 112 transparent alias expansion and corrected stale Phase 112 focused-test evidence counts.
 - Hardened Phase 112 definitional equality mismatch classification so structurally disjoint neutral/projection/data heads report known inequality instead of neutrality-blocked evidence (TASK-829).
 

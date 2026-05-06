@@ -1,6 +1,6 @@
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, Visibility as CoreVisibility};
 use ash_core::kind::Kind;
-use ash_core::module_graph::ModuleId;
+use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, InterfaceIdentityId,
     InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, ModuleSourceOrigin,
@@ -54,6 +54,25 @@ fn anchor(label: &str) -> SourceAnchor {
 fn nominal(name: &str, args: Vec<CanonicalTypeExpr>) -> CanonicalTypeExpr {
     CanonicalTypeExpr::NominalApp {
         origin: type_id(name),
+        visible_name: name.to_string(),
+        args,
+        kind: Kind::Type,
+    }
+}
+
+fn fallback_nominal(name: &str, args: Vec<CanonicalTypeExpr>) -> CanonicalTypeExpr {
+    CanonicalTypeExpr::NominalApp {
+        origin: TypeDeclId::ordinary(
+            ModuleIdentity::new(
+                Some(CrateId(usize::MAX)),
+                ModuleId(usize::MAX),
+                vec!["typeenv".to_string(), "defeq_fallback".to_string()],
+                ModuleSourceOrigin::Synthetic {
+                    reason: "TASK-826 guarded TypeEnv defeq fallback identity".to_string(),
+                },
+            ),
+            name,
+        ),
         visible_name: name.to_string(),
         args,
         kind: Kind::Type,
@@ -211,7 +230,7 @@ fn task_826_projection_argument_spines_normalize_without_losing_rigidity() {
     let env = env_with_projection_interface();
     let iterable = interface_id("Iterable");
     let member = member_id(iterable.clone(), "Item");
-    let aliased = nominal(
+    let aliased = fallback_nominal(
         "AliasBox",
         vec![CanonicalTypeExpr::Primitive("Int".to_string())],
     );

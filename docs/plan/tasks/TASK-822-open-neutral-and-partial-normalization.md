@@ -46,7 +46,7 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 ## Files
 
 - Modify: `crates/ash-typeck/src/normalizer.rs`
-- Test: `crates/ash-typeck/tests/task_822_open_neutral_normalization.rs`
+- Test: `crates/ash-typeck/tests/task_822_open_neutral_partial_normalization.rs`
 
 ## TDD Steps
 
@@ -61,7 +61,7 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 ```
 strictness: clean
 commands:
-  - cargo test -p ash-typeck --test task_822_open_neutral_normalization
+  - cargo test -p ash-typeck --test task_822_open_neutral_partial_normalization
   - cargo test -p ash-typeck --test task_821_closed_computation_head_reduction
   - cargo fmt --check
 checklist:

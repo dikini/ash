@@ -11,7 +11,7 @@ use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use crate::{Kind, QualifiedName};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
-use ash_core::module_graph::ModuleId;
+use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleIdentity,
@@ -474,8 +474,8 @@ impl AliasCanonicalVarBridge {
 fn fallback_canonical_type_decl_id(name: &str) -> TypeDeclId {
     TypeDeclId::ordinary(
         ModuleIdentity::new(
-            None,
-            ModuleId(0),
+            Some(CrateId(usize::MAX)),
+            ModuleId(usize::MAX),
             vec!["typeenv".to_string(), "defeq_fallback".to_string()],
             ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
                 reason: "TASK-826 guarded TypeEnv defeq fallback identity".to_string(),
@@ -2755,9 +2755,17 @@ impl TypeEnv {
     #[must_use]
     pub fn transparent_alias_canonical_target(
         &self,
+        origin: &TypeDeclId,
         visible_name: &str,
         args: &[CanonicalTypeExpr],
     ) -> Option<CanonicalTypeExpr> {
+        let registered_origin = self
+            .type_identity_for_name(visible_name)
+            .cloned()
+            .unwrap_or_else(|| fallback_canonical_type_decl_id(visible_name));
+        if registered_origin != *origin {
+            return None;
+        }
         let mut bridge = AliasCanonicalVarBridge::default();
         let type_args: Vec<_> = args
             .iter()
@@ -2816,20 +2824,7 @@ impl TypeEnv {
                     origin: self
                         .type_identity_for_name(&name.name)
                         .cloned()
-                        .unwrap_or_else(|| {
-                            TypeDeclId::ordinary(
-                                ModuleIdentity::new(
-                                    None,
-                                    ModuleId(0),
-                                    vec!["transparent_alias".to_string(), "fallback".to_string()],
-                                    ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
-                                        reason: "transparent alias canonical target fallback"
-                                            .to_string(),
-                                    },
-                                ),
-                                name.name.clone(),
-                            )
-                        }),
+                        .unwrap_or_else(|| fallback_canonical_type_decl_id(&name.name)),
                     visible_name: name.name.clone(),
                     args,
                     kind: kind.clone(),

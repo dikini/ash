@@ -1,6 +1,18 @@
 # TASK-819: Typechecker Normalizer API Skeleton
 
-## Status: 📝 Planned
+## Status: ✅ Complete
+
+## Completion Notes
+
+Implemented the `ash-typeck::normalizer` API skeleton with environment-borrowing `Normalizer<'env>`, normalization modes/config/fuel, structured outcome/evidence/trace carriers, and distinct fuel/cycle error scaffolding. The current behavior is deliberately identity/structural only: primitives, variables, nominal apps, computation heads, and projections are converted to `NormalTypeExpr` without fixture equations, reduction semantics, definitional equality adoption, or associated-family computation.
+
+## Verification Evidence
+
+- TDD red: `cargo test -p ash-typeck --test task_819_normalizer_api_skeleton` initially failed with unresolved `ash_typeck::normalizer`.
+- Pass: `cargo test -p ash-typeck --test task_819_normalizer_api_skeleton` (6 tests)
+- Pass: `cargo test -p ash-typeck normalizer`
+- Pass: `cargo fmt --check`
+- Pass: `git diff --check`
 
 ## Description
 
@@ -17,7 +29,7 @@ Add the ash-typeck normalizer module, options, outcomes, error types, and identi
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-818](TASK-818-core-normal-form-and-domain-constructor-carriers.md) (planned predecessor)
+- ✅ [TASK-818](TASK-818-core-normal-form-and-domain-constructor-carriers.md) (completed predecessor)
 
 ## Dispatch
 
@@ -66,9 +78,9 @@ commands:
   - cargo test -p ash-typeck
   - cargo fmt --check
 checklist:
-  - [ ] Normalizer module compiles
-  - [ ] Identity normalization tests pass
-  - [ ] Fuel/cycle error types exist but are not conflated with neutral stuckness
+  - [x] Normalizer module compiles (`cargo test -p ash-typeck --test task_819_normalizer_api_skeleton`)
+  - [x] Identity normalization tests pass (`cargo test -p ash-typeck --test task_819_normalizer_api_skeleton`)
+  - [x] Fuel/cycle error types exist but are not conflated with neutral stuckness (`cargo test -p ash-typeck --test task_819_normalizer_api_skeleton`)
 ```
 
 ## Notes

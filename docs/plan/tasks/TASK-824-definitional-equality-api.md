@@ -1,6 +1,6 @@
 # TASK-824: Definitional Equality API
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,7 @@ Add a structured normalize-and-compare definitional equality API over normal for
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-823](TASK-823-rigid-projection-and-alias-normalization.md) (planned predecessor)
+- ✅ [TASK-823](TASK-823-rigid-projection-and-alias-normalization.md)
 
 ## Dispatch
 
@@ -62,15 +62,22 @@ Add a structured normalize-and-compare definitional equality API over normal for
 strictness: clean
 commands:
   - cargo test -p ash-typeck --test task_824_definitional_equality
-  - cargo test -p ash-typeck --test task_822_open_neutral_normalization
+  - cargo test -p ash-typeck --test task_822_open_neutral_partial_normalization
   - cargo fmt --check
 checklist:
-  - [ ] Structured equality tests pass
-  - [ ] Boolean wrapper is derived from structured result
-  - [ ] Mismatch evidence contains normalized slices
-  - [ ] Neutral/rigid projections compare by identity, rigidity, and normalized arguments
+  - [x] Structured equality tests pass
+  - [x] Boolean wrapper is derived from structured result
+  - [x] Mismatch evidence contains normalized slices
+  - [x] Neutral/rigid projections compare by identity, rigidity, and normalized arguments
 ```
 
 ## Notes
 
 Task type: Type/Semantic. Estimated effort: 6 hours. Keep the slice compilable and do not widen beyond SPEC-060 scope.
+
+## Completion Notes
+
+- Implemented `DefinitionalEqualityResult::{Equal, NotEqual, BlockedByNeutrality}` and `Normalizer::definitional_equality(...)` as normalize-and-compare over canonical normal forms.
+- Added `Normalizer::definitionally_equal(...)` as a boolean convenience wrapper derived from the structured result.
+- Equality compares normal-form heads by canonical identities, kind/rigidity where applicable, and recursively normalized argument spines. It does not perform proof search, inversion, associated-family computation, or TypeEnv forcing-point rollout.
+- Added focused `task_824_*` tests covering closed reduction equality, open neutral structural equality, neutral/rigid projection structural equality, normalized mismatch slices, blocker evidence, and fuel/error propagation.

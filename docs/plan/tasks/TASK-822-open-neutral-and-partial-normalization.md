@@ -1,6 +1,6 @@
 # TASK-822: Open Neutral and Partial Normalization
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,7 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-821](TASK-821-closed-computation-head-reduction.md) (planned predecessor)
+- ✅ [TASK-821](TASK-821-closed-computation-head-reduction.md) (completed predecessor)
 
 ## Dispatch
 
@@ -46,7 +46,7 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 ## Files
 
 - Modify: `crates/ash-typeck/src/normalizer.rs`
-- Test: `crates/ash-typeck/tests/task_822_open_neutral_normalization.rs`
+- Test: `crates/ash-typeck/tests/task_822_open_neutral_partial_normalization.rs`
 
 ## TDD Steps
 
@@ -61,14 +61,20 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 ```
 strictness: clean
 commands:
-  - cargo test -p ash-typeck --test task_822_open_neutral_normalization
-  - cargo test -p ash-typeck --test task_821_closed_computation_reduction
+  - cargo test -p ash-typeck --test task_822_open_neutral_partial_normalization
+  - cargo test -p ash-typeck --test task_821_closed_computation_head_reduction
   - cargo fmt --check
 checklist:
-  - [ ] Open neutral tests pass
-  - [ ] Partial prefix tests pass
-  - [ ] Neutral forms include non-inverting stuck reasons
+  - [x] Open neutral tests pass
+  - [x] Partial prefix tests pass
+  - [x] Neutral forms include non-inverting stuck reasons
 ```
+
+## Completion Notes
+
+- Added focused `task_822_open_neutral_partial_normalization` tests for open `Append<Xs, Ys>` neutrality, nested open tails under `Cons`, normalized argument spines containing rigid projections, open `Append<Nil, Ys>` partial prefix reduction, and rejection of an open catch-all equation.
+- Implemented open-aware fixture matching in the normalizer so constructor-pattern equations can reduce known prefixes while abstract variables/projections/neutral blockers preserve canonical neutral computation apps with normalized argument spines.
+- Preserved the no-inversion boundary by refusing to bind top-level open neutral arguments through catch-all variable-pattern equations.
 
 ## Notes
 

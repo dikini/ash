@@ -1,6 +1,6 @@
 # TASK-817: Normalizer / Definitional Equality Audit Gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -69,14 +69,18 @@ strictness: clean
 commands:
   - git diff --check
 checklist:
-  - [ ] Audit artifact exists
-  - [ ] Audit cites live files/functions
-  - [ ] Audit includes an exact forcing-point matrix consumed by TASK-826
-  - [ ] Audit marks public type fn/source syntax/export work out of scope
-  - [ ] Audit maps canonical abstract variables versus inference metas
-  - [ ] Audit names rendering callsites and deferred/fallback callsites
+  - [x] Audit artifact exists
+  - [x] Audit cites live files/functions
+  - [x] Audit includes an exact forcing-point matrix consumed by TASK-826
+  - [x] Audit marks public type fn/source syntax/export work out of scope
+  - [x] Audit maps canonical abstract variables versus inference metas
+  - [x] Audit names rendering callsites and deferred/fallback callsites
 ```
 
 ## Notes
 
 Task type: Docs/Substrate. Estimated effort: 4 hours. Keep the slice compilable and do not widen beyond SPEC-060 scope.
+
+## Completion Notes
+
+Completed in this slice by creating [`../audits/TASK-817-normalizer-defeq-audit.md`](../audits/TASK-817-normalizer-defeq-audit.md). The audit records the exact live `ash-core` and `ash-typeck` normalizer/equality seams, the TASK-826 forcing-point matrix with deferred/fallback status, the canonical abstract-variable versus inference-meta boundary, and the selected rendering callsites. Public `type fn` source syntax, source equations, recursive associated-family computation, and equation export/import remain out of scope.

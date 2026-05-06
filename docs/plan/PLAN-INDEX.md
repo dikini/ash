@@ -288,7 +288,7 @@ Update this section as tasks complete:
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
-| 112 | 14 | 1 | 📝 Planned |
+| 112 | 14 | 14 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -397,7 +397,7 @@ This table is retained near the original early-phase section for historical cont
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
-| 112 | 14 | 1 | 📝 Planned |
+| 112 | 14 | 14 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3240,7 +3240,7 @@ Boundary note: marker constructors are not promoted ADT constructors, not ordina
 ## Phase 112: Normalizer and Definitional Equality Core
 
 **Priority:** High (DESIGN-034 SPEC-D substrate required before direct structural `type fn`, type-computation export/import, associated families, and proposition solving)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-108-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md](PLAN-108-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
@@ -3252,19 +3252,19 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-816](tasks/TASK-816-spec-d-spec-plan-packet.md) | SPEC-D spec/plan packet | 4 | ✅ Complete |
-| [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Normalizer / definitional equality audit gate | 4 | 📝 Planned |
-| [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Core normal-form and domain-constructor carriers | 5 | 📝 Planned |
-| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Typechecker normalizer API skeleton | 5 | 📝 Planned |
-| [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Internal fixture equation registry | 5 | 📝 Planned |
-| [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Closed computation-head reduction | 6 | 📝 Planned |
-| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Open neutral and partial normalization | 6 | 📝 Planned |
-| [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Neutral/rigid projection and alias normalization | 5 | 📝 Planned |
-| [TASK-824](tasks/TASK-824-definitional-equality-api.md) | Definitional equality API | 6 | 📝 Planned |
-| [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Non-inverting unification boundary | 5 | 📝 Planned |
-| [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | TypeEnv forcing-point rollout | 7 | 📝 Planned |
-| [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Normalizer diagnostics and non-interference | 6 | 📝 Planned |
-| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | SPEC-D closeout docs and verification | 4 | 📝 Planned |
-| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Phase 112 review remediation | 6 | 📝 Planned |
+| [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Normalizer / definitional equality audit gate | 4 | ✅ Complete |
+| [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Core normal-form and domain-constructor carriers | 5 | ✅ Complete |
+| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Typechecker normalizer API skeleton | 5 | ✅ Complete |
+| [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Internal fixture equation registry | 5 | ✅ Complete |
+| [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Closed computation-head reduction | 6 | ✅ Complete |
+| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Open neutral and partial normalization | 6 | ✅ Complete |
+| [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Neutral/rigid projection and alias normalization | 5 | ✅ Complete |
+| [TASK-824](tasks/TASK-824-definitional-equality-api.md) | Definitional equality API | 6 | ✅ Complete |
+| [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Non-inverting unification boundary | 5 | ✅ Complete |
+| [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | TypeEnv forcing-point rollout | 7 | ✅ Complete |
+| [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Normalizer diagnostics and non-interference | 6 | ✅ Complete |
+| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | SPEC-D closeout docs and verification | 4 | ✅ Complete |
+| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Phase 112 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-D to SPEC-060/PLAN-108, then audit live canonicalization/equality/forcing seams and produce an exact forcing-point matrix before Rust changes.
 **Track B (Normal-Form and Normalizer Substrate):** 15h. Add shared normal-form/domain-constructor carriers, the `ash-typeck` normalizer skeleton, and internal fixture equation tables.

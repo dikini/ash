@@ -1,6 +1,6 @@
 # TASK-823: Neutral/Rigid Projection and Alias Normalization
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,7 @@ Normalize transparent aliases plus neutral and rigid projection argument spines 
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-822](TASK-822-open-neutral-and-partial-normalization.md) (planned predecessor)
+- ✅ [TASK-822](TASK-822-open-neutral-and-partial-normalization.md) (completed predecessor)
 
 ## Dispatch
 
@@ -67,11 +67,15 @@ commands:
   - cargo test -p ash-typeck --test task_800_associated_projection_canonicalization_red
   - cargo fmt --check
 checklist:
-  - [ ] Alias normalization tests pass
-  - [ ] Neutral and rigid projection structural tests pass
-  - [ ] No associated-family computation path is added
+  - [x] Alias normalization tests pass (`cargo test -p ash-typeck --test task_823_rigid_projection_alias_normalization`)
+  - [x] Neutral and rigid projection structural tests pass (`cargo test -p ash-typeck --test task_823_rigid_projection_alias_normalization`)
+  - [x] No associated-family computation path is added; projections preserve rigidity without solver/inversion (`cargo test -p ash-typeck --test task_823_rigid_projection_alias_normalization`)
 ```
 
 ## Notes
 
 Task type: Type/Semantic. Estimated effort: 5 hours. Keep the slice compilable and do not widen beyond SPEC-060 scope.
+
+## Completion Notes
+
+Implemented in the Phase 112 normalizer with focused tests in `crates/ash-typeck/tests/task_823_rigid_projection_alias_normalization.rs`. The normalizer now peels registered transparent aliases only at normalizer inputs via a narrow `TypeEnv` helper, recursively normalizes rigid and neutral projection argument spines (including nested reducible fixture computations), preserves `ProjectionRigidity` and blocker reasons, and intentionally leaves associated projections as structural normal forms without recursive associated-family reduction or new equality forcing-point adoption.

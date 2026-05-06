@@ -1,6 +1,6 @@
 # SPEC-060: Normalizer and Definitional Equality Core
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-06
 **Promotes:** [DESIGN-034 §16.4](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Builds on:** [SPEC-057](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -163,6 +163,8 @@ Full normalization recursively normalizes every reachable subterm and repeatedly
 
 Demand-driven normalization is a use-site policy that chooses weak-head or full normalization based on the question being asked. Equality must normalize enough to decide comparison or produce a precise neutrality-blocked diagnostic.
 
+Phase 112 MVP note: the public config surface reserves `WeakHead` and `Demand` mode names, but the implemented normalizer uses the recursive full-normalization behavior for current comparisons. `Normalizer::definitional_equality` explicitly forces `Full` mode; future work may make weak-head/demand normalization operationally distinct without changing equality semantics.
+
 ### 8.4 Open terms
 
 If equation selection is blocked by an abstract type variable, unresolved neutral computation head, neutral projection, or rigid projection, normalization returns a canonical neutral/projection form rather than an error.
@@ -283,3 +285,8 @@ Deferred to SPEC-E/F/G/H or later:
 - proposition/disequality proof search;
 - target inference, partial type-constructor application, and holes;
 - public syntax for generalized associated-family projections.
+
+
+## Implementation Status
+
+Phase 112 implemented the internal SPEC-D normalizer and definitional equality core through TASK-829, with closeout verification recorded in TASK-828 and post-review remediation recorded in TASK-829. The implementation remains internal-only: public `type fn` syntax, source equation validation, associated-family solving, proof search, recursive user computation, type-function inversion, and fixture equation summary export/import are still deferred.

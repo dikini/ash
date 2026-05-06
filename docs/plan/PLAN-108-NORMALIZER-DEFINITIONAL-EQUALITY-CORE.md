@@ -12,7 +12,7 @@
 
 ## Phase 112: Normalizer and Definitional Equality Core
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete (TASK-829 review/remediation closed)
 **Spec:** [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -22,19 +22,19 @@
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-816](tasks/TASK-816-spec-d-spec-plan-packet.md) | Promote DESIGN-034 SPEC-D into SPEC-060/PLAN-108 and register Phase 112 | Docs/Planning | 4 | ✅ Complete |
-| [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Audit live canonicalization/equality/forcing seams before implementation | Docs/Substrate | 4 | 📝 Planned |
-| [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Add core normal-form and sealed-domain constructor normal-form carriers | Core/Substrate | 5 | 📝 Planned |
-| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Add `ash-typeck` normalizer module, options, outcome, and identity behavior | Type/Substrate | 5 | 📝 Planned |
-| [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | 📝 Planned |
-| [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Implement closed fixture reduction to domain-constructor normal forms | Type/Semantic | 6 | 📝 Planned |
-| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Implement open neutral/stuck forms and partial prefix normalization | Type/Semantic | 6 | 📝 Planned |
-| [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Normalize aliases plus neutral/rigid projection argument spines without associated-family computation | Type/Semantic | 5 | 📝 Planned |
-| [TASK-824](tasks/TASK-824-definitional-equality-api.md) | Add structured normalize-and-compare definitional equality API | Type/Semantic | 6 | 📝 Planned |
-| [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Enforce non-inversion/no-solving-under-neutral computation heads | Type/Semantic | 5 | 📝 Planned |
-| [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | Adopt definitional equality at named `TypeEnv` forcing points only | Type/Integration | 7 | 📝 Planned |
-| [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and Phase 109/110/111 non-interference coverage | Diagnostics/Tests | 6 | 📝 Planned |
-| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | 📝 Planned |
-| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Remediate post-closeout review findings for Phase 112 | Review/Hardening | 6 | 📝 Planned |
+| [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Audit live canonicalization/equality/forcing seams before implementation | Docs/Substrate | 4 | ✅ Complete |
+| [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Add core normal-form and sealed-domain constructor normal-form carriers | Core/Substrate | 5 | ✅ Complete |
+| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Add `ash-typeck` normalizer module, options, outcome, and identity behavior | Type/Substrate | 5 | ✅ Complete |
+| [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | ✅ Complete |
+| [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Implement closed fixture reduction to domain-constructor normal forms | Type/Semantic | 6 | ✅ Complete |
+| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Implement open neutral/stuck forms and partial prefix normalization | Type/Semantic | 6 | ✅ Complete |
+| [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Normalize aliases plus neutral/rigid projection argument spines without associated-family computation | Type/Semantic | 5 | ✅ Complete |
+| [TASK-824](tasks/TASK-824-definitional-equality-api.md) | Add structured normalize-and-compare definitional equality API | Type/Semantic | 6 | ✅ Complete |
+| [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Enforce non-inversion/no-solving-under-neutral computation heads | Type/Semantic | 5 | ✅ Complete |
+| [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | Adopt definitional equality at named `TypeEnv` forcing points only | Type/Integration | 7 | ✅ Complete |
+| [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and Phase 109/110/111 non-interference coverage | Diagnostics/Tests | 6 | ✅ Complete |
+| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | ✅ Complete |
+| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Remediate post-closeout review findings for Phase 112 | Review/Hardening | 6 | ✅ Complete |
 
 Estimated total: 74 hours.
 
@@ -43,7 +43,7 @@ Estimated total: 74 hours.
 ### Track A: Spec Gate and Audit
 
 - TASK-816 creates the normative SPEC-D packet.
-- TASK-817 audits the live `TypeEnv` equality/canonicalization/forcing seams, produces an exact forcing-point matrix, and freezes exact file targets before Rust implementation begins.
+- TASK-817 audits the live `TypeEnv` equality/canonicalization/forcing seams, produces an exact forcing-point matrix, and freezes exact file targets before Rust implementation begins. Completed audit: [TASK-817 normalizer/defeq audit](audits/TASK-817-normalizer-defeq-audit.md).
 
 ### Track B: Normal-Form and Normalizer Substrate
 
@@ -124,12 +124,16 @@ Every implementation task must include focused tests and exact non-regression co
 
 ## Completion Checklist
 
-- [x] SPEC-060 is registered in `docs/spec/README.md` as Draft.
+- [x] SPEC-060 is registered in `docs/spec/README.md` as Implemented MVP after TASK-828 closeout.
 - [x] PLAN-108 and TASK-816 through TASK-829 are registered in `docs/plan/PLAN-INDEX.md`.
-- [ ] `ash-core` exposes normal-form/domain-constructor carriers needed by `ash-typeck`.
-- [ ] `ash-typeck` exposes a normalizer API with weak-head/full/demand-aware options.
-- [ ] Internal fixture equation tables support closed/open Append-style tests.
-- [ ] Closed and partial-open normalization tests pass.
-- [ ] Definitional equality returns structured equality/mismatch/neutral-blocked outcomes.
-- [ ] Current ordinary constructor unification remains non-regressed.
-- [ ] Docs/status/changelog are reconciled and review findings are closed via TASK-829.
+- [x] `ash-core` exposes normal-form/domain-constructor carriers needed by `ash-typeck`.
+- [x] `ash-typeck` exposes a normalizer API with weak-head/full/demand-aware options.
+- [x] Internal fixture equation tables support closed/open Append-style tests.
+- [x] Closed and partial-open normalization tests pass.
+- [x] Definitional equality returns structured equality/mismatch/neutral-blocked outcomes.
+- [x] Current ordinary constructor unification remains non-regressed.
+- [x] Docs/status/changelog are reconciled through TASK-829 review remediation; Phase 112 is complete/remediated.
+
+## Closeout Verification Evidence
+
+TASK-828 recorded focused Phase 112 tests, workspace check/clippy/doc gates, and `cargo test --workspace` passing with no residual failures. TASK-829 completed independent review remediation by fixing structurally known neutral/projection mismatch classification, forcing definitional equality through full normalization, making neutral computation blocker reasons mandatory, replacing the transparent-alias canonical-var hash bridge with a per-alias bijection that also preserves unregistered nominal origins, and adding focused regression coverage; broad verification is recorded in TASK-829.

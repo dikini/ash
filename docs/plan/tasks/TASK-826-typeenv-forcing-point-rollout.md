@@ -1,6 +1,6 @@
 # TASK-826: TypeEnv Forcing-Point Rollout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,8 +17,8 @@ Adopt the definitional equality API at the named TypeEnv forcing points only.
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-825](TASK-825-non-inverting-unification-boundary.md) (planned predecessor)
-- 📝 [TASK-817](TASK-817-normalizer-defeq-audit-gate.md) forcing-point matrix
+- ✅ [TASK-825](TASK-825-non-inverting-unification-boundary.md)
+- ✅ [TASK-817](TASK-817-normalizer-defeq-audit-gate.md) forcing-point matrix
 
 ## Dispatch
 
@@ -38,6 +38,8 @@ Adopt the definitional equality API at the named TypeEnv forcing points only.
 
 ## Requirements
 
+Completion evidence: consumed TASK-817 FP-1/FP-2/FP-6/FP-7/FP-17 and left FP-10/FP-11/FP-12/FP-13/FP-15/FP-16 deferred/fallback.
+
 1. Consume the exact forcing-point matrix from TASK-817 and list each touched function/callsite in this task before implementation.
 2. Route TypeEnv equality wrappers through definitional equality when both sides canonicalize safely.
 3. Adopt expected-vs-actual expression/return comparison only for callsites explicitly marked owned in the TASK-817 matrix; constructor-field/pattern/exhaustiveness callsites are deferred unless the matrix says otherwise.
@@ -50,7 +52,7 @@ Adopt the definitional equality API at the named TypeEnv forcing points only.
 
 - Modify: `crates/ash-typeck/src/type_env.rs`
 - Modify: `crates/ash-typeck/src/check_expr.rs` only for exact callsites owned by the TASK-817 matrix
-- Test: `crates/ash-typeck/tests/task_826_typeenv_forcing_points.rs`
+- Test: `crates/ash-typeck/tests/task_826_typeenv_forcing_point_rollout.rs`
 
 ## TDD Steps
 
@@ -65,15 +67,20 @@ Adopt the definitional equality API at the named TypeEnv forcing points only.
 ```
 strictness: clean
 commands:
-  - cargo test -p ash-typeck --test task_826_typeenv_forcing_points
+  - cargo test -p ash-typeck --test task_826_typeenv_forcing_point_rollout
   - cargo test -p ash-typeck
   - cargo fmt --check
 checklist:
-  - [ ] Named forcing-point tests pass and cite the TASK-817 matrix
-  - [ ] Ordinary constructor unification remains stable
-  - [ ] No new pattern/exhaustiveness/constructor-field forcing-point adoption occurs unless explicitly authorized by the matrix
+  - [x] Named forcing-point tests pass and cite the TASK-817 matrix
+  - [x] Ordinary constructor unification remains stable
+  - [x] No new pattern/exhaustiveness/constructor-field forcing-point adoption occurs unless explicitly authorized by the matrix
 ```
 
 ## Notes
 
 Task type: Type/Integration. Estimated effort: 7 hours. Keep the slice compilable and do not widen beyond SPEC-060 scope.
+
+
+## Completion Notes
+
+Completed in Phase 112 implementation. `TypeEnv::unify_types` and `types_equivalent_for_equality` now use guarded normalizer/definitional equality only when both `Type` values safely lower to canonical IR. The rollout covers associated projection canonical identity aliases, transparent alias-compatible impl overlap, impl method return checking, and projection-spine normalization while preserving legacy fallback for inference metas and deferred legacy shapes.

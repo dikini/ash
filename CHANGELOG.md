@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [SPEC-060](docs/spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [PLAN-108](docs/plan/PLAN-108-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), and [TASK-816](docs/plan/tasks/TASK-816-spec-d-spec-plan-packet.md) through [TASK-829](docs/plan/tasks/TASK-829-phase112-review-remediation.md): planned Phase 112 as DESIGN-034 SPEC-D, defining the internal total normalizer, canonical normal forms, fixture equation tables, normalize-and-compare definitional equality, neutrality/non-inversion diagnostics, and narrow `TypeEnv` forcing-point adoption while explicitly deferring public `type fn`, associated type-family computation, equation export/import, and proof search.
+
 - Added draft design note [DESIGN-NOTE-STRUCTURED-DIAGNOSTICS](docs/design/DESIGN-NOTE-STRUCTURED-DIAGNOSTICS.md) outlining structured Ash diagnostics as the canonical model for Rust/Elm-style human errors, JSON/YAML machine formats, LSP projection, and future LLM/tool consumption.
 
 - [TASK-807](docs/plan/tasks/TASK-807-sealed-domain-audit-gate.md): Phase 111 sealed-domain audit gate. Authoritative audit of the live parser/core/engine/typechecker substrate documenting current declaration carriers, summary transport, kind ownership, import/export behavior, and registration seams. Identifies 7 contradictions between current code and SPEC-059 requirements, maps exact file targets for TASK-808 through TASK-813, and explicitly marks deferred work belonging to SPEC-D/E/F/G/H. Audit artifact: [TASK-807 sealed-domain audit](docs/plan/audits/TASK-807-sealed-domain-audit.md).

@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Added structured normalizer diagnostics and non-interference coverage for Phase 112 boundaries (TASK-827).
 
 - [TASK-825](docs/plan/tasks/TASK-825-non-inverting-unification-boundary.md): Added focused non-inverting unification-boundary coverage for the normalizer/definitional-equality API. Same-headed neutral computation applications now have explicit tests proving differing canonical abstract variables remain blocked evidence instead of being solved by inversion, `Append<Xs, Ys> == Cons<A, Nil>` reports `BlockedByNeutrality` with a no-inversion note instead of solving inputs from outputs, equal neutral spines still compare structurally, and legacy same-headed nominal `Type` unification continues to solve current inference metas through the existing unifier without any `TypeEnv` forcing-point rollout.
 

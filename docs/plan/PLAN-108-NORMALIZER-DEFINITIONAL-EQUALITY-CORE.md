@@ -28,11 +28,11 @@
 | [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | ✅ Complete |
 | [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Implement closed fixture reduction to domain-constructor normal forms | Type/Semantic | 6 | ✅ Complete |
 | [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Implement open neutral/stuck forms and partial prefix normalization | Type/Semantic | 6 | ✅ Complete |
-| [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Normalize aliases plus neutral/rigid projection argument spines without associated-family computation | Type/Semantic | 5 | 📝 Planned |
+| [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Normalize aliases plus neutral/rigid projection argument spines without associated-family computation | Type/Semantic | 5 | ✅ Complete |
 | [TASK-824](tasks/TASK-824-definitional-equality-api.md) | Add structured normalize-and-compare definitional equality API | Type/Semantic | 6 | ✅ Complete |
 | [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Enforce non-inversion/no-solving-under-neutral computation heads | Type/Semantic | 5 | ✅ Complete |
-| [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | Adopt definitional equality at named `TypeEnv` forcing points only | Type/Integration | 7 | 📝 Planned |
-| [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and Phase 109/110/111 non-interference coverage | Diagnostics/Tests | 6 | 📝 Planned |
+| [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | Adopt definitional equality at named `TypeEnv` forcing points only | Type/Integration | 7 | ✅ Complete |
+| [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and Phase 109/110/111 non-interference coverage | Diagnostics/Tests | 6 | ✅ Complete |
 | [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | 📝 Planned |
 | [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Remediate post-closeout review findings for Phase 112 | Review/Hardening | 6 | 📝 Planned |
 

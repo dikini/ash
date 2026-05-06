@@ -356,6 +356,47 @@ pub enum NormalizationError {
 /// Result alias for normalization requests.
 pub type NormalizationResult<T> = Result<T, NormalizationError>;
 
+/// Structured diagnostic classes emitted by the normalizer/definitional-equality
+/// core. These are evidence carriers for compiler diagnostics and tests; they do
+/// not add reduction semantics, public syntax, equation export/import, or proof
+/// search.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NormalizerDiagnosticKind {
+    NeutralStuckNormalizationNote,
+    NeutralAssociatedProjectionNote,
+    ConcreteNormalFormRequired,
+    EqualityBlockedByNeutrality,
+    NonInvertingEqualityNote,
+    NormalizedMismatch,
+    FuelOrCycleGuard,
+    LegacyFallback,
+}
+
+/// One structured normalizer diagnostic/evidence item.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NormalizerDiagnostic {
+    pub kind: NormalizerDiagnosticKind,
+    pub message: String,
+    pub normal_slice: Option<NormalTypeExpr>,
+}
+
+impl NormalizerDiagnostic {
+    #[must_use]
+    pub fn new(kind: NormalizerDiagnosticKind, message: impl Into<String>) -> Self {
+        Self {
+            kind,
+            message: message.into(),
+            normal_slice: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_normal_slice(mut self, normal_slice: NormalTypeExpr) -> Self {
+        self.normal_slice = Some(normal_slice);
+        self
+    }
+}
+
 /// Structured normalize-and-compare definitional equality evidence.
 ///
 /// This API is intentionally non-inverting: normal forms are compared
@@ -510,6 +551,93 @@ impl<'env> Normalizer<'env> {
             .map(|evidence| matches!(evidence, DefinitionalEqualityResult::Equal))
     }
 
+    /// Require a concrete, non-neutral data normal form for contexts that cannot
+    /// proceed with a stuck computation head or projection. This is a diagnostic
+    /// helper only; it does not force inversion or add reduction rules.
+    pub fn require_concrete_normal_form(
+        &self,
+        expr: &CanonicalTypeExpr,
+    ) -> Result<NormalTypeExpr, Box<NormalizerDiagnostic>> {
+        match self.normalize(expr) {
+            Ok(outcome) => match outcome.normal {
+                normal @ (NormalTypeExpr::Primitive(_)
+                | NormalTypeExpr::NominalApp { .. }
+                | NormalTypeExpr::DomainConstructorApp { .. }) => Ok(normal),
+                normal @ (NormalTypeExpr::Var(_)
+                | NormalTypeExpr::NeutralComputationApp { .. }
+                | NormalTypeExpr::Projection { .. }) => Err(Box::new(NormalizerDiagnostic::new(
+                    NormalizerDiagnosticKind::ConcreteNormalFormRequired,
+                    "concrete normal form required; normalization produced a neutral/stuck normal form and equality will not invert it",
+                )
+                .with_normal_slice(normal))),
+            },
+            Err(error) => Err(Box::new(NormalizerDiagnostic::new(
+                NormalizerDiagnosticKind::FuelOrCycleGuard,
+                format!(
+                    "normalizer implementation guard failed while requiring a concrete normal form: {error:?}"
+                ),
+            ))),
+        }
+    }
+
+    /// Diagnostic evidence for a single normalization request.
+    pub fn diagnostics_for_normalization(
+        &self,
+        expr: &CanonicalTypeExpr,
+    ) -> Vec<NormalizerDiagnostic> {
+        match self.normalize(expr) {
+            Ok(outcome) => diagnostics_for_normal_form(&outcome.normal),
+            Err(error) => vec![fuel_or_cycle_guard_diagnostic(error)],
+        }
+    }
+
+    /// Diagnostic evidence for normalize-and-compare equality.
+    pub fn diagnostics_for_definitional_equality(
+        &self,
+        lhs: &CanonicalTypeExpr,
+        rhs: &CanonicalTypeExpr,
+    ) -> Vec<NormalizerDiagnostic> {
+        match self.definitional_equality(lhs, rhs) {
+            Ok(DefinitionalEqualityResult::Equal) => Vec::new(),
+            Ok(DefinitionalEqualityResult::NotEqual {
+                lhs_norm,
+                rhs_norm,
+                mismatch,
+            }) => vec![NormalizerDiagnostic::new(
+                NormalizerDiagnosticKind::NormalizedMismatch,
+                format!(
+                    "normalized mismatch at {mismatch}: left normal form {lhs_norm:?}; right normal form {rhs_norm:?}"
+                ),
+            )],
+            Ok(DefinitionalEqualityResult::BlockedByNeutrality {
+                lhs_norm,
+                rhs_norm,
+                neutral_subterms,
+                no_inversion_note,
+            }) => {
+                let mut diagnostics = vec![NormalizerDiagnostic::new(
+                    NormalizerDiagnosticKind::EqualityBlockedByNeutrality,
+                    format!(
+                        "equality blocked by neutral/stuck normal form: left {lhs_norm:?}; right {rhs_norm:?}"
+                    ),
+                )];
+                diagnostics.extend(neutral_subterms.into_iter().map(|normal| {
+                    NormalizerDiagnostic::new(
+                        NormalizerDiagnosticKind::NeutralStuckNormalizationNote,
+                        "neutral/stuck normalization note: blocker is preserved structurally",
+                    )
+                    .with_normal_slice(normal)
+                }));
+                diagnostics.push(NormalizerDiagnostic::new(
+                    NormalizerDiagnosticKind::NonInvertingEqualityNote,
+                    no_inversion_note,
+                ));
+                diagnostics
+            }
+            Err(error) => vec![fuel_or_cycle_guard_diagnostic(error)],
+        }
+    }
+
     /// Returns this normalizer's configuration.
     #[must_use]
     pub const fn config(&self) -> &NormalizationConfig {
@@ -521,6 +649,74 @@ impl<'env> Normalizer<'env> {
     pub const fn fixture_registry(&self) -> &FixtureEquationRegistry {
         self.fixture_registry
     }
+}
+
+fn diagnostics_for_normal_form(normal: &NormalTypeExpr) -> Vec<NormalizerDiagnostic> {
+    let mut diagnostics = Vec::new();
+    collect_normal_form_diagnostics(normal, &mut diagnostics);
+    diagnostics
+}
+
+fn collect_normal_form_diagnostics(
+    normal: &NormalTypeExpr,
+    diagnostics: &mut Vec<NormalizerDiagnostic>,
+) {
+    match normal {
+        NormalTypeExpr::NeutralComputationApp { reason, args, .. } => {
+            diagnostics.push(
+                NormalizerDiagnostic::new(
+                    NormalizerDiagnosticKind::NeutralStuckNormalizationNote,
+                    format!(
+                        "neutral/stuck normalization note: computation head is blocked by {:?}",
+                        reason.clone().unwrap_or(NormalFormBlockReason::Unsupported)
+                    ),
+                )
+                .with_normal_slice(normal.clone()),
+            );
+            for arg in args {
+                collect_normal_form_diagnostics(arg, diagnostics);
+            }
+        }
+        NormalTypeExpr::Projection {
+            rigidity,
+            reason,
+            args,
+            ..
+        } => {
+            diagnostics.push(
+                NormalizerDiagnostic::new(
+                    NormalizerDiagnosticKind::NeutralAssociatedProjectionNote,
+                    format!(
+                        "neutral associated projection note: {rigidity:?} projection is blocked by {:?} and is preserved without associated-family computation",
+                        reason.clone().unwrap_or(match rigidity {
+                            ProjectionRigidity::Rigid => NormalFormBlockReason::RigidProjection,
+                            ProjectionRigidity::Neutral => NormalFormBlockReason::AbstractScrutinee,
+                        })
+                    ),
+                )
+                .with_normal_slice(normal.clone()),
+            );
+            for arg in args {
+                collect_normal_form_diagnostics(arg, diagnostics);
+            }
+        }
+        NormalTypeExpr::NominalApp { args, .. }
+        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+            for arg in args {
+                collect_normal_form_diagnostics(arg, diagnostics);
+            }
+        }
+        NormalTypeExpr::Primitive(_) | NormalTypeExpr::Var(_) => {}
+    }
+}
+
+fn fuel_or_cycle_guard_diagnostic(error: NormalizationError) -> NormalizerDiagnostic {
+    NormalizerDiagnostic::new(
+        NormalizerDiagnosticKind::FuelOrCycleGuard,
+        format!(
+            "normalizer implementation fuel/cycle guard failed; this is not semantic stuckness: {error:?}"
+        ),
+    )
 }
 
 fn normal_forms_definitionally_equal(lhs: &NormalTypeExpr, rhs: &NormalTypeExpr) -> bool {

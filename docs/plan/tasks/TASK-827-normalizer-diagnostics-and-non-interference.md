@@ -1,6 +1,6 @@
 # TASK-827: Normalizer Diagnostics and Non-Interference
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,7 @@ Add diagnostics, negative tests, and non-interference coverage for the Phase 112
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-826](TASK-826-typeenv-forcing-point-rollout.md) (planned predecessor)
+- ✅ [TASK-826](TASK-826-typeenv-forcing-point-rollout.md)
 
 ## Dispatch
 
@@ -36,6 +36,8 @@ toolsets: [terminal, file]
 Add diagnostics, negative tests, and non-interference coverage for the Phase 112 normalizer/equality core.
 
 ## Requirements
+
+Completion evidence: added structured normalizer diagnostics and non-interference tests without adding public syntax or widening TypeEnv rollout.
 
 1. Add tests for neutral note, neutral associated projection note, concrete-normal-form-required, equality-blocked-by-neutrality, normalized mismatch, and fuel/cycle guard diagnostics.
 2. Add non-interference tests for Phase 109 ordinary summaries, Phase 110 projection canonicalization, and Phase 111 sealed-domain registration.
@@ -68,12 +70,17 @@ commands:
   - cargo test -p ash-parser --test task_827_no_public_type_fn_syntax
   - cargo fmt --check
 checklist:
-  - [ ] Diagnostic tests pass
-  - [ ] Non-interference tests pass
-  - [ ] No fixture summary export leakage
-  - [ ] No public parser type fn support appears and the parser negative test runs nonzero tests
+  - [x] Diagnostic tests pass
+  - [x] Non-interference tests pass
+  - [x] No fixture summary export leakage
+  - [x] No public parser type fn support appears and the parser negative test runs nonzero tests
 ```
 
 ## Notes
 
 Task type: Diagnostics/Tests. Estimated effort: 6 hours. Keep the slice compilable and do not widen beyond SPEC-060 scope.
+
+
+## Completion Notes
+
+Completed in Phase 112 implementation. Added `NormalizerDiagnostic` evidence for neutral/stuck normalization, neutral associated projections, concrete-normal-form requirements, equality blocked by neutrality, non-inverting equality notes, normalized mismatches, fuel guards, and legacy fallback boundaries. Added focused parser negative tests for public `type fn` syntax and non-interference coverage for Phase 109 summaries, Phase 110 projections, Phase 111 sealed-domain registration, fixture registry serialization, ordinary ADT constructor boundaries, and TASK-826 guarded TypeEnv rollout.

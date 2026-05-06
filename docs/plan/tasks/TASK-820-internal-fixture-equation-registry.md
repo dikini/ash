@@ -1,6 +1,6 @@
 # TASK-820: Internal Fixture Equation Registry
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,7 @@ Add an internal, non-exported fixture equation registry for test-only / explicit
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-819](TASK-819-typeck-normalizer-api-skeleton.md) (planned predecessor)
+- ✅ [TASK-819](TASK-819-typeck-normalizer-api-skeleton.md)
 
 ## Dispatch
 
@@ -61,14 +61,21 @@ Add an internal, non-exported fixture equation registry for test-only / explicit
 ```
 strictness: clean
 commands:
-  - cargo test -p ash-typeck --test task_820_fixture_equation_registry
-  - cargo test -p ash-engine semantic_summary
+  - cargo test -p ash-typeck --test task_820_internal_fixture_equation_registry
+  - cargo test -p ash-typeck normalizer
   - cargo fmt --check
+  - git diff --check
 checklist:
-  - [ ] Fixture registry tests pass
-  - [ ] No source parser, production module summary, or non-test compiler path claims public type fn support
-  - [ ] Append fixture setup can be reused by TASK-821/822
+  - [x] Fixture registry tests pass
+  - [x] No source parser, production module summary, or non-test compiler path claims public type fn support
+  - [x] Append fixture setup can be reused by TASK-821/822
 ```
+
+## Completion Notes
+
+- Added `FixtureEquationRegistry`, `FixtureEquation`, first-order `FixturePattern`, `FixtureResultExpr`, lookup match metadata, and validation errors in `ash-typeck::normalizer`.
+- Added empty-default behavior plus explicit `Normalizer::with_registry(...)` / `with_config_and_registry(...)` construction while preserving TASK-819 behavior: fixture equations are not applied during normalization until TASK-821.
+- Added focused TDD coverage in `task_820_internal_fixture_equation_registry.rs` for structural head-keyed registration, deterministic order/arity, duplicate/arity/unbound-variable rejection, structural lookup bindings, module-summary non-leakage, and unchanged neutral computation-head normalization.
 
 ## Notes
 

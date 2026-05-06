@@ -2,14 +2,201 @@
 //!
 //! This module intentionally provides only the total API surface and structural
 //! identity conversion from `CanonicalTypeExpr` to `NormalTypeExpr`. It does not
-//! own fixture equation registration, reduction semantics, definitional equality
-//! adoption, or associated-family computation; later SPEC-060 tasks build those
-//! pieces on this boundary.
+//! own reduction semantics, definitional equality adoption, or associated-family
+//! computation; later SPEC-060 tasks build those pieces on this boundary.
+
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::type_env::TypeEnv;
+use ash_core::kind::Kind;
+use ash_core::semantic_summary::{DomainConstructorId, SealedDomainId};
 use ash_core::type_ir::{
     CanonicalTypeExpr, NormalFormBlockReason, NormalTypeExpr, ProjectionRigidity,
+    TypeComputationHeadId,
 };
+
+/// First-order fixture equation pattern used by internal normalizer tests.
+///
+/// These patterns are compiler-internal setup data only. They are not parsed from
+/// source and are not serialized through module semantic summaries.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum FixturePattern {
+    Var(String),
+    DomainConstructor(Box<FixtureDomainConstructorPattern>),
+}
+
+/// Sealed-domain constructor fixture pattern payload.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FixtureDomainConstructorPattern {
+    pub constructor: DomainConstructorId,
+    pub domain: SealedDomainId,
+    pub args: Vec<FixturePattern>,
+}
+
+/// Result expression for an internal fixture equation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum FixtureResultExpr {
+    BoundVar(String),
+    DomainConstructor {
+        constructor: DomainConstructorId,
+        domain: SealedDomainId,
+        args: Vec<FixtureResultExpr>,
+        kind: Kind,
+    },
+    ComputationHeadApp {
+        head: TypeComputationHeadId,
+        args: Vec<FixtureResultExpr>,
+        kind: Kind,
+    },
+}
+
+/// Validation and registration errors for internal fixture equations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FixtureEquationRegistryError {
+    UnboundResultVariable {
+        variable: String,
+    },
+    DuplicateEquation {
+        head: TypeComputationHeadId,
+    },
+    ArityMismatch {
+        head: TypeComputationHeadId,
+        expected: usize,
+        actual: usize,
+    },
+}
+
+/// One internal fixture equation for a computation head.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FixtureEquation {
+    head: TypeComputationHeadId,
+    patterns: Vec<FixturePattern>,
+    result: FixtureResultExpr,
+}
+
+impl FixtureEquation {
+    pub fn new(
+        head: TypeComputationHeadId,
+        patterns: Vec<FixturePattern>,
+        result: FixtureResultExpr,
+    ) -> Result<Self, FixtureEquationRegistryError> {
+        let mut bound = BTreeSet::new();
+        collect_pattern_vars(&patterns, &mut bound);
+        validate_result_vars(&result, &bound)?;
+        Ok(Self {
+            head,
+            patterns,
+            result,
+        })
+    }
+
+    #[must_use]
+    pub const fn head(&self) -> &TypeComputationHeadId {
+        &self.head
+    }
+
+    #[must_use]
+    pub fn patterns(&self) -> &[FixturePattern] {
+        &self.patterns
+    }
+
+    #[must_use]
+    pub const fn result(&self) -> &FixtureResultExpr {
+        &self.result
+    }
+
+    #[must_use]
+    pub fn arity(&self) -> usize {
+        self.patterns.len()
+    }
+}
+
+/// Deterministic registry of internal fixture equations keyed by computation head.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FixtureEquationRegistry {
+    equations: Vec<FixtureEquation>,
+}
+
+impl FixtureEquationRegistry {
+    #[must_use]
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.equations.is_empty()
+    }
+
+    pub fn with_equation(
+        mut self,
+        equation: FixtureEquation,
+    ) -> Result<Self, FixtureEquationRegistryError> {
+        for existing in self.equations_for(equation.head()) {
+            if existing.arity() != equation.arity() {
+                return Err(FixtureEquationRegistryError::ArityMismatch {
+                    head: equation.head().clone(),
+                    expected: existing.arity(),
+                    actual: equation.arity(),
+                });
+            }
+            if existing.patterns() == equation.patterns() {
+                return Err(FixtureEquationRegistryError::DuplicateEquation {
+                    head: equation.head().clone(),
+                });
+            }
+        }
+        self.equations.push(equation);
+        Ok(self)
+    }
+
+    pub fn equations_for<'a>(
+        &'a self,
+        head: &'a TypeComputationHeadId,
+    ) -> impl Iterator<Item = &'a FixtureEquation> + 'a {
+        self.equations
+            .iter()
+            .filter(move |equation| equation.head() == head)
+    }
+
+    pub fn first_match<'a>(
+        &'a self,
+        head: &'a TypeComputationHeadId,
+        args: &[NormalTypeExpr],
+    ) -> Option<FixtureEquationMatch<'a>> {
+        self.equations_for(head).find_map(|equation| {
+            if equation.arity() != args.len() {
+                return None;
+            }
+            let mut bindings = BTreeMap::new();
+            let matched = equation
+                .patterns()
+                .iter()
+                .zip(args)
+                .all(|(pattern, arg)| match_pattern(pattern, arg, &mut bindings));
+            matched.then_some(FixtureEquationMatch { equation, bindings })
+        })
+    }
+}
+
+/// Metadata returned by registry lookup. TASK-820 does not apply the equation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FixtureEquationMatch<'a> {
+    equation: &'a FixtureEquation,
+    bindings: BTreeMap<String, NormalTypeExpr>,
+}
+
+impl<'a> FixtureEquationMatch<'a> {
+    #[must_use]
+    pub const fn equation(&self) -> &'a FixtureEquation {
+        self.equation
+    }
+
+    #[must_use]
+    pub const fn bindings(&self) -> &BTreeMap<String, NormalTypeExpr> {
+        &self.bindings
+    }
+}
 
 /// Normalization strategy requested by a caller.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -123,19 +310,51 @@ pub type NormalizationResult<T> = Result<T, NormalizationError>;
 pub struct Normalizer<'env> {
     _env: &'env TypeEnv,
     config: NormalizationConfig,
+    fixture_registry: &'env FixtureEquationRegistry,
 }
+
+static EMPTY_FIXTURE_EQUATION_REGISTRY: FixtureEquationRegistry = FixtureEquationRegistry {
+    equations: Vec::new(),
+};
 
 impl<'env> Normalizer<'env> {
     /// Creates a normalizer with default full-normalization options.
     #[must_use]
     pub fn new(env: &'env TypeEnv) -> Self {
-        Self::with_config(env, NormalizationConfig::default())
+        Self::with_config_and_registry(
+            env,
+            NormalizationConfig::default(),
+            &EMPTY_FIXTURE_EQUATION_REGISTRY,
+        )
     }
 
     /// Creates a normalizer with explicit configuration.
     #[must_use]
     pub fn with_config(env: &'env TypeEnv, config: NormalizationConfig) -> Self {
-        Self { _env: env, config }
+        Self::with_config_and_registry(env, config, &EMPTY_FIXTURE_EQUATION_REGISTRY)
+    }
+
+    /// Creates a normalizer with explicit internal fixture equations.
+    ///
+    /// TASK-820 stores and exposes lookup metadata only; normalization still
+    /// preserves computation heads as neutral until TASK-821 consumes the table.
+    #[must_use]
+    pub fn with_registry(env: &'env TypeEnv, registry: &'env FixtureEquationRegistry) -> Self {
+        Self::with_config_and_registry(env, NormalizationConfig::default(), registry)
+    }
+
+    /// Creates a normalizer with explicit configuration and fixture equations.
+    #[must_use]
+    pub fn with_config_and_registry(
+        env: &'env TypeEnv,
+        config: NormalizationConfig,
+        registry: &'env FixtureEquationRegistry,
+    ) -> Self {
+        Self {
+            _env: env,
+            config,
+            fixture_registry: registry,
+        }
     }
 
     /// Normalizes a canonical type expression into a normal-form carrier.
@@ -160,6 +379,83 @@ impl<'env> Normalizer<'env> {
     #[must_use]
     pub const fn config(&self) -> &NormalizationConfig {
         &self.config
+    }
+
+    /// Returns the explicit internal fixture registry attached to this normalizer.
+    #[must_use]
+    pub const fn fixture_registry(&self) -> &FixtureEquationRegistry {
+        self.fixture_registry
+    }
+}
+
+fn collect_pattern_vars(patterns: &[FixturePattern], bound: &mut BTreeSet<String>) {
+    for pattern in patterns {
+        match pattern {
+            FixturePattern::Var(name) => {
+                bound.insert(name.clone());
+            }
+            FixturePattern::DomainConstructor(pattern) => {
+                collect_pattern_vars(&pattern.args, bound);
+            }
+        }
+    }
+}
+
+fn validate_result_vars(
+    result: &FixtureResultExpr,
+    bound: &BTreeSet<String>,
+) -> Result<(), FixtureEquationRegistryError> {
+    match result {
+        FixtureResultExpr::BoundVar(variable) => {
+            if bound.contains(variable) {
+                Ok(())
+            } else {
+                Err(FixtureEquationRegistryError::UnboundResultVariable {
+                    variable: variable.clone(),
+                })
+            }
+        }
+        FixtureResultExpr::DomainConstructor { args, .. }
+        | FixtureResultExpr::ComputationHeadApp { args, .. } => {
+            for arg in args {
+                validate_result_vars(arg, bound)?;
+            }
+            Ok(())
+        }
+    }
+}
+
+fn match_pattern(
+    pattern: &FixturePattern,
+    arg: &NormalTypeExpr,
+    bindings: &mut BTreeMap<String, NormalTypeExpr>,
+) -> bool {
+    match pattern {
+        FixturePattern::Var(name) => match bindings.get(name) {
+            Some(bound) => bound == arg,
+            None => {
+                bindings.insert(name.clone(), arg.clone());
+                true
+            }
+        },
+        FixturePattern::DomainConstructor(pattern) => match arg {
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: arg_constructor,
+                domain: arg_domain,
+                args: arg_args,
+                ..
+            } => {
+                pattern.constructor == *arg_constructor
+                    && pattern.domain == *arg_domain
+                    && pattern.args.len() == arg_args.len()
+                    && pattern
+                        .args
+                        .iter()
+                        .zip(arg_args)
+                        .all(|(pattern, arg)| match_pattern(pattern, arg, bindings))
+            }
+            _ => false,
+        },
     }
 }
 

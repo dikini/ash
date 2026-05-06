@@ -25,7 +25,7 @@
 | [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Audit live canonicalization/equality/forcing seams before implementation | Docs/Substrate | 4 | ✅ Complete |
 | [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Add core normal-form and sealed-domain constructor normal-form carriers | Core/Substrate | 5 | ✅ Complete |
 | [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Add `ash-typeck` normalizer module, options, outcome, and identity behavior | Type/Substrate | 5 | ✅ Complete |
-| [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | 📝 Planned |
+| [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | ✅ Complete |
 | [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Implement closed fixture reduction to domain-constructor normal forms | Type/Semantic | 6 | 📝 Planned |
 | [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Implement open neutral/stuck forms and partial prefix normalization | Type/Semantic | 6 | 📝 Planned |
 | [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Normalize aliases plus neutral/rigid projection argument spines without associated-family computation | Type/Semantic | 5 | 📝 Planned |

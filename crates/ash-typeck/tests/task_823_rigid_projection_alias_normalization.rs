@@ -280,3 +280,143 @@ fn generic_transparent_alias_preserves_canonical_variable_spelling() {
         NormalTypeExpr::Var("A".to_string())
     );
 }
+
+#[test]
+fn transparent_alias_bridge_preserves_unregistered_nominal_origin() {
+    let mut env = TypeEnv::new();
+    env.register_type(&TypeDef {
+        name: "Id".to_string(),
+        params: vec!["T".to_string()],
+        body: TypeBody::Alias(TypeExpr::Named("T".to_string())),
+        visibility: Visibility::Public,
+        builtin: false,
+    })
+    .expect("register generic transparent alias");
+
+    let external_origin = TypeDeclId::ordinary(
+        ModuleIdentity::new(
+            None,
+            ModuleId(9_823),
+            vec!["task_823".to_string(), "external".to_string()],
+            ModuleSourceOrigin::Synthetic {
+                reason: "unregistered nominal origin for alias bridge regression".to_string(),
+            },
+        ),
+        "External",
+    );
+    let external = CanonicalTypeExpr::NominalApp {
+        origin: external_origin.clone(),
+        visible_name: "External".to_string(),
+        args: vec![],
+        kind: Kind::Type,
+    };
+
+    assert_eq!(
+        normalize_with(&env, &nominal("Id", vec![external.clone()])),
+        NormalTypeExpr::NominalApp {
+            origin: external_origin,
+            visible_name: "External".to_string(),
+            args: vec![],
+            kind: Kind::Type,
+        }
+    );
+    assert_eq!(
+        normalize_with(&env, &nominal("Id", vec![external.clone()])),
+        normalize_with(&env, &external)
+    );
+}
+
+#[test]
+fn transparent_alias_bridge_preserves_same_visible_nominals_with_different_origins() {
+    let mut env = TypeEnv::new();
+    env.register_type(&TypeDef {
+        name: "Pair".to_string(),
+        params: vec!["T".to_string(), "U".to_string()],
+        body: TypeBody::Struct(vec![
+            ("fst".to_string(), TypeExpr::Named("T".to_string())),
+            ("snd".to_string(), TypeExpr::Named("U".to_string())),
+        ]),
+        visibility: Visibility::Public,
+        builtin: false,
+    })
+    .expect("register pair type");
+    env.register_type(&TypeDef {
+        name: "PairAlias".to_string(),
+        params: vec!["T".to_string(), "U".to_string()],
+        body: TypeBody::Alias(TypeExpr::Constructor {
+            name: "Pair".to_string(),
+            args: vec![
+                TypeExpr::Named("T".to_string()),
+                TypeExpr::Named("U".to_string()),
+            ],
+        }),
+        visibility: Visibility::Public,
+        builtin: false,
+    })
+    .expect("register pair transparent alias");
+
+    let origin_a = TypeDeclId::ordinary(
+        ModuleIdentity::new(
+            None,
+            ModuleId(9_824),
+            vec!["task_823".to_string(), "external_a".to_string()],
+            ModuleSourceOrigin::Synthetic {
+                reason: "first same-name unregistered nominal".to_string(),
+            },
+        ),
+        "External",
+    );
+    let origin_b = TypeDeclId::ordinary(
+        ModuleIdentity::new(
+            None,
+            ModuleId(9_825),
+            vec!["task_823".to_string(), "external_b".to_string()],
+            ModuleSourceOrigin::Synthetic {
+                reason: "second same-name unregistered nominal".to_string(),
+            },
+        ),
+        "External",
+    );
+    let external_a = CanonicalTypeExpr::NominalApp {
+        origin: origin_a.clone(),
+        visible_name: "External".to_string(),
+        args: vec![],
+        kind: Kind::Type,
+    };
+    let external_b = CanonicalTypeExpr::NominalApp {
+        origin: origin_b.clone(),
+        visible_name: "External".to_string(),
+        args: vec![],
+        kind: Kind::Type,
+    };
+
+    match normalize_with(&env, &nominal("PairAlias", vec![external_a, external_b])) {
+        NormalTypeExpr::NominalApp {
+            visible_name,
+            args,
+            kind,
+            ..
+        } => {
+            assert_eq!(visible_name, "Pair");
+            assert_eq!(kind, Kind::Type);
+            assert_eq!(
+                args,
+                vec![
+                    NormalTypeExpr::NominalApp {
+                        origin: origin_a,
+                        visible_name: "External".to_string(),
+                        args: vec![],
+                        kind: Kind::Type,
+                    },
+                    NormalTypeExpr::NominalApp {
+                        origin: origin_b,
+                        visible_name: "External".to_string(),
+                        args: vec![],
+                        kind: Kind::Type,
+                    },
+                ]
+            );
+        }
+        other => panic!("expected Pair nominal app, got {other:?}"),
+    }
+}

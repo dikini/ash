@@ -459,55 +459,15 @@ pub struct SelectedScheme {
 #[derive(Debug, Default)]
 struct AliasCanonicalVarBridge {
     next_var: u32,
-    by_name: HashMap<String, TypeVar>,
-    names: HashMap<TypeVar, String>,
+    args: HashMap<TypeVar, CanonicalTypeExpr>,
 }
 
 impl AliasCanonicalVarBridge {
-    fn var_for(&mut self, name: &str) -> TypeVar {
-        if let Some(var) = self.by_name.get(name) {
-            return *var;
-        }
+    fn placeholder_for_arg(&mut self, expr: &CanonicalTypeExpr) -> Type {
         let var = TypeVar(0x8230_0000u32.wrapping_add(self.next_var));
         self.next_var = self.next_var.wrapping_add(1);
-        self.by_name.insert(name.to_string(), var);
-        self.names.insert(var, name.to_string());
-        var
-    }
-}
-
-fn canonical_expr_to_type_for_alias(
-    expr: &CanonicalTypeExpr,
-    vars: &mut AliasCanonicalVarBridge,
-) -> Option<Type> {
-    match expr {
-        CanonicalTypeExpr::Primitive(name) => match name.as_str() {
-            "Int" => Some(Type::Int),
-            "String" => Some(Type::String),
-            "Bool" => Some(Type::Bool),
-            "Float" => Some(Type::Float),
-            "Null" | "Unit" => Some(Type::Null),
-            "Time" => Some(Type::Time),
-            "Ref" => Some(Type::Ref),
-            _ => None,
-        },
-        CanonicalTypeExpr::Var(name) => {
-            looks_like_unbound_type_var_name(name).then(|| Type::Var(vars.var_for(name)))
-        }
-        CanonicalTypeExpr::NominalApp {
-            visible_name,
-            args,
-            kind,
-            ..
-        } => Some(Type::Constructor {
-            name: QualifiedName::root(visible_name.clone()),
-            args: args
-                .iter()
-                .map(|arg| canonical_expr_to_type_for_alias(arg, vars))
-                .collect::<Option<_>>()?,
-            kind: kind.clone(),
-        }),
-        CanonicalTypeExpr::Projection { .. } | CanonicalTypeExpr::ComputationHeadApp { .. } => None,
+        self.args.insert(var, expr.clone());
+        Type::Var(var)
     }
 }
 
@@ -2801,11 +2761,11 @@ impl TypeEnv {
         let mut bridge = AliasCanonicalVarBridge::default();
         let type_args: Vec<_> = args
             .iter()
-            .map(|arg| canonical_expr_to_type_for_alias(arg, &mut bridge))
-            .collect::<Option<_>>()?;
+            .map(|arg| bridge.placeholder_for_arg(arg))
+            .collect();
         let target =
             self.transparent_alias_target(&QualifiedName::root(visible_name), &type_args)?;
-        self.type_to_canonical_expr_for_alias(&target, &bridge.names)
+        self.type_to_canonical_expr_for_alias(&target, &bridge)
             .map(|target| self.canonical_expr_with_registered_origin(target))
     }
 
@@ -2832,7 +2792,7 @@ impl TypeEnv {
     fn type_to_canonical_expr_for_alias(
         &self,
         ty: &Type,
-        var_names: &HashMap<TypeVar, String>,
+        bridge: &AliasCanonicalVarBridge,
     ) -> Option<CanonicalTypeExpr> {
         match ty {
             Type::Int => Some(CanonicalTypeExpr::Primitive("Int".to_string())),
@@ -2842,16 +2802,15 @@ impl TypeEnv {
             Type::Null => Some(CanonicalTypeExpr::Primitive("Null".to_string())),
             Type::Time => Some(CanonicalTypeExpr::Primitive("Time".to_string())),
             Type::Ref => Some(CanonicalTypeExpr::Primitive("Ref".to_string())),
-            Type::Var(var) => Some(CanonicalTypeExpr::Var(
-                var_names
-                    .get(var)
-                    .cloned()
-                    .unwrap_or_else(|| format!("T{}", var.0)),
-            )),
+            Type::Var(var) => bridge
+                .args
+                .get(var)
+                .cloned()
+                .or_else(|| Some(CanonicalTypeExpr::Var(format!("T{}", var.0)))),
             Type::Constructor { name, args, kind } if name.is_root() => {
                 let args = args
                     .iter()
-                    .map(|arg| self.type_to_canonical_expr_for_alias(arg, var_names))
+                    .map(|arg| self.type_to_canonical_expr_for_alias(arg, bridge))
                     .collect::<Option<_>>()?;
                 Some(CanonicalTypeExpr::NominalApp {
                     origin: self
@@ -2881,7 +2840,7 @@ impl TypeEnv {
                 base,
                 name,
             } => {
-                let base = self.type_to_canonical_expr_for_alias(base, var_names)?;
+                let base = self.type_to_canonical_expr_for_alias(base, bridge)?;
                 self.lower_associated_projection_to_canonical(&base, name)
                     .ok()
                     .map(|projection| match projection {

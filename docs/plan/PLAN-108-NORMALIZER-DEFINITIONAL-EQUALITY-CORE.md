@@ -24,7 +24,7 @@
 | [TASK-816](tasks/TASK-816-spec-d-spec-plan-packet.md) | Promote DESIGN-034 SPEC-D into SPEC-060/PLAN-108 and register Phase 112 | Docs/Planning | 4 | ✅ Complete |
 | [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Audit live canonicalization/equality/forcing seams before implementation | Docs/Substrate | 4 | ✅ Complete |
 | [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Add core normal-form and sealed-domain constructor normal-form carriers | Core/Substrate | 5 | ✅ Complete |
-| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Add `ash-typeck` normalizer module, options, outcome, and identity behavior | Type/Substrate | 5 | 📝 Planned |
+| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Add `ash-typeck` normalizer module, options, outcome, and identity behavior | Type/Substrate | 5 | ✅ Complete |
 | [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | 📝 Planned |
 | [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Implement closed fixture reduction to domain-constructor normal forms | Type/Semantic | 6 | 📝 Planned |
 | [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Implement open neutral/stuck forms and partial prefix normalization | Type/Semantic | 6 | 📝 Planned |
@@ -127,7 +127,7 @@ Every implementation task must include focused tests and exact non-regression co
 - [x] SPEC-060 is registered in `docs/spec/README.md` as Draft.
 - [x] PLAN-108 and TASK-816 through TASK-829 are registered in `docs/plan/PLAN-INDEX.md`.
 - [x] `ash-core` exposes normal-form/domain-constructor carriers needed by `ash-typeck`.
-- [ ] `ash-typeck` exposes a normalizer API with weak-head/full/demand-aware options.
+- [x] `ash-typeck` exposes a normalizer API with weak-head/full/demand-aware options.
 - [ ] Internal fixture equation tables support closed/open Append-style tests.
 - [ ] Closed and partial-open normalization tests pass.
 - [ ] Definitional equality returns structured equality/mismatch/neutral-blocked outcomes.

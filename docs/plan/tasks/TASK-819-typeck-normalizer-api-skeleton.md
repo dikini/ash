@@ -1,6 +1,18 @@
 # TASK-819: Typechecker Normalizer API Skeleton
 
-## Status: 📝 Planned
+## Status: ✅ Complete
+
+## Completion Notes
+
+Implemented the `ash-typeck::normalizer` API skeleton with environment-borrowing `Normalizer<'env>`, normalization modes/config/fuel, structured outcome/evidence/trace carriers, and distinct fuel/cycle error scaffolding. The current behavior is deliberately identity/structural only: primitives, variables, nominal apps, computation heads, and projections are converted to `NormalTypeExpr` without fixture equations, reduction semantics, definitional equality adoption, or associated-family computation.
+
+## Verification Evidence
+
+- TDD red: `cargo test -p ash-typeck --test task_819_normalizer_api_skeleton` initially failed with unresolved `ash_typeck::normalizer`.
+- Pass: `cargo test -p ash-typeck --test task_819_normalizer_api_skeleton` (6 tests)
+- Pass: `cargo test -p ash-typeck normalizer`
+- Pass: `cargo fmt --check`
+- Pass: `git diff --check`
 
 ## Description
 

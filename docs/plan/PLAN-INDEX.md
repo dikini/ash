@@ -3254,7 +3254,7 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 | [TASK-816](tasks/TASK-816-spec-d-spec-plan-packet.md) | SPEC-D spec/plan packet | 4 | ✅ Complete |
 | [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Normalizer / definitional equality audit gate | 4 | ✅ Complete |
 | [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Core normal-form and domain-constructor carriers | 5 | ✅ Complete |
-| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Typechecker normalizer API skeleton | 5 | 📝 Planned |
+| [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Typechecker normalizer API skeleton | 5 | ✅ Complete |
 | [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Internal fixture equation registry | 5 | 📝 Planned |
 | [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Closed computation-head reduction | 6 | 📝 Planned |
 | [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Open neutral and partial normalization | 6 | 📝 Planned |

@@ -3263,7 +3263,7 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 | [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Non-inverting unification boundary | 5 | ✅ Complete |
 | [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | TypeEnv forcing-point rollout | 7 | ✅ Complete |
 | [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Normalizer diagnostics and non-interference | 6 | ✅ Complete |
-| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | SPEC-D closeout docs and verification | 4 | 📝 Planned |
+| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | SPEC-D closeout docs and verification | 4 | ✅ Complete |
 | [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Phase 112 review remediation | 6 | 📝 Planned |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-D to SPEC-060/PLAN-108, then audit live canonicalization/equality/forcing seams and produce an exact forcing-point matrix before Rust changes.

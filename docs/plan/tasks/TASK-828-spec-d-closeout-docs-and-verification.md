@@ -1,6 +1,6 @@
 # TASK-828: SPEC-D Closeout Docs and Verification
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,7 @@ Reconcile docs/status/changelog and record focused and broad verification eviden
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-827](TASK-827-normalizer-diagnostics-and-non-interference.md) (planned predecessor)
+- ✅ [TASK-827](TASK-827-normalizer-diagnostics-and-non-interference.md)
 
 ## Dispatch
 
@@ -36,6 +36,8 @@ toolsets: [terminal, file]
 Reconcile docs/status/changelog and record focused and broad verification evidence for Phase 112 closeout.
 
 ## Requirements
+
+Completion evidence: SPEC-060 and spec README are marked Implemented MVP; Phase 112 task/status surfaces and verification evidence were reconciled with no residual failures.
 
 1. Update SPEC-060 status if the implementation is complete.
 2. Update PLAN-108 completion checklist.
@@ -68,12 +70,29 @@ commands:
   - cargo fmt --check
   - cargo doc --workspace --no-deps
 checklist:
-  - [ ] Focused verification evidence recorded
-  - [ ] Broad verification evidence recorded
-  - [ ] Docs/spec README, PLAN-INDEX, PLAN-108, CHANGELOG reconciled
-  - [ ] No residual failures are hidden
+  - [x] Focused verification evidence recorded
+  - [x] Broad verification evidence recorded
+  - [x] Docs/spec README, PLAN-INDEX, PLAN-108, CHANGELOG reconciled
+  - [x] No residual failures are hidden
 ```
 
 ## Notes
 
 Task type: Docs/Planning. Estimated effort: 4 hours. Keep the slice compilable and do not widen beyond SPEC-060 scope.
+
+
+## Verification Evidence
+
+Recorded during TASK-828 closeout in `.worktrees/phase-112`:
+
+- `cargo test -p ash-core --test task_818_normal_form_carriers`: passed, 5 tests.
+- `cargo test -p ash-typeck --test task_819_normalizer_api_skeleton --test task_820_internal_fixture_equation_registry --test task_821_closed_computation_head_reduction --test task_822_open_neutral_partial_normalization --test task_823_rigid_projection_alias_normalization --test task_824_definitional_equality --test task_825_non_inverting_unification_boundary --test task_826_typeenv_forcing_point_rollout --test task_827_normalizer_diagnostics`: passed, 59 focused tests.
+- `cargo test -p ash-parser --test task_827_no_public_type_fn_syntax`: passed, 2 parser non-interference tests.
+- `cargo fmt --check`: passed.
+- `git diff --check`: passed.
+- `cargo check --workspace`: passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: passed.
+- `cargo doc --workspace --no-deps`: passed.
+- `cargo test --workspace`: passed, including workspace unit, integration, and doctest suites.
+
+No residual failures were observed in the closeout gates.

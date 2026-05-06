@@ -12,7 +12,7 @@
 
 ## Phase 112: Normalizer and Definitional Equality Core
 
-**Status:** 🚧 In Progress
+**Status:** 🚧 In Progress (TASK-829 review/remediation pending)
 **Spec:** [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -33,7 +33,7 @@
 | [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Enforce non-inversion/no-solving-under-neutral computation heads | Type/Semantic | 5 | ✅ Complete |
 | [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | Adopt definitional equality at named `TypeEnv` forcing points only | Type/Integration | 7 | ✅ Complete |
 | [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and Phase 109/110/111 non-interference coverage | Diagnostics/Tests | 6 | ✅ Complete |
-| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | 📝 Planned |
+| [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | ✅ Complete |
 | [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Remediate post-closeout review findings for Phase 112 | Review/Hardening | 6 | 📝 Planned |
 
 Estimated total: 74 hours.
@@ -124,12 +124,16 @@ Every implementation task must include focused tests and exact non-regression co
 
 ## Completion Checklist
 
-- [x] SPEC-060 is registered in `docs/spec/README.md` as Draft.
+- [x] SPEC-060 is registered in `docs/spec/README.md` as Implemented MVP after TASK-828 closeout.
 - [x] PLAN-108 and TASK-816 through TASK-829 are registered in `docs/plan/PLAN-INDEX.md`.
 - [x] `ash-core` exposes normal-form/domain-constructor carriers needed by `ash-typeck`.
 - [x] `ash-typeck` exposes a normalizer API with weak-head/full/demand-aware options.
-- [ ] Internal fixture equation tables support closed/open Append-style tests.
-- [ ] Closed and partial-open normalization tests pass.
-- [ ] Definitional equality returns structured equality/mismatch/neutral-blocked outcomes.
-- [ ] Current ordinary constructor unification remains non-regressed.
-- [ ] Docs/status/changelog are reconciled and review findings are closed via TASK-829.
+- [x] Internal fixture equation tables support closed/open Append-style tests.
+- [x] Closed and partial-open normalization tests pass.
+- [x] Definitional equality returns structured equality/mismatch/neutral-blocked outcomes.
+- [x] Current ordinary constructor unification remains non-regressed.
+- [x] Docs/status/changelog are reconciled through TASK-828; TASK-829 remains the explicit independent review/remediation slice.
+
+## Closeout Verification Evidence
+
+TASK-828 recorded focused Phase 112 tests, workspace check/clippy/doc gates, and `cargo test --workspace` passing with no residual failures. TASK-829 remains the independent post-closeout remediation slice.

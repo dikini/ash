@@ -1,6 +1,6 @@
 # SPEC-060: Normalizer and Definitional Equality Core
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-06
 **Promotes:** [DESIGN-034 §16.4](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Builds on:** [SPEC-057](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -283,3 +283,8 @@ Deferred to SPEC-E/F/G/H or later:
 - proposition/disequality proof search;
 - target inference, partial type-constructor application, and holes;
 - public syntax for generalized associated-family projections.
+
+
+## Implementation Status
+
+Phase 112 implemented the internal SPEC-D normalizer and definitional equality core through TASK-827, with closeout verification recorded in TASK-828. The implementation remains internal-only: public `type fn` syntax, source equation validation, associated-family solving, proof search, recursive user computation, type-function inversion, and fixture equation summary export/import are still deferred.

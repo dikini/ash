@@ -12,7 +12,7 @@
 
 ## Phase 112: Normalizer and Definitional Equality Core
 
-**Status:** 📝 Planned
+**Status:** 🚧 In Progress
 **Spec:** [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -22,7 +22,7 @@
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-816](tasks/TASK-816-spec-d-spec-plan-packet.md) | Promote DESIGN-034 SPEC-D into SPEC-060/PLAN-108 and register Phase 112 | Docs/Planning | 4 | ✅ Complete |
-| [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Audit live canonicalization/equality/forcing seams before implementation | Docs/Substrate | 4 | 📝 Planned |
+| [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Audit live canonicalization/equality/forcing seams before implementation | Docs/Substrate | 4 | ✅ Complete |
 | [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Add core normal-form and sealed-domain constructor normal-form carriers | Core/Substrate | 5 | 📝 Planned |
 | [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Add `ash-typeck` normalizer module, options, outcome, and identity behavior | Type/Substrate | 5 | 📝 Planned |
 | [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | 📝 Planned |
@@ -43,7 +43,7 @@ Estimated total: 74 hours.
 ### Track A: Spec Gate and Audit
 
 - TASK-816 creates the normative SPEC-D packet.
-- TASK-817 audits the live `TypeEnv` equality/canonicalization/forcing seams, produces an exact forcing-point matrix, and freezes exact file targets before Rust implementation begins.
+- TASK-817 audits the live `TypeEnv` equality/canonicalization/forcing seams, produces an exact forcing-point matrix, and freezes exact file targets before Rust implementation begins. Completed audit: [TASK-817 normalizer/defeq audit](audits/TASK-817-normalizer-defeq-audit.md).
 
 ### Track B: Normal-Form and Normalizer Substrate
 

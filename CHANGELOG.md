@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- [NOTE-011](docs/notes/NOTE-011-TYPE-LEVEL-PROTOCOLS-CAPABILITY-AUTHORITY-AND-DISTRIBUTED-PARTICIPANTS.md): captured the initial design discussion on type-level CSP / restricted π-calculus / MPST-style protocol modeling over Ash capabilities, authority, resources, distributed/sandboxed participants, LLM/external actor tool discovery, workflow-synchronized evidence protocols, and minimal runtime endpoint/session support while deferring surface syntax.
+
 - [SPEC-060](docs/spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [PLAN-108](docs/plan/PLAN-108-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), and [TASK-816](docs/plan/tasks/TASK-816-spec-d-spec-plan-packet.md) through [TASK-829](docs/plan/tasks/TASK-829-phase112-review-remediation.md): planned Phase 112 as DESIGN-034 SPEC-D, defining the internal total normalizer, canonical normal forms, fixture equation tables, normalize-and-compare definitional equality, neutrality/non-inversion diagnostics, and narrow `TypeEnv` forcing-point adoption while explicitly deferring public `type fn`, associated type-family computation, equation export/import, and proof search.
 
 - Added draft design note [DESIGN-NOTE-STRUCTURED-DIAGNOSTICS](docs/design/DESIGN-NOTE-STRUCTURED-DIAGNOSTICS.md) outlining structured Ash diagnostics as the canonical model for Rust/Elm-style human errors, JSON/YAML machine formats, LSP projection, and future LLM/tool consumption.

@@ -7,6 +7,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-829](docs/plan/tasks/TASK-829-phase112-review-remediation.md): Completed the Phase 112 independent review/remediation slice. Added focused regression coverage for structurally known definitional-equality mismatches involving neutral computation heads, associated projections, and closed data heads with neutral arguments, and fixed the normalizer to report those cases as normalized `NotEqual` evidence rather than neutrality-blocked non-inversion evidence.
+
 - Added structured normalizer diagnostics and non-interference coverage for Phase 112 boundaries (TASK-827).
 
 - [TASK-825](docs/plan/tasks/TASK-825-non-inverting-unification-boundary.md): Added focused non-inverting unification-boundary coverage for the normalizer/definitional-equality API. Same-headed neutral computation applications now have explicit tests proving differing canonical abstract variables remain blocked evidence instead of being solved by inversion, `Append<Xs, Ys> == Cons<A, Nil>` reports `BlockedByNeutrality` with a no-inversion note instead of solving inputs from outputs, equal neutral spines still compare structurally, and legacy same-headed nominal `Type` unification continues to solve current inference metas through the existing unifier without any `TypeEnv` forcing-point rollout.
@@ -280,6 +282,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+- Hardened Phase 112 definitional equality mismatch classification so structurally disjoint neutral/projection/data heads report known inequality instead of neutrality-blocked evidence (TASK-829).
 
 - [TASK-792](docs/plan/tasks/TASK-792-phase109-review-remediation.md): fixed follow-up Phase 109 import/export alias regressions by making split `pub use` alias constructor summaries replace origin constructor names, preserving builtin alias execution through the original dispatch target, accepting same-module `pub use` type aliases in public signatures, and refreshing stdlib/status comments that overpromised deferred supervised-agent behavior or preserved superseded broad-suite failure notes without TASK-792 supersession context.
 

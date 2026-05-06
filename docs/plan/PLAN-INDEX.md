@@ -288,7 +288,7 @@ Update this section as tasks complete:
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
-| 112 | 14 | 2 | 🚧 In Progress |
+| 112 | 14 | 14 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -397,7 +397,7 @@ This table is retained near the original early-phase section for historical cont
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
-| 112 | 14 | 2 | 🚧 In Progress |
+| 112 | 14 | 14 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3240,7 +3240,7 @@ Boundary note: marker constructors are not promoted ADT constructors, not ordina
 ## Phase 112: Normalizer and Definitional Equality Core
 
 **Priority:** High (DESIGN-034 SPEC-D substrate required before direct structural `type fn`, type-computation export/import, associated families, and proposition solving)
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Spec:** [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-108-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md](PLAN-108-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
@@ -3264,7 +3264,7 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 | [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | TypeEnv forcing-point rollout | 7 | ✅ Complete |
 | [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Normalizer diagnostics and non-interference | 6 | ✅ Complete |
 | [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | SPEC-D closeout docs and verification | 4 | ✅ Complete |
-| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Phase 112 review remediation | 6 | 📝 Planned |
+| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Phase 112 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 8h. Promote DESIGN-034 SPEC-D to SPEC-060/PLAN-108, then audit live canonicalization/equality/forcing seams and produce an exact forcing-point matrix before Rust changes.
 **Track B (Normal-Form and Normalizer Substrate):** 15h. Add shared normal-form/domain-constructor carriers, the `ash-typeck` normalizer skeleton, and internal fixture equation tables.

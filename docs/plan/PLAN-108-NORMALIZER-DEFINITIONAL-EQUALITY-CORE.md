@@ -12,7 +12,7 @@
 
 ## Phase 112: Normalizer and Definitional Equality Core
 
-**Status:** 🚧 In Progress (TASK-829 review/remediation pending)
+**Status:** ✅ Complete (TASK-829 review/remediation closed)
 **Spec:** [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md)
@@ -34,7 +34,7 @@
 | [TASK-826](tasks/TASK-826-typeenv-forcing-point-rollout.md) | Adopt definitional equality at named `TypeEnv` forcing points only | Type/Integration | 7 | ✅ Complete |
 | [TASK-827](tasks/TASK-827-normalizer-diagnostics-and-non-interference.md) | Add diagnostics, negative tests, and Phase 109/110/111 non-interference coverage | Diagnostics/Tests | 6 | ✅ Complete |
 | [TASK-828](tasks/TASK-828-spec-d-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | ✅ Complete |
-| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Remediate post-closeout review findings for Phase 112 | Review/Hardening | 6 | 📝 Planned |
+| [TASK-829](tasks/TASK-829-phase112-review-remediation.md) | Remediate post-closeout review findings for Phase 112 | Review/Hardening | 6 | ✅ Complete |
 
 Estimated total: 74 hours.
 
@@ -132,8 +132,8 @@ Every implementation task must include focused tests and exact non-regression co
 - [x] Closed and partial-open normalization tests pass.
 - [x] Definitional equality returns structured equality/mismatch/neutral-blocked outcomes.
 - [x] Current ordinary constructor unification remains non-regressed.
-- [x] Docs/status/changelog are reconciled through TASK-828; TASK-829 remains the explicit independent review/remediation slice.
+- [x] Docs/status/changelog are reconciled through TASK-829 review remediation; Phase 112 is complete/remediated.
 
 ## Closeout Verification Evidence
 
-TASK-828 recorded focused Phase 112 tests, workspace check/clippy/doc gates, and `cargo test --workspace` passing with no residual failures. TASK-829 remains the independent post-closeout remediation slice.
+TASK-828 recorded focused Phase 112 tests, workspace check/clippy/doc gates, and `cargo test --workspace` passing with no residual failures. TASK-829 completed independent review remediation by fixing structurally known neutral/projection mismatch classification and adding focused regression coverage; broad verification is recorded in TASK-829.

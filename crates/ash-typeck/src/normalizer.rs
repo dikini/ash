@@ -521,6 +521,14 @@ impl<'env> Normalizer<'env> {
             return Ok(DefinitionalEqualityResult::Equal);
         }
 
+        if normal_forms_are_structurally_disjoint(&lhs_norm, &rhs_norm) {
+            return Ok(DefinitionalEqualityResult::NotEqual {
+                lhs_norm,
+                rhs_norm,
+                mismatch: "root".to_string(),
+            });
+        }
+
         let neutral_subterms = neutrality_blockers_for_mismatch(&lhs_norm, &rhs_norm);
         if neutral_subterms.is_empty() {
             Ok(DefinitionalEqualityResult::NotEqual {
@@ -815,6 +823,87 @@ fn normal_arg_spines_definitionally_equal(
             .iter()
             .zip(rhs_args)
             .all(|(lhs, rhs)| normal_forms_definitionally_equal(lhs, rhs))
+}
+
+fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalTypeExpr) -> bool {
+    match (lhs, rhs) {
+        (NormalTypeExpr::Primitive(lhs), NormalTypeExpr::Primitive(rhs))
+        | (NormalTypeExpr::Var(lhs), NormalTypeExpr::Var(rhs)) => lhs != rhs,
+        (
+            NormalTypeExpr::NominalApp {
+                origin: lhs_origin,
+                kind: lhs_kind,
+                ..
+            },
+            NormalTypeExpr::NominalApp {
+                origin: rhs_origin,
+                kind: rhs_kind,
+                ..
+            },
+        ) => lhs_origin != rhs_origin || lhs_kind != rhs_kind,
+        (
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: lhs_constructor,
+                domain: lhs_domain,
+                kind: lhs_kind,
+                ..
+            },
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: rhs_constructor,
+                domain: rhs_domain,
+                kind: rhs_kind,
+                ..
+            },
+        ) => lhs_constructor != rhs_constructor || lhs_domain != rhs_domain || lhs_kind != rhs_kind,
+        (
+            NormalTypeExpr::NeutralComputationApp {
+                head: lhs_head,
+                args: lhs_args,
+                kind: lhs_kind,
+                ..
+            },
+            NormalTypeExpr::NeutralComputationApp {
+                head: rhs_head,
+                args: rhs_args,
+                kind: rhs_kind,
+                ..
+            },
+        ) => lhs_head != rhs_head || lhs_kind != rhs_kind || lhs_args.len() != rhs_args.len(),
+        (
+            NormalTypeExpr::Projection {
+                interface: lhs_interface,
+                member: lhs_member,
+                args: lhs_args,
+                kind: lhs_kind,
+                rigidity: _,
+                ..
+            },
+            NormalTypeExpr::Projection {
+                interface: rhs_interface,
+                member: rhs_member,
+                args: rhs_args,
+                kind: rhs_kind,
+                rigidity: _,
+                ..
+            },
+        ) => {
+            lhs_interface != rhs_interface
+                || lhs_member != rhs_member
+                || lhs_kind != rhs_kind
+                || lhs_args.len() != rhs_args.len()
+        }
+        (
+            NormalTypeExpr::Primitive(_)
+            | NormalTypeExpr::Var(_)
+            | NormalTypeExpr::NominalApp { .. }
+            | NormalTypeExpr::DomainConstructorApp { .. },
+            NormalTypeExpr::Primitive(_)
+            | NormalTypeExpr::Var(_)
+            | NormalTypeExpr::NominalApp { .. }
+            | NormalTypeExpr::DomainConstructorApp { .. },
+        ) => true,
+        _ => false,
+    }
 }
 
 fn neutrality_blockers_for_mismatch(

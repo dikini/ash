@@ -254,7 +254,7 @@ fn task_826_projection_argument_spines_normalize_without_losing_rigidity() {
                 ),
             )
             .expect("projection rigidity mismatch produces structured evidence"),
-        DefinitionalEqualityResult::BlockedByNeutrality { .. }
+        DefinitionalEqualityResult::NotEqual { .. }
     ));
 }
 

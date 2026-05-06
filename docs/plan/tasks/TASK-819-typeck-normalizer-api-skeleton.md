@@ -29,7 +29,7 @@ Add the ash-typeck normalizer module, options, outcomes, error types, and identi
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-818](TASK-818-core-normal-form-and-domain-constructor-carriers.md) (planned predecessor)
+- ✅ [TASK-818](TASK-818-core-normal-form-and-domain-constructor-carriers.md) (planned predecessor)
 
 ## Dispatch
 
@@ -78,9 +78,9 @@ commands:
   - cargo test -p ash-typeck
   - cargo fmt --check
 checklist:
-  - [ ] Normalizer module compiles
-  - [ ] Identity normalization tests pass
-  - [ ] Fuel/cycle error types exist but are not conflated with neutral stuckness
+  - [x] Normalizer module compiles (`cargo test -p ash-typeck --test task_819_normalizer_api_skeleton`)
+  - [x] Identity normalization tests pass (`cargo test -p ash-typeck --test task_819_normalizer_api_skeleton`)
+  - [x] Fuel/cycle error types exist but are not conflated with neutral stuckness (`cargo test -p ash-typeck --test task_819_normalizer_api_skeleton`)
 ```
 
 ## Notes

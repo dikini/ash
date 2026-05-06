@@ -67,10 +67,10 @@ commands:
   - cargo test -p ash-typeck --test task_802_canonicalization_boundary_adoption_red
   - cargo fmt --check
 checklist:
-  - [ ] No-solving-under-neutral tests pass
-  - [ ] Ordinary nominal unification regression tests pass
-  - [ ] Neutral-blocked diagnostics mention no inversion
-  - [ ] Canonical-var versus inference-meta behavior is explicitly covered
+  - [x] No-solving-under-neutral tests pass (`cargo test -p ash-typeck --test task_825_non_inverting_unification_boundary`)
+  - [x] Ordinary nominal unification regression tests pass (`cargo test -p ash-typeck --test task_825_non_inverting_unification_boundary`)
+  - [x] Neutral-blocked diagnostics mention no inversion (`cargo test -p ash-typeck --test task_825_non_inverting_unification_boundary`)
+  - [x] Canonical-var versus inference-meta behavior is explicitly covered (`cargo test -p ash-typeck --test task_825_non_inverting_unification_boundary`)
 ```
 
 ## Notes

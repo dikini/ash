@@ -1,9 +1,11 @@
-//! Type-expression normalizer API skeleton for Phase 112.
+//! Phase 112 SPEC-D normalizer and definitional-equality core.
 //!
-//! This module intentionally provides only the total API surface and structural
-//! identity conversion from `CanonicalTypeExpr` to `NormalTypeExpr`. It does not
-//! own reduction semantics, definitional equality adoption, or associated-family
-//! computation; later SPEC-060 tasks build those pieces on this boundary.
+//! The module lowers canonical type expressions into total normal-form carriers,
+//! applies compiler-internal fixture equations for closed computation heads, and
+//! compares canonical normal forms for definitional equality. It deliberately does
+//! not expose public `type fn` syntax, source-level equation validation,
+//! associated-family solving, proposition solving, recursive computation, or
+//! type-function inversion.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -250,10 +252,18 @@ impl<'a> FixtureEquationMatch<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NormalizationMode {
     /// Reduce only as much as needed to expose the outermost head.
+    ///
+    /// Phase 112 keeps this as a reserved strategy flag for callers that need to
+    /// record intent; the current MVP normalizer still normalizes argument spines
+    /// when constructing canonical normal forms.
     WeakHead,
     /// Recursively normalize the entire reachable expression.
     Full,
     /// Use-site selected demand-driven normalization.
+    ///
+    /// Reserved for future mode-sensitive forcing-point control; Phase 112 uses
+    /// the same total argument-spine normalization behavior as `Full` after the
+    /// caller has selected a normalization boundary.
     Demand,
 }
 
@@ -502,8 +512,8 @@ impl<'env> Normalizer<'env> {
         })
     }
 
-    /// Normalize both inputs using this normalizer's configuration and compare
-    /// the canonical normal forms structurally.
+    /// Normalize both inputs in full-normalization mode and compare the canonical
+    /// normal forms structurally.
     ///
     /// This method deliberately does not perform proof search, type-function
     /// inversion, associated-family computation, or any `TypeEnv` forcing-point
@@ -514,8 +524,12 @@ impl<'env> Normalizer<'env> {
         lhs: &CanonicalTypeExpr,
         rhs: &CanonicalTypeExpr,
     ) -> NormalizationResult<DefinitionalEqualityResult> {
-        let lhs_norm = self.normalize(lhs)?.normal;
-        let rhs_norm = self.normalize(rhs)?.normal;
+        let mut full_config = self.config.clone();
+        full_config.mode = NormalizationMode::Full;
+        let full_normalizer =
+            Self::with_config_and_registry(self.env, full_config, self.fixture_registry);
+        let lhs_norm = full_normalizer.normalize(lhs)?.normal;
+        let rhs_norm = full_normalizer.normalize(rhs)?.normal;
 
         if normal_forms_definitionally_equal(&lhs_norm, &rhs_norm) {
             return Ok(DefinitionalEqualityResult::Equal);
@@ -832,29 +846,42 @@ fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalType
         (
             NormalTypeExpr::NominalApp {
                 origin: lhs_origin,
+                args: lhs_args,
                 kind: lhs_kind,
                 ..
             },
             NormalTypeExpr::NominalApp {
                 origin: rhs_origin,
+                args: rhs_args,
                 kind: rhs_kind,
                 ..
             },
-        ) => lhs_origin != rhs_origin || lhs_kind != rhs_kind,
+        ) => {
+            lhs_origin != rhs_origin
+                || lhs_kind != rhs_kind
+                || normal_arg_spines_structurally_disjoint(lhs_args, rhs_args)
+        }
         (
             NormalTypeExpr::DomainConstructorApp {
                 constructor: lhs_constructor,
                 domain: lhs_domain,
+                args: lhs_args,
                 kind: lhs_kind,
                 ..
             },
             NormalTypeExpr::DomainConstructorApp {
                 constructor: rhs_constructor,
                 domain: rhs_domain,
+                args: rhs_args,
                 kind: rhs_kind,
                 ..
             },
-        ) => lhs_constructor != rhs_constructor || lhs_domain != rhs_domain || lhs_kind != rhs_kind,
+        ) => {
+            lhs_constructor != rhs_constructor
+                || lhs_domain != rhs_domain
+                || lhs_kind != rhs_kind
+                || normal_arg_spines_structurally_disjoint(lhs_args, rhs_args)
+        }
         (
             NormalTypeExpr::NeutralComputationApp {
                 head: lhs_head,
@@ -868,14 +895,19 @@ fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalType
                 kind: rhs_kind,
                 ..
             },
-        ) => lhs_head != rhs_head || lhs_kind != rhs_kind || lhs_args.len() != rhs_args.len(),
+        ) => {
+            lhs_head != rhs_head
+                || lhs_kind != rhs_kind
+                || lhs_args.len() != rhs_args.len()
+                || normal_arg_spines_structurally_disjoint(lhs_args, rhs_args)
+        }
         (
             NormalTypeExpr::Projection {
                 interface: lhs_interface,
                 member: lhs_member,
                 args: lhs_args,
                 kind: lhs_kind,
-                rigidity: _,
+                rigidity: lhs_rigidity,
                 ..
             },
             NormalTypeExpr::Projection {
@@ -883,14 +915,16 @@ fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalType
                 member: rhs_member,
                 args: rhs_args,
                 kind: rhs_kind,
-                rigidity: _,
+                rigidity: rhs_rigidity,
                 ..
             },
         ) => {
             lhs_interface != rhs_interface
                 || lhs_member != rhs_member
                 || lhs_kind != rhs_kind
+                || lhs_rigidity != rhs_rigidity
                 || lhs_args.len() != rhs_args.len()
+                || normal_arg_spines_structurally_disjoint(lhs_args, rhs_args)
         }
         (
             NormalTypeExpr::Primitive(_)
@@ -903,6 +937,39 @@ fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalType
             | NormalTypeExpr::DomainConstructorApp { .. },
         ) => true,
         _ => false,
+    }
+}
+
+fn normal_arg_spines_structurally_disjoint(
+    lhs_args: &[NormalTypeExpr],
+    rhs_args: &[NormalTypeExpr],
+) -> bool {
+    lhs_args.len() != rhs_args.len()
+        || lhs_args
+            .iter()
+            .zip(rhs_args)
+            .any(|(lhs, rhs)| normal_forms_are_structurally_disjoint_in_spine(lhs, rhs))
+}
+
+fn normal_forms_are_structurally_disjoint_in_spine(
+    lhs: &NormalTypeExpr,
+    rhs: &NormalTypeExpr,
+) -> bool {
+    normal_form_is_concrete(lhs)
+        && normal_form_is_concrete(rhs)
+        && normal_forms_are_structurally_disjoint(lhs, rhs)
+}
+
+fn normal_form_is_concrete(expr: &NormalTypeExpr) -> bool {
+    match expr {
+        NormalTypeExpr::Primitive(_) => true,
+        NormalTypeExpr::NominalApp { args, .. }
+        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+            args.iter().all(normal_form_is_concrete)
+        }
+        NormalTypeExpr::Var(_)
+        | NormalTypeExpr::NeutralComputationApp { .. }
+        | NormalTypeExpr::Projection { .. } => false,
     }
 }
 

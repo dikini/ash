@@ -34,6 +34,10 @@ fn var(name: &str) -> CanonicalTypeExpr {
     CanonicalTypeExpr::Var(name.to_string())
 }
 
+fn primitive(name: &str) -> CanonicalTypeExpr {
+    CanonicalTypeExpr::Primitive(name.to_string())
+}
+
 fn interface(name: &str) -> InterfaceIdentityId {
     InterfaceIdentityId::new(module(), name)
 }
@@ -42,15 +46,29 @@ fn member(interface: InterfaceIdentityId, name: &str) -> AssociatedMemberIdentit
     AssociatedMemberIdentityId::associated_type(interface, name, vec![])
 }
 
-fn projection(interface_name: &str, member_name: &str) -> CanonicalTypeExpr {
+fn projection_with_args(
+    interface_name: &str,
+    member_name: &str,
+    rigidity: ProjectionRigidity,
+    args: Vec<CanonicalTypeExpr>,
+) -> CanonicalTypeExpr {
     let interface = interface(interface_name);
     CanonicalTypeExpr::Projection {
         member: member(interface.clone(), member_name),
         interface,
-        args: vec![var("T")],
+        args,
         kind: Kind::Type,
-        rigidity: ProjectionRigidity::Neutral,
+        rigidity,
     }
+}
+
+fn projection(interface_name: &str, member_name: &str) -> CanonicalTypeExpr {
+    projection_with_args(
+        interface_name,
+        member_name,
+        ProjectionRigidity::Neutral,
+        vec![var("T")],
+    )
 }
 
 fn defeq(lhs: &CanonicalTypeExpr, rhs: &CanonicalTypeExpr) -> DefinitionalEqualityResult {
@@ -108,5 +126,106 @@ fn task_829_different_closed_data_heads_do_not_become_blocked_due_to_neutral_arg
     assert!(
         matches!(result, DefinitionalEqualityResult::NotEqual { .. }),
         "different data heads are known unequal before inspecting neutral arguments: {result:?}"
+    );
+}
+
+#[test]
+fn task_829_projection_rigidity_mismatch_is_structural_not_blocked() {
+    let lhs = projection_with_args(
+        "Iterable",
+        "Item",
+        ProjectionRigidity::Rigid,
+        vec![var("T")],
+    );
+    let rhs = projection_with_args(
+        "Iterable",
+        "Item",
+        ProjectionRigidity::Neutral,
+        vec![var("T")],
+    );
+
+    let result = defeq(&lhs, &rhs);
+
+    assert!(
+        matches!(result, DefinitionalEqualityResult::NotEqual { .. }),
+        "same projection identity with different rigidity is structurally unequal: {result:?}"
+    );
+}
+
+#[test]
+fn task_829_same_neutral_head_with_closed_arg_mismatch_is_structural_not_blocked() {
+    let lhs = app("F", vec![primitive("Int")]);
+    let rhs = app("F", vec![primitive("String")]);
+
+    let result = defeq(&lhs, &rhs);
+
+    assert!(
+        matches!(result, DefinitionalEqualityResult::NotEqual { .. }),
+        "same neutral head with known unequal normalized argument spines is not blocked: {result:?}"
+    );
+}
+
+#[test]
+fn task_829_same_projection_identity_with_closed_arg_mismatch_is_structural_not_blocked() {
+    let lhs = projection_with_args(
+        "Iterable",
+        "Item",
+        ProjectionRigidity::Neutral,
+        vec![primitive("Int")],
+    );
+    let rhs = projection_with_args(
+        "Iterable",
+        "Item",
+        ProjectionRigidity::Neutral,
+        vec![primitive("String")],
+    );
+
+    let result = defeq(&lhs, &rhs);
+
+    assert!(
+        matches!(result, DefinitionalEqualityResult::NotEqual { .. }),
+        "same projection identity with known unequal normalized argument spines is not blocked: {result:?}"
+    );
+}
+
+#[test]
+fn task_829_same_neutral_head_with_open_vs_closed_arg_remains_blocked() {
+    let lhs = app("F", vec![var("X")]);
+    let rhs = app("F", vec![primitive("Int")]);
+
+    let result = defeq(&lhs, &rhs);
+
+    assert!(
+        matches!(
+            result,
+            DefinitionalEqualityResult::BlockedByNeutrality { .. }
+        ),
+        "same neutral head with an open argument mismatch must not solve or classify as known unequal: {result:?}"
+    );
+}
+
+#[test]
+fn task_829_same_projection_identity_with_open_vs_closed_arg_remains_blocked() {
+    let lhs = projection_with_args(
+        "Iterable",
+        "Item",
+        ProjectionRigidity::Neutral,
+        vec![var("X")],
+    );
+    let rhs = projection_with_args(
+        "Iterable",
+        "Item",
+        ProjectionRigidity::Neutral,
+        vec![primitive("Int")],
+    );
+
+    let result = defeq(&lhs, &rhs);
+
+    assert!(
+        matches!(
+            result,
+            DefinitionalEqualityResult::BlockedByNeutrality { .. }
+        ),
+        "same projection identity with an open argument mismatch must not solve or classify as known unequal: {result:?}"
     );
 }

@@ -112,6 +112,11 @@ pub enum NormalTypeExpr {
         head: TypeComputationHeadId,
         args: Vec<NormalTypeExpr>,
         kind: Kind,
+        /// Reason preserved when this neutral computation app is stuck.
+        ///
+        /// `None` is reserved for imported or legacy carriers that predate reason
+        /// attribution; the Phase 112 normalizer always fills `Some(...)` for
+        /// carriers it constructs.
         reason: Option<NormalFormBlockReason>,
     },
     Projection {
@@ -120,6 +125,11 @@ pub enum NormalTypeExpr {
         args: Vec<NormalTypeExpr>,
         kind: Kind,
         rigidity: ProjectionRigidity,
+        /// Reason preserved when this projection remains stuck.
+        ///
+        /// `None` is reserved for imported or legacy carriers that predate reason
+        /// attribution; the Phase 112 normalizer always fills `Some(...)` for
+        /// carriers it constructs.
         reason: Option<NormalFormBlockReason>,
     },
 }

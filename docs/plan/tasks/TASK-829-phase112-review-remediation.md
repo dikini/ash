@@ -80,7 +80,7 @@ Review inputs checked live against `SPEC-060`, `PLAN-108`, `PLAN-INDEX`, `type_i
 
 1. **High — Neutral blockers over-classified structurally known mismatches.** `Normalizer::definitional_equality(...)` returned `BlockedByNeutrality` whenever any neutral/projection subterm existed in a mismatch, even when the mismatch was already decided by different computation-head identities, projection identities, nominal data heads, or kind/arity metadata. This drifted from SPEC-060's normalize-and-compare contract: neutral terms block equality only when deciding the comparison would require inversion/solving under the neutral head, not when canonical identities are already unequal.
    - Remediation: added root structural-disjointness classification before blocker collection in `crates/ash-typeck/src/normalizer.rs`.
-   - Regression: added `crates/ash-typeck/tests/task_829_review_remediation.rs` proving different neutral computation heads, different projection identities, and different closed data heads with neutral arguments report `NotEqual` rather than `BlockedByNeutrality`.
+   - Regression: added `crates/ash-typeck/tests/task_829_review_remediation.rs` proving different neutral computation heads, different projection identities, different closed data heads with neutral arguments, projection rigidity mismatches, and same-head neutral/projection comparisons with closed known-unequal argument spines report `NotEqual` rather than `BlockedByNeutrality`, while open-vs-closed argument spines remain `BlockedByNeutrality` to preserve the non-inversion boundary.
 
 2. **No blocker — Phase 112 scope boundaries remain intact.** Review found no public `type fn` syntax, no source equation parsing/lowering, no fixture equation summary export/import, no associated-family solver, and no proof-search/inversion implementation. Existing parser rejection and non-interference tests remain in TASK-827.
 
@@ -102,10 +102,13 @@ TASK-829 is complete. Phase 112 is complete/remediated after focused review reme
 
 Post-remediation verification in `.worktrees/phase-112`:
 
-- `cargo test -p ash-typeck --test task_829_review_remediation`: passed, 3 tests.
-- `cargo test -p ash-typeck --test task_824_definitional_equality --test task_827_normalizer_diagnostics`: passed, 18 tests.
+- `cargo test -p ash-typeck --test task_829_review_remediation`: passed, 8 tests.
+- `cargo test -p ash-typeck --test task_824_definitional_equality --test task_825_non_inverting_unification_boundary --test task_826_typeenv_forcing_point_rollout --test task_829_review_remediation`: passed, 27 tests.
 - `cargo clippy -p ash-typeck --test task_829_review_remediation --all-features -- -D warnings`: passed.
+- `cargo test --workspace`: passed after final remediation (background wait exit 0; foreground reruns timed out at the known long CLI input test before completion, so completion evidence uses the tracked background process exit code).
 - `cargo fmt --check`: passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: passed.
+- `cargo doc --workspace --no-deps`: passed.
 - `git diff --check`: passed.
 
-TASK-828 previously recorded broad `cargo check --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo doc --workspace --no-deps`, and `cargo test --workspace` passing. Final broad gates were rerun after TASK-829 before phase completion.
+TASK-828 previously recorded broad gates; the commands above were rerun after the final TASK-829 remediation changes before phase completion.

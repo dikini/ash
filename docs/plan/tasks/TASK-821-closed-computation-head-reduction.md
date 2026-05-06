@@ -17,7 +17,7 @@ Implement closed fixture reduction from computation-head applications to domain-
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-820](TASK-820-internal-fixture-equation-registry.md) (planned predecessor)
+- ✅ [TASK-820](TASK-820-internal-fixture-equation-registry.md) (planned predecessor)
 
 ## Dispatch
 
@@ -46,7 +46,7 @@ Implement closed fixture reduction from computation-head applications to domain-
 ## Files
 
 - Modify: `crates/ash-typeck/src/normalizer.rs`
-- Test: `crates/ash-typeck/tests/task_821_closed_computation_reduction.rs`
+- Test: `crates/ash-typeck/tests/task_821_closed_computation_head_reduction.rs`
 
 ## TDD Steps
 
@@ -61,13 +61,13 @@ Implement closed fixture reduction from computation-head applications to domain-
 ```
 strictness: clean
 commands:
-  - cargo test -p ash-typeck --test task_821_closed_computation_reduction
+  - cargo test -p ash-typeck --test task_821_closed_computation_head_reduction
   - cargo test -p ash-typeck task_802
   - cargo fmt --check
 checklist:
-  - [ ] Closed Append reductions pass
-  - [ ] Reduction output uses domain constructor normal forms
-  - [ ] Existing TypeEnv equality tests still pass
+  - [x] Closed Append reductions pass (`cargo test -p ash-typeck --test task_821_closed_computation_head_reduction`)
+  - [x] Reduction output uses domain constructor normal forms (`cargo test -p ash-typeck --test task_821_closed_computation_head_reduction`)
+  - [x] Existing TypeEnv equality tests still pass (`cargo test -p ash-typeck --test task_826_typeenv_forcing_point_rollout`)
 ```
 
 ## Notes

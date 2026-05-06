@@ -17,7 +17,7 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-821](TASK-821-closed-computation-head-reduction.md) (planned predecessor)
+- ✅ [TASK-821](TASK-821-closed-computation-head-reduction.md) (planned predecessor)
 
 ## Dispatch
 
@@ -62,7 +62,7 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 strictness: clean
 commands:
   - cargo test -p ash-typeck --test task_822_open_neutral_normalization
-  - cargo test -p ash-typeck --test task_821_closed_computation_reduction
+  - cargo test -p ash-typeck --test task_821_closed_computation_head_reduction
   - cargo fmt --check
 checklist:
   - [x] Open neutral tests pass

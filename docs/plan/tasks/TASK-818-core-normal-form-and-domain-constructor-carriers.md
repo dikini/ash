@@ -17,7 +17,7 @@ Add the shared normal-form/domain-constructor carrier substrate needed by the ty
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-817](TASK-817-normalizer-defeq-audit-gate.md) (planned predecessor)
+- ✅ [TASK-817](TASK-817-normalizer-defeq-audit-gate.md) (planned predecessor)
 
 ## Dispatch
 

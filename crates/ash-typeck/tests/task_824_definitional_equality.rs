@@ -231,7 +231,7 @@ fn task_824_neutral_and_rigid_projections_compare_by_identity_rigidity_and_norma
     let mismatch = defeq(&rigid_lhs, &neutral_rhs);
     assert!(matches!(
         mismatch,
-        DefinitionalEqualityResult::BlockedByNeutrality { .. }
+        DefinitionalEqualityResult::NotEqual { .. }
     ));
 }
 
@@ -308,4 +308,26 @@ fn task_824_normalization_errors_propagate_from_equality() {
             remaining: 0,
         }
     );
+}
+
+#[test]
+fn task_824_defeq_forces_full_normalization_even_from_weak_head_normalizer() {
+    let env = TypeEnv::new();
+    let registry = registry();
+    let config = NormalizationConfig {
+        mode: NormalizationMode::WeakHead,
+        fuel: NormalizationFuel::new(64),
+        trace: false,
+    };
+    let normalizer = Normalizer::with_config_and_registry(&env, config, &registry);
+
+    let lhs = app("Append", vec![nil_expr(), nil_expr()]);
+    let rhs = nil_expr();
+
+    assert!(matches!(
+        normalizer
+            .definitional_equality(&lhs, &rhs)
+            .expect("defeq uses full normalization contract"),
+        DefinitionalEqualityResult::Equal
+    ));
 }

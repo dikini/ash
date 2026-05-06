@@ -356,6 +356,34 @@ pub enum NormalizationError {
 /// Result alias for normalization requests.
 pub type NormalizationResult<T> = Result<T, NormalizationError>;
 
+/// Structured normalize-and-compare definitional equality evidence.
+///
+/// This API is intentionally non-inverting: normal forms are compared
+/// structurally, and mismatches involving neutral or rigid blockers are reported
+/// as blocked evidence rather than triggering proof search or type-function
+/// inversion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DefinitionalEqualityResult {
+    /// Both inputs normalize to the same canonical normal form.
+    Equal,
+    /// Both inputs normalized successfully, but the resulting closed/data shapes
+    /// differ. The stored slices are normalized forms for diagnostics.
+    NotEqual {
+        lhs_norm: NormalTypeExpr,
+        rhs_norm: NormalTypeExpr,
+        mismatch: String,
+    },
+    /// Equality could not be decided without inverting or solving underneath a
+    /// neutral/rigid blocker. The stored slices are normalized forms for future
+    /// diagnostics.
+    BlockedByNeutrality {
+        lhs_norm: NormalTypeExpr,
+        rhs_norm: NormalTypeExpr,
+        neutral_subterms: Vec<NormalTypeExpr>,
+        no_inversion_note: String,
+    },
+}
+
 /// Environment-aware normalizer.
 pub struct Normalizer<'env> {
     env: &'env TypeEnv,
@@ -428,6 +456,55 @@ impl<'env> Normalizer<'env> {
         })
     }
 
+    /// Normalize both inputs using this normalizer's configuration and compare
+    /// the canonical normal forms structurally.
+    ///
+    /// This method deliberately does not perform proof search, type-function
+    /// inversion, associated-family computation, or any `TypeEnv` forcing-point
+    /// adoption. Normalization failures such as fuel exhaustion propagate as
+    /// robustness errors rather than becoming semantic stuckness evidence.
+    pub fn definitional_equality(
+        &self,
+        lhs: &CanonicalTypeExpr,
+        rhs: &CanonicalTypeExpr,
+    ) -> NormalizationResult<DefinitionalEqualityResult> {
+        let lhs_norm = self.normalize(lhs)?.normal;
+        let rhs_norm = self.normalize(rhs)?.normal;
+
+        if normal_forms_definitionally_equal(&lhs_norm, &rhs_norm) {
+            return Ok(DefinitionalEqualityResult::Equal);
+        }
+
+        let neutral_subterms = neutrality_blockers_for_mismatch(&lhs_norm, &rhs_norm);
+        if neutral_subterms.is_empty() {
+            Ok(DefinitionalEqualityResult::NotEqual {
+                lhs_norm,
+                rhs_norm,
+                mismatch: "root".to_string(),
+            })
+        } else {
+            Ok(DefinitionalEqualityResult::BlockedByNeutrality {
+                lhs_norm,
+                rhs_norm,
+                neutral_subterms,
+                no_inversion_note:
+                    "definitional equality normalizes and compares; it does not invert neutral computation heads or projections"
+                        .to_string(),
+            })
+        }
+    }
+
+    /// Boolean convenience wrapper derived only from structured equality
+    /// evidence.
+    pub fn definitionally_equal(
+        &self,
+        lhs: &CanonicalTypeExpr,
+        rhs: &CanonicalTypeExpr,
+    ) -> NormalizationResult<bool> {
+        self.definitional_equality(lhs, rhs)
+            .map(|evidence| matches!(evidence, DefinitionalEqualityResult::Equal))
+    }
+
     /// Returns this normalizer's configuration.
     #[must_use]
     pub const fn config(&self) -> &NormalizationConfig {
@@ -438,6 +515,129 @@ impl<'env> Normalizer<'env> {
     #[must_use]
     pub const fn fixture_registry(&self) -> &FixtureEquationRegistry {
         self.fixture_registry
+    }
+}
+
+fn normal_forms_definitionally_equal(lhs: &NormalTypeExpr, rhs: &NormalTypeExpr) -> bool {
+    match (lhs, rhs) {
+        (NormalTypeExpr::Primitive(lhs), NormalTypeExpr::Primitive(rhs))
+        | (NormalTypeExpr::Var(lhs), NormalTypeExpr::Var(rhs)) => lhs == rhs,
+        (
+            NormalTypeExpr::NominalApp {
+                origin: lhs_origin,
+                args: lhs_args,
+                kind: lhs_kind,
+                ..
+            },
+            NormalTypeExpr::NominalApp {
+                origin: rhs_origin,
+                args: rhs_args,
+                kind: rhs_kind,
+                ..
+            },
+        ) => {
+            lhs_origin == rhs_origin
+                && lhs_kind == rhs_kind
+                && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
+        }
+        (
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: lhs_constructor,
+                domain: lhs_domain,
+                args: lhs_args,
+                kind: lhs_kind,
+            },
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: rhs_constructor,
+                domain: rhs_domain,
+                args: rhs_args,
+                kind: rhs_kind,
+            },
+        ) => {
+            lhs_constructor == rhs_constructor
+                && lhs_domain == rhs_domain
+                && lhs_kind == rhs_kind
+                && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
+        }
+        (
+            NormalTypeExpr::NeutralComputationApp {
+                head: lhs_head,
+                args: lhs_args,
+                kind: lhs_kind,
+                ..
+            },
+            NormalTypeExpr::NeutralComputationApp {
+                head: rhs_head,
+                args: rhs_args,
+                kind: rhs_kind,
+                ..
+            },
+        ) => {
+            lhs_head == rhs_head
+                && lhs_kind == rhs_kind
+                && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
+        }
+        (
+            NormalTypeExpr::Projection {
+                interface: lhs_interface,
+                member: lhs_member,
+                args: lhs_args,
+                kind: lhs_kind,
+                rigidity: lhs_rigidity,
+                ..
+            },
+            NormalTypeExpr::Projection {
+                interface: rhs_interface,
+                member: rhs_member,
+                args: rhs_args,
+                kind: rhs_kind,
+                rigidity: rhs_rigidity,
+                ..
+            },
+        ) => {
+            lhs_interface == rhs_interface
+                && lhs_member == rhs_member
+                && lhs_kind == rhs_kind
+                && lhs_rigidity == rhs_rigidity
+                && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
+        }
+        _ => false,
+    }
+}
+
+fn normal_arg_spines_definitionally_equal(
+    lhs_args: &[NormalTypeExpr],
+    rhs_args: &[NormalTypeExpr],
+) -> bool {
+    lhs_args.len() == rhs_args.len()
+        && lhs_args
+            .iter()
+            .zip(rhs_args)
+            .all(|(lhs, rhs)| normal_forms_definitionally_equal(lhs, rhs))
+}
+
+fn neutrality_blockers_for_mismatch(
+    lhs: &NormalTypeExpr,
+    rhs: &NormalTypeExpr,
+) -> Vec<NormalTypeExpr> {
+    let mut blockers = Vec::new();
+    collect_neutrality_blockers(lhs, &mut blockers);
+    collect_neutrality_blockers(rhs, &mut blockers);
+    blockers
+}
+
+fn collect_neutrality_blockers(expr: &NormalTypeExpr, blockers: &mut Vec<NormalTypeExpr>) {
+    match expr {
+        NormalTypeExpr::NeutralComputationApp { .. } | NormalTypeExpr::Projection { .. } => {
+            blockers.push(expr.clone());
+        }
+        NormalTypeExpr::NominalApp { args, .. }
+        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+            for arg in args {
+                collect_neutrality_blockers(arg, blockers);
+            }
+        }
+        NormalTypeExpr::Primitive(_) | NormalTypeExpr::Var(_) => {}
     }
 }
 

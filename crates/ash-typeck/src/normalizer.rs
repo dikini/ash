@@ -276,6 +276,8 @@ pub enum NormalizationEvidence {
     /// A computation head was preserved as neutral because no equation registry
     /// exists in TASK-819.
     NeutralUnsupportedComputation,
+    /// A fixture equation reduced a closed computation-head application.
+    FixtureEquationReduced,
     /// A projection was preserved without associated-family computation.
     ProjectionPreserved { rigidity: ProjectionRigidity },
 }
@@ -336,8 +338,9 @@ impl<'env> Normalizer<'env> {
 
     /// Creates a normalizer with explicit internal fixture equations.
     ///
-    /// TASK-820 stores and exposes lookup metadata only; normalization still
-    /// preserves computation heads as neutral until TASK-821 consumes the table.
+    /// Fixture equations are compiler-internal setup data. Closed matching and
+    /// result substitution are consumed by normalization; unmatched computation
+    /// heads are still preserved as neutral forms.
     #[must_use]
     pub fn with_registry(env: &'env TypeEnv, registry: &'env FixtureEquationRegistry) -> Self {
         Self::with_config_and_registry(env, NormalizationConfig::default(), registry)
@@ -364,6 +367,7 @@ impl<'env> Normalizer<'env> {
             fuel: self.config.fuel,
             trace_enabled: self.config.trace,
             trace: Vec::new(),
+            fixture_registry: self.fixture_registry,
         };
         let (normal, evidence) = state.normalize_expr(expr)?;
         Ok(NormalizationOutcome {
@@ -459,14 +463,28 @@ fn match_pattern(
     }
 }
 
-struct NormalizationState {
+fn is_closed_normal_type_expr(expr: &NormalTypeExpr) -> bool {
+    match expr {
+        NormalTypeExpr::Primitive(_) => true,
+        NormalTypeExpr::DomainConstructorApp { args, .. } => {
+            args.iter().all(is_closed_normal_type_expr)
+        }
+        NormalTypeExpr::Var(_)
+        | NormalTypeExpr::NominalApp { .. }
+        | NormalTypeExpr::NeutralComputationApp { .. }
+        | NormalTypeExpr::Projection { .. } => false,
+    }
+}
+
+struct NormalizationState<'env> {
     mode: NormalizationMode,
     fuel: NormalizationFuel,
     trace_enabled: bool,
     trace: Vec<NormalizationTraceEvent>,
+    fixture_registry: &'env FixtureEquationRegistry,
 }
 
-impl NormalizationState {
+impl<'env> NormalizationState<'env> {
     fn normalize_expr(
         &mut self,
         expr: &CanonicalTypeExpr,
@@ -521,15 +539,9 @@ impl NormalizationState {
                     },
                 )
             }
-            CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => (
-                NormalTypeExpr::NeutralComputationApp {
-                    head: head.clone(),
-                    args: self.normalize_args(args)?,
-                    kind: kind.clone(),
-                    reason: Some(NormalFormBlockReason::Unsupported),
-                },
-                NormalizationEvidence::NeutralUnsupportedComputation,
-            ),
+            CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
+                self.normalize_computation_app(head, args, kind)?
+            }
         };
 
         self.record(evidence.clone());
@@ -543,6 +555,98 @@ impl NormalizationState {
         args.iter()
             .map(|arg| self.normalize_expr(arg).map(|(normal, _)| normal))
             .collect()
+    }
+
+    fn normalize_computation_app(
+        &mut self,
+        head: &TypeComputationHeadId,
+        args: &[CanonicalTypeExpr],
+        kind: &Kind,
+    ) -> NormalizationResult<(NormalTypeExpr, NormalizationEvidence)> {
+        let normalized_args = self.normalize_args(args)?;
+        if let Some(matched) = self
+            .fixture_registry
+            .first_match(head, &normalized_args)
+            .filter(|_| normalized_args.iter().all(is_closed_normal_type_expr))
+        {
+            let result = matched.equation().result().clone();
+            let bindings = matched.bindings().clone();
+            self.fuel.consume(self.mode)?;
+            let reduced = self.normalize_fixture_result(&result, &bindings)?;
+            return Ok((reduced, NormalizationEvidence::FixtureEquationReduced));
+        }
+        Ok((
+            NormalTypeExpr::NeutralComputationApp {
+                head: head.clone(),
+                args: normalized_args,
+                kind: kind.clone(),
+                reason: Some(NormalFormBlockReason::Unsupported),
+            },
+            NormalizationEvidence::NeutralUnsupportedComputation,
+        ))
+    }
+
+    fn normalize_fixture_result(
+        &mut self,
+        result: &FixtureResultExpr,
+        bindings: &BTreeMap<String, NormalTypeExpr>,
+    ) -> NormalizationResult<NormalTypeExpr> {
+        self.fuel.consume(self.mode)?;
+        match result {
+            FixtureResultExpr::BoundVar(variable) => Ok(bindings
+                .get(variable)
+                .cloned()
+                .expect("fixture result variables are validated at equation construction")),
+            FixtureResultExpr::DomainConstructor {
+                constructor,
+                domain,
+                args,
+                kind,
+            } => Ok(NormalTypeExpr::DomainConstructorApp {
+                constructor: constructor.clone(),
+                domain: domain.clone(),
+                args: self.normalize_fixture_result_args(args, bindings)?,
+                kind: kind.clone(),
+            }),
+            FixtureResultExpr::ComputationHeadApp { head, args, kind } => {
+                let args = self.normalize_fixture_result_args(args, bindings)?;
+                self.reduce_normalized_computation_app(head, args, kind)
+            }
+        }
+    }
+
+    fn normalize_fixture_result_args(
+        &mut self,
+        args: &[FixtureResultExpr],
+        bindings: &BTreeMap<String, NormalTypeExpr>,
+    ) -> NormalizationResult<Vec<NormalTypeExpr>> {
+        args.iter()
+            .map(|arg| self.normalize_fixture_result(arg, bindings))
+            .collect()
+    }
+
+    fn reduce_normalized_computation_app(
+        &mut self,
+        head: &TypeComputationHeadId,
+        args: Vec<NormalTypeExpr>,
+        kind: &Kind,
+    ) -> NormalizationResult<NormalTypeExpr> {
+        if let Some(matched) = self
+            .fixture_registry
+            .first_match(head, &args)
+            .filter(|_| args.iter().all(is_closed_normal_type_expr))
+        {
+            let result = matched.equation().result().clone();
+            let bindings = matched.bindings().clone();
+            self.fuel.consume(self.mode)?;
+            return self.normalize_fixture_result(&result, &bindings);
+        }
+        Ok(NormalTypeExpr::NeutralComputationApp {
+            head: head.clone(),
+            args,
+            kind: kind.clone(),
+            reason: Some(NormalFormBlockReason::Unsupported),
+        })
     }
 
     fn record(&mut self, evidence: NormalizationEvidence) {

@@ -1,6 +1,6 @@
 # TASK-825: Non-Inverting Unification Boundary
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,7 @@ Prove and enforce that equality/unification does not solve underneath neutral co
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- 📝 [TASK-824](TASK-824-definitional-equality-api.md) (planned predecessor)
+- ✅ [TASK-824](TASK-824-definitional-equality-api.md)
 
 ## Dispatch
 

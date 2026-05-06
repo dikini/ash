@@ -361,7 +361,12 @@ pub type NormalizationResult<T> = Result<T, NormalizationError>;
 /// This API is intentionally non-inverting: normal forms are compared
 /// structurally, and mismatches involving neutral or rigid blockers are reported
 /// as blocked evidence rather than triggering proof search or type-function
-/// inversion.
+/// inversion. In particular, same-headed neutral computation apps are not treated
+/// as unification problems: their normalized argument spines are compared
+/// structurally, and differing spines remain blocked evidence instead of solving
+/// `CanonicalTypeExpr::Var(String)` inputs from the computation head's output.
+/// Current inference metas (`Type::Var(TypeVar)`) remain owned by the legacy
+/// `Type` unifier until an explicit top-level bridge is introduced.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DefinitionalEqualityResult {
     /// Both inputs normalize to the same canonical normal form.
